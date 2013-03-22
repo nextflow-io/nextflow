@@ -1,0 +1,5 @@
+.idea/**
+.gradle/**
+.nextflow.log*
+build/**
+out/**

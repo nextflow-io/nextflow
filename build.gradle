@@ -1,0 +1,174 @@
+/*
+ * Copyright (c) 2012, the authors.
+ *
+ *   This file is part of 'Nextflow'.
+ *
+ *   Nextflow is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   Nextflow is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+apply plugin: 'groovy'
+version = '0.1'
+status = 'alpha'
+
+repositories {
+    flatDir(dirs: file('lib'))
+    mavenCentral()
+}
+
+dependencies {
+
+    groovy module ('org.codehaus.groovy:groovy-all:2.1.1') {
+        transitive = true
+    }
+
+    compile (
+            'org.codehaus.gpars:gpars:1.0.0',
+            'org.slf4j:slf4j-api:1.7.2',
+            'org.slf4j:jcl-over-slf4j:1.7.2',
+            'org.slf4j:jul-to-slf4j:1.7.2',
+            'org.slf4j:log4j-over-slf4j:1.7.2',
+            'ch.qos.logback:logback-classic:1.0.9',
+            'ch.qos.logback:logback-core:1.0.9',
+            'commons-lang:commons-lang:2.6',
+            'commons-io:commons-io:2.4',
+            'com.google.guava:guava:13.0.1',
+            'com.beust:jcommander:1.30',
+            'jline:jline:2.9',
+            'org.fusesource.jansi:jansi:1.9'
+    )
+
+    testCompile ('org.spockframework:spock-core:0.7-groovy-2.0')
+
+}
+
+
+
+/*
+ * print out the runtime classpath
+ */
+task classpathRuntime(dependsOn: configurations.runtime) << {
+
+    String home = System.properties['user.home']
+    def libs = configurations.compile.collect {File file -> file.absolutePath ?.replace(home,'$HOME')}
+    println libs.join(':')
+
+}
+
+/*
+ * print out the compile classpath
+ */
+task classpathCompile(dependsOn: configurations.compile) << {
+
+    String home = System.properties['user.home']
+    def libs = configurations.compile.collect {File file -> file.absolutePath ?.replace(home,'$HOME')}
+    println libs.join(':')
+
+}
+
+
+/*
+ * Update the build timestamp in the source source file
+ */
+task buildInfo << {
+
+    def file = new File('./src/main/groovy/nextflow/Const.groovy')
+    def buildNum = 0
+    def src = file.text
+    src.find(/APP_BUILDNUM *= *([0-9]*)/) { buildNum = it[1]?.toInteger()+1 }
+    src = src.replaceAll('APP_VER *= *"[0-9\\.]+"', "APP_VER = \"${version}\"" as String)
+    src = src.replaceAll('APP_TIMESTAMP *= *[0-9]*', "APP_TIMESTAMP = ${System.currentTimeMillis()}" as String)
+    if( buildNum ) {
+        src = src.replaceAll('APP_BUILDNUM *= *[0-9]*', "APP_BUILDNUM = ${buildNum}" as String)
+    }
+    else {
+        println "WARN: Unable to find current build number"
+    }
+    file.text = src
+
+
+}
+
+/*
+ * Compile sources and copies all libs to target directory
+ */
+task compile(type: Copy) {
+    dependsOn buildInfo, compileJava, compileGroovy, processResources
+
+    into "$buildDir/dependency-libs"
+    from configurations.runtime
+}
+
+
+/*
+ * Create the distribution stage folder i.e. creates a folder containing everythinh
+ * have to be included in the distribution package
+ */
+
+task stage( type: Copy ) {
+    dependsOn jar, javadoc, groovydoc
+
+    // clean the target directory before create
+    def target = file("$buildDir/stage/nextflow-$version")
+    target.parentFile.deleteDir()
+    target.mkdirs()
+
+    destinationDir target
+
+//    // copy the bin scripts
+//    into('bin') {
+//        from ('./bin') { exclude 'circo' }
+//        rename { String fileName -> fileName.replace('circo.sh', 'circo') }
+//    }
+
+    // copy application - and - runtime dependencies jars
+    into('libs') {
+        from "$buildDir/libs/nextflow-${version}.jar"
+        from configurations.runtime
+    }
+
+    // still some stuff
+    into('conf') { from './src/main/resources' }
+    into('src') { from './src/main' }
+    into('docs') { from '$buildDir/docs/groovydoc/'}
+
+}
+
+/*
+ * Creates the Zip distribution file
+ */
+task distZip(type: Zip) {
+    dependsOn stage
+    from "$buildDir/stage/"
+}
+
+/*
+ * creates the Tar distribution file
+ */
+task distTar(type: Tar) {
+    dependsOn stage
+    compression = Compression.GZIP
+    from "$buildDir/stage/"
+}
+
+task dist() {
+    dependsOn distZip, distTar
+}
+
+/*
+ * Print the distribution file name when distXxx task completes
+ */
+gradle.taskGraph.afterTask { Task task, TaskState state ->
+    if (task == distTar && !state.failure) { println "\n** TAR: ${relativePath(distTar.archivePath)}\n\n"}
+    if (task == distZip && !state.failure) { println "\n** ZIP: ${relativePath(distZip.archivePath)}\n\n"}
+}

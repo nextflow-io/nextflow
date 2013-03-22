@@ -1,0 +1,5 @@
+task {
+    """
+    echo 'Hello world'
+    """
+}

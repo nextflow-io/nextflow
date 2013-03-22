@@ -1,0 +1,46 @@
+def fasta='/Users/ptommaso/sample.fa'
+def DB='/Users/ptommaso/tools/blast-db/pdb/pdb'
+
+def sequences = task('split') {
+
+    input fasta:[fasta]
+    output 'seq_*'
+
+        """
+        gcsplit $fasta '%^>%' '/^>/' '{*}' -f seq_
+        """
+}
+
+
+def singleBlast = task('blast') {
+
+    input seq: sequences
+    output 'blast_result'
+
+        """
+        blastp -db $DB -query $seq -outfmt 6 > blast_result
+        """
+
+}
+
+
+def allBlast = merge {
+
+    input blast:singleBlast
+    output 'allBlast'
+
+        """
+        cat $blast >> allBlast
+        """
+
+}
+
+def result = task('sort') {
+    input result:allBlast
+        """
+        sort $result
+        """
+}
+
+
+println read(result)
