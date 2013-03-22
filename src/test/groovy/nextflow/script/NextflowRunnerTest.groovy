@@ -81,10 +81,10 @@ class NextflowRunnerTest extends Specification {
 
         then:
         result == 'echo Hello world!'
-        runner.getScript().taskProcessor().getName() == 'task2'
-        runner.getScript().taskProcessor().getInput('x').getVal() == 1
-        runner.getScript().taskProcessor().getInput('y') instanceof DataflowQueue
-        runner.getScript().taskProcessor().getOutput('-') instanceof DataflowWriteChannel
+        runner.getScript().getTaskProcessor().getName() == 'task2'
+        runner.getScript().getTaskProcessor().getInput('x').getVal() == 1
+        runner.getScript().getTaskProcessor().getInput('y') instanceof DataflowQueue
+        runner.getScript().getTaskProcessor().getOutput('-') instanceof DataflowWriteChannel
 
     }
 

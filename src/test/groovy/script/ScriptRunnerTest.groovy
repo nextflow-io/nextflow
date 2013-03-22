@@ -9,44 +9,12 @@ import spock.lang.Specification
  */
 class ScriptRunnerTest extends Specification {
 
-    def 'test parseCmdLine' () {
 
-        when:
-        def (oo, aa) = new CliRunner().parseScriptArgs(cmdline)
-
-        then:
-        oo == options
-        aa == args
-
-        where:
-        cmdline                                     | options           | args
-        ['file1','file2','file3']                   | [:]               | ['file1','file2','file3']
-        ['--param','hola', 'file*']                 | [param:'hola']    | ['file*']
-        ['file1','--flag','--beta','value','more*'] | [flag:true,beta:'value'] | ['file1','more*']
-        ['--num','99','other','args']               | [num:99]          | ['other','args']
-
-    }
-
-    def 'test toVal' () {
-
-        expect:
-        CliRunner.parseValue(str) == value
-
-        where:
-        str         | value
-        'hola'      | 'hola'
-        '1'         | 1
-        "${Long.MAX_VALUE}" | Long.MAX_VALUE
-        'True'      | true
-        'False'     | false
-        "10.2"      | 10.2
-
-    }
 
     def 'test version' () {
 
         when:
-        def opt = CliRunner.parseMainArgs(['-v'] as String[])
+        def opt = CliRunner.parseMainArgs('-v')
 
         then:
         assert opt.version
@@ -64,17 +32,6 @@ class ScriptRunnerTest extends Specification {
     }
 
 
-    def 'test params' () {
-
-        when:
-        def opt = CliRunner.parseMainArgs('--$VAR1=1','--$VAR2=2','more','files')
-
-        then:
-        assert opt.params['VAR1'] == '1'
-        assert opt.params['VAR2'] == '2'
-        assert opt.arguments == ['more','files']
-
-    }
 
     def 'test usage' () {
 
@@ -137,7 +94,7 @@ class ScriptRunnerTest extends Specification {
         def path = CliRunner.validateWorkDirectory( null, 'myScript' )
 
         then:
-        path == new File('myScript').canonicalFile
+        path == new File('run-myScript').canonicalFile
         path.exists()
 
         cleanup:

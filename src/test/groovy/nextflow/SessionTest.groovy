@@ -19,6 +19,7 @@
 
 package nextflow
 
+import nextflow.processor.NopeScriptProcessor
 import spock.lang.Specification
 /**
  *
@@ -56,7 +57,24 @@ class SessionTest extends Specification {
         result['P'] == 'hello'
         result['Z'] == ''
 
+    }
 
+
+    def 'test createProcessor - bindOnTermination attribute' () {
+
+        setup:
+        def session = new Session()
+        session.processorClass = NopeScriptProcessor
+
+        when:
+        def processor1 = session.createProcessor()
+        def processor2 = session.createProcessor(false)
+        def processor3 = session.createProcessor(true)
+
+        then:
+        !processor1.getBindOnTermination()
+        !processor2.getBindOnTermination()
+        processor3.getBindOnTermination()
 
     }
 
