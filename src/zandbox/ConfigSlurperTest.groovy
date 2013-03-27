@@ -23,7 +23,16 @@
  *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
-def str = """
+def conf1 = '''
+    env {
+        alpha = 'env1'
+        beta = 'env1'
+        HOME = "$HOME:xxx"
+    }
+
+    '''
+
+def conf2 = '''
     task {
         processor = 'local'
         echo = true
@@ -35,8 +44,43 @@ def str = """
         maxInactive = '1 m'
         errorStrategy = 'xx'
     }
-    """
 
-def config1 = new ConfigSlurper().parse(str)
+    env {
+        beta = 'env2'
+        delta = 'env2'
+        HOME = "$HOME:yyy"
+    }
 
-println config1
+    x = "$HOME"
+
+    '''
+
+def builder = new StringBuilder("env {\n")
+System.getenv().sort().each { name, value -> builder << "${name.replace('.','_')}='$value'\n" }
+builder << "}"
+
+def slurp0 = new ConfigSlurper()
+slurp0.setBinding(System.getenv())
+
+def slurp1 = new ConfigSlurper()
+slurp1.setBinding(System.getenv())
+
+def slurp2 = new ConfigSlurper()
+slurp2.setBinding(System.getenv())
+
+
+def config0 = slurp0.parse(builder.toString())
+def config1 = slurp1.parse(conf1)
+def config2 = slurp2.parse(conf2)
+
+config0.merge(config1)
+config0.merge(config2)
+
+
+assert config0.env.alpha == 'env1'
+assert config0.env.beta == 'env2'
+assert config0.env.delta == 'env2'
+assert config0.env.HOME == System.getenv()['HOME'] + ':yyy'
+assert config0.x == System.getenv()['HOME']
+
+

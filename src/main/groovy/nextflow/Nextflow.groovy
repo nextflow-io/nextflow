@@ -18,15 +18,19 @@
  */
 
 package nextflow
+
+import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.PoisonPill
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 class Nextflow {
 
 
@@ -46,7 +50,8 @@ class Nextflow {
             channel.getVal()
         }
         else {
-            throw new IllegalArgumentException("The argument provided is not a valid channel type: ${channel.getClass().name}")
+            log.warn "The value is not channel '$channel' (${channel?.class?.simpleName})"
+            return channel
         }
     }
 

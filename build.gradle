@@ -28,9 +28,7 @@ repositories {
 
 dependencies {
 
-    groovy module ('org.codehaus.groovy:groovy-all:2.1.1') {
-        transitive = true
-    }
+    groovy module ('org.codehaus.groovy:groovy-all:2.1.2')
 
     compile (
             'org.codehaus.gpars:gpars:1.0.0',
@@ -125,11 +123,11 @@ task stage( type: Copy ) {
 
     destinationDir target
 
-//    // copy the bin scripts
-//    into('bin') {
-//        from ('./bin') { exclude 'circo' }
-//        rename { String fileName -> fileName.replace('circo.sh', 'circo') }
-//    }
+    // copy the launch script
+    into('.') {
+        from ('./nextflow.sh') // { exclude 'circo' }
+        //rename { String fileName -> fileName.replace('circo.sh', 'circo') }
+    }
 
     // copy application - and - runtime dependencies jars
     into('libs') {
@@ -138,7 +136,6 @@ task stage( type: Copy ) {
     }
 
     // still some stuff
-    into('conf') { from './src/main/resources' }
     into('src') { from './src/main' }
     into('docs') { from '$buildDir/docs/groovydoc/'}
 
@@ -161,6 +158,7 @@ task distTar(type: Tar) {
     from "$buildDir/stage/"
 }
 
+
 task dist() {
     dependsOn distZip, distTar
 }
@@ -172,3 +170,72 @@ gradle.taskGraph.afterTask { Task task, TaskState state ->
     if (task == distTar && !state.failure) { println "\n** TAR: ${relativePath(distTar.archivePath)}\n\n"}
     if (task == distZip && !state.failure) { println "\n** ZIP: ${relativePath(distZip.archivePath)}\n\n"}
 }
+
+/*
+ * Create a self-contained executable jar
+ */
+
+def oneJarShellStub = "./one-jar/launcher.stub"
+def oneJarLibPath = "./one-jar/one-jar-ant-task-0.97.jar"
+def oneJarTempPath = "$buildDir/tmp/nextflow-${version}.run.jar"
+def oneJarDistPath = "$buildDir/distributions/nextflow.run"
+
+task packOneJar(dependsOn: compile) << {
+
+
+    def appMainClass = 'nextflow.script.CliRunner'
+
+    ant.taskdef (
+            name:"one-jar",
+            classname:"com.simontuffs.onejar.ant.OneJarTask",
+            classpath: oneJarLibPath,
+            onerror: "report"
+    )
+
+    ant.delete( dir: oneJarTempPath )
+    ant."one-jar"( destfile: oneJarTempPath ) {
+        delegate.manifest {
+            attribute( name: 'One-Jar-Main-Class', value: appMainClass )
+            attribute( name: 'One-Jar-URL-Factory', value: "com.simontuffs.onejar.JarClassLoader\$OneJarURLFactory" )
+        }
+
+        delegate.main {
+            fileset( dir: "$buildDir/classes/main" )
+            fileset( dir: "$buildDir/resources/main" )
+        }
+
+        lib {
+            fileset dir: "$buildDir/dependency-libs"
+        }
+    }
+
+
+    /*
+     * Create the bash startup file
+     */
+
+    def distFile = new File(oneJarDistPath).absoluteFile
+    if( !distFile.getParentFile().exists() ) { distFile.getParentFile().mkdirs()  }
+    if( distFile.exists() ) distFile.delete()
+
+    def out = new FileOutputStream(oneJarDistPath);
+    out << new FileInputStream(oneJarShellStub)
+    out << new FileInputStream(oneJarTempPath)
+
+    "chmod +x ${distFile}".execute()
+
+    // copy also the plain jar
+    ant.echo( "Nextflow executable created. Launch with: '$oneJarDistPath'" )
+    ant.echo( "Done" );
+
+}
+
+task uploadOnejar ( type: Copy, dependsOn: packOneJar ) {
+    dependsOn packOneJar
+
+    from oneJarDistPath
+    into '/Users/ptommaso/Dropbox/Public/nextflow/'
+
+}
+
+

@@ -26,7 +26,8 @@
 # the application 'base' folder
 bin_dir=`dirname "$0"`
 bin_dir=`cd "$bin_dir"; pwd`
-base_dir=`dirname $bin_dir`
+#base_dir=`dirname $bin_dir`
+base_dir=$bin_dir
 
 # define the java env
 java=java
@@ -56,11 +57,11 @@ if [ -e "$base_dir/build/classes/main" ]; then
 #
 # deployed application class -- only jar in the libs folder
 #
-#elif [ -e $base_dir/libs ]; then
-#  CLASSPATH="$base_dir/conf"
-#  for file in $base_dir/libs/*.jar; do
-#    CLASSPATH+=":$file";
-#  done
+elif [ -e $base_dir/libs ]; then
+  CLASSPATH="$base_dir/conf"
+  for file in $base_dir/libs/*.jar; do
+    CLASSPATH+=":$file";
+  done
 
 else
   echo "Missing application libraries -- Nextflow cannot start"

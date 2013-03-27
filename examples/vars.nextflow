@@ -1,6 +1,0 @@
-x = 1
-def y = 2
-
-println "x: $x"
-println "y: $y"
-println "z: $z"

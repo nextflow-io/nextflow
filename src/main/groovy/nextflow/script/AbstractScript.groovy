@@ -42,11 +42,13 @@ abstract class AbstractScript extends Script {
     private Session session = { getBinding()?.getVariable('__$session') as Session } ()
 
     /**
-     * Holds the system environment which will used to execution the user tasks
+     * Holds the configuration object which will used to execution the user tasks
      */
     @Lazy
-    Map<String,String> env = { session.env } ()
+    Map config = { session.config } ()
 
+    @Lazy
+    InputStream stdin = { System.in }()
 
     // the last produced result
     private result
@@ -58,6 +60,13 @@ abstract class AbstractScript extends Script {
 
     def Processor getTaskProcessor() { taskProcessor }
 
+    /**
+     * Enable disable task 'echo' configuration property
+     * @param value
+     */
+    def void echo(boolean value = true) {
+        config.task.echo = value
+    }
 
     /**
      * Create a task processor
@@ -71,7 +80,7 @@ abstract class AbstractScript extends Script {
         assert block
 
         // create the processor object
-        def processor = session.createProcessor(bindOnTermination)
+        def processor = session.createProcessor(this, bindOnTermination)
 
         // set the name, when specified
         if( name ) { processor.name(name) }
@@ -105,12 +114,17 @@ abstract class AbstractScript extends Script {
 
     def merge( String name = null, Closure<String> block ) {
 
-        def processor = createProcessor(name,true,block)
-        processor.shareWorkDir(true)
+        result = createProcessor(name,true,block) .run()
 
-        result = processor.run()
     }
 
+//
+//    def printBinding() {
+//        getBinding().variables.each{ name, value ->
+//            println "$name = $value"
+//        }
+//    }
+//
 
 
 }

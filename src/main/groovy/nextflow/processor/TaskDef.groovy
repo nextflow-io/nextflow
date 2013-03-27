@@ -44,6 +44,11 @@ class TaskDef {
     Status status
 
     /**
+     * The value to be piped to the process stdin
+     */
+    def input
+
+    /**
      * The exit code returned by executing the task script
      */
     int exitCode

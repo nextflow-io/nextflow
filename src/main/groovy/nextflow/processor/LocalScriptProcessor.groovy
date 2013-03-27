@@ -42,7 +42,7 @@ class LocalScriptProcessor extends AbstractScriptProcessor {
     protected void runScript( def script, TaskDef task )  {
         assert script
 
-        task.workDirectory = shareWorkDirectory ? new File(session.workDirectory, name) : new File(session.workDirectory, "$name-${task.index}")
+        task.workDirectory = shareWorkDir ? new File(session.workDirectory, name) : new File(session.workDirectory, "$name-${task.index}")
         File scratch = task.workDirectory
 
         if ( !scratch.exists() && !scratch.mkdirs() ) {
@@ -62,11 +62,19 @@ class LocalScriptProcessor extends AbstractScriptProcessor {
                 .redirectErrorStream(true)
 
         // -- configure the job environment
-        builder.environment().putAll(getProcessEnv())
+        builder.environment().putAll(getProcessEnvironment())
 
         // -- start the execution and notify the event to the monitor
         Process process = builder.start()
         task.status = TaskDef.Status.RUNNING
+
+        // -- copy the input value to the process standard input
+        if( task.input != null ) {
+            try {
+                process.withOutputStream{ writer -> writer << task.input }
+            }
+            catch( IOException e ) { log.warn "Unable to pipe input data to task", e }
+        }
 
         // -- print the process out if it is not capture by the output
         //    * The byte dumper uses a separate thread to capture the process stdout
@@ -104,10 +112,23 @@ class LocalScriptProcessor extends AbstractScriptProcessor {
 
     }
 
-    protected Map<String,String> getProcessEnv() {
-        def result = new HashMap( session.env )
+    protected Map<String,String> getProcessEnvironment() {
+
+        def result = [:]
+
+        // add the config environment entries
+        if( session.config.env instanceof Map ) {
+            session.config.env.each { name, value ->
+                result.put( name, value?.toString() )
+            }
+        }
+        else {
+            log.debug "Invalid 'session.config.env' object: ${session.config.env?.class?.name}"
+        }
+
+        // add the task specific entries
         if( environment ) {
-            result.putAll(environment)
+            environment.each { name, value -> result.put(name, value?.toString()) }
         }
 
         return result

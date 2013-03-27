@@ -21,6 +21,12 @@ class CliOptions {
     @Parameter(hidden = true, names='-trace')
     List<String> trace
 
+    @Parameter(names=['-c','-config'], description = 'Use the specified configuration file(s)')
+    List<String> config
+
+    @Parameter(names=['-V'], description = 'Specifies that all variables in the current sys environment to be exported to the task execution context')
+    boolean exportEnvironment
+
     /**
      * Print out the version number and exit
      */
@@ -38,7 +44,6 @@ class CliOptions {
 
     @Parameter(names= ['-wd','-work-dir'], description =  'Directory where output files are stored')
     String workDirectory
-
 
     /**
      * Defines the parameters to be passed to the pipeline script

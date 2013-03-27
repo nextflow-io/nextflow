@@ -193,4 +193,11 @@ class FileHelper {
         !isEmpty(path)
     }
 
+    def delete( File file )  {
+
+        if ( file.isFile() ) {
+            file.deleteDir()
+        }
+    }
+
 }

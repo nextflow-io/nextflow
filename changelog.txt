@@ -1,0 +1,5 @@
+NEXTFLOW CHANGE-LOG
+===================
+
+0.1 - 25 Mar 2013
+- Initial release

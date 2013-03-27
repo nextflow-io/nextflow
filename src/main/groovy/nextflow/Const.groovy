@@ -48,9 +48,9 @@ class Const {
 
     static final String APP_VER = "0.1"
 
-    static final long APP_TIMESTAMP = 1363907474080
+    static final long APP_TIMESTAMP = 1364382426901
 
-    static final int APP_BUILDNUM = 31
+    static final int APP_BUILDNUM = 100
 
     static final String LOGO =
 
@@ -58,11 +58,17 @@ class Const {
          _  _         _    __ _
         | \\| |_____ _| |_ / _| |_____ __ __
         | .` / -_) \\ /  _|  _| / _ \\ V  V /
-        |_|\\_\\___/_\\_\\\\__|_| |_\\___/\\_/\\_/
+        |_|\\_\\___/_\\_\\\\__|_| |_\\___/\\_/\\_/   ver. $APP_VER
         """
         .stripIndent()
 
 
 
+
+    static DATETIME_FORMAT = "dd/MMM/yyyy HH:mm"
+
+    static SHORT_DATETIME_FORMAT = "HH:mm dd/MMM"
+
+    static TIME_FORMAT = "HH:mm:ss"
 
 }

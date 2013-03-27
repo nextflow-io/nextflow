@@ -19,45 +19,15 @@
 
 package nextflow
 
+import nextflow.processor.LocalScriptProcessor
 import nextflow.processor.NopeScriptProcessor
+import nextflow.processor.OgeScriptProcessor
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class SessionTest extends Specification {
-
-    def 'test parseEnvFile' () {
-
-        setup:
-        def map = [X:'hola',Y:'hello']
-
-        def file = File.createTempFile('test','env')
-        file.deleteOnExit()
-        file.text = '''
-            A=1
-            B=${X}_123
-            C=${Y}
-            D=${B}:${C}
-            Q='$xyz'
-            P="${Y}"
-            Z=${missing_variable}
-            '''
-        when:
-        def session = new Session()
-        def result = session.parseEnvironmentFile(file, map)
-
-
-        then:
-        result['A'] == '1'
-        result['B'] == 'hola_123'
-        result['C'] == 'hello'
-        result['D'] == "hola_123:hello"
-        result['Q'] == '$xyz'
-        result['P'] == 'hello'
-        result['Z'] == ''
-
-    }
 
 
     def 'test createProcessor - bindOnTermination attribute' () {
@@ -75,7 +45,48 @@ class SessionTest extends Specification {
         !processor1.getBindOnTermination()
         !processor2.getBindOnTermination()
         processor3.getBindOnTermination()
+    }
 
+    def 'test createProcessor with attributes' () {
+
+        setup:
+        def taskConf = [
+                echo: true,
+                shareWorkDir: true,
+                shell: 'zsh',
+                threads: 3,
+                environment: [a:1, b:2,c:3],
+                validExitCodes: [1,2,3]
+        ]
+        def session = new Session( [task: taskConf] )
+
+        when:
+        def p = session.createProcessor()
+
+        then:
+        p.echo
+//        p.shareWorkDirectory
+        p.threads == 3
+        p.environment == [a:1, b:2,c:3]
+        p.validExitCodes == [1,2,3]
+        p.shell == 'zsh'
+    }
+
+
+    def 'test loadProcessorClass' () {
+
+        expect:
+        new Session().loadProcessorClass(null) == LocalScriptProcessor
+        new Session().loadProcessorClass('local') == LocalScriptProcessor
+        new Session().loadProcessorClass('sge') == OgeScriptProcessor
+        new Session().loadProcessorClass( OgeScriptProcessor.name ) == OgeScriptProcessor
+
+    }
+
+    def 'test new Session with config' () {
+        expect:
+        new Session().processorClass == LocalScriptProcessor
+        new Session([task: [processor:'oge']]).processorClass == OgeScriptProcessor
     }
 
 //

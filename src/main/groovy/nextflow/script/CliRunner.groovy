@@ -75,25 +75,59 @@ class CliRunner {
     private String name
 
     /**
+     * The script file
+     */
+    private File scriptFile
+
+    /**
      * Instantiate the runner object creating a new session
      */
     def CliRunner( ) {
-        this.session = new Session()
+        this( [:] )
     }
+
+    def CliRunner( Map config ) {
+        session = new Session(config)
+    }
+
+    /**
+     * Only for testing purposes
+     *
+     * @param config
+     */
+    def CliRunner( ConfigObject config ) {
+        this(configToMap(config))
+    }
+
 
     /**
      * Instantiate the runner object using the specified session
      *
      * @param session
      */
-    def CliRunner(Session session) {
+    def CliRunner( Session session ) {
         this.session = session
+    }
+
+
+    CliRunner setParam( String name, String value ) {
+        assert name
+        this.params.setParam(name, value)
+        return this
+    }
+
+    CliRunner setParam( Map<String,String> params ) {
+        assert params != null
+        params.each { name, value -> setParam(name, value) }
+        return this
     }
 
     /**
      * @return The interpreted script object
      */
     AbstractScript getScript() { script }
+
+    File getWorkDirectory() { workDirectory }
 
     /**
      * Execute a Nextflow script, it does the following:
@@ -110,9 +144,12 @@ class CliRunner {
         assert scriptFile
 
         // set the script name attribute
-        if( !name ) {
-            name = FilenameUtils.getBaseName(scriptFile.toString())
+        if( !this.name ) {
+            this.name = FilenameUtils.getBaseName(scriptFile.toString())
         }
+
+        // set the file name attribute
+        this.scriptFile = scriptFile
 
         // get the script text and execute it
         execute( scriptFile.text, args )
@@ -146,14 +183,20 @@ class CliRunner {
     protected AbstractScript parseScript( File file, String... args) {
         assert file
 
+        this.scriptFile = file
         parseScript( file.text, args )
     }
 
-    protected AbstractScript parseScript( String flow, String... args = null) {
+    protected AbstractScript parseScript( String scriptText, String... args = null) {
 
         params['__$session'] = session
         params['args'] = args
 
+//        // comment
+//        def lines = scriptText.readLines()
+//        if ( lines || lines[0].startsWith('#!') ) {
+//            lines[0] = "//" + lines[0]
+//        }
 
         // define the imports
         def importCustomizer = new ImportCustomizer()
@@ -166,7 +209,12 @@ class CliRunner {
 
         // run and wait for termination
         def groovy = new GroovyShell(this.class.classLoader, params, config)
-        groovy.parse( flow ) as AbstractScript
+        if ( scriptFile ) {
+            groovy.parse( scriptText, scriptFile?.toString() ) as AbstractScript
+        }
+        else {
+            groovy.parse( scriptText ) as AbstractScript
+        }
     }
 
     protected void defineWorkDirectory() {
@@ -199,7 +247,7 @@ class CliRunner {
      * @return The value as returned by the user provided script
      */
     protected run() {
-        assert script, "Missing script to run"
+        assert script, "Missing script instance to run"
 
         // -- define work-directory
         defineWorkDirectory()
@@ -211,7 +259,7 @@ class CliRunner {
         if ( result == null ) {
             return null
         }
-        else if( result instanceof Collection || result.class.isArray()) {
+        else if( result instanceof Collection || result.getClass().isArray()) {
             return result.collect { Nextflow.read(it) }
         }
         else {
@@ -255,7 +303,7 @@ class CliRunner {
 
         // -- print out the version number, then exit
         if ( options.version ) {
-            println getVersion()
+            println getVersion(true)
             System.exit(0)
         }
 
@@ -269,7 +317,7 @@ class CliRunner {
             System.exit(0)
         }
 
-
+        // -- check script name
         File scriptFile = new File(options.arguments[0])
         String scriptName = FilenameUtils.getBaseName(options.arguments[0])
         if ( !scriptFile.exists() ) {
@@ -277,9 +325,14 @@ class CliRunner {
             System.exit(1)
         }
 
+
         try {
+            // -- configuration file(s)
+            def configFiles = validateConfigFiles(options.config)
+            def config = buildConfig(options.exportEnvironment, configFiles)
+
             // -- create a new runner instance
-            def runner = new CliRunner()
+            def runner = new CliRunner(config)
 
             // -- define the working directory
             runner.workDirectory = validateWorkDirectory( options.workDirectory, scriptName )
@@ -287,7 +340,7 @@ class CliRunner {
 
             // -- define the variable bindings
             if ( options.params ) {
-                options.params.each { k,v -> runner.params.setParam(k,v) }
+                runner.setParam( options.params )
             }
 
             // -- specify the arguments
@@ -348,10 +401,119 @@ class CliRunner {
         FileHelper.tryCreateDir( new File('.',"run-${folderName}") )
     }
 
+    /**
+     * Transform the specified list of string to a list of files, verifying their existence.
+     * <p>
+     *     If a file in the list does not exist an exception of type {@code CliArgumentException} is thrown.
+     * <p>
+     *     If the specified list is empty it tries to return of default configuration files located at:
+     *     <li>$HOME/.nextflow/config
+     *     <li>$PWD/nextflow.config
+     *
+     * @param files
+     * @return
+     */
+    def static List<File> validateConfigFiles( List<String> files ) {
+
+        def result = []
+        if ( files ) {
+            files.each { String fileName ->
+                def thisFile = new File(fileName)
+                if(!thisFile.exists()) {
+                    throw new CliArgumentException("The specified configuration file does not exist: $thisFile -- check the name or choose another file")
+                }
+                result << thisFile
+            }
+            return result
+        }
+
+        def home = new File(Const.APP_HOME_DIR, 'config')
+        if( home.exists() ) result << home
+
+        def local = new File('nextflow.config')
+        if( local.exists() ) result << local
+
+        return result
+    }
 
 
-    static String getVersion() {
-        return Const.APP_VER
+    def static Map buildConfig( boolean export, List<File> files ) {
+
+        def texts = []
+        files?.each { File file ->
+            if (!file.exists()) {
+                log.warn "The specified configuration file cannot be found: $file"
+            }
+            else {
+                texts << file.text
+            }
+        }
+
+        buildConfig0( System.getenv(), export, texts )
+    }
+
+
+    def static Map buildConfig0( Map env, boolean export, List<String> confText )  {
+        assert env
+
+        ConfigObject result = new ConfigSlurper().parse('env{}')
+
+        if ( export ) {
+            env.sort().each { name, value -> result.env.put(name,value) }
+        }
+
+        confText?.each { String text ->
+
+            if ( text ) {
+                def cfg = new ConfigSlurper()
+                cfg.setBinding(env)
+                result.merge( cfg.parse(text) )
+            }
+
+        }
+
+        // convert the ConfigObject to plain map
+        // this because when accessing a non-existing entry in a ConfigObject it return and empty map as value
+        return configToMap( result )
+    }
+
+
+    static String getVersion(boolean full = false) {
+
+        Const.with {
+            if ( full ) {
+                "${APP_NAME.capitalize()} ${APP_VER}_${APP_BUILDNUM} - Build at ${new Date(Const.APP_TIMESTAMP).format(DATETIME_FORMAT)}"
+            }
+            else {
+                APP_VER
+            }
+        }
+    }
+
+    /**
+     * Converts a {@code ConfigObject} to a plain {@code Map}
+     *
+     * @param config
+     * @return
+     */
+    static Map configToMap( ConfigObject config ) {
+        assert config != null
+
+        Map result = new LinkedHashMap(config.size())
+        config.keySet().each { name ->
+            def value = config.get(name)
+            if( value instanceof ConfigObject ) {
+                result.put( name, configToMap(value))
+            }
+            else if ( value != null ){
+                result.put( name, value )
+            }
+            else {
+                result.put( name, null )
+            }
+        }
+
+        return result
     }
 
 }

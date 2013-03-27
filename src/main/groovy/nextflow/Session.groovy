@@ -20,19 +20,22 @@
 package nextflow
 import com.google.common.collect.LinkedHashMultimap
 import com.google.common.collect.Multimap
-import groovy.text.GStringTemplateEngine
-import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.processor.LocalScriptProcessor
+import nextflow.processor.NopeScriptProcessor
+import nextflow.processor.OgeScriptProcessor
 import nextflow.processor.Processor
 import nextflow.processor.TaskDef
+import nextflow.script.AbstractScript
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 class Session {
+
 
     /**
      * The class to be used create a {@code Processor} instance
@@ -55,93 +58,64 @@ class Session {
      */
     File workDirectory = new File('.')
 
+
     /**
-     * The default environment used to run the tasks process
+     * Holds the configuration object
      */
-    @Lazy
-    Map<String,String> env = { createEnvMap() } ()
+    def Map config
 
-
-    private Map<String, String> createEnvMap() {
-
-        // by default load the current environment variables
-        def result = new HashMap<String,String>(System.getenv())
-
-
-        // override current environment by file in the 'nextflow' home directory
-        def home = new File(Const.APP_HOME_DIR,'environment')
-        if ( home.exists() ) {
-            log.debug "Loading home environment file: $home"
-            result.putAll( parseEnvironmentFile(home, result) )
-        }
-
-        // override current environment by the file in the local directory
-        def local = new File('.environment')
-        if ( local.exists() ) {
-            log.debug "Loading local environment file: $home"
-            result.putAll( parseEnvironmentFile(home, result) )
-        }
-
-
-        return result
+    /**
+     * Creates a new session with an 'empty' (default) configuration
+     */
+    def Session() {
+        this([:])
     }
 
 
-    @TupleConstructor
-    static class SoftReplaceMap implements Map {
+    /**
+     * Creates a new session using the configuration properties provided
+     *
+     * @param config
+     */
+    def Session( Map config ) {
+        assert config != null
+        this.config = config
 
-        @Delegate
-        Map map
+        // normalize config object
+        if( config.task == null ) config.task = [:]
+        if( config.env == null ) config.env = [:]
 
-        @Override
-        def get(Object name ) {
-            if( map.containsKey(name) ) return map[name]
-            // fallback on Java system properties
-            else if ( System.properties.containsKey(name) ) return System.properties[name]
-            // otherwise return '' (an empty string)
-            else return ''
-        }
+        this.processorClass = loadProcessorClass(config.task.processor?.toString())
     }
 
-    private Map<String,String> parseEnvironmentFile( File template, Map<String,String> binding ) {
-        assert template
-        assert binding != null
 
+    protected Class<? extends Processor> loadProcessorClass(String processorType) {
 
-        def engine = new GStringTemplateEngine()
-        def result = new LinkedHashMap<String,String>(binding)
-        int c = 0
-        template.text.readLines().each { line->
-
-            def matcher = ( line =~~ /^\s*(\S+)\s*=\s*(.*)\s*$/ )
-            if ( !matcher.matches()  )  {
-                return
-            }
-
-            String name = matcher[0][1]
-            String value = matcher[0][2]
-
-            // when the quote is single-quote delimited
-            // it is not interpreted
-            matcher = ( value =~~ /'(.*)'/ )
-            if( matcher.matches() ) {
-                value = matcher[0][1]
-                result.put(name,value)
-            }
-            // otherwise replace any variables
-            else {
-                matcher = ( value =~~ /"(.*)"/ )
-                if( matcher.matches() ) {
-                    value = matcher[0][1]
-                }
-
-                value = engine.createTemplate(value?.toString()).make(new SoftReplaceMap(result))
-                result.put( name, value?.toString() )
-            }
-
+        def className
+        if ( !processorType ) {
+            className = LocalScriptProcessor.name
+        }
+        else if ( processorType.toLowerCase() == 'local' ) {
+            className = LocalScriptProcessor.name
+        }
+        else if ( processorType.toLowerCase() in ['sge','oge'] ) {
+            className = OgeScriptProcessor.name
+        }
+        else if ( processorType.toLowerCase() == 'nope' ) {
+            className = NopeScriptProcessor.name
+        }
+        else {
+            className = processorType
         }
 
-        return result
+        log.debug "Loading processor class: ${className}"
+        try {
+            Thread.currentThread().getContextClassLoader().loadClass(className) as Class<Processor>
+        }
+        catch( Exception e ) {
+            throw new IllegalArgumentException("Cannot find a valid class for specified processor type: '${processorType}'")
+        }
+
     }
 
 
@@ -149,8 +123,37 @@ class Session {
      * Create an instance of the task {@code Processor}
      * @return
      */
-    Processor createProcessor(boolean bindOnTermination = false) {
-        processorClass.newInstance( this, bindOnTermination )
+    Processor createProcessor(AbstractScript script = null, boolean bindOnTermination = false) {
+
+        // -- create a new processor instance
+        def processor = processorClass.newInstance( this, script, bindOnTermination )
+
+        // -- inject attributes defined by the 'config.task' element
+        if ( config.task instanceof Map ) {
+
+            def methods = processor.metaClass.getMethods().findAll{ MetaMethod m -> m.isPublic() && m.getParameterTypes().size()==1 }
+            def names = methods *. getName()
+
+            config.task.each { String key, Object value ->
+
+                def i = names.indexOf(key)
+                if ( i != -1 ) {
+
+                    try {
+                        methods[i].invoke(processor,value)
+                    }
+                    catch( Exception e ) {
+                        def mType = methods[i].getNativeParameterTypes()[0]?.simpleName
+                        def vType = value?.class?.simpleName
+                        log.warn "Task attribute '$key' requires a value of type: '${mType}' -- entered value: '${value} of type: '${vType}'" , e
+                    }
+                }
+            }
+        }
+
+
+        return processor
+
     }
 
 

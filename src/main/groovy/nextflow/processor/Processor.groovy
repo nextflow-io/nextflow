@@ -55,7 +55,7 @@ interface Processor {
 
     Processor shell( String value )
 
-    Processor validExitCodes( int... values )
+    Processor validExitCodes( List<Integer> values )
 
 
     /**
@@ -118,7 +118,7 @@ interface Processor {
     /**
      * @return The current environment map
      */
-    Map<String,String >getEnvironment()
+    Map<String,String > getEnvironment()
 
     /**
      * @return The maximum number of thread that can be used by the processor
@@ -128,6 +128,9 @@ interface Processor {
     /**
      * @return Whenever the same working direction have to be used for all tasks execution by this processor
      */
-    boolean getShareWorkDirectory()
+    boolean getShareWorkDir()
 
+    String getShell()
+
+    List<Integer> getValidExitCodes()
 }

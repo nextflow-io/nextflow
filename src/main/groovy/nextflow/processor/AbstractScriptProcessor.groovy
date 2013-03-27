@@ -34,6 +34,7 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.group.PGroup
 import nextflow.Nextflow
 import nextflow.Session
+import nextflow.script.AbstractScript
 
 /**
  *
@@ -48,6 +49,11 @@ abstract class AbstractScriptProcessor implements Processor {
      * The current workflow execution session
      */
     protected final Session session
+
+    /**
+     * The script object which defines this task
+     */
+    protected final AbstractScript ownerScript
 
     /**
      * When {@code true} the output is produced only at the process termination
@@ -84,7 +90,7 @@ abstract class AbstractScriptProcessor implements Processor {
     /**
      * When {@code true} all the tasks launched by the same processor will share the same work directory
      */
-    protected Boolean shareWorkDirectory = Boolean.FALSE
+    protected Boolean shareWorkDir = Boolean.FALSE
 
     /**
      * The closure wrapping the script to be executed
@@ -99,7 +105,7 @@ abstract class AbstractScriptProcessor implements Processor {
     /**
      * The exit code which define a valid result, default {@code 0}
      */
-    protected int[] validExitCodes = [0]
+    protected List<Integer> validExitCodes = [0]
 
     /**
      * When {@code true} the task stdout is redirected to the application console
@@ -120,9 +126,16 @@ abstract class AbstractScriptProcessor implements Processor {
         this.session = session
     }
 
-    AbstractScriptProcessor( Session session, boolean bindOnTermination ) {
+    AbstractScriptProcessor( Session session, AbstractScript script,  boolean bindOnTermination ) {
         this.session = session
+        this.ownerScript = script
         this.bindOnTermination = bindOnTermination
+
+        // by definition when 'bindOnTermination' is true all tasks must share
+        // the same working directory
+        if ( bindOnTermination ) {
+            this.shareWorkDir = true
+        }
     }
 
     @Override
@@ -192,8 +205,8 @@ abstract class AbstractScriptProcessor implements Processor {
     }
 
     @Override
-    AbstractScriptProcessor shareWorkDir(boolean value = true) {
-        this.shareWorkDirectory = value
+    AbstractScriptProcessor shareWorkDir(boolean value) {
+        this.shareWorkDir = value
         return this
     }
 
@@ -204,7 +217,7 @@ abstract class AbstractScriptProcessor implements Processor {
     }
 
     @Override
-    AbstractScriptProcessor validExitCodes( int... values ) {
+    AbstractScriptProcessor validExitCodes( List<Integer> values ) {
         this.validExitCodes = values
         return this
     }
@@ -253,8 +266,12 @@ abstract class AbstractScriptProcessor implements Processor {
     int getThreads() { return threads }
 
     @Override
-    boolean getShareWorkDirectory() { shareWorkDirectory }
+    boolean getShareWorkDir() { shareWorkDir }
 
+    @Override
+    String getShell() { shell }
+
+    List<Integer> getValidExitCodes() { validExitCodes }
 
     /**
      * Launch the 'script' define by the code closure as a local bash script
@@ -279,7 +296,7 @@ abstract class AbstractScriptProcessor implements Processor {
             throw new IllegalArgumentException("Missing 'script' attribute")
         }
 
-        if( shareWorkDirectory && threads > 1 ) {
+        if( shareWorkDir && threads > 1 ) {
             throw new IllegalArgumentException("The 'shareWorkDirectory' attribute cannot be set TRUE when the specified 'thread's are more than 1")
         }
 
@@ -297,7 +314,7 @@ abstract class AbstractScriptProcessor implements Processor {
          */
 
         if( inputs.size() == 0 ) {
-            input('-':true)
+            input('$':true)
         }
         def _inputs = new ArrayList(inputs.values())
 
@@ -309,6 +326,13 @@ abstract class AbstractScriptProcessor implements Processor {
          */
         if ( outputs.size() == 0 ) { output('-') }
         def _outputs = new ArrayList(outputs.values())
+
+        // bind the outputs to the script scope
+        if( ownerScript ) {
+            outputs.each { name, channel ->
+                if( name != '-' ) { ownerScript.setProperty(name, channel) }
+            }
+        }
 
         /*
          * create a mock closure to trigger the operator
@@ -451,7 +475,7 @@ abstract class AbstractScriptProcessor implements Processor {
             }
 
             /**
-             * Invoked if an exception occurs. Unless overriden by subclasses this implementation returns true to terminate the operator.
+             * Invoked if an exception occurs. Unless overridden by subclasses this implementation returns true to terminate the operator.
              * If any of the listeners returns true, the operator will terminate.
              * Exceptions outside of the operator's body or listeners' messageSentOut() handlers will terminate the operator irrespective of the listeners' votes.
              * When using maxForks, the method may be invoked from threads running the forks.
@@ -467,6 +491,8 @@ abstract class AbstractScriptProcessor implements Processor {
         }
 
     }
+
+
 
     /**
      * The processor execution body
@@ -488,12 +514,21 @@ abstract class AbstractScriptProcessor implements Processor {
         }
 
         // -- map the inputs to a map and use to delegate closure values interpolation
-        def map = [:]
+        def map = new DelegateMap(ownerScript)
         code.delegate = map
         code.setResolveStrategy(Closure.DELEGATE_FIRST)
 
+        map['taskIndex'] = task.index
+        map['taskId'] = task.id
+
         inputs?.keySet()?.eachWithIndex { name, index ->
-            map[ name ] = values.get(index)
+            if( name == '-' ) {
+                task.input = values.get(index)
+            }
+            else {
+                map[ name ] = values.get(index)
+            }
+
         }
 
         // -- call the closure and execute the script
@@ -549,5 +584,54 @@ abstract class AbstractScriptProcessor implements Processor {
      */
     protected abstract List<File> collectResultFile( File path, String name )
 
+
+}
+
+
+/**
+ * Map used to delegate variable resolution to script scope
+ */
+@Slf4j
+class DelegateMap implements Map {
+
+    @Delegate
+    private Map<String,Object> local
+
+    private AbstractScript script
+
+    DelegateMap(AbstractScript script) {
+        this.script = script
+        this.local = [:]
+    }
+
+    DelegateMap(Map target) {
+        assert target != null
+        this.script = script
+        this.local = target
+    }
+
+    @Override
+    public Object get(Object property) {
+
+        if( local.containsKey(property) ) {
+            return local.get(property)
+        }
+        else if ( script ){
+            try {
+                return script.getProperty(property?.toString())
+            }
+            catch( MissingPropertyException e ) {
+                log.debug "Unable to get property '${property}' on the script context -- do no interpolate it"
+            }
+        }
+
+        return '$' + property
+
+    }
+
+    @Override
+    public put(String property, Object newValue) {
+        local.put(property, newValue)
+    }
 
 }
