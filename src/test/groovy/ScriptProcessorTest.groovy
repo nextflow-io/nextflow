@@ -74,4 +74,4 @@ session.createProcessor()
 
 
 
-session.awaitTermination()
+session.terminate()

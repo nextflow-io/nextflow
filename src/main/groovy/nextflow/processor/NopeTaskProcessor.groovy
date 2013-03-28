@@ -17,15 +17,30 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import nextflow.Session
-def session = new Session()
+package nextflow.processor
+import groovy.transform.InheritConstructors
+import groovy.util.logging.Slf4j
+/**
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@Slf4j
+@InheritConstructors
+class NopeTaskProcessor extends AbstractTaskProcessor {
 
-session.createProcessor()
-        .echo(true)
-        .script {
-            "echo Hello world!"
-        }
-        .run()
+    @Override
+    protected void runScript( def script, TaskDef task ) {
+        log.debug "Running script: $script"
 
+        task.workDirectory = new File('.').absoluteFile
+        task.status = TaskDef.Status.TERMINATED
+        task.exitCode = 0
+        task.output = script ?. toString()  // return the script itself as output
 
-session.terminate()
+    }
+
+    @Override
+    protected List<File> collectResultFile(File scratchPath, String name) {
+        return [ new File(scratchPath, name) ]
+    }
+}

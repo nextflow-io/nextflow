@@ -31,7 +31,7 @@ import groovy.util.logging.Slf4j
  */
 @Slf4j
 @InheritConstructors
-class LocalScriptProcessor extends AbstractScriptProcessor {
+class LocalTaskProcessor extends AbstractTaskProcessor {
 
     /**
      * Run a system executable script
@@ -81,32 +81,28 @@ class LocalScriptProcessor extends AbstractScriptProcessor {
         //    * The process stdout is captured in two condition:
         //      when the flag 'echo' is set or when it goes in the output channel (outputs['-'])
         //
-        ByteDumper dumper = null
-        def buffer = outputs.containsKey('-') ? new ByteArrayOutputStream() : null
-        if ( echo || buffer ) {
-            def handler = { byte[] data, int len ->
-                if( echo ) System.out.print(new String(data,0,len))
-                if( buffer ) buffer.write(data,0,len)
-            }
-            dumper = new ByteDumper(process.getInputStream(), handler)
-            dumper.setName("dumper-$name")
-            dumper.start()
-        }
+        File fileOut = new File(scratch, '.command.out')
+        BufferedOutputStream streamOut = new BufferedOutputStream( new FileOutputStream(fileOut) )
 
+        def handler = { byte[] data, int len ->
+            streamOut.write(data,0,len)
+            if( echo ) System.out.print(new String(data,0,len))
+        }
+        ByteDumper dumper = new ByteDumper(process.getInputStream(), handler)
+        dumper.setName("dumper-$name")
+        dumper.start()
 
         try {
-
             // -- wait the the process completes
-            //    and collect the result
             task.exitCode = process.waitFor()
             dumper?.await(500)
-
+            streamOut.close()
 
         }
         finally {
             dumper?.terminate()
             task.workDirectory = scratch
-            task.output = buffer ? new String(buffer.toByteArray()): null
+            task.output = fileOut
 
         }
 

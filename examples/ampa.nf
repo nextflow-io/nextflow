@@ -1,6 +1,5 @@
 #!/bin/env nextflow
 
-
 fileName = "${config.env.HOME}/Downloads/ampa/multi.fa"
 fastaFile = new File(fileName)
 

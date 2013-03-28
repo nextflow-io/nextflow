@@ -19,7 +19,7 @@
 
 package nextflow.script
 import nextflow.Session
-import nextflow.processor.Processor
+import nextflow.processor.TaskProcessor
 
 /**
  * Any user defined script will extends this class, it provides the base execution context
@@ -56,9 +56,9 @@ abstract class AbstractScript extends Script {
     def getResult() { result }
 
     // the last created task
-    private Processor taskProcessor
+    private TaskProcessor taskProcessor
 
-    def Processor getTaskProcessor() { taskProcessor }
+    def TaskProcessor getTaskProcessor() { taskProcessor }
 
     /**
      * Enable disable task 'echo' configuration property

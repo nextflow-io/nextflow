@@ -21,6 +21,8 @@ package nextflow.script
 import com.beust.jcommander.JCommander
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Const
 import nextflow.Nextflow
 import nextflow.Session
@@ -41,7 +43,6 @@ class CliRunner {
     static class CliArgumentException extends RuntimeException {
 
     }
-
 
     /**
      * The underlying execution session
@@ -78,6 +79,16 @@ class CliRunner {
      * The script file
      */
     private File scriptFile
+
+    /*
+     * the script raw output
+     */
+    private def output
+
+    /**
+     * The script result
+     */
+    private def result
 
     /**
      * Instantiate the runner object creating a new session
@@ -127,7 +138,15 @@ class CliRunner {
      */
     AbstractScript getScript() { script }
 
+    /**
+     * @return The script working directory
+     */
     File getWorkDirectory() { workDirectory }
+
+    /**
+     * @return The result produced by the script execution
+     */
+    def getResult() { result }
 
     /**
      * Execute a Nextflow script, it does the following:
@@ -171,14 +190,35 @@ class CliRunner {
 
         script = parseScript(scriptText, args)
         try {
-            return run()
+            run()
         }
         finally {
             terminate()
         }
 
+        return result
     }
 
+    def normalizeOutput() {
+        if ( output == null ) {
+            result = null
+        }
+        else if( output instanceof Collection || output.getClass().isArray()) {
+            result = (output as Collection).collect { normalizeOutput(it) }
+        }
+        else {
+            result = normalizeOutput(output)
+        }
+    }
+
+    def normalizeOutput(def value) {
+        if ( value instanceof DataflowReadChannel || value instanceof DataflowWriteChannel ) {
+            return session.isAborted() ? null : Nextflow.read(value)
+        }
+        else {
+            return value
+        }
+    }
 
     protected AbstractScript parseScript( File file, String... args) {
         assert file
@@ -191,12 +231,6 @@ class CliRunner {
 
         params['__$session'] = session
         params['args'] = args
-
-//        // comment
-//        def lines = scriptText.readLines()
-//        if ( lines || lines[0].startsWith('#!') ) {
-//            lines[0] = "//" + lines[0]
-//        }
 
         // define the imports
         def importCustomizer = new ImportCustomizer()
@@ -253,24 +287,14 @@ class CliRunner {
         defineWorkDirectory()
 
         // -- launch the script execution
-        def result = script.run()
-
-        // -- normalize the
-        if ( result == null ) {
-            return null
-        }
-        else if( result instanceof Collection || result.getClass().isArray()) {
-            return result.collect { Nextflow.read(it) }
-        }
-        else {
-            Nextflow.read(result)
-        }
-
+        output = script.run()
 
     }
 
     protected terminate() {
-        session?.awaitTermination()
+        session.await()
+        normalizeOutput()
+        session?.terminate()
     }
 
 
@@ -329,7 +353,7 @@ class CliRunner {
         try {
             // -- configuration file(s)
             def configFiles = validateConfigFiles(options.config)
-            def config = buildConfig(options.exportEnvironment, configFiles)
+            def config = buildConfig(configFiles)
 
             // -- create a new runner instance
             def runner = new CliRunner(config)
@@ -437,7 +461,7 @@ class CliRunner {
     }
 
 
-    def static Map buildConfig( boolean export, List<File> files ) {
+    def static Map buildConfig( List<File> files ) {
 
         def texts = []
         files?.each { File file ->
@@ -449,18 +473,16 @@ class CliRunner {
             }
         }
 
-        buildConfig0( System.getenv(), export, texts )
+        buildConfig0( System.getenv(), texts )
     }
 
 
-    def static Map buildConfig0( Map env, boolean export, List<String> confText )  {
+    def static Map buildConfig0( Map env, List<String> confText )  {
         assert env
 
         ConfigObject result = new ConfigSlurper().parse('env{}')
 
-        if ( export ) {
-            env.sort().each { name, value -> result.env.put(name,value) }
-        }
+        env.sort().each { name, value -> result.env.put(name,value) }
 
         confText?.each { String text ->
 

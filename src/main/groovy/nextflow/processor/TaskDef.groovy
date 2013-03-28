@@ -56,7 +56,20 @@ class TaskDef {
     /**
      * The return std out
      */
-    String output
+    def output
+
+    def getOutput() {
+
+        if( output == null ) return null
+        if( output instanceof File ) {
+            return output.text
+        }
+        else {
+            output.toString()
+        }
+
+    }
+
 
     /**
      * The directory used to run the task
@@ -72,6 +85,12 @@ class TaskDef {
      * Task end time
      */
     long terminateTime
+
+
+    /*
+     * The closure implementing this task
+     */
+    Closure code
 
 
     def void setStatus( Status status ) {

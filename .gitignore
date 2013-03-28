@@ -3,3 +3,4 @@
 .nextflow.log*
 build/**
 out/**
+piper/**

@@ -26,36 +26,38 @@ import nextflow.Session
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface Processor {
+interface TaskProcessor {
 
     /**
      * Define the execution environment of the command to be executed
      *
      * @param environment
      */
-    Processor environment(Map<String,String> environment)
+    TaskProcessor environment(Map<String,String> environment)
 
     /**
      * Defines the inputs dataflow
      *
      * @param inputs
      */
-    Processor input(Map<String,?> inputs)
+    TaskProcessor input(Map<String,?> inputs)
 
     /**
      * Defines the outputs dataflow
      */
-    Processor output(Map<String,DataflowWriteChannel> outputs)
+    TaskProcessor output(Map<String,DataflowWriteChannel> outputs)
 
-    Processor output(String... files)
+    TaskProcessor output(String... files)
 
-    Processor echo( boolean value )
+    TaskProcessor echo( boolean value )
 
-    Processor shareWorkDir( boolean value )
+    TaskProcessor shareWorkDir( boolean value )
 
-    Processor shell( String value )
+    TaskProcessor shell( String value )
 
-    Processor validExitCodes( List<Integer> values )
+    TaskProcessor validExitCodes( List<Integer> values )
+
+    TaskProcessor errorStrategy( ErrorStrategy value )
 
 
     /**
@@ -64,7 +66,7 @@ interface Processor {
      * @param max
      * @return
      */
-    Processor threads( int max );
+    TaskProcessor threads( int max );
 
     /**
      * Define the processor 'name' attribute
@@ -72,11 +74,11 @@ interface Processor {
      * @param name
      * @return
      */
-    Processor name( String name )
+    TaskProcessor name( String name )
 
-    Processor script( Closure closure )
+    TaskProcessor script( Closure closure )
 
-    Processor script( String shell, Closure closure )
+    TaskProcessor script( String shell, Closure closure )
 
     /**
      * The code to be executed
@@ -133,4 +135,6 @@ interface Processor {
     String getShell()
 
     List<Integer> getValidExitCodes()
+
+    ErrorStrategy getErrorStrategy()
 }

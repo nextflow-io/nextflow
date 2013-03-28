@@ -17,15 +17,32 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import nextflow.Session
-def session = new Session()
+package nextflow.script
 
-session.createProcessor()
-        .echo(true)
-        .script {
-            "echo Hello world!"
-        }
-        .run()
+import nextflow.script.CliBinding
+import spock.lang.Specification
+
+/**
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+class CliBindingTest extends Specification {
 
 
-session.terminate()
+    def 'test toVal' () {
+
+        expect:
+        CliBinding.parseValue(str) == value
+
+        where:
+        str         | value
+        'hola'      | 'hola'
+        '1'         | 1
+        "${Long.MAX_VALUE}" | Long.MAX_VALUE
+        'True'      | true
+        'False'     | false
+        "10.2"      | 10.2
+
+    }
+
+}

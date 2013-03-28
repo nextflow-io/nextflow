@@ -1,3 +1,5 @@
+import java.util.concurrent.atomic.AtomicInteger
+
 /*
  * Copyright (c) 2012, the authors.
  *
@@ -17,30 +19,18 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
-import groovy.transform.InheritConstructors
-import groovy.util.logging.Slf4j
 /**
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@InheritConstructors
-class NopeScriptProcessor extends AbstractScriptProcessor {
 
-    @Override
-    protected void runScript( def script, TaskDef task ) {
-        log.debug "Running script: $script"
+def x = new AtomicInteger()
+def y = new AtomicInteger()
 
-        task.workDirectory = new File('.').absoluteFile
-        task.status = TaskDef.Status.TERMINATED
-        task.exitCode = 0
-        task.output = script ?. toString()  // return the script itself as output
+x.incrementAndGet()
+x.incrementAndGet()
 
-    }
+y.incrementAndGet()
 
-    @Override
-    protected List<File> collectResultFile(File scratchPath, String name) {
-        return [ new File(scratchPath, name) ]
-    }
-}
+assert x.intValue() == 2
+assert y.intValue() == 1

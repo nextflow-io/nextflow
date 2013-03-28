@@ -1,4 +1,4 @@
-import nextflow.processor.NopeScriptProcessor
+import nextflow.processor.NopeTaskProcessor
 import nextflow.script.CliRunner
 import spock.lang.Specification
 /*
@@ -127,7 +127,7 @@ class FunctionalTest extends Specification {
                 shell = 'zsh'
                 threads = 10
                 environment = [a:1, b:2,c:3]
-                validExitCodes = [11,22,33]
+                validExitCodes = [0,11,22,33]
             }
             '''
         def cfg = new ConfigSlurper().parse(configStr)
@@ -145,13 +145,13 @@ class FunctionalTest extends Specification {
         def task = runner.execute( script )
 
         then:
-        task instanceof NopeScriptProcessor
+        task instanceof NopeTaskProcessor
         task.getName() == 'taskHello'
         task.getEcho() == true
         task.getShell() == 'zsh'
         task.getThreads() == 10
         task.getEnvironment().entrySet() == [a:1,b:2,c:3].entrySet()
-        task.getValidExitCodes() == [11,22,33]
+        task.getValidExitCodes() == [0,11,22,33]
 
 
         cleanup:

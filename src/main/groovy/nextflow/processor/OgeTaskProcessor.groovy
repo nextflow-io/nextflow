@@ -17,15 +17,30 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import nextflow.Session
-def session = new Session()
+package nextflow.processor
+import groovy.transform.InheritConstructors
+import groovy.util.logging.Slf4j
 
-session.createProcessor()
-        .echo(true)
-        .script {
-            "echo Hello world!"
-        }
-        .run()
+/**
+ * Execute a task script by running it on the SGE/OGE cluster
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@Slf4j
+@InheritConstructors
+class OgeTaskProcessor extends AbstractTaskProcessor {
 
 
-session.terminate()
+    @Override
+    protected void runScript(script, TaskDef task) {
+        //TODO ++
+        throw new IllegalAccessException('TODO ')
+
+    }
+
+    @Override
+    protected List<File> collectResultFile(File path, String name) {
+        //TODO ++
+        return null
+    }
+}

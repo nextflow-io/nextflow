@@ -19,9 +19,9 @@
 
 package nextflow
 
-import nextflow.processor.LocalScriptProcessor
-import nextflow.processor.NopeScriptProcessor
-import nextflow.processor.OgeScriptProcessor
+import nextflow.processor.LocalTaskProcessor
+import nextflow.processor.NopeTaskProcessor
+import nextflow.processor.OgeTaskProcessor
 import spock.lang.Specification
 /**
  *
@@ -34,12 +34,12 @@ class SessionTest extends Specification {
 
         setup:
         def session = new Session()
-        session.processorClass = NopeScriptProcessor
+        session.processorClass = NopeTaskProcessor
 
         when:
         def processor1 = session.createProcessor()
-        def processor2 = session.createProcessor(false)
-        def processor3 = session.createProcessor(true)
+        def processor2 = session.createProcessor(null,false)
+        def processor3 = session.createProcessor(null,true)
 
         then:
         !processor1.getBindOnTermination()
@@ -76,17 +76,17 @@ class SessionTest extends Specification {
     def 'test loadProcessorClass' () {
 
         expect:
-        new Session().loadProcessorClass(null) == LocalScriptProcessor
-        new Session().loadProcessorClass('local') == LocalScriptProcessor
-        new Session().loadProcessorClass('sge') == OgeScriptProcessor
-        new Session().loadProcessorClass( OgeScriptProcessor.name ) == OgeScriptProcessor
+        new Session().loadProcessorClass(null) == LocalTaskProcessor
+        new Session().loadProcessorClass('local') == LocalTaskProcessor
+        new Session().loadProcessorClass('sge') == OgeTaskProcessor
+        new Session().loadProcessorClass( OgeTaskProcessor.name ) == OgeTaskProcessor
 
     }
 
     def 'test new Session with config' () {
         expect:
-        new Session().processorClass == LocalScriptProcessor
-        new Session([task: [processor:'oge']]).processorClass == OgeScriptProcessor
+        new Session().processorClass == LocalTaskProcessor
+        new Session([task: [processor:'oge']]).processorClass == OgeTaskProcessor
     }
 
 //
@@ -94,7 +94,7 @@ class SessionTest extends Specification {
 //
 //        given:
 //        def session = new Session()
-//        def processor = new LocalScriptProcessor(session).name('Hola')
+//        def processor = new LocalTaskProcessor(session).name('Hola')
 //
 //        TaskDef task1 = new TaskDef(id: 1, status: TaskDef.Status.RUNNING)
 //        TaskDef task2 = new TaskDef(id: 2, status: TaskDef.Status.TERMINATED, exitCode: 1)

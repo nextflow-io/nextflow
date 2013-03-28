@@ -76,4 +76,4 @@ def result = session.createProcessor()
 
 println Nextflow.read(result)
 
-session.awaitTermination()
+session.terminate()

@@ -18,29 +18,14 @@
  */
 
 package nextflow.processor
-import groovy.transform.InheritConstructors
-import groovy.util.logging.Slf4j
 
 /**
- * Execute a task script by running it on the SGE/OGE cluster
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@InheritConstructors
-class OgeScriptProcessor extends AbstractScriptProcessor {
+enum ErrorStrategy {
 
+    IGNORE,     // on error, ignore it an go-on
+    TERMINATE   // on error, terminate gracefully
 
-    @Override
-    protected void runScript(script, TaskDef task) {
-        //TODO ++
-        throw new IllegalAccessException('TODO ')
-
-    }
-
-    @Override
-    protected List<File> collectResultFile(File path, String name) {
-        //TODO ++
-        return null
-    }
 }

@@ -28,6 +28,6 @@ session.env [ 'HELLO' ]  = '1'
 
 session.createProcessor().echo(true).script{ "env | sort" }.run()
 
-session.awaitTermination()
+session.terminate()
 
 

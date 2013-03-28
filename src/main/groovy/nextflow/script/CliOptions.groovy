@@ -24,9 +24,6 @@ class CliOptions {
     @Parameter(names=['-c','-config'], description = 'Use the specified configuration file(s)')
     List<String> config
 
-    @Parameter(names=['-V'], description = 'Specifies that all variables in the current sys environment to be exported to the task execution context')
-    boolean exportEnvironment
-
     /**
      * Print out the version number and exit
      */

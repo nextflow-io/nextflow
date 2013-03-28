@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2012, the authors.
  *
@@ -17,15 +18,53 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import nextflow.Session
-def session = new Session()
-
-session.createProcessor()
-        .echo(true)
-        .script {
-            "echo Hello world!"
-        }
-        .run()
+/**
+ *
+ *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
 
 
-session.terminate()
+def x=1;
+def y=2
+def z=3
+
+def out1 = 1
+
+def task( Closure<String> closure ) {
+
+
+    closure.delegate = new MyDelegate()
+    def result = closure.call()
+
+    println result
+}
+
+class MyDelegate implements GroovyObject {
+
+    Object invokeMethod(String name, Object args) {
+        println "method: $name ($args)"
+        return 'x'
+    }
+
+    Object getProperty(String name) {
+        return 'y'
+    }
+
+}
+
+
+task {
+
+    stdin(channelIn)
+    stdout(channelOut)
+
+    """
+    do this ${input(channelIn)}
+    do that >> ${outfile(file:'dssd' )}
+               ${out(channel3:'resutl_*', store:file)}
+    do that ${shell(variable)}
+    """
+
+}
+
+

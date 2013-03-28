@@ -44,9 +44,11 @@ class Nextflow {
         assert channel
 
         if ( channel instanceof DataflowBroadcast ) {
+            log.debug "Read DataflowBroadcast channel"
             channel.createReadChannel().getVal()
         }
         else if ( channel instanceof DataflowReadChannel ) {
+            log.debug "Read DataflowReadChannel channel"
             channel.getVal()
         }
         else {

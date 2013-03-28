@@ -17,7 +17,6 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.processor
-
 import java.util.concurrent.locks.ReentrantLock
 
 import groovy.util.logging.Slf4j
@@ -34,14 +33,16 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.group.PGroup
 import nextflow.Nextflow
 import nextflow.Session
+import nextflow.exception.InvalidExitException
+import nextflow.exception.MissingFileException
+import nextflow.exception.TaskValidationException
 import nextflow.script.AbstractScript
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-abstract class AbstractScriptProcessor implements Processor {
+abstract class AbstractTaskProcessor implements TaskProcessor {
 
     protected int index
 
@@ -107,26 +108,29 @@ abstract class AbstractScriptProcessor implements Processor {
      */
     protected List<Integer> validExitCodes = [0]
 
+
+    protected ErrorStrategy errorStrategy = ErrorStrategy.TERMINATE
+
     /**
      * When {@code true} the task stdout is redirected to the application console
      */
     protected boolean echo
 
-    // -- private
+    // ---== private ==---
 
     protected TaskDef lastRunTask
 
     private allScalarValues
 
-    boolean getAllScalarValues() { allScalarValues }
-
     private creationLock = new ReentrantLock(true)
 
-    AbstractScriptProcessor( Session session ) {
+    private DataflowProcessor processor
+
+    AbstractTaskProcessor( Session session ) {
         this.session = session
     }
 
-    AbstractScriptProcessor( Session session, AbstractScript script,  boolean bindOnTermination ) {
+    AbstractTaskProcessor( Session session, AbstractScript script,  boolean bindOnTermination ) {
         this.session = session
         this.ownerScript = script
         this.bindOnTermination = bindOnTermination
@@ -139,14 +143,14 @@ abstract class AbstractScriptProcessor implements Processor {
     }
 
     @Override
-    AbstractScriptProcessor environment(Map<String, String> environment) {
+    AbstractTaskProcessor environment(Map<String, String> environment) {
         assert environment
         this.environment = new HashMap<>(environment)
         return this
     }
 
     @Override
-    AbstractScriptProcessor input(Map<String,?> inputs) {
+    AbstractTaskProcessor input(Map<String,?> inputs) {
         // wrap by a linked map o guarantee the insertion order
 
         inputs?.each { name, value ->
@@ -175,16 +179,16 @@ abstract class AbstractScriptProcessor implements Processor {
     }
 
     @Override
-    AbstractScriptProcessor output(String... files) {
+    AbstractTaskProcessor output(String... files) {
         if ( files ) {
-            files.each { name -> outputs.put( name, Nextflow.list() ) }
+            files.each { name -> outputs.put( name, Nextflow.queue() ) }
         }
 
         return this
     }
 
     @Override
-    AbstractScriptProcessor output(Map<String,DataflowWriteChannel> outputs) {
+    AbstractTaskProcessor output(Map<String,DataflowWriteChannel> outputs) {
         if ( outputs ) {
             this.outputs.putAll(outputs)
         }
@@ -193,49 +197,55 @@ abstract class AbstractScriptProcessor implements Processor {
     }
 
     @Override
-    AbstractScriptProcessor name( String name ) {
+    AbstractTaskProcessor name( String name ) {
         this.name = name
         return this
     }
 
     @Override
-    AbstractScriptProcessor echo( boolean value ) {
+    AbstractTaskProcessor echo( boolean value ) {
         this.echo = value
         return this
     }
 
     @Override
-    AbstractScriptProcessor shareWorkDir(boolean value) {
+    AbstractTaskProcessor shareWorkDir(boolean value) {
         this.shareWorkDir = value
         return this
     }
 
     @Override
-    AbstractScriptProcessor shell( String value ) {
+    AbstractTaskProcessor shell( String value ) {
         this.shell = value
         return this
     }
 
     @Override
-    AbstractScriptProcessor validExitCodes( List<Integer> values ) {
+    AbstractTaskProcessor validExitCodes( List<Integer> values ) {
         this.validExitCodes = values
         return this
     }
 
     @Override
-    AbstractScriptProcessor threads(int max) {
+    AbstractTaskProcessor errorStrategy( ErrorStrategy value ) {
+        this.errorStrategy = value
+        return this
+    }
+
+    @Override
+    AbstractTaskProcessor threads(int max) {
         this.threads = max
         return this
     }
 
     @Override
-    AbstractScriptProcessor script(Closure script) {
+    AbstractTaskProcessor script(Closure script) {
         this.code = script
         return this
     }
 
     @Override
-    AbstractScriptProcessor script(String shell, Closure script) {
+    AbstractTaskProcessor script(String shell, Closure script) {
         this.shell = shell
         this.code = script
         return this
@@ -271,7 +281,11 @@ abstract class AbstractScriptProcessor implements Processor {
     @Override
     String getShell() { shell }
 
+    @Override
     List<Integer> getValidExitCodes() { validExitCodes }
+
+    @Override
+    ErrorStrategy getErrorStrategy() { errorStrategy }
 
     /**
      * Launch the 'script' define by the code closure as a local bash script
@@ -343,7 +357,9 @@ abstract class AbstractScriptProcessor implements Processor {
          * create the output
          */
         def params = [inputs: _inputs, outputs: _outputs, maxForks: threads, listeners: [createListener()] ]
-        session.allProcessors << new DataflowOperator(group, params, mock).start()
+        session.allProcessors << (processor = new DataflowOperator(group, params, mock).start())
+        // increment the session sync
+        session.sync.countUp()
 
         /*
          * When there is a single output channel, return let returns that item
@@ -359,13 +375,171 @@ abstract class AbstractScriptProcessor implements Processor {
         def str
         // when no input is provided just an empty closure
 
-        // create an empty closure having as many arguments are the inputs
+        // the closure by the GPars dataflow constraints MUST have has many parameters
+        // are the input channels, so let create it on-fly
         def params = []
         inputs.size().times { params << "__\$$it" }
-        str = "{ ${params.join(',')} -> void }"
+        str = "{ ${params.join(',')} -> runTask(__\$0) }"
+        log.debug "Mock closure: ${str}"
 
-        (Closure)new GroovyShell().evaluate (str)
+        def binding = new Binding( ['runTask': this.&runTask] )
+        (Closure)new GroovyShell(binding).evaluate (str)
     }
+
+
+    /**
+     * Create the {@code TaskDef} data structure and initialize the task execution context
+     * with the received input values
+     *
+     * @param values
+     * @return
+     */
+    final protected TaskDef initTaskRun(List values) {
+
+        final task = null
+        creationLock.lock()
+        try {
+            def num = session.tasks.size()
+            task = new TaskDef(id: num, status: TaskDef.Status.PENDING, index: ++index )
+            session.tasks.put( this, task )
+        }
+        finally {
+            creationLock.unlock()
+        }
+
+        // -- map the inputs to a map and use to delegate closure values interpolation
+        def map = new DelegateMap(ownerScript)
+        map['taskIndex'] = task.index
+        map['taskId'] = task.id
+
+        inputs?.keySet()?.eachWithIndex { name, index ->
+
+            // when the name define for this 'input' is '-'
+            // copy the value to the task 'input' attribute
+            // it will be used to pipe it to the process stdin
+            if( name == '-' ) {
+                task.input = values.get(index)
+            }
+
+            // otherwise put in on the map used to resolve the values evaluating the script
+            else {
+                map[ name ] = values.get(index)
+            }
+        }
+
+        /*
+         * initialize the task code to be executed
+         */
+        task.code = this.code.clone() as Closure
+        task.code.delegate = map
+        task.code.setResolveStrategy(Closure.DELEGATE_FIRST)
+
+        return task
+
+    }
+
+    ThreadLocal<TaskDef> currentTask = new ThreadLocal<>()
+
+    /**
+     * The processor execution body
+     *
+     * @param processor
+     * @param values
+     */
+    final protected runTask(TaskDef task) {
+        log.debug "Running task: '$name' -- ${task.dump()} "
+
+        // -- call the closure and execute the script
+        try {
+            currentTask.set(task)
+            runScript( task.code.call(), task )
+
+            boolean success = (task.exitCode in validExitCodes)
+            if ( !success ) {
+                throw new InvalidExitException("Task '$name' terminated with an invalid exit-code: ${task.exitCode}")
+            }
+
+            // -- bind output (files)
+            if ( success && !bindOnTermination ) {
+                bindOutputs(processor, task)
+            }
+        }
+        finally {
+            lastRunTask = task
+            task.status = TaskDef.Status.TERMINATED
+        }
+
+    }
+
+    final protected handleException( Throwable e, TaskDef task ) {
+
+        if( e instanceof TaskValidationException ) {
+            if ( errorStrategy == ErrorStrategy.IGNORE ) {
+                log.debug "${e.getMessage()} -- error is ignored"
+                return
+            }
+
+            log.error("${e.getMessage()} -- Check the log file '.nextflow.log' for more details", e)
+
+            // if the echo was disabled show, the program out when there's an error
+            if ( !echo && task ) {
+                println task.output
+            }
+
+        }
+        else {
+            log.error("Failed to execute task: '${name}' -- Check the log file '.nextflow.log' for more details", e)
+        }
+
+
+        session.abort()
+
+    }
+
+    final protected void finalizeTask( ) {
+
+        currentTask.remove()
+
+        // -- when all input values are 'scalar' (not queue or broadcast stream)
+        //    stops after the first run
+        if( allScalarValues ) {
+            log.debug "Processor: '$name' terminates since all values are scalar"
+            processor.terminate()
+        }
+
+    }
+
+    /**
+     * Bind the expected output files to the corresponding output channels
+     * @param processor
+     */
+    protected synchronized void bindOutputs( DataflowProcessor processor, TaskDef task ) {
+
+        // -- collect the produced output
+        outputs.keySet().eachWithIndex { fileName, index ->
+
+            if ( fileName == '-' ) {
+                processor.bindOutput( index, task.output )
+            }
+
+            else {
+                def files = collectResultFile( task.workDirectory, fileName )
+                if ( !files )  {
+                    throw new MissingFileException("Missing output file(s): '$fileName' expected by task: '${this.name}'")
+                }
+
+                files .each { File file ->
+                    if( file.exists() ) {
+                        processor.bindOutput(index, file)
+                    }
+                    else {
+                        throw new MissingFileException("Missing output file(s): '$fileName' expected by task: '${this.name}'")
+                    }
+                }
+            }
+        }
+    }
+
 
 
     /**
@@ -384,35 +558,56 @@ abstract class AbstractScriptProcessor implements Processor {
              */
             @Override
             List<Object> beforeRun(DataflowProcessor processor, List<Object> messages) {
-                log.debug "Processor '$name' beforeRun $messages"
+                if( log.isDebugEnabled() ) {
+                    log.debug "Task: '$name' before run"
+                }
+                else if ( log.isTraceEnabled() ) {
+                    log.trace "Task: '$name' before run; messages: $messages"
+                }
 
-                try {
-                    execute( processor, messages )
-                }
-                catch( Throwable fail ) {
-                    processor.reportError(fail)
-                }
+                // - prepare and initialize the data structure before execute the task
+                // - set the current task parameter on a Thread local variable
+                final TASK = initTaskRun(messages)
+
+                // HERE COMES THE HACK !
+                // the result 'messages' is used to pass the task instance in the 'mock' closure
+                // since there MUST be at least one input parameters it is sure to have at least one element.
+                // This is used to pass the TASK instanced as argument, others are ignores
+                // See 'createMockClosure'
+                messages = new Object[ messages.size() ]
+                messages[0] = TASK
 
                 return messages
+            }
+
+
+            /**
+             * Invoked if an exception occurs. Unless overridden by subclasses this implementation returns true to terminate the operator.
+             * If any of the listeners returns true, the operator will terminate.
+             * Exceptions outside of the operator's body or listeners' messageSentOut() handlers will terminate the operator irrespective of the listeners' votes.
+             * When using maxForks, the method may be invoked from threads running the forks.
+             * @param processor
+             * @param error
+             * @return
+             */
+            public boolean onException(final DataflowProcessor processor, final Throwable error) {
+                log.debug "Task: '$name' raised and exception"
+                handleException( error, AbstractTaskProcessor.this.currentTask.get() )
+                return true
             }
 
             /**
              * Invoked when the operator completes a single run.
              *
              * @param processor
-             * @param messages
+             * @param MOCK_MESSAGES
              */
             @Override
-            void afterRun(DataflowProcessor processor, List<Object> messages) {
-                log.debug "Processor '$name' afterRun $messages"
-
-                // when all input values are 'scalar' (not queue or broadcast stream)
-                // stops after the first run
-                if( AbstractScriptProcessor.this.allScalarValues ) {
-                    log.debug "Processor '$name' terminates since all values are scalar"
-                    processor.terminate()
-                }
+            void afterRun(DataflowProcessor processor, List<Object> MOCK_MESSAGES) {
+                log.debug "Task: '$name' after run"
+                finalizeTask()
             }
+
 
             /**
              * Invoked when a control message (instances of ControlMessage) becomes available in an input channel.
@@ -425,9 +620,14 @@ abstract class AbstractScriptProcessor implements Processor {
              */
             @Override
             public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-                log.debug "Processor '$name' got control message: $message"
+                if( log.isDebugEnabled() ) {
+                    log.debug "Task: '$name' control message arrived"
+                }
+                else if ( log.isTraceEnabled() ) {
+                    log.trace "Task: '$name' control message arrived; channel index: $index; value: $message"
+                }
 
-                if ( message == PoisonPill.instance && AbstractScriptProcessor.this.bindOnTermination && AbstractScriptProcessor.this.lastRunTask ) {
+                if ( message == PoisonPill.instance && AbstractTaskProcessor.this.bindOnTermination && AbstractTaskProcessor.this.lastRunTask ) {
                     log.debug "Processor '$name' binding on termination"
                     bindOutputs(processor, lastRunTask)
                     lastRunTask = null
@@ -447,7 +647,13 @@ abstract class AbstractScriptProcessor implements Processor {
              */
             @Override
             public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-                log.debug "Processor '$name' receiving message:  $message"
+                if( log.isDebugEnabled() ) {
+                    log.debug "Task: '$name' receiving message"
+                }
+                else if ( log.isTraceEnabled() ) {
+                    log.trace "Task: '$name' receiving message; channel index: $index; value: $message"
+                }
+
                 return message;
             }
 
@@ -456,7 +662,7 @@ abstract class AbstractScriptProcessor implements Processor {
              */
             @Override
             public void afterStart(final DataflowProcessor processor) {
-                log.debug "Processor '$name' started"
+                log.debug "Task: '$name' after start"
             }
 
             /**
@@ -466,103 +672,11 @@ abstract class AbstractScriptProcessor implements Processor {
              */
             @Override
             public void afterStop(final DataflowProcessor processor) {
-                log.debug "Processor '$name' stopped"
-
-                // -- NOTE: free all outputs to avoid to prevent out of memory
-                synchronized (session.tasks) {
-                    session.tasks.get(AbstractScriptProcessor.this)?.each { TaskDef task -> task.output = null }
-                }
+                log.debug "Task: '$name' after stop"
+                // increment the session sync
+                session.sync.countDown()
             }
 
-            /**
-             * Invoked if an exception occurs. Unless overridden by subclasses this implementation returns true to terminate the operator.
-             * If any of the listeners returns true, the operator will terminate.
-             * Exceptions outside of the operator's body or listeners' messageSentOut() handlers will terminate the operator irrespective of the listeners' votes.
-             * When using maxForks, the method may be invoked from threads running the forks.
-             * @param processor
-             * @param e
-             * @return
-             */
-            public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                log.error "Processor '$name' reported an exception", e
-                return true;
-            }
-
-        }
-
-    }
-
-
-
-    /**
-     * The processor execution body
-     *
-     * @param processor
-     * @param values
-     */
-    final protected execute(DataflowProcessor processor, List<Object> values) {
-
-        def task = null
-        creationLock.lock()
-        try {
-            def num = session.tasks.size()
-            task = new TaskDef(id: num, status: TaskDef.Status.PENDING, index: ++index )
-            session.tasks.put( this, task )
-        }
-        finally {
-            creationLock.unlock()
-        }
-
-        // -- map the inputs to a map and use to delegate closure values interpolation
-        def map = new DelegateMap(ownerScript)
-        code.delegate = map
-        code.setResolveStrategy(Closure.DELEGATE_FIRST)
-
-        map['taskIndex'] = task.index
-        map['taskId'] = task.id
-
-        inputs?.keySet()?.eachWithIndex { name, index ->
-            if( name == '-' ) {
-                task.input = values.get(index)
-            }
-            else {
-                map[ name ] = values.get(index)
-            }
-
-        }
-
-        // -- call the closure and execute the script
-        try {
-            runScript( code.call(), task )
-        }
-        finally {
-            lastRunTask = task
-            task.status = TaskDef.Status.TERMINATED
-        }
-
-        // -- bind output (files)
-        if ( !bindOnTermination ) {
-            bindOutputs(processor, task)
-        }
-    }
-
-    /**
-     * Bind the expected output files to the corresponding output channels
-     * @param processor
-     */
-    protected synchronized void bindOutputs( DataflowProcessor processor, TaskDef task ) {
-
-        // -- collect the produced output
-        outputs.keySet().eachWithIndex { name, index ->
-
-            if ( name == '-' ) {
-                processor.bindOutput( index, task.output )
-            }
-            else {
-                collectResultFile( task.workDirectory, name ).each { File file ->
-                    processor.bindOutput(index, file)
-                }
-            }
         }
     }
 
@@ -621,10 +735,12 @@ class DelegateMap implements Map {
                 return script.getProperty(property?.toString())
             }
             catch( MissingPropertyException e ) {
-                log.debug "Unable to get property '${property}' on the script context -- do no interpolate it"
+                log.debug "Unable to find a value for: '\$${property}' on script context"
             }
         }
 
+        // return the variable name prefixed with the '$' char
+        // so give a chance to the bash interpreted to evaluate it
         return '$' + property
 
     }

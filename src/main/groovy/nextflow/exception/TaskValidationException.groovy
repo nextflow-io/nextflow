@@ -17,32 +17,29 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package script
+package nextflow.exception
 
-import nextflow.script.CliBinding
-import spock.lang.Specification
+import groovy.transform.InheritConstructors
 
 /**
+ * Reports a generic error during the 'Task' validation step
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CliBindingTest extends Specification {
+@InheritConstructors
+class TaskValidationException extends Exception {
+}
 
+/**
+ * An expected result file is missing
+ */
+@InheritConstructors
+class MissingFileException extends TaskValidationException {
+}
 
-    def 'test toVal' () {
-
-        expect:
-        CliBinding.parseValue(str) == value
-
-        where:
-        str         | value
-        'hola'      | 'hola'
-        '1'         | 1
-        "${Long.MAX_VALUE}" | Long.MAX_VALUE
-        'True'      | true
-        'False'     | false
-        "10.2"      | 10.2
-
-    }
-
+/**
+ * The task returned an unexpected error code
+ */
+@InheritConstructors
+class InvalidExitException extends TaskValidationException {
 }
