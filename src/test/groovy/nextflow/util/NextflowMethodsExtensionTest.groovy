@@ -17,41 +17,42 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package util
+package nextflow.util
 
+import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.Nextflow
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ChunkMethodsTest extends Specification {
+class NextflowMethodsExtensionTest extends Specification {
 
     def 'test chunk string by line' () {
 
         when:
-        def out = "Hello".chunkLines()
+        def out = []
+        "Hello".chunkLines { out << it }
 
         then:
-        Nextflow.read(out)  == 'Hello'
+        out  == ['Hello']
 
 
         when:
-        out = "Hello\nHola\nHalo".chunkLines()
+        out = []
+        "Hello\nHola\nHalo".chunkLines { out << it }
 
         then:
-        Nextflow.read(out) == 'Hello'
-        Nextflow.read(out) == 'Hola'
-        Nextflow.read(out) == 'Halo'
+        out == ['Hello', 'Hola', 'Halo']
 
 
         when:
-        out = "11\n22\n33\n44\n55".chunkLines(3)
+        out = []
+        "11\n22\n33\n44\n55".chunkLines(3) { out << it }
 
         then:
-        Nextflow.read(out) == '11\n22\n33'
-        Nextflow.read(out) == '44\n55'
+        out == [ '11\n22\n33', '44\n55' ]
 
     }
 
@@ -69,7 +70,8 @@ class ChunkMethodsTest extends Specification {
         '''.stripIndent()
 
         when:
-        def channel = file.chunkLines()
+        def channel = new DataflowQueue()
+        file.chunkLines { channel << it }
 
         then:
         Nextflow.read(channel) == 'line1'
@@ -79,7 +81,8 @@ class ChunkMethodsTest extends Specification {
         Nextflow.read(channel) == 'line5'
 
         when:
-        channel = file.chunkLines(2)
+        channel = new DataflowQueue()
+        file.chunkLines(2) { channel << it }
 
         then:
         Nextflow.read(channel) == 'line1\nline2'
@@ -102,7 +105,8 @@ class ChunkMethodsTest extends Specification {
                 IENY
                 """.stripIndent()
 
-        def result = fasta.chunkFasta()
+        def result = new DataflowQueue()
+        fasta.chunkFasta { result << it }
 
         then:
         Nextflow.read(result) == ">prot1\nLCLYTHIGRNIYYGS1\nEWIWGGFSVDKATLN\n"
@@ -134,13 +138,77 @@ class ChunkMethodsTest extends Specification {
 
 
         when:
-        def result = fasta.chunkFasta(2)
+        def result = new DataflowQueue()
+        fasta.chunkFasta(2) { result << it }
 
         then:
         Nextflow.read(result) == ">prot1\nAA\n>prot2\nBB\nCC\n"
         Nextflow.read(result) == ">prot3\nDD\n>prot4\nEE\nFF\nGG\n"
         Nextflow.read(result) == ">prot5\nLL\nNN\n"
 
+    }
+
+
+    def data1 = new DataflowQueue<>()
+    def data2 = new DataflowQueue()
+
+    def 'test closure interceptor' () {
+
+        setup:
+
+        def closure = {
+
+            data1 << 1
+            data2
+
+        }
+
+        when:
+        def interceptor = new NextflowMethodsExtension.WritableChannelInterceptor(closure.owner)
+        closure.@owner = interceptor
+        closure.call()
+
+        then:
+        interceptor.getWrittenChannels() *.unwrap() == [data1]
+
+    }
+
+
+    def channel1 = new DataflowQueue<>()
+    def channel2 = new DataflowQueue()
+
+    def 'test Each' () {
+
+        setup:
+        def queue = new DataflowQueue()
+
+        def closure = { it ->
+            channel1 << it
+            channel2 << it * it
+
+        }
+
+        when:
+        NextflowMethodsExtension.each(queue, closure);
+        queue << 1 << 2 << PoisonPill
+
+        then:
+        channel1.getVal() == 1
+        channel1.getVal() == 2
+        channel2.getVal() == 1
+        channel2.getVal() == 4
+
+    }
+
+    def 'test cloure ' () {
+
+        when:
+        def closure = {}
+        println "delegate: ${closure.delegate}"
+        println "owner: ${closure.owner}"
+
+
+        then: true
     }
 
 }

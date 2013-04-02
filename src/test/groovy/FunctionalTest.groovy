@@ -61,11 +61,11 @@ class FunctionalTest extends Specification {
         setup:
         def script = """
 
-            X = 1
-            Y = 2
-            def Z = 3
+            params.X = 1
+            params.Y = 2
+            params.Z = 3
 
-            [ X, Y, Z, W ]
+            [ params.X, params.Y, params.Z, params.W ]
             """
 
         /*
@@ -82,7 +82,7 @@ class FunctionalTest extends Specification {
         then:
         result[0] == 10
         result[1] == 2
-        result[2] == 3
+        result[2] == 30
         result[3] == 'long string'
 
         cleanup:

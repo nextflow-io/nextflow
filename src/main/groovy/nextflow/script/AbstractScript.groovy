@@ -18,6 +18,8 @@
  */
 
 package nextflow.script
+
+import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.processor.TaskProcessor
 
@@ -26,6 +28,7 @@ import nextflow.processor.TaskProcessor
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 abstract class AbstractScript extends Script {
 
 
@@ -66,6 +69,10 @@ abstract class AbstractScript extends Script {
      */
     def void echo(boolean value = true) {
         config.task.echo = value
+    }
+
+    def void exit(int errCode=0) {
+        System.exit(errCode)
     }
 
     /**
@@ -118,13 +125,6 @@ abstract class AbstractScript extends Script {
 
     }
 
-//
-//    def printBinding() {
-//        getBinding().variables.each{ name, value ->
-//            println "$name = $value"
-//        }
-//    }
-//
 
 
 }

@@ -18,31 +18,25 @@
  */
 
 
-import groovyx.gpars.dataflow.Dataflow
+import static groovyx.gpars.dataflow.Dataflow.operator
+import static groovyx.gpars.dataflow.Dataflow.task
+
 import groovyx.gpars.dataflow.DataflowQueue
-import groovyx.gpars.dataflow.operator.DataflowOperator
-
-
 /**
  * Shows how to build operators using the ProcessingNode class
  */
 
-final DataflowQueue aValues = new DataflowQueue()
-final DataflowQueue bValues = new DataflowQueue()
-final DataflowQueue results = new DataflowQueue()
+aValues = new DataflowQueue()
+bValues = new DataflowQueue()
+results = new DataflowQueue()
 
-
-def callback = { println 'ciao' }
-
-def str = '{ x, y -> callback(); bindOutput x + y }'
-def closure = new GroovyShell(new Binding(callback:callback)).evaluate(str)
-
-def params = [inputs: [aValues,bValues], outputs: [results], maxForks: 1]
-new DataflowOperator(Dataflow.DATA_FLOW_GROUP, params, closure).start()
+operator( inputs:[aValues,bValues], outputs:[results] ) { a, b ->
+    bindOutput a + b
+}
 
 
 //Now the operator is running and processing the data
-groovyx.gpars.dataflow.Dataflow.task {
+task {
 
     int count=0
     while(true) {
@@ -52,7 +46,7 @@ groovyx.gpars.dataflow.Dataflow.task {
 
 }
 
-groovyx.gpars.dataflow.Dataflow.task {
+task {
 
     int count=0
     while(true) {

@@ -41,13 +41,15 @@ def task( Closure<String> closure ) {
 
 class MyDelegate implements GroovyObject {
 
+    def method
+
     Object invokeMethod(String name, Object args) {
-        println "method: $name ($args)"
+        println "method: $name ($args) - ${args.getClass().isArray()}"
         return 'x'
     }
 
     Object getProperty(String name) {
-        return 'y'
+        return ">>$name<<"
     }
 
 }
@@ -58,13 +60,30 @@ task {
     stdin(channelIn)
     stdout(channelOut)
 
+    output( blastResult: 'file_*' )
+    output( channelOut: 'file.log')
+
+    def q = 99
+
     """
-    do this ${input(channelIn)}
-    do that >> ${outfile(file:'dssd' )}
-               ${out(channel3:'resutl_*', store:file)}
-    do that ${shell(variable)}
+    do this ${input 'channel99'} - ${x}
+    do that > ${output(channelOut)}
+     $id
+    do that >> ${output channel2, as: value}
+
+    do that ${shell variable}
+
+
+    exit $q
     """
 
 }
 
 
+
+ task {
+
+     input genomes to x
+     output 'files*' to channel
+
+ }

@@ -1,9 +1,10 @@
 #!/bin/env nextflow
 
-fileName = "${config.env.HOME}/Downloads/ampa/multi.fa"
+fileName = "${HOME}/Downloads/ampa/multi.fa"
 fastaFile = new File(fileName)
 
-seq = fastaFile.chunkFasta()
+seq = queue()
+fastaFile.chunkFasta { seq << it }
 
 
 task ('ampa') {
@@ -28,4 +29,5 @@ merge {
     cat $result
     """
 }
+
 

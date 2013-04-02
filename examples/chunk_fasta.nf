@@ -1,6 +1,10 @@
 #!/bin/env nextflow
 
-sequences = stdin.chunkFasta()
+sequences = queue()
+
+stdin.chunkFasta { str ->
+    sequences << it
+}
 
 task {
     echo true

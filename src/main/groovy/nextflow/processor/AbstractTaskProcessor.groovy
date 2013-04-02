@@ -471,7 +471,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
     }
 
-    final protected handleException( Throwable e, TaskDef task ) {
+    final protected handleException( Throwable e, TaskDef task = null ) {
 
         if( e instanceof TaskValidationException ) {
             if ( errorStrategy == ErrorStrategy.IGNORE ) {
@@ -629,7 +629,12 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
                 if ( message == PoisonPill.instance && AbstractTaskProcessor.this.bindOnTermination && AbstractTaskProcessor.this.lastRunTask ) {
                     log.debug "Processor '$name' binding on termination"
-                    bindOutputs(processor, lastRunTask)
+                    try {
+                        bindOutputs(processor, lastRunTask)
+                    }
+                    catch( Throwable error ) {
+                        handleException(error)
+                    }
                     lastRunTask = null
                 }
 
@@ -699,55 +704,54 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     protected abstract List<File> collectResultFile( File path, String name )
 
 
-}
+    /**
+     * Map used to delegate variable resolution to script scope
+     */
+    @Slf4j
+    static class DelegateMap implements Map {
 
+        @Delegate
+        private Map<String,Object> local
 
-/**
- * Map used to delegate variable resolution to script scope
- */
-@Slf4j
-class DelegateMap implements Map {
+        private AbstractScript script
 
-    @Delegate
-    private Map<String,Object> local
-
-    private AbstractScript script
-
-    DelegateMap(AbstractScript script) {
-        this.script = script
-        this.local = [:]
-    }
-
-    DelegateMap(Map target) {
-        assert target != null
-        this.script = script
-        this.local = target
-    }
-
-    @Override
-    public Object get(Object property) {
-
-        if( local.containsKey(property) ) {
-            return local.get(property)
-        }
-        else if ( script ){
-            try {
-                return script.getProperty(property?.toString())
-            }
-            catch( MissingPropertyException e ) {
-                log.debug "Unable to find a value for: '\$${property}' on script context"
-            }
+        DelegateMap(AbstractScript script) {
+            this.script = script
+            this.local = [:]
         }
 
-        // return the variable name prefixed with the '$' char
-        // so give a chance to the bash interpreted to evaluate it
-        return '$' + property
+        DelegateMap(Map target) {
+            assert target != null
+            this.script = script
+            this.local = target
+        }
 
-    }
+        @Override
+        public Object get(Object property) {
 
-    @Override
-    public put(String property, Object newValue) {
-        local.put(property, newValue)
+            if( local.containsKey(property) ) {
+                return local.get(property)
+            }
+            else if ( script ){
+                try {
+                    return script.getProperty(property?.toString())
+                }
+                catch( MissingPropertyException e ) {
+                    log.debug "Unable to find a value for: '\$${property}' on script context"
+                }
+            }
+
+            // return the variable name prefixed with the '$' char
+            // so give a chance to the bash interpreted to evaluate it
+            return '$' + property
+
+        }
+
+        @Override
+        public put(String property, Object newValue) {
+            local.put(property, newValue)
+        }
     }
 
 }
+

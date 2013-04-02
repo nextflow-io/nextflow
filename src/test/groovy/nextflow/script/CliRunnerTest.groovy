@@ -59,6 +59,30 @@ class CliRunnerTest extends Specification {
 //    }
 
 
+    def 'test cli params' () {
+        setup:
+        def runner = new CliRunner()
+
+        when:
+        def script =
+            '''
+            params['p1'] = 1
+            params['p2'] = 2
+            params['p3'] = 3
+
+            return params
+            '''
+        runner.setParam( ['p1':'10','p2':'Hola'] )
+        def result = runner.execute( script )
+
+        then:
+        result.p1 == 10
+        result.p2 == 'Hola'
+        result.p3 == 3
+
+
+    }
+
     def 'test task with assignment' () {
         setup:
         def runner = new CliRunner([task:[processor:'nope']])
@@ -140,7 +164,6 @@ class CliRunnerTest extends Specification {
 
         cleanup:
         runner.workDirectory?.deleteDir()
-
 
     }
 
@@ -334,6 +357,39 @@ class CliRunnerTest extends Specification {
 
     }
 
+
+    def 'test parseValue' () {
+
+        expect:
+        CliRunner.parseValue(str) == value
+
+        where:
+        str         | value
+        'hola'      | 'hola'
+        '1'         | 1
+        "${Long.MAX_VALUE}" | Long.MAX_VALUE
+        'True'      | true
+        'False'     | false
+        "10.2"      | 10.2
+
+    }
+
+    def 'test setParams' () {
+        when:
+        def cli = new CliRunner()
+        cli.setParam('x', '1')
+        cli.setParam('y', 'true')
+        cli.setParam('z', 'Hola')
+
+        then:
+        cli.params.x == 1
+        cli.params.y == true
+        cli.params.z == 'Hola'
+
+
+
+
+    }
 
 
 

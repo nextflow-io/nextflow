@@ -18,21 +18,26 @@
  */
 
 
-
-
-import static groovyx.gpars.dataflow.Dataflow.operator
-
 import groovyx.gpars.dataflow.DataflowVariable
-/**
- * Shows how to build operators using the ProcessingNode class
- */
 
-final aValues = new DataflowVariable()
+import static groovyx.gpars.dataflow.Dataflow.task
 
-//Now the operator is running and processing the data
-aValues << 10
+x = new DataflowVariable()
+y = new DataflowVariable()
+z = new DataflowVariable()
 
 
-operator(inputs: [aValues], outputs:[] )  { x ->
-    println x
-}.join()
+task {
+    z << x + y
+}
+
+task {
+    x << 10
+}
+
+task {
+    y << 5
+}
+
+
+println "Result => ${z.val}"

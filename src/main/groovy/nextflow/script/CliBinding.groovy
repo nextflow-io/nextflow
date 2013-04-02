@@ -20,16 +20,15 @@
 package nextflow.script
 
 import groovy.util.logging.Slf4j
-
+import nextflow.Session
 /**
- * Custom binding used to hold the CLI specified parameters.
+ * Defines the script execution context. By default provided the following variables
+ * <li>{@code __$session}: the current execution session
+ * <li>{@code params}: the parameters map specified by the users on the program CLI using the '--' prefix
+ * <li>{@code args}: the list of programs arguments specified on the program CLI
+ *
  * <p>
- * The difference respect the default implementation is that
- * once the value is defined it cannot be overridden, so this make
- * the parameters definition works like constant values.
- * <p>
- * The main reason for that is to be able to provide optional default value
- * for script parameters in the pipeline script.
+ *     These values cannot be overridden by definition
  *
  * Read more about 'binding variables'
  * http://groovy.codehaus.org/Scoping+and+the+Semantics+of+%22def%22
@@ -38,42 +37,87 @@ import groovy.util.logging.Slf4j
 @Slf4j
 class CliBinding extends Binding {
 
-    def parameters = []
+    private Session session
 
-    def void setParam( String name, String value ) {
+    def CliBinding(Session session1) {
+        super( new ReadOnlyMap( ['__$session':session1, args:[], params:[:]]) )
+        this.session = session1
+    }
 
-        // mark this name as a parameter
-        if( !parameters.contains(name) ) {
-            parameters.add(name)
+    /**
+     * The map of the CLI named parameters
+     * @param values
+     */
+    def void setParams( Map values ) {
+        (getVariables() as ReadOnlyMap).force( 'params', new ReadOnlyMap(values)  )
+    }
+
+    /**
+     * The list of CLI arguments (unnamed)
+     * @param values
+     */
+    def void setArgs( String ... values ) {
+        (getVariables() as ReadOnlyMap).force( 'args', values  )
+    }
+
+    /**
+     * Try to get a value in the current bindings, if does not exist try
+     * to fallback on the session environment.
+     *
+     * @param name
+     * @return
+     */
+    def getVariable( String name ) {
+
+        if ( super.hasVariable(name) ) {
+            return super.getVariable(name)
+        }
+        else if( fallbackMap()?.containsKey(name) ) {
+            fallbackMap().get(name)
+        }
+        else {
+            throw new MissingPropertyException(name, getClass())
+        }
+    }
+
+    /**
+     * The fallback session environment
+     * */
+    private Map fallbackMap() {
+        session.config.env as Map
+    }
+
+
+
+    /**
+     * A class for which value cannot be changed
+     */
+    static class ReadOnlyMap extends LinkedHashMap {
+
+        List<String> readOnlyNames
+
+        /**
+         * @param map0 Initial map values
+         * @param readOnlyNames1 The list of values that cannot be changed after obj construction,
+         *          when {@code null} all the value in the initial map cannot be changed
+         *
+         */
+        ReadOnlyMap( Map map0, List<String> readOnlyNames1 = null  ) {
+            super(map0)
+            readOnlyNames = new ArrayList( readOnlyNames1 != null ? readOnlyNames1 : map0.keySet() )
         }
 
-        super.setVariable(name,parseValue(value))
-    }
-
-    def void setVariable(String name, Object value) {
-
-        // variable name marked as parameter cannot be overridden
-        if( name in parameters ) {
-            return
+        def put(Object name, Object value) {
+            final RO = name in readOnlyNames
+            if ( !RO ) {
+                super.put(name,value)
+            }
         }
 
-        super.setVariable(name,value)
-    }
-
-
-
-    static private parseValue( String str ) {
-
-        if ( str == null ) return null
-
-        if ( str?.toLowerCase() == 'true') return Boolean.TRUE
-        if ( str?.toLowerCase() == 'false' ) return Boolean.FALSE
-
-        if ( str.isInteger() ) return str.toInteger()
-        if ( str.isLong() ) return str.toLong()
-        if ( str.isDouble() ) return str.toDouble()
-
-        return str
+        def force( Object name, Object value ) {
+            super.put(name,value)
+        }
 
     }
+
 }

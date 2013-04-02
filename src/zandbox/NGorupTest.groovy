@@ -1,3 +1,10 @@
+import groovyx.gpars.dataflow.Dataflow
+import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.group.DefaultPGroup
+import nextflow.NGroup
+import org.codehaus.groovy.runtime.InvokerHelper
+
 /*
  * Copyright (c) 2012, the authors.
  *
@@ -17,40 +24,9 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import groovyx.gpars.dataflow.DataflowQueue
-/**
- * Shows how to build operators using the ProcessingNode class
- */
 
-final DataflowQueue aValues = new DataflowQueue()
-final DataflowQueue bValues = new DataflowQueue()
-final DataflowQueue results = new DataflowQueue()
 
-groovyx.gpars.dataflow.Dataflow.operator( inputs:[aValues,bValues], outputs:[results] ) { a, b ->
-    bindOutput a + b
+Dataflow.usingGroup(new NGroup()) {
+
+    operator( new DataflowQueue(), new DataflowQueue() ) {  }
 }
-
-
-//Now the operator is running and processing the data
-groovyx.gpars.dataflow.Dataflow.task {
-
-    int count=0
-    while(true) {
-        aValues << (++count) * 10
-        sleep 500
-    }
-
-}
-
-groovyx.gpars.dataflow.Dataflow.task {
-
-    int count=0
-    while(true) {
-        bValues << (++count)
-        sleep 700
-    }
-
-}
-
-
-while(true) println results.val

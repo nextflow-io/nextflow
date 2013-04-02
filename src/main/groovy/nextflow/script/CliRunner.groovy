@@ -63,7 +63,9 @@ class CliRunner {
     /**
      * The extra binding variables specified by the user
      */
-    private CliBinding params = new CliBinding()
+    private CliBinding bindings
+
+    private Map params = [:]
 
     /**
      * Unnamed arguments passed to script into the 'args' script variable
@@ -99,6 +101,7 @@ class CliRunner {
 
     def CliRunner( Map config ) {
         session = new Session(config)
+        bindings = new CliBinding(session)
     }
 
     /**
@@ -123,7 +126,7 @@ class CliRunner {
 
     CliRunner setParam( String name, String value ) {
         assert name
-        this.params.setParam(name, value)
+        this.params.put(name, parseValue(value))
         return this
     }
 
@@ -131,6 +134,22 @@ class CliRunner {
         assert params != null
         params.each { name, value -> setParam(name, value) }
         return this
+    }
+
+
+    static private parseValue( String str ) {
+
+        if ( str == null ) return null
+
+        if ( str?.toLowerCase() == 'true') return Boolean.TRUE
+        if ( str?.toLowerCase() == 'false' ) return Boolean.FALSE
+
+        if ( str.isInteger() ) return str.toInteger()
+        if ( str.isLong() ) return str.toLong()
+        if ( str.isDouble() ) return str.toDouble()
+
+        return str
+
     }
 
     /**
@@ -229,8 +248,8 @@ class CliRunner {
 
     protected AbstractScript parseScript( String scriptText, String... args = null) {
 
-        params['__$session'] = session
-        params['args'] = args
+        bindings.setArgs( args )
+        bindings.setParams( params )
 
         // define the imports
         def importCustomizer = new ImportCustomizer()
@@ -242,7 +261,7 @@ class CliRunner {
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskScriptClosureTransform))
 
         // run and wait for termination
-        def groovy = new GroovyShell(this.class.classLoader, params, config)
+        def groovy = new GroovyShell(this.class.classLoader, bindings, config)
         if ( scriptFile ) {
             groovy.parse( scriptText, scriptFile?.toString() ) as AbstractScript
         }

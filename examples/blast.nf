@@ -3,7 +3,8 @@
 DB = '/Users/ptommaso/tools/blast-db/pdb/pdb'
 fileName = '/Users/ptommaso/sample.fa'
 
-seq = new File(fileName).chunkFasta()
+seq = queue()
+new File(fileName).chunkFasta { seq << it }
 
 
 task {
