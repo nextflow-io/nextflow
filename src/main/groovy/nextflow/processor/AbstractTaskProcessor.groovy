@@ -686,6 +686,29 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     }
 
 
+    protected Map<String,String> getProcessEnvironment() {
+
+        def result = [:]
+
+        // add the config environment entries
+        if( session.config.env instanceof Map ) {
+            session.config.env.each { name, value ->
+                result.put( name, value?.toString() )
+            }
+        }
+        else {
+            log.debug "Invalid 'session.config.env' object: ${session.config.env?.class?.name}"
+        }
+
+        // add the task specific entries
+        if( environment ) {
+            environment.each { name, value -> result.put(name, value?.toString()) }
+        }
+
+        return result
+    }
+
+
     /**
      * Execute the specified system script
      *

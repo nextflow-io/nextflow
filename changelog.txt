@@ -1,5 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.2.1 - 13 Apr 2013
+- Initial support for SGE/OGE grid engine
+
+0.2.0 - 12 Apr 2012
+- General improvement
+- Enhanced parameters handling
+- 'chunkLines' and 'chunkFasta' API extension
+- 'each' iterator over dataflow queue API extension
+
 0.1 - 25 Mar 2013
 - Initial release

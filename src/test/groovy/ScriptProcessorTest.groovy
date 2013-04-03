@@ -67,7 +67,7 @@ session.createProcessor()
         .input(file: aln)
         .script{
                 """
-                cat $file
+                cat $fInputFile
                 """
             }
         .run()

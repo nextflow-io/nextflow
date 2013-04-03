@@ -43,7 +43,7 @@ def result = session.createProcessor()
 session.createProcessor()
     .echo(true)
     .input(file:result)
-    .script { "cat $file" }
+    .script { "cat $fInputFile" }
     .run()
 
 

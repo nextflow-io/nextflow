@@ -18,12 +18,11 @@
  */
 
 package nextflow.processor
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 import groovy.io.FileType
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
+import nextflow.util.ByteDumper
 
 /**
  *
@@ -108,27 +107,6 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
 
     }
 
-    protected Map<String,String> getProcessEnvironment() {
-
-        def result = [:]
-
-        // add the config environment entries
-        if( session.config.env instanceof Map ) {
-            session.config.env.each { name, value ->
-                result.put( name, value?.toString() )
-            }
-        }
-        else {
-            log.debug "Invalid 'session.config.env' object: ${session.config.env?.class?.name}"
-        }
-
-        // add the task specific entries
-        if( environment ) {
-            environment.each { name, value -> result.put(name, value?.toString()) }
-        }
-
-        return result
-    }
 
 
     @Override
@@ -154,65 +132,6 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
     }
 
 
-    private static class ByteDumper extends Thread {
 
-        InputStream fInput
-        boolean fTerminated
-        CountDownLatch barrier = new CountDownLatch(1)
-        Closure fCallback
-
-        public ByteDumper(InputStream _in, Closure callback ) {
-            assert _in
-            assert callback
-
-            this.fInput = new BufferedInputStream(_in);
-            this.fCallback = callback
-        }
-
-        /**
-         *  Interrupt the dumper thread
-         */
-        def void terminate() { fTerminated = true }
-
-        /**
-         * Await that the thread finished to read the process stdout
-         *
-         * @param millis Maximum time (in millis) to await
-         */
-        def void await(long millis=0) {
-            if( millis ) {
-                barrier.await(millis, TimeUnit.MILLISECONDS)
-            }
-            else {
-                barrier.await()
-
-            }
-        }
-
-
-        @Override
-        public void run() {
-
-            try {
-                consume()
-            }
-            finally{
-                barrier.countDown()
-            }
-
-        }
-
-        public void consume() {
-            byte[] buf = new byte[8192];
-            int next;
-            try {
-                while ((next = fInput.read(buf)) != -1 && !fTerminated ) {
-                    fCallback.call(buf, next)
-                }
-            } catch (IOException e) {
-                throw new RuntimeException("exception while dumping process stream", e);
-            }
-        }
-    }
 
 }
