@@ -9,7 +9,7 @@ echo true
  *
  * $ nextflow piper.nf --query=<path to your file name>
  */
-params['query-chunk-len'] = Integer.MAX_VALUE
+params['query-chunk-len'] = 100
 params['query'] = "${HOME}/workspace/piper/tutorial/5_RNA_queries.fa"
 params['genomes'] = "${HOME}/workspace/piper/tutorial/genomes/"
 params['genomes-db'] = "${HOME}/workspace/piper/tutorial"
@@ -38,18 +38,64 @@ sourceGenomesPath = new File(params.genomes)
 
 formatName = []
 allGenomes = [:]
-sourceGenomesPath.eachDir { File path ->
-    def fasta = path.listFiles().find{ File file -> file.name.endsWith('.fa') }
-    if( fasta ) {
-        println "Processing => ${path.name} - ${fasta}"
-        allGenomes[ path.name ] = [
+
+// -- when the provided source path is a FILE
+//      each line represent the path to a genome file
+if( sourceGenomesPath.isFile() ) {
+    // parse the genomes input file files (genome-id, path to genome file)
+    int count=0
+    sourceGenomesPath.eachLine { line ->
+        count++
+        def genomeId
+        def path
+
+        def items = line.trim().split(/\s/)
+        if( items.size() > 1 ) {
+            (genomeId, path) = items
+        }
+        else if( items.size() ==1  ){
+            genomeId = "gen${count}"
+            path = items[0]
+        }
+        else {
+            return
+        }
+
+        def fasta = new File(path)
+        if( !fasta.exists() ) {
+            println "Missing input genome file: $fasta"
+            exit 1
+        }
+
+        allGenomes[ genomeId ] = [
                 genome_fa: fasta,
-                chr_db: new File(dbpath,"${path.name}/chr"),
-                blast_db: new File(dbpath, "${path.name}/blastdb")
+                chr_db: new File(dbpath,"${genomeId}/chr"),
+                blast_db: new File(dbpath, "${genomeId}/blastdb")
             ]
-        formatName << path.name
+        formatName << genomeId
+    }
+
+}
+else if( sourceGenomesPath.isDirectory() ) {
+
+    sourceGenomesPath.eachDir { File path ->
+        def fasta = path.listFiles().find{ File file -> file.name.endsWith('.fa') }
+        if( fasta ) {
+            println "Processing => ${path.name} - ${fasta}"
+            allGenomes[ path.name ] = [
+                    genome_fa: fasta,
+                    chr_db: new File(dbpath,"${path.name}/chr"),
+                    blast_db: new File(dbpath, "${path.name}/blastdb")
+                ]
+            formatName << path.name
+        }
     }
 }
+else {
+    println "Invalid genomes source file: ${sourceGenomesPath}"
+    exit 1
+}
+
 
 if( !allGenomes ) {
     println "No genomes found in path: ${sourceGenomesPath}"
@@ -90,6 +136,8 @@ println "Created $chunkCount input chunks to path: ${querySplits}"
  */
 
 
+def split_cmd = (System.properties['os.name'] == 'Mac OS X' ? 'gcsplit' : 'csplit')
+
 task('format') {
     input formatName
     output blastName
@@ -116,7 +164,7 @@ task('format') {
     if [[ ! `ls -A ${CHR_DB} 2>/dev/null` ]]; then
 
         ## split the fasta in a file for each sequence 'seq_*'
-        gcsplit ${FASTA} '%^>%' '/^>/' '{*}' -f seq_ -n 5
+        ${split_cmd} ${FASTA} '%^>%' '/^>/' '{*}' -f seq_ -n 5
 
         ## create the target folder
         mkdir -p ${CHR_DB}
