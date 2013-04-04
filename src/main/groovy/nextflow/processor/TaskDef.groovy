@@ -34,9 +34,14 @@ class TaskDef {
     def id
 
     /**
-     * Task index
+     * Task index within its execution group
      */
     def index
+
+    /**
+     * Task name
+     */
+    def String name
 
     /**
      * Task current status
@@ -58,14 +63,13 @@ class TaskDef {
      */
     def output
 
-    def getOutput() {
+    def String getOutput() {
 
-        if( output == null ) return null
         if( output instanceof File ) {
             return output.text
         }
         else {
-            output.toString()
+            output?.toString()
         }
 
     }
@@ -92,6 +96,19 @@ class TaskDef {
      */
     Closure code
 
+    /**
+     * The script executed by the system
+     */
+    def script
+
+    def String getScript() {
+        if ( script instanceof File ) {
+            script.text
+        }
+        else {
+            script?.toString()
+        }
+    }
 
     def void setStatus( Status status ) {
         assert status

@@ -50,7 +50,7 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
 
 
     @Override
-    protected void runScript(script, TaskDef task) {
+    protected void launchTask(TaskDef task) {
 
         task.workDirectory = shareWorkDir ? new File(session.workDirectory, name) : new File(session.workDirectory, "$name-${task.index}")
         File scratch = task.workDirectory
@@ -59,12 +59,16 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
             throw new IOException("Unable to create task work directory: '${scratch}'")
         }
 
+        log.debug "Lauching task > ${task.name} -- scratch folder: $scratch"
+
         /*
          * save the original script to be executed
          */
         def scriptFile = new File(scratch, '.command.sh')
-        scriptFile.text = script.toString().stripIndent()
+        scriptFile.text = task.script.toString()
 
+        // -- keep a reference to the file
+        task.script = scriptFile
 
         /*
          * Prepare the 'qsub' cmdline. The following options are used
@@ -117,6 +121,9 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
         // append at the the script file to be executed through 'qsub'
         qsubCmd += scriptFile
 
+        // -- log the qsub command
+        log.debug "qsub command > ${qsubCmd} -- task: ${task.name}"
+
         /*
          * Save the 'qsub' command line
          */
@@ -145,7 +152,7 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
                 process.withOutputStream{ writer -> writer << task.input }
             }
             catch( IOException e ) {
-                log.warn "Unable to pipe input data to task", e
+                log.warn "Unable to pipe input data for task: ${task.name}", e
             }
         }
 
@@ -171,7 +178,7 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
             // -- wait the the process completes
             task.exitCode = process.waitFor()
             success = task.exitCode in validExitCodes
-            log.debug "Task success: ${success} -- exit-code: ${task.exitCode}; accepted codes: ${validExitCodes.join(',')}"
+            log.debug "Task completeted > ${task.name} -- exit code: ${task.exitCode}; accepted code(s): ${validExitCodes.join(',')}"
 
             qsubDumper.await(500)
             qsubOutStream.close()
@@ -189,14 +196,17 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
             //   + program terminated ok -> return the program output output (file)
             //   + program failed and output file not empty -> program output
             //             failed and output EMPTY -> return 'qsub' output file
-            final cmdOutExists = cmdOutFile.exists() && cmdOutFile.size()>0
-            log.debug "Cmd out exists: ${cmdOutExists} -- File: ${cmdOutFile}"
+            log.debug "Task cmd output > ${task.name} -- file ${cmdOutFile}; empty: ${cmdOutFile.isEmpty()}"
+            log.debug "Task qsub output > ${task.name} -- file: ${qsubOutFile}; empty: ${qsubOutFile.isEmpty()}"
 
-            final qsubOutExists = qsubOutFile.exists() && qsubOutFile.size()>0
-            log.debug "Qsub out exists: ${qsubOutExists} -- File ${qsubOutFile}"
+            if( success ) {
+                task.output = cmdOutFile.isNotEmpty() ? cmdOutFile : ''
+            }
+            else {
+                task.output = cmdOutFile.isNotEmpty() ? cmdOutFile : ( qsubOutFile.isNotEmpty() ? qsubOutFile : '' )
+            }
 
-            task.output = (success && cmdOutExists) ? cmdOutFile : ( qsubOutExists ? qsubOutFile : null )
-            log.debug "Task otuput: ${task.@output}"
+            log.debug "Task finished > ${task.name} -- success: ${success}; output: ${task.@output}"
 
         }
 

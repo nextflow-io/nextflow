@@ -26,7 +26,6 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
-import groovyx.gpars.dataflow.operator.DataflowEventListener
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
@@ -356,7 +355,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         /*
          * create the output
          */
-        def params = [inputs: _inputs, outputs: _outputs, maxForks: threads, listeners: [createListener()] ]
+        def params = [inputs: _inputs, outputs: _outputs, maxForks: threads, listeners: [new DataflowInterceptor()] ]
         session.allProcessors << (processor = new DataflowOperator(group, params, mock).start())
         // increment the session sync
         session.sync.countUp()
@@ -372,17 +371,13 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
     Closure createMockClosure() {
 
-        def str
-        // when no input is provided just an empty closure
-
         // the closure by the GPars dataflow constraints MUST have has many parameters
         // are the input channels, so let create it on-fly
-        def params = []
+        final params = []
         inputs.size().times { params << "__\$$it" }
-        str = "{ ${params.join(',')} -> runTask(__\$0) }"
-        log.debug "Mock closure: ${str}"
+        final str = "{ ${params.join(',')} -> runTask(__\$0) }"
 
-        def binding = new Binding( ['runTask': this.&runTask] )
+        final binding = new Binding( ['runTask': this.&runTask] )
         (Closure)new GroovyShell(binding).evaluate (str)
     }
 
@@ -395,12 +390,13 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
      * @return
      */
     final protected TaskDef initTaskRun(List values) {
+        log.debug "Creating a new task > $name"
 
         final task = null
         creationLock.lock()
         try {
             def num = session.tasks.size()
-            task = new TaskDef(id: num, status: TaskDef.Status.PENDING, index: ++index )
+            task = new TaskDef(id: num, status: TaskDef.Status.PENDING, index: ++index, name: "$name ($index)" )
             session.tasks.put( this, task )
         }
         finally {
@@ -438,7 +434,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
     }
 
-    ThreadLocal<TaskDef> currentTask = new ThreadLocal<>()
+    protected final ThreadLocal<TaskDef> currentTask = new ThreadLocal<>()
 
     /**
      * The processor execution body
@@ -447,16 +443,18 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
      * @param values
      */
     final protected runTask(TaskDef task) {
-        log.debug "Running task: '$name' -- ${task.dump()} "
+        assert task
+        log.info "Running task > ${task.name}"
 
         // -- call the closure and execute the script
         try {
             currentTask.set(task)
-            runScript( task.code.call(), task )
+            task.script = task.code.call()?.toString()?.stripIndent()
+            launchTask( task )
 
             boolean success = (task.exitCode in validExitCodes)
             if ( !success ) {
-                throw new InvalidExitException("Task '$name' terminated with an invalid exit-code: ${task.exitCode}")
+                throw new InvalidExitException("Task '${task.name}' terminated with an invalid exit code: ${task.exitCode}")
             }
 
             // -- bind output (files)
@@ -479,16 +477,31 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
                 return
             }
 
-            log.error("${e.getMessage()} -- Check the log file '.nextflow.log' for more details", e)
+            // compose a readable error message
+            def message = []
+            message << e.getMessage()
 
-            // if the echo was disabled show, the program out when there's an error
-            if ( !echo && task ) {
-                println task.output
+            if( task ) {
+                // print the executed command
+                message << "Command executed:"
+                task.script.eachLine {
+                    message << "  $it"
+                }
+
+                // if the echo was disabled show, the program out when there's an error
+                if ( !echo ) {
+                    message << "\nCommand output:"
+                    task.output.eachLine {
+                        message << "  $it"
+                    }
+                }
             }
+
+            log.error message.join('\n')
 
         }
         else {
-            log.error("Failed to execute task: '${name}' -- Check the log file '.nextflow.log' for more details", e)
+            log.error("Failed to execute task > '${task?.name ?: name}' -- Check the log file '.nextflow.log' for more details", e)
         }
 
 
@@ -498,12 +511,13 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
     final protected void finalizeTask( ) {
 
+        final task = currentTask.get()
         currentTask.remove()
 
         // -- when all input values are 'scalar' (not queue or broadcast stream)
         //    stops after the first run
         if( allScalarValues ) {
-            log.debug "Processor: '$name' terminates since all values are scalar"
+            log.debug "Finalize > ${task?.name ?: name} terminates since all values are scalar"
             processor.terminate()
         }
 
@@ -525,7 +539,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
             else {
                 def files = collectResultFile( task.workDirectory, fileName )
                 if ( !files )  {
-                    throw new MissingFileException("Missing output file(s): '$fileName' expected by task: '${this.name}'")
+                    throw new MissingFileException("Missing output file(s): '$fileName' expected by task: ${task.name}")
                 }
 
                 files .each { File file ->
@@ -533,7 +547,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
                         processor.bindOutput(index, file)
                     }
                     else {
-                        throw new MissingFileException("Missing output file(s): '$fileName' expected by task: '${this.name}'")
+                        throw new MissingFileException("Missing output file(s): '$fileName' expected by task: ${task.name}")
                     }
                 }
             }
@@ -541,148 +555,142 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     }
 
 
+    class DataflowInterceptor extends DataflowEventAdapter {
 
-    /**
-     * The operator listener, it implements some important behavior
-     */
-    private DataflowEventListener createListener() {
+        /**
+         * Invoked when all messages required to trigger the operator become available in the input channels.
+         *
+         * @param processor
+         * @param messages
+         * @return
+         */
+        @Override
+        List<Object> beforeRun(DataflowProcessor processor, List<Object> messages) {
 
-        new DataflowEventAdapter() {
+            // - prepare and initialize the data structure before execute the task
+            // - set the current task parameter on a Thread local variable
+            final task = initTaskRun(messages)
 
-            /**
-             * Invoked when all messages required to trigger the operator become available in the input channels.
-             *
-             * @param processor
-             * @param messages
-             * @return
-             */
-            @Override
-            List<Object> beforeRun(DataflowProcessor processor, List<Object> messages) {
-                if( log.isDebugEnabled() ) {
-                    log.debug "Task: '$name' before run"
-                }
-                else if ( log.isTraceEnabled() ) {
-                    log.trace "Task: '$name' before run; messages: $messages"
-                }
-
-                // - prepare and initialize the data structure before execute the task
-                // - set the current task parameter on a Thread local variable
-                final TASK = initTaskRun(messages)
-
-                // HERE COMES THE HACK !
-                // the result 'messages' is used to pass the task instance in the 'mock' closure
-                // since there MUST be at least one input parameters it is sure to have at least one element.
-                // This is used to pass the TASK instanced as argument, others are ignores
-                // See 'createMockClosure'
-                messages = new Object[ messages.size() ]
-                messages[0] = TASK
-
-                return messages
+            if( log.isDebugEnabled() ) {
+                log.debug "Before run > ${task.name}"
+            }
+            else if ( log.isTraceEnabled() ) {
+                log.trace "Before run > ${task.name} -- messages: $messages"
             }
 
+            // HERE COMES THE HACK !
+            // the result 'messages' is used to pass the task instance in the 'mock' closure
+            // since there MUST be at least one input parameters it is sure to have at least one element.
+            // This is used to pass the TASK instanced as argument, others are ignores
+            // See 'createMockClosure'
+            messages = new Object[ messages.size() ]
+            messages[0] = task
 
-            /**
-             * Invoked if an exception occurs. Unless overridden by subclasses this implementation returns true to terminate the operator.
-             * If any of the listeners returns true, the operator will terminate.
-             * Exceptions outside of the operator's body or listeners' messageSentOut() handlers will terminate the operator irrespective of the listeners' votes.
-             * When using maxForks, the method may be invoked from threads running the forks.
-             * @param processor
-             * @param error
-             * @return
-             */
-            public boolean onException(final DataflowProcessor processor, final Throwable error) {
-                log.debug "Task: '$name' raised and exception"
-                handleException( error, AbstractTaskProcessor.this.currentTask.get() )
-                return true
-            }
-
-            /**
-             * Invoked when the operator completes a single run.
-             *
-             * @param processor
-             * @param MOCK_MESSAGES
-             */
-            @Override
-            void afterRun(DataflowProcessor processor, List<Object> MOCK_MESSAGES) {
-                log.debug "Task: '$name' after run"
-                finalizeTask()
-            }
-
-
-            /**
-             * Invoked when a control message (instances of ControlMessage) becomes available in an input channel.
-             *
-             * @param processor
-             * @param channel
-             * @param index
-             * @param message
-             * @return
-             */
-            @Override
-            public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-                if( log.isDebugEnabled() ) {
-                    log.debug "Task: '$name' control message arrived"
-                }
-                else if ( log.isTraceEnabled() ) {
-                    log.trace "Task: '$name' control message arrived; channel index: $index; value: $message"
-                }
-
-                if ( message == PoisonPill.instance && AbstractTaskProcessor.this.bindOnTermination && AbstractTaskProcessor.this.lastRunTask ) {
-                    log.debug "Processor '$name' binding on termination"
-                    try {
-                        bindOutputs(processor, lastRunTask)
-                    }
-                    catch( Throwable error ) {
-                        handleException(error)
-                    }
-                    lastRunTask = null
-                }
-
-                return message;
-            }
-
-            /**
-             * Invoked when a message becomes available in an input channel.
-             *
-             * @param processor
-             * @param channel
-             * @param index
-             * @param message
-             * @return
-             */
-            @Override
-            public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-                if( log.isDebugEnabled() ) {
-                    log.debug "Task: '$name' receiving message"
-                }
-                else if ( log.isTraceEnabled() ) {
-                    log.trace "Task: '$name' receiving message; channel index: $index; value: $message"
-                }
-
-                return message;
-            }
-
-            /**
-             * Invoked immediately after the operator starts by a pooled thread before the first message is obtained
-             */
-            @Override
-            public void afterStart(final DataflowProcessor processor) {
-                log.debug "Task: '$name' after start"
-            }
-
-            /**
-             * Invoked immediately after the operator terminates
-             *
-             * @param processor The reporting dataflow operator/selector
-             */
-            @Override
-            public void afterStop(final DataflowProcessor processor) {
-                log.debug "Task: '$name' after stop"
-                // increment the session sync
-                session.sync.countDown()
-            }
-
+            return messages
         }
+
+
+        /**
+         * Invoked if an exception occurs. Unless overridden by subclasses this implementation returns true to terminate the operator.
+         * If any of the listeners returns true, the operator will terminate.
+         * Exceptions outside of the operator's body or listeners' messageSentOut() handlers will terminate the operator irrespective of the listeners' votes.
+         * When using maxForks, the method may be invoked from threads running the forks.
+         * @param processor
+         * @param error
+         * @return
+         */
+        public boolean onException(final DataflowProcessor processor, final Throwable error) {
+            handleException( error, currentTask.get() )
+            return true
+        }
+
+        /**
+         * Invoked when the operator completes a single run.
+         *
+         * @param processor
+         * @param MOCK_MESSAGES
+         */
+        @Override
+        void afterRun(DataflowProcessor processor, List<Object> MOCK_MESSAGES) {
+            log.debug "After run > ${currentTask.get()?.name ?: name}"
+            finalizeTask()
+        }
+
+
+        /**
+         * Invoked when a control message (instances of ControlMessage) becomes available in an input channel.
+         *
+         * @param processor
+         * @param channel
+         * @param index
+         * @param message
+         * @return
+         */
+        @Override
+        public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+            if( log.isDebugEnabled() ) {
+                log.debug "Received control message > task: ${currentTask.get()?.name ?: name}"
+            }
+            else if ( log.isTraceEnabled() ) {
+                log.trace "Received control message > task: ${currentTask.get()?.name ?: name}; channel: $index; value: $message"
+            }
+
+            if ( message == PoisonPill.instance && AbstractTaskProcessor.this.bindOnTermination && AbstractTaskProcessor.this.lastRunTask ) {
+                log.debug "Bind on termination > task: ${currentTask.get()?.name ?: name}"
+
+                try {
+                    bindOutputs(processor, lastRunTask)
+                }
+                catch( Throwable error ) {
+                    handleException(error)
+                }
+                lastRunTask = null
+            }
+
+            return message;
+        }
+
+        /**
+         * Invoked when a message becomes available in an input channel.
+         *
+         * @param processor
+         * @param channel
+         * @param index
+         * @param message
+         * @return
+         */
+        @Override
+        public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+            if( log.isDebugEnabled() ) {
+                log.debug "Received message > task: ${currentTask.get()?.name ?: name}"
+            }
+            else if ( log.isTraceEnabled() ) {
+                log.trace "Received message > task: ${currentTask.get()?.name ?: name}; channel: $index; value: $message"
+            }
+
+            return message;
+        }
+
+        /**
+         * Invoked immediately after the operator starts by a pooled thread before the first message is obtained
+         */
+        @Override
+        public void afterStart(final DataflowProcessor processor) {
+            log.debug "After start > $name"
+        }
+
+        /**
+         * Invoked immediately after the operator terminates
+         *
+         * @param processor The reporting dataflow operator/selector
+         */
+        @Override
+        public void afterStop(final DataflowProcessor processor) {
+            log.debug "After stop > $name"
+            // increment the session sync
+            session.sync.countDown()
+        }
+
     }
 
 
@@ -715,7 +723,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
      * @param script The script string to be execute, e.g. a BASH script
      * @return {@code TaskDef}
      */
-    protected abstract void runScript( def script, TaskDef task )
+    protected abstract void launchTask( TaskDef task )
 
     /**
      * Collect the file(s) with the name specified, produced by the execution
@@ -760,7 +768,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
                     return script.getProperty(property?.toString())
                 }
                 catch( MissingPropertyException e ) {
-                    log.debug "Unable to find a value for: '\$${property}' on script context"
+                    log.trace "Unable to find a value for: '\$${property}' on script context"
                 }
             }
 

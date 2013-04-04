@@ -38,8 +38,9 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
      * @param script
      * @return
      */
-    protected void runScript( def script, TaskDef task )  {
-        assert script
+    protected void launchTask( TaskDef task )  {
+        assert task
+        assert task.@script
 
         task.workDirectory = shareWorkDir ? new File(session.workDirectory, name) : new File(session.workDirectory, "$name-${task.index}")
         File scratch = task.workDirectory
@@ -48,12 +49,15 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
             throw new IOException("Unable to create task work directory: '${scratch}'")
         }
 
-        log.debug "Processor '$name' running script using scratch folder: $scratch"
+        log.debug "Lauching task > ${task.name} -- scratch folder: $scratch"
 
         // -- create the command script file
         def scriptFile = new File(scratch, '.command.sh')
         scriptFile.createNewFile()
-        scriptFile.text = script.toString().stripIndent()
+        scriptFile.text = task.script.toString().stripIndent()
+
+        // -- save the reference to the scriptFile
+        task.script = scriptFile
 
         ProcessBuilder builder = new ProcessBuilder()
                 .directory(scratch)
@@ -72,7 +76,7 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
             try {
                 process.withOutputStream{ writer -> writer << task.input }
             }
-            catch( IOException e ) { log.warn "Unable to pipe input data to task", e }
+            catch( IOException e ) { log.warn "Unable to pipe input data for task: ${task.name}", e }
         }
 
         // -- print the process out if it is not capture by the output

@@ -114,16 +114,6 @@ class CliRunner {
     }
 
 
-    /**
-     * Instantiate the runner object using the specified session
-     *
-     * @param session
-     */
-    def CliRunner( Session session ) {
-        this.session = session
-    }
-
-
     CliRunner setParam( String name, String value ) {
         assert name
         this.params.put(name, parseValue(value))

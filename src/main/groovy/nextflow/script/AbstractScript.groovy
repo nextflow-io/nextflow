@@ -71,8 +71,18 @@ abstract class AbstractScript extends Script {
         config.task.echo = value
     }
 
-    def void exit(int errCode=0) {
-        System.exit(errCode)
+    def void exit(int exitCode, String message = null) {
+        if ( exitCode && message ) {
+            log.error message
+        }
+        else if ( message ) {
+            log.info message
+        }
+        System.exit(exitCode)
+    }
+
+    def void exit( String message ) {
+        exit(0, message)
     }
 
     /**

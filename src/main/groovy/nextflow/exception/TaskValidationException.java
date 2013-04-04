@@ -17,29 +17,21 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.exception
-
-import groovy.transform.InheritConstructors
+package nextflow.exception;
 
 /**
  * Reports a generic error during the 'Task' validation step
  *
+ * Note: THIS IS A PLAIN JAVA CLASS due to this bug
+ * http://blog.proxerd.pl/article/how-to-fix-incompatibleclasschangeerror-for-your-groovy-projects-running-on-jdk7
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@InheritConstructors
-class TaskValidationException extends Exception {
+public class TaskValidationException extends Exception {
+
+    public TaskValidationException(String message) {
+        super(message);
+    }
+
 }
 
-/**
- * An expected result file is missing
- */
-@InheritConstructors
-class MissingFileException extends TaskValidationException {
-}
-
-/**
- * The task returned an unexpected error code
- */
-@InheritConstructors
-class InvalidExitException extends TaskValidationException {
-}

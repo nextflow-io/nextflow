@@ -185,7 +185,7 @@ class FileHelper {
         if ( file.isDirectory() ) {
             file.list()?.size()==0 }
         else {
-            return file.size()==0
+            return !file.exists() || file.size()==0
         }
     }
 

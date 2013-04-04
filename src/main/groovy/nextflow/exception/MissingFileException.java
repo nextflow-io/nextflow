@@ -17,29 +17,18 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
-import groovy.transform.InheritConstructors
-import groovy.util.logging.Slf4j
+package nextflow.exception;
+
 /**
+ * An expected result file is missing
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * Note: THIS IS A PLAIN JAVA CLASS due to this bug
+ * http://blog.proxerd.pl/article/how-to-fix-incompatibleclasschangeerror-for-your-groovy-projects-running-on-jdk7
+ *
  */
-@Slf4j
-@InheritConstructors
-class NopeTaskProcessor extends AbstractTaskProcessor {
+public class MissingFileException extends TaskValidationException {
 
-    @Override
-    protected void launchTask( TaskDef task ) {
-
-        task.workDirectory = new File('.').absoluteFile
-        task.status = TaskDef.Status.TERMINATED
-        task.exitCode = 0
-        task.output = task.script   // return the script itself as output
-
-    }
-
-    @Override
-    protected List<File> collectResultFile(File scratchPath, String name) {
-        return [ new File(scratchPath, name) ]
+    public MissingFileException(String message) {
+        super(message);
     }
 }
