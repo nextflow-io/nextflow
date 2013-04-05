@@ -23,6 +23,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 import groovy.util.logging.Slf4j
+import org.apache.commons.io.IOUtils
 
 /**
  *
@@ -79,6 +80,7 @@ class ByteDumper extends Thread {
             consume()
         }
         finally{
+            if( fInputStream ) IOUtils.closeQuietly(fInputStream)
             barrier.countDown()
         }
 

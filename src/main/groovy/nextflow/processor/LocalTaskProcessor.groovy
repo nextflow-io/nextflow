@@ -23,6 +23,7 @@ import groovy.io.FileType
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import nextflow.util.ByteDumper
+import org.apache.commons.io.IOUtils
 
 /**
  *
@@ -79,23 +80,25 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
             catch( IOException e ) { log.warn "Unable to pipe input data for task: ${task.name}", e }
         }
 
-        // -- print the process out if it is not capture by the output
-        //    * The byte dumper uses a separate thread to capture the process stdout
-        //    * The process stdout is captured in two condition:
-        //      when the flag 'echo' is set or when it goes in the output channel (outputs['-'])
-        //
+
         File fileOut = new File(scratch, '.command.out')
-        BufferedOutputStream streamOut = new BufferedOutputStream( new FileOutputStream(fileOut) )
-
-        def handler = { byte[] data, int len ->
-            streamOut.write(data,0,len)
-            if( echo ) System.out.print(new String(data,0,len))
-        }
-        ByteDumper dumper = new ByteDumper(process.getInputStream(), handler)
-        dumper.setName("dumper-$name")
-        dumper.start()
-
+        ByteDumper dumper = null
         try {
+            // -- print the process out if it is not capture by the output
+            //    * The byte dumper uses a separate thread to capture the process stdout
+            //    * The process stdout is captured in two condition:
+            //      when the flag 'echo' is set or when it goes in the output channel (outputs['-'])
+            //
+            BufferedOutputStream streamOut = new BufferedOutputStream( new FileOutputStream(fileOut) )
+
+            def handler = { byte[] data, int len ->
+                streamOut.write(data,0,len)
+                if( echo ) System.out.print(new String(data,0,len))
+            }
+            dumper = new ByteDumper(process.getInputStream(), handler)
+            dumper.setName("dumper-$name")
+            dumper.start()
+
             // -- wait the the process completes
             task.exitCode = process.waitFor()
             dumper?.await(500)
@@ -107,6 +110,10 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
             task.workDirectory = scratch
             task.output = fileOut
 
+            IOUtils.closeQuietly(process.in)
+            IOUtils.closeQuietly(process.out)
+            IOUtils.closeQuietly(process.err)
+            process.destroy()
         }
 
     }
