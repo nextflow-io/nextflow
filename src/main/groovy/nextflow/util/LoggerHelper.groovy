@@ -19,6 +19,8 @@
 
 package nextflow.util
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder
@@ -29,10 +31,9 @@ import ch.qos.logback.core.LayoutBase
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder
 import ch.qos.logback.core.filter.Filter
 import ch.qos.logback.core.joran.spi.NoAutoStart
-import ch.qos.logback.core.rolling.DefaultTimeBasedFileNamingAndTriggeringPolicy
 import ch.qos.logback.core.rolling.FixedWindowRollingPolicy
 import ch.qos.logback.core.rolling.RollingFileAppender
-import ch.qos.logback.core.rolling.RolloverFailure
+import ch.qos.logback.core.rolling.TriggeringPolicyBase
 import ch.qos.logback.core.spi.FilterReply
 import nextflow.Const
 import org.slf4j.LoggerFactory
@@ -87,14 +88,14 @@ class LoggerHelper {
         // -- the file appender
         def fileName = ".${Const.MAIN_PACKAGE}.log"
         def fileAppender = new RollingFileAppender()
+        fileAppender.file = fileName
+
         def rollingPolicy = new  FixedWindowRollingPolicy( )
-        rollingPolicy.fileNamePattern = "${fileName}.%d{yyyy-MM-dd}.%i"
+        rollingPolicy.fileNamePattern = "${fileName}.%i"
         rollingPolicy.setContext(loggerContext)
         rollingPolicy.setParent(fileAppender)
         rollingPolicy.setMinIndex(1)
-        rollingPolicy.setMaxIndex(9)
-
-        //timeBasedPolicy.setTimeBasedFileNamingAndTriggeringPolicy( new StartupTimeBasedTriggeringPolicy() )
+        rollingPolicy.setMaxIndex(5)
         rollingPolicy.start()
 
         def encoder = new PatternLayoutEncoder()
@@ -102,12 +103,12 @@ class LoggerHelper {
         encoder.setContext(loggerContext)
         encoder.start()
 
-        fileAppender.file = fileName
-        //fileAppender.rollingPolicy = timeBasedPolicy
+        fileAppender.rollingPolicy = rollingPolicy
         fileAppender.encoder = encoder
         fileAppender.setContext(loggerContext)
-        fileAppender.setTriggeringPolicy(new StartupTimeBasedTriggeringPolicy())
+        fileAppender.setTriggeringPolicy(new RollOnStartupPolicy())
         fileAppender.start()
+
 
         // -- configure the ROOT logger
         root.setLevel(Level.INFO)
@@ -140,9 +141,7 @@ class LoggerHelper {
             logger.addAppender(fileAppender)
             logger.addAppender(consoleAppender)
         }
-
     }
-
 
 
     /*
@@ -195,19 +194,26 @@ class LoggerHelper {
     }
 
 
+    /**
+     * Trigger a new log file on application start-up
+     *
+     * See here http://stackoverflow.com/a/2647471/395921
+     */
     @NoAutoStart
-    static public class StartupTimeBasedTriggeringPolicy extends DefaultTimeBasedFileNamingAndTriggeringPolicy {
+    static class RollOnStartupPolicy<E> extends TriggeringPolicyBase<E> {
+
+        private final AtomicBoolean firstTime = new AtomicBoolean(true);
 
         @Override
-        public void start() {
-            super.start();
-            nextCheck = 0L;
-            isTriggeringEvent(null, null);
-            try {
-                tbrp.rollover();
-            } catch (RolloverFailure e) {
-                //Do nothing
+        public boolean isTriggeringEvent(File activeFile, E event) {
+            if (!firstTime.get()) { // fast path
+                return false;
             }
+
+            if (firstTime.getAndSet(false)) {
+                return true;
+            }
+            return false;
         }
 
     }
