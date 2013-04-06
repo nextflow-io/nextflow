@@ -570,13 +570,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
             // - prepare and initialize the data structure before execute the task
             // - set the current task parameter on a Thread local variable
             final task = initTaskRun(messages)
-
-            if( log.isDebugEnabled() ) {
-                log.debug "Before run > ${task.name}"
-            }
-            else if ( log.isTraceEnabled() ) {
-                log.trace "Before run > ${task.name} -- messages: $messages"
-            }
+            log.trace "Before run > ${task.name} -- messages: $messages"
 
             // HERE COMES THE HACK !
             // the result 'messages' is used to pass the task instance in the 'mock' closure
@@ -612,7 +606,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
          */
         @Override
         void afterRun(DataflowProcessor processor, List<Object> MOCK_MESSAGES) {
-            log.debug "After run > ${currentTask.get()?.name ?: name}"
+            log.trace "After run > ${currentTask.get()?.name ?: name}"
             finalizeTask()
         }
 
@@ -628,12 +622,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
          */
         @Override
         public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            if( log.isDebugEnabled() ) {
-                log.debug "Received control message > task: ${currentTask.get()?.name ?: name}"
-            }
-            else if ( log.isTraceEnabled() ) {
-                log.trace "Received control message > task: ${currentTask.get()?.name ?: name}; channel: $index; value: $message"
-            }
+            log.trace "Received control message > task: ${currentTask.get()?.name ?: name}; channel: $index; value: $message"
 
             if ( message == PoisonPill.instance && AbstractTaskProcessor.this.bindOnTermination && AbstractTaskProcessor.this.lastRunTask ) {
                 log.debug "Bind on termination > task: ${currentTask.get()?.name ?: name}"
@@ -661,13 +650,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
          */
         @Override
         public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            if( log.isDebugEnabled() ) {
-                log.debug "Received message > task: ${currentTask.get()?.name ?: name}"
-            }
-            else if ( log.isTraceEnabled() ) {
-                log.trace "Received message > task: ${currentTask.get()?.name ?: name}; channel: $index; value: $message"
-            }
-
+            log.trace "Received message > task: ${currentTask.get()?.name ?: name}; channel: $index; value: $message"
             return message
         }
 
@@ -676,7 +659,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
          */
         @Override
         public void afterStart(final DataflowProcessor processor) {
-            log.debug "After start > $name"
+            log.trace "After start > $name"
         }
 
         /**
@@ -686,7 +669,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
          */
         @Override
         public void afterStop(final DataflowProcessor processor) {
-            log.debug "After stop > $name"
+            log.trace "After stop > $name"
             // increment the session sync
             session.sync.countDown()
         }
