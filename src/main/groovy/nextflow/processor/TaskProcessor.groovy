@@ -66,7 +66,7 @@ interface TaskProcessor {
      * @param max
      * @return
      */
-    TaskProcessor threads( int max );
+    TaskProcessor threads( int max )
 
     /**
      * Define the processor 'name' attribute

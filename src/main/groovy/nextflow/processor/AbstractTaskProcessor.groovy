@@ -647,7 +647,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
                 lastRunTask = null
             }
 
-            return message;
+            return message
         }
 
         /**
@@ -668,7 +668,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
                 log.trace "Received message > task: ${currentTask.get()?.name ?: name}; channel: $index; value: $message"
             }
 
-            return message;
+            return message
         }
 
         /**

@@ -37,7 +37,7 @@ import nextflow.Session
 @Slf4j
 class CliBinding extends Binding {
 
-    private Session session
+    final private Session session
 
     def CliBinding(Session session1) {
         super( new ReadOnlyMap( ['__$session':session1, args:[], params:[:]]) )

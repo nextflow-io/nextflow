@@ -65,7 +65,7 @@ class Session {
     /**
      * The class to be used create a {@code Processor} instance
      */
-    Class<? extends TaskProcessor> processorClass = LocalTaskProcessor.class
+    Class<? extends TaskProcessor> processorClass = LocalTaskProcessor
 
     /**
      * Keep a list of all processor created

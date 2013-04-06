@@ -38,14 +38,14 @@ class ByteDumper extends Thread {
     Closure fCallback
     File fInputFile
 
-    public ByteDumper(InputStream input0, Closure callback0 ) {
+    ByteDumper(InputStream input0, Closure callback0 ) {
         assert input0
 
-        this.fInputStream = new BufferedInputStream(input0);
+        this.fInputStream = new BufferedInputStream(input0)
         this.fCallback = callback0
     }
 
-    public ByteDumper( File file0, Closure callback0 ) {
+    ByteDumper( File file0, Closure callback0 ) {
         assert file0
 
         this.fInputFile = file0
@@ -74,7 +74,7 @@ class ByteDumper extends Thread {
 
 
     @Override
-    public void run() {
+    def void run() {
 
         try {
             consume()
@@ -86,7 +86,7 @@ class ByteDumper extends Thread {
 
     }
 
-    public void consume() {
+    def void consume() {
 
         // -- if a file reference has been provided instead of stream
         //    wait for the file to exist
@@ -111,8 +111,8 @@ class ByteDumper extends Thread {
             return
         }
 
-        byte[] buf = new byte[8192];
-        int next;
+        byte[] buf = new byte[8192]
+        int next
         try {
             while ((next = fInputStream.read(buf)) != -1 && !fTerminated) {
                 log.trace  "consume '${getName()}' -- reading "
@@ -122,7 +122,7 @@ class ByteDumper extends Thread {
             log.trace "consume '${getName()}' -- exit -- terminated: ${fTerminated}"
 
         } catch (IOException e) {
-            throw new RuntimeException("exception while dumping process stream", e);
+            throw new RuntimeException("exception while dumping process stream", e)
         }
     }
 }

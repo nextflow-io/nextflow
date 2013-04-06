@@ -42,15 +42,15 @@ class Const {
     }
 
 
-    static final String MAIN_PACKAGE = Const.class.name.split('\\.')[0]
+    static final String MAIN_PACKAGE = Const.name.split('\\.')[0]
 
     static final String APP_NAME = MAIN_PACKAGE
 
-    static final String APP_VER = "0.2.1"
+    static final String APP_VER = '0.2.1'
 
-    static final long APP_TIMESTAMP = 1365171912036
+    static final long APP_TIMESTAMP = 1365197273876
 
-    static final int APP_BUILDNUM = 215
+    static final int APP_BUILDNUM = 231
 
     static final String LOGO =
 
@@ -65,10 +65,10 @@ class Const {
 
 
 
-    static DATETIME_FORMAT = "dd/MMM/yyyy HH:mm"
+    static final DATETIME_FORMAT = 'dd/MMM/yyyy HH:mm'
 
-    static SHORT_DATETIME_FORMAT = "HH:mm dd/MMM"
+    static final SHORT_DATETIME_FORMAT = 'HH:mm dd/MMM'
 
-    static TIME_FORMAT = "HH:mm:ss"
+    static final TIME_FORMAT = 'HH:mm:ss'
 
 }

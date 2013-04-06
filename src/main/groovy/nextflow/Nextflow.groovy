@@ -44,11 +44,11 @@ class Nextflow {
         assert channel
 
         if ( channel instanceof DataflowBroadcast ) {
-            log.debug "Read DataflowBroadcast channel"
+            log.debug 'Read DataflowBroadcast channel'
             channel.createReadChannel().getVal()
         }
         else if ( channel instanceof DataflowReadChannel ) {
-            log.debug "Read DataflowReadChannel channel"
+            log.debug 'Read DataflowReadChannel channel'
             channel.getVal()
         }
         else {
@@ -66,7 +66,9 @@ class Nextflow {
      */
     static <T> DataflowVariable<T> val( T value = null ) {
         def result = new DataflowVariable<T>()
-        if( value ) result.bind(value)
+        if( value ) {
+            result.bind(value)
+        }
         result
     }
 
