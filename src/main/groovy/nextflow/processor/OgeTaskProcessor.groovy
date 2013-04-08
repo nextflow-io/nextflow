@@ -23,6 +23,7 @@ import groovy.io.FileType
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import nextflow.util.ByteDumper
+import org.apache.commons.io.IOUtils
 
 /**
  * Execute a task script by running it on the SGE/OGE cluster
@@ -191,6 +192,11 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
             qsubDumper.terminate()
             cmdDumper.terminate()
             task.workDirectory = scratch
+
+            IOUtils.closeQuietly(process.in)
+            IOUtils.closeQuietly(process.out)
+            IOUtils.closeQuietly(process.err)
+            process.destroy()
 
             //  -- return the program output with the following strategy
             //   + program terminated ok -> return the program output output (file)
