@@ -495,6 +495,8 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
                         message << "  $it"
                     }
                 }
+
+                message << "\nCommand work dir:\n  ${task.workDirectory}"
             }
 
             log.error message.join('\n')
