@@ -48,9 +48,9 @@ class Const {
 
     static final String APP_VER = "0.2.2"
 
-    static final long APP_TIMESTAMP = 1365422813962
+    static final long APP_TIMESTAMP = 1365434814663
 
-    static final int APP_BUILDNUM = 225
+    static final int APP_BUILDNUM = 232
 
     static final String LOGO =
 

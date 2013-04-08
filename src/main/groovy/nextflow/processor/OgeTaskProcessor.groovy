@@ -23,6 +23,9 @@ import groovy.io.FileType
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import nextflow.util.ByteDumper
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
+import org.apache.commons.io.IOUtils
 
 /**
  * Execute a task script by running it on the SGE/OGE cluster
@@ -33,12 +36,32 @@ import nextflow.util.ByteDumper
 @InheritConstructors
 class OgeTaskProcessor extends AbstractTaskProcessor {
 
+    private static final COMMAND_SCRIPT_FILENAME = '.command.sh'
+
+    private static final COMMAND_OUTPUT_FILENAME = '.command.out'
+
+    private static final QSUB_SCRIPT_FILENAME = '.qsub.sh'
+
     private String queue
 
     private String qsubCmdLine
 
+    private MemoryUnit maxMemory
+
+    private Duration maxDuration
+
     OgeTaskProcessor queue( String queue0 ) {
         this.queue = queue0
+        return this
+    }
+
+    OgeTaskProcessor maxMemory( String mem0 ) {
+        this.maxMemory = new MemoryUnit(mem0)
+        return this
+    }
+
+    OgeTaskProcessor maxDuration( String duration0 ) {
+        this.maxDuration = new Duration(duration0)
         return this
     }
 
@@ -47,6 +70,64 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
         return this
     }
 
+    /*
+     * Prepare the 'qsub' cmdline. The following options are used
+     * - wd: define the job working directory
+     * - terse: output just the job id on the output stream
+     * - o: define the file to which redirect the standard output
+     * - e: define the file to which redirect the error output
+     */
+    protected List<String> getQsubCommandLine(TaskDef task) {
+
+        final result = []
+
+        result << 'qsub'
+        result << '-terse'
+        result << '-wd $PWD'
+        result << '-o' << COMMAND_OUTPUT_FILENAME
+        result << '-j y'
+        result << '-sync y'
+        result << '-V'
+
+
+        // add other parameters (if any)
+        if(queue) {
+            result << '-q'  << queue
+        }
+
+        if( maxDuration ) {
+            result << "-l h_rt=${maxDuration.format('HH:mm:ss')}"
+        }
+
+        /*
+         * Read more about SGE virtual_free vs mem_free at the following links
+         * http://gridengine.org/pipermail/users/2011-December/002215.html
+         * http://www.gridengine.info/tag/virtual_free/
+         */
+        if( maxMemory ) {
+            result << "-l virtual_free=${maxMemory.toString().replaceAll(/[\sB]/,'')}"
+        }
+
+//        if( config?.procs && config.procs.toString().isInteger() ) {
+//            startCmd +=  "-l slots=${config.procs} "
+//        }
+//        else if ( config?.procs ) {
+//            startCmd += "-pe ${config.procs} "
+//        }
+
+        // -- the job name
+        result << '-N' << "nf-${name}-${task.index}"
+
+        // -- at the end append the command script wrapped file name
+        if ( qsubCmdLine ) {
+            result << qsubCmdLine
+        }
+
+        // -- last entry to 'script' file name
+        result << COMMAND_SCRIPT_FILENAME
+
+        return result
+    }
 
 
     @Override
@@ -64,79 +145,27 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
         /*
          * save the original script to be executed
          */
-        def scriptFile = new File(scratch, '.command.sh')
+        def scriptFile = new File(scratch, COMMAND_SCRIPT_FILENAME).absoluteFile
         scriptFile.text = task.script.toString()
 
         // -- keep a reference to the file
         task.script = scriptFile
 
-        /*
-         * Prepare the 'qsub' cmdline. The following options are used
-         * - wd: define the job working directory
-         * - terse: output just the job id on the output stream
-         * - o: define the file to which redirect the standard output
-         * - e: define the file to which redirect the error output
-         */
-
-        File cmdOutFile = new File(scratch, '.command.out').absoluteFile
-        def qsubCmd = "qsub -terse -wd \$PWD -o ${cmdOutFile} -j y -sync y -V "
-
-        // add other parameters (if any)
-        if(queue) {
-            qsubCmd += "-q ${queue} "
-        }
-
-//        if( config?.walltime )  {
-//            startCmd += "-l h_rt=${config.walltime} "
-//        }
-//
-//        if( config?.procs && config.procs.toString().isInteger() ) {
-//            startCmd +=  "-l slots=${config.procs} "
-//        }
-//        else if ( config?.procs ) {
-//            startCmd += "-pe ${config.procs} "
-//        }
-//
-//        if( config?.memory ) {
-//            /*
-//             * Read more about SGE virtual_free vs mem_free at the following links
-//             * http://gridengine.org/pipermail/users/2011-December/002215.html
-//             * http://www.gridengine.info/tag/virtual_free/
-//             */
-//            startCmd += "-l virtual_free=${config.memory} "
-//        }
-//
-//        if( config?.sge_request_options ) {
-//            startCmd += config.sge_request_options + ' '
-//        }
-
-        // -- the job name
-        qsubCmd += "-N nf-${name}-${task.index} "
-
-        // at the end append the command script wrapped file name
-        if ( qsubCmdLine ) {
-            qsubCmd += "$qsubCmdLine "
-        }
-
-        // append at the the script file to be executed through 'qsub'
-        qsubCmd += scriptFile
-
         // -- log the qsub command
-        log.debug "qsub command > ${qsubCmd} -- task: ${task.name}"
+        def cli = getQsubCommandLine(task).join(' ')
+        log.debug "qsub command > '${cli}' -- task: ${task.name}"
 
         /*
          * Save the 'qsub' command line
          */
-        def qsubLauncher = new File(scratch, '.qsub.sh')
-        qsubLauncher.text = qsubCmd
-
+        new File(scratch, QSUB_SCRIPT_FILENAME).text = cli
 
         /*
          * launch 'qsub' script wrapper
          */
         ProcessBuilder builder = new ProcessBuilder()
                 .directory(scratch)
-                .command( shell, qsubLauncher.toString() )
+                .command( shell, QSUB_SCRIPT_FILENAME )
                 .redirectErrorStream(true)
 
         // -- configure the job environment
@@ -168,6 +197,7 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
         //    * The process stdout is captured in two condition:
         //      when the flag 'echo' is set or when it goes in the output channel (outputs['-'])
         //
+        File cmdOutFile = new File(scratch, COMMAND_OUTPUT_FILENAME)
         def handler = echo ? { byte[] data, int len ->  System.out.print(new String(data,0,len)) } : null
         ByteDumper cmdDumper = new ByteDumper( cmdOutFile, handler )
         cmdDumper.setName("dumper-$name")
@@ -184,12 +214,20 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
             qsubOutStream.close()
 
             // there may be very loooong delay over NFS, wait at least one minute
-            cmdDumper.await(60_000)
+            if(success) {
+                cmdDumper.await(60_000)
+            }
 
         }
         finally {
             qsubDumper.terminate()
             cmdDumper.terminate()
+
+            IOUtils.closeQuietly(process.in)
+            IOUtils.closeQuietly(process.out)
+            IOUtils.closeQuietly(process.err)
+            process.destroy()
+
             task.workDirectory = scratch
 
             //  -- return the program output with the following strategy
@@ -207,7 +245,6 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
             }
 
             log.debug "Task finished > ${task.name} -- success: ${success}; output: ${task.@output}"
-
         }
 
     }

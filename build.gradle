@@ -18,7 +18,7 @@
  */
 
 apply plugin: 'groovy'
-version = '0.2.1'
+version = '0.2.2'
 
 repositories {
     flatDir(dirs: file('lib'))

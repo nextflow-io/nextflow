@@ -21,6 +21,8 @@ package nextflow.util
 
 import java.util.concurrent.TimeUnit
 
+import org.apache.commons.lang.time.DurationFormatUtils
+
 /**
  * A simple time duration representation
  *
@@ -28,23 +30,23 @@ import java.util.concurrent.TimeUnit
  */
 class Duration {
 
-    static private FORMAT = /(\d+)\s*(\S+)/
+    static private final FORMAT = /(\d+)\s*(\S+)/
 
-    static private MILLIS = ['ms','milli','millis']
+    static private final MILLIS = ['ms','milli','millis']
 
-    static private SECONDS = ['s','sec','second','seconds']
+    static private final SECONDS = ['s','sec','second','seconds']
 
-    static private MINUTES = ['m','min','minute','minutes']
+    static private final MINUTES = ['m','min','minute','minutes']
 
-    static private HOURS = ['h','hour','hours']
+    static private final HOURS = ['h','hour','hours']
 
-    static private DAYS = ['d','day','days']
+    static private final DAYS = ['d','day','days']
 
 
     /**
      * Duration in millis
      */
-    long value
+    final long value
 
     /**
      * Create e a duration object having the specified number of millis
@@ -132,8 +134,56 @@ class Duration {
         TimeUnit.MILLISECONDS.toDays(value)
     }
 
-    String toString() {
+    /**
+     * Duration formatting utilities and constants. The following table describes the tokens used in the pattern language for formatting.
+     * <p>
+     * <pre>
+     *   character	duration element
+     *   y	        years
+     *   d	        days
+     *   H	        hours
+     *   m	        minutes
+     *   s	        seconds
+     * </pre>
+     *
+     * @param fmt
+     * @return
+     */
+    String format( String fmt ) {
+        DurationFormatUtils.formatDuration(value, fmt)
+    }
 
+    String toString() {
+        def value = format("d:H:m:s").split(':').collect { Integer.parseInt(it) }
+        def result = []
+
+        // -- day / days
+        if( value[0] == 1 ) {
+            result << value[0] + 'day'
+        }
+        else if( value[0] > 1 ) {
+            result << value[0] + 'days'
+        }
+
+        // hour / hours
+        if( value[1] == 1 ) {
+            result << value[1] + 'hour'
+        }
+        else if( value[1] > 1 ) {
+            result << value[1] + 'hour'
+        }
+
+        // -- minute / minutes
+        if( value[2] > 0 ) {
+            result << value[2] + 'min'
+        }
+
+        // -- second / seconds
+        if( value[3] > 0 ) {
+            result << value[3] + 'sec'
+        }
+
+        result.join(' ')
     }
 
 }
