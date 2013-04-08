@@ -18,12 +18,12 @@
  */
 
 package nextflow.processor
-
 import groovy.io.FileType
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import nextflow.util.ByteDumper
 import org.apache.commons.io.IOUtils
+import org.codehaus.groovy.runtime.IOGroovyMethods
 
 /**
  *
@@ -74,12 +74,8 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
 
         // -- copy the input value to the process standard input
         if( task.input != null ) {
-            try {
-                process.withOutputStream{ writer -> writer << task.input }
-            }
-            catch( IOException e ) { log.warn "Unable to pipe input data for task: ${task.name}", e }
+            pipeInput( task, process )
         }
-
 
         File fileOut = new File(scratch, '.command.out')
         ByteDumper dumper = null
@@ -140,6 +136,26 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
 
         // TODO ++ what if expected files are missing?
         return files
+    }
+
+    /**
+     * Pipe the {@code TaskDef#input} to the {@code Process}
+     *
+     * @param task The current task to be executed
+     * @param process The system process that will run the task
+     */
+    protected void pipeInput( TaskDef task, Process process ) {
+
+        Thread.start {
+            try {
+                IOGroovyMethods.withStream(new BufferedOutputStream(process.getOutputStream())) {writer -> writer << task.input}
+            }
+            catch( Exception e ) {
+                log.warn "Unable to pipe input data for task: ${task.name}"
+            }
+        }
+
+
     }
 
 
