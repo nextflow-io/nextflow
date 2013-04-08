@@ -46,11 +46,11 @@ class Const {
 
     static final String APP_NAME = MAIN_PACKAGE
 
-    static final String APP_VER = "0.2.1"
+    static final String APP_VER = "0.2.2"
 
-    static final long APP_TIMESTAMP = 1365171912036
+    static final long APP_TIMESTAMP = 1365422813962
 
-    static final int APP_BUILDNUM = 215
+    static final int APP_BUILDNUM = 225
 
     static final String LOGO =
 
