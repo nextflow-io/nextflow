@@ -110,6 +110,8 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
     protected ErrorStrategy errorStrategy = ErrorStrategy.TERMINATE
 
+    private Boolean errorShown = Boolean.FALSE
+
     /**
      * When {@code true} the task stdout is redirected to the application console
      */
@@ -469,7 +471,11 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
     }
 
-    final protected handleException( Throwable e, TaskDef task = null ) {
+    final synchronized protected handleException( Throwable e, TaskDef task = null ) {
+
+        // -- synchronize on the errorShow to avoid multiple report of the same task
+        if( errorShown ) { return }
+        errorShown = Boolean.TRUE
 
         if( e instanceof TaskValidationException ) {
             if ( errorStrategy == ErrorStrategy.IGNORE ) {
@@ -489,12 +495,12 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
                 }
 
                 // if the echo was disabled show, the program out when there's an error
-                if ( !echo ) {
-                    message << "\nCommand output:"
-                    task.output.eachLine {
-                        message << "  $it"
-                    }
+                message << "\nCommand output:"
+                task.output.eachLine {
+                    message << "  $it"
                 }
+
+                message << "\nCommand work dir:\n  ${task.workDirectory}"
             }
 
             log.error message.join('\n')

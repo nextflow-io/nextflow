@@ -25,19 +25,19 @@ import java.text.DecimalFormat
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FileSize {
+class MemoryUnit {
 
-    static private FORMAT = /([0-9\.]+)\s*(\S+)?/
+    static private final FORMAT = /([0-9\.]+)\s*(\S)?B?/
 
     static private final List UNITS = [ "B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB" ]
 
     long size
 
-    FileSize(long value ) {
+    MemoryUnit( long value ) {
         this.size = value
     }
 
-    FileSize( String str ) {
+    MemoryUnit( String str ) {
 
         def matcher = (str =~~ FORMAT)
         if( !matcher.matches() ) {
@@ -53,7 +53,12 @@ class FileSize {
         else {
             int p = UNITS.indexOf(unit)
             if ( p == -1 ) {
-                throw new IllegalArgumentException("Not a valid file size unit: ${str}")
+                // try adding a 'B' specified
+                unit += 'B'
+                p = UNITS.indexOf(unit)
+                if( p == -1 ) {
+                    throw new IllegalArgumentException("Not a valid file size unit: ${str}")
+                }
             }
 
             Math.with {

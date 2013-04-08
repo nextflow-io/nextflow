@@ -1,10 +1,15 @@
 NEXTFLOW CHANGE-LOG
 ===================
+0.2.2 - 8 Apr 2013
+- Fixed file/stream close leaks, that caused 'Too many open files' error on big pipeline execution
+- Rolling log file '.nextflow.log' on startup
+- CLI option 'quiet' suppress all 'info' messages
+- Added 'maxDuration' and 'maxMemory' attribute to OgeTaskProcessor
 
-0.2.1 - 13 Apr 2013
+0.2.1 - 3 Apr 2013
 - Initial support for SGE/OGE grid engine
 
-0.2.0 - 12 Apr 2012
+0.2.0 - 2 Apr 2012
 - General improvement
 - Enhanced parameters handling
 - 'chunkLines' and 'chunkFasta' API extension

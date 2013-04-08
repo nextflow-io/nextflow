@@ -59,4 +59,32 @@ class DurationTest extends Specification {
         Duration.create('1d').toHours() == 24
 
     }
+
+    def 'test format' () {
+
+        when:
+        def duration = new Duration('5min')
+
+        then:
+        duration.value == 5 * 60 * 1000
+        duration.toMillis() == 5 * 60 * 1000
+        duration.toSeconds() == 5 * 60
+        duration.toMinutes() == 5
+
+        duration.format('ss') == '300'
+        duration.format('mm:ss') == '05:00'
+        duration.toString() == '5minutes'
+
+    }
+
+    def 'test toString' () {
+
+        expect:
+        new Duration(1000).toString() == '1sec'
+        new Duration(61 * 1000).toString() == '1min 1sec'
+        new Duration(60 * 60 * 1000 + 1000).toString() == '1hour 1sec'
+        new Duration(25 * 60 * 60 * 1000 + 1000).toString() == '1day 1hour 1sec'
+
+    }
+
 }

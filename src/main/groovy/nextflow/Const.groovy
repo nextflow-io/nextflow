@@ -30,7 +30,7 @@ class Const {
     static final File APP_TMP_DIR
 
     static {
-        APP_HOME_DIR = new File( System.getProperty("user.home"), ".${Const.APP_NAME}" )
+        APP_HOME_DIR = new File( System.getProperty("user.home"), ".${APP_NAME}" )
         if( !APP_HOME_DIR.exists() && !APP_HOME_DIR.mkdir() ) {
             throw new IllegalStateException("Cannot create path '${APP_HOME_DIR}' -- check file system access permission")
         }
@@ -46,11 +46,11 @@ class Const {
 
     static final String APP_NAME = MAIN_PACKAGE
 
-    static final String APP_VER = '0.2.1'
+    static final String APP_VER = "0.2.2"
 
-    static final long APP_TIMESTAMP = 1365197273876
+    static final long APP_TIMESTAMP = 1365458550104
 
-    static final int APP_BUILDNUM = 231
+    static final int APP_BUILDNUM = 233
 
     static final String LOGO =
 

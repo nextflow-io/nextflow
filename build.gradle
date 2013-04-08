@@ -22,7 +22,8 @@ apply plugin: 'groovy'
 ext.codenarcSources = ['src/main/groovy']
 ext.codenarcRuleSetFiles = [ 'config/codenarc.groovy' ]
 apply from: 'http://dl.bintray.com/content/evgenyg/GradleScripts/CodeNarc.gradle'
-version = '0.2.1'
+
+version = '0.2.2'
 
 repositories {
     flatDir(dirs: file('lib'))

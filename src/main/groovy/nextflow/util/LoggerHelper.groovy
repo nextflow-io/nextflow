@@ -45,41 +45,36 @@ import org.slf4j.LoggerFactory
  */
 class LoggerHelper {
 
-
     /**
-     * Configure the client application logging subsytem.
+     * Configure the underlying logging subsystem. The logging information are saved
+     * in a file named '.nextflow.log' in the current path, plus to the terminal console.
      * <p>
-     *     It looks on the cli argument for the following options
-     *     <li>--debug
-     *     <li>--trace
+     *     By default only the INFORMATION level logging messages are visualized to the console,
+     *     instead in the file are saved the DEBUG level messages.
      *
-     * <p>
-     *     On both of them can be optionally specified a comma separated list of packages to which
-     *     apply the specify logging level
-     *
-     *
-     * @param args The app cli arguments as entered by the user.
+     * @param quiet When {@code true} only Warning and Error messages are visualized to teh console
+     * @param debugConf The list of packages for which use a Debug logging level
+     * @param traceConf The list of packages for which use a Trace logging level
      */
-    static void configureLogger(List<String> debugConf, List<String> traceConf) {
+    static void configureLogger(boolean quiet, List<String> debugConf, List<String> traceConf) {
 
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory()
 
         // Reset all the logger
-        def root = loggerContext.getLogger('ROOT')
+        final root = loggerContext.getLogger('ROOT')
         root.detachAndStopAllAppenders()
 
         // -- define the console appender
         Map<String,Level> packages = [:]
-        packages[Const.MAIN_PACKAGE] = Level.INFO
-        packages['akka'] = Level.WARN
+        packages[Const.MAIN_PACKAGE] = quiet ? Level.WARN : Level.INFO
         debugConf?.each { packages[it] = Level.DEBUG }
         traceConf?.each { packages[it] = Level.TRACE }
 
-        def filter = new LoggerPackageFilter( packages )
+        final filter = new LoggerPackageFilter( packages )
         filter.setContext(loggerContext)
         filter.start()
 
-        def consoleAppender = new ConsoleAppender()
+        final consoleAppender = new ConsoleAppender()
         consoleAppender.setContext(loggerContext)
         consoleAppender.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
         consoleAppender.addFilter(filter)
