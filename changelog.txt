@@ -1,5 +1,8 @@
 NEXTFLOW CHANGE-LOG
 ===================
+0.2.3
+- Renamed 'queue' to 'channel'
+
 0.2.2 - 9 Apr 2013
 - Fixed file/stream close leaks, that caused 'Too many open files' error on big pipeline execution
 - Rolling log file '.nextflow.log' on startup

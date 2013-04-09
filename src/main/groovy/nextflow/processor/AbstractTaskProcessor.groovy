@@ -19,6 +19,7 @@
 package nextflow.processor
 import java.util.concurrent.locks.ReentrantLock
 
+import com.google.common.hash.Hashing
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowBroadcast
@@ -394,7 +395,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     final protected TaskDef initTaskRun(List values) {
         log.debug "Creating a new task > $name"
 
-        final task = null
+        final TaskDef task = null
         creationLock.lock()
         try {
             def num = session.tasks.size()
@@ -436,6 +437,22 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
     }
 
+
+    protected taskHashCode( String script, def Map values, def input ) {
+        assert script
+
+        def function = Hashing.goodFastHash(32)
+        def hasher = function.newHasher()
+        hasher.putString(script)
+        hasher.putOb
+
+
+
+
+
+    }
+
+
     protected final ThreadLocal<TaskDef> currentTask = new ThreadLocal<>()
 
     /**
@@ -452,6 +469,14 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         try {
             currentTask.set(task)
             task.script = task.code.call()?.toString()?.stripIndent()
+
+            // create an hash for the inputs and code
+            // Does it exist in the cache?
+            // NO --> launch the task
+            // YES --> Does it exited OK and exists the expected outputs?
+            //          YES --> return the outputs
+            //          NO  --> launch the task
+
             launchTask( task )
 
             boolean success = (task.exitCode in validExitCodes)
