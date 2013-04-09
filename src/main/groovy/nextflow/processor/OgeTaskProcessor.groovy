@@ -235,13 +235,7 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
             qsubDumper.terminate()
             cmdDumper.terminate()
 
-            IOUtils.closeQuietly(process.in)
-            IOUtils.closeQuietly(process.out)
-            IOUtils.closeQuietly(process.err)
-            process.destroy()
-
-            task.workDirectory = scratch
-
+            // make sure to release all resources
             IOUtils.closeQuietly(process.in)
             IOUtils.closeQuietly(process.out)
             IOUtils.closeQuietly(process.err)
