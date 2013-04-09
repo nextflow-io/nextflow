@@ -1,4 +1,4 @@
-#!/bin/env nextflow
+#!/usr/bin/env nextflow
 
 // define the input parameters
 NUM_SET=1           // 100
@@ -34,7 +34,7 @@ else if( RUN_MODE == "complete"  ) {
 }
 
 
-genAlnInputData = queue()
+genAlnInputData = channel()
 
 
 for( tip in tips )

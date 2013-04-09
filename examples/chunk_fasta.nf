@@ -1,9 +1,9 @@
-#!/bin/env nextflow
+#!/usr/bin/env nextflow
 
-sequences = queue()
+sequences = channel()
 
 stdin.chunkFasta { str ->
-    sequences << it
+    sequences << str
 }
 
 task {

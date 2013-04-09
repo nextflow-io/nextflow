@@ -1,9 +1,9 @@
-#!/bin/env nextflow
+#!/usr/bin/env nextflow
 
 fileName = "${HOME}/Downloads/ampa/multi.fa"
 fastaFile = new File(fileName)
 
-seq = queue()
+seq = channel()
 fastaFile.chunkFasta { seq << it }
 
 

@@ -1,4 +1,4 @@
-#!/bin/env nextflow
+#!/usr/bin/env nextflow
 
 echo true
 config.env [ 'HELLO' ]  = '1'

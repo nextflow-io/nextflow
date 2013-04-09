@@ -81,7 +81,7 @@ class Nextflow {
      * @param values
      * @return
      */
-    static <T> DataflowQueue<T> queue( Collection<T> values = null ) {
+    static <T> DataflowQueue<T> channel( Collection<T> values = null ) {
         def result = new DataflowQueue<T>()
         if ( values ) {
             values.each { result << it }
@@ -102,8 +102,8 @@ class Nextflow {
      * @param item
      * @return
      */
-    static <T> DataflowQueue<T> queue( T item ) {
-        queue([item])
+    static <T> DataflowQueue<T> channel( T item ) {
+        channel([item])
     }
 
     /**
@@ -115,6 +115,7 @@ class Nextflow {
      * @param item
      * @return
      */
+    @Deprecated
     static <T> DataflowBroadcast<T> list( T item ) {
         list([item])
     }
@@ -129,6 +130,7 @@ class Nextflow {
      * @param item
      * @return
      */
+    @Deprecated
     static <T> DataflowBroadcast<T> list( Collection<T> values = null ) {
         def result = new DataflowBroadcast()
         if ( values )  {

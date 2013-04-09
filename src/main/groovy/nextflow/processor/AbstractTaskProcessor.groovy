@@ -163,11 +163,11 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
             }
             // wrap any collections with a DataflowQueue
             else if( value instanceof Collection ) {
-                this.inputs.put( name, Nextflow.queue(value) )
+                this.inputs.put( name, Nextflow.channel(value) )
             }
             // wrap any array with a DataflowQueue
             else if ( value && value.class.isArray() ) {
-                this.inputs.put( name, Nextflow.queue(value as List) )
+                this.inputs.put( name, Nextflow.channel(value as List) )
             }
             // wrap a single value with a DataflowVariable
             else {
@@ -182,7 +182,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     @Override
     AbstractTaskProcessor output(String... files) {
         if ( files ) {
-            files.each { name -> outputs.put( name, Nextflow.queue() ) }
+            files.each { name -> outputs.put( name, Nextflow.channel() ) }
         }
 
         return this

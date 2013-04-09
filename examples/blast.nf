@@ -1,9 +1,9 @@
-#!/bin/env nextflow
+#!/usr/bin/env nextflow
 
 DB = '/Users/ptommaso/tools/blast-db/pdb/pdb'
 fileName = '/Users/ptommaso/sample.fa'
 
-seq = queue()
+seq = channel()
 new File(fileName).chunkFasta { seq << it }
 
 

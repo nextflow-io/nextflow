@@ -1,3 +1,4 @@
+#!/usr/bin/env nextflow
 
 int count = 0
 stdin.chunkFasta { seq ->

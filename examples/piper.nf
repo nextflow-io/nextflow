@@ -1,4 +1,4 @@
-#!/bin/env nextflow
+#!/usr/bin/env nextflow
 
 /*
  * Defines the pipeline parameters.
@@ -233,8 +233,8 @@ task('format') {
 /*
  * Iterate over the query chunks and create a pair (genome name, chunk file) for each of them
  */
-blastId = queue()
-blastQuery = queue()
+blastId = channel()
+blastQuery = channel()
 
 blastName.each {
 

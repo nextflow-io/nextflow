@@ -1,4 +1,4 @@
-#!/bin/env nextflow
+#!/usr/bin/env nextflow
 
 x = 1
 y = ['a','b']
