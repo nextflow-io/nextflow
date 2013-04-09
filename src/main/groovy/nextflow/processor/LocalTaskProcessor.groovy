@@ -22,6 +22,7 @@ import groovy.io.FileType
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import nextflow.util.ByteDumper
+import nextflow.util.Duration
 import org.apache.commons.io.IOUtils
 import org.codehaus.groovy.runtime.IOGroovyMethods
 
@@ -32,6 +33,20 @@ import org.codehaus.groovy.runtime.IOGroovyMethods
 @Slf4j
 @InheritConstructors
 class LocalTaskProcessor extends AbstractTaskProcessor {
+
+    private Duration maxDuration
+
+    /**
+     * The max duration time allowed for the job to be executed, this value sets the '-l h_rt' squb command line option.
+     *
+     * @param duration0 The max allowed time expressed as duration string, Accepted units are 'min', 'hour', 'day'.
+     *                  For example {@code maxDuration '30 min'}, {@code maxDuration '10 hour'}, {@code maxDuration '2 day'}
+     */
+    LocalTaskProcessor maxDuration( String duration0 ) {
+        this.maxDuration = new Duration(duration0)
+        return this
+    }
+
 
     /**
      * Run a system executable script
@@ -96,7 +111,18 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
             dumper.start()
 
             // -- wait the the process completes
-            task.exitCode = process.waitFor()
+            if( maxDuration ) {
+                log.debug "Running task > ${task.name} -- waiting max: ${maxDuration}"
+                process.waitForOrKill(maxDuration.toMillis())
+                task.exitCode = process.exitValue()
+            }
+            else {
+                log.debug "Running task > ${task.name} -- wait forever"
+                task.exitCode = process.waitFor()
+            }
+
+            log.debug "Task completed > ${task.name} -- exit code: ${task.exitCode}; success: ${task.exitCode in validExitCodes}"
+
             dumper?.await(500)
             streamOut.close()
 
