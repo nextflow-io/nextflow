@@ -79,7 +79,7 @@ class MemoryUnit {
         }
 
         int digitGroups = (int) (Math.log10(size) / Math.log10(1024))
-        new DecimalFormat("#,##0.#").format(size/Math.pow(1024, digitGroups)) + " " + UNITS[digitGroups];
+        new DecimalFormat("#,##0.#").format(size/Math.pow(1024, digitGroups)) + " " + UNITS[digitGroups]
     }
 
 

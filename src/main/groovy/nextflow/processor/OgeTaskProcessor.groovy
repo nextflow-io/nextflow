@@ -50,21 +50,45 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
 
     private Duration maxDuration
 
+    /**
+     * The SGE/OGE cluster queue to which submit the job
+     */
+
     OgeTaskProcessor queue( String queue0 ) {
         this.queue = queue0
         return this
     }
 
+    /**
+     * The max memory allow to be used to the job, this value will set the 'virtual_free' qsub cli option
+     * <p>
+     * Read more about SGE virtual_free vs mem_free at the following links
+     * http://gridengine.org/pipermail/users/2011-December/002215.html
+     * http://www.gridengine.info/tag/virtual_free/
+     *
+     * @param mem0 The maximum amount of memory expressed as string value,
+     *              accepted units are 'B', 'K', 'M', 'G', 'T', 'P'. So for example
+     *              {@code maxMemory '100M'}, {@code maxMemory '2G'}, etc.
+     */
     OgeTaskProcessor maxMemory( String mem0 ) {
         this.maxMemory = new MemoryUnit(mem0)
         return this
     }
 
+    /**
+     * The max duration time allowed for the job to be executed, this value sets the '-l h_rt' squb command line option.
+     *
+     * @param duration0 The max allowed time expressed as duration string, Accepted units are 'min', 'hour', 'day'.
+     *                  For example {@code maxDuration '30 min'}, {@code maxDuration '10 hour'}, {@code maxDuration '2 day'}
+     */
     OgeTaskProcessor maxDuration( String duration0 ) {
         this.maxDuration = new Duration(duration0)
         return this
     }
 
+    /**
+     * Extra options appended to the generated 'qsub' command line
+     */
     OgeTaskProcessor qsubCmdLine( String cmdLine ) {
         this.qsubCmdLine = cmdLine
         return this
@@ -99,21 +123,9 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
             result << "-l h_rt=${maxDuration.format('HH:mm:ss')}"
         }
 
-        /*
-         * Read more about SGE virtual_free vs mem_free at the following links
-         * http://gridengine.org/pipermail/users/2011-December/002215.html
-         * http://www.gridengine.info/tag/virtual_free/
-         */
         if( maxMemory ) {
             result << "-l virtual_free=${maxMemory.toString().replaceAll(/[\sB]/,'')}"
         }
-
-//        if( config?.procs && config.procs.toString().isInteger() ) {
-//            startCmd +=  "-l slots=${config.procs} "
-//        }
-//        else if ( config?.procs ) {
-//            startCmd += "-pe ${config.procs} "
-//        }
 
         // -- the job name
         result << '-N' << "nf-${name}-${task.index}"

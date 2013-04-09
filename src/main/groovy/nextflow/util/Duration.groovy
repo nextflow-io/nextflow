@@ -46,7 +46,7 @@ class Duration {
     /**
      * Duration in millis
      */
-    final long value
+    final long durationInMillis
 
     /**
      * Create e a duration object having the specified number of millis
@@ -55,7 +55,7 @@ class Duration {
      */
     Duration(long duration) {
         assert duration>=0
-        this.value = duration
+        this.durationInMillis = duration
     }
 
     /**
@@ -66,11 +66,6 @@ class Duration {
      * <li>{@code m}, {@code minute}, {@code minutes}: for minutes
      * <li>{@code h}, {@code hour}, {@code hours}: for hours
      * <li>{@code d}, {@code day}, {@code days}: for days
-     *
-     *
-     *
-     *
-     * For example<p>:
      *
      *
      * @param str
@@ -85,19 +80,19 @@ class Duration {
         final unit = matcher[0][2]
 
         if( unit in MILLIS ) {
-            this.value = val
+            this.durationInMillis = val
         }
         else if ( unit in SECONDS ) {
-            this.value = TimeUnit.SECONDS.toMillis(val)
+            this.durationInMillis = TimeUnit.SECONDS.toMillis(val)
         }
         else if ( unit in MINUTES ) {
-            this.value = TimeUnit.MINUTES.toMillis(val)
+            this.durationInMillis = TimeUnit.MINUTES.toMillis(val)
         }
         else if ( unit in HOURS ) {
-            this.value = TimeUnit.HOURS.toMillis(val)
+            this.durationInMillis = TimeUnit.HOURS.toMillis(val)
         }
         else if ( unit in DAYS ) {
-            this.value = TimeUnit.DAYS.toMillis(val)
+            this.durationInMillis = TimeUnit.DAYS.toMillis(val)
         }
         else {
             throw new IllegalArgumentException("Not a valid duration value: ${str}")
@@ -107,7 +102,7 @@ class Duration {
 
     Duration(long value0, TimeUnit unit) {
         assert unit
-        this.value = unit.toMillis(value0)
+        this.durationInMillis = unit.toMillis(value0)
     }
 
     static Duration create( String str ) {
@@ -115,23 +110,23 @@ class Duration {
     }
 
     long toMillis() {
-        value
+        durationInMillis
     }
 
     long toSeconds() {
-        TimeUnit.MILLISECONDS.toSeconds(value)
+        TimeUnit.MILLISECONDS.toSeconds(durationInMillis)
     }
 
     long toMinutes() {
-        TimeUnit.MILLISECONDS.toMinutes(value)
+        TimeUnit.MILLISECONDS.toMinutes(durationInMillis)
     }
 
     long toHours() {
-        TimeUnit.MILLISECONDS.toHours(value)
+        TimeUnit.MILLISECONDS.toHours(durationInMillis)
     }
 
     long toDays() {
-        TimeUnit.MILLISECONDS.toDays(value)
+        TimeUnit.MILLISECONDS.toDays(durationInMillis)
     }
 
     /**
@@ -150,7 +145,7 @@ class Duration {
      * @return
      */
     String format( String fmt ) {
-        DurationFormatUtils.formatDuration(value, fmt)
+        DurationFormatUtils.formatDuration(durationInMillis, fmt)
     }
 
     String toString() {
