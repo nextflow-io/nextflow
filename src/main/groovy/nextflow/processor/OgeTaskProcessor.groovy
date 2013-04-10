@@ -19,14 +19,12 @@
 
 package nextflow.processor
 
-import groovy.io.FileType
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import nextflow.util.ByteDumper
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import org.apache.commons.io.IOUtils
-
 /**
  * Execute a task script by running it on the SGE/OGE cluster
  *
@@ -41,6 +39,8 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
     private static final COMMAND_OUTPUT_FILENAME = '.command.out'
 
     private static final QSUB_SCRIPT_FILENAME = '.qsub.sh'
+
+    private static final QSUB_OUT_FILENAME = '.qsub.out'
 
     private String queue
 
@@ -144,14 +144,10 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
 
     @Override
     protected void launchTask(TaskDef task) {
+        assert task
+        assert task.workDirectory
 
-        task.workDirectory = shareWorkDir ? new File(session.workDirectory, name) : new File(session.workDirectory, "$name-${task.index}")
-        File scratch = task.workDirectory
-
-        if ( !scratch.exists() && !scratch.mkdirs() ) {
-            throw new IOException("Unable to create task work directory: '${scratch}'")
-        }
-
+        final scratch = task.workDirectory
         log.debug "Lauching task > ${task.name} -- scratch folder: $scratch"
 
         /*
@@ -198,7 +194,7 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
         }
 
         // -- save the 'qsub' process output
-        def qsubOutFile = new File(scratch, '.qsub.out')
+        def qsubOutFile = new File(scratch, QSUB_OUT_FILENAME)
         def qsubOutStream = new BufferedOutputStream(new FileOutputStream(qsubOutFile))
         ByteDumper qsubDumper = new ByteDumper(process.getInputStream(), {  byte[] data, int len -> qsubOutStream.write(data,0,len) } )
         qsubDumper.setName("qsub-$name")
@@ -215,11 +211,10 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
         cmdDumper.setName("dumper-$name")
         cmdDumper.start()
 
-        def success = false
         try {
             // -- wait the the process completes
             task.exitCode = process.waitFor()
-            success = task.exitCode in validExitCodes
+            def success = task.exitCode in validExitCodes
             log.debug "Task completeted > ${task.name} -- exit code: ${task.exitCode}; accepted code(s): ${validExitCodes.join(',')}"
 
             qsubDumper.await(500)
@@ -229,6 +224,9 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
             if(success) {
                 cmdDumper.await(60_000)
             }
+
+            // save the exit-code
+            new File(scratch, '.exitcode').text = task.exitCode
 
         }
         finally {
@@ -241,50 +239,44 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
             IOUtils.closeQuietly(process.err)
             process.destroy()
 
+            task.output = collectResultFile(task,'-')
+        }
+
+    }
+
+
+    protected collectResultFile(TaskDef task, String fileName ) {
+        assert fileName
+        assert task
+
+        if( fileName == '-' ) {
+
             //  -- return the program output with the following strategy
             //   + program terminated ok -> return the program output output (file)
             //   + program failed and output file not empty -> program output
             //             failed and output EMPTY -> return 'qsub' output file
+            def cmdOutFile = new File(task.workDirectory, COMMAND_OUTPUT_FILENAME)
+            def qsubOutFile = new File(task.workDirectory, QSUB_OUT_FILENAME)
             log.debug "Task cmd output > ${task.name} -- file ${cmdOutFile}; empty: ${cmdOutFile.isEmpty()}"
             log.debug "Task qsub output > ${task.name} -- file: ${qsubOutFile}; empty: ${qsubOutFile.isEmpty()}"
 
+            def result
+            def success = task.exitCode in validExitCodes
             if( success ) {
-                task.output = cmdOutFile.isNotEmpty() ? cmdOutFile : ''
+                result = cmdOutFile.isNotEmpty() ? cmdOutFile : null
             }
             else {
-                task.output = cmdOutFile.isNotEmpty() ? cmdOutFile : ( qsubOutFile.isNotEmpty() ? qsubOutFile : '' )
+                result = cmdOutFile.isNotEmpty() ? cmdOutFile : ( qsubOutFile.isNotEmpty() ? qsubOutFile : null )
             }
 
-            log.debug "Task finished > ${task.name} -- success: ${success}; output: ${task.@output}"
+            log.debug "Task finished > ${task.name} -- success: ${success}; output: ${result}"
+            return result
+
         }
-
-    }
-
-
-
-
-    @Override
-    protected List<File> collectResultFile( File scratchPath, String name ) {
-        assert scratchPath
-        assert name
-
-        // replace any wildcards characters
-        // TODO give a try to http://code.google.com/p/wildcard/  -or- http://commons.apache.org/io/
-        String filePattern = name.replace("?", ".?").replace("*", ".*?")
-
-        if( filePattern == name ) {
-            // TODO check that the file exists (?)
-            return [ new File(scratchPath,name) ]
+        else {
+            super.collectResultFile(task,fileName)
         }
-
-        // scan to find the file with that name
-        List files = []
-        scratchPath.eachFileMatch(FileType.FILES, ~/$filePattern/ ) { File it -> files << it}
-
-        // TODO ++ what if expected files are missing?
-        return files
     }
-
 
 
 

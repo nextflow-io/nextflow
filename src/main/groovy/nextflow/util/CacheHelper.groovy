@@ -36,13 +36,13 @@ class CacheHelper {
     }
 
     static Hasher hasher( def value, HashFunction function ) {
-            hasher( value, function.newHasher() )
+        hasher( value, function.newHasher() )
     }
 
     static Hasher hasher( def value, Hasher hasher ) {
         assert hasher
 
-        if( value == null ) return
+        if( value == null ) return hasher
 
         switch (value.getClass()) {
             case Boolean:

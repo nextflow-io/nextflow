@@ -148,11 +148,6 @@ class CliRunner {
     AbstractScript getScript() { script }
 
     /**
-     * @return The script working directory
-     */
-    File getWorkDirectory() { workDirectory }
-
-    /**
      * @return The result produced by the script execution
      */
     def getResult() { result }
@@ -260,29 +255,6 @@ class CliRunner {
         }
     }
 
-    protected void defineWorkDirectory() {
-
-        // -- the user may have specified teh work dir,
-        //    if no create a new folder in the current directory
-        if ( !workDirectory ) {
-            workDirectory = FileHelper.tryCreateDir(new File('.', name ?: 'run'))
-        }
-
-        // -- make sure it is empty
-        if ( FileHelper.isNotEmpty(workDirectory) ) {
-            throw new IllegalStateException("Working directory must be empty: '${workDirectory.absolutePath}' -- Empty it or specify a different working directory to continue")
-        }
-
-        // -- se the 'run' name if missing
-        if ( !name ) {
-            name = FilenameUtils.getBaseName( workDirectory.name )
-        }
-
-        // -- set the working directory into the session
-        session.workDirectory = workDirectory
-
-    }
-
 
     /**
      * Launch the Nextflow script execution
@@ -291,9 +263,6 @@ class CliRunner {
      */
     protected run() {
         assert script, "Missing script instance to run"
-
-        // -- define work-directory
-        defineWorkDirectory()
 
         // -- launch the script execution
         output = script.run()
@@ -366,10 +335,6 @@ class CliRunner {
 
             // -- create a new runner instance
             def runner = new CliRunner(config)
-
-            // -- define the working directory
-            runner.workDirectory = validateWorkDirectory( options.workDirectory, scriptName )
-            log.info "Work directory: ${runner.workDirectory}"
 
             // -- define the variable bindings
             if ( options.params ) {

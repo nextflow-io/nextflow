@@ -18,14 +18,13 @@
  */
 
 package nextflow.processor
-import groovy.io.FileType
+
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import nextflow.util.ByteDumper
 import nextflow.util.Duration
 import org.apache.commons.io.IOUtils
 import org.codehaus.groovy.runtime.IOGroovyMethods
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -33,6 +32,10 @@ import org.codehaus.groovy.runtime.IOGroovyMethods
 @Slf4j
 @InheritConstructors
 class LocalTaskProcessor extends AbstractTaskProcessor {
+
+    private static final COMMAND_OUT_FILENAME = '.command.out'
+
+    private static final COMMAND_SH_FILENAME = '.command.sh'
 
     private Duration maxDuration
 
@@ -57,27 +60,21 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
     protected void launchTask( TaskDef task )  {
         assert task
         assert task.@script
+        assert task.workDirectory
 
-        task.workDirectory = shareWorkDir ? new File(session.workDirectory, name) : new File(session.workDirectory, "$name-${task.index}")
-        File scratch = task.workDirectory
-
-        if ( !scratch.exists() && !scratch.mkdirs() ) {
-            throw new IOException("Unable to create task work directory: '${scratch}'")
-        }
-
+        final scratch = task.workDirectory
         log.debug "Lauching task > ${task.name} -- scratch folder: $scratch"
 
         // -- create the command script file
-        def scriptFile = new File(scratch, '.command.sh')
-        scriptFile.createNewFile()
-        scriptFile.text = task.script.toString().stripIndent()
+        def scriptFile = new File(scratch, COMMAND_SH_FILENAME)
+        scriptFile.text = task.script.toString()
 
         // -- save the reference to the scriptFile
         task.script = scriptFile
 
         ProcessBuilder builder = new ProcessBuilder()
                 .directory(scratch)
-                .command( shell, scriptFile.toString() )
+                .command( shell, COMMAND_SH_FILENAME )
                 .redirectErrorStream(true)
 
         // -- configure the job environment
@@ -92,7 +89,7 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
             pipeInput( task, process )
         }
 
-        File fileOut = new File(scratch, '.command.out')
+        File fileOut = new File(scratch, COMMAND_OUT_FILENAME)
         ByteDumper dumper = null
         try {
             // -- print the process out if it is not capture by the output
@@ -126,42 +123,34 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
             dumper?.await(500)
             streamOut.close()
 
+            // save the exit-code
+            new File(scratch, '.exitcode').text = task.exitCode
         }
         finally {
-            dumper?.terminate()
-            task.workDirectory = scratch
-            task.output = fileOut
 
+            dumper?.terminate()
             IOUtils.closeQuietly(process.in)
             IOUtils.closeQuietly(process.out)
             IOUtils.closeQuietly(process.err)
             process.destroy()
+
+            task.output = fileOut
         }
 
     }
 
 
+    protected collectResultFile(TaskDef task, String fileName ) {
+        assert fileName
+        assert task
 
-    @Override
-    protected List<File> collectResultFile( File scratchPath, String name ) {
-        assert scratchPath
-        assert name
-
-        // replace any wildcards characters
-        // TODO give a try to http://code.google.com/p/wildcard/  -or- http://commons.apache.org/io/
-        String filePattern = name.replace("?", ".?").replace("*", ".*?")
-
-        if( filePattern == name ) {
-            // TODO check that the file exists (?)
-            return [ new File(scratchPath,name) ]
+        if( fileName == '-' ) {
+            def fileOut = new File(task.workDirectory, COMMAND_OUT_FILENAME)
+            fileOut.exists() ? fileOut : null
         }
-
-        // scan to find the file with that name
-        List files = []
-        scratchPath.eachFileMatch(FileType.FILES, ~/$filePattern/ ) { File it -> files << it}
-
-        // TODO ++ what if expected files are missing?
-        return files
+        else {
+            super.collectResultFile(task,fileName)
+        }
     }
 
     /**

@@ -79,12 +79,6 @@ class Session {
     Multimap<TaskProcessor, TaskDef> tasks = LinkedHashMultimap.create()
 
     /**
-     * The directory where tasks create their execution folders and store results, bye default the current directory
-     */
-    File workDirectory = new File('.')
-
-
-    /**
      * Holds the configuration object
      */
     def Map config

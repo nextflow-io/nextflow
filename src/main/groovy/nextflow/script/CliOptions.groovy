@@ -39,9 +39,6 @@ class CliOptions {
     @Parameter(names = ['-q','-quiet'], description = 'Do not print information messages' )
     boolean quiet
 
-    @Parameter(names= ['-wd','-work-dir'], description =  'Directory where output files are stored')
-    String workDirectory
-
     /**
      * Defines the parameters to be passed to the pipeline script
      */

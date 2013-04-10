@@ -56,7 +56,7 @@ class TaskDef {
     /**
      * The exit code returned by executing the task script
      */
-    int exitCode
+    int exitCode = Integer.MAX_VALUE
 
     /**
      * The return std out

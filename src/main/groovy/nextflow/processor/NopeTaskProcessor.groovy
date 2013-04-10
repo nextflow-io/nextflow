@@ -39,7 +39,7 @@ class NopeTaskProcessor extends AbstractTaskProcessor {
     }
 
     @Override
-    protected List<File> collectResultFile(File scratchPath, String name) {
-        return [ new File(scratchPath, name) ]
+    protected collectResultFile(TaskDef task, String name) {
+        return new File(task.workDirectory, name)
     }
 }

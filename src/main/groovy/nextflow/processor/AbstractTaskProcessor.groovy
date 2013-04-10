@@ -19,7 +19,9 @@
 package nextflow.processor
 import java.util.concurrent.locks.ReentrantLock
 
+import com.google.common.hash.HashCode
 import com.google.common.hash.Hashing
+import groovy.io.FileType
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowBroadcast
@@ -37,6 +39,7 @@ import nextflow.exception.InvalidExitException
 import nextflow.exception.MissingFileException
 import nextflow.exception.TaskValidationException
 import nextflow.script.AbstractScript
+import nextflow.util.CacheHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -122,11 +125,18 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
     protected TaskDef lastRunTask
 
+    protected DataflowProcessor processor
+
     private allScalarValues
 
     private creationLock = new ReentrantLock(true)
 
-    private DataflowProcessor processor
+
+    private static final folderLock = new ReentrantLock(true)
+
+    private File sharedFolder
+
+    private random = new Random()
 
     AbstractTaskProcessor( Session session ) {
         this.session = session
@@ -408,8 +418,6 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
         // -- map the inputs to a map and use to delegate closure values interpolation
         def map = new DelegateMap(ownerScript)
-        map['taskIndex'] = task.index
-        map['taskId'] = task.id
 
         inputs?.keySet()?.eachWithIndex { name, index ->
 
@@ -477,7 +485,13 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
             //          YES --> return the outputs
             //          NO  --> launch the task
 
-            launchTask( task )
+            def hash = CacheHelper.hasher( [task.script, task.input] ).hash()
+            def folder = shareWorkDir && sharedFolder ? sharedFolder : folderForHash(hash)
+            def cached = checkCachedOutput(task,folder)
+            if( !cached ) {
+                task.workDirectory = createTaskFolder(folder, hash)
+                launchTask( task )
+            }
 
             boolean success = (task.exitCode in validExitCodes)
             if ( !success ) {
@@ -486,13 +500,101 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
             // -- bind output (files)
             if ( success && !bindOnTermination ) {
-                bindOutputs(processor, task)
+                bindOutputs(task)
             }
         }
         finally {
             lastRunTask = task
             task.status = TaskDef.Status.TERMINATED
         }
+    }
+
+
+    final protected File folderForHash(HashCode hash) {
+
+        def bucket = Hashing.consistentHash(hash, 100)
+        def folder = new File("./tmp/$bucket", hash.toString())
+
+        return folder
+    }
+
+    final protected File createTaskFolder( File folder, HashCode hash ) {
+
+        folderLock.lock()
+        try {
+            if( shareWorkDir && folder.exists() ) {
+                return folder
+            }
+
+            if( folder.exists() ) {
+
+                // find another folder name that does NOT exist
+                while( true ) {
+                    hash = CacheHelper.hasher( [hash.asInt(), random.nextInt() ] ).hash()
+                    folder = folderForHash(hash)
+                    if( !folder.exists() ) {
+                        break
+                    }
+                }
+            }
+
+            if( !folder.mkdirs() ) {
+                throw new IOException("Unable to create folder: $folder -- check file system permission")
+            }
+
+            if( shareWorkDir ) sharedFolder = folder
+
+            return folder
+        }
+
+        finally {
+            folderLock.unlock()
+        }
+
+    }
+
+    final checkCachedOutput(TaskDef task, File folder) {
+        if( !folder.exists() ) {
+            // no folder -> no cached result
+            return false
+        }
+
+        def exitFile = new File(folder,'.exitcode')
+        if( exitFile.isEmpty() ) {
+            return false
+        }
+
+        def exitValue = exitFile.text.trim()
+        if( !exitValue.isInteger() || !(exitValue.toInteger() in validExitCodes) ) {
+            return false
+        }
+
+        try {
+            task.exitCode = exitValue.toInteger()
+            task.workDirectory = folder
+
+            def producedFiles = collectOutputs(task)
+
+            if( producedFiles.containsKey('-') && echo ) {
+                def out = producedFiles['-']
+                if( out instanceof File )  {
+                    System.out.print(out.text)
+                }
+                else if( out ) {
+                    System.out.print(out.toString())
+                }
+            }
+
+            bindOutputs(producedFiles)
+
+            return true
+        }
+        catch( MissingFileException e ) {
+            task.exitCode = Integer.MAX_VALUE
+            task.workDirectory = null
+            return false
+        }
+
 
     }
 
@@ -558,29 +660,32 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
      * Bind the expected output files to the corresponding output channels
      * @param processor
      */
-    protected synchronized void bindOutputs( DataflowProcessor processor, TaskDef task ) {
+    protected synchronized void bindOutputs( TaskDef task ) {
 
+        bindOutputs(collectOutputs(task))
+
+    }
+
+    protected Map collectOutputs( TaskDef task ) {
         // -- collect the produced output
+        def allFiles = [:]
+        outputs.keySet().each { name ->
+            allFiles[ name ] = collectResultFile(task, name)
+        }
+
+        return allFiles
+    }
+
+    protected bindOutputs( Map allFiles ) {
+        // -- bind each produced file to its own channel
         outputs.keySet().eachWithIndex { fileName, index ->
 
-            if ( fileName == '-' ) {
-                processor.bindOutput( index, task.output )
+            def entry = allFiles[fileName]
+            if( entry instanceof Collection ) {
+                entry.each { processor.bindOutput(index, it) }
             }
-
             else {
-                def files = collectResultFile( task.workDirectory, fileName )
-                if ( !files )  {
-                    throw new MissingFileException("Missing output file(s): '$fileName' expected by task: ${task.name}")
-                }
-
-                files .each { File file ->
-                    if( file.exists() ) {
-                        processor.bindOutput(index, file)
-                    }
-                    else {
-                        throw new MissingFileException("Missing output file(s): '$fileName' expected by task: ${task.name}")
-                    }
-                }
+                processor.bindOutput(index, entry)
             }
         }
     }
@@ -659,7 +764,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
                 log.debug "Bind on termination > task: ${currentTask.get()?.name ?: name}"
 
                 try {
-                    bindOutputs(processor, lastRunTask)
+                    bindOutputs(lastRunTask)
                 }
                 catch( Throwable error ) {
                     handleException(error)
@@ -746,7 +851,35 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
      * @param name The file name, it may include file name wildcards
      * @return The list of files matching the specified name
      */
-    protected abstract List<File> collectResultFile( File path, String name )
+
+    protected collectResultFile( TaskDef task, String name ) {
+        assert name
+        assert task
+        assert task.workDirectory
+
+        // replace any wildcards characters
+        // TODO give a try to http://code.google.com/p/wildcard/  -or- http://commons.apache.org/io/
+        String filePattern = name.replace("?", ".?").replace("*", ".*?")
+
+        if( filePattern == name ) {
+            def result = new File(task.workDirectory,name)
+            if( !result.exists() ) {
+                throw new MissingFileException("Missing output file: '$name' expected by task: ${this.name}")
+            }
+            return result
+        }
+
+        // scan to find the file with that name
+        List files = []
+        task.workDirectory.eachFileMatch(FileType.FILES, ~/$filePattern/ ) { File it -> files << it}
+        if( !files ) {
+            throw new MissingFileException("Missing output file(s): '$name' expected by task: ${this.name}")
+        }
+
+        return files
+    }
+
+
 
 
     /**
