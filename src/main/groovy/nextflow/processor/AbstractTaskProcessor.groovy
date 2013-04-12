@@ -446,21 +446,6 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     }
 
 
-    protected taskHashCode( String script, def Map values, def input ) {
-        assert script
-
-        def function = Hashing.goodFastHash(32)
-        def hasher = function.newHasher()
-        hasher.putString(script)
-        hasher.putOb
-
-
-
-
-
-    }
-
-
     protected final ThreadLocal<TaskDef> currentTask = new ThreadLocal<>()
 
     /**
@@ -471,7 +456,6 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
      */
     final protected runTask(TaskDef task) {
         assert task
-        log.info "Running task > ${task.name}"
 
         // -- call the closure and execute the script
         try {
@@ -485,12 +469,18 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
             //          YES --> return the outputs
             //          NO  --> launch the task
 
-            def hash = CacheHelper.hasher( [task.script, task.input] ).hash()
+            def hash = CacheHelper.hasher( [task.script, task.input, task.code.delegate] ).hash()
             def folder = shareWorkDir && sharedFolder ? sharedFolder : folderForHash(hash)
-            def cached = checkCachedOutput(task,folder)
+            def cached = session.cacheable && (!shareWorkDir) && checkCachedOutput(task,folder)
             if( !cached ) {
+                log.info "Running task > ${task.name}"
+                log.debug "New key: ${hash.toString()}\ntask: ${task.name}\nfolder: ${folder}\nshared: ${sharedFolder}\nscript: ${task.script}\ninput: ${task.input}\nmap: ${task.code.delegate?.dump()}"
+
                 task.workDirectory = createTaskFolder(folder, hash)
                 launchTask( task )
+            }
+            else {
+                log.debug "Cached key: ${hash.toString()}\ntask: ${task.name}\nfolder: ${folder}\nshared: ${sharedFolder}\nscript: ${task.script}\ninput: ${task.input}\nmap: ${task.code.delegate?.dump()}"
             }
 
             boolean success = (task.exitCode in validExitCodes)
@@ -513,7 +503,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     final protected File folderForHash(HashCode hash) {
 
         def bucket = Hashing.consistentHash(hash, 100)
-        def folder = new File("./tmp/$bucket", hash.toString())
+        def folder = new File("./tmp/${session.scriptName}/${bucket}", hash.toString()).absoluteFile
 
         return folder
     }
@@ -554,18 +544,22 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     }
 
     final checkCachedOutput(TaskDef task, File folder) {
+        log.debug "Checking cache folder > task: ${task.name} -- folder: ${folder}"
         if( !folder.exists() ) {
+            log.debug "Cached folder does not exists > $folder"
             // no folder -> no cached result
             return false
         }
 
         def exitFile = new File(folder,'.exitcode')
         if( exitFile.isEmpty() ) {
+            log.debug "Cached exit does not exists > $folder"
             return false
         }
 
         def exitValue = exitFile.text.trim()
         if( !exitValue.isInteger() || !(exitValue.toInteger() in validExitCodes) ) {
+            log.debug "Cached invalid exit > $folder"
             return false
         }
 
@@ -573,8 +567,11 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
             task.exitCode = exitValue.toInteger()
             task.workDirectory = folder
 
+            // -- check if all output resources are available
             def producedFiles = collectOutputs(task)
+            log.info "Cached task > ${task.name} -- folder: $folder"
 
+            // -- print out the program output is required
             if( producedFiles.containsKey('-') && echo ) {
                 def out = producedFiles['-']
                 if( out instanceof File )  {
@@ -585,11 +582,13 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
                 }
             }
 
+            // -- now bind the results
             bindOutputs(producedFiles)
 
             return true
         }
         catch( MissingFileException e ) {
+            log.debug "Missing cached file > ${e.getMessage()} -- folder: $folder"
             task.exitCode = Integer.MAX_VALUE
             task.workDirectory = null
             return false
@@ -670,7 +669,13 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         // -- collect the produced output
         def allFiles = [:]
         outputs.keySet().each { name ->
-            allFiles[ name ] = collectResultFile(task, name)
+            if( name == '-' ) {
+                def result = collectResultFile(task, name)
+                allFiles[ name ] = result instanceof File ? result.text : result?.toString()
+            }
+            else {
+                allFiles[ name ] = collectResultFile(task, name)
+            }
         }
 
         return allFiles

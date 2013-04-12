@@ -26,7 +26,6 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Const
 import nextflow.Nextflow
 import nextflow.Session
-import nextflow.util.FileHelper
 import nextflow.util.LoggerHelper
 import org.apache.commons.io.FilenameUtils
 import org.codehaus.groovy.control.CompilerConfiguration
@@ -71,11 +70,6 @@ class CliRunner {
      * Unnamed arguments passed to script into the 'args' script variable
      */
     private String[] args
-
-    /**
-     * The script name (without the file extension)
-     */
-    private String name
 
     /**
      * The script file
@@ -143,6 +137,17 @@ class CliRunner {
     }
 
     /**
+     * Enable/Disable tasks results caching for the current session
+     *
+     * @param value
+     * @return
+     */
+    CliRunner setCacheable( boolean value ) {
+        session.cacheable = value
+        return this
+    }
+
+    /**
      * @return The interpreted script object
      */
     AbstractScript getScript() { script }
@@ -167,9 +172,7 @@ class CliRunner {
         assert scriptFile
 
         // set the script name attribute
-        if( !this.name ) {
-            this.name = FilenameUtils.getBaseName(scriptFile.toString())
-        }
+        session.scriptName = FilenameUtils.getBaseName(scriptFile.toString())
 
         // set the file name attribute
         this.scriptFile = scriptFile
@@ -321,7 +324,6 @@ class CliRunner {
 
         // -- check script name
         File scriptFile = new File(options.arguments[0])
-        String scriptName = FilenameUtils.getBaseName(options.arguments[0])
         if ( !scriptFile.exists() ) {
             System.err.println "The specified script file does not exist: '$scriptFile'"
             System.exit(1)
@@ -335,6 +337,7 @@ class CliRunner {
 
             // -- create a new runner instance
             def runner = new CliRunner(config)
+            runner.cacheable = options.cacheable
 
             // -- define the variable bindings
             if ( options.params ) {
@@ -355,49 +358,6 @@ class CliRunner {
 
     }
 
-
-    /**
-     * If the workDirectory string is specified, create that folder
-     * otherwise tries to create a temporary working directory in current folder
-     * using the 'scriptName' argument
-     *
-     * @param workDirectory The directory path that need to be created or {@code null} if a temporary working path is required
-     * @param folderName The name of a temporary folder, used only when @{code workDirectory} is {@code null}
-     * @return The directory created
-     */
-    static File validateWorkDirectory(String workDirectory, String folderName) {
-
-        File workPath = null
-
-        /*
-         * verify user specified 'work directory'
-         */
-        if ( workDirectory ) {
-            workPath = new File(workDirectory).canonicalFile
-
-            if ( workPath.exists() ) {
-                if ( !workPath.isDirectory() ) {
-                    throw new CliArgumentException("The specified work directory is not valid: '${workDirectory}' -- Specify a valid path directory path")
-                }
-
-                if ( !FileHelper.isEmpty(workPath) ) {
-                    throw new CliArgumentException("The work directory must be empty: '${workPath}' -- Remove the content or choose a different path")
-                }
-            }
-            else {
-                if ( !workPath.mkdirs() ) {
-                    throw new CliArgumentException("Cannot create work directory: ${workPath} -- Check access permission or choose a different path")
-                }
-            }
-
-            return workPath
-        }
-
-        /*
-         * create a new working directory in the current folder using the script name as sub-folder name
-         */
-        FileHelper.tryCreateDir( new File('.',"run-${folderName}") )
-    }
 
     /**
      * Transform the specified list of string to a list of files, verifying their existence.
@@ -478,7 +438,7 @@ class CliRunner {
 
         Const.with {
             if ( full ) {
-                "${APP_NAME.capitalize()} ${APP_VER}_${APP_BUILDNUM} - Build at ${new Date(Const.APP_TIMESTAMP).format(DATETIME_FORMAT)}"
+                "${APP_NAME.capitalize()} ${APP_VER}_${APP_BUILDNUM} - Build at ${new Date(APP_TIMESTAMP).format(DATETIME_FORMAT)}"
             }
             else {
                 APP_VER

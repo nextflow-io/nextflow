@@ -83,6 +83,17 @@ class Session {
      */
     def Map config
 
+    /**
+     * Enable / disable tasks result caching
+     */
+    def boolean cacheable
+
+    /**
+     * The script name
+     */
+    def String scriptName = 'script1'
+
+
     private SyncLatch sync = new SyncLatch()
 
     private boolean aborted

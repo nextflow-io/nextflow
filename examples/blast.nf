@@ -6,36 +6,31 @@ fileName = '/Users/ptommaso/sample.fa'
 seq = channel()
 new File(fileName).chunkFasta { seq << it }
 
-
 task {
-
     input '-': seq
     output blastResult
 
     """
     cat - | blastp -db $DB -query - -outfmt 6 > blastResult
     """
-
 }
 
 
 merge {
-
     input blastResult
     output allBlast
 
-        """
-        cat ${blastResult} >> allBlast
-        """
-
+    """
+    cat ${blastResult} >> allBlast
+    """
 }
 
 task {
     input allBlast
 
-        """
-        sort $allBlast
-        """
+    """
+    sort $allBlast
+    """
 }
 
 

@@ -20,7 +20,6 @@
 package nextflow.script
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import org.apache.commons.io.FileUtils
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import spock.lang.Specification
 /**
@@ -199,62 +198,7 @@ class CliRunnerTest extends Specification {
 
     }
 
-    def 'validateWorkDir' () {
 
-        /*
-         * the user specified a path that does not exist
-         * it will created
-         */
-        when:
-        def path = CliRunner.validateWorkDirectory( 'x1_testValidateFolder', 'scriptName' )
-
-        then:
-        path == new File('x1_testValidateFolder').canonicalFile
-        path.exists()
-
-        cleanup:
-        if( path ) FileUtils.deleteDirectory(path)
-
-    }
-
-    def 'validateWorkDir 2' () {
-
-        setup:
-        def folder = new File('x2_testValidateFolder')
-        folder.mkdirs()
-        def file = File.createTempFile('test','test',folder)
-
-        /*
-         * The folder specified by the user contains a file
-         * -> it is not a valid folder, an exception is thrown
-         */
-        when:
-        def path = CliRunner.validateWorkDirectory( folder.toString(), 'scriptName' )
-
-        then:
-        thrown(CliRunner.CliArgumentException.class)
-
-        cleanup:
-        if( folder ) FileUtils.deleteDirectory(folder)
-
-    }
-
-    def 'validateWorkDir 3' () {
-
-        /*
-         * No folder is specified, create a temp folder in the current dir, using the script name
-         */
-        when:
-        def path = CliRunner.validateWorkDirectory( null, 'myScript' )
-
-        then:
-        path == new File('run-myScript').canonicalFile
-        path.exists()
-
-        cleanup:
-        path?.delete()
-
-    }
 
     def 'buildConfigObject' () {
 

@@ -24,6 +24,9 @@ class CliOptions {
     @Parameter(names=['-c','-config'], description = 'Use the specified configuration file(s)')
     List<String> config
 
+    @Parameter(names=['-cache'], description = 'Enable/disable task(s) caching', arity = 1)
+    boolean cacheable = true
+
     /**
      * Print out the version number and exit
      */
