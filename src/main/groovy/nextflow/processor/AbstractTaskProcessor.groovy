@@ -494,17 +494,19 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
                 // save the exit code
                 new File(folder, '.exitcode').text = task.exitCode
+
+                // check if terminated successfully
+                boolean success = (task.exitCode in validExitCodes)
+                if ( !success ) {
+                    throw new InvalidExitException("Task '${task.name}' terminated with an invalid exit code: ${task.exitCode}")
+                }
+
+                // -- bind output (files)
+                if ( success && !bindOnTermination ) {
+                    bindOutputs(task)
+                }
             }
 
-            boolean success = (task.exitCode in validExitCodes)
-            if ( !success ) {
-                throw new InvalidExitException("Task '${task.name}' terminated with an invalid exit code: ${task.exitCode}")
-            }
-
-            // -- bind output (files)
-            if ( success && !bindOnTermination ) {
-                bindOutputs(task)
-            }
         }
         finally {
             lastRunTask = task
@@ -687,8 +689,9 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
     protected bindOutputs( Map allOutputResources ) {
 
-        // -- bind each produced file to its own channel
+        log.debug "Binding results > task: ${currentTask.get()?.name ?: name} - values: ${allOutputResources}"
 
+        // -- bind each produced file to its own channel
         outputs.keySet().eachWithIndex { fileName, index ->
 
             def entry = allOutputResources[fileName]
