@@ -101,14 +101,14 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
      */
     protected List<String> getQsubCommandLine(TaskDef task) {
 
-        final result = []
+        final result = new ArrayList<String>()
 
         result << 'qsub'
         result << '-terse'
-        result << '-wd $PWD'
+        result << '-wd' << task.workDirectory
         result << '-o' << COMMAND_OUTPUT_FILENAME
-        result << '-j y'
-        result << '-sync y'
+        result << '-j' << 'y'
+        result << '-sync' << 'y'
         result << '-V'
 
 
@@ -118,11 +118,11 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
         }
 
         if( maxDuration ) {
-            result << "-l h_rt=${maxDuration.format('HH:mm:ss')}"
+            result << '-l' << "h_rt=${maxDuration.format('HH:mm:ss')}"
         }
 
         if( maxMemory ) {
-            result << "-l virtual_free=${maxMemory.toString().replaceAll(/[\sB]/,'')}"
+            result << '-l' << "virtual_free=${maxMemory.toString().replaceAll(/[\sB]/,'')}"
         }
 
         // -- the job name
@@ -183,7 +183,7 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
          */
         ProcessBuilder builder = new ProcessBuilder()
                 .directory(scratch)
-                .command( cli )
+                .command( cli as String[] )
                 .redirectErrorStream(true)
 
         // -- configure the job environment
