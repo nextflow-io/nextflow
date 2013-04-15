@@ -102,24 +102,27 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     protected Closure code
 
     /**
-     * The system interpreter used to execute the script, by default {@code bash}
+     * The system interpreter used to execute the script, by default {@code 'bash'}
      */
-    protected String shell = 'bash'
+    protected shell = ['bash','-u']
 
     /**
      * The exit code which define a valid result, default {@code 0}
      */
     protected List<Integer> validExitCodes = [0]
 
-
     protected ErrorStrategy errorStrategy = ErrorStrategy.TERMINATE
-
-    private Boolean errorShown = Boolean.FALSE
 
     /**
      * When {@code true} the task stdout is redirected to the application console
      */
     protected boolean echo
+
+    /**
+     * When the task is cacheable, by default {@code true}
+     */
+    protected boolean cacheable = true
+
 
     // ---== private ==---
 
@@ -131,12 +134,13 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
     private creationLock = new ReentrantLock(true)
 
-
     private static final folderLock = new ReentrantLock(true)
 
     private File sharedFolder
 
     private random = new Random()
+
+    private Boolean errorShown = Boolean.FALSE
 
     AbstractTaskProcessor( Session session ) {
         this.session = session
@@ -227,7 +231,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     }
 
     @Override
-    AbstractTaskProcessor shell( String value ) {
+    AbstractTaskProcessor shell( value ) {
         this.shell = value
         return this
     }
@@ -245,6 +249,12 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     }
 
     @Override
+    AbstractTaskProcessor cacheable( boolean value ) {
+        this.cacheable = value
+        return this
+    }
+
+    @Override
     AbstractTaskProcessor threads(int max) {
         this.threads = max
         return this
@@ -257,7 +267,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     }
 
     @Override
-    AbstractTaskProcessor script(String shell, Closure script) {
+    AbstractTaskProcessor script( def shell, Closure script) {
         this.shell = shell
         this.code = script
         return this
@@ -291,13 +301,16 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     boolean getShareWorkDir() { shareWorkDir }
 
     @Override
-    String getShell() { shell }
+    def getShell() { shell }
 
     @Override
     List<Integer> getValidExitCodes() { validExitCodes }
 
     @Override
     ErrorStrategy getErrorStrategy() { errorStrategy }
+
+    @Override
+    boolean getCacheable() { cacheable }
 
     /**
      * Launch the 'script' define by the code closure as a local bash script
@@ -471,16 +484,16 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
             def hash = CacheHelper.hasher( [task.script, task.input, task.code.delegate] ).hash()
             def folder = shareWorkDir && sharedFolder ? sharedFolder : folderForHash(hash)
-            def cached = session.cacheable && (!shareWorkDir) && checkCachedOutput(task,folder)
+            def cached = session.cacheable && this.cacheable && (!shareWorkDir) && checkCachedOutput(task,folder)
             if( !cached ) {
                 log.info "Running task > ${task.name}"
-                log.debug "New key: ${hash.toString()}\ntask: ${task.name}\nfolder: ${folder}\nshared: ${sharedFolder}\nscript: ${task.script}\ninput: ${task.input}\nmap: ${task.code.delegate?.dump()}"
 
+                // run the task
                 task.workDirectory = createTaskFolder(folder, hash)
                 launchTask( task )
-            }
-            else {
-                log.debug "Cached key: ${hash.toString()}\ntask: ${task.name}\nfolder: ${folder}\nshared: ${sharedFolder}\nscript: ${task.script}\ninput: ${task.input}\nmap: ${task.code.delegate?.dump()}"
+
+                // save the exit code
+                new File(folder, '.exitcode').text = task.exitCode
             }
 
             boolean success = (task.exitCode in validExitCodes)
@@ -544,34 +557,31 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     }
 
     final checkCachedOutput(TaskDef task, File folder) {
-        log.debug "Checking cache folder > task: ${task.name} -- folder: ${folder}"
         if( !folder.exists() ) {
-            log.debug "Cached folder does not exists > $folder"
             // no folder -> no cached result
             return false
         }
 
         def exitFile = new File(folder,'.exitcode')
         if( exitFile.isEmpty() ) {
-            log.debug "Cached exit does not exists > $folder"
             return false
         }
 
         def exitValue = exitFile.text.trim()
-        if( !exitValue.isInteger() || !(exitValue.toInteger() in validExitCodes) ) {
-            log.debug "Cached invalid exit > $folder"
+        def exitCode = exitValue.isInteger() ? exitValue.toInteger() : null
+        if( exitCode == null || !(exitCode in validExitCodes) ) {
             return false
         }
 
         try {
-            task.exitCode = exitValue.toInteger()
+            task.exitCode = exitCode
             task.workDirectory = folder
 
             // -- check if all output resources are available
-            def producedFiles = collectOutputs(task)
-            log.info "Cached task > ${task.name} -- folder: $folder"
+            def producedFiles = collectAndValidateOutputs(task)
+            log.info "Cached task > ${task.name}"
 
-            // -- print out the program output is required
+            // -- print out the cached tasks output when 'echo' is true
             if( producedFiles.containsKey('-') && echo ) {
                 def out = producedFiles['-']
                 if( out instanceof File )  {
@@ -661,32 +671,31 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
      */
     protected synchronized void bindOutputs( TaskDef task ) {
 
-        bindOutputs(collectOutputs(task))
+        bindOutputs(collectAndValidateOutputs(task))
 
     }
 
-    protected Map collectOutputs( TaskDef task ) {
+    protected Map collectAndValidateOutputs( TaskDef task ) {
         // -- collect the produced output
         def allFiles = [:]
         outputs.keySet().each { name ->
-            if( name == '-' ) {
-                def result = collectResultFile(task, name)
-                allFiles[ name ] = result instanceof File ? result.text : result?.toString()
-            }
-            else {
-                allFiles[ name ] = collectResultFile(task, name)
-            }
+            allFiles[ name ] = collectResultFile(task, name)
         }
 
         return allFiles
     }
 
-    protected bindOutputs( Map allFiles ) {
+    protected bindOutputs( Map allOutputResources ) {
+
         // -- bind each produced file to its own channel
+
         outputs.keySet().eachWithIndex { fileName, index ->
 
-            def entry = allFiles[fileName]
-            if( entry instanceof Collection ) {
+            def entry = allOutputResources[fileName]
+            if( fileName == '-' && entry instanceof File ) {
+                processor.bindOutput(index, entry.text)
+            }
+            else if( entry instanceof Collection ) {
                 entry.each { processor.bindOutput(index, it) }
             }
             else {
@@ -842,7 +851,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
 
     /**
-     * Execute the specified system script
+     * Execute the specified task shell script
      *
      * @param script The script string to be execute, e.g. a BASH script
      * @return {@code TaskDef}
@@ -850,26 +859,39 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     protected abstract void launchTask( TaskDef task )
 
     /**
+     * The file which contains the stdout produced by the executed task script
+     *
+     * @param task The user task to be executed
+     * @return The absolute file to the produced script output
+     */
+    protected abstract getStdOutFile( TaskDef task )
+
+    /**
      * Collect the file(s) with the name specified, produced by the execution
      *
      * @param path The job working path
-     * @param name The file name, it may include file name wildcards
+     * @param fileName The file name, it may include file name wildcards
      * @return The list of files matching the specified name
      */
-
-    protected collectResultFile( TaskDef task, String name ) {
-        assert name
+    protected collectResultFile( TaskDef task, String fileName ) {
+        assert fileName
         assert task
         assert task.workDirectory
 
+        // the '-' stands for the script stdout, save to a file
+        if( fileName == '-' ) {
+            return getStdOutFile(task)
+        }
+
         // replace any wildcards characters
         // TODO give a try to http://code.google.com/p/wildcard/  -or- http://commons.apache.org/io/
-        String filePattern = name.replace("?", ".?").replace("*", ".*?")
+        String filePattern = fileName.replace("?", ".?").replace("*", ".*?")
 
-        if( filePattern == name ) {
-            def result = new File(task.workDirectory,name)
+        // when there's not change in the pattern, try to find a single file
+        if( filePattern == fileName ) {
+            def result = new File(task.workDirectory,fileName)
             if( !result.exists() ) {
-                throw new MissingFileException("Missing output file: '$name' expected by task: ${this.name}")
+                throw new MissingFileException("Missing output file: '$fileName' expected by task: ${this.name}")
             }
             return result
         }
@@ -878,12 +900,11 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         List files = []
         task.workDirectory.eachFileMatch(FileType.FILES, ~/$filePattern/ ) { File it -> files << it}
         if( !files ) {
-            throw new MissingFileException("Missing output file(s): '$name' expected by task: ${this.name}")
+            throw new MissingFileException("Missing output file(s): '$fileName' expected by task: ${this.name}")
         }
 
         return files
     }
-
 
 
 

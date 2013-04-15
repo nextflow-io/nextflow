@@ -39,7 +39,12 @@ class NopeTaskProcessor extends AbstractTaskProcessor {
     }
 
     @Override
-    protected collectResultFile(TaskDef task, String name) {
-        return new File(task.workDirectory, name)
+    protected getStdOutFile(TaskDef task) {
+        return task.script
+    }
+
+    @Override
+    protected collectResultFile(TaskDef task, String fileName) {
+        return new File(task.workDirectory, fileName)
     }
 }

@@ -72,9 +72,16 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
         // -- save the reference to the scriptFile
         task.script = scriptFile
 
+        // -- compose the command to execute
+        //    the 'shell' may by either a single string e.g. 'bash'
+        //    or a list of strings representing a command plus the options
+        //    in any case the script is appended as the last parameter
+        def command = ( shell instanceof List ) ? shell.collect { it?.toString() } : [shell.toString()]
+        command << COMMAND_SH_FILENAME
+
         ProcessBuilder builder = new ProcessBuilder()
                 .directory(scratch)
-                .command( shell, COMMAND_SH_FILENAME )
+                .command( command )
                 .redirectErrorStream(true)
 
         // -- configure the job environment
@@ -123,8 +130,6 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
             dumper?.await(500)
             streamOut.close()
 
-            // save the exit-code
-            new File(scratch, '.exitcode').text = task.exitCode
         }
         finally {
 
@@ -136,22 +141,14 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
 
             task.output = fileOut
         }
+    }
+
+    protected getStdOutFile( TaskDef task ) {
+
+        new File(task.workDirectory, COMMAND_OUT_FILENAME)
 
     }
 
-
-    protected collectResultFile(TaskDef task, String fileName ) {
-        assert fileName
-        assert task
-
-        if( fileName == '-' ) {
-            def fileOut = new File(task.workDirectory, COMMAND_OUT_FILENAME)
-            fileOut.exists() ? fileOut : null
-        }
-        else {
-            super.collectResultFile(task,fileName)
-        }
-    }
 
     /**
      * Pipe the {@code TaskDef#input} to the {@code Process}

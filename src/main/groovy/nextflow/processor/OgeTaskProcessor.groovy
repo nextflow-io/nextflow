@@ -38,8 +38,6 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
 
     private static final COMMAND_OUTPUT_FILENAME = '.command.out'
 
-    private static final QSUB_SCRIPT_FILENAME = '.qsub.sh'
-
     private static final QSUB_OUT_FILENAME = '.qsub.out'
 
     private String queue
@@ -151,29 +149,41 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
         log.debug "Lauching task > ${task.name} -- scratch folder: $scratch"
 
         /*
+         * the shell defined by the user is specified in the script
+         * by the 'shebang' header definition
+         */
+        def scriptToRun = task.script.toString()
+        if( !scriptToRun.trim().startsWith('#!/') ) {
+
+            String shebang = shell instanceof List ? shell.join(' ') : shell
+            if( shebang.startsWith('/') ) {
+                shebang = '#!' + shebang
+            }
+            else {
+                shebang= '#!/usr/bin/env ' + shebang
+            }
+            scriptToRun = shebang + '\n' + scriptToRun
+        }
+
+        /*
          * save the original script to be executed
          */
         def scriptFile = new File(scratch, COMMAND_SCRIPT_FILENAME).absoluteFile
-        scriptFile.text = task.script.toString()
+        scriptFile.text = scriptToRun
 
         // -- keep a reference to the file
         task.script = scriptFile
 
         // -- log the qsub command
-        def cli = getQsubCommandLine(task).join(' ')
+        def cli = getQsubCommandLine(task)
         log.debug "qsub command > '${cli}' -- task: ${task.name}"
-
-        /*
-         * Save the 'qsub' command line
-         */
-        new File(scratch, QSUB_SCRIPT_FILENAME).text = cli
 
         /*
          * launch 'qsub' script wrapper
          */
         ProcessBuilder builder = new ProcessBuilder()
                 .directory(scratch)
-                .command( shell, QSUB_SCRIPT_FILENAME )
+                .command( cli )
                 .redirectErrorStream(true)
 
         // -- configure the job environment
@@ -225,9 +235,6 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
                 cmdDumper.await(60_000)
             }
 
-            // save the exit-code
-            new File(scratch, '.exitcode').text = task.exitCode
-
         }
         finally {
             qsubDumper.terminate()
@@ -245,37 +252,31 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
     }
 
 
-    protected collectResultFile(TaskDef task, String fileName ) {
-        assert fileName
+    protected getStdOutFile( TaskDef task ) {
         assert task
 
-        if( fileName == '-' ) {
+        //  -- return the program output with the following strategy
+        //   + program terminated ok -> return the program output output (file)
+        //   + program failed and output file not empty -> program output
+        //             failed and output EMPTY -> return 'qsub' output file
+        def cmdOutFile = new File(task.workDirectory, COMMAND_OUTPUT_FILENAME)
+        def qsubOutFile = new File(task.workDirectory, QSUB_OUT_FILENAME)
+        log.debug "Task cmd output > ${task.name} -- file ${cmdOutFile}; empty: ${cmdOutFile.isEmpty()}"
+        log.debug "Task qsub output > ${task.name} -- file: ${qsubOutFile}; empty: ${qsubOutFile.isEmpty()}"
 
-            //  -- return the program output with the following strategy
-            //   + program terminated ok -> return the program output output (file)
-            //   + program failed and output file not empty -> program output
-            //             failed and output EMPTY -> return 'qsub' output file
-            def cmdOutFile = new File(task.workDirectory, COMMAND_OUTPUT_FILENAME)
-            def qsubOutFile = new File(task.workDirectory, QSUB_OUT_FILENAME)
-            log.debug "Task cmd output > ${task.name} -- file ${cmdOutFile}; empty: ${cmdOutFile.isEmpty()}"
-            log.debug "Task qsub output > ${task.name} -- file: ${qsubOutFile}; empty: ${qsubOutFile.isEmpty()}"
-
-            def result
-            def success = task.exitCode in validExitCodes
-            if( success ) {
-                result = cmdOutFile.isNotEmpty() ? cmdOutFile : null
-            }
-            else {
-                result = cmdOutFile.isNotEmpty() ? cmdOutFile : ( qsubOutFile.isNotEmpty() ? qsubOutFile : null )
-            }
-
-            log.debug "Task finished > ${task.name} -- success: ${success}; output: ${result}"
-            return result
-
+        def result
+        def success = task.exitCode in validExitCodes
+        if( success ) {
+            result = cmdOutFile.isNotEmpty() ? cmdOutFile : null
         }
         else {
-            super.collectResultFile(task,fileName)
+            result = cmdOutFile.isNotEmpty() ? cmdOutFile : ( qsubOutFile.isNotEmpty() ? qsubOutFile : null )
         }
+
+        log.debug "Task finished > ${task.name} -- success: ${success}; output: ${result}"
+        return result
+
+
     }
 
 

@@ -53,11 +53,13 @@ interface TaskProcessor {
 
     TaskProcessor shareWorkDir( boolean value )
 
-    TaskProcessor shell( String value )
+    TaskProcessor shell( value )
 
     TaskProcessor validExitCodes( List<Integer> values )
 
     TaskProcessor errorStrategy( ErrorStrategy value )
+
+    TaskProcessor cacheable( boolean value )
 
 
     /**
@@ -78,7 +80,7 @@ interface TaskProcessor {
 
     TaskProcessor script( Closure closure )
 
-    TaskProcessor script( String shell, Closure closure )
+    TaskProcessor script( def shell, Closure closure )
 
     /**
      * The code to be executed
@@ -132,9 +134,11 @@ interface TaskProcessor {
      */
     boolean getShareWorkDir()
 
-    String getShell()
+    def getShell()
 
     List<Integer> getValidExitCodes()
 
     ErrorStrategy getErrorStrategy()
+
+    boolean getCacheable()
 }
