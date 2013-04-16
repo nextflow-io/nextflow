@@ -195,12 +195,7 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
 
         // -- pipe the input value to the process standard input
         if( task.input != null ) {
-            try {
-                process.withOutputStream{ writer -> writer << task.input }
-            }
-            catch( IOException e ) {
-                log.warn "Unable to pipe input data for task: ${task.name}", e
-            }
+            pipeTaskInput( task, process )
         }
 
         // -- save the 'qsub' process output

@@ -18,13 +18,11 @@
  */
 
 package nextflow.processor
-
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import nextflow.util.ByteDumper
 import nextflow.util.Duration
 import org.apache.commons.io.IOUtils
-import org.codehaus.groovy.runtime.IOGroovyMethods
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -93,7 +91,7 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
 
         // -- copy the input value to the process standard input
         if( task.input != null ) {
-            pipeInput( task, process )
+            pipeTaskInput( task, process )
         }
 
         File fileOut = new File(scratch, COMMAND_OUT_FILENAME)
@@ -146,27 +144,6 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
     protected getStdOutFile( TaskDef task ) {
 
         new File(task.workDirectory, COMMAND_OUT_FILENAME)
-
-    }
-
-
-    /**
-     * Pipe the {@code TaskDef#input} to the {@code Process}
-     *
-     * @param task The current task to be executed
-     * @param process The system process that will run the task
-     */
-    protected void pipeInput( TaskDef task, Process process ) {
-
-        Thread.start {
-            try {
-                IOGroovyMethods.withStream(new BufferedOutputStream(process.getOutputStream())) {writer -> writer << task.input}
-            }
-            catch( Exception e ) {
-                log.warn "Unable to pipe input data for task: ${task.name}"
-            }
-        }
-
 
     }
 
