@@ -19,6 +19,7 @@
 
 package nextflow.script
 import com.beust.jcommander.JCommander
+import com.beust.jcommander.ParameterException
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
@@ -302,35 +303,34 @@ class CliRunner {
      */
     public static void main(String[] args)  {
 
-        // parse the program arguments - and - configure the logger
-        def options = parseMainArgs(args)
-        LoggerHelper.configureLogger( options.quiet, options.debug, options.trace )
-
-        // -- print out the version number, then exit
-        if ( options.version ) {
-            println getVersion(true)
-            System.exit(0)
-        }
-
-        if ( !options.quiet ) {
-            println Const.LOGO
-        }
-
-        // -- print out the program help, then exit
-        if( options.help || !options.arguments ) {
-            jcommander.usage()
-            System.exit(0)
-        }
-
-        // -- check script name
-        File scriptFile = new File(options.arguments[0])
-        if ( !scriptFile.exists() ) {
-            System.err.println "The specified script file does not exist: '$scriptFile'"
-            System.exit(1)
-        }
-
-
         try {
+            // -- parse the program arguments - and - configure the logger
+            def options = parseMainArgs(args)
+            LoggerHelper.configureLogger( options.quiet, options.debug, options.trace )
+
+            // -- print out the version number, then exit
+            if ( options.version ) {
+                println getVersion(true)
+                System.exit(0)
+            }
+
+            if ( !options.quiet ) {
+                println Const.LOGO
+            }
+
+            // -- print out the program help, then exit
+            if( options.help || !options.arguments ) {
+                jcommander.usage()
+                System.exit(0)
+            }
+
+            // -- check script name
+            File scriptFile = new File(options.arguments[0])
+            if ( !scriptFile.exists() ) {
+                log.error "The specified script file does not exist: '$scriptFile'"
+                System.exit(1)
+            }
+
             // -- configuration file(s)
             def configFiles = validateConfigFiles(options.config)
             def config = buildConfig(configFiles)
@@ -349,6 +349,14 @@ class CliRunner {
 
             // -- run it!
             runner.execute(scriptFile, scriptArgs as String[])
+        }
+
+        catch( ParameterException e ) {
+            // print command line parsing errors
+            // note: use system.err.println since if an exception is raised
+            //       parsing the cli params the logging is not configured
+            System.err.println "${e.getMessage()} -- Check the available command line parameters and syntax using '-h'"
+            System.exit(1)
         }
 
         catch( Throwable fail ) {

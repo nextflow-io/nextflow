@@ -40,8 +40,6 @@ import nextflow.exception.MissingFileException
 import nextflow.exception.TaskValidationException
 import nextflow.script.AbstractScript
 import nextflow.util.CacheHelper
-import org.codehaus.groovy.runtime.IOGroovyMethods
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -106,7 +104,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     /**
      * The system interpreter used to execute the script, by default {@code 'bash'}
      */
-    protected shell = ['bash','-u']
+    protected shell = ['bash','-ue']
 
     /**
      * The exit code which define a valid result, default {@code 0}
@@ -854,25 +852,6 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         return result
     }
 
-
-    /**
-     * Pipe the {@code TaskDef#input} to the {@code Process}
-     *
-     * @param task The current task to be executed
-     * @param process The system process that will run the task
-     */
-    protected void pipeTaskInput( TaskDef task, Process process ) {
-
-        Thread.start {
-            try {
-                IOGroovyMethods.withStream(new BufferedOutputStream(process.getOutputStream())) {writer -> writer << task.input}
-            }
-            catch( Exception e ) {
-                log.warn "Unable to pipe input data for task: ${task.name}"
-            }
-        }
-
-    }
 
 
     /**

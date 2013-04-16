@@ -38,7 +38,11 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
 
     private static final COMMAND_OUTPUT_FILENAME = '.command.out'
 
+    private static final COMMAND_INPUT_FILE = '.command.input'
+
     private static final QSUB_OUT_FILENAME = '.qsub.out'
+
+    private static final QSUB_SCRIPT_FILENAME = '.qsub.sh'
 
     private String queue
 
@@ -134,7 +138,7 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
         }
 
         // -- last entry to 'script' file name
-        result << COMMAND_SCRIPT_FILENAME
+        result << QSUB_SCRIPT_FILENAME
 
         return result
     }
@@ -145,34 +149,56 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
         assert task
         assert task.workDirectory
 
-        final scratch = task.workDirectory
-        log.debug "Lauching task > ${task.name} -- scratch folder: $scratch"
+        final folder = task.workDirectory
+        log.debug "Lauching task > ${task.name} -- scratch folder: $folder"
 
         /*
-         * the shell defined by the user is specified in the script
-         * by the 'shebang' header definition
+         * save the command input (if any)
+         * the file content will be piped to the executed user script
          */
-        def scriptToRun = task.script.toString()
-        if( !scriptToRun.trim().startsWith('#!/') ) {
-
-            String shebang = shell instanceof List ? shell.join(' ') : shell
-            if( shebang.startsWith('/') ) {
-                shebang = '#!' + shebang
-            }
-            else {
-                shebang= '#!/usr/bin/env ' + shebang
-            }
-            scriptToRun = shebang + '\n' + scriptToRun
+        File cmdInputFile = null
+        if( task.input != null ) {
+            cmdInputFile = new File(folder, COMMAND_INPUT_FILE)
+            cmdInputFile.text = task.input
         }
 
         /*
-         * save the original script to be executed
+         * save the 'user' script to be executed
          */
-        def scriptFile = new File(scratch, COMMAND_SCRIPT_FILENAME).absoluteFile
-        scriptFile.text = scriptToRun
-
-        // -- keep a reference to the file
+        def scriptFile = new File(folder, COMMAND_SCRIPT_FILENAME)
+        scriptFile.text = task.script.toString()
+        // keep a reference to the file
         task.script = scriptFile
+
+        /*
+         * create a script wrapper which do the following
+         * 1 - move the TMP directory provided by the sge/oge grid engine
+         * 2 - pipe the input stream
+         * 3 - launch the user script
+         * 4 - un-stage e.g. copy back the result files to the working folder
+         */
+        File cmdOutFile = new File(folder, COMMAND_OUTPUT_FILENAME)
+        def scriptShell = shell instanceof List ? shell.join(' ') : shell
+        def wrapper = new StringBuilder()
+        wrapper << '#!/bin/bash -ue' << '\n'
+        wrapper << '[ ! -z $TMP ] && cd $TMP' << '\n'
+        wrapper << '[ ! -z $TMPDIR ] && cd $TMPDIR'  << '\n'
+
+        // execute the command script
+        if( cmdInputFile ) {
+            wrapper << 'cat ' << cmdInputFile << ' | '
+        }
+        wrapper << "$scriptShell $scriptFile &> ${cmdOutFile.absolutePath}" << '\n'
+
+        // "un-stage" the result files
+        def resultFiles = outputs.keySet().findAll { it != '-' }
+        if( resultFiles ) {
+            wrapper << "if [ \$PWD != $folder ]; then" << '\n'
+            resultFiles.each { name -> wrapper << "for X in $name; do cp \$X $folder; done\n" }
+            wrapper << 'fi' << '\n'
+        }
+
+        new File(folder, QSUB_SCRIPT_FILENAME).text = wrapper.toString()
 
         // -- log the qsub command
         def cli = getQsubCommandLine(task)
@@ -182,7 +208,7 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
          * launch 'qsub' script wrapper
          */
         ProcessBuilder builder = new ProcessBuilder()
-                .directory(scratch)
+                .directory(folder)
                 .command( cli as String[] )
                 .redirectErrorStream(true)
 
@@ -193,28 +219,14 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
         Process process = builder.start()
         task.status = TaskDef.Status.RUNNING
 
-        // -- pipe the input value to the process standard input
-        if( task.input != null ) {
-            pipeTaskInput( task, process )
-        }
 
         // -- save the 'qsub' process output
-        def qsubOutFile = new File(scratch, QSUB_OUT_FILENAME)
+        def qsubOutFile = new File(folder, QSUB_OUT_FILENAME)
         def qsubOutStream = new BufferedOutputStream(new FileOutputStream(qsubOutFile))
         ByteDumper qsubDumper = new ByteDumper(process.getInputStream(), {  byte[] data, int len -> qsubOutStream.write(data,0,len) } )
-        qsubDumper.setName("qsub-$name")
+        qsubDumper.setName("qsub_${task.name}")
         qsubDumper.start()
 
-        // -- print the process out if it is not capture by the output
-        //    * The byte dumper uses a separate thread to capture the process stdout
-        //    * The process stdout is captured in two condition:
-        //      when the flag 'echo' is set or when it goes in the output channel (outputs['-'])
-        //
-        File cmdOutFile = new File(scratch, COMMAND_OUTPUT_FILENAME)
-        def handler = echo ? { byte[] data, int len ->  System.out.print(new String(data,0,len)) } : null
-        ByteDumper cmdDumper = new ByteDumper( cmdOutFile, handler )
-        cmdDumper.setName("dumper-$name")
-        cmdDumper.start()
 
         try {
             // -- wait the the process completes
@@ -226,14 +238,16 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
             qsubOutStream.close()
 
             // there may be very loooong delay over NFS, wait at least one minute
-            if(success) {
-                cmdDumper.await(60_000)
+            if( success ) {
+                Duration.waitFor('60s') { cmdOutFile.exists() }
+            }
+            if( cmdOutFile.exists() && echo ) {
+                print cmdOutFile.text
             }
 
         }
         finally {
             qsubDumper.terminate()
-            cmdDumper.terminate()
 
             // make sure to release all resources
             IOUtils.closeQuietly(process.in)
@@ -245,6 +259,7 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
         }
 
     }
+
 
 
     protected getStdOutFile( TaskDef task ) {

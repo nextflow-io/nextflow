@@ -20,6 +20,7 @@
 package nextflow.util
 
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 import org.apache.commons.lang.time.DurationFormatUtils
 
@@ -179,6 +180,48 @@ class Duration {
         }
 
         result.join(' ')
+    }
+
+    /**
+     * Waits indefinitely the specified condition is verified
+     *
+     * @param condition A closure returning a condition to be satisfied, if waits until the condition is {@code false}
+     *          and exit when {@code true}
+     */
+    static final protected  waitFor( Closure<Boolean> condition ) {
+        waitFor((Duration)null, condition)
+    }
+
+
+    /**
+     * Waits until the specified condition is verified or throws an exception of type {@code TimeoutException}
+     * when the specified duration is exceeded
+     *
+     * @param maxDuration
+     * @param condition
+     */
+    static final waitFor( Duration maxDuration, Closure<Boolean> condition ) {
+        long time = System.currentTimeMillis()
+
+        while( true ) {
+            if( condition.call() ) {
+                break
+            }
+
+            if( maxDuration && (System.currentTimeMillis()-time > maxDuration.durationInMillis ) ) {
+                throw new TimeoutException("Wait condition exceed time-out: $maxDuration")
+            }
+
+            sleep(200)
+        }
+    }
+
+    static final waitFor( String duration, Closure<Boolean> condition ) {
+        waitFor(new Duration(duration), condition)
+    }
+
+    static final waitFor( long millis, Closure<Boolean> condition ) {
+        waitFor(new Duration(millis), condition)
     }
 
 }

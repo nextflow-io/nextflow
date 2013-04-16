@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+0.2.4
+- Using minimal Groovy dependencies
+- SGE/OGE processor works in the scratch folder and un-stage result files when complelte
+- SGE/OGE handles stdin transparently
+
 0.2.3
 - Renamed 'queue' to 'channel'
 - Adding a basic tasks cache mechanism

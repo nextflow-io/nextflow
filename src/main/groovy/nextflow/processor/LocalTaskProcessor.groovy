@@ -23,6 +23,8 @@ import groovy.util.logging.Slf4j
 import nextflow.util.ByteDumper
 import nextflow.util.Duration
 import org.apache.commons.io.IOUtils
+import org.codehaus.groovy.runtime.IOGroovyMethods
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -148,6 +150,22 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
     }
 
 
+    /**
+     * Pipe the {@code TaskDef#input} to the {@code Process}
+     *
+     * @param task The current task to be executed
+     * @param process The system process that will run the task
+     */
+    protected void pipeTaskInput( TaskDef task, Process process ) {
 
+        Thread.start {
+            try {
+                IOGroovyMethods.withStream(new BufferedOutputStream(process.getOutputStream())) {writer -> writer << task.input}
+            }
+            catch( Exception e ) {
+                log.warn "Unable to pipe input data for task: ${task.name}"
+            }
+        }
+    }
 
 }
