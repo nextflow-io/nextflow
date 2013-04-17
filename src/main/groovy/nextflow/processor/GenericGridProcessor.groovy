@@ -32,7 +32,7 @@ import org.apache.commons.io.IOUtils
  */
 @Slf4j
 @InheritConstructors
-class OgeTaskProcessor extends AbstractTaskProcessor {
+class GenericGridProcessor extends AbstractTaskProcessor {
 
     private static final COMMAND_SCRIPT_FILENAME = '.command.sh'
 
@@ -40,9 +40,9 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
 
     private static final COMMAND_INPUT_FILE = '.command.input'
 
-    private static final QSUB_OUT_FILENAME = '.qsub.out'
+    private static final JOB_OUT_FILENAME = '.job.out'
 
-    private static final QSUB_SCRIPT_FILENAME = '.qsub.sh'
+    private static final JOB_SCRIPT_FILENAME = '.job.sh'
 
     private String queue
 
@@ -56,7 +56,7 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
      * The SGE/OGE cluster queue to which submit the job
      */
 
-    OgeTaskProcessor queue( String queue0 ) {
+    GenericGridProcessor queue( String queue0 ) {
         this.queue = queue0
         return this
     }
@@ -72,7 +72,7 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
      *              accepted units are 'B', 'K', 'M', 'G', 'T', 'P'. So for example
      *              {@code maxMemory '100M'}, {@code maxMemory '2G'}, etc.
      */
-    OgeTaskProcessor maxMemory( String mem0 ) {
+    GenericGridProcessor maxMemory( String mem0 ) {
         this.maxMemory = new MemoryUnit(mem0)
         return this
     }
@@ -83,7 +83,7 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
      * @param duration0 The max allowed time expressed as duration string, Accepted units are 'min', 'hour', 'day'.
      *                  For example {@code maxDuration '30 min'}, {@code maxDuration '10 hour'}, {@code maxDuration '2 day'}
      */
-    OgeTaskProcessor maxDuration( String duration0 ) {
+    GenericGridProcessor maxDuration( String duration0 ) {
         this.maxDuration = new Duration(duration0)
         return this
     }
@@ -91,7 +91,7 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
     /**
      * Extra options appended to the generated 'qsub' command line
      */
-    OgeTaskProcessor qsubCmdLine( String cmdLine ) {
+    GenericGridProcessor qsubCmdLine( String cmdLine ) {
         this.qsubCmdLine = cmdLine
         return this
     }
@@ -134,11 +134,16 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
 
         // -- at the end append the command script wrapped file name
         if ( qsubCmdLine ) {
-            result << qsubCmdLine
+            if( qsubCmdLine instanceof Collection ) {
+                result.addAll( qsubCmdLine as Collection )
+            }
+            else {
+                result.addAll( qsubCmdLine.toString().split(' ') )
+            }
         }
 
         // -- last entry to 'script' file name
-        result << QSUB_SCRIPT_FILENAME
+        result << JOB_SCRIPT_FILENAME
 
         return result
     }
@@ -198,7 +203,7 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
             wrapper << 'fi' << '\n'
         }
 
-        new File(folder, QSUB_SCRIPT_FILENAME).text = wrapper.toString()
+        new File(folder, JOB_SCRIPT_FILENAME).text = wrapper.toString()
 
         // -- log the qsub command
         def cli = getQsubCommandLine(task)
@@ -221,12 +226,11 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
 
 
         // -- save the 'qsub' process output
-        def qsubOutFile = new File(folder, QSUB_OUT_FILENAME)
+        def qsubOutFile = new File(folder, JOB_OUT_FILENAME)
         def qsubOutStream = new BufferedOutputStream(new FileOutputStream(qsubOutFile))
         ByteDumper qsubDumper = new ByteDumper(process.getInputStream(), {  byte[] data, int len -> qsubOutStream.write(data,0,len) } )
         qsubDumper.setName("qsub_${task.name}")
         qsubDumper.start()
-
 
         try {
             // -- wait the the process completes
@@ -270,7 +274,7 @@ class OgeTaskProcessor extends AbstractTaskProcessor {
         //   + program failed and output file not empty -> program output
         //             failed and output EMPTY -> return 'qsub' output file
         def cmdOutFile = new File(task.workDirectory, COMMAND_OUTPUT_FILENAME)
-        def qsubOutFile = new File(task.workDirectory, QSUB_OUT_FILENAME)
+        def qsubOutFile = new File(task.workDirectory, JOB_OUT_FILENAME)
         log.debug "Task cmd output > ${task.name} -- file ${cmdOutFile}; empty: ${cmdOutFile.isEmpty()}"
         log.debug "Task qsub output > ${task.name} -- file: ${qsubOutFile}; empty: ${qsubOutFile.isEmpty()}"
 
