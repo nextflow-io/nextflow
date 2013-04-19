@@ -15,6 +15,9 @@ class CliOptions {
     @Parameter(hidden = true, names='-debug')
     List<String> debug
 
+    @Parameter(names=['-history'], description = 'Show history of executed commands')
+    boolean history
+
     /**
      * The packages to trace
      */
@@ -26,6 +29,9 @@ class CliOptions {
 
     @Parameter(names=['-cache'], description = 'Enable/disable task(s) caching', arity = 1)
     boolean cacheable = true
+
+    @Parameter(names=['-continue'], description = 'Execute the script using the cached results, useful to continue executions that stopped by an error')
+    String continueFlag
 
     /**
      * Print out the version number and exit

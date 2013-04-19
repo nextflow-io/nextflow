@@ -25,8 +25,10 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Const
+import nextflow.ExitCode
 import nextflow.Nextflow
 import nextflow.Session
+import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import org.apache.commons.io.FilenameUtils
 import org.codehaus.groovy.control.CompilerConfiguration
@@ -291,9 +293,31 @@ class CliRunner {
     static private CliOptions parseMainArgs(String... args) {
 
         def result = new CliOptions()
-        jcommander = new JCommander(result,args)
+        jcommander = new JCommander(result, normalizeArgs( args ) as String[] )
 
         return result
+    }
+
+    static protected List<String> normalizeArgs( String ... args ) {
+
+        def normalized = []
+        int i=0
+        while( true ) {
+            if( i==args.size() ) { break }
+
+            normalized << args[i]
+
+            if( args[i++] == '-continue' ) {
+                if( i<args.size() && !args[i].startsWith('-') && (args[i]=='last' || args[i] =~~ /[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{8}/) ) {
+                    normalized << args[i++]
+                }
+                else {
+                    normalized << 'last'
+                }
+            }
+        }
+
+        return normalized
     }
 
     /**
@@ -311,7 +335,13 @@ class CliRunner {
             // -- print out the version number, then exit
             if ( options.version ) {
                 println getVersion(true)
-                System.exit(0)
+                System.exit(ExitCode.OK)
+            }
+
+            // -- print the history of executed commands
+            if( options.history ) {
+                HistoryFile.history.print()
+                System.exit(ExitCode.OK)
             }
 
             if ( !options.quiet ) {
@@ -321,23 +351,40 @@ class CliRunner {
             // -- print out the program help, then exit
             if( options.help || !options.arguments ) {
                 jcommander.usage()
-                System.exit(0)
+                System.exit(ExitCode.OK)
             }
 
             // -- check script name
             File scriptFile = new File(options.arguments[0])
             if ( !scriptFile.exists() ) {
                 log.error "The specified script file does not exist: '$scriptFile'"
-                System.exit(1)
+                System.exit( ExitCode.MISSING_SCRIPT_FILE )
             }
 
             // -- configuration file(s)
             def configFiles = validateConfigFiles(options.config)
             def config = buildConfig(configFiles)
 
+            // -- check for the 'continue' flag
+            if( options.continueFlag ) {
+                def uniqueId = options.continueFlag
+                if( uniqueId == 'last' ) {
+                    uniqueId = HistoryFile.history.retrieveLastUniqueId()
+                    if( !uniqueId ) {
+                        log.error "It appears you have never executed it before -- Cannot use the '-continue' command line option"
+                        System.exit(ExitCode.MISSING_UNIQUE_ID)
+                    }
+                }
+                config.session.uniqueId = uniqueId
+            }
+
+
             // -- create a new runner instance
             def runner = new CliRunner(config)
             runner.cacheable = options.cacheable
+
+            // -- set a shutdown hook to save the current session ID and command lines
+            addShutdownHook { HistoryFile.history.append( runner.session.uniqueId, args ) }
 
             // -- define the variable bindings
             if ( options.params ) {
@@ -356,12 +403,12 @@ class CliRunner {
             // note: use system.err.println since if an exception is raised
             //       parsing the cli params the logging is not configured
             System.err.println "${e.getMessage()} -- Check the available command line parameters and syntax using '-h'"
-            System.exit(1)
+            System.exit( ExitCode.INVALID_COMMAND_LINE_PARAMETER )
         }
 
         catch( Throwable fail ) {
             log.error fail.message, fail
-            System.exit(1)
+            System.exit( ExitCode.UNKNOWN_ERROR )
         }
 
     }
@@ -422,7 +469,7 @@ class CliRunner {
     def static Map buildConfig0( Map env, List<String> confText )  {
         assert env
 
-        ConfigObject result = new ConfigSlurper().parse('env{}')
+        ConfigObject result = new ConfigSlurper().parse('env{}; session {} ')
 
         env.sort().each { name, value -> result.env.put(name,value) }
 

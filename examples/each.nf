@@ -1,11 +1,7 @@
 #!/usr/bin/env nextflow
 
-int count = 0
-stdin.chunkFasta { seq ->
+channel = channel( 1, 2, 3 )
 
-    println "seq ($count): " + seq
-
+channel.each {
+    println it
 }
-
-
-sleep 100

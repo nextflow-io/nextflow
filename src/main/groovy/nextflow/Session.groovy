@@ -18,17 +18,20 @@
  */
 
 package nextflow
-
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.google.common.collect.LinkedHashMultimap
 import com.google.common.collect.Multimap
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.operator.DataflowProcessor
+import groovyx.gpars.group.NonDaemonPGroup
+import groovyx.gpars.group.PGroup
 import nextflow.processor.LocalTaskProcessor
+import nextflow.processor.LsfTaskProcessor
 import nextflow.processor.NopeTaskProcessor
-import nextflow.processor.OgeTaskProcessor
+import nextflow.processor.SgeTaskProcessor
 import nextflow.processor.TaskDef
 import nextflow.processor.TaskProcessor
 import nextflow.script.AbstractScript
@@ -93,10 +96,17 @@ class Session {
      */
     def String scriptName = 'script1'
 
+    /**
+     * The unique identifier of this session
+     */
+    def final UUID uniqueId
 
-    private SyncLatch sync = new SyncLatch()
+    final private SyncLatch sync = new SyncLatch()
+
+    final private PGroup pgroup
 
     private boolean aborted
+
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -119,6 +129,13 @@ class Session {
         if( config.task == null ) config.task = [:]
         if( config.env == null ) config.env = [:]
 
+        // set unique session from the config object, or create a new one
+        uniqueId = config.session?.uniqueId ? UUID.fromString( config.session.uniqueId.toString() ) : UUID.randomUUID()
+
+        // configure the dataflow thread group
+        pgroup = new NonDaemonPGroup()
+        Dataflow.activeParallelGroup.set(pgroup)
+
         this.processorClass = loadProcessorClass(config.task.processor?.toString())
     }
 
@@ -133,7 +150,10 @@ class Session {
             className = LocalTaskProcessor.name
         }
         else if ( processorType.toLowerCase() in ['sge','oge'] ) {
-            className = OgeTaskProcessor.name
+            className = SgeTaskProcessor.name
+        }
+        else if ( processorType.toLowerCase() == 'lsf' ) {
+            className = LsfTaskProcessor.name
         }
         else if ( processorType.toLowerCase() == 'nope' ) {
             className = NopeTaskProcessor.name
@@ -198,13 +218,16 @@ class Session {
     }
 
     void terminate() {
+        log.debug "Session terminated"
         allProcessors *. join()
+        pgroup.shutdown()
     }
 
     void abort() {
         log.debug "Session abort -- terminating all processors"
         aborted = true
         allProcessors *. terminate()
+        System.exit( ExitCode.SESSION_ABORTED )
     }
 
     boolean isAborted() { aborted }

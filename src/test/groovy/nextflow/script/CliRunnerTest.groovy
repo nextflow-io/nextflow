@@ -260,6 +260,34 @@ class CliRunnerTest extends Specification {
 
     }
 
+    def 'buildConfigObject 3 ' () {
+
+        setup:
+        def env = [HOME:'/home/my', PATH:'/local/bin', 'dot.key.name':'any text']
+
+        def text1 = '''
+        task { field1 = 1; field2 = 'hola'; }
+        env { alpha = 'a1'; beta  = 'b1'; HOME="$HOME:/some/path"; }
+        params { demo = 1; 'p-one' = 'due'  }
+        '''
+
+
+        when:
+        def config1 = CliRunner.buildConfig0(env, [text1])
+
+        then:
+        config1.task.field1 == 1
+        config1.task.field2 == 'hola'
+        config1.env.HOME == '/home/my:/some/path'
+        config1.env.PATH == '/local/bin'
+        config1.env.'dot.key.name' == 'any text'
+
+        config1.params.demo == 1
+        config1.params['p-one'] == 'due'
+
+
+    }
+
 
     def 'test validateConfigFiles '() {
         when:
@@ -330,9 +358,15 @@ class CliRunnerTest extends Specification {
         cli.params.y == true
         cli.params.z == 'Hola'
 
+    }
 
+    def 'test normalize cmdline' () {
 
-
+        expect:
+        CliRunner.normalizeArgs('a','-bb','-ccc','dddd') == ['a','-bb','-ccc','dddd']
+        CliRunner.normalizeArgs('a','-bb','-ccc','-continue', 'last') == ['a','-bb','-ccc','-continue','last']
+        CliRunner.normalizeArgs('a','-bb','-ccc','-continue') == ['a','-bb','-ccc','-continue','last']
+        CliRunner.normalizeArgs('a','-bb','-ccc','-continue','1d2c942a-345d-420b-b7c7-18d90afc6c33', 'zzz') == ['a','-bb','-ccc','-continue','1d2c942a-345d-420b-b7c7-18d90afc6c33', 'zzz']
     }
 
 

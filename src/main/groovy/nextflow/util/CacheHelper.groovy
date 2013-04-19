@@ -103,10 +103,15 @@ class CacheHelper {
 
             case File:
                 def file = value as File
-                hasher
-                    .putString( file.absolutePath )
-                    .putLong( file.length() )
-                    .putLong( file.lastModified() )
+                hasher = hasher
+                            .putString( file.absolutePath )
+                            .putLong( file.length() )
+                            .putLong( file.lastModified() )
+                break
+
+            case UUID:
+                def uuid = value as UUID
+                hasher = hasher.putLong(uuid.mostSignificantBits).putLong(uuid.leastSignificantBits)
                 break
 
             default:

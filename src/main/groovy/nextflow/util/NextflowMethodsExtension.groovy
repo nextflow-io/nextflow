@@ -32,6 +32,7 @@ import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
 import groovyx.gpars.group.DefaultPGroup
 import groovyx.gpars.group.PGroup
 import groovyx.gpars.scheduler.Pool
+import org.apache.commons.io.FileUtils
 
 /**
  * Provides extension methods to chunk text and file
@@ -71,8 +72,7 @@ class NextflowMethodsExtension {
         BufferedReader reader0 = reader instanceof BufferedReader ? reader : new BufferedReader(reader)
 
         // -- wrap the owner to intercept any reference to an external dataflow instance
-        final interceptor = new WritableChannelInterceptor(block.owner)
-        block.@owner = interceptor
+        final interceptor = new WritableChannelInterceptor(block)
 
         String line
         StringBuilder buffer = new StringBuilder()
@@ -106,7 +106,7 @@ class NextflowMethodsExtension {
      * @param channel The channel to which send the result, use {@code null} to create a new {@code DataflowQueue} channel instance
      * @return The channel to which chunks are written
      */
-    static DataflowWriteChannel chunkLines( File file, int n = 1, Closure block ) {
+    static void chunkLines( File file, int n = 1, Closure block ) {
         assert file
         chunkLines( new FileReader(file), n, block )
     }
@@ -120,9 +120,9 @@ class NextflowMethodsExtension {
      * @param channel The channel to which send the result, use {@code null} to create a new {@code DataflowQueue} channel instance
      * @return The channel to which chunks are written
      */
-    static DataflowWriteChannel chunkLines( InputStream stream, int n = 1, Closure block ) {
+    static void chunkLines( InputStream stream, int n = 1, Closure block ) {
         assert stream
-        chunkLines( new InputStreamReader(stream), n, block)
+        chunkLines( new InputStreamReader(stream), n, block )
     }
 
 
@@ -164,8 +164,7 @@ class NextflowMethodsExtension {
 
         BufferedReader reader0 = reader instanceof BufferedReader ? reader : new BufferedReader(reader)
         // -- wrap the owner to intercept any reference to an external dataflow instance
-        final interceptor = new WritableChannelInterceptor(block.owner)
-        block.@owner = interceptor
+        final interceptor = new WritableChannelInterceptor(block)
 
         String line
         StringBuilder buffer = new StringBuilder()
@@ -263,6 +262,11 @@ class NextflowMethodsExtension {
         each0( queue, group, code )
     }
 
+
+    static void each ( WriteChannelWrap channel, Closure code ) {
+        each0( channel.target as DataflowReadChannel, Dataflow.retrieveCurrentDFPGroup(), code )
+    }
+
     /**
      * Implements the 'each' operator.
      * <p>
@@ -276,8 +280,7 @@ class NextflowMethodsExtension {
     private static void each0( DataflowReadChannel queue, final PGroup group, Closure code ) {
 
         // -- wrap the owner to intercept any reference to an external dataflow instance
-        final interceptor = new WritableChannelInterceptor(code.owner)
-        code.@owner = interceptor
+        final interceptor = new WritableChannelInterceptor(code)
 
         // -- when a 'PoisonPill' is received, spread it over over any written channel
         def listenForPoisonPill = new DataflowEventAdapter() {
@@ -286,7 +289,13 @@ class NextflowMethodsExtension {
                     interceptor.getWrittenChannels() *. bind( message )
                 }
                 return message;
-            }}
+            }
+
+            public boolean onException(final DataflowProcessor processor, final Throwable e) {
+                NextflowMethodsExtension.log.error("${e.getMessage()} -- See the file '.nextflow.log' for more error details", e)
+                return true
+            }
+        }
 
         group.operator(inputs:[queue], outputs:[], listeners: [listenForPoisonPill], code )
     }
@@ -294,7 +303,6 @@ class NextflowMethodsExtension {
     /**
      * Keep trace of any reference to a {@code DataflowQueue} or {@code DataflowBroadcast}
      */
-    @TupleConstructor(includes = 'target')
     private static class WritableChannelInterceptor {
 
         /* The target owner object */
@@ -302,6 +310,13 @@ class NextflowMethodsExtension {
 
         /* Any reference to a {@code DataflowQueue} or {@code DataflowBroadcast} in the closure block */
         def List<WriteChannelWrap> channels = []
+
+        WritableChannelInterceptor( Closure code ) {
+            assert code
+            // replace the closure 'owner' by 'this' instance
+            target = code.owner
+            code.@owner = this
+        }
 
         /** All the channel for which a 'bind' operation has been invoked */
         List<WriteChannelWrap> getWrittenChannels() {
@@ -365,6 +380,16 @@ class NextflowMethodsExtension {
 
     def static isNotEmpty( File file ) {
         return FileHelper.isNotEmpty(file)
+    }
+
+
+    def static copyTo( File source, File target ) {
+        if( source.isDirectory() ) {
+            FileUtils.copyDirectory(source, target)
+        }
+        else {
+            FileUtils.copyFile(source, target)
+        }
     }
 
 

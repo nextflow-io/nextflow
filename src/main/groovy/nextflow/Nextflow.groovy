@@ -102,8 +102,8 @@ class Nextflow {
      * @param item
      * @return
      */
-    static <T> DataflowQueue<T> channel( T item ) {
-        channel([item])
+    static <T> DataflowQueue<T> channel( T... items ) {
+        channel( items ? items as List : [] )
     }
 
     /**

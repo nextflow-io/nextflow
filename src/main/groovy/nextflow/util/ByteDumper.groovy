@@ -43,6 +43,7 @@ class ByteDumper extends Thread {
 
         this.fInputStream = new BufferedInputStream(input0)
         this.fCallback = callback0
+        setDaemon(true)
     }
 
     ByteDumper( File file0, Closure callback0 ) {
@@ -50,6 +51,7 @@ class ByteDumper extends Thread {
 
         this.fInputFile = file0
         this.fCallback = callback0
+        setDaemon(true)
     }
 
     /**

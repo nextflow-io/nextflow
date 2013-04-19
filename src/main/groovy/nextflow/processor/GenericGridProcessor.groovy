@@ -18,7 +18,6 @@
  */
 
 package nextflow.processor
-
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import nextflow.util.ByteDumper
@@ -26,31 +25,29 @@ import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import org.apache.commons.io.IOUtils
 /**
- * Execute a task script by running it on the SGE/OGE cluster
+ * Generic task processor executing a task throgh a grid facility
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @InheritConstructors
-class GenericGridProcessor extends AbstractTaskProcessor {
+abstract class GenericGridProcessor extends AbstractTaskProcessor {
 
-    private static final COMMAND_SCRIPT_FILENAME = '.command.sh'
+    protected static final COMMAND_SCRIPT_FILENAME = '.command.sh'
 
-    private static final COMMAND_OUTPUT_FILENAME = '.command.out'
+    protected static final COMMAND_OUTPUT_FILENAME = '.command.out'
 
-    private static final COMMAND_INPUT_FILE = '.command.input'
+    protected static final COMMAND_INPUT_FILE = '.command.input'
 
-    private static final JOB_OUT_FILENAME = '.job.out'
+    protected static final JOB_OUT_FILENAME = '.job.out'
 
-    private static final JOB_SCRIPT_FILENAME = '.job.sh'
+    protected static final JOB_SCRIPT_FILENAME = '.job.sh'
 
-    private String queue
+    protected String queue
 
-    private String qsubCmdLine
+    protected MemoryUnit maxMemory
 
-    private MemoryUnit maxMemory
-
-    private Duration maxDuration
+    protected Duration maxDuration
 
     /**
      * The SGE/OGE cluster queue to which submit the job
@@ -88,65 +85,8 @@ class GenericGridProcessor extends AbstractTaskProcessor {
         return this
     }
 
-    /**
-     * Extra options appended to the generated 'qsub' command line
-     */
-    GenericGridProcessor qsubCmdLine( String cmdLine ) {
-        this.qsubCmdLine = cmdLine
-        return this
-    }
 
-    /*
-     * Prepare the 'qsub' cmdline. The following options are used
-     * - wd: define the job working directory
-     * - terse: output just the job id on the output stream
-     * - o: define the file to which redirect the standard output
-     * - e: define the file to which redirect the error output
-     */
-    protected List<String> getQsubCommandLine(TaskDef task) {
-
-        final result = new ArrayList<String>()
-
-        result << 'qsub'
-        result << '-terse'
-        result << '-wd' << task.workDirectory
-        result << '-o' << COMMAND_OUTPUT_FILENAME
-        result << '-j' << 'y'
-        result << '-sync' << 'y'
-        result << '-V'
-
-
-        // add other parameters (if any)
-        if(queue) {
-            result << '-q'  << queue
-        }
-
-        if( maxDuration ) {
-            result << '-l' << "h_rt=${maxDuration.format('HH:mm:ss')}"
-        }
-
-        if( maxMemory ) {
-            result << '-l' << "virtual_free=${maxMemory.toString().replaceAll(/[\sB]/,'')}"
-        }
-
-        // -- the job name
-        result << '-N' << "nf-${name}-${task.index}"
-
-        // -- at the end append the command script wrapped file name
-        if ( qsubCmdLine ) {
-            if( qsubCmdLine instanceof Collection ) {
-                result.addAll( qsubCmdLine as Collection )
-            }
-            else {
-                result.addAll( qsubCmdLine.toString().split(' ') )
-            }
-        }
-
-        // -- last entry to 'script' file name
-        result << JOB_SCRIPT_FILENAME
-
-        return result
-    }
+    abstract protected List<String> getSubmitCommandLine(TaskDef task)
 
 
     @Override
@@ -190,10 +130,11 @@ class GenericGridProcessor extends AbstractTaskProcessor {
         wrapper << '[ ! -z $TMPDIR ] && cd $TMPDIR'  << '\n'
 
         // execute the command script
+        wrapper << '('
         if( cmdInputFile ) {
             wrapper << 'cat ' << cmdInputFile << ' | '
         }
-        wrapper << "$scriptShell $scriptFile &> ${cmdOutFile.absolutePath}" << '\n'
+        wrapper << "$scriptShell $scriptFile) &> ${cmdOutFile.absolutePath}" << '\n'
 
         // "un-stage" the result files
         def resultFiles = outputs.keySet().findAll { it != '-' }
@@ -206,11 +147,11 @@ class GenericGridProcessor extends AbstractTaskProcessor {
         new File(folder, JOB_SCRIPT_FILENAME).text = wrapper.toString()
 
         // -- log the qsub command
-        def cli = getQsubCommandLine(task)
-        log.debug "qsub command > '${cli}' -- task: ${task.name}"
+        def cli = getSubmitCommandLine(task)
+        log.debug "sub command > '${cli}' -- task: ${task.name}"
 
         /*
-         * launch 'qsub' script wrapper
+         * launch 'sub' script wrapper
          */
         ProcessBuilder builder = new ProcessBuilder()
                 .directory(folder)
@@ -225,12 +166,12 @@ class GenericGridProcessor extends AbstractTaskProcessor {
         task.status = TaskDef.Status.RUNNING
 
 
-        // -- save the 'qsub' process output
-        def qsubOutFile = new File(folder, JOB_OUT_FILENAME)
-        def qsubOutStream = new BufferedOutputStream(new FileOutputStream(qsubOutFile))
-        ByteDumper qsubDumper = new ByteDumper(process.getInputStream(), {  byte[] data, int len -> qsubOutStream.write(data,0,len) } )
-        qsubDumper.setName("qsub_${task.name}")
-        qsubDumper.start()
+        // -- save the 'sub' process output
+        def subOutFile = new File(folder, JOB_OUT_FILENAME)
+        def subOutStream = new BufferedOutputStream(new FileOutputStream(subOutFile))
+        ByteDumper subDumper = new ByteDumper(process.getInputStream(), {  byte[] data, int len -> subOutStream.write(data,0,len) } )
+        subDumper.setName("sub_${task.name}")
+        subDumper.start()
 
         try {
             // -- wait the the process completes
@@ -238,8 +179,8 @@ class GenericGridProcessor extends AbstractTaskProcessor {
             def success = task.exitCode in validExitCodes
             log.debug "Task completeted > ${task.name} -- exit code: ${task.exitCode}; accepted code(s): ${validExitCodes.join(',')}"
 
-            qsubDumper.await(500)
-            qsubOutStream.close()
+            subDumper.await(500)
+            subOutStream.close()
 
             // there may be very loooong delay over NFS, wait at least one minute
             if( success ) {
@@ -251,7 +192,7 @@ class GenericGridProcessor extends AbstractTaskProcessor {
 
         }
         finally {
-            qsubDumper.terminate()
+            subDumper.terminate()
 
             // make sure to release all resources
             IOUtils.closeQuietly(process.in)
@@ -272,11 +213,11 @@ class GenericGridProcessor extends AbstractTaskProcessor {
         //  -- return the program output with the following strategy
         //   + program terminated ok -> return the program output output (file)
         //   + program failed and output file not empty -> program output
-        //             failed and output EMPTY -> return 'qsub' output file
+        //             failed and output EMPTY -> return 'sub' output file
         def cmdOutFile = new File(task.workDirectory, COMMAND_OUTPUT_FILENAME)
-        def qsubOutFile = new File(task.workDirectory, JOB_OUT_FILENAME)
+        def subOutFile = new File(task.workDirectory, JOB_OUT_FILENAME)
         log.debug "Task cmd output > ${task.name} -- file ${cmdOutFile}; empty: ${cmdOutFile.isEmpty()}"
-        log.debug "Task qsub output > ${task.name} -- file: ${qsubOutFile}; empty: ${qsubOutFile.isEmpty()}"
+        log.debug "Task sub output > ${task.name} -- file: ${subOutFile}; empty: ${subOutFile.isEmpty()}"
 
         def result
         def success = task.exitCode in validExitCodes
@@ -284,12 +225,11 @@ class GenericGridProcessor extends AbstractTaskProcessor {
             result = cmdOutFile.isNotEmpty() ? cmdOutFile : null
         }
         else {
-            result = cmdOutFile.isNotEmpty() ? cmdOutFile : ( qsubOutFile.isNotEmpty() ? qsubOutFile : null )
+            result = cmdOutFile.isNotEmpty() ? cmdOutFile : ( subOutFile.isNotEmpty() ? subOutFile : null )
         }
 
         log.debug "Task finished > ${task.name} -- success: ${success}; output: ${result}"
         return result
-
 
     }
 

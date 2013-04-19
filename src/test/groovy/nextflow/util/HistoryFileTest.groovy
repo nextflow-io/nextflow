@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2012, the authors.
  *
@@ -18,16 +17,35 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-def args = ['-debug', 'xxx,yyy', '-t','-a','-l','*.groovy','--ciao','--bua','1']
+package nextflow.util
 
-def cli = new CliBuilder(usage:'ls')
-cli.a('display all files')
-cli.l('use a long listing format')
-cli.t(longOpt:null, 'sort by modification time')
-cli.debug('define the packages to debug')
-def options = cli.parse(args)
+import spock.lang.Specification
+/**
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+class HistoryFileTest extends Specification {
 
-assert options // would be null (false) on failure
-assert options.a && options.l && options.t
-assert options.debug
-assert  options.arguments() == ['*.groovy','--ciao','--bua','1']
+    def 'test add and get' () {
+
+        when:
+        true
+
+        then:
+        HistoryFile.history.retrieveLastUniqueId() == null
+
+        when:
+        HistoryFile.history.append( 'xxx', [1,2,3] )
+        HistoryFile.history.append( 'yyy', [1,2,3] )
+        HistoryFile.history.append( 'zzz', [1,2,3] )
+
+        then:
+        HistoryFile.history.retrieveLastUniqueId() == 'zzz'
+
+
+        cleanup:
+        HistoryFile.history.delete()
+
+    }
+
+}

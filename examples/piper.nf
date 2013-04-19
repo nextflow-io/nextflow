@@ -278,17 +278,28 @@ task ('blast') {
 /*
  * Given the blast output execute the 'exonerate' step
  */
+
+exonerateOut = channel()
+
 task ('exonerate') {
     input exonerateId
     input exonerateQuery
     input blastResult
+    output '*.gtf': exonerateOut
     threads params['max-threads']
 
     """
-    set -e
     chr=${allGenomes[exonerateId.text.trim()].chr_db}
     exonerateRemapping.pl -query ${exonerateQuery} -mf2 $blastResult -targetGenomeFolder $chr -exonerate_lines_mode 1000 -exonerate_success_mode 1 -ner no
     """
+
+}
+
+task ('align') {
+    echo true
+    input exonerateOut
+
+    "cat $exonerateOut"
 
 }
 

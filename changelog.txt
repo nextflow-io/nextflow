@@ -1,8 +1,15 @@
 NEXTFLOW CHANGE-LOG
 ===================
+0.2.5
+- Added LSF executor (experimental)
+- Added command line option '-history'
+- Added command line option '-continue' to resume the execution of an interrupted execution
+- Using Non-daemon threads by default
+- Refactored SGE task processor
+
 0.2.4
 - Using minimal Groovy dependencies
-- SGE/OGE processor works in the scratch folder and un-stage result files when complelte
+- SGE/OGE processor works in the scratch folder and un-stage result files when complete
 - SGE/OGE handles stdin transparently
 
 0.2.3

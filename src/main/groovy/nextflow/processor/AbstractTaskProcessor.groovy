@@ -84,7 +84,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
      */
     protected int threads = 1
 
-    protected PGroup group = Dataflow.DATA_FLOW_GROUP
+    protected PGroup group = Dataflow.retrieveCurrentDFPGroup()
 
     /**
      * The processor descriptive name
@@ -482,7 +482,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
             //          YES --> return the outputs
             //          NO  --> launch the task
 
-            def hash = CacheHelper.hasher( [task.script, task.input, task.code.delegate] ).hash()
+            def hash = CacheHelper.hasher( [session.uniqueId, task.script, task.input, task.code.delegate] ).hash()
             def folder = shareWorkDir && sharedFolder ? sharedFolder : folderForHash(hash)
             def cached = session.cacheable && this.cacheable && (!shareWorkDir) && checkCachedOutput(task,folder)
             if( !cached ) {
@@ -517,8 +517,8 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
     final protected File folderForHash(HashCode hash) {
 
-        def bucket = Hashing.consistentHash(hash, 100)
-        def folder = new File("./tmp/${session.scriptName}/${bucket}", hash.toString()).absoluteFile
+        def bucket = Hashing.consistentHash(hash, 100).toString().padLeft(2,'0')
+        def folder = new File("./tmp/${bucket}", hash.toString()).absoluteFile
 
         return folder
     }
@@ -640,6 +640,8 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
                 message << "\nCommand work dir:\n  ${task.workDirectory}"
             }
+
+            message << "\nTip: when you have fixed the problem you may continue the execution appending to the nextflow command line the '-continue' option"
 
             log.error message.join('\n')
 
@@ -822,7 +824,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
          */
         @Override
         public void afterStop(final DataflowProcessor processor) {
-            log.trace "After stop > $name"
+            log.debug "After stop > $name"
             // increment the session sync
             session.sync.countDown()
         }

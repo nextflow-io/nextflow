@@ -19,32 +19,24 @@
 
 package nextflow
 
-import nextflow.processor.SgeTaskProcessor
-import nextflow.processor.TaskDef
-import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class OgeTaskProcessorTest extends Specification {
-
-    def 'test qsub cmd line' () {
-
-        when:
-        def processor = new SgeTaskProcessor(new Session())
-        processor.queue('my-queue')
-        processor.maxMemory( '2GB' )
-        processor.maxDuration( '3h' )
-        processor.qsubCmdLine('-extra opt')
-        processor.name = 'task'
-
-        def task = new TaskDef(name: 'my-task', index: 9)
+interface ExitCode {
 
 
-        then:
-        processor.getSubmitCommandLine(task).join(' ') == 'qsub -terse -wd $PWD -o .command.out -j y -sync y -V -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -N nf-task-9 -extra opt .command.sh'
+    static final short OK = 0
 
-    }
+    static final short MISSING_SCRIPT_FILE = 101
+
+    static final short INVALID_COMMAND_LINE_PARAMETER = 102
+
+    static final short SESSION_ABORTED = 103
+
+    static final short MISSING_UNIQUE_ID = 104
+
+    static final short UNKNOWN_ERROR = 255
+
 
 }

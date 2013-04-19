@@ -1,16 +1,16 @@
 #!/bin/env nextflow
 
 if( !args ) {
-  print "Please specify the input file as a cmd line argument"
+  exit "Please specify the input file as a cmd line argument"
 }
 
 fileName = args[0]
 fastaFile = new File(fileName)
 
-seq = queue()
+seq = channel()
 fastaFile.chunkFasta { seq << it }
 
-ampaOut = queue()
+ampaOut = channel()
 task ('ampa') {
 
     //  defines the Input and Output
@@ -22,17 +22,17 @@ task ('ampa') {
     // The BASH script to be executed - for each - sequence
     """
     set -e
-    cat - > input.file && perl '$HOME/PROJECT_CRG/SEG_filter/AMPA-BIGTABLE.pl' -in=input.file -noplot -rf=result -df=data
-    cat input.file | grep '>' > /dev/stdout
-    cat result | grep '#' > /dev/stdout
+    cat - > input.file && AMPA-BIGTABLE.pl -in=input.file -noplot -rf=result -df=data
+    cat input.file | grep '>' >> /dev/stdout
+    cat result | grep '#' >> /dev/stdout
     """
 
 }
 
 def result = new File('bigampa.txt')
+println "Saving result at: ${result.absoluteFile}"
 
 ampaOut.each { str ->
-    
   def (line1,line2) = str.trim().split('\n')
   def id = getIDs(line1)
   def val = getValues(line2)
