@@ -22,6 +22,7 @@ package nextflow.script
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.processor.TaskProcessor
+import nextflow.util.CacheHelper
 
 /**
  * Any user defined script will extends this class, it provides the base execution context
@@ -44,6 +45,9 @@ abstract class AbstractScript extends Script {
     @Lazy
     private Session session = { getBinding()?.getVariable('__$session') as Session } ()
 
+    private final random = new Random()
+
+
     /**
      * Holds the configuration object which will used to execution the user tasks
      */
@@ -53,12 +57,16 @@ abstract class AbstractScript extends Script {
     @Lazy
     InputStream stdin = { System.in }()
 
-    // the last produced result
+    /*
+     * The last produced result object
+     */
     private result
 
     def getResult() { result }
 
-    // the last created task
+    /*
+     * The last created task processor
+     */
     private TaskProcessor taskProcessor
 
     def TaskProcessor getTaskProcessor() { taskProcessor }
@@ -71,6 +79,12 @@ abstract class AbstractScript extends Script {
         config.task.echo = value
     }
 
+    /**
+     * Stop the current execution returning an error code and message
+     *
+     * @param exitCode The exit code to be returned
+     * @param message The message that will be reported in the log file (optional)
+     */
     def void exit(int exitCode, String message = null) {
         if ( exitCode && message ) {
             log.error message
@@ -81,8 +95,55 @@ abstract class AbstractScript extends Script {
         System.exit(exitCode)
     }
 
+    /**
+     * Stop the current execution returning a 0 error code and the specified message
+     *
+     * @param message The message that will be reported in the log file
+     */
     def void exit( String message ) {
         exit(0, message)
+    }
+
+    /**
+     * Create a folder for the given key. It guarantees to return the same folder name
+     * the same provided object key.
+     *
+     * @param key An object to be used as cache-key creating the folder, it can be any object
+     *          or an array or objects to use multi-objects key
+     *
+     * @return The {@code File} to the cached directory or a newly created folder foe the specified key
+     */
+    File cacheableDir( Object key ) {
+        assert key, "Please specify the 'key' argument on 'cacheableDir' method"
+
+        def hash = CacheHelper.hasher([ session.uniqueId, key, session.cacheable ? 0 : random.nextInt() ]).hash()
+
+        def file = CacheHelper.folderForHash(hash)
+        if( !file.exists() && !file.mkdirs() ) {
+            throw new IOException("Unable to create folder: $file -- Check file system permission" )
+        }
+
+        return file
+    }
+
+    /**
+     * Create a file for the given key. It guarantees to return the same file name
+     * the same provided object key.
+     *
+     * @param key
+     * @param name
+     * @return
+     */
+    File cacheableFile( Object key, String name = null ) {
+
+        // the cacheability is guaranteed by the folder
+        def folder = cacheableDir(key)
+
+        if( !name ) {
+            name = key instanceof File ? key.name : key.toString()
+        }
+
+        return new File(folder, name)
     }
 
     /**

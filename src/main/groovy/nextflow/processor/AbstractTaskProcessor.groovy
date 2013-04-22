@@ -20,7 +20,6 @@ package nextflow.processor
 import java.util.concurrent.locks.ReentrantLock
 
 import com.google.common.hash.HashCode
-import com.google.common.hash.Hashing
 import groovy.io.FileType
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.Dataflow
@@ -491,7 +490,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
             //          NO  --> launch the task
 
             def hash = CacheHelper.hasher( [session.uniqueId, task.script, task.input, task.code.delegate] ).hash()
-            def folder = shareWorkDir && sharedFolder ? sharedFolder : folderForHash(hash)
+            def folder = shareWorkDir && sharedFolder ? sharedFolder : CacheHelper.folderForHash(hash)
             def cached = session.cacheable && this.cacheable && (!shareWorkDir) && checkCachedOutput(task,folder)
             if( !cached ) {
                 log.info "Running task > ${task.name}"
@@ -522,15 +521,6 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         }
     }
 
-
-    final protected File folderForHash(HashCode hash) {
-
-        def bucket = Hashing.consistentHash(hash, 100).toString().padLeft(2,'0')
-        def folder = new File("./tmp/${bucket}", hash.toString()).absoluteFile
-
-        return folder
-    }
-
     final protected File createTaskFolder( File folder, HashCode hash ) {
 
         folderLock.lock()
@@ -544,7 +534,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
                 // find another folder name that does NOT exist
                 while( true ) {
                     hash = CacheHelper.hasher( [hash.asInt(), random.nextInt() ] ).hash()
-                    folder = folderForHash(hash)
+                    folder = CacheHelper.folderForHash(hash)
                     if( !folder.exists() ) {
                         break
                     }
@@ -716,7 +706,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
     protected bindOutputs( Map allOutputResources ) {
 
-        log.debug "Binding results > task: ${currentTask.get()?.name ?: name} - values: ${allOutputResources}"
+        log.trace "Binding results > task: ${currentTask.get()?.name ?: name} - values: ${allOutputResources}"
 
         // -- bind each produced file to its own channel
         outputs.keySet().eachWithIndex { fileName, index ->

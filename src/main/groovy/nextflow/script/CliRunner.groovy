@@ -24,6 +24,7 @@ import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.Channel
 import nextflow.Const
 import nextflow.ExitCode
 import nextflow.Nextflow
@@ -224,7 +225,8 @@ class CliRunner {
 
         // define the imports
         def importCustomizer = new ImportCustomizer()
-        importCustomizer.addStaticStars(Nextflow.getName())
+        importCustomizer.addStaticStars( Nextflow.getName() )
+        importCustomizer.addImports( Channel.getName() )
 
         def config = new CompilerConfiguration()
         config.addCompilationCustomizers( importCustomizer )

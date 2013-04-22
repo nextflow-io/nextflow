@@ -19,6 +19,7 @@
 
 package nextflow.util
 
+import com.google.common.hash.HashCode
 import com.google.common.hash.HashFunction
 import com.google.common.hash.Hasher
 import com.google.common.hash.Hashing
@@ -32,14 +33,14 @@ import groovy.util.logging.Slf4j
 class CacheHelper {
 
     static Hasher hasher( def value ) {
-        hasher( value, Hashing.murmur3_32() )
+        hasher( Hashing.murmur3_32(), value )
     }
 
-    static Hasher hasher( def value, HashFunction function ) {
-        hasher( value, function.newHasher() )
+    static Hasher hasher( HashFunction function, def value ) {
+        hasher( function.newHasher(), value )
     }
 
-    static Hasher hasher( def value, Hasher hasher ) {
+    static Hasher hasher( Hasher hasher, def value ) {
         assert hasher
 
         if( value == null ) return hasher
@@ -87,17 +88,17 @@ class CacheHelper {
 
             case (Object[]):
                 for( def item: (value as Object[]) ) {
-                    hasher = CacheHelper.hasher( item as Object, hasher )
+                    hasher = CacheHelper.hasher( hasher, item as Object )
                 }
                 break
 
             case Collection:
-                value.each { hasher = CacheHelper.hasher( it,hasher )  }
+                value.each { hasher = CacheHelper.hasher( hasher, it )  }
                 break
 
             case Map:
                 value.each { name, item ->
-                    hasher = CacheHelper.hasher( item, hasher )
+                    hasher = CacheHelper.hasher( hasher, item )
                 }
                 break
 
@@ -121,6 +122,20 @@ class CacheHelper {
 
 
         return hasher
+    }
+
+    /**
+     * Defines a cacheable path for the specified {@code HashCode} instance.
+     *
+     * @param hash
+     * @return
+     */
+    final static File folderForHash(HashCode hash) {
+
+        def bucket = Hashing.consistentHash(hash, 100).toString().padLeft(2,'0')
+        def folder = new File("./tmp/${bucket}", hash.toString()).absoluteFile
+
+        return folder
     }
 
 

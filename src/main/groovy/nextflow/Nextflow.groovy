@@ -18,14 +18,12 @@
  */
 
 package nextflow
-
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.PoisonPill
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -82,15 +80,7 @@ class Nextflow {
      * @return
      */
     static <T> DataflowQueue<T> channel( Collection<T> values = null ) {
-        def result = new DataflowQueue<T>()
-        if ( values ) {
-            values.each { result << it }
-            // since queue is 'finite' close it by a poison pill
-            // so the operator will stop on when all values in the queue are consumed
-            // (otherwise it will wait forever for a new entry)
-            result << PoisonPill.instance
-        }
-        return result
+        return new Channel<T>(values)
     }
 
     /**
@@ -103,7 +93,7 @@ class Nextflow {
      * @return
      */
     static <T> DataflowQueue<T> channel( T... items ) {
-        channel( items ? items as List : [] )
+        return new Channel<T>(items)
     }
 
     /**
@@ -139,5 +129,7 @@ class Nextflow {
         }
         return result
     }
+
+
 
 }
