@@ -1,6 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
-0.2.5
+
+0.2.6 - 22 Apr 2016
+- Fixed a bug on errors handling
+- Added default parameters in config file
+- Added Channel type
+- Added cacheableDir and cacheableFile
+- Upgraded to Groovy 2.1.3
+
+0.2.5 - 19 Apr 2013
 - Added LSF executor (experimental)
 - Added command line option '-history'
 - Added command line option '-continue' to resume the execution of an interrupted execution
