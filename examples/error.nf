@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-channel = channel(1,2,3)
+channel = new Channel(1,2,3)
 
 task {
    input channel
@@ -13,7 +13,7 @@ task {
 
  sleep 500
 
- channel2 = channel(4,5,6)
+ channel2 = new Channel(4,5,6)
 
  task {
    input channel2

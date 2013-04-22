@@ -1,10 +1,14 @@
 #!/usr/bin/env nextflow
 
-DB = '/Users/ptommaso/tools/blast-db/pdb/pdb'
-fileName = '/Users/ptommaso/sample.fa'
+params.db = "$HOME/tools/blast-db/pdb/pdb"
+params.query = "$HOME/sample.fa"
+params.chunkSize = 1
 
-seq = channel()
-new File(fileName).chunkFasta { seq << it }
+DB=params.db
+seq = new Channel()
+
+inputFile = new File(params.query)
+inputFile.chunkFasta( params.chunkSize ) { seq << it }
 
 task {
     input '-': seq
@@ -14,7 +18,6 @@ task {
     cat - | blastp -db $DB -query - -outfmt 6 > blastResult
     """
 }
-
 
 merge {
     input blastResult

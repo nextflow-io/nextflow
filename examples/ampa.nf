@@ -3,10 +3,18 @@
 fileName = "${HOME}/Downloads/ampa/multi.fa"
 fastaFile = new File(fileName)
 
-seq = channel()
+seq = new Channel()
+
+/*
+ * Splits the input file in chunks containing a single sequences,
+ * and send each of it over the 'seq' channel
+ */
 fastaFile.chunkFasta { seq << it }
 
-
+/*
+ * For each sequence that is sent over the 'seq' channel
+ * the below task is executed
+ */
 task ('ampa') {
 
     //  defines the Input and Output
@@ -20,14 +28,9 @@ task ('ampa') {
 
 }
 
-
-merge {
-    echo true
-    input result
-
-    """
-    cat $result
-    """
+/*
+ * print out each 'result' produced by the above step
+ */
+result.each {
+    println it.text
 }
-
-

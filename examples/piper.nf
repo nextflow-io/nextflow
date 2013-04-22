@@ -6,7 +6,9 @@
  * option prefixed with a double '-' char, for example
  *
  * $ nextflow piper.nf --query=<path to your file name>
+ *
  */
+
 params['query-chunk-len'] = 100
 params['query'] = "${HOME}/workspace/piper/tutorial/5_RNA_queries.fa"
 params['genomes-db'] = "${HOME}/workspace/piper/tutorial"
@@ -23,7 +25,6 @@ params['genomes-folder'] = "${HOME}/workspace/piper/tutorial/genomes/"
 
 
 queryFile = new File( params.query )
-querySplits = new File('./splits')
 dbpath = new File(params['genomes-db']).absoluteFile
 
 if( !dbpath.exists() ) {
@@ -155,21 +156,24 @@ formatName = allGenomes.keySet()
  * The chunk files are saved in a local folder define by the variable 'querySplits'
  *
  */
-println "Splitting query file: $queryFile .."
-querySplits.with {
-    if( exists() && !isEmpty() ) { deleteDir() }
-    if( !exists() && !mkdirs() ) {
-        println "Unable to create query splits folder: $querySplits"
-        exit 2
+
+// create a folder that may be cached, using the 'queryFile' and the number chunks as cache key
+querySplits = cacheableDir([queryFile, params.'query-chunk-len'])
+
+if( querySplits.isEmpty() ) {
+    println "Splitting query file: $queryFile .."
+    chunkCount=0
+    queryFile.chunkFasta( params.'query-chunk-len' ) { sequence ->
+        def file = new File(querySplits, "seq_${chunkCount++}")
+        file.text = sequence
     }
+    println "Created $chunkCount input chunks to path: ${querySplits}"
+}
+else {
+    println "Cached query splits > ${querySplits.list().size()} input query chunks"
 }
 
-int chunkCount=0
-queryFile.chunkFasta( params.'query-chunk-len' ) { sequence ->
-    def file = new File(querySplits, "seq_${chunkCount++}")
-    file.text = sequence
-}
-println "Created $chunkCount input chunks to path: ${querySplits}"
+
 
 
 /*
@@ -240,7 +244,7 @@ blastName.each {
 
     def name = it.text.trim()
     querySplits.eachFile { chunk ->
-        println "Blasting '$name' - chunk: $chunk"
+        println "Blasting > $name - chunk: $chunk"
         synchronized(this) {
             blastId << name
             blastQuery << chunk.absoluteFile
