@@ -132,15 +132,17 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
     private allScalarValues
 
-    private creationLock = new ReentrantLock(true)
+    private final creationLock = new ReentrantLock(true)
 
     private static final folderLock = new ReentrantLock(true)
 
     private File sharedFolder
 
-    private random = new Random()
+    private final random = new Random()
 
     private Boolean errorShown = Boolean.FALSE
+
+    private final errorLock = new ReentrantLock(true)
 
     AbstractTaskProcessor( Session session ) {
         this.session = session
@@ -247,6 +249,12 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         this.errorStrategy = value
         return this
     }
+
+    AbstractTaskProcessor errorStrategy( String value ) {
+        this.errorStrategy = ErrorStrategy.valueOf(value?.toUpperCase())
+        return this
+    }
+
 
     @Override
     AbstractTaskProcessor cacheable( boolean value ) {
@@ -606,24 +614,41 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
             return false
         }
 
-
     }
 
-    final synchronized protected handleException( Throwable e, TaskDef task = null ) {
+    /**
+     * Handles an error raised during the processor execution
+     *
+     * @param error The exception raised during the task execution
+     * @param task The {@code TaskDef} instance which raised the exception
+     * @return {@code true} to terminate the processor execution,
+     *         {@code false} ignore the error and continue to process other pending tasks
+     */
+    final protected boolean handleException( Throwable error, TaskDef task = null ) {
 
-        // -- synchronize on the errorShow to avoid multiple report of the same task
-        if( errorShown ) { return }
-        errorShown = Boolean.TRUE
+        // -- when is a task level error and the user has chosen to ignore error, just report and error message
+        //    return 'false' to DO NOT stop the execution
+        if( error instanceof TaskValidationException && errorStrategy == ErrorStrategy.IGNORE ) {
+            log.warn "Error running task > ${error.getMessage()} -- error is ignored"
+            return false
+        }
 
-        if( e instanceof TaskValidationException ) {
-            if ( errorStrategy == ErrorStrategy.IGNORE ) {
-                log.debug "${e.getMessage()} -- error is ignored"
-                return
-            }
+        // -- synchronize on the errorLock to avoid multiple report of the same error
+        errorLock.lock()
+        try {
+            if( errorShown ) { return true }
+            errorShown = Boolean.TRUE
+        }
+        finally {
+            errorLock.unlock()
+        }
+
+
+        if( error instanceof TaskValidationException ) {
 
             // compose a readable error message
             def message = []
-            message << e.getMessage()
+            message << error.getMessage()
 
             if( task ) {
                 // print the executed command
@@ -647,12 +672,12 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
         }
         else {
-            log.error("Failed to execute task > '${task?.name ?: name}' -- Check the log file '.nextflow.log' for more details", e)
+            log.error("Failed to execute task > '${task?.name ?: name}' -- Check the log file '.nextflow.log' for more details", error)
         }
 
 
         session.abort()
-
+        return true
     }
 
     final protected void finalizeTask( ) {
@@ -750,7 +775,6 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
          */
         public boolean onException(final DataflowProcessor processor, final Throwable error) {
             handleException( error, currentTask.get() )
-            return true
         }
 
         /**
