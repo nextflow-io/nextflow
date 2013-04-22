@@ -67,13 +67,6 @@ class CliRunner {
      */
     private CliBinding bindings
 
-    private Map params = [:]
-
-    /**
-     * Unnamed arguments passed to script into the 'args' script variable
-     */
-    private String[] args
-
     /**
      * The script file
      */
@@ -108,19 +101,6 @@ class CliRunner {
      */
     def CliRunner( ConfigObject config ) {
         this(configToMap(config))
-    }
-
-
-    CliRunner setParam( String name, String value ) {
-        assert name
-        this.params.put(name, parseValue(value))
-        return this
-    }
-
-    CliRunner setParam( Map<String,String> params ) {
-        assert params != null
-        params.each { name, value -> setParam(name, value) }
-        return this
     }
 
 
@@ -240,7 +220,7 @@ class CliRunner {
     protected AbstractScript parseScript( String scriptText, String... args = null) {
 
         bindings.setArgs( args )
-        bindings.setParams( params )
+        bindings.setParams( session.config.params as Map )
 
         // define the imports
         def importCustomizer = new ImportCustomizer()
@@ -378,6 +358,10 @@ class CliRunner {
                 config.session.uniqueId = uniqueId
             }
 
+            // -- add the command line parameters to the 'config' object
+            options.params?.each { name, value ->
+                config.params.put(name, parseValue(value))
+            }
 
             // -- create a new runner instance
             def runner = new CliRunner(config)
@@ -385,11 +369,6 @@ class CliRunner {
 
             // -- set a shutdown hook to save the current session ID and command lines
             addShutdownHook { HistoryFile.history.append( runner.session.uniqueId, args ) }
-
-            // -- define the variable bindings
-            if ( options.params ) {
-                runner.setParam( options.params )
-            }
 
             // -- specify the arguments
             def scriptArgs = options.arguments.size()>1 ? options.arguments[1..-1] : null
@@ -454,6 +433,7 @@ class CliRunner {
 
         def texts = []
         files?.each { File file ->
+            log.debug "Parsing config file: ${file.absoluteFile}"
             if (!file.exists()) {
                 log.warn "The specified configuration file cannot be found: $file"
             }
@@ -469,7 +449,7 @@ class CliRunner {
     def static Map buildConfig0( Map env, List<String> confText )  {
         assert env
 
-        ConfigObject result = new ConfigSlurper().parse('env{}; session {} ')
+        ConfigObject result = new ConfigSlurper().parse('env{}; session{}; params{} ')
 
         env.sort().each { name, value -> result.env.put(name,value) }
 

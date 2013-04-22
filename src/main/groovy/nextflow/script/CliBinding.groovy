@@ -21,6 +21,8 @@ package nextflow.script
 
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import org.apache.commons.lang.StringUtils
+
 /**
  * Defines the script execution context. By default provided the following variables
  * <li>{@code __$session}: the current execution session
@@ -40,16 +42,21 @@ class CliBinding extends Binding {
     final private Session session
 
     def CliBinding(Session session1) {
-        super( new ReadOnlyMap( ['__$session':session1, args:[], params:[:]]) )
+        super( new ReadOnlyMap( ['__$session':session1, args:[], params: new ParamsMap() ]) )
         this.session = session1
     }
 
     /**
      * The map of the CLI named parameters
+     *
      * @param values
      */
     def void setParams( Map values ) {
-        (getVariables() as ReadOnlyMap).force( 'params', new ReadOnlyMap(values)  )
+
+        def params = getVariable('params') as ParamsMap
+        values ?. each { String name, Object value ->
+            params.put(name, value)
+        }
     }
 
     /**
@@ -116,6 +123,78 @@ class CliBinding extends Binding {
 
         def force( Object name, Object value ) {
             super.put(name,value)
+        }
+
+    }
+
+    /**
+     * Holds parameter immutable values
+     */
+    static class ParamsMap extends LinkedHashMap<String,Object> {
+
+        Set<String> readOnlyNames = []
+
+
+        def String put(String name, Object value) {
+            assert name
+
+            // normalize the name
+            def name2 = name.contains('-') ? hyphenToCamelCase(name) : camelCaseToHyphen(name)
+
+            final readOnly = name in readOnlyNames || name2 in readOnlyNames
+
+            def result = null
+            if( !readOnly ) {
+                readOnlyNames << name
+                readOnlyNames << name2
+                result = super.put(name, value)
+                super.put(name2, value)
+            }
+
+            return result
+        }
+
+
+
+        static def String hyphenToCamelCase( String name ) {
+
+            if( !name ) { return name }
+
+            def result = new StringBuilder()
+            name.split('-').eachWithIndex{ String entry, int i ->
+                result << (i>0 ? StringUtils.capitalize(entry) : entry )
+            }
+
+            return result.toString()
+        }
+
+        static def String camelCaseToHyphen( String name ) {
+
+            def lower = 'a'..'z'
+            def upper = 'A'..'Z'
+
+            def result = new StringBuilder()
+            if( !name ) {
+                return name
+            }
+
+            result << name[0]
+            for( int i=1; i<name.size(); i++ ) {
+                if( name[i] in upper && name[i-1] in lower  ) {
+                    result << '-'
+                    if( i+1<name.size() && name[i+1] in lower ) {
+                        result << name[i].toLowerCase()
+                    }
+                    else {
+                        result << name[i]
+                    }
+                }
+                else {
+                    result << name[i]
+                }
+            }
+
+            return result.toString()
         }
 
     }
