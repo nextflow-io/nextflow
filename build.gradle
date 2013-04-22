@@ -23,17 +23,18 @@ ext.codenarcSources = ['src/main/groovy']
 ext.codenarcRuleSetFiles = [ 'config/codenarc.groovy' ]
 apply from: 'http://dl.bintray.com/content/evgenyg/GradleScripts/CodeNarc.gradle'
 
-version = '0.2.5'
+version = '0.2.6'
 
 repositories {
     flatDir(dirs: file('lib'))
     mavenCentral()
+    maven { url 'http://uk.maven.org/maven2' }
 }
 
 dependencies {
 
     compile (
-            'org.codehaus.groovy:groovy:2.1.2',
+            'org.codehaus.groovy:groovy:2.1.3',
             'org.codehaus.gpars:gpars:1.0.0',
             'org.slf4j:slf4j-api:1.7.2',
             'org.slf4j:jcl-over-slf4j:1.7.2',
