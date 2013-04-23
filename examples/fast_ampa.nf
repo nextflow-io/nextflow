@@ -32,10 +32,17 @@ task ('ampa') {
 def result = new File('bigampa.txt')
 println "Saving result at: ${result.absoluteFile}"
 
-ampaOut.each { str ->
-  def (line1,line2) = str.trim().split('\n')
-  def id = getIDs(line1)
-  def val = getValues(line2)
+ampaOut.eachWithIndex { str, index ->
+
+  def lines = str.trim().split('\n')
+  if( lines.size() != 2 ) {
+      println "ERROR > Invalid AMPA ($index) result:\n${str}\n\n"
+      return
+  }
+
+  def id = getIDs(lines[0])
+  def val = getValues(lines[1])
+
   result << "${id[0]}\t${id[1]}\t${val[0]}\t${val[1]}\t${val[2]}\t${val[3]}\n"
 }
 
@@ -50,6 +57,7 @@ def getIDs( line ) {
     return [seqId, geneId]
   }
   else {
+    println "Bad ID line: $line"
     return []
   }
 
@@ -71,7 +79,8 @@ def getValues(result) {
     return [rm[0][1], rm[0][2], rm[0][3], rm[0][4]]
   }
   else {
-    return []   
+    println "Bad result line: $result"
+    return []
   }
 }
 

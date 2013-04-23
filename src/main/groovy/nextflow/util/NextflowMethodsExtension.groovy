@@ -18,6 +18,9 @@
  */
 
 package nextflow.util
+
+import java.util.concurrent.atomic.AtomicLong
+
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.Dataflow
@@ -33,7 +36,6 @@ import groovyx.gpars.group.DefaultPGroup
 import groovyx.gpars.group.PGroup
 import groovyx.gpars.scheduler.Pool
 import org.apache.commons.io.FileUtils
-
 /**
  * Provides extension methods to chunk text and file
  *
@@ -299,6 +301,72 @@ class NextflowMethodsExtension {
 
         group.operator(inputs:[queue], outputs:[], listeners: [listenForPoisonPill], code )
     }
+
+    /**
+     * Implements a semantically equivalent 'each' iterator over a {@code DataflowStreamReadAdapter} channel
+
+     * @param channel
+     * @param closure
+     */
+    static void eachWithIndex( DataflowStreamReadAdapter channel, Closure closure ) {
+        eachWithIndex(channel, Dataflow.retrieveCurrentDFPGroup(), closure)
+    }
+
+    static void eachWithIndex( DataflowStreamReadAdapter channel, final Pool pool, Closure closure ) {
+        eachWithIndex( channel, new DefaultPGroup(pool), closure)
+    }
+
+    static void eachWithIndex( DataflowStreamReadAdapter channel, final PGroup group, Closure code ) {
+        eachWithIndex0( channel, group, code )
+    }
+
+
+    static void eachWithIndex( DataflowQueue queue, Closure closure ) {
+        eachWithIndex(queue, Dataflow.retrieveCurrentDFPGroup(), closure)
+    }
+
+    static void eachWithIndex( DataflowQueue channel, final Pool pool, Closure closure ) {
+        eachWithIndex( channel, new DefaultPGroup(pool), closure)
+    }
+
+    static void eachWithIndex( DataflowQueue channel, final PGroup group, Closure code ) {
+        eachWithIndex0( channel, group, code )
+    }
+
+
+    static void eachWithIndex( WriteChannelWrap channel, Closure code ) {
+        eachWithIndex0( channel.target as DataflowReadChannel, Dataflow.retrieveCurrentDFPGroup(), code )
+    }
+
+
+    private static void eachWithIndex0( DataflowReadChannel channel, final PGroup group, Closure code ) {
+
+        // -- wrap the owner to intercept any reference to an external dataflow instance
+        final interceptor = new WritableChannelInterceptor(code)
+
+        // -- when a 'PoisonPill' is received, spread it over over any written channel
+        def listenForPoisonPill = new DataflowEventAdapter() {
+            public Object controlMessageArrived(final DataflowProcessor arg0, final DataflowReadChannel<Object> arg1, final int arg2, final Object message) {
+                if ( message instanceof PoisonPill ) {
+                    interceptor.getWrittenChannels() *. bind(message)
+                }
+                return message;
+            }
+
+            public boolean onException(final DataflowProcessor processor, final Throwable e) {
+                NextflowMethodsExtension.log.error("${e.getMessage()} -- See the file '.nextflow.log' for more error details", e)
+                return true
+            }
+        }
+
+        def index = new AtomicLong()
+        group.operator(inputs:[channel], outputs:[], listeners: [listenForPoisonPill]) { entry ->
+             // invoke the user 'code' passing the current index as an extra parameter
+            code.call(entry,index.getAndIncrement())
+
+        }
+    }
+
 
     /**
      * Keep trace of any reference to a {@code DataflowQueue} or {@code DataflowBroadcast}

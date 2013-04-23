@@ -1,6 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.2.7
+- Added 'eachWithIndex' iterator like method on dataflow channel
+
 0.2.6 - 22 Apr 2016
 - Fixed a bug on errors handling
 - Added default parameters in config file
