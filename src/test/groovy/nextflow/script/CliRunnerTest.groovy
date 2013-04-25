@@ -58,29 +58,6 @@ class CliRunnerTest extends Specification {
 //    }
 
 
-    def 'test cli params' () {
-        setup:
-        def runner = new CliRunner()
-
-        when:
-        def script =
-            '''
-            params['p1'] = 1
-            params['p2'] = 2
-            params['p3'] = 3
-
-            return params
-            '''
-        runner.setParam( ['p1':'10','p2':'Hola'] )
-        def result = runner.execute( script )
-
-        then:
-        result.p1 == 10
-        result.p2 == 'Hola'
-        result.p3 == 3
-
-
-    }
 
     def 'test task with assignment' () {
         setup:
@@ -268,7 +245,7 @@ class CliRunnerTest extends Specification {
         def text1 = '''
         task { field1 = 1; field2 = 'hola'; }
         env { alpha = 'a1'; beta  = 'b1'; HOME="$HOME:/some/path"; }
-        params { demo = 1; 'p-one' = 'due'  }
+        params { demo = 1   }
         '''
 
 
@@ -283,7 +260,6 @@ class CliRunnerTest extends Specification {
         config1.env.'dot.key.name' == 'any text'
 
         config1.params.demo == 1
-        config1.params['p-one'] == 'due'
 
 
     }
@@ -346,27 +322,14 @@ class CliRunnerTest extends Specification {
 
     }
 
-    def 'test setParams' () {
-        when:
-        def cli = new CliRunner()
-        cli.setParam('x', '1')
-        cli.setParam('y', 'true')
-        cli.setParam('z', 'Hola')
-
-        then:
-        cli.params.x == 1
-        cli.params.y == true
-        cli.params.z == 'Hola'
-
-    }
 
     def 'test normalize cmdline' () {
 
         expect:
         CliRunner.normalizeArgs('a','-bb','-ccc','dddd') == ['a','-bb','-ccc','dddd']
-        CliRunner.normalizeArgs('a','-bb','-ccc','-continue', 'last') == ['a','-bb','-ccc','-continue','last']
-        CliRunner.normalizeArgs('a','-bb','-ccc','-continue') == ['a','-bb','-ccc','-continue','last']
-        CliRunner.normalizeArgs('a','-bb','-ccc','-continue','1d2c942a-345d-420b-b7c7-18d90afc6c33', 'zzz') == ['a','-bb','-ccc','-continue','1d2c942a-345d-420b-b7c7-18d90afc6c33', 'zzz']
+        CliRunner.normalizeArgs('a','-bb','-ccc','-resume', 'last') == ['a','-bb','-ccc','-resume','last']
+        CliRunner.normalizeArgs('a','-bb','-ccc','-resume') == ['a','-bb','-ccc','-resume','last']
+        CliRunner.normalizeArgs('a','-bb','-ccc','-resume','1d2c942a-345d-420b-b7c7-18d90afc6c33', 'zzz') == ['a','-bb','-ccc','-resume','1d2c942a-345d-420b-b7c7-18d90afc6c33', 'zzz']
     }
 
 

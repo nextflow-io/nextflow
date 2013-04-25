@@ -11,11 +11,11 @@
 
 params['query-chunk-len'] = 100
 params['query'] = "${HOME}/workspace/piper/tutorial/5_RNA_queries.fa"
-params['genomes-db'] = "${HOME}/workspace/piper/tutorial"
+params['genomes-db'] = "${HOME}/workspace/piper/tutorial/db"
 params['max-threads'] = Runtime.getRuntime().availableProcessors()
 
 // these parameters are mutually exclusive
-// Inout genome can be specified by
+// Input genome can be specified by
 // - genomes-file: a file containing the list of genomes FASTA to be processed
 // - genomes-list: a comma separated list of genomes FASTA file
 // - genomes-folder: a directory containing a folder for each genome FASTA file
@@ -24,8 +24,8 @@ params['genomes-list'] = null
 params['genomes-folder'] = "${HOME}/workspace/piper/tutorial/genomes/"
 
 
-queryFile = new File( params.query )
-dbpath = new File(params['genomes-db']).absoluteFile
+queryFile = file(params.query)
+dbpath = file(params['genomes-db'])
 
 if( !dbpath.exists() ) {
     log.warn "Creating genomes-db path: $dbpath"
@@ -58,8 +58,7 @@ allGenomes = [:]
 if( params['genomes-file'] ) {
     def sourcePath = new File(params['genomes-file'])
     if( sourcePath.isEmpty() ) {
-        println "Not a valid input genomes descriptor file: ${sourcePath}"
-        exit 1
+        exit 1, "Not a valid input genomes descriptor file: ${sourcePath}"
     }
 
     // parse the genomes input file files (genome-id, path to genome file)
@@ -83,8 +82,7 @@ if( params['genomes-file'] ) {
 
         def fasta = new File(path)
         if( !fasta.exists() ) {
-            println "Missing input genome file: $fasta"
-            exit 1
+            exit 2, "Missing input genome file: $fasta"
         }
 
         allGenomes[ genomeId ] = [
@@ -101,8 +99,7 @@ else if( params['genomes-list'] ) {
 
     files.each { fasta ->
         if( !fasta.exists() ) {
-            println "Missing genome file: $fasta"
-            exit 4
+            exit 3, "Missing genome file: $fasta"
         }
 
         def genomeId = "gen${++count}"
@@ -118,14 +115,13 @@ else if( params['genomes-list'] ) {
 else if( params['genomes-folder'] ) {
     def sourcePath = new File(params['genomes-folder'])
     if( !sourcePath.exists() || sourcePath.isEmpty() ) {
-        println "Not a valid input genomes folder: ${sourcePath}"
-        exit 2
+        exit 4, "Not a valid input genomes folder: ${sourcePath}"
     }
 
     sourcePath.eachDir { File path ->
         def fasta = path.listFiles().find{ File file -> file.name.endsWith('.fa') }
         if( fasta ) {
-            println "Processing => ${path.name} - ${fasta}"
+            log.info "Processing => ${path.name} - ${fasta}"
             allGenomes[ path.name ] = [
                     genome_fa: fasta,
                     chr_db: new File(dbpath,"${path.name}/chr"),
@@ -136,13 +132,11 @@ else if( params['genomes-folder'] ) {
 }
 
 else {
-    println "No input genome(s) provided -- Use one of the following CLI options 'genomes-file' or 'genomes-list' or 'genomes-folder' "
-    exit 1
+    exit 5, "No input genome(s) provided -- Use one of the following CLI options 'genomes-file' or 'genomes-list' or 'genomes-folder' "
 }
 
 if( !allGenomes ) {
-    println "No genomes found in path"
-    exit 1
+    exit 6, "No genomes found in path"
 }
 
 // get all genomes ID found and put into a list
@@ -161,19 +155,24 @@ formatName = allGenomes.keySet()
 querySplits = cacheableDir([queryFile, params.'query-chunk-len'])
 
 if( querySplits.isEmpty() ) {
-    println "Splitting query file: $queryFile .."
+    log.info "Splitting query file: $queryFile .."
     chunkCount=0
     queryFile.chunkFasta( params.'query-chunk-len' ) { sequence ->
         def file = new File(querySplits, "seq_${chunkCount++}")
         file.text = sequence
     }
-    println "Created $chunkCount input chunks to path: ${querySplits}"
+    log.info "Created $chunkCount input chunks to path: ${querySplits}"
 }
 else {
-    println "Cached query splits > ${querySplits.list().size()} input query chunks"
+    log.info "Cached query splits > ${querySplits.list().size()} input query chunks"
 }
 
 
+
+allQueryIDs = []
+queryFile.chunkFasta() { String chunk ->
+    allQueryIDs << chunk.readLines()[0].substring(1)
+}
 
 
 /*
@@ -244,7 +243,7 @@ blastName.each {
 
     def name = it.text.trim()
     querySplits.eachFile { chunk ->
-        println "Blasting > $name - chunk: $chunk"
+        log.info "Blasting > $name - chunk: $chunk"
         synchronized(this) {
             blastId << name
             blastQuery << chunk.absoluteFile
@@ -289,21 +288,83 @@ task ('exonerate') {
     input exonerateId
     input exonerateQuery
     input blastResult
-    output '*.gtf': exonerateOut
+    output '*.fa': exonerateOut
     threads params['max-threads']
 
     """
+    specie='${exonerateId.text.trim()}'
     chr=${allGenomes[exonerateId.text.trim()].chr_db}
+    ## apply exonerate
     exonerateRemapping.pl -query ${exonerateQuery} -mf2 $blastResult -targetGenomeFolder $chr -exonerate_lines_mode 1000 -exonerate_success_mode 1 -ner no
+
+    ## exonerateRemapping create a file named 'blastResult.fa'
+    ## split the exonerate result into single files
+    ${split_cmd} blastResult.fa '%^>%' '/^>/' '{*}' -f .seq_ -n 5
+    mv blastResult.fa .blastResult.fa
+
+    ## rename the seq_xxx files so that the file name match the seq fasta id
+    ## plus append the specie to th sequence id
+    for x in .seq_*; do
+      SEQID=`grep '>' \$x`
+      FILENAME=`grep '>' \$x | sed 's/^>\\(.*\\)_hit\\d*.*\$/\\1/'`
+      printf "\${SEQID}_${specie}\\n" > \${FILENAME}.fa
+      cat \$x | grep -v '>' >> \${FILENAME}.fa
+    done
     """
-
 }
 
-task ('align') {
+
+fastaToMerge = new Channel()
+exonerateOut.filter { file -> file.baseName in allQueryIDs  } .into (fastaToMerge)
+
+fastaToAlign = merge('prepare_mfa') {
+
+    input fastaToMerge
+    output '*.mfa'
+
+    """
+    # Extract the file name w/o the extension
+    fileName=\$(basename "$fastaToMerge")
+    baseName="\${fileName%.*}"
+
+    # Only the first time append the query sequence
+    if [ ! -e \$baseName.mfa ]; then
+    perl -n -e '$on=(/^>('\$baseName')/) if (/^>/); print $_ if ($on);' $queryFile > \$baseName.mfa
+    fi
+
+    # Append the exonerate result
+    cat $fastaToMerge >> \$baseName.mfa
+    """
+}
+
+alignment = task('align') {
+    input fastaToAlign
+    output '*.aln'
+
+    """
+    t_coffee -in $fastaToAlign -method slow_pair -n_core 1
+    """
+}
+
+similarity = merge('similarity') {
+    input alignment
+    output '*'
+
+    """
+    fileName=\$(basename "$alignment")
+    baseName="\${fileName%.*}"
+    t_coffee -other_pg seq_reformat -in $alignment -output sim > \$baseName
+    """
+}
+
+simFolder = val()
+similarity.whenBound { file -> simFolder << file.parent }
+
+task ('matrix') {
     echo true
-    input exonerateOut
+    input simFolder
 
-    "cat $exonerateOut"
-
+    """
+    sim2matrix.pl -query $queryFile -data_dir $simFolder -genomes_dir $dbpath
+    """
 }
-

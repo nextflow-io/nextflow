@@ -53,12 +53,12 @@ class SgeTaskProcessor extends GenericGridProcessor {
         final result = new ArrayList<String>()
 
         result << 'qsub'
-        result << '-terse'
         result << '-wd' << task.workDirectory
+        result << '-N' << "nf-${name}-${task.index}"
+        result << '-o' << ".qsub.out.nf-${name}-${task.index}"
         result << '-j' << 'y'
         result << '-sync' << 'y'
         result << '-V'
-
 
         // add other parameters (if any)
         if(queue) {
@@ -72,9 +72,6 @@ class SgeTaskProcessor extends GenericGridProcessor {
         if( maxMemory ) {
             result << '-l' << "virtual_free=${maxMemory.toString().replaceAll(/[\sB]/,'')}"
         }
-
-        // -- the job name
-        result << '-N' << "nf-${name}-${task.index}"
 
         // -- at the end append the command script wrapped file name
         if ( qsubCmdLine ) {

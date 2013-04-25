@@ -18,9 +18,8 @@
  */
 
 package nextflow.util
-
 import groovyx.gpars.dataflow.DataflowQueue
-import groovyx.gpars.dataflow.operator.PoisonPill
+import groovyx.gpars.group.NonDaemonPGroup
 import nextflow.Nextflow
 import spock.lang.Specification
 /**
@@ -164,8 +163,7 @@ class NextflowMethodsExtensionTest extends Specification {
         }
 
         when:
-        def interceptor = new NextflowMethodsExtension.WritableChannelInterceptor(closure.owner)
-        closure.@owner = interceptor
+        def interceptor = new NextflowMethodsExtension.WritableChannelInterceptor(closure)
         closure.call()
 
         then:
@@ -174,7 +172,7 @@ class NextflowMethodsExtensionTest extends Specification {
     }
 
 
-    def channel1 = new DataflowQueue<>()
+    def channel1 = new DataflowQueue()
     def channel2 = new DataflowQueue()
 
     def 'test Each' () {
@@ -185,12 +183,12 @@ class NextflowMethodsExtensionTest extends Specification {
         def closure = { it ->
             channel1 << it
             channel2 << it * it
-
         }
 
         when:
-        NextflowMethodsExtension.each(queue, closure);
-        queue << 1 << 2 << PoisonPill
+        // note: launching the test from Gradle, it requires the NonDaemonPGroup to be specified, otherwise it raises a RejectedExecutionException exception
+        NextflowMethodsExtension.each(queue, new NonDaemonPGroup(), closure);
+        queue << 1 << 2
 
         then:
         channel1.getVal() == 1
@@ -200,7 +198,7 @@ class NextflowMethodsExtensionTest extends Specification {
 
     }
 
-    def 'test cloure ' () {
+    def 'test closure ' () {
 
         when:
         def closure = {}

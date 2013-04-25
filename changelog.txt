@@ -3,6 +3,9 @@ NEXTFLOW CHANGE-LOG
 
 0.2.7
 - Added 'eachWithIndex' iterator like method on dataflow channel
+- Make the SGE task processor to write the output file in the job execution directory
+- Renaming the CLI option -continue to -resume
+- Adding File extension methods: getBaseName(), getExtension()
 
 0.2.6 - 22 Apr 2016
 - Fixed a bug on errors handling

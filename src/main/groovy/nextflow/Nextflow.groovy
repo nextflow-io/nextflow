@@ -132,4 +132,10 @@ class Nextflow {
 
 
 
+    static File file( def name ) {
+        assert name
+        def fileName = name.toString()
+        fileName.startsWith( File.separator ) ? new File(fileName) : new File(fileName).absoluteFile
+    }
+
 }

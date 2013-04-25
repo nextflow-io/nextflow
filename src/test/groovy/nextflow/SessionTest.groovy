@@ -19,10 +19,12 @@
 
 package nextflow
 
+import nextflow.processor.GenericGridProcessor
 import nextflow.processor.LocalTaskProcessor
 import nextflow.processor.NopeTaskProcessor
-import nextflow.processor.GenericGridProcessor
+import nextflow.processor.SgeTaskProcessor
 import spock.lang.Specification
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -78,7 +80,7 @@ class SessionTest extends Specification {
         expect:
         new Session().loadProcessorClass(null) == LocalTaskProcessor
         new Session().loadProcessorClass('local') == LocalTaskProcessor
-        new Session().loadProcessorClass('sge') == GenericGridProcessor
+        new Session().loadProcessorClass('sge') == SgeTaskProcessor
         new Session().loadProcessorClass( GenericGridProcessor.name ) == GenericGridProcessor
 
     }
@@ -86,7 +88,7 @@ class SessionTest extends Specification {
     def 'test new Session with config' () {
         expect:
         new Session().processorClass == LocalTaskProcessor
-        new Session([task: [processor:'oge']]).processorClass == GenericGridProcessor
+        new Session([task: [processor:'oge']]).processorClass == SgeTaskProcessor
     }
 
 //

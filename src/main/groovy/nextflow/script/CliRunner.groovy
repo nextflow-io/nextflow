@@ -289,7 +289,7 @@ class CliRunner {
 
             normalized << args[i]
 
-            if( args[i++] == '-continue' ) {
+            if( args[i++] == '-resume' ) {
                 if( i<args.size() && !args[i].startsWith('-') && (args[i]=='last' || args[i] =~~ /[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{8}/) ) {
                     normalized << args[i++]
                 }
@@ -348,12 +348,12 @@ class CliRunner {
             def config = buildConfig(configFiles)
 
             // -- check for the 'continue' flag
-            if( options.continueFlag ) {
-                def uniqueId = options.continueFlag
+            if( options.resume ) {
+                def uniqueId = options.resume
                 if( uniqueId == 'last' ) {
                     uniqueId = HistoryFile.history.retrieveLastUniqueId()
                     if( !uniqueId ) {
-                        log.error "It appears you have never executed it before -- Cannot use the '-continue' command line option"
+                        log.error "It appears you have never executed it before -- Cannot use the '-resume' command line option"
                         System.exit(ExitCode.MISSING_UNIQUE_ID)
                     }
                 }

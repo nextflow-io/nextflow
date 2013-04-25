@@ -111,7 +111,7 @@ abstract class AbstractScript extends Script {
      * @param key An object to be used as cache-key creating the folder, it can be any object
      *          or an array or objects to use multi-objects key
      *
-     * @return The {@code File} to the cached directory or a newly created folder foe the specified key
+     * @return The {@code File} to the cached directory or a newly created folder for the specified key
      */
     File cacheableDir( Object key ) {
         assert key, "Please specify the 'key' argument on 'cacheableDir' method"

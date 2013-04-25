@@ -688,7 +688,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
      * Bind the expected output files to the corresponding output channels
      * @param processor
      */
-    protected synchronized void bindOutputs( TaskDef task ) {
+    protected void bindOutputs( TaskDef task ) {
 
         bindOutputs(collectAndValidateOutputs(task))
 
@@ -704,7 +704,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         return allFiles
     }
 
-    protected bindOutputs( Map allOutputResources ) {
+    synchronized protected bindOutputs( Map allOutputResources ) {
 
         log.trace "Binding results > task: ${currentTask.get()?.name ?: name} - values: ${allOutputResources}"
 

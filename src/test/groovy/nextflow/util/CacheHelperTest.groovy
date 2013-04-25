@@ -61,20 +61,6 @@ class CacheHelperTest extends Specification {
         CacheHelper.hasher(file).hash() == aFile
     }
 
-    def 'test overflow' () {
 
-        when:
-        def hasher = Hashing.murmur3_32().newHasher().putInt(1)
-
-        println hasher.hash()
-
-        hasher = hasher.putInt(2)
-
-        println hasher.hash()
-
-        then:
-        true
-
-    }
 
 }

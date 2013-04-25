@@ -30,8 +30,8 @@ class CliOptions {
     @Parameter(names=['-cache'], description = 'Enable/disable task(s) caching', arity = 1)
     boolean cacheable = true
 
-    @Parameter(names=['-continue'], description = 'Execute the script using the cached results, useful to continue executions that stopped by an error')
-    String continueFlag
+    @Parameter(names=['-resume'], description = 'Execute the script using the cached results, useful to continue executions that stopped by an error')
+    String resume
 
     /**
      * Print out the version number and exit

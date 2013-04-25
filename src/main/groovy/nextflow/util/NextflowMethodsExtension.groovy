@@ -36,6 +36,8 @@ import groovyx.gpars.group.DefaultPGroup
 import groovyx.gpars.group.PGroup
 import groovyx.gpars.scheduler.Pool
 import org.apache.commons.io.FileUtils
+import org.apache.commons.io.FilenameUtils
+
 /**
  * Provides extension methods to chunk text and file
  *
@@ -450,7 +452,6 @@ class NextflowMethodsExtension {
         return FileHelper.isNotEmpty(file)
     }
 
-
     def static copyTo( File source, File target ) {
         if( source.isDirectory() ) {
             FileUtils.copyDirectory(source, target)
@@ -460,6 +461,47 @@ class NextflowMethodsExtension {
         }
     }
 
+    /**
+     * Gets the base name, minus the full path and extension, from a full filename.
+     *
+     * This method will handle a file in either Unix or Windows format.
+     * The text after the last forward or backslash and before the last dot is returned.
+     * <pre>
+     *   a/b/c.txt --> c
+     *   a.txt     --> a
+     *   a/b/c     --> c
+     *   a/b/c/    --> ""
+     * </pre>
+     *
+     * The output will be the same irrespective of the machine that the code is running on.
+     * @param file The filename to query, null returns null
+     * @return The name of the file without the path, or an empty string if none exists
+     */
+    def static String getBaseName( File file ) {
+        assert file
+        FilenameUtils.getBaseName(file.name)
+    }
 
+    /**
+     * Gets the extension of a filename.
+     * This method returns the textual part of the filename after the last dot.
+     * There must be no directory separator after the dot.
+     * <pre>
+     *   foo.txt      --> "txt"
+     *   a/b/c.jpg    --> "jpg"
+     *   a/b.txt/c    --> ""
+     *   a/b/c        --> ""
+     * </pre>
+     *
+     * The output will be the same irrespective of the machine that the code is running on.
+     *
+     *
+     * @param file  The file to retrieve the extension of.
+     * @return the Extension of the file or an empty string if none exists
+     */
+    def static String getExtension( File file ) {
+        assert file
+        FilenameUtils.getExtension(file.name)
+    }
 
 }

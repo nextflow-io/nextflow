@@ -53,42 +53,6 @@ class FunctionalTest extends Specification {
 
     }
 
-    /*
-     * test passing values through command line parameters
-     */
-    def 'test parameters' () {
-
-        setup:
-        def script = """
-
-            params.X = 1
-            params.Y = 2
-            params.Z = 3
-
-            [ params.X, params.Y, params.Z, params.W ]
-            """
-
-        /*
-         * the X value is overridden by the 'X' value specified as value
-         * the Y value is not overridden because it is not passed as parameter
-         * the X value is NOT overridden because is a local variable
-         * the W is taken directly from the binding params
-         */
-        when:
-        def runner = new CliRunner()
-        runner.setParam( [X:'10', Z: '30', W:'long string']  )
-        def result = runner.execute(script)
-
-        then:
-        result[0] == 10
-        result[1] == 2
-        result[2] == 30
-        result[3] == 'long string'
-
-        cleanup:
-        runner.workDirectory?.deleteDir()
-
-    }
 
     /*
      * test passing values through command line argument (unnamed parameters)

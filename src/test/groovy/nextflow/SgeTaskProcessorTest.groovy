@@ -27,7 +27,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class OgeTaskProcessorTest extends Specification {
+class SgeTaskProcessorTest extends Specification {
 
     def 'test qsub cmd line' () {
 
@@ -40,10 +40,11 @@ class OgeTaskProcessorTest extends Specification {
         processor.name = 'task'
 
         def task = new TaskDef(name: 'my-task', index: 9)
+        task.workDirectory = new File('/abc')
 
 
         then:
-        processor.getSubmitCommandLine(task).join(' ') == 'qsub -terse -wd $PWD -o .command.out -j y -sync y -V -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -N nf-task-9 -extra opt .command.sh'
+        processor.getSubmitCommandLine(task) as String[] == 'qsub -wd /abc -N nf-task-9 -o .qsub.out.nf-task-9 -j y -sync y -V -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'.split(' ')
 
     }
 
