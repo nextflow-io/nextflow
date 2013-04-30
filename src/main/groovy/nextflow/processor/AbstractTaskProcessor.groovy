@@ -17,6 +17,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.processor
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
 import com.google.common.hash.HashCode
@@ -39,12 +40,16 @@ import nextflow.exception.MissingFileException
 import nextflow.exception.TaskValidationException
 import nextflow.script.AbstractScript
 import nextflow.util.CacheHelper
+import nextflow.util.FileHelper
+import org.apache.commons.io.FileUtils
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 abstract class AbstractTaskProcessor implements TaskProcessor {
+
+    static final File TMP_FOLDER = new File('tmp')
 
     protected int index
 
@@ -125,17 +130,15 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
     // ---== private ==---
 
-    protected TaskDef lastRunTask
+    protected TaskRun lastRunTask
 
     protected DataflowProcessor processor
 
     private allScalarValues
 
-    private final creationLock = new ReentrantLock(true)
+    private static final creationLock = new ReentrantLock(true)
 
     private static final folderLock = new ReentrantLock(true)
-
-    private File sharedFolder
 
     private final random = new Random()
 
@@ -152,11 +155,8 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         this.ownerScript = script
         this.bindOnTermination = bindOnTermination
 
-        // by definition when 'bindOnTermination' is true all tasks must share
-        // the same working directory
-        if ( bindOnTermination ) {
-            this.shareWorkDir = true
-        }
+        this.threads = bindOnTermination ? 1 : Runtime.getRuntime().availableProcessors()
+
     }
 
     @Override
@@ -222,12 +222,6 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     @Override
     AbstractTaskProcessor echo( boolean value ) {
         this.echo = value
-        return this
-    }
-
-    @Override
-    AbstractTaskProcessor shareWorkDir(boolean value) {
-        this.shareWorkDir = value
         return this
     }
 
@@ -305,9 +299,6 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     int getThreads() { return threads }
 
     @Override
-    boolean getShareWorkDir() { shareWorkDir }
-
-    @Override
     def getShell() { shell }
 
     @Override
@@ -342,15 +333,11 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
             throw new IllegalArgumentException("Missing 'script' attribute")
         }
 
-        if( shareWorkDir && threads > 1 ) {
-            throw new IllegalArgumentException("The 'shareWorkDirectory' attribute cannot be set TRUE when the specified 'thread's are more than 1")
-        }
-
         /*
          * generate the processor name if not specified
          */
         if ( !name ) {
-            name = "task${session.allProcessors.size()}"
+            name = "task${session.allProcessors.size()+1}"
         }
 
         /*
@@ -362,23 +349,48 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         if( inputs.size() == 0 ) {
             input('$':true)
         }
-        def _inputs = new ArrayList(inputs.values())
 
-        allScalarValues = !_inputs.any { !(it instanceof DataflowVariable) }
+        allScalarValues = !inputs.values().any { !(it instanceof DataflowVariable) }
 
         /*
          * Normalize the output
-         * - event though the output may be empty, let return the stdout as output by default
+         * - even though the output may be empty, let return the stdout as output by default
          */
-        if ( outputs.size() == 0 ) { output('-') }
-        def _outputs = new ArrayList(outputs.values())
+        if ( outputs.size() == 0 ) {
+            output('-')
+        }
 
-        // bind the outputs to the script scope
+        /*
+         * bind the outputs to the script scope
+         */
         if( ownerScript ) {
             outputs.each { name, channel ->
                 if( name != '-' ) { ownerScript.setProperty(name, channel) }
             }
         }
+
+        if( bindOnTermination ) {
+            mergeCreateOperator()
+        }
+        else {
+            createTaskOperator()
+        }
+
+
+        /*
+         * When there is a single output channel, return let returns that item
+         * otherwise return the list
+         */
+        def result = outputs.values()
+        return result.size() == 1 ? result[0] : result
+    }
+
+
+    private void createTaskOperator() {
+
+        def opInputs = new ArrayList(inputs.values())
+        def opOutputs = new ArrayList(outputs.values())
+
 
         /*
          * create a mock closure to trigger the operator
@@ -388,18 +400,158 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         /*
          * create the output
          */
-        def params = [inputs: _inputs, outputs: _outputs, maxForks: threads, listeners: [new DataflowInterceptor()] ]
+        def params = [inputs: opInputs, outputs: opOutputs, maxForks: threads, listeners: [new TaskProcessorInterceptor()] ]
         session.allProcessors << (processor = new DataflowOperator(group, params, mock).start())
         // increment the session sync
         session.sync.countUp()
 
-        /*
-         * When there is a single output channel, return let returns that item
-         * otherwise return the list
-         */
-        return _outputs.size() == 1 ? _outputs[0] : _outputs
     }
 
+    /*
+     * The merge task is composed by two operator, the first creates a single 'script' to be executed by second one
+     */
+    private void mergeCreateOperator() {
+
+        log.debug "Starting merge > ${name}"
+
+        final args = []
+        inputs.size().times { args << "__p$it" }
+
+        final str = " { ${args.join(',')} -> callback([ ${args.join(',')} ]) }"
+        final binding = new Binding( ['callback': this.&mergeScriptCollector] )
+        final wrapper = (Closure)new GroovyShell(binding).evaluate (str)
+
+        mergeHashesList = new LinkedList<>()
+        mergeTempFolder = FileHelper.createTempFolder()
+
+        def params = [inputs: new ArrayList(inputs.values()), outputs: new ArrayList(outputs.values()), listeners: [new MergeProcessorInterceptor()] ]
+        processor = new DataflowOperator(group, params, wrapper)
+        session.allProcessors.add(processor)
+
+        // increment the session sync
+        session.sync.countUp()
+
+        // -- start it
+        processor.start()
+
+    }
+
+    protected void mergeTaskRun(TaskRun task) {
+
+        try {
+
+            // -- create the unique hash number for this tasks,
+            //    collecting the id of all the executed runs
+            //    and sorting them
+            def hasher = CacheHelper.hasher(session.uniqueId)
+            mergeHashesList.sort()
+            mergeHashesList.each { Integer entry ->  hasher = CacheHelper.hasher(hasher,entry) }
+            def hash = hasher.hash()
+            log.trace "Merging task > $name -- hash: $hash"
+
+            def folder = FileHelper.createWorkFolder(hash)
+            log.trace "Merging task > $name -- trying cached: $folder"
+
+            def cached = session.cacheable && this.cacheable && checkCachedOutput(task,folder)
+            if( !cached ) {
+
+                folder = createTaskFolder(folder, hash)
+                log.info "Running merge > ${name}"
+
+                // -- set the folder where execute the script
+                task.workDirectory = folder
+
+                // -- set the aggregate script to be executed
+                task.script = mergeScript.toString()
+
+                // -- run it !
+                launchTask( task )
+
+                // -- save the exit code
+                new File(folder, '.exitcode').text = task.exitCode
+
+                // -- check if terminated successfully
+                boolean success = (task.exitCode in validExitCodes)
+                if ( !success ) {
+                    throw new InvalidExitException("Task '${task.name}' terminated with an invalid exit code: ${task.exitCode}")
+                }
+
+                bindOutputs(task)
+            }
+        }
+        finally {
+            task.status = TaskRun.Status.TERMINATED
+        }
+
+    }
+
+    protected String getShellCommandString() {
+        shell instanceof List ? shell.join(' ') : shell?.toString()
+    }
+
+    private List<Integer> mergeHashesList
+
+    private File mergeTempFolder
+
+    private AtomicInteger mergeIndex = new AtomicInteger()
+
+    private def mergeScript = new StringBuilder()
+
+    protected void mergeScriptCollector( List params ) {
+        final currentIndex = mergeIndex.incrementAndGet()
+        log.info "Collecting task > ${name} ($currentIndex)"
+
+        // -- map the inputs to a map and use to delegate closure values interpolation
+        def inputVars = new DelegateMap(ownerScript)
+        inputs?.keySet()?.eachWithIndex { name, index ->
+            inputVars[name] = params[index]
+        }
+
+        /*
+         * initialize the task code to be executed
+         */
+        Closure scriptClosure = this.code.clone() as Closure
+        scriptClosure.delegate = inputVars
+        scriptClosure.setResolveStrategy(Closure.DELEGATE_FIRST)
+
+        def commandToRun = scriptClosure.call()?.toString()?.stripIndent()?.trim()
+
+        /*
+         * create a unique hash-code for this task run and save it into a list
+         * which maintains all the hashes for executions making-up this merge task
+         */
+        def keys = [commandToRun]
+        if( inputVars.containsKey('-') ) {
+            keys << inputVars['-']
+        }
+        keys << 7
+        mergeHashesList << CacheHelper.hasher(keys).hash().asInt()
+
+        /*
+         * save the script to execute into a separate unique-named file
+         */
+        def index = currentIndex
+        def scriptName = ".merge_command.sh.${index.toString().padLeft(4,'0')}"
+        def scriptFile = new File(mergeTempFolder, scriptName)
+        scriptFile.text = commandToRun
+
+        // the command to launch this command
+        def scriptCommand =  getShellCommandString() + ' ' + scriptFile
+
+        // check if some input have to be send
+        if( inputVars.containsKey('-') ) {
+            def inputName = ".merge_command.input.$index"
+            def inputFile = new File( mergeTempFolder, inputName )
+            inputFile.text = inputVars['-']
+
+            // pipe the user input to the user command
+            scriptCommand = "$scriptCommand < ${inputFile.toString()}"
+        }
+
+        // create a unique script collecting all the commands
+        mergeScript << scriptCommand << '\n'
+
+    }
 
 
     Closure createMockClosure() {
@@ -415,6 +567,22 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     }
 
 
+    final protected TaskRun createTaskRun() {
+
+        TaskRun result
+        creationLock.lock()
+        try {
+            def num = session.tasks.size()
+            result = new TaskRun(id: num, status: TaskRun.Status.PENDING, index: ++index, name: "$name ($index)" )
+            session.tasks.put( this, result )
+        }
+        finally {
+            creationLock.unlock()
+        }
+
+        return result
+    }
+
     /**
      * Create the {@code TaskDef} data structure and initialize the task execution context
      * with the received input values
@@ -422,19 +590,10 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
      * @param values
      * @return
      */
-    final protected TaskDef initTaskRun(List values) {
+    final protected TaskRun initTaskRun(List values) {
         log.debug "Creating a new task > $name"
 
-        final TaskDef task = null
-        creationLock.lock()
-        try {
-            def num = session.tasks.size()
-            task = new TaskDef(id: num, status: TaskDef.Status.PENDING, index: ++index, name: "$name ($index)" )
-            session.tasks.put( this, task )
-        }
-        finally {
-            creationLock.unlock()
-        }
+        final TaskRun task = createTaskRun()
 
         // -- map the inputs to a map and use to delegate closure values interpolation
         def map = new DelegateMap(ownerScript)
@@ -466,7 +625,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     }
 
 
-    protected final ThreadLocal<TaskDef> currentTask = new ThreadLocal<>()
+    protected final ThreadLocal<TaskRun> currentTask = new ThreadLocal<>()
 
     /**
      * The processor execution body
@@ -474,7 +633,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
      * @param processor
      * @param values
      */
-    final protected runTask(TaskDef task) {
+    final protected runTask(TaskRun task) {
         assert task
 
         // -- call the closure and execute the script
@@ -490,8 +649,8 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
             //          NO  --> launch the task
 
             def hash = CacheHelper.hasher( [session.uniqueId, task.script, task.input, task.code.delegate] ).hash()
-            def folder = shareWorkDir && sharedFolder ? sharedFolder : CacheHelper.folderForHash(hash)
-            def cached = session.cacheable && this.cacheable && (!shareWorkDir) && checkCachedOutput(task,folder)
+            def folder = FileHelper.createWorkFolder(hash)
+            def cached = session.cacheable && this.cacheable && checkCachedOutput(task,folder)
             if( !cached ) {
                 log.info "Running task > ${task.name}"
 
@@ -517,24 +676,21 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         }
         finally {
             lastRunTask = task
-            task.status = TaskDef.Status.TERMINATED
+            task.status = TaskRun.Status.TERMINATED
         }
     }
 
-    final protected File createTaskFolder( File folder, HashCode hash ) {
+    final protected File createTaskFolder( File folder, HashCode hash  ) {
 
         folderLock.lock()
         try {
-            if( shareWorkDir && folder.exists() ) {
-                return folder
-            }
 
             if( folder.exists() ) {
 
                 // find another folder name that does NOT exist
                 while( true ) {
                     hash = CacheHelper.hasher( [hash.asInt(), random.nextInt() ] ).hash()
-                    folder = CacheHelper.folderForHash(hash)
+                    folder = FileHelper.createWorkFolder(hash)
                     if( !folder.exists() ) {
                         break
                     }
@@ -545,8 +701,6 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
                 throw new IOException("Unable to create folder: $folder -- check file system permission")
             }
 
-            if( shareWorkDir ) sharedFolder = folder
-
             return folder
         }
 
@@ -556,20 +710,24 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
     }
 
-    final checkCachedOutput(TaskDef task, File folder) {
+
+    final checkCachedOutput(TaskRun task, File folder) {
         if( !folder.exists() ) {
+            log.trace "Cached folder does not exists > $folder -- return false"
             // no folder -> no cached result
             return false
         }
 
         def exitFile = new File(folder,'.exitcode')
         if( exitFile.isEmpty() ) {
+            log.trace "Exit file is empty > $exitFile -- return false"
             return false
         }
 
         def exitValue = exitFile.text.trim()
         def exitCode = exitValue.isInteger() ? exitValue.toInteger() : null
         if( exitCode == null || !(exitCode in validExitCodes) ) {
+            log.trace "Exit code is not valid > $exitValue -- return false"
             return false
         }
 
@@ -614,7 +772,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
      * @return {@code true} to terminate the processor execution,
      *         {@code false} ignore the error and continue to process other pending tasks
      */
-    final protected boolean handleException( Throwable error, TaskDef task = null ) {
+    final protected boolean handleException( Throwable error, TaskRun task = null ) {
 
         // -- when is a task level error and the user has chosen to ignore error, just report and error message
         //    return 'false' to DO NOT stop the execution
@@ -656,7 +814,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
                 message << "\nCommand work dir:\n  ${task.workDirectory}"
             }
 
-            message << "\nTip: when you have fixed the problem you may continue the execution appending to the nextflow command line the '-continue' option"
+            message << "\nTip: when you have fixed the problem you may continue the execution appending to the nextflow command line the '-resume' option"
 
             log.error message.join('\n')
 
@@ -688,13 +846,14 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
      * Bind the expected output files to the corresponding output channels
      * @param processor
      */
-    protected void bindOutputs( TaskDef task ) {
+    protected void bindOutputs( TaskRun task ) {
 
         bindOutputs(collectAndValidateOutputs(task))
 
     }
 
-    protected Map collectAndValidateOutputs( TaskDef task ) {
+    protected Map collectAndValidateOutputs( TaskRun task ) {
+
         // -- collect the produced output
         def allFiles = [:]
         outputs.keySet().each { name ->
@@ -709,10 +868,11 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         log.trace "Binding results > task: ${currentTask.get()?.name ?: name} - values: ${allOutputResources}"
 
         // -- bind each produced file to its own channel
-        outputs.keySet().eachWithIndex { fileName, index ->
+        outputs.keySet().eachWithIndex { name, index ->
 
-            def entry = allOutputResources[fileName]
-            if( fileName == '-' && entry instanceof File ) {
+            def entry = allOutputResources[name]
+
+            if( name == '-' && entry instanceof File ) {
                 processor.bindOutput(index, entry.text)
             }
             else if( entry instanceof Collection ) {
@@ -724,8 +884,35 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         }
     }
 
+    private class BaseEventHandler extends DataflowEventAdapter {
 
-    class DataflowInterceptor extends DataflowEventAdapter {
+        @Override
+        void afterRun(DataflowProcessor processor, List<Object> MOCK_MESSAGES) {
+            log.trace "After run > ${currentTask.get()?.name ?: name}"
+            finalizeTask()
+        }
+
+        @Override
+        public void afterStop(final DataflowProcessor processor) {
+            log.debug "After stop > $name"
+            // increment the session sync
+            session.sync.countDown()
+        }
+
+        @Override
+        public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+            log.trace "Received message > task: ${currentTask.get()?.name ?: name}; channel: $index; value: $message"
+            return message
+        }
+
+        @Override
+        public void afterStart(final DataflowProcessor processor) {
+            log.trace "After start > $name"
+        }
+
+    }
+
+    class TaskProcessorInterceptor extends BaseEventHandler {
 
         /**
          * Invoked when all messages required to trigger the operator become available in the input channels.
@@ -767,83 +954,42 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
             handleException( error, currentTask.get() )
         }
 
-        /**
-         * Invoked when the operator completes a single run.
-         *
-         * @param processor
-         * @param MOCK_MESSAGES
-         */
-        @Override
-        void afterRun(DataflowProcessor processor, List<Object> MOCK_MESSAGES) {
-            log.trace "After run > ${currentTask.get()?.name ?: name}"
-            finalizeTask()
-        }
 
-
-        /**
-         * Invoked when a control message (instances of ControlMessage) becomes available in an input channel.
-         *
-         * @param processor
-         * @param channel
-         * @param index
-         * @param message
-         * @return
-         */
-        @Override
-        public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "Received control message > task: ${currentTask.get()?.name ?: name}; channel: $index; value: $message"
-
-            if ( message == PoisonPill.instance && AbstractTaskProcessor.this.bindOnTermination && AbstractTaskProcessor.this.lastRunTask ) {
-                log.debug "Bind on termination > task: ${currentTask.get()?.name ?: name}"
-
-                try {
-                    bindOutputs(lastRunTask)
-                }
-                catch( Throwable error ) {
-                    handleException(error)
-                }
-                lastRunTask = null
-            }
-
-            return message
-        }
-
-        /**
-         * Invoked when a message becomes available in an input channel.
-         *
-         * @param processor
-         * @param channel
-         * @param index
-         * @param message
-         * @return
-         */
-        @Override
-        public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "Received message > task: ${currentTask.get()?.name ?: name}; channel: $index; value: $message"
-            return message
-        }
-
-        /**
-         * Invoked immediately after the operator starts by a pooled thread before the first message is obtained
-         */
-        @Override
-        public void afterStart(final DataflowProcessor processor) {
-            log.trace "After start > $name"
-        }
-
-        /**
-         * Invoked immediately after the operator terminates
-         *
-         * @param processor The reporting dataflow operator/selector
-         */
-        @Override
-        public void afterStop(final DataflowProcessor processor) {
-            log.debug "After stop > $name"
-            // increment the session sync
-            session.sync.countDown()
-        }
 
     }
+
+
+    /**
+     * A task of type 'merge' binds the output when it terminates it's work, i.e. when
+     * it receives a 'poison pill message that will stop it
+     */
+    class MergeProcessorInterceptor extends BaseEventHandler {
+
+        public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+
+            // intercepts 'poison pill' message e.g. termination control message
+            // in order the launch the task execution on the underlying system
+            if( message == PoisonPill.instance)  {
+
+                def task = createTaskRun()
+                try {
+                    mergeTaskRun(task)
+                }
+                catch( Exception e ) {
+                    handleException(e, task)
+                }
+
+            }
+            return message
+        }
+
+        public boolean onException(final DataflowProcessor processor, final Throwable e) {
+            handleException(e)
+        }
+
+
+    }
+
 
 
     protected Map<String,String> getProcessEnvironment() {
@@ -876,7 +1022,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
      * @param script The script string to be execute, e.g. a BASH script
      * @return {@code TaskDef}
      */
-    protected abstract void launchTask( TaskDef task )
+    protected abstract void launchTask( TaskRun task )
 
     /**
      * The file which contains the stdout produced by the executed task script
@@ -884,7 +1030,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
      * @param task The user task to be executed
      * @return The absolute file to the produced script output
      */
-    protected abstract getStdOutFile( TaskDef task )
+    protected abstract getStdOutFile( TaskRun task )
 
     /**
      * Collect the file(s) with the name specified, produced by the execution
@@ -893,7 +1039,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
      * @param fileName The file name, it may include file name wildcards
      * @return The list of files matching the specified name
      */
-    protected collectResultFile( TaskDef task, String fileName ) {
+    protected collectResultFile( TaskRun task, String fileName ) {
         assert fileName
         assert task
         assert task.workDirectory
@@ -976,6 +1122,9 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
             local.put(property, newValue)
         }
     }
+
+
+
 
 }
 

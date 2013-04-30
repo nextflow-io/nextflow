@@ -28,6 +28,9 @@ class HistoryFileTest extends Specification {
 
     def 'test add and get' () {
 
+        setup:
+        new File('.nextflow.history').delete()
+
         when:
         true
 

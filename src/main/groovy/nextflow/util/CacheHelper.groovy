@@ -19,7 +19,6 @@
 
 package nextflow.util
 
-import com.google.common.hash.HashCode
 import com.google.common.hash.HashFunction
 import com.google.common.hash.Hasher
 import com.google.common.hash.Hashing
@@ -123,21 +122,6 @@ class CacheHelper {
 
         return hasher
     }
-
-    /**
-     * Defines a cacheable path for the specified {@code HashCode} instance.
-     *
-     * @param hash
-     * @return
-     */
-    final static File folderForHash(HashCode hash) {
-
-        def bucket = Hashing.consistentHash(hash, 100).toString().padLeft(2,'0')
-        def folder = new File("./tmp/${bucket}", hash.toString()).absoluteFile
-
-        return folder
-    }
-
 
 
 }

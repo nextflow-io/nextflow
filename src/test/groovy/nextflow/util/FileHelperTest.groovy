@@ -57,8 +57,8 @@ class FileHelperTest extends Specification {
     def 'test isEmpty dir'() {
 
         setup:
-        def emptyDir = FileHelper.createScratchDir()
-        def notEmptyDir = FileHelper.createScratchDir()
+        def emptyDir = FileHelper.createTempDir()
+        def notEmptyDir = FileHelper.createTempDir()
         File.createTempFile('test','test', notEmptyDir)
 
         expect:

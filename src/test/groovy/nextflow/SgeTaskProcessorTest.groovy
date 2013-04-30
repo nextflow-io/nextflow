@@ -20,7 +20,7 @@
 package nextflow
 
 import nextflow.processor.SgeTaskProcessor
-import nextflow.processor.TaskDef
+import nextflow.processor.TaskRun
 import spock.lang.Specification
 
 /**
@@ -39,7 +39,7 @@ class SgeTaskProcessorTest extends Specification {
         processor.qsubCmdLine('-extra opt')
         processor.name = 'task'
 
-        def task = new TaskDef(name: 'my-task', index: 9)
+        def task = new TaskRun(name: 'my-task', index: 9)
         task.workDirectory = new File('/abc')
 
 

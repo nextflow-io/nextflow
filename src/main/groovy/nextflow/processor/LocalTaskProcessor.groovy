@@ -37,6 +37,8 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
 
     private static final COMMAND_SH_FILENAME = '.command.sh'
 
+    private static final COMMAND_ENV_FILENAME = '.command.environment'
+
     private Duration maxDuration
 
     /**
@@ -57,7 +59,7 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
      * @param script
      * @return
      */
-    protected void launchTask( TaskDef task )  {
+    protected void launchTask( TaskRun task )  {
         assert task
         assert task.@script
         assert task.workDirectory
@@ -65,7 +67,21 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
         final scratch = task.workDirectory
         log.debug "Lauching task > ${task.name} -- scratch folder: $scratch"
 
-        // -- create the command script file
+       final envMap = getProcessEnvironment()
+
+//        final envBuilder = new StringBuilder()
+//        envMap.each { name, value ->
+//            if( !name.contains('.') ) {
+//                envBuilder << "export $name='$value'" << '\n'
+//            }
+//        }
+//        new File(scratch, COMMAND_ENV_FILENAME).text = envBuilder.toString()
+//
+//        // -- create the command script file
+//        def scriptBuilder = new StringBuilder()
+//        scriptBuilder << '. ' << COMMAND_ENV_FILENAME << '\n'
+//        scriptBuilder <<  task.script.toString()
+
         def scriptFile = new File(scratch, COMMAND_SH_FILENAME)
         scriptFile.text = task.script.toString()
 
@@ -85,11 +101,12 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
                 .redirectErrorStream(true)
 
         // -- configure the job environment
-        builder.environment().putAll(getProcessEnvironment())
+        builder.environment().putAll(envMap)
+
 
         // -- start the execution and notify the event to the monitor
         Process process = builder.start()
-        task.status = TaskDef.Status.RUNNING
+        task.status = TaskRun.Status.RUNNING
 
         // -- copy the input value to the process standard input
         if( task.input != null ) {
@@ -143,7 +160,7 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
         }
     }
 
-    protected getStdOutFile( TaskDef task ) {
+    protected getStdOutFile( TaskRun task ) {
 
         new File(task.workDirectory, COMMAND_OUT_FILENAME)
 
@@ -156,7 +173,7 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
      * @param task The current task to be executed
      * @param process The system process that will run the task
      */
-    protected void pipeTaskInput( TaskDef task, Process process ) {
+    protected void pipeTaskInput( TaskRun task, Process process ) {
 
         Thread.start {
             try {

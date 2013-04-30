@@ -32,8 +32,8 @@ import nextflow.processor.LocalTaskProcessor
 import nextflow.processor.LsfTaskProcessor
 import nextflow.processor.NopeTaskProcessor
 import nextflow.processor.SgeTaskProcessor
-import nextflow.processor.TaskDef
 import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
 import nextflow.script.AbstractScript
 /**
  *
@@ -79,7 +79,7 @@ class Session {
      * Keep the list all executed tasks
      * note: LinkedHashMultimap preserves insertion order of entries, as well as the insertion order of keys, and the set of values associated with any one key.
      */
-    Multimap<TaskProcessor, TaskDef> tasks = LinkedHashMultimap.create()
+    Multimap<TaskProcessor, TaskRun> tasks = LinkedHashMultimap.create()
 
     /**
      * Holds the configuration object

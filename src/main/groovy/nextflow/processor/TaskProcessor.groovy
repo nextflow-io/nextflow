@@ -51,8 +51,6 @@ interface TaskProcessor {
 
     TaskProcessor echo( boolean value )
 
-    TaskProcessor shareWorkDir( boolean value )
-
     TaskProcessor shell( value )
 
     TaskProcessor validExitCodes( List<Integer> values )
@@ -128,11 +126,6 @@ interface TaskProcessor {
      * @return The maximum number of thread that can be used by the processor
      */
     int getThreads()
-
-    /**
-     * @return Whenever the same working direction have to be used for all tasks execution by this processor
-     */
-    boolean getShareWorkDir()
 
     def getShell()
 

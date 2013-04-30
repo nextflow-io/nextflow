@@ -19,9 +19,9 @@
 
 package nextflow.util
 
+import com.google.common.hash.HashCode
+import com.google.common.hash.Hashing
 import groovy.util.logging.Slf4j
-import nextflow.Const
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -84,7 +84,7 @@ class FileHelper {
      * @param seed
      * @return
      */
-    static File createScratchDir( final File baseDir = Const.APP_TMP_DIR ) {
+    static File createTempDir( final File baseDir = null ) {
 
         long timestamp = System.currentTimeMillis()
         while( true ) {
@@ -92,11 +92,12 @@ class FileHelper {
             String rnd1 = randomString(2, NUMERIC)
             String rnd2 = randomString(4, ALPHANUM)
             String rnd3 = randomString(4, ALPHANUM)
+            String path = "$rnd1/$rnd2-$rnd3"
 
-            File tempDir = new File(baseDir, "$rnd1/$rnd2-$rnd3".toString());
+            File tempDir = baseDir ? new File(baseDir,path) : new File(path)
 
             if (tempDir.mkdirs()) {
-                return tempDir;
+                return tempDir.absoluteFile;
             }
             else if ( !tempDir.exists() ) {
                 // when 'mkdirs' failed because it was unable to create the folder
@@ -193,11 +194,39 @@ class FileHelper {
         !isEmpty(path)
     }
 
-    def delete( File file )  {
 
-        if ( file.isFile() ) {
-            file.deleteDir()
-        }
+
+    /**
+     * Defines a cacheable path for the specified {@code HashCode} instance.
+     *
+     * @param hash
+     * @return
+     */
+    final static File createWorkFolder(HashCode hash) {
+
+        def bucket = Hashing.consistentHash(hash, 100).toString().padLeft(2,'0')
+        def folder = new File("./work/${bucket}", hash.toString()).absoluteFile
+
+        return folder
     }
 
+    final static File createTempFolder() {
+        int count = 0
+        while( true ) {
+            def hash = CacheHelper.hasher(rndGen.nextLong()).hash()
+            def bucket = Hashing.consistentHash(hash, 100).toString().padLeft(2,'0')
+            def result = new File("./work/tmp/$bucket/${hash.toString()}")
+
+            if( result.exists() ) {
+                if( ++count > 100 ) { throw new IOException("Unable to create a unique temporary path: $result") }
+                continue
+            }
+            if( !result.mkdirs() ) {
+                throw new IOException("Unable to create temporary parth: $result -- Verify file system access permission")
+            }
+
+            return result.absoluteFile
+        }
+
+    }
 }

@@ -24,7 +24,7 @@ package nextflow.processor
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
-class TaskDef {
+class TaskRun {
 
     enum Status { PENDING, RUNNING, TERMINATED }
 

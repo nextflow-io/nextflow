@@ -48,7 +48,7 @@ class SgeTaskProcessor extends GenericGridProcessor {
      * - sync: wait for the job completion
      * -V: export the current environment
      */
-    protected List<String> getSubmitCommandLine(TaskDef task) {
+    protected List<String> getSubmitCommandLine(TaskRun task) {
 
         final result = new ArrayList<String>()
 

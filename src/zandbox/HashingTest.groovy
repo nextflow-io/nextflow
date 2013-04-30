@@ -1,3 +1,6 @@
+import com.google.common.hash.HashCodes
+import nextflow.util.CacheHelper
+
 /*
  * Copyright (c) 2012, the authors.
  *
@@ -17,30 +20,16 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
-import groovy.transform.InheritConstructors
-import groovy.util.logging.Slf4j
 /**
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@InheritConstructors
-class NopeTaskProcessor extends AbstractTaskProcessor {
 
-    @Override
-    protected void launchTask( TaskRun task ) {
+def hash = CacheHelper.hasher(0).hash()
+println hash.toString()
+println hash.asBytes()
+println HashCodes.fromBytes(hash.asBytes()).toString()
 
-        task.workDirectory = new File('.').absoluteFile
-        task.status = TaskRun.Status.TERMINATED
-        task.exitCode = 0
-        task.output = task.script   // return the script itself as output
 
-    }
-
-    @Override
-    protected getStdOutFile(TaskRun task) {
-        return task.script
-    }
-
-}
+assert CacheHelper.hasher(['abc',123]).hash() == CacheHelper.hasher(['abc',123]).hash()
+assert CacheHelper.hasher(['abc',123]).hash() != CacheHelper.hasher([123,'abc']).hash()

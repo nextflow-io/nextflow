@@ -86,11 +86,11 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
     }
 
 
-    abstract protected List<String> getSubmitCommandLine(TaskDef task)
+    abstract protected List<String> getSubmitCommandLine(TaskRun task)
 
 
     @Override
-    protected void launchTask(TaskDef task) {
+    protected void launchTask(TaskRun task) {
         assert task
         assert task.workDirectory
 
@@ -163,7 +163,7 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
 
         // -- start the execution and notify the event to the monitor
         Process process = builder.start()
-        task.status = TaskDef.Status.RUNNING
+        task.status = TaskRun.Status.RUNNING
 
 
         // -- save the 'sub' process output
@@ -207,7 +207,7 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
 
 
 
-    protected getStdOutFile( TaskDef task ) {
+    protected getStdOutFile( TaskRun task ) {
         assert task
 
         //  -- return the program output with the following strategy

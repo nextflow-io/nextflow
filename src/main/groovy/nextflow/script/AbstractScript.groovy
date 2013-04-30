@@ -23,6 +23,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.processor.TaskProcessor
 import nextflow.util.CacheHelper
+import nextflow.util.FileHelper
 
 /**
  * Any user defined script will extends this class, it provides the base execution context
@@ -118,7 +119,7 @@ abstract class AbstractScript extends Script {
 
         def hash = CacheHelper.hasher([ session.uniqueId, key, session.cacheable ? 0 : random.nextInt() ]).hash()
 
-        def file = CacheHelper.folderForHash(hash)
+        def file = FileHelper.createWorkFolder(hash)
         if( !file.exists() && !file.mkdirs() ) {
             throw new IOException("Unable to create folder: $file -- Check file system permission" )
         }

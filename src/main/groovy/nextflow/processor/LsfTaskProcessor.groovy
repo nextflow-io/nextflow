@@ -40,7 +40,7 @@ class LsfTaskProcessor extends GenericGridProcessor {
     }
 
     @Override
-    protected List<String> getSubmitCommandLine(TaskDef task) {
+    protected List<String> getSubmitCommandLine(TaskRun task) {
 
         final result = new ArrayList<String>()
 

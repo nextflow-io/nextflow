@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2012, the authors.
  *
@@ -17,30 +18,12 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
-import groovy.transform.InheritConstructors
-import groovy.util.logging.Slf4j
 /**
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@InheritConstructors
-class NopeTaskProcessor extends AbstractTaskProcessor {
 
-    @Override
-    protected void launchTask( TaskRun task ) {
+def path1 =new File('test/A/B')
+path1.mkdirs()
 
-        task.workDirectory = new File('.').absoluteFile
-        task.status = TaskRun.Status.TERMINATED
-        task.exitCode = 0
-        task.output = task.script   // return the script itself as output
-
-    }
-
-    @Override
-    protected getStdOutFile(TaskRun task) {
-        return task.script
-    }
-
-}
+def path2 = new File('test/X/Y')
