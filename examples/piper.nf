@@ -329,7 +329,7 @@ fastaToAlign = merge('prepare_mfa') {
 
     # Only the first time append the query sequence
     if [ ! -e \$baseName.mfa ]; then
-    perl -n -e '$on=(/^>('\$baseName')/) if (/^>/); print $_ if ($on);' $queryFile > \$baseName.mfa
+    perl -n -e '$on=(/^>('\$baseName')\$/) if (/^>/); print $_ if ($on);' $queryFile > \$baseName.mfa
     fi
 
     # Append the exonerate result

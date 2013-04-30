@@ -1,9 +1,9 @@
 #!/usr/bin/env nextflow
 
-fileName = "${HOME}/Downloads/ampa/multi.fa"
-fastaFile = new File(fileName)
+params.in = "${HOME}/sample.fa"
 
-seq = new Channel()
+fastaFile = file(params.in)
+seq = channel()
 
 /*
  * Splits the input file in chunks containing a single sequences,
