@@ -17,7 +17,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.util
+package nextflow.extension
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.group.NonDaemonPGroup
 import nextflow.Nextflow
@@ -26,7 +26,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class NextflowMethodsExtensionTest extends Specification {
+class NextflowExtensionsTest extends Specification {
 
     def 'test chunk string by line' () {
 
@@ -163,7 +163,7 @@ class NextflowMethodsExtensionTest extends Specification {
         }
 
         when:
-        def interceptor = new NextflowMethodsExtension.WritableChannelInterceptor(closure)
+        def interceptor = new NextflowExtensions.WritableChannelInterceptor(closure)
         closure.call()
 
         then:
@@ -187,7 +187,7 @@ class NextflowMethodsExtensionTest extends Specification {
 
         when:
         // note: launching the test from Gradle, it requires the NonDaemonPGroup to be specified, otherwise it raises a RejectedExecutionException exception
-        NextflowMethodsExtension.each(queue, new NonDaemonPGroup(), closure);
+        NextflowExtensions.each(queue, new NonDaemonPGroup(), closure);
         queue << 1 << 2
 
         then:

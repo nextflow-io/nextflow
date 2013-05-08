@@ -1,3 +1,4 @@
+package misc
 /*
  * Copyright (c) 2012, the authors.
  *
@@ -18,33 +19,14 @@
  */
 
 import nextflow.Session
-/**
- *
- *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- */
-
-
 def session = new Session()
 
-def result = session.createProcessor()
-        .input(item: [1,2,3])
-        .output('result')
-        .echo(true)
-        .setBindOnTermination(true)
-        .setSharedWorkDirectory(true)
-        .script {
-            """
-            echo "item $item" >> result
-            """
-            }
-        .run()
-
-
 session.createProcessor()
-    .echo(true)
-    .input(file:result)
-    .script { "cat $fInputFile" }
-    .run()
+        .echo(true)
+        .script {
+            "echo Hello world!"
+        }
+        .run()
 
 
 session.terminate()

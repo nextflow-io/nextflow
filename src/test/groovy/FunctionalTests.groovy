@@ -24,7 +24,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FunctionalTest extends Specification {
+class FunctionalTests extends Specification {
 
     /**
      * test passing values through environment variables
