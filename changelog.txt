@@ -1,6 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.2.9 
+- Adding 'test' feature
+
 0.2.8 - 30 Apr 2013
 - Improved scheduling of 'merge', there are executed like a single job
 - Fixed caching for 'merge' task

@@ -1,5 +1,6 @@
 import nextflow.processor.NopeTaskProcessor
 import nextflow.script.CliRunner
+import spock.lang.Shared
 import spock.lang.Specification
 /*
  * Copyright (c) 2012, the authors.
@@ -25,6 +26,23 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class FunctionalTests extends Specification {
+
+
+    @Shared
+    File scriptFile
+
+    // run before the first feature method
+    def setupSpec() {
+        scriptFile = new File('test.nf')
+        scriptFile.deleteOnExit()
+    }
+
+
+    // run after the last feature method
+    def cleanupSpec() {
+    }
+
+
 
     /**
      * test passing values through environment variables
@@ -122,6 +140,7 @@ class FunctionalTests extends Specification {
         runner.workDirectory?.deleteDir()
 
     }
+
 
 
 
