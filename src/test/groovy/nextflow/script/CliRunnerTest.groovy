@@ -330,6 +330,10 @@ class CliRunnerTest extends Specification {
         CliRunner.normalizeArgs('a','-bb','-ccc','-resume', 'last') == ['a','-bb','-ccc','-resume','last']
         CliRunner.normalizeArgs('a','-bb','-ccc','-resume') == ['a','-bb','-ccc','-resume','last']
         CliRunner.normalizeArgs('a','-bb','-ccc','-resume','1d2c942a-345d-420b-b7c7-18d90afc6c33', 'zzz') == ['a','-bb','-ccc','-resume','1d2c942a-345d-420b-b7c7-18d90afc6c33', 'zzz']
+
+        CliRunner.normalizeArgs('x','-test') == ['x','-test','%all']
+        CliRunner.normalizeArgs('x','-test','alpha') == ['x','-test','alpha']
+        CliRunner.normalizeArgs('x','-test','-other') == ['x','-test','%all','-other']
     }
 
 

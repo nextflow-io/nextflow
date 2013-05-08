@@ -165,6 +165,7 @@ class CliRunner {
         execute( scriptFile.text, args )
     }
 
+
     /**
      * Execute a Nextflow script, it does the following:
      * <li>parse the script
@@ -189,6 +190,75 @@ class CliRunner {
 
         return result
     }
+
+    /**
+     * Test the name specified by the {@code methodName}
+     *
+     * @param scriptText
+     * @param methodName
+     * @param args
+     */
+    def test ( String scriptText, String methodName, String... args ) {
+        assert scriptText
+        assert methodName
+
+        script = parseScript(scriptText, args)
+        def values = args ? args.collect { parseValue(it) } : null
+
+        def methodsToTest
+        if ( methodName == '%all' ) {
+            methodsToTest = script.metaClass.getMethods().findAll { it.name.startsWith('test') }.collect { it.name }.unique()
+        }
+        else {
+            methodsToTest = methodName.split(',') *.trim()
+        }
+
+        if( !methodsToTest ) {
+            log.info ('No test defined')
+            return
+        }
+
+        for( String name: methodsToTest ) {
+            try {
+                def metaMethod = script.metaClass.getMethods().find { it.name == name }
+
+                if( !metaMethod ) {
+                    log.error "Unknown function '$name' -- Check the name spelling"
+                }
+                else {
+                    def result = metaMethod.invoke(script, values as Object[] )
+                    if( result != null ) {
+                        log.info "SUCCESS: '$name' == $result"
+                    }
+                    else {
+                        log.info "SUCCESS: '$name'"
+                    }
+                }
+            }
+
+            catch( AssertionError | Exception e ) {
+
+                def lines = e.getMessage()?.readLines()?.collect { '  ' + it }
+                def fmtMsg = lines ? "\n\n${lines.join('\n')}\n" : ''
+
+                log.info "FAILED: function '$name'${fmtMsg}", e
+            }
+        }
+    }
+
+    def test( File scriptFile, String methodName, String... args ) {
+        assert scriptFile
+        assert methodName
+
+        // set the script name attribute
+        session.scriptName = FilenameUtils.getBaseName(scriptFile.toString())
+        // set the file name attribute
+        this.scriptFile = scriptFile
+
+        test( scriptFile.text, methodName, args )
+
+    }
+
 
     def normalizeOutput() {
         if ( output == null ) {
@@ -287,15 +357,20 @@ class CliRunner {
         while( true ) {
             if( i==args.size() ) { break }
 
-            normalized << args[i]
+            def current = args[i++]
+            normalized << current
 
-            if( args[i++] == '-resume' ) {
+
+            if( current == '-resume' ) {
                 if( i<args.size() && !args[i].startsWith('-') && (args[i]=='last' || args[i] =~~ /[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{8}/) ) {
                     normalized << args[i++]
                 }
                 else {
                     normalized << 'last'
                 }
+            }
+            else if( current == '-test' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '%all'
             }
         }
 
@@ -307,7 +382,7 @@ class CliRunner {
      *
      * @param args The program options as specified by the user on the CLI
      */
-    public static void main(String[] args)  {
+    public static void main(String... args)  {
 
         try {
             // -- parse the program arguments - and - configure the logger
@@ -369,14 +444,19 @@ class CliRunner {
             def runner = new CliRunner(config)
             runner.cacheable = options.cacheable
 
-            // -- set a shutdown hook to save the current session ID and command lines
-            addShutdownHook { HistoryFile.history.append( runner.session.uniqueId, args ) }
-
             // -- specify the arguments
             def scriptArgs = options.arguments.size()>1 ? options.arguments[1..-1] : null
 
-            // -- run it!
-            runner.execute(scriptFile, scriptArgs as String[])
+            if( options.test ) {
+                runner.test(scriptFile, options.test, scriptArgs as String[])
+            }
+            else {
+                // -- set a shutdown hook to save the current session ID and command lines
+                addShutdownHook { HistoryFile.history.append( runner.session.uniqueId, args ) }
+                // -- run it!
+                runner.execute(scriptFile, scriptArgs as String[])
+            }
+
         }
 
         catch( ParameterException e ) {
