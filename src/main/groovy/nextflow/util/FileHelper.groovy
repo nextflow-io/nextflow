@@ -183,18 +183,22 @@ class FileHelper {
      */
     def static boolean isEmpty( File file ) {
         assert file
+
+        if( !file.exists() ) {
+            return true
+        }
+
         if ( file.isDirectory() ) {
-            file.list()?.size()==0 }
+            file.list()?.size()==0
+        }
         else {
-            return !file.exists() || file.size()==0
+            file.size()==0
         }
     }
 
     def static isNotEmpty( File path ) {
         !isEmpty(path)
     }
-
-
 
     /**
      * Defines a cacheable path for the specified {@code HashCode} instance.
