@@ -12,7 +12,7 @@
 
 
 params.chunkSize = 1
-sequences = new Channel()
+sequences = channel()
 
 stdin.chunkFasta( params.chunkSize ) { str ->
     sequences << str

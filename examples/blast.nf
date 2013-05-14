@@ -5,7 +5,7 @@ params.query = "$HOME/sample.fa"
 params.chunkSize = 1
 
 DB=params.db
-seq = new Channel()
+seq = channel()
 
 inputFile = new File(params.query)
 inputFile.chunkFasta( params.chunkSize ) { seq << it }
