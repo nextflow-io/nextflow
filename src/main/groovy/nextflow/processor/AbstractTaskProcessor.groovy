@@ -25,6 +25,7 @@ import groovy.io.FileType
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowBroadcast
+import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
@@ -32,6 +33,7 @@ import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
+import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
 import nextflow.Nextflow
 import nextflow.Session
@@ -41,7 +43,6 @@ import nextflow.exception.TaskValidationException
 import nextflow.script.AbstractScript
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
-import org.apache.commons.io.FileUtils
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -837,7 +838,28 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         //    stops after the first run
         if( allScalarValues ) {
             log.debug "Finalize > ${task?.name ?: name} terminates since all values are scalar"
+            // send a poison pill to 'termiate' all downstream channels
+            sendPoisonPill()
             processor.terminate()
+        }
+
+    }
+
+    final protected synchronized void sendPoisonPill() {
+
+        outputs.each { name, channel ->
+            if( channel instanceof DataflowQueue ) {
+                log.trace "Sending Poison-pill over $name channel"
+                channel.bind( PoisonPill.instance )
+            }
+            else if( channel instanceof DataflowStreamWriteAdapter ) {
+                log.trace "Sending Poison-pill over $name channel"
+                channel.bind( PoisonPill.instance )
+            }
+            else {
+                log.trace "Poison pill is not sent over $name channel"
+            }
+
         }
 
     }
