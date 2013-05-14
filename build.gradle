@@ -19,7 +19,7 @@
 
 apply plugin: 'groovy'
 apply plugin: 'codenarc'
-version = '0.2.8'
+version = '0.2.9'
 
 repositories {
     flatDir(dirs: file('lib'))
@@ -177,16 +177,15 @@ gradle.taskGraph.afterTask { Task task, TaskState state ->
 }
 
 /*
- * Create a self-contained executable jar
+ * Create a self-contained executable package
  */
 
 def oneJarShellStub = "./one-jar/launcher.stub"
 def oneJarLibPath = "./one-jar/one-jar-ant-task-0.97.jar"
 def oneJarTempPath = "$buildDir/tmp/nextflow-${version}.run.jar"
-def oneJarDistPath = "$buildDir/distributions/nextflow.run"
+def oneJarDistPath = "$buildDir/pack/nextflow"
 
-task packOneJar(dependsOn: compile) << {
-
+task pack(dependsOn: compile) << {
 
     def appMainClass = 'nextflow.script.CliRunner'
 
@@ -235,8 +234,11 @@ task packOneJar(dependsOn: compile) << {
 
 }
 
-task uploadOnejar ( type: Copy, dependsOn: packOneJar ) {
-    dependsOn packOneJar
+/*
+ * private task - create the executable package and upload it to Dropbox
+ */
+task uploadOnejar ( type: Copy, dependsOn: pack ) {
+    dependsOn pack
 
     from oneJarDistPath
     into '/Users/ptommaso/Dropbox/Public/nextflow/'
