@@ -107,7 +107,7 @@ class FunctionalTests extends Specification {
                 processor = 'nope'
                 echo = true
                 shell = 'zsh'
-                threads = 10
+                maxForks = 10
                 environment = [a:1, b:2,c:3]
                 validExitCodes = [0,11,22,33]
             }
@@ -131,7 +131,7 @@ class FunctionalTests extends Specification {
         task.getName() == 'taskHello'
         task.getEcho() == true
         task.getShell() == 'zsh'
-        task.getThreads() == 10
+        task.getMaxForks() == 10
         task.getEnvironment().entrySet() == [a:1,b:2,c:3].entrySet()
         task.getValidExitCodes() == [0,11,22,33]
 

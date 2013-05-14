@@ -1,10 +1,10 @@
 #!/usr/bin/env nextflow
 
-channel = new Channel(1,2,3)
+channel = channel(1,2,3)
 
 task {
    input channel
-   threads 4
+   maxForks 4
    errorStrategy 'ignore'
 
    "echo $channel; exit 1"
@@ -13,12 +13,12 @@ task {
 
  sleep 500
 
- channel2 = new Channel(4,5,6)
+ channel2 = channel(4,5,6)
 
  task {
    input channel2
-   threads 4
+   maxForks 4
 
-   "echo $channel; exit 1"
+   "echo $channel2"
 
  }

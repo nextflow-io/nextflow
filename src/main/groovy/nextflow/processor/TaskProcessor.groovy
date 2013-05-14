@@ -66,7 +66,7 @@ interface TaskProcessor {
      * @param max
      * @return
      */
-    TaskProcessor threads( int max )
+    TaskProcessor maxForks( int max )
 
     /**
      * Define the processor 'name' attribute
@@ -125,7 +125,7 @@ interface TaskProcessor {
     /**
      * @return The maximum number of thread that can be used by the processor
      */
-    int getThreads()
+    int getMaxForks()
 
     def getShell()
 

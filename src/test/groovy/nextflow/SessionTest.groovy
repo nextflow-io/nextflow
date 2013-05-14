@@ -56,7 +56,7 @@ class SessionTest extends Specification {
                 echo: true,
                 shareWorkDir: true,
                 shell: 'zsh',
-                threads: 3,
+                maxForks: 3,
                 environment: [a:1, b:2,c:3],
                 validExitCodes: [1,2,3]
         ]
@@ -68,7 +68,7 @@ class SessionTest extends Specification {
         then:
         p.echo
 //        p.shareWorkDirectory
-        p.threads == 3
+        p.maxForks == 3
         p.environment == [a:1, b:2,c:3]
         p.validExitCodes == [1,2,3]
         p.shell == 'zsh'

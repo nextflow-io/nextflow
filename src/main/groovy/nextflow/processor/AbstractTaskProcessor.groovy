@@ -87,7 +87,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     /**
      * Maximum number of thread that can be used by this processor
      */
-    protected int threads = 1
+    protected int maxForks = 1
 
     protected PGroup group = Dataflow.retrieveCurrentDFPGroup()
 
@@ -156,7 +156,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         this.ownerScript = script
         this.bindOnTermination = bindOnTermination
 
-        this.threads = bindOnTermination ? 1 : Runtime.getRuntime().availableProcessors()
+        this.maxForks = bindOnTermination ? 1 : Runtime.getRuntime().availableProcessors()
 
     }
 
@@ -257,8 +257,8 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     }
 
     @Override
-    AbstractTaskProcessor threads(int max) {
-        this.threads = max
+    AbstractTaskProcessor maxForks(int max) {
+        this.maxForks = max
         return this
     }
 
@@ -297,7 +297,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     Map<String,String > getEnvironment() { return environment }
 
     @Override
-    int getThreads() { return threads }
+    int getMaxForks() { return maxForks }
 
     @Override
     def getShell() { shell }
@@ -401,7 +401,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         /*
          * create the output
          */
-        def params = [inputs: opInputs, outputs: opOutputs, maxForks: threads, listeners: [new TaskProcessorInterceptor()] ]
+        def params = [inputs: opInputs, outputs: opOutputs, maxForks: maxForks, listeners: [new TaskProcessorInterceptor()] ]
         session.allProcessors << (processor = new DataflowOperator(group, params, mock).start())
         // increment the session sync
         session.sync.countUp()

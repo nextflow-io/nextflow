@@ -17,7 +17,7 @@ task ('ampa') {
     //echo true
     input '-':seq
     output '-':ampaOut
-    threads 10
+    maxForks 10
 
     // The BASH script to be executed - for each - sequence
     """
