@@ -128,7 +128,7 @@ The *Nextflow* framework source code is released under the GNU GPL3 License.
 Credits
 -------
 
-Nextflow is built on two great pieces of open source software, namely <a href='groovy.codehaus.org' target='_blank'>Groovy</a>
+Nextflow is built on two great pieces of open source software, namely <a href='http://groovy.codehaus.org' target='_blank'>Groovy</a>
 and <a href='http://www.gpars.org/' target='_blank'>Gpars</a>
 
 YourKit is kindly supporting this open source project with its full-featured Java Profiler.
