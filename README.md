@@ -24,11 +24,11 @@ Quick start
 Nextflow does not require any installation procedure, just download the <a href="http://dl.dropbox.com/u/376524/nextflow/nextflow">executable package here</a> and
 save it somewhere on your computer.
 
-Grants the execute permission to the donwload packages using the following command `chmod +x nextflow`, after that you are ready to use it.
+Grants the execute permission to the donwloaded package using the following command `chmod +x nextflow`, after that you are ready to use it.
 You may try to execute the command `./nextflow -h` to show the program help.
 
 Create a file named `hello.nf` with the following content and copy it
-to the path where you downloaded the Nextflow executable.
+to the path where you downloaded the Nextflow package.
 
     echo true
 
@@ -41,7 +41,7 @@ to the path where you downloaded the Nextflow executable.
 
 
 
-Launch the above trivial example by typing the following command on your terminal console:
+Launch the above example by typing the following command on your terminal console:
 
     ./nextflow -q hello.nf
 
@@ -49,10 +49,11 @@ Launch the above trivial example by typing the following command on your termina
 Congratulations! You have just run your first task with Nextflow.
 
 
-Something more usefull
-----------------------
+Something more useful
+---------------------
 
-Let's see a more real example, execute BLAST search, get the top 10 hits, extract the found proteins sequences an align.
+Let's see a more real example: execute a BLAST search, get the top 10 hits, extract the found proteins sequences and align them.
+
 Copy the following example into a file named `pipeline.nf` .
 
 
@@ -83,11 +84,11 @@ Copy the following example into a file named `pipeline.nf` .
     }
 
 
-The `input` and `output` declarations in each tasks, define what the task is expeting to receive as input and what file(s)
+The `input` and `output` declarations in each task, define what the task is expecting to receive as input and what file(s)
 it is going to produce as output.
 
 Since the two variables `query` and `db` are prefixed by the `params` qualifier, their values can be overriden quickly
-when the script is launched, simply adding them on the Nextflow command line and prefixing them with the `--` characters.
+when the script is launched, by simply adding them on the Nextflow command line and prefixing them with the `--` characters.
 For example:
 
     $ ./nextflow pipeline.nf --db=/path/to/blast/db --query=/path/to/query.fasta
