@@ -6,17 +6,23 @@ A *dataflow* oriented workflow framework for bioinformatic pipelines
 Rationale
 ---------
 
-With the arise of big data, techniques to process and run experiments on large dataset are increasingly necessary.
+With the arise of big data, techniques to process and run experiments on large datasets are increasingly necessary.
 
-Parallelization and distributed computing are the best way to tackle this problem, but the tools commonly available
-to the bioinformaticians community traditionally lack of a good support of these techniques, or provide a model that fits
-badly with the specific requirements in the bioinformatics domain, and most of the time, require the knowledge
+Parallelization and distributed computing are the best ways to tackle this kind of problem, but the tools commonly available
+to the bioinformaticians community, traditionally lack good support for these techniques, or provide a model that fits
+badly with the specific requirements in the bioinformatics domain and, most of the time, require the knowledge
 of complex tools or low-level APIs.
 
-Nextflow framework is based on the *dataflow* programming model, which greatly simplify writing parallel and distributed pipelines
-without adding unnecessary complexity and letting to concentrate on the flow of data, i.e. the functional logic of the application/algorithm.
+Nextflow framework is based on the *dataflow* programming model, which greatly simplifies writing parallel and distributed pipelines
+without adding unnecessary complexity and letting you concentrate on the flow of data, i.e. the functional logic of the application/algorithm.
 
+It doesn't aim to be another pipeline scripting language yet, but it is built around the idea that the Linux platform 
+is the *lingua franca* of data science, since it provides many simple command line and scripting tools, which by themselves 
+are powerful, but when chained together facilitate complex data manipulations. 
 
+In practice, this means that a Nextflow script is defined by composing  many different tasks. 
+Each task can be written in any scripting language that can be executed by the Linux platform (BASH, Perl, Ruby, Python, etc), 
+to which is added the ability to coordinate and synchronize the execution of the tasks by simply specifying their inputs and outputs.   
 
 Quick start
 -----------
@@ -24,8 +30,8 @@ Quick start
 Nextflow does not require any installation procedure, just download the <a href="http://dl.dropbox.com/u/376524/nextflow/nextflow">executable package here</a> and
 save it somewhere on your computer.
 
-Grants the execute permission to the donwloaded package using the following command `chmod +x nextflow`, after that you are ready to use it.
-You may try to execute the command `./nextflow -h` to show the program help.
+Grant the execute permission to the downloaded package using the following command `chmod +x nextflow`, after that you are ready to use it.
+You can to execute the command `nextflow -h` to show the program help.
 
 Create a file named `hello.nf` with the following content and copy it
 to the path where you downloaded the Nextflow package.
@@ -52,7 +58,7 @@ Congratulations! You have just run your first task with Nextflow.
 Something more useful
 ---------------------
 
-Let's see a more real example: execute a BLAST search, get the top 10 hits, extract the found proteins sequences and align them.
+Let's see a more real example: execute a BLAST search, get the top 10 hits, extract the found protein sequences and align them.
 
 Copy the following example into a file named `pipeline.nf` .
 
@@ -85,7 +91,7 @@ Copy the following example into a file named `pipeline.nf` .
 
 
 The `input` and `output` declarations in each task, define what the task is expecting to receive as input and what file(s)
-it is going to produce as output.
+are going to be produced as output.
 
 Since the two variables `query` and `db` are prefixed by the `params` qualifier, their values can be overriden quickly
 when the script is launched, by simply adding them on the Nextflow command line and prefixing them with the `--` characters.
@@ -104,12 +110,12 @@ following command in the project home directory on your computer:
 
     $ ./gradlew compile
 
-The very first time you run it, it will download automatically all the libraries required by the build process. It can requires
-some minutes to complete.
+The very first time you run it, it will automatically download all the libraries required by the build process. 
+It may take some minutes to complete.
 
-When it completes, execute the program by using the `nextflow.sh` launch script in the project directory.
+When complete, execute the program by using the `nextflow.sh` launch script in the project directory.
 
-In order to create the self-contained executable package launch gradle specifying the *pack* task, using the follwing command:
+In order to create the self-contained executable package launch Gradle specifying the *pack* task, using the following command:
 
     $ ./gradlew pack
 
