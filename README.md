@@ -1,7 +1,7 @@
 Nextflow
 ========
 
-A *dataflow* oriented workflow framwork for bioinformatics pipeline
+A *dataflow* oriented workflow framework for bioinformatic pipelines
 
 Rationale
 ---------
@@ -83,7 +83,7 @@ Copy the following example into a file named `pipeline.nf` .
     }
 
 
-The `input` and `output` declaration in each tasks, define what the task is expeting to receive as input and what file(s)
+The `input` and `output` declarations in each tasks, define what the task is expeting to receive as input and what file(s)
 it is going to produce as output.
 
 Since the two variables `query` and `db` are prefixed by the `params` qualifier, their values can be overriden quickly
