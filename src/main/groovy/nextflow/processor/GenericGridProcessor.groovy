@@ -89,6 +89,11 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
     abstract protected List<String> getSubmitCommandLine(TaskRun task)
 
 
+    protected String getJobTempFolder() {
+        '[ ! -z $TMPDIR ] && cd $TMPDIR'
+    }
+
+
     @Override
     protected void launchTask(TaskRun task) {
         assert task
@@ -126,8 +131,7 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
         def scriptShell = shell instanceof List ? shell.join(' ') : shell
         def wrapper = new StringBuilder()
         wrapper << '#!/bin/bash -ue' << '\n'
-        wrapper << '[ ! -z $TMP ] && cd $TMP' << '\n'
-        wrapper << '[ ! -z $TMPDIR ] && cd $TMPDIR'  << '\n'
+        wrapper << getJobTempFolder()  << '\n'
 
         // execute the command script
         wrapper << '('
