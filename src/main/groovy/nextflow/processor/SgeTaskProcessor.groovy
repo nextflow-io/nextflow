@@ -55,7 +55,7 @@ class SgeTaskProcessor extends GenericGridProcessor {
         result << 'qsub'
         result << '-wd' << task.workDirectory
         result << '-N' << "nf-${name}-${task.index}"
-        result << '-o' << ".qsub.out.nf-${name}-${task.index}"
+        result << '-o' << "/dev/null"
         result << '-j' << 'y'
         result << '-sync' << 'y'
         result << '-V'

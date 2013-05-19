@@ -44,7 +44,7 @@ class SgeTaskProcessorTest extends Specification {
 
 
         then:
-        processor.getSubmitCommandLine(task) as String[] == 'qsub -wd /abc -N nf-task-9 -o .qsub.out.nf-task-9 -j y -sync y -V -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'.split(' ')
+        processor.getSubmitCommandLine(task) as String[] == 'qsub -wd /abc -N nf-task-9 -o /dev/null -j y -sync y -V -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'.split(' ')
 
     }
 
