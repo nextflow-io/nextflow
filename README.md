@@ -39,10 +39,9 @@ to the path where you downloaded the Nextflow package.
     echo true
 
     task {
-        '''
-        #!/bin/sh
+        """
         printf 'Hello world! \n'
-        '''
+        """
     }
 
 

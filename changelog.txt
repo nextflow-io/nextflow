@@ -1,6 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.2.10
+- Adding '-pool-size' cli option and config parameter to define size of executor threads
+- Removed SGE output file
+- Initial SLURM support
+
 0.2.9 
 - Adding 'test' feature
 
