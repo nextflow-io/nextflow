@@ -6,3 +6,6 @@ out/**
 piper/**
 tmp/*
 work/*
+.project
+.classpath
+.vagrant/*
