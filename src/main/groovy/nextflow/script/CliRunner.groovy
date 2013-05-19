@@ -435,6 +435,11 @@ class CliRunner {
                 config.session.uniqueId = uniqueId
             }
 
+            // -- other configuration parameters
+            if( options.poolSize ) {
+                config.poolSize = options.poolSize
+            }
+
             // -- add the command line parameters to the 'config' object
             options.params?.each { name, value ->
                 config.params.put(name, parseValue(value))
@@ -555,7 +560,7 @@ class CliRunner {
 
         Const.with {
             if ( full ) {
-                "${APP_NAME.capitalize()} ${APP_VER}_${APP_BUILDNUM} - Build at ${new Date(APP_TIMESTAMP).format(DATETIME_FORMAT)}"
+                "${APP_VER}_${APP_BUILDNUM} - build timestamp ${new Date(APP_TIMESTAMP).format(DATETIME_FORMAT)}"
             }
             else {
                 APP_VER

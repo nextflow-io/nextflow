@@ -156,7 +156,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         this.ownerScript = script
         this.bindOnTermination = bindOnTermination
 
-        this.maxForks = bindOnTermination ? 1 : Runtime.getRuntime().availableProcessors()
+        this.maxForks = bindOnTermination ? 1 : session.config.poolSize
 
     }
 

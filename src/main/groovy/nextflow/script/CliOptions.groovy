@@ -33,6 +33,9 @@ class CliOptions {
     @Parameter(names=['-resume'], description = 'Execute the script using the cached results, useful to continue executions that stopped by an error')
     String resume
 
+    @Parameter(names=['-ps','-pool-size'], description = 'The number of threads in the executor pool')
+    Integer poolSize
+
     @Parameter(names=['-test'], description = 'Test the function with the name specified')
     String test
 

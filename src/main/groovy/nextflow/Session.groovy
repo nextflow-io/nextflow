@@ -28,6 +28,7 @@ import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.group.NonDaemonPGroup
 import groovyx.gpars.group.PGroup
+import groovyx.gpars.util.PoolUtils
 import nextflow.processor.LocalTaskProcessor
 import nextflow.processor.LsfTaskProcessor
 import nextflow.processor.NopeTaskProcessor
@@ -132,8 +133,14 @@ class Session {
         // set unique session from the config object, or create a new one
         uniqueId = config.session?.uniqueId ? UUID.fromString( config.session.uniqueId.toString() ) : UUID.randomUUID()
 
+        if( !config.poolSize ) {
+            config.poolSize = PoolUtils.retrieveDefaultPoolSize()
+        }
+
+        log.debug "Executor pool size: ${config.poolSize}"
+
         // configure the dataflow thread group
-        pgroup = new NonDaemonPGroup()
+        pgroup = new NonDaemonPGroup( config.poolSize as int )
         Dataflow.activeParallelGroup.set(pgroup)
 
         this.processorClass = loadProcessorClass(config.task.processor?.toString())
