@@ -33,6 +33,7 @@ import nextflow.processor.LocalTaskProcessor
 import nextflow.processor.LsfTaskProcessor
 import nextflow.processor.NopeTaskProcessor
 import nextflow.processor.SgeTaskProcessor
+import nextflow.processor.SlurmTaskProcessor
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.script.AbstractScript
@@ -161,6 +162,9 @@ class Session {
         }
         else if ( processorType.toLowerCase() == 'lsf' ) {
             className = LsfTaskProcessor.name
+        }
+        else if ( processorType.toLowerCase() == 'slurm' ) {
+            className = SlurmTaskProcessor.name
         }
         else if ( processorType.toLowerCase() == 'nope' ) {
             className = NopeTaskProcessor.name
