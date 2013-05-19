@@ -22,6 +22,10 @@ package nextflow.processor
 import groovy.transform.InheritConstructors
 
 /**
+ * Processor for LSF resource manager (DRAFT)
+ *
+ * See http://en.wikipedia.org/wiki/Platform_LSF
+ *
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
