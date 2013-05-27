@@ -9,3 +9,4 @@ work/*
 .project
 .classpath
 .vagrant/*
+.nextflow.history
