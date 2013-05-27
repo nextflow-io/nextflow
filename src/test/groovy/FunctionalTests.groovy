@@ -86,7 +86,7 @@ class FunctionalTests extends Specification {
             return [ x, y, len ]
             """
         def runner = new CliRunner()
-        def result = runner.execute(script, 'hello', 'hola' )
+        def result = runner.execute(script, ['hello', 'hola'] )
 
         then:
         result[0] == 'hello'

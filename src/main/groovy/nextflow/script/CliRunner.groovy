@@ -29,6 +29,7 @@ import nextflow.Const
 import nextflow.ExitCode
 import nextflow.Nextflow
 import nextflow.Session
+import nextflow.exception.InvalidArgumentException
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import org.apache.commons.io.FilenameUtils
@@ -152,7 +153,7 @@ class CliRunner {
      * @return The result as returned by the {@code #run} method
      */
 
-    def execute( File scriptFile, String... args ) {
+    def execute( File scriptFile, List<String> args = null ) {
         assert scriptFile
 
         // set the script name attribute
@@ -177,7 +178,7 @@ class CliRunner {
      * @return The result as returned by the {@code #run} method
      */
 
-    def execute( String scriptText, String... args ) {
+    def execute( String scriptText, List<String> args = null ) {
         assert scriptText
 
         script = parseScript(scriptText, args)
@@ -198,7 +199,7 @@ class CliRunner {
      * @param methodName
      * @param args
      */
-    def test ( String scriptText, String methodName, String... args ) {
+    def test ( String scriptText, String methodName, List<String> args = null ) {
         assert scriptText
         assert methodName
 
@@ -246,7 +247,7 @@ class CliRunner {
         }
     }
 
-    def test( File scriptFile, String methodName, String... args ) {
+    def test( File scriptFile, String methodName, List<String> args = null ) {
         assert scriptFile
         assert methodName
 
@@ -281,16 +282,16 @@ class CliRunner {
         }
     }
 
-    protected AbstractScript parseScript( File file, String... args) {
+    protected AbstractScript parseScript( File file, List<String> args = null ) {
         assert file
 
         this.scriptFile = file
         parseScript( file.text, args )
     }
 
-    protected AbstractScript parseScript( String scriptText, String... args = null) {
+    protected AbstractScript parseScript( String scriptText, List<String> args = null) {
 
-        bindings.setArgs( args )
+        bindings.setArgs( new ArgsList(args) )
         bindings.setParams( session.config.params as Map )
 
         // define the imports
@@ -453,13 +454,13 @@ class CliRunner {
             def scriptArgs = options.arguments.size()>1 ? options.arguments[1..-1] : null
 
             if( options.test ) {
-                runner.test(scriptFile, options.test, scriptArgs as String[])
+                runner.test(scriptFile, options.test, scriptArgs )
             }
             else {
                 // -- set a shutdown hook to save the current session ID and command lines
                 addShutdownHook { HistoryFile.history.append( runner.session.uniqueId, args ) }
                 // -- run it!
-                runner.execute(scriptFile, scriptArgs as String[])
+                runner.execute(scriptFile,scriptArgs)
             }
 
         }
@@ -594,4 +595,31 @@ class CliRunner {
         return result
     }
 
+    /**
+     * Extends an {@code ArrayList} class adding a nicer index-out-of-range error message
+     */
+    static class ArgsList extends ArrayList<String> {
+
+
+        ArgsList(List<String> values) {
+            super( values ?: [] )
+        }
+
+        def String get( int pos ) {
+            if( pos < 0 ) {
+                throw new InvalidArgumentException("Argument array index cannot be lower than zero")
+            }
+
+            if( pos >= size() ) {
+                throw new InvalidArgumentException("Arguments index out of range: $pos -- You may have not entered all arguments required by the pipeline")
+            }
+
+            super.get(pos)
+        }
+
+        def String getAt(int pos) {
+            get(pos)
+        }
+
+    }
 }
