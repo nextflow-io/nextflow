@@ -560,7 +560,7 @@ class CliRunner {
 
         Const.with {
             if ( full ) {
-                "${APP_VER}_${APP_BUILDNUM} - build timestamp ${new Date(APP_TIMESTAMP).format(DATETIME_FORMAT)}"
+                "${getAPP_NAME()} version ${APP_VER}_${APP_BUILDNUM} - build timestamp ${new Date(APP_TIMESTAMP).format(DATETIME_FORMAT)}"
             }
             else {
                 APP_VER
