@@ -8,7 +8,7 @@ import org.apache.commons.io.FilenameUtils
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FileExtensions {
+class OtherExtensions {
 
     /**
      * Check if a file - or - a directory is empty
@@ -111,5 +111,14 @@ class FileExtensions {
     def static String getExtension( File file ) {
         assert file
         FilenameUtils.getExtension(file.name)
+    }
+
+
+    def static String rightTrim(String self) {
+        self.replaceAll(/\s+$/,"")
+    }
+
+    def static String leftTrim( String self ) {
+        self.replaceAll(/^\s+/,"")
     }
 }

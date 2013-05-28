@@ -6,7 +6,24 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FileExtensionsTest extends Specification {
+class OtherExtensionsTest extends Specification {
+
+
+    def 'test leftTrim' () {
+
+        expect:
+        '  hola hello  '.leftTrim() == 'hola hello  '
+        '\n\n hola hello\n'.leftTrim() == 'hola hello\n'
+
+    }
+
+    def 'test rightTrim' () {
+
+        expect:
+        '  hola hello  '.rightTrim() == '  hola hello'
+        '\n\nhola hello\n\n'.rightTrim() == '\n\nhola hello'
+
+    }
 
     def 'test empty' () {
 
