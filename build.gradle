@@ -19,7 +19,7 @@
 
 apply plugin: 'groovy'
 apply plugin: 'codenarc'
-version = '0.2.10'
+version = '0.2.11'
 
 repositories {
     flatDir(dirs: file('lib'))

@@ -1,6 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.2.11 - 28 May 2013
+- Added 'lefTrim' and 'rightTrim' extension methods to String class
+- The task script interprets correctly the 'shebang' header declaration
+- The task save the command environment to a separated file, in order to simply task reproducibility and debugging
+
 0.2.10
 - Adding '-pool-size' cli option and config parameter to define size of executor threads
 - Removed SGE output file
