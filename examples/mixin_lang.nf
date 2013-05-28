@@ -9,9 +9,9 @@ randNums = channel()
  */
 task {
     output '-': randNums
-    shell 'perl'
 
     """
+    #!/usr/bin/env perl
     use strict;
     use warnings;
 
@@ -32,9 +32,9 @@ task {
 task {
     input '-': randNums
     echo true
-    shell 'python'
 
     """
+    #!/usr/bin/env python
     import sys
 
     x = 0
