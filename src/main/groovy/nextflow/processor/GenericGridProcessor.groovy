@@ -37,11 +37,13 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
 
     protected static final COMMAND_OUTPUT_FILENAME = '.command.out'
 
-    protected static final COMMAND_INPUT_FILE = '.command.input'
+    protected static final COMMAND_INPUT_FILE = '.command.in'
+
+    protected static final COMMAND_ENV_FILENAME = '.command.env'
 
     protected static final JOB_OUT_FILENAME = '.job.out'
 
-    protected static final JOB_SCRIPT_FILENAME = '.job.sh'
+    protected static final JOB_SCRIPT_FILENAME = '.job.run'
 
     protected String queue
 
@@ -89,7 +91,7 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
     abstract protected List<String> getSubmitCommandLine(TaskRun task)
 
 
-    protected String getJobTempFolder() {
+    protected String changeToTempFolder() {
         '[ ! -z $TMPDIR ] && cd $TMPDIR'
     }
 
@@ -101,6 +103,23 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
 
         final folder = task.workDirectory
         log.debug "Lauching task > ${task.name} -- scratch folder: $folder"
+
+        /*
+         * save the environment to a file
+         */
+        final envMap = getProcessEnvironment()
+        final envBuilder = new StringBuilder()
+        envMap.each { name, value ->
+            if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
+                envBuilder << "export $name='$value'" << '\n'
+            }
+            else {
+                log.debug "Task ${task.name} > Invalid environment variable name: '${name}'"
+            }
+        }
+        def envFile = new File(folder, COMMAND_ENV_FILENAME)
+        envFile.text = envBuilder.toString()
+
 
         /*
          * save the command input (if any)
@@ -116,8 +135,8 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
          * save the 'user' script to be executed
          */
         def scriptFile = new File(folder, COMMAND_SCRIPT_FILENAME)
-        scriptFile.text = task.script.toString()
-        // keep a reference to the file
+        scriptFile.text = normalizeScript(task.script.toString())
+        scriptFile.setExecutable(true)
         task.script = scriptFile
 
         /*
@@ -128,17 +147,16 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
          * 4 - un-stage e.g. copy back the result files to the working folder
          */
         File cmdOutFile = new File(folder, COMMAND_OUTPUT_FILENAME)
-        def scriptShell = shell instanceof List ? shell.join(' ') : shell
         def wrapper = new StringBuilder()
-        wrapper << '#!/bin/bash -ue' << '\n'
-        wrapper << getJobTempFolder()  << '\n'
+        wrapper << 'source ' << envFile.absolutePath << '\n'
+        wrapper << changeToTempFolder()  << '\n'
 
         // execute the command script
         wrapper << '('
         if( cmdInputFile ) {
             wrapper << 'cat ' << cmdInputFile << ' | '
         }
-        wrapper << "$scriptShell $scriptFile) &> ${cmdOutFile.absolutePath}" << '\n'
+        wrapper << "${scriptFile.absolutePath}) &> ${cmdOutFile.absolutePath}" << '\n'
 
         // "un-stage" the result files
         def resultFiles = outputs.keySet().findAll { it != '-' }
@@ -148,7 +166,7 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
             wrapper << 'fi' << '\n'
         }
 
-        new File(folder, JOB_SCRIPT_FILENAME).text = wrapper.toString()
+        new File(folder, JOB_SCRIPT_FILENAME).text = normalizeScript(wrapper.toString())
 
         // -- log the qsub command
         def cli = getSubmitCommandLine(task)

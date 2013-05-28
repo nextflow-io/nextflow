@@ -109,7 +109,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
     /**
      * The system interpreter used to execute the script, by default {@code 'bash'}
      */
-    protected shell = ['bash','-ue']
+    protected shell = ['/bin/bash','-ue']
 
     /**
      * The exit code which define a valid result, default {@code 0}
@@ -408,6 +408,39 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
     }
 
+    protected getShebangLine() {
+
+        String result = shell instanceof List ? shell.join(' ') : shell
+        if( result.startsWith('/') ) {
+            result = '#!' + result
+        }
+        else {
+            result= '#!/usr/bin/env ' + result
+        }
+
+        return result
+
+    }
+
+    /**
+     * Remove extra leading and trailing whitespace and newlines chars,
+     * also if the script does not start with a {@code shebang} line,
+     * add the default by using the current {@code #shell} attribute
+     */
+    protected String normalizeScript(String script) {
+        assert script != null
+
+        def result = new StringBuilder()
+        result << script.stripIndent().trim()
+        result << '\n'
+
+        if( result[0] != '#' || result[1] != '!') {
+            result.insert(0, shebangLine +'\n')
+        }
+
+        return result.toString()
+    }
+
     /*
      * The merge task is composed by two operator, the first creates a single 'script' to be executed by second one
      */
@@ -486,10 +519,6 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
 
     }
 
-    protected String getShellCommandString() {
-        shell instanceof List ? shell.join(' ') : shell?.toString()
-    }
-
     private List<Integer> mergeHashesList
 
     private File mergeTempFolder
@@ -515,7 +544,7 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         scriptClosure.delegate = inputVars
         scriptClosure.setResolveStrategy(Closure.DELEGATE_FIRST)
 
-        def commandToRun = scriptClosure.call()?.toString()?.stripIndent()?.trim()
+        def commandToRun = normalizeScript(scriptClosure.call()?.toString())
 
         /*
          * create a unique hash-code for this task run and save it into a list
@@ -535,9 +564,10 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
         def scriptName = ".merge_command.sh.${index.toString().padLeft(4,'0')}"
         def scriptFile = new File(mergeTempFolder, scriptName)
         scriptFile.text = commandToRun
+        scriptFile.setExecutable(true)
 
         // the command to launch this command
-        def scriptCommand =  getShellCommandString() + ' ' + scriptFile
+        def scriptCommand = scriptFile.absolutePath
 
         // check if some input have to be send
         if( inputVars.containsKey('-') ) {

@@ -35,9 +35,11 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
 
     private static final COMMAND_OUT_FILENAME = '.command.out'
 
-    private static final COMMAND_SH_FILENAME = '.command.sh'
+    private static final COMMAND_RUNNER_FILENAME = '.command.run'
 
-    private static final COMMAND_ENV_FILENAME = '.command.environment'
+    private static final COMMAND_ENV_FILENAME = '.command.env'
+
+    private static final COMMAND_SCRIPT_FILENAME = '.command.sh'
 
     private Duration maxDuration
 
@@ -67,42 +69,49 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
         final scratch = task.workDirectory
         log.debug "Lauching task > ${task.name} -- scratch folder: $scratch"
 
-       final envMap = getProcessEnvironment()
+        /*
+         * save the environment to a file
+         */
+        final envMap = getProcessEnvironment()
+        final envBuilder = new StringBuilder()
+        envMap.each { name, value ->
+            if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
+                envBuilder << "export $name='$value'" << '\n'
+            }
+            else {
+                log.debug "Task ${task.name} > Invalid environment variable name: '${name}'"
+            }
+        }
+        new File(scratch, COMMAND_ENV_FILENAME).text = envBuilder.toString()
 
-//        final envBuilder = new StringBuilder()
-//        envMap.each { name, value ->
-//            if( !name.contains('.') ) {
-//                envBuilder << "export $name='$value'" << '\n'
-//            }
-//        }
-//        new File(scratch, COMMAND_ENV_FILENAME).text = envBuilder.toString()
-//
-//        // -- create the command script file
-//        def scriptBuilder = new StringBuilder()
-//        scriptBuilder << '. ' << COMMAND_ENV_FILENAME << '\n'
-//        scriptBuilder <<  task.script.toString()
 
-        def scriptFile = new File(scratch, COMMAND_SH_FILENAME)
-        scriptFile.text = task.script.toString()
+        /*
+         * save the main script file
+         */
+        def scriptFile = new File(scratch, COMMAND_SCRIPT_FILENAME)
+        scriptFile.text = normalizeScript(task.script.toString())
+        scriptFile.setExecutable(true)
 
-        // -- save the reference to the scriptFile
+        /*
+         * create the runner script which will launch the script
+         */
+        def runnerText = """
+                    source ${COMMAND_ENV_FILENAME}
+                    ./${COMMAND_SCRIPT_FILENAME}
+                    """
+        def runnerFile = new File(scratch, COMMAND_RUNNER_FILENAME)
+        runnerFile.text = normalizeScript(runnerText)
+        runnerFile.setExecutable(true)
+
+        /*
+         * save the reference to the scriptFile
+         */
         task.script = scriptFile
-
-        // -- compose the command to execute
-        //    the 'shell' may by either a single string e.g. 'bash'
-        //    or a list of strings representing a command plus the options
-        //    in any case the script is appended as the last parameter
-        def command = ( shell instanceof List ) ? shell.collect { it?.toString() } : [shell.toString()]
-        command << COMMAND_SH_FILENAME
 
         ProcessBuilder builder = new ProcessBuilder()
                 .directory(scratch)
-                .command( command )
+                .command(runnerFile.absolutePath)
                 .redirectErrorStream(true)
-
-        // -- configure the job environment
-        builder.environment().putAll(envMap)
-
 
         // -- start the execution and notify the event to the monitor
         Process process = builder.start()
