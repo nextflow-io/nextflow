@@ -29,23 +29,21 @@ repositories {
 
 dependencies {
 
-    compile (
-            'org.codehaus.groovy:groovy:2.1.3',
-            'org.codehaus.gpars:gpars:1.0.0',
-            'org.slf4j:slf4j-api:1.7.2',
-            'org.slf4j:jcl-over-slf4j:1.7.2',
-            'org.slf4j:jul-to-slf4j:1.7.2',
-            'org.slf4j:log4j-over-slf4j:1.7.2',
-            'ch.qos.logback:logback-classic:1.0.9',
-            'ch.qos.logback:logback-core:1.0.9',
-            'commons-lang:commons-lang:2.6',
-            'commons-io:commons-io:2.4',
-            'commons-cli:commons-cli:1.2',
-            'com.google.guava:guava:14.0.1',
-            'com.beust:jcommander:1.30',
-            'jline:jline:2.9',
-            'org.fusesource.jansi:jansi:1.9'
-    )
+    compile 'org.codehaus.groovy:groovy:2.1.3'
+    compile 'org.codehaus.gpars:gpars:1.0.0'
+    compile 'org.slf4j:slf4j-api:1.7.2'
+    compile 'org.slf4j:jcl-over-slf4j:1.7.2'
+    compile 'org.slf4j:jul-to-slf4j:1.7.2'
+    compile 'org.slf4j:log4j-over-slf4j:1.7.2'
+    compile 'ch.qos.logback:logback-classic:1.0.9'
+    compile 'ch.qos.logback:logback-core:1.0.9'
+    compile 'commons-lang:commons-lang:2.6'
+    compile 'commons-io:commons-io:2.4'
+    compile 'commons-cli:commons-cli:1.2'
+    compile 'com.google.guava:guava:14.0.1'
+    compile 'com.beust:jcommander:1.30'
+    compile 'jline:jline:2.9'
+    compile 'org.fusesource.jansi:jansi:1.9'
 
     testCompile ('org.spockframework:spock-core:0.7-groovy-2.0')
 
