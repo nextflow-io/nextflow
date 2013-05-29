@@ -103,7 +103,8 @@ Mixing scripting languages
 --------------------------
 
 Tasks in your pipeline can be written in any scripting language supported by the underlying Linux platform. To use a scripting
-other than Linux BASH (e.g. Perl, Python, Ruby, R, etc), simply starts your task script with the corresponding [shebang](http://en.wikipedia.org/wiki/Shebang_(Unix) ) declaration. For example:
+other than Linux BASH (e.g. Perl, Python, Ruby, R, etc), simply starts your task script with the corresponding
+<a href='http://en.wikipedia.org/wiki/Shebang_(Unix)' target='_bank'>shebang</a> declaration. For example:
 
     echo true
 
