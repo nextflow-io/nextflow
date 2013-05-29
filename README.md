@@ -99,6 +99,33 @@ For example:
     $ ./nextflow pipeline.nf --db=/path/to/blast/db --query=/path/to/query.fasta
 
 
+Mixing scripting languages
+--------------------------
+
+Tasks in your pipeline can be written in any scripting language supported by the underlying Linux platform. To use a scripting
+other than Linux BASH (e.g. Perl, Python, Ruby, R, etc), simply starts your task script with the corresponding [shebang](http://en.wikipedia.org/wiki/Shebang_(Unix)) declaration. For example:
+
+    echo true
+
+    task {
+
+        """
+        #!/usr/bin/env perl
+
+        print 'Hi there!' . '\n';
+        """
+    }
+
+    task {
+        """
+        #!/usr/bin/env python
+
+        x = 'Hello'
+        y = 'world!'
+        print "%s - %s" % (x,y)
+        """
+    }
+
 
 
 Compile from sources
