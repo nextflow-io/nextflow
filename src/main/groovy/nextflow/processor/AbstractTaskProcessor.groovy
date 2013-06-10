@@ -50,8 +50,6 @@ import nextflow.util.FileHelper
 @Slf4j
 abstract class AbstractTaskProcessor implements TaskProcessor {
 
-    static final File TMP_FOLDER = new File('tmp')
-
     protected int index
 
     /**
@@ -95,11 +93,6 @@ abstract class AbstractTaskProcessor implements TaskProcessor {
      * The processor descriptive name
      */
     protected String name
-
-    /**
-     * When {@code true} all the tasks launched by the same processor will share the same work directory
-     */
-    protected Boolean shareWorkDir = Boolean.FALSE
 
     /**
      * The closure wrapping the script to be executed
