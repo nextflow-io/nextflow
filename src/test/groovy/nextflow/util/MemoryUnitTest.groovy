@@ -74,4 +74,13 @@ class MemoryUnitTest extends Specification {
         new MemoryUnit('35 P').toBytes() == 35 * 1024 * 1024 * 1024L* 1024L* 1024L
     }
 
+    def 'test equals and compare' () {
+
+        expect:
+        new MemoryUnit('1GB') == new MemoryUnit('1GB')
+        new MemoryUnit('1M') < new MemoryUnit('1GB')
+        new MemoryUnit('1G') > new MemoryUnit('1M')
+
+    }
+
 }

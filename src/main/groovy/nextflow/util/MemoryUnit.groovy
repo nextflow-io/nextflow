@@ -21,11 +21,14 @@ package nextflow.util
 
 import java.text.DecimalFormat
 
+import groovy.transform.EqualsAndHashCode
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class MemoryUnit {
+@EqualsAndHashCode(includes = 'size')
+class MemoryUnit implements Comparable<MemoryUnit> {
 
     static private final FORMAT = /([0-9\.]+)\s*(\S)?B?/
 
@@ -82,5 +85,8 @@ class MemoryUnit {
         new DecimalFormat("#,##0.#").format(size/Math.pow(1024, digitGroups)) + " " + UNITS[digitGroups]
     }
 
-
+    @Override
+    int compareTo(MemoryUnit that) {
+        return this.size <=> that.size
+    }
 }

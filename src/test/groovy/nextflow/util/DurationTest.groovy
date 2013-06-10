@@ -87,4 +87,12 @@ class DurationTest extends Specification {
 
     }
 
+    def 'test equals and compare' () {
+        expect:
+        new Duration('1h') == new Duration('1h')
+        new Duration('10min') < new Duration('11min')
+        new Duration('20min') > new Duration('11min')
+
+    }
+
 }

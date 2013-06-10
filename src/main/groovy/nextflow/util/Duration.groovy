@@ -22,6 +22,7 @@ package nextflow.util
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
+import groovy.transform.EqualsAndHashCode
 import org.apache.commons.lang.time.DurationFormatUtils
 
 /**
@@ -29,7 +30,8 @@ import org.apache.commons.lang.time.DurationFormatUtils
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class Duration {
+@EqualsAndHashCode(includes = 'durationInMillis')
+class Duration implements Comparable<Duration> {
 
     static private final FORMAT = /(\d+)\s*(\S+)/
 
@@ -224,4 +226,8 @@ class Duration {
         waitFor(new Duration(millis), condition)
     }
 
+    @Override
+    int compareTo(Duration that) {
+        return this.durationInMillis <=> that.durationInMillis
+    }
 }
