@@ -132,7 +132,6 @@ Cluster Resource Managers support
 ---------------------------------
 
 *Nextflow* provides an abstraction between the pipeline functional logic and the underlying processing system. 
-
 Thus it is possibile to write your pipeline once and have it running on your computer or any cluster resource 
 manager without modifying it. 
 
