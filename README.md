@@ -103,7 +103,7 @@ Mixing scripting languages
 --------------------------
 
 Tasks in your pipeline can be written in any scripting language supported by the underlying Linux platform. To use a scripting
-other than Linux BASH (e.g. Perl, Python, Ruby, R, etc), simply starts your task script with the corresponding
+other than Linux BASH (e.g. Perl, Python, Ruby, R, etc), simply start your task script with the corresponding
 <a href='http://en.wikipedia.org/wiki/Shebang_(Unix)' target='_bank'>shebang</a> declaration. For example:
 
     echo true
@@ -133,10 +133,10 @@ Cluster Resource Managers support
 
 *Nextflow* provides an abstraction between the pipeline functional logic and the underlying processing system. 
 
-This makes possibile to write your pipeline once and have it running on your computer and cluster resource managers 
-by different vendors without modifying it. 
+Thus it is possibile to write your pipeline once and have it running on your computer or any cluster resource 
+manager without modifying it. 
 
-Currently are supported the following clusters: 
+Currently the following clusters are supported: 
   
   + Oracle Grid Engine (SGE)
   + SLURM (beta)
@@ -145,29 +145,32 @@ Currently are supported the following clusters:
 
 By default tasks are parallelized by spanning multiple threads in the machine where the pipeline is launched. 
 
-To submit the execution to a SGE cluster, create in the directory in which the pipeline is going to be launched a file named
-`nextflow.conf` (or alternatively in the file `$HOME/.nextflow/config`), with the following content: 
+To submit the execution to a SGE cluster create a file named `nextflow.conf`, in the directory 
+where the pipeline is going to be launched, with the following content: 
 
     task {
       processor='sge'
       queue='<your queue name>'
     }
 
-Doing that, tasks will be executed through the `qsub` SGE command, and so your pipeline will behave like any 
-other SGE job script, with the benefit that *Nextflow* will manage automatically and transparently the tasks synchronisation,
-file(s) stage/un-staging, etc.  
+In doing that, tasks will be executed through the `qsub` SGE command, and so your pipeline will behave like any 
+other SGE job script, with the benefit that *Nextflow* will automatically and transparently manage the tasks 
+synchronisation, file(s) staging/un-staging, etc.  
+
+Alternatively the same declaration can be defined in the file `$HOME/.nextflow/config`, which is supposed to hold 
+the global *Nextflow* configuration.
 
 
-Compile from sources
---------------------
+Build from source
+-----------------
 
-*Nextflow* is written [Groovy](groovy.codehaus.org) (a scripting language for the JVM). A precompiled, ready-to-run, 
-package is available at this link http://goo.gl/062sh, being so it is not necessary to compile it in order to use it. 
+*Nextflow* is written in [Groovy](groovy.codehaus.org) (a scripting language for the JVM). A precompiled, ready-to-run, 
+package is available at this link http://goo.gl/062sh, thus it is not necessary to compile it in order to use it. 
 
-If you are interested to modify the source code, or to contribute to the project, it worth knowing that 
+If you are interested in modifying the source code, or contributing to the project, it worth knowing that 
 the build process is based on the [Gradle](http://www.gradle.org/) build automation system. 
 
-You can compile Nextflow by typing the following command in the project home directory on your computer:
+You can compile *Nextflow* by typing the following command in the project home directory on your computer:
 
     $ ./gradlew compile
 
