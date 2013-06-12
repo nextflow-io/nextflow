@@ -112,7 +112,7 @@ task compile(type: Copy) {
 
 
 /*
- * Create the distribution stage folder i.e. creates a folder containing everythinh
+ * Create the distribution stage folder i.e. creates a folder containing everything
  * have to be included in the distribution package
  */
 
