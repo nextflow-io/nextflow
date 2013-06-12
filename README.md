@@ -27,7 +27,7 @@ to which is added the ability to coordinate and synchronize the execution of the
 Quick start
 -----------
 
-Nextflow does not require any installation procedure, just download the <a href="http://dl.dropbox.com/u/376524/nextflow/nextflow">executable package here</a> and
+Nextflow does not require any installation procedure, just download the <a href="http://goo.gl/062sh" target='_blank'>executable package here</a> and
 save it somewhere on your computer.
 
 Grant the execute permission to the downloaded package using the following command `chmod +x nextflow`, after that you are ready to use it.
@@ -128,12 +128,46 @@ other than Linux BASH (e.g. Perl, Python, Ruby, R, etc), simply starts your task
     }
 
 
+Cluster Resource Managers support
+---------------------------------
+
+*Nextflow* provides an abstraction between the pipeline functional logic and the underlying processing system. 
+
+This makes possibile to write your pipeline once and have it running on your computer and cluster resource managers 
+by different vendors without modifying it. 
+
+Currently are supported the following clusters: 
+  
+  + Oracle Grid Engine (SGE)
+  + SLURM (beta)
+  + Platform LSF (beta)
+
+
+By default tasks are parallelized by spanning multiple threads in the machine where the pipeline is launched. 
+
+To submit the execution to a SGE cluster, create in the directory in which the pipeline is going to be launched a file named
+`nextflow.conf` (or alternatively in the file `$HOME/.nextflow/config`), with the following content: 
+
+    task {
+      processor='sge'
+      queue='<your queue name>'
+    }
+
+Doing that, tasks will be executed through the `qsub` SGE command, and so your pipeline will behave like any 
+other SGE job script, with the benefit that *Nextflow* will manage automatically and transparently the tasks synchronisation,
+file(s) stage/un-staging, etc.  
+
 
 Compile from sources
 --------------------
 
-The Nextflow build process is based on the Gradle build automation system. You can compile Nextflow by typing the
-following command in the project home directory on your computer:
+*Nextflow* is written [Groovy](groovy.codehaus.org) (a scripting language for the JVM). A precompiled, ready-to-run, 
+package is available at this link http://goo.gl/062sh, being so it is not necessary to compile it in order to use it. 
+
+If you are interested to modify the source code, or to contribute to the project, it worth knowing that 
+the build process is based on the [Gradle](http://www.gradle.org/) build automation system. 
+
+You can compile Nextflow by typing the following command in the project home directory on your computer:
 
     $ ./gradlew compile
 
