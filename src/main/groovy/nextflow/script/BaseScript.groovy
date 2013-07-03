@@ -19,8 +19,18 @@
 
 package nextflow.script
 
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.executor.ExecutionStrategy
+import nextflow.executor.LocalExecutor
+import nextflow.executor.LsfExecutor
+import nextflow.processor.MergeTaskProcessor
+import nextflow.executor.NopeExecutor
+import nextflow.processor.ParallelTaskProcessor
+import nextflow.executor.SgeExecutor
+import nextflow.processor.SlurmExecutor
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
@@ -31,12 +41,12 @@ import nextflow.util.FileHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-abstract class AbstractScript extends Script {
+abstract class BaseScript extends Script {
 
 
-    protected AbstractScript(){ }
+    protected BaseScript(){ }
 
-    protected AbstractScript(Binding binding) {
+    protected BaseScript(Binding binding) {
         super(binding)
     }
 
@@ -147,34 +157,6 @@ abstract class AbstractScript extends Script {
         return new File(folder, name)
     }
 
-    /**
-     * Create a task processor
-     *
-     * @param name The name used to label this processor
-     * @param block The code block to be executed
-     * @return The {@code Processor} instance
-     */
-    def createProcessor( String name, boolean bindOnTermination, Closure<String> block  ) {
-
-        assert block
-
-        // create the processor object
-        def processor = session.createProcessor(this, bindOnTermination)
-
-        // set the name, when specified
-        if( name ) { processor.name(name) }
-
-        // invoke the code block, which will return the script closure to the executed
-        def script = processor.with ( block ) as Closure
-        if ( !script ) throw new IllegalArgumentException("Missing script in the specified task block -- make sure it terminates with the script string to be executed")
-
-        // set the script and run !
-        processor.script(script)
-
-        // keep track of the last create processor
-        return taskProcessor = processor
-
-    }
 
 
     /**
@@ -186,16 +168,90 @@ abstract class AbstractScript extends Script {
      */
     def task( String name = null, Closure<String> block ) {
 
-        result = createProcessor(name,false,block).run()
+        result = createProcessor(ParallelTaskProcessor, name, block).run()
 
     }
 
 
     def merge( String name = null, Closure<String> block ) {
 
-        result = createProcessor(name,true,block) .run()
+        result = createProcessor(MergeTaskProcessor, name,block) .run()
 
     }
+
+
+    /**
+     * Create a task processor
+     *
+     * @param name The name used to label this processor
+     * @param block The code block to be executed
+     * @return The {@code Processor} instance
+     */
+    private createProcessor( Class<? extends TaskProcessor> processorClass, String name, Closure<String> block  ) {
+        assert block
+
+        def taskConfig = new TaskConfig()
+        if( config.task instanceof Map ) {
+            config.task.each { String key, value -> taskConfig.setProperty(key,value) }
+        }
+
+        if( name ) {
+            taskConfig['name'] = name
+        }
+
+        // create the processor object
+        def strategyClass = loadStrategyClass( taskConfig['processor']?.toString() ?: session.config.processor )
+
+        // invoke the code block, which will return the script closure to the executed
+        def script = taskConfig.with ( block ) as Closure
+        if ( !script ) throw new IllegalArgumentException("Missing script in the specified task block -- make sure it terminates with the script string to be executed")
+
+
+        def executor = strategyClass.newInstance()
+        def processor = processorClass.newInstance( executor, session, this, taskConfig, script )
+
+        // keep track of the last create processor
+        return taskProcessor = processor
+
+    }
+
+
+    @PackageScope
+    static Class<? extends ExecutionStrategy> loadStrategyClass(String processorType) {
+
+        def className
+        if ( !processorType ) {
+            className = LocalExecutor.name
+        }
+        else if ( processorType.toLowerCase() == 'local' ) {
+            className = LocalExecutor.name
+        }
+        else if ( processorType.toLowerCase() in ['sge','oge'] ) {
+            className = SgeExecutor.name
+        }
+        else if ( processorType.toLowerCase() == 'lsf' ) {
+            className = LsfExecutor.name
+        }
+        else if ( processorType.toLowerCase() == 'slurm' ) {
+            className = SlurmExecutor.name
+        }
+        else if ( processorType.toLowerCase() == 'nope' ) {
+            className = NopeExecutor.name
+        }
+        else {
+            className = processorType
+        }
+
+        log.debug "Loading processor class: ${className}"
+        try {
+            Thread.currentThread().getContextClassLoader().loadClass(className) as Class<ExecutionStrategy>
+        }
+        catch( Exception e ) {
+            throw new IllegalArgumentException("Cannot find a valid class for specified processor type: '${processorType}'")
+        }
+
+    }
+
 
 
 

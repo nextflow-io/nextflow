@@ -1,4 +1,4 @@
-package misc
+
 /*
  * Copyright (c) 2012, the authors.
  *
@@ -18,34 +18,16 @@ package misc
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import nextflow.Session
 /**
  *
  *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
+def name = '1HOLA_'
 
-def session = new Session()
-
-def result = session.createProcessor()
-        .input(item: [1,2,3])
-        .output('result')
-        .echo(true)
-        .setBindOnTermination(true)
-        .setSharedWorkDirectory(true)
-        .script {
-            """
-            echo "item $item" >> result
-            """
-            }
-        .run()
-
-
-session.createProcessor()
-    .echo(true)
-    .input(file:result)
-    .script { "cat $fInputFile" }
-    .run()
-
-
-session.terminate()
+if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
+    println 'OK'
+}
+else {
+    println 'FAIL'
+}

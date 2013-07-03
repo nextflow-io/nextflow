@@ -56,7 +56,7 @@ class CliRunner {
     /**
      * The interpreted script object
      */
-    private AbstractScript script
+    private BaseScript script
 
     /**
      * The directory where the output folder is created, optional.
@@ -135,7 +135,7 @@ class CliRunner {
     /**
      * @return The interpreted script object
      */
-    AbstractScript getScript() { script }
+    BaseScript getScript() { script }
 
     /**
      * @return The result produced by the script execution
@@ -282,14 +282,14 @@ class CliRunner {
         }
     }
 
-    protected AbstractScript parseScript( File file, List<String> args = null ) {
+    protected BaseScript parseScript( File file, List<String> args = null ) {
         assert file
 
         this.scriptFile = file
         parseScript( file.text, args )
     }
 
-    protected AbstractScript parseScript( String scriptText, List<String> args = null) {
+    protected BaseScript parseScript( String scriptText, List<String> args = null) {
 
         bindings.setArgs( new ArgsList(args) )
         bindings.setParams( session.config.params as Map )
@@ -301,16 +301,16 @@ class CliRunner {
 
         def config = new CompilerConfiguration()
         config.addCompilationCustomizers( importCustomizer )
-        config.scriptBaseClass = AbstractScript.class.name
+        config.scriptBaseClass = BaseScript.class.name
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskScriptClosureTransform))
 
         // run and wait for termination
         def groovy = new GroovyShell(this.class.classLoader, bindings, config)
         if ( scriptFile ) {
-            groovy.parse( scriptText, scriptFile?.toString() ) as AbstractScript
+            groovy.parse( scriptText, scriptFile?.toString() ) as BaseScript
         }
         else {
-            groovy.parse( scriptText ) as AbstractScript
+            groovy.parse( scriptText ) as BaseScript
         }
     }
 

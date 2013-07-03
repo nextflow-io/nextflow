@@ -29,14 +29,8 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.group.NonDaemonPGroup
 import groovyx.gpars.group.PGroup
 import groovyx.gpars.util.PoolUtils
-import nextflow.processor.LocalTaskProcessor
-import nextflow.processor.LsfTaskProcessor
-import nextflow.processor.NopeTaskProcessor
-import nextflow.processor.SgeTaskProcessor
-import nextflow.processor.SlurmTaskProcessor
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import nextflow.script.AbstractScript
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -67,10 +61,6 @@ class Session {
         }
     }
 
-    /**
-     * The class to be used create a {@code Processor} instance
-     */
-    Class<? extends TaskProcessor> processorClass = LocalTaskProcessor
 
     /**
      * Keep a list of all processor created
@@ -143,81 +133,6 @@ class Session {
         // configure the dataflow thread group
         pgroup = new NonDaemonPGroup( config.poolSize as int )
         Dataflow.activeParallelGroup.set(pgroup)
-
-        this.processorClass = loadProcessorClass(config.task.processor?.toString())
-    }
-
-
-    protected Class<? extends TaskProcessor> loadProcessorClass(String processorType) {
-
-        def className
-        if ( !processorType ) {
-            className = LocalTaskProcessor.name
-        }
-        else if ( processorType.toLowerCase() == 'local' ) {
-            className = LocalTaskProcessor.name
-        }
-        else if ( processorType.toLowerCase() in ['sge','oge'] ) {
-            className = SgeTaskProcessor.name
-        }
-        else if ( processorType.toLowerCase() == 'lsf' ) {
-            className = LsfTaskProcessor.name
-        }
-        else if ( processorType.toLowerCase() == 'slurm' ) {
-            className = SlurmTaskProcessor.name
-        }
-        else if ( processorType.toLowerCase() == 'nope' ) {
-            className = NopeTaskProcessor.name
-        }
-        else {
-            className = processorType
-        }
-
-        log.debug "Loading processor class: ${className}"
-        try {
-            Thread.currentThread().getContextClassLoader().loadClass(className) as Class<TaskProcessor>
-        }
-        catch( Exception e ) {
-            throw new IllegalArgumentException("Cannot find a valid class for specified processor type: '${processorType}'")
-        }
-
-    }
-
-
-    /**
-     * Create an instance of the task {@code Processor}
-     * @return
-     */
-    TaskProcessor createProcessor(AbstractScript script = null, boolean bindOnTermination = false) {
-
-        // -- create a new processor instance
-        def processor = processorClass.newInstance( this, script, bindOnTermination )
-
-        // -- inject attributes defined by the 'config.task' element
-        if ( config.task instanceof Map ) {
-
-            def methods = processor.metaClass.getMethods().findAll{ MetaMethod m -> m.isPublic() && m.getParameterTypes().size()==1 }
-            def names = methods *. getName()
-
-            config.task.each { String key, Object value ->
-
-                def i = names.indexOf(key)
-                if ( i != -1 ) {
-
-                    try {
-                        methods[i].invoke(processor,value)
-                    }
-                    catch( Exception e ) {
-                        def mType = methods[i].getNativeParameterTypes()[0]?.simpleName
-                        def vType = value?.class?.simpleName
-                        log.warn "Task attribute '$key' requires a value of type: '${mType}' -- entered value: '${value} of type: '${vType}'" , e
-                    }
-                }
-            }
-        }
-
-
-        return processor
 
     }
 

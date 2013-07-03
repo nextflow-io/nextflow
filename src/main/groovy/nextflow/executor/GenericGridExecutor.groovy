@@ -17,21 +17,23 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
+package nextflow.executor
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
 import nextflow.util.ByteDumper
 import nextflow.util.Duration
-import nextflow.util.MemoryUnit
 import org.apache.commons.io.IOUtils
+
 /**
- * Generic task processor executing a task throgh a grid facility
+ * Generic task processor executing a task through a grid facility
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @InheritConstructors
-abstract class GenericGridProcessor extends AbstractTaskProcessor {
+abstract class GenericGridExecutor extends ExecutionStrategy {
 
     protected static final COMMAND_SCRIPT_FILENAME = '.command.sh'
 
@@ -45,48 +47,6 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
 
     protected static final JOB_SCRIPT_FILENAME = '.job.run'
 
-    protected String queue
-
-    protected MemoryUnit maxMemory
-
-    protected Duration maxDuration
-
-    /**
-     * The SGE/OGE cluster queue to which submit the job
-     */
-
-    GenericGridProcessor queue( String queue0 ) {
-        this.queue = queue0
-        return this
-    }
-
-    /**
-     * The max memory allow to be used to the job, this value will set the 'virtual_free' qsub cli option
-     * <p>
-     * Read more about SGE virtual_free vs mem_free at the following links
-     * http://gridengine.org/pipermail/users/2011-December/002215.html
-     * http://www.gridengine.info/tag/virtual_free/
-     *
-     * @param mem0 The maximum amount of memory expressed as string value,
-     *              accepted units are 'B', 'K', 'M', 'G', 'T', 'P'. So for example
-     *              {@code maxMemory '100M'}, {@code maxMemory '2G'}, etc.
-     */
-    GenericGridProcessor maxMemory( String mem0 ) {
-        this.maxMemory = new MemoryUnit(mem0)
-        return this
-    }
-
-    /**
-     * The max duration time allowed for the job to be executed, this value sets the '-l h_rt' squb command line option.
-     *
-     * @param duration0 The max allowed time expressed as duration string, Accepted units are 'min', 'hour', 'day'.
-     *                  For example {@code maxDuration '30 min'}, {@code maxDuration '10 hour'}, {@code maxDuration '2 day'}
-     */
-    GenericGridProcessor maxDuration( String duration0 ) {
-        this.maxDuration = new Duration(duration0)
-        return this
-    }
-
 
     abstract protected List<String> getSubmitCommandLine(TaskRun task)
 
@@ -97,7 +57,7 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
 
 
     @Override
-    protected void launchTask(TaskRun task) {
+    void launchTask( TaskProcessor processor, TaskRun task ) {
         assert task
         assert task.workDirectory
 
@@ -107,7 +67,7 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
         /*
          * save the environment to a file
          */
-        final envMap = getProcessEnvironment()
+        final envMap = processor.getProcessEnvironment()
         final envBuilder = new StringBuilder()
         envMap.each { name, value ->
             if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
@@ -135,7 +95,7 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
          * save the 'user' script to be executed
          */
         def scriptFile = new File(folder, COMMAND_SCRIPT_FILENAME)
-        scriptFile.text = normalizeScript(task.script.toString())
+        scriptFile.text = processor.normalizeScript(task.script.toString())
         scriptFile.setExecutable(true)
         task.script = scriptFile
 
@@ -159,14 +119,14 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
         wrapper << "${scriptFile.absolutePath}) &> ${cmdOutFile.absolutePath}" << '\n'
 
         // "un-stage" the result files
-        def resultFiles = outputs.keySet().findAll { it != '-' }
+        def resultFiles = taskConfig.outputs.keySet().findAll { it != '-' }
         if( resultFiles ) {
             wrapper << "if [ \$PWD != $folder ]; then" << '\n'
             resultFiles.each { name -> wrapper << "for X in $name; do cp \$X $folder; done\n" }
             wrapper << 'fi' << '\n'
         }
 
-        new File(folder, JOB_SCRIPT_FILENAME).text = normalizeScript(wrapper.toString())
+        new File(folder, JOB_SCRIPT_FILENAME).text = processor.normalizeScript(wrapper.toString())
 
         // -- log the qsub command
         def cli = getSubmitCommandLine(task)
@@ -181,7 +141,7 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
                 .redirectErrorStream(true)
 
         // -- configure the job environment
-        builder.environment().putAll(getProcessEnvironment())
+        builder.environment().putAll(processor.getProcessEnvironment())
 
         // -- start the execution and notify the event to the monitor
         Process process = builder.start()
@@ -198,7 +158,7 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
         try {
             // -- wait the the process completes
             task.exitCode = process.waitFor()
-            def success = task.exitCode in validExitCodes
+            def success = task.exitCode in taskConfig.validExitCodes
             log.debug "Task completeted > ${task.name} -- exit code: ${task.exitCode}; accepted code(s): ${validExitCodes.join(',')}"
 
             subDumper.await(500)
@@ -208,7 +168,7 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
             if( success ) {
                 Duration.waitFor('60s') { cmdOutFile.exists() }
             }
-            if( cmdOutFile.exists() && echo ) {
+            if( cmdOutFile.exists() && taskConfig.echo ) {
                 print cmdOutFile.text
             }
 
@@ -228,8 +188,8 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
     }
 
 
-
-    protected getStdOutFile( TaskRun task ) {
+    @Override
+    def getStdOutFile( TaskRun task ) {
         assert task
 
         //  -- return the program output with the following strategy
@@ -242,7 +202,7 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
         log.debug "Task sub output > ${task.name} -- file: ${subOutFile}; empty: ${subOutFile.isEmpty()}"
 
         def result
-        def success = task.exitCode in validExitCodes
+        def success = task.exitCode in taskConfig.validExitCodes
         if( success ) {
             result = cmdOutFile.isNotEmpty() ? cmdOutFile : null
         }

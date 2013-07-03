@@ -29,7 +29,7 @@ repositories {
 
 dependencies {
 
-    compile 'org.codehaus.groovy:groovy:2.1.4'
+    compile 'org.codehaus.groovy:groovy:2.1.5'
     compile 'org.codehaus.gpars:gpars:1.0.0'
     compile 'org.slf4j:slf4j-api:1.7.2'
     compile 'org.slf4j:jcl-over-slf4j:1.7.2'

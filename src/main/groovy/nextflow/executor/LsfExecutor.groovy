@@ -17,9 +17,10 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
+package nextflow.executor
 
 import groovy.transform.InheritConstructors
+import nextflow.processor.TaskRun
 
 /**
  * Processor for LSF resource manager (DRAFT)
@@ -30,7 +31,7 @@ import groovy.transform.InheritConstructors
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class LsfTaskProcessor extends GenericGridProcessor {
+class LsfExecutor extends GenericGridExecutor {
 
 
     protected String bsubCmdLine
@@ -38,7 +39,7 @@ class LsfTaskProcessor extends GenericGridProcessor {
     /**
      * Extra options appended to the generated 'qsub' command line
      */
-    LsfTaskProcessor bsubCmdLine( String cmdLine ) {
+    LsfExecutor bsubCmdLine( String cmdLine ) {
         this.bsubCmdLine = cmdLine
         return this
     }
@@ -54,20 +55,20 @@ class LsfTaskProcessor extends GenericGridProcessor {
         result << '-V'
 
         // add other parameters (if any)
-        if(queue) {
-            result << '-q'  << queue
+        if( taskConfig.queue ) {
+            result << '-q'  << taskConfig.queue
         }
 
-        if( maxDuration ) {
-            result << '-l' << "h_rt=${maxDuration.format('HH:mm:ss')}"
+        if( taskConfig.maxDuration ) {
+            result << '-l' << "h_rt=${taskConfig.maxDuration.format('HH:mm:ss')}"
         }
 
-        if( maxMemory ) {
-            result << '-l' << "virtual_free=${maxMemory.toString().replaceAll(/[\sB]/,'')}"
+        if( taskConfig.maxMemory ) {
+            result << '-l' << "virtual_free=${taskConfig.maxMemory.toString().replaceAll(/[\sB]/,'')}"
         }
 
         // -- the job name
-        result << '-J' << "nf-${name}-${task.index}"
+        result << '-J' << "nf-${processor.name}-${task.index}"
 
         // -- at the end append the command script wrapped file name
         if ( bsubCmdLine ) {

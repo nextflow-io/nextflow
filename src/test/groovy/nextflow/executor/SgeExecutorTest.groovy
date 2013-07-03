@@ -17,34 +17,38 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow
+package nextflow.executor
 
-import nextflow.processor.SgeTaskProcessor
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class SgeTaskProcessorTest extends Specification {
+class SgeExecutorTest extends Specification {
 
     def 'test qsub cmd line' () {
 
+        setup:
+        def config = new TaskConfig()
+        config.queue('my-queue')
+        config.maxMemory( '2GB' )
+        config.maxDuration( '3h' )
+        config.qsubCmdLine('-extra opt')
+        config.name = 'task'
+
+
         when:
-        def processor = new SgeTaskProcessor(new Session())
-        processor.queue('my-queue')
-        processor.maxMemory( '2GB' )
-        processor.maxDuration( '3h' )
-        processor.qsubCmdLine('-extra opt')
-        processor.name = 'task'
+        def executor = new SgeExecutor()
+
 
         def task = new TaskRun(name: 'my-task', index: 9)
         task.workDirectory = new File('/abc')
 
 
         then:
-        processor.getSubmitCommandLine(task) as String[] == 'qsub -wd /abc -N nf-task-9 -o /dev/null -j y -sync y -V -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'.split(' ')
+        executor.getSubmitCommandLine(task) as String[] == 'qsub -wd /abc -N nf-task-9 -o /dev/null -j y -sync y -V -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'.split(' ')
 
     }
 

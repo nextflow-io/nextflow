@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2012, the authors.
  *
@@ -17,30 +18,20 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
-import groovy.transform.InheritConstructors
-import groovy.util.logging.Slf4j
 /**
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@InheritConstructors
-class NopeTaskProcessor extends AbstractTaskProcessor {
 
-    @Override
-    protected void launchTask( TaskRun task ) {
-
-        task.workDirectory = new File('.').absoluteFile
-        task.status = TaskRun.Status.TERMINATED
-        task.exitCode = 0
-        task.output = task.script   // return the script itself as output
-
+def shell = new GroovyShell()
+def script = shell.parse('''
+    def hola() {
+      1 + 2
     }
+    ''')
 
-    @Override
-    protected getStdOutFile(TaskRun task) {
-        return task.script
-    }
 
-}
+def methodName = 'hola'
+def result = script."$methodName"()
+
+assert result == 3

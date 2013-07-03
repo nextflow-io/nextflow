@@ -1,4 +1,5 @@
-import nextflow.processor.NopeTaskProcessor
+import nextflow.processor.ParallelTaskProcessor
+import nextflow.processor.TaskProcessor
 import nextflow.script.CliRunner
 import spock.lang.Shared
 import spock.lang.Specification
@@ -118,22 +119,28 @@ class FunctionalTests extends Specification {
         when:
         def script = '''
 
-            task('taskHello') { '' }
+            task('taskHello') {
+                maxForks 11
+                dummyField 99
+
+                ''
+                }
 
             return taskProcessor
             '''
 
         def runner = new CliRunner(cfg)
-        def task = runner.execute( script )
+        def TaskProcessor processor = runner.execute( script )
 
         then:
-        task instanceof NopeTaskProcessor
-        task.getName() == 'taskHello'
-        task.getEcho() == true
-        task.getShell() == 'zsh'
-        task.getMaxForks() == 10
-        task.getEnvironment().entrySet() == [a:1,b:2,c:3].entrySet()
-        task.getValidExitCodes() == [0,11,22,33]
+        processor instanceof ParallelTaskProcessor
+        processor.getName() == 'taskHello'
+        processor.taskConfig.echo == true
+        processor.taskConfig.shell == 'zsh'
+        processor.taskConfig.maxForks == 11
+        processor.taskConfig.dummyField == 99
+        processor.taskConfig.environment.entrySet() == [a:1,b:2,c:3].entrySet()
+        processor.taskConfig.validExitCodes == [0,11,22,33]
 
 
         cleanup:

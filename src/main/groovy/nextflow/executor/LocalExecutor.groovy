@@ -17,9 +17,11 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
-import groovy.transform.InheritConstructors
+package nextflow.executor
+
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
 import nextflow.util.ByteDumper
 import nextflow.util.Duration
 import org.apache.commons.io.IOUtils
@@ -30,8 +32,7 @@ import org.codehaus.groovy.runtime.IOGroovyMethods
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@InheritConstructors
-class LocalTaskProcessor extends AbstractTaskProcessor {
+class LocalExecutor extends ExecutionStrategy {
 
     private static final COMMAND_OUT_FILENAME = '.command.out'
 
@@ -44,24 +45,12 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
     private Duration maxDuration
 
     /**
-     * The max duration time allowed for the job to be executed, this value sets the '-l h_rt' squb command line option.
-     *
-     * @param duration0 The max allowed time expressed as duration string, Accepted units are 'min', 'hour', 'day'.
-     *                  For example {@code maxDuration '30 min'}, {@code maxDuration '10 hour'}, {@code maxDuration '2 day'}
-     */
-    LocalTaskProcessor maxDuration( String duration0 ) {
-        this.maxDuration = new Duration(duration0)
-        return this
-    }
-
-
-    /**
      * Run a system executable script
      *
      * @param script
      * @return
      */
-    protected void launchTask( TaskRun task )  {
+    void launchTask( TaskProcessor processor, TaskRun task )  {
         assert task
         assert task.@script
         assert task.workDirectory
@@ -72,7 +61,7 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
         /*
          * save the environment to a file
          */
-        final envMap = getProcessEnvironment()
+        final envMap = processor.getProcessEnvironment()
         final envBuilder = new StringBuilder()
         envMap.each { name, value ->
             if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
@@ -89,7 +78,7 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
          * save the main script file
          */
         def scriptFile = new File(scratch, COMMAND_SCRIPT_FILENAME)
-        scriptFile.text = normalizeScript(task.script.toString())
+        scriptFile.text = processor.normalizeScript(task.script.toString())
         scriptFile.setExecutable(true)
 
         /*
@@ -100,7 +89,7 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
                     ./${COMMAND_SCRIPT_FILENAME}
                     """
         def runnerFile = new File(scratch, COMMAND_RUNNER_FILENAME)
-        runnerFile.text = normalizeScript(runnerText)
+        runnerFile.text = processor.normalizeScript(runnerText)
         runnerFile.setExecutable(true)
 
         /*
@@ -169,7 +158,8 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
         }
     }
 
-    protected getStdOutFile( TaskRun task ) {
+    @Override
+    def getStdOutFile( TaskRun task ) {
 
         new File(task.workDirectory, COMMAND_OUT_FILENAME)
 

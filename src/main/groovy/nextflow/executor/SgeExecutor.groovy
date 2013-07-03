@@ -17,9 +17,10 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
+package nextflow.executor
 
 import groovy.transform.InheritConstructors
+import nextflow.processor.TaskRun
 
 /**
  * Execute a task script by running it on the SGE/OGE cluster
@@ -27,7 +28,7 @@ import groovy.transform.InheritConstructors
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class SgeTaskProcessor extends GenericGridProcessor {
+class SgeExecutor extends GenericGridExecutor {
 
 
     protected String qsubCmdLine
@@ -35,7 +36,7 @@ class SgeTaskProcessor extends GenericGridProcessor {
     /**
      * Extra options appended to the generated 'qsub' command line
      */
-    SgeTaskProcessor qsubCmdLine( String cmdLine ) {
+    SgeExecutor qsubCmdLine( String cmdLine ) {
         this.qsubCmdLine = cmdLine
         return this
     }
@@ -54,23 +55,23 @@ class SgeTaskProcessor extends GenericGridProcessor {
 
         result << 'qsub'
         result << '-wd' << task.workDirectory
-        result << '-N' << "nf-${name}-${task.index}"
+        result << '-N' << "nf-${processor.name}-${task.index}"
         result << '-o' << "/dev/null"
         result << '-j' << 'y'
         result << '-sync' << 'y'
         result << '-V'
 
         // add other parameters (if any)
-        if(queue) {
-            result << '-q'  << queue
+        if( taskConfig.queue ) {
+            result << '-q'  << taskConfig.queue
         }
 
-        if( maxDuration ) {
-            result << '-l' << "h_rt=${maxDuration.format('HH:mm:ss')}"
+        if( taskConfig.maxDuration ) {
+            result << '-l' << "h_rt=${taskConfig.maxDuration.format('HH:mm:ss')}"
         }
 
-        if( maxMemory ) {
-            result << '-l' << "virtual_free=${maxMemory.toString().replaceAll(/[\sB]/,'')}"
+        if( taskConfig.maxMemory ) {
+            result << '-l' << "virtual_free=${taskConfig.maxMemory.toString().replaceAll(/[\sB]/,'')}"
         }
 
         // -- at the end append the command script wrapped file name
