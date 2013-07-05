@@ -144,7 +144,7 @@ Currently the following clusters are supported:
 
 By default tasks are parallelized by spanning multiple threads in the machine where the pipeline is launched. 
 
-To submit the execution to a SGE cluster create a file named `nextflow.conf`, in the directory 
+To submit the execution to a SGE cluster create a file named `nextflow.config`, in the directory
 where the pipeline is going to be launched, with the following content: 
 
     task {
