@@ -91,7 +91,6 @@ abstract class TaskProcessor {
     private final errorLock = new ReentrantLock(true)
 
 
-
     TaskProcessor( AbstractExecutor executor, Session session, BaseScript script, TaskConfig taskConfig, Closure taskBlock ) {
         assert executor
         assert session
@@ -225,7 +224,25 @@ abstract class TaskProcessor {
         return result.toString()
     }
 
+    /**
+     * Wraps the target method by a closure declaring as many arguments as many are the user declared inputs
+     * object.
+     *
+     * @param n The number of inputs
+     * @param method The method which will execute the task
+     * @return The operator closure adapter
+     */
+    final protected Closure createCallbackWrapper( int n, Closure method ) {
 
+        final args = []
+        n.times { args << "__p$it" }
+
+        final str = " { ${args.join(',')} -> callback([ ${args.join(',')} ]) }"
+        final binding = new Binding( ['callback': method] )
+        final result = (Closure)new GroovyShell(binding).evaluate (str)
+
+        return result
+    }
 
     final protected TaskRun createTaskRun() {
 

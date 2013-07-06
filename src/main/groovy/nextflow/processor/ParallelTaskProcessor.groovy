@@ -1,15 +1,12 @@
 package nextflow.processor
-
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.exception.InvalidExitException
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
-
 /**
  * Defines the parallel tasks execution logic
  *
@@ -20,6 +17,10 @@ import nextflow.util.FileHelper
 @InheritConstructors
 class ParallelTaskProcessor extends TaskProcessor {
 
+    /**
+     * Keeps track of the task instance executed by the current thread
+     */
+    protected final ThreadLocal<TaskRun> currentTask = new ThreadLocal<>()
 
     @Override
     protected void createOperator() {
@@ -29,31 +30,20 @@ class ParallelTaskProcessor extends TaskProcessor {
         /*
          * create a mock closure to trigger the operator
          */
-        Closure mock = createMockClosure()
+        final wrapper = createCallbackWrapper( taskConfig.inputs.size(), this.&invokeTask )
 
         /*
          * create the output
          */
-        def maxForks = taskConfig['maxForks'] ?: session.config.poolSize
+        def maxForks = taskConfig.maxForks ?: session.config.poolSize
+        log.debug "Creating operator > $name -- maxForks: $maxForks"
+
         def params = [inputs: opInputs, outputs: opOutputs, maxForks: maxForks, listeners: [new TaskProcessorInterceptor()] ]
-        session.allProcessors << (processor = new DataflowOperator(group, params, mock).start())
+        session.allProcessors << (processor = new DataflowOperator(group, params, wrapper).start())
 
         // increment the session sync
         session.sync.countUp()
 
-    }
-
-
-
-    Closure createMockClosure() {
-        // the closure by the GPars dataflow constraints MUST have has many parameters
-        // are the input channels, so let create it on-fly
-        final params = []
-        taskConfig.inputs.size().times { params << "__\$$it" }
-        final str = "{ ${params.join(',')} -> runTask(__\$0) }"
-
-        final binding = new Binding( ['runTask': this.&runTask] )
-        (Closure)new GroovyShell(binding).evaluate (str)
     }
 
     /**
@@ -94,11 +84,8 @@ class ParallelTaskProcessor extends TaskProcessor {
         task.code.setResolveStrategy(Closure.DELEGATE_FIRST)
 
         return task
-
     }
 
-
-    protected final ThreadLocal<TaskRun> currentTask = new ThreadLocal<>()
 
     /**
      * The processor execution body
@@ -106,8 +93,11 @@ class ParallelTaskProcessor extends TaskProcessor {
      * @param processor
      * @param values
      */
-    final protected runTask(TaskRun task) {
-        assert task
+    final protected void invokeTask( def args ) {
+
+        // create and initialize the task instance to be executed
+        List params = args instanceof List ? args : [args]
+        final task = initTaskRun(params)
 
         // -- call the closure and execute the script
         try {
@@ -157,6 +147,11 @@ class ParallelTaskProcessor extends TaskProcessor {
     class TaskProcessorInterceptor extends DataflowEventAdapter {
 
         @Override
+        public void afterStart(final DataflowProcessor processor) {
+            log.trace "After start > $name"
+        }
+
+        @Override
         void afterRun(DataflowProcessor processor, List<Object> MOCK_MESSAGES) {
             log.trace "After run > ${currentTask.get()?.name ?: name}"
             currentTask.remove()
@@ -169,45 +164,6 @@ class ParallelTaskProcessor extends TaskProcessor {
             // increment the session sync
             session.sync.countDown()
         }
-
-        @Override
-        public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "Received message > task: ${currentTask.get()?.name ?: name}; channel: $index; value: $message"
-            return message
-        }
-
-        @Override
-        public void afterStart(final DataflowProcessor processor) {
-            log.trace "After start > $name"
-        }
-
-
-        /**
-         * Invoked when all messages required to trigger the operator become available in the input channels.
-         *
-         * @param processor
-         * @param messages
-         * @return
-         */
-        @Override
-        List<Object> beforeRun(DataflowProcessor processor, List<Object> messages) {
-
-            // - prepare and initialize the data structure before execute the task
-            // - set the current task parameter on a Thread local variable
-            final task = initTaskRun(messages)
-            log.trace "Before run > ${task.name} -- messages: $messages"
-
-            // HERE COMES THE HACK !
-            // the result 'messages' is used to pass the task instance in the 'mock' closure
-            // since there MUST be at least one input parameters it is sure to have at least one element.
-            // This is used to pass the TASK instanced as argument, others are ignores
-            // See 'createMockClosure'
-            messages = new Object[ messages.size() ]
-            messages[0] = task
-
-            return messages
-        }
-
 
         /**
          * Invoked if an exception occurs. Unless overridden by subclasses this implementation returns true to terminate the operator.

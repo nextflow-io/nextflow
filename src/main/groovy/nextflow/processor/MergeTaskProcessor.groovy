@@ -1,4 +1,5 @@
 package nextflow.processor
+
 import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.InheritConstructors
@@ -13,7 +14,7 @@ import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
 
 /**
- * Defines the 'merge' operation logic
+ * Defines the 'merge' processing policy
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -22,22 +23,22 @@ import nextflow.util.FileHelper
 @InheritConstructors
 class MergeTaskProcessor extends TaskProcessor {
 
+    private List<Integer> mergeHashesList
+
+    private File mergeTempFolder
+
+    private AtomicInteger mergeIndex = new AtomicInteger()
+
+    private def mergeScript = new StringBuilder()
 
     /*
      * The merge task is composed by two operator, the first creates a single 'script' to be executed by second one
      */
     @Override
     protected void createOperator() {
-
         log.debug "Starting merge > ${name}"
 
-        final args = []
-        taskConfig.inputs.size().times { args << "__p$it" }
-
-        final str = " { ${args.join(',')} -> callback([ ${args.join(',')} ]) }"
-        final binding = new Binding( ['callback': this.&mergeScriptCollector] )
-        final wrapper = (Closure)new GroovyShell(binding).evaluate (str)
-
+        def wrapper = createCallbackWrapper(taskConfig.inputs.size(), this.&mergeScriptCollector)
         mergeHashesList = new LinkedList<>()
         mergeTempFolder = FileHelper.createTempFolder()
 
@@ -50,8 +51,8 @@ class MergeTaskProcessor extends TaskProcessor {
 
         // -- start it
         processor.start()
-
     }
+
 
     protected void mergeTaskRun(TaskRun task) {
 
@@ -101,14 +102,6 @@ class MergeTaskProcessor extends TaskProcessor {
         }
 
     }
-
-    private List<Integer> mergeHashesList
-
-    private File mergeTempFolder
-
-    private AtomicInteger mergeIndex = new AtomicInteger()
-
-    private def mergeScript = new StringBuilder()
 
     protected void mergeScriptCollector( List params ) {
         final currentIndex = mergeIndex.incrementAndGet()
@@ -168,12 +161,16 @@ class MergeTaskProcessor extends TaskProcessor {
     }
 
 
-
     /**
      * A task of type 'merge' binds the output when it terminates it's work, i.e. when
      * it receives a 'poison pill message that will stop it
      */
     class MergeProcessorInterceptor extends DataflowEventAdapter {
+
+        @Override
+        public void afterStart(final DataflowProcessor processor) {
+            log.trace "After start > $name"
+        }
 
         @Override
         void afterRun(DataflowProcessor processor, List<Object> MOCK_MESSAGES) {
@@ -192,11 +189,6 @@ class MergeTaskProcessor extends TaskProcessor {
         public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
             log.trace "Received message > task: ${name}; channel: $index; value: $message"
             return message
-        }
-
-        @Override
-        public void afterStart(final DataflowProcessor processor) {
-            log.trace "After start > $name"
         }
 
 
@@ -221,7 +213,6 @@ class MergeTaskProcessor extends TaskProcessor {
         public boolean onException(final DataflowProcessor processor, final Throwable e) {
             handleException(e)
         }
-
 
     }
 
