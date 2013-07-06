@@ -271,7 +271,7 @@ abstract class TaskProcessor {
                 // find another folder name that does NOT exist
                 while( true ) {
                     hash = CacheHelper.hasher( [hash.asInt(), random.nextInt() ] ).hash()
-                    folder = FileHelper.createWorkFolder(hash)
+                    folder = FileHelper.createWorkFolder(session.workDir, hash)
                     if( !folder.exists() ) {
                         break
                     }

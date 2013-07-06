@@ -67,8 +67,6 @@ class FunctionalTests extends Specification {
         then:
         runner.execute( script ) == ['value1', -1]
 
-        cleanup:
-        runner.workDirectory?.deleteDir()
 
     }
 
@@ -94,8 +92,6 @@ class FunctionalTests extends Specification {
         result[1] == 'hola'
         result[2] == 2
 
-        cleanup:
-        runner.workDirectory?.deleteDir()
     }
 
 
@@ -142,9 +138,6 @@ class FunctionalTests extends Specification {
         processor.taskConfig.environment.entrySet() == [a:1,b:2,c:3].entrySet()
         processor.taskConfig.validExitCodes == [0,11,22,33]
 
-
-        cleanup:
-        runner.workDirectory?.deleteDir()
 
     }
 

@@ -89,6 +89,11 @@ class Session {
     def String scriptName = 'script1'
 
     /**
+     * The folder where tasks temporary files are stored
+     */
+    def File workDir = new File('./work')
+
+    /**
      * The unique identifier of this session
      */
     def final UUID uniqueId

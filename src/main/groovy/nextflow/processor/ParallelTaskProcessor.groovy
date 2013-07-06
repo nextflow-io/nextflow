@@ -112,7 +112,7 @@ class ParallelTaskProcessor extends TaskProcessor {
             //          NO  --> launch the task
 
             def hash = CacheHelper.hasher( [session.uniqueId, task.script, task.input, task.code.delegate] ).hash()
-            def folder = FileHelper.createWorkFolder(hash)
+            def folder = FileHelper.createWorkFolder(session.workDir, hash)
             def cached = session.cacheable && taskConfig['cacheable'] && checkCachedOutput(task,folder)
             if( !cached ) {
                 log.info "Running task > ${task.name}"

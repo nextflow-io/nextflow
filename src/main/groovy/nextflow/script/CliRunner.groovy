@@ -59,12 +59,6 @@ class CliRunner {
     private BaseScript script
 
     /**
-     * The directory where the output folder is created, optional.
-     * If it is not specified, the output is stored in folder created in the current directory
-     */
-    private File workDirectory
-
-    /**
      * The extra binding variables specified by the user
      */
     private CliBinding bindings
@@ -119,17 +113,6 @@ class CliRunner {
 
         return str
 
-    }
-
-    /**
-     * Enable/Disable tasks results caching for the current session
-     *
-     * @param value
-     * @return
-     */
-    CliRunner setCacheable( boolean value ) {
-        session.cacheable = value
-        return this
     }
 
     /**
@@ -448,7 +431,8 @@ class CliRunner {
 
             // -- create a new runner instance
             def runner = new CliRunner(config)
-            runner.cacheable = options.cacheable
+            runner.session.cacheable = options.cacheable
+            runner.session.workDir = options.workDir
 
             // -- specify the arguments
             def scriptArgs = options.arguments.size()>1 ? options.arguments[1..-1] : null

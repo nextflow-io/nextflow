@@ -87,9 +87,6 @@ class CliRunnerTest extends Specification {
         runner.getScript().getTaskProcessor().taskConfig.inputs['y'] instanceof DataflowQueue
         runner.getScript().getTaskProcessor().taskConfig.outputs['-'] instanceof DataflowWriteChannel
 
-        cleanup:
-        runner.workDirectory?.deleteDir()
-
     }
 
 
@@ -138,9 +135,6 @@ class CliRunnerTest extends Specification {
         then:
         thrown(MultipleCompilationErrorsException)
 
-        cleanup:
-        runner.workDirectory?.deleteDir()
-
     }
 
     def 'test task variables' () {
@@ -164,9 +158,6 @@ class CliRunnerTest extends Specification {
 
         expect:
         runner.execute(script) == '1-2-3'
-
-        cleanup:
-        runner.workDirectory?.deleteDir()
 
     }
 

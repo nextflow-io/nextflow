@@ -96,9 +96,13 @@ class TaskConfigTest extends Specification {
         def config = new TaskConfig()
 
         expect:
-        'xyz' in config == false
-        'echo' in config == true
-        'maxForks' in config == false
+        config.containsKey('echo')
+        config.containsKey('shell')
+        config.containsKey('validExitCodes')
+        config.containsKey('inputs')
+        config.containsKey('outputs')
+        !config.containsKey('xyz')
+        !config.containsKey('maxForks')
         config.maxForks == null
 
 

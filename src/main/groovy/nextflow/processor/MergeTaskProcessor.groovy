@@ -40,7 +40,7 @@ class MergeTaskProcessor extends TaskProcessor {
 
         def wrapper = createCallbackWrapper(taskConfig.inputs.size(), this.&mergeScriptCollector)
         mergeHashesList = new LinkedList<>()
-        mergeTempFolder = FileHelper.createTempFolder()
+        mergeTempFolder = FileHelper.createTempFolder(session.workDir)
 
         def params = [inputs: new ArrayList(taskConfig.inputs.values()), outputs: new ArrayList(taskConfig.outputs.values()), listeners: [new MergeProcessorInterceptor()] ]
         processor = new DataflowOperator(group, params, wrapper)
@@ -67,7 +67,7 @@ class MergeTaskProcessor extends TaskProcessor {
             def hash = hasher.hash()
             log.trace "Merging task > $name -- hash: $hash"
 
-            def folder = FileHelper.createWorkFolder(hash)
+            def folder = FileHelper.createWorkFolder(session.workDir, hash)
             log.trace "Merging task > $name -- trying cached: $folder"
 
             def cached = session.cacheable && taskConfig['cacheable'] && checkCachedOutput(task,folder)
