@@ -117,11 +117,11 @@ class Session {
         assert config != null
         this.config = config
 
-        // normalize config object
+        // normalize taskConfig object
         if( config.task == null ) config.task = [:]
         if( config.env == null ) config.env = [:]
 
-        // set unique session from the config object, or create a new one
+        // set unique session from the taskConfig object, or create a new one
         uniqueId = config.session?.uniqueId ? UUID.fromString( config.session.uniqueId.toString() ) : UUID.randomUUID()
 
         if( !config.poolSize ) {

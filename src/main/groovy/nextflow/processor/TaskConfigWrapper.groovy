@@ -17,33 +17,28 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.executor
-import groovy.util.logging.Slf4j
-import nextflow.processor.TaskRun
+package nextflow.processor
 
 /**
- * Dummy executor, only for test purpose
+ * Wrap a {@code TaskConfig} object in order to modify the behaviour of
+ * {@code #getProperty} so that it raises a {@code MissingPropertyException}
+ * when a property is not defined in the delegate map
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-class NopeExecutor extends AbstractExecutor {
 
-    @Override
-    void launchTask( TaskRun task ) {
-        log.info ">> launching nope task: ${task}"
+class TaskConfigWrapper extends TaskConfig {
 
-        task.workDirectory = new File('.').absoluteFile
-        task.status = TaskRun.Status.TERMINATED
-        task.exitCode = 0
-        task.output = task.script   // return the script itself as output
-
+    TaskConfigWrapper( TaskConfig source ) {
+        super(source)
     }
 
-    @Override
-    def getStdOutFile( TaskRun task ) {
-        log.info ">> Getting nope stdout: ${task}"
-        return task.script
+    def getProperty( String name ) {
+        if( containsKey(name) ) {
+            return super.getProperty(name)
+        }
+
+        throw new MissingPropertyException(name, this.getClass())
     }
 
 }

@@ -23,10 +23,8 @@ class ParallelTaskProcessor extends TaskProcessor {
 
     @Override
     protected void createOperator() {
-
         def opInputs = new ArrayList(taskConfig.inputs.values())
         def opOutputs = new ArrayList(taskConfig.outputs.values())
-
 
         /*
          * create a mock closure to trigger the operator
@@ -48,7 +46,6 @@ class ParallelTaskProcessor extends TaskProcessor {
 
 
     Closure createMockClosure() {
-
         // the closure by the GPars dataflow constraints MUST have has many parameters
         // are the input channels, so let create it on-fly
         final params = []

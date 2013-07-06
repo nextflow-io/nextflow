@@ -17,6 +17,8 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.processor
+
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
 import com.google.common.hash.HashCode
@@ -31,7 +33,7 @@ import groovyx.gpars.group.PGroup
 import nextflow.Session
 import nextflow.exception.MissingFileException
 import nextflow.exception.TaskValidationException
-import nextflow.executor.ExecutionStrategy
+import nextflow.executor.AbstractExecutor
 import nextflow.script.BaseScript
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
@@ -72,9 +74,15 @@ abstract class TaskProcessor {
 
     protected allScalarValues
 
+    protected final AbstractExecutor executor
+
+    protected final TaskConfig taskConfig
+
     private static final creationLock = new ReentrantLock(true)
 
     private static final folderLock = new ReentrantLock(true)
+
+    private static final AtomicInteger tasksCount = new AtomicInteger()
 
     private final random = new Random()
 
@@ -82,12 +90,9 @@ abstract class TaskProcessor {
 
     private final errorLock = new ReentrantLock(true)
 
-    private final ExecutionStrategy executor
-
-    private final TaskConfig taskConfig
 
 
-    TaskProcessor( ExecutionStrategy executor, Session session, BaseScript script, TaskConfig taskConfig, Closure taskBlock ) {
+    TaskProcessor( AbstractExecutor executor, Session session, BaseScript script, TaskConfig taskConfig, Closure taskBlock ) {
         assert executor
         assert session
         assert script
@@ -99,10 +104,17 @@ abstract class TaskProcessor {
         this.taskConfig = taskConfig
         this.code = taskBlock
 
-        executor.setProcessor( this )
+        executor.taskConfig = taskConfig
 
         if( taskConfig.name ) {
             this.name = taskConfig.name
+        }
+        else {
+            /*
+             * generate the processor name if not specified
+             */
+            this.name = "task_${tasksCount.incrementAndGet()}"
+            taskConfig.name = this.name
         }
     }
 
@@ -137,19 +149,13 @@ abstract class TaskProcessor {
             throw new IllegalArgumentException("Missing 'script' attribute")
         }
 
-        /*
-         * generate the processor name if not specified
-         */
-        if ( !name ) {
-            name = "task${session.allProcessors.size()+1}"
-        }
 
         /*
          * Normalize the input channels:
          * - at least one input channel have to be provided,
          *   if missing create an dummy 'input' set to true
          */
-
+        log.debug "TaskConfig: ${taskConfig}"
         if( taskConfig.inputs.size() == 0 ) {
             taskConfig.input('$':true)
         }
@@ -227,7 +233,7 @@ abstract class TaskProcessor {
         creationLock.lock()
         try {
             def num = session.tasks.size()
-            result = new TaskRun(id: num, status: TaskRun.Status.PENDING, index: ++index, name: "$name ($index)" )
+            result = new TaskRun(processor: this, id: num, status: TaskRun.Status.PENDING, index: ++index, name: "$name ($index)" )
             session.tasks.put( this, result )
         }
         finally {
@@ -464,7 +470,7 @@ abstract class TaskProcessor {
 
         def result = [:]
 
-        // add the config environment entries
+        // add the taskConfig environment entries
         if( session.config.env instanceof Map ) {
             session.config.env.each { name, value ->
                 result.put( name, value?.toString() )
@@ -491,7 +497,7 @@ abstract class TaskProcessor {
      * @return {@code TaskDef}
      */
     final void launchTask( TaskRun task ) {
-        executor.launchTask(this, task)
+        executor.launchTask(task)
     }
 
 

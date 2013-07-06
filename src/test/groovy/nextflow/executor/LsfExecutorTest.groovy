@@ -25,17 +25,19 @@ import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 import nextflow.script.BaseScript
 import spock.lang.Specification
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class SgeExecutorTest extends Specification {
+class LsfExecutorTest extends Specification {
 
-    def 'test qsub cmd line' () {
+
+    def 'test bsub cmd line' () {
 
         setup:
         def config = new TaskConfig()
-        config.queue 'my-queue'
+        config.queue 'hpc-queue1'
         config.maxMemory '2GB'
         config.maxDuration '3h'
         config.nativeGridOptions '-extra opt'
@@ -44,16 +46,16 @@ class SgeExecutorTest extends Specification {
         def src = new BaseScript() {
             @Override Object run() { return null  }
         }
-        def executor = new SgeExecutor()
+        def executor = new LsfExecutor()
         def processor = new ParallelTaskProcessor(executor, new Session(), src, config, {})
 
 
         when:
         def task = new TaskRun(name: 'my-task', index: 9, processor: processor)
-        task.workDirectory = new File('/abc')
+        task.workDirectory = new File('/xxx')
 
         then:
-        executor.getSubmitCommandLine(task) == 'qsub -wd /abc -N nf-task-9 -o /dev/null -j y -sync y -V -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.run'.split(' ') as List
+        executor.getSubmitCommandLine(task) == 'bsub -cwd /xxx -K -V -q hpc-queue1 -l h_rt=03:00:00 -l virtual_free=2G -J nf-task-9 -extra opt < .job.run'.split(' ') as List
 
     }
 

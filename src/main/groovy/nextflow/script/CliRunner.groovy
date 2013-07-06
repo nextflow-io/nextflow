@@ -441,7 +441,7 @@ class CliRunner {
                 config.poolSize = options.poolSize
             }
 
-            // -- add the command line parameters to the 'config' object
+            // -- add the command line parameters to the 'taskConfig' object
             options.params?.each { name, value ->
                 config.params.put(name, parseValue(value))
             }
@@ -487,8 +487,8 @@ class CliRunner {
      *     If a file in the list does not exist an exception of type {@code CliArgumentException} is thrown.
      * <p>
      *     If the specified list is empty it tries to return of default configuration files located at:
-     *     <li>$HOME/.nextflow/config
-     *     <li>$PWD/nextflow.config
+     *     <li>$HOME/.nextflow/taskConfig
+     *     <li>$PWD/nextflow.taskConfig
      *
      * @param files
      * @return

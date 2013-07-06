@@ -31,15 +31,6 @@ import nextflow.processor.TaskRun
 class SgeExecutor extends GenericGridExecutor {
 
 
-    protected String qsubCmdLine
-
-    /**
-     * Extra options appended to the generated 'qsub' command line
-     */
-    SgeExecutor qsubCmdLine( String cmdLine ) {
-        this.qsubCmdLine = cmdLine
-        return this
-    }
 
     /*
      * Prepare the 'qsub' cmdline. The following options are used
@@ -54,33 +45,35 @@ class SgeExecutor extends GenericGridExecutor {
         final result = new ArrayList<String>()
 
         result << 'qsub'
-        result << '-wd' << task.workDirectory
-        result << '-N' << "nf-${processor.name}-${task.index}"
+        result << '-wd' << task.workDirectory?.toString()
+        result << '-N' << "nf-${task.processor.name}-${task.index}"
         result << '-o' << "/dev/null"
         result << '-j' << 'y'
         result << '-sync' << 'y'
         result << '-V'
 
-        // add other parameters (if any)
+        // the requested queue name
         if( taskConfig.queue ) {
             result << '-q'  << taskConfig.queue
         }
 
+        // max task duration
         if( taskConfig.maxDuration ) {
             result << '-l' << "h_rt=${taskConfig.maxDuration.format('HH:mm:ss')}"
         }
 
+        // task max memory
         if( taskConfig.maxMemory ) {
             result << '-l' << "virtual_free=${taskConfig.maxMemory.toString().replaceAll(/[\sB]/,'')}"
         }
 
         // -- at the end append the command script wrapped file name
-        if ( qsubCmdLine ) {
-            if( qsubCmdLine instanceof Collection ) {
-                result.addAll( qsubCmdLine as Collection )
+        if ( taskConfig.nativeGridOptions ) {
+            if( taskConfig.nativeGridOptions instanceof Collection ) {
+                result.addAll( taskConfig.nativeGridOptions as Collection )
             }
             else {
-                result.addAll( qsubCmdLine.toString().split(' ') )
+                result.addAll( taskConfig.nativeGridOptions.toString().split(' ') as List )
             }
         }
 

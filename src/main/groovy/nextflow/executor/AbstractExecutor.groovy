@@ -1,25 +1,21 @@
 package nextflow.executor
-
 import groovy.io.FileType
-import groovy.transform.PackageScope
 import nextflow.exception.MissingFileException
 import nextflow.processor.TaskConfig
-import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+
 /**
  * Declares methods have to be implemented by a generic
  * execution strategy
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-abstract class ExecutionStrategy {
+abstract class AbstractExecutor {
 
-    @PackageScope
-    protected TaskConfig config
-
-    TaskConfig getTaskConfig() {
-        taskConfig
-    }
+    /*
+     * The object holding the configuration declared by this task
+     */
+    public TaskConfig taskConfig
 
     /**
      * Execute the specified task shell script
@@ -27,7 +23,7 @@ abstract class ExecutionStrategy {
      * @param script The script string to be execute, e.g. a BASH script
      * @return {@code TaskDef}
      */
-    abstract void launchTask( TaskProcessor processor, TaskRun task )
+    abstract void launchTask( TaskRun task )
 
     /**
      * The file which contains the stdout produced by the executed task script

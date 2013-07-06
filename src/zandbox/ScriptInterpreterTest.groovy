@@ -21,13 +21,12 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Session
 import nextflow.executor.NopeExecutor
-import nextflow.executor.NopeExecutor
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ScriptInterpreterTest extends Specification {
+class ScriptInterpreterTest  {
 
     def 'test createProcessor' () {
 

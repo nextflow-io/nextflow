@@ -33,8 +33,8 @@ merge {
 }
 
 task ('align') {
-    input all_seq
     echo true
+    input all_seq
 
     "t_coffee $all_seq 2>&- | tee align_result"
 }

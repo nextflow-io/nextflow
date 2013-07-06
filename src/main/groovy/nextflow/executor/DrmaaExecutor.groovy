@@ -34,7 +34,7 @@ import org.ggf.drmaa.SessionFactory
  */
 
 @Slf4j
-class DrmaaExecutor extends ExecutionStrategy {
+class DrmaaExecutor extends AbstractExecutor {
 
     private static final COMMAND_OUT_FILENAME = '.command.out'
     private static final COMMAND_RUNNER_FILENAME = '.command.run'
@@ -45,8 +45,6 @@ class DrmaaExecutor extends ExecutionStrategy {
 
     @Lazy
     private static factory = SessionFactory.getFactory();
-
-    protected String nativeSpec
 
     @Override
     void launchTask(TaskRun task) {
@@ -60,7 +58,7 @@ class DrmaaExecutor extends ExecutionStrategy {
         /*
          * save the environment to a file
          */
-        final envMap = processor.getProcessEnvironment()
+        final envMap = task.processor.getProcessEnvironment()
         final envBuilder = new StringBuilder()
         envMap.each { name, value ->
             if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
@@ -77,7 +75,7 @@ class DrmaaExecutor extends ExecutionStrategy {
          */
         File cmdOutFile = new File(scratch, COMMAND_OUT_FILENAME)
         def scriptFile = new File(scratch, COMMAND_SCRIPT_FILENAME)
-        scriptFile.text = processor.normalizeScript(task.script.toString())
+        scriptFile.text = task.processor.normalizeScript(task.script.toString())
         scriptFile.setExecutable(true)
 
         def runnerText = """
@@ -86,7 +84,7 @@ class DrmaaExecutor extends ExecutionStrategy {
                     ./${COMMAND_SCRIPT_FILENAME}
                     """
         def runnerFile = new File(scratch, COMMAND_RUNNER_FILENAME)
-        runnerFile.text = processor.normalizeScript(runnerText)
+        runnerFile.text = task.processor.normalizeScript(runnerText)
         runnerFile.setExecutable(true)
 
         /*
@@ -103,12 +101,19 @@ class DrmaaExecutor extends ExecutionStrategy {
         JobTemplate job = session.createJobTemplate()
         job.setWorkingDirectory( scratch.absolutePath )
         job.setRemoteCommand( runnerFile.absolutePath )
-        job.setJobEnvironment( processor.getProcessEnvironment() )
-        job.setJobName("nf-${processor.name}-${task.index}")
+        job.setJobEnvironment( task.processor.getProcessEnvironment() )
+        job.setJobName("nf-${task.processor.name}-${task.index}")
         job.setJoinFiles(true)
         job.setOutputPath('/dev/null')
-        if( this.nativeSpec ) {
-            job.setNativeSpecification(this.nativeSpec)
+
+        if( taskConfig['nativeGridOptions'] ) {
+            def val = taskConfig['nativeGridOptions']
+            if( val instanceof Collection ) {
+                job.setNativeSpecification( val.join(' ') )
+            }
+            else {
+                job.setNativeSpecification( val.toString() )
+            }
         }
 
         def jobId = session.runJob(job);
@@ -153,8 +158,6 @@ class DrmaaExecutor extends ExecutionStrategy {
 
             task.output = collectResultFile(task,'-')
         }
-
-
 
 
     }

@@ -11,6 +11,7 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.exception.InvalidExitException
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
+
 /**
  * Defines the 'merge' operation logic
  *

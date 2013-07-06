@@ -33,24 +33,13 @@ import nextflow.processor.TaskRun
 @InheritConstructors
 class LsfExecutor extends GenericGridExecutor {
 
-
-    protected String bsubCmdLine
-
-    /**
-     * Extra options appended to the generated 'qsub' command line
-     */
-    LsfExecutor bsubCmdLine( String cmdLine ) {
-        this.bsubCmdLine = cmdLine
-        return this
-    }
-
     @Override
     protected List<String> getSubmitCommandLine(TaskRun task) {
 
         final result = new ArrayList<String>()
 
         result << 'bsub'
-        result << '-cwd' << task.workDirectory
+        result << '-cwd' << task.workDirectory?.toString()
         result << '-K'              // sync mode i.e. wait for termination before exit
         result << '-V'
 
@@ -68,15 +57,15 @@ class LsfExecutor extends GenericGridExecutor {
         }
 
         // -- the job name
-        result << '-J' << "nf-${processor.name}-${task.index}"
+        result << '-J' << "nf-${task.processor.name}-${task.index}"
 
         // -- at the end append the command script wrapped file name
-        if ( bsubCmdLine ) {
-            if( bsubCmdLine instanceof Collection ) {
-                result.addAll( bsubCmdLine as Collection )
+        if ( taskConfig.nativeGridOptions ) {
+            if( taskConfig.nativeGridOptions instanceof Collection ) {
+                result.addAll( taskConfig.nativeGridOptions as Collection )
             }
             else {
-                result.addAll( bsubCmdLine.toString().split(' ') )
+                result.addAll( taskConfig.nativeGridOptions.toString().split(' ') )
             }
         }
 

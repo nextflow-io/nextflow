@@ -20,7 +20,6 @@
 package nextflow.executor
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
-import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.ByteDumper
 import nextflow.util.Duration
@@ -33,7 +32,7 @@ import org.apache.commons.io.IOUtils
  */
 @Slf4j
 @InheritConstructors
-abstract class GenericGridExecutor extends ExecutionStrategy {
+abstract class GenericGridExecutor extends AbstractExecutor {
 
     protected static final COMMAND_SCRIPT_FILENAME = '.command.sh'
 
@@ -57,7 +56,7 @@ abstract class GenericGridExecutor extends ExecutionStrategy {
 
 
     @Override
-    void launchTask( TaskProcessor processor, TaskRun task ) {
+    void launchTask( TaskRun task ) {
         assert task
         assert task.workDirectory
 
@@ -67,7 +66,7 @@ abstract class GenericGridExecutor extends ExecutionStrategy {
         /*
          * save the environment to a file
          */
-        final envMap = processor.getProcessEnvironment()
+        final envMap = task.processor.getProcessEnvironment()
         final envBuilder = new StringBuilder()
         envMap.each { name, value ->
             if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
@@ -95,7 +94,7 @@ abstract class GenericGridExecutor extends ExecutionStrategy {
          * save the 'user' script to be executed
          */
         def scriptFile = new File(folder, COMMAND_SCRIPT_FILENAME)
-        scriptFile.text = processor.normalizeScript(task.script.toString())
+        scriptFile.text = task.processor.normalizeScript(task.script.toString())
         scriptFile.setExecutable(true)
         task.script = scriptFile
 
@@ -126,7 +125,7 @@ abstract class GenericGridExecutor extends ExecutionStrategy {
             wrapper << 'fi' << '\n'
         }
 
-        new File(folder, JOB_SCRIPT_FILENAME).text = processor.normalizeScript(wrapper.toString())
+        new File(folder, JOB_SCRIPT_FILENAME).text = task.processor.normalizeScript(wrapper.toString())
 
         // -- log the qsub command
         def cli = getSubmitCommandLine(task)
@@ -141,7 +140,7 @@ abstract class GenericGridExecutor extends ExecutionStrategy {
                 .redirectErrorStream(true)
 
         // -- configure the job environment
-        builder.environment().putAll(processor.getProcessEnvironment())
+        builder.environment().putAll(task.processor.getProcessEnvironment())
 
         // -- start the execution and notify the event to the monitor
         Process process = builder.start()
@@ -159,7 +158,7 @@ abstract class GenericGridExecutor extends ExecutionStrategy {
             // -- wait the the process completes
             task.exitCode = process.waitFor()
             def success = task.exitCode in taskConfig.validExitCodes
-            log.debug "Task completeted > ${task.name} -- exit code: ${task.exitCode}; accepted code(s): ${validExitCodes.join(',')}"
+            log.debug "Task completeted > ${task.name} -- exit code: ${task.exitCode}; accepted code(s): ${taskConfig.validExitCodes.join(',')}"
 
             subDumper.await(500)
             subOutStream.close()

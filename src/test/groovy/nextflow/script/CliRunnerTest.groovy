@@ -82,12 +82,39 @@ class CliRunnerTest extends Specification {
         then:
         result == 'echo Hello world!'
         runner.getScript().getTaskProcessor().getName() == 'task2'
-        runner.getScript().getTaskProcessor().getInput('x').getVal() == 1
-        runner.getScript().getTaskProcessor().getInput('y') instanceof DataflowQueue
-        runner.getScript().getTaskProcessor().getOutput('-') instanceof DataflowWriteChannel
+        runner.getScript().getTaskProcessor().taskConfig.name == 'task2'
+        runner.getScript().getTaskProcessor().taskConfig.inputs['x'].getVal() == 1
+        runner.getScript().getTaskProcessor().taskConfig.inputs['y'] instanceof DataflowQueue
+        runner.getScript().getTaskProcessor().taskConfig.outputs['-'] instanceof DataflowWriteChannel
 
         cleanup:
         runner.workDirectory?.deleteDir()
+
+    }
+
+
+    def 'test task echo' () {
+
+        setup:
+        def runner = new CliRunner([task:[processor:'nope']])
+
+        when:
+        def script =
+            '''
+            task('test')  {
+                input x: 1
+                echo true
+
+                """echo $x"""
+            }
+
+            '''
+        def result = runner.execute(script)
+
+        then:
+        result == 'echo 1'
+        runner.script.taskProcessor.taskConfig.name == 'test'
+        runner.script.taskProcessor.taskConfig.echo == true
 
     }
 

@@ -28,6 +28,11 @@ class TaskRun {
 
     enum Status { PENDING, RUNNING, TERMINATED }
 
+    /*
+     * The processor that creates this 'task'
+     */
+    TaskProcessor processor
+
     /**
      * Task unique id
      */

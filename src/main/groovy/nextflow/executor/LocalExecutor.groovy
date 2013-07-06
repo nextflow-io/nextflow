@@ -18,21 +18,19 @@
  */
 
 package nextflow.executor
-
 import groovy.util.logging.Slf4j
-import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.ByteDumper
-import nextflow.util.Duration
 import org.apache.commons.io.IOUtils
 import org.codehaus.groovy.runtime.IOGroovyMethods
 
 /**
+ * Executes the specified task on the locally exploiting the underlying Java thread pool
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class LocalExecutor extends ExecutionStrategy {
+class LocalExecutor extends AbstractExecutor {
 
     private static final COMMAND_OUT_FILENAME = '.command.out'
 
@@ -42,7 +40,6 @@ class LocalExecutor extends ExecutionStrategy {
 
     private static final COMMAND_SCRIPT_FILENAME = '.command.sh'
 
-    private Duration maxDuration
 
     /**
      * Run a system executable script
@@ -50,7 +47,7 @@ class LocalExecutor extends ExecutionStrategy {
      * @param script
      * @return
      */
-    void launchTask( TaskProcessor processor, TaskRun task )  {
+    void launchTask( TaskRun task )  {
         assert task
         assert task.@script
         assert task.workDirectory
@@ -61,7 +58,7 @@ class LocalExecutor extends ExecutionStrategy {
         /*
          * save the environment to a file
          */
-        final envMap = processor.getProcessEnvironment()
+        final envMap = task.processor.getProcessEnvironment()
         final envBuilder = new StringBuilder()
         envMap.each { name, value ->
             if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
@@ -78,7 +75,7 @@ class LocalExecutor extends ExecutionStrategy {
          * save the main script file
          */
         def scriptFile = new File(scratch, COMMAND_SCRIPT_FILENAME)
-        scriptFile.text = processor.normalizeScript(task.script.toString())
+        scriptFile.text = task.processor.normalizeScript(task.script.toString())
         scriptFile.setExecutable(true)
 
         /*
@@ -89,7 +86,7 @@ class LocalExecutor extends ExecutionStrategy {
                     ./${COMMAND_SCRIPT_FILENAME}
                     """
         def runnerFile = new File(scratch, COMMAND_RUNNER_FILENAME)
-        runnerFile.text = processor.normalizeScript(runnerText)
+        runnerFile.text = task.processor.normalizeScript(runnerText)
         runnerFile.setExecutable(true)
 
         /*
@@ -123,16 +120,16 @@ class LocalExecutor extends ExecutionStrategy {
 
             def handler = { byte[] data, int len ->
                 streamOut.write(data,0,len)
-                if( echo ) System.out.print(new String(data,0,len))
+                if( taskConfig.echo ) System.out.print(new String(data,0,len))
             }
             dumper = new ByteDumper(process.getInputStream(), handler)
-            dumper.setName("dumper-$name")
+            dumper.setName("dumper-$taskConfig.name")
             dumper.start()
 
             // -- wait the the process completes
-            if( maxDuration ) {
-                log.debug "Running task > ${task.name} -- waiting max: ${maxDuration}"
-                process.waitForOrKill(maxDuration.toMillis())
+            if( taskConfig.maxDuration ) {
+                log.debug "Running task > ${task.name} -- waiting max: ${taskConfig.maxDuration}"
+                process.waitForOrKill(taskConfig.maxDuration.toMillis())
                 task.exitCode = process.exitValue()
             }
             else {
@@ -140,7 +137,7 @@ class LocalExecutor extends ExecutionStrategy {
                 task.exitCode = process.waitFor()
             }
 
-            log.debug "Task completed > ${task.name} -- exit code: ${task.exitCode}; success: ${task.exitCode in validExitCodes}"
+            log.debug "Task completed > ${task.name} -- exit code: ${task.exitCode}; success: ${task.exitCode in taskConfig.validExitCodes}"
 
             dumper?.await(500)
             streamOut.close()

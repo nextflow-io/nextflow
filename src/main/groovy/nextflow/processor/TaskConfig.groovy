@@ -18,28 +18,34 @@
  */
 
 package nextflow.processor
+
+import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Nextflow
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+
 /**
  * Holds the task configuration properties
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class TaskConfig extends GroovyObjectSupport {
+@Slf4j
+class TaskConfig implements Map {
 
-    private Map configProperties = new LinkedHashMap()
+    @Delegate
+    protected final Map configProperties
 
     /**
-     * Initialize the config object with the defaults values
+     * Initialize the taskConfig object with the defaults values
      */
     TaskConfig() {
 
+        configProperties = new LinkedHashMap()
         configProperties.with {
-            echo = true
+            echo = false
             shell = ['/bin/bash','-ue']
             validExitCodes = [0]
             inputs = new LinkedHashMap()
@@ -49,8 +55,17 @@ class TaskConfig extends GroovyObjectSupport {
         configProperties.errorStrategy = ErrorStrategy.TERMINATE
     }
 
+    protected TaskConfig( Map delegate ) {
+        configProperties = delegate
+    }
+
+    def boolean containsKey(String name) {
+        return configProperties.containsKey(name)
+    }
+
 
     def methodMissing(String name, Object args) {
+        log.debug "methodMissing: $name = $args"
 
         if( args instanceof Object[] ) {
 
@@ -69,20 +84,6 @@ class TaskConfig extends GroovyObjectSupport {
         return this
     }
 
-    def void setProperty( String name, Object value ) {
-        assert name
-        configProperties[name] = value
-    }
-
-    def Object propertyMissing(String name) {
-        if( name in configProperties ) {
-            return configProperties[ name ]
-        }
-
-        throw new MissingPropertyException(name,TaskConfig)
-    }
-
-
     /**
      * Type shortcut to {@code #configProperties.inputs}
      */
@@ -99,6 +100,23 @@ class TaskConfig extends GroovyObjectSupport {
 
     boolean getEcho() {
         configProperties.echo
+    }
+
+    void setEcho( Object value ) {
+        if( value instanceof Boolean ) {
+            configProperties.echo = value.booleanValue()
+        }
+        else if( value ?.toString()?.toLowerCase() in ['true','yes','on']) {
+            configProperties.echo = true
+        }
+        else {
+            configProperties.echo = false
+        }
+    }
+
+    TaskConfig echo( def value ) {
+        setEcho(value)
+        return this
     }
 
     /**
@@ -198,6 +216,8 @@ class TaskConfig extends GroovyObjectSupport {
         return this
     }
 
+    Duration getMaxDuration() { configProperties.maxDuration }
+
     TaskConfig validExitCodes( Object values ) {
 
         if( values instanceof List ) {
@@ -211,6 +231,7 @@ class TaskConfig extends GroovyObjectSupport {
     }
 
     List<Integer> getValidExitCodes() { configProperties.validExitCodes }
+
 
 
 }

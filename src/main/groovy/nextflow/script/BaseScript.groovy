@@ -22,7 +22,7 @@ package nextflow.script
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.executor.ExecutionStrategy
+import nextflow.executor.AbstractExecutor
 import nextflow.executor.LocalExecutor
 import nextflow.executor.LsfExecutor
 import nextflow.processor.MergeTaskProcessor
@@ -31,6 +31,7 @@ import nextflow.processor.ParallelTaskProcessor
 import nextflow.executor.SgeExecutor
 import nextflow.processor.SlurmExecutor
 import nextflow.processor.TaskConfig
+import nextflow.processor.TaskConfigWrapper
 import nextflow.processor.TaskProcessor
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
@@ -196,16 +197,19 @@ abstract class BaseScript extends Script {
         }
 
         if( name ) {
-            taskConfig['name'] = name
+            taskConfig.name = name
         }
 
         // create the processor object
         def strategyClass = loadStrategyClass( taskConfig['processor']?.toString() ?: session.config.processor )
 
-        // invoke the code block, which will return the script closure to the executed
-        def script = taskConfig.with ( block ) as Closure
+        // Invoke the code block, which will return the script closure to the executed
+        // As side effect will set all the properties declaration in the 'taskConfig' object
+        // Note: the config object is wrapped by a TaskConfigWrapper because it is required
+        // to raise a MissingPropertyException when some values is missing, so that the Closure
+        // will try to fallback on the owner object
+        def script = new TaskConfigWrapper(taskConfig).with ( block ) as Closure
         if ( !script ) throw new IllegalArgumentException("Missing script in the specified task block -- make sure it terminates with the script string to be executed")
-
 
         def executor = strategyClass.newInstance()
         def processor = processorClass.newInstance( executor, session, this, taskConfig, script )
@@ -217,7 +221,7 @@ abstract class BaseScript extends Script {
 
 
     @PackageScope
-    static Class<? extends ExecutionStrategy> loadStrategyClass(String processorType) {
+    static Class<? extends AbstractExecutor> loadStrategyClass(String processorType) {
 
         def className
         if ( !processorType ) {
@@ -244,7 +248,7 @@ abstract class BaseScript extends Script {
 
         log.debug "Loading processor class: ${className}"
         try {
-            Thread.currentThread().getContextClassLoader().loadClass(className) as Class<ExecutionStrategy>
+            Thread.currentThread().getContextClassLoader().loadClass(className) as Class<AbstractExecutor>
         }
         catch( Exception e ) {
             throw new IllegalArgumentException("Cannot find a valid class for specified processor type: '${processorType}'")

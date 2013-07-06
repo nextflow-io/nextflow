@@ -68,14 +68,39 @@ class TaskConfigTest extends Specification {
     }
 
 
-    def 'test missingPropertyException' () {
+    def 'test NO missingPropertyException' () {
 
         when:
         def config = new TaskConfig()
-        config.hola = 99
+        def x = config.hola
+
+        then:
+        x == null
+        noExceptionThrown()
+
+    }
+
+    def 'test MissingPropertyException' () {
+        when:
+        def config = new TaskConfigWrapper(new TaskConfig())
+        def x = config.hola
 
         then:
         thrown(MissingPropertyException)
+    }
+
+
+    def 'test check property existence' () {
+
+        setup:
+        def config = new TaskConfig()
+
+        expect:
+        'xyz' in config == false
+        'echo' in config == true
+        'maxForks' in config == false
+        config.maxForks == null
+
 
     }
 
