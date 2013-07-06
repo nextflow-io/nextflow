@@ -20,6 +20,7 @@
 package nextflow
 
 /**
+ * Application main constants
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -48,22 +49,9 @@ class Const {
 
     static final String APP_VER = "0.3.0"
 
-    static final long APP_TIMESTAMP = 1373146076469
+    static final long APP_TIMESTAMP = 1373147563051
 
-    static final int APP_BUILDNUM = 578
-
-    static final String LOGO =
-
-        """
-         _  _         _    __ _
-        | \\| |_____ _| |_ / _| |_____ __ __
-        | .` / -_) \\ /  _|  _| / _ \\ V  V /
-        |_|\\_\\___/_\\_\\\\__|_| |_\\___/\\_/\\_/   ver. $APP_VER
-        """
-        .stripIndent()
-
-
-
+    static final int APP_BUILDNUM = 590
 
     static final DATETIME_FORMAT = 'dd/MMM/yyyy HH:mm'
 
@@ -71,4 +59,13 @@ class Const {
 
     static final TIME_FORMAT = 'HH:mm:ss'
 
+    static final String APP_TIMESTAMP_STRING = new Date(APP_TIMESTAMP).format(DATETIME_FORMAT)
+
+    static final String LOGO =
+
+"""
+      N E X T F L O W
+      Version ${APP_VER}   last modified ${APP_TIMESTAMP_STRING}
+      http://nextflow-project.org
+"""
 }

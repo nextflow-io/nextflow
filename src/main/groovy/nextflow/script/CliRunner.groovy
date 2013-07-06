@@ -385,12 +385,9 @@ class CliRunner {
                 System.exit(ExitCode.OK)
             }
 
-            if ( !options.quiet ) {
-                println Const.LOGO
-            }
-
             // -- print out the program help, then exit
             if( options.help || !options.arguments ) {
+                println Const.LOGO
                 jcommander.usage()
                 System.exit(ExitCode.OK)
             }
@@ -400,6 +397,10 @@ class CliRunner {
             if ( !scriptFile.exists() ) {
                 log.error "The specified script file does not exist: '$scriptFile'"
                 System.exit( ExitCode.MISSING_SCRIPT_FILE )
+            }
+
+            if( !options.quiet ) {
+                println "N E X T F L O W _ _ version ${Const.APP_VER}"
             }
 
             // -- configuration file(s)
@@ -545,7 +546,7 @@ class CliRunner {
 
         Const.with {
             if ( full ) {
-                "${getAPP_NAME()} version ${APP_VER}.${APP_BUILDNUM} - build timestamp ${new Date(APP_TIMESTAMP).format(DATETIME_FORMAT)}"
+                "${getAPP_NAME()} version ${APP_VER}.${APP_BUILDNUM} - build timestamp ${APP_TIMESTAMP_STRING}"
             }
             else {
                 APP_VER
