@@ -330,6 +330,7 @@ class CliRunner {
 
         def result = new CliOptions()
         jcommander = new JCommander(result, normalizeArgs( args ) as String[] )
+        jcommander.setProgramName( Const.APP_NAME )
 
         return result
     }
@@ -344,7 +345,6 @@ class CliRunner {
             def current = args[i++]
             normalized << current
 
-
             if( current == '-resume' ) {
                 if( i<args.size() && !args[i].startsWith('-') && (args[i]=='last' || args[i] =~~ /[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{8}/) ) {
                     normalized << args[i++]
@@ -355,6 +355,12 @@ class CliRunner {
             }
             else if( current == '-test' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '%all'
+            }
+
+            else if( current ==~ /^\-\-[a-zA-Z\d].*/ && !current.contains('=')) {
+                current += '='
+                current += ( i<args.size() ? args[i++] : 'true' )
+                normalized[-1] = current
             }
         }
 
@@ -386,16 +392,22 @@ class CliRunner {
             }
 
             // -- print out the program help, then exit
-            if( options.help || !options.arguments ) {
+            if( options.help || !args ) {
                 println Const.LOGO
                 jcommander.usage()
                 System.exit(ExitCode.OK)
             }
 
+            if( !options.arguments ) {
+                log.error "You didn't enter any script file on the program command line\n"
+                jcommander.usage()
+                System.exit( ExitCode.MISSING_SCRIPT_FILE )
+            }
+
             // -- check script name
             File scriptFile = new File(options.arguments[0])
             if ( !scriptFile.exists() ) {
-                log.error "The specified script file does not exist: '$scriptFile'"
+                log.error "The specified script does not exist: '$scriptFile'\n"
                 System.exit( ExitCode.MISSING_SCRIPT_FILE )
             }
 

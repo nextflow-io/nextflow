@@ -352,6 +352,10 @@ class CliRunnerTest extends Specification {
         CliRunner.normalizeArgs('x','-test') == ['x','-test','%all']
         CliRunner.normalizeArgs('x','-test','alpha') == ['x','-test','alpha']
         CliRunner.normalizeArgs('x','-test','-other') == ['x','-test','%all','-other']
+
+        CliRunner.normalizeArgs('--alpha=1') == ['--alpha=1']
+        CliRunner.normalizeArgs('--alpha','1') == ['--alpha=1']
+        CliRunner.normalizeArgs('-x', '1', 'script.nf', '--long', 'v1', '--more', 'v2', '--flag') == ['-x','1','script.nf','--long=v1','--more=v2','--flag=true']
     }
 
 
