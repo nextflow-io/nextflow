@@ -412,7 +412,7 @@ class CliRunner {
             }
 
             if( !options.quiet ) {
-                println "N E X T F L O W _ _ version ${Const.APP_VER}"
+                println "N E X T F L O W  ~  version ${Const.APP_VER}"
             }
 
             // -- configuration file(s)

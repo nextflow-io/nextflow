@@ -47,6 +47,7 @@ class LocalExecutor extends AbstractExecutor {
      * @param script
      * @return
      */
+    @Override
     void launchTask( TaskRun task )  {
         assert task
         assert task.@script
@@ -58,18 +59,7 @@ class LocalExecutor extends AbstractExecutor {
         /*
          * save the environment to a file
          */
-        final envMap = task.processor.getProcessEnvironment()
-        final envBuilder = new StringBuilder()
-        envMap.each { name, value ->
-            if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
-                envBuilder << "export $name='$value'" << '\n'
-            }
-            else {
-                log.debug "Task ${task.name} > Invalid environment variable name: '${name}'"
-            }
-        }
-        new File(scratch, COMMAND_ENV_FILENAME).text = envBuilder.toString()
-
+        saveEnvironment(task, new File(scratch,COMMAND_ENV_FILENAME))
 
         /*
          * save the main script file

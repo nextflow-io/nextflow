@@ -40,7 +40,7 @@ class LsfExecutorTest extends Specification {
         config.queue 'hpc-queue1'
         config.maxMemory '2GB'
         config.maxDuration '3h'
-        config.nativeGridOptions '-extra opt'
+        config.gridNativeOptions '-extra opt'
         config.name 'task'
 
         def src = new BaseScript() {
@@ -55,7 +55,7 @@ class LsfExecutorTest extends Specification {
         task.workDirectory = new File('/xxx')
 
         then:
-        executor.getSubmitCommandLine(task) == 'bsub -cwd /xxx -K -V -q hpc-queue1 -l h_rt=03:00:00 -l virtual_free=2G -J nf-task-9 -extra opt < .job.run'.split(' ') as List
+        executor.getSubmitCommandLine(task) == 'bsub -K -cwd /xxx -o .job.out -q hpc-queue1 -J nf-task-9 -extra opt ./.job.run'.split(' ') as List
 
     }
 

@@ -1,5 +1,6 @@
 package nextflow.executor
 import groovy.io.FileType
+import groovy.util.logging.Slf4j
 import nextflow.exception.MissingFileException
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
@@ -10,6 +11,7 @@ import nextflow.processor.TaskRun
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 abstract class AbstractExecutor {
 
     /*
@@ -74,5 +76,28 @@ abstract class AbstractExecutor {
         return files
     }
 
+    /**
+     * Save the environment into the specified file
+     *
+     * @param task The task instance which current environment needs to be stored
+     * @param target The path to where save the task environment
+     */
+    def void saveEnvironment( TaskRun task, File target ) {
+        assert task
+        assert target
+
+        final envMap = task.processor.getProcessEnvironment()
+        final envBuilder = new StringBuilder()
+        envMap.each { name, value ->
+            if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
+                envBuilder << "export $name='$value'" << '\n'
+            }
+            else {
+                log.debug "Task ${task.name} > Invalid environment variable name: '${name}'"
+            }
+        }
+
+        target.text = envBuilder.toString()
+    }
 
 }

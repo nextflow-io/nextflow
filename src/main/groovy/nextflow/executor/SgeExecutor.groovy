@@ -19,7 +19,6 @@
 
 package nextflow.executor
 
-import groovy.transform.InheritConstructors
 import nextflow.processor.TaskRun
 
 /**
@@ -27,9 +26,7 @@ import nextflow.processor.TaskRun
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@InheritConstructors
-class SgeExecutor extends GenericGridExecutor {
-
+class SgeExecutor extends AbstractGridExecutor {
 
 
     /*
@@ -68,13 +65,8 @@ class SgeExecutor extends GenericGridExecutor {
         }
 
         // -- at the end append the command script wrapped file name
-        if ( taskConfig.nativeGridOptions ) {
-            if( taskConfig.nativeGridOptions instanceof Collection ) {
-                result.addAll( taskConfig.nativeGridOptions as Collection )
-            }
-            else {
-                result.addAll( taskConfig.nativeGridOptions.toString().split(' ') as List )
-            }
+        if( taskConfig.gridNativeOptions ) {
+            result.addAll( getGridNativeOptionsAsList() )
         }
 
         // -- last entry to 'script' file name

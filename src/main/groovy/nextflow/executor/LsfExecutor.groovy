@@ -19,7 +19,6 @@
 
 package nextflow.executor
 
-import groovy.transform.InheritConstructors
 import nextflow.processor.TaskRun
 
 /**
@@ -30,8 +29,7 @@ import nextflow.processor.TaskRun
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@InheritConstructors
-class LsfExecutor extends GenericGridExecutor {
+class LsfExecutor extends AbstractGridExecutor {
 
     @Override
     protected List<String> getSubmitCommandLine(TaskRun task) {
@@ -39,40 +37,35 @@ class LsfExecutor extends GenericGridExecutor {
         final result = new ArrayList<String>()
 
         result << 'bsub'
+        result << '-K'    // sync mode i.e. wait for termination before exit
         result << '-cwd' << task.workDirectory?.toString()
-        result << '-K'              // sync mode i.e. wait for termination before exit
-        result << '-V'
+        result << '-o' << JOB_OUT_FILENAME
 
         // add other parameters (if any)
         if( taskConfig.queue ) {
             result << '-q'  << taskConfig.queue
         }
 
-        if( taskConfig.maxDuration ) {
-            result << '-l' << "h_rt=${taskConfig.maxDuration.format('HH:mm:ss')}"
-        }
-
-        if( taskConfig.maxMemory ) {
-            result << '-l' << "virtual_free=${taskConfig.maxMemory.toString().replaceAll(/[\sB]/,'')}"
-        }
-
         // -- the job name
         result << '-J' << "nf-${task.processor.name}-${task.index}"
 
         // -- at the end append the command script wrapped file name
-        if ( taskConfig.nativeGridOptions ) {
-            if( taskConfig.nativeGridOptions instanceof Collection ) {
-                result.addAll( taskConfig.nativeGridOptions as Collection )
-            }
-            else {
-                result.addAll( taskConfig.nativeGridOptions.toString().split(' ') )
-            }
+        if( taskConfig.gridNativeOptions ) {
+            result.addAll( getGridNativeOptionsAsList() )
         }
 
         // -- last entry to 'script' file name
-        result << '<' << JOB_SCRIPT_FILENAME
+        result << "./$JOB_SCRIPT_FILENAME"
 
         return result
 
+    }
+
+    def submitJob( TaskRun task, File runnerFile, File cmdOutFile ) {
+        // note: LSF requires the job script file to be executable
+        runnerFile.setExecutable(true)
+
+        // now invoke the default method
+        super.submitJob(task, runnerFile, cmdOutFile)
     }
 }

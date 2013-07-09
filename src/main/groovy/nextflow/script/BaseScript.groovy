@@ -18,24 +18,22 @@
  */
 
 package nextflow.script
-
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.executor.AbstractExecutor
 import nextflow.executor.LocalExecutor
 import nextflow.executor.LsfExecutor
-import nextflow.processor.MergeTaskProcessor
 import nextflow.executor.NopeExecutor
-import nextflow.processor.ParallelTaskProcessor
 import nextflow.executor.SgeExecutor
-import nextflow.processor.SlurmExecutor
+import nextflow.executor.SlurmExecutor
+import nextflow.processor.MergeTaskProcessor
+import nextflow.processor.ParallelTaskProcessor
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskConfigWrapper
 import nextflow.processor.TaskProcessor
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
-
 /**
  * Any user defined script will extends this class, it provides the base execution context
  *
@@ -201,7 +199,8 @@ abstract class BaseScript extends Script {
         }
 
         // create the processor object
-        def strategyClass = loadStrategyClass( taskConfig['processor']?.toString() ?: session.config.processor )
+        // note: 'processor' have to be deprecated in favor of 'executor'
+        def executorClass = loadExecutorClass( taskConfig['processor']?.toString() ?: session.config.processor )
 
         // Invoke the code block, which will return the script closure to the executed
         // As side effect will set all the properties declaration in the 'taskConfig' object
@@ -211,7 +210,7 @@ abstract class BaseScript extends Script {
         def script = new TaskConfigWrapper(taskConfig).with ( block ) as Closure
         if ( !script ) throw new IllegalArgumentException("Missing script in the specified task block -- make sure it terminates with the script string to be executed")
 
-        def executor = strategyClass.newInstance()
+        def executor = executorClass.newInstance()
         def processor = processorClass.newInstance( executor, session, this, taskConfig, script )
 
         // keep track of the last create processor
@@ -221,30 +220,44 @@ abstract class BaseScript extends Script {
 
 
     @PackageScope
-    static Class<? extends AbstractExecutor> loadStrategyClass(String processorType) {
+    static Class<? extends AbstractExecutor> loadExecutorClass(String processorType) {
 
         def className
-        if ( !processorType ) {
-            className = LocalExecutor.name
+
+        switch( processorType?.toLowerCase() ) {
+            case null:
+                className = LocalExecutor.name
+                break
+
+            case 'local':
+                className = LocalExecutor.name;
+                break;
+
+            case 'sge':
+            case 'oge':
+                className = SgeExecutor.name
+                break
+
+            case 'lsf':
+                className = LsfExecutor.name;
+                break;
+
+            case 'slurm':
+                className = SlurmExecutor.name
+                break;
+
+            case 'nope':
+                className = NopeExecutor.name
+                break;
+
+//            case 'drmaa':
+//                className = DrmaaExecutor.name
+//                break
+//
+            default:
+                className = processorType
         }
-        else if ( processorType.toLowerCase() == 'local' ) {
-            className = LocalExecutor.name
-        }
-        else if ( processorType.toLowerCase() in ['sge','oge'] ) {
-            className = SgeExecutor.name
-        }
-        else if ( processorType.toLowerCase() == 'lsf' ) {
-            className = LsfExecutor.name
-        }
-        else if ( processorType.toLowerCase() == 'slurm' ) {
-            className = SlurmExecutor.name
-        }
-        else if ( processorType.toLowerCase() == 'nope' ) {
-            className = NopeExecutor.name
-        }
-        else {
-            className = processorType
-        }
+
 
         log.debug "Loading processor class: ${className}"
         try {

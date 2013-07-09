@@ -1,9 +1,6 @@
-package nextflow.processor
-
+package nextflow.executor
 import groovy.transform.InheritConstructors
-import nextflow.executor.GenericGridExecutor
-import nextflow.executor.SgeExecutor
-
+import nextflow.processor.TaskRun
 /**
  * Processor for SLURM resource manager (DRAFT)
  *
@@ -13,17 +10,7 @@ import nextflow.executor.SgeExecutor
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class SlurmExecutor extends GenericGridExecutor {
-
-    protected String srunCmdLine
-
-    /**
-     * Extra options appended to the generated 'qsub' command line
-     */
-    SgeExecutor srunCmdLine( String cmdLine ) {
-        this.srunCmdLine = cmdLine
-        return this
-    }
+class SlurmExecutor extends AbstractGridExecutor {
 
 
     /**
@@ -52,7 +39,7 @@ class SlurmExecutor extends GenericGridExecutor {
 
         result << 'srun'
         result << '-D' << task.workDirectory
-        result << '-J' << "nf-${processor.name}-${task.index}"
+        result << '-J' << "nf-${task.processor.name}-${task.index}"
         result << '-E'
 
         if( taskConfig.maxDuration ) {
@@ -60,13 +47,8 @@ class SlurmExecutor extends GenericGridExecutor {
         }
 
         // -- at the end append the command script wrapped file name
-        if ( srunCmdLine ) {
-            if( srunCmdLine instanceof Collection ) {
-                result.addAll( srunCmdLine as Collection )
-            }
-            else {
-                result.addAll( srunCmdLine.toString().split(' ') )
-            }
+        if( taskConfig.gridNativeOptions ) {
+            result.addAll( getGridNativeOptionsAsList() )
         }
 
         // -- last entry to 'script' file name

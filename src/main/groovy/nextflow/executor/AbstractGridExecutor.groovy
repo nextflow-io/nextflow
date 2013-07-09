@@ -18,7 +18,6 @@
  */
 
 package nextflow.executor
-import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 import nextflow.util.ByteDumper
@@ -31,8 +30,7 @@ import org.apache.commons.io.IOUtils
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@InheritConstructors
-abstract class GenericGridExecutor extends AbstractExecutor {
+abstract class AbstractGridExecutor extends AbstractExecutor {
 
     protected static final COMMAND_SCRIPT_FILENAME = '.command.sh'
 
@@ -46,39 +44,19 @@ abstract class GenericGridExecutor extends AbstractExecutor {
 
     protected static final JOB_SCRIPT_FILENAME = '.job.run'
 
-
-    abstract protected List<String> getSubmitCommandLine(TaskRun task)
-
-
-    protected String changeToTempFolder() {
-        '[ ! -z $TMPDIR ] && cd $TMPDIR'
-    }
-
-
     @Override
     void launchTask( TaskRun task ) {
         assert task
         assert task.workDirectory
 
         final folder = task.workDirectory
-        log.debug "Lauching task > ${task.name} -- scratch folder: $folder"
+        log.debug "Lauching task > ${task.name} -- work folder: $folder"
 
         /*
          * save the environment to a file
          */
-        final envMap = task.processor.getProcessEnvironment()
-        final envBuilder = new StringBuilder()
-        envMap.each { name, value ->
-            if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
-                envBuilder << "export $name='$value'" << '\n'
-            }
-            else {
-                log.debug "Task ${task.name} > Invalid environment variable name: '${name}'"
-            }
-        }
         def envFile = new File(folder, COMMAND_ENV_FILENAME)
-        envFile.text = envBuilder.toString()
-
+        saveEnvironment(task, envFile)
 
         /*
          * save the command input (if any)
@@ -108,7 +86,14 @@ abstract class GenericGridExecutor extends AbstractExecutor {
         File cmdOutFile = new File(folder, COMMAND_OUTPUT_FILENAME)
         def wrapper = new StringBuilder()
         wrapper << 'source ' << envFile.absolutePath << '\n'
-        wrapper << changeToTempFolder()  << '\n'
+
+        // check if a 'scratchDir' is defined in the task configuration
+        if( taskConfig.scratchDir == true ) {
+            wrapper << '[ ! -z $TMPDIR ] && cd $TMPDIR' << '\n'
+        }
+        else if( taskConfig.scratchDir instanceof String ) {
+            wrapper << "[ ! -z '${taskConfig.scratchDir}' ] && cd '${taskConfig.scratchDir}'" << '\n'
+        }
 
         // execute the command script
         wrapper << '('
@@ -125,7 +110,27 @@ abstract class GenericGridExecutor extends AbstractExecutor {
             wrapper << 'fi' << '\n'
         }
 
-        new File(folder, JOB_SCRIPT_FILENAME).text = task.processor.normalizeScript(wrapper.toString())
+        def runnerFile = new File(folder, JOB_SCRIPT_FILENAME)
+        runnerFile.text = task.processor.normalizeScript(wrapper.toString())
+
+
+        /*
+         * Finally submit the job script for execution
+         */
+        submitJob(task, runnerFile, cmdOutFile)
+
+    }
+
+    /**
+     * Submit the job script to the grid executor
+     *
+     * @param task The task instance to be executed
+     * @param cmdOutFile The file where the job outputs its stdout result
+     */
+    def submitJob( TaskRun task, File runnerFile, File cmdOutFile ) {
+        assert task
+
+        final folder = task.workDirectory
 
         // -- log the qsub command
         def cli = getSubmitCommandLine(task)
@@ -158,7 +163,7 @@ abstract class GenericGridExecutor extends AbstractExecutor {
             // -- wait the the process completes
             task.exitCode = process.waitFor()
             def success = task.exitCode in taskConfig.validExitCodes
-            log.debug "Task completeted > ${task.name} -- exit code: ${task.exitCode}; accepted code(s): ${taskConfig.validExitCodes.join(',')}"
+            log.debug "Task completed > ${task.name} -- exit code: ${task.exitCode}; accepted code(s): ${taskConfig.validExitCodes.join(',')}"
 
             subDumper.await(500)
             subOutStream.close()
@@ -186,7 +191,48 @@ abstract class GenericGridExecutor extends AbstractExecutor {
 
     }
 
+    /**
+     * Build up the platform native command line used to submit the job wrapper
+     * execution request to the underlying grid, e.g. {@code qsub -q something script.job}
+     *
+     * @param task The task instance descriptor
+     * @return A list holding the command line
+     */
+    abstract protected List<String> getSubmitCommandLine(TaskRun task)
 
+
+    final protected List<String> getGridNativeOptionsAsList() {
+
+        if ( !taskConfig.gridNativeOptions ) {
+            return null
+        }
+
+        if( taskConfig.gridNativeOptions instanceof Collection ) {
+            return new ArrayList<String>(taskConfig.gridNativeOptions as Collection)
+        }
+        else {
+            return taskConfig.gridNativeOptions.toString().split(' ') as List
+        }
+    }
+
+    final protected String getNativeOptionsAsString() {
+
+        if( !taskConfig.gridNativeOptions ) {
+            return null
+        }
+
+        def value = taskConfig.gridNativeOptions
+        value instanceof Collection ? value.join(' ') : value.toString()
+
+    }
+
+
+    /**
+     * Get the file where the task stdout has been saved
+     *
+     * @param task The task instance for which the output file is required
+     * @return The file holding the task stdout
+     */
     @Override
     def getStdOutFile( TaskRun task ) {
         assert task
