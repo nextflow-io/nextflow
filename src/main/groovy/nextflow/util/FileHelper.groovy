@@ -206,20 +206,24 @@ class FileHelper {
      * @param hash
      * @return
      */
-    final static File createWorkFolder(HashCode hash) {
+    final static File createWorkFolder(File bashPath, HashCode hash) {
+        assert bashPath
+        assert hash
 
         def bucket = Hashing.consistentHash(hash, 100).toString().padLeft(2,'0')
-        def folder = new File("./work/${bucket}", hash.toString()).absoluteFile
+        def folder = new File(bashPath, "${bucket}/${hash.toString()}").absoluteFile
 
         return folder
     }
 
-    final static File createTempFolder() {
+    final static File createTempFolder(File basePath) {
+        assert basePath
+
         int count = 0
         while( true ) {
             def hash = CacheHelper.hasher(rndGen.nextLong()).hash()
             def bucket = Hashing.consistentHash(hash, 100).toString().padLeft(2,'0')
-            def result = new File("./work/tmp/$bucket/${hash.toString()}")
+            def result = new File(basePath, "tmp/$bucket/${hash.toString()}")
 
             if( result.exists() ) {
                 if( ++count > 100 ) { throw new IOException("Unable to create a unique temporary path: $result") }

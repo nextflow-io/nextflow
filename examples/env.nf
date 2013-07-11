@@ -5,11 +5,11 @@
  */
 
 
-echo true
 config.env [ 'HELLO_1' ]  = '1'
 
 task {
-    environment HELLO_2: 2
+    env HELLO_2: 2
+    echo true
 
     "env | sort"
 }

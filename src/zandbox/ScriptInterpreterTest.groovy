@@ -20,13 +20,13 @@
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Session
-import nextflow.processor.NopeTaskProcessor
+import nextflow.executor.NopeExecutor
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ScriptInterpreterTest extends Specification {
+class ScriptInterpreterTest  {
 
     def 'test createProcessor' () {
 
@@ -39,7 +39,7 @@ class ScriptInterpreterTest extends Specification {
                 ]
         )
         def session = new Session()
-        def nope = new NopeTaskProcessor(session)
+        def nope = new NopeExecutor(session)
         def interpreter = new ScriptInterpreter(bindings,nope)
 
         when:

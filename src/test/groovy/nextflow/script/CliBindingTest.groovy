@@ -33,7 +33,7 @@ class CliBindingTest extends Specification {
         setup:
         def bindings = new CliBinding(new Session([env:[HOME:'/this/path']]))
         bindings.setParams( [field1: 1, field2: 'dos'] )
-        bindings.setArgs('a','b','c')
+        bindings.setArgs(['a','b','c'])
 
         when:
         // set a generic value

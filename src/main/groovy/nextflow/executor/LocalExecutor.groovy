@@ -17,21 +17,20 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
-import groovy.transform.InheritConstructors
+package nextflow.executor
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskRun
 import nextflow.util.ByteDumper
-import nextflow.util.Duration
 import org.apache.commons.io.IOUtils
 import org.codehaus.groovy.runtime.IOGroovyMethods
 
 /**
+ * Executes the specified task on the locally exploiting the underlying Java thread pool
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@InheritConstructors
-class LocalTaskProcessor extends AbstractTaskProcessor {
+class LocalExecutor extends AbstractExecutor {
 
     private static final COMMAND_OUT_FILENAME = '.command.out'
 
@@ -41,19 +40,6 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
 
     private static final COMMAND_SCRIPT_FILENAME = '.command.sh'
 
-    private Duration maxDuration
-
-    /**
-     * The max duration time allowed for the job to be executed, this value sets the '-l h_rt' squb command line option.
-     *
-     * @param duration0 The max allowed time expressed as duration string, Accepted units are 'min', 'hour', 'day'.
-     *                  For example {@code maxDuration '30 min'}, {@code maxDuration '10 hour'}, {@code maxDuration '2 day'}
-     */
-    LocalTaskProcessor maxDuration( String duration0 ) {
-        this.maxDuration = new Duration(duration0)
-        return this
-    }
-
 
     /**
      * Run a system executable script
@@ -61,7 +47,8 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
      * @param script
      * @return
      */
-    protected void launchTask( TaskRun task )  {
+    @Override
+    void launchTask( TaskRun task )  {
         assert task
         assert task.@script
         assert task.workDirectory
@@ -72,24 +59,13 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
         /*
          * save the environment to a file
          */
-        final envMap = getProcessEnvironment()
-        final envBuilder = new StringBuilder()
-        envMap.each { name, value ->
-            if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
-                envBuilder << "export $name='$value'" << '\n'
-            }
-            else {
-                log.debug "Task ${task.name} > Invalid environment variable name: '${name}'"
-            }
-        }
-        new File(scratch, COMMAND_ENV_FILENAME).text = envBuilder.toString()
-
+        createEnvironmentFile(task, new File(scratch,COMMAND_ENV_FILENAME))
 
         /*
          * save the main script file
          */
         def scriptFile = new File(scratch, COMMAND_SCRIPT_FILENAME)
-        scriptFile.text = normalizeScript(task.script.toString())
+        scriptFile.text = task.processor.normalizeScript(task.script.toString())
         scriptFile.setExecutable(true)
 
         /*
@@ -100,7 +76,7 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
                     ./${COMMAND_SCRIPT_FILENAME}
                     """
         def runnerFile = new File(scratch, COMMAND_RUNNER_FILENAME)
-        runnerFile.text = normalizeScript(runnerText)
+        runnerFile.text = task.processor.normalizeScript(runnerText)
         runnerFile.setExecutable(true)
 
         /*
@@ -134,16 +110,16 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
 
             def handler = { byte[] data, int len ->
                 streamOut.write(data,0,len)
-                if( echo ) System.out.print(new String(data,0,len))
+                if( taskConfig.echo ) System.out.print(new String(data,0,len))
             }
             dumper = new ByteDumper(process.getInputStream(), handler)
-            dumper.setName("dumper-$name")
+            dumper.setName("dumper-$taskConfig.name")
             dumper.start()
 
             // -- wait the the process completes
-            if( maxDuration ) {
-                log.debug "Running task > ${task.name} -- waiting max: ${maxDuration}"
-                process.waitForOrKill(maxDuration.toMillis())
+            if( taskConfig.maxDuration ) {
+                log.debug "Running task > ${task.name} -- waiting max: ${taskConfig.maxDuration}"
+                process.waitForOrKill(taskConfig.maxDuration.toMillis())
                 task.exitCode = process.exitValue()
             }
             else {
@@ -151,7 +127,7 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
                 task.exitCode = process.waitFor()
             }
 
-            log.debug "Task completed > ${task.name} -- exit code: ${task.exitCode}; success: ${task.exitCode in validExitCodes}"
+            log.debug "Task completed > ${task.name} -- exit code: ${task.exitCode}; success: ${task.exitCode in taskConfig.validExitCodes}"
 
             dumper?.await(500)
             streamOut.close()
@@ -169,7 +145,8 @@ class LocalTaskProcessor extends AbstractTaskProcessor {
         }
     }
 
-    protected getStdOutFile( TaskRun task ) {
+    @Override
+    def getStdOutFile( TaskRun task ) {
 
         new File(task.workDirectory, COMMAND_OUT_FILENAME)
 

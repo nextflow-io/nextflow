@@ -17,19 +17,21 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
-import groovy.transform.InheritConstructors
+package nextflow.executor
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskRun
+
 /**
+ * Dummy executor, only for test purpose
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@InheritConstructors
-class NopeTaskProcessor extends AbstractTaskProcessor {
+class NopeExecutor extends AbstractExecutor {
 
     @Override
-    protected void launchTask( TaskRun task ) {
+    void launchTask( TaskRun task ) {
+        log.info ">> launching nope task: ${task}"
 
         task.workDirectory = new File('.').absoluteFile
         task.status = TaskRun.Status.TERMINATED
@@ -39,7 +41,8 @@ class NopeTaskProcessor extends AbstractTaskProcessor {
     }
 
     @Override
-    protected getStdOutFile(TaskRun task) {
+    def getStdOutFile( TaskRun task ) {
+        log.info ">> Getting nope stdout: ${task}"
         return task.script
     }
 

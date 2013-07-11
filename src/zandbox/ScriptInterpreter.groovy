@@ -19,7 +19,7 @@
 
 import groovy.transform.ToString
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.processor.TaskProcessor
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>

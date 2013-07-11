@@ -12,7 +12,7 @@ final DataflowQueue aValues = new DataflowQueue()
 final DataflowQueue bValues = new DataflowQueue()
 final DataflowQueue results = new DataflowQueue()
 
-//Create a config and gradually set the required properties - channels, code, etc.
+//Create a taskConfig and gradually set the required properties - channels, code, etc.
 def adderConfig = node {valueA, valueB ->
     bindOutput valueA + valueB
 }

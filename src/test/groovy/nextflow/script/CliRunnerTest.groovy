@@ -82,12 +82,36 @@ class CliRunnerTest extends Specification {
         then:
         result == 'echo Hello world!'
         runner.getScript().getTaskProcessor().getName() == 'task2'
-        runner.getScript().getTaskProcessor().getInput('x').getVal() == 1
-        runner.getScript().getTaskProcessor().getInput('y') instanceof DataflowQueue
-        runner.getScript().getTaskProcessor().getOutput('-') instanceof DataflowWriteChannel
+        runner.getScript().getTaskProcessor().taskConfig.name == 'task2'
+        runner.getScript().getTaskProcessor().taskConfig.inputs['x'].getVal() == 1
+        runner.getScript().getTaskProcessor().taskConfig.inputs['y'] instanceof DataflowQueue
+        runner.getScript().getTaskProcessor().taskConfig.outputs['-'] instanceof DataflowWriteChannel
 
-        cleanup:
-        runner.workDirectory?.deleteDir()
+    }
+
+
+    def 'test task echo' () {
+
+        setup:
+        def runner = new CliRunner([task:[processor:'nope']])
+
+        when:
+        def script =
+            '''
+            task('test')  {
+                input x: 1
+                echo true
+
+                """echo $x"""
+            }
+
+            '''
+        def result = runner.execute(script)
+
+        then:
+        result == 'echo 1'
+        runner.script.taskProcessor.taskConfig.name == 'test'
+        runner.script.taskProcessor.taskConfig.echo == true
 
     }
 
@@ -110,9 +134,6 @@ class CliRunnerTest extends Specification {
 
         then:
         thrown(MultipleCompilationErrorsException)
-
-        cleanup:
-        runner.workDirectory?.deleteDir()
 
     }
 
@@ -137,9 +158,6 @@ class CliRunnerTest extends Specification {
 
         expect:
         runner.execute(script) == '1-2-3'
-
-        cleanup:
-        runner.workDirectory?.deleteDir()
 
     }
 
@@ -334,6 +352,10 @@ class CliRunnerTest extends Specification {
         CliRunner.normalizeArgs('x','-test') == ['x','-test','%all']
         CliRunner.normalizeArgs('x','-test','alpha') == ['x','-test','alpha']
         CliRunner.normalizeArgs('x','-test','-other') == ['x','-test','%all','-other']
+
+        CliRunner.normalizeArgs('--alpha=1') == ['--alpha=1']
+        CliRunner.normalizeArgs('--alpha','1') == ['--alpha=1']
+        CliRunner.normalizeArgs('-x', '1', 'script.nf', '--long', 'v1', '--more', 'v2', '--flag') == ['-x','1','script.nf','--long=v1','--more=v2','--flag=true']
     }
 
 

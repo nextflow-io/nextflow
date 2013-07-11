@@ -17,28 +17,17 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
+package nextflow.executor
 
-import groovy.transform.InheritConstructors
+import nextflow.processor.TaskRun
 
 /**
  * Execute a task script by running it on the SGE/OGE cluster
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@InheritConstructors
-class SgeTaskProcessor extends GenericGridProcessor {
+class SgeExecutor extends AbstractGridExecutor {
 
-
-    protected String qsubCmdLine
-
-    /**
-     * Extra options appended to the generated 'qsub' command line
-     */
-    SgeTaskProcessor qsubCmdLine( String cmdLine ) {
-        this.qsubCmdLine = cmdLine
-        return this
-    }
 
     /*
      * Prepare the 'qsub' cmdline. The following options are used
@@ -53,34 +42,31 @@ class SgeTaskProcessor extends GenericGridProcessor {
         final result = new ArrayList<String>()
 
         result << 'qsub'
-        result << '-wd' << task.workDirectory
-        result << '-N' << "nf-${name}-${task.index}"
+        result << '-wd' << task.workDirectory?.toString()
+        result << '-N' << "nf-${task.processor.name}-${task.index}"
         result << '-o' << "/dev/null"
         result << '-j' << 'y'
         result << '-sync' << 'y'
         result << '-V'
 
-        // add other parameters (if any)
-        if(queue) {
-            result << '-q'  << queue
+        // the requested queue name
+        if( taskConfig.queue ) {
+            result << '-q'  << taskConfig.queue
         }
 
-        if( maxDuration ) {
-            result << '-l' << "h_rt=${maxDuration.format('HH:mm:ss')}"
+        // max task duration
+        if( taskConfig.maxDuration ) {
+            result << '-l' << "h_rt=${taskConfig.maxDuration.format('HH:mm:ss')}"
         }
 
-        if( maxMemory ) {
-            result << '-l' << "virtual_free=${maxMemory.toString().replaceAll(/[\sB]/,'')}"
+        // task max memory
+        if( taskConfig.maxMemory ) {
+            result << '-l' << "virtual_free=${taskConfig.maxMemory.toString().replaceAll(/[\sB]/,'')}"
         }
 
         // -- at the end append the command script wrapped file name
-        if ( qsubCmdLine ) {
-            if( qsubCmdLine instanceof Collection ) {
-                result.addAll( qsubCmdLine as Collection )
-            }
-            else {
-                result.addAll( qsubCmdLine.toString().split(' ') )
-            }
+        if( taskConfig.clusterOptions ) {
+            result.addAll( getClusterOptionsAsList() )
         }
 
         // -- last entry to 'script' file name

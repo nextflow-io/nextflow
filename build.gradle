@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, the authors.
+ * Copyright (c) 2013, the authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -19,7 +19,7 @@
 
 apply plugin: 'groovy'
 apply plugin: 'codenarc'
-version = '0.2.11'
+version = '0.3.0'
 
 repositories {
     flatDir(dirs: file('lib'))
@@ -29,7 +29,7 @@ repositories {
 
 dependencies {
 
-    compile 'org.codehaus.groovy:groovy:2.1.3'
+    compile 'org.codehaus.groovy:groovy:2.1.5'
     compile 'org.codehaus.gpars:gpars:1.0.0'
     compile 'org.slf4j:slf4j-api:1.7.2'
     compile 'org.slf4j:jcl-over-slf4j:1.7.2'
@@ -47,6 +47,12 @@ dependencies {
 
     testCompile ('org.spockframework:spock-core:0.7-groovy-2.0')
 
+}
+
+
+compileGroovy {
+    sourceCompatibility = 1.6
+    targetCompatibility = 1.6
 }
 
 

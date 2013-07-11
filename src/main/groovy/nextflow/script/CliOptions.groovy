@@ -39,6 +39,9 @@ class CliOptions {
     @Parameter(names=['-test'], description = 'Test the function with the name specified')
     String test
 
+    @Parameter(names=['-w', '-work-dir'], description = 'Directory where tasks results are stored')
+    File workDir = new File('./work')
+
     /**
      * Print out the version number and exit
      */

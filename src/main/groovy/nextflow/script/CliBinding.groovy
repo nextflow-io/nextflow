@@ -63,7 +63,7 @@ class CliBinding extends Binding {
      * The list of CLI arguments (unnamed)
      * @param values
      */
-    def void setArgs( String ... values ) {
+    def void setArgs( List<String> values ) {
         (getVariables() as ReadOnlyMap).force( 'args', values  )
     }
 

@@ -17,35 +17,28 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow
-
-import nextflow.processor.SgeTaskProcessor
-import nextflow.processor.TaskRun
-import spock.lang.Specification
+package nextflow.processor
 
 /**
+ * Wrap a {@code TaskConfig} object in order to modify the behaviour of
+ * {@code #getProperty} so that it raises a {@code MissingPropertyException}
+ * when a property is not defined in the delegate map
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class SgeTaskProcessorTest extends Specification {
 
-    def 'test qsub cmd line' () {
+class TaskConfigWrapper extends TaskConfig {
 
-        when:
-        def processor = new SgeTaskProcessor(new Session())
-        processor.queue('my-queue')
-        processor.maxMemory( '2GB' )
-        processor.maxDuration( '3h' )
-        processor.qsubCmdLine('-extra opt')
-        processor.name = 'task'
+    TaskConfigWrapper( TaskConfig source ) {
+        super(source)
+    }
 
-        def task = new TaskRun(name: 'my-task', index: 9)
-        task.workDirectory = new File('/abc')
+    def getProperty( String name ) {
+        if( containsKey(name) ) {
+            return super.getProperty(name)
+        }
 
-
-        then:
-        processor.getSubmitCommandLine(task) as String[] == 'qsub -wd /abc -N nf-task-9 -o /dev/null -j y -sync y -V -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'.split(' ')
-
+        throw new MissingPropertyException(name, this.getClass())
     }
 
 }

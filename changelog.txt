@@ -1,6 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.3.0 - 8 Jul 2013
+- Decoupled the processing policy by the execution strategy classes 
+- Normalised script level arguments so that a blank char may be used in place of the equals char
+
 0.2.11 - 28 May 2013
 - Added 'lefTrim' and 'rightTrim' extension methods to String class
 - The task script interprets correctly the 'shebang' header declaration

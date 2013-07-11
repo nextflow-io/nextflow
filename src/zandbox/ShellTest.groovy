@@ -1,4 +1,4 @@
-package misc
+
 /*
  * Copyright (c) 2012, the authors.
  *
@@ -18,34 +18,20 @@ package misc
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import nextflow.Session
 /**
  *
  *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
-
-def session = new Session()
-
-def result = session.createProcessor()
-        .input(item: [1,2,3])
-        .output('result')
-        .echo(true)
-        .setBindOnTermination(true)
-        .setSharedWorkDirectory(true)
-        .script {
-            """
-            echo "item $item" >> result
-            """
-            }
-        .run()
+def shell = new GroovyShell()
+def script = shell.parse('''
+    def hola() {
+      1 + 2
+    }
+    ''')
 
 
-session.createProcessor()
-    .echo(true)
-    .input(file:result)
-    .script { "cat $fInputFile" }
-    .run()
+def methodName = 'hola'
+def result = script."$methodName"()
 
-
-session.terminate()
+assert result == 3

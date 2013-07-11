@@ -17,9 +17,9 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
+package nextflow.executor
 
-import groovy.transform.InheritConstructors
+import nextflow.processor.TaskRun
 
 /**
  * Processor for LSF resource manager (DRAFT)
@@ -29,19 +29,7 @@ import groovy.transform.InheritConstructors
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@InheritConstructors
-class LsfTaskProcessor extends GenericGridProcessor {
-
-
-    protected String bsubCmdLine
-
-    /**
-     * Extra options appended to the generated 'qsub' command line
-     */
-    LsfTaskProcessor bsubCmdLine( String cmdLine ) {
-        this.bsubCmdLine = cmdLine
-        return this
-    }
+class LsfExecutor extends AbstractGridExecutor {
 
     @Override
     protected List<String> getSubmitCommandLine(TaskRun task) {
@@ -49,40 +37,34 @@ class LsfTaskProcessor extends GenericGridProcessor {
         final result = new ArrayList<String>()
 
         result << 'bsub'
-        result << '-cwd' << task.workDirectory
-        result << '-K'              // sync mode i.e. wait for termination before exit
-        result << '-V'
+        result << '-K'    // sync mode i.e. wait for termination before exit
+        result << '-cwd' << task.workDirectory?.toString()
+        result << '-o' << JOB_OUT_FILENAME
 
         // add other parameters (if any)
-        if(queue) {
-            result << '-q'  << queue
-        }
-
-        if( maxDuration ) {
-            result << '-l' << "h_rt=${maxDuration.format('HH:mm:ss')}"
-        }
-
-        if( maxMemory ) {
-            result << '-l' << "virtual_free=${maxMemory.toString().replaceAll(/[\sB]/,'')}"
+        if( taskConfig.queue ) {
+            result << '-q'  << taskConfig.queue
         }
 
         // -- the job name
-        result << '-J' << "nf-${name}-${task.index}"
+        result << '-J' << "nf-${task.processor.name}-${task.index}"
 
         // -- at the end append the command script wrapped file name
-        if ( bsubCmdLine ) {
-            if( bsubCmdLine instanceof Collection ) {
-                result.addAll( bsubCmdLine as Collection )
-            }
-            else {
-                result.addAll( bsubCmdLine.toString().split(' ') )
-            }
+        if( taskConfig.clusterOptions ) {
+            result.addAll( getClusterOptionsAsList() )
         }
 
         // -- last entry to 'script' file name
-        result << '<' << JOB_SCRIPT_FILENAME
+        result << "./$JOB_SCRIPT_FILENAME"
 
         return result
 
+    }
+
+    def submitJob( TaskRun task, File runnerFile, File cmdOutFile ) {
+        // note: LSF requires the job script file to be executable
+        runnerFile.setExecutable(true)
+        // now invoke the default method
+        super.submitJob(task, runnerFile, cmdOutFile)
     }
 }

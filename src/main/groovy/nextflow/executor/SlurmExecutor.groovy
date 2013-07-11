@@ -1,7 +1,6 @@
-package nextflow.processor
-
+package nextflow.executor
 import groovy.transform.InheritConstructors
-
+import nextflow.processor.TaskRun
 /**
  * Processor for SLURM resource manager (DRAFT)
  *
@@ -11,17 +10,7 @@ import groovy.transform.InheritConstructors
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class SlurmTaskProcessor extends GenericGridProcessor {
-
-    protected String srunCmdLine
-
-    /**
-     * Extra options appended to the generated 'qsub' command line
-     */
-    SgeTaskProcessor srunCmdLine( String cmdLine ) {
-        this.srunCmdLine = cmdLine
-        return this
-    }
+class SlurmExecutor extends AbstractGridExecutor {
 
 
     /**
@@ -50,21 +39,16 @@ class SlurmTaskProcessor extends GenericGridProcessor {
 
         result << 'srun'
         result << '-D' << task.workDirectory
-        result << '-J' << "nf-${name}-${task.index}"
+        result << '-J' << "nf-${task.processor.name}-${task.index}"
         result << '-E'
 
-        if( maxDuration ) {
-            result << '-t' << maxDuration.format('HH:mm:ss')
+        if( taskConfig.maxDuration ) {
+            result << '-t' << taskConfig.maxDuration.format('HH:mm:ss')
         }
 
         // -- at the end append the command script wrapped file name
-        if ( srunCmdLine ) {
-            if( srunCmdLine instanceof Collection ) {
-                result.addAll( srunCmdLine as Collection )
-            }
-            else {
-                result.addAll( srunCmdLine.toString().split(' ') )
-            }
+        if( taskConfig.clusterOptions ) {
+            result.addAll( getClusterOptionsAsList() )
         }
 
         // -- last entry to 'script' file name

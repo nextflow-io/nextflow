@@ -17,21 +17,20 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
-import groovy.transform.InheritConstructors
+package nextflow.executor
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskRun
 import nextflow.util.ByteDumper
 import nextflow.util.Duration
-import nextflow.util.MemoryUnit
 import org.apache.commons.io.IOUtils
+
 /**
- * Generic task processor executing a task throgh a grid facility
+ * Generic task processor executing a task through a grid facility
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@InheritConstructors
-abstract class GenericGridProcessor extends AbstractTaskProcessor {
+abstract class AbstractGridExecutor extends AbstractExecutor {
 
     protected static final COMMAND_SCRIPT_FILENAME = '.command.sh'
 
@@ -45,99 +44,77 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
 
     protected static final JOB_SCRIPT_FILENAME = '.job.run'
 
-    protected String queue
-
-    protected MemoryUnit maxMemory
-
-    protected Duration maxDuration
-
-    /**
-     * The SGE/OGE cluster queue to which submit the job
-     */
-
-    GenericGridProcessor queue( String queue0 ) {
-        this.queue = queue0
-        return this
-    }
-
-    /**
-     * The max memory allow to be used to the job, this value will set the 'virtual_free' qsub cli option
-     * <p>
-     * Read more about SGE virtual_free vs mem_free at the following links
-     * http://gridengine.org/pipermail/users/2011-December/002215.html
-     * http://www.gridengine.info/tag/virtual_free/
-     *
-     * @param mem0 The maximum amount of memory expressed as string value,
-     *              accepted units are 'B', 'K', 'M', 'G', 'T', 'P'. So for example
-     *              {@code maxMemory '100M'}, {@code maxMemory '2G'}, etc.
-     */
-    GenericGridProcessor maxMemory( String mem0 ) {
-        this.maxMemory = new MemoryUnit(mem0)
-        return this
-    }
-
-    /**
-     * The max duration time allowed for the job to be executed, this value sets the '-l h_rt' squb command line option.
-     *
-     * @param duration0 The max allowed time expressed as duration string, Accepted units are 'min', 'hour', 'day'.
-     *                  For example {@code maxDuration '30 min'}, {@code maxDuration '10 hour'}, {@code maxDuration '2 day'}
-     */
-    GenericGridProcessor maxDuration( String duration0 ) {
-        this.maxDuration = new Duration(duration0)
-        return this
-    }
-
-
-    abstract protected List<String> getSubmitCommandLine(TaskRun task)
-
-
-    protected String changeToTempFolder() {
-        '[ ! -z $TMPDIR ] && cd $TMPDIR'
-    }
 
 
     @Override
-    protected void launchTask(TaskRun task) {
+    void launchTask( TaskRun task ) {
         assert task
         assert task.workDirectory
 
         final folder = task.workDirectory
-        log.debug "Lauching task > ${task.name} -- scratch folder: $folder"
+        log.debug "Lauching task > ${task.name} -- work folder: $folder"
 
         /*
          * save the environment to a file
          */
-        final envMap = getProcessEnvironment()
-        final envBuilder = new StringBuilder()
-        envMap.each { name, value ->
-            if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
-                envBuilder << "export $name='$value'" << '\n'
-            }
-            else {
-                log.debug "Task ${task.name} > Invalid environment variable name: '${name}'"
-            }
-        }
         def envFile = new File(folder, COMMAND_ENV_FILENAME)
-        envFile.text = envBuilder.toString()
-
+        createEnvironmentFile(task, envFile)
 
         /*
          * save the command input (if any)
          * the file content will be piped to the executed user script
          */
-        File cmdInputFile = null
-        if( task.input != null ) {
-            cmdInputFile = new File(folder, COMMAND_INPUT_FILE)
-            cmdInputFile.text = task.input
-        }
+        File cmdInputFile = createCommandInputFile(task)
 
         /*
          * save the 'user' script to be executed
          */
-        def scriptFile = new File(folder, COMMAND_SCRIPT_FILENAME)
-        scriptFile.text = normalizeScript(task.script.toString())
+        def scriptFile = createCommandScriptFile(task)
+
+
+        /*
+         * create the job wrapper script file
+         */
+        def cmdOutFile = new File(folder, COMMAND_OUTPUT_FILENAME)
+        def runnerFile = createJobWrapperFile(task, scriptFile, envFile, cmdInputFile, cmdOutFile)
+
+
+        /*
+         * Finally submit the job script for execution
+         */
+        submitJob(task, runnerFile, cmdOutFile)
+
+    }
+
+
+    protected File createCommandScriptFile( TaskRun task ) {
+        assert task
+
+        def scriptFile = new File(task.workDirectory, COMMAND_SCRIPT_FILENAME)
+        scriptFile.text = task.processor.normalizeScript(task.script.toString())
         scriptFile.setExecutable(true)
         task.script = scriptFile
+
+        return scriptFile
+    }
+
+
+    protected File createCommandInputFile( TaskRun task ) {
+
+        if( task.input == null ) {
+            return null
+        }
+
+        def result = new File( task.workDirectory, COMMAND_INPUT_FILE )
+        result.text = task.input
+        return result
+    }
+
+
+    protected File createJobWrapperFile( TaskRun task, File scriptFile, File envFile, File cmdInputFile, File cmdOutFile ) {
+        assert task
+
+        def folder = task.workDirectory
 
         /*
          * create a script wrapper which do the following
@@ -146,10 +123,15 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
          * 3 - launch the user script
          * 4 - un-stage e.g. copy back the result files to the working folder
          */
-        File cmdOutFile = new File(folder, COMMAND_OUTPUT_FILENAME)
+
         def wrapper = new StringBuilder()
         wrapper << 'source ' << envFile.absolutePath << '\n'
-        wrapper << changeToTempFolder()  << '\n'
+
+        // whenever it has to change to the scratch directory
+        def changeDir = changeToScratchDirectory()
+        if( changeDir ) {
+            wrapper << changeDir << '\n'
+        }
 
         // execute the command script
         wrapper << '('
@@ -159,14 +141,63 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
         wrapper << "${scriptFile.absolutePath}) &> ${cmdOutFile.absolutePath}" << '\n'
 
         // "un-stage" the result files
-        def resultFiles = outputs.keySet().findAll { it != '-' }
-        if( resultFiles ) {
-            wrapper << "if [ \$PWD != $folder ]; then" << '\n'
+        def resultFiles = taskConfig.outputs.keySet().findAll { it != '-' }
+        if( resultFiles && changeDir ) {
             resultFiles.each { name -> wrapper << "for X in $name; do cp \$X $folder; done\n" }
-            wrapper << 'fi' << '\n'
+            wrapper << 'rm -rf $NF_SCRATCH &'
         }
 
-        new File(folder, JOB_SCRIPT_FILENAME).text = normalizeScript(wrapper.toString())
+        def result = new File(folder, JOB_SCRIPT_FILENAME)
+        result.text = task.processor.normalizeScript(wrapper.toString())
+
+        return result
+    }
+
+
+    protected String changeToScratchDirectory() {
+
+        def scratch = taskConfig.scratch
+
+        if( scratch == null || scratch == false ) {
+            return null
+        }
+
+        /*
+         * when 'scratch' is defined as a bool value
+         * try to use the 'TMP' variable, if does not exist fallback to a tmp folder
+         */
+        if( scratch == true ) {
+            return 'NF_SCRATCH=${TMPDIR:-`mktemp -d`} && cd $NF_SCRATCH'
+        }
+
+        // convert to string for safety
+        scratch = scratch.toString()
+
+        // when it is defined by a variable, just use it
+        if( scratch.startsWith('$') ) {
+            return "NF_SCRATCH=$scratch && cd \$NF_SCRATCH"
+        }
+
+        if( scratch.toLowerCase() in ['ramdisk','ram-disk']) {
+            return 'NF_SCRATCH=$(mktemp -d -p /dev/shm/nextflow) && cd $NF_SCRATCH'
+        }
+
+
+        return "NF_SCRATCH=\$(mktemp -d -p $scratch) && cd \$NF_SCRATCH"
+
+    }
+
+
+    /**
+     * Submit the job script to the grid executor
+     *
+     * @param task The task instance to be executed
+     * @param cmdOutFile The file where the job outputs its stdout result
+     */
+    protected submitJob( TaskRun task, File runnerFile, File cmdOutFile ) {
+        assert task
+
+        final folder = task.workDirectory
 
         // -- log the qsub command
         def cli = getSubmitCommandLine(task)
@@ -181,7 +212,7 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
                 .redirectErrorStream(true)
 
         // -- configure the job environment
-        builder.environment().putAll(getProcessEnvironment())
+        builder.environment().putAll(task.processor.getProcessEnvironment())
 
         // -- start the execution and notify the event to the monitor
         Process process = builder.start()
@@ -198,8 +229,8 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
         try {
             // -- wait the the process completes
             task.exitCode = process.waitFor()
-            def success = task.exitCode in validExitCodes
-            log.debug "Task completeted > ${task.name} -- exit code: ${task.exitCode}; accepted code(s): ${validExitCodes.join(',')}"
+            def success = task.exitCode in taskConfig.validExitCodes
+            log.debug "Task completed > ${task.name} -- exit code: ${task.exitCode}; accepted code(s): ${taskConfig.validExitCodes.join(',')}"
 
             subDumper.await(500)
             subOutStream.close()
@@ -208,7 +239,7 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
             if( success ) {
                 Duration.waitFor('60s') { cmdOutFile.exists() }
             }
-            if( cmdOutFile.exists() && echo ) {
+            if( cmdOutFile.exists() && taskConfig.echo ) {
                 print cmdOutFile.text
             }
 
@@ -227,9 +258,50 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
 
     }
 
+    /**
+     * Build up the platform native command line used to submit the job wrapper
+     * execution request to the underlying grid, e.g. {@code qsub -q something script.job}
+     *
+     * @param task The task instance descriptor
+     * @return A list holding the command line
+     */
+    abstract protected List<String> getSubmitCommandLine(TaskRun task)
 
 
-    protected getStdOutFile( TaskRun task ) {
+    final protected List<String> getClusterOptionsAsList() {
+
+        if ( !taskConfig.clusterOptions ) {
+            return null
+        }
+
+        if( taskConfig.clusterOptions instanceof Collection ) {
+            return new ArrayList<String>(taskConfig.clusterOptions as Collection)
+        }
+        else {
+            return taskConfig.clusterOptions.toString().split(' ') as List
+        }
+    }
+
+    final protected String getClusterOptionsAsString() {
+
+        if( !taskConfig.clusterOptions ) {
+            return null
+        }
+
+        def value = taskConfig.clusterOptions
+        value instanceof Collection ? value.join(' ') : value.toString()
+
+    }
+
+
+    /**
+     * Get the file where the task stdout has been saved
+     *
+     * @param task The task instance for which the output file is required
+     * @return The file holding the task stdout
+     */
+    @Override
+    def getStdOutFile( TaskRun task ) {
         assert task
 
         //  -- return the program output with the following strategy
@@ -242,7 +314,7 @@ abstract class GenericGridProcessor extends AbstractTaskProcessor {
         log.debug "Task sub output > ${task.name} -- file: ${subOutFile}; empty: ${subOutFile.isEmpty()}"
 
         def result
-        def success = task.exitCode in validExitCodes
+        def success = task.exitCode in taskConfig.validExitCodes
         if( success ) {
             result = cmdOutFile.isNotEmpty() ? cmdOutFile : null
         }
