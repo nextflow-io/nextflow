@@ -50,8 +50,8 @@ class LsfExecutor extends AbstractGridExecutor {
         result << '-J' << "nf-${task.processor.name}-${task.index}"
 
         // -- at the end append the command script wrapped file name
-        if( taskConfig.gridNativeOptions ) {
-            result.addAll( getGridNativeOptionsAsList() )
+        if( taskConfig.clusterOptions ) {
+            result.addAll( getClusterOptionsAsList() )
         }
 
         // -- last entry to 'script' file name
@@ -64,7 +64,6 @@ class LsfExecutor extends AbstractGridExecutor {
     def submitJob( TaskRun task, File runnerFile, File cmdOutFile ) {
         // note: LSF requires the job script file to be executable
         runnerFile.setExecutable(true)
-
         // now invoke the default method
         super.submitJob(task, runnerFile, cmdOutFile)
     }

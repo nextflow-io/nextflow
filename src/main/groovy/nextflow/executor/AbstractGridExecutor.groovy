@@ -44,6 +44,8 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
 
     protected static final JOB_SCRIPT_FILENAME = '.job.run'
 
+
+
     @Override
     void launchTask( TaskRun task ) {
         assert task
@@ -56,25 +58,63 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
          * save the environment to a file
          */
         def envFile = new File(folder, COMMAND_ENV_FILENAME)
-        saveEnvironment(task, envFile)
+        createEnvironmentFile(task, envFile)
 
         /*
          * save the command input (if any)
          * the file content will be piped to the executed user script
          */
-        File cmdInputFile = null
-        if( task.input != null ) {
-            cmdInputFile = new File(folder, COMMAND_INPUT_FILE)
-            cmdInputFile.text = task.input
-        }
+        File cmdInputFile = createCommandInputFile(task)
 
         /*
          * save the 'user' script to be executed
          */
-        def scriptFile = new File(folder, COMMAND_SCRIPT_FILENAME)
+        def scriptFile = createCommandScriptFile(task)
+
+
+        /*
+         * create the job wrapper script file
+         */
+        def cmdOutFile = new File(folder, COMMAND_OUTPUT_FILENAME)
+        def runnerFile = createJobWrapperFile(task, scriptFile, envFile, cmdInputFile, cmdOutFile)
+
+
+        /*
+         * Finally submit the job script for execution
+         */
+        submitJob(task, runnerFile, cmdOutFile)
+
+    }
+
+
+    protected File createCommandScriptFile( TaskRun task ) {
+        assert task
+
+        def scriptFile = new File(task.workDirectory, COMMAND_SCRIPT_FILENAME)
         scriptFile.text = task.processor.normalizeScript(task.script.toString())
         scriptFile.setExecutable(true)
         task.script = scriptFile
+
+        return scriptFile
+    }
+
+
+    protected File createCommandInputFile( TaskRun task ) {
+
+        if( task.input == null ) {
+            return null
+        }
+
+        def result = new File( task.workDirectory, COMMAND_INPUT_FILE )
+        result.text = task.input
+        return result
+    }
+
+
+    protected File createJobWrapperFile( TaskRun task, File scriptFile, File envFile, File cmdInputFile, File cmdOutFile ) {
+        assert task
+
+        def folder = task.workDirectory
 
         /*
          * create a script wrapper which do the following
@@ -83,16 +123,14 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
          * 3 - launch the user script
          * 4 - un-stage e.g. copy back the result files to the working folder
          */
-        File cmdOutFile = new File(folder, COMMAND_OUTPUT_FILENAME)
+
         def wrapper = new StringBuilder()
         wrapper << 'source ' << envFile.absolutePath << '\n'
 
-        // check if a 'scratchDir' is defined in the task configuration
-        if( taskConfig.scratchDir == true ) {
-            wrapper << '[ ! -z $TMPDIR ] && cd $TMPDIR' << '\n'
-        }
-        else if( taskConfig.scratchDir instanceof String ) {
-            wrapper << "[ ! -z '${taskConfig.scratchDir}' ] && cd '${taskConfig.scratchDir}'" << '\n'
+        // whenever it has to change to the scratch directory
+        def changeDir = changeToScratchDirectory()
+        if( changeDir ) {
+            wrapper << changeDir << '\n'
         }
 
         // execute the command script
@@ -104,22 +142,51 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
 
         // "un-stage" the result files
         def resultFiles = taskConfig.outputs.keySet().findAll { it != '-' }
-        if( resultFiles ) {
-            wrapper << "if [ \$PWD != $folder ]; then" << '\n'
+        if( resultFiles && changeDir ) {
             resultFiles.each { name -> wrapper << "for X in $name; do cp \$X $folder; done\n" }
-            wrapper << 'fi' << '\n'
+            wrapper << 'rm -rf $NF_SCRATCH &'
         }
 
-        def runnerFile = new File(folder, JOB_SCRIPT_FILENAME)
-        runnerFile.text = task.processor.normalizeScript(wrapper.toString())
+        def result = new File(folder, JOB_SCRIPT_FILENAME)
+        result.text = task.processor.normalizeScript(wrapper.toString())
 
+        return result
+    }
+
+
+    protected String changeToScratchDirectory() {
+
+        def scratch = taskConfig.scratch
+
+        if( scratch == null || scratch == false ) {
+            return null
+        }
 
         /*
-         * Finally submit the job script for execution
+         * when 'scratch' is defined as a bool value
+         * try to use the 'TMP' variable, if does not exist fallback to a tmp folder
          */
-        submitJob(task, runnerFile, cmdOutFile)
+        if( scratch == true ) {
+            return 'NF_SCRATCH=${TMPDIR:-`mktemp -d`} && cd $NF_SCRATCH'
+        }
+
+        // convert to string for safety
+        scratch = scratch.toString()
+
+        // when it is defined by a variable, just use it
+        if( scratch.startsWith('$') ) {
+            return "NF_SCRATCH=$scratch && cd \$NF_SCRATCH"
+        }
+
+        if( scratch.toLowerCase() in ['ramdisk','ram-disk']) {
+            return 'NF_SCRATCH=$(mktemp -d -p /dev/shm/nextflow) && cd $NF_SCRATCH'
+        }
+
+
+        return "NF_SCRATCH=\$(mktemp -d -p $scratch) && cd \$NF_SCRATCH"
 
     }
+
 
     /**
      * Submit the job script to the grid executor
@@ -127,7 +194,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
      * @param task The task instance to be executed
      * @param cmdOutFile The file where the job outputs its stdout result
      */
-    def submitJob( TaskRun task, File runnerFile, File cmdOutFile ) {
+    protected submitJob( TaskRun task, File runnerFile, File cmdOutFile ) {
         assert task
 
         final folder = task.workDirectory
@@ -201,27 +268,27 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
     abstract protected List<String> getSubmitCommandLine(TaskRun task)
 
 
-    final protected List<String> getGridNativeOptionsAsList() {
+    final protected List<String> getClusterOptionsAsList() {
 
-        if ( !taskConfig.gridNativeOptions ) {
+        if ( !taskConfig.clusterOptions ) {
             return null
         }
 
-        if( taskConfig.gridNativeOptions instanceof Collection ) {
-            return new ArrayList<String>(taskConfig.gridNativeOptions as Collection)
+        if( taskConfig.clusterOptions instanceof Collection ) {
+            return new ArrayList<String>(taskConfig.clusterOptions as Collection)
         }
         else {
-            return taskConfig.gridNativeOptions.toString().split(' ') as List
+            return taskConfig.clusterOptions.toString().split(' ') as List
         }
     }
 
-    final protected String getNativeOptionsAsString() {
+    final protected String getClusterOptionsAsString() {
 
-        if( !taskConfig.gridNativeOptions ) {
+        if( !taskConfig.clusterOptions ) {
             return null
         }
 
-        def value = taskConfig.gridNativeOptions
+        def value = taskConfig.clusterOptions
         value instanceof Collection ? value.join(' ') : value.toString()
 
     }

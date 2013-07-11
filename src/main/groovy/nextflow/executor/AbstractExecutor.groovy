@@ -82,7 +82,7 @@ abstract class AbstractExecutor {
      * @param task The task instance which current environment needs to be stored
      * @param target The path to where save the task environment
      */
-    def void saveEnvironment( TaskRun task, File target ) {
+    def void createEnvironmentFile( TaskRun task, File target ) {
         assert task
         assert target
 

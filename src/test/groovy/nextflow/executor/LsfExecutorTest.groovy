@@ -40,7 +40,7 @@ class LsfExecutorTest extends Specification {
         config.queue 'hpc-queue1'
         config.maxMemory '2GB'
         config.maxDuration '3h'
-        config.gridNativeOptions '-extra opt'
+        config.clusterOptions '-extra opt'
         config.name 'task'
 
         def src = new BaseScript() {

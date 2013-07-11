@@ -38,7 +38,7 @@ class SgeExecutorTest extends Specification {
         config.queue 'my-queue'
         config.maxMemory '2GB'
         config.maxDuration '3h'
-        config.gridNativeOptions '-extra opt'
+        config.clusterOptions '-extra opt'
         config.name 'task'
 
         def src = new BaseScript() {

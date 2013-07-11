@@ -47,8 +47,8 @@ class SlurmExecutor extends AbstractGridExecutor {
         }
 
         // -- at the end append the command script wrapped file name
-        if( taskConfig.gridNativeOptions ) {
-            result.addAll( getGridNativeOptionsAsList() )
+        if( taskConfig.clusterOptions ) {
+            result.addAll( getClusterOptionsAsList() )
         }
 
         // -- last entry to 'script' file name

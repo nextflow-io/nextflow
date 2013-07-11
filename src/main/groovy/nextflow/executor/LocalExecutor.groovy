@@ -59,7 +59,7 @@ class LocalExecutor extends AbstractExecutor {
         /*
          * save the environment to a file
          */
-        saveEnvironment(task, new File(scratch,COMMAND_ENV_FILENAME))
+        createEnvironmentFile(task, new File(scratch,COMMAND_ENV_FILENAME))
 
         /*
          * save the main script file
