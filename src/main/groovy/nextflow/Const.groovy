@@ -19,6 +19,8 @@
 
 package nextflow
 
+import java.text.SimpleDateFormat
+
 /**
  * Application main constants
  *
@@ -42,30 +44,84 @@ class Const {
         }
     }
 
-
+    /**
+     * The application main package name
+     */
     static final String MAIN_PACKAGE = Const.name.split('\\.')[0]
 
+    /**
+     * The application main name
+     */
     static final String APP_NAME = MAIN_PACKAGE
 
+    /**
+     * The application version
+     */
     static final String APP_VER = "0.3.0"
 
-    static final long APP_TIMESTAMP = 1373549253154
+    /**
+     * The app build time as linux/unix timestamp
+     */
+    static final long APP_TIMESTAMP = 1373556464476
 
-    static final int APP_BUILDNUM = 632
+    /**
+     * The app build number
+     */
+    static final int APP_BUILDNUM = 645
 
-    static final DATETIME_FORMAT = 'dd/MMM/yyyy HH:mm'
+    /**
+     * The date time formatter string
+     */
+    static final DATETIME_FORMAT = 'dd-MM-yyyy HH:mm'
 
-    static final SHORT_DATETIME_FORMAT = 'HH:mm dd/MMM'
+    /**
+     * The app build time string relative to UTC timezone
+     */
+    static final String APP_TIMESTAMP_UTC = {
 
-    static final TIME_FORMAT = 'HH:mm:ss'
+        def tz = TimeZone.getTimeZone('UTC')
+        def fmt = new SimpleDateFormat(DATETIME_FORMAT)
+        fmt.setTimeZone(tz)
+        fmt.format(new Date(APP_TIMESTAMP)) + ' ' + tz.getDisplayName( true, TimeZone.SHORT )
 
-    static final String APP_TIMESTAMP_STRING = new Date(APP_TIMESTAMP).format(DATETIME_FORMAT)
+    } ()
+
+
+    /**
+     * The app build time string relative to local timezone
+     */
+    static final String APP_TIMESTAMP_LOCAL = {
+
+        def tz = TimeZone.getDefault()
+        def fmt = new SimpleDateFormat(DATETIME_FORMAT)
+        fmt.setTimeZone(tz)
+        fmt.format(new Date(APP_TIMESTAMP)) + ' ' + tz.getDisplayName( true, TimeZone.SHORT )
+
+    } ()
+
+    private static String deltaString( String str1, String str2 ) {
+
+        int i=0;
+        while( i<str1.size() && str2.size() && str1[i]==str2[i] && str1[i]!=' ') {
+            i++
+        }
+
+        return i<str2.length() ? str2.substring(i).trim() : ''
+    }
+
+    private static String deltaLocal() { deltaString( APP_TIMESTAMP_UTC, APP_TIMESTAMP_LOCAL ) }
+
+    /*
+     * The application 'logo'
+     */
 
     static final String LOGO =
 
 """
       N E X T F L O W
-      Version ${APP_VER}   last modified ${APP_TIMESTAMP_STRING}
+      Version ${APP_VER} build ${APP_BUILDNUM}
+      last modified ${APP_TIMESTAMP_UTC} (${deltaLocal()})
       http://nextflow-project.org
 """
+
 }
