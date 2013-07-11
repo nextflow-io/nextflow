@@ -1,9 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.3.0 - 8 Jul 2013
+0.3.0 - 11 Jul 2013
 - Decoupled the processing policy by the execution strategy classes 
 - Normalised script level arguments so that a blank char may be used in place of the equals char
+- Added a new configuration option named 'clusterOptions' where specify grid native configuration parameters
+- Added a new configuration option named 'scratch' which enable/disable usage of scratch temporary folder when using cluster executors
+- Enhanced implementation of LSF executor
 
 0.2.11 - 28 May 2013
 - Added 'lefTrim' and 'rightTrim' extension methods to String class

@@ -49,9 +49,9 @@ class Const {
 
     static final String APP_VER = "0.3.0"
 
-    static final long APP_TIMESTAMP = 1373545156829
+    static final long APP_TIMESTAMP = 1373549253154
 
-    static final int APP_BUILDNUM = 631
+    static final int APP_BUILDNUM = 632
 
     static final DATETIME_FORMAT = 'dd/MMM/yyyy HH:mm'
 
