@@ -40,7 +40,7 @@ class LsfExecutorTest extends Specification {
         config.queue 'hpc-queue1'
         config.maxMemory '2GB'
         config.maxDuration '3h'
-        config.clusterOptions '-extra opt'
+        config.clusterOptions " -M 4000  -R 'rusage[mem=4000] select[mem>4000]' --X \"abc\" "
         config.name 'task'
 
         def src = new BaseScript() {
@@ -55,7 +55,7 @@ class LsfExecutorTest extends Specification {
         task.workDirectory = new File('/xxx')
 
         then:
-        executor.getSubmitCommandLine(task) == 'bsub -K -cwd /xxx -o .job.out -q hpc-queue1 -J nf-task-9 -extra opt ./.job.run'.split(' ') as List
+        executor.getSubmitCommandLine(task) == ['bsub','-K','-cwd','/xxx','-o','.job.out','-q', 'hpc-queue1', '-J', 'nf-task-9', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './.job.run']
 
     }
 

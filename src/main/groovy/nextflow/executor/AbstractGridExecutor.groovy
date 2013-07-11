@@ -21,6 +21,7 @@ package nextflow.executor
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 import nextflow.util.ByteDumper
+import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
 import org.apache.commons.io.IOUtils
 
@@ -45,7 +46,9 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
     protected static final JOB_SCRIPT_FILENAME = '.job.run'
 
 
-
+    /*
+     * Prepare and launch the task in the underlying execution platform
+     */
     @Override
     void launchTask( TaskRun task ) {
         assert task
@@ -86,7 +89,9 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
 
     }
 
-
+    /**
+     * Save the main task script to a file having executable permission
+     */
     protected File createCommandScriptFile( TaskRun task ) {
         assert task
 
@@ -98,7 +103,12 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         return scriptFile
     }
 
-
+    /**
+     * Save the task {@code stdin} to a file to be piped when it is executed
+     *
+     * @param task
+     * @return
+     */
     protected File createCommandInputFile( TaskRun task ) {
 
         if( task.input == null ) {
@@ -110,9 +120,19 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         return result
     }
 
-
+    /**
+     * Create a script which wraps the target script to be able to manage custom environment variable, scratch directory, etc
+     *
+     * @param task The task instance descriptor
+     * @param scriptFile The task main script file
+     * @param envFile The file containing the task environment
+     * @param cmdInputFile The 'stdin' file (if any)
+     * @param cmdOutFile The file that where save the task output
+     * @return The script wrapper file
+     */
     protected File createJobWrapperFile( TaskRun task, File scriptFile, File envFile, File cmdInputFile, File cmdOutFile ) {
         assert task
+        assert scriptFile
 
         def folder = task.workDirectory
 
@@ -153,7 +173,9 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         return result
     }
 
-
+    /**
+     * @return The bash script fragment to change to the 'scratch' directory if it has been specified in the task configuration
+     */
     protected String changeToScratchDirectory() {
 
         def scratch = taskConfig.scratch
@@ -267,7 +289,9 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
      */
     abstract protected List<String> getSubmitCommandLine(TaskRun task)
 
-
+    /**
+     * @return Parse the {@code clusterOptions} configuration option and return the entries as a list of values
+     */
     final protected List<String> getClusterOptionsAsList() {
 
         if ( !taskConfig.clusterOptions ) {
@@ -278,10 +302,13 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
             return new ArrayList<String>(taskConfig.clusterOptions as Collection)
         }
         else {
-            return taskConfig.clusterOptions.toString().split(' ') as List
+            return CmdLineHelper.splitter( taskConfig.clusterOptions.toString() )
         }
     }
 
+    /**
+     * @return Parse the {@code clusterOptions} configuration option and return the entries as a string
+     */
     final protected String getClusterOptionsAsString() {
 
         if( !taskConfig.clusterOptions ) {
