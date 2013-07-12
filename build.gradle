@@ -245,7 +245,7 @@ task uploadOnejar ( type: Copy, dependsOn: pack ) {
     dependsOn pack
 
     from oneJarDistPath
-    into '/Users/ptommaso/Dropbox/Public/nextflow/'
+    into '/Users/pditommaso/Dropbox/Public/nextflow/'
 
 }
 
