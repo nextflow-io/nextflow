@@ -116,6 +116,7 @@ class FunctionalTests extends Specification {
         def script = '''
 
             task('taskHello') {
+                echo true
                 maxForks 11
                 dummyField 99
 

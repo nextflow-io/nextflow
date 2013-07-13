@@ -18,6 +18,9 @@ class CliOptions {
     @Parameter(names=['-history'], description = 'Show history of executed commands')
     boolean history
 
+    @Parameter(names=['-echo'], description = 'Print out task(s) output')
+    boolean echo
+
     /**
      * The packages to trace
      */

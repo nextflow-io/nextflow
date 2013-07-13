@@ -446,6 +446,7 @@ class CliRunner {
             def runner = new CliRunner(config)
             runner.session.cacheable = options.cacheable
             runner.session.workDir = options.workDir
+            runner.session.echo = options.echo
 
             // -- specify the arguments
             def scriptArgs = options.arguments.size()>1 ? options.arguments[1..-1] : null

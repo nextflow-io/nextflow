@@ -86,7 +86,7 @@ abstract class BaseScript extends Script {
      * @param value
      */
     def void echo(boolean value = true) {
-        config.task.echo = value
+        session.echo = value
     }
 
     /**
@@ -190,13 +190,16 @@ abstract class BaseScript extends Script {
         assert block
 
         def taskConfig = new TaskConfig()
+
+        // set 'default' properties defined in the configuration file in the 'task' section
         if( config.task instanceof Map ) {
             config.task.each { String key, value -> taskConfig.setProperty(key,value) }
         }
 
-        if( name ) {
-            taskConfig.name = name
-        }
+        // override with properties defined by the current session
+        taskConfig.echo = session.echo
+        if( name ) { taskConfig.name = name }
+
 
         // create the processor object
         // note: 'processor' have to be deprecated in favor of 'executor'

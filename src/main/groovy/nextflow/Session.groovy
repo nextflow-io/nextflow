@@ -94,6 +94,11 @@ class Session {
     def File workDir = new File('./work')
 
     /**
+     * Whenever to print task output if not defined at task level
+     */
+    def boolean echo
+
+    /**
      * The unique identifier of this session
      */
     def final UUID uniqueId
