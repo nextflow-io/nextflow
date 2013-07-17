@@ -123,7 +123,7 @@ class LocalExecutor extends AbstractExecutor {
                 task.exitCode = process.exitValue()
             }
             else {
-                log.debug "Running task > ${task.name} -- wait forever"
+                log.debug "Running task > ${task.name} -- wait until it finishes"
                 task.exitCode = process.waitFor()
             }
 
