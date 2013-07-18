@@ -154,7 +154,7 @@ abstract class TaskProcessor {
          * - at least one input channel have to be provided,
          *   if missing create an dummy 'input' set to true
          */
-        log.debug "TaskConfig: ${taskConfig}"
+        log.trace "TaskConfig: ${taskConfig}"
         if( taskConfig.inputs.size() == 0 ) {
             taskConfig.input('$':true)
         }
