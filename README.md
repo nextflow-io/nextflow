@@ -36,8 +36,6 @@ You can to execute the command `nextflow -h` to show the program help.
 Create a file named `hello.nf` with the following content and copy it
 to the path where you downloaded the Nextflow package.
 
-    echo true
-
     task {
         """
         printf 'Hello world! \n'
@@ -48,7 +46,7 @@ to the path where you downloaded the Nextflow package.
 
 Launch the above example by typing the following command on your terminal console:
 
-    ./nextflow -q hello.nf
+    ./nextflow -echo hello.nf
 
 
 Congratulations! You have just run your first task with Nextflow.
@@ -105,8 +103,6 @@ Mixing scripting languages
 Tasks in your pipeline can be written in any scripting language supported by the underlying Linux platform. To use a scripting
 other than Linux BASH (e.g. Perl, Python, Ruby, R, etc), simply start your task script with the corresponding
 <a href='http://en.wikipedia.org/wiki/Shebang_(Unix)' target='_bank'>shebang</a> declaration. For example:
-
-    echo true
 
     task {
 
