@@ -198,12 +198,19 @@ class MergeTaskProcessor extends TaskProcessor {
             // in order the launch the task execution on the underlying system
             if( message == PoisonPill.instance)  {
 
-                def task = createTaskRun()
-                try {
-                    mergeTaskRun(task)
+                if( mergeIndex.get() ) {
+
+                    def task = MergeTaskProcessor.this.createTaskRun()
+                    try {
+                        MergeTaskProcessor.this.mergeTaskRun(task)
+                    }
+                    catch( Throwable e ) {
+                        handleException(e, task)
+                    }
+
                 }
-                catch( Exception e ) {
-                    handleException(e, task)
+                else {
+                    log.warn "No data collected by task > $name -- Won't execute it. Something may be wrong in your execution flow"
                 }
 
             }
