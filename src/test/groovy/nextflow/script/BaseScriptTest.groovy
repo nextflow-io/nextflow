@@ -17,6 +17,7 @@ class BaseScriptTest extends Specification {
         BaseScript.loadExecutorClass(null) == LocalExecutor
         BaseScript.loadExecutorClass('local') == LocalExecutor
         BaseScript.loadExecutorClass('sge') == SgeExecutor
+        BaseScript.loadExecutorClass('oge') == SgeExecutor
         BaseScript.loadExecutorClass( AbstractGridExecutorTest.name ) == AbstractGridExecutorTest
 
     }

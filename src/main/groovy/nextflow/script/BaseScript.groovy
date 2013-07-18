@@ -23,7 +23,6 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.executor.AbstractExecutor
 import nextflow.executor.LocalExecutor
-import nextflow.executor.LsfExecutor
 import nextflow.executor.NopeExecutor
 import nextflow.executor.SgeExecutor
 import nextflow.executor.SlurmExecutor
@@ -86,7 +85,7 @@ abstract class BaseScript extends Script {
      * @param value
      */
     def void echo(boolean value = true) {
-        session.echo = value
+        config.task.echo = value
     }
 
     /**
@@ -197,8 +196,13 @@ abstract class BaseScript extends Script {
         }
 
         // override with properties defined by the current session
-        taskConfig.echo = session.echo
-        if( name ) { taskConfig.name = name }
+        if( session.echo ) {
+            taskConfig.echo = session.echo
+        }
+
+        if( name ) {
+            taskConfig.name = name
+        }
 
 
         // create the processor object
@@ -222,45 +226,27 @@ abstract class BaseScript extends Script {
     }
 
 
+
+    /*
+     * Map the executor class to its 'friendly' name
+     */
+    static executorsMap = [
+            'local': LocalExecutor.name,
+            'sge':  SgeExecutor.name,
+            'oge':  SgeExecutor.name,
+            'slurm': SlurmExecutor.name,
+            'nope': NopeExecutor.name
+    ]
+
     @PackageScope
     static Class<? extends AbstractExecutor> loadExecutorClass(String processorType) {
 
-        def className
+        def className = processorType ? executorsMap[ processorType?.toLowerCase()  ] : LocalExecutor.name
 
-        switch( processorType?.toLowerCase() ) {
-            case null:
-                className = LocalExecutor.name
-                break
-
-            case 'local':
-                className = LocalExecutor.name;
-                break;
-
-            case 'sge':
-            case 'oge':
-                className = SgeExecutor.name
-                break
-
-            case 'lsf':
-                className = LsfExecutor.name;
-                break;
-
-            case 'slurm':
-                className = SlurmExecutor.name
-                break;
-
-            case 'nope':
-                className = NopeExecutor.name
-                break;
-
-//            case 'drmaa':
-//                className = DrmaaExecutor.name
-//                break
-//
-            default:
-                className = processorType
+        // if the className is empty (because the 'processorType' does not map to any class, fallback to the 'processorType' itself)
+        if( !className ) {
+            className = processorType
         }
-
 
         log.debug "Loading processor class: ${className}"
         try {
