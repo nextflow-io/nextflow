@@ -23,11 +23,8 @@
  *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
-def name = '1HOLA_'
+def name = '>ALPHA gene3232e2'
 
-if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
-    println 'OK'
-}
-else {
-    println 'FAIL'
-}
+
+
+println name.replaceAll( /^>(\S*).*$/, '$1' )
