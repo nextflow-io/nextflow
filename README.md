@@ -37,6 +37,7 @@ Create a file named `hello.nf` with the following content and copy it
 to the path where you downloaded the Nextflow package.
 
     task {
+    
         """
         printf 'Hello world! \n'
         """
