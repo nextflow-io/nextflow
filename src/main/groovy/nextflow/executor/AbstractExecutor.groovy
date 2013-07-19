@@ -86,6 +86,12 @@ abstract class AbstractExecutor {
         assert task
         assert target
 
+        target.text = createEnvironmentString(task)
+    }
+
+    def String createEnvironmentString( TaskRun task ) {
+        assert task
+
         final envMap = task.processor.getProcessEnvironment()
         final envBuilder = new StringBuilder()
         envMap.each { name, value ->
@@ -97,7 +103,8 @@ abstract class AbstractExecutor {
             }
         }
 
-        target.text = envBuilder.toString()
+        return envBuilder.toString()
+
     }
 
 }

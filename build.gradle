@@ -45,6 +45,12 @@ dependencies {
     compile 'jline:jline:2.9'
     compile 'org.fusesource.jansi:jansi:1.9'
 
+    compile 'org.apache.httpcomponents:httpclient:4.2.1'
+    compile 'commons-io:commons-io:2.4'
+    compile 'com.fasterxml.jackson.core:jackson-core:2.0.5'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.0.5'
+
+
     testCompile ('org.spockframework:spock-core:0.7-groovy-2.0')
 
 }
@@ -182,7 +188,7 @@ gradle.taskGraph.afterTask { Task task, TaskState state ->
 def oneJarShellStub = "./one-jar/launcher.stub"
 def oneJarLibPath = "./one-jar/one-jar-ant-task-0.97.jar"
 def oneJarTempPath = "$buildDir/tmp/nextflow-${version}.run.jar"
-def oneJarDistPath = "$buildDir/pack/nextflow"
+def oneJarDistPath = "./resources/usr/bin/nextflow"
 
 task pack(dependsOn: compile) << {
 

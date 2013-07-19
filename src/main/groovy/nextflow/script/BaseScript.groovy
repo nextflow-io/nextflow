@@ -22,6 +22,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.executor.AbstractExecutor
+import nextflow.executor.DnaNexusExecutor
 import nextflow.executor.LocalExecutor
 import nextflow.executor.NopeExecutor
 import nextflow.executor.SgeExecutor
@@ -247,13 +248,14 @@ abstract class BaseScript extends Script {
             'sge':  SgeExecutor.name,
             'oge':  SgeExecutor.name,
             'slurm': SlurmExecutor.name,
+            'dnanexus': DnaNexusExecutor,
             'nope': NopeExecutor.name
     ]
 
     @PackageScope
     static Class<? extends AbstractExecutor> loadExecutorClass(String processorType) {
 
-        def className = processorType ? executorsMap[ processorType?.toLowerCase()  ] : LocalExecutor.name
+        String className = processorType ? executorsMap[ processorType?.toLowerCase()  ] : LocalExecutor.name
 
         // if the className is empty (because the 'processorType' does not map to any class, fallback to the 'processorType' itself)
         if( !className ) {

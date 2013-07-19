@@ -1,0 +1,20 @@
+{
+  "name": "nextflow",
+  "title": "Java Parallelism Example",
+  "summary": "Demonstrates spawning subjobs in Java",
+  "dxapi": "1.0.0",
+  "inputSpec": [
+  ],
+  "outputSpec": [
+    {"name": "output_file", "class": "file"}
+  ],
+  "runSpec": {
+    "file": "code.sh",
+    "interpreter": "bash",
+    "execDepends": [
+      {"name": "dx-java-bindings"},
+      {"name": "openjdk-6-jre-headless"}
+    ]
+  },
+  "version": "0.0.1"
+}
