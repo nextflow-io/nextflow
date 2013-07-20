@@ -17,6 +17,7 @@ class TaskConfigTest extends Specification {
 
         expect:
         config.shell ==  ['/bin/bash','-ue']
+        config.cacheable
         config.validExitCodes == [0]
         config.errorStrategy == ErrorStrategy.TERMINATE
         config.inputs instanceof Map

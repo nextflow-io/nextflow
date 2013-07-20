@@ -46,6 +46,7 @@ class TaskConfig implements Map {
         configProperties = new LinkedHashMap()
         configProperties.with {
             echo = false
+            cacheable = true
             shell = ['/bin/bash','-ue']
             validExitCodes = [0]
             inputs = new LinkedHashMap()

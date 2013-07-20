@@ -70,7 +70,7 @@ class MergeTaskProcessor extends TaskProcessor {
             def folder = FileHelper.createWorkFolder(session.workDir, hash)
             log.trace "Merging task > $name -- trying cached: $folder"
 
-            def cached = session.cacheable && taskConfig['cacheable'] && checkCachedOutput(task,folder)
+            def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder)
             if( !cached ) {
 
                 folder = createTaskFolder(folder, hash)
