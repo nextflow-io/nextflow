@@ -195,15 +195,9 @@ abstract class BaseScript extends Script {
             config.task.each { String key, value -> taskConfig.setProperty(key,value) }
         }
 
-        // override with properties defined by the current session
-        if( session.echo ) {
-            taskConfig.echo = session.echo
-        }
-
         if( name ) {
             taskConfig.name = name
         }
-
 
         // create the processor object
         // note: 'processor' have to be deprecated in favor of 'executor'

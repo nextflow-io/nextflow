@@ -19,8 +19,6 @@ class CliOptions {
     @Parameter(names=['-history'], description = 'Show history of executed commands')
     boolean history
 
-    @Parameter(names=['-echo'], description = 'Print out task(s) output')
-    boolean echo
     @Parameter(names=['-log'], description = 'Define the application log file')
     String logFile = ".${Const.APP_NAME}.log"
 
@@ -66,8 +64,11 @@ class CliOptions {
     /**
      * Defines the parameters to be passed to the pipeline script
      */
-    @DynamicParameter(names = "--", description = "Define a variable to be used by the workflow" )
+    @DynamicParameter(names = '--', description = 'Set a parameter used by the workflow' )
     Map<String,String> params = new LinkedHashMap<>()
+
+    @DynamicParameter(names = ['-t.','-task.'], description = 'Set task options used by the workflow' )
+    Map<String,String> task = new LinkedHashMap<>()
 
     /**
      * Extra parameters for the script execution

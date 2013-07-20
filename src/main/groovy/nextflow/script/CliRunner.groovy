@@ -362,6 +362,13 @@ class CliRunner {
                 current += ( i<args.size() ? args[i++] : 'true' )
                 normalized[-1] = current
             }
+
+            else if( (current ==~ /^\-t\..+/ || current ==~ /^\-task\..+/) && !current.contains('=')) {
+                current += '='
+                current += ( i<args.size() ? args[i++] : 'true' )
+                normalized[-1] = current
+            }
+
         }
 
         return normalized
@@ -419,6 +426,11 @@ class CliRunner {
             def configFiles = validateConfigFiles(options.config)
             def config = buildConfig(configFiles)
 
+            // -- override 'task' parameters defined on the cmd line
+            options.task.each { name, value ->
+                config.task[name] = parseValue(value)
+            }
+
             // -- check for the 'continue' flag
             if( options.resume ) {
                 def uniqueId = options.resume
@@ -446,7 +458,6 @@ class CliRunner {
             def runner = new CliRunner(config)
             runner.session.cacheable = options.cacheable
             runner.session.workDir = options.workDir
-            runner.session.echo = options.echo
 
             // -- specify the arguments
             def scriptArgs = options.arguments.size()>1 ? options.arguments[1..-1] : null
@@ -535,7 +546,7 @@ class CliRunner {
     def static Map buildConfig0( Map env, List<String> confText )  {
         assert env
 
-        ConfigObject result = new ConfigSlurper().parse('env{}; session{}; params{} ')
+        ConfigObject result = new ConfigSlurper().parse('env{}; session{}; params{}; task{} ')
 
         env.sort().each { name, value -> result.env.put(name,value) }
 
