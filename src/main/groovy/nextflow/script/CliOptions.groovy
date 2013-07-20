@@ -2,6 +2,7 @@ package nextflow.script
 
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
+import nextflow.Const
 
 /**
  *
@@ -20,6 +21,8 @@ class CliOptions {
 
     @Parameter(names=['-echo'], description = 'Print out task(s) output')
     boolean echo
+    @Parameter(names=['-log'], description = 'Define the application log file')
+    String logFile = ".${Const.APP_NAME}.log"
 
     /**
      * The packages to trace

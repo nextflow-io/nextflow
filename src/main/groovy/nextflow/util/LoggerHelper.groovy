@@ -52,11 +52,13 @@ class LoggerHelper {
      *     By default only the INFORMATION level logging messages are visualized to the console,
      *     instead in the file are saved the DEBUG level messages.
      *
+     * @param logFileName The file where save the application log
      * @param quiet When {@code true} only Warning and Error messages are visualized to teh console
      * @param debugConf The list of packages for which use a Debug logging level
      * @param traceConf The list of packages for which use a Trace logging level
      */
-    static void configureLogger(boolean quiet, List<String> debugConf, List<String> traceConf) {
+    static void configureLogger( String logFileName, boolean quiet, List<String> debugConf, List<String> traceConf ) {
+        assert logFileName
 
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory()
 
@@ -81,12 +83,11 @@ class LoggerHelper {
         consoleAppender.start()
 
         // -- the file appender
-        def fileName = ".${Const.MAIN_PACKAGE}.log"
         def fileAppender = new RollingFileAppender()
-        fileAppender.file = fileName
+        fileAppender.file = logFileName
 
         def rollingPolicy = new  FixedWindowRollingPolicy( )
-        rollingPolicy.fileNamePattern = "${fileName}.%i"
+        rollingPolicy.fileNamePattern = "${logFileName}.%i"
         rollingPolicy.setContext(loggerContext)
         rollingPolicy.setParent(fileAppender)
         rollingPolicy.setMinIndex(1)
@@ -201,7 +202,8 @@ class LoggerHelper {
 
         @Override
         public boolean isTriggeringEvent(File activeFile, E event) {
-            if (!firstTime.get()) { // fast path
+
+            if ( !firstTime.get() ) { // fast path
                 return false;
             }
 

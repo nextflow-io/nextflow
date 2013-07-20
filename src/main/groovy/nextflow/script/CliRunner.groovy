@@ -377,7 +377,7 @@ class CliRunner {
         try {
             // -- parse the program arguments - and - configure the logger
             def options = parseMainArgs(args)
-            LoggerHelper.configureLogger( options.quiet, options.debug, options.trace )
+            LoggerHelper.configureLogger( options.logFile, options.quiet, options.debug, options.trace )
 
             // -- print out the version number, then exit
             if ( options.version ) {
