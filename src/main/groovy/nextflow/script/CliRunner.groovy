@@ -570,7 +570,8 @@ class CliRunner {
 
         Const.with {
             if ( full ) {
-                "${getAPP_NAME()} version ${APP_VER}.${APP_BUILDNUM} - build timestamp ${APP_TIMESTAMP_UTC}"
+                "${getAPP_NAME()} version ${APP_VER}.${APP_BUILDNUM} ~ build timestamp ${APP_TIMESTAMP_UTC}"
+                //"${getAPP_NAME()} version ${APP_VER}.${APP_BUILDNUM} ~ build timestamp ${APP_TIMESTAMP_UTC} ~ jvm: ${System.getProperty('java.version')} (${ System.getProperty('java.vendor')}) ~ os: ${System.getProperty('os.name')} ${ System.getProperty('os.version')} (${ System.getProperty('os.arch')})"
             }
             else {
                 APP_VER
