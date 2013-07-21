@@ -80,7 +80,20 @@ class Nextflow {
      * @return
      */
     static <T> DataflowQueue<T> channel( Collection<T> values = null ) {
-        return new Channel<T>(values)
+        log.trace("channel[1]: $values")
+
+        def channel = new DataflowQueue<T>()
+        if ( values )  {
+            // bind e
+            values.each { channel << it }
+
+            // since queue is 'finite' close it by a poison pill
+            // so the operator will stop on when all values in the queue are consumed
+            // (otherwise it will wait forever for a new entry)
+            channel << PoisonPill.instance
+        }
+
+        return channel
     }
 
     /**
@@ -93,7 +106,8 @@ class Nextflow {
      * @return
      */
     static <T> DataflowQueue<T> channel( T... items ) {
-        return new Channel<T>(items)
+        log.trace("channel[2]: $items")
+        return channel(items as List)
     }
 
     /**
