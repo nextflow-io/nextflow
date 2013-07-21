@@ -1,6 +1,7 @@
 package nextflow.processor
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
@@ -41,8 +42,6 @@ class ParallelTaskProcessor extends TaskProcessor {
         def params = [inputs: opInputs, outputs: opOutputs, maxForks: maxForks, listeners: [new TaskProcessorInterceptor()] ]
         session.allProcessors << (processor = new DataflowOperator(group, params, wrapper).start())
 
-        // increment the session sync
-        session.sync.countUp()
 
     }
 
@@ -101,6 +100,8 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         // -- call the closure and execute the script
         try {
+            log.trace "Binding map for task > ${task.name} ::: ${task.code.delegate}"
+
             currentTask.set(task)
             task.script = task.code.call()?.toString()?.stripIndent()
 
@@ -148,7 +149,37 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         @Override
         public void afterStart(final DataflowProcessor processor) {
-            log.trace "After start > $name"
+            // increment the session sync
+            def val = session.taskRegister()
+            log.trace "After start > register phaser '$name' :: $val"
+        }
+
+        @Override
+        public List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
+            log.trace "Before run > ${currentTask.get()?.name ?: name} -- messages: ${messages}"
+            return messages;
+        }
+
+        @Override
+        public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+            if( log.isTraceEnabled() ) {
+                def inputs = new ArrayList(taskConfig.inputs?.keySet())
+                def name = currentTask.get()?.name ?: name
+                log.trace "Message arrived > ${name} -- ${inputs.get(index)} => ${message}"
+            }
+
+            return message;
+        }
+
+        @Override
+        public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+            if( log.isTraceEnabled() ) {
+                def inputs = new ArrayList(taskConfig.inputs?.keySet())
+                def name = currentTask.get()?.name ?: name
+                log.trace "Control arrived > ${name} -- ${inputs.get(index)} => ${message}"
+            }
+
+            return message;
         }
 
         @Override
@@ -160,9 +191,9 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         @Override
         public void afterStop(final DataflowProcessor processor) {
-            log.debug "After stop > $name"
             // increment the session sync
-            session.sync.countDown()
+            def val = session.taskDeregister()
+            log.debug "After stop > deregister phaser '$name' :: $val"
         }
 
         /**

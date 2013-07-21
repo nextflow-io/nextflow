@@ -18,8 +18,6 @@
  */
 
 package nextflow
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.atomic.AtomicInteger
 
 import com.google.common.collect.LinkedHashMultimap
 import com.google.common.collect.Multimap
@@ -29,6 +27,7 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.group.NonDaemonPGroup
 import groovyx.gpars.group.PGroup
 import groovyx.gpars.util.PoolUtils
+import jsr166y.Phaser
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 /**
@@ -37,30 +36,6 @@ import nextflow.processor.TaskRun
  */
 @Slf4j
 class Session {
-
-
-    static class SyncLatch {
-
-        AtomicInteger val = new AtomicInteger()
-        CountDownLatch target = new CountDownLatch(1)
-
-        void countDown() {
-            if ( val.decrementAndGet() == 0 ) {
-                target.countDown()
-            }
-        }
-
-        def void countUp() {
-            val.incrementAndGet()
-        }
-
-        def void await() {
-            if ( val ) {
-                target.await()
-            }
-        }
-    }
-
 
     /**
      * Keep a list of all processor created
@@ -94,16 +69,11 @@ class Session {
     def File workDir = new File('./work')
 
     /**
-     * Whenever to print task output if not defined at task level
-     */
-    def boolean echo
-
-    /**
      * The unique identifier of this session
      */
     def final UUID uniqueId
 
-    final private SyncLatch sync = new SyncLatch()
+    final private Phaser phaser = new Phaser()
 
     final private PGroup pgroup
 
@@ -144,19 +114,24 @@ class Session {
         pgroup = new NonDaemonPGroup( config.poolSize as int )
         Dataflow.activeParallelGroup.set(pgroup)
 
+        phaser.register()
     }
 
     /**
      * Await the termination of all processors
      */
     void await() {
-        sync.await()
+        log.trace "Phaser await .. "
+        phaser.arriveAndAwaitAdvance()
+        log.debug "Phaser passed"
     }
 
     void terminate() {
-        log.debug "Session terminated"
+        log.trace "Session join .. "
         allProcessors *. join()
+        log.trace "Session joined"
         pgroup.shutdown()
+        log.debug "Session terminated"
     }
 
     void abort() {
@@ -167,6 +142,14 @@ class Session {
     }
 
     boolean isAborted() { aborted }
+
+    def int taskRegister() {
+        phaser.register()
+    }
+
+    def int taskDeregister() {
+        phaser.arriveAndDeregister()
+    }
 
 
 //    /**

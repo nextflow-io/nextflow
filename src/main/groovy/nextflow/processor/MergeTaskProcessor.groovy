@@ -46,9 +46,6 @@ class MergeTaskProcessor extends TaskProcessor {
         processor = new DataflowOperator(group, params, wrapper)
         session.allProcessors.add(processor)
 
-        // increment the session sync
-        session.sync.countUp()
-
         // -- start it
         processor.start()
     }
@@ -169,7 +166,9 @@ class MergeTaskProcessor extends TaskProcessor {
 
         @Override
         public void afterStart(final DataflowProcessor processor) {
-            log.trace "After start > $name"
+            // increment the session sync
+            def val = session.taskRegister()
+            log.trace "After start > register phaser '$name' :: $val"
         }
 
         @Override
@@ -180,9 +179,9 @@ class MergeTaskProcessor extends TaskProcessor {
 
         @Override
         public void afterStop(final DataflowProcessor processor) {
-            log.debug "After stop > $name"
             // increment the session sync
-            session.sync.countDown()
+            def val = session.taskDeregister()
+            log.debug "After stop > deregister phaser '$name' :: $val"
         }
 
         @Override
