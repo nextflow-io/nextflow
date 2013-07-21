@@ -24,7 +24,6 @@ import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.Channel
 import nextflow.Const
 import nextflow.ExitCode
 import nextflow.Nextflow
@@ -33,6 +32,7 @@ import nextflow.exception.InvalidArgumentException
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import org.apache.commons.io.FilenameUtils
+import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
@@ -279,8 +279,13 @@ class CliRunner {
 
         // define the imports
         def importCustomizer = new ImportCustomizer()
-        importCustomizer.addStaticStars( Nextflow.getName() )
-        importCustomizer.addImports( Channel.getName() )
+        importCustomizer.addImports( StringUtils.name, groovy.transform.Field.name )
+        importCustomizer.addStaticStars( Nextflow.name )
+        importCustomizer.addStaticImport( groovyx.gpars.dataflow.Dataflow.name, 'splitter' )
+        importCustomizer.addStaticImport( groovyx.gpars.dataflow.Dataflow.name, 'operator' )
+        importCustomizer.addStaticImport( groovyx.gpars.dataflow.Dataflow.name, 'prioritySelector' )
+        importCustomizer.addStaticImport( groovyx.gpars.dataflow.Dataflow.name, 'select' )
+        importCustomizer.addStaticImport( groovyx.gpars.dataflow.Dataflow.name, 'selector' )
 
         def config = new CompilerConfiguration()
         config.addCompilationCustomizers( importCustomizer )
