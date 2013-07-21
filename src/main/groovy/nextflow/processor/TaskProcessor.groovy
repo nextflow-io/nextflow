@@ -321,8 +321,8 @@ abstract class TaskProcessor {
             log.info "Cached task > ${task.name}"
 
             // -- print out the cached tasks output when 'echo' is true
-            if( producedFiles.containsKey('-') && taskConfig.echo ) {
-                def out = producedFiles['-']
+            if( taskConfig.echo ) {
+                def out = executor.getStdOutFile(task)
                 if( out instanceof File )  {
                     System.out.print(out.text)
                 }
