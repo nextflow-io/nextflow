@@ -95,7 +95,7 @@ class LoggerHelper {
         rollingPolicy.start()
 
         def encoder = new PatternLayoutEncoder()
-        encoder.setPattern('%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n')
+        encoder.setPattern('%d{MMM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n')
         encoder.setContext(loggerContext)
         encoder.start()
 
