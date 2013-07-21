@@ -57,17 +57,17 @@ class Const {
     /**
      * The application version
      */
-    static final String APP_VER = "0.3.1"
+    static final String APP_VER = "0.3.2"
 
     /**
      * The app build time as linux/unix timestamp
      */
-    static final long APP_TIMESTAMP = 1374166866726
+    static final long APP_TIMESTAMP = 1374446823220
 
     /**
      * The app build number
      */
-    static final int APP_BUILDNUM = 666
+    static final int APP_BUILDNUM = 702
 
     /**
      * The date time formatter string
@@ -99,17 +99,12 @@ class Const {
 
     } ()
 
-    private static String deltaString( String str1, String str2 ) {
+    private static String deltaLocal() {
+        def utc = APP_TIMESTAMP_UTC.split(' ')
+        def loc = APP_TIMESTAMP_LOCAL.split(' ')
 
-        int i=0;
-        while( i<str1.size() && str2.size() && str1[i]==str2[i] && str1[i]!=' ') {
-            i++
-        }
-
-        return i<str2.length() ? str2.substring(i).trim() : ''
+        utc[0] == loc[0] ? loc[1,-1].join(' ') : loc.join(' ')
     }
-
-    private static String deltaLocal() { deltaString( APP_TIMESTAMP_UTC, APP_TIMESTAMP_LOCAL ) }
 
     /*
      * The application 'logo'
