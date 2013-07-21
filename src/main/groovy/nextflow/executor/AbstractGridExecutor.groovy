@@ -201,7 +201,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         }
 
         if( scratch.toLowerCase() in ['ramdisk','ram-disk']) {
-            return 'NF_SCRATCH=$(mktemp -d -p /dev/shm/nextflow) && cd $NF_SCRATCH'
+            return 'NF_SCRATCH=$(mktemp -d -p /dev/shm/) && cd $NF_SCRATCH'
         }
 
 
