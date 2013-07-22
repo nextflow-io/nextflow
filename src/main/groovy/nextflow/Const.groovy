@@ -62,12 +62,12 @@ class Const {
     /**
      * The app build time as linux/unix timestamp
      */
-    static final long APP_TIMESTAMP = 1374446823220
+    static final long APP_TIMESTAMP = 1374494956265
 
     /**
      * The app build number
      */
-    static final int APP_BUILDNUM = 702
+    static final int APP_BUILDNUM = 703
 
     /**
      * The date time formatter string
@@ -103,7 +103,12 @@ class Const {
         def utc = APP_TIMESTAMP_UTC.split(' ')
         def loc = APP_TIMESTAMP_LOCAL.split(' ')
 
-        utc[0] == loc[0] ? loc[1,-1].join(' ') : loc.join(' ')
+        if( APP_TIMESTAMP_UTC == APP_TIMESTAMP_LOCAL ) {
+            return ''
+        }
+
+        def result = utc[0] == loc[0] ? loc[1,-1].join(' ') : loc.join(' ')
+        return "($result)"
     }
 
     /*
@@ -115,7 +120,7 @@ class Const {
 """
       N E X T F L O W
       Version ${APP_VER} build ${APP_BUILDNUM}
-      last modified ${APP_TIMESTAMP_UTC} (${deltaLocal()})
+      last modified ${APP_TIMESTAMP_UTC} ${deltaLocal()}
       http://nextflow-project.org
 """
 
