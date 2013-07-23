@@ -1,6 +1,6 @@
 {
   "name": "nextflow",
-  "title": "Java Parallelism Example",
+  "title": "Nextflow Parallelism Example",
   "summary": "Demonstrates spawning subjobs in Java",
   "dxapi": "1.0.0",
   "inputSpec": [

@@ -1,6 +1,9 @@
 package nextflow.executor
 import com.dnanexus.DXJSON
+import com.dnanexus.DXAPI
 import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 /**
@@ -41,52 +44,59 @@ class DnaNexusExecutor extends AbstractExecutor {
         final scratch = task.workDirectory
         log.debug "Lauching task > ${task.name} -- work folder: $scratch"
 
+
         /*
          * save the environment to a file
          */
         def taskEnv = createEnvironmentString(task)
+        log.debug "Creating Environment"
+
 
         /*
-         * save the main script file
+         * Saving the main script file
          */
         File taskScript = new File('taskScript')
         taskScript.text = task.processor.normalizeScript(task.script.toString())
-        String path= taskScript.absolutePath
+        log.debug "Creating script file > ${taskScript.name}"
 
-        Process uploadCmd = Runtime.getRuntime().exec("dx upload --brief ${path}")
-        // Can specify multiple files above
 
+        /*
+         * Uploading the main script file
+         */
+        Process uploadCmd = Runtime.getRuntime().exec("dx upload --brief ${taskScript.absolutePath}")
         BufferedReader uploadOutput = new BufferedReader(new InputStreamReader(uploadCmd.getInputStream()))
         String fileId = uploadOutput.readLine().trim(); // In general, there'd be one line per uploaded file
-
-        log.debug "File >> ${fileId}"
-        println("END OF PROGRAM")
+        log.debug "Uploading script file >> ${fileId}"
 
 
-       // ObjectMapper mapper = new ObjectMapper();
-    /*    ObjectNode processJobInputHash = DXJSON.getObjectBuilder()
-                .put("function", "process")
-                .put("input", DXJSON.getObjectBuilder()
-                                    .put("taskName", task.name)
-                                    .put("taskScript", makeDXLink(fileId))
-                                    .build())
-                .build()            **/
+        /*
+         * Creating the job
+         */
+        ObjectNode processJobInputHash = DXJSON.getObjectBuilder()
+                    .put("function", "process")
+                    .put("input", DXJSON.getObjectBuilder()
+                            .put("taskName", task.name)
+                            .put("taskScript", makeDXLink(fileId))
+                            .build())
+                    .build()
         //.put("taskEnv", '')
+        log.debug "Creating job parameters"
 
 
         /*
-         * launch the job
+         * Launching the job
          */
-       // String processJobId = DXAPI.jobNew(processJobInputHash).get("id").textValue()
+        String processJobId = DXAPI.jobNew(processJobInputHash).get("id").textValue()
+        log.debug "Launching job > ${processJobId}"
 
 
         /*
-         * Wait for task execution
+         * Waiting for the job to end
          */
-
-
-     /*   JsonNode result = null
+        JsonNode result = null
         String state = null
+        log.debug "Waiting for the job"
+
         while( true ) {
             sleep( 10_000 )
             result = DXAPI.jobDescribe(processJobId)
@@ -94,27 +104,45 @@ class DnaNexusExecutor extends AbstractExecutor {
 
             state = result.get('state').textValue()
             if( state in ['idle', 'waiting_on_input', 'runnable', 'running', 'waiting_on_output', 'terminating'] ) {
+                log.debug "State > ${state}"
                 continue
             }
+            log.debug "State > ${state}"
             break
         }
 
+
+        /*
+         * Getting the task's outputs
+         */
         String exitCode = result.get('output').get('exit_code').textValue()
-        log.debug "task exit code as string: $exitCode"
 
         if( state == 'done' && exitCode?.isInteger() ) {
             task.exitCode = exitCode.toInteger()
-        }       */
+            log.debug "Task's exit code > ${task.exitCode}"
+        }
+
+        ObjectNode jobOutput = DXJSON.getObjectBuilder()
+                .put("output_file", makeJbor(processJobId, "my_output_file"))
+                .build();
+
+        ObjectMapper mapper = new ObjectMapper();
+        File final_output= new File("job_output.json")
+        mapper.writeValue(final_output, jobOutput)
+
+        println("FINAL OUTPUT: ${final_output.text}")
 
 
-//        def output = result.get('output').textValue()
-//        def failureReason = result.get('failureReason').textValue()
-//        def failureMessage = result.get('failureMessage').textValue()
-//
-//        log.debug "task terminated > output: $output -- failureReason: $failureReason -- failureMessage: $failureMessage"
+        task.output = final_output
 
+        /*
+        * Show the job result when the 'echo' flag is set
+        * This have to be replaced by the API call /job-xxx/streamLog -- http://goo.gl/3EFcZW
+        */
+        if( taskConfig.echo ) {
+            println( final_output.toString()) //fileOut.text )
+        }
 
-     //   DXAPI.fileDownload('xx')
 
 
         /*
