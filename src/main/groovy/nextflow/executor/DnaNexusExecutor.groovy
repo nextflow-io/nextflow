@@ -39,6 +39,7 @@ class DnaNexusExecutor extends AbstractExecutor {
     }
 
 
+
     @Override
     void launchTask(TaskRun task) {
         //To change body of implemented methods use File | Settings | File Templates.
@@ -54,30 +55,35 @@ class DnaNexusExecutor extends AbstractExecutor {
         /*
          * save the main script file
          */
-       File taskScript = new File(scratch, 'taskScript')
-       taskScript.text = task.processor.normalizeScript(task.script.toString())
+        File taskScript = new File('taskScript')
+        taskScript.text = task.processor.normalizeScript(task.script.toString())
+        String path= taskScript.absolutePath
+
+        Process uploadCmd = Runtime.getRuntime().exec("dx upload --brief ${path}")
+        // Can specify multiple files above
+
+        BufferedReader uploadOutput = new BufferedReader(new InputStreamReader(uploadCmd.getInputStream()))
+        String fileId = uploadOutput.readLine().trim(); // In general, there'd be one line per uploaded file
+
+        log.debug "File >> ${fileId}"
+        println("END OF PROGRAM")
 
 
-
-        def jsonFile = DXAPI.fileUpload(taskScript)
-        log.debug "File >> ${jsonFile.toString()}"
-        def scriptId = jsonFile.get('ID').textValue()
-
-
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode processJobInputHash = DXJSON.getObjectBuilder()
+       // ObjectMapper mapper = new ObjectMapper();
+    /*    ObjectNode processJobInputHash = DXJSON.getObjectBuilder()
                 .put("function", "process")
                 .put("input", DXJSON.getObjectBuilder()
-                .put("taskName", task.name)
-                .put("taskEnv", '')
-                .put("taskScript", makeDXLink(scriptId) )
-                .build())
-                .build();
+                                    .put("taskName", task.name)
+                                    .put("taskScript", makeDXLink(fileId))
+                                    .build())
+                .build()            **/
+        //.put("taskEnv", '')
+
 
         /*
          * launch the job
          */
-        String processJobId = DXAPI.jobNew(processJobInputHash).get("id").textValue();
+       // String processJobId = DXAPI.jobNew(processJobInputHash).get("id").textValue()
 
 
         /*
@@ -85,7 +91,7 @@ class DnaNexusExecutor extends AbstractExecutor {
          */
 
 
-        JsonNode result = null
+     /*   JsonNode result = null
         String state = null
         while( true ) {
             sleep( 10_000 )
@@ -104,7 +110,7 @@ class DnaNexusExecutor extends AbstractExecutor {
 
         if( state == 'done' && exitCode?.isInteger() ) {
             task.exitCode = exitCode.toInteger()
-        }
+        }       */
 
 
 //        def output = result.get('output').textValue()
