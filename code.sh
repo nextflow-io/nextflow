@@ -14,18 +14,17 @@ process() {
   input_file_id=$(dx-jobutil-parse-link "${taskScript}")
   dx download "$input_file_id" -o task_script --no-progress
 
-  #printf "$taskEnv" > task_env
+  printf "$taskEnv" > task_env
   chmod +x task_script
 
   set +e
-  #(source task_env; ./task_script) > output_file
-  eval task_script > output_file
-  #exitcode=$?
+  (source task_env; ./task_script) > output_file
+  exitcode=$?
   set -e
 
   # Upload the output files and add the output.
   output_file_id=`dx upload output_file --brief --no-progress`
-  #dx-jobutil-add-output exit_code "$exitcode" --class string
+  dx-jobutil-add-output exit_code "$exitcode" --class string
   dx-jobutil-add-output output_file "$output_file_id" --class file
 
   echo "Finished PROCESS subtask ${taskName}"
