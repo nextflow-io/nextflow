@@ -1,14 +1,8 @@
 package nextflow.executor
-
+import com.dnanexus.DXJSON
+import com.fasterxml.jackson.databind.node.ObjectNode
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
-import java.io.*
-import java.util.*
-import org.apache.commons.io.IOUtils
-import com.fasterxml.jackson.databind.*
-import com.fasterxml.jackson.databind.node.*
-import com.dnanexus.*
-
 /**
  * Created with IntelliJ IDEA.
  * User: bmartin
@@ -122,10 +116,34 @@ class DnaNexusExecutor extends AbstractExecutor {
 
      //   DXAPI.fileDownload('xx')
 
+
+        /*
+         * Fake job exit status -- this should come from the job executed in the cloud
+         */
+        task.exitCode = 0
+
+
+        /*
+         * Fake job stdout -- this have to be download from dna-nexus
+         */
+
+        File fileOut = new File(scratch, COMMAND_OUT_FILENAME)
+        fileOut.text = '(fake result)\n\n'
+        task.output = fileOut
+
+        /*
+         * Show the job result when the 'echo' flag is set
+         * This have to be replaced by the API call /job-xxx/streamLog -- http://goo.gl/3EFcZW
+         */
+        if( taskConfig.echo ) {
+            System.out.print( fileOut.text )
+        }
+
+
     }
 
     @Override
     def getStdOutFile(TaskRun task) {
-        return 'none'
+        task.@output
     }
 }
