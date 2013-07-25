@@ -57,21 +57,58 @@ class DnaNexusExecutor extends AbstractExecutor {
          */
         File taskScript = new File('taskScript')
         taskScript.text = task.processor.normalizeScript(task.script.toString())
+        println("PATH: ${taskScript.absolutePath}")
         log.debug "Creating script file > ${taskScript.name}"
 
 
         /*
          * Uploading the main script file
          */
-        Process uploadCmd = Runtime.getRuntime().exec("dx upload --brief ${taskScript.absolutePath}")
-        BufferedReader uploadOutput = new BufferedReader(new InputStreamReader(uploadCmd.getInputStream()))
-        String fileId = uploadOutput.readLine().trim(); // In general, there'd be one line per uploaded file
-        log.debug "Uploading script file >> ${fileId}"
+        Process scriptCmd = Runtime.getRuntime().exec("dx upload --brief ${taskScript.absolutePath}")
+        BufferedReader uploadScript = new BufferedReader(new InputStreamReader(scriptCmd.getInputStream()))
+        String scriptId = uploadScript.readLine().trim(); // In general, there'd be one line per uploaded file
+        log.debug "Uploading script file >> ${scriptId}"
 
+
+        /**
+         * Retrieving & uploading all the inputs of the task
+         */
+        def map = task.code.delegate
+        String cadena = "( "//"ARRAY=("
+
+        map.each{ k, v ->
+            String path = String.valueOf(v)
+            println("PATH: ${path}")
+
+            Process inputCmd = Runtime.getRuntime().exec("dx upload --brief ${path}")
+            BufferedReader uploadInput = new BufferedReader(new InputStreamReader(inputCmd.getInputStream()))
+            String inputId = uploadInput.readLine().trim();
+            String link = makeDXLink(inputId)
+            cadena = cadena + "[${k}]=\'${link}\' "
+
+            log.debug "Uploading input file ${k} >> ${inputId}"
+        }
+
+        cadena = cadena + ")"
+        println("CADENA X STRING >> ${cadena}")
 
         /*
          * Creating the job
          */
+//        ObjectNode processJobInputHash = DXJSON.getObjectBuilder()
+//                .put("function", "process")
+//                .put("input", DXJSON.getObjectBuilder()
+//                .put("taskName", task.name)
+//                .put("taskScript", makeDXLink(fileId))
+//                .build())
+//                .build()
+//        //.put("taskEnv", '')
+//        log.debug "Creating job parameters"
+
+        /*
+         * Creating the job with a input's Map
+         */
+        log.debug "Creating job parameters: inicio"
         ObjectNode processJobInputHash = DXJSON.getObjectBuilder()
                     .put("function", "process")
                     .put("input", DXJSON.getObjectBuilder()
@@ -142,7 +179,7 @@ class DnaNexusExecutor extends AbstractExecutor {
         if( taskConfig.echo ) {
             println( final_output.toString()) //fileOut.text )
         }
-
+        task.output=null
 
 
         /*

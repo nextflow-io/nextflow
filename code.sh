@@ -3,12 +3,24 @@ set -e
 
 # Main entry point for this app.
 main() {
-  nextflow -debug nextflow -c ${DX_FS_ROOT}/nextflow.config ${DX_FS_ROOT}/test.nf
+  nextflow -debug nextflow -c ${DX_FS_ROOT}/nextflow.config ${DX_FS_ROOT}/input_test.nf
 }
 
 # Entry point for parallel subtasks.
 process() {
   echo "Starting PROCESS subtask ${taskName}"
+
+  declare -A arrayC="${cadenas}"
+
+  for i in "${!arrayC[@]}";
+      do
+        echo "key  : $i" ;
+        echo "value: ${arrayC[$i]}" ;
+        input_file_id=$(dx-jobutil-parse-link "${arrayC[$i]}") ;
+        echo "$input_file_id"
+        dx download "$input_file_id" -o "$i" --no-progress  ;
+      done
+
 
   # Download the input files.
   input_file_id=$(dx-jobutil-parse-link "${taskScript}")
