@@ -10,14 +10,13 @@ main() {
 process() {
   echo "Starting PROCESS subtask ${taskName}"
 
-  declare -A arrayC="${cadenas}"
+  declare -A array="${inputs}"
 
-  for i in "${!arrayC[@]}";
+  for i in "${!array[@]}";
       do
         echo "key  : $i" ;
-        echo "value: ${arrayC[$i]}" ;
-        input_file_id=$(dx-jobutil-parse-link "${arrayC[$i]}") ;
-        echo "$input_file_id"
+        echo "value: ${array[$i]}" ;
+        input_file_id=$(dx-jobutil-parse-link "${array[$i]}") ;
         dx download "$input_file_id" -o "$i" --no-progress  ;
       done
 

@@ -74,36 +74,21 @@ class DnaNexusExecutor extends AbstractExecutor {
          * Retrieving & uploading all the inputs of the task
          */
         def map = task.code.delegate
-        String cadena = "( "//"ARRAY=("
+        String inputs = "( "
 
         map.each{ k, v ->
             String path = String.valueOf(v)
-            println("PATH: ${path}")
 
             Process inputCmd = Runtime.getRuntime().exec("dx upload --brief ${path}")
             BufferedReader uploadInput = new BufferedReader(new InputStreamReader(inputCmd.getInputStream()))
             String inputId = uploadInput.readLine().trim();
             String link = makeDXLink(inputId)
-            cadena = cadena + "[${k}]=\'${link}\' "
 
+            inputs = inputs + "[${k}]=\'${link}\' "
             log.debug "Uploading input file ${k} >> ${inputId}"
         }
 
-        cadena = cadena + ")"
-        println("CADENA X STRING >> ${cadena}")
-
-        /*
-         * Creating the job
-         */
-//        ObjectNode processJobInputHash = DXJSON.getObjectBuilder()
-//                .put("function", "process")
-//                .put("input", DXJSON.getObjectBuilder()
-//                .put("taskName", task.name)
-//                .put("taskScript", makeDXLink(fileId))
-//                .build())
-//                .build()
-//        //.put("taskEnv", '')
-//        log.debug "Creating job parameters"
+        inputs = inputs + ")"
 
         /*
          * Creating the job with a input's Map
