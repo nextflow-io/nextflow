@@ -54,7 +54,7 @@ class LocalExecutor extends AbstractExecutor {
         assert task.workDirectory
 
         final scratch = task.workDirectory
-        log.debug "Lauching task > ${task.name} -- scratch folder: $scratch"
+        log.debug "Launching task > ${task.name} -- scratch folder: $scratch"
 
         /*
          * save the environment to a file
