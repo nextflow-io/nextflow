@@ -18,6 +18,7 @@
  */
 
 package nextflow.extension
+
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.group.NonDaemonPGroup
 import nextflow.Nextflow
@@ -31,29 +32,29 @@ class NextflowExtensionsTest extends Specification {
     def 'test chunk string by line' () {
 
         when:
-        def out = []
-        "Hello".chunkLines { out << it }
-
+        def out = []; "Hello".chunkLines { out << it }
         then:
         out  == ['Hello']
 
-
         when:
-        out = []
-        "Hello\nHola\nHalo".chunkLines { out << it }
-
+        out = []; "Hello\nHola\nHalo".chunkLines { out << it }
         then:
         out == ['Hello', 'Hola', 'Halo']
 
-
         when:
-        out = []
-        "11\n22\n33\n44\n55".chunkLines(3) { out << it }
-
+        out = []; "11\n22\n33\n44\n55".chunkLines(3) { out << it }
         then:
         out == [ '11\n22\n33', '44\n55' ]
 
+        when:
+        out = []; "11\n22\n33\n44\n55".chunkLines(size: 2) { out << it }
+        then:
+        out == [ '11\n22', '33\n44', '55' ]
+
     }
+
+    // the channel has to be defined at class level, otherwise the 'WritableChannelInterceptor' does not work
+    def channel = new DataflowQueue()
 
     def 'test chunk file by line ' () {
 
@@ -69,24 +70,42 @@ class NextflowExtensionsTest extends Specification {
         '''.stripIndent()
 
         when:
-        def channel = new DataflowQueue()
         file.chunkLines { channel << it }
 
         then:
-        Nextflow.read(channel) == 'line1'
-        Nextflow.read(channel) == 'line2'
-        Nextflow.read(channel) == 'line3'
-        Nextflow.read(channel) == 'line4'
-        Nextflow.read(channel) == 'line5'
+        channel.val == 'line1'
+        channel.val == 'line2'
+        channel.val == 'line3'
+        channel.val == 'line4'
+        channel.val == 'line5'
+
 
         when:
         channel = new DataflowQueue()
-        file.chunkLines(2) { channel << it }
+        def closure = { channel << it }
+        file.chunkLines(2, closure)
 
         then:
-        Nextflow.read(channel) == 'line1\nline2'
-        Nextflow.read(channel) == 'line3\nline4'
-        Nextflow.read(channel) == 'line5'
+        channel.val == 'line1\nline2'
+        channel.val == 'line3\nline4'
+        channel.val == 'line5'
+        // the following getter are defined by the 'WritableChannelInterceptor'
+        closure.@owner.getWrittenChannels().size() == 1
+        closure.@owner.isClosed() == true
+
+
+        when:
+        channel = new DataflowQueue()
+        closure = { channel << it }
+        file.chunkLines(size:3, autoClose: false, closure)
+
+        then:
+        channel.val == 'line1\nline2\nline3'
+        channel.val == 'line4\nline5'
+        // the following getter are defined by the 'WritableChannelInterceptor'
+        closure.@owner.getWrittenChannels().size() == 1 // one channel has been intercepted
+        closure.@owner.isClosed() == false              // no channel has been close as requested
+
 
     }
 

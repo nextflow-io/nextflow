@@ -1,6 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.3.2 - 22 Jul 2013
+- New command line option '-log' to specify the application log file
+- New command line options '-task.xxx' to task default parameters (overriding the ones in the configuration file)
+- Fixed a bug which was preventing the caching mechanism to work properly
+- Fixed synchronization issue caused by a miss-used CountDownLatch, replaced with a Phaser
+- Fixed a bug by which cached tasks didn't print out any result when 'echo' was set
+- Fixed a bug in the timezone handling in the build timestamp
+
 0.3.1 - 18 Jul 2013
 - Added command line parameter 'echo' to enable default tasks output
 - Fixed an issue on merge task, when it doesn't collect any data the execution is skipped  

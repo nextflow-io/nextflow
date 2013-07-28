@@ -37,7 +37,7 @@ import groovyx.gpars.scheduler.Pool
 /**
  * Provides extension methods to chunk text and file
  *
- * See about extension methods
+ * See more about extension methods
  * http://docs.codehaus.org/display/GROOVY/Creating+an+extension+module
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -46,28 +46,62 @@ import groovyx.gpars.scheduler.Pool
 class NextflowExtensions {
 
     /**
-     * Splits a {@code CharSequence} by lines
+     * Splits a {@code CharSequence} in text chunks having the specified number of lines
      *
-     * @param sequence The sequence of chars to which apply the chunk operation
+     * @param sequence A sequence of chars to which apply the chunkLines operation
      * @param n The number of lines in each 'chunk'
-     * @param channel The channel to which send the result, use {@code null} to create a new {@code DataflowQueue} channel instance
-     * @return The channel to which chunks are written
+     * @param A closure invoked for each chunk of text, it takes a single (optional) string parameter which represents the current text chunk
      */
     public static void chunkLines( CharSequence sequence, int n = 1, Closure block ) {
-        assert sequence
-        chunkLines( new StringReader(sequence.toString()), n, block )
+        assert sequence != null
+        chunkLines( new StringReader(sequence.toString()), [size: n], block )
     }
 
     /**
-     * Splits the content of {@code Reader} by lines
+     * Splits a {@code CharSequence} in text chunks having the specified number of lines
      *
-     * @param reader The reader of chars to which apply the chunk operation
+     * @param sequence A sequence of chars to which apply the chunkLines operation
+     * @param options Specifies the chunk operation options. The following attributes are supported:
+     *   <li>{@code size}: The number of lines in each text chunk (default: 1)
+     *   <li>{@code autoClose}: Close automatically any channel eventually specified in the chunk closure (default: true)
+     * @param A closure invoked for each chunk of text, it takes a single (optional) string parameter which represents the current text chunk
+     */
+    public static void chunkLines( CharSequence sequence, Map options, Closure block ) {
+        assert sequence != null
+        chunkLines( new StringReader(sequence.toString()), options, block )
+    }
+
+    /**
+     * Splits a {@code Reader} in text chunks having the specified number of lines
+     *
+     * @param reader A reader to which apply the chunkLines operation
      * @param n The number of lines in each 'chunk'
-     * @param channel The channel to which send the result, use {@code null} to create a new {@code DataflowQueue} channel instance
-     * @return The channel to which chunks are written
+     * @param A closure invoked for each chunk of text, it takes a single (optional) string parameter which represents the current text chunk
      */
     static void chunkLines( Reader reader, int n = 1,  Closure block) {
-        assert reader
+        chunkLines( reader, [size: n], block)
+    }
+
+
+    /**
+     * Splits a {@code Reader} in text chunks having the specified number of lines
+     *
+     * @param reader A reader to which apply the chunkLines operation
+     * @param options Specifies the chunk operation options. The following attributes are supported:
+     *   <li>{@code size}: The number of lines in each text chunk (default: 1)
+     *   <li>{@code autoClose}: Close automatically any channel eventually specified in the chunk closure (default: true)
+     * @param A closure invoked for each chunk of text, it takes a single (optional) string parameter which represents the current text chunk
+     */
+
+    static void chunkLines( Reader reader, Map options,  Closure block) {
+        assert reader != null
+        assert options != null
+        assert block != null
+
+        log.debug "Chunk options: ${options}"
+
+        int size = options?.size ?: 1
+        log.debug "Chunk size: $size"
 
         BufferedReader reader0 = reader instanceof BufferedReader ? reader : new BufferedReader(reader)
 
@@ -80,7 +114,7 @@ class NextflowExtensions {
         while( (line = reader0.readLine()) != null ) {
             if ( c ) buffer << '\n'
             buffer << line
-            if ( ++c == n ) {
+            if ( ++c == size ) {
                 c = 0
                 block.call( buffer.toString() )
 
@@ -93,76 +127,201 @@ class NextflowExtensions {
         }
 
         // send a poison pill to any written channel
-        interceptor.getWrittenChannels() *.unwrap() .each { channel -> channel << PoisonPill.instance }
+        def close = options.autoClose
+        if( close == null || close == true ) {
+            interceptor.closeChannels()
+        }
+        else {
+            log.debug "Skipping channel autoClose"
+        }
 
     }
 
 
     /**
-     * Splits the content of {@code InputStream} by lines
+     * Splits a {@code File} in text chunks having the specified number of lines
      *
-     * @param stream The stream of chars to which apply the chunk operation
+     * @param file A file to which apply the chunkLines operation
      * @param n The number of lines in each 'chunk'
-     * @param channel The channel to which send the result, use {@code null} to create a new {@code DataflowQueue} channel instance
-     * @return The channel to which chunks are written
+     * @param A closure invoked for each chunk of text, it takes a single (optional) string parameter which represents the current text chunk
      */
     static void chunkLines( File file, int n = 1, Closure block ) {
         assert file
-        chunkLines( new FileReader(file), n, block )
+        chunkLines( new FileReader(file), [size: n], block )
+    }
+
+    /**
+     * Splits a {@code File} in text chunks having the specified number of lines
+     *
+     * @param file A file to which apply the chunkLines operation
+     * @param options Specifies the chunk operation options. The following attributes are supported:
+     *   <li>{@code size}: The number of lines in each text chunk (default: 1)
+     *   <li>{@code autoClose}: Close automatically any channel eventually specified in the chunk closure (default: true)
+     * @param A closure invoked for each chunk of text, it takes a single (optional) string parameter which represents the current text chunk
+     */
+    static void chunkLines( File file, Map options, Closure block ) {
+        assert file
+        chunkLines( new FileReader(file), options, block )
     }
 
 
     /**
-     * Splits the content of {@code InputStream} by lines
+     * Splits a {@code InputStream} in text chunks having the specified number of lines
      *
      * @param stream The stream of chars to which apply the chunk operation
      * @param n The number of lines in each 'chunk'
-     * @param channel The channel to which send the result, use {@code null} to create a new {@code DataflowQueue} channel instance
-     * @return The channel to which chunks are written
+     * @param A closure invoked for each chunk of text, it takes a single (optional) string parameter which represents the current text chunk
      */
     static void chunkLines( InputStream stream, int n = 1, Closure block ) {
         assert stream
-        chunkLines( new InputStreamReader(stream), n, block )
-    }
-
-
-
-    public static void chunkFasta( CharSequence sequence, int n = 1, Closure block ) {
-        assert sequence
-        chunkFasta( new StringReader(sequence.toString()), n, block )
+        chunkLines( new InputStreamReader(stream), [size: n], block )
     }
 
     /**
-     * Split a {@code InputStream} containing FASTA formatted data in chunks
+     * Splits a {@code InputStream} in text chunks having the specified number of lines
      *
-     * @param sequence A {@code InputStream} to which apply the operation
-     * @param n The number of (FASTA) sequences in each chunk
-     * @param channel The channel to which send the result, use {@code null} to create a new {@code DataflowQueue} channel instance
-     * @return The channel to which chunks are written
+     * @param stream A text stream to which apply the chunkLines operation
+     * @param options Specifies the chunk operation options. The following attributes are supported:
+     *   <li>{@code size}: The number of lines in each text chunk (default: 1)
+     *   <li>{@code autoClose}: Close automatically any channel eventually specified in the chunk closure (default: true)
+     * @param A closure invoked for each chunk of text, it takes a single (optional) string parameter which represents the current text chunk
      */
-    static void chunkFasta( InputStream stream, int n = 1, Closure block ) {
+
+    static void chunkLines( InputStream stream, Map options, Closure block ) {
         assert stream
-        chunkFasta( new InputStreamReader(stream), n, block)
+        chunkLines( new InputStreamReader(stream), options, block )
     }
 
     /**
-     * Split a {@code File} containing FASTA formatted data in chunks
+     * Splits a text formatted in multi-FASTA format in chunks containing the specified number of 'sequences'
+     * <p>
+     * Read more about the FASTA format http://en.wikipedia.org/wiki/FASTA_format
      *
-     * @param sequence A {@code InputStream} to which apply the operation
-     * @param n The number of (FASTA) sequences in each chunk
-     * @param channel The channel to which send the result, use {@code null} to create a new {@code DataflowQueue} channel instance
-     * @return The channel to which chunks are written
+     * @param text A {@code CharSequence} holding the sequences to be splitted
+     * @param n The number of 'sequences' in each text chunk (default: 1)
+     * @param block A closure invoked for each chunk of sequences, it takes a single (optional) string parameter which represents the current chunk os sequences
+     */
+    public static void chunkFasta( CharSequence text, int n = 1, Closure block ) {
+        assert text != null
+        chunkFasta( new StringReader(text.toString()), [size: n], block )
+    }
+
+    /**
+     * Splits a text formatted in multi-FASTA format in chunks containing the specified number of 'sequences'
+     * <p>
+     * Read more about the FASTA format http://en.wikipedia.org/wiki/FASTA_format
+     *
+     * @param text A {@code CharSequence} holding the sequences to be splitted
+     * @param options Specifies the chunk operation options. The following attributes are supported:
+     *   <li>{@code size}: The number of sequences in each chunk (default: 1)
+     *   <li>{@code autoClose}: Close automatically any channel eventually specified in the chunk closure (default: true)
+     * @param block A closure invoked for each chunk of sequences, it takes a single (optional) string parameter which represents the current chunk os sequences
+     */
+
+    public static void chunkFasta( CharSequence text, Map options, Closure block ) {
+        assert text != null
+        chunkFasta( new StringReader(text.toString()), options, block )
+    }
+
+    /**
+     * Splits a text formatted in multi-FASTA format in chunks containing the specified number of 'sequences'
+     * <p>
+     * Read more about the FASTA format http://en.wikipedia.org/wiki/FASTA_format
+     *
+     * @param text A {@code InputStream} holding the sequences to be splitted
+     * @param n The number of 'sequences' in each text chunk (default: 1)
+     * @param block A closure invoked for each chunk of sequences, it takes a single (optional) string parameter which represents the current chunk os sequences
+     */
+    static void chunkFasta( InputStream text, int n = 1, Closure block ) {
+        assert text != null
+        chunkFasta( new InputStreamReader(text), [size: n], block)
+    }
+
+    /**
+     * Splits a text formatted in multi-FASTA format in chunks containing the specified number of 'sequences'
+     * <p>
+     * Read more about the FASTA format http://en.wikipedia.org/wiki/FASTA_format
+     *
+     * @param text A {@code InputStream} holding the sequences to be splitted
+     * @param options Specifies the chunk operation options. The following attributes are supported:
+     *   <li>{@code size}: The number of sequences in each chunk (default: 1)
+     *   <li>{@code autoClose}: Close automatically any channel eventually specified in the chunk closure (default: true)
+     * @param block A closure invoked for each chunk of sequences, it takes a single (optional) string parameter which represents the current chunk os sequences
+     */
+
+    static void chunkFasta( InputStream text, Map options, Closure block ) {
+        assert text != null
+        chunkFasta( new InputStreamReader(text), options, block)
+    }
+
+    /**
+     * Splits a text formatted in multi-FASTA format in chunks containing the specified number of 'sequences'
+     * <p>
+     * Read more about the FASTA format http://en.wikipedia.org/wiki/FASTA_format
+     *
+     * @param text A {@code File} holding the sequences to be splitted
+     * @param n The number of 'sequences' in each text chunk (default: 1)
+     * @param block A closure invoked for each chunk of sequences, it takes a single (optional) string parameter which represents the current chunk os sequences
      */
     static void chunkFasta( File file, int n = 1, Closure block ) {
         assert file
         chunkFasta( new FileReader(file), n, block )
     }
 
-    static void chunkFasta( Reader reader, int n = 1,  Closure block ) {
-        assert reader
-        assert block
 
-        BufferedReader reader0 = reader instanceof BufferedReader ? reader : new BufferedReader(reader)
+    /**
+     * Splits a text formatted in multi-FASTA format in chunks containing the specified number of 'sequences'
+     * <p>
+     * Read more about the FASTA format http://en.wikipedia.org/wiki/FASTA_format
+     *
+     * @param text A {@code File} holding the sequences to be splitted
+     * @param options Specifies the chunk operation options. The following attributes are supported:
+     *   <li>{@code size}: The number of sequences in each chunk (default: 1)
+     *   <li>{@code autoClose}: Close automatically any channel eventually specified in the chunk closure (default: true)
+     * @param block A closure invoked for each chunk of sequences, it takes a single (optional) string parameter which represents the current chunk os sequences
+     */
+
+    static void chunkFasta( File file, Map options, Closure block ) {
+        assert file
+        chunkFasta( new FileReader(file), options, block )
+    }
+
+    /**
+     * Splits a text formatted in multi-FASTA format in chunks containing the specified number of 'sequences'
+     * <p>
+     * Read more about the FASTA format http://en.wikipedia.org/wiki/FASTA_format
+     *
+     * @param text A {@code Reader} holding the sequences to be splitted
+     * @param n The number of 'sequences' in each text chunk (default: 1)
+     * @param block A closure invoked for each chunk of sequences, it takes a single (optional) string parameter which represents the current chunk os sequences
+     */
+    static void chunkFasta( Reader text, int n = 1,  Closure block ) {
+        chunkFasta( text, [size: n], block)
+    }
+
+    /**
+     * Splits a text formatted in multi-FASTA format in chunks containing the specified number of 'sequences'
+     * <p>
+     * Read more about the FASTA format http://en.wikipedia.org/wiki/FASTA_format
+     *
+     * @param text A {@code Reader} holding the sequences to be splitted
+     * @param options Specifies the chunk operation options. The following attributes are supported:
+     *   <li>{@code size}: The number of sequences in each chunk (default: 1)
+     *   <li>{@code autoClose}: Close automatically any channel eventually specified in the chunk closure (default: true)
+     * @param block A closure invoked for each chunk of sequences, it takes a single (optional) string parameter which represents the current chunk os sequences
+     */
+
+    static void chunkFasta( Reader text, Map options, Closure block ) {
+        assert text != null
+        assert block != null
+        assert options != null
+
+        log.debug "Chunk options: $options"
+
+        int size = options.size ?: 1
+        log.debug "Chunk size: $size"
+
+        BufferedReader reader0 = text instanceof BufferedReader ? text : new BufferedReader(text)
         // -- wrap the owner to intercept any reference to an external dataflow instance
         final interceptor = new WritableChannelInterceptor(block)
 
@@ -182,7 +341,7 @@ class NextflowExtensions {
             else if ( openBlock && line.charAt(0)=='>') {
                 // another block is started
 
-                if ( ++blockCount == n ) {
+                if ( ++blockCount == size ) {
                     // invoke the closure, passing the read block as parameter
                     block.call(buffer.toString())
 
@@ -204,9 +363,14 @@ class NextflowExtensions {
         }
 
         // send a poison pill to any written channel
-        interceptor.getWrittenChannels() *.unwrap() .each { channel -> channel << PoisonPill.instance }
+        def close = options.autoClose
+        if( close == null || close == true ) {
+            interceptor.closeChannels()
+        }
+        else {
+            log.debug "Skipping channel autoClose"
+        }
     }
-
 
 
 
@@ -377,6 +541,10 @@ class NextflowExtensions {
         /* Any reference to a {@code DataflowQueue} or {@code DataflowBroadcast} in the closure block */
         def List<WriteChannelWrap> channels = []
 
+        def private added = []
+
+        def private boolean closed = false
+
         WritableChannelInterceptor( Closure code ) {
             assert code
             // replace the closure 'owner' by 'this' instance
@@ -389,13 +557,24 @@ class NextflowExtensions {
             channels.findAll{ WriteChannelWrap it -> it.receivedData }
         }
 
+        def boolean isClosed() { closed }
+
+        def void closeChannels( ) {
+            if( !closed ) {
+                channels *.unwrap() .each { channel -> channel << PoisonPill.instance }
+                closed = true
+            }
+        }
+
         def getProperty(String name) {
 
             def result = target.getProperty(name)
-            if( result instanceof DataflowQueue ) {
+            if( result instanceof DataflowQueue && !added.contains(result)) {
+                added << result
                 channels << ( result = new WriteChannelWrap(result) )
             }
-            else if ( result instanceof DataflowBroadcast ) {
+            else if ( result instanceof DataflowBroadcast && !added.contains(result) ) {
+                added << result
                 channels << ( result = new WriteChannelWrap(result))
             }
 
