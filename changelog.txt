@@ -1,6 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.3.3
+- Added optional parameters to 'chunkLines' and 'chunkFasta' methods
+
 0.3.2 - 22 Jul 2013
 - New command line option '-log' to specify the application log file
 - New command line options '-task.xxx' to task default parameters (overriding the ones in the configuration file)
