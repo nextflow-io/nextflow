@@ -6,7 +6,6 @@
   "inputSpec": [
   ],
   "outputSpec": [
-    {"name": "output_file", "class": "file"}
   ],
   "runSpec": {
     "file": "code.sh",

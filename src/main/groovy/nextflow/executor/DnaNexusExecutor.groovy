@@ -4,8 +4,11 @@ import com.dnanexus.DXAPI
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import groovy.io.FileType
 import groovy.util.logging.Slf4j
+import nextflow.exception.MissingFileException
 import nextflow.processor.TaskRun
+
 /**
  * Created with IntelliJ IDEA.
  * User: bmartin
@@ -79,28 +82,48 @@ class DnaNexusExecutor extends AbstractExecutor {
         map.each{ k, v ->
             String path = String.valueOf(v)
 
-            Process inputCmd = Runtime.getRuntime().exec("dx upload --brief ${path}")
-            BufferedReader uploadInput = new BufferedReader(new InputStreamReader(inputCmd.getInputStream()))
-            String inputId = uploadInput.readLine().trim();
-            String link = makeDXLink(inputId)
+            if( v instanceof DxFile ) {
+                String link = makeDXLink(v.getId())
 
-            inputs = inputs + "[${k}]=\'${link}\' "
-            log.debug "Uploading input file ${k} >> ${inputId}"
+                inputs = inputs + "[${k}]=\'${link}\' "
+                log.debug "Getting input DxFile ${k} >> ${v.getId()}"
+            }
+            else if( v instanceof File ) {
+                Process inputCmd = Runtime.getRuntime().exec("dx upload --brief ${path}")
+                BufferedReader uploadInput = new BufferedReader(new InputStreamReader(inputCmd.getInputStream()))
+                String inputId = uploadInput.readLine().trim();
+                String link = makeDXLink(inputId)
+
+                inputs = inputs + "[${k}]=\'${link}\' "
+                log.debug "Uploading input file ${k} >> ${inputId}"
+            }
+            else {
+                log.warn "Unsupported input type: $k --> $v"
+            }
         }
 
         inputs = inputs + ")"
 
+        String outputs = "( "
+
+        taskConfig.getOutputs().keySet().each { String name ->
+             outputs= outputs + "\"${name}\" "
+        }
+        outputs = outputs + ")"
+        println("OUTPUTS: ${outputs}")
+
         /*
          * Creating the job with a input's Map
          */
-        log.debug "Creating job parameters: inicio"
         ObjectNode processJobInputHash = DXJSON.getObjectBuilder()
-                    .put("function", "process")
-                    .put("input", DXJSON.getObjectBuilder()
-                            .put("taskName", task.name)
-                            .put("taskScript", makeDXLink(fileId))
-                            .build())
-                    .build()
+                .put("function", "process")
+                .put("input", DXJSON.getObjectBuilder()
+                        .put("inputs", inputs)
+                        .put("outputs", outputs)
+                        .put("taskName", task.name)
+                        .put("taskScript", makeDXLink(scriptId))
+                        .build())
+                .build()
         //.put("taskEnv", '')
         log.debug "Creating job parameters"
 
@@ -144,26 +167,26 @@ class DnaNexusExecutor extends AbstractExecutor {
             log.debug "Task's exit code > ${task.exitCode}"
         }
 
-        ObjectNode jobOutput = DXJSON.getObjectBuilder()
-                .put("output_file", makeJbor(processJobId, "my_output_file"))
+    /*    ObjectNode jobOutput = DXJSON.getObjectBuilder()
+                .put("output_file", makeJbor(processJobId, "file1"))
                 .build();
 
         ObjectMapper mapper = new ObjectMapper();
         File final_output= new File("job_output.json")
         mapper.writeValue(final_output, jobOutput)
+        log.debug "Final output >> ${final_output.text}"
 
-        println("FINAL OUTPUT: ${final_output.text}")
 
-
-        task.output = final_output
+        task.output = final_output                  */
+        task.jobId = processJobId
 
         /*
         * Show the job result when the 'echo' flag is set
         * This have to be replaced by the API call /job-xxx/streamLog -- http://goo.gl/3EFcZW
         */
-        if( taskConfig.echo ) {
+    /*    if( taskConfig.echo ) {
             println( final_output.toString()) //fileOut.text )
-        }
+        }*/
         task.output=null
 
 
@@ -195,5 +218,31 @@ class DnaNexusExecutor extends AbstractExecutor {
     @Override
     def getStdOutFile(TaskRun task) {
         task.@output
+    }
+
+
+
+    def collectResultFile( TaskRun task, String fileName ) {
+        assert fileName
+        assert task
+        assert task.jobId
+
+        // the '-' stands for the script stdout, save to a file
+        if( fileName == '-' ) {
+            return getStdOutFile(task)
+        }
+
+
+        JsonNode node = DXAPI.jobDescribe(task.jobId)
+        //String file = node.get('output').get(fileName).textValue()
+        String file = node.get('output').get(fileName).textValue()
+
+        println("RESULTADO2 ${fileName} >> ${file} ")
+
+        //"${task.jobId}:${fileName}"
+        def result = new DxFile(id:file, name: fileName)
+        log.debug "Result File >> ${result.getName()} : ${result.getId()}"
+
+        return result
     }
 }
