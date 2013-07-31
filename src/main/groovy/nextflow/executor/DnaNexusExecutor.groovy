@@ -1,12 +1,9 @@
 package nextflow.executor
-import com.dnanexus.DXJSON
 import com.dnanexus.DXAPI
-import com.fasterxml.jackson.databind.node.ObjectNode
+import com.dnanexus.DXJSON
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
-import groovy.io.FileType
+import com.fasterxml.jackson.databind.node.ObjectNode
 import groovy.util.logging.Slf4j
-import nextflow.exception.MissingFileException
 import nextflow.processor.TaskRun
 
 /**
