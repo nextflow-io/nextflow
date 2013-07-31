@@ -39,6 +39,11 @@ class TaskRun {
     def id
 
     /**
+     * The jobid as provided by the underlying execution system (process, SGE jobid, dnanexus jobid, etc)
+     */
+    def jobId
+
+    /**
      * Task index within its execution group
      */
     def index

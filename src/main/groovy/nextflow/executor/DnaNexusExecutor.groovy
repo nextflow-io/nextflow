@@ -232,17 +232,38 @@ class DnaNexusExecutor extends AbstractExecutor {
             return getStdOutFile(task)
         }
 
-
         JsonNode node = DXAPI.jobDescribe(task.jobId)
-        //String file = node.get('output').get(fileName).textValue()
-        String file = node.get('output').get(fileName).textValue()
 
-        println("RESULTADO2 ${fileName} >> ${file} ")
+        if(fileName.startsWith('*.')){
+            String outputs = node.get('output')
+            String[] array = outputs.substring(1,outputs.length()-2).split(",")
 
-        //"${task.jobId}:${fileName}"
-        def result = new DxFile(id:file, name: fileName)
-        log.debug "Result File >> ${result.getName()} : ${result.getId()}"
+            for(int i=0; i< array.length; i++){
+                array[i] = array[i].substring(0,array[i].indexOf(":")).replace("\"","")
+            }
 
-        return result
+            String name
+            String expression =  fileName.replace(".","\\.").replace("*",".*")
+
+            for(int i=0; i<array.length; i++ ) {
+                if(array[i] =~ /$expression/){
+                    name = array[i]
+                }
+            }
+
+            String fileFinal = node.get('output').get(name).textValue()
+            def result = new DxFile(id:fileFinal, name: name)
+            log.debug "Result File >> ${fileName} >> ${name} >> ${fileFinal}"
+
+            return result
+
+        }else{
+            String file = node.get('output').get(fileName).textValue()
+
+            def result = new DxFile(id:file, name: fileName)
+            log.debug "Result File >> ${result.getName()} : ${result.getId()}"
+
+            return result
+        }
     }
 }

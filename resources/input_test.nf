@@ -24,10 +24,11 @@ task {
 
 task {
   input file1
+  output '*.txt'
 
   """
   echo 'This is the second task'
-  cat ${file1}
+  cat ${file1} > prueba.txt
   """
 
 }
