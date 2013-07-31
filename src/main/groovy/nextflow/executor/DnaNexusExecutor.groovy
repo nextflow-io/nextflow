@@ -229,10 +229,27 @@ class DnaNexusExecutor extends AbstractExecutor {
             return getStdOutFile(task)
         }
 
-        JsonNode node = DXAPI.jobDescribe(task.jobId)
+        JsonNode node = DXAPI.jobDescribe(task.jobId?.toString())
+        def output = node.get('output').get(fileName)
+        log.debug "Dx output: ${output.toString()}"
+
+        return getFiles(output, fileName)
+
+    }
+
+    /**
+     * Given the list JSON node containing the job output, return the {@code DxFile} instance
+     * for the fine specified by the string {@code fileName}.
+     * <p>
+     *     When {@code fileName} contains one or more wildcards (star or question mark) a list of
+     *     of files may be returned
+     *
+     * @param output
+     * @param fileName
+     */
+    def static getFiles( JsonNode outputs, String fileName ) {
 
         if(fileName.startsWith('*.')){
-            String outputs = node.get('output')
             String[] array = outputs.substring(1,outputs.length()-2).split(",")
 
             for(int i=0; i< array.length; i++){
@@ -248,14 +265,14 @@ class DnaNexusExecutor extends AbstractExecutor {
                 }
             }
 
-            String fileFinal = node.get('output').get(name).textValue()
+            String fileFinal = outputs.get(name).textValue()
             def result = new DxFile(id:fileFinal, name: name)
             log.debug "Result File >> ${fileName} >> ${name} >> ${fileFinal}"
 
             return result
 
         }else{
-            String file = node.get('output').get(fileName).textValue()
+            String file = outputs.get(fileName).textValue()
 
             def result = new DxFile(id:file, name: fileName)
             log.debug "Result File >> ${result.getName()} : ${result.getId()}"

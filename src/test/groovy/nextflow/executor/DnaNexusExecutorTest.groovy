@@ -1,6 +1,7 @@
 package nextflow.executor
 
 import com.dnanexus.DXJSON
+import nextflow.exception.MissingFileException
 import nextflow.util.DxFile
 import spock.lang.Specification
 /**
@@ -52,10 +53,17 @@ class DnaNexusExecutorTest extends Specification {
                 new DxFile(name:'file2', id:'file-7F7G7G7S7HTKGLH0D9A8A8D8')
         ]
 
+        // missing file
+        when:
+        DnaNexusExecutor.getFiles(output,'missing.file')
+        then:
+        thrown(MissingFileException)
 
-
-
-
+        // empty list
+        when:
+        def listEmpty = DnaNexusExecutor.getFiles(output, '*.gtf')
+        then:
+        listEmpty == []
 
 
 
