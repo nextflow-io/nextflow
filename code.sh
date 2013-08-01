@@ -3,7 +3,7 @@ set -e
 
 # Main entry point for this app.
 main() {
-  nextflow -debug nextflow -c ${DX_FS_ROOT}/nextflow.config ${DX_FS_ROOT}/input_test.nf
+  nextflow -debug nextflow -c ${DX_FS_ROOT}/nextflow.config ${DX_FS_ROOT}/output_test.nf
 }
 
 # Entry point for parallel subtasks.
@@ -16,7 +16,7 @@ process() {
   for i in "${!array[@]}";
       do
         input_file_id=$(dx-jobutil-parse-link "${array[$i]}") ;
-        dx download "$input_file_id" -o "$i" --no-progress  ;
+        dx download "$input_file_id" --no-progress  ;
       done
 
 
@@ -35,24 +35,18 @@ process() {
 
 
   # Upload the output files and add the output.
-  #output_file_id=`dx upload file.txt --brief --no-progress`
-  #dx-jobutil-add-output file.txt "$output_file_id" --class file
   dx-jobutil-add-output exit_code "$exitcode" --class string
 
   for item in "${outputs[@]}"; do
     for name in `ls $item 2>/dev/null`; do
           output_file_id=`dx upload "${name}" --brief --no-progress` ;
-          #dx-jobutil-add-output "${name}" "$output_file_id" --class file ;
           dx-jobutil-add-output "${name}" "$output_file_id" --class string ;
-
-          echo "NAME: ${name}" ;
-          echo "ID: ${output_file_id}" ;
-
     done
   done
 
   echo "Finished PROCESS subtask ${taskName}"
 }
+
 
 # This entry point is run after all 'process' tasks have finished.
 postprocess() {

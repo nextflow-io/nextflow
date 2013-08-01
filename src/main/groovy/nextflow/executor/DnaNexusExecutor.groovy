@@ -18,7 +18,6 @@ import nextflow.processor.TaskRun
 @Slf4j
 class DnaNexusExecutor extends AbstractExecutor {
 
-
     private static final COMMAND_OUT_FILENAME = '.command.out'
 
     private static final COMMAND_RUNNER_FILENAME = '.command.run'
@@ -35,7 +34,6 @@ class DnaNexusExecutor extends AbstractExecutor {
     protected ObjectNode makeJbor(String jobId, String fieldName) {
         return DXJSON.getObjectBuilder().put("job", jobId).put("field", fieldName).build();
     }
-
 
 
     @Override
@@ -108,7 +106,7 @@ class DnaNexusExecutor extends AbstractExecutor {
              outputs= outputs + "\"${name}\" "
         }
         outputs = outputs + ")"
-        println("OUTPUTS: ${outputs}")
+
 
         /*
          * Creating the job with a input's Map
@@ -165,28 +163,7 @@ class DnaNexusExecutor extends AbstractExecutor {
             log.debug "Task's exit code > ${task.exitCode}"
         }
 
-    /*    ObjectNode jobOutput = DXJSON.getObjectBuilder()
-                .put("output_file", makeJbor(processJobId, "file1"))
-                .build();
-
-        ObjectMapper mapper = new ObjectMapper();
-        File final_output= new File("job_output.json")
-        mapper.writeValue(final_output, jobOutput)
-        log.debug "Final output >> ${final_output.text}"
-
-
-        task.output = final_output                  */
-        task.jobId = processJobId
-
-        /*
-        * Show the job result when the 'echo' flag is set
-        * This have to be replaced by the API call /job-xxx/streamLog -- http://goo.gl/3EFcZW
-        */
-    /*    if( taskConfig.echo ) {
-            println( final_output.toString()) //fileOut.text )
-        }*/
         task.output=null
-
 
         /*
          * Fake job exit status -- this should come from the job executed in the cloud
@@ -213,11 +190,11 @@ class DnaNexusExecutor extends AbstractExecutor {
 
     }
 
+
     @Override
     def getStdOutFile(TaskRun task) {
         task.@output
     }
-
 
 
     def collectResultFile( TaskRun task, String fileName ) {
@@ -235,8 +212,8 @@ class DnaNexusExecutor extends AbstractExecutor {
         log.debug "Dx output: ${output.toString()}"
 
         return getFiles(output, fileName)
-
     }
+
 
     /**
      * Given the list JSON node containing the job output, return the {@code DxFile} instance
@@ -269,21 +246,20 @@ class DnaNexusExecutor extends AbstractExecutor {
 
             for(int i=0; i<array.length; i++ ) {
                 if(array[i] =~ /^$expression$/){
-                    String fileId = outputs.get(array[i]).textValue()
+                    String fileId = outputs.get(array[i])?.textValue()
                     DxFile file = new DxFile(id:fileId, name: array[i])
                     result.add(file)
                     log.debug "Result File >> ${fileName} >> ${array[i]} >> ${fileId}"
                 }
             }
 
-
             if( !result ) {
                 throw new MissingFileException("Missing output file(s): '$fileName' expected by task: ${taskConfig.name}")
             }
 
             return result
-
-        }else{
+        }
+        else{
             String file = outputs.get(fileName)?.textValue()
 
             if( !file ) {
@@ -295,7 +271,5 @@ class DnaNexusExecutor extends AbstractExecutor {
 
             return result
         }
-
-
     }
 }

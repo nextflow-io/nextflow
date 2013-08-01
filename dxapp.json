@@ -1,7 +1,7 @@
 {
   "name": "nextflow",
-  "title": "Nextflow Parallelism Example",
-  "summary": "Demonstrates spawning subjobs in Java",
+  "title": "Nextflow DnaNexus Execution",
+  "summary": "Executes nextflow's pipelines in DnaNexus",
   "dxapi": "1.0.0",
   "inputSpec": [
   ],
