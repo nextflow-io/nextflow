@@ -4,6 +4,7 @@ import com.dnanexus.DXJSON
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import groovy.util.logging.Slf4j
+import nextflow.exception.MissingFileException
 import nextflow.processor.TaskRun
 
 /**
@@ -230,7 +231,7 @@ class DnaNexusExecutor extends AbstractExecutor {
         }
 
         JsonNode node = DXAPI.jobDescribe(task.jobId?.toString())
-        def output = node.get('output').get(fileName)
+        def output = node.get('output')
         log.debug "Dx output: ${output.toString()}"
 
         return getFiles(output, fileName)
@@ -247,37 +248,54 @@ class DnaNexusExecutor extends AbstractExecutor {
      * @param output
      * @param fileName
      */
-    def static getFiles( JsonNode outputs, String fileName ) {
+    def getFiles( JsonNode outputs, String fileName ) {
 
-        if(fileName.startsWith('*.')){
-            String[] array = outputs.substring(1,outputs.length()-2).split(",")
+        if(fileName.contains('*') || fileName.contains('?')){
+            String output_string = outputs.toString()
+            String[] array = output_string.substring(1,output_string.length()-2).split(",")
 
             for(int i=0; i< array.length; i++){
                 array[i] = array[i].substring(0,array[i].indexOf(":")).replace("\"","")
             }
 
-            String name
-            String expression =  fileName.replace(".","\\.").replace("*",".*")
+            def result = []
+            String expression
+
+            if(fileName.contains('*'))
+                expression =  fileName.replace(".","\\.").replace("*",".*")
+            else if (fileName.contains('?'))
+                expression =  fileName.replace(".","\\.").replace("?",".?")
+
 
             for(int i=0; i<array.length; i++ ) {
-                if(array[i] =~ /$expression/){
-                    name = array[i]
+                if(array[i] =~ /^$expression$/){
+                    String fileId = outputs.get(array[i]).textValue()
+                    DxFile file = new DxFile(id:fileId, name: array[i])
+                    result.add(file)
+                    log.debug "Result File >> ${fileName} >> ${array[i]} >> ${fileId}"
                 }
             }
 
-            String fileFinal = outputs.get(name).textValue()
-            def result = new DxFile(id:fileFinal, name: name)
-            log.debug "Result File >> ${fileName} >> ${name} >> ${fileFinal}"
+
+            if( !result ) {
+                throw new MissingFileException("Missing output file(s): '$fileName' expected by task: ${taskConfig.name}")
+            }
 
             return result
 
         }else{
-            String file = outputs.get(fileName).textValue()
+            String file = outputs.get(fileName)?.textValue()
+
+            if( !file ) {
+                throw new MissingFileException("Missing output file(s): '$fileName' expected by task: ${taskConfig.name}")
+            }
 
             def result = new DxFile(id:file, name: fileName)
             log.debug "Result File >> ${result.getName()} : ${result.getId()}"
 
             return result
         }
+
+
     }
 }
