@@ -3,10 +3,27 @@ set -e
 
 # Main entry point for this app.
 main() {
-  nextflow -debug nextflow -c ${DX_FS_ROOT}/nextflow.config ${DX_FS_ROOT}/output_test.nf
+    #echo 'Install Java 6 runtime'
+    #apt-get install -y openjdk-6-jre-headless > /dev/null
+
+    #
+    # Download the script file
+    script_id=$(dx-jobutil-parse-link "${script}")
+    dx download ${script_id} -o script.nf
+
+    # Launch it !
+    set +e
+    nextflow -log $PWD\nextflow.log -c ${DX_FS_ROOT}/nextflow.config script.nf
+    echo "nextflow exitstatus > $?"
+    set -e
+
+    # returns the nextflow log
+    log_file_id=$(dx upload $PWD\nextflow.log --brief)
+    echo "log_file_id: $log_file_id"
+    dx-jobutil-add-output 'log' "$log_file_id" --class=file
 }
 
-# Entry point for parallel subtasks.
+# Entry point for parallel sub-tasks.
 process() {
   echo "Starting PROCESS subtask ${taskName}"
 
@@ -36,15 +53,17 @@ process() {
 
   # Execution of the task's script
   set +e
-  #(source task_env; ./task_script) > my_output_file
-  ./task_script
+  ( ./task_script ) > .command.out
   exitcode=$?
   set -e
 
-
   # Set as output the exit code of the script's execution
   dx-jobutil-add-output exit_code "$exitcode" --class string
-
+  # Upload the command result
+  if [ -f .command.out ]; then
+     output_file_id=`dx upload ".command.out" --brief --no-progress` ;
+     dx-jobutil-add-output ".command.out" "$output_file_id" --class string ;
+  fi
 
   # Upload and set as outputs the files which matches the
   # names or structures of the files declared in "outputs[]"
