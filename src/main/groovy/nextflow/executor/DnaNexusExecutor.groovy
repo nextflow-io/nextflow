@@ -26,7 +26,7 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.MissingFileException
 import nextflow.processor.TaskRun
 import nextflow.util.DxFile
-
+import nextflow.util.DxHelper
 /**
  * Executes script.nf indicated in code.sh in the DnaNexus environment
  * -->  https://www.dnanexus.com/
@@ -175,7 +175,7 @@ class DnaNexusExecutor extends AbstractExecutor {
          */
         String processJobId = DXAPI.jobNew(processJobInputHash).get("id").textValue()
         log.debug "Launching job > ${processJobId}"
-
+        task.jobId = processJobId
 
         /*
          * Waiting for the job to end while showing the state job's state and details.
@@ -185,7 +185,7 @@ class DnaNexusExecutor extends AbstractExecutor {
         log.debug "Waiting for the job"
 
         while( true ) {
-            sleep( 10_000 )
+            sleep( 15_000 )
             result = DXAPI.jobDescribe(processJobId)
             log.debug "Task ${task.name} -- current result: ${result.toString()}\n"
 
@@ -207,30 +207,6 @@ class DnaNexusExecutor extends AbstractExecutor {
         if( state == 'done' && exitCode?.isInteger() ) {
             task.exitCode = exitCode.toInteger()
             log.debug "Task's exit code > ${task.exitCode}"
-        }
-
-        task.output=null
-
-        /*
-         * Fake job exit status -- this should come from the job executed in the cloud
-         */
-        task.exitCode = 0
-
-
-        /*
-         * Fake job stdout -- this have to be download from dna-nexus
-         */
-
-        File fileOut = new File(scratch, COMMAND_OUT_FILENAME)
-        fileOut.text = '(fake result)\n\n'
-        task.output = fileOut
-
-        /*
-         * Show the job result when the 'echo' flag is set
-         * This have to be replaced by the API call /job-xxx/streamLog -- http://goo.gl/3EFcZW
-         */
-        if( taskConfig.echo ) {
-            System.out.print( fileOut.text )
         }
 
 
