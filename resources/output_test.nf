@@ -2,6 +2,7 @@ import nextflow.util.DxFile
 
 params.genome= 'file-B7jPG5j0FqX1ByBjfj4005xV'
 genome = new DxFile(id: params.genome, name:'genome')
+//genome= file(params.genome)
 
 echo true
 

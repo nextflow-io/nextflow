@@ -1,7 +1,7 @@
 {
   "name": "nextflow",
   "title": "Nextflow DnaNexus Execution",
-  "summary": "Executes nextflow's pipelines in DnaNexus",
+  "summary": "Executes nextflow pipelines in DnaNexus",
   "dxapi": "1.0.0",
   "inputSpec": [
   ],

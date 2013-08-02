@@ -1,3 +1,22 @@
+/*
+* Copyright (c) 2012, the authors.
+*
+* This file is part of 'Nextflow'.
+*
+* Nextflow is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* Nextflow is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with Nextflow. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 package nextflow.executor
 import com.dnanexus.DXAPI
 import com.dnanexus.DXJSON
@@ -6,14 +25,15 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import groovy.util.logging.Slf4j
 import nextflow.exception.MissingFileException
 import nextflow.processor.TaskRun
+import nextflow.util.DxFile
 
 /**
- * Created with IntelliJ IDEA.
- * User: bmartin
- * Date: 7/18/13
- * Time: 1:54 PM
- * To change this template use File | Settings | File Templates.
+ * Executes script.nf indicated in code.sh in the DnaNexus environment
+ * -->  https://www.dnanexus.com/
+ *
+ * @author Beatriz Martin San Juan <bmsanjuan@gmail.com>
  */
+
 
 @Slf4j
 class DnaNexusExecutor extends AbstractExecutor {
@@ -26,51 +46,69 @@ class DnaNexusExecutor extends AbstractExecutor {
 
     private static final COMMAND_SCRIPT_FILENAME = '.command.sh'
 
-
+    /*
+     * Creation of Dnanexus link out of the id of an object.
+     * @param objectId
+     * @return ObjectNode
+     */
     protected ObjectNode makeDXLink(String objectId) {
         return DXJSON.getObjectBuilder().put("\$dnanexus_link", objectId).build();
     }
 
+
+    /**
+     * Creation of a link to a job and one of its fields out of the id of the first and
+     * the required name of the second.
+     * @param jobId
+     * @param fieldName
+     * @return ObjectNode
+     */
     protected ObjectNode makeJbor(String jobId, String fieldName) {
         return DXJSON.getObjectBuilder().put("job", jobId).put("field", fieldName).build();
     }
 
 
+    /**
+     * Launches the task
+     * @param task
+     */
     @Override
     void launchTask(TaskRun task) {
-        //To change body of implemented methods use File | Settings | File Templates.
 
+        /*
+         * Setting the work directory
+         */
         final scratch = task.workDirectory
         log.debug "Lauching task > ${task.name} -- work folder: $scratch"
 
 
         /*
-         * save the environment to a file
+         * Saving the environment to a file.
          */
         def taskEnv = createEnvironmentString(task)
         log.debug "Creating Environment"
 
 
         /*
-         * Saving the main script file
+         * Saving the task script file.
          */
         File taskScript = new File('taskScript')
         taskScript.text = task.processor.normalizeScript(task.script.toString())
-        println("PATH: ${taskScript.absolutePath}")
         log.debug "Creating script file > ${taskScript.name}"
 
 
         /*
-         * Uploading the main script file
+         * Uploading the task's script file.
          */
         Process scriptCmd = Runtime.getRuntime().exec("dx upload --brief ${taskScript.absolutePath}")
         BufferedReader uploadScript = new BufferedReader(new InputStreamReader(scriptCmd.getInputStream()))
-        String scriptId = uploadScript.readLine().trim(); // In general, there'd be one line per uploaded file
+        String scriptId = uploadScript.readLine().trim();
         log.debug "Uploading script file >> ${scriptId}"
 
 
-        /**
-         * Retrieving & uploading all the inputs of the task
+        /*
+         * Retrieving & uploading all the inputs already declared as parameters in the task.
+         * Different method depending on the instance DxFile or File.
          */
         def map = task.code.delegate
         String inputs = "( "
@@ -97,9 +135,12 @@ class DnaNexusExecutor extends AbstractExecutor {
                 log.warn "Unsupported input type: $k --> $v"
             }
         }
-
         inputs = inputs + ")"
 
+
+        /*
+         * Retrieving all the outputs already declared as parameters in the task.
+         */
         String outputs = "( "
 
         taskConfig.getOutputs().keySet().each { String name ->
@@ -109,7 +150,12 @@ class DnaNexusExecutor extends AbstractExecutor {
 
 
         /*
-         * Creating the job with a input's Map
+         * Building the ObjectNode which will be set in the job.
+         * As parameters of this:
+         *      - inputs --> String formed by all the names and ids of the inputs declared.
+         *      - outputs --> String formed by all the names of the outputs declared.
+         *      - taskname --> String with the name of the task.
+         *      - taskScript --> Dnanexus link to the task's script file.
          */
         ObjectNode processJobInputHash = DXJSON.getObjectBuilder()
                 .put("function", "process")
@@ -125,14 +171,14 @@ class DnaNexusExecutor extends AbstractExecutor {
 
 
         /*
-         * Launching the job
+         * Launching the job.
          */
         String processJobId = DXAPI.jobNew(processJobInputHash).get("id").textValue()
         log.debug "Launching job > ${processJobId}"
 
 
         /*
-         * Waiting for the job to end
+         * Waiting for the job to end while showing the state job's state and details.
          */
         JsonNode result = null
         String state = null
@@ -154,7 +200,7 @@ class DnaNexusExecutor extends AbstractExecutor {
 
 
         /*
-         * Getting the task's outputs
+         * Getting the exit code of the task's execution.
          */
         String exitCode = result.get('output').get('exit_code').textValue()
 
@@ -191,18 +237,31 @@ class DnaNexusExecutor extends AbstractExecutor {
     }
 
 
+    /**
+     * Returns the output of the task.
+     * @param task
+     * @return task.output
+     */
     @Override
     def getStdOutFile(TaskRun task) {
         task.@output
     }
 
 
+    /**
+     * Given the task and the name of one of the output files, it returns
+     * all the files generated by the task's execution which matches the
+     * file name.
+     * The '-' stands for the script stdout, save to a file
+     * @param task
+     * @param fileName
+     * @return  DxFile[] or DxFile
+     */
     def collectResultFile( TaskRun task, String fileName ) {
         assert fileName
         assert task
         assert task.jobId
 
-        // the '-' stands for the script stdout, save to a file
         if( fileName == '-' ) {
             return getStdOutFile(task)
         }
@@ -224,6 +283,7 @@ class DnaNexusExecutor extends AbstractExecutor {
      *
      * @param output
      * @param fileName
+     * @return DxFile[] or DxFile
      */
     def getFiles( JsonNode outputs, String fileName ) {
 
@@ -237,6 +297,7 @@ class DnaNexusExecutor extends AbstractExecutor {
 
             def result = []
             String expression
+            log.debug "Antes de la expresion"
 
             if(fileName.contains('*'))
                 expression =  fileName.replace(".","\\.").replace("*",".*")
@@ -245,8 +306,11 @@ class DnaNexusExecutor extends AbstractExecutor {
 
 
             for(int i=0; i<array.length; i++ ) {
+                log.debug "Entro en el bucle"
                 if(array[i] =~ /^$expression$/){
-                    String fileId = outputs.get(array[i])?.textValue()
+                    log.debug "Entro en el if"
+
+                    String fileId = outputs.get(array[i]).textValue()
                     DxFile file = new DxFile(id:fileId, name: array[i])
                     result.add(file)
                     log.debug "Result File >> ${fileName} >> ${array[i]} >> ${fileId}"

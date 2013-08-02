@@ -10,33 +10,44 @@ main() {
 process() {
   echo "Starting PROCESS subtask ${taskName}"
 
-  declare -A array="${inputs}"
+  # Declare and set an associative array for inputs
+  # Declare and set an array for outputs
+  declare -A inputs="${inputs}"
   declare -a outputs="${outputs}"
 
-  for i in "${!array[@]}";
+
+  # Download all the files specified in "inputs"
+  for i in "${!inputs[@]}";
       do
-        input_file_id=$(dx-jobutil-parse-link "${array[$i]}") ;
+        input_file_id=$(dx-jobutil-parse-link "${inputs[$i]}") ;
         dx download "$input_file_id" --no-progress  ;
       done
 
 
-  # Download the input files.
+  # Download the script file
   input_file_id=$(dx-jobutil-parse-link "${taskScript}")
   dx download "$input_file_id" -o task_script --no-progress
 
+
+  # Change permissions to task_script to execute
   #printf "$taskEnv" > task_env
   chmod +x task_script
 
+
+  # Execution of the task's script
   set +e
   #(source task_env; ./task_script) > my_output_file
-  sh task_script
+  ./task_script
   exitcode=$?
   set -e
 
 
-  # Upload the output files and add the output.
+  # Set as output the exit code of the script's execution
   dx-jobutil-add-output exit_code "$exitcode" --class string
 
+
+  # Upload and set as outputs the files which matches the
+  # names or structures of the files declared in "outputs[]"
   for item in "${outputs[@]}"; do
     for name in `ls $item 2>/dev/null`; do
           output_file_id=`dx upload "${name}" --brief --no-progress` ;
