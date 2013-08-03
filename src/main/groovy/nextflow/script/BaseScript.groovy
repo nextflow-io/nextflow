@@ -155,7 +155,25 @@ abstract class BaseScript extends Script {
         return new File(folder, name)
     }
 
+    /**
+     * @return Create a temporary directory
+     */
+    File tempDir() {
+        def file = FileHelper.createTempFolder(session.workDir)
+        if( !file.exists() && !file.mkdirs() ) {
+            throw new IOException("Unable to create folder: $file -- Check file system permission" )
+        }
+        return file
+    }
 
+    /**
+     * @return Create a temporary file
+     */
+    File tempFile( String name = 'temp.file') {
+
+        def folder = tempDir()
+        return new File(folder, name)
+    }
 
     /**
      * Creates and runs a task
