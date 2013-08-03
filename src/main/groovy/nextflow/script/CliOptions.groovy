@@ -22,6 +22,9 @@ class CliOptions {
     @Parameter(names=['-log'], description = 'Define the application log file')
     String logFile = ".${Const.APP_NAME}.log"
 
+    @Parameter(names=['-lib'], description = 'Library extension path')
+    String libPath
+
     /**
      * The packages to trace
      */

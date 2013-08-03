@@ -29,6 +29,7 @@ import nextflow.ExitCode
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.exception.InvalidArgumentException
+import nextflow.exception.MissingLibraryException
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import org.apache.commons.io.FilenameUtils
@@ -79,6 +80,11 @@ class CliRunner {
     private def result
 
     /**
+     * Class path extension, they may be JAR files or directories containing java/groovy classes
+     */
+    private List<File> libraries
+
+    /**
      * Instantiate the runner object creating a new session
      */
     def CliRunner( ) {
@@ -114,6 +120,39 @@ class CliRunner {
         return str
 
     }
+
+    def void setLibPath( String str ) {
+        if( !str ) { return }
+
+        def files = str.split( File.pathSeparator ).collect { new File(it) }
+        files?.each { File file ->
+            if( !file.exists() ) { throw new MissingLibraryException("Cannot find specified library: ${file.absolutePath}")  }
+            addLibPaths(file)
+        }
+
+    }
+
+    /**
+     * Add a library to the list of classpath extension. When {@code path} refers to
+     * a 'directory', other than the directory, try to add all '.jar' files
+     * contained in the directory itself.
+     *
+     * @param path
+     */
+    protected void addLibPaths( File path ) {
+        assert path
+
+        if( libraries == null ) { libraries = [] }
+
+        if( path.isFile() && path.name.endsWith('.jar') ) {
+            libraries << path
+        }
+        else if( path.isDirectory() ) {
+            libraries << path
+            path.eachFileMatch( ~/.+\.jar$/ ) { if(it.isFile()) this.libraries << it }
+        }
+    }
+
 
     /**
      * @return The interpreted script object
@@ -292,8 +331,22 @@ class CliRunner {
         config.scriptBaseClass = BaseScript.class.name
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskScriptClosureTransform))
 
+        // extend the class-loader if required
+        def gcl = new GroovyClassLoader()
+        if( libraries == null ) {
+            // if no user defined libraries are provided
+            // try to add the 'lib' folder in the local path if exist
+            def localLib = new File('lib')
+            if( localLib.exists() ) { addLibPaths(localLib) }
+        }
+
+        libraries?.each { File lib -> def path = lib.absolutePath
+            log.debug "Adding to the classpath library: ${path}"
+            gcl.addClasspath(path)
+        }
+
         // run and wait for termination
-        def groovy = new GroovyShell(this.class.classLoader, bindings, config)
+        def groovy = new GroovyShell(gcl, bindings, config)
         if ( scriptFile ) {
             groovy.parse( scriptText, scriptFile?.toString() ) as BaseScript
         }
@@ -390,6 +443,7 @@ class CliRunner {
             // -- parse the program arguments - and - configure the logger
             def options = parseMainArgs(args)
             LoggerHelper.configureLogger( options.logFile, options.quiet, options.debug, options.trace )
+            log.debug "${Const.APP_NAME} ${args?.join(' ')}"
 
             // -- print out the version number, then exit
             if ( options.version ) {
@@ -463,6 +517,7 @@ class CliRunner {
             def runner = new CliRunner(config)
             runner.session.cacheable = options.cacheable
             runner.session.workDir = options.workDir
+            runner.libPath = options.libPath
 
             // -- specify the arguments
             def scriptArgs = options.arguments.size()>1 ? options.arguments[1..-1] : null

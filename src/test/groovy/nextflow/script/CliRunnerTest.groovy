@@ -20,6 +20,7 @@
 package nextflow.script
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.exception.MissingLibraryException
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import spock.lang.Specification
 /**
@@ -365,6 +366,73 @@ class CliRunnerTest extends Specification {
         CliRunner.normalizeArgs('-x', '1', '-that.alpha','2', '3') == ['-x', '1', '-that.alpha','2', '3']
     }
 
+
+
+    def testAddLibPath() {
+
+        setup:
+        def path1 = File.createTempDir()
+        def path2 = File.createTempDir()
+        def jar1 = new File(path2, 'lib1.jar'); jar1.createNewFile()
+        def jar2 = new File(path2, 'lib2.jar'); jar2.createNewFile()
+
+        when:
+        def runner = new CliRunner()
+        runner.addLibPaths( path1 )
+        then:
+        runner.libraries == [ path1 ]
+
+
+        when:
+        runner = new CliRunner()
+        runner.addLibPaths( path2 )
+        then:
+        runner.libraries == [ path2, jar1, jar2 ]
+
+
+        cleanup:
+        path1.deleteDir()
+        path2.deleteDir()
+
+    }
+
+
+    def testSetLibPath() {
+
+
+        setup:
+        def path1 = File.createTempDir()
+        def path2 = File.createTempDir()
+        def jar1 = new File(path2, 'lib1.jar'); jar1.createNewFile()
+        def jar2 = new File(path2, 'lib2.jar'); jar2.createNewFile()
+
+        when:
+        def runner = new CliRunner()
+        runner.setLibPath(jar1.toString())
+        then:
+        runner.libraries == [ jar1 ]
+
+        when:
+        runner = new CliRunner()
+        runner.libPath = "${jar1}:${jar2}"
+        then:
+        runner.libraries == [ jar1, jar2 ]
+
+
+        when:
+        runner = new CliRunner()
+        runner.setLibPath('some/lib.jar')
+
+        then:
+        thrown(MissingLibraryException)
+
+        cleanup:
+        path1.deleteDir()
+        path2.deleteDir()
+
+
+
+    }
 
 
 }
