@@ -29,14 +29,14 @@ repositories {
 
 dependencies {
 
-    compile 'org.codehaus.groovy:groovy:2.1.5'
+    compile 'org.codehaus.groovy:groovy:2.1.6'
     compile 'org.codehaus.gpars:gpars:1.0.0'
-    compile 'org.slf4j:slf4j-api:1.7.2'
-    compile 'org.slf4j:jcl-over-slf4j:1.7.2'
-    compile 'org.slf4j:jul-to-slf4j:1.7.2'
-    compile 'org.slf4j:log4j-over-slf4j:1.7.2'
-    compile 'ch.qos.logback:logback-classic:1.0.9'
-    compile 'ch.qos.logback:logback-core:1.0.9'
+    compile 'org.slf4j:slf4j-api:1.7.5'
+    compile 'org.slf4j:jcl-over-slf4j:1.7.5'
+    compile 'org.slf4j:jul-to-slf4j:1.7.5'
+    compile 'org.slf4j:log4j-over-slf4j:1.7.5'
+    compile 'ch.qos.logback:logback-classic:1.0.13'
+    compile 'ch.qos.logback:logback-core:1.0.13'
     compile 'commons-lang:commons-lang:2.6'
     compile 'commons-io:commons-io:2.4'
     compile 'commons-cli:commons-cli:1.2'
@@ -55,11 +55,6 @@ compileGroovy {
     targetCompatibility = 1.6
 }
 
-
-//
-//task printCp {
-//    println configurations.runtime.resolve().join('\n')
-//}
 
 /*
  * print out the runtime classpath
@@ -134,8 +129,8 @@ task stage( type: Copy ) {
 
     // copy the launch script
     into('.') {
-        from ('./nextflow.sh') // { exclude 'circo' }
-        //rename { String fileName -> fileName.replace('circo.sh', 'circo') }
+        from ('./nextflow.sh') // { exclude 'nextflow' }
+        //rename { String fileName -> fileName.replace('nextflow.sh', 'nextflow') }
     }
 
     // copy application - and - runtime dependencies jars
