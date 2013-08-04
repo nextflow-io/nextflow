@@ -3,6 +3,12 @@ NEXTFLOW CHANGE-LOG
 
 0.3.3
 - Added optional parameters to 'chunkLines' and 'chunkFasta' methods
+- Added '-lib' command line parameter specify external libraries (.jar files) or extension scripts
+- Folder 'lib' in the launch directory is added by as default libraries path
+- Added 'tempFile()' and 'tempDir()' methods to BaseScript class
+- Upgraded to Groovy 2.1.6
+- Upgraded to Slf4j 1.7.5
+- Upgraded to Logback 1.0.13
 
 0.3.2 - 22 Jul 2013
 - New command line option '-log' to specify the application log file
