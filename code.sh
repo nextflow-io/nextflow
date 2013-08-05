@@ -32,13 +32,19 @@ process() {
 
     # Declare and set an associative array for inputs
     # Declare and set an array for outputs
-    declare -A inputs="${inputs}"
+    #declare -A inputs="${inputs}"
     declare -a outputs="${outputs}"
 
     # Download all the files specified in "inputs"
-    for i in "${!inputs[@]}"; do
-        input_file_id=$(dx-jobutil-parse-link "${inputs[$i]}") ;
+    #for i in "${!inputs[@]}"; do
+    for input in "${inputs[@]}"
+    do
+        echo "Input name >> $input" ;
+        #echo "Input file name >> ${inputs[$i]}"   ;
+        #input_file_id=$(dx-jobutil-parse-link "${inputs[$i]}") ;
+        input_file_id=$(dx-jobutil-parse-link "${input}") ;
         dx download "$input_file_id" --no-progress  ;
+        echo "Input id >> ${input_file_id}"  ;
     done
 
     # Download the script file
@@ -53,6 +59,8 @@ process() {
     # Execution of the task's script
     set +e
     ( ./task_script ) > .command.out
+    echo "COMMAND.OUT"
+    cat .command.out
     exit_status=$?
     set -e
 
@@ -75,8 +83,12 @@ process() {
     # names or structures of the files declared in "outputs[]"
     for item in "${outputs[@]}"; do
         for name in `ls $item 2>/dev/null`; do
+            echo "Output file name >> ${name} " ;
             output_file_id=`dx upload "${name}" --brief --no-progress` ;
             dx-jobutil-add-output "${name}" "$output_file_id" --class string ;
+            echo "Output file name 2 >> ${name} " ;
+
+
         done
     done
 

@@ -1,7 +1,7 @@
 import nextflow.util.DxFile
 
-file = new DxFile(name:'sample.fa', id:'file-B7vQg7j0j583xBb7QJV00284')
-//file = file("$HOME/sample.fa")
+file = new DxFile(name:'sample.fa', id:'file-B7zq7j80FqXB4J080VV0023Y')
+//file = file("$HOME/vagrant_machine_precise64/nextflow/sample.fa")
 
 chunks = channel()
 
@@ -16,11 +16,13 @@ task {
 
 }
 
+
 task {
     input chunks
     echo true
 
     """
+    echo "CHUNKS >> ${chunks}"
     rev $chunks
     """
 }

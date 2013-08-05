@@ -21,7 +21,9 @@ package nextflow.executor
 import com.dnanexus.DXAPI
 import com.dnanexus.DXJSON
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.databind.node.ArrayNode
 import groovy.util.logging.Slf4j
 import nextflow.exception.MissingFileException
 import nextflow.processor.TaskRun
@@ -110,18 +112,25 @@ class DnaNexusExecutor extends AbstractExecutor {
          * Different method depending on the instance DxFile or File.
          */
         def map = task.code.delegate
-        String inputs = "( "
+        ObjectMapper mapper = new ObjectMapper();
+        ArrayNode inputs = mapper.createArrayNode();
+        //String inputs = "( "
 
         map.each{ k, v ->
-            String path = String.valueOf(v)
+
+            log.debug " MAP INPUT DEBUG >> K: ${k} >> V: ${v}"
 
             if( v instanceof DxFile ) {
-                String link = makeDXLink(v.getId())
+                // String link = makeDXLink(v.getId())
+                //inputs = inputs + "[${k}]=\'${link}\' "
 
-                inputs = inputs + "[${k}]=\'${link}\' "
-                log.debug "Getting input DxFile ${k} >> ${v.getId()}"
+                inputs.add(makeDXLink(v.getId()));
+
+                log.debug "Get DXFile >> K: ${k} >> V: ${v}"
+                log.debug "Getting input DxFile ${k} >> Name: ${v} >> ${v.getId()}"
             }
             else if( v instanceof File ) {
+                String path = String.valueOf(v)
                 Process inputCmd = Runtime.getRuntime().exec("dx upload --brief ${path}")
                 BufferedReader uploadInput = new BufferedReader(new InputStreamReader(inputCmd.getInputStream()))
                 String inputId = uploadInput.readLine().trim();
@@ -134,7 +143,7 @@ class DnaNexusExecutor extends AbstractExecutor {
                 log.warn "Unsupported input type: $k --> $v"
             }
         }
-        inputs = inputs + ")"
+        //inputs = inputs + ")"
 
 
         /*
