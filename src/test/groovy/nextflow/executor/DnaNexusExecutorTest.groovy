@@ -35,7 +35,6 @@ class DnaNexusExecutorTest extends Specification {
         then:
         file0 == new DxFile(name:'file_z.fa', id:'file-7FJFJ5J6SLA9FGKS6DHF8RFJ')
 
-        println("***************************************************************")
 
         // question mark wildcard is used
         when:
@@ -48,7 +47,6 @@ class DnaNexusExecutorTest extends Specification {
                 new DxFile(name:'file_z.fa', id:'file-7FJFJ5J6SLA9FGKS6DHF8RFJ')
         ]
 
-        println("***************************************************************")
 
         // star wildcard used, returns the matching list of DxFile(s)
         when:
@@ -59,7 +57,6 @@ class DnaNexusExecutorTest extends Specification {
                 new DxFile(name:'file2', id:'file-7F7G7G7S7HTKGLH0D9A8A8D8')
         ]
 
-        println("***************************************************************")
 
         // missing file
         when:
@@ -67,7 +64,6 @@ class DnaNexusExecutorTest extends Specification {
         then:
         thrown(MissingFileException)
 
-        println("***************************************************************")
 
         // empty list
         when:
@@ -75,6 +71,27 @@ class DnaNexusExecutorTest extends Specification {
         then:
         thrown(MissingFileException)
 
+
+
+    }
+
+
+    def testRealOutput() {
+
+        setup:
+        def str = '''
+            {".command.out":"file-B7xxj1j0j589v1JqPk7VP96X","exit_code":"0","seq_04":"file-B7xxj3j0j58B5k7YPJ4VZ8PP","seq_02":"file-B7xxj300j58B5k7YPJ4VZ8KJ","seq_03":"file-B7xxj3Q0j589v1JqPk7VP992","seq_00":"file-B7xxj200j589v1JqPk7VP96j","seq_01":"file-B7xxj2Q0j586f59yQV7Q6Gpp"}
+            '''
+        def output = DXJSON.parseJson(str)
+        def executor = new DnaNexusExecutor()
+        executor.taskConfig = new TaskConfig([name:'task-1'])
+
+        when:
+        def result = executor.getFiles(output, 'seq_02')
+
+        then:
+        output.isObject()
+        result == new DxFile( name: 'seq_02', id: 'file-B7xxj300j58B5k7YPJ4VZ8KJ' )
 
 
     }

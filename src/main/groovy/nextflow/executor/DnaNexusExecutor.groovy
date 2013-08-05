@@ -26,7 +26,6 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.MissingFileException
 import nextflow.processor.TaskRun
 import nextflow.util.DxFile
-import nextflow.util.DxHelper
 /**
  * Executes script.nf indicated in code.sh in the DnaNexus environment
  * -->  https://www.dnanexus.com/
@@ -52,7 +51,7 @@ class DnaNexusExecutor extends AbstractExecutor {
      * @return ObjectNode
      */
     protected ObjectNode makeDXLink(String objectId) {
-        return DXJSON.getObjectBuilder().put("\$dnanexus_link", objectId).build();
+        return DXJSON.getObjectBuilder().put('$dnanexus_link', objectId).build();
     }
 
 
@@ -262,44 +261,12 @@ class DnaNexusExecutor extends AbstractExecutor {
      * @return DxFile[] or DxFile
      */
     def getFiles( JsonNode outputs, String fileName ) {
+        assert outputs != null
+        assert fileName
 
-        if(fileName.contains('*') || fileName.contains('?')){
-            String output_string = outputs.toString()
-            String[] array = output_string.substring(1,output_string.length()-2).split(",")
+        String filePattern = fileName.replace('?', '.?').replace('*', '.*')
 
-            for(int i=0; i< array.length; i++){
-                array[i] = array[i].substring(0,array[i].indexOf(":")).replace("\"","")
-            }
-
-            def result = []
-            String expression
-            log.debug "Antes de la expresion"
-
-            if(fileName.contains('*'))
-                expression =  fileName.replace(".","\\.").replace("*",".*")
-            else if (fileName.contains('?'))
-                expression =  fileName.replace(".","\\.").replace("?",".?")
-
-
-            for(int i=0; i<array.length; i++ ) {
-                log.debug "Entro en el bucle"
-                if(array[i] =~ /^$expression$/){
-                    log.debug "Entro en el if"
-
-                    String fileId = outputs.get(array[i]).textValue()
-                    DxFile file = new DxFile(id:fileId, name: array[i])
-                    result.add(file)
-                    log.debug "Result File >> ${fileName} >> ${array[i]} >> ${fileId}"
-                }
-            }
-
-            if( !result ) {
-                throw new MissingFileException("Missing output file(s): '$fileName' expected by task: ${taskConfig.name}")
-            }
-
-            return result
-        }
-        else{
+        if( fileName == filePattern ) {
             String file = outputs.get(fileName)?.textValue()
 
             if( !file ) {
@@ -311,5 +278,22 @@ class DnaNexusExecutor extends AbstractExecutor {
 
             return result
         }
+
+
+        def result = []
+        for( Map.Entry<String,JsonNode> entry : outputs.fields() ) {
+            if( entry.key ==~/$filePattern/ ) {
+                def fileId = entry.value?.textValue()
+                log.debug "Result File >> ${fileName} >> ${entry.key} >> ${fileId}"
+                def file = new DxFile(name: entry.key, id: entry.value?.textValue())
+                result << file
+            }
+        }
+
+        if( !result ) {
+            throw new MissingFileException("Missing output file(s): '$fileName' expected by task: ${taskConfig.name}")
+        }
+
+        return result
     }
 }

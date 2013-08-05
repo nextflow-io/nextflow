@@ -7,7 +7,7 @@ import groovy.transform.EqualsAndHashCode
  *
  */
 
-@EqualsAndHashCode(includes = ['id'])
+@EqualsAndHashCode(includes = ['id','name'])
 class DxFile {
 
     String id
