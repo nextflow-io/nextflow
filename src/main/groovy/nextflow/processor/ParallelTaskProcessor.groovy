@@ -7,7 +7,6 @@ import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.exception.InvalidExitException
 import nextflow.util.CacheHelper
-import nextflow.util.DxFile
 import nextflow.util.FileHelper
 /**
  * Defines the parallel tasks execution logic
@@ -73,10 +72,6 @@ class ParallelTaskProcessor extends TaskProcessor {
             // otherwise put in on the map used to resolve the values evaluating the script
             else {
                 map[ name ] = values.get(index)
-                if( map[ name ] instanceof DxFile ) {
-                    def DxFile  file = map[ name ] as DxFile
-                    log.debug "Task: ${task.name} map [$name] == ${file.name} :: ${file.id}"
-                }
             }
         }
 

@@ -15,12 +15,13 @@ main() {
     set +e
     nextflow -log $PWD\nextflow.log -c ${DX_FS_ROOT}/nextflow.config script.nf
     exit_status=$?
-    echo "nextflow exitstatus > ${exit_status}"
     set -e
+
+    echo "nextflow exitstatus > ${exit_status}"
+    if [ "$exit_status" -ne "0" ]; then cat $PWD\nextflow.log; fi
 
     # returns the nextflow log
     log_file_id=$(dx upload $PWD\nextflow.log --brief)
-    echo "log_file_id: $log_file_id"
     dx-jobutil-add-output 'log' "$log_file_id" --class=file
 
     exit ${exit_status}
@@ -32,35 +33,26 @@ process() {
 
     # Declare and set an associative array for inputs
     # Declare and set an array for outputs
-    #declare -A inputs="${inputs}"
     declare -a outputs="${outputs}"
 
     # Download all the files specified in "inputs"
-    #for i in "${!inputs[@]}"; do
     for input in "${inputs[@]}"
     do
-        echo "Input name >> $input" ;
-        #echo "Input file name >> ${inputs[$i]}"   ;
-        #input_file_id=$(dx-jobutil-parse-link "${inputs[$i]}") ;
         input_file_id=$(dx-jobutil-parse-link "${input}") ;
         dx download "$input_file_id" --no-progress  ;
-        echo "Input id >> ${input_file_id}"  ;
     done
 
     # Download the script file
     input_file_id=$(dx-jobutil-parse-link "${taskScript}")
-    dx download "$input_file_id" -o task_script --no-progress
+    dx download "$input_file_id" -o .command.sh --no-progress
 
-    # Change permissions to task_script to execute
+    # Change permissions to '.command.sh' to execute
     # printf "$taskEnv" > task_env
-    chmod +x task_script
-
+    chmod +x .command.sh
 
     # Execution of the task's script
     set +e
-    ( ./task_script ) > .command.out
-    echo "COMMAND.OUT"
-    cat .command.out
+    ( ./.command.sh ) > .command.out
     exit_status=$?
     set -e
 
@@ -74,7 +66,6 @@ process() {
     fi
 
     if [ "$exit_status" -ne "0" ]; then
-        echo "Task > $taskName exit status >> $exit_status" >&2
         ls -la >&2
         exit
     fi
@@ -83,12 +74,8 @@ process() {
     # names or structures of the files declared in "outputs[]"
     for item in "${outputs[@]}"; do
         for name in `ls $item 2>/dev/null`; do
-            echo "Output file name >> ${name} " ;
             output_file_id=`dx upload "${name}" --brief --no-progress` ;
             dx-jobutil-add-output "${name}" "$output_file_id" --class string ;
-            echo "Output file name 2 >> ${name} " ;
-
-
         done
     done
 

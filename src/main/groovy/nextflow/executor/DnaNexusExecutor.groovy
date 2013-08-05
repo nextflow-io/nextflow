@@ -93,9 +93,9 @@ class DnaNexusExecutor extends AbstractExecutor {
         /*
          * Saving the task script file.
          */
-        File taskScript = new File('taskScript')
+        File taskScript = new File(scratch, 'taskScript')
         taskScript.text = task.processor.normalizeScript(task.script.toString())
-        log.debug "Creating script file > ${taskScript.name}"
+        log.debug "Creating script file for task > ${task.name}: ${taskScript.text}\n\n "
 
 
         /*
@@ -104,7 +104,7 @@ class DnaNexusExecutor extends AbstractExecutor {
         Process scriptCmd = Runtime.getRuntime().exec("dx upload --brief ${taskScript.absolutePath}")
         BufferedReader uploadScript = new BufferedReader(new InputStreamReader(scriptCmd.getInputStream()))
         String scriptId = uploadScript.readLine().trim();
-        log.debug "Uploading script file >> ${scriptId}"
+        log.debug "Uploading script file for task ${task.name} >> ${scriptId}"
 
 
         /*
@@ -118,7 +118,7 @@ class DnaNexusExecutor extends AbstractExecutor {
 
         map.each{ k, v ->
 
-            log.debug " MAP INPUT DEBUG >> K: ${k} >> V: ${v}"
+            log.debug " MAP INPUT DEBUG for task ${task.name} >> K: ${k} >> V: ${v}"
 
             if( v instanceof DxFile ) {
                 // String link = makeDXLink(v.getId())
@@ -126,8 +126,7 @@ class DnaNexusExecutor extends AbstractExecutor {
 
                 inputs.add(makeDXLink(v.getId()));
 
-                log.debug "Get DXFile >> K: ${k} >> V: ${v}"
-                log.debug "Getting input DxFile ${k} >> Name: ${v} >> ${v.getId()}"
+                log.debug "Getting input DxFile ${k} for task ${task.name} >> Name: ${v} >> ${v.getId()}"
             }
             else if( v instanceof File ) {
                 String path = String.valueOf(v)
