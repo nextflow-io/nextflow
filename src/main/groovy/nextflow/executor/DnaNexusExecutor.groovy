@@ -91,7 +91,7 @@ class DnaNexusExecutor extends AbstractExecutor {
 
 
         /*
-         * Saving the task script file.
+         * Saving the task script file in the appropriate task's working folder
          */
         File taskScript = new File(scratch, 'taskScript')
         taskScript.text = task.processor.normalizeScript(task.script.toString())
@@ -114,18 +114,10 @@ class DnaNexusExecutor extends AbstractExecutor {
         def map = task.code.delegate
         ObjectMapper mapper = new ObjectMapper();
         ArrayNode inputs = mapper.createArrayNode();
-        //String inputs = "( "
 
         map.each{ k, v ->
-
-            log.debug " MAP INPUT DEBUG for task ${task.name} >> K: ${k} >> V: ${v}"
-
             if( v instanceof DxFile ) {
-                // String link = makeDXLink(v.getId())
-                //inputs = inputs + "[${k}]=\'${link}\' "
-
                 inputs.add(makeDXLink(v.getId()));
-
                 log.debug "Getting input DxFile ${k} for task ${task.name} >> Name: ${v} >> ${v.getId()}"
             }
             else if( v instanceof File ) {
@@ -133,27 +125,23 @@ class DnaNexusExecutor extends AbstractExecutor {
                 Process inputCmd = Runtime.getRuntime().exec("dx upload --brief ${path}")
                 BufferedReader uploadInput = new BufferedReader(new InputStreamReader(inputCmd.getInputStream()))
                 String inputId = uploadInput.readLine().trim();
-                String link = makeDXLink(inputId)
 
-                inputs = inputs + "[${k}]=\'${link}\' "
-                log.debug "Uploading input file ${k} >> ${inputId}"
+                inputs.add(makeDXLink(inputId))
+                log.debug "Uploading input file ${k} for task ${task.name} >> ${inputId}"
             }
             else {
                 log.warn "Unsupported input type: $k --> $v"
             }
         }
-        //inputs = inputs + ")"
 
 
         /*
          * Retrieving all the outputs already declared as parameters in the task.
          */
-        String outputs = "( "
-
+        ArrayNode outputs = mapper.createArrayNode()
         taskConfig.getOutputs().keySet().each { String name ->
-             outputs= outputs + "\"${name}\" "
+             outputs.add(name)
         }
-        outputs = outputs + ")"
 
 
         /*
@@ -183,6 +171,7 @@ class DnaNexusExecutor extends AbstractExecutor {
         String processJobId = DXAPI.jobNew(processJobInputHash).get("id").textValue()
         log.debug "Launching job > ${processJobId}"
         task.jobId = processJobId
+
 
         /*
          * Waiting for the job to end while showing the state job's state and details.
@@ -216,6 +205,25 @@ class DnaNexusExecutor extends AbstractExecutor {
             log.debug "Task's exit code > ${task.exitCode}"
         }
 
+        /*
+         * Getting the program output file.
+         * When the 'echo' property is set, it prints out the task stdout
+         */
+        String outFileId = result.get('output')?.get('.command.out')?.textValue()
+        if( !outFileId ) {
+            log.warn "Unable to get task out file-id"
+            task.output = '(unknown)'
+        }
+        else {
+            log.debug "Downloading cmd out: $outFileId"
+            def cmdOutFile = new File(scratch, '.command.out')
+            DxHelper.downloadFile(outFileId, cmdOutFile)
+            task.output = cmdOutFile
+
+            if( taskConfig.echo ) {
+                print cmdOutFile.text
+            }
+        }
 
     }
 

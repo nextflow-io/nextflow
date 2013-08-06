@@ -6,7 +6,6 @@ main() {
     #echo 'Install Java 6 runtime'
     #apt-get install -y openjdk-6-jre-headless > /dev/null
 
-    #
     # Download the script file
     script_id=$(dx-jobutil-parse-link "${script}")
     dx download ${script_id} -o script.nf
@@ -20,7 +19,7 @@ main() {
     echo "nextflow exitstatus > ${exit_status}"
     if [ "$exit_status" -ne "0" ]; then cat $PWD\nextflow.log; fi
 
-    # returns the nextflow log
+    # Returns the nextflow log
     log_file_id=$(dx upload $PWD\nextflow.log --brief)
     dx-jobutil-add-output 'log' "$log_file_id" --class=file
 
@@ -30,10 +29,6 @@ main() {
 # Entry point for parallel sub-tasks.
 process() {
     echo "Starting PROCESS subtask ${taskName}"
-
-    # Declare and set an associative array for inputs
-    # Declare and set an array for outputs
-    declare -a outputs="${outputs}"
 
     # Download all the files specified in "inputs"
     for input in "${inputs[@]}"
