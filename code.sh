@@ -47,7 +47,14 @@ process() {
 
     # Execution of the task's script
     set +e
-    ( ./.command.sh ) > .command.out
+    if [ -z "${taskInput}" ]; then
+      ( ./.command.sh ) > .command.out
+    else
+      # Download the input file and save to .command.in
+      input_taskfile_id=$(dx-jobutil-parse-link "${taskInput}")  ;
+      dx download "$input_taskfile_id" -o .command.in --no-progress  ;
+      ( cat .command.in | ./.command.sh ) > .command.out  ;
+    fi
     exit_status=$?
     set -e
 

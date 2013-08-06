@@ -90,6 +90,30 @@ class DnaNexusExecutor extends AbstractExecutor {
         log.debug "Creating Environment"
 
 
+
+
+        /*
+         * In case there's a task input file.
+         */
+        String taskInputId
+        if (task.input){
+
+            /*
+             * Saving the task input file in the appropriate task's working folder
+             */
+            File inputFile = new File(scratch, '.command.in')
+            inputFile.text = task.input
+
+            /*
+             * Uploading the task's script file
+             */
+            Process taskInputCmd = Runtime.getRuntime().exec("dx upload --brief ${inputFile.absolutePath}")
+            BufferedReader uploadTaskInput = new BufferedReader(new InputStreamReader(taskInputCmd.getInputStream()))
+            taskInputId = uploadTaskInput.readLine().trim();
+            log.debug "Uploading Task input file for task ${task.name} >> ${taskInputId}"
+        }
+
+
         /*
          * Saving the task script file in the appropriate task's working folder
          */
@@ -146,22 +170,41 @@ class DnaNexusExecutor extends AbstractExecutor {
 
         /*
          * Building the ObjectNode which will be set in the job.
-         * As parameters of this:
+         * Depending on whether we have the already checked task's input file or not,
+         *
+         * As parameters of both cases:
          *      - inputs --> String formed by all the names and ids of the inputs declared.
          *      - outputs --> String formed by all the names of the outputs declared.
          *      - taskname --> String with the name of the task.
+         *      - taskInput --> (Compulsory if we have the named file) Dnanexus link to the task's input file.
          *      - taskScript --> Dnanexus link to the task's script file.
          */
-        ObjectNode processJobInputHash = DXJSON.getObjectBuilder()
-                .put("function", "process")
-                .put("input", DXJSON.getObjectBuilder()
+        ObjectNode processJobInputHash
+
+        if (task.input){
+            processJobInputHash = DXJSON.getObjectBuilder()
+                    .put("function", "process")
+                    .put("input", DXJSON.getObjectBuilder()
                         .put("inputs", inputs)
                         .put("outputs", outputs)
                         .put("taskName", task.name)
+                        .put("taskInput", makeDXLink(taskInputId))
                         .put("taskScript", makeDXLink(scriptId))
                         .build())
-                .build()
-        //.put("taskEnv", '')
+                    .build()
+        }
+        else{
+            processJobInputHash = DXJSON.getObjectBuilder()
+                    .put("function", "process")
+                    .put("input", DXJSON.getObjectBuilder()
+                            .put("inputs", inputs)
+                            .put("outputs", outputs)
+                            .put("taskName", task.name)
+                            .put("taskScript", makeDXLink(scriptId))
+                            .build())
+                    .build()
+            //.put("taskEnv", '')
+        }
         log.debug "Creating job parameters"
 
 
@@ -204,6 +247,7 @@ class DnaNexusExecutor extends AbstractExecutor {
             task.exitCode = exitCode.toInteger()
             log.debug "Task's exit code > ${task.exitCode}"
         }
+
 
         /*
          * Getting the program output file.
