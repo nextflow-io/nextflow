@@ -1,11 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.3.3
+0.3.3 - 8 Aug 2013
 - Added optional parameters to 'chunkLines' and 'chunkFasta' methods
 - Added '-lib' command line parameter specify external libraries (.jar files) or extension scripts
 - Folder 'lib' in the launch directory is added by as default libraries path
 - Added 'tempFile()' and 'tempDir()' methods to BaseScript class
+- The 'bin' directory in the script folder is added to the task PATH environment by default
 - Upgraded to Groovy 2.1.6
 - Upgraded to Slf4j 1.7.5
 - Upgraded to Logback 1.0.13

@@ -481,8 +481,9 @@ abstract class TaskProcessor {
         }
     }
 
-
-
+    /**
+     * @return The map holding the shell environment variables for the task to be executed
+     */
     def Map<String,String> getProcessEnvironment() {
 
         def result = [:]
@@ -495,6 +496,13 @@ abstract class TaskProcessor {
         }
         else {
             log.debug "Invalid 'session.config.env' object: ${session.config.env?.class?.name}"
+        }
+
+
+        // pre-pend the 'bin' folder to the task environment
+        if( session.binDir ) {
+            def path = result['PATH'] ? "${session.binDir}:${result['PATH']}" : session.binDir
+            result['PATH'] = path
         }
 
         // add the task specific entries

@@ -69,6 +69,26 @@ class Session {
     def File workDir = new File('./work')
 
     /**
+     * The folder where the main script is contained
+     */
+    def File baseDir
+
+    /**
+     * The folder where script binaries file are located, bu default the folder 'bin'
+     * in the script base directory
+     */
+    @Lazy
+    File binDir = {
+        if( !baseDir ) { log.debug "Script base directory is null"; return null }
+        def path = new File(baseDir, 'bin')
+        if( !path.exists() || !path.isDirectory() ) {
+            return null
+        }
+        log.debug "Setting script bin dir: ${path}"
+        return path
+    }()
+
+    /**
      * The unique identifier of this session
      */
     def final UUID uniqueId

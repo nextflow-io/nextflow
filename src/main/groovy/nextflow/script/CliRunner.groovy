@@ -517,6 +517,7 @@ class CliRunner {
             def runner = new CliRunner(config)
             runner.session.cacheable = options.cacheable
             runner.session.workDir = options.workDir
+            runner.session.baseDir = scriptFile?.canonicalFile?.parentFile
             runner.libPath = options.libPath
 
             // -- specify the arguments
