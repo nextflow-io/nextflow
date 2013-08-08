@@ -93,7 +93,7 @@ abstract class AbstractExecutor {
                 envBuilder << "export $name='$value'" << '\n'
             }
             else {
-                log.debug "Task ${task.name} > Invalid environment variable name: '${name}'"
+                log.trace "Task ${task.name} > Invalid environment variable name: '${name}'"
             }
         }
 
