@@ -244,7 +244,3 @@ task uploadOnejar ( type: Copy, dependsOn: pack ) {
 
 }
 
-
-task wrapper(type: Wrapper) {
-    gradleVersion = '1.5'
-}
