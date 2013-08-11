@@ -1,6 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.3.4
+- Extending semnatics for method File.copyTo(source,target) so that when 'target' argument 
+  is a directory, it copy the 'source' file to that folder, with the same name of the original file.
+
 0.3.3 - 8 Aug 2013
 - Added optional parameters to 'chunkLines' and 'chunkFasta' methods
 - Added '-lib' command line parameter specify external libraries (.jar files) or extension scripts

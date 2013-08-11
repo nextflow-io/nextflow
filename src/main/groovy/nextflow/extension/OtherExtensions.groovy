@@ -41,6 +41,9 @@ class OtherExtensions {
         if( source.isDirectory() ) {
             FileUtils.copyDirectory(source, target)
         }
+        else if( target.isDirectory() ) {
+            FileUtils.copyFile(source, new File(target, source.name) )
+        }
         else {
             FileUtils.copyFile(source, target)
         }
