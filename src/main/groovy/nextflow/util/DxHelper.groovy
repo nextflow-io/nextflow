@@ -8,8 +8,11 @@ import groovy.util.logging.Slf4j
 import org.apache.http.HttpVersion
 import org.apache.http.client.HttpClient
 import org.apache.http.client.methods.HttpGet
+import org.apache.http.client.methods.HttpPost
+import org.apache.http.entity.FileEntity
 import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.params.CoreProtocolPNames
+import org.apache.http.util.EntityUtils
 
 /**
  *
@@ -45,6 +48,53 @@ class DxHelper {
             buffer.close()
         }
 
+    }
+
+    /**
+     * Uploads the defined file to the Dnanexus' space
+     *
+     * @param fileToUpload
+     * @param fileName
+     * @return fileId
+     */
+    static String uploadFile( File fileToUpload, String fileName) {
+
+        def projectId = System.getenv('DX_PROJECT_CONTEXT_ID')
+        log.debug  "Current project >> ${projectId}"
+
+        def newFileRequest = mapToJsonNode([name: fileName, project: projectId ?: 'project-B7fQ9vj0FqXB2z80y5FQ0JGG'] )
+        println "Request >> ${newFileRequest.toString()}"
+
+        def result = DXAPI.fileNew(  newFileRequest )
+        log.debug "FileNew >> ${result.toString()}"
+
+        def fileId = result.get('id').textValue()
+        def upload = DXAPI.fileUpload(fileId)
+        log.debug "FileUpload >> ${upload.toString()}"
+
+        def url = upload.get('url').textValue()
+        def headers = upload.get('headers')
+        log.debug "Headers >>>\n" + headers.toString()
+
+        def auth = headers.get('Authorization').textValue()
+
+        HttpClient client = new DefaultHttpClient();
+        client.getParams().setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
+
+        HttpPost post = new HttpPost( url );
+
+        post.setHeader('Authorization', auth)
+
+        FileEntity entity = new FileEntity(fileToUpload)
+        post.setEntity(entity)
+
+        String response = EntityUtils.toString( client.execute( post ).getEntity(), "UTF-8" );
+        log.debug "Post >> ${response}"
+
+        def close = DXAPI.fileClose(fileId)
+        log.debug "FileClose >> ${close.toString()}"
+
+        return fileId
     }
 
 

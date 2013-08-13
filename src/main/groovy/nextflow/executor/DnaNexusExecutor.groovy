@@ -90,8 +90,6 @@ class DnaNexusExecutor extends AbstractExecutor {
         log.debug "Creating Environment"
 
 
-
-
         /*
          * In case there's a task input file.
          */
@@ -105,11 +103,9 @@ class DnaNexusExecutor extends AbstractExecutor {
             inputFile.text = task.input
 
             /*
-             * Uploading the task's script file
+             * Uploading the task's input file
              */
-            Process taskInputCmd = Runtime.getRuntime().exec("dx upload --brief ${inputFile.absolutePath}")
-            BufferedReader uploadTaskInput = new BufferedReader(new InputStreamReader(taskInputCmd.getInputStream()))
-            taskInputId = uploadTaskInput.readLine().trim();
+            taskInputId = DxHelper.uploadFile(inputFile,inputFile.absolutePath)
             log.debug "Uploading Task input file for task ${task.name} >> ${taskInputId}"
         }
 
@@ -125,9 +121,7 @@ class DnaNexusExecutor extends AbstractExecutor {
         /*
          * Uploading the task's script file.
          */
-        Process scriptCmd = Runtime.getRuntime().exec("dx upload --brief ${taskScript.absolutePath}")
-        BufferedReader uploadScript = new BufferedReader(new InputStreamReader(scriptCmd.getInputStream()))
-        String scriptId = uploadScript.readLine().trim();
+        String scriptId=DxHelper.uploadFile(taskScript, taskScript.absolutePath)
         log.debug "Uploading script file for task ${task.name} >> ${scriptId}"
 
 
@@ -145,11 +139,7 @@ class DnaNexusExecutor extends AbstractExecutor {
                 log.debug "Getting input DxFile ${k} for task ${task.name} >> Name: ${v} >> ${v.getId()}"
             }
             else if( v instanceof File ) {
-                String path = String.valueOf(v)
-                Process inputCmd = Runtime.getRuntime().exec("dx upload --brief ${path}")
-                BufferedReader uploadInput = new BufferedReader(new InputStreamReader(inputCmd.getInputStream()))
-                String inputId = uploadInput.readLine().trim();
-
+                String inputId=DxHelper.uploadFile(taskScript, String.valueOf(v))
                 inputs.add(makeDXLink(inputId))
                 log.debug "Uploading input file ${k} for task ${task.name} >> ${inputId}"
             }

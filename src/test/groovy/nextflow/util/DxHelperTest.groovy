@@ -21,4 +21,22 @@ class DxHelperTest extends Specification {
         target?.delete()
 
     }
+
+
+    def testUpload() {
+
+        setup:
+        String projectId = System.getenv('DX_PROJECT_CONTEXT_ID') ?: 'project-B7fQ9vj0FqXB2z80y5FQ0JGG'
+
+        when:
+        File target = new File("fileToUpload")
+        target.text = "Esto es una prueba"
+        String id = DxHelper.uploadFile(target,target.name)
+
+        then:
+        id.startsWith('file-')
+
+        cleanup:
+        target?.delete()
+    }
 }
