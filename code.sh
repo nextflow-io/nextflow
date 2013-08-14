@@ -17,12 +17,13 @@ main() {
     set -e
 
     echo "nextflow exitstatus > ${exit_status}"
-    if [ "$exit_status" -ne "0" ]; then cat $PWD\nextflow.log; fi
+    if [ "$exit_status" -ne "0" ]; then tail -n 100 $PWD\nextflow.log >&2; fi
 
-    # Returns the nextflow log
-    log_file_id=$(dx upload $PWD\nextflow.log --brief)
-    dx-jobutil-add-output 'log' "$log_file_id" --class=file
+    # upload the nextflow log
+    log_file_id=$(dx upload $PWD\nextflow.log --brief --path ${DX_PROJECT_CONTEXT_ID}:nextflow.log )
+    echo "nextflow.log > $log_file_id"
 
+    # report the application exit status
     exit ${exit_status}
 }
 

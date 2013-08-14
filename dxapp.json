@@ -7,9 +7,7 @@
   "inputSpec": [
       { "name": "script", "class": "file", "optional": false }
   ],
-  "outputSpec": [
-      { "name": "log", "class": "file" }
-  ],
+  "outputSpec": [ ],
   "runSpec": {
     "file": "code.sh",
     "interpreter": "bash",
