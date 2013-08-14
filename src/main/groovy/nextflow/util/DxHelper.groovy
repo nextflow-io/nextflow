@@ -1,18 +1,26 @@
 package nextflow.util
+import java.nio.ByteBuffer
+import java.util.concurrent.atomic.AtomicInteger
 
 import com.dnanexus.DXAPI
 import com.dnanexus.DXJSON
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.Dataflow
+import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.operator.DataflowEventAdapter
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import org.apache.http.HttpVersion
 import org.apache.http.client.HttpClient
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.methods.HttpPost
-import org.apache.http.entity.FileEntity
+import org.apache.http.entity.InputStreamEntity
 import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.params.CoreProtocolPNames
 import org.apache.http.util.EntityUtils
+import sun.nio.ch.DirectBuffer
 
 /**
  *
@@ -53,48 +61,171 @@ class DxHelper {
     /**
      * Uploads the defined file to the Dnanexus' space
      *
-     * @param fileToUpload
-     * @param fileName
+     * @param fileToUpload The file to be uploaded. The size cannot exceed 5TB
+     * @param targetName Name used to store the file in the remote storage. If not specified the source file name is used.
+     * @param workspaceId The DNAnexus workspace-id where the file has to be stored. If not specified the environment variable {@code DX_WORKSPACE_ID} is used
      * @return fileId
      */
-    static String uploadFile( File fileToUpload, String fileName) {
+    static String uploadFile( File fileToUpload, String targetName = null, String workspaceId = null ) {
+        assert fileToUpload
 
-        def projectId = System.getenv('DX_PROJECT_CONTEXT_ID')
-        log.debug  "Current project >> ${projectId}"
+        if( !fileToUpload.exists() ) {
+            throw new IllegalArgumentException("Missing file: $fileToUpload -- upload failed" )
+        }
 
-        def newFileRequest = mapToJsonNode([name: fileName, project: projectId ?: 'project-B7fQ9vj0FqXB2z80y5FQ0JGG'] )
-        println "Request >> ${newFileRequest.toString()}"
+        if( fileToUpload.size() > new MemoryUnit('5TB').toBytes() ) {
+            throw new IllegalArgumentException("File $fileToUpload exceed the maximum allowed upload size (5TB) -- upload failed" )
+        }
 
-        def result = DXAPI.fileNew(  newFileRequest )
-        log.debug "FileNew >> ${result.toString()}"
+        // fallback to the source file name
+        if( !targetName ) {
+            targetName = fileToUpload.name
+        }
+        def targetFile = new File(targetName)
 
-        def fileId = result.get('id').textValue()
-        def upload = DXAPI.fileUpload(fileId)
-        log.debug "FileUpload >> ${upload.toString()}"
+        // try to access to the current 'DX_WORKSPACE_ID'
+        if( !workspaceId ) {
+            workspaceId = System.getenv('DX_WORKSPACE_ID')
+        }
 
-        def url = upload.get('url').textValue()
-        def headers = upload.get('headers')
-        log.debug "Headers >>>\n" + headers.toString()
+        def uploadInfo = [project: workspaceId, name: targetFile.name]
+        if( targetFile.parent ) {
+            // set the parent folder where it must be stored
+            uploadInfo.folder = targetFile.parent
+            uploadInfo.parents = true
+        }
+        log.debug "Dx upload info: $uploadInfo"
 
-        def auth = headers.get('Authorization').textValue()
+        /*
+         * Create a new remote file
+         */
+        def newFileRequest = mapToJsonNode(uploadInfo)
+        log.trace "Dx fileNew request > ${newFileRequest.toString()}"
 
-        HttpClient client = new DefaultHttpClient();
-        client.getParams().setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
+        def result = DXAPI.fileNew(newFileRequest)
+        log.trace "Dx fileNew reply > ${result.toString()}"
 
-        HttpPost post = new HttpPost( url );
+        /*
+         * The file is splitted in multiple chunks which are uploaded in parallel
+         */
+        final fileId = result.get('id').textValue()
 
-        post.setHeader('Authorization', auth)
+        // defines the max size of each chunk
+        // By the API spec if must be a value between 5MB and 5GB
+        // See https://wiki.dnanexus.com/API-Specification-v1.0.0/Files#API-method:-/file-xxxx/upload
+        final chunkSize = 1024 * 1024 * 100 // 100 MB
+        final maxParallel = 5
+        final chunks = new DataflowQueue()
+        def totChunks = 0
+        while( (totChunks*chunkSize) <= fileToUpload.size() ) {
+            chunks << totChunks++
+        }
 
-        FileEntity entity = new FileEntity(fileToUpload)
-        post.setEntity(entity)
+        // synchronization vars
+        final counter = new AtomicInteger()
+        final done = new DataflowVariable()
+        final Map<Thread,ByteBuffer> buffers = [:]
 
-        String response = EntityUtils.toString( client.execute( post ).getEntity(), "UTF-8" );
-        log.debug "Post >> ${response}"
+        // error handler to redirect exception on the application log
+        def errorHandler = new DataflowEventAdapter() {
+            public boolean onException(final DataflowProcessor processor, final Throwable e) {
+                DxHelper.log.error "Failure uploading: $fileToUpload", e
+                done << false
+                return true;
+            }
+        }
 
-        def close = DXAPI.fileClose(fileId)
-        log.debug "FileClose >> ${close.toString()}"
+        /*
+         * parallel uploader
+         */
+        Dataflow.operator( inputs:[chunks], outputs:[], maxForks: maxParallel, listeners: [errorHandler] ) { int current ->
 
-        return fileId
+            final fileName = fileToUpload.name
+            log.trace "Uploading chunk [$current] for file: ${fileName}"
+
+            // open the file in 'read' mode
+            final file = new RandomAccessFile(fileToUpload, 'r')
+            final offset = current * chunkSize
+            final channel = file.getChannel()
+
+            // get am available buffer or allocate it
+            def tt = Thread.currentThread()
+            def buffer = buffers[tt]
+            if( !buffer ) {
+                log.trace "File: $fileName; chunk [$current] > allocating buffer for thread: ${tt}"
+                buffer = buffers[tt] = ByteBuffer.allocateDirect(chunkSize)
+            }
+            else {
+                log.trace "File: $fileName; chunk [$current] > clearing buffer: $tt"
+                buffer.clear()
+            }
+
+            // read the chunk to be uploaded using a direct buffer
+            def len = channel.read(buffer, offset)
+            log.trace "File: $fileName; chunk [$current] > read buffer len: $len "
+
+            // request to upload a new chunk
+            // note: dnanexus upload chunk index is 1-based
+            def params = mapToJsonNode( index: current+1 )
+            def upload = DXAPI.fileUpload(fileId, params)
+            log.trace "File: $fileName; chunk [$current] > FileUpload: ${upload.toString()}"
+
+            // the response provide the url when 'post' the chunk and the
+            // 'authorization' code
+            def url = upload.get('url').textValue()
+            def auth = upload.get('headers')?.get('Authorization')?.textValue()
+
+            // create a 'post' request to upload the stuff
+            HttpPost post = new HttpPost(url);
+            post.setHeader('Authorization', auth)
+
+            buffer.flip()
+            log.trace "File: $fileName; chunk [$current] > buffer remaining: ${buffer.remaining()} "
+
+            def payload = new InputStreamEntity(new ByteBufferBackedInputStream(buffer), len)
+            post.setEntity(payload)
+
+            HttpClient client = new DefaultHttpClient();
+            client.getParams().setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
+            log.trace "File: $fileName; chunk [$current] > Post starting: $post "
+
+            def entity = client.execute( post ).getEntity()
+            String response = EntityUtils.toString( entity, "UTF-8" );
+            log.trace "File: $fileName; chunk [$current] > post response: ${response}"
+
+            client.getConnectionManager().shutdown()
+
+            // when ALL the chunks have been uploaded, signal the termination
+            if( counter.incrementAndGet() == totChunks )  {
+                done << true
+            }
+
+        }
+
+        /*
+         * await the termination
+         */
+        try {
+            if( done.get() )  {
+                /*
+                 * when finished, close the remote file
+                 */
+                def close = DXAPI.fileClose(fileId)
+                log.debug "Dx fileClose > ${close.toString()}"
+                return fileId
+            }
+
+            // return null in case of error (!done)
+            return null
+        }
+        finally {
+            log.trace "Uploader > release buffers"
+            // release the direct buffer
+            buffers.values().each { DirectBuffer it ->
+                it?.cleaner() ?.clean()
+            }
+        }
+
     }
 
 

@@ -105,7 +105,7 @@ class DnaNexusExecutor extends AbstractExecutor {
             /*
              * Uploading the task's input file
              */
-            taskInputId = DxHelper.uploadFile(inputFile,inputFile.absolutePath)
+            taskInputId = DxHelper.uploadFile(inputFile)
             log.debug "Uploading Task input file for task ${task.name} >> ${taskInputId}"
         }
 
@@ -121,7 +121,7 @@ class DnaNexusExecutor extends AbstractExecutor {
         /*
          * Uploading the task's script file.
          */
-        String scriptId=DxHelper.uploadFile(taskScript, taskScript.absolutePath)
+        String scriptId=DxHelper.uploadFile(taskScript)
         log.debug "Uploading script file for task ${task.name} >> ${scriptId}"
 
 
@@ -139,7 +139,7 @@ class DnaNexusExecutor extends AbstractExecutor {
                 log.debug "Getting input DxFile ${k} for task ${task.name} >> Name: ${v} >> ${v.getId()}"
             }
             else if( v instanceof File ) {
-                String inputId=DxHelper.uploadFile(taskScript, String.valueOf(v))
+                String inputId=DxHelper.uploadFile(taskScript)
                 inputs.add(makeDXLink(inputId))
                 log.debug "Uploading input file ${k} for task ${task.name} >> ${inputId}"
             }

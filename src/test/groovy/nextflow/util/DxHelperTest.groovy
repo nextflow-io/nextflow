@@ -1,5 +1,6 @@
 package nextflow.util
 
+import groovy.json.JsonSlurper
 import spock.lang.Specification
 
 /**
@@ -26,12 +27,15 @@ class DxHelperTest extends Specification {
     def testUpload() {
 
         setup:
-        String projectId = System.getenv('DX_PROJECT_CONTEXT_ID') ?: 'project-B7fQ9vj0FqXB2z80y5FQ0JGG'
+        def home = System.getProperty('user.home')
+        def config = new File(home, '.dnanexus_config/environment.json')
+        def json = new JsonSlurper().parseText(config.text)
+        def projectId = json.DX_PROJECT_CONTEXT_ID as String
 
         when:
-        File target = new File("fileToUpload")
-        target.text = "Esto es una prueba"
-        String id = DxHelper.uploadFile(target,target.name)
+        File target = File.createTempFile('dxupload', 'test')
+        target.text = "Hello there!\n"
+        String id = DxHelper.uploadFile(target, 'test-upload', projectId)
 
         then:
         id.startsWith('file-')
@@ -39,4 +43,6 @@ class DxHelperTest extends Specification {
         cleanup:
         target?.delete()
     }
+
+
 }
