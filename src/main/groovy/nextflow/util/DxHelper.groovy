@@ -33,6 +33,7 @@ import com.fasterxml.jackson.databind.node.DoubleNode
 import com.fasterxml.jackson.databind.node.IntNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.LongNode
+import com.fasterxml.jackson.databind.node.NullNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
 import groovy.util.logging.Slf4j
@@ -140,7 +141,7 @@ class DxHelper {
         /*
          * Create a new remote file
          */
-        def newFileRequest = mapToJsonNode(uploadInfo)
+        def newFileRequest = toJsonNode(uploadInfo)
         log.trace "Dx fileNew request > ${newFileRequest.toString()}"
 
         def result = DXAPI.fileNew(newFileRequest)
@@ -206,7 +207,7 @@ class DxHelper {
 
             // request to upload a new chunk
             // note: dnanexus upload chunk index is 1-based
-            def params = mapToJsonNode( index: current+1 )
+            def params = toJsonNode( index: current+1 )
             def upload = DXAPI.fileUpload(fileId, params)
             log.trace "File: $fileName; chunk [$current] > FileUpload: ${upload.toString()}"
 
@@ -344,9 +345,11 @@ class DxHelper {
 //        node.build()
 //    }
 
-    static JsonNode mapToJsonNode( def value ) {
+    static JsonNode toJsonNode( def value ) {
 
         switch( value ) {
+            case null:
+                return NullNode.instance
 
             case String:
                 return TextNode.valueOf(value as String)
@@ -354,15 +357,11 @@ class DxHelper {
             case BigDecimal:
                 return DecimalNode.valueOf(value as BigDecimal)
 
-
             case Integer:
                 return IntNode.valueOf(value as int)
 
             case BigInteger:
                 return BigIntegerNode.valueOf(value as BigInteger)
-
-            case byte[]:
-                return BinaryNode.valueOf(value as byte[])
 
             case Boolean:
                 return BooleanNode.valueOf(value as Boolean)
@@ -377,18 +376,25 @@ class DxHelper {
             case Map:
                 def result = new ObjectNode(JsonNodeFactory.instance)
                 (value as Map).each { String name, Object item ->
-                    result.put( name, mapToJsonNode(item))
+                    result.put( name, toJsonNode(item))
                 }
                 return result
+
+            case byte[]:
+                return BinaryNode.valueOf(value as byte[])
 
             case Collection:
             case Object[]:
 
                 def result = new ArrayNode(JsonNodeFactory.instance)
                 (value as List) .each {
-                    result.add( mapToJsonNode(it) )
+                    result.add( toJsonNode(it) )
                 }
                 return result
+
+            default:
+                log.debug "Unknown json type: ${value.class.name} -- mapping as string"
+                return TextNode.valueOf(value.toString())
         }
     }
 

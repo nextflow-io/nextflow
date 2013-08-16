@@ -17,12 +17,9 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.util
-
 import com.fasterxml.jackson.databind.node.ArrayNode
-import com.fasterxml.jackson.databind.node.ObjectNode
 import groovy.json.JsonSlurper
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -65,32 +62,52 @@ class DxHelperTest extends Specification {
     }
 
 
-    def testMapToJsonNode(){
+    def testToJsonNode(){
 
         when:
-        Map<String,Object> map = new HashMap<String,Object>();
+        def map = [:]
         map.put("one",1); // autoboxed to an object
         map.put("two", [1, 2]); // array of ints is an object
         map.put("three","hello"); // string is an object
-        ObjectNode result = DxHelper.toJsonNode(map);
+        map.put('empty', null )
+        map.put('map', [a:10,b:20,c:30])
+        map.put('array', ['alpha','beta'] as String[] )
+        def result = DxHelper.toJsonNode(map);
 
         then:
-        println("RESULTADO >> ${result}")
+        result.get('one').intValue() == 1
+        result.get('two') instanceof ArrayNode
+        result.get('two').get(0).intValue() == 1
+        result.get('two').get(1).intValue() == 2
+        result.get('three').isTextual()
+        result.get('three').textValue() == 'hello'
+        result.get('empty').isNull()
+        result.get('map').isObject()
+        result.get('map').get('a').isInt()
+        result.get('map').get('a').intValue() == 10
+        result.get('map').get('b').isInt()
+        result.get('map').get('b').intValue() == 20
+        result.get('map').get('c').isInt()
+        result.get('map').get('c').intValue() == 30
+        result.get('map').size() == 3
+        result.get('array').isArray()
+        result.get('array').get(0).isTextual()
+        result.get('array').get(0).textValue() == 'alpha'
+        result.get('array').get(1).isTextual()
+        result.get('array').get(1).textValue() == 'beta'
+        result.get('array').size() == 2
+
     }
 
     def testJsonNodeToMap2() {
 
         when:
-        def node = DxHelper.toJsonNode( [field1: "string", field2:[1,2,3], field3:[x: 1, y: 2], field4:[ [p:10, q:20], [w:99], ['a', 'b', 'c'] ]] )
+        def EXPECTED = [field1: "string", field2:[1,2,3], field3:[x: 1, y: 2], field4:[ [p:10, q:20], [w:99], ['a', 'b', 'c'] ]]
+        def node = DxHelper.toJsonNode(EXPECTED)
         def map = DxHelper.jsonNodeToMap(node)
 
-        println map.field2.class.name
-
         then:
-        map.field1 == 'string'
-        map.field2 == [1,2,3]
-        map.field3 == [x: 1, y: 2]
-        map.field4 == [ [p:10, q:20], [w:99], ['a', 'b', 'c'] ]
+        map == EXPECTED
 
     }
 
@@ -117,23 +134,16 @@ class DxHelperTest extends Specification {
 
         then:
         map.field1 == 0.23546769425757967900001 as BigDecimal
-    }
-
-    def testJsonNodeToMapBigInteger(){
 
         when:
-        def node = DxHelper.toJsonNode( [field1: 239423904802384 as BigInteger])
-        def map = DxHelper.jsonNodeToMap(node)
-
+        node = DxHelper.toJsonNode( [field1: 239423904802384 as BigInteger])
+        map = DxHelper.jsonNodeToMap(node)
         then:
         map.field1 == 239423904802384 as BigInteger
-    }
-
-    def testJsonNodeToMapBinary() {
 
         when:
-        def node = DxHelper.toJsonNode( [field1: [0xa,0x2,0xf] as byte[] ] )
-        def map = DxHelper.jsonNodeToMap(node)
+        node = DxHelper.toJsonNode( [field1: [0xa,0x2,0xf] as byte[] ] )
+        map = DxHelper.jsonNodeToMap(node)
 
         then:
         map.field1 == [0xa,0x2,0xf] as byte[]
@@ -195,8 +205,6 @@ class DxHelperTest extends Specification {
         node.get('b') instanceof ArrayNode
         (node.get('b') as ArrayNode).size() == 2
         (node.get('b') as ArrayNode).get(0).get('x').intValue() == 1
-
-
 
 
     }
