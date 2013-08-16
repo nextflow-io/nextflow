@@ -1,6 +1,25 @@
+/*
+ * Copyright (c) 2012-2013, the authors.
+ *
+ *   This file is part of 'Nextflow'.
+ *
+ *   Nextflow is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   Nextflow is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package nextflow.util
 
 import java.nio.ByteBuffer
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.dnanexus.DXAPI
@@ -33,27 +52,39 @@ import org.apache.http.util.EntityUtils
 import sun.nio.ch.DirectBuffer
 
 /**
+ * Helper methods to interact with DNAnexus API
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Beatriz M. San Juan <bmsanjuan@gmail.com>
  */
 
 @Slf4j
 class DxHelper {
 
+    /**
+     * Given a DNAnexus 'fileId' download it to the local file system
+     *
+     * @param fileId The remote file to be downloaded
+     * @param targetFile A local {@code File}
+     */
     static void downloadFile( String fileId, File targetFile ) {
+        assert fileId
+        assert targetFile
+
+        log.debug "Dx download: $fileId; target: $targetFile"
 
         def download = DXAPI.fileDownload(fileId)
         def url = download.get('url').textValue()
         def headers = download.get('headers')
 
-        log.debug "download headers>>>\n" + headers.toString()
+        log.trace "download headers>>>\n" + headers.toString()
 
         HttpClient client = new DefaultHttpClient();
         client.getParams().setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
 
         def get = new HttpGet(url)
         for( Map.Entry<String,JsonNode> item : headers.fields() ) {
-            log.debug "setting header > ${item.key}: ${item.value.textValue()}"
+            log.trace "setting header > ${item.key}: ${item.value.textValue()}"
             get.setHeader( item.key, item.value.textValue())
         }
 
@@ -134,7 +165,7 @@ class DxHelper {
         // synchronization vars
         final counter = new AtomicInteger()
         final done = new DataflowVariable()
-        final Map<Thread,ByteBuffer> buffers = [:]
+        final Queue<ByteBuffer> bufferPool = new ConcurrentLinkedQueue<ByteBuffer>()
 
         // error handler to redirect exception on the application log
         def errorHandler = new DataflowEventAdapter() {
@@ -159,14 +190,13 @@ class DxHelper {
             final channel = file.getChannel()
 
             // get am available buffer or allocate it
-            def tt = Thread.currentThread()
-            def buffer = buffers[tt]
+            def buffer = bufferPool.poll()
             if( !buffer ) {
-                log.trace "File: $fileName; chunk [$current] > allocating buffer for thread: ${tt}"
-                buffer = buffers[tt] = ByteBuffer.allocateDirect(chunkSize)
+                log.trace "File: $fileName; chunk [$current] > allocating buffer"
+                buffer = ByteBuffer.allocateDirect(chunkSize)
             }
             else {
-                log.trace "File: $fileName; chunk [$current] > clearing buffer: $tt"
+                log.trace "File: $fileName; chunk [$current] > clearing buffer"
                 buffer.clear()
             }
 
@@ -203,7 +233,10 @@ class DxHelper {
             String response = EntityUtils.toString( entity, "UTF-8" );
             log.trace "File: $fileName; chunk [$current] > post response: ${response}"
 
+            // close the client (maybe not really necessary)
             client.getConnectionManager().shutdown()
+            // offer the buffer so that it can be reused in the next iteration
+            bufferPool.offer(buffer)
 
             // when ALL the chunks have been uploaded, signal the termination
             if( counter.incrementAndGet() == totChunks )  {
@@ -231,7 +264,7 @@ class DxHelper {
         finally {
             log.trace "Uploader > release buffers"
             // release the direct buffer
-            buffers.values().each { DirectBuffer it ->
+            bufferPool.each { DirectBuffer it ->
                 it?.cleaner() ?.clean()
             }
         }
