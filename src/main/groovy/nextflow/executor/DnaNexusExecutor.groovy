@@ -181,6 +181,11 @@ class DnaNexusExecutor extends AbstractExecutor {
                         .put("taskInput", makeDXLink(taskInputId))
                         .put("taskScript", makeDXLink(scriptId))
                         .build())
+                    .put("systemRequirements", DXJSON.getObjectBuilder()      // "*"
+                        .put("process", DXJSON.getObjectBuilder()
+                            .put("instanceType", "dx_m2.2xlarge")
+                            .build())
+                        .build())
                     .build()
         }
         else{
@@ -191,6 +196,11 @@ class DnaNexusExecutor extends AbstractExecutor {
                             .put("outputs", outputs)
                             .put("taskName", task.name)
                             .put("taskScript", makeDXLink(scriptId))
+                            .build())
+                    .put("systemRequirements", DXJSON.getObjectBuilder()
+                            .put("process", DXJSON.getObjectBuilder()
+                                .put("instanceType", "dx_m2.2xlarge")
+                                .build())
                             .build())
                     .build()
             //.put("taskEnv", '')
