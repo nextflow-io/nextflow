@@ -1,5 +1,6 @@
 
 task {
+  echo true
   instanceType 'dx_m2.4xlarge'
 
   """

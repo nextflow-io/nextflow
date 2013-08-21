@@ -57,9 +57,6 @@ process() {
       ( cat .command.in | ./.command.sh ) > .command.out  ;
     fi
 
-    echo "<< .COMMAND.OUT >>"
-    cat .command.out
-
     exit_status=$?
     set -e
 
