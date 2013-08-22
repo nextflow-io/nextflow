@@ -170,6 +170,10 @@ class DnaNexusExecutor extends AbstractExecutor {
          *      - taskScript --> Dnanexus link to the task's script file.
          */
         ObjectNode processJobInputHash
+        String instance = taskConfig.instanceType
+        if(instance.equals(null)){
+                instance = "dx_m1.large"
+        }
 
         if (task.input){
             processJobInputHash = DXJSON.getObjectBuilder()
@@ -178,12 +182,13 @@ class DnaNexusExecutor extends AbstractExecutor {
                         .put("inputs", inputs)
                         .put("outputs", outputs)
                         .put("taskName", task.name)
+                        .put("taskEnv", createEnvironmentString(task))
                         .put("taskInput", makeDXLink(taskInputId))
                         .put("taskScript", makeDXLink(scriptId))
                         .build())
                     .put("systemRequirements", DXJSON.getObjectBuilder()
                         .put("process", DXJSON.getObjectBuilder()          // "*"
-                            .put("instanceType", taskConfig.instanceType)
+                            .put("instanceType", instance)
                             .build())
                         .build())
                     .build()
@@ -192,18 +197,18 @@ class DnaNexusExecutor extends AbstractExecutor {
             processJobInputHash = DXJSON.getObjectBuilder()
                     .put("function", "process")
                     .put("input", DXJSON.getObjectBuilder()
-                            .put("inputs", inputs)
-                            .put("outputs", outputs)
-                            .put("taskName", task.name)
-                            .put("taskScript", makeDXLink(scriptId))
-                            .build())
+                        .put("inputs", inputs)
+                        .put("outputs", outputs)
+                        .put("taskName", task.name)
+                        .put("taskEnv", createEnvironmentString(task))
+                        .put("taskScript", makeDXLink(scriptId))
+                        .build())
                     .put("systemRequirements", DXJSON.getObjectBuilder()
-                            .put("process", DXJSON.getObjectBuilder()      // "*"
-                                .put("instanceType", taskConfig.instanceType)
-                                .build())
+                        .put("process", DXJSON.getObjectBuilder()      // "*"
+                            .put("instanceType", instance)
                             .build())
+                        .build())
                     .build()
-            //.put("taskEnv", '')
         }
         log.debug "Creating job parameters"
 

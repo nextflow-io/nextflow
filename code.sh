@@ -42,19 +42,20 @@ process() {
     input_file_id=$(dx-jobutil-parse-link "${taskScript}")
     dx download "$input_file_id" -o .command.sh --no-progress
 
+
     # Change permissions to '.command.sh' to execute
-    # printf "$taskEnv" > task_env
     chmod +x .command.sh
+
 
     # Execution of the task's script
     set +e
     if [ -z "${taskInput}" ]; then
-      ( ./.command.sh ) > .command.out
+      (eval "${taskEnv}" && ./.command.sh ) > .command.out
     else
       # Download the input file and save to .command.in
       input_taskfile_id=$(dx-jobutil-parse-link "${taskInput}")  ;
       dx download "$input_taskfile_id" -o .command.in --no-progress  ;
-      ( cat .command.in | ./.command.sh ) > .command.out  ;
+     ( eval "${taskEnv}" && ( cat .command.in | ./.command.sh )) > .command.out  ;
     fi
 
     exit_status=$?
