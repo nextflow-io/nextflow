@@ -502,7 +502,7 @@ abstract class TaskProcessor {
         // pre-pend the 'bin' folder to the task environment
         if( session.binDir ) {
             def path = result['PATH'] ? "${session.binDir}:${result['PATH']}" : session.binDir
-            result['PATH'] = path
+            result['PATH'] = path.toString()
         }
 
         // add the task specific entries
