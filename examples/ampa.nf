@@ -17,8 +17,8 @@ fastaFile.chunkFasta { seq << it }
  */
 task ('ampa') {
 
-    //  defines the Input and Output
-    input '-':seq
+    // defines the Input and Output
+    stdin seq
     output result
 
     // The BASH script to be executed - for each - sequence

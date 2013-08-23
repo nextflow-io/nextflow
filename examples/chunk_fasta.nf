@@ -20,7 +20,7 @@ stdin.chunkFasta( params.chunkSize ) { str ->
 
 task {
     echo true
-    input '-': sequences
+    stdin sequences
 
     "cat -"
 }

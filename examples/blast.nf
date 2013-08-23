@@ -7,32 +7,32 @@ params.chunkSize = 1
 DB=params.db
 seq = channel()
 
-inputFile = new File(params.query)
+inputFile = file(params.query)
 inputFile.chunkFasta( params.chunkSize ) { seq << it }
 
 task {
-    input '-': seq
-    output blastResult
+    stdin seq
+    output file: 'out', into: blast_result
 
     """
-    cat - | blastp -db $DB -query - -outfmt 6 > blastResult
+    cat - | blastp -db $DB -query - -outfmt 6 > out
     """
 }
 
 merge {
-    input blastResult
-    output allBlast
+    input blast_result
+    output blast_all
 
     """
-    cat ${blastResult} >> allBlast
+    cat ${blast_result} >> blast_all
     """
 }
 
 task {
-    input allBlast
+    input blast_all
 
     """
-    sort $allBlast
+    sort $blast_all
     """
 }
 

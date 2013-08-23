@@ -25,8 +25,8 @@ class ParallelTaskProcessor extends TaskProcessor {
 
     @Override
     protected void createOperator() {
-        def opInputs = new ArrayList(taskConfig.inputs.values())
-        def opOutputs = new ArrayList(taskConfig.outputs.values())
+        def opInputs = new ArrayList(taskConfig.inputs.channels)
+        def opOutputs = new ArrayList(taskConfig.outputs.channels)
 
         /*
          * create a mock closure to trigger the operator
@@ -60,19 +60,23 @@ class ParallelTaskProcessor extends TaskProcessor {
         // -- map the inputs to a map and use to delegate closure values interpolation
         def map = new DelegateMap(ownerScript)
 
-        taskConfig.inputs?.keySet()?.eachWithIndex { String name, int index ->
+        taskConfig.inputs.eachWithIndex { InParam param, int index ->
 
             // when the name define for this 'input' is '-'
             // copy the value to the task 'input' attribute
             // it will be used to pipe it to the process stdin
-            if( name == '-' ) {
-                task.input = values.get(index)
+            if( param.name == '-' && param instanceof InFileParam) {
+                task.stdin = values.get(index)
             }
 
-            // otherwise put in on the map used to resolve the values evaluating the script
-            else {
-                map[ name ] = values.get(index)
+                // otherwise put in on the map used to resolve the values evaluating the script
+            else if( param instanceof InValueParam ) {
+                map[ param.name ] = values.get(index)
             }
+            else {
+                log.warn "Unknown input type > ${param.class.simpleName} -- ${param.dump()}"
+            }
+
         }
 
         /*
@@ -112,7 +116,7 @@ class ParallelTaskProcessor extends TaskProcessor {
             //          YES --> return the outputs
             //          NO  --> launch the task
 
-            def hash = CacheHelper.hasher( [session.uniqueId, task.script, task.input, task.code.delegate] ).hash()
+            def hash = CacheHelper.hasher( [session.uniqueId, task.script, task.stdin, task.code.delegate] ).hash()
             def folder = FileHelper.createWorkFolder(session.workDir, hash)
             def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder)
             if( !cached ) {
@@ -163,9 +167,9 @@ class ParallelTaskProcessor extends TaskProcessor {
         @Override
         public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
             if( log.isTraceEnabled() ) {
-                def inputs = new ArrayList(taskConfig.inputs?.keySet())
-                def name = currentTask.get()?.name ?: name
-                log.trace "Message arrived > ${name} -- ${inputs.get(index)} => ${message}"
+                def channelName = taskConfig.inputs?.names?.get(index)
+                def taskName = currentTask.get()?.name ?: name
+                log.trace "Message arrived > ${taskName} -- ${channelName} => ${message}"
             }
 
             return message;
@@ -174,9 +178,9 @@ class ParallelTaskProcessor extends TaskProcessor {
         @Override
         public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
             if( log.isTraceEnabled() ) {
-                def inputs = new ArrayList(taskConfig.inputs?.keySet())
-                def name = currentTask.get()?.name ?: name
-                log.trace "Control arrived > ${name} -- ${inputs.get(index)} => ${message}"
+                def channelName = taskConfig.inputs?.names?.get(index)
+                def taskName = currentTask.get()?.name ?: name
+                log.trace "Control arrived > ${taskName} -- ${channelName} => ${message}"
             }
 
             return message;

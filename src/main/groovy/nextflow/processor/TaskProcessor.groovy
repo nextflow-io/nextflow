@@ -30,6 +30,7 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
+import nextflow.Nextflow
 import nextflow.Session
 import nextflow.exception.MissingFileException
 import nextflow.exception.TaskValidationException
@@ -156,26 +157,17 @@ abstract class TaskProcessor {
          */
         log.trace "TaskConfig: ${taskConfig}"
         if( taskConfig.inputs.size() == 0 ) {
-            taskConfig.input('$':true)
+            taskConfig.noInput()
         }
 
-        allScalarValues = !taskConfig.inputs.values().any { !(it instanceof DataflowVariable) }
+        allScalarValues = !taskConfig.inputs.channels.any { !(it instanceof DataflowVariable) }
 
         /*
          * Normalize the output
          * - even though the output may be empty, let return the stdout as output by default
          */
         if ( taskConfig.outputs.size() == 0 ) {
-            taskConfig.output('-')
-        }
-
-        /*
-         * bind the outputs to the script scope
-         */
-        if( ownerScript ) {
-            taskConfig.outputs.each { String name, Object channel ->
-                if( name != '-' ) { ownerScript.setProperty(name, channel) }
-            }
+            taskConfig.stdout( Nextflow.channel() )
         }
 
         createOperator()
@@ -184,7 +176,7 @@ abstract class TaskProcessor {
          * When there is a single output channel, return let returns that item
          * otherwise return the list
          */
-        def result = taskConfig.outputs.values()
+        def result = taskConfig.outputs.channels
         return result.size() == 1 ? result[0] : result
     }
 
@@ -398,7 +390,7 @@ abstract class TaskProcessor {
 
                 // if the echo was disabled show, the program out when there's an error
                 message << "\nCommand output:"
-                task.output.eachLine {
+                task.stdout.eachLine {
                     message << "  $it"
                 }
 
@@ -433,7 +425,7 @@ abstract class TaskProcessor {
 
     final protected synchronized void sendPoisonPill() {
 
-        taskConfig.outputs.each { name, channel ->
+        taskConfig.outputs.eachParam { name, channel ->
             if( channel instanceof DataflowQueue ) {
                 log.trace "Sending Poison-pill over $name channel"
                 channel.bind( PoisonPill.instance )
@@ -463,7 +455,7 @@ abstract class TaskProcessor {
 
         // -- collect the produced output
         def allFiles = [:]
-        taskConfig.outputs.keySet().each { name ->
+        taskConfig.outputs.names.each { name ->
             allFiles[ name ] = executor.collectResultFile(task, name)
         }
 
@@ -475,11 +467,11 @@ abstract class TaskProcessor {
         log.trace "Binding results > task: ${name} - values: ${allOutputResources}"
 
         // -- bind each produced file to its own channel
-        taskConfig.outputs.keySet().eachWithIndex { name, index ->
+        taskConfig.outputs.eachWithIndex { OutParam param, index ->
 
-            def entry = allOutputResources[name]
+            def entry = allOutputResources[ param.name ]
 
-            if( name == '-' && entry instanceof File ) {
+            if( param.name == '-' && entry instanceof File ) {
                 processor.bindOutput(index, entry.text)
             }
             else if( entry instanceof Collection ) {

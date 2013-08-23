@@ -111,12 +111,12 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
      */
     protected File createCommandInputFile( TaskRun task ) {
 
-        if( task.input == null ) {
+        if( task.stdin == null ) {
             return null
         }
 
         def result = new File( task.workDirectory, COMMAND_INPUT_FILE )
-        result.text = task.input
+        result.text = task.stdin
         return result
     }
 
@@ -161,7 +161,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         wrapper << "${scriptFile.absolutePath}) &> ${cmdOutFile.absolutePath}" << '\n'
 
         // "un-stage" the result files
-        def resultFiles = taskConfig.outputs.keySet().findAll { it != '-' }
+        def resultFiles = taskConfig.outputs.names.findAll { it != '-' }
         if( resultFiles && changeDir ) {
             resultFiles.each { name -> wrapper << "for X in $name; do cp \$X $folder; done\n" }
             wrapper << 'rm -rf $NF_SCRATCH &'
@@ -275,7 +275,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
             IOUtils.closeQuietly(process.err)
             process.destroy()
 
-            task.output = collectResultFile(task,'-')
+            task.stdout = collectResultFile(task,'-')
         }
 
     }

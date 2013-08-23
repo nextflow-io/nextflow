@@ -2,7 +2,6 @@ params.query = "$HOME/sample.fa"
 params.db = "$HOME/tools/blast-db/pdb/pdb"
 
 
-
 task ('blast') {
     output top_hits
 

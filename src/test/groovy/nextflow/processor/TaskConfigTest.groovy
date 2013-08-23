@@ -1,5 +1,6 @@
 package nextflow.processor
 
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -106,6 +107,30 @@ class TaskConfigTest extends Specification {
         !config.containsKey('maxForks')
         config.maxForks == null
 
+
+    }
+
+
+    def 'test input' () {
+
+        setup:
+        def config = new TaskConfig()
+
+        when:
+        config.input file: 'filename.fa', from: new DataflowVariable<>()
+        config.input val: 'x', from: 1
+
+        then:
+        config.getInputs().size() == 2
+
+        config.getInputs().get(0) instanceof InFileParam
+        config.getInputs().get(0).name == 'filename.fa'
+
+        config.getInputs().get(1) instanceof InValueParam
+        config.getInputs().get(1).name == 'x'
+
+        config.getInputs().names == [ 'filename.fa', 'x' ]
+        config.getInputs().ofType( InFileParam ) == [ config.getInputs().get(0) ]
 
     }
 

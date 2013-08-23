@@ -5,7 +5,8 @@ y = ['a','b']
 
 task {
     echo true
-    input x, y
+    input x
+    input y
 
     "echo $x - $y"
 

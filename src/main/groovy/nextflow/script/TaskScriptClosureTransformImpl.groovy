@@ -115,6 +115,11 @@ class TaskScriptClosureTransformImpl implements ASTTransformation {
                     super.visitMethodCallExpression(methodCall)
                 }
 
+                else if ( preCondition && methodCall.getMethodAsString() == 'stdout' && currentTaskName  ) {
+                    handleStdoutMethod(methodCall, sourceUnit)
+                    super.visitMethodCallExpression(methodCall)
+                }
+
                 // just apply the default behavior
                 else {
                     super.visitMethodCallExpression(methodCall)
@@ -125,11 +130,8 @@ class TaskScriptClosureTransformImpl implements ASTTransformation {
     }
 
     /**
-     * This method transform method invocation for method {@code Processor#input}
-     * from {@code input(x,y,z..) to {@code input( ['x':x, 'y':y, 'z':z ]}
-     * <p>
-     *     In other words from a list of values to a map for which each entry has the
-     *     same name as the variable name itself
+     * Normalize the *input* declaration converting variables to fully qualified idiom
+     * in the form {@code [ val: <literal>, from: <value> ] }
      *
      * @param methodCall
      * @param source
@@ -137,7 +139,9 @@ class TaskScriptClosureTransformImpl implements ASTTransformation {
     def void handleInputMethod( MethodCallExpression methodCall, SourceUnit source ) {
         log.trace "Method 'input' arguments: ${methodCall.arguments}"
 
-        if ( !(methodCall.arguments instanceof ArgumentListExpression) ) {
+        // if the arguments is already TupleExpression, there's nothing to do
+        // since it is already wrapping a named parameters
+        if ( methodCall.arguments.class == TupleExpression ) {
             log.trace "Transformation for argument of type: '${methodCall.arguments?.class?.name}' not required"
             return
         }
@@ -148,7 +152,11 @@ class TaskScriptClosureTransformImpl implements ASTTransformation {
         List<MapEntryExpression> entries = []
         args.getExpressions().each { Expression item ->
             if ( item instanceof VariableExpression ) {
-                   entries << new MapEntryExpression( new ConstantExpression(item.getName()), item )
+                // when the input declaration contains just a variable
+                // it is converted to an 'val' input declaration equivalent to
+                // the following [ val:<literal>, channel:<value> ]
+                entries << new MapEntryExpression( new ConstantExpression('val'), new ConstantExpression(item.getName()) )
+                entries << new MapEntryExpression( new ConstantExpression('from'), item )
             }
             else if ( item instanceof MapExpression ) {
                 item.mapEntryExpressions?.each { MapEntryExpression entry -> entries << entry }
@@ -164,32 +172,94 @@ class TaskScriptClosureTransformImpl implements ASTTransformation {
 
     }
 
-
+    /**
+     * Normalize the {@code output} clause, interpreting constants and variables
+     * as *output* files specification.
+     *
+     * @param methodCall
+     * @param source
+     */
     def void handleOutputMethod( MethodCallExpression methodCall, SourceUnit source ) {
         log.trace "Method 'output' arguments: ${methodCall.arguments}"
 
-        if ( !(methodCall.arguments instanceof ArgumentListExpression) ) {
-            log.trace "Transformation for argument of type: '${methodCall.arguments?.class?.name}' not required"
-            return
-        }
-
         // need to convert the ArgumentListExpression to a 'TupleExpression'
-        def args = methodCall.arguments as ArgumentListExpression
+        def args = methodCall.arguments as TupleExpression
 
-        int c = args.getExpressions()?.size()
-        for( int i=0; i<c; i++  ) {
-            // replace any variable expression by a constant expression
-            def item = args.expressions[i]
-            if ( item instanceof VariableExpression ) {
-                log.trace "Replacing Variable expression: $item"
-                args.expressions[i] = new ConstantExpression(item.getName())
+        List<MapEntryExpression> entries = []
+        args.getExpressions().each { Expression item ->
+            if( item instanceof ConstantExpression ) {
+                // when the output declaration contains a constant value,
+                // it is interpreted as the the file(s) name(s) to be returned by the task
+                // the following map entry it is created {@code [ file:<const value> ] }
+                entries << new MapEntryExpression( new ConstantExpression('file'), new ConstantExpression(item.getValue()) )
+            }
+            else if ( item instanceof VariableExpression ) {
+                // when the output declaration contains just a variable value
+                // it is interpreted as the the file(s) name(s) to be returned by the task
+                // the following map entry it is created {@code [ file:<variable name> ] }
+                entries << new MapEntryExpression( new ConstantExpression('file'), new ConstantExpression(item.getName()) )
+            }
+            else if ( item instanceof MapExpression ) {
+                item.mapEntryExpressions?.each { MapEntryExpression entry ->
+                    def k = entry.keyExpression
+                    def v = entry.valueExpression
+                    // converts {@code into: variable} to a {@code into: 'variable name' } clause
+                    // in order to reference *channel* by name
+                    if( k instanceof ConstantExpression && k.value == 'into' && v instanceof VariableExpression ) {
+                        entries << new MapEntryExpression( k, new ConstantExpression(v.name) )
+                    }
+                    else {
+                        entries << entry
+                    }
+                }
             }
             else {
-                log.trace "Skipping expression item: $item"
+                source.addError(new SyntaxException("Not a valid variable expression", item.lineNumber, item.columnNumber ))
+                return
             }
         }
 
+        TupleExpression tuple = new TupleExpression(new NamedArgumentListExpression(entries))
+        methodCall.setArguments( tuple )
 
+    }
+
+    /**
+     * Handle the 'stdout' task parameter definition. The 'stdout' it is supposed
+     * to have an argument specified the 'channel' to which the task stdout has to be
+     * forward.
+     * <p>
+     * Since we want to make possible to *create* a channel whenever it does not exist,
+     * the channel has to be referenced by its name specified by a string value.
+     * <p>
+     * This method converts the clause {@code stdout channel} to {@code stdout 'channel'}
+     *
+     * @param methodCall
+     * @param source
+     */
+    def void handleStdoutMethod( MethodCallExpression methodCall, SourceUnit source ) {
+        log.trace "Method 'stdout' arguments: ${methodCall.arguments}"
+
+        // need to convert the ArgumentListExpression to a 'TupleExpression'
+        def args = methodCall.arguments as TupleExpression
+
+        List<Expression> entries = []
+        args.getExpressions().each { Expression item ->
+
+            // converts variable expression
+            // holding the reference to a channel
+            // to a constant expression as he channel variable literal
+            if ( item instanceof VariableExpression ) {
+                entries << new ConstantExpression(item.getName())
+            }
+            else {
+                source.addError(new SyntaxException("Not a valid stdout parameter value", item.lineNumber, item.columnNumber ))
+                return
+            }
+        }
+
+        TupleExpression tuple = new ArgumentListExpression(entries)
+        methodCall.setArguments( tuple )
 
     }
 
@@ -223,7 +293,7 @@ class TaskScriptClosureTransformImpl implements ASTTransformation {
      * @param unit
      */
     def void handleTaskMethod( MethodCallExpression methodCall, SourceUnit unit ) {
-        log.trace "Apply task closure trasformation to method call: $methodCall"
+        log.trace "Apply task closure transformation to method call: $methodCall"
 
         def args = methodCall.arguments as ArgumentListExpression
         def lastArg = args.expressions.size()>0 ? args.getExpression(args.expressions.size()-1) : null

@@ -98,7 +98,7 @@ class LocalExecutor extends AbstractExecutor {
         task.status = TaskRun.Status.RUNNING
 
         // -- copy the input value to the process standard input
-        if( task.input != null ) {
+        if( task.stdin != null ) {
             pipeTaskInput( task, process )
         }
 
@@ -145,7 +145,7 @@ class LocalExecutor extends AbstractExecutor {
             IOUtils.closeQuietly(process.err)
             process.destroy()
 
-            task.output = fileOut
+            task.stdout = fileOut
         }
     }
 
@@ -167,7 +167,7 @@ class LocalExecutor extends AbstractExecutor {
 
         Thread.start {
             try {
-                IOGroovyMethods.withStream(new BufferedOutputStream(process.getOutputStream())) {writer -> writer << task.input}
+                IOGroovyMethods.withStream(new BufferedOutputStream(process.getOutputStream())) {writer -> writer << task.stdin}
             }
             catch( Exception e ) {
                 log.warn "Unable to pipe input data for task: ${task.name}"

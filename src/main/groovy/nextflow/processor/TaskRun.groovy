@@ -20,6 +20,7 @@
 package nextflow.processor
 
 /**
+ * Models a task instance
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -56,7 +57,7 @@ class TaskRun {
     /**
      * The value to be piped to the process stdin
      */
-    def input
+    def stdin
 
     /**
      * The exit code returned by executing the task script
@@ -66,15 +67,15 @@ class TaskRun {
     /**
      * The return std out
      */
-    def output
+    def stdout
 
-    def String getOutput() {
+    def String getStdout() {
 
-        if( output instanceof File ) {
-            return output.text
+        if( stdout instanceof File ) {
+            return stdout.text
         }
         else {
-            output?.toString()
+            stdout?.toString()
         }
 
     }

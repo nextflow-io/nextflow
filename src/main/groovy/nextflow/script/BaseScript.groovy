@@ -206,7 +206,7 @@ abstract class BaseScript extends Script {
     private createProcessor( Class<? extends TaskProcessor> processorClass, String name, Closure<String> block  ) {
         assert block
 
-        def taskConfig = new TaskConfig()
+        def taskConfig = new TaskConfig(this)
 
         // set 'default' properties defined in the configuration file in the 'task' section
         if( config.task instanceof Map ) {

@@ -42,7 +42,7 @@ class MergeTaskProcessor extends TaskProcessor {
         mergeHashesList = new LinkedList<>()
         mergeTempFolder = FileHelper.createTempFolder(session.workDir)
 
-        def params = [inputs: new ArrayList(taskConfig.inputs.values()), outputs: new ArrayList(taskConfig.outputs.values()), listeners: [new MergeProcessorInterceptor()] ]
+        def params = [inputs: new ArrayList(taskConfig.inputs.channels), outputs: new ArrayList(taskConfig.outputs.channels), listeners: [new MergeProcessorInterceptor()] ]
         processor = new DataflowOperator(group, params, wrapper)
         session.allProcessors.add(processor)
 
@@ -100,14 +100,18 @@ class MergeTaskProcessor extends TaskProcessor {
 
     }
 
-    protected void mergeScriptCollector( List params ) {
+    protected void mergeScriptCollector( List values ) {
         final currentIndex = mergeIndex.incrementAndGet()
         log.info "Collecting task > ${name} ($currentIndex)"
 
         // -- map the inputs to a map and use to delegate closure values interpolation
         def inputVars = new DelegateMap(ownerScript)
-        taskConfig.inputs?.keySet()?.eachWithIndex { name, index ->
-            inputVars[name] = params[index]
+        taskConfig.inputs.eachWithIndex { InParam param, int index ->
+
+            if( param instanceof InValueParam ) {
+                inputVars[param.name] = values[index]
+            }
+
         }
 
         /*

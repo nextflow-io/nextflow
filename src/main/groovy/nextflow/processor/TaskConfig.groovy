@@ -18,15 +18,12 @@
  */
 
 package nextflow.processor
-
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowBroadcast
-import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Nextflow
+import nextflow.script.BaseScript
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-
 /**
  * Holds the task configuration properties
  *
@@ -38,10 +35,14 @@ class TaskConfig implements Map {
     @Delegate
     protected final Map configProperties
 
+    private final BaseScript ownerScript
+
     /**
      * Initialize the taskConfig object with the defaults values
      */
-    TaskConfig() {
+    TaskConfig( BaseScript script ) {
+
+        ownerScript = script
 
         configProperties = new LinkedHashMap()
         configProperties.with {
@@ -49,8 +50,8 @@ class TaskConfig implements Map {
             cacheable = true
             shell = ['/bin/bash','-ue']
             validExitCodes = [0]
-            inputs = new LinkedHashMap()
-            outputs = new LinkedHashMap()
+            inputs = new InputList()
+            outputs = new OutputList()
         }
 
         configProperties.errorStrategy = ErrorStrategy.TERMINATE
@@ -60,13 +61,18 @@ class TaskConfig implements Map {
         configProperties = delegate
     }
 
+    protected TaskConfig( TaskConfig cfg ) {
+        configProperties = cfg
+        ownerScript = cfg.@ownerScript
+        log.debug "TaskConfig >> ownerScript: $ownerScript"
+    }
+
     def boolean containsKey(String name) {
         return configProperties.containsKey(name)
     }
 
 
-    def methodMissing(String name, Object args) {
-        log.debug "methodMissing: $name = $args"
+    def methodMissing( String name, def args) {
 
         if( args instanceof Object[] ) {
 
@@ -88,14 +94,14 @@ class TaskConfig implements Map {
     /**
      * Type shortcut to {@code #configProperties.inputs}
      */
-    Map<String,DataflowReadChannel> getInputs() {
+    InputList getInputs() {
         return configProperties.inputs
     }
 
     /**
      * Type shortcut to {@code #configProperties.outputs}
      */
-    Map<String,DataflowWriteChannel> getOutputs() {
+    OutputList getOutputs() {
         return configProperties.outputs
     }
 
@@ -120,53 +126,113 @@ class TaskConfig implements Map {
         return this
     }
 
-    /**
-     * Defines one, or more, input channel
+    /*
+     * Try to access to the script property defined by the
+     * specified {@code name}
+     * <p>
+     * If it's not defined, it will return {@code null}
      *
-     * @param args
+     */
+    private getScriptProperty( String name ) {
+        assert ownerScript
+        try {
+            ownerScript.getProperty(name)
+        }
+        catch( MissingPropertyException e ) {
+            return null
+        }
+    }
+
+
+    /**
+     * Defines a task 'input'
+     *
+     * @param attributes
      * @return
      */
-    TaskConfig input(Map<String,?> args) {
-        // wrap by a linked map o guarantee the insertion order
+    def TaskConfig input( Map attributes )  {
 
-        args?.each { name, value ->
-            if ( value instanceof DataflowBroadcast )  {
-                inputs.put( name, value.createReadChannel() )
+        configProperties.inputs << InParam.parse(attributes)
+
+        return this
+    }
+
+    /**
+     * Defines a special *dummy* input parameter, when no inputs are
+     * provided by the user for the current task
+     */
+    def void noInput() {
+        input( val:'$', from: true )
+    }
+
+    /**
+     * Defines a task 'output'. An output is defined through a map holding its
+     * properties, using the following pattern:
+     * <p>
+     * <pre>
+     *     file: <file name>, into: <receiving channel>
+     * </pre>
+     *
+     *
+     * @param attributes
+     * @return
+     */
+    def TaskConfig output( Map attributes ) {
+        assert attributes
+        assert attributes.file
+
+        def nm = attributes.file as String
+        def ch = attributes.into
+
+        // the receiving channel may not be defined explicitly
+        // in that case the specified file name will used to
+        // reference it in the script context
+        if( ch == null ) {
+            log.trace "output > channel not defined"
+            ch = ( nm != '-' ) ? nm.replaceAll(/\./, '_') :  Nextflow.channel()
+        }
+
+        if( ch instanceof String ) {
+            // the channel is specified by name
+            def local = ch
+            log.trace "output > channel name: $local"
+
+            // look for that name in the 'script' context
+            ch = getScriptProperty(local)
+            if( ch instanceof DataflowWriteChannel ) {
+                // that's OK -- nothing to do
             }
-            else if( value instanceof DataflowReadChannel ) {
-                inputs.put( name, value )
-            }
-            // wrap any collections with a DataflowQueue
-            else if( value instanceof Collection ) {
-                inputs.put( name, Nextflow.channel(value) )
-            }
-            // wrap any array with a DataflowQueue
-            else if ( value && value.class.isArray() ) {
-                inputs.put( name, Nextflow.channel(value as List) )
-            }
-            // wrap a single value with a DataflowVariable
             else {
-                inputs.put( name, Nextflow.val(value) )
+                if( ch == null ) {
+                    log.debug "output > channel unknown: $local -- creating a new instance"
+                }
+                else {
+                    log.warn "Duplicate output channel name: '$ch' in the script context -- it's worth to rename it to avoid possible conflicts"
+                }
+
+                // instantiate the new channel
+                ch = Nextflow.channel()
+                // bind it to the script on-fly
+                if( local != '-' && ownerScript) {
+                    // bind the outputs to the script scope
+                    ownerScript.setProperty(local, ch)
+                }
             }
+
         }
+
+        // add it to the list out outputs
+        configProperties.outputs << new OutFileParam(name: nm, channel: ch)
 
         return this
     }
 
-    TaskConfig output(String... files) {
-        if ( files ) {
-            files.each { name -> outputs.put( name, Nextflow.channel() ) }
-        }
-
-        return this
+    def TaskConfig stdin(channel) {
+        input( file:'-', from:channel )
     }
 
-    TaskConfig output(Map<String,DataflowWriteChannel> outputs) {
-        if ( outputs ) {
-            this.outputs.putAll(outputs)
-        }
-
-        return this
+    def TaskConfig stdout(channel) {
+        output( file:'-', into:channel )
     }
 
 

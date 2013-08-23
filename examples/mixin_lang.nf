@@ -2,13 +2,11 @@
 
 params.range = 100
 
-randNums = channel()
-
 /*
  * A trivial Perl script producing a list of numbers pair
  */
 task {
-    output '-': randNums
+    stdout randNums
 
     """
     #!/usr/bin/env perl
@@ -30,7 +28,7 @@ task {
  * A Python script task which parses the output of the previous script
  */
 task {
-    input '-': randNums
+    stdin randNums
     echo true
 
     """
