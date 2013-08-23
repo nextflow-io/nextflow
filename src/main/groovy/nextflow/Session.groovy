@@ -74,7 +74,7 @@ class Session {
     def File baseDir
 
     /**
-     * The folder where script binaries file are located, bu default the folder 'bin'
+     * The folder where script binaries file are located, by default the folder 'bin'
      * in the script base directory
      */
     @Lazy
