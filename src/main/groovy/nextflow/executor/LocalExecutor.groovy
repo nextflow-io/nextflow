@@ -66,18 +66,21 @@ class LocalExecutor extends AbstractExecutor {
          */
         def scriptFile = new File(scratch, COMMAND_SCRIPT_FILENAME)
         scriptFile.text = task.processor.normalizeScript(task.script.toString())
-        scriptFile.setExecutable(true)
 
         /*
          * create the runner script which will launch the script
          */
         def runnerText = """
                     source ${COMMAND_ENV_FILENAME}
+                    chmod +x ${COMMAND_SCRIPT_FILENAME}
                     ./${COMMAND_SCRIPT_FILENAME}
                     """
         def runnerFile = new File(scratch, COMMAND_RUNNER_FILENAME)
         runnerFile.text = task.processor.normalizeScript(runnerText)
-        runnerFile.setExecutable(true)
+
+        // the cmd list to launch it
+        List cmd = new ArrayList(taskConfig.shell ?: 'bash' as List ) << COMMAND_RUNNER_FILENAME
+        log.trace "Launch cmd line: ${cmd.join(' ')}"
 
         /*
          * save the reference to the scriptFile
@@ -86,7 +89,7 @@ class LocalExecutor extends AbstractExecutor {
 
         ProcessBuilder builder = new ProcessBuilder()
                 .directory(scratch)
-                .command(runnerFile.absolutePath)
+                .command(cmd)
                 .redirectErrorStream(true)
 
         // -- start the execution and notify the event to the monitor
