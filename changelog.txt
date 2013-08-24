@@ -2,8 +2,10 @@ NEXTFLOW CHANGE-LOG
 ===================
 
 0.3.4
-- Extending semnatics for method File.copyTo(source,target) so that when 'target' argument 
+- Extending semantic for method File.copyTo(source,target) so that when 'target' argument 
   is a directory, it copy the 'source' file to that folder, with the same name of the original file.
+- Bug: Fixed a ClassCastEx exception when the 'bin' folder is added to the PATH
+- Bug: Fixed an issue that raised an error "error=26 Text file busy" on some platforms (CentOS)  
 
 0.3.3 - 8 Aug 2013
 - Added optional parameters to 'chunkLines' and 'chunkFasta' methods

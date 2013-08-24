@@ -34,11 +34,11 @@ class LocalExecutor extends AbstractExecutor {
 
     private static final COMMAND_OUT_FILENAME = '.command.out'
 
-    private static final COMMAND_RUNNER_FILENAME = '.command.run'
+    private static final COMMAND_BASH_FILENAME = '.command.sh'
 
     private static final COMMAND_ENV_FILENAME = '.command.env'
 
-    private static final COMMAND_SCRIPT_FILENAME = '.command.sh'
+    private static final COMMAND_SCRIPT_FILENAME = '.command.run'
 
 
     /**
@@ -64,22 +64,23 @@ class LocalExecutor extends AbstractExecutor {
         /*
          * save the main script file
          */
+        def scriptStr = task.processor.normalizeScript(task.script.toString())
         def scriptFile = new File(scratch, COMMAND_SCRIPT_FILENAME)
-        scriptFile.text = task.processor.normalizeScript(task.script.toString())
+        scriptFile.text = scriptStr
+        def interpreter = task.processor.fetchInterpreter(scriptStr)
 
         /*
          * create the runner script which will launch the script
          */
         def runnerText = """
-                    source ${COMMAND_ENV_FILENAME}
-                    chmod +x ${COMMAND_SCRIPT_FILENAME}
-                    ./${COMMAND_SCRIPT_FILENAME}
+                    source $COMMAND_ENV_FILENAME
+                    $interpreter $COMMAND_SCRIPT_FILENAME
                     """
-        def runnerFile = new File(scratch, COMMAND_RUNNER_FILENAME)
+        def runnerFile = new File(scratch, COMMAND_BASH_FILENAME)
         runnerFile.text = task.processor.normalizeScript(runnerText)
 
         // the cmd list to launch it
-        List cmd = new ArrayList(taskConfig.shell ?: 'bash' as List ) << COMMAND_RUNNER_FILENAME
+        List cmd = new ArrayList(taskConfig.shell ?: 'bash' as List ) << COMMAND_BASH_FILENAME
         log.trace "Launch cmd line: ${cmd.join(' ')}"
 
         /*

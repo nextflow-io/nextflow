@@ -224,6 +224,16 @@ abstract class TaskProcessor {
         return result.toString()
     }
 
+    def String fetchInterpreter( String script ) {
+        assert script != null
+
+        if( script[0] == '#' && script[1] == '!') {
+            return script.readLines()[0].substring(2)
+        }
+
+        return null
+    }
+
     /**
      * Wraps the target method by a closure declaring as many arguments as many are the user declared inputs
      * object.

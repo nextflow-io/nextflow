@@ -118,6 +118,7 @@ class MergeTaskProcessor extends TaskProcessor {
         scriptClosure.setResolveStrategy(Closure.DELEGATE_FIRST)
 
         def commandToRun = normalizeScript(scriptClosure.call()?.toString())
+        def interpreter = fetchInterpreter(commandToRun)
 
         /*
          * create a unique hash-code for this task run and save it into a list
@@ -137,7 +138,6 @@ class MergeTaskProcessor extends TaskProcessor {
         def scriptName = ".merge_command.sh.${index.toString().padLeft(4,'0')}"
         def scriptFile = new File(mergeTempFolder, scriptName)
         scriptFile.text = commandToRun
-        scriptFile.setExecutable(true)
 
         // the command to launch this command
         def scriptCommand = scriptFile.absolutePath
@@ -153,7 +153,7 @@ class MergeTaskProcessor extends TaskProcessor {
         }
 
         // create a unique script collecting all the commands
-        mergeScript << scriptCommand << '\n'
+        mergeScript << interpreter << ' ' << scriptCommand << '\n'
 
     }
 

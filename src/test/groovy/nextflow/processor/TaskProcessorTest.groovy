@@ -40,7 +40,7 @@ class TaskProcessorTest extends Specification {
         when:
         def session = new Session([env: [X:"1", Y:"2"]])
         session.setBaseDir(home)
-        def processor = new DummyProcessor(new NopeExecutor(), session, new DummyScript(), new TaskConfig(), {})
+        def processor = new DummyProcessor(new NopeExecutor(), session, new TaskConfig())
         def builder = new ProcessBuilder()
         builder.environment().putAll( processor.getProcessEnvironment() )
 
@@ -53,7 +53,7 @@ class TaskProcessorTest extends Specification {
         when:
         session = new Session([env: [X:"1", Y:"2", PATH:'/some']])
         session.setBaseDir(home)
-        processor = new DummyProcessor(new NopeExecutor(), session, new DummyScript(), new TaskConfig(), {})
+        processor = new DummyProcessor(new NopeExecutor(), session, new TaskConfig())
         builder = new ProcessBuilder()
         builder.environment().putAll( processor.getProcessEnvironment() )
 
@@ -69,11 +69,32 @@ class TaskProcessorTest extends Specification {
 
     }
 
+    def testFetchInterpreter() {
+
+        when:
+        def processor = new DummyProcessor(new NopeExecutor(), new Session(), new TaskConfig())
+        def script =
+            '''
+            #!/bin/perl
+            do this
+            do that
+            '''
+        def i = processor.fetchInterpreter(script.stripIndent().trim())
+        then:
+        i == '/bin/perl'
+
+        when:
+        processor = new DummyProcessor(new NopeExecutor(), new Session(),  new TaskConfig())
+        i = processor.fetchInterpreter('do this')
+        then:
+        i == null
+    }
+
 
     static class DummyProcessor extends TaskProcessor {
 
-        DummyProcessor(AbstractExecutor executor, Session session, BaseScript script, TaskConfig taskConfig, Closure taskBlock) {
-            super(executor, session, script, taskConfig, taskBlock)
+        DummyProcessor(AbstractExecutor executor, Session session, TaskConfig taskConfig) {
+            super(executor, session, new DummyScript(), taskConfig, {})
         }
 
         @Override
