@@ -3,7 +3,7 @@ NEXTFLOW CHANGE-LOG
 
 0.3.4
 - Extending semantic for method File.copyTo(source,target) so that when 'target' argument 
-  is a directory, it copy the 'source' file to that folder, with the same name of the original file.
+  is a directory, it copies the 'source' file to that folder, with the same name as the original file.
 - Bug: Fixed a ClassCastEx exception when the 'bin' folder is added to the PATH
 - Bug: Fixed an issue that raised an error "error=26 Text file busy" on some platforms (CentOS)  
 

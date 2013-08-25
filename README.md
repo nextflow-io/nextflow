@@ -47,7 +47,7 @@ to the path where you downloaded the Nextflow package.
 
 Launch the above example by typing the following command on your terminal console:
 
-    ./nextflow -echo hello.nf
+    ./nextflow -t.echo true hello.nf
 
 
 Congratulations! You have just run your first task with Nextflow.
