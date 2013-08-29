@@ -8,3 +8,5 @@ tmp/*
 work/*
 .vagrant/*
 .nextflow.history
+nextflow.eml
+nextflow.iml
