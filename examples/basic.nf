@@ -1,16 +1,16 @@
 #!/usr/bin/env nextflow
 
-params.in = './sample.fa'
+params.in = "$HOME/sample.fa"
 
 sequences = file(params.in)
 SPLIT = (System.properties['os.name'] == 'Mac OS X' ? 'gcsplit' : 'csplit')
 
 task {
-  input sequences
+  input file:'input.fa', from: sequences
   output file:'seq_*', into: records
-  
+
   """
-  $SPLIT ${sequences} '%^>%' '/^>/' '{*}' -f seq_
+  $SPLIT input.fa '%^>%' '/^>/' '{*}' -f seq_
   """
 
 }

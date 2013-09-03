@@ -11,11 +11,11 @@ inputFile = file(params.query)
 inputFile.chunkFasta( params.chunkSize ) { seq << it }
 
 task {
-    stdin seq
+    input file: 'seq.fa', from: seq
     output file: 'out', into: blast_result
 
     """
-    cat - | blastp -db $DB -query - -outfmt 6 > out
+    blastp -db $DB -query seq.fa -outfmt 6 > out
     """
 }
 
@@ -30,6 +30,7 @@ merge {
 
 task {
     input blast_all
+    stdout result
 
     """
     sort $blast_all
@@ -37,4 +38,4 @@ task {
 }
 
 
-println read(result)
+println result.val
