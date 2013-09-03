@@ -54,6 +54,31 @@ class TaskRun {
      */
     Status status
 
+    Map<InParam,Object> inputs = [:]
+
+    Map<OutParam,Object> outputs = [:]
+
+    def void setInput( InParam param, Object value = null ) {
+        assert param
+
+        inputs[param] = value
+
+        // copy the value to the task 'input' attribute
+        // it will be used to pipe it to the process stdin
+        if( param instanceof StdInParam) {
+            stdin = value
+        }
+    }
+
+    def void setOutput( OutParam param, Object value = null ) {
+        assert param
+
+        outputs[param] = value
+        if( param instanceof StdOutParam ) {
+            stdout = value
+        }
+    }
+
     /**
      * The value to be piped to the process stdin
      */
@@ -96,7 +121,6 @@ class TaskRun {
      */
     long terminateTime
 
-
     /*
      * The closure implementing this task
      */
@@ -127,6 +151,20 @@ class TaskRun {
         else if ( status == Status.TERMINATED ) {
             terminateTime = System.currentTimeMillis()
         }
+    }
+
+    def <T extends InParam> Map<T,Object> getInputsByType( Class<T> type ) {
+        assert type
+        def result = [:]
+        inputs.findAll() { it.key.class == type }.each { result << it }
+        return result
+    }
+
+    def Map<OutParam,Object> getOutputsByType( Class type ) {
+        assert type
+        def result = [:]
+        outputs.findAll() { it.key.class == type }.each { result << it }
+        return result
     }
 
 }

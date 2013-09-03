@@ -17,7 +17,6 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.processor
-
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
@@ -30,7 +29,6 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
-import nextflow.Nextflow
 import nextflow.Session
 import nextflow.exception.MissingFileException
 import nextflow.exception.TaskValidationException
@@ -127,6 +125,8 @@ abstract class TaskProcessor {
 
     String getName() { name }
 
+    BaseScript getOwnerScript() { ownerScript }
+
     /**
      * Launch the 'script' define by the code closure as a local bash script
      *
@@ -162,13 +162,13 @@ abstract class TaskProcessor {
 
         allScalarValues = !taskConfig.inputs.channels.any { !(it instanceof DataflowVariable) }
 
-        /*
-         * Normalize the output
-         * - even though the output may be empty, let return the stdout as output by default
-         */
-        if ( taskConfig.outputs.size() == 0 ) {
-            taskConfig.stdout( Nextflow.channel() )
-        }
+//        /*
+//         * Normalize the output
+//         * - even though the output may be empty, let return the stdout as output by default
+//         */
+//        if ( taskConfig.outputs.size() == 0 ) {
+//            taskConfig.stdout( Nextflow.channel() )
+//        }
 
         createOperator()
 
@@ -180,11 +180,20 @@ abstract class TaskProcessor {
         return result.size() == 1 ? result[0] : result
     }
 
+    /**
+     * Template method which extending classes have to override in order to
+     * create the underlying *dataflow* operator associated with this processor
+     *
+     */
     protected abstract void createOperator()
 
+    /**
+     * @return A string 'she-bang' formatted to the added on top script to be executed.
+     * The interpreter to be used define bu the *taskConfig* property {@code shell}
+     */
     def getShebangLine() {
 
-        def shell = taskConfig['shell']
+        def shell = taskConfig.shell
         String result = shell instanceof List ? shell.join(' ') : shell
         if( result.startsWith('/') ) {
             result = '#!' + result
@@ -216,6 +225,12 @@ abstract class TaskProcessor {
         return result.toString()
     }
 
+    /**
+     * Given the task script extract the top *she-bang* interpreter declaration removing the {@code #!} characters.
+     * @param script The script to be executed
+     *
+     * @return The interpreter as defined in the she-bang declaration, for example {@code /usr/bin/env perl}
+     */
     def String fetchInterpreter( String script ) {
         assert script != null
 
@@ -224,6 +239,147 @@ abstract class TaskProcessor {
         }
 
         return null
+    }
+
+    /**
+     * Given a map of the input file parameters with respective values,
+     * create the BASH script to stage them into the task working space
+     *
+     * @param inputs An associative array mapping each {@code FileInParam} to the corresponding file (or generic value)
+     * @return The BASH script to stage them
+     */
+    def String stagingFilesScript( Map<FileInParam,Object> inputs ) {
+        assert inputs != null
+
+        def count = 0
+        def delete = []
+        def links = []
+        inputs.each { param, obj ->
+
+            def files = (obj instanceof Collection ? obj : [obj]).collect {
+                stageFile(it, "input.${++count}")
+            }
+
+            def names = expandWildcards(param.name, files)
+
+            // delete all previous files with the same name
+            names.each {
+                delete << "rm -f ${it}"
+            }
+
+            // link them
+            names.eachWithIndex { String entry, int i ->
+                links << "ln -s ${files[i].absolutePath} $entry"
+            }
+        }
+        links << '' // just to have new-line at the end of the script
+
+        // return a big string containing the command
+        return (delete + links).join('\n')
+    }
+
+    /**
+     * An input file parameter can be provided with any value other than a file.
+     * This function normalize a generic value to a {@code File} create a temporary file
+     * in the for it.
+     *
+     * @param input The input value
+     * @param altName The name to be used when a temporary file is created.
+     * @return The {@code File} that will be staged in the task working folder
+     */
+    protected File stageFile( Object input, String altName ) {
+
+        if( input instanceof File ) {
+            return input
+        }
+
+        def result = ownerScript.tempFile(altName)
+        result.text = input?.toString() ?: ''
+        return result
+    }
+
+    /**
+     * An input file name may contain wildcards characters which have to be handled coherently
+     * given the number of files specified.
+     *
+     * @param name A file name with may contain a wildcard character star {@code *} or question mark {@code ?}.
+     *  Only one occurrence can be specified for star or question mark widlcards.
+     *
+     * @param value Any value that have to be managed as an input files. Values other than {@code File} are converted
+     * to a string value, using the {@code #toString} method and saved in the local file-system. Value of type {@code Collection}
+     * are expanded to multiple values accordingly.
+     *
+     * @return
+     */
+    protected List<String> expandWildcards( String name, Object value ) {
+        assert name
+        assert value != null
+
+        def result = []
+        if( name == '*' ) {
+            def files = value instanceof Collection ? value : [value]
+            files.each {
+                if( it instanceof File ) { result << it.name }
+                else throw new IllegalArgumentException("Not a valid value argument for 'expandWildcards' method: $it")
+            }
+            return result
+        }
+
+        // no wildcards in the file name
+        else if( !name.contains('*') && !name.contains('?') ) {
+
+            /*
+             * The name do not contain any wildcards *BUT* when multiple files are provide
+             * it is managed like having a 'start' at the end of the file name
+             */
+            if( value instanceof Collection ) {
+                name += '*'
+            }
+            else {
+                // just return that name
+                return [name]
+            }
+        }
+
+        /*
+         * The star wildcard: when a single item is provided, it is simply ignored
+         * When a collection of files is provided, the name is expanded to the index number
+         */
+        if( name.contains('*') ) {
+            if( value instanceof Collection && value.size()>1 ) {
+                def count = 1
+                value.each {
+                    result << name.replace('*', (count++).toString())
+                }
+            }
+            else {
+                // there's just one value, remove the 'star' wildcards
+                result << name.replace('*','')
+            }
+        }
+
+        /*
+         * The question mark wildcards *always* expand to an index number
+         * as long as are the number of question mark characters
+         */
+        else if( name.contains('?') ) {
+            def files = value instanceof Collection ? value : [value]
+            def count = 1
+            files.each {
+                String match = (name =~ /\?+/)[0]
+                def replace = (count++).toString().padLeft(match.size(), '0')
+                def fileName = name.replace(match, replace)
+                result << fileName
+            }
+
+        }
+
+        // not a valid condition
+        else {
+            throw new IllegalStateException("Invalid file expansion for name: '$name'")
+        }
+
+        return result
     }
 
     /**
@@ -247,19 +403,26 @@ abstract class TaskProcessor {
     }
 
     final protected TaskRun createTaskRun() {
+        log.debug "Creating a new task > $name"
 
-        TaskRun result = null
+        TaskRun task = null
         creationLock.lock()
         try {
             def num = session.tasks.size()
-            result = new TaskRun(processor: this, id: num, status: TaskRun.Status.PENDING, index: ++index, name: "$name ($index)" )
-            session.tasks.put( this, result )
+            task = new TaskRun(processor: this, id: num, status: TaskRun.Status.PENDING, index: ++index, name: "$name ($index)" )
+            session.tasks.put( this, task )
         }
         finally {
             creationLock.unlock()
         }
 
-        return result
+        /*
+         * initialize the inputs/outputs for this task instance
+         */
+        taskConfig.inputs.each { InParam param -> task.setInput(param) }
+        taskConfig.outputs.each { OutParam param -> task.setOutput(param) }
+
+        return task
     }
 
 
@@ -319,7 +482,7 @@ abstract class TaskProcessor {
             task.workDirectory = folder
 
             // -- check if all output resources are available
-            def producedFiles = collectAndValidateOutputs(task)
+            collectOutputs(task)
             log.info "Cached task > ${task.name}"
 
             // -- print out the cached tasks output when 'echo' is true
@@ -334,8 +497,7 @@ abstract class TaskProcessor {
             }
 
             // -- now bind the results
-            bindOutputs(producedFiles)
-
+            bindOutputs(task)
             return true
         }
         catch( MissingFileException e ) {
@@ -445,41 +607,56 @@ abstract class TaskProcessor {
      * Bind the expected output files to the corresponding output channels
      * @param processor
      */
-    protected void bindOutputs( TaskRun task ) {
+    synchronized protected void bindOutputs( TaskRun task ) {
 
-        bindOutputs(collectAndValidateOutputs(task))
-
-    }
-
-    protected Map collectAndValidateOutputs( TaskRun task ) {
-
-        // -- collect the produced output
-        def allFiles = [:]
-        taskConfig.outputs.names.each { name ->
-            allFiles[ name ] = executor.collectResultFile(task, name)
-        }
-
-        return allFiles
-    }
-
-    synchronized protected bindOutputs( Map allOutputResources ) {
-
-        log.trace "Binding results > task: ${name} - values: ${allOutputResources}"
+        log.trace "Binding results task: ${name} > outputs: ${task.outputs}"
 
         // -- bind each produced file to its own channel
-        taskConfig.outputs.eachWithIndex { OutParam param, index ->
+        task.outputs.eachWithIndex { OutParam param, result, index ->
 
-            def entry = allOutputResources[ param.name ]
+            switch( param ) {
+            case StdOutParam:
+                processor.bindOutput(index, result instanceof File ? result.text : result)
+                break
 
-            if( param.name == '-' && entry instanceof File ) {
-                processor.bindOutput(index, entry.text)
+            case FileOutParam:
+                if( result instanceof Collection && !(param as FileOutParam).joint ) {
+                    result.each { processor.bindOutput(index, it) }
+                }
+                else {
+                    processor.bindOutput(index, result)
+                }
+                break;
+
+            default:
+                throw new IllegalArgumentException("Illegal output parameter type: ${param.class.simpleName}")
             }
-            else if( entry instanceof Collection ) {
-                entry.each { processor.bindOutput(index, it) }
+        }
+
+    }
+
+    /**
+     * Once the task has completed this method is invoked to collected all the task results
+     *
+     * @param task
+     */
+    final void collectOutputs( TaskRun task ) {
+
+        task.outputs.keySet().each { OutParam param ->
+
+            switch( param ) {
+            case StdOutParam:
+                task.setOutput(param, executor.getStdOutFile(task))
+                break
+
+            case FileOutParam:
+                task.setOutput(param, executor.collectResultFile(task, param.name))
+                break
+
+            default:
+                throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
             }
-            else {
-                processor.bindOutput(index, entry)
-            }
+
         }
     }
 

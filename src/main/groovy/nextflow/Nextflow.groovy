@@ -18,12 +18,15 @@
  */
 
 package nextflow
+
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.PoisonPill
+import org.apache.commons.io.filefilter.WildcardFileFilter
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -144,12 +147,52 @@ class Nextflow {
         return result
     }
 
-
-
-    static File file( def name ) {
+    /**
+     * File factory utility method.
+     *
+     * @param name
+     * @return
+     */
+    static file( def name ) {
         assert name
-        def fileName = name.toString()
-        fileName.startsWith( File.separator ) ? new File(fileName) : new File(fileName).absoluteFile
+
+        /*
+         * expand special user home '~' character
+         */
+        def sName = name.toString()
+        if( sName == '~' ) {
+            sName = System.getProperty('user.home')
+        }
+        else if( sName.startsWith('~'+File.separatorChar) ) {
+            sName = sName.replace('~', System.getProperty('user.home'))
+        }
+
+        /*
+         * split the parent path from the file name
+         */
+        def file = new File(sName)
+        def base = (file.parentFile ?: new File('.')).canonicalFile
+        def pattern = file.name
+
+        /*
+         * punctual file, just return it
+         */
+        if( !pattern.contains('*') && !pattern.contains('?') ) {
+            return new File(base, pattern)
+        }
+
+        /*
+         * when the name contains a wildcard character, it returns the list of
+         * all matching files (eventually empty)
+         */
+        else {
+            def filter = new WildcardFileFilter(pattern)
+            def found = base.list( filter )
+            def result = new ArrayList(found.size())
+            found.each { result << new File(base, it) }
+            return result
+        }
+
     }
 
 }

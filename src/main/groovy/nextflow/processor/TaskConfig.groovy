@@ -19,8 +19,6 @@
 
 package nextflow.processor
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.Nextflow
 import nextflow.script.BaseScript
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -50,8 +48,8 @@ class TaskConfig implements Map {
             cacheable = true
             shell = ['/bin/bash','-ue']
             validExitCodes = [0]
-            inputs = new InputList()
-            outputs = new OutputList()
+            inputs = new InputsList()
+            outputs = new OutputsList()
         }
 
         configProperties.errorStrategy = ErrorStrategy.TERMINATE
@@ -94,14 +92,14 @@ class TaskConfig implements Map {
     /**
      * Type shortcut to {@code #configProperties.inputs}
      */
-    InputList getInputs() {
+    InputsList getInputs() {
         return configProperties.inputs
     }
 
     /**
      * Type shortcut to {@code #configProperties.outputs}
      */
-    OutputList getOutputs() {
+    OutputsList getOutputs() {
         return configProperties.outputs
     }
 
@@ -126,23 +124,6 @@ class TaskConfig implements Map {
         return this
     }
 
-    /*
-     * Try to access to the script property defined by the
-     * specified {@code name}
-     * <p>
-     * If it's not defined, it will return {@code null}
-     *
-     */
-    private getScriptProperty( String name ) {
-        assert ownerScript
-        try {
-            ownerScript.getProperty(name)
-        }
-        catch( MissingPropertyException e ) {
-            return null
-        }
-    }
-
 
     /**
      * Defines a task 'input'
@@ -152,7 +133,7 @@ class TaskConfig implements Map {
      */
     def TaskConfig input( Map attributes )  {
 
-        configProperties.inputs << InParam.parse(attributes)
+        configProperties.inputs << InParam.create(attributes)
 
         return this
     }
@@ -178,51 +159,9 @@ class TaskConfig implements Map {
      * @return
      */
     def TaskConfig output( Map attributes ) {
-        assert attributes
-        assert attributes.file
-
-        def nm = attributes.file as String
-        def ch = attributes.into
-
-        // the receiving channel may not be defined explicitly
-        // in that case the specified file name will used to
-        // reference it in the script context
-        if( ch == null ) {
-            log.trace "output > channel not defined"
-            ch = ( nm != '-' ) ? nm.replaceAll(/\./, '_') :  Nextflow.channel()
-        }
-
-        if( ch instanceof String ) {
-            // the channel is specified by name
-            def local = ch
-            log.trace "output > channel name: $local"
-
-            // look for that name in the 'script' context
-            ch = getScriptProperty(local)
-            if( ch instanceof DataflowWriteChannel ) {
-                // that's OK -- nothing to do
-            }
-            else {
-                if( ch == null ) {
-                    log.debug "output > channel unknown: $local -- creating a new instance"
-                }
-                else {
-                    log.warn "Duplicate output channel name: '$ch' in the script context -- it's worth to rename it to avoid possible conflicts"
-                }
-
-                // instantiate the new channel
-                ch = Nextflow.channel()
-                // bind it to the script on-fly
-                if( local != '-' && ownerScript) {
-                    // bind the outputs to the script scope
-                    ownerScript.setProperty(local, ch)
-                }
-            }
-
-        }
 
         // add it to the list out outputs
-        configProperties.outputs << new OutFileParam(name: nm, channel: ch)
+        configProperties.outputs << OutParam.create(attributes, ownerScript)
 
         return this
     }

@@ -19,11 +19,11 @@
 
 package nextflow.executor
 import groovy.util.logging.Slf4j
+import nextflow.processor.FileInParam
 import nextflow.processor.TaskRun
 import nextflow.util.ByteDumper
 import org.apache.commons.io.IOUtils
 import org.codehaus.groovy.runtime.IOGroovyMethods
-
 /**
  * Executes the specified task on the locally exploiting the underlying Java thread pool
  *
@@ -34,7 +34,7 @@ class LocalExecutor extends AbstractExecutor {
 
     private static final COMMAND_OUT_FILENAME = '.command.out'
 
-    private static final COMMAND_BASH_FILENAME = '.command.sh'
+    private static final COMMAND_WRAPPER_FILENAME = '.command.sh'
 
     private static final COMMAND_ENV_FILENAME = '.command.env'
 
@@ -64,23 +64,33 @@ class LocalExecutor extends AbstractExecutor {
         /*
          * save the main script file
          */
-        def scriptStr = task.processor.normalizeScript(task.script.toString())
-        def scriptFile = new File(scratch, COMMAND_SCRIPT_FILENAME)
+        final scriptStr = task.processor.normalizeScript(task.script.toString())
+        final scriptFile = new File(scratch, COMMAND_SCRIPT_FILENAME)
         scriptFile.text = scriptStr
-        def interpreter = task.processor.fetchInterpreter(scriptStr)
+        final interpreter = task.processor.fetchInterpreter(scriptStr)
+
+        /*
+         * staging input files
+         */
+        final files = task.getInputsByType(FileInParam)
+        final staging = task.processor.stagingFilesScript(files)
+
 
         /*
          * create the runner script which will launch the script
          */
-        def runnerText = """
-                    source $COMMAND_ENV_FILENAME
-                    $interpreter $COMMAND_SCRIPT_FILENAME
-                    """
-        def runnerFile = new File(scratch, COMMAND_BASH_FILENAME)
-        runnerFile.text = task.processor.normalizeScript(runnerText)
+        def wrapperScript = []
+        wrapperScript << "# task: ${task.name}\n"
+        wrapperScript << staging
+        wrapperScript << "source $COMMAND_ENV_FILENAME"
+        wrapperScript << "$interpreter $COMMAND_SCRIPT_FILENAME"
+        wrapperScript << ''
+
+        def wrapperFile = new File(scratch, COMMAND_WRAPPER_FILENAME)
+        wrapperFile.text = task.processor.normalizeScript(wrapperScript.join('\n'))
 
         // the cmd list to launch it
-        List cmd = new ArrayList(taskConfig.shell ?: 'bash' as List ) << COMMAND_BASH_FILENAME
+        List cmd = new ArrayList(taskConfig.shell ?: 'bash' as List ) << COMMAND_WRAPPER_FILENAME
         log.trace "Launch cmd line: ${cmd.join(' ')}"
 
         /*

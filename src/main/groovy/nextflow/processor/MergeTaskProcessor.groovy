@@ -91,6 +91,7 @@ class MergeTaskProcessor extends TaskProcessor {
                     throw new InvalidExitException("Task '${task.name}' terminated with an invalid exit code: ${task.exitCode}")
                 }
 
+                collectOutputs(task)
                 bindOutputs(task)
             }
         }
@@ -105,11 +106,26 @@ class MergeTaskProcessor extends TaskProcessor {
         log.info "Collecting task > ${name} ($currentIndex)"
 
         // -- map the inputs to a map and use to delegate closure values interpolation
-        def inputVars = new DelegateMap(ownerScript)
+        def stdin = null
+        def contextMap = new DelegateMap(ownerScript)
+        Map<FileInParam,Object> filesMap = [:]
+
         taskConfig.inputs.eachWithIndex { InParam param, int index ->
 
-            if( param instanceof InValueParam ) {
-                inputVars[param.name] = values[index]
+            if( param instanceof ValueInParam ) {
+                contextMap[param.name] = values[index]
+            }
+            else if( param instanceof StdInParam ) {
+                stdin = values[index]
+            }
+            else if( param instanceof FileInParam ) {
+                filesMap[param] = values[index]
+            }
+//            else if( param instanceof EnvInParam ) {
+//                envMap[param.name] = values[index]
+//            }
+            else {
+                log.debug "Task $name > unknown input param type: ${param?.class?.simpleName}"
             }
 
         }
@@ -118,7 +134,7 @@ class MergeTaskProcessor extends TaskProcessor {
          * initialize the task code to be executed
          */
         Closure scriptClosure = this.code.clone() as Closure
-        scriptClosure.delegate = inputVars
+        scriptClosure.delegate = contextMap
         scriptClosure.setResolveStrategy(Closure.DELEGATE_FIRST)
 
         def commandToRun = normalizeScript(scriptClosure.call()?.toString())
@@ -129,11 +145,15 @@ class MergeTaskProcessor extends TaskProcessor {
          * which maintains all the hashes for executions making-up this merge task
          */
         def keys = [commandToRun]
-        if( inputVars.containsKey('-') ) {
-            keys << inputVars['-']
+        if( stdin ) {
+            keys << stdin
         }
         keys << 7
         mergeHashesList << CacheHelper.hasher(keys).hash().asInt()
+
+        mergeScript << "# task '$name' ($currentIndex)" << '\n'
+        mergeScript << stagingFilesScript( filesMap )
+
 
         /*
          * save the script to execute into a separate unique-named file
@@ -147,10 +167,10 @@ class MergeTaskProcessor extends TaskProcessor {
         def scriptCommand = scriptFile.absolutePath
 
         // check if some input have to be send
-        if( inputVars.containsKey('-') ) {
+        if( stdin ) {
             def inputName = ".merge_command.input.$index"
             def inputFile = new File( mergeTempFolder, inputName )
-            inputFile.text = inputVars['-']
+            inputFile.text = stdin
 
             // pipe the user input to the user command
             scriptCommand = "$scriptCommand < ${inputFile.toString()}"
@@ -190,18 +210,19 @@ class MergeTaskProcessor extends TaskProcessor {
 
         @Override
         public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "Received message > task: ${name}; channel: $index; value: $message"
+            log.trace "Message arrived > task: ${name}; channel: $index; value: $message"
             return message
         }
 
 
         public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+            log.trace "Control message arrived > task: ${name}; channel: $index; value: $message"
 
             // intercepts 'poison pill' message e.g. termination control message
             // in order the launch the task execution on the underlying system
             if( message == PoisonPill.instance)  {
 
-                if( mergeIndex.get() ) {
+                if( mergeIndex.get()>0 ) {
 
                     def task = MergeTaskProcessor.this.createTaskRun()
                     try {

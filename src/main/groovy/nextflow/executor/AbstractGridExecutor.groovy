@@ -275,7 +275,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
             IOUtils.closeQuietly(process.err)
             process.destroy()
 
-            task.stdout = collectResultFile(task,'-')
+            task.stdout = getStdOutFile(task)
         }
 
     }

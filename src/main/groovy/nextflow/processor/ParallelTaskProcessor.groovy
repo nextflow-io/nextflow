@@ -53,28 +53,23 @@ class ParallelTaskProcessor extends TaskProcessor {
      * @return
      */
     final protected TaskRun initTaskRun(List values) {
-        log.debug "Creating a new task > $name"
 
         final TaskRun task = createTaskRun()
 
         // -- map the inputs to a map and use to delegate closure values interpolation
         def map = new DelegateMap(ownerScript)
 
+        /*
+         * initialize the inputs for this task instances
+         */
         taskConfig.inputs.eachWithIndex { InParam param, int index ->
 
-            // when the name define for this 'input' is '-'
-            // copy the value to the task 'input' attribute
-            // it will be used to pipe it to the process stdin
-            if( param.name == '-' && param instanceof InFileParam) {
-                task.stdin = values.get(index)
-            }
+            // add the value to the task instance
+            task.setInput(param, values.get(index))
 
-                // otherwise put in on the map used to resolve the values evaluating the script
-            else if( param instanceof InValueParam ) {
+            // otherwise put in on the map used to resolve the values evaluating the script
+            if( param instanceof ValueInParam ) {
                 map[ param.name ] = values.get(index)
-            }
-            else {
-                log.warn "Unknown input type > ${param.class.simpleName} -- ${param.dump()}"
             }
 
         }
@@ -137,6 +132,7 @@ class ParallelTaskProcessor extends TaskProcessor {
 
                 // -- bind output (files)
                 if ( success ) {
+                    collectOutputs(task)
                     bindOutputs(task)
                 }
             }
@@ -180,7 +176,7 @@ class ParallelTaskProcessor extends TaskProcessor {
             if( log.isTraceEnabled() ) {
                 def channelName = taskConfig.inputs?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
-                log.trace "Control arrived > ${taskName} -- ${channelName} => ${message}"
+                log.trace "Control message arrived > ${taskName} -- ${channelName} => ${message}"
             }
 
             return message;

@@ -67,7 +67,7 @@ class Const {
     /**
      * The app build number
      */
-    static final int APP_BUILDNUM = 777
+    static final int APP_BUILDNUM = 800
 
     /**
      * The date time formatter string

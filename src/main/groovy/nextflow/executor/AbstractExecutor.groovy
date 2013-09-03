@@ -4,7 +4,6 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.MissingFileException
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
-
 /**
  * Declares methods have to be implemented by a generic
  * execution strategy
@@ -99,5 +98,7 @@ abstract class AbstractExecutor {
 
         target.text = envBuilder.toString()
     }
+
+
 
 }
