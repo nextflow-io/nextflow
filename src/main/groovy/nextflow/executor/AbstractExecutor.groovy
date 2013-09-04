@@ -2,6 +2,7 @@ package nextflow.executor
 import groovy.io.FileType
 import groovy.util.logging.Slf4j
 import nextflow.exception.MissingFileException
+import nextflow.processor.EnvInParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 /**
@@ -85,9 +86,17 @@ abstract class AbstractExecutor {
         assert task
         assert target
 
-        final envMap = task.processor.getProcessEnvironment()
+        // get the 'static' environment
+        final environment = task.processor.getProcessEnvironment()
+
+        // add the task input of type 'env'
+        task.getInputsByType( EnvInParam ).each { param, value ->
+            environment.put( param.name, value?.toString() )
+        }
+
+        // create the *bash* environment script
         final envBuilder = new StringBuilder()
-        envMap.each { name, value ->
+        environment.each { name, value ->
             if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
                 envBuilder << "export $name='$value'" << '\n'
             }
