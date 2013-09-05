@@ -81,7 +81,7 @@ class TaskScriptClosureTransformImpl implements ASTTransformation {
                 log.trace "Visiting methodCallExpr: ${methodCall}"
 
                 // pre-condition to be verified to apply the transformation
-                Boolean preCondition = methodCall.with{
+                Boolean preCondition = methodCall.with {
                     (getMethod() instanceof ConstantExpression && objectExpression?.getText() == 'this')
                 }
 
@@ -96,6 +96,11 @@ class TaskScriptClosureTransformImpl implements ASTTransformation {
                     finally {
                         currentTaskName = null
                     }
+                }
+                else if( preCondition &&  methodCall.getMethodAsString() == 'process' ) {
+
+                    convertProcessDef(methodCall,sourceUnit)
+                    super.visitMethodCallExpression(methodCall)
                 }
 
                 // transform the 'input' method call invocation inside a 'task' method
@@ -276,5 +281,27 @@ class TaskScriptClosureTransformImpl implements ASTTransformation {
     }
 
 
+    def void convertProcessDef( MethodCallExpression methodCall, SourceUnit unit ) {
+        log.debug "Converts 'process' ${methodCall.arguments} "
+
+        assert methodCall.arguments instanceof ArgumentListExpression
+        def list = (methodCall.arguments as ArgumentListExpression).getExpressions()
+
+        assert list.size() == 1
+        assert list[0] instanceof MethodCallExpression
+
+        def nested = list[0] as MethodCallExpression
+        def name = nested.getMethodAsString()
+
+        def args = nested.getArguments() as ArgumentListExpression
+        log.debug "Process name: $name with args: $args"
+
+        args.getExpressions().add(0, new ConstantExpression(name))
+
+        methodCall.setArguments( args )
+
+        // now continue as before !
+        handleTaskMethod(methodCall, unit)
+    }
 
 }

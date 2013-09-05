@@ -238,6 +238,29 @@ abstract class BaseScript extends Script {
     }
 
 
+    def process(Map<String,?> args, String name ) {
+        log.debug "Create task: $name with: $args"
+        task(name, { return '' })
+    }
+
+    def process(Map<String,?> args, String name, Closure code ) {
+        log.debug "Create task: $name with: $args "
+        task(name, code)
+    }
+
+    def process(String name ) {
+        log.debug "Create task: $name "
+        task(name, { return '' })
+    }
+
+    def process(String name, Closure code ) {
+        log.debug "Create task: $name "
+        task(name, code)
+    }
+
+
+
+
 
     /*
      * Map the executor class to its 'friendly' name
