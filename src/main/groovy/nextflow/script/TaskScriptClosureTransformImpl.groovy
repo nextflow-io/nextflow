@@ -139,27 +139,42 @@ class TaskScriptClosureTransformImpl implements ASTTransformation {
     def void handleInputMethod( MethodCallExpression methodCall, SourceUnit source ) {
         log.trace "Method 'input' arguments: ${methodCall.arguments}"
 
-        // if the arguments is already TupleExpression, there's nothing to do
-        // since it is already wrapping a named parameters
-        if ( methodCall.arguments.class == TupleExpression ) {
-            log.trace "Transformation for argument of type: '${methodCall.arguments?.class?.name}' not required"
-            return
-        }
-
         // need to convert the ArgumentListExpression to a 'TupleExpression'
-        def args = methodCall.arguments as ArgumentListExpression
+        def args = methodCall.arguments as TupleExpression
 
         List<MapEntryExpression> entries = []
         args.getExpressions().each { Expression item ->
+
+            /*
+             * when the input declaration contains just a variable
+             * it is converted to an 'val' input declaration  equivalent to
+             *   val:'expression', from: expression
+             */
             if ( item instanceof VariableExpression ) {
-                // when the input declaration contains just a variable
-                // it is converted to an 'val' input declaration equivalent to
-                // the following [ val:<literal>, channel:<value> ]
                 entries << new MapEntryExpression( new ConstantExpression('val'), new ConstantExpression(item.getName()) )
                 entries << new MapEntryExpression( new ConstantExpression('from'), item )
             }
+
+            /*
+             * convert input attributes from
+             *    val: x
+             * to
+             *    val: 'x'
+             *
+             * so that users do not have to wrap values name by quotes
+             */
             else if ( item instanceof MapExpression ) {
-                item.mapEntryExpressions?.each { MapEntryExpression entry -> entries << entry }
+                item.mapEntryExpressions?.each { MapEntryExpression entry ->
+
+                    def k = entry.keyExpression
+                    def v = entry.valueExpression
+                    if( k instanceof ConstantExpression && k.value == 'val' && v instanceof VariableExpression ) {
+                        entries << new MapEntryExpression( k, new ConstantExpression(v.name) )
+                    }
+                    else {
+                        entries << entry
+                    }
+                }
             }
             else {
                 source.addError(new SyntaxException("Not a valid variable expression", item.lineNumber, item.columnNumber ))
@@ -167,6 +182,7 @@ class TaskScriptClosureTransformImpl implements ASTTransformation {
             }
         }
 
+        log.trace "<< input converted args: ${entries}"
         TupleExpression tuple = new TupleExpression(new NamedArgumentListExpression(entries))
         methodCall.setArguments( tuple )
 
@@ -187,16 +203,24 @@ class TaskScriptClosureTransformImpl implements ASTTransformation {
 
         List<MapEntryExpression> entries = []
         args.getExpressions().each { Expression item ->
+
+            /*
+             * when the output declaration contains a constant value, it is
+             * interpreted as the the file(s) name(s) to be returned by the task
+             * the following map entry it is created
+             *    file: 'name'
+             */
             if( item instanceof ConstantExpression ) {
-                // when the output declaration contains a constant value,
-                // it is interpreted as the the file(s) name(s) to be returned by the task
-                // the following map entry it is created {@code [ file:<const value> ] }
                 entries << new MapEntryExpression( new ConstantExpression('file'), new ConstantExpression(item.getValue()) )
             }
+
+            /*
+             * when the output declaration contains just a variable value
+             * it is interpreted as the the file(s) name(s) to be returned by the task
+             * the following map entry it is created
+             *    file: 'name'
+             */
             else if ( item instanceof VariableExpression ) {
-                // when the output declaration contains just a variable value
-                // it is interpreted as the the file(s) name(s) to be returned by the task
-                // the following map entry it is created {@code [ file:<variable name> ] }
                 entries << new MapEntryExpression( new ConstantExpression('file'), new ConstantExpression(item.getName()) )
             }
 
@@ -205,13 +229,26 @@ class TaskScriptClosureTransformImpl implements ASTTransformation {
                     def k = entry.keyExpression
                     def v = entry.valueExpression
 
-                    // converts {@code into: variable} to a {@code into: 'variable name' } clause
-                    // in order to reference *channel* by name
+                    /*
+                     * Channels in the output declarations have to referenced by name (string value).
+                     * This fragment converts channel references from
+                     *    into: variable
+                     * to
+                     *   into: 'name'
+                     *
+                     */
                     if( k instanceof ConstantExpression && k.value == 'into' && v instanceof VariableExpression ) {
                         entries << new MapEntryExpression( k, new ConstantExpression(v.name) )
                     }
 
-                    // converts val:x --> val:'x'
+                    /*
+                     * Convert *val* reference like
+                     *    val: variable
+                     * to
+                     *    val 'constant'
+                     *
+                     * so that the user do not have to wrap them by quotes
+                     */
                     else if( k instanceof ConstantExpression && k.value == 'val' && v instanceof VariableExpression ) {
                         entries << new MapEntryExpression( k, new ConstantExpression(v.name) )
                     }
@@ -227,6 +264,7 @@ class TaskScriptClosureTransformImpl implements ASTTransformation {
             }
         }
 
+        log.trace "<< output converted args: ${entries}"
         TupleExpression tuple = new TupleExpression(new NamedArgumentListExpression(entries))
         methodCall.setArguments( tuple )
 
