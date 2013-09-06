@@ -53,7 +53,7 @@ class SlurmExecutor extends AbstractGridExecutor {
 
         // -- last entry to 'script' file name
         // replace with the 'shell' attribute
-        result << 'bash' << JOB_SCRIPT_FILENAME
+        result << 'bash' << JOB_WRAPPER_FILENAME
 
     }
 

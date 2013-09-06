@@ -70,7 +70,7 @@ class SgeExecutor extends AbstractGridExecutor {
         }
 
         // -- last entry to 'script' file name
-        result << JOB_SCRIPT_FILENAME
+        result << JOB_WRAPPER_FILENAME
 
         return result
     }

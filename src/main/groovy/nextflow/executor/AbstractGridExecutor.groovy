@@ -19,12 +19,12 @@
 
 package nextflow.executor
 import groovy.util.logging.Slf4j
+import nextflow.processor.FileInParam
 import nextflow.processor.TaskRun
 import nextflow.util.ByteDumper
 import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
 import org.apache.commons.io.IOUtils
-
 /**
  * Generic task processor executing a task through a grid facility
  *
@@ -33,7 +33,7 @@ import org.apache.commons.io.IOUtils
 @Slf4j
 abstract class AbstractGridExecutor extends AbstractExecutor {
 
-    protected static final COMMAND_SCRIPT_FILENAME = '.command.sh'
+    protected static final COMMAND_SCRIPT_FILENAME = '.command.run'
 
     protected static final COMMAND_OUTPUT_FILENAME = '.command.out'
 
@@ -43,7 +43,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
 
     protected static final JOB_OUT_FILENAME = '.job.out'
 
-    protected static final JOB_SCRIPT_FILENAME = '.job.run'
+    protected static final JOB_WRAPPER_FILENAME = '.job.sh'
 
 
     /*
@@ -97,7 +97,6 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
 
         def scriptFile = new File(task.workDirectory, COMMAND_SCRIPT_FILENAME)
         scriptFile.text = task.processor.normalizeScript(task.script.toString())
-        scriptFile.setExecutable(true)
         task.script = scriptFile
 
         return scriptFile
@@ -145,7 +144,10 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
          */
 
         def wrapper = new StringBuilder()
+
+        // source the environment
         wrapper << 'source ' << envFile.absolutePath << '\n'
+
 
         // whenever it has to change to the scratch directory
         def changeDir = changeToScratchDirectory()
@@ -153,12 +155,23 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
             wrapper << changeDir << '\n'
         }
 
+        // staging input files when required
+        final files = task.getInputsByType(FileInParam)
+        final staging = task.processor.stagingFilesScript(files)
+        if( staging ) {
+            wrapper << staging << '\n'
+        }
+
+        // fetch the script interpreter
+        final interpreter = task.processor.fetchInterpreter(scriptFile.text)
+
         // execute the command script
         wrapper << '('
         if( cmdInputFile ) {
             wrapper << 'cat ' << cmdInputFile << ' | '
         }
-        wrapper << "${scriptFile.absolutePath}) &> ${cmdOutFile.absolutePath}" << '\n'
+        wrapper << interpreter << ' ' << scriptFile.absolutePath
+        wrapper << ') &> ' << cmdOutFile.absolutePath << '\n'
 
         // "un-stage" the result files
         def resultFiles = taskConfig.outputs.names.findAll { it != '-' }
@@ -167,7 +180,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
             wrapper << 'rm -rf $NF_SCRATCH &'
         }
 
-        def result = new File(folder, JOB_SCRIPT_FILENAME)
+        def result = new File(folder, JOB_WRAPPER_FILENAME)
         result.text = task.processor.normalizeScript(wrapper.toString())
 
         return result
