@@ -159,6 +159,7 @@ class ParamsTest extends Specification {
         when:
         def out1 = OutParam.create( file:'file.txt', into: 'channel4', autoClose: false, joint: true, script )
         def out2 = OutParam.create( file:'file.txt', into: 'channel4', autoClose: true, joint: false, script )
+        def out3 = OutParam.create( val: 'x', into: 'channel', script )
 
         then:
         !(out1 as FileOutParam).autoClose
@@ -166,6 +167,9 @@ class ParamsTest extends Specification {
 
         (out2 as FileOutParam).autoClose
         !(out2 as FileOutParam).joint
+
+        out3 instanceof ValueOutParam
+        out3.name == 'x'
 
 
 

@@ -11,6 +11,7 @@ import nextflow.Nextflow
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @ToString(includePackage=false, includeNames = true)
 abstract class InParam {
 
@@ -29,6 +30,7 @@ abstract class InParam {
      * @return
      */
     static InParam create( Map args ) {
+        log.debug "Input ${args}"
         assert args
 
         if( !args.from )  {
@@ -99,23 +101,6 @@ class ValueInParam extends InParam { }
 class StdInParam extends InParam { { name='' } }
 
 
-class InputsList implements List<InParam> {
-
-    @Delegate
-    List<InParam> target = new LinkedList<>()
-
-    List<DataflowReadChannel> getChannels() { target *.channel }
-
-    List<String> getNames() { target *. name }
-
-    List<InParam> ofType( Class... classes ) { target.findAll { it.class in classes } }
-
-    void eachParam (Closure closure) {
-        target.each { InParam param -> closure.call(param.name, param.channel) }
-    }
-
-}
-
 @Slf4j
 @ToString(includePackage=false, includeNames = true)
 abstract class OutParam {
@@ -138,11 +123,24 @@ abstract class OutParam {
      * @return
      */
     static OutParam create( Map attributes, Script script ) {
-
+        log.debug "Output: ${attributes}"
         assert attributes
-        assert attributes.file
 
+        def OutParam result
         def name = attributes.file as String
+        if( name == '-' ) {
+            result = new StdOutParam(name:name)
+        }
+        else if( name ) {
+            result = new FileOutParam(name:name)
+        }
+        else {
+            name = attributes.val
+            if( !name ) throw new IllegalStateException("Missing output parameter name")
+            result = new ValueOutParam(name:name)
+        }
+
+
         def channel = attributes.into
 
         // the receiving channel may not be defined explicitly
@@ -182,8 +180,6 @@ abstract class OutParam {
         }
 
         // the special file name '-' has to be mapped to special parameter ot type StdOutParam
-        OutParam result = name == '-' ? new StdOutParam() : new FileOutParam()
-        result.name = name
         result.channel = channel
 
 
@@ -191,7 +187,7 @@ abstract class OutParam {
          * set any other attributes on the target object other than 'file' and 'into'
          */
         attributes.each { String key, value ->
-            if( key in ['file','into'] || value == null ) { return }
+            if( key in ['file','into', 'val'] || value == null ) { return }
 
             def prop = result.getMetaClass().getMetaProperty(key)
             if( !prop ) {
@@ -244,11 +240,38 @@ class FileOutParam extends OutParam {
      */
     Boolean joint = Boolean.FALSE
 
+    /**
+     * The character used to separate multiple names (pattern) in the output specification
+     */
+    String separatorChar = ':'
+
 }
 
 @ToString(includePackage=false, includeSuper = true, includeNames = true)
 class StdOutParam extends OutParam { { name='' } }
 
+
+@ToString(includePackage=false, includeSuper = true, includeNames = true)
+class ValueOutParam extends OutParam { }
+
+
+
+class InputsList implements List<InParam> {
+
+    @Delegate
+    List<InParam> target = new LinkedList<>()
+
+    List<DataflowReadChannel> getChannels() { target *.channel }
+
+    List<String> getNames() { target *. name }
+
+    def <T extends InParam> List<T> ofType( Class<T> clazz ) { (List<T>) target.findAll { it.class == clazz } }
+
+    void eachParam (Closure closure) {
+        target.each { InParam param -> closure.call(param.name, param.channel) }
+    }
+
+}
 
 class OutputsList implements List<OutParam> {
 
@@ -258,6 +281,8 @@ class OutputsList implements List<OutParam> {
     List<DataflowWriteChannel> getChannels() { target *.channel }
 
     List<String> getNames() { target *. name }
+
+    def <T extends OutParam> List<T> ofType( Class<T> clazz ) { (List<T>) target.findAll { it.class == clazz } }
 
     void eachParam (Closure closure) {
         target.each { OutParam param -> closure.call(param.name, param.channel) }

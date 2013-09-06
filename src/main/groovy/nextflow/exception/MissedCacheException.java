@@ -20,21 +20,20 @@
 package nextflow.exception;
 
 /**
- * Reports a generic error during the 'Task' validation step
+ * An expected result file is missing
  *
  * Note: THIS IS A PLAIN JAVA CLASS due to this bug
  * http://blog.proxerd.pl/article/how-to-fix-incompatibleclasschangeerror-for-your-groovy-projects-running-on-jdk7
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public class TaskValidationException extends Exception {
+public class MissedCacheException extends TaskValidationException {
 
-    public TaskValidationException(String message) {
+    public MissedCacheException(String message) {
         super(message);
     }
 
-    public TaskValidationException(String message, Throwable cause) {
-        super(message,cause);
+    public MissedCacheException(String message, Throwable cause) {
+        super(message, cause);
     }
-}
 
+}

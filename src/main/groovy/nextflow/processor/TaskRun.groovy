@@ -18,7 +18,6 @@
  */
 
 package nextflow.processor
-
 /**
  * Models a task instance
  *
@@ -166,6 +165,8 @@ class TaskRun {
         outputs.findAll() { it.key.class == type }.each { result << it }
         return result
     }
+
+
 
 }
 

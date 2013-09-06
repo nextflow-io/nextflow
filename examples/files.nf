@@ -32,11 +32,23 @@ task {
 }
 
 
-task{
-    input file: 'chunk', from: splits
+task {
+    input from: splits, file: 'chunk'
+    output into: two_chunks, file: 'chunk1:chunk3'
     echo true
 
     """
     cat chunk* | rev
+    """
+
+}
+
+task {
+    input from: two_chunks, file:'chunk'
+    output into: result, file: 'chunk'
+    echo true
+
+    """
+    cat chunk
     """
 }

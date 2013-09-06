@@ -416,12 +416,6 @@ abstract class TaskProcessor {
             creationLock.unlock()
         }
 
-        /*
-         * initialize the inputs/outputs for this task instance
-         */
-        taskConfig.inputs.each { InParam param -> task.setInput(param) }
-        taskConfig.outputs.each { OutParam param -> task.setOutput(param) }
-
         return task
     }
 
@@ -501,7 +495,7 @@ abstract class TaskProcessor {
             return true
         }
         catch( MissingFileException e ) {
-            log.debug "Missing cached file > ${e.getMessage()} -- folder: $folder"
+            log.debug "Missed cache > ${e.getMessage()} -- folder: $folder"
             task.exitCode = Integer.MAX_VALUE
             task.workDirectory = null
             return false
@@ -552,7 +546,7 @@ abstract class TaskProcessor {
 
                 // if the echo was disabled show, the program out when there's an error
                 message << "\nCommand output:"
-                task.stdout.eachLine {
+                task.stdout?.eachLine {
                     message << "  $it"
                 }
 
@@ -612,21 +606,25 @@ abstract class TaskProcessor {
         log.trace "Binding results task: ${name} > outputs: ${task.outputs}"
 
         // -- bind each produced file to its own channel
-        task.outputs.eachWithIndex { OutParam param, result, index ->
+        task.outputs.eachWithIndex { OutParam param, value, index ->
 
             switch( param ) {
             case StdOutParam:
-                processor.bindOutput(index, result instanceof File ? result.text : result)
+                processor.bindOutput(index, value instanceof File ? value.text : value?.toString())
                 break
 
             case FileOutParam:
-                if( result instanceof Collection && !(param as FileOutParam).joint ) {
-                    result.each { processor.bindOutput(index, it) }
+                if( value instanceof Collection && !(param as FileOutParam).joint ) {
+                    value.each { processor.bindOutput(index, it) }
                 }
                 else {
-                    processor.bindOutput(index, result)
+                    processor.bindOutput(index, value)
                 }
                 break;
+
+            case ValueOutParam:
+                processor.bindOutput(index, value)
+                break
 
             default:
                 throw new IllegalArgumentException("Illegal output parameter type: ${param.class.simpleName}")
@@ -640,24 +638,53 @@ abstract class TaskProcessor {
      *
      * @param task
      */
-    final void collectOutputs( TaskRun task ) {
+    final protected void collectOutputs( TaskRun task ) {
 
         task.outputs.keySet().each { OutParam param ->
+            collectOutputs(task, param)
+        }
 
-            switch( param ) {
+    }
+
+    protected void collectOutputs( TaskRun task, OutParam param ) {
+        assert task
+        assert param
+
+        switch( param ) {
             case StdOutParam:
                 task.setOutput(param, executor.getStdOutFile(task))
                 break
 
             case FileOutParam:
-                task.setOutput(param, executor.collectResultFile(task, param.name))
+                def all = []
+                def fileParam = param as FileOutParam
+                // type file parameter can contain a multiple files pattern separating them with a special character
+                def entries = fileParam.separatorChar ? fileParam.name.split(/\${fileParam.separatorChar}/) : [fileParam.name]
+                // for each of them collect the produced files
+                entries.each { String it ->
+                    def file = executor.collectResultFile(task, it)
+                    if( file instanceof Collection ) all.addAll(file)
+                    else if( file ) { all.add(file) }
+                }
+
+                task.setOutput( param, all.size()==1 ? all[0] : all )
                 break
+
+            case ValueOutParam:
+                def map = task.code.delegate as DelegateMap
+                if( map.containsKey(param.name) ) {
+                    task.setOutput(param, map[param.name])
+                }
+                else {
+                    log.warn "Not a valid output parameter: '${param.name}' -- only values declared as input can be used in the output section"
+                }
+                break
+
 
             default:
                 throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
-            }
-
         }
+
     }
 
     /**
@@ -690,6 +717,26 @@ abstract class TaskProcessor {
         }
 
         return result
+    }
+
+    /**
+     * Given a map holding variables key-value pairs, create a script fragment
+     * exporting the required environment variables
+     */
+    static String bashEnvironmentScript( Map<String,String> environment ) {
+
+        final script = []
+        environment.each { name, value ->
+            if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
+                script << "export $name='$value'"
+            }
+            else {
+                log.trace "Illegal environment variable name: '${name}'"
+            }
+        }
+        script << ''
+
+        return script.join('\n')
     }
 
 

@@ -5,9 +5,16 @@ y = ['a','b']
 
 task {
     echo true
-    input x
+
+    input val: x, from: x
     input y
+    output val: x, into: channel
 
     "echo $x - $y"
 
+}
+
+
+channel.each {
+    println "got: $it"
 }

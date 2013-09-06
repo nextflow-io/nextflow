@@ -18,7 +18,6 @@
  */
 
 package nextflow.util
-
 import com.google.common.hash.HashFunction
 import com.google.common.hash.Hasher
 import com.google.common.hash.Hashing

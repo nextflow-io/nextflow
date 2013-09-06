@@ -169,6 +169,7 @@ class TaskConfigTest extends Specification {
         then:
         config.outputs.size() == 4
         config.outputs.names == ['-', 'file1.fa', 'file2.fa', 'file3.fa']
+        config.outputs.ofType(StdOutParam).size() == 1
 
         config.outputs[0] instanceof StdOutParam
         config.outputs[1].name == 'file1.fa'

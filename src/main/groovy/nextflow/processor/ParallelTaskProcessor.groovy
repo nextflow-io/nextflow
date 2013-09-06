@@ -56,6 +56,12 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         final TaskRun task = createTaskRun()
 
+        /*
+         * initialize the inputs/outputs for this task instance
+         */
+        taskConfig.inputs.each { InParam param -> task.setInput(param) }
+        taskConfig.outputs.each { OutParam param -> task.setOutput(param) }
+
         // -- map the inputs to a map and use to delegate closure values interpolation
         def map = new DelegateMap(ownerScript)
 
@@ -99,7 +105,6 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         // -- call the closure and execute the script
         try {
-            log.trace "Binding map for task > ${task.name} ::: ${task.code.delegate}"
 
             currentTask.set(task)
             task.script = task.code.call()?.toString()?.stripIndent()
@@ -111,7 +116,11 @@ class ParallelTaskProcessor extends TaskProcessor {
             //          YES --> return the outputs
             //          NO  --> launch the task
 
-            def hash = CacheHelper.hasher( [session.uniqueId, task.script, task.stdin, task.code.delegate] ).hash()
+            def keys = [session.uniqueId, task.script ]
+            // add all the input name-value pairs to the key generator
+            task.inputs.each { keys << it.key.name << it.value }
+
+            def hash = CacheHelper.hasher(keys).hash()
             def folder = FileHelper.createWorkFolder(session.workDir, hash)
             def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder)
             if( !cached ) {
@@ -131,10 +140,8 @@ class ParallelTaskProcessor extends TaskProcessor {
                 }
 
                 // -- bind output (files)
-                if ( success ) {
-                    collectOutputs(task)
-                    bindOutputs(task)
-                }
+                collectOutputs(task)
+                bindOutputs(task)
             }
 
         }

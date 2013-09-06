@@ -31,6 +31,8 @@ class MergeTaskProcessor extends TaskProcessor {
 
     private def mergeScript = new StringBuilder()
 
+    private Map<String,List> valuesCollector = [:]
+
     /*
      * The merge task is composed by two operator, the first creates a single 'script' to be executed by second one
      */
@@ -42,6 +44,16 @@ class MergeTaskProcessor extends TaskProcessor {
         mergeHashesList = new LinkedList<>()
         mergeTempFolder = FileHelper.createTempFolder(session.workDir)
 
+        // initialize the output values collector
+        taskConfig.outputs.ofType(ValueOutParam).each { ValueOutParam param ->
+            if( taskConfig.inputs.ofType(ValueInParam).find { it.name == param.name } ) {
+                valuesCollector[param.name] = []
+            }
+            else {
+                log.warn "Not a valid output parameter: '${param.name}' -- only values declared as input can be used in the output section"
+            }
+        }
+
         def params = [inputs: new ArrayList(taskConfig.inputs.channels), outputs: new ArrayList(taskConfig.outputs.channels), listeners: [new MergeProcessorInterceptor()] ]
         processor = new DataflowOperator(group, params, wrapper)
         session.allProcessors.add(processor)
@@ -51,9 +63,116 @@ class MergeTaskProcessor extends TaskProcessor {
     }
 
 
+    protected void mergeScriptCollector( List values ) {
+        final currentIndex = mergeIndex.incrementAndGet()
+        log.info "Collecting task > ${name} ($currentIndex)"
+
+        // -- map the inputs to a map and use to delegate closure values interpolation
+        def keys = []
+        def stdin = null
+        def contextMap = new DelegateMap(ownerScript)
+        Map<FileInParam,Object> filesMap = [:]
+        Map<String,String> environment = [:]
+
+        taskConfig.inputs.eachWithIndex { InParam param, int index ->
+
+            // define the *context* against which the script will be evaluated
+            if( param instanceof ValueInParam ) {
+                contextMap[param.name] = values[index]
+            }
+            // define the *stdin* text
+            else if( param instanceof StdInParam ) {
+                stdin = values[index]
+            }
+            // all the files to be staged
+            else if( param instanceof FileInParam ) {
+                filesMap[param] = values[index]
+            }
+            // the environment variables for this 'iteration'
+            else if( param instanceof EnvInParam ) {
+                environment[param.name] = values[index]
+            }
+            else {
+                log.debug "Task $name > unknown input param type: ${param?.class?.simpleName}"
+            }
+
+            // add all the input name-value pairs to the key generator
+            keys << param.name << values[index]
+        }
+
+        /*
+         * initialize the task code to be executed
+         */
+        Closure scriptClosure = this.code.clone() as Closure
+        scriptClosure.delegate = contextMap
+        scriptClosure.setResolveStrategy(Closure.DELEGATE_FIRST)
+
+        def commandToRun = normalizeScript(scriptClosure.call()?.toString())
+        def interpreter = fetchInterpreter(commandToRun)
+
+        // collect the output values
+        valuesCollector.keySet().each { key ->
+            if( contextMap.containsKey(key) ) {
+                valuesCollector[key] << contextMap[key]
+            }
+        }
+
+
+        /*
+         * create a unique hash-code for this task run and save it into a list
+         * which maintains all the hashes for executions making-up this merge task
+         */
+        keys << commandToRun << 7
+        mergeHashesList << CacheHelper.hasher(keys).hash().asInt()
+
+        // section marker
+        mergeScript << "# task '$name' ($currentIndex)" << '\n'
+
+        // add the files to staged
+        if( filesMap ) {
+            mergeScript << stagingFilesScript( filesMap )
+        }
+
+        // add the variables to be exported
+        if( environment ) {
+            mergeScript << bashEnvironmentScript(environment)
+        }
+
+        /*
+         * save the script to execute into a separate unique-named file
+         */
+        def index = currentIndex
+        def scriptName = ".merge_command.sh.${index.toString().padLeft(4,'0')}"
+        def scriptFile = new File(mergeTempFolder, scriptName)
+        scriptFile.text = commandToRun
+
+        // the command to launch this command
+        def scriptCommand = scriptFile.absolutePath
+
+        // check if some input have to be send
+        if( stdin ) {
+            def inputName = ".merge_command.input.$index"
+            def inputFile = new File( mergeTempFolder, inputName )
+            inputFile.text = stdin
+
+            // pipe the user input to the user command
+            scriptCommand = "$scriptCommand < ${inputFile.toString()}"
+        }
+
+        // create a unique script collecting all the commands
+        mergeScript << interpreter << ' ' << scriptCommand << '\n'
+
+    }
+
     protected void mergeTaskRun(TaskRun task) {
 
         try {
+
+            /*
+             * initialize the *only* outputs for this task instance
+             * (inputs have been managed during the scripts collection stage)
+             */
+            taskConfig.outputs.each { OutParam param -> task.setOutput(param) }
 
             // -- create the unique hash number for this tasks,
             //    collecting the id of all the executed runs
@@ -98,87 +217,19 @@ class MergeTaskProcessor extends TaskProcessor {
         finally {
             task.status = TaskRun.Status.TERMINATED
         }
-
     }
 
-    protected void mergeScriptCollector( List values ) {
-        final currentIndex = mergeIndex.incrementAndGet()
-        log.info "Collecting task > ${name} ($currentIndex)"
 
-        // -- map the inputs to a map and use to delegate closure values interpolation
-        def stdin = null
-        def contextMap = new DelegateMap(ownerScript)
-        Map<FileInParam,Object> filesMap = [:]
+    @Override
+    protected void collectOutputs( TaskRun task, OutParam param ) {
 
-        taskConfig.inputs.eachWithIndex { InParam param, int index ->
-
-            if( param instanceof ValueInParam ) {
-                contextMap[param.name] = values[index]
-            }
-            else if( param instanceof StdInParam ) {
-                stdin = values[index]
-            }
-            else if( param instanceof FileInParam ) {
-                filesMap[param] = values[index]
-            }
-//            else if( param instanceof EnvInParam ) {
-//                envMap[param.name] = values[index]
-//            }
-            else {
-                log.debug "Task $name > unknown input param type: ${param?.class?.simpleName}"
-            }
-
+        if( param instanceof ValueOutParam ) {
+            task.setOutput(param, valuesCollector[param.name])
+            return
         }
 
-        /*
-         * initialize the task code to be executed
-         */
-        Closure scriptClosure = this.code.clone() as Closure
-        scriptClosure.delegate = contextMap
-        scriptClosure.setResolveStrategy(Closure.DELEGATE_FIRST)
-
-        def commandToRun = normalizeScript(scriptClosure.call()?.toString())
-        def interpreter = fetchInterpreter(commandToRun)
-
-        /*
-         * create a unique hash-code for this task run and save it into a list
-         * which maintains all the hashes for executions making-up this merge task
-         */
-        def keys = [commandToRun]
-        if( stdin ) {
-            keys << stdin
-        }
-        keys << 7
-        mergeHashesList << CacheHelper.hasher(keys).hash().asInt()
-
-        mergeScript << "# task '$name' ($currentIndex)" << '\n'
-        mergeScript << stagingFilesScript( filesMap )
-
-
-        /*
-         * save the script to execute into a separate unique-named file
-         */
-        def index = currentIndex
-        def scriptName = ".merge_command.sh.${index.toString().padLeft(4,'0')}"
-        def scriptFile = new File(mergeTempFolder, scriptName)
-        scriptFile.text = commandToRun
-
-        // the command to launch this command
-        def scriptCommand = scriptFile.absolutePath
-
-        // check if some input have to be send
-        if( stdin ) {
-            def inputName = ".merge_command.input.$index"
-            def inputFile = new File( mergeTempFolder, inputName )
-            inputFile.text = stdin
-
-            // pipe the user input to the user command
-            scriptCommand = "$scriptCommand < ${inputFile.toString()}"
-        }
-
-        // create a unique script collecting all the commands
-        mergeScript << interpreter << ' ' << scriptCommand << '\n'
-
+        // fallback on the default behavior
+        super.collectOutputs(task, param)
     }
 
 

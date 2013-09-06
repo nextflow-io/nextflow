@@ -199,15 +199,23 @@ class TaskScriptClosureTransformImpl implements ASTTransformation {
                 // the following map entry it is created {@code [ file:<variable name> ] }
                 entries << new MapEntryExpression( new ConstantExpression('file'), new ConstantExpression(item.getName()) )
             }
+
             else if ( item instanceof MapExpression ) {
                 item.mapEntryExpressions?.each { MapEntryExpression entry ->
                     def k = entry.keyExpression
                     def v = entry.valueExpression
+
                     // converts {@code into: variable} to a {@code into: 'variable name' } clause
                     // in order to reference *channel* by name
                     if( k instanceof ConstantExpression && k.value == 'into' && v instanceof VariableExpression ) {
                         entries << new MapEntryExpression( k, new ConstantExpression(v.name) )
                     }
+
+                    // converts val:x --> val:'x'
+                    else if( k instanceof ConstantExpression && k.value == 'val' && v instanceof VariableExpression ) {
+                        entries << new MapEntryExpression( k, new ConstantExpression(v.name) )
+                    }
+
                     else {
                         entries << entry
                     }
