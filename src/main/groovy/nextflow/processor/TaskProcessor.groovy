@@ -711,11 +711,6 @@ abstract class TaskProcessor {
             result['PATH'] = path.toString()
         }
 
-        // add the task specific entries
-        if( taskConfig['env'] ) {
-            taskConfig['env'].each { name, value -> result.put(name, value?.toString()) }
-        }
-
         return result
     }
 
