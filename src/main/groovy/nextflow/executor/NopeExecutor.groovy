@@ -36,7 +36,6 @@ class NopeExecutor extends AbstractExecutor {
         task.workDirectory = new File('.').absoluteFile
         task.status = TaskRun.Status.TERMINATED
         task.exitCode = 0
-        task.stdout = task.script   // return the script itself as output
 
     }
 

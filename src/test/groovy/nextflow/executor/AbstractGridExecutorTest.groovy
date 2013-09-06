@@ -18,11 +18,10 @@
  */
 
 package nextflow.executor
-
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
+import nextflow.script.BaseScript
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -32,15 +31,13 @@ class AbstractGridExecutorTest extends Specification {
     def 'test changeToScratchDir' () {
 
         setup:
+        def script = Mock(BaseScript)
         def executor = new AbstractGridExecutor() {
-            @Override
-            protected List<String> getSubmitCommandLine(TaskRun task) {
-                return null  //To change body of implemented methods use File | Settings | File Templates.
-            }
+            @Override protected List<String> getSubmitCommandLine(TaskRun task) { return null }
         }
 
         when:
-        executor.taskConfig = new TaskConfig( )
+        executor.taskConfig = new TaskConfig(script)
         then:
         executor.changeToScratchDirectory() == null
 

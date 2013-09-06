@@ -18,7 +18,6 @@
  */
 
 package nextflow.executor
-
 import nextflow.Session
 import nextflow.processor.ParallelTaskProcessor
 import nextflow.processor.TaskConfig
@@ -34,18 +33,17 @@ class SgeExecutorTest extends Specification {
     def 'test qsub cmd line' () {
 
         setup:
-        def config = new TaskConfig()
+        def script = Mock(BaseScript)
+        def config = new TaskConfig(script)
         config.queue 'my-queue'
         config.maxMemory '2GB'
         config.maxDuration '3h'
         config.clusterOptions '-extra opt'
         config.name 'task'
 
-        def src = new BaseScript() {
-            @Override Object run() { return null  }
-        }
+
         def executor = new SgeExecutor()
-        def processor = new ParallelTaskProcessor(executor, new Session(), src, config, {})
+        def processor = new ParallelTaskProcessor(executor, new Session(), script, config, {})
 
 
         when:

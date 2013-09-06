@@ -366,7 +366,7 @@ class CliRunner {
 
         // -- launch the script execution
         output = script.run()
-
+        log.trace "Script output > $output"
     }
 
     protected terminate() {

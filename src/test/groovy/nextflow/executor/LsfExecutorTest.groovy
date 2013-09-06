@@ -36,18 +36,16 @@ class LsfExecutorTest extends Specification {
     def 'test bsub cmd line' () {
 
         setup:
-        def config = new TaskConfig()
+        def script = Mock(BaseScript)
+        def config = new TaskConfig(script)
         config.queue 'hpc-queue1'
         config.maxMemory '2GB'
         config.maxDuration '3h'
         config.clusterOptions " -M 4000  -R 'rusage[mem=4000] select[mem>4000]' --X \"abc\" "
         config.name 'task'
 
-        def src = new BaseScript() {
-            @Override Object run() { return null  }
-        }
         def executor = new LsfExecutor()
-        def processor = new ParallelTaskProcessor(executor, new Session(), src, config, {})
+        def processor = new ParallelTaskProcessor(executor, new Session(), script, config, {})
 
 
         when:

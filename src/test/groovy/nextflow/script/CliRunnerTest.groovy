@@ -68,26 +68,23 @@ class CliRunnerTest extends Specification {
         def script =
             '''
             task('task2')  {
+                input val:x, from: 1
+                input val:y, from: [3]
+                stdout result
 
-                input x: 1
-                input y: [3,4]
-
-                def z = 'Hello world!'
-
-                """echo $z"""
+                """echo $x - $y"""
             }
 
             '''
         def result = runner.execute(script)
 
         then:
-        result == 'echo Hello world!'
+        result == 'echo 1 - 3'
         runner.getScript().getTaskProcessor().getName() == 'task2'
         runner.getScript().getTaskProcessor().taskConfig.name == 'task2'
-        runner.getScript().getTaskProcessor().taskConfig.inputs['x'].getVal() == 1
-        runner.getScript().getTaskProcessor().taskConfig.inputs['y'] instanceof DataflowQueue
-        runner.getScript().getTaskProcessor().taskConfig.outputs['-'] instanceof DataflowWriteChannel
-
+        runner.getScript().getTaskProcessor().taskConfig.inputs[0].channel.getVal() == 1
+        runner.getScript().getTaskProcessor().taskConfig.inputs[1].channel instanceof DataflowQueue
+        runner.getScript().getTaskProcessor().taskConfig.outputs[0].channel instanceof DataflowWriteChannel
     }
 
 
@@ -100,19 +97,17 @@ class CliRunnerTest extends Specification {
         def script =
             '''
             task('test')  {
-                input x: 1
-                echo true
+                input val: x, from: 1
+                stdout result
 
-                """echo $x"""
+                "echo $x"
             }
-
             '''
         def result = runner.execute(script)
 
         then:
         result == 'echo 1'
         runner.script.taskProcessor.taskConfig.name == 'test'
-        runner.script.taskProcessor.taskConfig.echo == true
 
     }
 
@@ -151,7 +146,7 @@ class CliRunnerTest extends Specification {
                 input Y
                 def Z = 3
 
-                """$X-$Y-$Z"""
+                "$X-$Y-$Z"
             }
 
             '''

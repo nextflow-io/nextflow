@@ -19,6 +19,7 @@ abstract class InParam {
 
     DataflowReadChannel channel
 
+
     /**
      * Parameter factory method, given the map of attributes create the respective input parameter object
      * <p>
@@ -98,7 +99,7 @@ class EnvInParam extends InParam { }
 class ValueInParam extends InParam { }
 
 @ToString(includePackage=false)
-class StdInParam extends InParam { { name='' } }
+class StdInParam extends InParam { StdInParam() { name='-' } }
 
 
 @Slf4j
@@ -113,6 +114,7 @@ abstract class OutParam {
 
     /** Whenever the channel has to closed on task termination */
     Boolean autoClose = Boolean.TRUE
+
 
     /**
      * Output parameter factory method. Given the map of named attributes for an output item
@@ -248,7 +250,7 @@ class FileOutParam extends OutParam {
 }
 
 @ToString(includePackage=false, includeSuper = true, includeNames = true)
-class StdOutParam extends OutParam { { name='' } }
+class StdOutParam extends OutParam { StdOutParam() { name='-' } }
 
 
 @ToString(includePackage=false, includeSuper = true, includeNames = true)

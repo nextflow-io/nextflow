@@ -29,6 +29,7 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
+import nextflow.Nextflow
 import nextflow.Session
 import nextflow.exception.MissingFileException
 import nextflow.exception.TaskValidationException
@@ -162,13 +163,13 @@ abstract class TaskProcessor {
 
         allScalarValues = !taskConfig.inputs.channels.any { !(it instanceof DataflowVariable) }
 
-//        /*
-//         * Normalize the output
-//         * - even though the output may be empty, let return the stdout as output by default
-//         */
-//        if ( taskConfig.outputs.size() == 0 ) {
-//            taskConfig.stdout( Nextflow.channel() )
-//        }
+        /*
+         * Normalize the output
+         * - even though the output may be empty, let return the stdout as output by default
+         */
+        if ( taskConfig.outputs.size() == 0 ) {
+            taskConfig.stdout(Nextflow.val())
+        }
 
         createOperator()
 
@@ -603,17 +604,17 @@ abstract class TaskProcessor {
      */
     synchronized protected void bindOutputs( TaskRun task ) {
 
-        log.trace "Binding results task: ${name} > outputs: ${task.outputs}"
-
         // -- bind each produced file to its own channel
         task.outputs.eachWithIndex { OutParam param, value, index ->
 
             switch( param ) {
             case StdOutParam:
+                log.trace "Task $name > Binding '$value' to stdout"
                 processor.bindOutput(index, value instanceof File ? value.text : value?.toString())
                 break
 
             case FileOutParam:
+                log.trace "Task $name > Binding file: '$value' to '${param.name}'"
                 if( value instanceof Collection && !(param as FileOutParam).joint ) {
                     value.each { processor.bindOutput(index, it) }
                 }
@@ -623,6 +624,7 @@ abstract class TaskProcessor {
                 break;
 
             case ValueOutParam:
+                log.trace "Task $name > Binding value: '$value' to '${param.name}'"
                 processor.bindOutput(index, value)
                 break
 
