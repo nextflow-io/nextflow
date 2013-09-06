@@ -4,6 +4,7 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.MissingFileException
 import nextflow.processor.EnvInParam
 import nextflow.processor.TaskConfig
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 /**
  * Declares methods have to be implemented by a generic
@@ -55,7 +56,7 @@ abstract class AbstractExecutor {
 
         // replace any wildcards characters
         // TODO give a try to http://code.google.com/p/wildcard/  -or- http://commons.apache.org/io/
-        String filePattern = fileName.replace("?", ".?").replace("*", ".*?")
+        String filePattern = fileName.replace("?", ".?").replace("*", ".*")
 
         // when there's not change in the pattern, try to find a single file
         if( filePattern == fileName ) {
@@ -95,17 +96,7 @@ abstract class AbstractExecutor {
         }
 
         // create the *bash* environment script
-        final envBuilder = new StringBuilder()
-        environment.each { name, value ->
-            if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
-                envBuilder << "export $name='$value'" << '\n'
-            }
-            else {
-                log.trace "Task ${task.name} > Invalid environment variable name: '${name}'"
-            }
-        }
-
-        target.text = envBuilder.toString()
+        target.text = TaskProcessor.bashEnvironmentScript(environment)
     }
 
 
