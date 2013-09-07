@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 echo true
 
-task {
+process sayhello {
 
     """
     echo 'Hello world!'

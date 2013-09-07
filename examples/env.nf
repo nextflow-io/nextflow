@@ -7,7 +7,7 @@
 
 config.env [ 'HELLO_1' ]  = '1'
 
-task {
+process printEnv {
     input env: 'HELLO_2', from: '2'
     input env: 'HELLO_X', from: ['a','b','c']
     echo true

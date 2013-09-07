@@ -10,7 +10,7 @@ seq = channel()
 inputFile = file(params.query)
 inputFile.chunkFasta( params.chunkSize ) { seq << it }
 
-task {
+process blast {
     input file: 'seq.fa', from: seq
     output file: 'out', into: blast_result
 
@@ -19,7 +19,7 @@ task {
     """
 }
 
-merge {
+process collectResult( merge: true ) {
     input blast_result
     output blast_all
 
@@ -28,7 +28,7 @@ merge {
     """
 }
 
-task {
+process sort {
     input blast_all
     stdout result
 

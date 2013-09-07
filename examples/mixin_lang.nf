@@ -5,7 +5,7 @@ params.range = 100
 /*
  * A trivial Perl script producing a list of numbers pair
  */
-task {
+process perlTask {
     stdout randNums
 
     """
@@ -27,7 +27,7 @@ task {
 /*
  * A Python script task which parses the output of the previous script
  */
-task {
+process pyTask {
     stdin randNums
     echo true
 

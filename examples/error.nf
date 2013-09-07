@@ -2,7 +2,7 @@
 
 channel = channel(1,2,3)
 
-task {
+process task1 {
    input channel
    maxForks 4
    errorStrategy 'ignore'
@@ -15,7 +15,7 @@ task {
 
  channel2 = channel(4,5,6)
 
- task {
+ process task2 {
    input channel2
    maxForks 4
 

@@ -22,7 +22,7 @@
 params.in = '~/sample.fa'
 SPLIT = (System.properties['os.name'] == 'Mac OS X' ? 'gcsplit' : 'csplit')
 
-task {
+process split {
     input file:'query.fa', from: file(params.in)
     output file: 'seq_*', into: splits, joint: true
 
@@ -32,7 +32,7 @@ task {
 }
 
 
-task {
+process printTwo {
     input from: splits, file: 'chunk'
     output into: two_chunks, file: 'chunk1:chunk3'
     echo true
@@ -43,7 +43,7 @@ task {
 
 }
 
-task {
+process printLast {
     input from: two_chunks, file:'chunk'
     output into: result, file: 'chunk'
     echo true

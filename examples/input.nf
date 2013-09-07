@@ -3,7 +3,7 @@
 x = 1
 y = ['a','b']
 
-task {
+process foo {
     echo true
 
     input val: x, from: x

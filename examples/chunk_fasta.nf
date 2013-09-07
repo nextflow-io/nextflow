@@ -18,7 +18,7 @@ stdin.chunkFasta( params.chunkSize ) { str ->
     sequences << str
 }
 
-task {
+process foo {
     echo true
     stdin sequences
 

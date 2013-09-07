@@ -2,7 +2,7 @@ params.query = "$HOME/sample.fa"
 params.db = "$HOME/tools/blast-db/pdb/pdb"
 
 
-task ('blast') {
+process blast {
     output top_hits
 
     """
@@ -12,14 +12,14 @@ task ('blast') {
 }
 
 
-task ('extract') {
+process extractTopHits {
     input top_hits
     output sequences
 
     "blastdbcmd -db ${params.db} -entry_batch $top_hits > sequences"
 }
 
-task ('align') {
+process align {
     input sequences
     echo true
 

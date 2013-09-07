@@ -15,7 +15,7 @@ fastaFile.chunkFasta { seq << it }
  * For each sequence that is sent over the 'seq' channel
  * the below task is executed
  */
-task ('ampa') {
+process ampaTask {
 
     // defines the Input and Output
     input file:'seq.fa', from: seq

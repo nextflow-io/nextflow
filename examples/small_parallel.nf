@@ -7,7 +7,7 @@ queryFile.chunkFasta {
     fasta << it
 }
 
-task ('blast') {
+process blast {
     input file:'query.fa', from: fasta
     output top_hits
 
@@ -18,21 +18,21 @@ task ('blast') {
 }
 
 
-task ('extract') {
+process extract {
     input top_hits
     output sequences
 
     "blastdbcmd -db ${params.db} -entry_batch $top_hits > sequences"
 }
 
-merge {
+process all(merge:true) {
     input sequences
     output all_seq
 
     "cat $sequences > all_seq"
 }
 
-task ('align') {
+process align {
     echo true
     input all_seq
 
