@@ -1,5 +1,4 @@
 import nextflow.processor.ParallelTaskProcessor
-import nextflow.processor.TaskProcessor
 import nextflow.script.CliRunner
 import spock.lang.Shared
 import spock.lang.Specification
@@ -100,7 +99,7 @@ class FunctionalTests extends Specification {
 
         setup:
         def configStr = '''
-             task {
+             process {
                 processor = 'nope'
                 echo = true
                 shell = 'zsh'
@@ -115,19 +114,19 @@ class FunctionalTests extends Specification {
         when:
         def script = '''
 
-            task('taskHello') {
+            process taskHello {
                 echo true
                 maxForks 11
                 dummyField 99
 
                 ''
-                }
+            }
 
-            return taskProcessor
             '''
 
         def runner = new CliRunner(cfg)
-        def TaskProcessor processor = runner.execute( script )
+        runner.execute( script )
+        def processor = runner.script.taskProcessor
 
         then:
         processor instanceof ParallelTaskProcessor

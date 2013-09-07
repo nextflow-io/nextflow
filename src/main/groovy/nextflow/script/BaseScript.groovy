@@ -66,26 +66,24 @@ abstract class BaseScript extends Script {
     @Lazy
     InputStream stdin = { System.in }()
 
-    /*
-     * The last produced result object
-     */
-    private result
-
-    def getResult() { result }
-
-    /*
-     * The last created task processor
-     */
     private TaskProcessor taskProcessor
 
-    def TaskProcessor getTaskProcessor() { taskProcessor }
+    /** Access to the last *process* object -- only for testing purpose */
+    @PackageScope
+    TaskProcessor getTaskProcessor() { taskProcessor }
+
+    private result
+
+    /** Access to the last *process* result -- only for testing purpose */
+    @PackageScope
+    Object getResult() { result }
 
     /**
      * Enable disable task 'echo' configuration property
      * @param value
      */
     def void echo(boolean value = true) {
-        config.task.echo = value
+        config.process.echo = value
     }
 
     /**
@@ -176,27 +174,6 @@ abstract class BaseScript extends Script {
     }
 
     /**
-     * Creates and runs a task
-     *
-     * @param name The name used to label this processor
-     * @param block The code block to be executed
-     * @return The task result as returned by {@code Processor#run}
-     */
-    def task( String name = null, Closure<String> block ) {
-
-        result = createProcessor(ParallelTaskProcessor, name, block).run()
-
-    }
-
-
-    def merge( String name = null, Closure<String> block ) {
-
-        result = createProcessor(MergeTaskProcessor, name,block) .run()
-
-    }
-
-
-    /**
      * Create a task processor
      *
      * @param name The name used to label this processor
@@ -209,17 +186,18 @@ abstract class BaseScript extends Script {
         def taskConfig = new TaskConfig(this)
 
         // set 'default' properties defined in the configuration file in the 'task' section
-        if( config.task instanceof Map ) {
+        if( config.process instanceof Map ) {
+            config.process .each { String key, value -> taskConfig.setProperty(key,value) }
+        }
+        else if( config.task instanceof Map ) {
+            log.warn "Note: configuration attribute 'task' has been deprecated -- replace it by using attribute 'process'"
             config.task.each { String key, value -> taskConfig.setProperty(key,value) }
         }
 
+        // set the task name in the config object
         if( name ) {
             taskConfig.name = name
         }
-
-        // create the processor object
-        // note: 'processor' have to be deprecated in favor of 'executor'
-        def executorClass = loadExecutorClass( taskConfig['processor']?.toString() ?: session.config.processor )
 
         // Invoke the code block, which will return the script closure to the executed
         // As side effect will set all the properties declaration in the 'taskConfig' object
@@ -229,37 +207,70 @@ abstract class BaseScript extends Script {
         def script = new TaskConfigWrapper(taskConfig).with ( block ) as Closure
         if ( !script ) throw new IllegalArgumentException("Missing script in the specified task block -- make sure it terminates with the script string to be executed")
 
+        // load the executor to be used
+        def executorClass = loadExecutorClass( getExecutorConfig(taskConfig) )
+
         def executor = executorClass.newInstance()
         def processor = processorClass.newInstance( executor, session, this, taskConfig, script )
 
-        // keep track of the last create processor
         return taskProcessor = processor
 
     }
 
+    /**
+     * Find out the 'executor' to be used in the process definition or in teh session configuration object
+     *
+     * @param taskConfig
+     */
+    private getExecutorConfig(Map taskConfig) {
+        log.debug ">> taskConfig $taskConfig"
 
-    def process(Map<String,?> args, String name ) {
-        log.debug "Create task: $name with: $args"
-        task(name, { return '' })
+        // create the processor object
+        def result = taskConfig.executor?.toString()
+
+        // fallback on deprecated attribute
+        if( !result && taskConfig.processor ) {
+            result = taskConfig.processor?.toString()
+            log.warn "Note: configuration attribute 'processor' has been deprecated -- replace it by using the attribute 'executor'"
+        }
+
+        // fallback on config file definition
+        if( !result ) {
+            result = session.config.executor?.toString()
+        }
+
+        if( !result && session.config.processor ) {
+            result = session.config.processor?.toString()
+            log.warn "Note: configuration attribute 'processor' has been deprecated -- replace it by using the attribute 'executor' in the 'nextflow.conf' file"
+        }
+
+        log.debug "<< taskConfig result: $result"
+        return result
     }
 
-    def process(Map<String,?> args, String name, Closure code ) {
-        log.debug "Create task: $name with: $args "
-        task(name, code)
+
+    def process( Map<String,?> args, String name, Closure code ) {
+        log.debug "Create task: $name -- $args "
+        def clazz = args.merge ? MergeTaskProcessor : ParallelTaskProcessor
+        result = createProcessor(clazz, name, code).run()
     }
 
-    def process(String name ) {
-        log.debug "Create task: $name "
-        task(name, { return '' })
-    }
-
-    def process(String name, Closure code ) {
-        log.debug "Create task: $name "
-        task(name, code)
+    def process( String name, Closure code ) {
+        log.debug "Create task: $name -- noargs"
+        result = createProcessor(ParallelTaskProcessor, name, code).run()
     }
 
 
 
+//    def process(Map<String,?> args, String name ) {
+//        log.debug "Create task: $name with: $args"
+//        task(name, { return '' })
+//    }
+
+//    def process(String name ) {
+//        log.debug "Create task: $name "
+//        task(name, { return '' })
+//    }
 
 
     /*
@@ -274,21 +285,21 @@ abstract class BaseScript extends Script {
     ]
 
     @PackageScope
-    static Class<? extends AbstractExecutor> loadExecutorClass(String processorType) {
-
-        def className = processorType ? executorsMap[ processorType?.toLowerCase()  ] : LocalExecutor.name
+    static Class<? extends AbstractExecutor> loadExecutorClass(String executorName) {
+        log.debug ">> processorType: $executorName"
+        def className = executorName ? executorsMap[ executorName?.toLowerCase()  ] : LocalExecutor.name
 
         // if the className is empty (because the 'processorType' does not map to any class, fallback to the 'processorType' itself)
         if( !className ) {
-            className = processorType
+            className = executorName
         }
 
-        log.debug "Loading processor class: ${className}"
+        log.debug "Loading executor class: ${className}"
         try {
             Thread.currentThread().getContextClassLoader().loadClass(className) as Class<AbstractExecutor>
         }
         catch( Exception e ) {
-            throw new IllegalArgumentException("Cannot find a valid class for specified processor type: '${processorType}'")
+            throw new IllegalArgumentException("Cannot find a valid class for specified executor: '${executorName}'")
         }
 
     }

@@ -421,7 +421,7 @@ class CliRunner {
                 normalized[-1] = current
             }
 
-            else if( (current ==~ /^\-t\..+/ || current ==~ /^\-task\..+/) && !current.contains('=')) {
+            else if( current ==~ /^\-process\..+/ && !current.contains('=')) {
                 current += '='
                 current += ( i<args.size() ? args[i++] : 'true' )
                 normalized[-1] = current
@@ -485,9 +485,9 @@ class CliRunner {
             def configFiles = validateConfigFiles(options.config)
             def config = buildConfig(configFiles)
 
-            // -- override 'task' parameters defined on the cmd line
-            options.task.each { name, value ->
-                config.task[name] = parseValue(value)
+            // -- override 'process' parameters defined on the cmd line
+            options.process.each { name, value ->
+                config.process[name] = parseValue(value)
             }
 
             // -- check for the 'continue' flag
@@ -607,7 +607,7 @@ class CliRunner {
     def static Map buildConfig0( Map env, List<String> confText )  {
         assert env
 
-        ConfigObject result = new ConfigSlurper().parse('env{}; session{}; params{}; task{} ')
+        ConfigObject result = new ConfigSlurper().parse('env{}; session{}; params{}; process{} ')
 
         env.sort().each { name, value -> result.env.put(name,value) }
 

@@ -118,7 +118,7 @@ class Session {
         this.config = config
 
         // normalize taskConfig object
-        if( config.task == null ) config.task = [:]
+        if( config.process == null ) config.process = [:]
         if( config.env == null ) config.env = [:]
 
         // set unique session from the taskConfig object, or create a new one

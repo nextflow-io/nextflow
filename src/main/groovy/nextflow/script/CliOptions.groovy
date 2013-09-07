@@ -70,8 +70,8 @@ class CliOptions {
     @DynamicParameter(names = '--', description = 'Set a parameter used by the workflow' )
     Map<String,String> params = new LinkedHashMap<>()
 
-    @DynamicParameter(names = ['-t.','-task.'], description = 'Set task options used by the workflow' )
-    Map<String,String> task = new LinkedHashMap<>()
+    @DynamicParameter(names = ['-process.'], description = 'Set default process options' )
+    Map<String,String> process = new LinkedHashMap<>()
 
     /**
      * Extra parameters for the script execution

@@ -62,12 +62,12 @@ class CliRunnerTest extends Specification {
 
     def 'test task with assignment' () {
         setup:
-        def runner = new CliRunner([task:[processor:'nope']])
+        def runner = new CliRunner( executor: 'nope' )
 
         when:
         def script =
             '''
-            task('task2')  {
+            process task2  {
                 input val:x, from: 1
                 input val:y, from: [3]
                 stdout result
@@ -91,12 +91,12 @@ class CliRunnerTest extends Specification {
     def 'test task echo' () {
 
         setup:
-        def runner = new CliRunner([task:[processor:'nope']])
+        def runner = new CliRunner( executor: 'nope' )
 
         when:
         def script =
             '''
-            task('test')  {
+            process test  {
                 input val: x, from: 1
                 stdout result
 
@@ -122,7 +122,7 @@ class CliRunnerTest extends Specification {
         when:
         def script =
             """
-            task('task1')  {
+            process task1  {
                 input x: 'hola'
             }
             """
@@ -137,12 +137,12 @@ class CliRunnerTest extends Specification {
 
 
         setup:
-        def runner = new CliRunner([task:[processor:'nope']])
+        def runner = new CliRunner( executor: 'nope' )
 
         def script = '''
             X = 1
             Y = 2
-            task {
+            process test {
                 input Y
                 def Z = 3
 
@@ -353,9 +353,8 @@ class CliRunnerTest extends Specification {
         CliRunner.normalizeArgs('--alpha','1') == ['--alpha=1']
         CliRunner.normalizeArgs('-x', '1', 'script.nf', '--long', 'v1', '--more', 'v2', '--flag') == ['-x','1','script.nf','--long=v1','--more=v2','--flag=true']
 
-        CliRunner.normalizeArgs('-x', '1', '-t.alpha','2', '3') == ['-x', '1', '-t.alpha=2', '3']
-        CliRunner.normalizeArgs('-x', '1', '-task.alpha','2', '3') == ['-x', '1', '-task.alpha=2', '3']
-        CliRunner.normalizeArgs('-x', '1', '-task.echo') == ['-x', '1', '-task.echo=true']
+        CliRunner.normalizeArgs('-x', '1', '-process.alpha','2', '3') == ['-x', '1', '-process.alpha=2', '3']
+        CliRunner.normalizeArgs('-x', '1', '-process.echo') == ['-x', '1', '-process.echo=true']
 
 
         CliRunner.normalizeArgs('-x', '1', '-that.alpha','2', '3') == ['-x', '1', '-that.alpha','2', '3']
