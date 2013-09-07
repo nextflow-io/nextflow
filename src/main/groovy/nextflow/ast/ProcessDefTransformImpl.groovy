@@ -395,24 +395,46 @@ class ProcessDefTransformImpl implements ASTTransformation {
         return [false, expr.lineNumber, expr.columnNumber]
     }
 
-
+    /**
+     * This method handle the process definition, so that it transform the user entered syntax
+     *    process myName ( named: args, ..  ) { code .. }
+     *
+     * into
+     *    process ( [named:args,..], String myName )  { }
+     *
+     * @param methodCall
+     * @param unit
+     */
     def void convertProcessDef( MethodCallExpression methodCall, SourceUnit unit ) {
-        log.debug "Converts 'process' ${methodCall.arguments} "
+        log.trace "Converts 'process' ${methodCall.arguments} "
 
         assert methodCall.arguments instanceof ArgumentListExpression
         def list = (methodCall.arguments as ArgumentListExpression).getExpressions()
 
+        // extract the first argument which has to be a method-call expression
+        // the name of this method represent the *process* name
         assert list.size() == 1
         assert list[0] instanceof MethodCallExpression
-
         def nested = list[0] as MethodCallExpression
         def name = nested.getMethodAsString()
 
+        // the nested method arguments are the arguments to be passed
+        // to the process definition, plus adding the process *name*
+        // as an extra item in the arguments list
         def args = nested.getArguments() as ArgumentListExpression
-        log.debug "Process name: $name with args: $args"
+        log.trace "Process name: $name with args: $args"
 
-        args.getExpressions().add(0, new ConstantExpression(name))
+        // make sure to add the 'name' after the map item
+        // (which represent the named parameter attributes)
+        list = args.getExpressions()
+        if( list.size()>0 && list[0] instanceof MapExpression ) {
+            list.add(1, new ConstantExpression(name))
+        }
+        else {
+            list.add(0, new ConstantExpression(name))
+        }
 
+        // set the new list as the new arguments
         methodCall.setArguments( args )
 
         // now continue as before !
