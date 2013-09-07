@@ -19,9 +19,7 @@
 
 package nextflow.util
 
-import org.apache.commons.io.FileUtils
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -57,8 +55,8 @@ class FileHelperTest extends Specification {
     def 'test isEmpty dir'() {
 
         setup:
-        def emptyDir = FileHelper.createTempDir()
-        def notEmptyDir = FileHelper.createTempDir()
+        def emptyDir = File.createTempDir()
+        def notEmptyDir = File.createTempDir()
         File.createTempFile('test','test', notEmptyDir)
 
         expect:
@@ -66,8 +64,8 @@ class FileHelperTest extends Specification {
         !FileHelper.isEmpty(notEmptyDir)
 
         cleanup:
-        FileUtils.deleteDirectory(emptyDir)
-        FileUtils.deleteDirectory(notEmptyDir)
+        emptyDir.deleteDir()
+        notEmptyDir.deleteDir()
 
     }
 
