@@ -51,7 +51,7 @@ class SgeExecutorTest extends Specification {
         task.workDirectory = new File('/abc')
 
         then:
-        executor.getSubmitCommandLine(task) == 'qsub -wd /abc -N nf-task-9 -o /dev/null -j y -sync y -V -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.run'.split(' ') as List
+        executor.getSubmitCommandLine(task) == 'qsub -wd /abc -N nf-task-9 -o /dev/null -j y -sync y -V -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'.split(' ') as List
 
     }
 

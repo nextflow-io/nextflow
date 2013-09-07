@@ -53,7 +53,7 @@ class LsfExecutorTest extends Specification {
         task.workDirectory = new File('/xxx')
 
         then:
-        executor.getSubmitCommandLine(task) == ['bsub','-K','-cwd','/xxx','-o','.job.out','-q', 'hpc-queue1', '-J', 'nf-task-9', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './.job.run']
+        executor.getSubmitCommandLine(task) == ['bsub','-K','-cwd','/xxx','-o','.job.out','-q', 'hpc-queue1', '-J', 'nf-task-9', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './.job.sh']
 
     }
 
