@@ -17,7 +17,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.script
+package nextflow.ast
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
@@ -42,7 +42,6 @@ import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.syntax.SyntaxException
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
-
 /**
  * Implement some syntax sugars of Nextflow DSL scripting.
  *
@@ -51,20 +50,15 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 
 @Slf4j
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
-class TaskScriptClosureTransformImpl implements ASTTransformation {
+class ProcessDefTransformImpl implements ASTTransformation {
 
 
     @Override
-    void visit(ASTNode[] nodes, SourceUnit unit) {
+    void visit(ASTNode[] astNodes, SourceUnit unit) {
 
-        createVisitor(unit).visitClass(nodes[1])
+        createVisitor(unit).visitClass(astNodes[1])
 
     }
-
-    /**
-     * Declares all method names to which is required to apply the closure transformation
-     */
-    static def final VALID_TASK_METHODS = ['task','merge']
 
     /*
      * create the code visitor
@@ -78,43 +72,48 @@ class TaskScriptClosureTransformImpl implements ASTTransformation {
             protected SourceUnit getSourceUnit() { unit }
 
             void visitMethodCallExpression(MethodCallExpression methodCall) {
-                log.trace "Visiting methodCallExpr: ${methodCall}"
 
                 // pre-condition to be verified to apply the transformation
                 Boolean preCondition = methodCall.with {
                     (getMethod() instanceof ConstantExpression && objectExpression?.getText() == 'this')
                 }
 
-                // intercept the task method in order to transform the script closure
-                if ( preCondition &&  methodCall.getMethodAsString() in VALID_TASK_METHODS ) {
+                /*
+                 * intercept the *process* method in order to transform the script closure
+                 */
+                if( preCondition &&  methodCall.getMethodAsString() == 'process' ) {
 
                     currentTaskName = methodCall.getMethodAsString()
                     try {
-                        handleTaskMethod(methodCall, sourceUnit)
+                        convertProcessDef(methodCall,sourceUnit)
                         super.visitMethodCallExpression(methodCall)
                     }
                     finally {
                         currentTaskName = null
                     }
-                }
-                else if( preCondition &&  methodCall.getMethodAsString() == 'process' ) {
 
-                    convertProcessDef(methodCall,sourceUnit)
-                    super.visitMethodCallExpression(methodCall)
                 }
 
-                // transform the 'input' method call invocation inside a 'task' method
+                /*
+                 * transform the 'input' method call invocation inside a 'task' method
+                 */
                 else if ( preCondition && methodCall.getMethodAsString() == 'input' && currentTaskName ) {
 
                     handleInputMethod(methodCall, sourceUnit)
                     super.visitMethodCallExpression(methodCall)
                 }
 
+                /*
+                 * convert the *output* declarations
+                 */
                 else if ( preCondition && methodCall.getMethodAsString() == 'output' && currentTaskName  ) {
                     handleOutputMethod(methodCall, sourceUnit)
                     super.visitMethodCallExpression(methodCall)
                 }
 
+                /*
+                 * convert the *stdout* declarations
+                 */
                 else if ( preCondition && methodCall.getMethodAsString() == 'stdout' && currentTaskName  ) {
                     handleStdoutMethod(methodCall, sourceUnit)
                     super.visitMethodCallExpression(methodCall)

@@ -17,7 +17,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.script
+package nextflow.ast
 
 import java.lang.annotation.ElementType
 import java.lang.annotation.Retention
@@ -26,7 +26,10 @@ import java.lang.annotation.Target
 
 import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
+/**
+ * Marker interface which to apply AST transformation to {@code process} declaration
+ */
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.METHOD)
-@GroovyASTTransformationClass(classes = [TaskScriptClosureTransformImpl])
-@interface TaskScriptClosureTransform {}
+@GroovyASTTransformationClass(classes = [ProcessDefTransformImpl])
+@interface ProcessDefTransform {}
