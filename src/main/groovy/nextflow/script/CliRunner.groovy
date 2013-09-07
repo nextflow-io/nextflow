@@ -28,6 +28,7 @@ import nextflow.Const
 import nextflow.ExitCode
 import nextflow.Nextflow
 import nextflow.Session
+import nextflow.ast.ProcessDefTransform
 import nextflow.exception.InvalidArgumentException
 import nextflow.exception.MissingLibraryException
 import nextflow.util.HistoryFile
@@ -38,6 +39,7 @@ import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
 /**
+ * Application entry class
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -329,7 +331,7 @@ class CliRunner {
         def config = new CompilerConfiguration()
         config.addCompilationCustomizers( importCustomizer )
         config.scriptBaseClass = BaseScript.class.name
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskScriptClosureTransform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(ProcessDefTransform))
 
         // extend the class-loader if required
         def gcl = new GroovyClassLoader()
