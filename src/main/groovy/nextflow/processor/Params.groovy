@@ -58,6 +58,17 @@ abstract class InParam {
             return new ValueInParam( name:args.val, channel: asChannel(args.from) )
         }
 
+        if( args.each ) {
+            if ( !(args.from instanceof Collection) ) {
+                throw new IllegalArgumentException("Illegal form: ${args.from} for 'each' input iterator")
+            }
+
+            // the collection is wrapper like a scalar value
+            def wrap = Nextflow.val( args.from )
+
+            return new EachInParam( name: args.each, channel: wrap )
+        }
+
         throw new IllegalArgumentException("Illegal'input' definition: $args")
     }
 
@@ -101,6 +112,8 @@ class ValueInParam extends InParam { }
 @ToString(includePackage=false)
 class StdInParam extends InParam { StdInParam() { name='-' } }
 
+@ToString(includePackage=false)
+class EachInParam extends InParam {}
 
 @Slf4j
 @ToString(includePackage=false, includeNames = true)

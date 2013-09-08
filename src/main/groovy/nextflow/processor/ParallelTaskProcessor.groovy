@@ -1,7 +1,9 @@
 package nextflow.processor
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
@@ -25,8 +27,43 @@ class ParallelTaskProcessor extends TaskProcessor {
 
     @Override
     protected void createOperator() {
+
+
         def opInputs = new ArrayList(taskConfig.inputs.channels)
         def opOutputs = new ArrayList(taskConfig.outputs.channels)
+
+        /*
+         * check if there are some iterators declaration
+         * the list holds the index in the list of all *inputs* for the {@code each} declaration
+         */
+        def iteratorIndexes = []
+        taskConfig.inputs.eachWithIndex { param, index ->
+            if( param instanceof EachInParam ) {  iteratorIndexes << index }
+        }
+
+        /*
+         * When one (or more) {@code each} are declared as input, it is created an extra
+         * operator which will receive the inputs from the channel (excepts the values over iterate)
+         *
+         * The operator will *expand* the received inputs, iterating over the user provided value and
+         * forwarding the final values the the second *parallel* processor executing the user specified task
+         */
+        if( iteratorIndexes ) {
+            final size = taskConfig.inputs.size()
+            // the script implementing the iterating process
+            final forwarder = createForwardWrapper(size, iteratorIndexes)
+            // the channel forwarding the data from the *iterator* process to the target task
+            final linkingChannels = new ArrayList(size)
+            size.times { linkingChannels[it] = new DataflowQueue() }
+
+            // instantiate the iteration process
+            def params = [inputs: opInputs, outputs: linkingChannels, maxForks: 1, listeners: [new IteratorProcessInterceptor()]]
+            session.allProcessors << (processor = new DataflowOperator(group, params, forwarder).start())
+
+            // set as next inputs the result channels of the iteration process
+            opInputs = linkingChannels
+        }
+
 
         /*
          * create a mock closure to trigger the operator
@@ -42,6 +79,62 @@ class ParallelTaskProcessor extends TaskProcessor {
         def params = [inputs: opInputs, outputs: opOutputs, maxForks: maxForks, listeners: [new TaskProcessorInterceptor()] ]
         session.allProcessors << (processor = new DataflowOperator(group, params, wrapper).start())
 
+
+    }
+
+    /**
+     * Implements the closure which *combines* all the iteration
+     *
+     * @param numOfInputs Number of in/out channel
+     * @param indexes The list of indexes which identify the position of iterators in the input channels
+     * @return The clousre implementing the iteration/forwarding logic
+     */
+    protected createForwardWrapper( int numOfInputs, List indexes ) {
+
+        final args = []
+        numOfInputs.times { args << "x$it" }
+
+        /*
+         * Explaining the following closure:
+         *
+         * - it has to be evaluated as a string since the number of input must much the number input channel
+         *   that is known only at runtime
+         *
+         * - 'out' holds the list of all input values which need to be forwarded (binded) to output as many
+         *   times are the items in the iteration list
+         *
+         * - the iteration list(s) is (are) passed like in the closure inputs like the other values,
+         *   the *indexes* argument defines the which of them are the iteration lists
+         *
+         * - 'itr' holds the list of all iteration lists
+         *
+         * - using the groovy method a combination of all values is create (cartesian product)
+         *   see http://groovy.codehaus.org/groovy-jdk/java/util/Collection.html#combinations()
+         *
+         * - the resulting values are replaced in the 'out' array of values and forwarded out
+         *
+         */
+
+        final str =
+            """
+            { ${args.join(',')} ->
+                def out = [ ${args.join(',')} ]
+                def itr = [ ${indexes.collect { 'x'+it }.join(',')} ]
+                def cmb = itr.combinations()
+                for( entries in cmb ) {
+                    def count = 0
+                    n.times { i->
+                        if( i in indexes ) { out[i] = entries[count++] }
+                    }
+                    bindAllOutputValues( *out )
+                }
+            }
+            """
+
+        final Binding binding = new Binding( indexes: indexes, n: numOfInputs )
+        final result = (Closure)new GroovyShell(binding).evaluate (str)
+
+        return result
 
     }
 
@@ -74,7 +167,7 @@ class ParallelTaskProcessor extends TaskProcessor {
             task.setInput(param, values.get(index))
 
             // otherwise put in on the map used to resolve the values evaluating the script
-            if( param instanceof ValueInParam ) {
+            if( param instanceof ValueInParam || param instanceof EachInParam ) {
                 map[ param.name ] = values.get(index)
             }
 
@@ -216,6 +309,37 @@ class ParallelTaskProcessor extends TaskProcessor {
             handleException( error, currentTask.get() )
         }
 
+    }
+
+    /*
+     * logger class for the *iterator* processor
+     */
+    class IteratorProcessInterceptor extends DataflowEventAdapter {
+
+        @Override
+        public boolean onException(final DataflowProcessor processor, final Throwable e) {
+            log.error "task '$name' > error on internal iteration process", e
+            return true;
+        }
+
+        @Override
+        public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+            log.trace "task '$name' > message arrived for iterator '${taskConfig.inputs.names[index]}' with value: '$message'"
+            return message;
+        }
+
+        @Override
+        public Object messageSentOut(final DataflowProcessor processor, final DataflowWriteChannel<Object> channel, final int index, final Object message) {
+            log.trace "task '$name' > message forwarded for iterator '${taskConfig.inputs.names[index]}' with value: '$message'"
+            return message;
+        }
+
+
+        @Override
+        public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+            log.trace "task '$name' > control message arrived for iterator '${taskConfig.inputs.names[index]}'"
+            return message;
+        }
     }
 
 

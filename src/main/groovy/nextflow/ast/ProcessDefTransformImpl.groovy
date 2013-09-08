@@ -167,7 +167,8 @@ class ProcessDefTransformImpl implements ASTTransformation {
 
                     def k = entry.keyExpression
                     def v = entry.valueExpression
-                    if( k instanceof ConstantExpression && k.value == 'val' && v instanceof VariableExpression ) {
+                    def isConst = k instanceof ConstantExpression
+                    if( isConst && k.value in ['val','each'] && v instanceof VariableExpression ) {
                         entries << new MapEntryExpression( k, new ConstantExpression(v.name) )
                     }
                     else {
