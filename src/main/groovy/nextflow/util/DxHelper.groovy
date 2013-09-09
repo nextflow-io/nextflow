@@ -408,7 +408,6 @@ class DxHelper {
 
         if( node.isObject() ) {
             for( Map.Entry<String,JsonNode> item : node.fields() ) {
-                println("KEY > ${item.key} -- VALUE > ${item.value}")
                 jsonNodeToMap(item.key, item.value, result)
             }
         }
