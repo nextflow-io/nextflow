@@ -249,4 +249,3 @@ task uploadOnejar ( type: Copy, dependsOn: pack ) {
     into '/Users/pditommaso/Dropbox/Public/nextflow/'
 
 }
-

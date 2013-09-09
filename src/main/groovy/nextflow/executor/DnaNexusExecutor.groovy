@@ -169,47 +169,10 @@ class DnaNexusExecutor extends AbstractExecutor {
          *      - taskInput --> (Compulsory if we have the named file) Dnanexus link to the task's input file.
          *      - taskScript --> Dnanexus link to the task's script file.
          */
-        ObjectNode processJobInputHash
-        String instance = taskConfig.instanceType
-        if(instance.equals(null)){
-                instance = "dx_m1.large"
-        }
+        ObjectNode taskInput = task.input ? makeDXLink(taskInputId) : null
+        String instance = taskConfig.instanceType ? taskConfig.instanceType : null
 
-        if (task.input){
-            processJobInputHash = DXJSON.getObjectBuilder()
-                    .put("function", "process")
-                    .put("input", DXJSON.getObjectBuilder()
-                        .put("inputs", inputs)
-                        .put("outputs", outputs)
-                        .put("taskName", task.name)
-                        .put("taskEnv", createEnvironmentString(task))
-                        .put("taskInput", makeDXLink(taskInputId))
-                        .put("taskScript", makeDXLink(scriptId))
-                        .build())
-                    .put("systemRequirements", DXJSON.getObjectBuilder()
-                        .put("process", DXJSON.getObjectBuilder()          // "*"
-                            .put("instanceType", instance)
-                            .build())
-                        .build())
-                    .build()
-        }
-        else{
-            processJobInputHash = DXJSON.getObjectBuilder()
-                    .put("function", "process")
-                    .put("input", DXJSON.getObjectBuilder()
-                        .put("inputs", inputs)
-                        .put("outputs", outputs)
-                        .put("taskName", task.name)
-                        .put("taskEnv", createEnvironmentString(task))
-                        .put("taskScript", makeDXLink(scriptId))
-                        .build())
-                    .put("systemRequirements", DXJSON.getObjectBuilder()
-                        .put("process", DXJSON.getObjectBuilder()      // "*"
-                            .put("instanceType", instance)
-                            .build())
-                        .build())
-                    .build()
-        }
+        ObjectNode processJobInputHash = createInputObject(inputs, outputs, task.name, createEnvironmentString(task),  makeDXLink(scriptId), taskInput, instance)
         log.debug "Creating job parameters"
 
 
@@ -276,6 +239,32 @@ class DnaNexusExecutor extends AbstractExecutor {
 
     }
 
+    def static JsonNode createInputObject( ArrayNode inp, ArrayNode out, String name, String env, ObjectNode script, ObjectNode taskInp, String instance) {
+
+        def root = [:]
+
+        if(instance){
+            def process = [ instanceType: instance ]
+            root.systemRequirements = [:]
+            root.systemRequirements.process =  process
+        }
+
+        root.input = [:]
+
+        if(!taskInp.equals(null)){
+            root.input.taskInput = taskInp
+        }
+        root.input.taskScript = script
+        root.input.taskEnv = env
+        root.input.taskName = name
+        root.input.outputs = out
+        root.input.inputs = inp
+
+        root.function = "process"
+
+        return DxHelper.toJsonNode(root)
+
+    }
 
     /**
      * Returns the output of the task.

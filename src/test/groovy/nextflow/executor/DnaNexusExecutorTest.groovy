@@ -1,9 +1,13 @@
 package nextflow.executor
 
 import com.dnanexus.DXJSON
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ArrayNode
+import com.fasterxml.jackson.databind.node.ObjectNode
 import nextflow.exception.MissingFileException
 import nextflow.processor.TaskConfig
 import nextflow.util.DxFile
+import nextflow.util.DxHelper
 import spock.lang.Specification
 /**
  *
@@ -94,6 +98,75 @@ class DnaNexusExecutorTest extends Specification {
         result == new DxFile( name: 'seq_02', id: 'file-B7xxj300j58B5k7YPJ4VZ8KJ' )
 
 
+    }
+
+    def testCreateInputObject() {
+
+        setup:
+        ObjectNode processJobInputHash
+        String instance = "dx_m1.large"
+        /*if(instance.equals(null)){
+             instance = "dx_m1.large"
+        }*/
+
+        def taskInput = ["nasdid979d"]
+        JsonNode inp = DxHelper.toJsonNode([:])
+        JsonNode out = DxHelper.toJsonNode([:])
+
+        String taskInputId =  "file-t4sk1np0t"
+        String scriptId = "file-B8fx3b801xqvy0gbP9k084F9"
+        String name = "task1(1)"
+        String env = " export CLASSPATH='/usr/share/java/dnanexus-api-0.1.0.jar:' export DNANEXUS_HOME='/usr/share/dnanexus' "
+
+        if (taskInput){
+            processJobInputHash = DXJSON.getObjectBuilder()
+                 .put("function", "process")
+                 .put("input", DXJSON.getObjectBuilder()
+                     .put("inputs", inp)
+                     .put("outputs", out)
+                     .put("taskName", name)
+                     .put("taskEnv", env)
+                     .put("taskScript", makeDXLink(scriptId))
+                     .put("taskInput", makeDXLink(taskInputId))
+                     .build())
+                 .put("systemRequirements", DXJSON.getObjectBuilder()
+                     .put("process", DXJSON.getObjectBuilder()          // "*"
+                         .put("instanceType", instance)
+                         .build())
+                     .build())
+                 .build()
+        }
+        else{
+            processJobInputHash = DXJSON.getObjectBuilder()
+                 .put("function", "process")
+                 .put("input", DXJSON.getObjectBuilder()
+                     .put("inputs", inp)
+                     .put("outputs", out)
+                     .put("taskName", name)
+                     .put("taskEnv", env)
+                     .put("taskScript", makeDXLink(scriptId))
+                     .build())
+                 .put("systemRequirements", DXJSON.getObjectBuilder()
+                     .put("process", DXJSON.getObjectBuilder()      // "*"
+                         .put("instanceType", instance)
+                         .build())
+                     .build())
+                 .build()
+        }
+
+        def expectedJson = processJobInputHash
+
+
+        when:
+        def myJson = DnaNexusExecutor.createInputObject(inp,out,name,env,makeDXLink(scriptId),makeDXLink(taskInputId),instance)
+
+        then:
+        myJson == expectedJson
+
+    }
+
+    protected ObjectNode makeDXLink(String objectId) {
+        return DXJSON.getObjectBuilder().put('$dnanexus_link', objectId).build();
     }
 
 }

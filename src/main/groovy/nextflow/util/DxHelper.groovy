@@ -380,10 +380,14 @@ class DxHelper {
                 }
                 return result
 
+            case ObjectNode:
+                return value as ObjectNode
+
             case byte[]:
                 return BinaryNode.valueOf(value as byte[])
 
             case Collection:
+            case ArrayNode:
             case Object[]:
 
                 def result = new ArrayNode(JsonNodeFactory.instance)
@@ -404,6 +408,7 @@ class DxHelper {
 
         if( node.isObject() ) {
             for( Map.Entry<String,JsonNode> item : node.fields() ) {
+                println("KEY > ${item.key} -- VALUE > ${item.value}")
                 jsonNodeToMap(item.key, item.value, result)
             }
         }
