@@ -272,78 +272,6 @@ class DxHelper {
 
     }
 
-//    /**
-//     * Converts a {@code Map} to a {@code ObjectNode} instance
-//     *
-//     * @param params
-//     * @return
-//     */
-//    static ObjectNode mapToJsonNode( Map params ) {
-//        assert params != null
-//
-//        def node = DXJSON.getObjectBuilder()
-//        params.each { String name, value ->
-//
-//            switch( value ) {
-//
-//                case String:
-//                    node = node.put(name, value as String)
-//                    break
-//
-//                case BigDecimal:
-//                    node = node.put(name, new DecimalNode(value as BigDecimal))
-//                    break
-//
-//                case BigInteger:
-//                    node = node.put(name, new BigIntegerNode(value as BigInteger))
-//                    break
-//
-//                case byte[]:
-//                    node = node.put( name, new BinaryNode(value as byte[]) )
-//                    break
-//
-//                case Boolean:
-//                    node = node.put(name, value as Boolean)
-//                    break
-//
-//                case Float:
-//                case Double:
-//                    node = node.put(name, value as Double)
-//                    break
-//
-//                case Integer:
-//                    node = node.put(name, value as Integer)
-//                    break
-//
-//                case Long:
-//                    node = node.put(name, value as Long)
-//                    break
-//
-//                case Map:
-//                    node = node.put(name, mapToJsonNode(value as Map))
-//                    break
-//
-//                case Collection:
-//                case Object[]:
-//
-//                    def array = new ArrayNode(JsonNodeFactory.instance)
-//                    (value as List) .each {
-//                        array.add( it )
-//                    }
-//                    node = node.put(name, array)
-//                    break
-//
-//
-//                default:
-//                    log.debug "Type not supported: ${value.class.name}"
-//                    node = node.put(name, value?.toString() )
-//
-//            }
-//
-//        }
-//
-//        node.build()
-//    }
 
     static JsonNode toJsonNode( def value ) {
 
@@ -381,7 +309,7 @@ class DxHelper {
                 return result
 
             case ObjectNode:
-                return value as ObjectNode
+                return value
 
             case byte[]:
                 return BinaryNode.valueOf(value as byte[])
@@ -403,16 +331,66 @@ class DxHelper {
     }
 
 
-    static Map jsonNodeToMap( JsonNode node ) {
-        def result = [:]
+    static jsonNodeToObj( JsonNode node ) {
 
-        if( node.isObject() ) {
-            for( Map.Entry<String,JsonNode> item : node.fields() ) {
-                jsonNodeToMap(item.key, item.value, result)
+        def result
+
+        if( node.isBigDecimal() ) {
+            return node.decimalValue()
+        }
+        else if( node.isBigInteger() ) {
+            return node.bigIntegerValue()
+        }
+        else if( node.isBinary() ) {
+            return node.binaryValue()
+        }
+        else if( node.isBoolean() ) {
+            return node.booleanValue()
+        }
+        else if( node.isDouble() ) {
+            return node.doubleValue()
+        }
+        else if( node.isFloatingPointNumber()) {
+            return node
+        }
+        else if( node.isInt() ) {
+            return node.intValue()
+        }
+        else if( node.isLong()) {
+            return node.longValue()
+        }
+        else if( node.isNumber()) {
+            return node.numberValue()
+        }
+        else if( node.isPojo() ) {
+            return node
+        }
+        else if( node.isTextual()) {
+            return node.textValue()
+        }
+        else if( node.isValueNode()) {
+            if(node.isContainerNode() || node.isMissingNode()){
+                return false
+            }else{
+                return true
             }
         }
+        else if( node.isNull()) {
+            return null
+        }
         else if( node.isArray() ) {
-
+            result = []
+            for(int i = 0; i<node.size(); i++){
+                result << jsonNodeToObj(node[i])
+            }
+            println("NODE -- ARRAY >> ${node}")
+        }
+        else if( node.isObject() ) {
+            result = [:]
+            for( Map.Entry<String,JsonNode> item : node.fields() ) {
+                println("NODE -- MAP >> ${item.key} && ${item.value}")
+                result[item.key] = jsonNodeToObj(item.value)
+            }
         }
         else {
             throw new IllegalStateException("Not a valid json node: ${node.toString()}")
@@ -420,68 +398,5 @@ class DxHelper {
 
         return result
     }
-
-
-    static Map jsonNodeToMap( String field, JsonNode node, Map result ) {
-
-        if( node.isArray()){
-            for( def item : node.elements() ) {
-                result[field] = item
-            }
-        }
-        else if( node.isBigDecimal() ) {
-            result[field] = node.decimalValue()
-        }
-        else if( node.isBigInteger() ) {
-            result[field] = node.bigIntegerValue()
-        }
-        else if( node.isBinary() ) {
-            result[field] = node.binaryValue()
-        }
-        else if( node.isBoolean() ) {
-            result[field] = node.booleanValue()
-        }
-        else if( node.isDouble() ) {
-            result[field] = node.doubleValue()
-        }
-        else if( node.isFloatingPointNumber()) {
-            result[field] = node
-        }
-        else if( node.isInt() ) {
-            result[field] = node.intValue()
-        }
-        else if( node.isLong()) {
-            result[field] = node.longValue()
-        }
-        else if( node.isNumber()) {
-            result[field] = node.numberValue()
-        }
-        else if( node.isObject()) {
-            result[field] = jsonNodeToMap(node)
-        }
-        else if( node.isPojo() ) {
-            result[field] = node
-        }
-        else if( node.isTextual()) {
-            result[field] = node.textValue()
-        }
-        else if( node.isValueNode()) {
-            if(node.isContainerNode() || node.isMissingNode()){
-                result[field] = false
-            }else{
-                result[field] = true
-            }
-        }
-        else if( node.isNull()) {
-            result[field] = null
-        }
-        else {
-
-        }
-
-        return result
-    }
-
-
 
 }

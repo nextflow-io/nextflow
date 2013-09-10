@@ -17,6 +17,8 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.util
+
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import groovy.json.JsonSlurper
 import spock.lang.Specification
@@ -104,18 +106,45 @@ class DxHelperTest extends Specification {
         when:
         def EXPECTED = [field1: "string", field2:[1,2,3], field3:[x: 1, y: 2], field4:[ [p:10, q:20], [w:99], ['a', 'b', 'c'] ]]
         def node = DxHelper.toJsonNode(EXPECTED)
-        def map = DxHelper.jsonNodeToMap(node)
+        def map = DxHelper.jsonNodeToObj(node)
 
         then:
         map == EXPECTED
+        println("MAPA >> $EXPECTED")
 
+    }
+
+    def testJsonArray() {
+
+        when:
+        ObjectMapper mapper = new ObjectMapper();
+        def array = mapper.createArrayNode();
+        array.add( 1 )
+        array.add( 2 )
+        array.add( 3 )
+        def map = mapper.createObjectNode()
+        map.put('field1','Hello')
+        map.put('field2','Ciao')
+        def array2 =  mapper.createArrayNode();
+        array2.add('a')
+        array2.add('b')
+
+        array.add(map)
+        array.add(array2)
+
+
+        then:
+        def mapa = DxHelper.jsonNodeToObj(array)
+
+
+        DxHelper.jsonNodeToObj(array) == [1,2,3,[field1:'Hello', field2:'Ciao'], ['a', 'b']]
     }
 
     def testJsonNodeToMapNative(){
 
         when:
         def node = DxHelper.toJsonNode( [field1: false as Boolean , field2:234.1 as Double, field3: 3 as Integer, field4:2344444444443 as Long, field5:34 as Number, field6:'Hello'])
-        def map = DxHelper.jsonNodeToMap(node)
+        def map = DxHelper.jsonNodeToObj(node)
 
         then:
         map.field1 instanceof Boolean
@@ -130,20 +159,20 @@ class DxHelperTest extends Specification {
 
         when:
         def node = DxHelper.toJsonNode( [field1: 0.23546769425757967900001 as BigDecimal])
-        def map = DxHelper.jsonNodeToMap(node)
+        def map = DxHelper.jsonNodeToObj(node)
 
         then:
         map.field1 == 0.23546769425757967900001 as BigDecimal
 
         when:
         node = DxHelper.toJsonNode( [field1: 239423904802384 as BigInteger])
-        map = DxHelper.jsonNodeToMap(node)
+        map = DxHelper.jsonNodeToObj(node)
         then:
         map.field1 == 239423904802384 as BigInteger
 
         when:
         node = DxHelper.toJsonNode( [field1: [0xa,0x2,0xf] as byte[] ] )
-        map = DxHelper.jsonNodeToMap(node)
+        map = DxHelper.jsonNodeToObj(node)
 
         then:
         map.field1 == [0xa,0x2,0xf] as byte[]
@@ -155,7 +184,7 @@ class DxHelperTest extends Specification {
 
         when:
         def node = DxHelper.toJsonNode( [field1:[1,2,3] as Object[] ])
-        def map = DxHelper.jsonNodeToMap(node)
+        def map = DxHelper.jsonNodeToObj(node)
 
         then:
         map.field1 == [1,2,3]

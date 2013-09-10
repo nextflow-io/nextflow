@@ -104,26 +104,22 @@ class DnaNexusExecutorTest extends Specification {
 
         setup:
         ObjectNode processJobInputHash
-        String instance = "dx_m1.large"
-        /*if(instance.equals(null)){
-             instance = "dx_m1.large"
-        }*/
 
-        def taskInput = ["nasdid979d"]
-        JsonNode inp = DxHelper.toJsonNode([:])
-        JsonNode out = DxHelper.toJsonNode([:])
+        String instance = "dx_m1.large"
+        JsonNode input = DxHelper.toJsonNode([ makeDXLink('file-xxx') ])
+        JsonNode output = DxHelper.toJsonNode([])
 
         String taskInputId =  "file-t4sk1np0t"
         String scriptId = "file-B8fx3b801xqvy0gbP9k084F9"
         String name = "task1(1)"
         String env = " export CLASSPATH='/usr/share/java/dnanexus-api-0.1.0.jar:' export DNANEXUS_HOME='/usr/share/dnanexus' "
 
-        if (taskInput){
+        if (taskInputId){
             processJobInputHash = DXJSON.getObjectBuilder()
                  .put("function", "process")
                  .put("input", DXJSON.getObjectBuilder()
-                     .put("inputs", inp)
-                     .put("outputs", out)
+                     .put("inputs", input)
+                     .put("outputs", output)
                      .put("taskName", name)
                      .put("taskEnv", env)
                      .put("taskScript", makeDXLink(scriptId))
@@ -140,8 +136,8 @@ class DnaNexusExecutorTest extends Specification {
             processJobInputHash = DXJSON.getObjectBuilder()
                  .put("function", "process")
                  .put("input", DXJSON.getObjectBuilder()
-                     .put("inputs", inp)
-                     .put("outputs", out)
+                     .put("inputs", input)
+                     .put("outputs", output)
                      .put("taskName", name)
                      .put("taskEnv", env)
                      .put("taskScript", makeDXLink(scriptId))
@@ -158,7 +154,7 @@ class DnaNexusExecutorTest extends Specification {
 
 
         when:
-        def myJson = DnaNexusExecutor.createInputObject(inp,out,name,env,makeDXLink(scriptId),makeDXLink(taskInputId),instance)
+        def myJson = DnaNexusExecutor.createInputObject(input.toList(),output.toList(),name,env,scriptId,taskInputId,instance)
 
         then:
         myJson == expectedJson

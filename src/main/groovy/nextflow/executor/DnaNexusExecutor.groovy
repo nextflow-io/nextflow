@@ -52,7 +52,7 @@ class DnaNexusExecutor extends AbstractExecutor {
      * @param objectId
      * @return ObjectNode
      */
-    protected ObjectNode makeDXLink(String objectId) {
+    protected static ObjectNode makeDXLink(String objectId) {
         return DXJSON.getObjectBuilder().put('$dnanexus_link', objectId).build();
     }
 
@@ -93,7 +93,7 @@ class DnaNexusExecutor extends AbstractExecutor {
         /*
          * In case there's a task input file.
          */
-        String taskInputId
+        String taskInputId = null
         if (task.input){
 
             /*
@@ -130,8 +130,7 @@ class DnaNexusExecutor extends AbstractExecutor {
          * Different method depending on the instance DxFile or File.
          */
         def map = task.code.delegate
-        ObjectMapper mapper = new ObjectMapper();
-        ArrayNode inputs = mapper.createArrayNode();
+        def inputs = []
 
         map.each{ k, v ->
             if( v instanceof DxFile ) {
@@ -152,7 +151,7 @@ class DnaNexusExecutor extends AbstractExecutor {
         /*
          * Retrieving all the outputs already declared as parameters in the task.
          */
-        ArrayNode outputs = mapper.createArrayNode()
+        def outputs = []
         taskConfig.getOutputs().keySet().each { String name ->
              outputs.add(name)
         }
@@ -163,16 +162,16 @@ class DnaNexusExecutor extends AbstractExecutor {
          * Depending on whether we have the already checked task's input file or not,
          *
          * As parameters of both cases:
-         *      - inputs --> String formed by all the names and ids of the inputs declared.
-         *      - outputs --> String formed by all the names of the outputs declared.
+         *      - inputs --> List formed by all the names and ids of the inputs declared.
+         *      - outputs --> List formed by all the names of the outputs declared.
          *      - taskname --> String with the name of the task.
-         *      - taskInput --> (Compulsory if we have the named file) Dnanexus link to the task's input file.
-         *      - taskScript --> Dnanexus link to the task's script file.
+         *      - environment --> String created with all the variables from it
+         *      - scriptId --> Id of the task's script file.
+         *      - taskInputId --> (Compulsory if we have the named file) Id of the task's input file if we have a task's input; null if not.
+         *      - instance --> Value of the instace if it has been modified; null if not.
          */
-        ObjectNode taskInput = task.input ? makeDXLink(taskInputId) : null
-        String instance = taskConfig.instanceType ? taskConfig.instanceType : null
 
-        ObjectNode processJobInputHash = createInputObject(inputs, outputs, task.name, createEnvironmentString(task),  makeDXLink(scriptId), taskInput, instance)
+        ObjectNode processJobInputHash = createInputObject(inputs, outputs, task.name, createEnvironmentString(task),  scriptId, taskInputId, taskConfig.instaceType)
         log.debug "Creating job parameters"
 
 
@@ -239,7 +238,7 @@ class DnaNexusExecutor extends AbstractExecutor {
 
     }
 
-    def static JsonNode createInputObject( ArrayNode inp, ArrayNode out, String name, String env, ObjectNode script, ObjectNode taskInp, String instance) {
+    def static JsonNode createInputObject( List inp, List out, String name, String env, String scriptId, String taskInpId, String instance) {
 
         def root = [:]
 
@@ -251,10 +250,10 @@ class DnaNexusExecutor extends AbstractExecutor {
 
         root.input = [:]
 
-        if(!taskInp.equals(null)){
-            root.input.taskInput = taskInp
+        if(!taskInpId.equals(null)){
+            root.input.taskInput = makeDXLink(taskInpId)
         }
-        root.input.taskScript = script
+        root.input.taskScript = makeDXLink(scriptId)
         root.input.taskEnv = env
         root.input.taskName = name
         root.input.outputs = out
