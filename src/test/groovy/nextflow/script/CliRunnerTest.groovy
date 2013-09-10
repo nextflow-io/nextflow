@@ -68,8 +68,10 @@ class CliRunnerTest extends Specification {
         def script =
             '''
             process task2  {
-                input val:x, from: 1
-                input val:y, from: [3]
+                input:
+                val x using 1
+                val y using ([3])
+                output:
                 stdout result
 
                 """echo $x - $y"""
@@ -97,7 +99,9 @@ class CliRunnerTest extends Specification {
         def script =
             '''
             process test  {
-                input val: x, from: 1
+                input:
+                val x using 1
+                output:
                 stdout result
 
                 "echo $x"

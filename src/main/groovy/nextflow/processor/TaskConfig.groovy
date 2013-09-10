@@ -124,18 +124,88 @@ class TaskConfig implements Map {
         return this
     }
 
-
     /**
-     * Defines a task 'input'
+     * Define a *file* parameter which can be used both input or output declaration
      *
-     * @param attributes
+     * @param name The file name
+     * @param direction The parameter direction, i.e. {@code in} or {@code out}
      * @return
+     *
      */
-    def TaskConfig input( Map attributes )  {
+    def FileInParam __in_file( String name ) {
+        log.debug "input param > file: '$name'"
 
-        configProperties.inputs << InParam.create(attributes)
+        def result = name == '-' ? new StdInParam(ownerScript) : new FileInParam(ownerScript, name)
+        configProperties.inputs << result
 
-        return this
+        return result
+    }
+
+    def ValueInParam __in_val( String name ) {
+        log.debug "input param > val: $name"
+
+        def result = new ValueInParam(ownerScript,name)
+        configProperties.inputs << result
+
+        return result
+    }
+
+    EnvInParam __in_env( String name ) {
+        log.debug "input param > env: '$name'"
+
+        def result = new EnvInParam(ownerScript,name)
+        configProperties.inputs << result
+
+        result
+    }
+
+    EachInParam __in_each( String name ) {
+        log.debug "input param > each: '$name'"
+
+        def result = new EachInParam(ownerScript,name)
+        configProperties.inputs << result
+
+        return result
+    }
+
+    def FileOutParam __out_file( String name ) {
+        log.debug "output param > file: '$name'"
+
+        def result = name == '-' ? new StdOutParam(ownerScript) : new FileOutParam(ownerScript,name)
+        configProperties.outputs << result
+
+        result
+    }
+
+    def ValueOutParam __out_val( String name ) {
+        log.debug "output param > val: $name"
+
+        def result = new ValueOutParam(ownerScript,name)
+        configProperties.outputs << result
+
+        result
+    }
+
+    StdInParam stdin( def channelRef = null  ) {
+        log.debug "input param > stdin - channelRef: $channelRef"
+
+        def result = new StdInParam(ownerScript)
+        if( channelRef ) result.using(channelRef)
+
+        configProperties.inputs << result
+
+        result
+    }
+
+    StdOutParam stdout( def channelRef = null ) {
+        log.debug "output param > stdout - channelRef: $channelRef"
+
+        def result = new StdOutParam(ownerScript)
+        if( channelRef ) result.using(channelRef)
+
+        configProperties.outputs << result
+
+        result
     }
 
     /**
@@ -143,35 +213,7 @@ class TaskConfig implements Map {
      * provided by the user for the current task
      */
     def void noInput() {
-        input( val:'$', from: true )
-    }
-
-    /**
-     * Defines a task 'output'. An output is defined through a map holding its
-     * properties, using the following pattern:
-     * <p>
-     * <pre>
-     *     file: <file name>, into: <receiving channel>
-     * </pre>
-     *
-     *
-     * @param attributes
-     * @return
-     */
-    def TaskConfig output( Map attributes ) {
-
-        // add it to the list out outputs
-        configProperties.outputs << OutParam.create(attributes, ownerScript)
-
-        return this
-    }
-
-    def TaskConfig stdin(channel) {
-        input( file:'-', from:channel )
-    }
-
-    def TaskConfig stdout(channel) {
-        output( file:'-', into:channel )
+        __in_val('$') .using(true)
     }
 
 

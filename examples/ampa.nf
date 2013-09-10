@@ -17,13 +17,15 @@ fastaFile.chunkFasta { seq << it }
  */
 process ampaTask {
 
-    // defines the Input and Output
-    input file:'seq.fa', from: seq
-    output result
+    input:
+    file seq
+
+    output:
+    file result
 
     // The BASH script to be executed - for each - sequence
     """
-    AMPA.pl -in=seq.fa -noplot -rf=result -df=data
+    AMPA.pl -in=seq -noplot -rf=result -df=data
     """
 
 }

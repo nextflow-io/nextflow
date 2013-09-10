@@ -28,15 +28,13 @@ import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
-import org.codehaus.groovy.ast.expr.MapEntryExpression
 import org.codehaus.groovy.ast.expr.MapExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
-import org.codehaus.groovy.ast.expr.NamedArgumentListExpression
-import org.codehaus.groovy.ast.expr.TupleExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.ast.stmt.ReturnStatement
+import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.syntax.SyntaxException
@@ -52,6 +50,9 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
 class ProcessDefTransformImpl implements ASTTransformation {
 
+    def String currentTaskName
+
+    def String currentLabel
 
     @Override
     void visit(ASTNode[] astNodes, SourceUnit unit) {
@@ -67,7 +68,6 @@ class ProcessDefTransformImpl implements ASTTransformation {
 
         new ClassCodeVisitorSupport() {
 
-            def String currentTaskName
 
             protected SourceUnit getSourceUnit() { unit }
 
@@ -83,6 +83,9 @@ class ProcessDefTransformImpl implements ASTTransformation {
                  */
                 if( preCondition &&  methodCall.getMethodAsString() == 'process' ) {
 
+                    // clear block label
+                    currentLabel = null
+                    // keep track of 'process' method (it may be removed)
                     currentTaskName = methodCall.getMethodAsString()
                     try {
                         convertProcessDef(methodCall,sourceUnit)
@@ -91,32 +94,6 @@ class ProcessDefTransformImpl implements ASTTransformation {
                     finally {
                         currentTaskName = null
                     }
-
-                }
-
-                /*
-                 * transform the 'input' method call invocation inside a 'task' method
-                 */
-                else if ( preCondition && methodCall.getMethodAsString() == 'input' && currentTaskName ) {
-
-                    handleInputMethod(methodCall, sourceUnit)
-                    super.visitMethodCallExpression(methodCall)
-                }
-
-                /*
-                 * convert the *output* declarations
-                 */
-                else if ( preCondition && methodCall.getMethodAsString() == 'output' && currentTaskName  ) {
-                    handleOutputMethod(methodCall, sourceUnit)
-                    super.visitMethodCallExpression(methodCall)
-                }
-
-                /*
-                 * convert the *stdout* declarations
-                 */
-                else if ( preCondition && methodCall.getMethodAsString() == 'stdout' && currentTaskName  ) {
-                    handleStdoutMethod(methodCall, sourceUnit)
-                    super.visitMethodCallExpression(methodCall)
                 }
 
                 // just apply the default behavior
@@ -128,186 +105,7 @@ class ProcessDefTransformImpl implements ASTTransformation {
         }
     }
 
-    /**
-     * Normalize the *input* declaration converting variables to fully qualified idiom
-     * in the form {@code [ val: <literal>, from: <value> ] }
-     *
-     * @param methodCall
-     * @param source
-     */
-    def void handleInputMethod( MethodCallExpression methodCall, SourceUnit source ) {
-        log.trace "Method 'input' arguments: ${methodCall.arguments}"
 
-        // need to convert the ArgumentListExpression to a 'TupleExpression'
-        def args = methodCall.arguments as TupleExpression
-
-        List<MapEntryExpression> entries = []
-        args.getExpressions().each { Expression item ->
-
-            /*
-             * when the input declaration contains just a variable
-             * it is converted to an 'val' input declaration  equivalent to
-             *   val:'expression', from: expression
-             */
-            if ( item instanceof VariableExpression ) {
-                entries << new MapEntryExpression( new ConstantExpression('val'), new ConstantExpression(item.getName()) )
-                entries << new MapEntryExpression( new ConstantExpression('from'), item )
-            }
-
-            /*
-             * convert input attributes from
-             *    val: x
-             * to
-             *    val: 'x'
-             *
-             * so that users do not have to wrap values name by quotes
-             */
-            else if ( item instanceof MapExpression ) {
-                item.mapEntryExpressions?.each { MapEntryExpression entry ->
-
-                    def k = entry.keyExpression
-                    def v = entry.valueExpression
-                    def isConst = k instanceof ConstantExpression
-                    if( isConst && k.value in ['val','each'] && v instanceof VariableExpression ) {
-                        entries << new MapEntryExpression( k, new ConstantExpression(v.name) )
-                    }
-                    else {
-                        entries << entry
-                    }
-                }
-            }
-            else {
-                source.addError(new SyntaxException("Not a valid variable expression", item.lineNumber, item.columnNumber ))
-                return
-            }
-        }
-
-        log.trace "<< input converted args: ${entries}"
-        TupleExpression tuple = new TupleExpression(new NamedArgumentListExpression(entries))
-        methodCall.setArguments( tuple )
-
-    }
-
-    /**
-     * Normalize the {@code output} clause, interpreting constants and variables
-     * as *output* files specification.
-     *
-     * @param methodCall
-     * @param source
-     */
-    def void handleOutputMethod( MethodCallExpression methodCall, SourceUnit source ) {
-        log.trace "Method 'output' arguments: ${methodCall.arguments}"
-
-        // need to convert the ArgumentListExpression to a 'TupleExpression'
-        def args = methodCall.arguments as TupleExpression
-
-        List<MapEntryExpression> entries = []
-        args.getExpressions().each { Expression item ->
-
-            /*
-             * when the output declaration contains a constant value, it is
-             * interpreted as the the file(s) name(s) to be returned by the task
-             * the following map entry it is created
-             *    file: 'name'
-             */
-            if( item instanceof ConstantExpression ) {
-                entries << new MapEntryExpression( new ConstantExpression('file'), new ConstantExpression(item.getValue()) )
-            }
-
-            /*
-             * when the output declaration contains just a variable value
-             * it is interpreted as the the file(s) name(s) to be returned by the task
-             * the following map entry it is created
-             *    file: 'name'
-             */
-            else if ( item instanceof VariableExpression ) {
-                entries << new MapEntryExpression( new ConstantExpression('file'), new ConstantExpression(item.getName()) )
-            }
-
-            else if ( item instanceof MapExpression ) {
-                item.mapEntryExpressions?.each { MapEntryExpression entry ->
-                    def k = entry.keyExpression
-                    def v = entry.valueExpression
-
-                    /*
-                     * Channels in the output declarations have to referenced by name (string value).
-                     * This fragment converts channel references from
-                     *    into: variable
-                     * to
-                     *   into: 'name'
-                     *
-                     */
-                    if( k instanceof ConstantExpression && k.value == 'into' && v instanceof VariableExpression ) {
-                        entries << new MapEntryExpression( k, new ConstantExpression(v.name) )
-                    }
-
-                    /*
-                     * Convert *val* reference like
-                     *    val: variable
-                     * to
-                     *    val 'constant'
-                     *
-                     * so that the user do not have to wrap them by quotes
-                     */
-                    else if( k instanceof ConstantExpression && k.value == 'val' && v instanceof VariableExpression ) {
-                        entries << new MapEntryExpression( k, new ConstantExpression(v.name) )
-                    }
-
-                    else {
-                        entries << entry
-                    }
-                }
-            }
-            else {
-                source.addError(new SyntaxException("Not a valid variable expression", item.lineNumber, item.columnNumber ))
-                return
-            }
-        }
-
-        log.trace "<< output converted args: ${entries}"
-        TupleExpression tuple = new TupleExpression(new NamedArgumentListExpression(entries))
-        methodCall.setArguments( tuple )
-
-    }
-
-    /**
-     * Handle the 'stdout' task parameter definition. The 'stdout' it is supposed
-     * to have an argument specified the 'channel' to which the task stdout has to be
-     * forward.
-     * <p>
-     * Since we want to make possible to *create* a channel whenever it does not exist,
-     * the channel has to be referenced by its name specified by a string value.
-     * <p>
-     * This method converts the clause {@code stdout channel} to {@code stdout 'channel'}
-     *
-     * @param methodCall
-     * @param source
-     */
-    def void handleStdoutMethod( MethodCallExpression methodCall, SourceUnit source ) {
-        log.trace "Method 'stdout' arguments: ${methodCall.arguments}"
-
-        // need to convert the ArgumentListExpression to a 'TupleExpression'
-        def args = methodCall.arguments as TupleExpression
-
-        List<Expression> entries = []
-        args.getExpressions().each { Expression item ->
-
-            // converts variable expression
-            // holding the reference to a channel
-            // to a constant expression as he channel variable literal
-            if ( item instanceof VariableExpression ) {
-                entries << new ConstantExpression(item.getName())
-            }
-            else {
-                source.addError(new SyntaxException("Not a valid stdout parameter value", item.lineNumber, item.columnNumber ))
-                return
-            }
-        }
-
-        TupleExpression tuple = new ArgumentListExpression(entries)
-        methodCall.setArguments( tuple )
-
-    }
 
     /**
      * This transformation applies to tasks code block and translate
@@ -338,7 +136,7 @@ class ProcessDefTransformImpl implements ASTTransformation {
      * @param methodCall
      * @param unit
      */
-    def void handleTaskMethod( MethodCallExpression methodCall, SourceUnit unit ) {
+    def void convertProcessBlock( MethodCallExpression methodCall, SourceUnit unit ) {
         log.trace "Apply task closure transformation to method call: $methodCall"
 
         def args = methodCall.arguments as ArgumentListExpression
@@ -346,22 +144,76 @@ class ProcessDefTransformImpl implements ASTTransformation {
         def isClosure = lastArg instanceof ClosureExpression
 
         if( isClosure ) {
+            // the block holding all the statements defined in the process (closure) definition
             def block = (lastArg as ClosureExpression).code as BlockStatement
-
             def len = block.statements.size()
-            def stm = len>0 ? block.statements.get(len-1) : null
 
+            /*
+             * iterate over the list of statements to:
+             * - converts the method after the 'input:' label as input parameters
+             * - converts the method after the 'output:' label as output parameters
+             * - collect all the statement after the 'exec:' label
+             */
+            List<Statement> execStatements = []
+            def iterator = block.getStatements().iterator()
+            while( iterator.hasNext() ) {
+
+                // get next statement
+                Statement stm = iterator.next()
+
+                // keep track of current block label
+                currentLabel = stm.statementLabel ?: currentLabel
+
+                switch(currentLabel) {
+                    case 'input':
+                        if( stm instanceof ExpressionStatement ) {
+                            convertInputMethod( stm.getExpression() )
+                        }
+                        break
+
+                    case 'output':
+                        if( stm instanceof ExpressionStatement ) {
+                            convertOutputMethod( stm.getExpression() )
+                        }
+                        break
+
+                    case 'exec':
+                        iterator.remove()
+                        execStatements << stm
+                }
+            }
+
+            /*
+             * wrap all the statements after the 'exec:'  label by a new closure containing them (in a new block)
+             */
             boolean done = false
             int line = methodCall.lineNumber
             int coln = methodCall.columnNumber
+            if( execStatements ) {
+                // create a new Closure
+                def execBlock = new BlockStatement(execStatements, new VariableScope(block.variableScope))
+                def execClosure = new ClosureExpression( Parameter.EMPTY_ARRAY, execBlock )
 
-            if ( stm instanceof ReturnStatement  ){
-                (done,line,coln) = wrapExpressionWithClosure(block, stm.expression, len)
+                // append the new block to the
+                block.addStatement( new ExpressionStatement(execClosure) )
+                done = true
             }
 
-            else if ( stm instanceof ExpressionStatement )  {
-                (done,line,coln) = wrapExpressionWithClosure(block, stm.expression, len)
+            /*
+             * when the last statement is a string script, the 'exec:' label can be omitted
+             */
+            else if( len ) {
+                def stm = block.getStatements().get(len-1)
+
+                if ( stm instanceof ReturnStatement  ){
+                    (done,line,coln) = wrapExpressionWithClosure(block, stm.expression, len)
+                }
+
+                else if ( stm instanceof ExpressionStatement )  {
+                    (done,line,coln) = wrapExpressionWithClosure(block, stm.expression, len)
+                }
             }
+
 
             if (!done) {
                 log.trace "Not a valid task statement return type: ${stm.class.name} -- Task must terminate with string expression"
@@ -369,6 +221,87 @@ class ProcessDefTransformImpl implements ASTTransformation {
             }
         }
     }
+
+    def void convertInputMethod( Expression expression ) {
+        log.trace "convert > input expression: $expression"
+
+        if( !(expression instanceof MethodCallExpression) ) {
+            return
+        }
+
+        def methodCall = expression as MethodCallExpression
+        def methodName = methodCall.getMethodAsString()
+        log.debug "convert > input method: $methodName"
+
+        if( methodName in ['val','env','file','each'] ) {
+            //this methods require a special prefix '__in_'
+            methodCall.setMethod( new ConstantExpression('__in_' + methodName) )
+
+            // the following methods require to replace a variable reference to a constant
+            convertVarToConst(methodCall)
+
+        }
+
+        if( methodCall.objectExpression instanceof MethodCallExpression ) {
+            convertInputMethod(methodCall.objectExpression)
+        }
+
+    }
+
+    def void convertOutputMethod( Expression expression ) {
+        log.debug "convert > output expression: $expression"
+
+        if( !(expression instanceof MethodCallExpression) ) {
+            return
+        }
+
+        def methodCall = expression as MethodCallExpression
+        def methodName = methodCall.getMethodAsString()
+        log.debug "convert > output method: $methodName"
+
+        if( methodName in ['val','file'] ) {
+            // prefix the method name with the string '__out_'
+            methodCall.setMethod( new ConstantExpression('__out_' + methodName) )
+        }
+
+        if( methodName in ['val','file','using','stdout'] ) {
+            convertVarToConst(methodCall)
+        }
+
+        // continue to traverse
+        if( methodCall.objectExpression instanceof MethodCallExpression ) {
+            convertOutputMethod(methodCall.objectExpression)
+        }
+
+    }
+
+    /**
+     * Converts a {@code VariableExpression} to a {@code ConstantExpression} having the same value as the variable name
+     *
+     * @param methodCall
+     * @param index
+     * @return
+     */
+    private List<Expression> convertVarToConst( MethodCallExpression methodCall, int index = 0 ) {
+
+        def args = methodCall.getArguments() as ArgumentListExpression
+
+        List<Expression> newArgs = []
+        args.eachWithIndex { expr, i ->
+
+            if( index == i && expr instanceof VariableExpression ) {
+                newArgs << new ConstantExpression(expr.getName())
+            }
+            else {
+                newArgs << expr
+            }
+
+        }
+        methodCall.setArguments(new ArgumentListExpression(newArgs))
+
+        return newArgs
+    }
+
 
     def List wrapExpressionWithClosure( BlockStatement block, Expression expr, int len ) {
         if( expr instanceof GStringExpression || expr instanceof ConstantExpression ) {
@@ -439,7 +372,7 @@ class ProcessDefTransformImpl implements ASTTransformation {
         methodCall.setArguments( args )
 
         // now continue as before !
-        handleTaskMethod(methodCall, unit)
+        convertProcessBlock(methodCall, unit)
     }
 
 }

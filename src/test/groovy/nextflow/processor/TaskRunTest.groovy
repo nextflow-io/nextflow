@@ -12,11 +12,12 @@ class TaskRunTest extends Specification {
     def testGetInputsByType() {
 
         setup:
+        def script = Mock(Script)
         def task = new TaskRun()
-        task.setInput( new StdInParam(), 'Hello' )
-        task.setInput( new FileInParam(name:'x'), 'file1' )
-        task.setInput( new FileInParam(name:'y'), 'file2' )
-        task.setInput( new EnvInParam(name:'z'), 'env' )
+        task.setInput( new StdInParam(script), 'Hello' )
+        task.setInput( new FileInParam(script, 'x'), 'file1' )
+        task.setInput( new FileInParam(script, 'y'), 'file2' )
+        task.setInput( new EnvInParam(script, 'z'), 'env' )
 
 
         when:
@@ -38,10 +39,11 @@ class TaskRunTest extends Specification {
     def testGetOutputsByType() {
 
         setup:
+        def script = Mock(Script)
         def task = new TaskRun()
-        task.setOutput( new FileOutParam(name:'x'), 'file1' )
-        task.setOutput( new FileOutParam(name:'y'), 'file2' )
-        task.setOutput( new StdOutParam(), 'Hello' )
+        task.setOutput( new FileOutParam(script, 'x'), 'file1' )
+        task.setOutput( new FileOutParam(script, 'y'), 'file2' )
+        task.setOutput( new StdOutParam(null), 'Hello' )
 
 
         when:

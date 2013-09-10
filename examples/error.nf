@@ -1,24 +1,26 @@
 #!/usr/bin/env nextflow
 
-channel = channel(1,2,3)
-
 process task1 {
-   input channel
-   maxForks 4
-   errorStrategy 'ignore'
+    maxForks 4
+    errorStrategy 'ignore'
 
-   "echo $channel; exit 1"
+    input:
+    val x using channel(1,2,3)
 
- }
+    exec:
+    "echo $x; exit 1"
+}
 
- sleep 500
+sleep 500
 
- channel2 = channel(4,5,6)
 
- process task2 {
-   input channel2
-   maxForks 4
+process task2 {
+    maxForks 4
 
-   "echo $channel2"
+    input:
+    val x using channel(4,5,6)
+
+    exec:
+    "echo $x"
 
  }

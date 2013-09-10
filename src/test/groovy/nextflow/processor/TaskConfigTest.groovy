@@ -1,30 +1,22 @@
 package nextflow.processor
 
-import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.script.BaseScript
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class TaskConfigTest extends Specification {
 
-    static class DummyScript extends BaseScript {
-        @Override
-        Object run() {
-            return null
-        }
-    }
-
 
     def 'test defaults' () {
 
         setup:
-        def config = new TaskConfig(new DummyScript())
+        def script = Mock(BaseScript)
+        def config = new TaskConfig(script)
 
         expect:
         config.shell ==  ['/bin/bash','-ue']
@@ -39,7 +31,8 @@ class TaskConfigTest extends Specification {
     def 'test setting properties' () {
 
         setup:
-        def config = new TaskConfig(new DummyScript())
+        def script = Mock(BaseScript)
+        def config = new TaskConfig(script)
 
         // setting property using method without brackets
         when:
@@ -83,7 +76,8 @@ class TaskConfigTest extends Specification {
     def 'test NO missingPropertyException' () {
 
         when:
-        def config = new TaskConfig(new DummyScript())
+        def script = Mock(BaseScript)
+        def config = new TaskConfig(script)
         def x = config.hola
 
         then:
@@ -94,7 +88,8 @@ class TaskConfigTest extends Specification {
 
     def 'test MissingPropertyException' () {
         when:
-        def config = new TaskConfigWrapper(new TaskConfig(new DummyScript()))
+        def script = Mock(BaseScript)
+        def config = new TaskConfigWrapper(new TaskConfig(script))
         def x = config.hola
 
         then:
@@ -105,7 +100,8 @@ class TaskConfigTest extends Specification {
     def 'test check property existence' () {
 
         setup:
-        def config = new TaskConfig(new DummyScript())
+        def script = Mock(BaseScript)
+        def config = new TaskConfig(script)
 
         expect:
         config.containsKey('echo')
@@ -124,12 +120,13 @@ class TaskConfigTest extends Specification {
     def 'test input' () {
 
         setup:
-        def config = new TaskConfig(new DummyScript())
+        def script = Mock(BaseScript)
+        def config = new TaskConfig(script)
 
         when:
-        config.input file: 'filename.fa', from: new DataflowVariable<>()
-        config.input val: 'x', from: 1
-        config.input file:'-', from: new DataflowVariable<>()
+        config.__in_file('filename.fa') .using(new DataflowVariable<>())
+        config.__in_val('x') .using(1)
+        config.stdin().using(new DataflowVariable<>())
 
         then:
         config.getInputs().size() == 3
@@ -151,20 +148,14 @@ class TaskConfigTest extends Specification {
     def 'test outputs' () {
 
         setup:
-        def ch1 = new DataflowVariable()
-        def ch3 = new DataflowVariable()
-        ch1 << 1
-
-        def script = new DummyScript()
+        def script = Mock(BaseScript)
         def config = new TaskConfig(script)
-        script.setProperty('ch1', ch1)
-
 
         when:
-        config.stdout( new DataflowVariable() )
-        config.output file: 'file1.fa', into: 'ch1'
-        config.output file: 'file2.fa', into: 'ch2'
-        config.output file: 'file3.fa', into: ch3
+        config.stdout()
+        config.__out_file('file1.fa').using('ch1')
+        config.__out_file('file2.fa').using('ch2')
+        config.__out_file('file3.fa').using('ch3')
 
         then:
         config.outputs.size() == 4
@@ -176,15 +167,6 @@ class TaskConfigTest extends Specification {
         config.outputs[2].name == 'file2.fa'
         config.outputs[3].name == 'file3.fa'
 
-        // 'ch1' is the same channel defined in the script binding
-        script.getBinding().getVariable('ch1') == ch1
-        script.getBinding().getVariable('ch1').val == 1
-
-        // 'ch2' is created automatically and added to the script context as a 'DataflowQueue'
-        script.getBinding().getVariable('ch2') instanceof DataflowQueue
-
-        // 'ch3' is not in the script context because it has specified by 'ref' (not by name)
-        !script.getBinding().hasVariable('ch3')
 
     }
 

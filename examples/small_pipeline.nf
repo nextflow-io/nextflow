@@ -3,7 +3,8 @@ params.db = "$HOME/tools/blast-db/pdb/pdb"
 
 
 process blast {
-    output top_hits
+    output:
+    file top_hits
 
     """
     blastp -db ${params.db} -query ${params.query} -outfmt 6 > blast_result
@@ -13,15 +14,20 @@ process blast {
 
 
 process extractTopHits {
-    input top_hits
-    output sequences
+    input:
+    val top_hits
+
+    output:
+    file sequences
 
     "blastdbcmd -db ${params.db} -entry_batch $top_hits > sequences"
 }
 
 process align {
-    input sequences
     echo true
+
+    input:
+    val sequences
 
     "t_coffee $sequences 2>&- | tee align_result"
 }

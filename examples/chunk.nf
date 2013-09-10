@@ -20,6 +20,8 @@ stdin.chunkFasta( params.chunkSize ) { str ->
 
 process foo {
     echo true
+
+    input:
     stdin sequences
 
     "cat -"

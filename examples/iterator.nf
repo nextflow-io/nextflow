@@ -1,5 +1,7 @@
+#!/usr/bin/env nextflow
+
 /*
- * Copyright (c) 2013, the authors.
+ * Copyright (c) 2012, the authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -17,49 +19,20 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+list1 = [1,2]
+list2 = ['Hola', 'mundo']
+list3 = ['alpha','beta','delta']
 
-
-params.in = '~/sample.fa'
-SPLIT = (System.properties['os.name'] == 'Mac OS X' ? 'gcsplit' : 'csplit')
-
-process split {
-    input:
-    file 'query.fa' using file(params.in)
-
-    output:
-    file 'seq_*' using splits joint true
-
-    """
-    $SPLIT query.fa '%^>%' '/^>/' '{*}' -f seq_
-    """
-}
-
-
-process printTwo {
+process hola {
     echo true
 
     input:
-    file 'chunk' using splits
-
-    output:
-    file 'chunk1:chunk3' using two_chunks
-
-    """
-    cat chunk* | rev
-    """
-
-}
-
-process printLast {
-    echo true
-
-    input:
-    file 'chunk' using two_chunks
-
-    output:
-    file 'chunk' using result
+    val x using list1
+    val y using list2
+    each z using list3
 
     """
-    cat chunk
+    echo 'x: $x - y: $y - z: $z'
     """
+
 }

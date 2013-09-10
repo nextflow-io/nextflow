@@ -6,9 +6,12 @@ y = ['a','b']
 process foo {
     echo true
 
-    input val: x, from: x
-    input y
-    output val: x, into: channel
+    input:
+    val x
+    val y
+
+    output:
+    val x using channel
 
     "echo $x - $y"
 

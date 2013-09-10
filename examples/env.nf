@@ -8,9 +8,11 @@
 config.env [ 'HELLO_1' ]  = '1'
 
 process printEnv {
-    input env: 'HELLO_2', from: '2'
-    input env: 'HELLO_X', from: ['a','b','c']
     echo true
+
+    input:
+    env 'HELLO_2' using '2'
+    env 'HELLO_X' using (['a','b','c'])
 
     "env | grep HELLO | sort"
 }

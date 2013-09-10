@@ -6,22 +6,29 @@ sequences = file(params.in)
 SPLIT = (System.properties['os.name'] == 'Mac OS X' ? 'gcsplit' : 'csplit')
 
 process splitSequences {
-  input file:'input.fa', from: sequences
-  output file:'seq_*', into: records
 
-  """
-  $SPLIT input.fa '%^>%' '/^>/' '{*}' -f seq_
-  """
+    input:
+    file 'input.fa' using sequences
+
+    output:
+    file 'seq_*' using records
+
+    """
+    $SPLIT input.fa '%^>%' '/^>/' '{*}' -f seq_
+    """
 
 }
 
 process reverse {
-    input records
-    stdout reverse
+
+    input:
+        val x using records
+    output:
+        stdout result
 
     """
-    cat $records | rev
+    cat $x | rev
     """
 }
 
-reverse.each { println it }
+result.each { println it }

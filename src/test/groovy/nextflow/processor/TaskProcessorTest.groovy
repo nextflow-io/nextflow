@@ -150,10 +150,11 @@ class TaskProcessorTest extends Specification {
 
     def testStagingFilesScript() {
         setup:
+        def owner = Mock(Script)
         def wrapper = new DummyScript()
         def processor = new DummyProcessor(new Session(), wrapper, new TaskConfig(wrapper))
-        def param1 = new FileInParam(name:'file.txt')
-        def param2 = new FileInParam(name:'seq_*.fa')
+        def param1 = new FileInParam(owner, 'file.txt')
+        def param2 = new FileInParam(owner, 'seq_*.fa')
         Map<FileInParam,Object> files = [:]
         files[param1] = new File('/home/data/sequences')
         files[param2] = [new File('/home/data/file1'), new File('/home/data/file2'), new File('/home/data/file3') ]
