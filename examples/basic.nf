@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-params.in = './sample.fa'
+params.in = "$HOME/sample.fa"
 
 sequences = file(params.in)
 records = channel()

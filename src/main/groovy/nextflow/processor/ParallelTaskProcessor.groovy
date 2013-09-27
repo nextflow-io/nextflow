@@ -1,4 +1,7 @@
 package nextflow.processor
+
+import java.nio.file.Path
+
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
@@ -115,7 +118,7 @@ class ParallelTaskProcessor extends TaskProcessor {
             //          NO  --> launch the task
 
             def hash = CacheHelper.hasher( [session.uniqueId, task.script, task.input, task.code.delegate] ).hash()
-            def folder = FileHelper.createWorkFolder(session.workDir, hash)
+            Path folder = FileHelper.createWorkFolder(session.workDir, hash)
             def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder)
             if( !cached ) {
                 log.info "Running task > ${task.name}"
@@ -125,7 +128,7 @@ class ParallelTaskProcessor extends TaskProcessor {
                 launchTask( task )
 
                 // save the exit code
-                new File(folder, '.exitcode').text = task.exitCode
+                folder.resolve('.exitcode').text = task.exitCode
 
                 // check if terminated successfully
                 boolean success = (task.exitCode in taskConfig.validExitCodes)

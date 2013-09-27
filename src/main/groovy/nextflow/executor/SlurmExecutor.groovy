@@ -38,7 +38,7 @@ class SlurmExecutor extends AbstractGridExecutor {
         final result = new ArrayList<String>()
 
         result << 'srun'
-        result << '-D' << task.workDirectory
+        result << '-D' << task.workDirectory.toString()
         result << '-J' << "nf-${task.processor.name}-${task.index}"
         result << '-E'
 

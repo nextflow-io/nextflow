@@ -1,4 +1,7 @@
 package nextflow.executor
+
+import java.nio.file.Path
+
 import groovy.io.FileType
 import groovy.util.logging.Slf4j
 import nextflow.exception.MissingFileException
@@ -55,11 +58,11 @@ abstract class AbstractExecutor {
 
         // replace any wildcards characters
         // TODO give a try to http://code.google.com/p/wildcard/  -or- http://commons.apache.org/io/
-        String filePattern = fileName.replace("?", ".?").replace("*", ".*?")
+        String filePattern = fileName.replace("?", ".?").replace("*", ".*")
 
         // when there's not change in the pattern, try to find a single file
         if( filePattern == fileName ) {
-            def result = new File(task.workDirectory,fileName)
+            def result = task.workDirectory.resolve(fileName)
             if( !result.exists() ) {
                 throw new MissingFileException("Missing output file: '$fileName' expected by task: ${task.name}")
             }
@@ -68,7 +71,7 @@ abstract class AbstractExecutor {
 
         // scan to find the file with that name
         List files = []
-        task.workDirectory.eachFileMatch(FileType.FILES, ~/$filePattern/ ) { File it -> files << it}
+        task.workDirectory.eachFileMatch(FileType.FILES, ~/$filePattern/ ) { Path it -> files << it}
         if( !files ) {
             throw new MissingFileException("Missing output file(s): '$fileName' expected by task: ${task.name}")
         }
@@ -82,7 +85,7 @@ abstract class AbstractExecutor {
      * @param task The task instance which current environment needs to be stored
      * @param target The path to where save the task environment
      */
-    def void createEnvironmentFile( TaskRun task, File target ) {
+    def void createEnvironmentFile( TaskRun task, Path target ) {
         assert task
         assert target
 

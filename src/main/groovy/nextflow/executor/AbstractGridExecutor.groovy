@@ -18,13 +18,17 @@
  */
 
 package nextflow.executor
+import static nextflow.util.FileHelper.isEmpty
+import static nextflow.util.FileHelper.isNotEmpty
+
+import java.nio.file.Path
+
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 import nextflow.util.ByteDumper
 import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
 import org.apache.commons.io.IOUtils
-
 /**
  * Generic task processor executing a task through a grid facility
  *
@@ -60,14 +64,14 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         /*
          * save the environment to a file
          */
-        def envFile = new File(folder, COMMAND_ENV_FILENAME)
+        def envFile = folder.resolve(COMMAND_ENV_FILENAME)
         createEnvironmentFile(task, envFile)
 
         /*
          * save the command input (if any)
          * the file content will be piped to the executed user script
          */
-        File cmdInputFile = createCommandInputFile(task)
+        Path cmdInputFile = createCommandInputFile(task)
 
         /*
          * save the 'user' script to be executed
@@ -78,7 +82,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         /*
          * create the job wrapper script file
          */
-        def cmdOutFile = new File(folder, COMMAND_OUTPUT_FILENAME)
+        def cmdOutFile = folder.resolve(COMMAND_OUTPUT_FILENAME)
         def runnerFile = createJobWrapperFile(task, scriptFile, envFile, cmdInputFile, cmdOutFile)
 
 
@@ -92,11 +96,13 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
     /**
      * Save the main task script to a file having executable permission
      */
-    protected File createCommandScriptFile( TaskRun task ) {
+    protected Path createCommandScriptFile( TaskRun task ) {
         assert task
 
-        def scriptFile = new File(task.workDirectory, COMMAND_SCRIPT_FILENAME)
+        def scriptFile = task.workDirectory.resolve(COMMAND_SCRIPT_FILENAME)
         scriptFile.text = task.processor.normalizeScript(task.script.toString())
+
+        //TODO to be removed
         scriptFile.setExecutable(true)
         task.script = scriptFile
 
@@ -109,13 +115,13 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
      * @param task
      * @return
      */
-    protected File createCommandInputFile( TaskRun task ) {
+    protected Path createCommandInputFile( TaskRun task ) {
 
         if( task.input == null ) {
             return null
         }
 
-        def result = new File( task.workDirectory, COMMAND_INPUT_FILE )
+        def result = task.workDirectory.resolve(COMMAND_INPUT_FILE )
         result.text = task.input
         return result
     }
@@ -130,7 +136,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
      * @param cmdOutFile The file that where save the task output
      * @return The script wrapper file
      */
-    protected File createJobWrapperFile( TaskRun task, File scriptFile, File envFile, File cmdInputFile, File cmdOutFile ) {
+    protected Path createJobWrapperFile( TaskRun task, Path scriptFile, Path envFile, Path cmdInputFile, Path cmdOutFile ) {
         assert task
         assert scriptFile
 
@@ -145,7 +151,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
          */
 
         def wrapper = new StringBuilder()
-        wrapper << 'source ' << envFile.absolutePath << '\n'
+        wrapper << 'source ' << envFile.toAbsolutePath() << '\n'
 
         // whenever it has to change to the scratch directory
         def changeDir = changeToScratchDirectory()
@@ -158,7 +164,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         if( cmdInputFile ) {
             wrapper << 'cat ' << cmdInputFile << ' | '
         }
-        wrapper << "${scriptFile.absolutePath}) &> ${cmdOutFile.absolutePath}" << '\n'
+        wrapper << "${scriptFile.toAbsolutePath()}) &> ${cmdOutFile.toAbsolutePath()}" << '\n'
 
         // "un-stage" the result files
         def resultFiles = taskConfig.outputs.keySet().findAll { it != '-' }
@@ -167,7 +173,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
             wrapper << 'rm -rf $NF_SCRATCH &'
         }
 
-        def result = new File(folder, JOB_SCRIPT_FILENAME)
+        def result = folder.resolve(JOB_SCRIPT_FILENAME)
         result.text = task.processor.normalizeScript(wrapper.toString())
 
         return result
@@ -216,7 +222,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
      * @param task The task instance to be executed
      * @param cmdOutFile The file where the job outputs its stdout result
      */
-    protected submitJob( TaskRun task, File runnerFile, File cmdOutFile ) {
+    protected submitJob( TaskRun task, Path runnerFile, Path cmdOutFile ) {
         assert task
 
         final folder = task.workDirectory
@@ -229,7 +235,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
          * launch 'sub' script wrapper
          */
         ProcessBuilder builder = new ProcessBuilder()
-                .directory(folder)
+                .directory(folder.toFile())
                 .command( cli as String[] )
                 .redirectErrorStream(true)
 
@@ -242,8 +248,8 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
 
 
         // -- save the 'sub' process output
-        def subOutFile = new File(folder, JOB_OUT_FILENAME)
-        def subOutStream = new BufferedOutputStream(new FileOutputStream(subOutFile))
+        def subOutFile = folder.resolve(JOB_OUT_FILENAME)
+        def subOutStream = subOutFile.newOutputStream()
         ByteDumper subDumper = new ByteDumper(process.getInputStream(), {  byte[] data, int len -> subOutStream.write(data,0,len) } )
         subDumper.setName("sub_${task.name}")
         subDumper.start()
@@ -335,18 +341,18 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         //   + program terminated ok -> return the program output output (file)
         //   + program failed and output file not empty -> program output
         //             failed and output EMPTY -> return 'sub' output file
-        def cmdOutFile = new File(task.workDirectory, COMMAND_OUTPUT_FILENAME)
-        def subOutFile = new File(task.workDirectory, JOB_OUT_FILENAME)
-        log.debug "Task cmd output > ${task.name} -- file ${cmdOutFile}; empty: ${cmdOutFile.isEmpty()}"
-        log.debug "Task sub output > ${task.name} -- file: ${subOutFile}; empty: ${subOutFile.isEmpty()}"
+        def cmdOutFile = task.workDirectory.resolve(COMMAND_OUTPUT_FILENAME)
+        def subOutFile = task.workDirectory.resolve(JOB_OUT_FILENAME)
+        log.debug "Task cmd output > ${task.name} -- file ${cmdOutFile}; empty: ${isEmpty(cmdOutFile)}"
+        log.debug "Task sub output > ${task.name} -- file: ${subOutFile}; empty: ${isEmpty(subOutFile)}"
 
         def result
         def success = task.exitCode in taskConfig.validExitCodes
         if( success ) {
-            result = cmdOutFile.isNotEmpty() ? cmdOutFile : null
+            result = isNotEmpty(cmdOutFile) ? cmdOutFile : null
         }
         else {
-            result = cmdOutFile.isNotEmpty() ? cmdOutFile : ( subOutFile.isNotEmpty() ? subOutFile : null )
+            result = isNotEmpty(cmdOutFile) ? cmdOutFile : ( isNotEmpty(subOutFile) ? subOutFile : null )
         }
 
         log.debug "Task finished > ${task.name} -- success: ${success}; output: ${result}"

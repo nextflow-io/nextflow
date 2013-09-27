@@ -19,6 +19,8 @@
 
 package nextflow.processor
 
+import java.nio.file.Path
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -75,7 +77,7 @@ class TaskRun {
 
     def String getOutput() {
 
-        if( output instanceof File ) {
+        if( output instanceof Path ) {
             return output.text
         }
         else {
@@ -88,7 +90,7 @@ class TaskRun {
     /**
      * The directory used to run the task
      */
-    File workDirectory
+    Path workDirectory
 
     /**
      * Task start time
@@ -112,8 +114,8 @@ class TaskRun {
     def script
 
     def String getScript() {
-        if ( script instanceof File ) {
-            script.text
+        if( script instanceof Path ) {
+            return script.text
         }
         else {
             script?.toString()

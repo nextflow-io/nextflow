@@ -18,6 +18,9 @@
  */
 
 package nextflow.script
+
+import java.nio.file.Path
+
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -123,7 +126,7 @@ abstract class BaseScript extends Script {
      *
      * @return The {@code File} to the cached directory or a newly created folder for the specified key
      */
-    File cacheableDir( Object key ) {
+    Path cacheableDir( Object key ) {
         assert key, "Please specify the 'key' argument on 'cacheableDir' method"
 
         def hash = CacheHelper.hasher([ session.uniqueId, key, session.cacheable ? 0 : random.nextInt() ]).hash()
@@ -144,7 +147,7 @@ abstract class BaseScript extends Script {
      * @param name
      * @return
      */
-    File cacheableFile( Object key, String name = null ) {
+    Path cacheableFile( Object key, String name = null ) {
 
         // the cacheability is guaranteed by the folder
         def folder = cacheableDir(key)
@@ -153,7 +156,7 @@ abstract class BaseScript extends Script {
             name = key instanceof File ? key.name : key.toString()
         }
 
-        return new File(folder, name)
+        return folder.resolve(name)
     }
 
     /**

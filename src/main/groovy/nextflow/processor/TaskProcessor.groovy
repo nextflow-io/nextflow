@@ -18,6 +18,7 @@
  */
 package nextflow.processor
 
+import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
@@ -271,7 +272,7 @@ abstract class TaskProcessor {
     }
 
 
-    final protected File createTaskFolder( File folder, HashCode hash  ) {
+    final protected Path createTaskFolder( Path folder, HashCode hash  ) {
 
         folderLock.lock()
         try {
@@ -302,15 +303,15 @@ abstract class TaskProcessor {
     }
 
 
-    final checkCachedOutput(TaskRun task, File folder) {
+    final boolean checkCachedOutput(TaskRun task, Path folder) {
         if( !folder.exists() ) {
             log.trace "Cached folder does not exists > $folder -- return false"
             // no folder -> no cached result
             return false
         }
 
-        def exitFile = new File(folder,'.exitcode')
-        if( exitFile.isEmpty() ) {
+        def exitFile = folder.resolve('.exitcode')
+        if( FileHelper.isEmpty(exitFile) ) {
             log.trace "Exit file is empty > $exitFile -- return false"
             return false
         }
@@ -333,7 +334,7 @@ abstract class TaskProcessor {
             // -- print out the cached tasks output when 'echo' is true
             if( taskConfig.echo ) {
                 def out = executor.getStdOutFile(task)
-                if( out instanceof File )  {
+                if( out instanceof Path )  {
                     System.out.print(out.text)
                 }
                 else if( out ) {
@@ -402,7 +403,7 @@ abstract class TaskProcessor {
                     message << "  $it"
                 }
 
-                message << "\nCommand work dir:\n  ${task.workDirectory}"
+                message << "\nCommand work dir:\n  ${task.workDirectory.toString()}"
             }
 
             message << "\nTip: when you have fixed the problem you may continue the execution appending to the nextflow command line the '-resume' option"
@@ -479,7 +480,7 @@ abstract class TaskProcessor {
 
             def entry = allOutputResources[name]
 
-            if( name == '-' && entry instanceof File ) {
+            if( name == '-' && entry instanceof Path ) {
                 processor.bindOutput(index, entry.text)
             }
             else if( entry instanceof Collection ) {

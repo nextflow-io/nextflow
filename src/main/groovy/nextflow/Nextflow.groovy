@@ -18,18 +18,49 @@
  */
 
 package nextflow
+import java.nio.file.Path
+
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.util.FileHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 class Nextflow {
+
+    static registerTypes() {
+
+        String.metaClass.define {
+            oldAsType = String.metaClass.getMetaMethod("asType", [Class] as Class[])
+            asType = { Class clazz ->
+                if (clazz == Path) {
+                    FileHelper.asPath((String)delegate)
+                }
+                else {
+                    oldAsType.invoke(delegate, clazz)
+                }
+            }
+        }
+
+        GString.metaClass.define {
+            oldAsType = String.metaClass.getMetaMethod("asType", [Class] as Class[])
+            asType = { Class clazz ->
+                if (clazz == Path) {
+                    FileHelper.asPath((String)delegate)
+                }
+                else {
+                    oldAsType.invoke(delegate, clazz)
+                }
+            }
+        }
+
+    }
 
 
     /**
@@ -144,12 +175,30 @@ class Nextflow {
         return result
     }
 
+    /**
+     * @param file
+     *
+     * @return Return an absolute {@code Path} from the specified file
+     */
+    static Path file( def file ) {
+        assert file
+        Path result
 
+        switch (file) {
+            case Path:
+                result = (Path)file
+                break;
 
-    static File file( def name ) {
-        assert name
-        def fileName = name.toString()
-        fileName.startsWith( File.separator ) ? new File(fileName) : new File(fileName).absoluteFile
+            case File:
+                result = ((File) file).toPath()
+                break;
+
+            default:
+                result = FileHelper.asPath( file.toString() )
+        }
+
+        return result.toAbsolutePath()
     }
+
 
 }

@@ -19,6 +19,8 @@
 
 package nextflow.executor
 
+import java.nio.file.Path
+
 import nextflow.processor.TaskRun
 
 /**
@@ -61,7 +63,8 @@ class LsfExecutor extends AbstractGridExecutor {
 
     }
 
-    def submitJob( TaskRun task, File runnerFile, File cmdOutFile ) {
+    @Override
+    def submitJob( TaskRun task, Path runnerFile, Path cmdOutFile ) {
         // note: LSF requires the job script file to be executable
         runnerFile.setExecutable(true)
         // now invoke the default method

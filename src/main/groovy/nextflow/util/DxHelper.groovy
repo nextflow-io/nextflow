@@ -17,25 +17,13 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.util
-
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.dnanexus.DXAPI
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ArrayNode
-import com.fasterxml.jackson.databind.node.BigIntegerNode
-import com.fasterxml.jackson.databind.node.BinaryNode
-import com.fasterxml.jackson.databind.node.BooleanNode
-import com.fasterxml.jackson.databind.node.DecimalNode
-import com.fasterxml.jackson.databind.node.DoubleNode
-import com.fasterxml.jackson.databind.node.IntNode
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import com.fasterxml.jackson.databind.node.LongNode
-import com.fasterxml.jackson.databind.node.NullNode
-import com.fasterxml.jackson.databind.node.ObjectNode
-import com.fasterxml.jackson.databind.node.TextNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowQueue
@@ -51,7 +39,6 @@ import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.params.CoreProtocolPNames
 import org.apache.http.util.EntityUtils
 import sun.nio.ch.DirectBuffer
-
 /**
  * Helper methods to interact with DNAnexus API
  *
@@ -61,6 +48,8 @@ import sun.nio.ch.DirectBuffer
 
 @Slf4j
 class DxHelper {
+
+    static private ObjectMapper mapper = new ObjectMapper();
 
     /**
      * Given a DNAnexus 'fileId' download it to the local file system
@@ -141,7 +130,7 @@ class DxHelper {
         /*
          * Create a new remote file
          */
-        def newFileRequest = toJsonNode(uploadInfo)
+        def newFileRequest = objToJson(uploadInfo)
         log.trace "Dx fileNew request > ${newFileRequest.toString()}"
 
         def result = DXAPI.fileNew(newFileRequest)
@@ -207,7 +196,7 @@ class DxHelper {
 
             // request to upload a new chunk
             // note: dnanexus upload chunk index is 1-based
-            def params = toJsonNode( index: current+1 )
+            def params = objToJson( index: current+1 )
             def upload = DXAPI.fileUpload(fileId, params)
             log.trace "File: $fileName; chunk [$current] > FileUpload: ${upload.toString()}"
 
@@ -273,130 +262,45 @@ class DxHelper {
     }
 
 
-    static JsonNode toJsonNode( def value ) {
-
-        switch( value ) {
-            case null:
-                return NullNode.instance
-
-            case String:
-                return TextNode.valueOf(value as String)
-
-            case BigDecimal:
-                return DecimalNode.valueOf(value as BigDecimal)
-
-            case Integer:
-                return IntNode.valueOf(value as int)
-
-            case BigInteger:
-                return BigIntegerNode.valueOf(value as BigInteger)
-
-            case Boolean:
-                return BooleanNode.valueOf(value as Boolean)
-
-            case Float:
-            case Double:
-                return DoubleNode.valueOf(value as Double)
-
-            case Long:
-                return LongNode.valueOf(value as Long)
-
-            case Map:
-                def result = new ObjectNode(JsonNodeFactory.instance)
-                (value as Map).each { String name, Object item ->
-                    result.put( name, toJsonNode(item))
-                }
-                return result
-
-            case ObjectNode:
-                return value
-
-            case byte[]:
-                return BinaryNode.valueOf(value as byte[])
-
-            case Collection:
-            case ArrayNode:
-            case Object[]:
-
-                def result = new ArrayNode(JsonNodeFactory.instance)
-                (value as List) .each {
-                    result.add( toJsonNode(it) )
-                }
-                return result
-
-            default:
-                log.debug "Unknown json type: ${value.class.name} -- mapping as string"
-                return TextNode.valueOf(value.toString())
+    /**
+     * Parse Json formatted string to a {@code JsonNode} object instance
+     *
+     * @param str The source JSON string
+     * @return The resulting {@code JsonNode}
+     */
+    static JsonNode parseJsonString( String str ) {
+        try {
+            return mapper.readValue(str, JsonNode.class);
         }
+        catch( IOException e ) {
+            throw new IllegalArgumentException(String.format("Error parsing json string:\n%s", str), e);
+        }
+
     }
 
 
-    static jsonNodeToObj( JsonNode node ) {
+    /**
+     * Converts a generic Java object to a {@code JsoNode} object
+     * @param obj The source Java object, usually it is a {@code Map}
+     * @return The mapped {@code JsonNode} instance
+     */
+    static JsonNode objToJson( def value ) {
 
-        def result
+        return mapper.valueToTree(value)
 
-        if( node.isBigDecimal() ) {
-            return node.decimalValue()
-        }
-        else if( node.isBigInteger() ) {
-            return node.bigIntegerValue()
-        }
-        else if( node.isBinary() ) {
-            return node.binaryValue()
-        }
-        else if( node.isBoolean() ) {
-            return node.booleanValue()
-        }
-        else if( node.isDouble() ) {
-            return node.doubleValue()
-        }
-        else if( node.isFloatingPointNumber()) {
-            return node
-        }
-        else if( node.isInt() ) {
-            return node.intValue()
-        }
-        else if( node.isLong()) {
-            return node.longValue()
-        }
-        else if( node.isNumber()) {
-            return node.numberValue()
-        }
-        else if( node.isPojo() ) {
-            return node
-        }
-        else if( node.isTextual()) {
-            return node.textValue()
-        }
-        else if( node.isValueNode()) {
-            if(node.isContainerNode() || node.isMissingNode()){
-                return false
-            }else{
-                return true
-            }
-        }
-        else if( node.isNull()) {
-            return null
-        }
-        else if( node.isArray() ) {
-            result = []
-            for(int i = 0; i<node.size(); i++){
-                result << jsonNodeToObj(node[i])
-            }
-            println("NODE -- ARRAY >> ${node}")
-        }
-        else if( node.isObject() ) {
-            result = [:]
-            for( Map.Entry<String,JsonNode> item : node.fields() ) {
-                println("NODE -- MAP >> ${item.key} && ${item.value}")
-                result[item.key] = jsonNodeToObj(item.value)
-            }
-        }
-        else {
-            throw new IllegalStateException("Not a valid json node: ${node.toString()}")
-        }
+    }
 
-        return result
+
+    /**
+     * Converts a {@code JsonNode} to a generic Java {@code Map} object
+     *
+     * @param node The source Json node
+     * @return The resulting Map object
+     */
+    static <T> T jsonToObj( JsonNode node ) {
+
+        return (T)mapper.convertValue(node, Map.class)
+
     }
 
 }

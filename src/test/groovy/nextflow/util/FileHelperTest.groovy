@@ -19,6 +19,10 @@
 
 package nextflow.util
 
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+
 import org.apache.commons.io.FileUtils
 import spock.lang.Specification
 
@@ -28,6 +32,14 @@ import spock.lang.Specification
  */
 class FileHelperTest extends Specification {
 
+    def 'test asPath' () {
+
+        expect:
+        FileHelper.asPath('file.txt') == Paths.get('file.txt')
+        FileHelper.asPath('file:///file.txt') == Paths.get( URI.create('file:///file.txt') )
+
+    }
+
     def 'test normalize' () {
 
         expect:
@@ -35,7 +47,6 @@ class FileHelperTest extends Specification {
         FileHelper.normalizePath( '~file.name' ) == '~file.name'
         FileHelper.normalizePath( '~' ) == System.properties['user.home']
         FileHelper.normalizePath( '~/path/file.name' ) == System.properties['user.home'] + '/path/file.name'
-
 
     }
 
@@ -70,6 +81,127 @@ class FileHelperTest extends Specification {
         FileUtils.deleteDirectory(notEmptyDir)
 
     }
+
+
+    def 'test empty file' () {
+
+        setup:
+        def fileEmpty = File.createTempFile('test','test')
+        fileEmpty.deleteOnExit()
+
+        File folderEmpty = File.createTempDir()
+
+        File  folderNotEmpty = File.createTempDir()
+        def fileInFolder = new File(folderNotEmpty, 'filename')
+        fileInFolder.createNewFile()
+
+        def fileNotEmpty = File.createTempFile('test','test')
+        fileNotEmpty.text = 'Hola'
+        fileNotEmpty.deleteOnExit()
+
+        expect:
+        FileHelper.isEmpty(new File('non existing'))
+        FileHelper.isEmpty(fileEmpty)
+        !FileHelper.isEmpty(fileNotEmpty)
+        FileHelper.isEmpty(folderEmpty)
+        !FileHelper.isEmpty(folderNotEmpty)
+
+        cleanup:
+        fileEmpty.delete()
+        folderNotEmpty?.deleteDir()
+        folderEmpty?.deleteDir()
+
+    }
+
+    def 'test empty path' () {
+
+        setup:
+        Path fileEmpty = Files.createFile(Paths.get('test.txt'))
+        Path folderEmpty = Files.createTempDirectory(null)
+        Path folderNotEmpty = Files.createTempDirectory(null)
+        Path fileInFolder = folderNotEmpty.resolve( 'empty_file' )
+        Files.createFile(fileInFolder)
+
+        Path fileNotEmpty = folderNotEmpty.resolve('not_empty_file')
+        fileNotEmpty.text = 'Hola'
+
+        Path fileNotExist = Paths.get('not_existing_file')
+
+        expect:
+        FileHelper.isEmpty(fileNotExist)
+        FileHelper.isEmpty(fileEmpty)
+        !FileHelper.isEmpty(fileNotEmpty)
+        FileHelper.isEmpty(folderEmpty)
+        !FileHelper.isEmpty(folderNotEmpty)
+
+        cleanup:
+        fileEmpty.delete()
+        fileNotEmpty.delete()
+        folderNotEmpty.deleteDir()
+        folderEmpty.deleteDir()
+
+    }
+
+
+    def 'test notEmpty file' () {
+
+        setup:
+        def fileEmpty = File.createTempFile('test','test')
+        fileEmpty.deleteOnExit()
+
+        def folderEmpty = File.createTempDir()
+
+        def folderNotEmpty = File.createTempDir()
+        def fileInFolder = new File(folderNotEmpty, 'filename')
+        fileInFolder.createNewFile()
+
+        def fileNotEmpty = File.createTempFile('test','test')
+        fileNotEmpty.text = 'Hola'
+        fileNotEmpty.deleteOnExit()
+
+        expect:
+        ! FileHelper.isNotEmpty(new File('non existing'))
+        ! FileHelper.isNotEmpty(fileEmpty)
+        FileHelper.isNotEmpty(fileNotEmpty)
+
+        !FileHelper.isNotEmpty(folderEmpty)
+        FileHelper.isNotEmpty(folderNotEmpty)
+
+        cleanup:
+        folderNotEmpty.deleteDir()
+        folderEmpty.deleteDir()
+
+    }
+
+    def 'test notEmpty path' () {
+
+        setup:
+        Path fileEmpty = Files.createFile(Paths.get('test.txt'))
+        Path folderEmpty = Files.createTempDirectory(null)
+        def folderNotEmpty = Files.createTempDirectory(null)
+
+        def fileInFolder = folderNotEmpty.resolve( 'empty_file' )
+        Files.createFile(fileInFolder)
+
+        def fileNotEmpty = File.createTempFile('test','test')
+        fileNotEmpty.text = 'Hola'
+        fileNotEmpty.deleteOnExit()
+
+        expect:
+        ! FileHelper.isNotEmpty(new File('non existing'))
+        ! FileHelper.isNotEmpty(fileEmpty)
+        FileHelper.isNotEmpty(fileNotEmpty)
+
+        ! FileHelper.isNotEmpty(folderEmpty)
+        FileHelper.isNotEmpty(folderNotEmpty)
+
+        cleanup:
+        fileEmpty.delete()
+        folderNotEmpty.deleteDir()
+        folderEmpty.deleteDir()
+
+    }
+
 
     def 'test nameParts' () {
 
