@@ -25,11 +25,13 @@ repositories {
     flatDir(dirs: file('lib'))
     mavenCentral()
     maven { url 'http://uk.maven.org/maven2' }
+    maven { url 'http://dl.bintray.com/paolo-ditommaso/maven'}
+    mavenLocal()
 }
 
 dependencies {
 
-    compile 'org.codehaus.groovy:groovy:2.1.6'
+    compile 'org.codehaus.groovy:groovy:2.1.7'
     compile 'org.codehaus.gpars:gpars:1.0.0'
     compile 'org.slf4j:slf4j-api:1.7.5'
     compile 'org.slf4j:jcl-over-slf4j:1.7.5'
@@ -42,7 +44,6 @@ dependencies {
     compile 'commons-cli:commons-cli:1.2'
     compile 'com.google.guava:guava:14.0.1'
     compile 'com.beust:jcommander:1.30'
-    compile 'jline:jline:2.9'
     compile 'org.fusesource.jansi:jansi:1.9'
 
     compile 'org.apache.httpcomponents:httpclient:4.2.1'
@@ -50,15 +51,12 @@ dependencies {
     compile 'com.fasterxml.jackson.core:jackson-core:2.0.5'
     compile 'com.fasterxml.jackson.core:jackson-databind:2.0.5'
 
+    compile 'dnanexus:dnanexus-api:1.0'
+    compile 'nextflow:nextflow-dxfs:0.2'
 
+    testCompile 'org.codehaus.groovy:groovy-json:2.1.7'
     testCompile ('org.spockframework:spock-core:0.7-groovy-2.0')
 
-}
-
-
-compileGroovy {
-    sourceCompatibility = 1.6
-    targetCompatibility = 1.6
 }
 
 
