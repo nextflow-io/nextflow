@@ -247,12 +247,12 @@ abstract class BaseScript extends Script {
      * Map the executor class to its 'friendly' name
      */
     static executorsMap = [
+            'nope': NopeExecutor.name,
             'local': LocalExecutor.name,
             'sge':  SgeExecutor.name,
             'oge':  SgeExecutor.name,
             'slurm': SlurmExecutor.name,
-            'dnanexus': DnaNexusExecutor,
-            'nope': NopeExecutor.name
+            'dnanexus': DnaNexusExecutor.name
     ]
 
     @PackageScope

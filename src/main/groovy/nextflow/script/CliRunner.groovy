@@ -18,6 +18,10 @@
  */
 
 package nextflow.script
+
+import java.lang.reflect.Field
+import java.nio.file.spi.FileSystemProvider
+
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.ParameterException
 import groovy.transform.InheritConstructors
@@ -30,6 +34,7 @@ import nextflow.Nextflow
 import nextflow.Session
 import nextflow.exception.InvalidArgumentException
 import nextflow.exception.MissingLibraryException
+import nextflow.fs.dx.DxFileSystemProvider
 import nextflow.util.FileHelper
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
@@ -482,6 +487,9 @@ class CliRunner {
                 println "N E X T F L O W  ~  version ${Const.APP_VER}"
             }
 
+            // -- check file system providers
+            checkFileSystemProviders()
+
             // -- configuration file(s)
             def configFiles = validateConfigFiles(options.config)
             def config = buildConfig(configFiles)
@@ -551,8 +559,40 @@ class CliRunner {
 
     }
 
+    static private void checkFileSystemProviders() {
 
-    /**
+        // check if this class has been loaded
+        boolean isInstalled = false
+        FileSystemProvider.installedProviders().each {
+            log.debug "Installed File System: '${it.scheme}' [${it.class.simpleName}]"
+            if( it.scheme == 'dxfs' ) {
+                isInstalled = true
+            }
+        }
+
+        if( !isInstalled ) {
+            try {
+                Class.forName('nextflow.fs.dx.DxFileSystemProvider')
+            }
+            catch( ClassNotFoundException e ) {
+                log.debug "DxFileSystemProvider NOT available"
+                return
+            }
+
+            // add it manually
+            Field field = FileSystemProvider.class.getDeclaredField('installedProviders')
+            field.setAccessible(true)
+            List installedProviders = new ArrayList((List)field.get(null))
+            installedProviders.add( new DxFileSystemProvider() )
+            field.set(this, Collections.unmodifiableList(installedProviders))
+            log.debug "Added 'DxFileSystemProvider' to list of installed providers [dxfs]"
+        }
+
+
+    }
+
+
+/**
      * Transform the specified list of string to a list of files, verifying their existence.
      * <p>
      *     If a file in the list does not exist an exception of type {@code CliArgumentException} is thrown.

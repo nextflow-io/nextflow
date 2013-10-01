@@ -6,13 +6,17 @@ main() {
     #echo 'Install Java 6 runtime'
     #apt-get install -y openjdk-6-jre-headless > /dev/null
 
+    # create workspace path
+    dx mkdir -p /cloud/workspace
+    echo CLASSPATH: $CLASSPATH
+
     # Download the script file
     script_id=$(dx-jobutil-parse-link "${script}")
     dx download ${script_id} -o script.nf
 
     # Launch it !
     set +e
-    nextflow -log $PWD\nextflow.log -c ${DX_FS_ROOT}/nextflow.config script.nf
+    nextflow -log $PWD\nextflow.log -c ${DX_FS_ROOT}/nextflow.config -w dxfs:///cloud/workspace/ script.nf
     exit_status=$?
     set -e
 
@@ -30,45 +34,33 @@ main() {
 # Entry point for parallel sub-tasks.
 process() {
     echo "Starting PROCESS subtask ${taskName}"
+    set -x
 
-    # Download all the files specified in "inputs"
-    for input in "${inputs[@]}"
-    do
-        input_file_id=$(dx-jobutil-parse-link "${input}") ;
-        dx download "$input_file_id" --no-progress  ;
-    done
+    # stage input files to current folder
+    dx download --no-progress $task_script -o .command.sh
+    [ ! -z $task_env ] && dx download --no-progress $task_env -o .command.env
+    [ ! -z $task_input ] && download --no-progress $task_input -o .command.in
 
-    # Download the script file
-    input_file_id=$(dx-jobutil-parse-link "${taskScript}")
-    dx download "$input_file_id" -o .command.sh --no-progress
-
+    # source the env file
+    if [ -f .command.env ]; then
+    source .command.env
+    fi
 
     # Change permissions to '.command.sh' to execute
     chmod +x .command.sh
 
-
     # Execution of the task's script
     set +e
-    if [ -z "${taskInput}" ]; then
-      (eval "${taskEnv}" && ./.command.sh ) > .command.out
+    if [ -f .command.in ]; then
+      ( ./.command.sh > .command.out < .command.in )
     else
-      # Download the input file and save to .command.in
-      input_taskfile_id=$(dx-jobutil-parse-link "${taskInput}")  ;
-      dx download "$input_taskfile_id" -o .command.in --no-progress  ;
-     ( eval "${taskEnv}" && ( cat .command.in | ./.command.sh )) > .command.out  ;
+      ( ./.command.sh > .command.out )
     fi
-
     exit_status=$?
     set -e
 
     # Set as output the exit code of the script's execution
-    dx-jobutil-add-output exit_code "$exit_status" --class string
-
-    # Upload the command result
-    if [ -f .command.out ]; then
-        output_file_id=`dx upload ".command.out" --brief --no-progress` ;
-        dx-jobutil-add-output ".command.out" "$output_file_id" --class string ;
-    fi
+    dx-jobutil-add-output exit_code "$exit_status" --class int
 
     if [ "$exit_status" -ne "0" ]; then
         ls -la >&2
@@ -77,10 +69,12 @@ process() {
 
     # Upload and set as outputs the files which matches the
     # names or structures of the files declared in "outputs[]"
+    PRJ=$(dx describe $task_script | grep Project | awk '{print $2}')
+    TARGET=$(dx describe $task_script | grep Folder | awk '{print $2}')
+    dx upload .command.out --path $PRJ:$TARGET/.command.out --brief --no-progress --wait
     for item in "${outputs[@]}"; do
         for name in `ls $item 2>/dev/null`; do
-            output_file_id=`dx upload "${name}" --brief --no-progress` ;
-            dx-jobutil-add-output "${name}" "$output_file_id" --class string ;
+            dx upload $name --path "$PRJ:$(dirname $TARGET)/$name" --brief --no-progress --wait
         done
     done
 

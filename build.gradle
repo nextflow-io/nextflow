@@ -51,8 +51,8 @@ dependencies {
     compile 'com.fasterxml.jackson.core:jackson-core:2.0.5'
     compile 'com.fasterxml.jackson.core:jackson-databind:2.0.5'
 
-    compile 'dnanexus:dnanexus-api:1.0'
-    compile 'nextflow:nextflow-dxfs:0.2'
+    compile 'dnanexus:dnanexus-api:0.1.0'
+    compile 'nextflow:nextflow-dxfs:0.3'
 
     testCompile 'org.codehaus.groovy:groovy-json:2.1.7'
     testCompile ('org.spockframework:spock-core:0.7-groovy-2.0')
@@ -214,6 +214,8 @@ task pack(dependsOn: compile) << {
         lib {
             fileset dir: "$buildDir/dependency-libs"
         }
+
+        //fileset( dir: "$buildDir/resources/main" )
     }
 
 
