@@ -107,7 +107,7 @@ class MergeTaskProcessor extends TaskProcessor {
         // -- map the inputs to a map and use to delegate closure values interpolation
         def inputVars = new DelegateMap(ownerScript)
         taskConfig.inputs?.keySet()?.eachWithIndex { name, index ->
-            inputVars[name] = params[index]
+            inputVars[name] = executor.resolveInputFile( params[index] )
         }
 
         /*
