@@ -59,27 +59,6 @@ class DnaNexusExecutor extends AbstractExecutor {
     }
 
 
-    private List getInputFiles(TaskRun task) {
-
-        def map = task.code.delegate
-        def inputs = []
-
-        map.each{ k, v ->
-            if( v instanceof DxPath ) {
-                log.debug "Getting input DxPath ${k} for task ${task.name} >> ${v} >> ${v.getFileId()}"
-                inputs.add( (v as DxPath).getFileId() );
-            }
-        }
-
-        return inputs
-    }
-
-    private List getOutputFiles( TaskRun task ) {
-
-        new ArrayList(taskConfig.getOutputs().keySet())
-
-    }
-
 
     /**
      * Launches the task
@@ -132,8 +111,7 @@ class DnaNexusExecutor extends AbstractExecutor {
         if( taskInputFile ) {
             obj.task_input = (taskInputFile as DxPath).getFileId()
         }
-        obj.input_files = getInputFiles(task)
-        obj.output_files = getOutputFiles(task)
+        obj.output_files = new ArrayList(taskConfig.getOutputs().keySet())
 
         // create the input parameters for the job to be executed
         def processJobInputHash = createInputObject( obj, (String)taskConfig.instaceType )
@@ -203,15 +181,6 @@ class DnaNexusExecutor extends AbstractExecutor {
         return DxHelper.jsonToObj(result)
     }
 
-
-    def resolveInputFile( def obj ) {
-        if( obj instanceof DxPath ) {
-            return (obj as DxPath).getFileName()
-        }
-        else {
-            obj
-        }
-    }
 
     /**
      * Building the ObjectNode which will be set in the job.

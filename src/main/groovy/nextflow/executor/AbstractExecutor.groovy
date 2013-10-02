@@ -31,15 +31,6 @@ abstract class AbstractExecutor {
     abstract void launchTask( TaskRun task )
 
     /**
-     * Executor can override this to handle input file properly
-     *
-     * @param obj
-     */
-    def resolveInputFile( def obj ) {
-        return obj
-    }
-
-    /**
      * The file which contains the stdout produced by the executed task script
      *
      * @param task The user task to be executed

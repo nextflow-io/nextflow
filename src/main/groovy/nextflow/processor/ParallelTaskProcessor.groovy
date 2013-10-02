@@ -69,12 +69,12 @@ class ParallelTaskProcessor extends TaskProcessor {
             // copy the value to the task 'input' attribute
             // it will be used to pipe it to the process stdin
             if( name == '-' ) {
-                task.input = executor.resolveInputFile( values.get(index) )
+                task.input = values.get(index)
             }
 
             // otherwise put in on the map used to resolve the values evaluating the script
             else {
-                map[ name ] = executor.resolveInputFile( values.get(index) )
+                map[ name ] = values.get(index)
             }
         }
 

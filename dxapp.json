@@ -1,12 +1,11 @@
 {
   "name": "nextflow",
-  "title": "Nextflow pipelines framework",
+  "title": "Nextflow DnaNexus Execution",
   "summary": "Executes nextflow pipelines in DnaNexus",
   "dxapi": "1.0.0",
   "access": {"project": "CONTRIBUTE"},
   "inputSpec": [
-      { "name": "script", "class": "string", "optional": false, "default": "/examples/basic.nf" },
-      { "name": "params", "class": "string", "optional": true }
+      { "name": "script", "class": "file", "optional": false }
   ],
   "outputSpec": [ ],
   "runSpec": {

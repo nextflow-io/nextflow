@@ -8,10 +8,15 @@ main() {
 
     # create workspace path
     dx mkdir -p /cloud/workspace
+    echo CLASSPATH: $CLASSPATH
+
+    # Download the script file
+    script_id=$(dx-jobutil-parse-link "${script}")
+    dx download ${script_id} -o script.nf
 
     # Launch it !
     set +e
-    nextflow -log $PWD\nextflow.log -task.processor dnanexus -task.processor dnanexus -w dxfs:///cloud/workspace/ $script $params
+    nextflow -log $PWD\nextflow.log -c ${DX_FS_ROOT}/nextflow.config -w dxfs:///cloud/workspace/ script.nf
     exit_status=$?
     set -e
 
@@ -35,13 +40,6 @@ process() {
     dx download --no-progress $task_script -o .command.sh
     [ ! -z $task_env ] && dx download --no-progress $task_env -o .command.env
     [ ! -z $task_input ] && download --no-progress $task_input -o .command.in
-
-
-    # stage input data  -- Download all the files specified in "input_files"
-    for input in "${input_files[@]}"
-    do
-        dx download "$input" --no-progress  ;
-    done
 
     # source the env file
     if [ -f .command.env ]; then
@@ -76,7 +74,7 @@ process() {
     dx upload .command.out --path $PRJ:$TARGET/.command.out --brief --no-progress --wait
     for item in "${outputs[@]}"; do
         for name in `ls $item 2>/dev/null`; do
-            dx upload $name --path "$PRJ:$TARGET/$name" --brief --no-progress --wait
+            dx upload $name --path "$PRJ:$(dirname $TARGET)/$name" --brief --no-progress --wait
         done
     done
 
