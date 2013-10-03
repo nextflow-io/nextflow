@@ -44,7 +44,6 @@ dependencies {
     compile 'commons-cli:commons-cli:1.2'
     compile 'com.google.guava:guava:14.0.1'
     compile 'com.beust:jcommander:1.30'
-    compile 'org.fusesource.jansi:jansi:1.9'
 
     compile 'org.apache.httpcomponents:httpclient:4.2.1'
     compile 'commons-io:commons-io:2.4'
