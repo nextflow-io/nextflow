@@ -28,7 +28,7 @@ main() {
 
 # Entry point for parallel sub-tasks.
 process() {
-    echo "Starting PROCESS subtask ${taskName}"
+    echo "Starting PROCESS subtask ${task_name}"
     set -x
 
     # stage input files to current folder
@@ -74,7 +74,7 @@ process() {
     PRJ=$(dx describe $task_script | grep Project | awk '{print $2}')
     TARGET=$(dx describe $task_script | grep Folder | awk '{print $2}')
     dx upload .command.out --path $PRJ:$TARGET/.command.out --brief --no-progress --wait
-    for item in "${outputs[@]}"; do
+    for item in "${output_files[@]}"; do
         for name in `ls $item 2>/dev/null`; do
             dx upload $name --path "$PRJ:$TARGET/$name" --brief --no-progress --wait
         done
