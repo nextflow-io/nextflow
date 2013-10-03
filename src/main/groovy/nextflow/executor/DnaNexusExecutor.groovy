@@ -146,7 +146,7 @@ class DnaNexusExecutor extends AbstractExecutor {
         Integer exitCode = result.output?.exit_code
         if( result.state == 'done' && exitCode != null ) {
             task.exitCode = exitCode
-            log.debug "Task exit code > ${task.exitCode}"
+            log.debug "Task ${task.name} > exit code > ${task.exitCode}"
         }
 
 
@@ -157,11 +157,11 @@ class DnaNexusExecutor extends AbstractExecutor {
         // the file that will receive the stdout
         Path taskOutputFile = scratch.resolve(COMMAND_OUT_FILENAME)
         if( !taskOutputFile.exists()) {
-            log.warn "Task output file does not exist: $taskOutputFile"
-            task.output = '(unknown)'
+            log.warn "Task ${task.name} > output file does not exist: $taskOutputFile"
+            task.output = '(none)'
         }
         else {
-            log.debug "Task out file: $taskOutputFile -- exists: ${taskOutputFile.exists()}; size: ${taskOutputFile.size()}\n ${taskOutputFile.text} "
+            log.debug "Task ${task.name} > out file: $taskOutputFile -- exists: ${taskOutputFile.exists()}; size: ${taskOutputFile.size()}\n ${taskOutputFile.text} "
             task.output = taskOutputFile
 
             if( taskConfig.echo ) {
@@ -176,14 +176,14 @@ class DnaNexusExecutor extends AbstractExecutor {
         while( true ) {
             sleep( 15_000 )
             result = DXAPI.jobDescribe(task.jobId as String)
-            log.debug "Task ${task.name} -- current result: ${result.toString()}\n"
+            log.debug "Task ${task.name} > current result: ${result.toString()}\n"
 
             String state = result.get('state').textValue()
             if( state in ['idle', 'waiting_on_input', 'runnable', 'running', 'waiting_on_output', 'terminating'] ) {
-                log.debug "State > ${state}"
+                log.debug "Task ${task.name} > State: ${state}"
                 continue
             }
-            log.debug "State > ${state}"
+            log.debug "Task ${task.name} > State: ${state}"
             break
         }
 

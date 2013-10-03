@@ -11,6 +11,7 @@ import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.exception.InvalidExitException
+import nextflow.fs.dx.DxPath
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
 /**
@@ -140,7 +141,18 @@ class MergeTaskProcessor extends TaskProcessor {
         scriptFile.text = commandToRun
 
         // the command to launch this command
-        def scriptCommand = scriptFile.toAbsolutePath()
+        def prefix
+        def scriptCommand
+        if( scriptFile instanceof DxPath) {
+            def fileId = (scriptFile as DxPath).getFileId()
+            def fileName = (scriptFile as DxPath).getFileName().toString()
+            prefix = "dx download --no-progress ${fileId}; "
+            scriptCommand = "./$fileName"
+        }
+        else {
+            prefix = ''
+            scriptCommand = scriptFile.toAbsolutePath()
+        }
 
         // check if some input have to be send
         if( inputVars.containsKey('-') ) {
@@ -153,7 +165,7 @@ class MergeTaskProcessor extends TaskProcessor {
         }
 
         // create a unique script collecting all the commands
-        mergeScript << interpreter << ' ' << scriptCommand << '\n'
+        mergeScript << prefix << interpreter << ' ' << scriptCommand << '\n'
 
     }
 
