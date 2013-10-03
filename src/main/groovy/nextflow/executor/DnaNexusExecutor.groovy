@@ -48,10 +48,10 @@ class DnaNexusExecutor extends AbstractExecutor {
 
     private List getInputFiles(TaskRun task) {
 
-        def map = task.code.delegate
+        def map = task.code?.delegate
         def inputs = []
 
-        map.each{ k, v ->
+        map?.each{ k, v ->
             if( v instanceof DxPath ) {
                 log.debug "Getting input DxPath ${k} for task ${task.name} >> ${v} >> ${v.getFileId()}"
                 inputs.add( (v as DxPath).getFileId() );

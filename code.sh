@@ -1,5 +1,7 @@
 #!/bin/bash
 set -e
+mkdir -p /cloud; dx-mount --project-id $DX_PROJECT_CONTEXT_ID /cloud
+
 
 # Main entry point for this app.
 main() {
@@ -7,19 +9,19 @@ main() {
     #apt-get install -y openjdk-6-jre-headless > /dev/null
 
     # create workspace path
-    dx mkdir -p /cloud/workspace
+    dx mkdir -p /workspace
 
     # Launch it !
     set +e
-    nextflow -log $PWD\nextflow.log -task.processor dnanexus -task.processor dnanexus -w dxfs:///cloud/workspace/ $script $params
+    nextflow -debug nextflow -log $PWD/nextflow.log -ps 5 -task.processor dnanexus -task.processor dnanexus -w dxfs:///workspace/ $script $params
     exit_status=$?
     set -e
 
     echo "nextflow exitstatus > ${exit_status}"
-    if [ "$exit_status" -ne "0" ]; then tail -n 100 $PWD\nextflow.log >&2; fi
+    if [ "$exit_status" -ne "0" ]; then tail -n 100 $PWD/nextflow.log >&2; fi
 
     # upload the nextflow log
-    log_file_id=$(dx upload $PWD\nextflow.log --brief --path ${DX_PROJECT_CONTEXT_ID}:nextflow.log )
+    log_file_id=$(dx upload $PWD/nextflow.log --brief --path ${DX_PROJECT_CONTEXT_ID}:nextflow.log )
     echo "nextflow.log > $log_file_id"
 
     # report the application exit status
@@ -34,7 +36,7 @@ process() {
     # stage input files to current folder
     dx download --no-progress $task_script -o .command.sh
     [ ! -z $task_env ] && dx download --no-progress $task_env -o .command.env
-    [ ! -z $task_input ] && download --no-progress $task_input -o .command.in
+    [ ! -z $task_input ] && dx download --no-progress $task_input -o .command.in
 
 
     # stage input data  -- Download all the files specified in "input_files"
@@ -83,22 +85,3 @@ process() {
 }
 
 
-# This entry point is run after all 'process' tasks have finished.
-postprocess() {
-  echo "Starting POSTPROCESS subtask"
-
-  # Replace this with whatever work is needed to combine the work from the
-  # PROCESS stages to make the final result.
-  #
-  # In this case we just concatenate all the files, so we end up with the
-  # original input file repeated numSubtasks times.
-  for process_output in "${process_outputs[@]}"
-  do
-    process_output_id=$(dx-jobutil-parse-link "$process_output")
-    dx cat $process_output_id >> combined_output
-  done
-
-  # Upload the output files and add the output.
-  combined_output_id=`dx upload combined_output --brief --no-progress`
-  dx-jobutil-add-output combined_output "$combined_output_id"
-}
