@@ -1,5 +1,4 @@
 package nextflow.processor
-
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -11,7 +10,6 @@ import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.exception.InvalidExitException
-import nextflow.fs.dx.DxPath
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
 /**
@@ -131,7 +129,7 @@ class MergeTaskProcessor extends TaskProcessor {
 
         // add the files to staged
         if( filesMap ) {
-            mergeScript << stagingFilesScript( filesMap )
+            mergeScript << executor.stagingFilesScript( filesMap )
         }
 
         // add the variables to be exported
@@ -142,37 +140,29 @@ class MergeTaskProcessor extends TaskProcessor {
         /*
          * save the script to execute into a separate unique-named file
          */
-        def index = currentIndex
-        def scriptName = ".merge_command.sh.${index.toString().padLeft(4,'0')}"
-        def scriptFile = mergeTempFolder.resolve(scriptName)
+        final index = currentIndex
+        final scriptName = ".merge_command.sh.${index.toString().padLeft(4,'0')}"
+        final scriptFile = mergeTempFolder.resolve(scriptName)
         scriptFile.text = commandToRun
 
         // the command to launch this command
-        def scriptCommand = scriptFile.toAbsolutePath()
-
-//        def prefix
-//        def scriptCommand
-//        if( scriptFile instanceof DxPath) {
-//            def fileId = (scriptFile as DxPath).getFileId()
-//            def fileName = (scriptFile as DxPath).getFileName().toString()
-//            prefix = "dx download --no-progress ${fileId}; "
-//            scriptCommand = "./$fileName"
-//        }
-//        else {
-//            prefix = ''
-//            scriptCommand = scriptFile.toAbsolutePath()
-//        }
-
+        def scriptCommand = scriptName
 
         // check if some input have to be send
         if( stdin ) {
-            def inputName = ".merge_command.input.$index"
-            def inputFile = mergeTempFolder.resolve( inputName )
+            final inputName = ".merge_command.input.$index"
+            final inputFile = mergeTempFolder.resolve( inputName )
             inputFile.text = stdin
 
             // pipe the user input to the user command
-            scriptCommand = "$scriptCommand < ${inputFile.toString()}"
+            scriptCommand = "$scriptCommand < ${inputName}"
+
+            // stage the input file
+            mergeScript << executor.stageInputFileScript(inputFile, inputName) << '\n'
         }
+
+        // stage this script itself
+        mergeScript << executor.stageInputFileScript(scriptFile, scriptName) << '\n'
 
         // create a unique script collecting all the commands
         mergeScript << interpreter << ' ' << scriptCommand << '\n'

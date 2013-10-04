@@ -24,10 +24,12 @@ import com.dnanexus.DXAPI
 import com.fasterxml.jackson.databind.JsonNode
 import groovy.util.logging.Slf4j
 import nextflow.fs.dx.DxPath
+import nextflow.processor.FileInParam
+import nextflow.processor.FileOutParam
 import nextflow.processor.TaskRun
 import nextflow.util.DxHelper
 /**
- * Executes script.nf indicated in code.sh in the DnaNexus environment
+ * Executes script.nf indicated in dxapp.sh in the DnaNexus environment
  * -->  https://www.dnanexus.com/
  *
  * @author Beatriz Martin San Juan <bmsanjuan@gmail.com>
@@ -46,27 +48,16 @@ class DnaNexusExecutor extends AbstractExecutor {
     private static final COMMAND_SCRIPT_FILENAME = '.command.sh'
 
 
-    private List getInputFiles(TaskRun task) {
 
-        def map = task.code?.delegate
-        def inputs = []
-
-        map?.each{ k, v ->
-            if( v instanceof DxPath ) {
-                log.debug "Getting input DxPath ${k} for task ${task.name} >> ${v} >> ${v.getFileId()}"
-                inputs.add( (v as DxPath).getFileId() );
-            }
+    @Override
+    protected String stageInputFileScript( Path path, String targetName ) {
+        if( path instanceof DxPath ) {
+            "dx download --no-progress ${(path as DxPath).getFileId()} -o $targetName"
         }
-
-        return inputs
+        else {
+            super.stageInputFileScript(path,targetName)
+        }
     }
-
-    private List getOutputFiles( TaskRun task ) {
-
-        new ArrayList(taskConfig.getOutputs().keySet())
-
-    }
-
 
     /**
      * Launches the task
@@ -81,7 +72,6 @@ class DnaNexusExecutor extends AbstractExecutor {
         final scratch = task.workDirectory
         log.debug "Lauching task > ${task.name} -- work folder: $scratch"
 
-
         /*
          * Saving the environment to a file.
          */
@@ -89,17 +79,12 @@ class DnaNexusExecutor extends AbstractExecutor {
         createEnvironmentFile(task, taskEnvFile)
 
         /*
-         * In case there's a task input file.
+         * In case there's a task input file, save it file
          */
         Path taskInputFile = null
-        if (task.input) {
-
-            /*
-             * Saving the task input file in the appropriate task's working folder
-             */
+        if (task.stdin) {
             taskInputFile = scratch.resolve(COMMAND_IN_FILENAME)
-            taskInputFile.text = task.input
-
+            taskInputFile.text = task.stdin
         }
 
 
@@ -110,17 +95,23 @@ class DnaNexusExecutor extends AbstractExecutor {
         taskScriptFile.text = task.processor.normalizeScript(task.script.toString())
         log.debug "Creating script file for task > ${task.name}\n\n "
 
+        /*
+         * create the stage inputs script
+         */
+        def stageScript = stagingFilesScript( task.getInputsByType(FileInParam) )
+
 
         // input job params
         def obj = [:]
         obj.task_name = task.name
         obj.task_script = (taskScriptFile as DxPath).getFileId()
+        // TODO complete env handling
         //obj.task_env = (taskEnvFile as DxPath).getFileId()
         if( taskInputFile ) {
             obj.task_input = (taskInputFile as DxPath).getFileId()
         }
-        obj.input_files = getInputFiles(task)
-        obj.output_files = getOutputFiles(task)
+        obj.stage_inputs = stageScript
+        obj.output_files = taskConfig.getOutputs().ofType(FileOutParam).collect { it.getName() }
 
         // create the input parameters for the job to be executed
         def processJobInputHash = createInputObject( obj, (String)taskConfig.instaceType )
@@ -158,11 +149,11 @@ class DnaNexusExecutor extends AbstractExecutor {
         Path taskOutputFile = scratch.resolve(COMMAND_OUT_FILENAME)
         if( !taskOutputFile.exists()) {
             log.warn "Task ${task.name} > output file does not exist: $taskOutputFile"
-            task.output = '(none)'
+            task.stdout = '(none)'
         }
         else {
             log.debug "Task ${task.name} > out file: $taskOutputFile -- exists: ${taskOutputFile.exists()}; size: ${taskOutputFile.size()}\n ${taskOutputFile.text} "
-            task.output = taskOutputFile
+            task.stdout = taskOutputFile
 
             if( taskConfig.echo ) {
                 print taskOutputFile.text
@@ -190,18 +181,6 @@ class DnaNexusExecutor extends AbstractExecutor {
         return DxHelper.jsonToObj(result)
     }
 
-
-    def resolveInputFile( def obj ) {
-        if( obj instanceof DxPath ) {
-            // call getFileId() to force resolving it to te real file before get as simple path name
-            obj.getFileId()
-            // now return the the file name as path
-            return obj.getFileName()
-        }
-        else {
-            obj
-        }
-    }
 
     /**
      * Building the ObjectNode which will be set in the job.
@@ -246,7 +225,7 @@ class DnaNexusExecutor extends AbstractExecutor {
      */
     @Override
     def getStdOutFile(TaskRun task) {
-        task.@output
+        task.@stdout
     }
 
 

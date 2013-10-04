@@ -25,6 +25,7 @@ import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
 import nextflow.processor.FileInParam
+import nextflow.processor.FileOutParam
 import nextflow.processor.TaskRun
 import nextflow.util.ByteDumper
 import nextflow.util.CmdLineHelper
@@ -161,7 +162,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
 
         // staging input files when required
         final files = task.getInputsByType(FileInParam)
-        final staging = task.processor.stagingFilesScript(files)
+        final staging = stagingFilesScript(files)
         if( staging ) {
             wrapper << staging << '\n'
         }
@@ -178,7 +179,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         wrapper << ') &> ' << cmdOutFile.toAbsolutePath() << '\n'
 
         // "un-stage" the result files
-        def resultFiles = taskConfig.outputs.names.findAll { it != '-' }
+        def resultFiles = taskConfig.outputs.ofType(FileOutParam).collect { it.getName() }
         if( resultFiles && changeDir ) {
             resultFiles.each { name -> wrapper << "for X in $name; do cp \$X $folder; done\n" }
             wrapper << 'rm -rf $NF_SCRATCH &'

@@ -166,15 +166,12 @@ class ParallelTaskProcessor extends TaskProcessor {
          */
         taskConfig.inputs.eachWithIndex { InParam param, int index ->
 
-            // *resolve* the input against the executor
-            def value = executor.resolveInputFile(values.get(index))
-
             // add the value to the task instance
-            task.setInput(param, value)
+            task.setInput(param, values.get(index))
 
             // otherwise put in on the map used to resolve the values evaluating the script
             if( param instanceof ValueInParam || param instanceof EachInParam ) {
-                map[ param.name ] = value
+                map[ param.name ] = values.get(index)
             }
 
         }
@@ -222,10 +219,6 @@ class ParallelTaskProcessor extends TaskProcessor {
 
             def hash = CacheHelper.hasher(keys).hash()
             Path folder = FileHelper.createWorkFolder(session.workDir, hash)
-//=======
-//            def hash = CacheHelper.hasher( [session.uniqueId, task.script, task.input, task.code.delegate] ).hash()
-//            Path folder = FileHelper.createWorkFolder(session.workDir, hash)
-//>>>>>>> beatriz/master
             def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder)
             if( !cached ) {
                 log.info "Running task > ${task.name}"

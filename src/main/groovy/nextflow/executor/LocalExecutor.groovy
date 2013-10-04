@@ -76,7 +76,7 @@ class LocalExecutor extends AbstractExecutor {
          * staging input files
          */
         final files = task.getInputsByType(FileInParam)
-        final staging = task.processor.stagingFilesScript(files)
+        final staging = stagingFilesScript(files)
 
         /*
          * create the runner script which will launch the script

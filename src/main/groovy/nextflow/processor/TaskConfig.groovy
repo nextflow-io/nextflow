@@ -65,6 +65,10 @@ class TaskConfig implements Map {
         log.debug "TaskConfig >> ownerScript: $ownerScript"
     }
 
+    protected BaseScript getOwnerScript() {
+        return ownerScript
+    }
+
     def boolean containsKey(String name) {
         return configProperties.containsKey(name)
     }
