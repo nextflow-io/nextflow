@@ -237,7 +237,7 @@ class Nextflow {
                 break;
 
             default:
-                retun fileNamePattern(file?.toString())
+                return fileNamePattern(file?.toString())
         }
 
     }

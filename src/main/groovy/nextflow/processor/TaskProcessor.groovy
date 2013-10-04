@@ -273,7 +273,7 @@ abstract class TaskProcessor {
 
             // link them
             names.eachWithIndex { String entry, int i ->
-                links << "ln -s ${files[i].absolutePath} $entry"
+                links << "ln -s ${files[i].toAbsolutePath()} $entry"
             }
         }
         links << '' // just to have new-line at the end of the script

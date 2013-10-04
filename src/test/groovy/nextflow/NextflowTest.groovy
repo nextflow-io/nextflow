@@ -22,7 +22,7 @@
  */
 
 package nextflow
-import java.nio.file.Path
+
 import java.nio.file.Paths
 
 import spock.lang.Specification
@@ -36,12 +36,12 @@ class NextflowTest extends Specification {
     def testFile() {
 
         expect:
-        Nextflow.file('file.log') == new File('file.log').canonicalFile
-        Nextflow.file('relative/file.test') == new File( new File('.').canonicalFile, 'relative/file.test')
-        Nextflow.file('/user/home/file.log') == new File('/user/home/file.log')
-        Nextflow.file('~') == new File( System.getProperty('user.home') )
-        Nextflow.file('~/file.test') == new File( System.getProperty('user.home'), 'file.test' )
-        Nextflow.file('~file.name') == new File('~file.name').canonicalFile
+        Nextflow.file('file.log').toFile() == new File('file.log').canonicalFile
+        Nextflow.file('relative/file.test').toFile() == new File( new File('.').canonicalFile, 'relative/file.test')
+        Nextflow.file('/user/home/file.log').toFile() == new File('/user/home/file.log')
+        Nextflow.file('~').toFile() == new File( System.getProperty('user.home') )
+        Nextflow.file('~/file.test').toFile() == new File( System.getProperty('user.home'), 'file.test' )
+        Nextflow.file('~file.name').toFile() == new File('~file.name').canonicalFile
 
     }
 
@@ -68,31 +68,35 @@ class NextflowTest extends Specification {
         new File('helo2').text = 'abc'
         new File('hello3').text = 'abc'
 
+        def h1 = Paths.get('hola1').toAbsolutePath()
+        def h2 = Paths.get('helo2').toAbsolutePath()
+        def h3 = Paths.get('hello3').toAbsolutePath()
+
         expect:
         Nextflow.file('ciao*') == []
-        Nextflow.file('hel*').sort() == [ new File('helo2').canonicalFile, new File('hello3').canonicalFile ].sort()
-        Nextflow.file('hol??') == [ new File('hola1').canonicalFile  ]
+        Nextflow.file('hel*').sort() == [ h2, h3 ].sort()
+        Nextflow.file('hol??') == [ h1  ]
 
 
         cleanup:
-        new File('hola1').delete()
-        new File('helo2').delete()
-        new File('hello3').delete()
+        h1.delete()
+        h2.delete()
+        h3.delete()
 
     }
 
-    def testStringAsPath() {
-
-        when:
-        Nextflow.registerTypes()
-        def x = 'hola'
-        then:
-        // Java String
-        'hola' as Path == Paths.get('hola')
-        // Groovy GString
-        "$x" as Path == Paths.get('hola')
-
-    }
+//    def testStringAsPath() {
+//
+//        when:
+//        Nextflow.registerTypes()
+//        def x = 'hola'
+//        then:
+//        // Java String
+//        'hola' as Path == Paths.get('hola')
+//        // Groovy GString
+//        "$x" as Path == Paths.get('hola')
+//
+//    }
 
 
 }

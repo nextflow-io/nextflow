@@ -122,7 +122,7 @@ abstract class BaseScript extends Script {
      * @param key An object to be used as cache-key creating the folder, it can be any object
      *          or an array or objects to use multi-objects key
      *
-     * @return The {@code File} to the cached directory or a newly created folder for the specified key
+     * @return The {@code Path} to the cached directory or a newly created folder for the specified key
      */
     Path cacheableDir( Object key ) {
         assert key, "Please specify the 'key' argument on 'cacheableDir' method"
@@ -151,7 +151,15 @@ abstract class BaseScript extends Script {
         def folder = cacheableDir(key)
 
         if( !name ) {
-            name = key instanceof File ? key.name : key.toString()
+            if( key instanceof File ) {
+                name =  key.getName()
+            }
+            else if( key instanceof Path ) {
+                name =  key.getName()
+            }
+            else {
+                name = key.toString()
+            }
         }
 
         return folder.resolve(name)
@@ -160,21 +168,21 @@ abstract class BaseScript extends Script {
     /**
      * @return Create a temporary directory
      */
-    File tempDir() {
-        def file = FileHelper.createTempFolder(session.workDir)
-        if( !file.exists() && !file.mkdirs() ) {
-            throw new IOException("Unable to create folder: $file -- Check file system permission" )
+    Path tempDir() {
+        def path = FileHelper.createTempFolder(session.workDir)
+        if( !path.exists() && !path.mkdirs() ) {
+            throw new IOException("Unable to create folder: $path -- Check file system permission" )
         }
-        return file
+        return path
     }
 
     /**
      * @return Create a temporary file
      */
-    File tempFile( String name = 'temp.file') {
+    Path tempFile( String name = 'temp.file') {
 
         def folder = tempDir()
-        return new File(folder, name)
+        return folder.resolve(name)
     }
 
     /**

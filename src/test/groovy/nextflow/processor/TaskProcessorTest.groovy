@@ -18,6 +18,9 @@
  */
 
 package nextflow.processor
+
+import java.nio.file.Paths
+
 import nextflow.Session
 import nextflow.executor.NopeExecutor
 import nextflow.script.BaseScript
@@ -103,8 +106,8 @@ class TaskProcessorTest extends Specification {
          * an index number is added to the specified name
          */
         when:
-        def list1 = processor.expandWildcards('file_name', new File('x'))
-        def list2 = processor.expandWildcards('file_name', [new File('x'), new File('y')])
+        def list1 = processor.expandWildcards('file_name', Paths.get('x'))
+        def list2 = processor.expandWildcards('file_name', [Paths.get('x'), Paths.get('y')])
         then:
         list1 == ['file_name']
         list2 == ['file_name1', 'file_name2']
@@ -115,8 +118,8 @@ class TaskProcessorTest extends Specification {
          * When a collection of files is provided, the name is expanded to the index number
          */
         when:
-        list1 = processor.expandWildcards('file*.fa', new File('x'))
-        list2 = processor.expandWildcards('file_*.fa', [new File('x'), new File('y'), new File('z')])
+        list1 = processor.expandWildcards('file*.fa', Paths.get('x'))
+        list2 = processor.expandWildcards('file_*.fa', [Paths.get('x'), Paths.get('y'), Paths.get('z')])
         then:
         list1 == ['file.fa']
         list2 == ['file_1.fa', 'file_2.fa', 'file_3.fa']
@@ -125,7 +128,7 @@ class TaskProcessorTest extends Specification {
          * The question mark wildcards *always* expand to an index number
          */
         when:
-        list1 = processor.expandWildcards('file?.fa', new File('0'))
+        list1 = processor.expandWildcards('file?.fa', Paths.get('0'))
         list2 = processor.expandWildcards('file_???.fa', 1..4 )
         def list3 = processor.expandWildcards('file_?.fa', 1..12 )
         then:
@@ -134,8 +137,8 @@ class TaskProcessorTest extends Specification {
         list3 == ['file_1.fa', 'file_2.fa', 'file_3.fa', 'file_4.fa', 'file_5.fa', 'file_6.fa', 'file_7.fa', 'file_8.fa', 'file_9.fa', 'file_10.fa', 'file_11.fa', 'file_12.fa']
 
         when:
-        list1 = processor.expandWildcards('*', new File('a'))
-        list2 = processor.expandWildcards('*', [new File('x'), new File('y'), new File('z')])
+        list1 = processor.expandWildcards('*', Paths.get('a'))
+        list2 = processor.expandWildcards('*', [Paths.get('x'), Paths.get('y'), Paths.get('z')])
         then:
         list1 == ['a']
         list2 == ['x','y','z']
@@ -156,8 +159,8 @@ class TaskProcessorTest extends Specification {
         def param1 = new FileInParam(owner, 'file.txt')
         def param2 = new FileInParam(owner, 'seq_*.fa')
         Map<FileInParam,Object> files = [:]
-        files[param1] = new File('/home/data/sequences')
-        files[param2] = [new File('/home/data/file1'), new File('/home/data/file2'), new File('/home/data/file3') ]
+        files[param1] = Paths.get('/home/data/sequences')
+        files[param2] = [Paths.get('/home/data/file1'), Paths.get('/home/data/file2'), Paths.get('/home/data/file3') ]
 
         when:
         def script = processor.stagingFilesScript(files)
