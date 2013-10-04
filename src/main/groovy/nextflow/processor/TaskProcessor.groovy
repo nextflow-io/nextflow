@@ -17,6 +17,8 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.processor
+
+import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
@@ -282,16 +284,16 @@ abstract class TaskProcessor {
 
     /**
      * An input file parameter can be provided with any value other than a file.
-     * This function normalize a generic value to a {@code File} create a temporary file
+     * This function normalize a generic value to a {@code Path} create a temporary file
      * in the for it.
      *
      * @param input The input value
      * @param altName The name to be used when a temporary file is created.
-     * @return The {@code File} that will be staged in the task working folder
+     * @return The {@code Path} that will be staged in the task working folder
      */
-    protected File stageFile( Object input, String altName ) {
+    protected Path stageFile( Object input, String altName ) {
 
-        if( input instanceof File ) {
+        if( input instanceof Path ) {
             return input
         }
 
@@ -307,7 +309,7 @@ abstract class TaskProcessor {
      * @param name A file name with may contain a wildcard character star {@code *} or question mark {@code ?}.
      *  Only one occurrence can be specified for star or question mark widlcards.
      *
-     * @param value Any value that have to be managed as an input files. Values other than {@code File} are converted
+     * @param value Any value that have to be managed as an input files. Values other than {@code Path} are converted
      * to a string value, using the {@code #toString} method and saved in the local file-system. Value of type {@code Collection}
      * are expanded to multiple values accordingly.
      *
@@ -321,7 +323,7 @@ abstract class TaskProcessor {
         if( name == '*' ) {
             def files = value instanceof Collection ? value : [value]
             files.each {
-                if( it instanceof File ) { result << it.name }
+                if( it instanceof Path ) { result << it.name }
                 else throw new IllegalArgumentException("Not a valid value argument for 'expandWildcards' method: $it")
             }
             return result
@@ -422,7 +424,7 @@ abstract class TaskProcessor {
     }
 
 
-    final protected File createTaskFolder( File folder, HashCode hash  ) {
+    final protected Path createTaskFolder( Path folder, HashCode hash  ) {
 
         folderLock.lock()
         try {
@@ -453,15 +455,15 @@ abstract class TaskProcessor {
     }
 
 
-    final checkCachedOutput(TaskRun task, File folder) {
+    final boolean checkCachedOutput(TaskRun task, Path folder) {
         if( !folder.exists() ) {
             log.trace "Cached folder does not exists > $folder -- return false"
             // no folder -> no cached result
             return false
         }
 
-        def exitFile = new File(folder,'.exitcode')
-        if( exitFile.isEmpty() ) {
+        def exitFile = folder.resolve('.exitcode')
+        if( FileHelper.isEmpty(exitFile) ) {
             log.trace "Exit file is empty > $exitFile -- return false"
             return false
         }
@@ -484,7 +486,7 @@ abstract class TaskProcessor {
             // -- print out the cached tasks output when 'echo' is true
             if( taskConfig.echo ) {
                 def out = executor.getStdOutFile(task)
-                if( out instanceof File )  {
+                if( out instanceof Path )  {
                     System.out.print(out.text)
                 }
                 else if( out ) {
@@ -552,7 +554,7 @@ abstract class TaskProcessor {
                     message << "  $it"
                 }
 
-                message << "\nCommand work dir:\n  ${task.workDirectory}"
+                message << "\nCommand work dir:\n  ${task.workDirectory.toString()}"
             }
 
             message << "\nTip: when you have fixed the problem you may continue the execution appending to the nextflow command line the '-resume' option"
@@ -611,7 +613,7 @@ abstract class TaskProcessor {
             switch( param ) {
             case StdOutParam:
                 log.trace "Task $name > Binding '$value' to stdout"
-                processor.bindOutput(index, value instanceof File ? value.text : value?.toString())
+                processor.bindOutput(index, value instanceof Path ? value.text : value?.toString())
                 break
 
             case FileOutParam:
@@ -683,9 +685,9 @@ abstract class TaskProcessor {
                 }
                 break
 
-
             default:
                 throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
+
         }
 
     }

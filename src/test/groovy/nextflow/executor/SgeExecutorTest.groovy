@@ -18,6 +18,9 @@
  */
 
 package nextflow.executor
+
+import java.nio.file.Paths
+
 import nextflow.Session
 import nextflow.processor.ParallelTaskProcessor
 import nextflow.processor.TaskConfig
@@ -48,7 +51,7 @@ class SgeExecutorTest extends Specification {
 
         when:
         def task = new TaskRun(name: 'my-task', index: 9, processor: processor)
-        task.workDirectory = new File('/abc')
+        task.workDirectory = Paths.get('/abc')
 
         then:
         executor.getSubmitCommandLine(task) == 'qsub -wd /abc -N nf-task-9 -o /dev/null -j y -sync y -V -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'.split(' ') as List

@@ -19,12 +19,14 @@
 
 apply plugin: 'groovy'
 apply plugin: 'codenarc'
-version = '0.4.0'
+version = '0.4.1'
 
 repositories {
     flatDir(dirs: file('lib'))
     mavenCentral()
     maven { url 'http://uk.maven.org/maven2' }
+    maven { url 'http://dl.bintray.com/paolo-ditommaso/maven'}
+    mavenLocal()
 }
 
 dependencies {
@@ -42,9 +44,16 @@ dependencies {
     compile 'commons-cli:commons-cli:1.2'
     compile 'com.google.guava:guava:14.0.1'
     compile 'com.beust:jcommander:1.30'
-    compile 'jline:jline:2.9'
-    compile 'org.fusesource.jansi:jansi:1.9'
 
+
+    compile 'dnanexus:dnanexus-api:0.1.1'
+    compile 'nextflow:nextflow-dxfs:0.3.1'
+    compile 'org.apache.httpcomponents:httpclient:4.2.1'
+    compile 'com.fasterxml.jackson.core:jackson-core:2.0.5'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.0.5'
+
+
+    testCompile 'org.codehaus.groovy:groovy-json:2.1.7'
     testCompile ('org.spockframework:spock-core:0.7-groovy-2.0')
     testCompile ('cglib:cglib-nodep:2.2')
 
@@ -177,7 +186,7 @@ gradle.taskGraph.afterTask { Task task, TaskState state ->
 def oneJarShellStub = "./one-jar/launcher.stub"
 def oneJarLibPath = "./one-jar/one-jar-ant-task-0.97.jar"
 def oneJarTempPath = "$buildDir/tmp/nextflow-${version}.run.jar"
-def oneJarDistPath = "$buildDir/pack/nextflow"
+def oneJarDistPath = "./resources/usr/bin/nextflow"
 
 task pack(dependsOn: compile) << {
 
@@ -205,6 +214,8 @@ task pack(dependsOn: compile) << {
         lib {
             fileset dir: "$buildDir/dependency-libs"
         }
+
+        //fileset( dir: "$buildDir/resources/main" )
     }
 
 
@@ -238,4 +249,3 @@ task uploadOnejar ( type: Copy, dependsOn: pack ) {
     into '/Users/pditommaso/Dropbox/Public/nextflow/'
 
 }
-

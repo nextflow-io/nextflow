@@ -18,6 +18,9 @@
  */
 
 package nextflow.processor
+
+import java.nio.file.Path
+
 /**
  * Models a task instance
  *
@@ -37,6 +40,11 @@ class TaskRun {
      * Task unique id
      */
     def id
+
+    /**
+     * The jobid as provided by the underlying execution system (process, SGE jobid, dnanexus jobid, etc)
+     */
+    def jobId
 
     /**
      * Task index within its execution group
@@ -95,7 +103,7 @@ class TaskRun {
 
     def String getStdout() {
 
-        if( stdout instanceof File ) {
+        if( stdout instanceof Path ) {
             return stdout.text
         }
         else {
@@ -108,7 +116,7 @@ class TaskRun {
     /**
      * The directory used to run the task
      */
-    File workDirectory
+    Path workDirectory
 
     /**
      * Task start time
@@ -131,8 +139,8 @@ class TaskRun {
     def script
 
     def String getScript() {
-        if ( script instanceof File ) {
-            script.text
+        if( script instanceof Path ) {
+            return script.text
         }
         else {
             script?.toString()

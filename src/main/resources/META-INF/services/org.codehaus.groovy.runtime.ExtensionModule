@@ -20,4 +20,4 @@
 
 moduleName=chunk-module
 moduleVersion=1.0
-extensionClasses=nextflow.extension.NextflowExtensions,nextflow.extension.OtherExtensions
+extensionClasses=nextflow.extension.NextflowExtensions,nextflow.extension.FilesExtensions,org.codehaus.groovy.runtime.NioGroovyMethods

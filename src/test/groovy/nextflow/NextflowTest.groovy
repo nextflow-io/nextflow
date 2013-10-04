@@ -1,5 +1,9 @@
 /*
+<<<<<<< HEAD
  * Copyright (c) 2012, the authors.
+=======
+ * Copyright (c) 2013, the authors.
+>>>>>>> beatriz/master
  *
  *   This file is part of 'Nextflow'.
  *
@@ -18,9 +22,10 @@
  */
 
 package nextflow
+import java.nio.file.Path
+import java.nio.file.Paths
 
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -37,6 +42,22 @@ class NextflowTest extends Specification {
         Nextflow.file('~') == new File( System.getProperty('user.home') )
         Nextflow.file('~/file.test') == new File( System.getProperty('user.home'), 'file.test' )
         Nextflow.file('~file.name') == new File('~file.name').canonicalFile
+
+    }
+
+
+
+    def testFile2() {
+
+        when:
+        def current = new File('.').canonicalPath
+
+        then:
+        Nextflow.file('hola').toString() == current + '/hola'
+        Nextflow.file( new File('path/file.txt') ).toString() == current + '/path/file.txt'
+        Nextflow.file( Paths.get('some/path') ).toString() == current + '/some/path'
+        Nextflow.file( '/abs/path/file.txt' ) == Paths.get('/abs/path/file.txt')
+
 
     }
 
@@ -59,4 +80,19 @@ class NextflowTest extends Specification {
         new File('hello3').delete()
 
     }
+
+    def testStringAsPath() {
+
+        when:
+        Nextflow.registerTypes()
+        def x = 'hola'
+        then:
+        // Java String
+        'hola' as Path == Paths.get('hola')
+        // Groovy GString
+        "$x" as Path == Paths.get('hola')
+
+    }
+
+
 }

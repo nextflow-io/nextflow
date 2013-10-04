@@ -18,6 +18,10 @@
  */
 
 package nextflow.util
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.spi.FileSystemProvider
 
 import com.google.common.hash.HashCode
 import com.google.common.hash.Hashing
@@ -124,6 +128,7 @@ class FileHelper {
      * @param path
      * @return
      */
+    @Deprecated
     static File tryCreateDir( File path ) {
         assert path
 
@@ -197,7 +202,25 @@ class FileHelper {
         }
     }
 
+    def static boolean isEmpty( Path path ) {
+        if( !Files.exists(path) ) {
+            return true
+        }
+
+        if ( Files.isDirectory(path) ) {
+            Iterator<Path> itr = Files.newDirectoryStream(path).iterator()
+            return !itr.hasNext()
+        }
+        else {
+            Files.size(path)==0
+        }
+    }
+
     def static isNotEmpty( File path ) {
+        !isEmpty(path)
+    }
+
+    def static isNotEmpty( Path path ) {
         !isEmpty(path)
     }
 
@@ -207,24 +230,24 @@ class FileHelper {
      * @param hash
      * @return
      */
-    final static File createWorkFolder(File bashPath, HashCode hash) {
+    final static Path createWorkFolder(Path bashPath, HashCode hash) {
         assert bashPath
         assert hash
 
         def bucket = Hashing.consistentHash(hash, 100).toString().padLeft(2,'0')
-        def folder = new File(bashPath, "${bucket}/${hash.toString()}").absoluteFile
+        def folder = bashPath.resolve("${bucket}/${hash.toString()}")
 
-        return folder
+        return folder.toAbsolutePath()
     }
 
-    final static File createTempFolder(File basePath) {
+    final static Path createTempFolder(Path basePath) {
         assert basePath
 
         int count = 0
         while( true ) {
             def hash = CacheHelper.hasher(rndGen.nextLong()).hash()
             def bucket = Hashing.consistentHash(hash, 100).toString().padLeft(2,'0')
-            def result = new File(basePath, "tmp/$bucket/${hash.toString()}")
+            def result = basePath.resolve( "tmp/$bucket/${hash.toString()}" )
 
             if( result.exists() ) {
                 if( ++count > 100 ) { throw new IOException("Unable to create a unique temporary path: $result") }
@@ -234,8 +257,38 @@ class FileHelper {
                 throw new IOException("Unable to create temporary parth: $result -- Verify file system access permission")
             }
 
-            return result.absoluteFile
+            return result.toAbsolutePath()
         }
 
+    }
+
+    static Path asPath( String str ) {
+        assert str
+
+        log.debug "path string: $str"
+        int p = str.indexOf('://')
+        if( p == -1  ) {
+            return Paths.get(str)
+        }
+
+        String scheme = str.substring(0, p).trim()
+        def provider = getProviderByScheme(scheme)
+        if( !provider ) {
+            throw new IllegalArgumentException("Unknown file scheme: $scheme");
+        }
+
+        return provider.getPath( URI.create(str) )
+
+    }
+
+
+    private static FileSystemProvider getProviderByScheme( String scheme ) {
+
+        for (FileSystemProvider provider : FileSystemProvider.installedProviders()) {
+            if ( scheme == provider.getScheme() ) {
+                return provider;
+            }
+        }
+        return null;
     }
 }

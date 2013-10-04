@@ -19,6 +19,8 @@
 
 package nextflow.executor
 
+import java.nio.file.Paths
+
 import nextflow.Session
 import nextflow.processor.ParallelTaskProcessor
 import nextflow.processor.TaskConfig
@@ -50,7 +52,7 @@ class LsfExecutorTest extends Specification {
 
         when:
         def task = new TaskRun(name: 'my-task', index: 9, processor: processor)
-        task.workDirectory = new File('/xxx')
+        task.workDirectory = Paths.get('/xxx')
 
         then:
         executor.getSubmitCommandLine(task) == ['bsub','-K','-cwd','/xxx','-o','.job.out','-q', 'hpc-queue1', '-J', 'nf-task-9', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './.job.sh']

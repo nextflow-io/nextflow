@@ -1,5 +1,6 @@
 package nextflow.processor
 
+import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.InheritConstructors
@@ -10,9 +11,9 @@ import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.exception.InvalidExitException
+import nextflow.fs.dx.DxPath
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
-
 /**
  * Defines the 'merge' processing policy
  *
@@ -25,7 +26,7 @@ class MergeTaskProcessor extends TaskProcessor {
 
     private List<Integer> mergeHashesList
 
-    private File mergeTempFolder
+    private Path mergeTempFolder
 
     private AtomicInteger mergeIndex = new AtomicInteger()
 
@@ -143,16 +144,30 @@ class MergeTaskProcessor extends TaskProcessor {
          */
         def index = currentIndex
         def scriptName = ".merge_command.sh.${index.toString().padLeft(4,'0')}"
-        def scriptFile = new File(mergeTempFolder, scriptName)
+        def scriptFile = mergeTempFolder.resolve(scriptName)
         scriptFile.text = commandToRun
 
         // the command to launch this command
-        def scriptCommand = scriptFile.absolutePath
+        def scriptCommand = scriptFile.toAbsolutePath()
+
+//        def prefix
+//        def scriptCommand
+//        if( scriptFile instanceof DxPath) {
+//            def fileId = (scriptFile as DxPath).getFileId()
+//            def fileName = (scriptFile as DxPath).getFileName().toString()
+//            prefix = "dx download --no-progress ${fileId}; "
+//            scriptCommand = "./$fileName"
+//        }
+//        else {
+//            prefix = ''
+//            scriptCommand = scriptFile.toAbsolutePath()
+//        }
+
 
         // check if some input have to be send
         if( stdin ) {
             def inputName = ".merge_command.input.$index"
-            def inputFile = new File( mergeTempFolder, inputName )
+            def inputFile = mergeTempFolder.resolve( inputName )
             inputFile.text = stdin
 
             // pipe the user input to the user command
@@ -183,7 +198,7 @@ class MergeTaskProcessor extends TaskProcessor {
             def hash = hasher.hash()
             log.trace "Merging task > $name -- hash: $hash"
 
-            def folder = FileHelper.createWorkFolder(session.workDir, hash)
+            Path folder = FileHelper.createWorkFolder(session.workDir, hash)
             log.trace "Merging task > $name -- trying cached: $folder"
 
             def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder)
@@ -202,7 +217,7 @@ class MergeTaskProcessor extends TaskProcessor {
                 launchTask( task )
 
                 // -- save the exit code
-                new File(folder, '.exitcode').text = task.exitCode
+                folder.resolve('.exitcode').text = task.exitCode
 
                 // -- check if terminated successfully
                 boolean success = (task.exitCode in taskConfig.validExitCodes)
@@ -219,7 +234,6 @@ class MergeTaskProcessor extends TaskProcessor {
         }
     }
 
-
     @Override
     protected void collectOutputs( TaskRun task, OutParam param ) {
 
@@ -231,6 +245,8 @@ class MergeTaskProcessor extends TaskProcessor {
         // fallback on the default behavior
         super.collectOutputs(task, param)
     }
+
+
 
 
     /**

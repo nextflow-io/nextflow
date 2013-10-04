@@ -1,4 +1,7 @@
 package nextflow.processor
+
+import java.nio.file.Path
+
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
@@ -163,15 +166,19 @@ class ParallelTaskProcessor extends TaskProcessor {
          */
         taskConfig.inputs.eachWithIndex { InParam param, int index ->
 
+            // *resolve* the input against the executor
+            def value = executor.resolveInputFile(values.get(index))
+
             // add the value to the task instance
-            task.setInput(param, values.get(index))
+            task.setInput(param, value)
 
             // otherwise put in on the map used to resolve the values evaluating the script
             if( param instanceof ValueInParam || param instanceof EachInParam ) {
-                map[ param.name ] = values.get(index)
+                map[ param.name ] = value
             }
 
         }
+
 
         /*
          * initialize the task code to be executed
@@ -214,7 +221,11 @@ class ParallelTaskProcessor extends TaskProcessor {
             task.inputs.each { keys << it.key.name << it.value }
 
             def hash = CacheHelper.hasher(keys).hash()
-            def folder = FileHelper.createWorkFolder(session.workDir, hash)
+            Path folder = FileHelper.createWorkFolder(session.workDir, hash)
+//=======
+//            def hash = CacheHelper.hasher( [session.uniqueId, task.script, task.input, task.code.delegate] ).hash()
+//            Path folder = FileHelper.createWorkFolder(session.workDir, hash)
+//>>>>>>> beatriz/master
             def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder)
             if( !cached ) {
                 log.info "Running task > ${task.name}"
@@ -224,7 +235,7 @@ class ParallelTaskProcessor extends TaskProcessor {
                 launchTask( task )
 
                 // save the exit code
-                new File(folder, '.exitcode').text = task.exitCode
+                folder.resolve('.exitcode').text = task.exitCode
 
                 // check if terminated successfully
                 boolean success = (task.exitCode in taskConfig.validExitCodes)

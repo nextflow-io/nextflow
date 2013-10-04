@@ -18,6 +18,9 @@
  */
 
 package nextflow.executor
+
+import java.nio.file.Path
+
 import groovy.util.logging.Slf4j
 import nextflow.processor.FileInParam
 import nextflow.processor.TaskRun
@@ -59,13 +62,13 @@ class LocalExecutor extends AbstractExecutor {
         /*
          * save the environment to a file
          */
-        createEnvironmentFile(task, new File(scratch,COMMAND_ENV_FILENAME))
+        createEnvironmentFile(task, scratch.resolve(COMMAND_ENV_FILENAME))
 
         /*
          * save the main script file
          */
         final scriptStr = task.processor.normalizeScript(task.script.toString())
-        final scriptFile = new File(scratch, COMMAND_SCRIPT_FILENAME)
+        final scriptFile = scratch.resolve(COMMAND_SCRIPT_FILENAME)
         scriptFile.text = scriptStr
         final interpreter = task.processor.fetchInterpreter(scriptStr)
 
@@ -85,7 +88,7 @@ class LocalExecutor extends AbstractExecutor {
         wrapperScript << "$interpreter $COMMAND_SCRIPT_FILENAME"
         wrapperScript << ''
 
-        def wrapperFile = new File(scratch, COMMAND_WRAPPER_FILENAME)
+        def wrapperFile = scratch.resolve(COMMAND_WRAPPER_FILENAME)
         wrapperFile.text = task.processor.normalizeScript(wrapperScript.join('\n'))
 
         // the cmd list to launch it
@@ -98,7 +101,7 @@ class LocalExecutor extends AbstractExecutor {
         task.script = scriptFile
 
         ProcessBuilder builder = new ProcessBuilder()
-                .directory(scratch)
+                .directory(scratch.toFile())
                 .command(cmd)
                 .redirectErrorStream(true)
 
@@ -111,7 +114,7 @@ class LocalExecutor extends AbstractExecutor {
             pipeTaskInput( task, process )
         }
 
-        File fileOut = new File(scratch, COMMAND_OUT_FILENAME)
+        Path fileOut = scratch.resolve(COMMAND_OUT_FILENAME)
         ByteDumper dumper = null
         try {
             // -- print the process out if it is not capture by the output
@@ -119,7 +122,7 @@ class LocalExecutor extends AbstractExecutor {
             //    * The process stdout is captured in two condition:
             //      when the flag 'echo' is set or when it goes in the output channel (outputs['-'])
             //
-            BufferedOutputStream streamOut = new BufferedOutputStream( new FileOutputStream(fileOut) )
+            BufferedOutputStream streamOut = fileOut.newOutputStream()
 
             def handler = { byte[] data, int len ->
                 streamOut.write(data,0,len)
@@ -161,7 +164,7 @@ class LocalExecutor extends AbstractExecutor {
     @Override
     def getStdOutFile( TaskRun task ) {
 
-        new File(task.workDirectory, COMMAND_OUT_FILENAME)
+        task.workDirectory.resolve(COMMAND_OUT_FILENAME)
 
     }
 

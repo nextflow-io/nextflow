@@ -19,6 +19,9 @@
 
 package nextflow
 
+import java.nio.file.Path
+import java.nio.file.Paths
+
 import com.google.common.collect.LinkedHashMultimap
 import com.google.common.collect.Multimap
 import groovy.util.logging.Slf4j
@@ -66,7 +69,7 @@ class Session {
     /**
      * The folder where tasks temporary files are stored
      */
-    def File workDir = new File('./work')
+    def Path workDir = Paths.get('./work')
 
     /**
      * The folder where the main script is contained

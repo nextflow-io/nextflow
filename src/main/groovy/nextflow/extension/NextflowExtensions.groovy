@@ -18,6 +18,10 @@
  */
 
 package nextflow.extension
+
+import java.nio.charset.Charset
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicLong
 
 import groovy.transform.TupleConstructor
@@ -44,6 +48,15 @@ import groovyx.gpars.scheduler.Pool
  */
 @Slf4j
 class NextflowExtensions {
+
+
+    def static String rightTrim(String self) {
+        self.replaceAll(/\s+$/,"")
+    }
+
+    def static String leftTrim( String self ) {
+        self.replaceAll(/^\s+/,"")
+    }
 
     /**
      * Splits a {@code CharSequence} in text chunks having the specified number of lines
@@ -164,6 +177,16 @@ class NextflowExtensions {
         chunkLines( new FileReader(file), options, block )
     }
 
+    static void chunkLines( Path file, int n = 1, Closure block ) {
+        assert file
+        chunkLines( Files.newBufferedReader(file, Charset.defaultCharset()), n, block )
+    }
+
+
+    static void chunkLines( Path file, Map options, Closure block ) {
+        assert file
+        chunkLines( Files.newBufferedReader(file, Charset.defaultCharset()), options, block )
+    }
 
     /**
      * Splits a {@code InputStream} in text chunks having the specified number of lines
@@ -268,6 +291,11 @@ class NextflowExtensions {
         chunkFasta( new FileReader(file), n, block )
     }
 
+    static void chunkFasta( Path path, int n = 1, Closure block ) {
+        assert path
+        chunkFasta( Files.newBufferedReader(path, Charset.defaultCharset()), n, block )
+    }
+
 
     /**
      * Splits a text formatted in multi-FASTA format in chunks containing the specified number of 'sequences'
@@ -285,6 +313,12 @@ class NextflowExtensions {
         assert file
         chunkFasta( new FileReader(file), options, block )
     }
+
+    static void chunkFasta( Path file, Map options, Closure block ) {
+        assert file
+        chunkFasta( Files.newBufferedReader(file, Charset.defaultCharset()), options, block )
+    }
+
 
     /**
      * Splits a text formatted in multi-FASTA format in chunks containing the specified number of 'sequences'
@@ -614,7 +648,6 @@ class NextflowExtensions {
         }
 
     }
-
 
 
 }

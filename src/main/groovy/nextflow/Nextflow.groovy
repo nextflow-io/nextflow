@@ -18,21 +18,50 @@
  */
 
 package nextflow
+import java.nio.file.Path
 
+import groovy.io.FileType
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.PoisonPill
-import org.apache.commons.io.filefilter.WildcardFileFilter
-
+import nextflow.util.FileHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 class Nextflow {
+
+    static registerTypes() {
+
+        String.metaClass.define {
+            oldAsType = String.metaClass.getMetaMethod("asType", [Class] as Class[])
+            asType = { Class clazz ->
+                if (clazz == Path) {
+                    FileHelper.asPath((String)delegate)
+                }
+                else {
+                    oldAsType.invoke(delegate, clazz)
+                }
+            }
+        }
+
+        GString.metaClass.define {
+            oldAsType = String.metaClass.getMetaMethod("asType", [Class] as Class[])
+            asType = { Class clazz ->
+                if (clazz == Path) {
+                    FileHelper.asPath((String)delegate)
+                }
+                else {
+                    oldAsType.invoke(delegate, clazz)
+                }
+            }
+        }
+
+    }
 
 
     /**
@@ -153,8 +182,9 @@ class Nextflow {
      * @param name
      * @return
      */
-    static file( def name ) {
-        assert name
+    static def fileNamePattern( def name ) {
+
+        if( !name ) return null
 
         /*
          * expand special user home '~' character
@@ -170,27 +200,44 @@ class Nextflow {
         /*
          * split the parent path from the file name
          */
-        def file = new File(sName)
-        def base = (file.parentFile ?: new File('.')).canonicalFile
-        def pattern = file.name
+        final path = FileHelper.asPath(sName).normalize().toAbsolutePath()
+        def base = path.getParent()
+        def filePattern = path.getFileName().toString()
 
         /*
          * punctual file, just return it
          */
-        if( !pattern.contains('*') && !pattern.contains('?') ) {
-            return new File(base, pattern)
+        if( !filePattern.contains('*') && !filePattern.contains('?') ) {
+            return path
         }
 
         /*
          * when the name contains a wildcard character, it returns the list of
          * all matching files (eventually empty)
+         *
+         * TODO use newDirectoryStream here and glob eventually
          */
-        else {
-            def filter = new WildcardFileFilter(pattern)
-            def found = base.list( filter )
-            def result = new ArrayList(found.size())
-            found.each { result << new File(base, it) }
-            return result
+        filePattern = filePattern.replace("?", ".?").replace("*", ".*")
+        def result = new LinkedList()
+        base.eachFileMatch(FileType.FILES, ~/$filePattern/ ) { result << it }
+        return result
+
+    }
+
+    static file( def file ) {
+        assert file
+
+        switch (file) {
+            case Path:
+                return ((Path) file).normalize().toAbsolutePath()
+                break;
+
+            case File:
+                return ((File) file).toPath().normalize().toAbsolutePath()
+                break;
+
+            default:
+                retun fileNamePattern(file?.toString())
         }
 
     }

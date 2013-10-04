@@ -1,0 +1,20 @@
+{
+  "name": "nextflow",
+  "title": "Nextflow pipelines framework",
+  "summary": "Executes nextflow pipelines in DnaNexus",
+  "dxapi": "1.0.0",
+  "access": {"project": "CONTRIBUTE"},
+  "inputSpec": [
+      { "name": "script", "class": "string", "optional": false, "default": "/examples/basic.nf" },
+      { "name": "params", "class": "string", "optional": true }
+  ],
+  "outputSpec": [ ],
+  "runSpec": {
+    "file": "code.sh",
+    "interpreter": "bash",
+    "execDepends": [
+      {"name": "openjdk-7-jre-headless"}
+    ]
+  },
+  "version": "0.0.1"
+}

@@ -18,6 +18,9 @@
  */
 
 package nextflow.executor
+
+import java.nio.file.Paths
+
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 
@@ -33,7 +36,7 @@ class NopeExecutor extends AbstractExecutor {
     void launchTask( TaskRun task ) {
         log.info ">> launching nope task: ${task}"
 
-        task.workDirectory = new File('.').absoluteFile
+        task.workDirectory = Paths.get('.').toAbsolutePath()
         task.status = TaskRun.Status.TERMINATED
         task.exitCode = 0
 
