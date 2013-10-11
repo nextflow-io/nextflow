@@ -18,10 +18,15 @@
  */
 
 package nextflow.util
+
+import java.nio.file.Path
+
 import com.google.common.hash.HashFunction
 import com.google.common.hash.Hasher
 import com.google.common.hash.Hashing
 import groovy.util.logging.Slf4j
+import nextflow.processor.FileHolder
+
 /**
  * Provide helper method to handle caching
  *
@@ -99,6 +104,19 @@ class CacheHelper {
                     hasher = CacheHelper.hasher( hasher, item )
                 }
                 break
+
+
+            case FileHolder:
+                hasher = CacheHelper.hasher(hasher, ((FileHolder) value).sourceObj )
+                break
+
+            case Path:
+                def file = value as Path
+                hasher = hasher
+                        .putString( file.toAbsolutePath().normalize().toString() )
+                        .putLong( file.size() )
+                        .putLong( file.lastModified() )
+                break;
 
             case File:
                 def file = value as File

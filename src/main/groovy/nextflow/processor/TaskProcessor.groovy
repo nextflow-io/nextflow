@@ -17,12 +17,15 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.processor
-
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
 import com.google.common.hash.HashCode
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.PackageScope
+import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowQueue
@@ -37,6 +40,7 @@ import nextflow.exception.MissingFileException
 import nextflow.exception.TaskValidationException
 import nextflow.executor.AbstractExecutor
 import nextflow.script.BaseScript
+import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
 /**
@@ -92,6 +96,8 @@ abstract class TaskProcessor {
 
     private final errorLock = new ReentrantLock(true)
 
+    /* for testing purpose - do not remove */
+    protected TaskProcessor() { }
 
     TaskProcessor( AbstractExecutor executor, Session session, BaseScript script, TaskConfig taskConfig, Closure taskBlock ) {
         assert executor
@@ -322,7 +328,7 @@ abstract class TaskProcessor {
         }
 
         def exitFile = folder.resolve('.exitcode')
-        if( FileHelper.isEmpty(exitFile) ) {
+        if( FileHelper.empty(exitFile) ) {
             log.trace "Exit file is empty > $exitFile -- return false"
             return false
         }
@@ -525,19 +531,40 @@ abstract class TaskProcessor {
                 // type file parameter can contain a multiple files pattern separating them with a special character
                 def entries = fileParam.separatorChar ? fileParam.name.split(/\${fileParam.separatorChar}/) : [fileParam.name]
                 // for each of them collect the produced files
-                entries.each { String it ->
-                    def file = executor.collectResultFile(task, it)
-                    if( file instanceof Collection ) all.addAll(file)
-                    else if( file ) { all.add(file) }
+                entries.each { String pattern ->
+                    def result = executor.collectResultFile(task, pattern)
+                    log.debug "Task ${task.name} > collected outputs for pattern '$pattern': $result"
+
+                    if( result instanceof List ) {
+                        // filter the result collection
+                        if( pattern.startsWith('*') && !fileParam.includeHidden ) {
+                            result = filterByRemovingHiddenFiles(result)
+                            log.trace "Task ${task.name} > after removing hidden files: ${result}"
+                        }
+
+                        // filter the inputs
+                        if( !fileParam.includeInputs ) {
+                            result = filterByRemovingStagedInputs(task, result)
+                            log.trace "Task ${task.name} > after removing staged inputs: ${result}"
+                        }
+
+                        all.addAll((List) result)
+                    }
+
+                    else if( result ) {
+                        all.add(result)
+                    }
                 }
 
                 task.setOutput( param, all.size()==1 ? all[0] : all )
                 break
 
             case ValueOutParam:
-                def map = task.code.delegate as DelegateMap
-                if( map.containsKey(param.name) ) {
-                    task.setOutput(param, map[param.name])
+                // look into the task inputs value for an *ValueInParam* entry
+                // having the same *name* as the requested output name
+                def entry = task.getInputsByType(ValueInParam,EachInParam).find { it.key.name == param.name }
+                if( entry ) {
+                    task.setOutput( param, entry.value )
                 }
                 else {
                     log.warn "Not a valid output parameter: '${param.name}' -- only values declared as input can be used in the output section"
@@ -548,6 +575,34 @@ abstract class TaskProcessor {
                 throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
 
         }
+    }
+
+    /**
+     * Given a list of {@code Path} removes all the hidden file i.e. the ones which names starts with a dot char
+     * @param files A list of {@code Path}
+     * @return The result list not containing hidden file entries
+     */
+    protected List<Path> filterByRemovingHiddenFiles( List<Path> files ) {
+        files.findAll { !it.getName().startsWith('.') }
+    }
+
+    /**
+     * Given a list of {@code Path} removes all the entries which name match the name of
+     * file used as input for the specified {@code TaskRun}
+     *
+     * See TaskRun#getStagedInputs
+     *
+     * @param task
+     * @param files
+     * @return
+     */
+    protected List<Path> filterByRemovingStagedInputs( TaskRun task, List<Path> files ) {
+
+        // get the list of input files
+        def List<Path> allStaged = task.getStagedInputs()
+        def List<String>  allInputNames = allStaged.collect { it.getName() }
+
+        files.findAll { !allInputNames.contains(it.getName()) }
 
     }
 
@@ -576,6 +631,134 @@ abstract class TaskProcessor {
         }
 
         return result
+    }
+
+    /**
+     * An input file parameter can be provided with any value other than a file.
+     * This function normalize a generic value to a {@code Path} create a temporary file
+     * in the for it.
+     *
+     * @param input The input value
+     * @param altName The name to be used when a temporary file is created.
+     * @return The {@code Path} that will be staged in the task working folder
+     */
+    protected FileHolder normalizeInputToFile( Object input, String altName ) {
+
+        if( input instanceof Path ) {
+            return new FileHolder(input)
+        }
+
+        def result = ownerScript.tempFile(altName)
+        result.text = input?.toString() ?: ''
+        return new FileHolder(input, result)
+    }
+
+    protected List<FileHolder> normalizeInputToFiles( Object obj, int count ) {
+
+        def files = (obj instanceof Collection ? obj : [obj]).collect {
+            normalizeInputToFile(it, "input.${++count}")
+        }
+
+        return files
+    }
+
+    protected singleItemOrList( List<FileHolder> items ) {
+        assert items
+        if( items.size() == 1 ) {
+            return items[0].stagePath
+        }
+        else {
+            return new BlankSeparatedList( items *. stagePath )
+        }
+    }
+
+
+    /**
+     * An input file name may contain wildcards characters which have to be handled coherently
+     * given the number of files specified.
+     *
+     * @param name A file name with may contain a wildcard character star {@code *} or question mark {@code ?}.
+     *  Only one occurrence can be specified for star or question mark wildcards.
+     *
+     * @param value Any value that have to be managed as an input files. Values other than {@code Path} are converted
+     * to a string value, using the {@code #toString} method and saved in the local file-system. Value of type {@code Collection}
+     * are expanded to multiple values accordingly.
+     *
+     * @return
+     */
+    protected List<FileHolder> expandWildcards( String name, List<FileHolder> files ) {
+        assert name
+        assert files != null
+
+        final result = []
+        if( files.size()==0 ) { return result }
+
+        if( name == '*' ) {
+            return files
+        }
+
+        // no wildcards in the file name
+        else if( !name.contains('*') && !name.contains('?') ) {
+            /*
+             * The name do not contain any wildcards *BUT* when multiple files are provide
+             * it is managed like having a 'start' at the end of the file name
+             */
+            if( files.size()>1 ) {
+                name += '*'
+            }
+            else {
+                // just return that name
+                result << files[0].withName(name)
+                return result
+            }
+        }
+
+        /*
+         * The star wildcard: when a single item is provided, it is simply ignored
+         * When a collection of files is provided, the name is expanded to the index number
+         */
+        if( name.contains('*') ) {
+            if( files.size()>1 ) {
+                def count = 1
+                files.each { FileHolder holder ->
+                    def stageName = name.replace('*', (count++).toString())
+                    result << holder.withName(stageName)
+                }
+            }
+            else {
+                // there's just one value, remove the 'star' wildcards
+                def stageName = name.replace('*','')
+                result << files[0].withName(stageName)
+            }
+        }
+
+        /*
+         * The question mark wildcards *always* expand to an index number
+         * as long as are the number of question mark characters
+         */
+        else if( name.contains('?') ) {
+            def count = 1
+            files.each { FileHolder holder ->
+                String match = (name =~ /\?+/)[0]
+                def replace = (count++).toString().padLeft(match.size(), '0')
+                def stageName = name.replace(match, replace)
+                result << holder.withName( stageName )
+            }
+
+        }
+
+        // not a valid condition
+        else {
+            throw new IllegalStateException("Invalid file expansion for name: '$name'")
+        }
+
+        return result
+    }
+
+
+    @Deprecated
+    protected List<FileHolder> expandWildcards( String filePattern, FileHolder... files ) {
+        expandWildcards( filePattern, files as List )
     }
 
     /**
@@ -660,8 +843,56 @@ abstract class TaskProcessor {
         }
     }
 
+}
 
 
+/**
+ * Implements a special {@code Path} used to stage files in the work area
+ */
+@ToString(includePackage = false, includeNames = true)
+@EqualsAndHashCode
+class FileHolder  {
+
+    final def sourceObj
+
+    final Path storePath
+
+    final Path stagePath
+
+    FileHolder( Path inputFile ) {
+        assert inputFile
+        this.sourceObj = inputFile
+        this.storePath = inputFile
+        this.stagePath = inputFile.getFileName()
+    }
+
+    FileHolder( def origin, Path path ) {
+        assert origin != null
+        assert path != null
+
+        this.sourceObj = origin
+        this.storePath = path
+        this.stagePath = path.getFileName()
+    }
+
+    protected FileHolder( def source, Path store, def stageName ) {
+        this.sourceObj = source
+        this.storePath = store
+        this.stagePath = stageName instanceof Path ? (Path)stageName : Paths.get(stageName.toString())
+    }
+
+    FileHolder withName( def stageName )  {
+        new FileHolder( this.sourceObj, this.storePath, stageName )
+    }
+
+    @PackageScope
+    static FileHolder get( def path, def name = null ) {
+        Path storePath = path instanceof Path ? path : Paths.get(path.toString())
+        def target = name ? name : storePath.getFileName()
+        new FileHolder( path, storePath, target )
+    }
 
 }
+
+
 

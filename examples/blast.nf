@@ -30,7 +30,7 @@ process collectResult( merge: true ) {
     file blast_all
 
     """
-    cat blast_result >> blast_all
+    cat ${blast_result} >> blast_all
     """
 }
 
@@ -43,7 +43,7 @@ process sort {
     stdout result
 
     """
-    sort blast_all
+    sort ${blast_all}
     """
 }
 

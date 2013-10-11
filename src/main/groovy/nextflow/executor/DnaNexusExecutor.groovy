@@ -18,6 +18,8 @@
 */
 
 package nextflow.executor
+
+import java.nio.file.Files
 import java.nio.file.Path
 
 import com.dnanexus.DXAPI
@@ -33,6 +35,7 @@ import nextflow.util.DxHelper
  * -->  https://www.dnanexus.com/
  *
  * @author Beatriz Martin San Juan <bmsanjuan@gmail.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
 
@@ -50,13 +53,19 @@ class DnaNexusExecutor extends AbstractExecutor {
 
 
     @Override
-    protected String stageInputFileScript( Path path, String targetName ) {
-        if( path instanceof DxPath ) {
-            "dx download --no-progress ${(path as DxPath).getFileId()} -o $targetName"
+    String stageInputFileScript( Path path, String target ) {
+        if( !(path instanceof DxPath) ) {
+            return super.stageInputFileScript(path,target)
+        }
+
+        if( Files.isDirectory(path) ) {
+            def origin = path.toAbsolutePath().normalize();
+            return "tmp=\$(mktemp -d); mkdir -p '$target'; dx download --no-progress -r ${origin} -o \$tmp; mv \$tmp/${origin}/* '${target}'"
         }
         else {
-            super.stageInputFileScript(path,targetName)
+            return "dx download --no-progress ${(path as DxPath).getFileId()} -o $target"
         }
+
     }
 
     /**
@@ -98,7 +107,7 @@ class DnaNexusExecutor extends AbstractExecutor {
         /*
          * create the stage inputs script
          */
-        def stageScript = stagingFilesScript( task.getInputsByType(FileInParam) )
+        def stageScript = stagingFilesScript( task.getInputsByType(FileInParam), '; ' )
 
 
         // input job params

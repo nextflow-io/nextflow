@@ -137,9 +137,17 @@ class FileOutParam extends OutParam {
      */
     protected String separatorChar = ':'
 
+    protected boolean includeHidden
+
+    protected boolean includeInputs
+
     boolean getJoint() { joint }
 
     String getSeparatorChar() { separatorChar }
+
+    boolean getIncludeHidden() { includeHidden }
+
+    boolean getIncludeInputs() { includeInputs }
 
     FileOutParam joint( boolean value ) {
         this.joint = value
@@ -148,6 +156,16 @@ class FileOutParam extends OutParam {
 
     FileOutParam separatorChar( String value ) {
         this.separatorChar = value
+        return this
+    }
+
+    FileOutParam includeInputs( boolean flag ) {
+        this.includeInputs = flag
+        return this
+    }
+
+    FileOutParam includeHidden( boolean flag ) {
+        this.includeHidden = flag
         return this
     }
 }

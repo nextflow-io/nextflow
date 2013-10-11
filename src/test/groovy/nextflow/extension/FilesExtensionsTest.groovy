@@ -1,5 +1,6 @@
 package nextflow.extension
 
+import java.nio.file.Files
 import java.nio.file.Paths
 
 import spock.lang.Specification
@@ -91,36 +92,64 @@ class FilesExtensionsTest extends Specification {
         setup:
         def source = File.createTempFile('test','source')
         source.text = 'Hello'
-        def copy = File.createTempFile('test','target')
 
         when:
-        source.copyTo( copy )
-
+        def copy = source.copyTo( File.createTempFile('test','target') )
         then:
         copy.text == 'Hello'
+        source.exists()
+
+        when:
+        def folder = Files.createTempDirectory('testCopyTo').toFile()
+        def copy2 = source.copyTo(folder)
+        then:
+        copy2.text == 'Hello'
+        copy2.name == source.name
+        source.exists()
 
         cleanup:
-        source.delete()
-        copy.delete()
+        source?.delete()
+        copy?.delete()
+        folder?.deleteDir()
 
     }
 
     def 'test moveTo' () {
 
         setup:
+        def folder = Files.createTempDirectory('testMoveTo').toFile()
+        // source1
         def source = File.createTempFile('test','source')
         source.text = 'Hello'
+        // source2
+        def source2 = File.createTempFile('test','source')
+        source2.text = 'Hello'
 
+        /*
+         * test moving to a file with a different name
+         */
         when:
-        def copy = new File('target')
-        source.moveTo( copy )
-
+        def file1 = source.moveTo( new File('target') )
         then:
         !source.exists()
-        copy.text == 'Hello'
+        file1.text == 'Hello'
+        file1.name == 'target'
+
+        /*
+         * test moving to a FOLDER
+         */
+        when:
+        def file2 = source2.moveTo(folder)
+        then:
+        file2.text == 'Hello'
+        file2.name == source2.name
+        !source2.exists()
+
 
         cleanup:
-        copy.delete()
+        file1?.delete()
+        file2?.delete()
+        folder?.deleteDir()
 
     }
 

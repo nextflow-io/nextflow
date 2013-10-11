@@ -41,7 +41,10 @@ class ParallelTaskProcessor extends TaskProcessor {
          */
         def iteratorIndexes = []
         taskConfig.inputs.eachWithIndex { param, index ->
-            if( param instanceof EachInParam ) {  iteratorIndexes << index }
+            if( param instanceof EachInParam ) {
+                log.trace "Task ${name} > got each param: ${param.name} at index: ${index} -- ${param.dump()}"
+                iteratorIndexes << index
+            }
         }
 
         /*
@@ -52,6 +55,8 @@ class ParallelTaskProcessor extends TaskProcessor {
          * forwarding the final values the the second *parallel* processor executing the user specified task
          */
         if( iteratorIndexes ) {
+            log.debug "Creating *combiner* operator for each param(s) at index(es): ${iteratorIndexes}"
+
             final size = taskConfig.inputs.size()
             // the script implementing the iterating process
             final forwarder = createForwardWrapper(size, iteratorIndexes)
@@ -103,7 +108,7 @@ class ParallelTaskProcessor extends TaskProcessor {
          * - it has to be evaluated as a string since the number of input must much the number input channel
          *   that is known only at runtime
          *
-         * - 'out' holds the list of all input values which need to be forwarded (binded) to output as many
+         * - 'out' holds the list of all input values which need to be forwarded (bound) to output as many
          *   times are the items in the iteration list
          *
          * - the iteration list(s) is (are) passed like in the closure inputs like the other values,
@@ -160,20 +165,43 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         // -- map the inputs to a map and use to delegate closure values interpolation
         def map = new DelegateMap(ownerScript)
-
+        int count =0
         /*
          * initialize the inputs for this task instances
          */
         taskConfig.inputs.eachWithIndex { InParam param, int index ->
 
             // add the value to the task instance
-            task.setInput(param, values.get(index))
+            def val = values.get(index)
 
             // otherwise put in on the map used to resolve the values evaluating the script
-            if( param instanceof ValueInParam || param instanceof EachInParam ) {
-                map[ param.name ] = values.get(index)
+
+            switch(param) {
+                case EachInParam:
+                case ValueInParam:
+                    map[param.name] = val
+                    break
+
+                case FileInParam:
+                    def fileParam = param as FileInParam
+                    def normalized = normalizeInputToFiles(val,count)
+                    def resolved = expandWildcards( fileParam.filePattern, normalized )
+                    map[ fileParam.name ] = singleItemOrList(resolved)
+                    count += resolved.size()
+                    val = resolved
+                    break
+
+                case StdInParam:
+                case EnvInParam:
+                    // nothing to do
+                    break
+
+                default:
+                    log.debug "Unsupported input param type: ${param?.class?.simpleName}"
             }
 
+            // add the value to the task instance context
+            task.setInput(param, val)
         }
 
 
@@ -297,7 +325,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         public void afterStop(final DataflowProcessor processor) {
             // increment the session sync
             def val = session.taskDeregister()
-            log.debug "After stop > deregister phaser '$name' :: $val"
+            log.debug "After stop > deregister phaser '$name' -- $val"
         }
 
         /**

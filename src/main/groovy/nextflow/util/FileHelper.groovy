@@ -187,7 +187,7 @@ class FileHelper {
      *
      * @param file The file path to
      */
-    def static boolean isEmpty( File file ) {
+    def static boolean empty( File file ) {
         assert file
 
         if( !file.exists() ) {
@@ -202,7 +202,7 @@ class FileHelper {
         }
     }
 
-    def static boolean isEmpty( Path path ) {
+    def static boolean empty( Path path ) {
         if( !Files.exists(path) ) {
             return true
         }
@@ -214,14 +214,6 @@ class FileHelper {
         else {
             Files.size(path)==0
         }
-    }
-
-    def static isNotEmpty( File path ) {
-        !isEmpty(path)
-    }
-
-    def static isNotEmpty( Path path ) {
-        !isEmpty(path)
     }
 
     /**

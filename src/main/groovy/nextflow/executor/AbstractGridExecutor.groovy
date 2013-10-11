@@ -18,8 +18,6 @@
  */
 
 package nextflow.executor
-import static nextflow.util.FileHelper.isEmpty
-import static nextflow.util.FileHelper.isNotEmpty
 
 import java.nio.file.Path
 
@@ -161,7 +159,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         }
 
         // staging input files when required
-        final files = task.getInputsByType(FileInParam)
+        def files = task.getInputsByType(FileInParam)
         final staging = stagingFilesScript(files)
         if( staging ) {
             wrapper << staging << '\n'
@@ -355,16 +353,16 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         //             failed and output EMPTY -> return 'sub' output file
         def cmdOutFile = task.workDirectory.resolve(COMMAND_OUTPUT_FILENAME)
         def subOutFile = task.workDirectory.resolve(JOB_OUT_FILENAME)
-        log.debug "Task cmd output > ${task.name} -- file ${cmdOutFile}; empty: ${isEmpty(cmdOutFile)}"
-        log.debug "Task sub output > ${task.name} -- file: ${subOutFile}; empty: ${isEmpty(subOutFile)}"
+        log.debug "Task cmd output > ${task.name} -- file ${cmdOutFile}; empty: ${cmdOutFile.empty()}"
+        log.debug "Task sub output > ${task.name} -- file: ${subOutFile}; empty: ${subOutFile.empty()}"
 
         def result
         def success = task.exitCode in taskConfig.validExitCodes
         if( success ) {
-            result = isNotEmpty(cmdOutFile) ? cmdOutFile : null
+            result = !cmdOutFile.empty() ? cmdOutFile : null
         }
         else {
-            result = isNotEmpty(cmdOutFile) ? cmdOutFile : ( isNotEmpty(subOutFile) ? subOutFile : null )
+            result = !cmdOutFile.empty() ? cmdOutFile : ( !subOutFile.empty() ? subOutFile : null )
         }
 
         log.debug "Task finished > ${task.name} -- success: ${success}; output: ${result}"

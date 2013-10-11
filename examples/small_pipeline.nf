@@ -15,7 +15,7 @@ process blast {
 
 process extractTopHits {
     input:
-    val top_hits
+    file top_hits
 
     output:
     file sequences
@@ -27,7 +27,7 @@ process align {
     echo true
 
     input:
-    val sequences
+    file sequences
 
     "t_coffee $sequences 2>&- | tee align_result"
 }

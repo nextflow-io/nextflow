@@ -1,11 +1,11 @@
 package nextflow.processor
+
 import groovy.transform.InheritConstructors
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Nextflow
-
 /**
  * Model a process generic input parameter
  *
@@ -22,7 +22,10 @@ abstract class InParam {
     protected Object using
 
     @Lazy
-    DataflowReadChannel channel = {
+    DataflowReadChannel channel = { getLazyChannel() } ()
+
+
+    protected DataflowReadChannel getLazyChannel() {
 
         if( using ) {
             return asChannel(using)
@@ -33,8 +36,7 @@ abstract class InParam {
 
         throw new IllegalStateException("Missing channel for input parameter: $name")
 
-    } ()
-
+    }
 
     InParam( Script script, String name ) {
         this.script = script
@@ -80,9 +82,28 @@ abstract class InParam {
 /**
  *  Model a process *file* input parameter
  */
-@InheritConstructors
 @ToString(includePackage=false, includeSuper = true)
-class FileInParam extends InParam  { }
+class FileInParam extends InParam  {
+
+    String filePattern
+
+    FileInParam( Script script, String name ) {
+        super(script,name)
+        this.filePattern = name
+    }
+
+    @Override
+    protected DataflowReadChannel getLazyChannel() {
+
+        if( !using ) {
+            this.filePattern = '*'
+        }
+        super.getLazyChannel()
+
+    }
+
+
+}
 
 /**
  *  Model a process *environment* input parameter
@@ -112,13 +133,13 @@ class StdInParam extends InParam { StdInParam(Script script) { super(script,'-')
 class EachInParam extends InParam {
 
     def EachInParam using( Object value ) {
-        if ( value instanceof Collection ) {
-            // the collection is wrapper like a scalar value
-            super.using( Nextflow.val( value ) )
-            return this
-        }
 
-        throw new IllegalArgumentException("Illegal form: ${args.from} for 'each' input iterator")
+        // everything is mapped to a collection
+        def list = Nextflow.list(value)
+        // the collection is wrapped to a "scalar" dataflow variable
+        super.using( Nextflow.val(list) )
+        return this
+
     }
 
 }

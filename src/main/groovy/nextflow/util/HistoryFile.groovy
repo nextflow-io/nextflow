@@ -47,7 +47,7 @@ class HistoryFile extends File {
     }
 
     def retrieveLastUniqueId() {
-        if( !exists() || isEmpty() ) {
+        if( !exists() || empty() ) {
             return null
         }
 
@@ -60,7 +60,7 @@ class HistoryFile extends File {
 
     def print() {
 
-        if( isEmpty() ) {
+        if( empty() ) {
             println '(no history available)'
         }
         else {

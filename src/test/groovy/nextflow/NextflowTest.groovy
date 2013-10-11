@@ -22,9 +22,10 @@
  */
 
 package nextflow
-
 import java.nio.file.Paths
 
+import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.operator.PoisonPill
 import spock.lang.Specification
 /**
  *
@@ -32,6 +33,48 @@ import spock.lang.Specification
  */
 class NextflowTest extends Specification {
 
+
+    def testList() {
+
+        expect:
+        Nextflow.list('a') == ['a']
+        Nextflow.list(1,2,3) == [1,2,3]
+        Nextflow.list(1..9, 'a'..'z') == (1..9) + ('a'..'z')
+
+        Nextflow.list('hola') == ['hola']
+        Nextflow.list('alpha','beta') == ['alpha','beta']
+    }
+
+    def testListFromChannel() {
+
+        when:
+        def var = new DataflowVariable()
+        var << 1
+        then:
+        Nextflow.list(var) == [1]
+
+        when:
+        def ch = Nextflow.channel(1,2,9)
+        then:
+        Nextflow.list(ch) == [1,2,9]
+
+
+        when:
+        def ch1 = Nextflow.channel(1,2,3)
+        def ch2 = Nextflow.channel('x','y','z')
+        Nextflow.list(ch1,ch2)
+        then:
+        thrown(IllegalArgumentException)
+
+
+        when:
+        def b = Nextflow.broadcast()
+        def ch3 = b.createReadChannel()
+        b << 4 << 5 << 6 << PoisonPill.instance
+        then:
+        Nextflow.list(ch3) == [4,5,6]
+
+    }
 
     def testFile() {
 

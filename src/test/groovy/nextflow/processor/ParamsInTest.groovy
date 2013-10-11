@@ -24,10 +24,12 @@ class ParamsInTest extends Specification {
          */
         when:
         def var = Nextflow.val(1)
-        def param = new FileInParam(script, 'x').using(var)
+        def param = new FileInParam(script, 'x'); param.using(var)
         then:
         param.name == 'x'
+        param.filePattern == 'x'
         param.channel.val == 1
+
 
 
         /*
@@ -36,12 +38,25 @@ class ParamsInTest extends Specification {
          *   it is created and associated to the parameter
          */
         when:
-        def input = new FileInParam(script, 'name.fa' ) .using('hola')
+        def input = new FileInParam(script, 'name.fa' ); input.using('hola')
+
         then:
         input instanceof FileInParam
         input.name == 'name.fa'
+        input.filePattern == 'name.fa'
         input.channel instanceof DataflowVariable
         input.channel.val == 'hola'
+
+
+        when:
+        binding.setVariable('channel_x', Nextflow.val(1))
+        input = new FileInParam(script, 'channel_x')
+        def x = input.getChannel()
+        then:
+        input.name == 'channel_x'
+        input.filePattern == '*'
+        input.channel == x
+        input.channel.val == 1
 
 
         /*
@@ -118,7 +133,7 @@ class ParamsInTest extends Specification {
          */
         when:
         input = new ValueInParam(script, 'a_script_z' )
-        def x = input.getChannel()
+        x = input.getChannel()
         then:
         thrown(IllegalStateException)
 

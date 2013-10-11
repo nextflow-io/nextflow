@@ -26,7 +26,9 @@ import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.PoisonPill
+import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
 import nextflow.util.FileHelper
 /**
  *
@@ -138,43 +140,59 @@ class Nextflow {
      * @return
      */
     static <T> DataflowQueue<T> channel( T... items ) {
-        log.trace("channel[2]: $items")
         return channel(items as List)
     }
 
-    /**
-     * Create as thread-safe list buffers for message transfer among concurrent tasks or threads.
-     * <p>The underlying data structure is a {@code DataflowBroadcast} which offers a publish-subscribe
-     * (1 to many, many to many) communication model. One or more producers write messages,
-     * while all registered readers will receive all the messages.
-     *
-     * @param item
-     * @return
-     */
-    @Deprecated
-    static <T> DataflowBroadcast<T> list( T item ) {
-        list([item])
+
+    static <T> DataflowBroadcast<T> broadcast() {
+        return new DataflowBroadcast<T>()
     }
 
-
     /**
-     * Create as thread-safe list buffers for message transfer among concurrent tasks or threads.
-     * <p>The underlying data structure is a {@code DataflowBroadcast} which offers a publish-subscribe
-     * (1 to many, many to many) communication model. One or more producers write messages,
-     * while all registered readers will receive all the messages.
+     * Converts the specified arguments to a {@code List} data type
      *
      * @param item
      * @return
      */
-    @Deprecated
-    static <T> DataflowBroadcast<T> list( Collection<T> values = null ) {
-        def result = new DataflowBroadcast()
-        if ( values )  {
-            values.each { result << it }
-            result << PoisonPill.instance
+    static List list( Object ... items ) {
+
+        List result = []
+        for( Object entry : items ) {
+            if( entry instanceof DataflowReadChannel || entry instanceof DataflowWriteChannel ) {
+                throw new IllegalArgumentException("Channel type not supported: ${entry?.class?.name}")
+            }
+            result.addAll( list(entry) )
         }
+
         return result
     }
+
+    static List list( Object item ) {
+
+        switch( item ) {
+
+            case Collection:
+                return new ArrayList( (Collection)item )
+
+            case (Object[]):
+                return new ArrayList( Arrays.asList( (Object[])item ) )
+
+            case Map:
+                return new ArrayList( ((Map)item ).entrySet()  )
+
+            case DataflowBroadcast:
+                throw new IllegalArgumentException()
+
+            case DataflowVariable:
+            case DataflowQueue:
+            case DataflowStreamReadAdapter:
+                return new ChannelListAdapter( (DataflowReadChannel)item )
+
+            default:
+                return [ item ]
+        }
+    }
+
 
     /**
      * File factory utility method.
@@ -224,22 +242,29 @@ class Nextflow {
 
     }
 
-    static file( def file ) {
-        assert file
+    static file( def fileName ) {
+        assert fileName
 
-        switch (file) {
+        switch (fileName) {
             case Path:
-                return ((Path) file).normalize().toAbsolutePath()
+                return ((Path) fileName).normalize().toAbsolutePath()
                 break;
 
             case File:
-                return ((File) file).toPath().normalize().toAbsolutePath()
+                return ((File) fileName).toPath().normalize().toAbsolutePath()
                 break;
 
             default:
-                return fileNamePattern(file?.toString())
+                return fileNamePattern(fileName?.toString())
         }
 
     }
+
+    static files( def fileName ) {
+        def result = file(fileName)
+        return result instanceof List ? result : [result]
+    }
+
+
 
 }

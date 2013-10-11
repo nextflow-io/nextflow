@@ -25,7 +25,7 @@ process ampaTask {
 
     // The BASH script to be executed - for each - sequence
     """
-    AMPA.pl -in=seq -noplot -rf=result -df=data
+    AMPA.pl -in=${seq} -noplot -rf=result -df=data
     """
 
 }

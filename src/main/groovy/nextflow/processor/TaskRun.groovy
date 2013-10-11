@@ -42,6 +42,7 @@ class TaskRun {
     def id
 
     /**
+     * TODO this have to be refactored
      * The jobid as provided by the underlying execution system (process, SGE jobid, dnanexus jobid, etc)
      */
     def jobId
@@ -61,9 +62,36 @@ class TaskRun {
      */
     Status status
 
+    /**
+     * Holds the input value(s) for each task input parameter
+     */
     Map<InParam,Object> inputs = [:]
 
+    /**
+     * Holds the output value(s) for each task output parameter
+     */
     Map<OutParam,Object> outputs = [:]
+
+    /**
+     * Return the list of all input files staged as inputs by this task execution
+     */
+    @Lazy
+    List<Path> stagedInputs = {
+        stagedProvider.call().values().flatten() *. stagePath
+    } ()
+
+    /**
+     * The *strategy* sued to retrieve the list of staged input files for this task.
+     * This sort of *hack* is required since task processed by the {@code MergeTaskProcessor} maintain
+     * their own input files list, and so the task will need to access that list, and not the one
+     * hold by the task itself
+     *
+     * See MergeTaskProcessor
+     */
+    Closure<Map<FileInParam,List<FileHolder>>> stagedProvider = {
+           (Map<FileInParam,List<FileHolder>>) getInputsByType(FileInParam)
+    }
+
 
     def void setInput( InParam param, Object value = null ) {
         assert param
@@ -160,17 +188,16 @@ class TaskRun {
         }
     }
 
-    def <T extends InParam> Map<T,Object> getInputsByType( Class<T> type ) {
-        assert type
+    def <T extends InParam> Map<T,Object> getInputsByType( Class<T>... types ) {
+
         def result = [:]
-        inputs.findAll() { it.key.class == type }.each { result << it }
+        inputs.findAll() { types.contains(it.key.class) }.each { result << it }
         return result
     }
 
-    def Map<OutParam,Object> getOutputsByType( Class type ) {
-        assert type
+    def Map<OutParam,Object> getOutputsByType( Class... types ) {
         def result = [:]
-        outputs.findAll() { it.key.class == type }.each { result << it }
+        outputs.findAll() { types.contains(it.key.class) }.each { result << it }
         return result
     }
 

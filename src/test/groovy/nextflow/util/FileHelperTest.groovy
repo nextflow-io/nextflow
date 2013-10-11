@@ -58,8 +58,8 @@ class FileHelperTest extends Specification {
         notEmptyFile.deleteOnExit()
 
         expect:
-        FileHelper.isEmpty(emptyFile)
-        !FileHelper.isEmpty(notEmptyFile)
+        FileHelper.empty(emptyFile)
+        !FileHelper.empty(notEmptyFile)
 
     }
 
@@ -71,8 +71,8 @@ class FileHelperTest extends Specification {
         File.createTempFile('test','test', notEmptyDir)
 
         expect:
-        FileHelper.isEmpty(emptyDir)
-        !FileHelper.isEmpty(notEmptyDir)
+        FileHelper.empty(emptyDir)
+        !FileHelper.empty(notEmptyDir)
 
         cleanup:
         emptyDir.deleteDir()
@@ -98,11 +98,11 @@ class FileHelperTest extends Specification {
         fileNotEmpty.deleteOnExit()
 
         expect:
-        FileHelper.isEmpty(new File('non existing'))
-        FileHelper.isEmpty(fileEmpty)
-        !FileHelper.isEmpty(fileNotEmpty)
-        FileHelper.isEmpty(folderEmpty)
-        !FileHelper.isEmpty(folderNotEmpty)
+        FileHelper.empty(new File('non existing'))
+        FileHelper.empty(fileEmpty)
+        !FileHelper.empty(fileNotEmpty)
+        FileHelper.empty(folderEmpty)
+        !FileHelper.empty(folderNotEmpty)
 
         cleanup:
         fileEmpty.delete()
@@ -126,11 +126,11 @@ class FileHelperTest extends Specification {
         Path fileNotExist = Paths.get('not_existing_file')
 
         expect:
-        FileHelper.isEmpty(fileNotExist)
-        FileHelper.isEmpty(fileEmpty)
-        !FileHelper.isEmpty(fileNotEmpty)
-        FileHelper.isEmpty(folderEmpty)
-        !FileHelper.isEmpty(folderNotEmpty)
+        FileHelper.empty(fileNotExist)
+        FileHelper.empty(fileEmpty)
+        !FileHelper.empty(fileNotEmpty)
+        FileHelper.empty(folderEmpty)
+        !FileHelper.empty(folderNotEmpty)
 
         cleanup:
         fileEmpty.delete()
@@ -141,75 +141,16 @@ class FileHelperTest extends Specification {
     }
 
 
-    def 'test notEmpty file' () {
-
-        setup:
-        def fileEmpty = File.createTempFile('test','test')
-        fileEmpty.deleteOnExit()
-
-        def folderEmpty = File.createTempDir()
-
-        def folderNotEmpty = File.createTempDir()
-        def fileInFolder = new File(folderNotEmpty, 'filename')
-        fileInFolder.createNewFile()
-
-        def fileNotEmpty = File.createTempFile('test','test')
-        fileNotEmpty.text = 'Hola'
-        fileNotEmpty.deleteOnExit()
-
-        expect:
-        ! FileHelper.isNotEmpty(new File('non existing'))
-        ! FileHelper.isNotEmpty(fileEmpty)
-        FileHelper.isNotEmpty(fileNotEmpty)
-
-        !FileHelper.isNotEmpty(folderEmpty)
-        FileHelper.isNotEmpty(folderNotEmpty)
-
-        cleanup:
-        folderNotEmpty.deleteDir()
-        folderEmpty.deleteDir()
-
-    }
-
-    def 'test notEmpty path' () {
-
-        setup:
-        Path fileEmpty = Files.createFile(Paths.get('test.txt'))
-        Path folderEmpty = Files.createTempDirectory(null)
-        def folderNotEmpty = Files.createTempDirectory(null)
-
-        def fileInFolder = folderNotEmpty.resolve( 'empty_file' )
-        Files.createFile(fileInFolder)
-
-        def fileNotEmpty = File.createTempFile('test','test')
-        fileNotEmpty.text = 'Hola'
-        fileNotEmpty.deleteOnExit()
-
-        expect:
-        ! FileHelper.isNotEmpty(new File('non existing'))
-        ! FileHelper.isNotEmpty(fileEmpty)
-        FileHelper.isNotEmpty(fileNotEmpty)
-
-        ! FileHelper.isNotEmpty(folderEmpty)
-        FileHelper.isNotEmpty(folderNotEmpty)
-
-        cleanup:
-        fileEmpty.delete()
-        folderNotEmpty.deleteDir()
-        folderEmpty.deleteDir()
-
-    }
-
 
     def 'test nameParts' () {
 
         expect:
-        FileHelper.nameParts( "hola" ) == ['hola',0]
-        FileHelper.nameParts( "hola123")  == ['hola',123]
-        FileHelper.nameParts( "hola1")  == ['hola',1]
-        FileHelper.nameParts( "x")  == ['x',0 ]
-        FileHelper.nameParts( "x1")  == ['x',1 ]
-        FileHelper.nameParts( "1")  == ['',1]
+        FileHelper.nameParts("hola") == ['hola',0]
+        FileHelper.nameParts("hola123")  == ['hola',123]
+        FileHelper.nameParts("hola1")  == ['hola',1]
+        FileHelper.nameParts("x")  == ['x',0 ]
+        FileHelper.nameParts("x1")  == ['x',1 ]
+        FileHelper.nameParts("1")  == ['',1]
 
     }
 

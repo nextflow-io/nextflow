@@ -72,4 +72,43 @@ class NioGroovyMethodsTest extends Specification {
 
     }
 
+
+    def testEachDir() {
+
+        setup:
+        def folder = Files.createTempDirectory('test')
+        def sub1 = Files.createTempDirectory(folder, 'sub_1_')
+        def sub2 = Files.createTempDirectory(folder, 'sub_2_')
+        def sub3 = Files.createTempDirectory(folder, 'sub_X_')
+        def sub4 = Files.createTempDirectory(sub2, 'sub_2_4_')
+        def sub5 = Files.createTempDirectory(sub2, 'sub_2_5_')
+        def file1 = Files.createTempFile(folder, 'file1', null)
+        def file2 = Files.createTempFile(folder, 'file2', null)
+
+        // test *eachDir*
+        when:
+        def result = []
+        folder.eachDir { result << it }
+        then:
+        result.sort() == [ sub1, sub2, sub3 ]
+
+        // test *eachMatchDir*
+        when:
+        def result2 = []
+        folder.eachDirMatch( ~/sub_\d_.*+/ ) { result2 << it }
+        then:
+        result2.sort() == [ sub1, sub2 ]
+
+        when:
+        def result3 = []
+        folder.eachDirRecurse { result3 << it }
+        then:
+        result3 == [ sub1, sub2, sub4, sub5, sub3 ]
+
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
 }

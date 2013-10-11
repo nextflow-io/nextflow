@@ -10,3 +10,7 @@ work/*
 .nextflow.history
 nextflow.eml
 nextflow.iml
+Vagrantfile
+resources/*
+test/*
+tools/*

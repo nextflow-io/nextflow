@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
-set -x
-mkdir -p /cloud; dx-mount --project-id $DX_PROJECT_CONTEXT_ID /cloud
+#set -x
+#mkdir -p /cloud; dx-mount --project-id $DX_PROJECT_CONTEXT_ID /cloud
 
 
 # Main entry point for this app.
@@ -63,14 +63,12 @@ process() {
     dx upload .command.out --path $PRJ:$TARGET/.command.out --brief --no-progress --wait
     for item in "${output_files[@]}"; do
         for name in `ls $item 2>/dev/null`; do
-            dx upload $name --path "$PRJ:$TARGET/$name" --brief --no-progress --wait
+            dx upload -r $name --path "$PRJ:$TARGET/$name" --brief --no-progress --wait
         done
     done
 
     if [ "$exit_status" -ne "0" ]; then
         ls -la >&2
-        ls -la /cloud >&2
-        ls -la /cloud/db/sample/* >&2
         exit
     fi
 

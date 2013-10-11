@@ -20,6 +20,7 @@
 package nextflow.script
 
 import java.lang.reflect.Field
+import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
 
 import com.beust.jcommander.JCommander
@@ -327,6 +328,7 @@ class CliRunner {
         // define the imports
         def importCustomizer = new ImportCustomizer()
         importCustomizer.addImports( StringUtils.name, groovy.transform.Field.name )
+        importCustomizer.addImports(Path.name)
         importCustomizer.addStaticStars( Nextflow.name )
         importCustomizer.addStaticImport( groovyx.gpars.dataflow.Dataflow.name, 'splitter' )
         importCustomizer.addStaticImport( groovyx.gpars.dataflow.Dataflow.name, 'operator' )

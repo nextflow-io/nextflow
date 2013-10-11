@@ -1,18 +1,13 @@
 package nextflow.extension
-
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.FileAttribute
-import java.nio.file.attribute.PosixFileAttributeView
-import java.nio.file.attribute.PosixFileAttributes
-import java.nio.file.attribute.PosixFilePermission
 
 import nextflow.util.FileHelper
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.FilenameUtils
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -26,13 +21,12 @@ class FilesExtensions {
      * @return {@code true} if the file does not exist or it is empty
      */
     @Deprecated
-    def static boolean isEmpty( File file ) {
-        FileHelper.isEmpty(file)
+    def static boolean empty( File file ) {
+        FileHelper.empty(file)
     }
 
 
     /**
-     * TODO This is not working because the concrete class (UnixPath) is providing its own isEmpty() method ..
      *
      * Check if a file - or - a directory is empty
      *
@@ -40,24 +34,8 @@ class FilesExtensions {
      * @return {@code true} if the file does not exist or it is empty
      */
     @Deprecated
-    def static boolean isEmpty( Path path ) {
-        FileHelper.isEmpty(path)
-    }
-
-    /**
-     * Check if a file - or - a folder is not empty
-     *
-     * @param file
-     * @return
-     */
-    @Deprecated
-    def static isNotEmpty( File file ) {
-        return FileHelper.isNotEmpty(file)
-    }
-
-    @Deprecated
-    def static isNotEmpty( Path file ) {
-        return FileHelper.isNotEmpty(file)
+    def static boolean empty( Path path ) {
+        FileHelper.empty(path)
     }
 
     /**
@@ -79,13 +57,26 @@ class FilesExtensions {
      * @param target
      * @return
      */
-    def static copyTo( File source, File target ) {
+    def static File copyTo( File source, File target ) {
         if( source.isDirectory() ) {
             FileUtils.copyDirectory(source, target)
+            return target
         }
-        else {
-            FileUtils.copyFile(source, target)
+
+        if( target.isDirectory() ) {
+            def result = new File(target,source.getName())
+            FileUtils.copyFile(source, result )
+            return result
         }
+
+        // create the parent directories if do not exist
+        def parent = source.getParentFile()
+        if( parent && !parent.exists() ) {
+            parent.mkdirs()
+        }
+
+        FileUtils.copyFile(source, target)
+        return target
     }
 
     /*
@@ -111,13 +102,26 @@ class FilesExtensions {
     }
 
 
-    def static moveTo( File source, File target ) {
+    def static File moveTo( File source, File target ) {
         if( source.isDirectory() ) {
             FileUtils.moveDirectory(source, target)
+            return target
         }
-        else {
-            FileUtils.moveFile(source, target)
+
+        if( target.isDirectory() ) {
+            def result = new File(target, source.getName())
+            FileUtils.moveFile(source, result)
+            return result
         }
+
+        // create the parent directories if do not exist
+        def parent = target.getParentFile()
+        if( parent && !parent.exists() ) {
+            parent.mkdirs()
+        }
+
+        FileUtils.moveFile(source, target)
+        return target
     }
 
     def static moveTo( File source, String target ) {
@@ -132,7 +136,7 @@ class FilesExtensions {
     }
 
     def static moveTo( Path source, String target ) {
-        moveTo(source, Paths.get(target))
+        moveTo(source, FileHelper.asPath(target))
     }
 
     /**
@@ -267,23 +271,24 @@ class FilesExtensions {
         Files.isRegularFile(self,options)
     }
 
-    def static void setExecutable(Path self, boolean flag) {
-
-        PosixFileAttributeView view = Files.getFileAttributeView(self,PosixFileAttributeView.class);
-        if( view == null ) {
-            throw new UnsupportedOperationException()
-        }
-
-        PosixFileAttributes attributes = view.readAttributes();
-        Set<PosixFilePermission> permissions = attributes.permissions();
-        if( flag )  {
-            permissions.add(PosixFilePermission.GROUP_EXECUTE)
-        }
-        else {
-            permissions.remove(PosixFilePermission.GROUP_EXECUTE);
-        }
-        // finally set the permission
-        view.setPermissions(permissions);
+    // TODO implements using the new API
+    def static boolean renameTo(Path self, Path target) {
+            self.toFile().renameTo(target.toFile())
     }
+
+    def static boolean renameTo(Path self, String target) {
+        renameTo( self, FileHelper.asPath(target) )
+    }
+
+    // TODO implements using the new API
+    def static String[] list(Path self) {
+        self.toFile().list()
+    }
+
+    // TODO implements using the new API
+    def static Path[] listFiles(Path self) {
+        self.toFile().listFiles().collect { it.toPath() } as Path[]
+    }
+
 
 }

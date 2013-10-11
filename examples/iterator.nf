@@ -28,11 +28,11 @@ process hola {
 
     input:
     val x using list1
-    val y using list2
+    each y using list2
     each z using list3
 
     """
-    echo 'x: $x - y: $y - z: $z'
+    echo 'x: $x; y: $y; z: $z'
     """
 
 }
