@@ -83,7 +83,9 @@ class LocalExecutor extends AbstractExecutor {
          */
         def wrapperScript = []
         wrapperScript << "# task: ${task.name}\n"
-        wrapperScript << staging
+        if( staging ) {
+            wrapperScript << staging
+        }
         wrapperScript << "source $COMMAND_ENV_FILENAME"
         wrapperScript << "$interpreter $COMMAND_SCRIPT_FILENAME"
         wrapperScript << ''

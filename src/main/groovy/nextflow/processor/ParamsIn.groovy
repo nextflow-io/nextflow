@@ -22,10 +22,10 @@ abstract class InParam {
     protected Object using
 
     @Lazy
-    DataflowReadChannel channel = { getLazyChannel() } ()
+    DataflowReadChannel channel = { channelRef() } ()
 
 
-    protected DataflowReadChannel getLazyChannel() {
+    protected DataflowReadChannel channelRef() {
 
         if( using ) {
             return asChannel(using)
@@ -93,12 +93,12 @@ class FileInParam extends InParam  {
     }
 
     @Override
-    protected DataflowReadChannel getLazyChannel() {
+    protected DataflowReadChannel channelRef() {
 
         if( !using ) {
             this.filePattern = '*'
         }
-        super.getLazyChannel()
+        super.channelRef()
 
     }
 

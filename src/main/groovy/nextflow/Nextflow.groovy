@@ -18,6 +18,7 @@
  */
 
 package nextflow
+
 import java.nio.file.Path
 
 import groovy.io.FileType
@@ -26,10 +27,12 @@ import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
-import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
+import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
+import nextflow.util.ChannelListProxy
 import nextflow.util.FileHelper
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -98,7 +101,7 @@ class Nextflow {
      */
     static <T> DataflowVariable<T> val( T value = null ) {
         def result = new DataflowVariable<T>()
-        if( value ) {
+        if( value != null ) {
             result.bind(value)
         }
         result
@@ -114,7 +117,6 @@ class Nextflow {
      * @return
      */
     static <T> DataflowQueue<T> channel( Collection<T> values = null ) {
-        log.trace("channel[1]: $values")
 
         def channel = new DataflowQueue<T>()
         if ( values )  {
@@ -158,7 +160,7 @@ class Nextflow {
 
         List result = []
         for( Object entry : items ) {
-            if( entry instanceof DataflowReadChannel || entry instanceof DataflowWriteChannel ) {
+            if( entry instanceof DataflowStreamWriteAdapter ) {
                 throw new IllegalArgumentException("Channel type not supported: ${entry?.class?.name}")
             }
             result.addAll( list(entry) )
@@ -181,12 +183,22 @@ class Nextflow {
                 return new ArrayList( ((Map)item ).entrySet()  )
 
             case DataflowBroadcast:
-                throw new IllegalArgumentException()
+                return new ChannelListProxy( ((DataflowBroadcast) item).createReadChannel() )
 
             case DataflowVariable:
+                def ch = (DataflowReadChannel)item
+                return [ ch.getVal() ]
+
             case DataflowQueue:
             case DataflowStreamReadAdapter:
-                return new ChannelListAdapter( (DataflowReadChannel)item )
+                def ch = (DataflowReadChannel)item
+                def result = []
+                while( true ) {
+                    def val = ch.getVal()
+                    if( val instanceof PoisonPill ) { break }
+                    result << val
+                }
+                return result
 
             default:
                 return [ item ]

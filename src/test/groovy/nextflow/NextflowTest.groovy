@@ -58,14 +58,16 @@ class NextflowTest extends Specification {
         then:
         Nextflow.list(ch) == [1,2,9]
 
+        when:
+        def val = Nextflow.val('x')
+        then:
+        Nextflow.list(val, val) == ['x','x']
 
         when:
         def ch1 = Nextflow.channel(1,2,3)
         def ch2 = Nextflow.channel('x','y','z')
-        Nextflow.list(ch1,ch2)
         then:
-        thrown(IllegalArgumentException)
-
+        Nextflow.list(ch1,ch2) == [1,2,3,'x','y','z']
 
         when:
         def b = Nextflow.broadcast()
@@ -73,6 +75,7 @@ class NextflowTest extends Specification {
         b << 4 << 5 << 6 << PoisonPill.instance
         then:
         Nextflow.list(ch3) == [4,5,6]
+
 
     }
 
