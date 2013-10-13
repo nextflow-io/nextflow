@@ -9,7 +9,6 @@ import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
-import nextflow.exception.InvalidExitException
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
 /**
@@ -37,7 +36,7 @@ class MergeTaskProcessor extends TaskProcessor {
      * Count the total number of {@code TaskRun} operation
      * executed by the final merge operation
      */
-    private AtomicInteger mergeCounter = new AtomicInteger()
+    private AtomicInteger mergeIndex = new AtomicInteger()
 
     /*
      * The script which will execute the merge operation.
@@ -73,9 +72,49 @@ class MergeTaskProcessor extends TaskProcessor {
         processor.start()
     }
 
+    protected void mergeTaskRun(TaskRun task) {
+
+        task.stagedProvider = this.&stagedProvider
+
+        /*
+         * initialize the *only* outputs for this task instance
+         * (inputs have been managed during the scripts collection stage)
+         */
+        taskConfig.outputs.each { OutParam param -> task.setOutput(param) }
+
+        // -- create the unique hash number for this tasks,
+        //    collecting the id of all the executed runs
+        //    and sorting them
+        def hasher = CacheHelper.hasher(session.uniqueId)
+        mergeHashesList.sort()
+        mergeHashesList.each { Integer entry ->  hasher = CacheHelper.hasher(hasher,entry) }
+        def hash = hasher.hash()
+        log.trace "Merging task > $name -- hash: $hash"
+
+        Path folder = FileHelper.createWorkFolder(session.workDir, hash)
+        log.trace "Merging task > $name -- trying cached: $folder"
+
+        def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder)
+        if( !cached ) {
+
+            folder = createTaskFolder(folder, hash)
+            log.info "Running merge > ${name}"
+
+            // -- set the folder where execute the script
+            task.workDirectory = folder
+
+            // -- set the aggregate script to be executed
+            task.script = mergeScript.toString()
+
+            // -- submit task for execution !
+            submitTask( task )
+
+        }
+
+    }
 
     protected void mergeScriptCollector( List values ) {
-        final currentIndex = mergeCounter.incrementAndGet()
+        final currentIndex = mergeIndex.incrementAndGet()
         log.info "Collecting task > ${name} ($currentIndex)"
 
         // -- map the inputs to a map and use to delegate closure values interpolation
@@ -197,61 +236,6 @@ class MergeTaskProcessor extends TaskProcessor {
         (Map<FileInParam,List<FileHolder>>) inputsCollector.findAll { it.key instanceof FileInParam }
     }
 
-    protected void mergeTaskRun(TaskRun task) {
-
-        try {
-            task.stagedProvider = this.&stagedProvider
-
-            /*
-             * initialize the *only* outputs for this task instance
-             * (inputs have been managed during the scripts collection stage)
-             */
-            taskConfig.outputs.each { OutParam param -> task.setOutput(param) }
-
-            // -- create the unique hash number for this tasks,
-            //    collecting the id of all the executed runs
-            //    and sorting them
-            def hasher = CacheHelper.hasher(session.uniqueId)
-            mergeHashesList.sort()
-            mergeHashesList.each { Integer entry ->  hasher = CacheHelper.hasher(hasher,entry) }
-            def hash = hasher.hash()
-            log.trace "Merging task > $name -- hash: $hash"
-
-            Path folder = FileHelper.createWorkFolder(session.workDir, hash)
-            log.trace "Merging task > $name -- trying cached: $folder"
-
-            def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder)
-            if( !cached ) {
-
-                folder = createTaskFolder(folder, hash)
-                log.info "Running merge > ${name}"
-
-                // -- set the folder where execute the script
-                task.workDirectory = folder
-
-                // -- set the aggregate script to be executed
-                task.script = mergeScript.toString()
-
-                // -- run it !
-                launchTask( task )
-
-                // -- save the exit code
-                folder.resolve('.exitcode').text = task.exitCode
-
-                // -- check if terminated successfully
-                boolean success = (task.exitCode in taskConfig.validExitCodes)
-                if ( !success ) {
-                    throw new InvalidExitException("Task '${task.name}' terminated with an invalid exit code: ${task.exitCode}")
-                }
-
-                collectOutputs(task)
-                bindOutputs(task)
-            }
-        }
-        finally {
-            task.status = TaskRun.Status.TERMINATED
-        }
-    }
 
 
     /**
@@ -264,38 +248,42 @@ class MergeTaskProcessor extends TaskProcessor {
         public void afterStart(final DataflowProcessor processor) {
             // increment the session sync
             def val = session.taskRegister()
-            log.trace "After start > register phaser '$name' :: $val"
+            log.debug "After start > register phaser for '$name' ($val)"
         }
 
         @Override
         void afterRun(DataflowProcessor processor, List<Object> MOCK_MESSAGES) {
             log.trace "After run > ${name}"
-            finalizeTask()
         }
 
         @Override
         public void afterStop(final DataflowProcessor processor) {
             // increment the session sync
             def val = session.taskDeregister()
-            log.debug "After stop > deregister phaser '$name' :: $val"
+            log.debug "After stop > deregister phaser for '$name' ($val)"
         }
 
         @Override
         public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "Message arrived > task: ${name}; channel: $index; value: $message"
+            log.trace "Received message > task: ${name}; channel: $index; value: $message"
             return message
         }
 
 
         public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "Control message arrived > task: ${name}; channel: $index; value: $message"
+            if( log.isTraceEnabled() ) {
+                def inputs = taskConfig.inputs.names
+                log.trace "Control message arrived > ${name} -- ${inputs[index]} => ${message}"
+            }
 
             // intercepts 'poison pill' message e.g. termination control message
             // in order the launch the task execution on the underlying system
             if( message == PoisonPill.instance)  {
 
-                if( mergeCounter.get()>0 ) {
+                // flag the task as terminated
+                gotPoisonPill = true
 
+                if( mergeIndex.get()>0 ) {
                     def task = MergeTaskProcessor.this.createTaskRun()
                     try {
                         MergeTaskProcessor.this.mergeTaskRun(task)
@@ -303,14 +291,15 @@ class MergeTaskProcessor extends TaskProcessor {
                     catch( Throwable e ) {
                         handleException(e, task)
                     }
-
                 }
                 else {
                     log.warn "No data collected by task > $name -- Won't execute it. Something may be wrong in your execution flow"
                 }
-
+                return StopQuietly.instance
             }
-            return message
+            else {
+                return message
+            }
         }
 
         public boolean onException(final DataflowProcessor processor, final Throwable e) {

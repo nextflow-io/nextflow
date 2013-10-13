@@ -53,7 +53,7 @@ class SlurmExecutor extends AbstractGridExecutor {
 
         // -- last entry to 'script' file name
         // replace with the 'shell' attribute
-        result << 'bash' << JOB_WRAPPER_FILENAME
+        result << 'bash' << JOB_SCRIPT_FILENAME
 
     }
 
@@ -64,4 +64,8 @@ class SlurmExecutor extends AbstractGridExecutor {
 //    }
 
 
+    @Override
+    void killTask(jobId) {
+        //TODO SLURM kill job
+    }
 }

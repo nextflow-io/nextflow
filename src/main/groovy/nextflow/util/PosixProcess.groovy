@@ -17,46 +17,48 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.executor
+package nextflow.util
 
-import java.nio.file.Paths
-
-import groovy.util.logging.Slf4j
-import nextflow.processor.TaskRun
+import java.lang.reflect.Field
 
 /**
- * Dummy executor, only for test purpose
+ * Hack the Java process to be able to access the Unix process id
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-class NopeExecutor extends AbstractExecutor {
+class PosixProcess {
 
-    @Override
-    void launchTask( TaskRun task ) {
-        log.info ">> launching nope task: ${task}"
+    @Delegate
+    Process target
 
-        task.workDirectory = Paths.get('.').toAbsolutePath()
-        task.status = TaskRun.Status.TERMINATED
-        task.exitCode = 0
-        task.stdout = task.script   // return the script itself as output
+    PosixProcess( Process process ) {
+        assert process
+        assert process.class.name == 'java.lang.UNIXProcess'
 
+        target = process
     }
 
-    @Override
-    boolean checkStarted(TaskRun task) {
-        return true
-    }
+    /**
+     * Access the *target* Unix process pid, via a reflection trick
+     */
+    @Lazy Integer pid = {
 
-    @Override
-    boolean checkCompleted(TaskRun task) {
-        return true
-    }
+        Field field = target.class.getDeclaredField("pid");
+        field.setAccessible(true);
+        return field.getInt(target);
 
-    @Override
-    def getStdOutFile( TaskRun task ) {
-        log.info ">> Getting nope stdout: ${task}"
-        return task.script
+    } ()
+
+
+    /**
+     * Check if the submitted job has terminated its execution
+     */
+    boolean hasExited() {
+
+        Field field = target.class.getDeclaredField("hasExited");
+        field.setAccessible(true);
+        return field.getBoolean(target);
+
     }
 
 }

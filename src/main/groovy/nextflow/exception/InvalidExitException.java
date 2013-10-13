@@ -26,9 +26,13 @@ package nextflow.exception;
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public class InvalidExitException extends TaskValidationException {
+public class InvalidExitException extends TaskException {
 
     public InvalidExitException(String message) {
         super(message);
+    }
+
+    public InvalidExitException(String message, Throwable e) {
+        super(message, e);
     }
 }

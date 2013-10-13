@@ -26,7 +26,7 @@ package nextflow.exception;
  * http://blog.proxerd.pl/article/how-to-fix-incompatibleclasschangeerror-for-your-groovy-projects-running-on-jdk7
  *
  */
-public class MissingFileException extends TaskValidationException {
+public class MissingFileException extends TaskException {
 
     public MissingFileException(String message) {
         super(message);

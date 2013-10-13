@@ -17,15 +17,14 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.processor
+
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
 import com.google.common.hash.HashCode
-import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
-import groovy.transform.ToString
+import groovy.transform.Synchronized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowQueue
@@ -36,13 +35,15 @@ import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
 import nextflow.Nextflow
 import nextflow.Session
+import nextflow.exception.InvalidExitException
 import nextflow.exception.MissingFileException
-import nextflow.exception.TaskValidationException
+import nextflow.exception.TaskException
 import nextflow.executor.AbstractExecutor
 import nextflow.script.BaseScript
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -50,7 +51,10 @@ import nextflow.util.FileHelper
 @Slf4j
 abstract class TaskProcessor {
 
-    protected int index
+    /**
+     * Count the number of instance (run) of this task
+     */
+    protected int instancesCount
 
     /**
      * The current workflow execution session
@@ -62,6 +66,9 @@ abstract class TaskProcessor {
      */
     protected final BaseScript ownerScript
 
+    /**
+     * Gpars thread pool
+     */
     protected PGroup group = Dataflow.retrieveCurrentDFPGroup()
 
     /**
@@ -74,31 +81,76 @@ abstract class TaskProcessor {
      */
     protected Closure code
 
-    protected TaskRun lastRunTask
-
+    /**
+     * The corresponding {@code DataflowProcessor} which will receive and
+     * manage accordingly the task inputs
+     */
     protected DataflowProcessor processor
 
+    /**
+     * Whenever all inputs for this task are *scalar* value, i.e. simple data types and not collections of values
+     */
     protected allScalarValues
 
+    /**
+     * The underlying executor which will run the task
+     */
     protected final AbstractExecutor executor
 
+    /**
+     * The corresponding task configuration properties, it holds the inputs/outputs
+     * definition as well as other execution meta-declaration
+     */
     protected final TaskConfig taskConfig
 
+    /**
+     * Lock to protected against race-condition the task creation phase
+     */
     private static final creationLock = new ReentrantLock(true)
 
+    /**
+     * Lock to protected against race-condition the folder creation phase
+     */
     private static final folderLock = new ReentrantLock(true)
 
+    /**
+     * Used for framework generated task names
+     */
+    @Deprecated
     private static final AtomicInteger tasksCount = new AtomicInteger()
 
+    /*
+     * Internally used, random number generator
+     */
     private final random = new Random()
 
-    private Boolean errorShown = Boolean.FALSE
+    /**
+     * Count the errors showed
+     */
+    private final errorCount = new AtomicInteger()
 
-    private final errorLock = new ReentrantLock(true)
+    /**
+     * Count the number of times the task has been finalized (it must math the *instances* executed)
+     */
+    private int finalizedCount
+
+    /**
+     * This flag is set when task has received a poison-pill message (signal to stop execution)
+     */
+    protected boolean gotPoisonPill
 
     /* for testing purpose - do not remove */
     protected TaskProcessor() { }
 
+    /**
+     * Create and initialize the processor object
+     *
+     * @param executor
+     * @param session
+     * @param script
+     * @param taskConfig
+     * @param taskBlock
+     */
     TaskProcessor( AbstractExecutor executor, Session session, BaseScript script, TaskConfig taskConfig, Closure taskBlock ) {
         assert executor
         assert session
@@ -113,13 +165,14 @@ abstract class TaskProcessor {
 
         executor.taskConfig = taskConfig
 
+        /*
+         * set the task name
+         */
         if( taskConfig.name ) {
             this.name = taskConfig.name
         }
         else {
-            /*
-             * generate the processor name if not specified
-             */
+            // generate the processor name if not specified
             this.name = "task_${tasksCount.incrementAndGet()}"
             taskConfig.name = this.name
         }
@@ -130,8 +183,14 @@ abstract class TaskProcessor {
         taskConfig
     }
 
+    /**
+     * @return The current {@code Session} instance
+     */
     Session getSession() { session }
 
+    /**
+     * @return The processor name
+     */
     String getName() { name }
 
     BaseScript getOwnerScript() { ownerScript }
@@ -194,6 +253,7 @@ abstract class TaskProcessor {
      * Template method which extending classes have to override in order to
      * create the underlying *dataflow* operator associated with this processor
      *
+     * See {@code DataflowProcessor}
      */
     protected abstract void createOperator()
 
@@ -202,6 +262,7 @@ abstract class TaskProcessor {
      * The interpreter to be used define bu the *taskConfig* property {@code shell}
      */
     def getShebangLine() {
+        assert taskConfig.shell, "Missing 'shell' property for task: $name"
 
         def shell = taskConfig.shell
         String result = shell instanceof List ? shell.join(' ') : shell
@@ -271,24 +332,43 @@ abstract class TaskProcessor {
         return result
     }
 
+    /**
+     * Create a new {@code TaskRun} instance, initializing the following properties :
+     * <li>{@code TaskRun#id}
+     * <li>{@code TaskRun#status}
+     * <li>{@code TaskRun#index}
+     * <li>{@code TaskRun#name}
+     * <li>{@code TaskRun#process}
+     *
+     * @return The new newly created {@code TaskRun{
+     */
     final protected TaskRun createTaskRun() {
         log.debug "Creating a new task > $name"
 
-        TaskRun task = null
+        TaskRun result = null
         creationLock.lock()
         try {
-            def num = session.tasks.size()
-            task = new TaskRun(processor: this, id: num, status: TaskRun.Status.PENDING, index: ++index, name: "$name ($index)" )
-            session.tasks.put( this, task )
+            def num = session.allTasks.size()
+            instancesCount += 1
+            result = new TaskRun(id: num, index: instancesCount, name: "$name ($instancesCount)", processor: this )
+            result.status = TaskRun.Status.NEW
+            session.allTasks.put( this, result )
         }
         finally {
             creationLock.unlock()
         }
 
-        return task
+        return result
     }
 
 
+    /**
+     * Create a unique-folder where the task will be executed
+     *
+     * @param folder
+     * @param hash
+     * @return
+     */
     final protected Path createTaskFolder( Path folder, HashCode hash  ) {
 
         folderLock.lock()
@@ -319,7 +399,13 @@ abstract class TaskProcessor {
 
     }
 
-
+    /**
+     * Check whenever the outputs for the specified task already exist
+     *
+     * @param task The task instance
+     * @param folder The folder where the outputs are stored (eventually)
+     * @return {@code true} when all outputs are available, {@code false} otherwise
+     */
     final boolean checkCachedOutput(TaskRun task, Path folder) {
         if( !folder.exists() ) {
             log.trace "Cached folder does not exists > $folder -- return false"
@@ -328,7 +414,7 @@ abstract class TaskProcessor {
         }
 
         def exitFile = folder.resolve('.exitcode')
-        if( FileHelper.empty(exitFile) ) {
+        if( exitFile.empty() ) {
             log.trace "Exit file is empty > $exitFile -- return false"
             return false
         }
@@ -360,7 +446,7 @@ abstract class TaskProcessor {
             }
 
             // -- now bind the results
-            bindOutputs(task)
+            finalizeTask0(task)
             return true
         }
         catch( MissingFileException e ) {
@@ -382,25 +468,19 @@ abstract class TaskProcessor {
      */
     final protected boolean handleException( Throwable error, TaskRun task = null ) {
 
-        // -- when is a task level error and the user has chosen to ignore error, just report and error message
-        //    return 'false' to DO NOT stop the execution
-        if( error instanceof TaskValidationException && taskConfig.errorStrategy == ErrorStrategy.IGNORE ) {
+        // when is a task level error and the user has chosen to ignore error, just report and error message
+        // return 'false' to DO NOT stop the execution
+        if( error instanceof TaskException && taskConfig.errorStrategy == ErrorStrategy.IGNORE ) {
             log.warn "Error running task > ${error.getMessage()} -- error is ignored"
             return false
         }
 
-        // -- synchronize on the errorLock to avoid multiple report of the same error
-        errorLock.lock()
-        try {
-            if( errorShown ) { return true }
-            errorShown = Boolean.TRUE
-        }
-        finally {
-            errorLock.unlock()
+        // make sure the error is showed only the very first time
+        if( errorCount.getAndIncrement()>0 ) {
+            return true
         }
 
-
-        if( error instanceof TaskValidationException ) {
+        if( error instanceof TaskException ) {
 
             // compose a readable error message
             def message = []
@@ -413,7 +493,8 @@ abstract class TaskProcessor {
                     message << "  $it"
                 }
 
-                // if the echo was disabled show, the program out when there's an error
+                message << "\nCommand exit status: ${task.exitCode}"
+
                 message << "\nCommand output:"
                 task.stdout?.eachLine {
                     message << "  $it"
@@ -435,19 +516,9 @@ abstract class TaskProcessor {
         return true
     }
 
-    final protected void finalizeTask( ) {
-
-        // -- when all input values are 'scalar' (not queue or broadcast stream)
-        //    stops after the first run
-        if( allScalarValues ) {
-            log.debug "Finalize > ${name} terminates since all values are scalar"
-            // send a poison pill to 'terminate' all downstream channels
-            sendPoisonPill()
-            processor.terminate()
-        }
-
-    }
-
+    /**
+     * Send a poison pill over all the outputs channel
+     */
     final protected synchronized void sendPoisonPill() {
 
         taskConfig.outputs.eachParam { name, channel ->
@@ -519,6 +590,7 @@ abstract class TaskProcessor {
     protected void collectOutputs( TaskRun task, OutParam param ) {
         assert task
         assert param
+        log.trace "Collecting output for ${param.dump()}"
 
         switch( param ) {
             case StdOutParam:
@@ -789,8 +861,9 @@ abstract class TaskProcessor {
      * @param script The script string to be execute, e.g. a BASH script
      * @return {@code TaskDef}
      */
-    final void launchTask( TaskRun task ) {
-        executor.launchTask(task)
+    final protected void submitTask( TaskRun task ) {
+        // add the task to the collection of running tasks
+        session.scheduler.submit(task)
     }
 
 
@@ -843,56 +916,120 @@ abstract class TaskProcessor {
         }
     }
 
-}
-
-
-/**
- * Implements a special {@code Path} used to stage files in the work area
- */
-@ToString(includePackage = false, includeNames = true)
-@EqualsAndHashCode
-class FileHolder  {
-
-    final def sourceObj
-
-    final Path storePath
-
-    final Path stagePath
-
-    FileHolder( Path inputFile ) {
-        assert inputFile
-        this.sourceObj = inputFile
-        this.storePath = inputFile
-        this.stagePath = inputFile.getFileName()
-    }
-
-    FileHolder( def origin, Path path ) {
-        assert origin != null
-        assert path != null
-
-        this.sourceObj = origin
-        this.storePath = path
-        this.stagePath = path.getFileName()
-    }
-
-    protected FileHolder( def source, Path store, def stageName ) {
-        this.sourceObj = source
-        this.storePath = store
-        this.stagePath = stageName instanceof Path ? (Path)stageName : Paths.get(stageName.toString())
-    }
-
-    FileHolder withName( def stageName )  {
-        new FileHolder( this.sourceObj, this.storePath, stageName )
-    }
-
+    /**
+     * Launch the task execution
+     */
     @PackageScope
-    static FileHolder get( def path, def name = null ) {
-        Path storePath = path instanceof Path ? path : Paths.get(path.toString())
-        def target = name ? name : storePath.getFileName()
-        new FileHolder( path, storePath, target )
+    def void launchTask( TaskRun task ) {
+        executor.launchTask(task)
     }
 
+    def boolean checkTaskStarted( TaskRun task ) {
+        try {
+            def result = executor.checkStarted(task)
+            log.trace "Check task ${task.name} > started: ${result}"
+            return result
+        }
+        catch ( Throwable error ) {
+            handleException(error, task)
+        }
+    }
+
+    /**
+     * Check for task completion
+     *
+     * @param task The {@code TaskRun} for which check if it has completed its execution
+     * @return {@code true} when the task execution has completed, or {@code false} otherwise
+     */
+    @PackageScope
+    final boolean checkTaskCompletion( TaskRun task ) {
+        try {
+            def result = executor.checkCompleted(task)
+            log.trace "Check task ${task.name} > completed: ${result}"
+            return result
+        }
+        catch ( Throwable error ) {
+            handleException(error, task)
+        }
+    }
+
+    /**
+     * Finalize the task execution, checking the exit status
+     * and binding output values accordingly
+     *
+     * @param task The {@code TaskRun} instance to finalize
+     */
+    @PackageScope
+    final void finalizeTask( TaskRun task ) {
+        try {
+            collectOutputs(task)
+            finalizeTask0(task)
+        }
+        catch ( Throwable error ) {
+            handleException(error, task)
+        }
+    }
+
+    /**
+     * Finalize the task execution, checking the exit status
+     * and binding output values accordingly
+     *
+     * @param task The {@code TaskRun} instance to finalize
+     * @param producedFiles The map of files to be bind the outputs
+     */
+    @Synchronized
+    private void finalizeTask0( TaskRun task ) {
+
+        /*
+         * check task termination status
+         */
+        try {
+            log.debug "Finalize task > ${task.name}"
+
+            boolean success = (task.exitCode in taskConfig.validExitCodes)
+
+            if ( !success ) {
+                throw new InvalidExitException("Task '${task.name}' terminated with an invalid exit code: ${task.exitCode}")
+            }
+
+            // -- bind output (files)
+            bindOutputs(task)
+
+        }
+
+        finally {
+            finalizedCount += 1
+            log.trace "Sending poison condition for task: ${task.name} > allScalar: $allScalarValues; poison: $gotPoisonPill; instances: $instancesCount; finalized: $finalizedCount"
+
+            /*
+             * send a poison pill when all inputs were scalar values i.e. it was just an iteration,
+             * or it received at poison pill and all task instances have been processed i.e. instancesCount == finalizedCount
+             */
+            if( allScalarValues || (gotPoisonPill && finalizedCount==instancesCount) ) {
+                log.trace "Sending poison pill for task > ${name}"
+                // send a poison pill to 'terminate' all downstream channels
+                sendPoisonPill()
+                processor.terminate()
+            }
+        }
+
+    }
+
+
+    def notifyTaskCreated(TaskRun task) {
+        log.debug "Task created > $task"
+    }
+
+    def notifyTaskStarted(TaskRun task) {
+        log.debug "Task started > $task"
+    }
+
+    def notifyTaskCompleted(TaskRun task) {
+        log.debug "Task completed > $task"
+    }
+
+
+
+
 }
-
-
 

@@ -1,5 +1,4 @@
 package nextflow.processor
-
 import java.nio.file.Path
 
 import groovy.transform.InheritConstructors
@@ -10,7 +9,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
-import nextflow.exception.InvalidExitException
+import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
 /**
@@ -154,6 +153,7 @@ class ParallelTaskProcessor extends TaskProcessor {
      * @return
      */
     final protected TaskRun initTaskRun(List values) {
+        log.debug "Creating a new task > $name"
 
         final TaskRun task = createTaskRun()
 
@@ -229,50 +229,33 @@ class ParallelTaskProcessor extends TaskProcessor {
         final task = initTaskRun(params)
 
         // -- call the closure and execute the script
-        try {
+        currentTask.set(task)
 
-            currentTask.set(task)
-            task.script = task.code.call()?.toString()?.stripIndent()
+        // Important! Here it call the user specific script and resolve the all variables ref
+        task.script = task.code.call()?.toString()?.stripIndent()
 
-            // create an hash for the inputs and code
-            // Does it exist in the cache?
-            // NO --> launch the task
-            // YES --> Does it exited OK and exists the expected outputs?
-            //          YES --> return the outputs
-            //          NO  --> launch the task
+        // create an hash for the inputs and code
+        // Does it exist in the cache?
+        // NO --> launch the task
+        // YES --> Does it exited OK and exists the expected outputs?
+        //          YES --> return the outputs
+        //          NO  --> launch the task
 
-            def keys = [session.uniqueId, task.script ]
-            // add all the input name-value pairs to the key generator
-            task.inputs.each { keys << it.key.name << it.value }
+        def keys = [session.uniqueId, task.script ]
+        // add all the input name-value pairs to the key generator
+        task.inputs.each { keys << it.key.name << it.value }
 
-            def hash = CacheHelper.hasher(keys).hash()
-            Path folder = FileHelper.createWorkFolder(session.workDir, hash)
-            def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder)
-            if( !cached ) {
-                log.info "Running task > ${task.name}"
+        def hash = CacheHelper.hasher(keys).hash()
+        Path folder = FileHelper.createWorkFolder(session.workDir, hash)
+        def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder)
+        if( !cached ) {
+            log.info "Running task > ${task.name}"
 
-                // run the task
-                task.workDirectory = createTaskFolder(folder, hash)
-                launchTask( task )
+            // run the task
+            task.workDirectory = createTaskFolder(folder, hash)
 
-                // save the exit code
-                folder.resolve('.exitcode').text = task.exitCode
-
-                // check if terminated successfully
-                boolean success = (task.exitCode in taskConfig.validExitCodes)
-                if ( !success ) {
-                    throw new InvalidExitException("Task '${task.name}' terminated with an invalid exit code: ${task.exitCode}")
-                }
-
-                // -- bind output (files)
-                collectOutputs(task)
-                bindOutputs(task)
-            }
-
-        }
-        finally {
-            lastRunTask = task
-            task.status = TaskRun.Status.TERMINATED
+            // submit task for execution
+            submitTask( task )
         }
     }
 
@@ -283,7 +266,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         public void afterStart(final DataflowProcessor processor) {
             // increment the session sync
             def val = session.taskRegister()
-            log.trace "After start > register phaser '$name' :: $val"
+            log.debug "After start > register phaser for '$name' ($val)"
         }
 
         @Override
@@ -311,21 +294,28 @@ class ParallelTaskProcessor extends TaskProcessor {
                 log.trace "Control message arrived > ${taskName} -- ${channelName} => ${message}"
             }
 
-            return message;
+            if( message == PoisonPill.instance ) {
+                log.trace "Poison pill arrived for task > ${currentTask.get()?.name ?: name} -- terminated"
+                gotPoisonPill = true
+                return StopQuietly.instance
+            }
+            else {
+                return message;
+            }
+
         }
 
         @Override
-        void afterRun(DataflowProcessor processor, List<Object> MOCK_MESSAGES) {
+        void afterRun(DataflowProcessor processor, List<Object> messages) {
             log.trace "After run > ${currentTask.get()?.name ?: name}"
             currentTask.remove()
-            finalizeTask()
         }
 
         @Override
         public void afterStop(final DataflowProcessor processor) {
-            // increment the session sync
+            // decrement the session sync
             def val = session.taskDeregister()
-            log.debug "After stop > deregister phaser '$name' -- $val"
+            log.debug "After stop > deregister phaser for '$name' ($val)"
         }
 
         /**

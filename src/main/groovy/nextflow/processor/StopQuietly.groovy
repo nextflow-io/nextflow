@@ -17,23 +17,14 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.exception;
+package nextflow.processor
+
+import groovyx.gpars.dataflow.operator.ControlMessage
 
 /**
- * An expected result file is missing
  *
- * Note: THIS IS A PLAIN JAVA CLASS due to this bug
- * http://blog.proxerd.pl/article/how-to-fix-incompatibleclasschangeerror-for-your-groovy-projects-running-on-jdk7
- *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public class MissedCacheException extends TaskException {
-
-    public MissedCacheException(String message) {
-        super(message);
-    }
-
-    public MissedCacheException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
+@Singleton
+class StopQuietly implements ControlMessage {
 }

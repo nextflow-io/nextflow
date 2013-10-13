@@ -170,6 +170,16 @@ class DnaNexusExecutor extends AbstractExecutor {
         }
     }
 
+    @Override
+    boolean checkStarted(TaskRun task) {
+        return false  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    boolean checkCompleted(TaskRun task) {
+        return false  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
     def Map waitForJobResult( TaskRun task ) {
         JsonNode result;
 

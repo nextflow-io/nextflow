@@ -19,7 +19,7 @@
 
 apply plugin: 'groovy'
 apply plugin: 'codenarc'
-version = '0.4.2'
+version = '0.5.0'
 
 repositories {
     flatDir(dirs: file('lib'))
@@ -186,7 +186,7 @@ gradle.taskGraph.afterTask { Task task, TaskState state ->
 def oneJarShellStub = "./one-jar/launcher.stub"
 def oneJarLibPath = "./one-jar/one-jar-ant-task-0.97.jar"
 def oneJarTempPath = "$buildDir/tmp/nextflow-${version}.run.jar"
-def oneJarDistPath = "./resources/usr/bin/nextflow"
+def oneJarDistPath = "$buildDir/pack/nextflow"
 
 task pack(dependsOn: compile) << {
 
@@ -214,8 +214,6 @@ task pack(dependsOn: compile) << {
         lib {
             fileset dir: "$buildDir/dependency-libs"
         }
-
-        //fileset( dir: "$buildDir/resources/main" )
     }
 
 
@@ -249,3 +247,4 @@ task uploadOnejar ( type: Copy, dependsOn: pack ) {
     into '/Users/pditommaso/Dropbox/Public/nextflow/'
 
 }
+

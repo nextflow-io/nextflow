@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, the authors.
+ * Copyright (c) 2013, the authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -17,24 +17,45 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.exception;
+package nextflow.executor
+
+import java.nio.file.Path
 
 /**
- * Reports a generic error during the 'Task' validation step
+ * Actions to handle the underlying job running the user task.
  *
- * Note: THIS IS A PLAIN JAVA CLASS due to this bug
- * http://blog.proxerd.pl/article/how-to-fix-incompatibleclasschangeerror-for-your-groovy-projects-running-on-jdk7
+ * <p>
+ * Note this model the job in the execution facility (i.e. grid, cloud, etc)
+ * NOT the *logical* user task
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public class TaskValidationException extends Exception {
+public interface ProcessHandler {
 
-    public TaskValidationException(String message) {
-        super(message);
-    }
 
-    public TaskValidationException(String message, Throwable cause) {
-        super(message,cause);
-    }
+    /**
+     * Check if the submitted job has started
+     */
+    boolean hasStarted()
+
+    /**
+     * Check if the submitted job has terminated its execution
+     */
+    boolean hasExited()
+
+    /**
+     * @return The exit status if the user task
+     */
+    int exitCode()
+
+    /**
+     * @return The file containing the job stdout
+     */
+    Path getOutputFile()
+
+    /**
+     * Force the submitted job to quit
+     */
+    void kill()
+
 }
-

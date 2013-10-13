@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import nextflow.processor.FileInParam
 import nextflow.processor.TaskRun
 import nextflow.util.ByteDumper
+import nextflow.util.PosixProcess
 import org.apache.commons.io.IOUtils
 import org.codehaus.groovy.runtime.IOGroovyMethods
 /**
@@ -33,11 +34,11 @@ import org.codehaus.groovy.runtime.IOGroovyMethods
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class LocalExecutor extends AbstractExecutor {
+class LocalExecutor extends AbstractExecutor<LocalProcessHandler> {
 
     private static final COMMAND_OUT_FILENAME = '.command.out'
 
-    private static final COMMAND_WRAPPER_FILENAME = '.command.sh'
+    private static final COMMAND_BASH_FILENAME = '.command.sh'
 
     private static final COMMAND_ENV_FILENAME = '.command.env'
 
@@ -51,7 +52,7 @@ class LocalExecutor extends AbstractExecutor {
      * @return
      */
     @Override
-    void launchTask( TaskRun task )  {
+    void launchTask( TaskRun<LocalProcessHandler> task )  {
         assert task
         assert task.@script
         assert task.workDirectory
@@ -82,19 +83,23 @@ class LocalExecutor extends AbstractExecutor {
          * create the runner script which will launch the script
          */
         def wrapperScript = []
-        wrapperScript << "# task: ${task.name}\n"
+        wrapperScript << '#!/bin/bash -Eeu'
+        wrapperScript << "# task: ${task.name}"
+        wrapperScript << 'trap onexit 1 2 3 15 ERR'
+        wrapperScript << 'function onexit() { local exit_status=${1:-$?}; printf $exit_status > .exitcode; exit $exit_status; }'
         if( staging ) {
             wrapperScript << staging
         }
         wrapperScript << "source $COMMAND_ENV_FILENAME"
         wrapperScript << "$interpreter $COMMAND_SCRIPT_FILENAME"
+        wrapperScript << 'onexit'
         wrapperScript << ''
 
-        def wrapperFile = scratch.resolve(COMMAND_WRAPPER_FILENAME)
+        def wrapperFile = scratch.resolve(COMMAND_BASH_FILENAME)
         wrapperFile.text = task.processor.normalizeScript(wrapperScript.join('\n'))
 
         // the cmd list to launch it
-        List cmd = new ArrayList(taskConfig.shell ?: 'bash' as List ) << COMMAND_WRAPPER_FILENAME
+        List cmd = new ArrayList(taskConfig.shell ?: 'bash' as List ) << COMMAND_BASH_FILENAME
         log.trace "Launch cmd line: ${cmd.join(' ')}"
 
         /*
@@ -107,86 +112,168 @@ class LocalExecutor extends AbstractExecutor {
                 .command(cmd)
                 .redirectErrorStream(true)
 
+        // the file that will hold the process stdout
+        Path outputFile = scratch.resolve(COMMAND_OUT_FILENAME)
+
         // -- start the execution and notify the event to the monitor
         Process process = builder.start()
-        task.status = TaskRun.Status.RUNNING
+        task.stdout = outputFile
+        task.handler = new LocalProcessHandler(process, task.name, task.stdin, outputFile, taskConfig.echo)
+        task.status = TaskRun.Status.STARTED
+        task.submitTimeMillis = task.handler.startTimeMillis
+        task.startedTimeMillis = task.handler.startTimeMillis
 
-        // -- copy the input value to the process standard input
-        if( task.stdin != null ) {
-            pipeTaskInput( task, process )
-        }
-
-        Path fileOut = scratch.resolve(COMMAND_OUT_FILENAME)
-        ByteDumper dumper = null
-        try {
-            // -- print the process out if it is not capture by the output
-            //    * The byte dumper uses a separate thread to capture the process stdout
-            //    * The process stdout is captured in two condition:
-            //      when the flag 'echo' is set or when it goes in the output channel (outputs['-'])
-            //
-            BufferedOutputStream streamOut = fileOut.newOutputStream()
-
-            def handler = { byte[] data, int len ->
-                streamOut.write(data,0,len)
-                if( taskConfig.echo ) System.out.print(new String(data,0,len))
-            }
-            dumper = new ByteDumper(process.getInputStream(), handler)
-            dumper.setName("dumper-$taskConfig.name")
-            dumper.start()
-
-            // -- wait the the process completes
-            if( taskConfig.maxDuration ) {
-                log.debug "Running task > ${task.name} -- waiting max: ${taskConfig.maxDuration}"
-                process.waitForOrKill(taskConfig.maxDuration.toMillis())
-                task.exitCode = process.exitValue()
-            }
-            else {
-                log.debug "Running task > ${task.name} -- wait until it finishes"
-                task.exitCode = process.waitFor()
-            }
-
-            log.debug "Task completed > ${task.name} -- exit code: ${task.exitCode}; success: ${task.exitCode in taskConfig.validExitCodes}"
-
-            dumper?.await(500)
-            streamOut.close()
-
-        }
-        finally {
-
-            dumper?.terminate()
-            IOUtils.closeQuietly(process.in)
-            IOUtils.closeQuietly(process.out)
-            IOUtils.closeQuietly(process.err)
-            process.destroy()
-
-            task.stdout = fileOut
-        }
     }
 
     @Override
-    def getStdOutFile( TaskRun task ) {
+    boolean checkStarted( TaskRun<LocalProcessHandler> task ) {
+        return task.isStarted()
+    }
 
-        task.workDirectory.resolve(COMMAND_OUT_FILENAME)
+    @Override
+    boolean checkCompleted( TaskRun<LocalProcessHandler>  task ) {
 
+        if( task.isTerminated() ) {
+            return true
+        }
+
+        def done = task.handler.hasExited()
+        if( done ) {
+            task.exitCode = task.handler.exitCode()
+            task.status = TaskRun.Status.TERMINATED
+            task.handler.destroy()
+        }
+        else if( taskConfig.maxDuration ) {
+            /*
+             * check if the task exceed max duration time
+             */
+            if( task.handler.elapsedTimeMillis() > taskConfig.maxDuration.toMillis() ) {
+                task.handler.destroy()
+                task.exitCode = task.handler.exitCode()
+                task.status = TaskRun.Status.TERMINATED
+
+                // signal has completed
+                done = true
+            }
+        }
+
+        return done
     }
 
 
-    /**
-     * Pipe the {@code TaskDef#input} to the {@code Process}
-     *
-     * @param task The current task to be executed
-     * @param process The system process that will run the task
-     */
-    protected void pipeTaskInput( TaskRun task, Process process ) {
 
-        Thread.start {
-            try {
-                IOGroovyMethods.withStream(new BufferedOutputStream(process.getOutputStream())) {writer -> writer << task.stdin}
-            }
-            catch( Exception e ) {
-                log.warn "Unable to pipe input data for task: ${task.name}"
-            }
+    /**
+     * A process wrapper adding the ability to access to the Posix PID
+     * and the {@code hasExited} flag
+     *
+     * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+     */
+    static class LocalProcessHandler implements ProcessHandler {
+
+        private final PosixProcess target
+
+        private final startTimeMillis = System.currentTimeMillis()
+
+        private final input
+
+        private final Path output
+
+        private final Boolean echo
+
+        private final String taskName
+
+        private ByteDumper outputDumper
+
+        private BufferedOutputStream outputBuffer
+
+        LocalProcessHandler( Process process, String taskName, def input, Path output, Boolean echo ) {
+            this.target = new PosixProcess(process)
+            this.taskName = taskName
+            this.input = input
+            this.output = output
+            this.echo = echo
+
+            // handle in/out
+            handleInputOutput()
         }
+
+        /**
+         * Pipe the process input to the running process and save the stdout to the specified *output* file
+         */
+        private handleInputOutput() {
+
+            /*
+             * Pipe the input data using a parallel thread
+             */
+            if( input ) {
+
+                Thread.start("Task $taskName > input feeder") {
+                    try {
+                        IOGroovyMethods.withStream(new BufferedOutputStream(target.getOutputStream())) { writer -> writer << input }
+                    }
+                    catch( Exception e ) {
+                        log.warn "Unable to pipe input data for task: ${taskName}"
+                    }
+                }
+            }
+
+            /*
+             * Capture the process stdout and save it to a file
+             */
+            outputBuffer = output.newOutputStream()
+            def writer = { byte[] data, int len ->
+                outputBuffer.write(data,0,len)
+                if( echo ) { System.out.print(new String(data,0,len)) }
+            }
+
+            outputDumper = new ByteDumper(target.getInputStream(), writer)
+            outputDumper.setName("Task $taskName > output dumper")
+            outputDumper.start()
+        }
+
+
+        long elapsedTimeMillis() {
+            System.currentTimeMillis() - startTimeMillis
+        }
+
+        /**
+         * Check if the submitted job has started
+         */
+        boolean hasStarted() { target != null }
+
+        /**
+         * @return The file containing the job stdout
+         */
+        Path getOutputFile() { this.output }
+
+        /**
+         * Check if the submitted job has terminated its execution
+         */
+        boolean hasExited() { target.hasExited() }
+
+        /**
+         * @return The exit status if the user task
+         */
+        int exitCode() { target.exitValue() }
+
+        /**
+         * Force the submitted job to quit
+         */
+        void kill() { destroy() }
+
+        /**
+         * Destroy the process handler, closing all associated streams
+         */
+        void destroy() {
+            outputDumper.await(500)
+            outputDumper.terminate()
+            outputBuffer.close()
+            IOUtils.closeQuietly(target.getInputStream())
+            IOUtils.closeQuietly(target.getOutputStream())
+            IOUtils.closeQuietly(target.getErrorStream())
+            target.destroy()
+        }
+
     }
 
 }

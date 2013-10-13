@@ -43,6 +43,10 @@ class CliOptions {
     @Parameter(names=['-ps','-pool-size'], description = 'The number of threads in the executor pool')
     Integer poolSize
 
+    @Parameter(names=['-qs','-queue-size'], description = 'The max number of task in execution queue')
+    Integer queueSize
+
+
     @Parameter(names=['-test'], description = 'Test the function with the name specified')
     String test
 

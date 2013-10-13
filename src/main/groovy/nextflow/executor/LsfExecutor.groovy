@@ -19,10 +19,11 @@
 
 package nextflow.executor
 
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.PosixFilePermissions
 
 import nextflow.processor.TaskRun
-
 /**
  * Processor for LSF resource manager (DRAFT)
  *
@@ -39,7 +40,6 @@ class LsfExecutor extends AbstractGridExecutor {
         final result = new ArrayList<String>()
 
         result << 'bsub'
-        result << '-K'    // sync mode i.e. wait for termination before exit
         result << '-cwd' << task.workDirectory?.toString()
         result << '-o' << JOB_OUT_FILENAME
 
@@ -57,7 +57,7 @@ class LsfExecutor extends AbstractGridExecutor {
         }
 
         // -- last entry to 'script' file name
-        result << "./$JOB_WRAPPER_FILENAME"
+        result << "./$JOB_SCRIPT_FILENAME"
 
         return result
 
@@ -66,8 +66,13 @@ class LsfExecutor extends AbstractGridExecutor {
     @Override
     def submitJob( TaskRun task, Path runnerFile, Path cmdOutFile ) {
         // note: LSF requires the job script file to be executable
-        runnerFile.setExecutable(true)
+        Files.setPosixFilePermissions( runnerFile, PosixFilePermissions.fromString('rwx------'))
         // now invoke the default method
         super.submitJob(task, runnerFile, cmdOutFile)
+    }
+
+    @Override
+    void killTask(jobId) {
+
     }
 }

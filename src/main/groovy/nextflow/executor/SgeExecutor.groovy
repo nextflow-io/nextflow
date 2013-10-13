@@ -46,7 +46,7 @@ class SgeExecutor extends AbstractGridExecutor {
         result << '-N' << "nf-${task.processor.name}-${task.index}"
         result << '-o' << "/dev/null"
         result << '-j' << 'y'
-        result << '-sync' << 'y'
+        result << '-terse'
         result << '-V'
 
         // the requested queue name
@@ -70,10 +70,13 @@ class SgeExecutor extends AbstractGridExecutor {
         }
 
         // -- last entry to 'script' file name
-        result << JOB_WRAPPER_FILENAME
+        result << JOB_SCRIPT_FILENAME
 
         return result
     }
 
-
+    @Override
+    void killTask(jobId) {
+       new ProcessBuilder( "qdel -j $jobId".split(' ') ).start()
+    }
 }

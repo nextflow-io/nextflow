@@ -146,4 +146,14 @@ class CmdLineHelper {
     }
 
 
+    static String toLine( String... args ) {
+        toLine( args as List)
+    }
+
+    static String toLine( List<String> args ) {
+        def result = new ArrayList(args.size())
+        args.each { result << (it.contains(' ') ? "'${it}'" : it) }
+        return result.join(' ')
+    }
+
 }

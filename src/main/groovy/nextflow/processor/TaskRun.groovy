@@ -21,20 +21,19 @@ package nextflow.processor
 
 import java.nio.file.Path
 
+import groovy.transform.ToString
+import nextflow.executor.ProcessHandler
+
 /**
  * Models a task instance
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
-class TaskRun {
+@ToString( includePackage = false, includeNames = true, includes = 'id,index,name,status,exitCode' )
+class TaskRun<T extends ProcessHandler> {
 
-    enum Status { PENDING, RUNNING, TERMINATED }
-
-    /*
-     * The processor that creates this 'task'
-     */
-    TaskProcessor processor
+    enum Status { NEW, STARTED, TERMINATED }
 
     /**
      * Task unique id
@@ -56,6 +55,16 @@ class TaskRun {
      * Task name
      */
     def String name
+
+    /*
+     * The processor that creates this 'task'
+     */
+    TaskProcessor processor
+
+    /**
+     * The process handler which is executing the task
+     */
+    def T handler
 
     /**
      * Task current status
@@ -146,16 +155,6 @@ class TaskRun {
      */
     Path workDirectory
 
-    /**
-     * Task start time
-     */
-    long startTime
-
-    /**
-     * Task end time
-     */
-    long terminateTime
-
     /*
      * The closure implementing this task
      */
@@ -171,22 +170,40 @@ class TaskRun {
             return script.text
         }
         else {
-            script?.toString()
+            return script?.toString()
         }
     }
 
     def void setStatus( Status status ) {
         assert status
-        if ( this.status == status ) return
+        if ( this.status == status ) { return }
 
         this.status = status
-        if ( status == Status.RUNNING ) {
-            startTime = System.currentTimeMillis()
+        if( status == Status.NEW ) {
+            processor.notifyTaskCreated(this)
+        }
+        if ( status == Status.STARTED ) {
+            processor.notifyTaskStarted(this)
         }
         else if ( status == Status.TERMINATED ) {
-            terminateTime = System.currentTimeMillis()
+            processor.notifyTaskCompleted(this)
         }
     }
+
+    boolean isNew() { return status == Status.NEW }
+
+    boolean isStarted() { return status == Status.STARTED }
+
+    boolean isTerminated()  { return status == Status.TERMINATED  }
+
+    /** The timestamp when the task has been submitted for execution */
+    long submitTimeMillis
+
+    /** The timestamp when the task has started the execution */
+    long startedTimeMillis
+
+    /** The timestamp when the task has completed the execution */
+    long completedTimeMillis
 
     def <T extends InParam> Map<T,Object> getInputsByType( Class<T>... types ) {
 

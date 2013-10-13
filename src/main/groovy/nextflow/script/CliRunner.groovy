@@ -376,13 +376,13 @@ class CliRunner {
 
         // -- launch the script execution
         output = script.run()
-        log.trace "Script output > $output"
+
     }
 
     protected terminate() {
         session.await()
         normalizeOutput()
-        session?.terminate()
+        session.destroy()
     }
 
 
@@ -519,6 +519,11 @@ class CliRunner {
             // -- other configuration parameters
             if( options.poolSize ) {
                 config.poolSize = options.poolSize
+                config.queueSize = options.poolSize  // the pool-size define the value of the queue size as well
+            }
+
+            if( options.queueSize ) {
+                config.queueSize = options.queueSize
             }
 
             // -- add the command line parameters to the 'taskConfig' object
@@ -540,6 +545,7 @@ class CliRunner {
                 runner.test(scriptFile, options.test, scriptArgs )
             }
             else {
+                runner.session.start()
                 // -- set a shutdown hook to save the current session ID and command lines
                 addShutdownHook { HistoryFile.history.append( runner.session.uniqueId, args ) }
                 // -- run it!

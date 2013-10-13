@@ -19,12 +19,12 @@ import nextflow.processor.TaskRun
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-abstract class AbstractExecutor {
+abstract class AbstractExecutor<T extends ProcessHandler> {
 
-    /*
+    /**
      * The object holding the configuration declared by this task
      */
-    public TaskConfig taskConfig
+    TaskConfig taskConfig
 
     /**
      * Execute the specified task shell script
@@ -32,8 +32,23 @@ abstract class AbstractExecutor {
      * @param script The script string to be execute, e.g. a BASH script
      * @return {@code TaskDef}
      */
-    abstract void launchTask( TaskRun task )
+    abstract void launchTask( TaskRun<T> task )
 
+    /**
+     * Check whenever the task has has started
+     *
+     * @param task
+     * @return
+     */
+    abstract boolean checkStarted( TaskRun<T> task )
+
+    /**
+     * Check whenever the task has complete his job or it is still running
+     *
+     * @param task
+     * @return
+     */
+    abstract boolean checkCompleted( TaskRun<T> task )
 
     /**
      * The file which contains the stdout produced by the executed task script
@@ -41,7 +56,9 @@ abstract class AbstractExecutor {
      * @param task The user task to be executed
      * @return The absolute file to the produced script output
      */
-    abstract getStdOutFile( TaskRun task )
+    def getStdOutFile( TaskRun<T> task ) {
+        task.handler.getOutputFile()
+    }
 
 
     /**
@@ -51,7 +68,7 @@ abstract class AbstractExecutor {
      * @param fileName The file name, it may include file name wildcards
      * @return The list of files matching the specified name
      */
-    def collectResultFile( TaskRun task, String fileName ) {
+    def collectResultFile( TaskRun<T> task, String fileName ) {
         assert fileName
         assert task
         assert task.workDirectory
@@ -91,7 +108,7 @@ abstract class AbstractExecutor {
      * @param task The task instance which current environment needs to be stored
      * @param target The path to where save the task environment
      */
-    def void createEnvironmentFile( TaskRun task, Path target ) {
+    def void createEnvironmentFile( TaskRun<T> task, Path target ) {
         assert task
         assert target
 

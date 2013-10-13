@@ -22,22 +22,22 @@ package nextflow.executor
 import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
+import nextflow.exception.InvalidExitException
 import nextflow.processor.FileInParam
 import nextflow.processor.FileOutParam
 import nextflow.processor.TaskRun
-import nextflow.util.ByteDumper
 import nextflow.util.CmdLineHelper
-import nextflow.util.Duration
 import org.apache.commons.io.IOUtils
+
 /**
  * Generic task processor executing a task through a grid facility
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-abstract class AbstractGridExecutor extends AbstractExecutor {
+abstract class AbstractGridExecutor extends AbstractExecutor<GridJobHandler> {
 
-    protected static final COMMAND_SCRIPT_FILENAME = '.command.run'
+    protected static final COMMAND_SCRIPT_FILENAME = '.command.sh'
 
     protected static final COMMAND_OUTPUT_FILENAME = '.command.out'
 
@@ -45,21 +45,28 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
 
     protected static final COMMAND_ENV_FILENAME = '.command.env'
 
+    @Deprecated
     protected static final JOB_OUT_FILENAME = '.job.out'
 
-    protected static final JOB_WRAPPER_FILENAME = '.job.sh'
+    protected static final JOB_SCRIPT_FILENAME = '.job.run'
+
+    protected static final JOB_STARTED_FILENAME = '.job.started'
 
 
     /*
      * Prepare and launch the task in the underlying execution platform
      */
     @Override
-    void launchTask( TaskRun task ) {
+    void launchTask( TaskRun<GridJobHandler> task ) {
         assert task
         assert task.workDirectory
 
         final folder = task.workDirectory
-        log.debug "Lauching task > ${task.name} -- work folder: $folder"
+        log.debug "Launching task > ${task.name} -- work folder: $folder"
+
+        task.handler = new GridJobHandler(this)
+        task.handler.startMarkerFile = task.workDirectory.resolve(JOB_STARTED_FILENAME)
+        task.handler.exitMarkerFile = task.workDirectory.resolve('.exitcode')
 
         /*
          * save the environment to a file
@@ -84,7 +91,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
          */
         def cmdOutFile = folder.resolve(COMMAND_OUTPUT_FILENAME)
         def runnerFile = createJobWrapperFile(task, scriptFile, envFile, cmdInputFile, cmdOutFile)
-
+        task.handler.outputFile = cmdOutFile
 
         /*
          * Finally submit the job script for execution
@@ -96,7 +103,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
     /**
      * Save the main task script to a file having executable permission
      */
-    protected Path createCommandScriptFile( TaskRun task ) {
+    protected Path createCommandScriptFile( TaskRun<GridJobHandler> task ) {
         assert task
 
         def scriptFile = task.workDirectory.resolve(COMMAND_SCRIPT_FILENAME)
@@ -133,7 +140,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
      * @param cmdOutFile The file that where save the task output
      * @return The script wrapper file
      */
-    protected Path createJobWrapperFile( TaskRun task, Path scriptFile, Path envFile, Path cmdInputFile, Path cmdOutFile ) {
+    protected Path createJobWrapperFile( TaskRun<GridJobHandler> task, Path scriptFile, Path envFile, Path cmdInputFile, Path cmdOutFile ) {
         assert task
         assert scriptFile
 
@@ -148,6 +155,10 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
          */
 
         def wrapper = new StringBuilder()
+        wrapper << '#!/bin/bash -Eeu' << '\n'
+        wrapper << 'trap onexit 1 2 3 15 ERR' << '\n'
+        wrapper << 'function onexit() { local exit_status=${1:-$?}; printf $exit_status > ' << task.handler.exitMarkerFile << '; exit $exit_status; }' << '\n'
+        wrapper << 'touch ' << task.handler.startMarkerFile << '\n'
 
         // source the environment
         wrapper << 'source ' << envFile.toAbsolutePath() << '\n'
@@ -183,7 +194,9 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
             wrapper << 'rm -rf $NF_SCRATCH &'
         }
 
-        def result = folder.resolve(JOB_WRAPPER_FILENAME)
+        wrapper << 'onexit' << '\n'
+
+        def result = folder.resolve(JOB_SCRIPT_FILENAME)
         result.text = task.processor.normalizeScript(wrapper.toString())
 
         return result
@@ -232,7 +245,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
      * @param task The task instance to be executed
      * @param cmdOutFile The file where the job outputs its stdout result
      */
-    protected submitJob( TaskRun task, Path runnerFile, Path cmdOutFile ) {
+    protected submitJob( TaskRun<GridJobHandler> task, Path runnerFile, Path cmdOutFile ) {
         assert task
 
         final folder = task.workDirectory
@@ -245,7 +258,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
          * launch 'sub' script wrapper
          */
         ProcessBuilder builder = new ProcessBuilder()
-                .directory(folder.toFile())
+                .directory(folder)
                 .command( cli as String[] )
                 .redirectErrorStream(true)
 
@@ -254,36 +267,30 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
 
         // -- start the execution and notify the event to the monitor
         Process process = builder.start()
-        task.status = TaskRun.Status.RUNNING
-
-
-        // -- save the 'sub' process output
-        def subOutFile = folder.resolve(JOB_OUT_FILENAME)
-        def subOutStream = subOutFile.newOutputStream()
-        ByteDumper subDumper = new ByteDumper(process.getInputStream(), {  byte[] data, int len -> subOutStream.write(data,0,len) } )
-        subDumper.setName("sub_${task.name}")
-        subDumper.start()
 
         try {
-            // -- wait the the process completes
-            task.exitCode = process.waitFor()
-            def success = task.exitCode in taskConfig.validExitCodes
-            log.debug "Task completed > ${task.name} -- exit code: ${task.exitCode}; accepted code(s): ${taskConfig.validExitCodes.join(',')}"
-
-            subDumper.await(500)
-            subOutStream.close()
-
-            // there may be very loooong delay over NFS, wait at least one minute
-            if( success ) {
-                Duration.waitFor('60s') { cmdOutFile.exists() }
+            def exitStatus = 0
+            String result
+            try {
+                // -- wait the the process completes
+                result = process.text
+                exitStatus = process.waitFor()
+                if( exitStatus ) {
+                    new IllegalStateException("Grid submit command returned an error exit status: $exitStatus")
+                }
+                // save the JobId in the
+                task.handler.jobId = parseJobId(result)
+                task.status = TaskRun.Status.STARTED
             }
-            if( cmdOutFile.exists() && taskConfig.echo ) {
-                print cmdOutFile.text
+            catch( Exception e ) {
+                task.exitCode = exitStatus
+                task.script = CmdLineHelper.toLine(cli)
+                task.stdout = result
+                throw new InvalidExitException("Error submitting task '${task.name}' for execution", e )
             }
 
         }
         finally {
-            subDumper.terminate()
 
             // make sure to release all resources
             IOUtils.closeQuietly(process.in)
@@ -291,7 +298,6 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
             IOUtils.closeQuietly(process.err)
             process.destroy()
 
-            task.stdout = getStdOutFile(task)
         }
 
     }
@@ -303,7 +309,18 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
      * @param task The task instance descriptor
      * @return A list holding the command line
      */
-    abstract protected List<String> getSubmitCommandLine(TaskRun task)
+    abstract protected List<String> getSubmitCommandLine(TaskRun<GridJobHandler> task)
+
+    /**
+     * Given the string returned the by grid submit command, extract the process handle i.e. the grid jobId
+     */
+    def parseJobId( String text ) {
+        // return always the last line
+        def lines = text.trim().readLines()
+        return lines ? lines[-1].trim() : null
+    }
+
+    abstract void killTask( def jobId )
 
     /**
      * @return Parse the {@code clusterOptions} configuration option and return the entries as a list of values
@@ -370,6 +387,101 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
 
     }
 
+    @Override
+    boolean checkStarted( TaskRun<GridJobHandler> task ) {
+        if( !task.isNew() ) {
+            return true
+        }
 
+        if( task.isNew() && task.handler?.hasStarted() ) {
+            task.startedTimeMillis = task.handler.startMarkerFile.lastModified()
+            task.status = TaskRun.Status.STARTED
+            return true
+        }
+
+        return false
+    }
+
+    @Override
+    boolean checkCompleted(TaskRun<GridJobHandler> task) {
+
+        if( task.isTerminated() ) {
+            return true
+        }
+
+        log.debug "Check completed >> Task ${task.name}; status: ${task.status}; hasExited: ${task.handler.hasExited()}; file: ${task.handler.exitMarkerFile}"
+        if( task.isStarted() && task.handler.hasExited() ) {
+
+            // print the stdout
+            if( taskConfig.echo ) {
+                if( task.handler.outputFile.exists() ) {
+                    log.debug "Task > ${task.name} > Echoing file: ${task.handler.outputFile}"
+                    task.handler.outputFile.withReader {  System.out << it }
+                }
+                else {
+                    log.debug "Echo file does not exist: ${task.handler.outputFile}"
+                }
+            }
+
+            // finalize the task
+            task.completedTimeMillis = task.handler.exitMarkerFile.lastModified()
+            task.exitCode = task.handler.exitCode()
+            task.status = TaskRun.Status.TERMINATED
+            task.stdout = task.handler.outputFile
+            return true
+        }
+
+        return false
+    }
+
+
+    static class GridJobHandler implements ProcessHandler {
+
+        def jobId
+
+        Path startMarkerFile
+
+        Path exitMarkerFile
+
+        Path outputFile
+
+        final AbstractGridExecutor executor
+
+        GridJobHandler( AbstractGridExecutor executor ) {
+            this.executor = executor
+        }
+
+        @Lazy
+        int fExitStatus = {
+            if( exitMarkerFile && exitMarkerFile.exists() ) {
+                def status = exitMarkerFile.text
+                try {
+                    return status.trim().toInteger()
+                }
+                catch( Exception e ) {
+                    log.warn "Unable to parse task exit file: $exitMarkerFile", e
+                }
+            }
+            Integer.MAX_VALUE
+
+        } ()
+
+        @Override
+        boolean hasStarted() { startMarkerFile?.exists() }
+
+        @Override
+        boolean hasExited() { exitMarkerFile?.exists() }
+
+        @Override
+        int exitCode() { fExitStatus }
+
+        @Override
+        Path getOutputFile() { outputFile }
+
+        @Override
+        void kill() {
+            executor.killTask(jobId)
+        }
+    }
 
 }

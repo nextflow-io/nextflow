@@ -24,6 +24,7 @@ import java.nio.file.Paths
 
 import com.google.common.collect.LinkedHashMultimap
 import com.google.common.collect.Multimap
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.operator.DataflowProcessor
@@ -33,6 +34,8 @@ import groovyx.gpars.util.PoolUtils
 import jsr166y.Phaser
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.processor.TaskScheduler
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -43,13 +46,15 @@ class Session {
     /**
      * Keep a list of all processor created
      */
-    List<DataflowProcessor> allProcessors = []
+    final List<DataflowProcessor> allProcessors = []
 
     /**
      * Keep the list all executed tasks
      * note: LinkedHashMultimap preserves insertion order of entries, as well as the insertion order of keys, and the set of values associated with any one key.
      */
-    Multimap<TaskProcessor, TaskRun> tasks = LinkedHashMultimap.create()
+    final Multimap<TaskProcessor, TaskRun> allTasks = LinkedHashMultimap.create()
+
+    final TaskScheduler scheduler
 
     /**
      * Holds the configuration object
@@ -102,6 +107,8 @@ class Session {
 
     private boolean aborted
 
+    private boolean terminated
+
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -131,30 +138,45 @@ class Session {
             config.poolSize = PoolUtils.retrieveDefaultPoolSize()
         }
 
+        if( !config.queueSize ) {
+            config.queueSize = PoolUtils.retrieveDefaultPoolSize()
+        }
+
         log.debug "Executor pool size: ${config.poolSize}"
 
         // configure the dataflow thread group
         pgroup = new NonDaemonPGroup( config.poolSize as int )
         Dataflow.activeParallelGroup.set(pgroup)
 
+        scheduler = new TaskScheduler(this)
+
+        log.debug ">>> phaser register (session)"
         phaser.register()
+    }
+
+    @PackageScope
+    def getPhaser() { phaser }
+
+    def void start() {
+        scheduler.start()
     }
 
     /**
      * Await the termination of all processors
      */
     void await() {
-        log.trace "Phaser await .. "
+        log.debug "Session await > processors completion"
+        allProcessors *. join()
+        terminated = true
+        log.debug "<<< phaser deregister (session)"
         phaser.arriveAndAwaitAdvance()
-        log.debug "Phaser passed"
+        log.debug "Session await > done"
     }
 
-    void terminate() {
-        log.trace "Session join .. "
-        allProcessors *. join()
-        log.trace "Session joined"
+    void destroy() {
+        log.trace "Session destroying"
         pgroup.shutdown()
-        log.debug "Session terminated"
+        log.debug "Session destroyed"
     }
 
     void abort() {
@@ -164,13 +186,17 @@ class Session {
         System.exit( ExitCode.SESSION_ABORTED )
     }
 
+    boolean isTerminated() { terminated }
+
     boolean isAborted() { aborted }
 
     def int taskRegister() {
+        log.debug ">>> phaser register (task)"
         phaser.register()
     }
 
     def int taskDeregister() {
+        log.debug "<<< phaser deregister (task)"
         phaser.arriveAndDeregister()
     }
 
