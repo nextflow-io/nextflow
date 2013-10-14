@@ -18,16 +18,12 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Paths
 
-import nextflow.Session
-import nextflow.processor.ParallelTaskProcessor
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 import nextflow.script.BaseScript
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -46,17 +42,24 @@ class LsfExecutorTest extends Specification {
         config.clusterOptions " -M 4000  -R 'rusage[mem=4000] select[mem>4000]' --X \"abc\" "
         config.name 'task'
 
-        def executor = new LsfExecutor()
-        def processor = new ParallelTaskProcessor(executor, new Session(), script, config, {})
+        // dummy script
+        def wrapper = Paths.get('.job.sh')
+        wrapper.text = 'test script'
 
+        // executor stub object
+        def executor = [:] as LsfExecutor
+        executor.taskConfig = config
 
         when:
-        def task = new TaskRun(name: 'my-task', index: 9, processor: processor)
+        def task = new TaskRun(name: 'task 1')
         task.workDirectory = Paths.get('/xxx')
 
         then:
-        executor.getSubmitCommandLine(task) == ['bsub','-K','-cwd','/xxx','-o','.job.out','-q', 'hpc-queue1', '-J', 'nf-task-9', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './.job.sh']
+        executor.getSubmitCommandLine(task, wrapper) == ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './.job.sh']
+        wrapper.canExecute()
 
+        cleanup:
+        wrapper?.delete()
     }
 
 }

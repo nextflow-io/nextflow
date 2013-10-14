@@ -1,15 +1,14 @@
 package nextflow.executor
-
 import java.nio.file.Path
 
 import groovy.io.FileType
 import groovy.util.logging.Slf4j
 import nextflow.exception.MissingFileException
-import nextflow.processor.EnvInParam
-import nextflow.processor.FileInParam
 import nextflow.processor.FileHolder
+import nextflow.processor.FileInParam
+import nextflow.processor.FileOutParam
 import nextflow.processor.TaskConfig
-import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 
 /**
@@ -19,7 +18,7 @@ import nextflow.processor.TaskRun
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-abstract class AbstractExecutor<T extends ProcessHandler> {
+abstract class AbstractExecutor {
 
     /**
      * The object holding the configuration declared by this task
@@ -27,38 +26,10 @@ abstract class AbstractExecutor<T extends ProcessHandler> {
     TaskConfig taskConfig
 
     /**
-     * Execute the specified task shell script
-     *
-     * @param script The script string to be execute, e.g. a BASH script
-     * @return {@code TaskDef}
+     * @return Create a new {@code TaskHandler} to manage the scheduling
+     * actions for this task
      */
-    abstract void launchTask( TaskRun<T> task )
-
-    /**
-     * Check whenever the task has has started
-     *
-     * @param task
-     * @return
-     */
-    abstract boolean checkStarted( TaskRun<T> task )
-
-    /**
-     * Check whenever the task has complete his job or it is still running
-     *
-     * @param task
-     * @return
-     */
-    abstract boolean checkCompleted( TaskRun<T> task )
-
-    /**
-     * The file which contains the stdout produced by the executed task script
-     *
-     * @param task The user task to be executed
-     * @return The absolute file to the produced script output
-     */
-    def getStdOutFile( TaskRun<T> task ) {
-        task.handler.getOutputFile()
-    }
+    abstract TaskHandler createTaskHandler(TaskRun task)
 
 
     /**
@@ -68,15 +39,10 @@ abstract class AbstractExecutor<T extends ProcessHandler> {
      * @param fileName The file name, it may include file name wildcards
      * @return The list of files matching the specified name
      */
-    def collectResultFile( TaskRun<T> task, String fileName ) {
+    def collectResultFile( TaskRun task, String fileName ) {
         assert fileName
         assert task
         assert task.workDirectory
-
-        // the '-' stands for the script stdout, save to a file
-        if( fileName == '-' ) {
-            return getStdOutFile(task)
-        }
 
         // replace any wildcards characters
         // TODO use newDirectoryStream here and eventually glob
@@ -102,28 +68,6 @@ abstract class AbstractExecutor<T extends ProcessHandler> {
         return files
     }
 
-    /**
-     * Save the environment into the specified file
-     *
-     * @param task The task instance which current environment needs to be stored
-     * @param target The path to where save the task environment
-     */
-    def void createEnvironmentFile( TaskRun<T> task, Path target ) {
-        assert task
-        assert target
-
-        // get the 'static' environment
-        final environment = task.processor.getProcessEnvironment()
-
-        // add the task input of type 'env'
-        task.getInputsByType( EnvInParam ).each { param, value ->
-            environment.put( param.name, value?.toString() )
-        }
-
-        // create the *bash* environment script
-        target.text = TaskProcessor.bashEnvironmentScript(environment)
-
-    }
 
 
     /**
@@ -171,5 +115,23 @@ abstract class AbstractExecutor<T extends ProcessHandler> {
         "ln -s ${path.toAbsolutePath()} $targetName"
     }
 
+    /**
+     * Creates the script to unstage the result output files from the scratch directory
+     * to the shared working directory
+     *
+     * @param task The {@code TaskRun} executed
+     * @param separatorChar The string to be used to separate multiple BASH statements (default: new line char)
+     * @return The BASH script fragment to be used to copy the output files to the shared storage
+     */
+    String unstageOutputFilesScript( final TaskRun task, final String separatorChar = '\n' ) {
+
+        // "un-stage" the result files
+        def result = new StringBuilder()
+        def resultFiles = task.getOutputsByType(FileOutParam).values().flatten()
+        resultFiles.each {
+            result << 'cp ' << it.toString() << ' ' << task.workDirectory << separatorChar
+        }
+        return result.toString()
+    }
 
 }

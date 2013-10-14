@@ -22,6 +22,7 @@ package nextflow.executor
 import java.nio.file.Paths
 
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 
 /**
@@ -33,30 +34,37 @@ import nextflow.processor.TaskRun
 class NopeExecutor extends AbstractExecutor {
 
     @Override
-    void launchTask( TaskRun task ) {
+    TaskHandler createTaskHandler(TaskRun task) {
+        return new NopeTaskHandler(task)
+    }
+
+}
+
+
+@Slf4j
+class NopeTaskHandler extends TaskHandler {
+
+    protected NopeTaskHandler(TaskRun task) {
+        super(task,null)
+    }
+
+    @Override
+    void submit() {
+
         log.info ">> launching nope task: ${task}"
-
         task.workDirectory = Paths.get('.').toAbsolutePath()
-        task.status = TaskRun.Status.TERMINATED
+        status = Status.TERMINATED
         task.exitCode = 0
-        task.stdout = task.script   // return the script itself as output
-
+        task.stdout = task.script
     }
 
     @Override
-    boolean checkStarted(TaskRun task) {
-        return true
-    }
+    boolean checkIfRunning() { true }
 
     @Override
-    boolean checkCompleted(TaskRun task) {
-        return true
-    }
+    boolean checkIfTerminated() { return true }
 
     @Override
-    def getStdOutFile( TaskRun task ) {
-        log.info ">> Getting nope stdout: ${task}"
-        return task.script
-    }
+    void kill() { }
 
 }

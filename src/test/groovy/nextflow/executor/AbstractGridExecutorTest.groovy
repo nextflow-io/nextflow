@@ -18,9 +18,7 @@
  */
 
 package nextflow.executor
-import nextflow.processor.TaskConfig
-import nextflow.processor.TaskRun
-import nextflow.script.BaseScript
+
 import spock.lang.Specification
 /**
  *
@@ -28,44 +26,5 @@ import spock.lang.Specification
  */
 class AbstractGridExecutorTest extends Specification {
 
-    def 'test changeToScratchDir' () {
-
-        setup:
-        def script = Mock(BaseScript)
-        def executor = new AbstractGridExecutor() {
-            @Override protected List<String> getSubmitCommandLine(TaskRun task) { return null }
-        }
-
-        when:
-        executor.taskConfig = new TaskConfig(script)
-        then:
-        executor.changeToScratchDirectory() == null
-
-        when:
-        executor.taskConfig = new TaskConfig( [scratch: true] )
-        then:
-        executor.changeToScratchDirectory() == 'NF_SCRATCH=${TMPDIR:-`mktemp -d`} && cd $NF_SCRATCH'
-
-        when:
-        executor.taskConfig = new TaskConfig( [scratch: '$SOME_DIR'] )
-        then:
-        executor.changeToScratchDirectory() == 'NF_SCRATCH=$SOME_DIR && cd $NF_SCRATCH'
-
-        when:
-        executor.taskConfig = new TaskConfig( [scratch: '$SOME_DIR'] )
-        then:
-        executor.changeToScratchDirectory() == 'NF_SCRATCH=$SOME_DIR && cd $NF_SCRATCH'
-
-        when:
-        executor.taskConfig = new TaskConfig( [scratch: '/my/temp'] )
-        then:
-        executor.changeToScratchDirectory() == 'NF_SCRATCH=$(mktemp -d -p /my/temp) && cd $NF_SCRATCH'
-
-        when:
-        executor.taskConfig = new TaskConfig( [scratch: '/my/temp'] )
-        then:
-        executor.changeToScratchDirectory() == 'NF_SCRATCH=$(mktemp -d -p /my/temp) && cd $NF_SCRATCH'
-
-    }
 
 }

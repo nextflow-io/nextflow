@@ -100,7 +100,7 @@ class FunctionalTests extends Specification {
         setup:
         def configStr = '''
              process {
-                processor = 'nope'
+                executor = 'nope'
                 echo = true
                 shell = 'zsh'
                 maxForks = 10

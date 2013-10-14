@@ -212,8 +212,11 @@ class CliRunner {
     def execute( String scriptText, List<String> args = null ) {
         assert scriptText
 
-        script = parseScript(scriptText, args)
+        // start the session
+        this.session.start()
         try {
+            // parse the script
+            script = parseScript(scriptText, args)
             run()
         }
         finally {
@@ -545,7 +548,6 @@ class CliRunner {
                 runner.test(scriptFile, options.test, scriptArgs )
             }
             else {
-                runner.session.start()
                 // -- set a shutdown hook to save the current session ID and command lines
                 addShutdownHook { HistoryFile.history.append( runner.session.uniqueId, args ) }
                 // -- run it!

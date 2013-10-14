@@ -32,14 +32,14 @@ import nextflow.util.Duration
 @Slf4j
 class TaskScheduler {
 
-    final BlockingQueue<TaskRun> queue
+    final BlockingQueue<TaskHandler> queue
 
     final private Session session
 
     TaskScheduler( Session session ) {
 
         this.session = session
-        this.queue = new ArrayBlockingQueue<TaskRun>( getQueueSize(session.config) )
+        this.queue = new ArrayBlockingQueue<TaskHandler>( getQueueSize(session.config) )
 
         killOnExit()
     }
@@ -60,7 +60,8 @@ class TaskScheduler {
     }
 
     /**
-     * Add the specify task instance to the queue of launched tasks
+     * Submit the specified task for execution to the underlying system
+     * and add it to the queue of tasks to be monitored.
      *
      * @param task A {@code TaskRun} instance
      */
@@ -75,18 +76,22 @@ class TaskScheduler {
          * Note: queue is implemented as a fixed size blocking queue, when
          * there's not space *put* operation will block until, some other tasks finish
          */
-        queue.put(task)
+        def handler = task.processor.executor.createTaskHandler(task)
+        queue.put(handler)
 
         try {
-            task.processor.launchTask(task)
+            handler.submit()
         }
         catch( Exception error ) {
-            queue.remove(task)
+            queue.remove(handler)
             throw error
         }
     }
 
 
+    /**
+     * Launch the scheduler which will monitor all
+     */
     public TaskScheduler start () {
         log.debug ">>> phaser register (scheduler)"
         session.phaser.register()
@@ -122,41 +127,46 @@ class TaskScheduler {
     }
 
 
-    private void checkAll( Collection<TaskRun> collection ) {
-        collection.each { TaskRun task ->
-            checkTask(task)
+    private void checkAll( Collection<TaskHandler> collection ) {
+        collection.each { TaskHandler handler ->
+            checkTask(handler)
         }
     }
 
-    private void checkTask( TaskRun task ) {
-        assert task
+    /**
+     * Check the status of the given task
+     *
+     * @param handler The {@code TaskHandler} instance of the task to check
+     */
+    private void checkTask( TaskHandler handler ) {
+        assert handler
 
-        task.processor.with {
+        // check if it is started
+        def started = handler.checkIfRunning()
 
-            // check if it is started
-            def started = checkTaskStarted(task)
+        // check if it is terminated
+        if( started && handler.checkIfTerminated()  ) {
 
-            // check if it is terminated
-            if( started && checkTaskCompletion(task)  ) {
+            // since completed *remove* the task from the processing queue
+            log.debug "Removing task from running queue: ${handler}"
+            queue.remove(handler)
 
-                // since completed *remove* the task from the processing queue
-                log.debug "Removing task from running queue: ${task}"
-                queue.remove(task)
-
-                // finalize the tasks execution
-                finalizeTask(task)
-            }
+            // finalize the tasks execution
+            handler.task.processor.finalizeTask(handler.task)
         }
+
     }
 
-
+    /**
+     * Kill all pending jobs when aborting
+     */
     private void killOnExit()  {
 
         Runtime.addShutdownHook {
             while( queue.size() ) {
-                TaskRun task = queue.poll()
-                log.warn "Killing pending task: $task"
-                task.handler?.kill()
+                TaskHandler handler = queue.poll()
+                log.warn "Killing pending task: ${handler.task.name}"
+                handler.kill()
             }
         }
 

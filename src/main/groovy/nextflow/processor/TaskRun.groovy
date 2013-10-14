@@ -20,9 +20,10 @@
 package nextflow.processor
 
 import java.nio.file.Path
+import java.util.concurrent.locks.ReentrantLock
 
 import groovy.transform.ToString
-import nextflow.executor.ProcessHandler
+import groovy.util.logging.Slf4j
 
 /**
  * Models a task instance
@@ -30,21 +31,16 @@ import nextflow.executor.ProcessHandler
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
+@Slf4j
 @ToString( includePackage = false, includeNames = true, includes = 'id,index,name,status,exitCode' )
-class TaskRun<T extends ProcessHandler> {
+class TaskRun<T extends TaskHandler> {
 
-    enum Status { NEW, STARTED, TERMINATED }
+    static private final echoLock = new ReentrantLock(true)
 
     /**
      * Task unique id
      */
     def id
-
-    /**
-     * TODO this have to be refactored
-     * The jobid as provided by the underlying execution system (process, SGE jobid, dnanexus jobid, etc)
-     */
-    def jobId
 
     /**
      * Task index within its execution group
@@ -60,16 +56,6 @@ class TaskRun<T extends ProcessHandler> {
      * The processor that creates this 'task'
      */
     TaskProcessor processor
-
-    /**
-     * The process handler which is executing the task
-     */
-    def T handler
-
-    /**
-     * Task current status
-     */
-    Status status
 
     /**
      * Holds the input value(s) for each task input parameter
@@ -116,11 +102,7 @@ class TaskRun<T extends ProcessHandler> {
 
     def void setOutput( OutParam param, Object value = null ) {
         assert param
-
         outputs[param] = value
-        if( param instanceof StdOutParam ) {
-            stdout = value
-        }
     }
 
     /**
@@ -138,13 +120,47 @@ class TaskRun<T extends ProcessHandler> {
      */
     def stdout
 
+    /**
+     * @return The task produced stdout result as string
+     */
     def String getStdout() {
+
+        if( stdout == null ) {
+            stdout = getCmdOutputFile()
+        }
 
         if( stdout instanceof Path ) {
             return stdout.text
         }
         else {
-            stdout?.toString()
+            return stdout?.toString()
+        }
+    }
+
+    /**
+     * Print to the current system console the task produced stdout
+     */
+    void echoStdout() {
+
+        def out = stdout ?: getCmdOutputFile()
+
+        // print the stdout
+        if( out instanceof Path ) {
+            if( !out.exists() ) {
+                log.debug "Echo file does not exist: ${out}"
+                return
+            }
+
+            echoLock.lock()
+            try {
+                out.withReader {  System.out << it }
+            }
+            finally {
+                echoLock.unlock()
+            }
+        }
+        else if( out != null ) {
+            print out.toString()
         }
 
     }
@@ -174,37 +190,12 @@ class TaskRun<T extends ProcessHandler> {
         }
     }
 
-    def void setStatus( Status status ) {
-        assert status
-        if ( this.status == status ) { return }
-
-        this.status = status
-        if( status == Status.NEW ) {
-            processor.notifyTaskCreated(this)
-        }
-        if ( status == Status.STARTED ) {
-            processor.notifyTaskStarted(this)
-        }
-        else if ( status == Status.TERMINATED ) {
-            processor.notifyTaskCompleted(this)
-        }
-    }
-
-    boolean isNew() { return status == Status.NEW }
-
-    boolean isStarted() { return status == Status.STARTED }
-
-    boolean isTerminated()  { return status == Status.TERMINATED  }
-
-    /** The timestamp when the task has been submitted for execution */
-    long submitTimeMillis
-
-    /** The timestamp when the task has started the execution */
-    long startedTimeMillis
-
-    /** The timestamp when the task has completed the execution */
-    long completedTimeMillis
-
+    /**
+     * Get the map of *input* objects by the given {@code InParam} type
+     *
+     * @param types One ore more subclass of {@code InParam}
+     * @return An associative array containing all the objects for the specified type
+     */
     def <T extends InParam> Map<T,Object> getInputsByType( Class<T>... types ) {
 
         def result = [:]
@@ -212,13 +203,63 @@ class TaskRun<T extends ProcessHandler> {
         return result
     }
 
+    /**
+     * Get the map of *output* objects by the given {@code InParam} type
+     *
+     * @param types One ore more subclass of {@code InParam}
+     * @return An associative array containing all the objects for the specified type
+     */
     def Map<OutParam,Object> getOutputsByType( Class... types ) {
         def result = [:]
         outputs.findAll() { types.contains(it.key.class) }.each { result << it }
         return result
     }
 
+    /**
+     * @return A map containing the task environment defined as input declaration by this task
+     */
+    Map<String,String> getInputEnvironment() {
+        final Map<String,String> environment = [:]
+        getInputsByType( EnvInParam ).each { param, value ->
+            environment.put( param.name, value?.toString() )
+        }
+        return environment
+    }
 
+    /**
+     * @return The location of the environment script used by this task
+     */
+    Path getCmdEnvironmentFile() { workDirectory.resolve('.command.env') }
+
+    /**
+     * @return The location of the task script script to be executed
+     */
+    Path getCmdScriptFile() { workDirectory.resolve('.command.sh') }
+
+    /**
+     * @return The location of the data file to be provided to this task
+     */
+    Path getCmdInputFile() { workDirectory.resolve('.command.in') }
+
+    /**
+     * @return The location of the data output by this task
+     */
+    Path getCmdOutputFile() { workDirectory.resolve('.command.out') }
+
+    /**
+     * @return The location of the file where the task exit status is saved
+     */
+    Path getCmdExitFile() { workDirectory.resolve('.exitcode') }
+
+    /**
+     * @return The location of the created when the task starts
+     */
+    Path getCmdStartedFile() { workDirectory.resolve('.command.started') }
+
+    /**
+     * @return The location of the wrapper BASH script user to launch the user target script
+     */
+    Path getCmdWrapperFile() { workDirectory.resolve('.command.run')  }
 
 }
 

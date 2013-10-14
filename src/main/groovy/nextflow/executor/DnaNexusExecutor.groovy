@@ -18,7 +18,6 @@
 */
 
 package nextflow.executor
-
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -28,11 +27,16 @@ import groovy.util.logging.Slf4j
 import nextflow.fs.dx.DxPath
 import nextflow.processor.FileInParam
 import nextflow.processor.FileOutParam
+import nextflow.processor.TaskConfig
+import nextflow.processor.TaskHandler
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.DxHelper
+
 /**
  * Executes script.nf indicated in dxapp.sh in the DnaNexus environment
- * -->  https://www.dnanexus.com/
+ *
+ * See https://www.dnanexus.com/
  *
  * @author Beatriz Martin San Juan <bmsanjuan@gmail.com>
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -42,14 +46,65 @@ import nextflow.util.DxHelper
 @Slf4j
 class DnaNexusExecutor extends AbstractExecutor {
 
-    private static final COMMAND_OUT_FILENAME = '.command.out'
+    /**
+     * Returns the output of the task.
+     * @param task
+     * @return task.output
+     */
+    @Override
+    TaskHandler createTaskHandler(TaskRun task) {
 
-    private static final COMMAND_IN_FILENAME = '.command.in'
+        /*
+         * Setting the work directory
+         */
+        final scratch = task.workDirectory
+        log.debug "Lauching task > ${task.name} -- work folder: $scratch"
 
-    private static final COMMAND_ENV_FILENAME = '.command.env'
+        /*
+         * Saving the environment to a file.
+         */
+        Map environment = task.processor.getProcessEnvironment()
+        environment.putAll( task.getInputEnvironment() )
+        final taskEnvFile = task.getCmdEnvironmentFile()
+        taskEnvFile.text = TaskProcessor.bashEnvironmentScript(environment)
 
-    private static final COMMAND_SCRIPT_FILENAME = '.command.sh'
+        /*
+         * In case there's a task input file, save it file
+         */
+        Path taskInputFile = null
+        if (task.stdin) {
+            taskInputFile = task.getCmdInputFile()
+            taskInputFile.text = task.stdin
+        }
 
+        /*
+         * Saving the task script file in the appropriate task's working folder
+         */
+        Path taskScriptFile = task.getCmdScriptFile()
+        taskScriptFile.text = task.processor.normalizeScript(task.script.toString())
+        log.debug "Creating script file for task > ${task.name}\n\n "
+
+        /*
+         * create the stage inputs script
+         */
+        def inputFiles = task.getInputsByType(FileInParam)
+        def stageScript = stagingFilesScript( inputFiles, '; ' )
+
+        /*
+         * the DnaNexus job params object
+         */
+        def obj = [:]
+        obj.task_name = task.name
+        obj.task_script = (taskScriptFile as DxPath).getFileId()
+        obj.task_env = (taskEnvFile as DxPath).getFileId()
+        if( taskInputFile ) {
+            obj.task_input = (taskInputFile as DxPath).getFileId()
+        }
+        obj.stage_inputs = stageScript
+        obj.output_files = taskConfig.getOutputs().ofType(FileOutParam).collect { it.getName() }
+
+        new DxTaskHandler(task, taskConfig, this, obj)
+    }
 
 
     @Override
@@ -66,138 +121,6 @@ class DnaNexusExecutor extends AbstractExecutor {
             return "dx download --no-progress ${(path as DxPath).getFileId()} -o $target"
         }
 
-    }
-
-    /**
-     * Launches the task
-     * @param task
-     */
-    @Override
-    void launchTask(TaskRun task) {
-
-        /*
-         * Setting the work directory
-         */
-        final scratch = task.workDirectory
-        log.debug "Lauching task > ${task.name} -- work folder: $scratch"
-
-        /*
-         * Saving the environment to a file.
-         */
-        def taskEnvFile = scratch.resolve(COMMAND_ENV_FILENAME);
-        createEnvironmentFile(task, taskEnvFile)
-
-        /*
-         * In case there's a task input file, save it file
-         */
-        Path taskInputFile = null
-        if (task.stdin) {
-            taskInputFile = scratch.resolve(COMMAND_IN_FILENAME)
-            taskInputFile.text = task.stdin
-        }
-
-
-        /*
-         * Saving the task script file in the appropriate task's working folder
-         */
-        Path taskScriptFile = scratch.resolve(COMMAND_SCRIPT_FILENAME)
-        taskScriptFile.text = task.processor.normalizeScript(task.script.toString())
-        log.debug "Creating script file for task > ${task.name}\n\n "
-
-        /*
-         * create the stage inputs script
-         */
-        def stageScript = stagingFilesScript( task.getInputsByType(FileInParam), '; ' )
-
-
-        // input job params
-        def obj = [:]
-        obj.task_name = task.name
-        obj.task_script = (taskScriptFile as DxPath).getFileId()
-        // TODO complete env handling
-        //obj.task_env = (taskEnvFile as DxPath).getFileId()
-        if( taskInputFile ) {
-            obj.task_input = (taskInputFile as DxPath).getFileId()
-        }
-        obj.stage_inputs = stageScript
-        obj.output_files = taskConfig.getOutputs().ofType(FileOutParam).collect { it.getName() }
-
-        // create the input parameters for the job to be executed
-        def processJobInputHash = createInputObject( obj, (String)taskConfig.instaceType )
-        log.debug "New job parameters: ${processJobInputHash}"
-
-        /*
-         * Launching the job.
-         */
-        String processJobId = DXAPI.jobNew(processJobInputHash).get("id").textValue()
-        log.debug "Launching job > ${processJobId}"
-        task.jobId = processJobId
-
-
-        /*
-         * Waiting for the job to end while showing the state job's state and details.
-         */
-        log.debug "Waiting for the job > $processJobId"
-        Map result = waitForJobResult(task)
-
-        /*
-         * Getting the exit code of the task's execution.
-         */
-        Integer exitCode = result.output?.exit_code
-        if( result.state == 'done' && exitCode != null ) {
-            task.exitCode = exitCode
-            log.debug "Task ${task.name} > exit code > ${task.exitCode}"
-        }
-
-
-        /*
-         * Getting the program output file.
-         * When the 'echo' property is set, it prints out the task stdout
-         */
-        // the file that will receive the stdout
-        Path taskOutputFile = scratch.resolve(COMMAND_OUT_FILENAME)
-        if( !taskOutputFile.exists()) {
-            log.warn "Task ${task.name} > output file does not exist: $taskOutputFile"
-            task.stdout = '(none)'
-        }
-        else {
-            log.debug "Task ${task.name} > out file: $taskOutputFile -- exists: ${taskOutputFile.exists()}; size: ${taskOutputFile.size()}\n ${taskOutputFile.text} "
-            task.stdout = taskOutputFile
-
-            if( taskConfig.echo ) {
-                print taskOutputFile.text
-            }
-        }
-    }
-
-    @Override
-    boolean checkStarted(TaskRun task) {
-        return false  //To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
-    boolean checkCompleted(TaskRun task) {
-        return false  //To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    def Map waitForJobResult( TaskRun task ) {
-        JsonNode result;
-
-        while( true ) {
-            sleep( 15_000 )
-            result = DXAPI.jobDescribe(task.jobId as String)
-            log.debug "Task ${task.name} > current result: ${result.toString()}\n"
-
-            String state = result.get('state').textValue()
-            if( state in ['idle', 'waiting_on_input', 'runnable', 'running', 'waiting_on_output', 'terminating'] ) {
-                log.debug "Task ${task.name} > State: ${state}"
-                continue
-            }
-            log.debug "Task ${task.name} > State: ${state}"
-            break
-        }
-
-        return DxHelper.jsonToObj(result)
     }
 
 
@@ -237,15 +160,137 @@ class DnaNexusExecutor extends AbstractExecutor {
 
     }
 
-    /**
-     * Returns the output of the task.
-     * @param task
-     * @return task.output
-     */
-    @Override
-    def getStdOutFile(TaskRun task) {
-        task.@stdout
+}
+
+/**
+ * Handle a job execution in the DnaNexus platform
+ */
+@Slf4j
+class DxTaskHandler extends TaskHandler {
+
+    final Map inputParams
+
+    final DnaNexusExecutor executor
+
+    private String processJobId
+
+    private long lastStatusMillis
+
+    private Map lastStatusResult
+
+
+    protected DxTaskHandler(TaskRun task, TaskConfig config, DnaNexusExecutor executor, Map params) {
+        super(task, config)
+        this.taskConfig = config
+        this.inputParams = params
+        this.executor = executor
     }
 
 
+    @Override
+    void submit() {
+
+        // create the input parameters for the job to be executed
+        def processJobInputHash = executor.createInputObject( inputParams, (String)taskConfig.instaceType )
+        log.debug "New job parameters: ${processJobInputHash}"
+
+        // Launching the job.
+        processJobId = DXAPI.jobNew(processJobInputHash).get("id").textValue()
+        log.debug "Launching job > ${processJobId}"
+
+    }
+
+    @Override
+    void kill() {
+        if( !processJobId ) { return }
+        log.debug "Killing DnaNexus job with id: $processJobId"
+        DXAPI.jobTerminate(processJobId)
+    }
+
+    @Override
+    boolean checkIfRunning() {
+
+        if( !isNew() ) {
+            return true
+        }
+
+        def result = checkStatus()
+        String state = result.state
+        log.debug "Task ${task.name} > State: ${state}"
+
+        if( state in ['idle', 'waiting_on_input', 'runnable', 'running', 'waiting_on_output'] ) {
+            status = Status.RUNNING
+            return true
+        }
+
+        return false
+    }
+
+    @Override
+    boolean checkIfTerminated() {
+
+        if( isTerminated() ) { return true }
+
+        if( !isRunning() ) { return false }
+
+        def result = checkStatus()
+        String state = result.state
+        if( !state ) { throw new IllegalStateException() }
+        log.debug "Task ${task.name} > State: ${state}"
+
+        if( !(state in ['done','terminating']) ) {
+            return false
+        }
+
+        /*
+         * Getting the exit code of the task's execution.
+         */
+        Integer exitCode = result.output?.exit_code
+        if( exitCode != null ) {
+            task.exitCode = exitCode
+            log.debug "Task ${task.name} > exit code > ${task.exitCode}"
+        }
+        else {
+            log.debug "Task ${task.name} > missing exit code"
+        }
+
+        /*
+         * Getting the program output file.
+         * When the 'echo' property is set, it prints out the task stdout
+         */
+
+        // the file that will receive the stdout
+        Path taskOutputFile = task.getCmdOutputFile()
+        if( !taskOutputFile.exists()) {
+            log.warn "Task ${task.name} > output file does not exist: $taskOutputFile"
+            task.stdout = '(none)'
+        }
+        else {
+            log.debug "Task ${task.name} > out file: $taskOutputFile -- exists: ${taskOutputFile.exists()}; size: ${taskOutputFile.size()}\n ${taskOutputFile.text} "
+            task.stdout = taskOutputFile
+        }
+
+        status = Status.TERMINATED
+        return true
+
+    }
+
+
+    private Map checkStatus() {
+
+        long delta = System.currentTimeMillis() - lastStatusMillis
+        if( delta < 15_000 ) {
+            return lastStatusResult
+        }
+
+        if( !processJobId ) {
+            throw new IllegalStateException()
+        }
+
+        def response = DXAPI.jobDescribe(processJobId)
+        log.debug "Task ${task.name} > current result: ${response.toString()}\n"
+
+        lastStatusMillis = System.currentTimeMillis()
+        lastStatusResult = DxHelper.jsonToObj(response)
+    }
 }

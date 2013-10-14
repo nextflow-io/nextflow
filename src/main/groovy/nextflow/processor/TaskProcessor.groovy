@@ -178,10 +178,10 @@ abstract class TaskProcessor {
         }
     }
 
-
-    TaskConfig getTaskConfig() {
-        taskConfig
-    }
+    /**
+     * @return The {@code TaskConfig} object holding the task configuration properties
+     */
+    TaskConfig getTaskConfig() { taskConfig }
 
     /**
      * @return The current {@code Session} instance
@@ -193,6 +193,9 @@ abstract class TaskProcessor {
      */
     String getName() { name }
 
+    /**
+     * @return The {@code BaseScript} object which represents pipeline script
+     */
     BaseScript getOwnerScript() { ownerScript }
 
     /**
@@ -351,7 +354,6 @@ abstract class TaskProcessor {
             def num = session.allTasks.size()
             instancesCount += 1
             result = new TaskRun(id: num, index: instancesCount, name: "$name ($instancesCount)", processor: this )
-            result.status = TaskRun.Status.NEW
             session.allTasks.put( this, result )
         }
         finally {
@@ -413,7 +415,11 @@ abstract class TaskProcessor {
             return false
         }
 
-        def exitFile = folder.resolve('.exitcode')
+        // set the folder has the task working directory
+        task.workDirectory = folder
+
+        // check if exists the task exit code file
+        def exitFile = task.getCmdExitFile()
         if( exitFile.empty() ) {
             log.trace "Exit file is empty > $exitFile -- return false"
             return false
@@ -427,23 +433,12 @@ abstract class TaskProcessor {
         }
 
         try {
-            task.exitCode = exitCode
-            task.workDirectory = folder
-
             // -- check if all output resources are available
             collectOutputs(task)
             log.info "Cached task > ${task.name}"
 
-            // -- print out the cached tasks output when 'echo' is true
-            if( taskConfig.echo ) {
-                def out = executor.getStdOutFile(task)
-                if( out instanceof Path )  {
-                    System.out.print(out.text)
-                }
-                else if( out ) {
-                    System.out.print(out.toString())
-                }
-            }
+            // set the exit code in to the task object
+            task.exitCode = exitCode
 
             // -- now bind the results
             finalizeTask0(task)
@@ -572,6 +567,10 @@ abstract class TaskProcessor {
             }
         }
 
+        // -- finally prints out the task output when 'echo' is true
+        if( taskConfig.echo ) {
+            task.echoStdout()
+        }
     }
 
     /**
@@ -594,7 +593,7 @@ abstract class TaskProcessor {
 
         switch( param ) {
             case StdOutParam:
-                task.setOutput(param, executor.getStdOutFile(task))
+                task.setOutput(param, task.stdout)
                 break
 
             case FileOutParam:
@@ -916,13 +915,6 @@ abstract class TaskProcessor {
         }
     }
 
-    /**
-     * Launch the task execution
-     */
-    @PackageScope
-    def void launchTask( TaskRun task ) {
-        executor.launchTask(task)
-    }
 
     def boolean checkTaskStarted( TaskRun task ) {
         try {
