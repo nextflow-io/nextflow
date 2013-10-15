@@ -36,7 +36,6 @@ import nextflow.Session
 import nextflow.ast.ProcessDefTransform
 import nextflow.exception.InvalidArgumentException
 import nextflow.exception.MissingLibraryException
-import nextflow.fs.dx.DxFileSystemProvider
 import nextflow.util.FileHelper
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
@@ -583,8 +582,10 @@ class CliRunner {
         }
 
         if( !isInstalled ) {
+            // try to load DnaNexus file system provider dynamically
+            Class provider
             try {
-                Class.forName('nextflow.fs.dx.DxFileSystemProvider')
+                provider = Class.forName('nextflow.fs.dx.DxFileSystemProvider')
             }
             catch( ClassNotFoundException e ) {
                 log.debug "DxFileSystemProvider NOT available"
@@ -595,7 +596,7 @@ class CliRunner {
             Field field = FileSystemProvider.class.getDeclaredField('installedProviders')
             field.setAccessible(true)
             List installedProviders = new ArrayList((List)field.get(null))
-            installedProviders.add( new DxFileSystemProvider() )
+            installedProviders.add( provider.newInstance() )
             field.set(this, Collections.unmodifiableList(installedProviders))
             log.debug "Added 'DxFileSystemProvider' to list of installed providers [dxfs]"
         }

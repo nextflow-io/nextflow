@@ -17,48 +17,74 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-apply plugin: 'groovy'
-apply plugin: 'codenarc'
+apply plugin: 'gradle-one-jar'
 version = '0.5.0'
 
-repositories {
-    flatDir(dirs: file('lib'))
-    mavenCentral()
-    maven { url 'http://uk.maven.org/maven2' }
-    maven { url 'http://dl.bintray.com/paolo-ditommaso/maven'}
-    mavenLocal()
+allprojects {
+    apply plugin: 'groovy'
+
+    repositories {
+        flatDir(dirs: file('lib'))
+        mavenCentral()
+        maven { url 'http://uk.maven.org/maven2' }
+        maven { url 'http://dl.bintray.com/paolo-ditommaso/maven'}
+        mavenLocal()
+    }
+
+    dependencies {
+        compile ("org.codehaus.groovy:groovy:${groovyVer}")
+        testCompile ("cglib:cglib-nodep:${cglibVer}")
+        testCompile ("org.objenesis:objenesis:${objenesisVer}")
+        testCompile ("org.spockframework:spock-core:${spockVer}") {
+            exclude module: 'groovy-all'
+        }
+    }
 }
+
+configurations {
+    oneJarLib
+    dnanexus.extendsFrom runtime
+}
+
 
 dependencies {
 
-    compile 'org.codehaus.groovy:groovy:2.1.7'
-    compile 'org.codehaus.gpars:gpars:1.0.0'
-    compile 'org.slf4j:slf4j-api:1.7.5'
-    compile 'org.slf4j:jcl-over-slf4j:1.7.5'
-    compile 'org.slf4j:jul-to-slf4j:1.7.5'
-    compile 'org.slf4j:log4j-over-slf4j:1.7.5'
-    compile 'ch.qos.logback:logback-classic:1.0.13'
-    compile 'ch.qos.logback:logback-core:1.0.13'
-    compile 'commons-lang:commons-lang:2.6'
-    compile 'commons-io:commons-io:2.4'
-    compile 'commons-cli:commons-cli:1.2'
-    compile 'com.google.guava:guava:14.0.1'
-    compile 'com.beust:jcommander:1.30'
+    compile "org.codehaus.gpars:gpars:${gparsVer}"
+    compile "org.slf4j:slf4j-api:${slf4jVer}"
+    compile "org.slf4j:jcl-over-slf4j:${slf4jVer}"
+    compile "org.slf4j:jul-to-slf4j:${slf4jVer}"
+    compile "org.slf4j:log4j-over-slf4j:${slf4jVer}"
+    compile "ch.qos.logback:logback-classic:${logbackVar}"
+    compile "ch.qos.logback:logback-core:${logbackVar}"
+    compile "commons-lang:commons-lang:${commonsLangVer}"
+    compile "commons-io:commons-io:${commonsIoVer}"
+    compile "commons-cli:commons-cli:${commonsCliVer}"
+    compile "com.google.guava:guava:${guavaVer}"
+    compile "com.beust:jcommander:${jcommanderVer}"
 
+    oneJarLib files('one-jar/one-jar-boot-0.97.jar')
 
-    compile 'dnanexus:dnanexus-api:0.1.1'
-    compile 'nextflow:nextflow-dxfs:0.4.0'
-    compile 'org.apache.httpcomponents:httpclient:4.2.1'
-    compile 'com.fasterxml.jackson.core:jackson-core:2.0.5'
-    compile 'com.fasterxml.jackson.core:jackson-databind:2.0.5'
-
-
-    testCompile 'org.codehaus.groovy:groovy-json:2.1.7'
-    testCompile ('org.spockframework:spock-core:0.7-groovy-2.0')
-    testCompile ('cglib:cglib-nodep:2.2')
-
+    dnanexus (project(':dnanexus')) {
+        exclude module: 'nextflow'
+    }
 }
 
+
+subprojects {
+    apply plugin: 'groovy'
+
+    sourceSets {
+        main {
+            groovy { srcDirs = ['src/main'] }
+            resources { srcDirs = ['src/resources'] }
+        }
+
+        test {
+            groovy { srcDirs = ['src/test'] }
+        }
+    }
+
+}
 
 /*
  * print out the runtime classpath
@@ -101,8 +127,6 @@ task buildInfo << {
         println "WARN: Unable to find current build number"
     }
     file.text = src
-
-
 }
 
 /*
@@ -179,48 +203,63 @@ gradle.taskGraph.afterTask { Task task, TaskState state ->
     if (task == distZip && !state.failure) { println "\n** ZIP: ${relativePath(distZip.archivePath)}\n\n"}
 }
 
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.github.rholder:gradle-one-jar:1.0.3'
+    }
+}
+
+/*
+ * Creates a self-contained *fat* jar shipping all required dependencies
+ */
+
+task onejar(type: OneJar) {
+    mainClass = 'nextflow.script.CliRunner'
+    manifest {
+        attributes 'One-Jar-URL-Factory': 'com.simontuffs.onejar.JarClassLoader$OneJarURLFactory'
+        attributes 'Timestamp': String.valueOf(System.currentTimeMillis())
+    }
+    useStable = false
+    oneJarConfiguration = configurations.oneJarLib
+
+    doFirst { def path=new File("$buildDir/one-jar-build"); if(path.exists()) path.deleteDir() }
+}
+
+/*
+ * Creates a self-contained *fat* jar shipping all required dependencies
+ * including DnaNexus stuff
+ */
+task dxjar(type: OneJar, dependsOn: clean) {
+    mainClass = 'nextflow.script.CliRunner'
+    manifest {
+        attributes 'One-Jar-URL-Factory': 'com.simontuffs.onejar.JarClassLoader$OneJarURLFactory'
+        attributes 'Timestamp': String.valueOf(System.currentTimeMillis())
+    }
+    useStable = false
+    oneJarConfiguration = configurations.oneJarLib
+    targetConfiguration = configurations.dnanexus
+
+    doFirst { def path=new File("$buildDir/one-jar-build"); if(path.exists()) path.deleteDir() }
+}
+
+
 /*
  * Create a self-contained executable package
  */
 
 def oneJarShellStub = "./one-jar/launcher.stub"
-def oneJarLibPath = "./one-jar/one-jar-ant-task-0.97.jar"
-def oneJarTempPath = "$buildDir/tmp/nextflow-${version}.run.jar"
+def oneJarTempPath = "$buildDir/libs/nextflow-${version}-standalone.jar"
 def oneJarDistPath = "$buildDir/pack/nextflow"
 
-task pack(dependsOn: compile) << {
-
-    def appMainClass = 'nextflow.script.CliRunner'
-
-    ant.taskdef (
-            name:"one-jar",
-            classname:"com.simontuffs.onejar.ant.OneJarTask",
-            classpath: oneJarLibPath,
-            onerror: "report"
-    )
-
-    ant.delete( dir: oneJarTempPath )
-    ant."one-jar"( destfile: oneJarTempPath ) {
-        delegate.manifest {
-            attribute( name: 'One-Jar-Main-Class', value: appMainClass )
-            attribute( name: 'One-Jar-URL-Factory', value: "com.simontuffs.onejar.JarClassLoader\$OneJarURLFactory" )
-        }
-
-        delegate.main {
-            fileset( dir: "$buildDir/classes/main" )
-            fileset( dir: "$buildDir/resources/main" )
-        }
-
-        lib {
-            fileset dir: "$buildDir/dependency-libs"
-        }
-    }
-
+task pack(dependsOn: onejar) << {
 
     /*
      * Create the bash startup file
      */
-
     def distFile = new File(oneJarDistPath).absoluteFile
     if( !distFile.getParentFile().exists() ) { distFile.getParentFile().mkdirs()  }
     if( distFile.exists() ) distFile.delete()
@@ -238,6 +277,54 @@ task pack(dependsOn: compile) << {
 }
 
 /*
+ * Create the dnanexus application archive and project structure
+ */
+
+File dxProject = file('./dnanexus-project')
+
+task dnanexus(dependsOn: dxjar) << {
+
+    def binFolder = new File(dxProject,'resources/usr/bin')
+    binFolder.mkdirs()
+    def target = new FileOutputStream(new File(binFolder,'nextflow.jar'))
+    target << new FileInputStream(new File(oneJarTempPath))
+
+    def dxApp = file('./subprojects/dnanexus/dxapp.json')
+    def dxScript = file('./subprojects/dnanexus/dxapp.sh')
+
+    // copy the 'dxapp.json' if not exists
+    target = new File(dxProject, dxApp.name)
+    if( !target.exists() ) {
+        target.text = dxApp.text
+    }
+
+    // copy the 'dxapp.sh' if not exists
+    target = new File(dxProject, dxScript.name)
+    if( !target.exists() ) {
+        target.text = dxScript.text
+    }
+
+    // copy the example files
+    target = new File(dxProject,'resources/examples')
+    target.mkdirs()
+    def examples = new File('./examples')
+    examples.eachFile {
+        def copy = new File(target, it.name)
+        if( !copy.exists() ) copy.text = it.text
+    }
+
+    println """
+    DnaNexus project ready
+    1. move to ${dxProject}
+    2. build it with the command 'dx build -f'
+    3. launch it using the command 'dx run nextflow'
+    """
+
+}
+
+
+
+/*
  * private task - create the executable package and upload it to Dropbox
  */
 task uploadOnejar ( type: Copy, dependsOn: pack ) {
@@ -247,4 +334,3 @@ task uploadOnejar ( type: Copy, dependsOn: pack ) {
     into '/Users/pditommaso/Dropbox/Public/nextflow/'
 
 }
-

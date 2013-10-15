@@ -33,6 +33,8 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.DxHelper
 
+import static nextflow.processor.TaskHandler.Status.*
+
 /**
  * Executes script.nf indicated in dxapp.sh in the DnaNexus environment
  *
@@ -181,7 +183,6 @@ class DxTaskHandler extends TaskHandler {
 
     protected DxTaskHandler(TaskRun task, TaskConfig config, DnaNexusExecutor executor, Map params) {
         super(task, config)
-        this.taskConfig = config
         this.inputParams = params
         this.executor = executor
     }
@@ -210,16 +211,15 @@ class DxTaskHandler extends TaskHandler {
     @Override
     boolean checkIfRunning() {
 
-        if( !isNew() ) {
-            return true
-        }
+        if( !isNew() ) { return true }
+        if( processJobId == null ) { return false }
 
         def result = checkStatus()
         String state = result.state
         log.debug "Task ${task.name} > State: ${state}"
 
         if( state in ['idle', 'waiting_on_input', 'runnable', 'running', 'waiting_on_output'] ) {
-            status = Status.RUNNING
+            status = RUNNING
             return true
         }
 
@@ -270,7 +270,7 @@ class DxTaskHandler extends TaskHandler {
             task.stdout = taskOutputFile
         }
 
-        status = Status.TERMINATED
+        status = TERMINATED
         return true
 
     }

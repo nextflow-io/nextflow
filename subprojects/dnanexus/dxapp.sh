@@ -14,7 +14,7 @@ main() {
 
     # Launch it !
     set +e
-    nextflow -log $PWD/nextflow.log -process.executor dnanexus -w dxfs:///workspace/ $script $params
+    java -jar /usr/bin/nextflow.jar -log $PWD/nextflow.log -process.executor dnanexus -w dxfs:///workspace/ $script $params
     exit_status=$?
     set -e
 

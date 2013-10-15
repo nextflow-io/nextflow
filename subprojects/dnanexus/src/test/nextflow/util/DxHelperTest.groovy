@@ -16,15 +16,15 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
-package nextflow.util
+package nextflow.executor
 import com.fasterxml.jackson.databind.node.ArrayNode
+import nextflow.util.DxHelper
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class DxHelperTest extends Specification {
-
 
 
     def testToJsonNode(){
