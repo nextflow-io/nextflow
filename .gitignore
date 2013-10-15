@@ -2,6 +2,7 @@
 .gradle/**
 .nextflow.log*
 build/**
+subprojects/**/build/
 out/**
 piper/**
 tmp/*
