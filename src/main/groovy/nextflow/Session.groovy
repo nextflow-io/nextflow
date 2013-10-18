@@ -87,9 +87,13 @@ class Session {
      */
     @Lazy
     File binDir = {
-        if( !baseDir ) { log.debug "Script base directory is null"; return null }
+        if( !baseDir ) {
+            log.debug "Script base directory is null";
+            return null
+        }
         def path = new File(baseDir, 'bin')
         if( !path.exists() || !path.isDirectory() ) {
+            log.debug "Script base path does not exist or is not a directory: ${path}"
             return null
         }
         log.debug "Setting script bin dir: ${path}"
