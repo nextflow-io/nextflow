@@ -154,6 +154,7 @@ class DnaNexusExecutor extends AbstractExecutor {
      */
 
     def static JsonNode createInputObject( Map inputObj, String instanceType ) {
+        log.debug "Creating inputObj with: ${inputObj}"
 
         def root = [:]
 
@@ -199,7 +200,7 @@ class DxTaskHandler extends TaskHandler {
     void submit() {
 
         // create the input parameters for the job to be executed
-        def processJobInputHash = executor.createInputObject( inputParams, (String)taskConfig.instaceType )
+        def processJobInputHash = executor.createInputObject( inputParams, (String)taskConfig.instanceType )
         log.debug "New job parameters: ${processJobInputHash}"
 
         // Launching the job.
