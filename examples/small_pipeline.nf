@@ -1,13 +1,17 @@
 params.query = "$HOME/sample.fa"
 params.db = "$HOME/tools/blast-db/pdb/pdb"
 
+db = file(params.db)
+query = file(params.query)
 
 process blast {
+    input
+    file query
     output:
     file top_hits
 
     """
-    blastp -db ${params.db} -query ${params.query} -outfmt 6 > blast_result
+    blastp -db $db -query $query -outfmt 6 > blast_result
     cat blast_result | head -n 10 | cut -f 2 > top_hits
     """
 }

@@ -22,9 +22,10 @@ process splitSequences {
 process reverse {
 
     input:
-        val x using records
+    file x using records
+    
     output:
-        stdout result
+    stdout result
 
     """
     cat $x | rev
