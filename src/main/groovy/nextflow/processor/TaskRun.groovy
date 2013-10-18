@@ -130,7 +130,7 @@ class TaskRun<T extends TaskHandler> {
         }
 
         if( stdout instanceof Path ) {
-            return stdout.text
+            return stdout.exists() ? stdout.text : null
         }
         else {
             return stdout?.toString()
