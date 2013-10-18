@@ -129,7 +129,12 @@ class TaskScheduler {
 
     private void checkAll( Collection<TaskHandler> collection ) {
         collection.each { TaskHandler handler ->
-            checkTask(handler)
+            try {
+                checkTask(handler)
+            }
+            catch( Exception e ) {
+                handler.task.processor.handleException(e, handler.task)
+            }
         }
     }
 
