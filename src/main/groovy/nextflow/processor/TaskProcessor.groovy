@@ -163,8 +163,6 @@ abstract class TaskProcessor {
         this.taskConfig = taskConfig
         this.code = taskBlock
 
-        executor.taskConfig = taskConfig
-
         /*
          * set the task name
          */
