@@ -95,7 +95,7 @@ class TaskProcessorTest extends Specification {
         noExceptionThrown()
         builder.environment().X == '1'
         builder.environment().Y == '2'
-        builder.environment().PATH == binFolder.toString()
+        builder.environment().PATH == "${binFolder.toString()}:\$PATH"
 
         when:
         session = new Session([env: [X:"1", Y:"2", PATH:'/some']])

@@ -59,6 +59,58 @@ class CliRunnerTest extends Specification {
 //    }
 
 
+    def testProcessorConfig() {
+
+        /*
+         * test that the *instanceType* attribute is visible in the taskConfig object
+         */
+        when:
+        def runner = new CliRunner( process: [executor:'nope', instanceType:'alpha'] )
+        def script =
+            '''
+            process simpleTask  {
+                input:
+                val x using 1
+                output:
+                stdout result
+
+                """echo $x"""
+            }
+
+            '''
+        runner.execute(script)
+        then:
+        runner.getScript().getTaskProcessor().taskConfig.name == 'simpleTask'
+        runner.getScript().getTaskProcessor().taskConfig.instanceType == 'alpha'
+
+
+        /*
+         * test that the *instanceType* property defined by the task (beta)
+         * override the one define in the main config (alpha)
+         */
+        when:
+        def runner2 = new CliRunner( process: [executor:'nope', instanceType:'alpha'] )
+        def script2 =
+            '''
+            process otherTask  {
+                instanceType 'beta'
+                input:
+                val x using 1
+                output:
+                stdout result
+
+                """echo $x"""
+            }
+
+            '''
+        runner2.execute(script2)
+
+        then:
+        runner2.getScript().getTaskProcessor().taskConfig.name == 'otherTask'
+        runner2.getScript().getTaskProcessor().taskConfig.instanceType == 'beta'
+
+    }
+
 
     def 'test task with assignment' () {
         setup:
