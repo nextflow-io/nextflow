@@ -1,16 +1,48 @@
 package nextflow.executor
-
 import java.nio.file.Files
 
+import com.fasterxml.jackson.databind.JsonNode
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
+import nextflow.script.BaseScript
+import nextflow.util.DxHelper
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class DnaNexusExecutorTest extends Specification {
+
+    def testCreateInputObject() {
+
+        when:
+        JsonNode json = DnaNexusExecutor.createInputObject( [a:1, b:2], 'dx_cc2.8xlarge' )
+        def obj = (Map)DxHelper.jsonToObj(json)
+        then:
+        obj.input == [a:1, b:2]
+        obj.function == 'process'
+        obj.systemRequirements.process.instanceType == 'dx_cc2.8xlarge'
+
+    }
+
+    def testInstanceTypeConfig( )  {
+
+        setup:
+        def script = Mock(BaseScript)
+        def task = Mock(TaskRun)
+        def config = new TaskConfig(script)
+        config.instanceType = 'dx_cc2.8xlarge'
+
+        when:
+        def executor = new DnaNexusExecutor()
+        executor.taskConfig = config
+        def handler = executor.createTaskHandler(task)
+        then:
+        handler.taskConfig.instanceType == 'dx_cc2.8xlarge'
+
+
+    }
 
 
     def testHandleCheckIfRunning() {
