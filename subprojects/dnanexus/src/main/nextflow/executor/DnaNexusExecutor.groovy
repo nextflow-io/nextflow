@@ -65,10 +65,15 @@ class DnaNexusExecutor extends AbstractExecutor {
         /*
          * Saving the environment to a file.
          */
+        def taskEnvFile = null
         Map environment = task.processor.getProcessEnvironment()
         environment.putAll( task.getInputEnvironment() )
-        final taskEnvFile = task.getCmdEnvironmentFile()
-        taskEnvFile.text = TaskProcessor.bashEnvironmentScript(environment)
+        final envBashText = TaskProcessor.bashEnvironmentScript(environment)
+        // make sure to upload the file only there is an environment content
+        if( envBashText ) {
+            taskEnvFile = task.getCmdEnvironmentFile()
+            taskEnvFile.text = envBashText
+        }
 
         /*
          * In case there's a task input file, save it file
@@ -98,7 +103,9 @@ class DnaNexusExecutor extends AbstractExecutor {
         def obj = [:]
         obj.task_name = task.name
         obj.task_script = (taskScriptFile as DxPath).getFileId()
-        obj.task_env = (taskEnvFile as DxPath).getFileId()
+        if( taskEnvFile ) {
+            obj.task_env = (taskEnvFile as DxPath).getFileId()
+        }
         if( taskInputFile ) {
             obj.task_input = (taskInputFile as DxPath).getFileId()
         }
