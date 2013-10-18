@@ -274,7 +274,7 @@ class DxTaskHandler extends TaskHandler {
             task.stdout = '(none)'
         }
         else {
-            log.debug "Task ${task.name} > out file: $taskOutputFile -- exists: ${taskOutputFile.exists()}; size: ${taskOutputFile.size()}\n ${taskOutputFile.text} "
+            log.debug "Task ${task.name} > out file: $taskOutputFile -- exists: ${taskOutputFile.exists()}; size: ${taskOutputFile.size()}"
             task.stdout = taskOutputFile
         }
 
