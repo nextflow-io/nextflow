@@ -1,29 +1,29 @@
 #!/bin/bash
 set -e
-#set -x
-#mkdir -p /cloud; dx-mount --project-id $DX_PROJECT_CONTEXT_ID /cloud
-
 
 # Main entry point for this app.
 main() {
-    #echo 'Install Java 6 runtime'
-    #apt-get install -y openjdk-6-jre-headless > /dev/null
-
-    # create workspace path
-    dx mkdir -p /workspace
+    # log file name
+    LOG=${name}.log
 
     # Launch it !
     set +e
-    java -jar /usr/bin/nextflow.jar -log $PWD/nextflow.log -process.executor dnanexus -w dxfs:///workspace/ $script $params
+    java -jar /usr/bin/nextflow.jar \
+         -log $PWD/$LOG \
+         -process.executor dnanexus \
+         -cache false \
+         -qs $queue \
+         -w dxfs://${DX_WORKSPACE_ID}:/workspace/ \
+         $script $params
     exit_status=$?
     set -e
 
     echo "nextflow exitstatus > ${exit_status}"
-    if [ "$exit_status" -ne "0" ]; then tail -n 100 $PWD/nextflow.log >&2; fi
+    if [ "$exit_status" -ne "0" ]; then tail -n 100 $PWD/$LOG >&2; fi
 
     # upload the nextflow log
-    log_file_id=$(dx upload $PWD/nextflow.log --brief --path ${DX_PROJECT_CONTEXT_ID}:nextflow.log )
-    echo "nextflow.log > $log_file_id"
+    log_file_id=$(dx upload $PWD/$LOG --brief --path ${DX_PROJECT_CONTEXT_ID}:$LOG )
+    echo "$LOG > $log_file_id"
 
     # report the application exit status
     exit ${exit_status}
@@ -31,7 +31,8 @@ main() {
 
 # Entry point for parallel sub-tasks.
 process() {
-    echo "Starting PROCESS subtask ${task_name}"
+    echo "Sys info: cpus `nproc`; mem `cat /proc/meminfo | grep MemTotal | awk '{print $2$3}'`"
+    echo "Starting: ${task_name}"
 
     # stage scripts and input files to current folder
     dx download --no-progress $task_script -o .command.sh
@@ -54,7 +55,7 @@ process() {
     set -e
 
     # Set as output the exit code of the script's execution
-    dx-jobutil-add-output exit_code "$exit_status" --class int
+    dx-jobutil-add-output exit_code "$exit_status" --class=int
 
     # Upload and set as outputs the files which matches the
     # names or structures of the files declared in "outputs[]"

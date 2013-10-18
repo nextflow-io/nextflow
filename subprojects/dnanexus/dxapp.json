@@ -5,7 +5,9 @@
   "dxapi": "1.0.0",
   "access": {"project": "CONTRIBUTE"},
   "inputSpec": [
-      { "name": "script", "class": "string", "optional": false, "default": "/examples/basic.nf" },
+      { "name": "name", "class": "int", "optional": false, "default": "nextflow" },
+      { "name": "queue", "class": "int", "optional": false, "default": 3 },
+      { "name": "script", "class": "string", "optional": false, "default": "/examples/hello.nf" },
       { "name": "params", "class": "string", "optional": true }
   ],
   "outputSpec": [ ],
