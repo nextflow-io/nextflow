@@ -233,7 +233,7 @@ task onejar(type: OneJar) {
  * Creates a self-contained *fat* jar shipping all required dependencies
  * including DnaNexus stuff
  */
-task dxjar(type: OneJar, dependsOn: clean) {
+task dxjar(type: OneJar, dependsOn: configurations.dnanexus ) {
     mainClass = 'nextflow.script.CliRunner'
     manifest {
         attributes 'One-Jar-URL-Factory': 'com.simontuffs.onejar.JarClassLoader$OneJarURLFactory'
@@ -280,7 +280,7 @@ task pack(dependsOn: onejar) << {
  * Create the dnanexus application archive and project structure
  */
 
-File dxProject = file('./dnanexus-project')
+File dxProject = file('./dx-project')
 
 task dnanexus(dependsOn: dxjar) << {
 
@@ -310,7 +310,7 @@ task dnanexus(dependsOn: dxjar) << {
     def examples = new File('./examples')
     examples.eachFile {
         def copy = new File(target, it.name)
-        if( !copy.exists() ) copy.text = it.text
+        if( it.isFile() && !copy.exists() ) copy.text = it.text
     }
 
     println """

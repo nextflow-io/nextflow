@@ -2,7 +2,7 @@ dependencies {
     compile project(':')
 
     compile 'dnanexus:dnanexus-api:0.1.1'
-    compile 'nextflow:nextflow-dxfs:0.4.1'
+    compile 'nextflow:nextflow-dxfs:0.4.3'
     compile 'org.apache.httpcomponents:httpclient:4.2.1'
     compile 'com.fasterxml.jackson.core:jackson-core:2.0.5'
     compile 'com.fasterxml.jackson.core:jackson-databind:2.0.5'
@@ -11,3 +11,7 @@ dependencies {
     testCompile "org.codehaus.groovy:groovy-json:${groovyVer}"
 }
 
+
+task compile(type: Copy) {
+    dependsOn compileJava, compileGroovy, processResources
+}
