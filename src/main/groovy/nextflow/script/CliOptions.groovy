@@ -75,7 +75,13 @@ class CliOptions {
     Map<String,String> params = new LinkedHashMap<>()
 
     @DynamicParameter(names = ['-process.'], description = 'Set default process options' )
-    Map<String,String> process = new LinkedHashMap<>()
+    Map<String,String> process = [:]
+
+    @DynamicParameter(names = ['-e'], description = 'Add the specified variable to execution environment')
+    Map<String,String> env = [:]
+
+    @Parameter(names = ['-E'], description = 'Exports all the current system environment')
+    boolean exportSysEnv
 
     /**
      * Extra parameters for the script execution

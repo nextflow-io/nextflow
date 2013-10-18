@@ -41,6 +41,8 @@ class CliBinding extends Binding {
 
     final private Session session
 
+    @Lazy Map<String,String> sysEnv = System.getenv()
+
     def CliBinding(Session session1) {
         super( new ReadOnlyMap( ['__$session':session1, args:[], params: new ParamsMap() ]) )
         this.session = session1
@@ -81,6 +83,9 @@ class CliBinding extends Binding {
         }
         else if( fallbackMap()?.containsKey(name) ) {
             fallbackMap().get(name)
+        }
+        else if( sysEnv.containsKey(name) ) {
+            return sysEnv.get(name)
         }
         else {
             throw new MissingPropertyException(name, getClass())

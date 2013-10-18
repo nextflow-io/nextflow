@@ -695,8 +695,12 @@ abstract class TaskProcessor {
 
         // pre-pend the 'bin' folder to the task environment
         if( session.binDir ) {
-            def path = result['PATH'] ? "${session.binDir}:${result['PATH']}" : session.binDir
-            result['PATH'] = path.toString()
+            if( result.containsKey('PATH') ) {
+                result['PATH'] =  "${session.binDir}:${result['PATH']}".toString()
+            }
+            else {
+                result['PATH'] = "${session.binDir}:\$PATH".toString()
+            }
         }
 
         return result
@@ -839,7 +843,7 @@ abstract class TaskProcessor {
         final script = []
         environment.each { name, value ->
             if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
-                script << "export $name='$value'"
+                script << "export $name=\"$value\""
             }
             else {
                 log.trace "Illegal environment variable name: '${name}'"

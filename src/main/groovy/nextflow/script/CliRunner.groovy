@@ -498,7 +498,7 @@ class CliRunner {
 
             // -- configuration file(s)
             def configFiles = validateConfigFiles(options.config)
-            def config = buildConfig(configFiles)
+            def config = buildConfig(configFiles, options.env, options.exportSysEnv)
 
             // -- override 'process' parameters defined on the cmd line
             options.process.each { name, value ->
@@ -641,7 +641,7 @@ class CliRunner {
     }
 
 
-    def static Map buildConfig( List<File> files ) {
+    def static Map buildConfig( List<File> files, Map<String,String> vars = null, boolean exportSysEnv = false  ) {
 
         def texts = []
         files?.each { File file ->
@@ -654,23 +654,41 @@ class CliRunner {
             }
         }
 
-        buildConfig0( System.getenv(), texts )
+        Map<String,String> env = [:]
+        if( exportSysEnv ) {
+            log.debug "Adding current system environment to session environment"
+            env.putAll(System.getenv())
+        }
+        if( vars ) {
+            log.debug "Adding following variables to session environment: $vars"
+            env.putAll(vars)
+        }
+
+        buildConfig0( env, texts )
     }
 
 
     def static Map buildConfig0( Map env, List<String> confText )  {
-        assert env
+        assert env != null
 
         ConfigObject result = new ConfigSlurper().parse('env{}; session{}; params{}; process{} ')
 
+        // add the user specified environment to the session env
         env.sort().each { name, value -> result.env.put(name,value) }
 
-        confText?.each { String text ->
+        if( confText ) {
+            // the configuration object binds always the current environment
+            // so that in the configuration file may be referenced any variable
+            // in the current environment
+            final binding = new HashMap(System.getenv())
+            binding.putAll(env)
 
-            if ( text ) {
-                def cfg = new ConfigSlurper()
-                cfg.setBinding(env)
-                result.merge( cfg.parse(text) )
+            confText.each { String text ->
+                if ( text ) {
+                    def cfg = new ConfigSlurper()
+                    cfg.setBinding(binding)
+                    result.merge( cfg.parse(text) )
+                }
             }
 
         }
