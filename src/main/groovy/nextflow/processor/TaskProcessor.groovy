@@ -916,35 +916,6 @@ abstract class TaskProcessor {
     }
 
 
-    def boolean checkTaskStarted( TaskRun task ) {
-        try {
-            def result = executor.checkStarted(task)
-            log.trace "Check task ${task.name} > started: ${result}"
-            return result
-        }
-        catch ( Throwable error ) {
-            handleException(error, task)
-        }
-    }
-
-    /**
-     * Check for task completion
-     *
-     * @param task The {@code TaskRun} for which check if it has completed its execution
-     * @return {@code true} when the task execution has completed, or {@code false} otherwise
-     */
-    @PackageScope
-    final boolean checkTaskCompletion( TaskRun task ) {
-        try {
-            def result = executor.checkCompleted(task)
-            log.trace "Check task ${task.name} > completed: ${result}"
-            return result
-        }
-        catch ( Throwable error ) {
-            handleException(error, task)
-        }
-    }
-
     /**
      * Finalize the task execution, checking the exit status
      * and binding output values accordingly
@@ -1006,20 +977,6 @@ abstract class TaskProcessor {
         }
 
     }
-
-
-    def notifyTaskCreated(TaskRun task) {
-        log.debug "Task created > $task"
-    }
-
-    def notifyTaskStarted(TaskRun task) {
-        log.debug "Task started > $task"
-    }
-
-    def notifyTaskCompleted(TaskRun task) {
-        log.debug "Task completed > $task"
-    }
-
 
 
 
