@@ -1,6 +1,5 @@
 package nextflow.script
 
-import nextflow.executor.AbstractGridExecutorTest
 import nextflow.executor.LocalExecutor
 import nextflow.executor.SgeExecutor
 import spock.lang.Specification
@@ -18,7 +17,6 @@ class BaseScriptTest extends Specification {
         BaseScript.loadExecutorClass('local') == LocalExecutor
         BaseScript.loadExecutorClass('sge') == SgeExecutor
         BaseScript.loadExecutorClass('oge') == SgeExecutor
-        BaseScript.loadExecutorClass( AbstractGridExecutorTest.name ) == AbstractGridExecutorTest
 
     }
 

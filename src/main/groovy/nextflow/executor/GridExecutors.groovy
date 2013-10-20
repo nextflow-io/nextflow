@@ -439,10 +439,10 @@ class SlurmExecutor extends AbstractGridExecutor {
 
         final result = new ArrayList<String>()
 
-        result << 'srun'
+        result << 'sbatch'
         result << '-D' << task.workDirectory.toString()
         result << '-J' << "nf-${task.name.replace(' ','_')}"
-        result << '-E'
+        result << '-o' << '/dev/null'
 
         if( taskConfig.maxDuration ) {
             result << '-t' << taskConfig.maxDuration.format('HH:mm:ss')
@@ -455,19 +455,30 @@ class SlurmExecutor extends AbstractGridExecutor {
 
         // -- last entry to 'script' file name
         // replace with the 'shell' attribute
-        result << 'bash' << scriptFile.getName()
+        result << scriptFile.getName()
 
     }
 
     @Override
     def parseJobId(String text) {
-        // TODO Slurm parseJobId
-        return text
+        def pattern = ~ /Submitted batch job (\d+)/
+        for( String line : text.readLines() ) {
+            def m = pattern.matcher(line)
+            if( m.matches() ) {
+                return m[0][1].toString().toInteger()
+            }
+        }
+
+        throw new IllegalStateException()
     }
 
 
     @Override
     void killTask(jobId) {
-        //TODO Slurm kill job
+        new ProcessBuilder(killTaskCommand(jobId)).start()
+    }
+
+    List<String> killTaskCommand(def jobId) {
+        ['scancel', jobId?.toString() ]
     }
 }

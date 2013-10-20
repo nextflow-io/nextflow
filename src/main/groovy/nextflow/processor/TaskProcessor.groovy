@@ -486,7 +486,7 @@ abstract class TaskProcessor {
                     message << "  $it"
                 }
 
-                message << "\nCommand exit status: ${task.exitCode}"
+                message << "\nCommand exit status:\n  ${task.exitCode}"
 
                 message << "\nCommand output:"
                 task.stdout?.eachLine {
