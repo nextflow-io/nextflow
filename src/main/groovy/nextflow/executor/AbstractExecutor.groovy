@@ -1,4 +1,5 @@
 package nextflow.executor
+
 import java.nio.file.Path
 
 import groovy.io.FileType
@@ -10,7 +11,6 @@ import nextflow.processor.FileOutParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
-
 /**
  * Declares methods have to be implemented by a generic
  * execution strategy
@@ -59,7 +59,7 @@ abstract class AbstractExecutor {
 
         // scan to find the file with that name
         List files = []
-        task.workDirectory.eachFileMatch(FileType.FILES, ~/$filePattern/ ) { files << it }
+        task.workDirectory.eachFileMatch(FileType.ANY, ~/$filePattern/ ) { files << it }
 
         if( !files ) {
             throw new MissingFileException("Missing output file(s): '$fileName' expected by task: ${task.name}")
