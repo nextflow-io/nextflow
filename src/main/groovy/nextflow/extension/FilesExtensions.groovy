@@ -1,17 +1,22 @@
 package nextflow.extension
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileAttribute
 
+import groovy.util.logging.Slf4j
 import nextflow.util.FileHelper
-import org.apache.commons.io.FileUtils
-import org.apache.commons.io.FilenameUtils
 /**
+ * Add utility methods to standard classes {@code File} and {@code Path}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 class FilesExtensions {
 
     /**
@@ -20,7 +25,6 @@ class FilesExtensions {
      * @param file The file under test
      * @return {@code true} if the file does not exist or it is empty
      */
-    @Deprecated
     def static boolean empty( File file ) {
         FileHelper.empty(file)
     }
@@ -33,7 +37,6 @@ class FilesExtensions {
      * @param file The file under test
      * @return {@code true} if the file does not exist or it is empty
      */
-    @Deprecated
     def static boolean empty( Path path ) {
         FileHelper.empty(path)
     }
@@ -51,39 +54,80 @@ class FilesExtensions {
     }
 
     /**
-     * Copy a file  -or- a whole directory to a new file -or- a new directory
+     * Copy or a file or a directory. It mimics the semantic of the Linux *cp* command
      *
      * @param source
      * @param target
      * @return
      */
     def static File copyTo( File source, File target ) {
+        copyTo(source.toPath(), target.toPath()).toFile()
+    }
+
+    /**
+     * Copy a file or a directory to the target path.
+     * It mimics the semantic of Linux *cp* command.
+     *
+     * @param source
+     * @param target
+     * @return
+     */
+    def static copyTo( Path source, Path target ) {
+
         if( source.isDirectory() ) {
-            FileUtils.copyDirectory(source, target)
-            return target
+            def parent = target.getParent()
+            if( parent && !parent.exists() ) parent.mkdirs()
+            return copyDirectory(source,target)
         }
 
         if( target.isDirectory() ) {
-            def result = new File(target,source.getName())
-            FileUtils.copyFile(source, result )
-            return result
+            target = target.resolve(source.getName())
+            return Files.copy(source,target, StandardCopyOption.REPLACE_EXISTING)
         }
 
         // create the parent directories if do not exist
-        def parent = source.getParentFile()
+        def parent = source.getParent()
         if( parent && !parent.exists() ) {
             parent.mkdirs()
         }
 
-        FileUtils.copyFile(source, target)
-        return target
+        return Files.copy(source,target, StandardCopyOption.REPLACE_EXISTING)
     }
 
-    /*
-     * TODO This MUST be reimplemented without using {@code Path#toFile} adapter method
-     */
-    def static copyTo( Path source, Path target ) {
-        copyTo(source.toFile(), target.toFile())
+
+    private static Path copyDirectory( Path source, Path target ) {
+
+        def visitor = new SimpleFileVisitor<Path>() {
+
+            public FileVisitResult preVisitDirectory(Path current, BasicFileAttributes attr)
+            throws IOException
+            {
+                // get the *delta* path against the source path
+                def delta = source.relativize(current)
+                def newFolder = delta ? target.resolve(delta) : target
+                FilesExtensions.log.trace "Copy DIR: $current -> $newFolder"
+                if( !newFolder.exists() ) {
+                    Files.copy(current, newFolder, StandardCopyOption.REPLACE_EXISTING)
+                }
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFile(Path current, BasicFileAttributes attr)
+            throws IOException
+            {
+                // get the *delta* path against the source path
+                def delta = source.relativize(current)
+                def newFile = delta ? target.resolve(delta) : target
+                FilesExtensions.log.trace "Copy file: $current -> $newFile"
+                Files.copy(current, newFile, StandardCopyOption.REPLACE_EXISTING)
+                return FileVisitResult.CONTINUE;
+            }
+
+        }
+
+        Files.walkFileTree(source, visitor)
+        return target
     }
 
     /**
@@ -93,49 +137,82 @@ class FilesExtensions {
      * @param target
      * @return
      */
-    def static copyTo( File source, String target ) {
-        copyTo(source, new File(target))
+    def static File copyTo( File source, String target ) {
+        copyTo(source.toPath(), Paths.get(target)).toFile()
     }
 
-    def static copyTo( Path source, String target ) {
+    /**
+     * Copy or a file or a directory. It mimics the semantic of the Linux *cp* command
+     *
+     * @param source
+     * @param target
+     * @return
+     */
+    def static Path copyTo( Path source, String target ) {
         copyTo(source, Paths.get(target))
     }
 
-
+    /**
+     * Move a file or a directory. Mimics the Linux *mv* command
+     *
+     * @param source
+     * @param target
+     * @return
+     */
     def static File moveTo( File source, File target ) {
+        moveTo(source.toPath(), target.toPath()).toFile()
+    }
+
+    /**
+     * Move a file or a directory. Mimics the Linux *mv* command
+     *
+     * @param source
+     * @param target
+     * @return
+     */
+    def static File moveTo( File source, String target ) {
+        moveTo(source.toPath(), Paths.get(target)).toFile()
+    }
+
+    /**
+     * Move a file or a directory. Mimics the Linux *mv* command
+     *
+     * @param source
+     * @param target
+     * @return
+     */
+    def static Path moveTo( Path source, Path target ) {
+
         if( source.isDirectory() ) {
-            FileUtils.moveDirectory(source, target)
-            return target
+            if( target.isDirectory() ) {
+                // when the target path is a directory
+                // move the source path into the target folder
+                return Files.move(source, target.resolve(source.getFileName()))
+            }
+            else {
+                def parent = target.getParent()
+                if( parent && !parent.exists()) { parent.mkdirs() }
+                return Files.move(source, target)
+            }
         }
 
+        // when the target path is a directory
+        // move the source file into the target using the same name
         if( target.isDirectory() ) {
-            def result = new File(target, source.getName())
-            FileUtils.moveFile(source, result)
-            return result
+            target = target.resolve(source.getName())
+            return Files.move(source, target)
         }
 
         // create the parent directories if do not exist
-        def parent = target.getParentFile()
-        if( parent && !parent.exists() ) {
-            parent.mkdirs()
-        }
+        def parent = target.getParent()
+        if( parent && !parent.exists() ) { parent.mkdirs() }
 
-        FileUtils.moveFile(source, target)
-        return target
+        // move the source file to the target file,
+        // overwriting the target if exists
+        return Files.move(source, target, StandardCopyOption.REPLACE_EXISTING)
     }
 
-    def static moveTo( File source, String target ) {
-        moveTo(source, new File(target))
-    }
-
-    /*
-     * TODO This MUST be reimplemented without using {@code Path#toFile} adapter method
-     */
-    def static moveTo( Path source, Path target ) {
-        moveTo(source.toFile(), target.toFile())
-    }
-
-    def static moveTo( Path source, String target ) {
+    def static Path moveTo( Path source, String target ) {
         moveTo(source, FileHelper.asPath(target))
     }
 
@@ -156,8 +233,7 @@ class FilesExtensions {
      * @return The name of the file without the path, or an empty string if none exists
      */
     def static String getBaseName( File file ) {
-        assert file
-        FilenameUtils.getBaseName(file.name)
+        getBaseName(file.toPath())
     }
 
     def static String getBaseName( Path self ) {
@@ -199,8 +275,7 @@ class FilesExtensions {
      * @return the Extension of the file or an empty string if none exists
      */
     def static String getExtension( File file ) {
-        assert file
-        FilenameUtils.getExtension(file.name)
+        getExtension(file.toPath())
     }
 
     def static String getExtension( Path file ) {

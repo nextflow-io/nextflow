@@ -111,37 +111,116 @@ class FilesExtensionsTest extends Specification {
         source?.delete()
         copy?.delete()
         folder?.deleteDir()
+    }
+
+    def 'test copy source directory (file) to target directory' () {
+
+        when:
+        def sourceFolder =  Files.createTempDirectory('folderToCopy').toFile()
+        def path1 = new File(sourceFolder, 'file1')
+        def path2 = new File(sourceFolder, 'file2')
+        def path3 = new File(sourceFolder, 'file3')
+        path1.text = 'Hello1'
+        path2.text = 'Hello2'
+        path3.text = 'Hello3'
+        def target = Files.createTempDirectory('targetFolder').resolve('xxx').toFile()
+        // try to copy the source folder to the target
+        sourceFolder.copyTo(target)
+
+        then:
+        new File(target, 'file1').text == 'Hello1'
+        new File(target, 'file2').text == 'Hello2'
+        new File(target, 'file3').text == 'Hello3'
+        !new File(target, 'file4').exists()
+
+        cleanup:
+        sourceFolder?.deleteDir()
+        target?.deleteDir()
+
+    }
+
+
+    def 'test copyTo path' () {
+
+        setup:
+        def source = Files.createTempFile('test','source')
+        source.text = 'Hello'
+
+        when:
+        def copy = source.copyTo( Files.createTempFile('test','target') )
+        then:
+        copy.text == 'Hello'
+        source.exists()
+
+        when:
+        def folder = Files.createTempDirectory('testCopyTo')
+        def copy2 = source.copyTo(folder)
+        then:
+        copy2.text == 'Hello'
+        copy2.name == source.name
+        source.exists()
+
+        cleanup:
+        source?.delete()
+        copy?.delete()
+        folder?.deleteDir()
+    }
+
+    def 'test copy source directory (path) to another directory' () {
+
+        when:
+        def sourceFolder =  Files.createTempDirectory('folderToCopy')
+        def path1 = sourceFolder.resolve('file1')
+        def path2 = sourceFolder.resolve('file2')
+        def path3 = sourceFolder.resolve('file3')
+        def sub1 = Files.createTempDirectory(sourceFolder, 'sub1')
+        def path4 = sub1.resolve('file4')
+        path1.text = 'Hello1'
+        path2.text = 'Hello2'
+        path3.text = 'Hello3'
+        path4.text = 'Hello4'
+        def targetFolder = Files.createTempDirectory('targetFolder')
+        // try to copy the source folder to the target
+        sourceFolder.copyTo(targetFolder)
+        then:
+        targetFolder.resolve('file1').text == 'Hello1'
+        targetFolder.resolve('file2').text == 'Hello2'
+        targetFolder.resolve('file3').text == 'Hello3'
+        targetFolder.resolve(sub1.getName()).resolve('file4').text == 'Hello4'
+
+        cleanup:
+        sourceFolder.deleteDir()
+        targetFolder.deleteDir()
 
     }
 
     def 'test moveTo' () {
 
         setup:
-        def folder = Files.createTempDirectory('testMoveTo').toFile()
         // source1
-        def source = File.createTempFile('test','source')
-        source.text = 'Hello'
-        // source2
-        def source2 = File.createTempFile('test','source')
-        source2.text = 'Hello'
+        def source1 = Files.createTempFile('test','source')
+        source1.text = 'Hello 1'
+
 
         /*
          * test moving to a file with a different name
          */
         when:
-        def file1 = source.moveTo( new File('target') )
+        def file1 = source1.moveTo( Files.createTempFile('targetFile',null) )
         then:
-        !source.exists()
-        file1.text == 'Hello'
-        file1.name == 'target'
+        !source1.exists()
+        file1.text == 'Hello 1'
 
         /*
          * test moving to a FOLDER
          */
         when:
+        def folder = Files.createTempDirectory('testMoveTo')
+        def source2 = Files.createTempFile('test','source')
+        source2.text = 'Hello 2'
         def file2 = source2.moveTo(folder)
         then:
-        file2.text == 'Hello'
+        file2.text == 'Hello 2'
         file2.name == source2.name
         !source2.exists()
 
@@ -152,6 +231,40 @@ class FilesExtensionsTest extends Specification {
         folder?.deleteDir()
 
     }
+
+    def 'test moveTo (directory) ' () {
+
+        given:
+        def sourceFolder =  Files.createTempDirectory('folderToCopy')
+        def path1 = sourceFolder.resolve('file1')
+        def path2 = sourceFolder.resolve('file2')
+        def path3 = sourceFolder.resolve('file3')
+        def sub1 = Files.createTempDirectory(sourceFolder, 'sub1')
+        def path4 = sub1.resolve('file4')
+        path1.text = 'Hello1'
+        path2.text = 'Hello2'
+        path3.text = 'Hello3'
+        path4.text = 'Hello4'
+        def targetFolder = Files.createTempDirectory('targetFolder')
+
+        when:
+        targetFolder = sourceFolder.moveTo(targetFolder)
+        then:
+        !sourceFolder.exists()
+        targetFolder.getName() == sourceFolder.getName()
+        targetFolder.resolve('file1').text == 'Hello1'
+        targetFolder.resolve('file2').text == 'Hello2'
+        targetFolder.resolve('file3').text == 'Hello3'
+        targetFolder.resolve(sub1.getName()).resolve('file4').text == 'Hello4'
+
+        cleanup:
+        sourceFolder?.deleteDir()
+        targetFolder.getParent()?.deleteDir()
+
+
+
+    }
+
 
 
 }
