@@ -1,12 +1,11 @@
 package nextflow.executor
 import java.nio.file.Files
 
-import com.fasterxml.jackson.databind.JsonNode
+import nextflow.fs.dx.api.DxApi
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.script.BaseScript
-import nextflow.util.DxHelper
 import spock.lang.Specification
 /**
  *
@@ -16,9 +15,10 @@ class DnaNexusExecutorTest extends Specification {
 
     def testCreateInputObject() {
 
+        given:
+        def exec = [:] as DnaNexusExecutor
         when:
-        JsonNode json = DnaNexusExecutor.createInputObject( [a:1, b:2], 'dx_cc2.8xlarge' )
-        def obj = (Map)DxHelper.jsonToObj(json)
+        def obj  = exec.createInputObject( [a:1, b:2], 'dx_cc2.8xlarge' )
         then:
         obj.input == [a:1, b:2]
         obj.function == 'process'
@@ -26,21 +26,73 @@ class DnaNexusExecutorTest extends Specification {
 
     }
 
-    def testInstanceTypeConfig( )  {
 
-        setup:
-        def script = Mock(BaseScript)
+    def testHadlerSubmit() {
+
+        given:
+        def api = Mock(DxApi)
         def task = Mock(TaskRun)
+        def exec = Mock(DnaNexusExecutor)
+        def script = Mock(BaseScript)
+
+        def params = [file1:'abc', file2: 'xxx']
+        // note: the *instanceType* configured must used in the submit method
         def config = new TaskConfig(script)
-        config.instanceType = 'dx_cc2.8xlarge'
+        config.instanceType = 'dx_m1.super'
+        // define the handler
+        def handler = new DxTaskHandler(task, config, exec, params, api);
+
+        // constraints
+        and:
+        1 * exec.createInputObject(params,'dx_m1.super') >> [function:'process']
+        1 * api.jobNew(_) >> "job-xyz"
 
         when:
-        def executor = new DnaNexusExecutor()
-        executor.taskConfig = config
-        def handler = executor.createTaskHandler(task)
+        handler.submit()
         then:
-        handler.taskConfig.instanceType == 'dx_cc2.8xlarge'
+        handler.processJobId == "job-xyz"
 
+    }
+
+
+    def testKill() {
+
+        given:
+        def api = Mock(DxApi)
+        def task = Mock(TaskRun)
+        def exec = Mock(DnaNexusExecutor)
+        def config = Mock(TaskConfig)
+        def handler = new DxTaskHandler(task, config, exec, null, api);
+        handler.processJobId = 'job-123'
+
+        and:
+        1 * api.jobTerminate('job-123')
+
+        when:
+        handler.kill()
+        then:
+        noExceptionThrown()
+
+    }
+
+
+    def testCheckStatus() {
+
+        given:
+        def api = Mock(DxApi)
+        def task = Mock(TaskRun)
+        def exec = Mock(DnaNexusExecutor)
+        def config = Mock(TaskConfig)
+        def handler = new DxTaskHandler(task, config, exec, null, api);
+        handler.processJobId = 'job-312'
+
+        and:
+        1 * api.jobDescribe('job-312') >> [alpha:1, beta:2]
+
+        when:
+        handler.checkStatus() ==  [alpha:1, beta:2]
+        then:
+        noExceptionThrown()
 
     }
 

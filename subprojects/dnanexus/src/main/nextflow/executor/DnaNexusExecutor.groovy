@@ -18,23 +18,21 @@
 */
 
 package nextflow.executor
+import static nextflow.processor.TaskHandler.Status.RUNNING
+import static nextflow.processor.TaskHandler.Status.TERMINATED
+
 import java.nio.file.Files
 import java.nio.file.Path
 
-import com.dnanexus.DXAPI
-import com.fasterxml.jackson.databind.JsonNode
 import groovy.util.logging.Slf4j
 import nextflow.fs.dx.DxPath
+import nextflow.fs.dx.api.DxApi
 import nextflow.processor.FileInParam
 import nextflow.processor.FileOutParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import nextflow.util.DxHelper
-
-import static nextflow.processor.TaskHandler.Status.*
-
 /**
  * Executes script.nf indicated in dxapp.sh in the DnaNexus environment
  *
@@ -153,7 +151,7 @@ class DnaNexusExecutor extends AbstractExecutor {
      *          Value of the instance type to be used (optional)
      */
 
-    def static JsonNode createInputObject( Map inputObj, String instanceType ) {
+    def Map createInputObject( Map inputObj, String instanceType ) {
         log.debug "Creating inputObj with: ${inputObj}"
 
         def root = [:]
@@ -166,7 +164,7 @@ class DnaNexusExecutor extends AbstractExecutor {
         root.input = inputObj
         root.function = "process"
 
-        return DxHelper.objToJson(root)
+        return root
 
     }
 
@@ -182,6 +180,8 @@ class DxTaskHandler extends TaskHandler {
 
     final DnaNexusExecutor executor
 
+    final private DxApi api
+
     private String processJobId
 
     private long lastStatusMillis
@@ -189,12 +189,13 @@ class DxTaskHandler extends TaskHandler {
     private Map lastStatusResult
 
 
-    protected DxTaskHandler(TaskRun task, TaskConfig config, DnaNexusExecutor executor, Map params) {
+
+    protected DxTaskHandler(TaskRun task, TaskConfig config, DnaNexusExecutor executor, Map params, DxApi api = null ) {
         super(task, config)
         this.inputParams = params
         this.executor = executor
+        this.api = api ?: DxApi.instance
     }
-
 
     @Override
     void submit() {
@@ -204,7 +205,7 @@ class DxTaskHandler extends TaskHandler {
         log.debug "New job parameters: ${processJobInputHash}"
 
         // Launching the job.
-        processJobId = DXAPI.jobNew(processJobInputHash).get("id").textValue()
+        processJobId = api.jobNew(processJobInputHash)
         log.debug "Launching job > ${processJobId}"
 
     }
@@ -213,7 +214,7 @@ class DxTaskHandler extends TaskHandler {
     void kill() {
         if( !processJobId ) { return }
         log.debug "Killing DnaNexus job with id: $processJobId"
-        DXAPI.jobTerminate(processJobId)
+        api.jobTerminate(processJobId)
     }
 
     @Override
@@ -295,10 +296,10 @@ class DxTaskHandler extends TaskHandler {
             throw new IllegalStateException()
         }
 
-        def response = DXAPI.jobDescribe(processJobId)
+        def response = api.jobDescribe(processJobId)
         log.debug "Task ${task.name} > current result: ${response.toString()}\n"
 
         lastStatusMillis = System.currentTimeMillis()
-        lastStatusResult = DxHelper.jsonToObj(response)
+        lastStatusResult = response
     }
 }
