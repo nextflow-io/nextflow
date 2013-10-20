@@ -184,9 +184,6 @@ class GridTaskHandler extends TaskHandler {
                 .command( cli as String[] )
                 .redirectErrorStream(true)
 
-        // -- configure the job environment
-        builder.environment().putAll(task.processor.getProcessEnvironment())
-
         // -- start the execution and notify the event to the monitor
         Process process = builder.start()
 
