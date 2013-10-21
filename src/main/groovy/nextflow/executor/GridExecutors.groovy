@@ -98,7 +98,11 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
      *
      * @param jobId The ID of the job to kill
      */
-    abstract void killTask( def jobId )
+    final void killTask( def jobId )  {
+        new ProcessBuilder(killTaskCommand(jobId)).start()
+    }
+
+    abstract List<String> killTaskCommand(def jobId);
 
     /**
      * @return Parse the {@code clusterOptions} configuration option and return the entries as a list of values
@@ -336,14 +340,10 @@ class SgeExecutor extends AbstractGridExecutor {
         return lines ? lines[-1].trim() : null
     }
 
-    @Override
-    void killTask(jobId) {
-        new ProcessBuilder(killTaskCommand(jobId)).start()
-    }
 
     @PackageScope
-    String[] killTaskCommand(jobId) {
-        "qdel -j $jobId".split(' ')
+    List<String> killTaskCommand(jobId) {
+        ['qdel', '-j', jobId?.toString()]
     }
 
 }
@@ -393,13 +393,21 @@ class LsfExecutor extends AbstractGridExecutor {
 
     @Override
     def parseJobId(String text) {
-        // TODO parseJobId
-        return text
+
+        def pattern = ~/Job <(\d+)> is submitted/
+        for( String line : text.readLines() ) {
+            def m = pattern.matcher(line)
+            if( m.find() ) {
+                return m[0][1].toString()
+            }
+        }
+
+        new IllegalStateException("Not a valid 'bsub' output:\n$text");
     }
 
     @Override
-    void killTask(jobId) {
-        // TODO killTask
+    List<String> killTaskCommand( def jobId ) {
+        ['bkill', jobId?.toString() ]
     }
 }
 
@@ -465,18 +473,13 @@ class SlurmExecutor extends AbstractGridExecutor {
         for( String line : text.readLines() ) {
             def m = pattern.matcher(line)
             if( m.matches() ) {
-                return m[0][1].toString().toInteger()
+                return m[0][1].toString()
             }
         }
 
         throw new IllegalStateException()
     }
 
-
-    @Override
-    void killTask(jobId) {
-        new ProcessBuilder(killTaskCommand(jobId)).start()
-    }
 
     List<String> killTaskCommand(def jobId) {
         ['scancel', jobId?.toString() ]

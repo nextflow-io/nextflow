@@ -19,7 +19,7 @@ class SlurmExecutorTest extends Specification {
         when:
         def exec = [:] as SlurmExecutor
         then:
-        exec.parseJobId('Submitted batch job 10') == 10
+        exec.parseJobId('Submitted batch job 10') == '10'
 
     }
 

@@ -62,4 +62,24 @@ class LsfExecutorTest extends Specification {
         wrapper?.delete()
     }
 
+
+    def testParseJobId() {
+
+        when:
+        // executor stub object
+        def executor = [:] as LsfExecutor
+        then:
+        executor.parseJobId( 'Job <2329803> is submitted to default queue <research-rh6>.' ) == '2329803'
+
+    }
+
+    def testKillCommand() {
+        when:
+        // executor stub object
+        def executor = [:] as LsfExecutor
+        then:
+        executor.killTaskCommand('12345').join(' ') == 'bkill 12345'
+
+    }
+
 }
