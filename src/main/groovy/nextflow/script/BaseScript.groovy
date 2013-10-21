@@ -26,6 +26,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.executor.AbstractExecutor
 import nextflow.executor.LocalExecutor
+import nextflow.executor.LsfExecutor
 import nextflow.executor.NopeExecutor
 import nextflow.executor.SgeExecutor
 import nextflow.executor.SlurmExecutor
@@ -293,6 +294,7 @@ abstract class BaseScript extends Script {
             'local': LocalExecutor.name,
             'sge':  SgeExecutor.name,
             'oge':  SgeExecutor.name,
+            'lsf': LsfExecutor.name,
             'slurm': SlurmExecutor.name,
             'dnanexus': 'nextflow.executor.DnaNexusExecutor'
     ]
