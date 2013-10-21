@@ -1,7 +1,7 @@
 Nextflow
 ========
 
-A *dataflow* oriented workflow framework for bioinformatic pipelines
+A *reactive* workflow framework for bioinformatic pipelines
 
 Rationale
 ---------
