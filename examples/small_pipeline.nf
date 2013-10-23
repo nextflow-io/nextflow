@@ -5,8 +5,9 @@ db = file(params.db)
 query = file(params.query)
 
 process blast {
-    input
+    input:
     file query
+    
     output:
     file top_hits
 
