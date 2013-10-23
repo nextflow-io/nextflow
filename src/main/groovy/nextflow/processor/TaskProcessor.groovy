@@ -17,7 +17,6 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.processor
-
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
@@ -43,7 +42,6 @@ import nextflow.script.BaseScript
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -927,6 +925,12 @@ abstract class TaskProcessor {
     @PackageScope
     final void finalizeTask( TaskRun task ) {
         try {
+            // verify task exist status
+            boolean success = (task.exitCode in taskConfig.validExitCodes)
+            if ( !success ) {
+                throw new InvalidExitException("Task '${task.name}' terminated with an invalid exit code: ${task.exitCode}")
+            }
+            // if it's OK collect results and finalize
             collectOutputs(task)
             finalizeTask0(task)
         }
@@ -951,17 +955,10 @@ abstract class TaskProcessor {
         try {
             log.debug "Finalize task > ${task.name}"
 
-            boolean success = (task.exitCode in taskConfig.validExitCodes)
-
-            if ( !success ) {
-                throw new InvalidExitException("Task '${task.name}' terminated with an invalid exit code: ${task.exitCode}")
-            }
-
             // -- bind output (files)
             bindOutputs(task)
 
         }
-
         finally {
             finalizedCount += 1
             log.trace "Sending poison condition for task: ${task.name} > allScalar: $allScalarValues; poison: $gotPoisonPill; instances: $instancesCount; finalized: $finalizedCount"
