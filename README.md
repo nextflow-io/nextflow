@@ -1,7 +1,7 @@
 Nextflow
 ========
 
-A *dataflow* oriented workflow framework for bioinformatic pipelines
+A *reactive* workflow framework for bioinformatics pipelines
 
 Rationale
 ---------
@@ -36,7 +36,7 @@ You can to execute the command `nextflow -h` to show the program help.
 Create a file named `hello.nf` with the following content and copy it
 to the path where you downloaded the Nextflow package.
 
-    task {
+    process sayHello {
     
         """
         printf 'Hello world! \n'
@@ -47,7 +47,7 @@ to the path where you downloaded the Nextflow package.
 
 Launch the above example by typing the following command on your terminal console:
 
-    ./nextflow -t.echo true hello.nf
+    ./nextflow -process.echo true hello.nf
 
 
 Congratulations! You have just run your first task with Nextflow.
@@ -64,8 +64,9 @@ Copy the following example into a file named `pipeline.nf` .
     params.query = "$HOME/sample.fa"
     params.db = "$HOME/tools/blast-db/pdb/pdb"
 
-    task ('blast') {
-        output top_hits
+    process blast {
+        output:
+         file top_hits
 
         """
         blastp -db ${params.db} -query ${params.query} -outfmt 6 > blast_result
@@ -73,15 +74,18 @@ Copy the following example into a file named `pipeline.nf` .
         """
     }
 
-    task ('extract') {
-        input top_hits
-        output sequences
+    process extract {
+        input:
+         file top_hits
+        output:
+         file sequences
 
         "blastdbcmd -db ${params.db} -entry_batch $top_hits > sequences"
     }
 
-    task ('align') {
-        input sequences
+    process align {
+        input:
+         file sequences
         echo true
 
         "t_coffee $sequences 2>&- | tee align_result"
@@ -91,7 +95,7 @@ Copy the following example into a file named `pipeline.nf` .
 The `input` and `output` declarations in each task, define what the task is expecting to receive as input and what file(s)
 are going to be produced as output.
 
-Since the two variables `query` and `db` are prefixed by the `params` qualifier, their values can be overriden quickly
+Since the two variables `query` and `db` are prefixed by the `params` qualifier, their values can be overridden quickly
 when the script is launched, by simply adding them on the Nextflow command line and prefixing them with the `--` characters.
 For example:
 
@@ -105,7 +109,7 @@ Tasks in your pipeline can be written in any scripting language supported by the
 other than Linux BASH (e.g. Perl, Python, Ruby, R, etc), simply start your task script with the corresponding
 <a href='http://en.wikipedia.org/wiki/Shebang_(Unix)' target='_bank'>shebang</a> declaration. For example:
 
-    task {
+    process perlStuff {
 
         """
         #!/usr/bin/env perl
@@ -114,7 +118,7 @@ other than Linux BASH (e.g. Perl, Python, Ruby, R, etc), simply start your task 
         """
     }
 
-    task {
+    process pyStuff {
         """
         #!/usr/bin/env python
 
@@ -129,14 +133,14 @@ Cluster Resource Managers support
 ---------------------------------
 
 *Nextflow* provides an abstraction between the pipeline functional logic and the underlying processing system. 
-Thus it is possibile to write your pipeline once and have it running on your computer or any cluster resource 
+Thus it is possible to write your pipeline once and have it running on your computer or a cluster resource
 manager without modifying it. 
 
 Currently the following clusters are supported: 
   
   + Oracle Grid Engine (SGE)
+  + Platform LSF
   + SLURM (beta)
-  + Platform LSF (beta)
 
 
 By default tasks are parallelized by spanning multiple threads in the machine where the pipeline is launched. 
@@ -144,8 +148,8 @@ By default tasks are parallelized by spanning multiple threads in the machine wh
 To submit the execution to a SGE cluster create a file named `nextflow.config`, in the directory
 where the pipeline is going to be launched, with the following content: 
 
-    task {
-      processor='sge'
+    process {
+      executor='sge'
       queue='<your queue name>'
     }
 
@@ -157,10 +161,25 @@ Alternatively the same declaration can be defined in the file `$HOME/.nextflow/c
 the global *Nextflow* configuration.
 
 
+Cloud support
+-------------
+
+*Nextflow* provide an experimental support for [DNAnexus](http://www.dnanexus.com) cloud platform.
+
+Since this requires some extra runtime dependencies, to have Nextflow running on the DNAnexus you will need
+to compile and build *Nextflow* from source, with the following command:
+
+    ./gradlew dnanexus
+
+
+Read more about the building procedure in the following section.
+
+
+
 Build from source
 -----------------
 
-*Nextflow* is written in [Groovy](groovy.codehaus.org) (a scripting language for the JVM). A precompiled, ready-to-run, 
+*Nextflow* is written in [Groovy](groovy.codehaus.org) (a scripting language for the JVM). A precompiled, ready-to-run,
 package is available at this link http://goo.gl/062sh, thus it is not necessary to compile it in order to use it. 
 
 If you are interested in modifying the source code, or contributing to the project, it worth knowing that 
@@ -183,7 +202,7 @@ In order to create the self-contained executable package launch Gradle specifyin
 Required dependencies
 ---------------------
 
-Java 6 or higher
+Java 7 or higher
 
 
 License
