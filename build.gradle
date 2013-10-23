@@ -41,8 +41,6 @@ dependencies {
     compile 'commons-io:commons-io:2.4'
     compile 'commons-cli:commons-cli:1.2'
     compile 'com.beust:jcommander:1.30'
-    compile 'jline:jline:2.9'
-    compile 'org.fusesource.jansi:jansi:1.9'
     compile 'com.google.code.findbugs:jsr305:2.0.2'
 
     testCompile ('org.spockframework:spock-core:0.7-groovy-2.0') {
