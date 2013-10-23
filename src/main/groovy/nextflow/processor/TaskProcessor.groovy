@@ -50,6 +50,11 @@ import nextflow.util.FileHelper
 abstract class TaskProcessor {
 
     /**
+     * Global count of all task instances
+     */
+    static protected int allCount
+
+    /**
      * Count the number of instance (run) of this task
      */
     protected int instancesCount
@@ -347,10 +352,9 @@ abstract class TaskProcessor {
         TaskRun result = null
         creationLock.lock()
         try {
-            def num = session.allTasks.size()
-            instancesCount += 1
-            result = new TaskRun(id: num, index: instancesCount, name: "$name ($instancesCount)", processor: this )
-            session.allTasks.put( this, result )
+            allCount ++
+            instancesCount ++
+            result = new TaskRun(id: allCount, index: instancesCount, name: "$name ($instancesCount)", processor: this )
         }
         finally {
             creationLock.unlock()

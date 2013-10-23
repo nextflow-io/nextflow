@@ -59,8 +59,8 @@ dependencies {
     compile "commons-lang:commons-lang:${commonsLangVer}"
     compile "commons-io:commons-io:${commonsIoVer}"
     compile "commons-cli:commons-cli:${commonsCliVer}"
-    compile "com.google.guava:guava:${guavaVer}"
     compile "com.beust:jcommander:${jcommanderVer}"
+    compile "com.google.code.findbugs:jsr305:1.3.9"
 
     oneJarLib files('one-jar/one-jar-boot-0.97.jar')
 

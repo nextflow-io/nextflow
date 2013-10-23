@@ -18,12 +18,9 @@
  */
 
 package nextflow
-
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import com.google.common.collect.LinkedHashMultimap
-import com.google.common.collect.Multimap
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.Dataflow
@@ -32,10 +29,7 @@ import groovyx.gpars.group.NonDaemonPGroup
 import groovyx.gpars.group.PGroup
 import groovyx.gpars.util.PoolUtils
 import jsr166y.Phaser
-import nextflow.processor.TaskProcessor
-import nextflow.processor.TaskRun
 import nextflow.processor.TaskScheduler
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -49,11 +43,8 @@ class Session {
     final List<DataflowProcessor> allProcessors = []
 
     /**
-     * Keep the list all executed tasks
-     * note: LinkedHashMultimap preserves insertion order of entries, as well as the insertion order of keys, and the set of values associated with any one key.
+     * The scheduler monitoring the tasks execution
      */
-    final Multimap<TaskProcessor, TaskRun> allTasks = LinkedHashMultimap.create()
-
     final TaskScheduler scheduler
 
     /**
