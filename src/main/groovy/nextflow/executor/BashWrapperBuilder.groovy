@@ -121,7 +121,7 @@ class BashWrapperBuilder {
         wrapper << 'touch ' << startedFile.toString() << ENDL
 
         // source the environment
-        wrapper << 'source ' << environmentFile.toString() << ENDL
+        wrapper << '[ -f '<< environmentFile.toString() << ' ]' << ' && source ' << environmentFile.toString() << ENDL
 
         // whenever it has to change to the scratch directory
         def changeDir = changeToScratchDirectory()
