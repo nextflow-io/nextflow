@@ -100,10 +100,11 @@ class DnaNexusExecutorTest extends Specification {
     def testHandleCheckIfRunning() {
 
         setup:
+        def api = Mock(DxApi)
         def task = Mock(TaskRun)
         def config = Mock(TaskConfig)
         def exec = Mock(DnaNexusExecutor)
-        def handler = new DxTaskHandler(task, config, exec, [:]);
+        def handler = new DxTaskHandler(task, config, exec, [:], api);
         handler.metaClass.checkStatus = { return [state:'runnable'] }
         when:
         handler.processJobId = '123'
@@ -115,6 +116,7 @@ class DnaNexusExecutorTest extends Specification {
     def testTaskHandlerCheckIfTerminated() {
 
         setup:
+        def api = Mock(DxApi)
         def outFile = Files.createTempFile('testOutFile', null)
         def task = Mock(TaskRun)
         task.getCmdOutputFile() >> outFile
@@ -122,7 +124,7 @@ class DnaNexusExecutorTest extends Specification {
         def exec = Mock(DnaNexusExecutor)
 
         when:
-        def handler = new DxTaskHandler(task, config, exec, [:]);
+        def handler = new DxTaskHandler(task, config, exec, [:], api);
         handler.metaClass.checkStatus = { return [state:'running'] }
         handler.processJobId = '123'
         handler.status = TaskHandler.Status.RUNNING
@@ -134,7 +136,7 @@ class DnaNexusExecutorTest extends Specification {
         def task2 = new TaskRun()
         task2.workDirectory = Files.createTempDirectory('testHandler')
         task2.getCmdOutputFile().text = 'Task says Hola'
-        handler = new DxTaskHandler(task2, config, exec, [:]);
+        handler = new DxTaskHandler(task2, config, exec, [:], api);
         handler.metaClass.checkStatus = { return [state:'done', output:[exit_code:33]] }
         handler.processJobId = '123'
         handler.status = TaskHandler.Status.RUNNING
