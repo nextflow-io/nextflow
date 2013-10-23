@@ -111,19 +111,11 @@ class CacheHelper {
                 break
 
             case Path:
-                def file = value as Path
-                hasher = hasher
-                        .putString( file.toAbsolutePath().normalize().toString() )
-                        .putLong( file.size() )
-                        .putLong( file.lastModified() )
+                hasher = hashPath(hasher, (Path)value)
                 break;
 
             case File:
-                def file = value as File
-                hasher = hasher
-                            .putString( file.absolutePath )
-                            .putLong( file.length() )
-                            .putLong( file.lastModified() )
+                hasher = hashFile(hasher, (File)value)
                 break
 
             case UUID:
@@ -140,5 +132,31 @@ class CacheHelper {
         return hasher
     }
 
+
+    static private Hasher hashPath( Hasher hasher, Path file ) {
+
+        hasher = hasher.putString( file.toAbsolutePath().normalize().toString() )
+
+        if( file.exists() ) {
+            return hasher.putLong( file.size() ) .putLong(file.lastModified())
+        }
+        else {
+            return hasher
+        }
+    }
+
+    static private Hasher hashFile( Hasher hasher, File file ) {
+
+        hasher = hasher.putString(file.absolutePath)
+
+        if( file.exists() ) {
+            return hasher .putLong(file.length()).putLong( file.lastModified())
+        }
+        else {
+            return hasher
+        }
+
+
+    }
 
 }
