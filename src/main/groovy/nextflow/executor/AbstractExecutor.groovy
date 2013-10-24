@@ -125,12 +125,23 @@ abstract class AbstractExecutor {
      */
     String unstageOutputFilesScript( final TaskRun task, final String separatorChar = '\n' ) {
 
-        // "un-stage" the result files
+        // collect all the expected names (pattern) for files to be un-staged
         def result = new StringBuilder()
-        def resultFiles = task.getOutputsByType(FileOutParam).values().flatten()
-        resultFiles.each {
-            result << 'cp ' << it.toString() << ' ' << task.workDirectory << separatorChar
+        def fileOutNames = []
+        task.getOutputsByType(FileOutParam).keySet().each { FileOutParam param ->
+            fileOutNames.addAll( param.name.split( param.separatorChar ) as List )
         }
+
+        // create a bash script that will copy the out file to the working directory
+        log.debug "Unstaging file names: $fileOutNames"
+        if( fileOutNames ) {
+            result << 'for item in "' << fileOutNames.unique().join(' ') << '"; do' << separatorChar
+            result << 'for name in `ls $item 2>/dev/null`; do' << separatorChar
+            result << '  cp $name ' << task.workDirectory.toString() << separatorChar
+            result << 'done' << separatorChar
+            result << 'done' << separatorChar
+        }
+
         return result.toString()
     }
 

@@ -55,6 +55,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         final bash = new BashWrapperBuilder(task)
         // set the input (when available)
         bash.input = task.stdin
+        bash.scratch = taskConfig.scratch
 
         // set the environment
         bash.environment = task.processor.getProcessEnvironment()
