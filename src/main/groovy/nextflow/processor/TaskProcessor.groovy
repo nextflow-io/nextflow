@@ -347,7 +347,7 @@ abstract class TaskProcessor {
      * @return The new newly created {@code TaskRun{
      */
     final protected TaskRun createTaskRun() {
-        log.debug "Creating a new task > $name"
+        log.trace "Creating a new task > $name"
 
         TaskRun result = null
         creationLock.lock()

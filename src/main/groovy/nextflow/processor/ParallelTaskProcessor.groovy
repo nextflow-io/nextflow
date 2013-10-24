@@ -153,7 +153,7 @@ class ParallelTaskProcessor extends TaskProcessor {
      * @return
      */
     final protected TaskRun initTaskRun(List values) {
-        log.debug "Creating a new task > $name"
+        log.trace "Creating a new task > $name"
 
         final TaskRun task = createTaskRun()
 
