@@ -236,7 +236,7 @@ abstract class BaseScript extends Script {
      * @param taskConfig
      */
     private getExecutorConfig(Map taskConfig) {
-        log.debug ">> taskConfig $taskConfig"
+        log.trace ">> taskConfig $taskConfig"
 
         // create the processor object
         def result = taskConfig.executor?.toString()
@@ -257,7 +257,7 @@ abstract class BaseScript extends Script {
             log.warn "Note: configuration attribute 'processor' has been deprecated -- replace it by using the attribute 'executor' in the 'nextflow.conf' file"
         }
 
-        log.debug "<< taskConfig result: $result"
+        log.debug "<< taskConfig executor: $result"
         return result
     }
 
@@ -272,18 +272,6 @@ abstract class BaseScript extends Script {
         log.debug "Create task: $name -- noargs"
         result = createProcessor(ParallelTaskProcessor, name, code).run()
     }
-
-
-
-//    def process(Map<String,?> args, String name ) {
-//        log.debug "Create task: $name with: $args"
-//        task(name, { return '' })
-//    }
-
-//    def process(String name ) {
-//        log.debug "Create task: $name "
-//        task(name, { return '' })
-//    }
 
 
     /*
