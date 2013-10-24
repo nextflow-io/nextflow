@@ -1,7 +1,16 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.3.4
+0.5.1 - 24 Oct 2013
+- Major executors refactoring
+- Featuring new single-thread tasks scheduler
+- New enhanced DLS syntax with extended semantic
+- Switched file handling to new NIO.2 file system
+- Introducing support for DNAnexus cloud platform
+- Removed unnecessary library dependencies
+- Slim self-contained executable package
+
+0.3.4 - 24 Aug 2012
 - Extending semantic for method File.copyTo(source,target) so that when 'target' argument 
   is a directory, it copies the 'source' file to that folder, with the same name as the original file.
 - Bug: Fixed a ClassCastEx exception when the 'bin' folder is added to the PATH
