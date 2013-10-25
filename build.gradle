@@ -21,7 +21,6 @@ apply plugin: 'gradle-one-jar'
 version = '0.5.1'
 
 allprojects {
-    apply plugin: 'java'
     apply plugin: 'groovy'
 
     repositories {
@@ -40,12 +39,6 @@ allprojects {
             exclude module: 'groovy-all'
         }
     }
-}
-
-compileJava {
-    options.compilerArgs << '-XDignore.symbol.file'
-    options.fork = true // may not needed on 1.8
-    options.forkOptions.executable = 'javac' // may not needed on 1.8
 }
 
 configurations {
@@ -75,6 +68,12 @@ dependencies {
     }
 }
 
+sourceSets.main.java.srcDirs = [] 
+sourceSets.main.groovy.srcDirs = ['src/main/java', 'src/main/groovy']
+
+compileGroovy {
+    options.compilerArgs = ['-XDignore.symbol.file']
+}
 
 subprojects {
     apply plugin: 'groovy'
