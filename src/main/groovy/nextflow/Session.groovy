@@ -29,7 +29,7 @@ import groovyx.gpars.group.NonDaemonPGroup
 import groovyx.gpars.group.PGroup
 import groovyx.gpars.util.PoolUtils
 import jsr166y.Phaser
-import nextflow.processor.TaskScheduler
+import nextflow.processor.TaskDispatcher
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -43,9 +43,9 @@ class Session {
     final List<DataflowProcessor> allProcessors = []
 
     /**
-     * The scheduler monitoring the tasks execution
+     * Dispatch tasks for executions
      */
-    final TaskScheduler scheduler
+    final TaskDispatcher dispatcher
 
     /**
      * Holds the configuration object
@@ -143,7 +143,7 @@ class Session {
         pgroup = new NonDaemonPGroup( config.poolSize as int )
         Dataflow.activeParallelGroup.set(pgroup)
 
-        scheduler = new TaskScheduler(this)
+        dispatcher = new TaskDispatcher(this)
 
         log.debug ">>> phaser register (session)"
         phaser.register()
@@ -151,10 +151,6 @@ class Session {
 
     @PackageScope
     def getPhaser() { phaser }
-
-    def void start() {
-        scheduler.start()
-    }
 
     /**
      * Await the termination of all processors

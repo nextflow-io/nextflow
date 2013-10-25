@@ -109,7 +109,7 @@ class DnaNexusExecutorTest extends Specification {
         when:
         handler.processJobId = '123'
         then:
-        handler.checkIfRunning()
+        handler.checkIfStarted()
 
     }
 
@@ -127,10 +127,10 @@ class DnaNexusExecutorTest extends Specification {
         def handler = new DxTaskHandler(task, config, exec, [:], api);
         handler.metaClass.checkStatus = { return [state:'running'] }
         handler.processJobId = '123'
-        handler.status = TaskHandler.Status.RUNNING
+        handler.status = TaskHandler.Status.STARTED
         then:
         !handler.checkIfTerminated()
-        handler.status == TaskHandler.Status.RUNNING
+        handler.status == TaskHandler.Status.STARTED
 
         when:
         def task2 = new TaskRun()
@@ -139,7 +139,7 @@ class DnaNexusExecutorTest extends Specification {
         handler = new DxTaskHandler(task2, config, exec, [:], api);
         handler.metaClass.checkStatus = { return [state:'done', output:[exit_code:33]] }
         handler.processJobId = '123'
-        handler.status = TaskHandler.Status.RUNNING
+        handler.status = TaskHandler.Status.STARTED
         then:
         handler.checkIfTerminated()
         handler.status == TaskHandler.Status.TERMINATED

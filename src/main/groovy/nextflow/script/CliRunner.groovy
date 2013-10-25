@@ -211,8 +211,6 @@ class CliRunner {
     def execute( String scriptText, List<String> args = null ) {
         assert scriptText
 
-        // start the session
-        this.session.start()
         try {
             // parse the script
             script = parseScript(scriptText, args)

@@ -59,7 +59,7 @@ class NopeTaskHandler extends TaskHandler {
     }
 
     @Override
-    boolean checkIfRunning() { true }
+    boolean checkIfStarted() { true }
 
     @Override
     boolean checkIfTerminated() { return true }

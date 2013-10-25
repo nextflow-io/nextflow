@@ -4,6 +4,7 @@ import java.nio.file.Path
 
 import groovy.io.FileType
 import groovy.util.logging.Slf4j
+import nextflow.Session
 import nextflow.exception.MissingFileException
 import nextflow.processor.FileHolder
 import nextflow.processor.FileInParam
@@ -26,10 +27,28 @@ abstract class AbstractExecutor {
     TaskConfig taskConfig
 
     /**
+     * The current session object
+     */
+    Session session
+
+    /** Let to post initialize the executor */
+    def void init() {  }
+
+    /**
      * @return Create a new {@code TaskHandler} to manage the scheduling
      * actions for this task
      */
     abstract TaskHandler createTaskHandler(TaskRun task)
+
+    abstract TaskQueue getTaskQueue()
+
+
+    TaskHandler submitTask( TaskRun task ) {
+        def handler = createTaskHandler(task)
+        getTaskQueue().add
+        handler.submit()
+        return handler
+    }
 
 
     /**

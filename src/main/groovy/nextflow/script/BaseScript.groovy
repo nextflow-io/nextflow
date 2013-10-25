@@ -224,6 +224,8 @@ abstract class BaseScript extends Script {
         def executor = executorClass.newInstance()
         // inject the task configuration into the executor instance
         executor.taskConfig = taskConfig
+        executor.session = session
+        executor.init()
 
         def result = processorClass.newInstance( executor, session, this, taskConfig, script )
         return taskProcessor = result

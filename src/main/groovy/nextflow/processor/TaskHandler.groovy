@@ -30,7 +30,7 @@ package nextflow.processor
  */
 public abstract class TaskHandler {
 
-    enum Status { NEW, RUNNING, TERMINATED }
+    enum Status { NEW, SUBMITTED, STARTED, TERMINATED }
 
     protected TaskHandler(TaskRun task, TaskConfig taskConfig) {
         this.task = task
@@ -60,7 +60,7 @@ public abstract class TaskHandler {
     /**
      * Check if the submitted job has started
      */
-    abstract boolean checkIfRunning()
+    abstract boolean checkIfStarted()
 
     /**
      * Check if the submitted job has terminated its execution
@@ -89,7 +89,9 @@ public abstract class TaskHandler {
 
     boolean isNew() { return status == Status.NEW }
 
-    boolean isRunning() { return status == Status.RUNNING }
+    boolean isStarted() { return status == Status.STARTED }
+
+    boolean isSubmitted() { return status == Status.SUBMITTED }
 
     boolean isTerminated()  { return status == Status.TERMINATED  }
 
