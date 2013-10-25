@@ -866,7 +866,7 @@ abstract class TaskProcessor {
      */
     final protected void submitTask( TaskRun task ) {
         // add the task to the collection of running tasks
-        session.scheduler.submit(task)
+        session.dispatcher.submit(task)
     }
 
 

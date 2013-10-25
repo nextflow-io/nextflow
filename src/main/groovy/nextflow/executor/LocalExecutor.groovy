@@ -24,11 +24,11 @@ import groovy.util.logging.Slf4j
 import nextflow.processor.FileInParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskPollingQueue
 import nextflow.processor.TaskRun
 import nextflow.util.PosixProcess
 import org.apache.commons.io.IOUtils
 import org.codehaus.groovy.runtime.IOGroovyMethods
-
 /**
  * Executes the specified task on the locally exploiting the underlying Java thread pool
  *
@@ -37,9 +37,18 @@ import org.codehaus.groovy.runtime.IOGroovyMethods
 @Slf4j
 class LocalExecutor extends AbstractExecutor {
 
+    private static TaskPollingQueue monitor
+
+    @Override
+    def void init() {
+        if( !monitor ) {
+            monitor = new TaskPollingQueue(session, 50)
+            monitor.start()
+        }
+    }
+
     @Override
     def LocalTaskHandler createTaskHandler(TaskRun task) {
-
         assert task
         assert task.@script
         assert task.workDirectory
@@ -62,7 +71,7 @@ class LocalExecutor extends AbstractExecutor {
         // create the wrapper script
         bash.build()
 
-        new LocalTaskHandler( task, taskConfig )
+        new LocalTaskHandler( task, taskConfig, monitor )
     }
 
 
@@ -92,14 +101,17 @@ class LocalTaskHandler extends TaskHandler {
 
     private boolean destroyed
 
-    LocalTaskHandler( TaskRun task, TaskConfig taskConfig ) {
+    LocalTaskHandler( TaskRun task, TaskConfig taskConfig  ) {
         super(task, taskConfig)
         // create the task handler
         this.exitFile = task.getCmdExitFile()
         this.outputFile = task.getCmdOutputFile()
         this.wrapperFile = task.getCmdWrapperFile()
         this.maxDurationMillis = taskConfig.maxDuration?.toMillis()
+
     }
+
+
 
     @Override
     def void submit() {
@@ -120,7 +132,7 @@ class LocalTaskHandler extends TaskHandler {
         pipeStdInput()
 
         // mark as STARTED
-        status = Status.RUNNING
+        status = Status.STARTED
     }
 
     /**
@@ -154,8 +166,8 @@ class LocalTaskHandler extends TaskHandler {
      * Check if the submitted job has started
      */
     @Override
-    boolean checkIfRunning() {
-        process != null && status == Status.RUNNING
+    boolean checkIfStarted() {
+        process != null && status == Status.STARTED
     }
 
     /**
@@ -217,3 +229,5 @@ class LocalTaskHandler extends TaskHandler {
     }
 
 }
+
+

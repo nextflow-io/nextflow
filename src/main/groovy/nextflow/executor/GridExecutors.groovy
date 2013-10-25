@@ -204,7 +204,7 @@ class GridTaskHandler extends TaskHandler {
                 }
                 // save the JobId in the
                 this.jobId = executor.parseJobId(result)
-                this.status = Status.RUNNING
+                this.status = Status.STARTED
             }
             catch( Exception e ) {
                 task.exitCode = exitStatus
@@ -239,14 +239,14 @@ class GridTaskHandler extends TaskHandler {
     }
 
     @Override
-    boolean checkIfRunning() {
+    boolean checkIfStarted() {
 
         if( !isNew() ) {
             return true
         }
 
         if( isNew() && startFile.exists() ) {
-            status = Status.RUNNING
+            status = Status.STARTED
             return true
         }
 
@@ -260,7 +260,7 @@ class GridTaskHandler extends TaskHandler {
             return true
         }
 
-        if( isRunning() && exitFile.exists() ) {
+        if( isStarted() && exitFile.exists() ) {
 
             // finalize the task
             task.exitCode = readExitStatus()

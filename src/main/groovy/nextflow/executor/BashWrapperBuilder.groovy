@@ -113,7 +113,7 @@ class BashWrapperBuilder {
          * 4 - un-stage e.g. copy back the result files to the working folder
          */
 
-        def ENDL = '\n'
+        final ENDL = '\n'
         def wrapper = new StringBuilder()
         wrapper << '#!/bin/bash -Eeu' << ENDL
         wrapper << 'trap onexit 1 2 3 15 ERR' << ENDL

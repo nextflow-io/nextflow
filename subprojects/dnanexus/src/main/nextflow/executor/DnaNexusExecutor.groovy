@@ -18,7 +18,7 @@
 */
 
 package nextflow.executor
-import static nextflow.processor.TaskHandler.Status.RUNNING
+import static nextflow.processor.TaskHandler.Status.STARTED
 import static nextflow.processor.TaskHandler.Status.TERMINATED
 
 import java.nio.file.Files
@@ -218,7 +218,7 @@ class DxTaskHandler extends TaskHandler {
     }
 
     @Override
-    boolean checkIfRunning() {
+    boolean checkIfStarted() {
 
         if( !isNew() ) { return true }
         if( processJobId == null ) { return false }
@@ -228,7 +228,7 @@ class DxTaskHandler extends TaskHandler {
         log.debug "Task ${task.name} > State: ${state}"
 
         if( state in ['idle', 'waiting_on_input', 'runnable', 'running', 'waiting_on_output'] ) {
-            status = RUNNING
+            status = STARTED
             return true
         }
 
@@ -240,7 +240,7 @@ class DxTaskHandler extends TaskHandler {
 
         if( isTerminated() ) { return true }
 
-        if( !isRunning() ) { return false }
+        if( !isStarted() ) { return false }
 
         def result = checkStatus()
         String state = result.state
