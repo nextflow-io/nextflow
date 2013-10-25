@@ -55,16 +55,7 @@ class TaskDispatcher {
          * Note: queue is implemented as a fixed size blocking queue, when
          * there's not space *put* operation will block until, some other tasks finish
          */
-        final handler = task.processor.executor.createTaskHandler(task)
-        queue.put(handler)
-
-        try {
-            handler.submit()
-        }
-        catch( Exception error ) {
-            queue.remove(handler)
-            throw error
-        }
+        task.processor.executor.submitTask(task)
     }
 
 

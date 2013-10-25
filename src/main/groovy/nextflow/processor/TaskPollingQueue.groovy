@@ -13,7 +13,7 @@ import nextflow.Session
  */
 
 @Slf4j
-class TaskPollingQueue implements TaskQueue {
+class TaskPollingQueue implements TaskQueueHolder {
 
     final BlockingQueue<TaskHandler> queue
 
@@ -59,7 +59,7 @@ class TaskPollingQueue implements TaskQueue {
 
         Thread.start {
             try {
-                run()
+                pollLoop()
             }
             finally {
                 log.debug "<<< phaser deregister (scheduler)"
@@ -69,7 +69,7 @@ class TaskPollingQueue implements TaskQueue {
 
     }
 
-    protected void run() {
+    protected void pollLoop() {
         while( true ) {
             long time = System.currentTimeMillis()
             log.trace "Scheduler queue size: ${queue.size()}"
@@ -88,8 +88,14 @@ class TaskPollingQueue implements TaskQueue {
     }
 
 
-    def void addTask( TaskHandler handler ) {
-        queue.add( handler )
+    @Override
+    def void put( TaskHandler handler ) {
+        queue.put( handler )
+    }
+
+    @Override
+    def boolean remove( TaskHandler handler ) {
+        queue.remove(handler)
     }
 
 
@@ -128,7 +134,6 @@ class TaskPollingQueue implements TaskQueue {
         }
 
     }
-
 
 
     /**

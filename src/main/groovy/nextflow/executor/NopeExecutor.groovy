@@ -23,6 +23,7 @@ import java.nio.file.Paths
 
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskQueueHolder
 import nextflow.processor.TaskRun
 
 /**
@@ -32,6 +33,11 @@ import nextflow.processor.TaskRun
  */
 @Slf4j
 class NopeExecutor extends AbstractExecutor {
+
+    @Override
+    protected TaskQueueHolder createQueueHolder() {
+        return [:] as TaskQueueHolder
+    }
 
     @Override
     TaskHandler createTaskHandler(TaskRun task) {

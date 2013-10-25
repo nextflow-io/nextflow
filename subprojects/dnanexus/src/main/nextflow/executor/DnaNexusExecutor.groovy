@@ -31,7 +31,9 @@ import nextflow.processor.FileInParam
 import nextflow.processor.FileOutParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskPollingQueue
 import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskQueueHolder
 import nextflow.processor.TaskRun
 /**
  * Executes script.nf indicated in dxapp.sh in the DnaNexus environment
@@ -45,6 +47,13 @@ import nextflow.processor.TaskRun
 
 @Slf4j
 class DnaNexusExecutor extends AbstractExecutor {
+
+
+    def TaskQueueHolder createQueueHolder() {
+        def queue = new TaskPollingQueue(session, 15_000)
+        queue.start()
+        return  queue
+    }
 
     /**
      * Returns the output of the task.
@@ -208,6 +217,8 @@ class DxTaskHandler extends TaskHandler {
         processJobId = api.jobNew(processJobInputHash)
         log.debug "Launching job > ${processJobId}"
 
+        // signal the new task status
+        status = Status.SUBMITTED
     }
 
     @Override
@@ -220,7 +231,7 @@ class DxTaskHandler extends TaskHandler {
     @Override
     boolean checkIfStarted() {
 
-        if( !isNew() ) { return true }
+        if( status in [STARTED, TERMINATED] ) { return true }
         if( processJobId == null ) { return false }
 
         def result = checkStatus()
