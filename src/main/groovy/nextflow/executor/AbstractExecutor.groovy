@@ -11,6 +11,7 @@ import nextflow.processor.FileInParam
 import nextflow.processor.FileOutParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskQueueHolder
 import nextflow.processor.TaskRun
 /**
  * Declares methods have to be implemented by a generic
@@ -31,8 +32,32 @@ abstract class AbstractExecutor {
      */
     Session session
 
-    /** Let to post initialize the executor */
-    def void init() {  }
+    /**
+     * The queue holder that keep track of all tasks for this executor.
+     * Note: this attribute is static since it is required to share the same
+     * queue for all executor of the same class
+     */
+    protected static TaskQueueHolder queueHolder
+
+
+    /**
+     * Let to post initialize the executor
+     */
+    def void init() {
+        if( !queueHolder ) {
+            queueHolder = createQueueHolder()
+        }
+    }
+
+    /**
+     * @return Create a new instance of the {@code TaskQueueHolder} component
+     */
+    abstract protected TaskQueueHolder createQueueHolder()
+
+    /**
+     * @return A reference to the current {@code #queueHolder} object
+     */
+    TaskQueueHolder getQueueHolder()  { queueHolder }
 
     /**
      * @return Create a new {@code TaskHandler} to manage the scheduling
@@ -40,13 +65,21 @@ abstract class AbstractExecutor {
      */
     abstract TaskHandler createTaskHandler(TaskRun task)
 
-    abstract TaskQueue getTaskQueue()
-
-
+    /**
+     * Submit a task for execution
+     *
+     * @param task
+     * @return
+     */
     TaskHandler submitTask( TaskRun task ) {
         def handler = createTaskHandler(task)
-        getTaskQueue().add
-        handler.submit()
+        queueHolder.put(handler)
+        try {
+            handler.submit()
+        }
+        catch( Exception e ) {
+            queueHolder.remove(handler)
+        }
         return handler
     }
 

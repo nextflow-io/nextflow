@@ -30,6 +30,8 @@ import nextflow.exception.InvalidExitException
 import nextflow.processor.FileInParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskPollingQueue
+import nextflow.processor.TaskQueueHolder
 import nextflow.processor.TaskRun
 import nextflow.util.CmdLineHelper
 import org.apache.commons.io.IOUtils
@@ -41,6 +43,17 @@ import org.apache.commons.io.IOUtils
  */
 @Slf4j
 abstract class AbstractGridExecutor extends AbstractExecutor {
+
+    /**
+     * Create a a queue holder for this executor
+     * @return
+     */
+    def TaskQueueHolder createQueueHolder() {
+        def queue = new TaskPollingQueue(session, 1_000)
+        queue.start()
+        return queue
+    }
+
 
     /*
      * Prepare and launch the task in the underlying execution platform
@@ -204,7 +217,7 @@ class GridTaskHandler extends TaskHandler {
                 }
                 // save the JobId in the
                 this.jobId = executor.parseJobId(result)
-                this.status = Status.STARTED
+                this.status = Status.SUBMITTED
             }
             catch( Exception e ) {
                 task.exitCode = exitStatus

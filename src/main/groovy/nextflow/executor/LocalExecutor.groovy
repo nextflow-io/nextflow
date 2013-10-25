@@ -25,6 +25,7 @@ import nextflow.processor.FileInParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskPollingQueue
+import nextflow.processor.TaskQueueHolder
 import nextflow.processor.TaskRun
 import nextflow.util.PosixProcess
 import org.apache.commons.io.IOUtils
@@ -37,14 +38,12 @@ import org.codehaus.groovy.runtime.IOGroovyMethods
 @Slf4j
 class LocalExecutor extends AbstractExecutor {
 
-    private static TaskPollingQueue monitor
 
     @Override
-    def void init() {
-        if( !monitor ) {
-            monitor = new TaskPollingQueue(session, 50)
-            monitor.start()
-        }
+    protected TaskQueueHolder createQueueHolder() {
+        def result = new TaskPollingQueue(session, 50)
+        result.start()
+        return result
     }
 
     @Override
@@ -71,7 +70,7 @@ class LocalExecutor extends AbstractExecutor {
         // create the wrapper script
         bash.build()
 
-        new LocalTaskHandler( task, taskConfig, monitor )
+        new LocalTaskHandler( task, taskConfig  )
     }
 
 
