@@ -6,7 +6,7 @@ A *reactive* workflow framework for bioinformatics pipelines
 Rationale
 ---------
 
-With the arise of big data, techniques to process and run experiments on large datasets are increasingly necessary.
+With the arise of big data, techniques to analyse and run experiments on large datasets are increasingly necessary.
 
 Parallelization and distributed computing are the best ways to tackle this kind of problem, but the tools commonly available
 to the bioinformaticians community, traditionally lack good support for these techniques, or provide a model that fits
@@ -22,7 +22,7 @@ are powerful, but when chained together facilitate complex data manipulations.
 
 In practice, this means that a Nextflow script is defined by composing  many different processes. 
 Each process can be written in any scripting language that can be executed by the Linux platform (BASH, Perl, Ruby, Python, etc), 
-to which is added the ability to coordinate and synchronize the execution of the processes by simply specifying their inputs and outputs.   
+to which is added the ability to coordinate and synchronize the processes execution by simply specifying their inputs and outputs.   
 
 Quick start
 -----------
@@ -150,10 +150,10 @@ where the pipeline is going to be launched, with the following content:
 
     process {
       executor='sge'
-      queue='<your queue name>'
+      queue='<your execution queue>'
     }
 
-In doing that, processes will be executed as SGE jobs and by using the `qsub` command, and so your pipeline will behave like any 
+In doing that, processes will be executed as SGE jobs by using the `qsub` command, and so your pipeline will behave like any 
 other SGE job script, with the benefit that *Nextflow* will automatically and transparently manage the processes 
 synchronisation, file(s) staging/un-staging, etc.  
 
