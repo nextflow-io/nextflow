@@ -38,4 +38,64 @@ class SessionTest extends Specification {
         base.deleteDir()
 
     }
+
+
+    def testGetQueueSize() {
+
+        setup:
+        def session = [:] as Session
+
+        when:
+        session.config = [ executor:[sge:[queueSize: 123] ] ]
+        then:
+        session.getQueueSize('sge', 1) == 123
+        session.getQueueSize('xxx', 1) == 1
+        session.getQueueSize(null, 1) == 1
+
+        when:
+        session.config = [ executor:[ queueSize: 321, sge:[queueSize:789] ] ]
+        then:
+        session.getQueueSize('sge', 2) == 789
+        session.getQueueSize('xxx', 2) == 321
+        session.getQueueSize(null, 2) == 321
+
+
+        when:
+        session.config = [ executor: 'sge' ]
+        then:
+        session.getQueueSize('sge', 1) == 1
+        session.getQueueSize('xxx', 2) == 2
+        session.getQueueSize(null, 3) == 3
+
+
+    }
+
+    def testGetPollInterval() {
+
+        setup:
+        def session = [:] as Session
+
+        when:
+        session.config = [ executor:[sge:[pollInterval: 345] ] ]
+        then:
+        session.getPollInterval('sge') == 345
+        session.getPollInterval('xxx') == 1_000
+        session.getPollInterval(null) == 1_000
+        session.getPollInterval(null, 2_000) == 2_000
+
+        when:
+        session.config = [ executor:[ pollInterval: 321, sge:[pollInterval:789] ] ]
+        then:
+        session.getPollInterval('sge') == 789
+        session.getPollInterval('xxx') == 321
+        session.getPollInterval(null) == 321
+
+        when:
+        session.config = [ executor: 'lsf' ]
+        then:
+        session.getPollInterval('sge', 33 ) == 33
+        session.getPollInterval('xxx', 44 ) == 44
+        session.getPollInterval(null, 55 ) == 55
+
+    }
 }

@@ -18,8 +18,7 @@
 */
 
 package nextflow.executor
-import static nextflow.processor.TaskHandler.Status.STARTED
-import static nextflow.processor.TaskHandler.Status.TERMINATED
+import static nextflow.processor.TaskHandler.Status.*
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -31,9 +30,9 @@ import nextflow.processor.FileInParam
 import nextflow.processor.FileOutParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
-import nextflow.processor.TaskPollingQueue
+import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskProcessor
-import nextflow.processor.TaskQueueHolder
+import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 /**
  * Executes script.nf indicated in dxapp.sh in the DnaNexus environment
@@ -48,11 +47,12 @@ import nextflow.processor.TaskRun
 @Slf4j
 class DnaNexusExecutor extends AbstractExecutor {
 
+    def TaskMonitor createTaskMonitor() {
+        final queueSize = session.getQueueSize(name, 10)
+        final pollInterval = session.getPollInterval(name, 15_000)
+        log.debug "Creating executor queue with size: $queueSize; poll-interval: $pollInterval"
 
-    def TaskQueueHolder createQueueHolder() {
-        def queue = new TaskPollingQueue(session, 15_000)
-        queue.start()
-        return  queue
+        return new TaskPollingMonitor(session, queueSize, pollInterval).start()
     }
 
     /**
@@ -218,7 +218,7 @@ class DxTaskHandler extends TaskHandler {
         log.debug "Launching job > ${processJobId}"
 
         // signal the new task status
-        status = Status.SUBMITTED
+        status = SUBMITTED
     }
 
     @Override
@@ -229,18 +229,18 @@ class DxTaskHandler extends TaskHandler {
     }
 
     @Override
-    boolean checkIfStarted() {
+    boolean checkIfRunning() {
 
-        if( status in [STARTED, TERMINATED] ) { return true }
-        if( processJobId == null ) { return false }
+        if( processJobId && isSubmitted() ) {
 
-        def result = checkStatus()
-        String state = result.state
-        log.debug "Task ${task.name} > State: ${state}"
+            def result = checkStatus()
+            String state = result.state
+            log.debug "Task ${task.name} > State: ${state}"
 
-        if( state in ['idle', 'waiting_on_input', 'runnable', 'running', 'waiting_on_output'] ) {
-            status = STARTED
-            return true
+            if( state in ['idle', 'waiting_on_input', 'runnable', 'running', 'waiting_on_output','done','terminating'] ) {
+                status = RUNNING
+                return true
+            }
         }
 
         return false
@@ -249,9 +249,7 @@ class DxTaskHandler extends TaskHandler {
     @Override
     boolean checkIfTerminated() {
 
-        if( isTerminated() ) { return true }
-
-        if( !isStarted() ) { return false }
+        if( !isRunning() ) { return false }
 
         def result = checkStatus()
         String state = result.state

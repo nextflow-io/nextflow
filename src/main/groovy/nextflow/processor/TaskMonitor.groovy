@@ -4,7 +4,7 @@ package nextflow.processor
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface TaskQueueHolder {
+interface TaskMonitor {
 
     /**
      * Put a {@code TaskHandler} instance into the queue of tasks to be processed.
@@ -24,5 +24,9 @@ interface TaskQueueHolder {
      */
     def boolean remove(TaskHandler handler)
 
-
+    /**
+     * Start the monitoring activity for the queued tasks
+     * @return The instance itself, useful to chain methods invocation
+     */
+    def TaskMonitor start()
 }

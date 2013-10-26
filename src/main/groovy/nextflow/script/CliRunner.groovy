@@ -519,11 +519,12 @@ class CliRunner {
             // -- other configuration parameters
             if( options.poolSize ) {
                 config.poolSize = options.poolSize
-                config.queueSize = options.poolSize  // the pool-size define the value of the queue size as well
             }
-
             if( options.queueSize ) {
-                config.queueSize = options.queueSize
+                config.executor.queueSize = options.queueSize
+            }
+            if( options.pollInterval ) {
+                config.executor.pollInterval = options.pollInterval
             }
 
             // -- add the command line parameters to the 'taskConfig' object
@@ -669,7 +670,7 @@ class CliRunner {
     def static Map buildConfig0( Map env, List<String> confText )  {
         assert env != null
 
-        ConfigObject result = new ConfigSlurper().parse('env{}; session{}; params{}; process{} ')
+        ConfigObject result = new ConfigSlurper().parse('env{}; session{}; params{}; process{}; executor{} ')
 
         // add the user specified environment to the session env
         env.sort().each { name, value -> result.env.put(name,value) }

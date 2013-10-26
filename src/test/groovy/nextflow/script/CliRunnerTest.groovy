@@ -29,34 +29,30 @@ import spock.lang.Specification
  */
 class CliRunnerTest extends Specification {
 
- //TODO check why it stops testing with gradle
+    def 'test task' () {
 
-//    def 'test task' () {
-//
-//        setup:
-//        def runner = new CliRunner([task:[processor:'nope']])
-//
-//        /*
-//         * Test a task with a very simple body.
-//         * For testing purposes the processor just return the script itself as result
-//         */
-//        when:
-//        def script =
-//            """
-//            task('task1')  {
-//                "echo Hello world"
-//            }
-//            """
-//
-//        def result = runner.execute(script)
-//
-//        then:
-//        result == "echo Hello world"
-//
-//        cleanup:
-//        runner.workDirectory?.deleteDir()
-//
-//    }
+        setup:
+        def runner = new CliRunner([process:[executor:'nope']])
+
+        /*
+         * Test a task with a very simple body.
+         * For testing purposes the processor just return the script itself as result
+         */
+        when:
+        def script =
+            """
+            process sayHello  {
+                "echo Hello world"
+            }
+            """
+
+        def result = runner.execute(script)
+
+        then:
+        result == "echo Hello world"
+
+
+    }
 
 
     def testProcessorConfig() {

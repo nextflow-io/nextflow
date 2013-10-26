@@ -21,6 +21,8 @@ package nextflow.processor
 
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.executor.AbstractExecutor
+
 /**
  * Monitor tasks execution for completion notifying their results
  *
@@ -29,12 +31,50 @@ import nextflow.Session
 @Slf4j
 class TaskDispatcher {
 
+    /**
+     * The current session object
+     */
     final private Session session
 
+    /**
+     * Map each executor class with its tasks monitor, in other words there's one {@code TaskMonitor}
+     * instance for each type of executor
+     */
+    final private Map<Class<? extends AbstractExecutor>, TaskMonitor> monitors = [:]
+
+    /**
+     * Dispatcher constrcutor
+     *
+     * @param session
+     */
     TaskDispatcher( Session session ) {
 
         this.session = session
 
+    }
+
+    /**
+     *
+     * Get an instance of {@code TaskMonitor} in the {@code #monitors} map,
+     * when the map contains no value for the specified executor invoke the
+     * closure in order to create a new {@code TaskMonitor} object,
+     * add it to the map and return it.
+     *
+     * NOTE: this method is not thread-safe by design
+     *
+     * @param type
+     * @param create
+     * @return
+     */
+    TaskMonitor getOrCreateMonitor( Class<? extends AbstractExecutor> type, Closure<TaskMonitor> create ) {
+
+        if( monitors.containsKey(type) ) {
+            return monitors.get(type)
+        }
+
+        def result = create.call()
+        monitors.put(type,result)
+        return result
     }
 
 
@@ -46,6 +86,7 @@ class TaskDispatcher {
      */
     void submit( TaskRun task ) {
         log.debug "Scheduling task: ${task}"
+
         if( session.isTerminated() ) {
             new IllegalStateException("Session terminated - Cannot add task to execution queue: ${task}")
         }
@@ -84,7 +125,9 @@ class TaskDispatcher {
      * @param e
      */
     public void notifyError(TaskHandler handler, Throwable e ) {
+
         handler.task.processor.handleException(e, handler.task)
+
     }
 
 
