@@ -1,6 +1,7 @@
 params.query = "$HOME/sample.fa"
 params.db = "$HOME/tools/blast-db/pdb/pdb"
 
+db = file(params.db)
 fasta = channel()
 queryFile = file(params.query)
 queryFile.chunkFasta {
@@ -15,7 +16,7 @@ process blast {
     file top_hits
 
     """
-    blastp -db ${params.db} -query query.fa -outfmt 6 > blast_result
+    blastp -db ${db} -query query.fa -outfmt 6 > blast_result
     cat blast_result | head -n 10 | cut -f 2 > top_hits
     """
 }
@@ -28,7 +29,7 @@ process extract {
     output:
     file sequences
 
-    "blastdbcmd -db ${params.db} -entry_batch $top_hits > sequences"
+    "blastdbcmd -db ${db} -entry_batch $top_hits > sequences"
 }
 
 process all(merge:true) {
