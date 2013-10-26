@@ -220,14 +220,16 @@ abstract class BaseScript extends Script {
         if ( !script ) throw new IllegalArgumentException("Missing script in the specified task block -- make sure it terminates with the script string to be executed")
 
         // load the executor to be used
-        def executorClass = loadExecutorClass( getExecutorConfig(taskConfig) )
-        def executor = executorClass.newInstance()
+        def execName = getExecutorName(taskConfig)
+        def execClass = loadExecutorClass(execName)
+        def execObj = execClass.newInstance()
         // inject the task configuration into the executor instance
-        executor.taskConfig = taskConfig
-        executor.session = session
-        executor.init()
+        execObj.taskConfig = taskConfig
+        execObj.session = session
+        execObj.name = execName
+        execObj.init()
 
-        def result = processorClass.newInstance( executor, session, this, taskConfig, script )
+        def result = processorClass.newInstance( execObj, session, this, taskConfig, script )
         return taskProcessor = result
 
     }
@@ -237,25 +239,30 @@ abstract class BaseScript extends Script {
      *
      * @param taskConfig
      */
-    private getExecutorConfig(Map taskConfig) {
+    private getExecutorName(Map taskConfig) {
         log.trace ">> taskConfig $taskConfig"
 
         // create the processor object
         def result = taskConfig.executor?.toString()
 
         // fallback on deprecated attribute
-        if( !result && taskConfig.processor ) {
-            result = taskConfig.processor?.toString()
+        if( !result && taskConfig.processor instanceof String ) {
+            result = taskConfig.processor
             log.warn "Note: configuration attribute 'processor' has been deprecated -- replace it by using the attribute 'executor'"
         }
 
         // fallback on config file definition
         if( !result ) {
-            result = session.config.executor?.toString()
+            if( session.config.executor instanceof String ) {
+                result = session.config.executor
+            }
+            else if( session.config.executor?.name instanceof String ) {
+                result = session.config.executor.name
+            }
         }
 
-        if( !result && session.config.processor ) {
-            result = session.config.processor?.toString()
+        if( !result && session.config.processor instanceof String ) {
+            result = session.config.processor
             log.warn "Note: configuration attribute 'processor' has been deprecated -- replace it by using the attribute 'executor' in the 'nextflow.conf' file"
         }
 

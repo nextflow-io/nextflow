@@ -7,53 +7,61 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 /**
  *
- * Maintains a queue of tasks for which manage status transition
+ * Monitors the queued tasks waiting for their termination
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
 @Slf4j
-class TaskPollingQueue implements TaskQueueHolder {
+class TaskPollingMonitor implements TaskMonitor {
 
+    /**
+     * The submitted tasks queue. It is implemented using a blocking queue,
+     * so that no more than a fixed amount of tasks can be submitted concurrently
+     */
     final BlockingQueue<TaskHandler> queue
 
+    /**
+     * The current session object
+     */
     final Session session
 
+    /**
+     * The tasks dispatcher
+     */
     final TaskDispatcher dispatcher
 
+    /**
+     * The time interval (in milliseconds) elapsed which execute a new poll
+     */
     final long pollInterval
 
-
-    TaskPollingQueue( Session session, long pollInterval ) {
-        assert session
-        assert pollInterval
+    /**
+     * Initialise the monitor, creatign the queue which will hold the tasks
+     *
+     * @param session
+     * @param queueSize
+     * @param pollInterval
+     */
+    TaskPollingMonitor( Session session, int queueSize, long pollInterval ) {
+        assert session , "Session object cannot be null"
+        assert queueSize, "Executor queue size cannot be zero"
+        assert pollInterval, "Executor polling interval cannot be zero"
 
         this.session = session
         this.dispatcher = session.dispatcher
         this.pollInterval = pollInterval
-        this.queue = new ArrayBlockingQueue<TaskHandler>( getQueueSize(session.config) )
+        this.queue = new ArrayBlockingQueue<TaskHandler>(queueSize)
 
         killOnExit()
     }
 
-
-
-    private int getQueueSize( Map config ) {
-        // creating the running tasks queue
-        def size
-        if( config.queueSize ) {
-            size = config.queueSize
-            log.debug "Processor runnable queue size: $size"
-        }
-        else {
-            size = Math.max( Runtime.getRuntime().availableProcessors()-1, 1 )
-            log.warn "Undefined processor runnable queue size -- fallback on num of available processors-1: $size"
-        }
-        return size
-    }
-
-
-    def void start() {
+    /**
+     * Launch the monitoring thread
+     *
+     * @return The monitor object itself
+     */
+    def TaskPollingMonitor start() {
         log.debug ">>> phaser register (scheduler)"
         session.phaser.register()
 
@@ -67,8 +75,12 @@ class TaskPollingQueue implements TaskQueueHolder {
             }
         }
 
+        return this
     }
 
+    /**
+     * Implements the polling strategy
+     */
     protected void pollLoop() {
         while( true ) {
             long time = System.currentTimeMillis()
@@ -87,18 +99,29 @@ class TaskPollingQueue implements TaskQueueHolder {
         }
     }
 
-
+    /**
+     * Add an entry to the queue of monitored tasks
+     *
+     * @param handler The {@code TaskHandler} instance for the task
+     */
     @Override
     def void put( TaskHandler handler ) {
         queue.put( handler )
     }
 
+    /**
+     * Remove an entry from the queue of monitored tasks
+     *
+     * @param handler The {@code TaskHandler} instance for the task
+     */
     @Override
     def boolean remove( TaskHandler handler ) {
         queue.remove(handler)
     }
 
-
+    /**
+     * @param collection The collections of tasks to check
+     */
     private void checkAll( Collection<TaskHandler> collection ) {
         collection.each { TaskHandler handler ->
             try {
@@ -119,14 +142,12 @@ class TaskPollingQueue implements TaskQueueHolder {
         assert handler
 
         // check if it is started
-        def started = handler.isStarted()
-        if( !started && handler.checkIfStarted() ) {
+        if( handler.checkIfRunning() ) {
             dispatcher.notifyStarted(handler)
-            started = true
         }
 
         // check if it is terminated
-        if( started && handler.checkIfTerminated()  ) {
+        if( handler.checkIfTerminated()  ) {
             // since completed *remove* the task from the processing queue
             queue.remove(handler)
             // finalize the tasks execution

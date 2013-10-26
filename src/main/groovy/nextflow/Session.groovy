@@ -192,6 +192,57 @@ class Session {
     }
 
 
+    public int getQueueSize( String execName, int defValue ) {
+        // creating the running tasks queue
+        def size = null
+
+        // make sure that the *executor* is a map object
+        // it could also be a plain string (when it specifies just the its name)
+        if( config.executor instanceof Map ){
+            if( execName ) {
+                size = config.executor?."$execName"?.queueSize
+            }
+
+            if( !size && config.executor?.queueSize ) {
+                size = config.executor?.queueSize
+            }
+        }
+
+
+        if( !size ) {
+            size = defValue
+            log.debug "Undefined executor queueSize property runnable queue size -- fallback default value: $size"
+        }
+
+        return size
+    }
+
+    public long getPollInterval( String execName, long defValue = 1_000 ) {
+        // creating the running tasks queue
+        def result = null
+
+        // make sure that the *executor* is a map object
+        // it could also be a plain string (when it specifies just the its name)
+        if( config.executor instanceof Map ){
+            if( execName ) {
+                result = config.executor?."$execName"?.pollInterval
+            }
+
+            if( !result && config.executor?.pollInterval ) {
+                result = config.executor?.pollInterval
+            }
+        }
+
+
+        if( !result ) {
+            result = defValue
+            log.debug "Undefined executor queueSize property runnable queue size -- fallback on num of available processors-1: $result"
+        }
+
+        return result
+    }
+
+
 //    /**
 //     * Create a table report of all executed or running tasks
 //     *

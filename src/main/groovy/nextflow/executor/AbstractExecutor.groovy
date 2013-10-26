@@ -11,7 +11,7 @@ import nextflow.processor.FileInParam
 import nextflow.processor.FileOutParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
-import nextflow.processor.TaskQueueHolder
+import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 /**
  * Declares methods have to be implemented by a generic
@@ -33,31 +33,34 @@ abstract class AbstractExecutor {
     Session session
 
     /**
-     * The queue holder that keep track of all tasks for this executor.
-     * Note: this attribute is static since it is required to share the same
-     * queue for all executor of the same class
+     * The executor simple name
      */
-    protected static TaskQueueHolder queueHolder
+    String name
+
+    /**
+     * The queue holder that keep track of all tasks for this executor.
+     */
+    private TaskMonitor monitor
 
 
     /**
      * Let to post initialize the executor
      */
     def void init() {
-        if( !queueHolder ) {
-            queueHolder = createQueueHolder()
+        if( !monitor ) {
+            monitor = session.dispatcher.getOrCreateMonitor(this.class) { createTaskMonitor() }
         }
     }
 
     /**
      * @return Create a new instance of the {@code TaskQueueHolder} component
      */
-    abstract protected TaskQueueHolder createQueueHolder()
+    abstract protected TaskMonitor createTaskMonitor()
 
     /**
      * @return A reference to the current {@code #queueHolder} object
      */
-    TaskQueueHolder getQueueHolder()  { queueHolder }
+    TaskMonitor getTaskMonitor()  { monitor }
 
     /**
      * @return Create a new {@code TaskHandler} to manage the scheduling
@@ -73,12 +76,12 @@ abstract class AbstractExecutor {
      */
     TaskHandler submitTask( TaskRun task ) {
         def handler = createTaskHandler(task)
-        queueHolder.put(handler)
+        monitor.put(handler)
         try {
             handler.submit()
         }
         catch( Exception e ) {
-            queueHolder.remove(handler)
+            monitor.remove(handler)
         }
         return handler
     }
