@@ -25,7 +25,7 @@ process extractTopHits {
     output:
     file sequences
 
-    "blastdbcmd -db ${params.db} -entry_batch $top_hits > sequences"
+    "blastdbcmd -db ${db} -entry_batch $top_hits > sequences"
 }
 
 process align {
