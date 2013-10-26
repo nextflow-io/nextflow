@@ -6,7 +6,7 @@ A *reactive* workflow framework for bioinformatics pipelines
 Rationale
 ---------
 
-With the arise of big data, techniques to process and run experiments on large datasets are increasingly necessary.
+With the arise of big data, techniques to analyse and run experiments on large datasets are increasingly necessary.
 
 Parallelization and distributed computing are the best ways to tackle this kind of problem, but the tools commonly available
 to the bioinformaticians community, traditionally lack good support for these techniques, or provide a model that fits
@@ -20,9 +20,9 @@ It doesn't aim to be another pipeline scripting language yet, but it is built ar
 is the *lingua franca* of data science, since it provides many simple command line and scripting tools, which by themselves 
 are powerful, but when chained together facilitate complex data manipulations. 
 
-In practice, this means that a Nextflow script is defined by composing  many different tasks. 
-Each task can be written in any scripting language that can be executed by the Linux platform (BASH, Perl, Ruby, Python, etc), 
-to which is added the ability to coordinate and synchronize the execution of the tasks by simply specifying their inputs and outputs.   
+In practice, this means that a Nextflow script is defined by composing  many different processes. 
+Each process can be written in any scripting language that can be executed by the Linux platform (BASH, Perl, Ruby, Python, etc), 
+to which is added the ability to coordinate and synchronize the processes execution by simply specifying their inputs and outputs.   
 
 Quick start
 -----------
@@ -50,7 +50,7 @@ Launch the above example by typing the following command on your terminal consol
     ./nextflow -process.echo true hello.nf
 
 
-Congratulations! You have just run your first task with Nextflow.
+Congratulations! You have just run your first program with Nextflow.
 
 
 Something more useful
@@ -92,7 +92,7 @@ Copy the following example into a file named `pipeline.nf` .
     }
 
 
-The `input` and `output` declarations in each task, define what the task is expecting to receive as input and what file(s)
+The `input` and `output` declarations in each process, define what it is expecting to receive as input and what file(s)
 are going to be produced as output.
 
 Since the two variables `query` and `db` are prefixed by the `params` qualifier, their values can be overridden quickly
@@ -105,8 +105,8 @@ For example:
 Mixing scripting languages
 --------------------------
 
-Tasks in your pipeline can be written in any scripting language supported by the underlying Linux platform. To use a scripting
-other than Linux BASH (e.g. Perl, Python, Ruby, R, etc), simply start your task script with the corresponding
+Processes in your pipeline can be written in any scripting language supported by the underlying Linux platform. To use a scripting
+other than Linux BASH (e.g. Perl, Python, Ruby, R, etc), simply start your process script with the corresponding
 <a href='http://en.wikipedia.org/wiki/Shebang_(Unix)' target='_bank'>shebang</a> declaration. For example:
 
     process perlStuff {
@@ -143,18 +143,18 @@ Currently the following clusters are supported:
   + SLURM (beta)
 
 
-By default tasks are parallelized by spanning multiple threads in the machine where the pipeline is launched. 
+By default processes are parallelized by spanning multiple threads in the machine where the pipeline is launched. 
 
 To submit the execution to a SGE cluster create a file named `nextflow.config`, in the directory
 where the pipeline is going to be launched, with the following content: 
 
     process {
       executor='sge'
-      queue='<your queue name>'
+      queue='<your execution queue>'
     }
 
-In doing that, tasks will be executed through the `qsub` SGE command, and so your pipeline will behave like any 
-other SGE job script, with the benefit that *Nextflow* will automatically and transparently manage the tasks 
+In doing that, processes will be executed as SGE jobs by using the `qsub` command, and so your pipeline will behave like any 
+other SGE job script, with the benefit that *Nextflow* will automatically and transparently manage the processes 
 synchronisation, file(s) staging/un-staging, etc.  
 
 Alternatively the same declaration can be defined in the file `$HOME/.nextflow/config`, which is supposed to hold 
