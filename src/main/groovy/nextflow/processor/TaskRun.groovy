@@ -116,6 +116,11 @@ class TaskRun<T extends TaskHandler> {
     int exitCode = Integer.MAX_VALUE
 
     /**
+     * Flag set when the bind stage is completed successfully
+     */
+    boolean canBind
+
+    /**
      * The return std out
      */
     def stdout
