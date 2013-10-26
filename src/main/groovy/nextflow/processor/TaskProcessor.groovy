@@ -584,6 +584,8 @@ abstract class TaskProcessor {
             collectOutputs(task, param)
         }
 
+        // mark ready for output binding
+        task.canBind = true
     }
 
     protected void collectOutputs( TaskRun task, OutParam param ) {
@@ -932,14 +934,16 @@ abstract class TaskProcessor {
             // verify task exist status
             boolean success = (task.exitCode in taskConfig.validExitCodes)
             if ( !success ) {
-                throw new InvalidExitException("Task '${task.name}' terminated with an invalid exit code: ${task.exitCode}")
+                throw new InvalidExitException("Task '${task.name}' terminated with an error")
             }
             // if it's OK collect results and finalize
             collectOutputs(task)
-            finalizeTask0(task)
         }
         catch ( Throwable error ) {
             handleException(error, task)
+        }
+        finally {
+            finalizeTask0(task)
         }
     }
 
@@ -960,7 +964,9 @@ abstract class TaskProcessor {
             log.debug "Finalize task > ${task.name}"
 
             // -- bind output (files)
-            bindOutputs(task)
+            if( task.canBind ) {
+                bindOutputs(task)
+            }
 
         }
         finally {
