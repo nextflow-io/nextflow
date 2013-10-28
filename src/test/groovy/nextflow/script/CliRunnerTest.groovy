@@ -277,7 +277,7 @@ class CliRunnerTest extends Specification {
 
         def text2 = '''
         task { field2 = 'Hello' }
-        env { beta = 'b2'; delta = 'd2'; HOME="$HOME:/local/path"; XXX="$PATH:/xxx"; YYY = "$XXX:/yyy"   }
+        env { beta = 'b2'; delta = 'd2'; HOME="$HOME:/local/path"; XXX="$PATH:/xxx"; YYY = "$XXX:/yyy"; WWW = "${WWW?:''}:value"   }
         '''
 
         when:
@@ -304,6 +304,7 @@ class CliRunnerTest extends Specification {
         config2.env.PATH == '/local/bin'
         config2.env.YYY == '/local/bin:/xxx:/yyy'
         config2.env.ZZZ == '99'
+        config2.env.WWW == ':value'
 
     }
 
@@ -481,8 +482,24 @@ class CliRunnerTest extends Specification {
         path2.deleteDir()
 
 
-
     }
+
+
+//    def test() {
+//
+//        when:
+//        def cfg = new ConfigSlurper()
+//        //cfg.setBinding(binding)
+//        def result = cfg.parse('''
+//            X = 1
+//            Z = "$Y"
+//            ''')
+//
+//        then:
+//        result.get('X') == 1
+//        result.Z == ''
+//
+//    }
 
 
 }
