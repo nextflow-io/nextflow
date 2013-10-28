@@ -245,4 +245,38 @@ class DataflowExtensionsTest extends Specification {
         Channel.from(1,1,2,2,2,3,1,1,2,4,6).distinct { it%2 } .toList().val == [1,2,3,2]
     }
 
+
+    def testSeparate() {
+
+        when:
+        def str = 'abcdef'
+        def (ch1, ch2) = Channel.from(0..3).separate(2) { [it, str[it]] }
+        then:
+        ch1.val == 0
+        ch1.val == 1
+        ch1.val == 2
+        ch1.val == 3
+        ch1.val == Channel.STOP
+
+        ch2.val == 'a'
+        ch2.val == 'b'
+        ch2.val == 'c'
+        ch2.val == 'd'
+        ch2.val == Channel.STOP
+
+
+    }
+
+//
+//    def testTap() {
+//
+//        when:
+//        def ch1 = Channel.create()
+//        def ch2 = Channel.create()
+//        ch2 = Channel.from(4,1,7,5).chainWith { "a_$it"} .tap(ch1)
+//        then:
+//        println ch1.toList().val
+//        println ch2.toList().val
+//
+//    }
 }
