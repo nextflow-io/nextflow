@@ -9,6 +9,7 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.ChainWithClosure
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
+import groovyx.gpars.dataflow.operator.SeparationClosure
 import nextflow.Channel
 import org.codehaus.groovy.runtime.NullObject
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
@@ -606,6 +607,14 @@ class DataflowExtensions {
             map.put(key, list)
             return map
         }
+    }
+
+    static public final List<DataflowQueue> separate( final DataflowQueue channel, int n, Closure mapper ) {
+
+        def outputs = []
+        n.times { outputs << new DataflowQueue() }
+        Dataflow.operator([channel], outputs, new SeparationClosure(mapper))
+        outputs
     }
 
 

@@ -13,6 +13,8 @@ import groovyx.gpars.dataflow.operator.ControlMessage
 import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.util.Duration
 import nextflow.util.FileHelper
+import org.codehaus.groovy.runtime.NullObject
+
 /**
  * Channel factory object
  *
@@ -21,6 +23,8 @@ import nextflow.util.FileHelper
 class Channel {
 
     static ControlMessage STOP = PoisonPill.getInstance()
+
+    static NullObject SKIP = NullObject.getNullObject()
 
     /**
      * Create an empty channel
