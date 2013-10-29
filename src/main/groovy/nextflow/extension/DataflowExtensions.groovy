@@ -11,7 +11,6 @@ import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.SeparationClosure
 import nextflow.Channel
-import nextflow.util.Duration
 import org.codehaus.groovy.runtime.NullObject
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 /**
@@ -657,29 +656,96 @@ class DataflowExtensions {
         return result
     }
 
-    static public final DataflowQueue buffer( final DataflowQueue channel, Object closingCriteria ) {
+    static public final DataflowQueue window( final DataflowQueue channel, Object closingCriteria ) {
+
+        def closure = new BooleanReturningMethodInvoker("isCase");
+        return windowImpl(channel, null, { Object it -> closure.invoke(closingCriteria, it) })
 
     }
 
-    static public final DataflowQueue buffer( final DataflowQueue channel, long count ) {
+    static public final DataflowQueue window( final DataflowQueue channel, Object startingCriteria, Object closingCriteria  ) {
+        assert startingCriteria != null
+        assert closingCriteria != null
+
+        def c1 = new BooleanReturningMethodInvoker("isCase");
+        def c2 = new BooleanReturningMethodInvoker("isCase");
+
+        return windowImpl(channel, {Object it -> c1.invoke(startingCriteria, it)}, {Object it -> c2.invoke(closingCriteria, it)})
 
     }
 
-    static public final DataflowQueue buffer( final DataflowQueue channel, long count, long skip ) {
+    static public final DataflowQueue window( final DataflowQueue channel, Map params ) {
 
+        if( params.count ) {
+            windowWithSizeConstraint( channel, (int)params.count, (int)params?.skip ?: 0 )
+        }
+        else {
+            throw new IllegalArgumentException()
+        }
     }
 
 
-    static public final DataflowQueue buffer( final DataflowQueue channel, Duration timespan ) {
 
+    static private windowWithSizeConstraint( final DataflowQueue channel, int size, int skip = 0 ) {
+        assert size>0
+
+        def skipCount = 0
+        def itemCount = 0
+
+        def closeRule = {
+            itemCount +=1
+            if( itemCount-skip == size ) {
+                itemCount = 0;
+                return true
+            }
+            return false
+        }
+
+
+        def startRule = {
+            skipCount +=1
+            if( skipCount > skip ) {
+                skipCount = 0
+                return true
+            }
+            return false
+        }
+
+        return windowImpl(channel, skip>0 ? startRule : null, closeRule )
     }
 
-    static public final DataflowQueue buffer( final DataflowQueue channel, Duration timespan, long count ) {
 
-    }
+    static private final DataflowQueue windowImpl( final DataflowQueue channel, Closure startingCriteria, Closure closeCriteria ) {
+        assert closeCriteria
 
+        // the list holding temporary collected elements
+        def buffer = []
 
-    static public final DataflowQueue buffer( final DataflowQueue channel, Object startingCriteria, Object closingCriteria  ) {
+        // the result queue
+        DataflowQueue result = new DataflowQueue();
 
+        // open frame flag
+        boolean isOpen = startingCriteria == null
+
+        // the operator collecting the elements
+        Dataflow.operator(channel, result) {
+            if( isOpen ) {
+                buffer << it
+            }
+            else if( startingCriteria.call(it) ) {
+                isOpen = true
+                buffer << it
+            }
+
+            if( closeCriteria.call(it) ) {
+                bindOutput(buffer);
+                buffer = []
+                // when a *startingCriteria* is defined, close the open frame flag
+                isOpen = (startingCriteria == null)
+            }
+
+        }
+
+        return result
     }
 }
