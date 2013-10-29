@@ -58,12 +58,21 @@ class DataflowExtensionsTest extends Specification {
     }
 
     def testMap() {
-
         when:
         def result = Channel.from(1,2,3).map { "Hello $it" }
         then:
         result.val == 'Hello 1'
         result.val == 'Hello 2'
+        result.val == 'Hello 3'
+        result.val == Channel.STOP
+    }
+
+    def testSkip() {
+
+        when:
+        def result = Channel.from(1,2,3).map { it == 2 ? Channel.SKIP : "Hello $it" }
+        then:
+        result.val == 'Hello 1'
         result.val == 'Hello 3'
         result.val == Channel.STOP
 
@@ -263,6 +272,75 @@ class DataflowExtensionsTest extends Specification {
         ch2.val == 'c'
         ch2.val == 'd'
         ch2.val == Channel.STOP
+
+    }
+
+    def testSpread() {
+
+        when:
+        def r1 = Channel.from(1,2).spread(['a','b'])
+        then:
+        r1.val == [1, 'a']
+        r1.val == [1, 'b']
+        r1.val == [2, 'a']
+        r1.val == [2, 'b']
+        r1.val == Channel.STOP
+
+        when:
+        def str = Channel.from('a','b','c')
+        def r2 = Channel.from(1,2).spread(str)
+        then:
+        r2.val == [1, 'a']
+        r2.val == [1, 'b']
+        r2.val == [1, 'c']
+        r2.val == [2, 'a']
+        r2.val == [2, 'b']
+        r2.val == [2, 'c']
+        r2.val == Channel.STOP
+
+    }
+
+    def testSpreadChained() {
+
+        when:
+        def str1 = Channel.from('a','b','c')
+        def str2 = Channel.from('x','y')
+        def result = Channel.from(1,2).spread(str1).spread(str2)
+        then:
+        result.val == [1,'a','x']
+        result.val == [1,'a','y']
+        result.val == [1,'b','x']
+        result.val == [1,'b','y']
+        result.val == [1,'c','x']
+        result.val == [1,'c','y']
+        result.val == [2,'a','x']
+        result.val == [2,'a','y']
+        result.val == [2,'b','x']
+        result.val == [2,'b','y']
+        result.val == [2,'c','x']
+        result.val == [2,'c','y']
+        result.val == Channel.STOP
+
+    }
+
+    def testFlatten() {
+
+        when:
+        def r1 = Channel.from(1,2,3).flatten()
+        then:
+        r1.val == 1
+        r1.val == 2
+        r1.val == 3
+        r1.val == Channel.STOP
+
+        when:
+        def r2 = Channel.from([1,'a'], [2,'b']).flatten()
+        then:
+        r2.val == 1
+        r2.val == 'a'
+        r2.val == 2
+        r2.val == 'b'
+        r2.val == Channel.STOP
 
 
     }
