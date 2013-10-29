@@ -342,8 +342,66 @@ class DataflowExtensionsTest extends Specification {
         r2.val == 'b'
         r2.val == Channel.STOP
 
+    }
+
+    def testBufferClose() {
+
+        when:
+        def r1 = Channel.from(1,2,3,1,2,3).window({ it == 2 })
+        then:
+        r1.val == [1,2]
+        r1.val == [3,1,2]
+        r1.val == Channel.STOP
+
+        when:
+        def r2 = Channel.from('a','b','c','a','b','z').window(~/b/)
+        then:
+        r2.val == ['a','b']
+        r2.val == ['c','a','b']
+        r2.val == Channel.STOP
 
     }
+
+    def testFrameHavingSize() {
+
+        when:
+        def r1 = Channel.from(1,2,3,1,2,3,1).window( count:2 )
+        then:
+        r1.val == [1,2]
+        r1.val == [3,1]
+        r1.val == [2,3]
+        r1.val == Channel.STOP
+
+
+        when:
+        def r2 = Channel.from(1,2,3,4,5,1,2,3,4,5,1,2).window( count:3, skip:2 )
+        then:
+        r2.val == [3,4,5]
+        r2.val == [3,4,5]
+        r2.val == Channel.STOP
+
+
+    }
+
+
+    def testBufferOpenClose() {
+
+        when:
+        def r1 = Channel.from(1,2,3,4,5,1,2,3,4,5,1,2).window( {it==2}, {it==4})
+        then:
+        r1.val == [2,3,4]
+        r1.val == [2,3,4]
+        r1.val == Channel.STOP
+
+        when:
+        def r2 = Channel.from('a','b','c','a','b','z').window(~/a/,~/b/)
+        then:
+        r2.val == ['a','b']
+        r2.val == ['a','b']
+        r2.val == Channel.STOP
+
+    }
+
 
 //
 //    def testTap() {
