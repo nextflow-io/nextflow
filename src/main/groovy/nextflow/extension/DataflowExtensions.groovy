@@ -11,6 +11,7 @@ import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.SeparationClosure
 import nextflow.Channel
+import nextflow.util.Duration
 import org.codehaus.groovy.runtime.NullObject
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 /**
@@ -617,6 +618,68 @@ class DataflowExtensions {
         outputs
     }
 
+    static public final DataflowQueue spread( final DataflowQueue channel, DataflowReadChannel other ) {
+
+        DataflowQueue result = new DataflowQueue()
+
+        def source
+        switch(other) {
+            case DataflowQueue:  source = ((DataflowQueue) other).toList(); break
+            case DataflowVariable: source = other; break
+            default: throw new IllegalArgumentException()
+        }
+
+        Dataflow.operator( [channel, source], [result] ) { a, b ->
+            [ [a], (b as List) ]
+                    .combinations()
+                    .each{ Collection it -> bindOutput(it.flatten())  }
+        }
+
+        return result
+    }
 
 
+    static public final DataflowQueue spread( final DataflowQueue channel, Collection other ) {
+        assert other != null
+
+        return spread(channel, Channel.just(other))
+    }
+
+
+    static public final DataflowQueue flatten( final DataflowQueue channel )  {
+
+        DataflowQueue result = new DataflowQueue()
+
+        Dataflow.operator(channel,result) {  it ->
+            if( it instanceof Collection ) { it.each { value -> bindOutput(value) } }
+            else { bindOutput(it) }
+        }
+        return result
+    }
+
+    static public final DataflowQueue buffer( final DataflowQueue channel, Object closingCriteria ) {
+
+    }
+
+    static public final DataflowQueue buffer( final DataflowQueue channel, long count ) {
+
+    }
+
+    static public final DataflowQueue buffer( final DataflowQueue channel, long count, long skip ) {
+
+    }
+
+
+    static public final DataflowQueue buffer( final DataflowQueue channel, Duration timespan ) {
+
+    }
+
+    static public final DataflowQueue buffer( final DataflowQueue channel, Duration timespan, long count ) {
+
+    }
+
+
+    static public final DataflowQueue buffer( final DataflowQueue channel, Object startingCriteria, Object closingCriteria  ) {
+
+    }
 }
