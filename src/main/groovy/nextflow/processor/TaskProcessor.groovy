@@ -18,6 +18,7 @@
  */
 package nextflow.processor
 import java.nio.file.Path
+import java.util.concurrent.Phaser
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
@@ -132,15 +133,7 @@ abstract class TaskProcessor {
      */
     private final errorCount = new AtomicInteger()
 
-    /**
-     * Count the number of times the task has been finalized (it must math the *instances* executed)
-     */
-    private int finalizedCount
-
-    /**
-     * This flag is set when task has received a poison-pill message (signal to stop execution)
-     */
-    protected boolean gotPoisonPill
+    protected Phaser phaser = new Phaser()
 
     /* for testing purpose - do not remove */
     protected TaskProcessor() { }
@@ -956,37 +949,24 @@ abstract class TaskProcessor {
      */
     @Synchronized
     private void finalizeTask0( TaskRun task ) {
+        log.debug "Finalize task > ${task.name}"
 
-        /*
-         * check task termination status
-         */
-        try {
-            log.debug "Finalize task > ${task.name}"
-
-            // -- bind output (files)
-            if( task.canBind ) {
-                bindOutputs(task)
-            }
-
+        // -- bind output (files)
+        if( task.canBind ) {
+            bindOutputs(task)
         }
-        finally {
-            finalizedCount += 1
-            log.trace "Sending poison condition for task: ${task.name} > allScalar: $allScalarValues; poison: $gotPoisonPill; instances: $instancesCount; finalized: $finalizedCount"
 
-            /*
-             * send a poison pill when all inputs were scalar values i.e. it was just an iteration,
-             * or it received at poison pill and all task instances have been processed i.e. instancesCount == finalizedCount
-             */
-            if( allScalarValues || (gotPoisonPill && finalizedCount==instancesCount) ) {
-                log.trace "Sending poison pill for task > ${name}"
-                // send a poison pill to 'terminate' all downstream channels
-                sendPoisonPill()
-                processor.terminate()
-            }
+        // deregister it
+        phaser.arriveAndDeregister()
+
+        // terminate the processor
+        def done = phaser.isTerminated()
+        log.trace "Finalize task > ${task.name} -- done: $done"
+        if( done ) {
+            processor.terminate()
         }
 
     }
-
 
 
 }

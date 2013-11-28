@@ -244,11 +244,19 @@ class MergeTaskProcessor extends TaskProcessor {
      */
     class MergeProcessorInterceptor extends DataflowEventAdapter {
 
+        private volatile boolean gotPoisonPill
+
         @Override
         public void afterStart(final DataflowProcessor processor) {
             // increment the session sync
-            def val = session.taskRegister()
-            log.debug "After start > register phaser for '$name' ($val)"
+            log.debug "After start > register phaser for '$name'"
+            session.taskRegister()
+        }
+
+        @Override
+        public List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
+            log.trace "Before run > ${name} -- messages: ${messages}"
+            return messages;
         }
 
         @Override
@@ -259,8 +267,13 @@ class MergeTaskProcessor extends TaskProcessor {
         @Override
         public void afterStop(final DataflowProcessor processor) {
             // increment the session sync
-            def val = session.taskDeregister()
-            log.debug "After stop > deregister phaser for '$name' ($val)"
+            log.debug "After stop > deregister phaser for '$name'"
+            session.taskDeregister()
+
+            if( gotPoisonPill ) {
+                // send poison pill to downstream channels
+                sendPoisonPill()
+            }
         }
 
         @Override
@@ -268,7 +281,6 @@ class MergeTaskProcessor extends TaskProcessor {
             log.trace "Received message > task: ${name}; channel: $index; value: $message"
             return message
         }
-
 
         public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
             if( log.isTraceEnabled() ) {
@@ -278,12 +290,13 @@ class MergeTaskProcessor extends TaskProcessor {
 
             // intercepts 'poison pill' message e.g. termination control message
             // in order the launch the task execution on the underlying system
-            if( message == PoisonPill.instance)  {
-
-                // flag the task as terminated
-                gotPoisonPill = true
+            if( message == PoisonPill.instance )  {
 
                 if( mergeIndex.get()>0 ) {
+                    gotPoisonPill = true
+                    // register this task run -- note: this is deregistered by the 'finalizeTask0' method provided by the superclass
+                    phaser.register()
+
                     def task = MergeTaskProcessor.this.createTaskRun()
                     try {
                         MergeTaskProcessor.this.mergeTaskRun(task)
@@ -291,15 +304,15 @@ class MergeTaskProcessor extends TaskProcessor {
                     catch( Throwable e ) {
                         handleException(e, task)
                     }
+
+                    return StopQuietly.instance
                 }
-                else {
-                    log.warn "No data collected by task > $name -- Won't execute it. Something may be wrong in your execution flow"
-                }
-                return StopQuietly.instance
+
+                log.warn "No data collected by task > $name -- Won't execute it. Something may be wrong in your execution flow"
+
             }
-            else {
-                return message
-            }
+
+            return message
         }
 
         public boolean onException(final DataflowProcessor processor, final Throwable e) {

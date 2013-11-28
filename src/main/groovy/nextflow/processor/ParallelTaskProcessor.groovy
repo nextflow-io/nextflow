@@ -265,13 +265,15 @@ class ParallelTaskProcessor extends TaskProcessor {
         @Override
         public void afterStart(final DataflowProcessor processor) {
             // increment the session sync
-            def val = session.taskRegister()
-            log.debug "After start > register phaser for '$name' ($val)"
+            log.debug "After start > register phaser for '$name'"
+            session.taskRegister()
         }
 
         @Override
         public List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
             log.trace "Before run > ${currentTask.get()?.name ?: name} -- messages: ${messages}"
+            // register this task run -- note: this is deregistered by the 'finalizeTask0' method provided by the superclass
+            phaser.register()
             return messages;
         }
 
@@ -296,13 +298,13 @@ class ParallelTaskProcessor extends TaskProcessor {
 
             if( message == PoisonPill.instance ) {
                 log.trace "Poison pill arrived for task > ${currentTask.get()?.name ?: name} -- terminated"
-                gotPoisonPill = true
+                // this control message avoid to stop the operator and
+                // propagate the PoisonPill to the downstream processes
                 return StopQuietly.instance
             }
             else {
                 return message;
             }
-
         }
 
         @Override
@@ -314,8 +316,10 @@ class ParallelTaskProcessor extends TaskProcessor {
         @Override
         public void afterStop(final DataflowProcessor processor) {
             // decrement the session sync
-            def val = session.taskDeregister()
-            log.debug "After stop > deregister phaser for '$name' ($val)"
+            log.debug "After stop > deregister phaser for '$name'"
+            session.taskDeregister()
+            // send poison pill to downstream channels
+            sendPoisonPill()
         }
 
         /**
