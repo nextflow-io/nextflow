@@ -3,7 +3,7 @@ NEXTFLOW CHANGE-LOG
 
 0.5.2 - 28 Nov 2013
 - Changed caching hash function to murmur3_128 to avoid cache collision
-- Fixed issue on process termination when resuming pipeline executing
+- Fixed issue on process termination when resuming pipeline execution
 
 0.5.1 - 24 Oct 2013
 - Major executors refactoring
