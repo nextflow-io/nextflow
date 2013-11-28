@@ -24,7 +24,6 @@ import java.nio.file.Paths
 import java.nio.file.spi.FileSystemProvider
 
 import com.google.common.hash.HashCode
-import com.google.common.hash.Hashing
 import groovy.util.logging.Slf4j
 /**
  *
@@ -226,8 +225,9 @@ class FileHelper {
         assert bashPath
         assert hash
 
-        def bucket = Hashing.consistentHash(hash, 100).toString().padLeft(2,'0')
-        def folder = bashPath.resolve("${bucket}/${hash.toString()}")
+        def str = hash.toString()
+        def bucket = str.substring(0,2)
+        def folder = bashPath.resolve("${bucket}/${str.substring(2)}")
 
         return folder.toAbsolutePath()
     }
@@ -237,9 +237,9 @@ class FileHelper {
 
         int count = 0
         while( true ) {
-            def hash = CacheHelper.hasher(rndGen.nextLong()).hash()
-            def bucket = Hashing.consistentHash(hash, 100).toString().padLeft(2,'0')
-            def result = basePath.resolve( "tmp/$bucket/${hash.toString()}" )
+            def hash = CacheHelper.hasher(rndGen.nextLong()).hash().toString()
+            def bucket = hash.substring(0,2)
+            def result = basePath.resolve( "tmp/$bucket/${hash.substring(2)}" )
 
             if( result.exists() ) {
                 if( ++count > 100 ) { throw new IOException("Unable to create a unique temporary path: $result") }

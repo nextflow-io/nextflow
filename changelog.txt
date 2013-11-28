@@ -1,6 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.5.2 - 28 Nov 2013
+- Changed caching hash function to murmur3_128 to avoid cache collision
+
 0.5.1 - 24 Oct 2013
 - Major executors refactoring
 - Featuring new single-thread tasks scheduler

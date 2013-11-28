@@ -36,7 +36,7 @@ import nextflow.processor.FileHolder
 class CacheHelper {
 
     static Hasher hasher( def value ) {
-        hasher( Hashing.murmur3_32(), value )
+        hasher( Hashing.murmur3_128(), value )
     }
 
     static Hasher hasher( HashFunction function, def value ) {
