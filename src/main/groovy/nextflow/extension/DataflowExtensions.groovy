@@ -1,11 +1,14 @@
 package nextflow.extension
 import static java.util.Arrays.asList
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.ChainWithClosure
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
@@ -14,6 +17,10 @@ import nextflow.Channel
 import org.codehaus.groovy.runtime.NullObject
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 /**
+ * A set of operators inspired to RxJava extending the methods available on DataflowChannel
+ * data structure
+ *
+ * See https://github.com/Netflix/RxJava/wiki/Observable
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -748,4 +755,177 @@ class DataflowExtensions {
 
         return result
     }
+
+    /**
+     * Similar to https://github.com/Netflix/RxJava/wiki/Combining-Observables#merge
+     *
+     * @param source
+     * @param target
+     * @return
+     */
+    static final DataflowQueue mix( DataflowQueue source, DataflowQueue... target ) {
+        assert target.size()>0
+
+        def result = new DataflowQueue()
+        def count = new AtomicInteger( target.size()+1 )
+        def handlers = [
+                onNext: { result << it },
+                onComplete: { if(count.decrementAndGet()==0) { result << Channel.STOP } }
+        ]
+
+        source.subscribe(handlers)
+        target.each{ it.subscribe(handlers) }
+
+        return result
+    }
+
+    /**
+     * Phase channels
+     *
+     * @param source
+     * @param target
+     * @param mapper
+     * @return
+     */
+    static final DataflowQueue phase( DataflowQueue source, DataflowQueue target, Closure mapper ) {
+
+        def result = new DataflowQueue()
+        def state = [:]
+
+        source.subscribe( phaseHandlers(state, 2, source, result, mapper) )
+        target.subscribe( phaseHandlers(state, 2, target, result, mapper) )
+
+        return result
+    }
+
+    /**
+     * Phase channels
+     *
+     * @param source
+     * @param target
+     * @return
+     */
+    static final DataflowQueue phase(DataflowQueue source, DataflowQueue target) {
+        phase(source, target, { phaseDefaultMapper(it) } )
+    }
+
+    /**
+     * Implements the default mapping strategy, having the following strategy:
+     * <pre>
+     *     Map -> first entry key
+     *     Map.Entry -> the entry key
+     *     Collection -> first item
+     *     Array -> first item
+     *     Object -> the object itself
+     * </pre>
+     * @param obj
+     * @return
+     */
+    static private phaseDefaultMapper( def obj )  {
+
+        switch( obj ) {
+            case Map:
+                def values = ((Map)obj).keySet()
+                return values.size() ? values.getAt(0) : null
+
+            case Map.Entry:
+                def entry = (Map.Entry) obj
+                return entry.key
+
+            case Collection:
+                def values = (Collection)obj
+                return values.size() ? values.getAt(0) : null
+
+            case Object[]:
+                def values = (Object[])obj
+                return values.size() ? values[0] : null
+
+            default:
+                return obj
+        }
+
+    }
+
+    /**
+     * Returns the methods {@code OnNext} and {@code onComplete} which will implement the phase logic
+     *
+     * @param buffer The shared state buffering the channel received values
+     * @param count The overall number of channel
+     * @param current The current channel
+     * @param channel The channel over which the results are sent
+     * @param mapper A closure mapping a value to its key
+     * @return A map with {@code OnNext} and {@code onComplete} methods entries
+     */
+    static private final Map phaseHandlers( Map<Object,Map<DataflowReadChannel,List>> buffer, int count, DataflowReadChannel current, DataflowWriteChannel channel, Closure mapper ) {
+
+        [
+                onNext: {
+                    synchronized (buffer) {  // phaseImpl is NOT thread safe, synchronize it !
+                        def entries = phaseImpl(buffer, count, current, it, mapper)
+                        if( entries ) channel.bind(entries)
+                    }},
+
+                onComplete: { channel.bind(Channel.STOP) }
+
+        ]
+
+    }
+
+    /**
+     * Implements the phase operator logic. Basically buffers the values received on each channel by their key .
+     *
+     * When a value with the same key has arrived on each channel, they are removed from the buffer and returned as list
+     *
+     *
+     * @param buffer The shared state buffer
+     * @param count The overall number of channels
+     * @param current The current channel
+     * @param item The value just arrived
+     * @param mapper The mapping closure retrieving a key by the item just arrived over the current channel
+     * @return The list a values having a common key for each channel or {@code null} when some values are missing
+     *
+     */
+    static private final List phaseImpl( Map<Object,Map<DataflowReadChannel,List>> buffer, int count, DataflowReadChannel current, def item, Closure mapper ) {
+
+        // get the index key for this object
+        def key = mapper.call(item)
+
+        // given a key we expect to receive on object with the same key on each channel
+        def channels = buffer.get(key)
+        if( channels==null ) {
+            channels = [:]
+            buffer[key] = channels
+        }
+
+        def entries = channels[current]
+        if( entries==null ) {
+            entries = []
+            channels[current] = entries
+        }
+
+        // add the received item to the list
+        entries << item
+
+        // now check if it has received a element matching for each channel
+        if( channels.size() != count )  {
+            return null
+        }
+
+        def result = []
+
+        Iterator<Map.Entry<DataflowReadChannel,List>> itr = channels.iterator()
+        while( itr.hasNext() ) {
+            def entry = itr.next()
+
+            def list = entry.getValue()
+            result << list[0]
+            list.remove(0)
+            if( list.size() == 0 ) {
+                itr.remove()
+            }
+        }
+
+        return result
+    }
+
 }

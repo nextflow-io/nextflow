@@ -70,7 +70,7 @@ class DataflowExtensionsTest extends Specification {
     def testSkip() {
 
         when:
-        def result = Channel.from(1,2,3).map { it == 2 ? Channel.SKIP : "Hello $it" }
+        def result = Channel.from(1,2,3).map { it == 2 ? Channel.VOID : "Hello $it" }
         then:
         result.val == 'Hello 1'
         result.val == 'Hello 3'
@@ -399,6 +399,108 @@ class DataflowExtensionsTest extends Specification {
         r2.val == ['a','b']
         r2.val == ['a','b']
         r2.val == Channel.STOP
+
+    }
+
+    def testMix() {
+        when:
+        def c1 = Channel.from( 1,2,3 )
+        def c2 = Channel.from( 'a','b' )
+        def c3 = Channel.from( 'z' )
+        def result = c1.mix(c2,c3).toList().val
+
+        then:
+        1 in result
+        2 in result
+        3 in result
+        'a' in result
+        'b' in result
+        'z' in result
+        !('c' in result)
+
+    }
+
+
+    def testPhase0() {
+
+        setup:
+        def result = null
+        def ch1 = new DataflowQueue()
+        def ch2 = new DataflowQueue()
+        def ch3 = new DataflowQueue()
+
+        when:
+        def map = [ : ]
+        result = DataflowExtensions.phase0(map, 2, ch1, 'a', { it })
+        then:
+        result == null
+        map == [ a:[(ch1): ['a']] ]
+
+        when:
+        map = [ : ]
+        result = DataflowExtensions.phase0(map, 2, ch1, 'a', { it })
+        result = DataflowExtensions.phase0(map, 2, ch2, 'a', { it })
+        then:
+        result == ['a','a']
+        map == [ a:[:] ]
+
+
+        when:
+        def r1
+        def r2
+        def r3
+        map = [ : ]
+        r1 = DataflowExtensions.phase0(map, 3, ch1, 'a', { it })
+        r1 = DataflowExtensions.phase0(map, 3, ch2, 'a', { it })
+        r1 = DataflowExtensions.phase0(map, 3, ch3, 'a', { it })
+
+        r2 = DataflowExtensions.phase0(map, 3, ch1, 'b', { it })
+        r2 = DataflowExtensions.phase0(map, 3, ch2, 'b', { it })
+        r2 = DataflowExtensions.phase0(map, 3, ch3, 'b', { it })
+
+        r3 = DataflowExtensions.phase0(map, 3, ch1, 'z', { it })
+        r3 = DataflowExtensions.phase0(map, 3, ch2, 'z', { it })
+        r3 = DataflowExtensions.phase0(map, 3, ch2, 'z', { it })
+        r3 = DataflowExtensions.phase0(map, 3, ch3, 'z', { it })
+
+        then:
+        r1 == ['a','a','a']
+        r2 == ['b','b','b']
+        r3 == ['z','z','z']
+        map == [ a:[:], b:[:], z:[(ch2):['z']] ]
+
+    }
+
+    def testPhaseDefaultMapper() {
+
+
+        expect:
+        DataflowExtensions.phaseDefaultMapper( [a:1, b:2, z:9] ) == 'a'
+        DataflowExtensions.phaseDefaultMapper( [:] ) == null
+
+        DataflowExtensions.phaseDefaultMapper( [3,2,1] ) == 3
+        DataflowExtensions.phaseDefaultMapper( [] ) == null
+
+        DataflowExtensions.phaseDefaultMapper( [1,2,3] as Object[] ) == 1
+        DataflowExtensions.phaseDefaultMapper( ['alpha','beta'] as String[] ) == 'alpha'
+        DataflowExtensions.phaseDefaultMapper( 99 ) == 99
+
+
+    }
+
+    def testPhase() {
+
+        setup:
+        def ch1 = Channel.from( 1,2,3 )
+        def ch2 = Channel.from( 3,2,7,8,9 )
+
+        when:
+        def result = ch1.phase(ch2)
+        then:
+        result.val == [2,2]
+        result.val == [3,3]
+        result.val == Channel.STOP
+
 
     }
 
