@@ -36,21 +36,12 @@ class Channel {
     static <T> DataflowReadChannel<T> create() { new DataflowQueue() }
 
     /**
-     * Create a channel subscribing the specified handlers.
-     *
-     * @param handlers
-     * @return
-     */
-    static <T> DataflowReadChannel<T> create(Map handlers) { new DataflowQueue() }
-
-    /**
      * Creates a channel sending the items in the collection over it
      *
      * @param items
      * @return
      */
-    static <T> DataflowReadChannel<T> from( Collection<T> items ) { Nextflow.channel(items) }
-
+    static <T> DataflowReadChannel<T> from( Iterable<T> items ) { Nextflow.channel(items) }
 
     /**
      * Creates a channel sending the items in the collection over it
@@ -71,6 +62,7 @@ class Channel {
 
         def result = new DataflowVariable<T>()
         if( obj != null ) result.bind(obj)
+
         return result
 
     }
@@ -171,14 +163,10 @@ class Channel {
             })
 
             channel << STOP
-
         }
 
         return channel
-
-
     }
-
 
     @PackageScope
     static List<String> getFolderAndPattern( String filePattern ) {
