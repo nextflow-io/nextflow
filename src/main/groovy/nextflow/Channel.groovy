@@ -5,9 +5,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
+import java.util.regex.Pattern
 
 import groovy.transform.PackageScope
 import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.ControlMessage
 import groovyx.gpars.dataflow.operator.PoisonPill
@@ -24,14 +26,22 @@ class Channel {
 
     static ControlMessage STOP = PoisonPill.getInstance()
 
-    static NullObject SKIP = NullObject.getNullObject()
+    static NullObject VOID = NullObject.getNullObject()
 
     /**
      * Create an empty channel
      *
      * @return
      */
-    static <T> DataflowQueue<T> create() { new DataflowQueue() }
+    static <T> DataflowReadChannel<T> create() { new DataflowQueue() }
+
+    /**
+     * Create a channel subscribing the specified handlers.
+     *
+     * @param handlers
+     * @return
+     */
+    static <T> DataflowReadChannel<T> create(Map handlers) { new DataflowQueue() }
 
     /**
      * Creates a channel sending the items in the collection over it
@@ -39,7 +49,7 @@ class Channel {
      * @param items
      * @return
      */
-    static <T> DataflowQueue<T> from( Collection<T> items) { Nextflow.channel(items) }
+    static <T> DataflowReadChannel<T> from( Collection<T> items ) { Nextflow.channel(items) }
 
 
     /**
@@ -49,7 +59,7 @@ class Channel {
      * @return
      */
 
-    static <T> DataflowQueue<T> from( T... items) { Nextflow.<T>channel(items) }
+    static <T> DataflowReadChannel<T> from( T... items ) { Nextflow.<T>channel(items) }
 
     /**
      * Convert an object into a *channel* variable that emits that object
@@ -57,10 +67,10 @@ class Channel {
      * @param obj
      * @return
      */
-    static <T> DataflowVariable just( T obj ) {
+    static <T> DataflowReadChannel<T> just( T obj = null ) {
 
         def result = new DataflowVariable<T>()
-        result.bind(obj)
+        if( obj != null ) result.bind(obj)
         return result
 
     }
@@ -71,7 +81,7 @@ class Channel {
      * @param duration
      * @return
      */
-    static DataflowQueue interval(String duration) {
+    static DataflowReadChannel interval(String duration) {
 
         interval( duration, { index -> index })
 
@@ -86,7 +96,7 @@ class Channel {
      * @return
      */
 
-    static DataflowQueue interval(String duration, Closure closure ) {
+    static DataflowReadChannel interval(String duration, Closure closure ) {
 
         def millis = Duration.create(duration).toMillis()
         def timer = new Timer()
@@ -106,32 +116,51 @@ class Channel {
         return channel
     }
 
-    static DataflowQueue<Path> files( String filePattern ) {
+    static DataflowReadChannel<Path> files( Pattern filePattern ) {
         assert filePattern
 
-        def channel = create()
-        int p = filePattern.indexOf('*')
+        // split the folder and the pattern
+        def ( String folder, String pattern ) = getFolderAndPattern(filePattern.toString())
 
-        if( p == -1 ) {
-            channel << FileHelper.asPath( filePattern )
-            return channel
+        filesImpl( 'regex', folder, pattern, false )
+    }
+
+    static DataflowReadChannel<Path> files( String filePattern ) {
+        assert filePattern
+
+        boolean glob  = false
+        glob |= filePattern.contains('*')
+        glob |= filePattern.contains('?')
+        glob = glob ||  filePattern ==~ /.*\{.+\,.+\}.*/
+
+        if( !glob ) {
+            return just( FileHelper.asPath(filePattern) )
         }
 
 
         // split the folder and the pattern
         def ( String folder, String pattern ) = getFolderAndPattern(filePattern)
 
+        filesImpl('glob', folder, pattern, pattern.startsWith('*')  )
+    }
+
+    static private DataflowReadChannel<Path> filesImpl( String syntax, String folder, String pattern, boolean skipHidden )  {
+        assert syntax in ['regex','glob']
+
         // now apply glob file search
         def path = FileHelper.asPath(folder)
-        def glob = "glob:${folder}${pattern}"
+        def glob = "$syntax:${folder}${pattern}"
         def matcher = path.getFileSystem().getPathMatcher(glob)
+        def channel = new DataflowQueue<Path>()
 
         Thread.start {
 
             Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attr) throws IOException {
-                    if (matcher.matches(file)) { channel.bind(file) }
+                    if (matcher.matches(file) && ( !skipHidden || !Files.isHidden(file) )) {
+                        channel.bind(file)
+                    }
                     return FileVisitResult.CONTINUE;
                 }
 
@@ -146,7 +175,10 @@ class Channel {
         }
 
         return channel
+
+
     }
+
 
     @PackageScope
     static List<String> getFolderAndPattern( String filePattern ) {

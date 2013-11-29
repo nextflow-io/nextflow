@@ -1,7 +1,9 @@
 package nextflow
 
 import java.nio.file.Files
+import java.nio.file.Paths
 
+import groovyx.gpars.dataflow.DataflowVariable
 import spock.lang.Specification
 
 
@@ -29,7 +31,101 @@ class ChannelTest extends Specification {
     }
 
 
-    def testFiles() {
+    def testSingleFile() {
+
+        when:
+        def channel = Channel.files('/some/file.txt')
+        then:
+        channel instanceof DataflowVariable
+        channel.val == Paths.get('/some/file.txt')
+
+        when:
+        channel = Channel.files('/some/f{i}le.txt')
+        then:
+        channel instanceof DataflowVariable
+        channel.val == Paths.get('/some/f{i}le.txt')
+
+    }
+
+
+    def testGlobAlternative() {
+
+        setup:
+        def folder = Files.createTempDirectory('testFiles')
+        def file1 = Files.createFile(folder.resolve('alpha.txt'))
+        def file2 = Files.createFile(folder.resolve('beta.txt'))
+        def file3 = Files.createFile(folder.resolve('gamma.txt'))
+        def file4 = Files.createFile(folder.resolve('file4.txt'))
+        def file5 = Files.createFile(folder.resolve('file5.txt'))
+        def file6 = Files.createFile(folder.resolve('file66.txt'))
+
+        when:
+        def channel = Channel.files("$folder/{alpha,gamma}.txt")
+        then:
+        channel.val == folder.resolve('alpha.txt')
+        channel.val == folder.resolve('gamma.txt')
+        channel.val == Channel.STOP
+
+        when:
+        channel = Channel.files("$folder/file?.txt")
+        then:
+        channel.val == folder.resolve('file4.txt')
+        channel.val == folder.resolve('file5.txt')
+        channel.val == Channel.STOP
+
+        when:
+        channel = Channel.files("$folder/file*.txt")
+        then:
+        channel.val == folder.resolve('file4.txt')
+        channel.val == folder.resolve('file5.txt')
+        channel.val == folder.resolve('file66.txt')
+        channel.val == Channel.STOP
+
+        cleanup:
+        folder.deleteDir()
+
+    }
+
+
+    def testGlobHiddenFiles() {
+
+        setup:
+        def folder = Files.createTempDirectory('testFiles')
+        def file1 = Files.createFile(folder.resolve('.alpha.txt'))
+        def file2 = Files.createFile(folder.resolve('.beta.txt'))
+        def file3 = Files.createFile(folder.resolve('delta.txt'))
+        def file4 = Files.createFile(folder.resolve('gamma.txt'))
+
+        when:
+        def channel = Channel.files("$folder/*")
+        then:
+        channel.val == folder.resolve('delta.txt')
+        channel.val == folder.resolve('gamma.txt')
+        channel.val == Channel.STOP
+
+        when:
+        channel = Channel.files("$folder/.*")
+        then:
+        channel.val == folder.resolve('.alpha.txt')
+        channel.val == folder.resolve('.beta.txt')
+        channel.val == Channel.STOP
+
+
+        when:
+        channel = Channel.files("$folder/{.*,*}")
+        then:
+        channel.val == folder.resolve('.alpha.txt')
+        channel.val == folder.resolve('.beta.txt')
+        channel.val == folder.resolve('delta.txt')
+        channel.val == folder.resolve('gamma.txt')
+        channel.val == Channel.STOP
+
+        cleanup:
+        folder.deleteDir()
+
+    }
+
+    def testGlobFiles() {
 
         setup:
         def folder = Files.createTempDirectory('testFiles')
@@ -67,8 +163,6 @@ class ChannelTest extends Specification {
 
         cleanup:
         folder.deleteDir()
-
-
 
     }
 

@@ -114,7 +114,7 @@ class Nextflow {
      * @param values
      * @return
      */
-    static <T> DataflowQueue<T> channel( Collection<T> values = null ) {
+    static <T> DataflowQueue<T> channel( Iterable<T> values = null ) {
 
         def channel = new DataflowQueue<T>()
         if ( values )  {
