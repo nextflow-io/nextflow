@@ -11,6 +11,31 @@ import spock.lang.Specification
  */
 class DataflowExtensionsTest extends Specification {
 
+    def testHandlerNames() {
+
+        when:
+        DataflowExtensions.checkSubscribeHandlers( [:] )
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        DataflowExtensions.checkSubscribeHandlers( [ onNext:{}] )
+        then:
+        true
+
+        when:
+        DataflowExtensions.checkSubscribeHandlers( [ onNext:{}, xxx:{}] )
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        DataflowExtensions.checkSubscribeHandlers( [ xxx:{}] )
+        then:
+        thrown(IllegalArgumentException)
+
+
+    }
+
     def testGrep() {
 
         when:
@@ -46,6 +71,33 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    def testSubscribe1() {
+
+        when:
+        def count = 0
+        def done = false
+        Channel.from(1,2,3).subscribe onNext:  { count++ }, onComplete: { done = true }
+        sleep 100
+        then:
+        done
+        count == 3
+
+    }
+
+    def testSubscribe2() {
+
+        when:
+        def count = 0
+        def done = false
+        Channel.just(1).subscribe onNext:  { count++ }, onComplete: { done = true }
+        sleep 100
+        then:
+        done
+        count == 1
+
+    }
+
+
     def testDoFinally() {
 
         when:
@@ -78,6 +130,16 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    def testMapWithIndex() {
+        when:
+        def result = Channel.from('a','b','c').mapWithIndex { item, index -> [item, index]}
+        then:
+        result.val == [ 'a', 0 ]
+        result.val == [ 'b', 1 ]
+        result.val == [ 'c', 2 ]
+        result.val == Channel.STOP
+    }
+
     def testMapMany () {
 
         when:
@@ -91,6 +153,22 @@ class DataflowExtensionsTest extends Specification {
         result.val == 6
         result.val == Channel.STOP
     }
+
+    def testMapManyWithHashArray () {
+
+        when:
+        def result = Channel.from(1,2,3).mapMany { it -> [ k: it, v: it*2] }
+        then:
+        result.val == new MapEntry('k',1)
+        result.val == new MapEntry('v',2)
+        result.val == new MapEntry('k',2)
+        result.val == new MapEntry('v',4)
+        result.val == new MapEntry('k',3)
+        result.val == new MapEntry('v',6)
+        result.val == Channel.STOP
+
+    }
+
 
 
     def testReduce() {
@@ -158,6 +236,10 @@ class DataflowExtensionsTest extends Specification {
 
         expect:
         Channel.from(3,6,4,5,4,3,4).first { it % 2 == 0  } .val == 6
+        Channel.from( 'a', 'b', 'c', 1, 2 ).first( Number ) .val == 1
+        Channel.from( 'a', 'b', 1, 2, 'aaa', 'bbb' ).first( ~/aa.*/ ) .val == 'aaa'
+        Channel.from( 'a', 'b', 1, 2, 'aaa', 'bbb' ).first( 1 ) .val == 1
+
 
     }
 
@@ -178,7 +260,9 @@ class DataflowExtensionsTest extends Specification {
 
         expect:
         Channel.from(3,6,4,5,4,3,9).last().val == 9
+        Channel.just('x').last().val == 'x'
     }
+
 
 
     def testMin() {
@@ -212,7 +296,7 @@ class DataflowExtensionsTest extends Specification {
         expect:
         Channel.from(4,1,7,5).count().val == 4
         Channel.from(4,1,7,1,1).count(1).val == 3
-        Channel.from('a','c','c','q','b').count { it == 'c' } .val == 2
+        Channel.from('a','c','c','q','b').count ( ~/c/ ) .val == 2
     }
 
     def testCountBy() {
@@ -342,6 +426,33 @@ class DataflowExtensionsTest extends Specification {
         r2.val == 'b'
         r2.val == Channel.STOP
 
+        when:
+        def r3 = Channel.from( [1,2] as Integer[], [3,4] as Integer[] ).flatten()
+        then:
+        r3.val == 1
+        r3.val == 2
+        r3.val == 3
+        r3.val == 4
+        r3.val == Channel.STOP
+
+        when:
+        def r4 = Channel.from( [x:1, y:2, z:3]).flatten()
+        then:
+        r4.val == new MapEntry('x', 1)
+        r4.val == new MapEntry('y', 2)
+        r4.val == new MapEntry('z', 3)
+        r4.val == Channel.STOP
+
+        when:
+        def r5 = Channel.just( [1,2,3] ).flatten()
+        then:
+        r5.val == 1
+        r5.val == 2
+        r5.val == 3
+        r5.val == Channel.STOP
+
+
+
     }
 
     def testBufferClose() {
@@ -421,7 +532,7 @@ class DataflowExtensionsTest extends Specification {
     }
 
 
-    def testPhase0() {
+    def testPhaseImpl() {
 
         setup:
         def result = null
@@ -431,15 +542,15 @@ class DataflowExtensionsTest extends Specification {
 
         when:
         def map = [ : ]
-        result = DataflowExtensions.phase0(map, 2, ch1, 'a', { it })
+        result = DataflowExtensions.phaseImpl(map, 2, ch1, 'a', { it })
         then:
         result == null
         map == [ a:[(ch1): ['a']] ]
 
         when:
         map = [ : ]
-        result = DataflowExtensions.phase0(map, 2, ch1, 'a', { it })
-        result = DataflowExtensions.phase0(map, 2, ch2, 'a', { it })
+        result = DataflowExtensions.phaseImpl(map, 2, ch1, 'a', { it })
+        result = DataflowExtensions.phaseImpl(map, 2, ch2, 'a', { it })
         then:
         result == ['a','a']
         map == [ a:[:] ]
@@ -450,18 +561,18 @@ class DataflowExtensionsTest extends Specification {
         def r2
         def r3
         map = [ : ]
-        r1 = DataflowExtensions.phase0(map, 3, ch1, 'a', { it })
-        r1 = DataflowExtensions.phase0(map, 3, ch2, 'a', { it })
-        r1 = DataflowExtensions.phase0(map, 3, ch3, 'a', { it })
+        r1 = DataflowExtensions.phaseImpl(map, 3, ch1, 'a', { it })
+        r1 = DataflowExtensions.phaseImpl(map, 3, ch2, 'a', { it })
+        r1 = DataflowExtensions.phaseImpl(map, 3, ch3, 'a', { it })
 
-        r2 = DataflowExtensions.phase0(map, 3, ch1, 'b', { it })
-        r2 = DataflowExtensions.phase0(map, 3, ch2, 'b', { it })
-        r2 = DataflowExtensions.phase0(map, 3, ch3, 'b', { it })
+        r2 = DataflowExtensions.phaseImpl(map, 3, ch1, 'b', { it })
+        r2 = DataflowExtensions.phaseImpl(map, 3, ch2, 'b', { it })
+        r2 = DataflowExtensions.phaseImpl(map, 3, ch3, 'b', { it })
 
-        r3 = DataflowExtensions.phase0(map, 3, ch1, 'z', { it })
-        r3 = DataflowExtensions.phase0(map, 3, ch2, 'z', { it })
-        r3 = DataflowExtensions.phase0(map, 3, ch2, 'z', { it })
-        r3 = DataflowExtensions.phase0(map, 3, ch3, 'z', { it })
+        r3 = DataflowExtensions.phaseImpl(map, 3, ch1, 'z', { it })
+        r3 = DataflowExtensions.phaseImpl(map, 3, ch2, 'z', { it })
+        r3 = DataflowExtensions.phaseImpl(map, 3, ch2, 'z', { it })
+        r3 = DataflowExtensions.phaseImpl(map, 3, ch3, 'z', { it })
 
         then:
         r1 == ['a','a','a']
