@@ -1,0 +1,570 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Operator &mdash; Nextflow 0.6.0 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:'./',
+        VERSION:'0.6.0',
+        COLLAPSE_INDEX:false,
+        FILE_SUFFIX:'.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+    <link rel="top" title="Nextflow 0.6.0 documentation" href="index.html"/>
+        <link rel="next" title="Configuration file" href="config.html"/>
+        <link rel="prev" title="Process" href="process.html"/> 
+
+  <script src="//cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="index.html" class="icon icon-home"> Nextflow</a>
+        <form id ="rtd-search-form" class="wy-form" action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search docs" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix">
+        
+        
+            <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="get_started.html">Get started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="channel.html">Channel</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="channel.html#channel-factory">Channel factory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="channel.html#binding-values">Binding values</a></li>
+<li class="toctree-l2"><a class="reference internal" href="channel.html#special-messages">Special messages</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="process.html">Process</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Operator</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#split">split( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#into">into( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tap">tap( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#merge">merge( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#separate">separate( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#choice">choice( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#filter">filter( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#subscribe">subscribe( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#map">map( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#mapwithindex">mapWithIndex( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#mapmany">mapMany( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#reduce">reduce( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#grep">grep( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#unique">unique( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#distinct">distinct( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#first">first( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#take">take( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#last">last( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#dofinally">doFinally( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tolist">toList( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#count">count( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#countby">countBy( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#min">min( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#max">max( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sum">sum( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#groupby">groupBy( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id1">separate()</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#spread">spread( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#flatten">flatten( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#window">window()</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#windowwithsizeconstraint">windowWithSizeConstraint( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#mix">mix( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#phase">phase( )</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration file</a></li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top">
+        <i data-toggle="wy-nav-top" class="icon icon-reorder"></i>
+        <a href="index.html">Nextflow</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <ul class="wy-breadcrumbs">
+  <li><a href="index.html">Docs</a> &raquo;</li>
+  <li><a href="">Operator</a></li>
+    <li class="wy-breadcrumbs-aside">
+      
+        <a href="_sources/operator.txt" rel="nofollow"> View page source</a>
+      
+    </li>
+</ul>
+<hr/>
+
+          
+  <div class="section" id="operator">
+<h1>Operator<a class="headerlink" href="#operator" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="split">
+<h2>split( )<a class="headerlink" href="#split" title="Permalink to this headline">¶</a></h2>
+<p>When a need comes to copy the output of a channel into more than one following channel, the <tt class="docutils literal"><span class="pre">split(</span> <span class="pre">)</span></tt> method will help you:</p>
+<div class="highlight-python"><pre>source = Channel.from( 1,2,3 )
+copy1 = Channel.create()
+copy2 = Channel.create()
+
+source.split( copy1, copy2 )</pre>
+</div>
+<p>In the above example, both channels <tt class="docutils literal"><span class="pre">copy1</span></tt> and <tt class="docutils literal"><span class="pre">copy2</span></tt> will get a values <tt class="docutils literal"><span class="pre">1</span></tt>, <tt class="docutils literal"><span class="pre">2</span></tt> and <tt class="docutils literal"><span class="pre">3</span></tt></p>
+</div>
+<div class="section" id="into">
+<h2>into( )<a class="headerlink" href="#into" title="Permalink to this headline">¶</a></h2>
+<p>TODO</p>
+</div>
+<div class="section" id="tap">
+<h2>tap( )<a class="headerlink" href="#tap" title="Permalink to this headline">¶</a></h2>
+<p>TODO</p>
+</div>
+<div class="section" id="merge">
+<h2>merge( )<a class="headerlink" href="#merge" title="Permalink to this headline">¶</a></h2>
+<p>For example, the following code merges together two channels, one of which emits a series of odd integers and the other
+of which emits a series of even integers:</p>
+<div class="highlight-python"><pre>odds  = Channel.from([1, 3, 5, 7, 9]);
+evens = Channel.from([2, 4, 6]);
+
+odds.merge( evens ) { o, e -&gt; [o, e] }
+    .subscribe { println it }</pre>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+<span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span>
+<span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="separate">
+<h2>separate( )<a class="headerlink" href="#separate" title="Permalink to this headline">¶</a></h2>
+<p>TODO</p>
+</div>
+<div class="section" id="choice">
+<h2>choice( )<a class="headerlink" href="#choice" title="Permalink to this headline">¶</a></h2>
+<p>TODO</p>
+</div>
+<div class="section" id="filter">
+<h2>filter( )<a class="headerlink" href="#filter" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="docutils literal"><span class="pre">filter(</span> <span class="pre">)</span></tt> operator allows you to filter data in the pipeline by using a boolean predicate. For example:</p>
+<div class="highlight-python"><pre>Channel
+    .from( 1, 2, 3, 4, 5 )
+    .filter { it % 2 == 1 }
+    .subscribe { println it }</pre>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="mi">1</span>
+<span class="mi">3</span>
+<span class="mi">5</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="subscribe">
+<h2>subscribe( )<a class="headerlink" href="#subscribe" title="Permalink to this headline">¶</a></h2>
+<p>TODO</p>
+</div>
+<div class="section" id="map">
+<h2>map( )<a class="headerlink" href="#map" title="Permalink to this headline">¶</a></h2>
+<p>Transform the items emitted by a channel by applying a function to each of them. For example:</p>
+<div class="highlight-python"><pre>Channel
+    .from( 1, 2, 3, 4, ,5 )
+    .map { it * it  }
+    .subscribe onNext: { println it }, onComplete: { println 'Done' }</pre>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="mi">1</span>
+<span class="mi">4</span>
+<span class="mi">9</span>
+<span class="mi">16</span>
+<span class="mi">25</span>
+<span class="n">Done</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="mapwithindex">
+<h2>mapWithIndex( )<a class="headerlink" href="#mapwithindex" title="Permalink to this headline">¶</a></h2>
+<p>Transform the items emitted by channel by applying a function to each of them that takes both the emitted item and
+the numerical index of that item in the source sequence, so that you can refer to both when you apply your transformation.</p>
+<p>For example:</p>
+<div class="highlight-python"><pre>Channel
+    .from( 'a', 'b', 'c' )
+    .mapWithIndex { item, index -&gt;  [item, index] }
+    .subscribe onNext: { println it }, onComplete: { println 'Done' }</pre>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span> <span class="s">&#39;a&#39;</span><span class="p">,</span> <span class="mi">0</span> <span class="p">]</span>
+<span class="p">[</span> <span class="s">&#39;b&#39;</span><span class="p">,</span> <span class="mi">1</span> <span class="p">]</span>
+<span class="p">[</span> <span class="s">&#39;c&#39;</span><span class="p">,</span> <span class="mi">2</span> <span class="p">]</span>
+<span class="n">Done</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="mapmany">
+<h2>mapMany( )<a class="headerlink" href="#mapmany" title="Permalink to this headline">¶</a></h2>
+<p>Transform the items emitted by a channel by applying a function to each of them and then flattens the results of that function.</p>
+<p>For example:</p>
+<div class="highlight-python"><pre>// create a channel of numbers
+numbers = Channel.from( 1, 2, 3 )
+
+// map each number to a tuple (array), which items are emitted separately
+results = numbers.mapMany { n -&gt; [ n*2, n*3 ] }
+
+// print the final results
+results.subscribe onNext: { println it }, onComplete: { println 'Done' }</pre>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="mi">2</span>
+<span class="mi">3</span>
+<span class="mi">4</span>
+<span class="mi">6</span>
+<span class="mi">6</span>
+<span class="mi">9</span>
+<span class="n">Done</span>
+</pre></div>
+</div>
+<p>Associative arrays are manged in the same way. Fo example:</p>
+<div class="highlight-python"><pre>Channel.from ( 1, 2, 3 )
+       .mapMany { it -&gt; [ number: it, square: it*it ] }
+       .subscribe { println it.key + ': ' + it.value }</pre>
+</div>
+<div class="highlight-python"><pre>number: 1
+square: 1
+number: 2
+square: 4
+number: 3
+square: 9</pre>
+</div>
+</div>
+<div class="section" id="reduce">
+<h2>reduce( )<a class="headerlink" href="#reduce" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="docutils literal"><span class="pre">reduce( )</span></tt> operator applies a function of your choosing to the first item emitted by a source channel,
+then feeds the result of that function along with the second item emitted by the source channel into the same function,
+then feeds the result of that function along with the third item into the same function, and so on until all items have been emitted by the source channel.</p>
+<p>Finally it emits the final result from the final call to your function as the sole output from the returned channel.</p>
+<p>For example:</p>
+<div class="highlight-python"><pre>Channel
+    .from( 1, 2, 3, 4, 5 )
+    .reduce { a, b -&gt;  a+b }
+    .subscribe onNext: { println it }, onComplete: { println 'Done' }</pre>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="mi">15</span>
+<span class="n">Done</span>
+</pre></div>
+</div>
+<p>There is also a version of <tt class="docutils literal"><span class="pre">reduce( )</span></tt> to which you can pass a seed item in addition to an accumulator function:</p>
+<div class="highlight-python"><pre>myChannel.reduce( seedValue ) {  a, b -&gt; ... }</pre>
+</div>
+<p>The seed value is used to initialize the accumulator argument i.e. the <tt class="docutils literal"><span class="pre">a</span></tt> argument in the above example.</p>
+</div>
+<div class="section" id="grep">
+<h2>grep( )<a class="headerlink" href="#grep" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="docutils literal"><span class="pre">grep(</span> <span class="pre">)</span></tt> operator allows to filter a channel by discarding all item that do not meet the specified condition. The condition
+can be a regular expression, a class, a literal value or a boolean expression.</p>
+<p>Example using a regular expression:</p>
+<div class="highlight-python"><pre>Channel
+    .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
+    .grep( ~/a+/ )
+    .subscribe { println it }</pre>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">a</span>
+<span class="n">aa</span>
+</pre></div>
+</div>
+<p>Example specifying the class <tt class="docutils literal"><span class="pre">Number</span></tt> to discard all but the numbers:</p>
+<div class="highlight-python"><pre>Channel
+    .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
+    .grep( Number )
+    .subscribe { println it }</pre>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="mi">3</span>
+<span class="mf">4.5</span>
+</pre></div>
+</div>
+<p>Example using a boolean expression:</p>
+<div class="highlight-python"><pre>Channel
+    .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
+    .grep { it.toString().size() == 1 }
+    .subscribe { println it }</pre>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">a</span>
+<span class="n">aa</span>
+<span class="mi">3</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Note in the above example that the filtering expression is wrapped by curly brackets instead of normal
+round bracket, since it specifies a function (closure) passed as argument of the <tt class="docutils literal"><span class="pre">grep</span></tt> operator.</p>
+</div>
+</div>
+<div class="section" id="unique">
+<h2>unique( )<a class="headerlink" href="#unique" title="Permalink to this headline">¶</a></h2>
+<p>Use the <tt class="docutils literal"><span class="pre">unique( )</span></tt> operator to remove duplicate items from a source channel and only emit single items with no repetition.</p>
+<p>For example:</p>
+<div class="highlight-python"><pre>Channel
+    .from( 1,1,1,5,7,7,7,3,3 )
+    .unique()
+    .subscribe { println it }</pre>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="mi">1</span>
+<span class="mi">5</span>
+<span class="mi">7</span>
+<span class="mi">3</span>
+</pre></div>
+</div>
+<p>You can also specify an optional a function (closure) that customizes how it distinguishes between unique items.
+For example</p>
+<div class="highlight-python"><pre>Channel
+    .from(1,3,4,5)
+    .unique { it % 2 }
+    .subscribe { println it }</pre>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="mi">1</span>
+<span class="mi">4</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="distinct">
+<h2>distinct( )<a class="headerlink" href="#distinct" title="Permalink to this headline">¶</a></h2>
+<p>Use the distinct( ) method to remove duplicate consecutive items from a source channel. For example:</p>
+<div class="highlight-python"><pre>Channel
+    .from( 1,1,2,2,2,3,1,1,2,2,3 )
+    .distinct()
+    .subscribe onNext: { println it }, onComplete: { println 'Done' }</pre>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="mi">1</span>
+<span class="mi">2</span>
+<span class="mi">3</span>
+<span class="mi">1</span>
+<span class="mi">2</span>
+<span class="mi">3</span>
+<span class="n">Done</span>
+</pre></div>
+</div>
+<p>You can also specify an optional a function (closure) that customizes how it distinguishes between distinct items.
+For example:</p>
+<div class="highlight-python"><pre>Channel
+    .from( 1,1,2,2,2,3,1,1,2,4,6 )
+    .distinct { it % 2 }
+    .subscribe onNext: { println it }, onComplete: { println 'Done' }</pre>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="mi">1</span>
+<span class="mi">2</span>
+<span class="mi">3</span>
+<span class="mi">2</span>
+<span class="n">Done</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="first">
+<h2>first( )<a class="headerlink" href="#first" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="docutils literal"><span class="pre">first(</span> <span class="pre">)</span></tt> operator creates a channel that emits the first item emitted by the source channel, or the first
+matching an optional condition. The condition can be a regular expression, a type or any closure evaluation a boolean expression. For example:</p>
+<div class="highlight-python"><pre>// no condition is specified, emits the very first item: 1
+Channel
+    .from( 1, 2, 3 )
+    .first()
+    .subscribe { println it }
+
+
+// emits the first String value: 'a'
+Channel
+    .from( 1, 2, 'a', 'b', 3 )
+    .first( String )
+    .subscribe { println it }
+
+// emits the first item matching the regular expression: 'aa'
+Channel
+    .from( 'a', 'aa', 'aaa' )
+    .first( ~/aa.*/ )
+    .subscribe { println it }
+
+// emits the first item for which the expression evaluates to true: 4
+Channel
+    .from( 1,2,3,4,5 )
+    .first { it &gt; 3 }
+    .subscribe { println it }</pre>
+</div>
+</div>
+<div class="section" id="take">
+<h2>take( )<a class="headerlink" href="#take" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="docutils literal"><span class="pre">take(</span> <span class="pre">)</span></tt> emits only the first <cite>n</cite> items emitted by an channel. For example:</p>
+<div class="highlight-python"><pre>Channel
+    .from( 1,2,3,4,5,6 )
+    .take( 3 )
+    .subscribe onNext: { println it }, onComplete: { println 'Done' }</pre>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="mi">1</span>
+<span class="mi">2</span>
+<span class="mi">3</span>
+<span class="n">Done</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="last">
+<h2>last( )<a class="headerlink" href="#last" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="docutils literal"><span class="pre">last(</span> <span class="pre">)</span></tt> operator creates a channel that only emits the last item emitted by a source channel.</p>
+</div>
+<div class="section" id="dofinally">
+<h2>doFinally( )<a class="headerlink" href="#dofinally" title="Permalink to this headline">¶</a></h2>
+<p>TODO</p>
+</div>
+<div class="section" id="tolist">
+<h2>toList( )<a class="headerlink" href="#tolist" title="Permalink to this headline">¶</a></h2>
+<p>TODO</p>
+</div>
+<div class="section" id="count">
+<h2>count( )<a class="headerlink" href="#count" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="docutils literal"><span class="pre">count(</span> <span class="pre">)</span></tt> operator creates a channel that emits a single item: a number that represents the total number of
+items emitted by the source channel.</p>
+<p>An optional parameter can be specified representing the condition to be satisfied by the item to count. For example:</p>
+<div class="highlight-python"><pre>Channel
+    .from(9,1,7,5)
+    .count()
+    .subscribe { println it }
+// -&gt; 4
+
+
+Channel
+    .from(4,1,7,1,1)
+    .count(1)
+    .subscribe { println it }
+ // -&gt; 3
+
+Channel
+    .from('a','c','c','q','b')
+    .count ( ~/c/ )
+    .subscribe { println it }
+// -&gt; 2</pre>
+</div>
+</div>
+<div class="section" id="countby">
+<h2>countBy( )<a class="headerlink" href="#countby" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="docutils literal"><span class="pre">countBy(</span> <span class="pre">)</span></tt> creates a channel which emits an associative array (map object) counting the occurence of the emitted
+items in the source channel. For example:</p>
+<div class="highlight-python"><pre>Channel
+    .from( 'x', 'y', 'x', 'x', 'z', 'y' )
+    .countBy()
+    .subscribe { println it }</pre>
+</div>
+<div class="highlight-python"><pre>[x:3, y:2, z:1]</pre>
+</div>
+<p>A optional grouping criteria can be specified by a function (closure) mapping each item to a grouping key. For example:</p>
+<div class="highlight-python"><pre>Channel
+    .from( 'hola', 'hello', 'ciao', 'bonjour', 'halo' )
+    .countBy { it[0] }
+    .subscribe { println it }</pre>
+</div>
+<div class="highlight-python"><pre>[h:3, c:1, b:1]</pre>
+</div>
+</div>
+<div class="section" id="min">
+<h2>min( )<a class="headerlink" href="#min" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="max">
+<h2>max( )<a class="headerlink" href="#max" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="sum">
+<h2>sum( )<a class="headerlink" href="#sum" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="groupby">
+<h2>groupBy( )<a class="headerlink" href="#groupby" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="id1">
+<h2>separate()<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p>rename it</p>
+</div>
+<div class="section" id="spread">
+<h2>spread( )<a class="headerlink" href="#spread" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="flatten">
+<h2>flatten( )<a class="headerlink" href="#flatten" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="window">
+<h2>window()<a class="headerlink" href="#window" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="windowwithsizeconstraint">
+<h2>windowWithSizeConstraint( )<a class="headerlink" href="#windowwithsizeconstraint" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="mix">
+<h2>mix( )<a class="headerlink" href="#mix" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="phase">
+<h2>phase( )<a class="headerlink" href="#phase" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          <footer>
+  
+    <div class="rst-footer-buttons">
+      
+        <a href="config.html" class="btn btn-neutral float-right" title="Configuration file"/>Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="process.html" class="btn btn-neutral" title="Process"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <p>
+      &copy; Copyright 2013, Paolo Di Tommaso.
+  </p>
+
+  <a href="https://www.github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="http://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+</body>
+</html>
