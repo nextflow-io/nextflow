@@ -3,6 +3,7 @@ import static java.util.Arrays.asList
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowChannel
@@ -88,48 +89,40 @@ class DataflowExtensions {
     static public final <V> DataflowReadChannel<V> subscribe(final DataflowReadChannel<V> source, final Map<String,Closure> events ) {
         checkSubscribeHandlers(events)
 
+        def error = false
         def stopOnFirst = source instanceof DataflowExpression
+        def listener = new DataflowEventAdapter() {
 
-        def listeners = []
-
-        if( events.onNext ) {
-            listeners << new DataflowEventAdapter() {
-                @Override
-                public void afterRun(final DataflowProcessor processor, final List<Object> messages) {
-                    events.onNext.call(messages[0])
-                    if( stopOnFirst ) {
-                        processor.terminate()
-                    }
-                }
+            @Override
+            public void afterStop(final DataflowProcessor processor) {
+                if( !events.onComplete || error ) return
+                events.onComplete.call(processor)
             }
-        }
 
-        if( events.onComplete ) {
-            listeners << new DataflowEventAdapter() {
-                @Override
-                public void afterStop(final DataflowProcessor processor) {
-                    events.onComplete.call(processor)
-                }
-            }
-        }
-
-        if( events.onException ) {
-            listeners << new DataflowEventAdapter() {
-                @Override
-                public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                    events.onException.call(e)
-                }
+            @Override
+            public boolean onException(final DataflowProcessor processor, final Throwable e) {
+                error = true
+                if( !events.onError ) return true
+                events.onError.call(e)
+                return true
             }
         }
 
 
-        final DataflowReadChannel<V> target = newChannelBy(source)
+
         final Map<String, Object> parameters = new HashMap<String, Object>();
         parameters.put("inputs", [source])
-        parameters.put("outputs", [target])
-        parameters.put('listeners', listeners)
+        parameters.put("outputs", [])
+        parameters.put('listeners', [listener])
 
-        Dataflow.operator(parameters, {it});
+        Dataflow.operator(parameters) {
+            if( events.onNext ) {
+                events.onNext.call(it)
+            }
+            if( stopOnFirst ) {
+                terminate()
+            }
+        }
 
         // forwards all
         return source
@@ -182,9 +175,8 @@ class DataflowExtensions {
         DataflowReadChannel<V> target = newChannelBy(source)
 
         Dataflow.operator(source, target) {
-
             def value = closure.call(it, index++)
-            if (value != NullObject.getNullObject()) {
+            if (value != Channel.VOID) {
                 ((DataflowProcessor) getDelegate()).bindAllOutputsAtomically(value);
             }
         }
@@ -201,24 +193,48 @@ class DataflowExtensions {
      */
     static public final <V> DataflowReadChannel<V> mapMany(final DataflowReadChannel<?> source, final Closure<V> closure) {
         assert source != null
-        assert closure
 
-        def target = newChannelBy(source)
+        def listeners = []
+        DataflowQueue target = new DataflowQueue()
 
-        Dataflow.operator(source, target) {
+        if( source instanceof DataflowExpression ) {
+            listeners << new DataflowEventAdapter() {
+                @Override
+                public void afterRun(final DataflowProcessor processor, final List<Object> messages) {
+                    processor.bindOutput( Channel.STOP )
+                    processor.terminate()
+                }
+            }
+        }
 
-            def value = closure.call(it);
-            switch( value ) {
+
+        Dataflow.operator(inputs: [source], outputs: [target], listeners: listeners) {  item ->
+
+            item = closure ? closure.call(item) : item
+
+            switch( item ) {
                 case Iterable:
-                    ((Iterable)value) .each { entry -> bindOutput(entry) }
+                    item.each { value -> bindOutput(value) }
+                    break
+
+                case (Object[]):
+                    item.each { value -> bindOutput(value) }
                     break
 
                 case Map:
-                    ((Map)value) .each { entry -> bindOutput(entry) }
+                    item.each { entry -> bindOutput(entry) }
+                    break
+
+                case Map.Entry:
+                    bindOutput( (item as Map.Entry).key )
+                    bindOutput( (item as Map.Entry).value )
+                    break
+
+                case Channel.VOID:
                     break
 
                 default:
-                    bindOutput(value)
+                    bindOutput(item)
             }
         }
 
@@ -667,13 +683,13 @@ class DataflowExtensions {
      * Sorts all collection members into groups determined by the supplied mapping closure
      *
      * @param channel
-     * @param criteria
+     * @param mapper
      * @return
      */
-    static public final DataflowReadChannel<Map> groupBy(final DataflowQueue channel, final Closure criteria ) {
+    static public final DataflowReadChannel<Map> groupBy(final DataflowReadChannel channel, final Closure mapper = DEFAULT_MAPPING_CLOSURE ) {
 
         return reduce(channel, [:]) { map, item ->
-            def key = criteria.call(item)
+            def key = mapper ? mapper.call(item) : item
             def list = map.get(key)
             list = list ? list << item : [item]
             map.put(key, list)
@@ -681,7 +697,63 @@ class DataflowExtensions {
         }
     }
 
-    static public final List<DataflowQueue> separate( final DataflowQueue channel, int n, Closure mapper ) {
+    static public final void route( final DataflowReadChannel source, Map<?,DataflowWriteChannel> targets, Closure mapper = DEFAULT_MAPPING_CLOSURE ) {
+
+        source.subscribe (
+                [
+                        onNext: { value ->
+                            def key = mapper ? mapper.call(value) : value
+                            def channel = targets.get(key)
+                            // emit the value itself
+                            if( channel ) {
+                                channel << value
+                            }
+
+                        },
+
+                        onComplete: {
+                            targets.values().each { it << Channel.STOP }
+                        }
+
+                ]
+        )
+
+    }
+
+    static public final DataflowReadChannel route( final DataflowReadChannel source, final Closure mapper = DEFAULT_MAPPING_CLOSURE ) {
+        assert !(source instanceof DataflowExpression)
+
+        def allChannels = [:]
+        DataflowQueue target = new DataflowQueue()
+
+        source.subscribe (
+                [
+                    onNext: { value ->
+                        def key = mapper ? mapper.call(value) : value
+                        def channel = allChannels.get(key)
+                        if( channel == null ) {
+                            channel = new DataflowQueue()
+                            allChannels[key] = channel
+                            // emit the key - channel pair
+                            target << [ key, channel ]
+                        }
+                        // emit the value itself
+                        channel << value
+                    },
+
+                    onComplete: {
+                        allChannels.values().each { it << Channel.STOP }
+                        target << Channel.STOP
+                    }
+
+                ]
+        )
+
+        return target
+    }
+
+
+    static public final List<DataflowReadChannel> separate( final DataflowQueue channel, int n, Closure mapper ) {
 
         def outputs = []
         n.times { outputs << new DataflowQueue() }
@@ -689,39 +761,32 @@ class DataflowExtensions {
         outputs
     }
 
-    static public final DataflowQueue spread( final DataflowQueue channel, DataflowReadChannel other ) {
+    static public final DataflowReadChannel spread( final DataflowReadChannel channel, Object other ) {
 
-        DataflowQueue result = new DataflowQueue()
+        DataflowQueue target = new DataflowQueue()
 
         def source
         switch(other) {
-            case DataflowQueue:  source = ((DataflowQueue) other).toList(); break
-            case DataflowVariable: source = other; break
+            case DataflowQueue: source = ((DataflowQueue) other).toList(); break
+            case DataflowExpression: source = other; break
+            case Iterable: source = Channel.just(other); break
             default: throw new IllegalArgumentException()
         }
 
-        Dataflow.operator( [channel, source], [result] ) { a, b ->
+        Dataflow.operator( [channel, source], [target] ) { a, b ->
             [ [a], (b as List) ]
                     .combinations()
                     .each{ Collection it -> bindOutput(it.flatten())  }
         }
 
-        return result
-    }
-
-
-    static public final DataflowQueue spread( final DataflowQueue channel, Collection other ) {
-        assert other != null
-
-        return spread(channel, Channel.just(other))
+        return target
     }
 
 
     static public final DataflowReadChannel flatten( final DataflowReadChannel source )  {
 
-        DataflowQueue target = new DataflowQueue()
-
         def listeners = []
+        DataflowQueue target = new DataflowQueue()
 
         if( source instanceof DataflowExpression ) {
             listeners << new DataflowEventAdapter() {
@@ -734,49 +799,60 @@ class DataflowExtensions {
         }
 
 
-        Dataflow.operator(inputs: [source], outputs: [target], listeners: listeners) {  it ->
-            switch( it ) {
-                case Iterable:
-                    it.each { value -> bindOutput(value) }
+        Dataflow.operator(inputs: [source], outputs: [target], listeners: listeners) {  item ->
+
+            switch( item ) {
+                case Collection:
+                    item.flatten().each { value -> bindOutput(value) }
                     break
 
-                case Object[]:
-                    it.each { value -> bindOutput(value) }
+                case (Object[]):
+                    item.flatten().each { value -> bindOutput(value) }
                     break
 
-                case Map:
-                    ((Map)it).each { entry -> bindOutput(entry) }
+                case Channel.VOID:
                     break
 
                 default:
-                    bindOutput(it)
+                    bindOutput(item)
             }
         }
+
         return target
     }
 
-    static public final DataflowQueue window( final DataflowQueue channel, Object closingCriteria ) {
+    /**
+     * The ``buffer( )`` operator gathers the items emitted by the source channel into bundles and
+     * and emits these bundles as its own emissions.
+     *
+     * @param source The dataflow channel from where the values are gathered
+     * @param closingCriteria A condition that has to be verified to close
+     * @return A newly created dataflow queue which emitted the gathered values as bundles
+     */
+    static public final <V> DataflowReadChannel<V> buffer( final DataflowReadChannel<V> source, Object closingCriteria ) {
 
         def closure = new BooleanReturningMethodInvoker("isCase");
-        return windowImpl(channel, null, { Object it -> closure.invoke(closingCriteria, it) })
+        return bufferImpl(source, null, { Object it -> closure.invoke(closingCriteria, it) })
 
     }
 
-    static public final DataflowQueue window( final DataflowQueue channel, Object startingCriteria, Object closingCriteria  ) {
+    static public final <V> DataflowReadChannel<V> buffer( final DataflowReadChannel<V> channel, Object startingCriteria, Object closingCriteria  ) {
         assert startingCriteria != null
         assert closingCriteria != null
 
         def c1 = new BooleanReturningMethodInvoker("isCase");
         def c2 = new BooleanReturningMethodInvoker("isCase");
 
-        return windowImpl(channel, {Object it -> c1.invoke(startingCriteria, it)}, {Object it -> c2.invoke(closingCriteria, it)})
+        return bufferImpl(channel, {Object it -> c1.invoke(startingCriteria, it)}, {Object it -> c2.invoke(closingCriteria, it)})
 
     }
 
-    static public final DataflowQueue window( final DataflowQueue channel, Map params ) {
+    static public final <V> DataflowReadChannel<V> buffer( DataflowReadChannel<V> source, Map params ) {
 
-        if( params.count ) {
-            windowWithSizeConstraint( channel, (int)params.count, (int)params?.skip ?: 0 )
+        int _skip = (int)params?.skip ?: 0
+        int _count = (int)params.count
+        if( _count ) {
+            bufferWithSizeConstraint( source, _count, _skip )
         }
         else {
             throw new IllegalArgumentException()
@@ -785,7 +861,7 @@ class DataflowExtensions {
 
 
 
-    static private windowWithSizeConstraint( final DataflowQueue channel, int size, int skip = 0 ) {
+    static private <V> DataflowReadChannel<V> bufferWithSizeConstraint( final DataflowReadChannel<V> channel, int size, int skip = 0 ) {
         assert size>0
 
         def skipCount = 0
@@ -810,24 +886,24 @@ class DataflowExtensions {
             return false
         }
 
-        return windowImpl(channel, skip>0 ? startRule : null, closeRule )
+        return bufferImpl(channel, skip>0 ? startRule : null, closeRule )
     }
 
 
-    static private final DataflowQueue windowImpl( final DataflowQueue channel, Closure startingCriteria, Closure closeCriteria ) {
+    static private <V> DataflowReadChannel<V> bufferImpl( DataflowReadChannel<V> source, Closure startingCriteria, Closure closeCriteria ) {
         assert closeCriteria
 
         // the list holding temporary collected elements
         def buffer = []
 
         // the result queue
-        DataflowQueue result = new DataflowQueue();
+        DataflowQueue target = new DataflowQueue();
 
         // open frame flag
         boolean isOpen = startingCriteria == null
 
         // the operator collecting the elements
-        Dataflow.operator(channel, result) {
+        Dataflow.operator(source, target) {
             if( isOpen ) {
                 buffer << it
             }
@@ -845,7 +921,7 @@ class DataflowExtensions {
 
         }
 
-        return result
+        return target
     }
 
     /**
@@ -855,7 +931,7 @@ class DataflowExtensions {
      * @param target
      * @return
      */
-    static final DataflowQueue mix( DataflowQueue source, DataflowQueue... target ) {
+    static final DataflowReadChannel mix( DataflowReadChannel source, DataflowReadChannel... target ) {
         assert target.size()>0
 
         def result = new DataflowQueue()
@@ -879,13 +955,16 @@ class DataflowExtensions {
      * @param mapper
      * @return
      */
-    static final DataflowQueue phase( DataflowQueue source, DataflowQueue target, Closure mapper ) {
+    static final DataflowReadChannel phase( DataflowReadChannel source, DataflowReadChannel target, Closure mapper ) {
 
         def result = new DataflowQueue()
         def state = [:]
 
-        source.subscribe( phaseHandlers(state, 2, source, result, mapper) )
-        target.subscribe( phaseHandlers(state, 2, target, result, mapper) )
+        final count = 2
+        final stopCount = new AtomicInteger(count)
+
+        source.subscribe( phaseHandlers(state, count, source, result, mapper, stopCount) )
+        target.subscribe( phaseHandlers(state, count, target, result, mapper, stopCount) )
 
         return result
     }
@@ -897,8 +976,8 @@ class DataflowExtensions {
      * @param target
      * @return
      */
-    static final DataflowQueue phase(DataflowQueue source, DataflowQueue target) {
-        phase(source, target, { phaseDefaultMapper(it) } )
+    static final DataflowReadChannel phase(DataflowReadChannel source, DataflowReadChannel target) {
+        phase(source, target, DEFAULT_MAPPING_CLOSURE )
     }
 
     /**
@@ -913,22 +992,24 @@ class DataflowExtensions {
      * @param obj
      * @return
      */
-    static private phaseDefaultMapper( def obj )  {
+
+    @PackageScope
+    static DEFAULT_MAPPING_CLOSURE = { obj ->
 
         switch( obj ) {
             case Map:
-                def values = ((Map)obj).keySet()
-                return values.size() ? values.getAt(0) : null
+                def itr = ((Map)obj).entrySet().iterator()
+                return itr.hasNext() ? itr.next().value : null
 
             case Map.Entry:
                 def entry = (Map.Entry) obj
                 return entry.key
 
-            case Collection:
-                def values = (Collection)obj
-                return values.size() ? values.getAt(0) : null
+            case Iterable:
+                def itr = ((Iterable)obj) .iterator()
+                return itr.hasNext() ? itr.next() : null
 
-            case Object[]:
+            case (Object[]):
                 def values = (Object[])obj
                 return values.size() ? values[0] : null
 
@@ -948,7 +1029,7 @@ class DataflowExtensions {
      * @param mapper A closure mapping a value to its key
      * @return A map with {@code OnNext} and {@code onComplete} methods entries
      */
-    static private final Map phaseHandlers( Map<Object,Map<DataflowReadChannel,List>> buffer, int count, DataflowReadChannel current, DataflowWriteChannel channel, Closure mapper ) {
+    static private final Map phaseHandlers( Map<Object,Map<DataflowReadChannel,List>> buffer, int count, DataflowReadChannel current, DataflowWriteChannel channel, Closure mapper, AtomicInteger stopCount ) {
 
         [
                 onNext: {
@@ -957,7 +1038,9 @@ class DataflowExtensions {
                         if( entries ) channel.bind(entries)
                     }},
 
-                onComplete: { channel.bind(Channel.STOP) }
+                onComplete: {  if( stopCount.decrementAndGet()==0) {
+                    channel << Channel.STOP
+                    }}
 
         ]
 

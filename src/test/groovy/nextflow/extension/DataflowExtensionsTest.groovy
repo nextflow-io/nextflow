@@ -97,6 +97,28 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    def testSubscribeError() {
+
+        when:
+        int next=0
+        int error=0
+        int complete=0
+        Channel
+                .from( 2,1,0,3,3 )
+                .subscribe onNext: { println it/it; next++ }, onError: { error++ }, onComplete: { complete++ }
+        sleep 100
+
+        then:
+        // on the third iteration raise an exception
+        // next have to be equals to two
+        next == 2
+        // error have to be invoked one time
+        error == 1
+        // complete never
+        complete == 0
+
+    }
+
 
     def testDoFinally() {
 
@@ -307,7 +329,49 @@ class DataflowExtensionsTest extends Specification {
     def testGroupBy() {
 
         expect:
-        Channel.from('hello','ciao','hola', 'hi', 'bonjour').groupBy { it[0] } .val == [c:['ciao'], b:['bonjour'], h:['hello','hola','hi']]
+        Channel.from('hello','ciao','hola', 'hi', 'bonjour').groupBy { String str -> str[0] } .val == [c:['ciao'], b:['bonjour'], h:['hello','hola','hi']]
+
+        Channel.from( [id: 1, str:'one'], [id: 2, str:'two'], [id: 2, str:'dos'] ).groupBy().val == [ 1: [[id: 1, str:'one']], 2: [[id: 2, str:'two'], [id: 2, str:'dos']] ]
+
+
+    }
+
+    def testRouteBy() {
+
+        when:
+        def result = Channel.from('hello','ciao','hola', 'hi', 'bonjour').route { it[0] }
+        result.subscribe {
+          def (key, channel) = it
+          channel.subscribe { println "group: $key >> $it" }
+        }
+
+        sleep 1000
+        then:
+        true
+
+    }
+
+    def testRouteByMap() {
+
+        setup:
+        def r1 = Channel.create()
+        def r2 = Channel.create()
+        def r3 = Channel.create()
+
+        when:
+        Channel.from('hello','ciao','hola', 'hi', 'x', 'bonjour').route ( b: r1, c: r2, h: r3 ) { it[0] }
+
+        then:
+        r1.val == 'bonjour'
+        r1.val == Channel.STOP
+
+        r2.val == 'ciao'
+        r2.val == Channel.STOP
+
+        r3.val == 'hello'
+        r3.val == 'hola'
+        r3.val == 'hi'
+        r3.val == Channel.STOP
 
     }
 
@@ -362,12 +426,14 @@ class DataflowExtensionsTest extends Specification {
     def testSpread() {
 
         when:
-        def r1 = Channel.from(1,2).spread(['a','b'])
+        def r1 = Channel.from(1,2,3).spread(['a','b'])
         then:
         r1.val == [1, 'a']
         r1.val == [1, 'b']
         r1.val == [2, 'a']
         r1.val == [2, 'b']
+        r1.val == [3, 'a']
+        r1.val == [3, 'b']
         r1.val == Channel.STOP
 
         when:
@@ -426,6 +492,7 @@ class DataflowExtensionsTest extends Specification {
         r2.val == 'b'
         r2.val == Channel.STOP
 
+
         when:
         def r3 = Channel.from( [1,2] as Integer[], [3,4] as Integer[] ).flatten()
         then:
@@ -436,11 +503,14 @@ class DataflowExtensionsTest extends Specification {
         r3.val == Channel.STOP
 
         when:
-        def r4 = Channel.from( [x:1, y:2, z:3]).flatten()
+        def r4 = Channel.from( [1,[2,3]], 4, [5,[6]] ).flatten()
         then:
-        r4.val == new MapEntry('x', 1)
-        r4.val == new MapEntry('y', 2)
-        r4.val == new MapEntry('z', 3)
+        r4.val == 1
+        r4.val == 2
+        r4.val == 3
+        r4.val == 4
+        r4.val == 5
+        r4.val == 6
         r4.val == Channel.STOP
 
         when:
@@ -458,14 +528,14 @@ class DataflowExtensionsTest extends Specification {
     def testBufferClose() {
 
         when:
-        def r1 = Channel.from(1,2,3,1,2,3).window({ it == 2 })
+        def r1 = Channel.from(1,2,3,1,2,3).buffer({ it == 2 })
         then:
         r1.val == [1,2]
         r1.val == [3,1,2]
         r1.val == Channel.STOP
 
         when:
-        def r2 = Channel.from('a','b','c','a','b','z').window(~/b/)
+        def r2 = Channel.from('a','b','c','a','b','z').buffer(~/b/)
         then:
         r2.val == ['a','b']
         r2.val == ['c','a','b']
@@ -473,10 +543,10 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
-    def testFrameHavingSize() {
+    def testBufferWithCount() {
 
         when:
-        def r1 = Channel.from(1,2,3,1,2,3,1).window( count:2 )
+        def r1 = Channel.from(1,2,3,1,2,3,1).buffer( count:2 )
         then:
         r1.val == [1,2]
         r1.val == [3,1]
@@ -485,7 +555,7 @@ class DataflowExtensionsTest extends Specification {
 
 
         when:
-        def r2 = Channel.from(1,2,3,4,5,1,2,3,4,5,1,2).window( count:3, skip:2 )
+        def r2 = Channel.from(1,2,3,4,5,1,2,3,4,5,1,2).buffer( count:3, skip:2 )
         then:
         r2.val == [3,4,5]
         r2.val == [3,4,5]
@@ -498,14 +568,14 @@ class DataflowExtensionsTest extends Specification {
     def testBufferOpenClose() {
 
         when:
-        def r1 = Channel.from(1,2,3,4,5,1,2,3,4,5,1,2).window( {it==2}, {it==4})
+        def r1 = Channel.from(1,2,3,4,5,1,2,3,4,5,1,2).buffer( 2, 4 )
         then:
         r1.val == [2,3,4]
         r1.val == [2,3,4]
         r1.val == Channel.STOP
 
         when:
-        def r2 = Channel.from('a','b','c','a','b','z').window(~/a/,~/b/)
+        def r2 = Channel.from('a','b','c','a','b','z').buffer(~/a/,~/b/)
         then:
         r2.val == ['a','b']
         r2.val == ['a','b']
@@ -517,7 +587,7 @@ class DataflowExtensionsTest extends Specification {
         when:
         def c1 = Channel.from( 1,2,3 )
         def c2 = Channel.from( 'a','b' )
-        def c3 = Channel.from( 'z' )
+        def c3 = Channel.just( 'z' )
         def result = c1.mix(c2,c3).toList().val
 
         then:
@@ -582,19 +652,18 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
-    def testPhaseDefaultMapper() {
-
+    def testDefaultMappingClosure() {
 
         expect:
-        DataflowExtensions.phaseDefaultMapper( [a:1, b:2, z:9] ) == 'a'
-        DataflowExtensions.phaseDefaultMapper( [:] ) == null
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9] ) == 1
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [:] ) == null
 
-        DataflowExtensions.phaseDefaultMapper( [3,2,1] ) == 3
-        DataflowExtensions.phaseDefaultMapper( [] ) == null
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [3,2,1] ) == 3
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [] ) == null
 
-        DataflowExtensions.phaseDefaultMapper( [1,2,3] as Object[] ) == 1
-        DataflowExtensions.phaseDefaultMapper( ['alpha','beta'] as String[] ) == 'alpha'
-        DataflowExtensions.phaseDefaultMapper( 99 ) == 99
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [1,2,3] as Object[] ) == 1
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( ['alpha','beta'] as String[] ) == 'alpha'
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( 99 ) == 99
 
 
     }
@@ -603,17 +672,60 @@ class DataflowExtensionsTest extends Specification {
 
         setup:
         def ch1 = Channel.from( 1,2,3 )
-        def ch2 = Channel.from( 3,2,7,8,9 )
+        def ch2 = Channel.from( 1,0,0,2,7,8,9,3 )
 
         when:
         def result = ch1.phase(ch2)
         then:
+        result.val == [1,1]
         result.val == [2,2]
         result.val == [3,3]
+
         result.val == Channel.STOP
 
 
+        when:
+        ch1 = Channel.from( [sequence: 'aaaaaa', key: 1], [sequence: 'bbbbbb', key: 2] )
+        ch2 = Channel.from( [val: 'zzzz', id: 3], [val: 'xxxxx', id: 1], [val: 'yyyyy', id: 2])
+        result = ch1.phase(ch2) { Map it ->
+            if( it.containsKey('key') ) {
+                return it.key
+            }
+            else if( it.containsKey('id') ) {
+                return it.id
+            }
+            return null
+        }
+        then:
+
+        result.val == [ [sequence: 'aaaaaa', key: 1], [val: 'xxxxx', id: 1] ]
+        result.val == [ [sequence: 'bbbbbb', key: 2], [val: 'yyyyy', id: 2] ]
+        result.val == Channel.STOP
+
     }
+
+
+//    def testTap() {
+//
+//        when:
+//
+//        def log1 = Channel.create().subscribe { println "Log 1: $it" }
+//        def log2 = Channel.create().subscribe { println "Log 2: $it" }
+//
+//        Channel
+//                .from ( 'a', 'b', 'c' )
+//                .tap( log1 )
+//                .map { it * 2 }
+//                .tap( log2 )
+//                .subscribe { println "Result: $it" }
+//
+//        sleep 100
+//
+//        then:
+//        true
+//
+//    }
+
 
 
 //

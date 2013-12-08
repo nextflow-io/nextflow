@@ -1,5 +1,4 @@
 package nextflow
-
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -8,15 +7,14 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util.regex.Pattern
 
 import groovy.transform.PackageScope
+import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowQueue
-import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.ControlMessage
 import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.util.Duration
 import nextflow.util.FileHelper
 import org.codehaus.groovy.runtime.NullObject
-
 /**
  * Channel factory object
  *
@@ -33,7 +31,7 @@ class Channel {
      *
      * @return
      */
-    static <T> DataflowReadChannel<T> create() { new DataflowQueue() }
+    static <T> DataflowChannel<T> create() { new DataflowQueue() }
 
     /**
      * Creates a channel sending the items in the collection over it
@@ -41,7 +39,7 @@ class Channel {
      * @param items
      * @return
      */
-    static <T> DataflowReadChannel<T> from( Iterable<T> items ) { Nextflow.channel(items) }
+    static <T> DataflowChannel<T> from( Iterable<T> items ) { Nextflow.channel(items) }
 
     /**
      * Creates a channel sending the items in the collection over it
@@ -50,7 +48,7 @@ class Channel {
      * @return
      */
 
-    static <T> DataflowReadChannel<T> from( T... items ) { Nextflow.<T>channel(items) }
+    static <T> DataflowChannel<T> from( T... items ) { Nextflow.<T>channel(items) }
 
     /**
      * Convert an object into a *channel* variable that emits that object
@@ -58,7 +56,7 @@ class Channel {
      * @param obj
      * @return
      */
-    static <T> DataflowReadChannel<T> just( T obj = null ) {
+    static <T> DataflowChannel<T> just( T obj = null ) {
 
         def result = new DataflowVariable<T>()
         if( obj != null ) result.bind(obj)
@@ -73,7 +71,7 @@ class Channel {
      * @param duration
      * @return
      */
-    static DataflowReadChannel interval(String duration) {
+    static DataflowChannel interval(String duration) {
 
         interval( duration, { index -> index })
 
@@ -88,7 +86,7 @@ class Channel {
      * @return
      */
 
-    static DataflowReadChannel interval(String duration, Closure closure ) {
+    static DataflowChannel interval(String duration, Closure closure ) {
 
         def millis = Duration.create(duration).toMillis()
         def timer = new Timer()
@@ -108,7 +106,7 @@ class Channel {
         return channel
     }
 
-    static DataflowReadChannel<Path> files( Pattern filePattern ) {
+    static DataflowChannel<Path> files( Pattern filePattern ) {
         assert filePattern
 
         // split the folder and the pattern
@@ -117,7 +115,7 @@ class Channel {
         filesImpl( 'regex', folder, pattern, false )
     }
 
-    static DataflowReadChannel<Path> files( String filePattern ) {
+    static DataflowChannel<Path> files( String filePattern ) {
         assert filePattern
 
         boolean glob  = false
@@ -136,7 +134,7 @@ class Channel {
         filesImpl('glob', folder, pattern, pattern.startsWith('*')  )
     }
 
-    static private DataflowReadChannel<Path> filesImpl( String syntax, String folder, String pattern, boolean skipHidden )  {
+    static private DataflowChannel<Path> filesImpl( String syntax, String folder, String pattern, boolean skipHidden )  {
         assert syntax in ['regex','glob']
 
         // now apply glob file search
