@@ -11,11 +11,14 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   get_started
-   channel
+   install
+   basic
    process
+   channel
    operator
+   executor
    config
+   resume
 
 
    

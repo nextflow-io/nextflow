@@ -1,0 +1,34 @@
+#########
+Executor
+#########
+
+
+Local executor
+==============
+
+
+Grid executors
+==============
+
+
+Sun/Oracle grid engine
+-----------------------
+
+
+Platform LSF
+------------
+
+SLURM
+------
+
+
+DNAnexus
+=========
+
+
+
+
+
+
+
+

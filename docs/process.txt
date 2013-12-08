@@ -2,4 +2,114 @@
 Process
 ########
 
-TO DO
+In the a Nextflow script the `process` in the basic processing `primitive` to execute a user provided script.
+
+The process definition starts with keyword ``process`` to which follows the process name and the process body
+delimited by curly brackets. The process ``body`` must contain a string which represents the command or, more generally,
+a script that is executed by it. A basic process looks like the following example::
+
+  process sayHello {
+
+      "echo 'Hello world!' > file"
+
+  }
+
+
+More in details a process may contains four compartments defining the directives, inputs, outputs and finally
+the process scripts following the syntax showed below:
+
+::
+
+  process < name > {
+
+     [ directives ]
+
+     input:
+      < process input files >
+
+     output:
+      < process output files >
+
+
+     < user script to be executed >
+
+  }
+
+
+Directives
+==========
+
+The `directives` compartment contains the process configuration and execution options.
+
+
+cacheable
+---------
+
+Whenever the process outputs have to caches across multiple pipeline executions. It is ``true`` by default, set to ``false``
+to disable caching feature for this process. For example::
+
+  process noCacheThis {
+
+    cache false
+
+    "your command here"
+
+  }
+
+
+echo
+-----
+
+Whenever print out the process standard output the current execution console. It is ``false`` by default, set to ``true``
+if you need to show the process output.
+
+
+errorStrategy
+--------------
+
+This
+
+See also `validExitCodes`_
+
+
+executor
+--------
+
+(default: ``'local'``)
+
+
+validExitCodes
+-------------------
+
+ (default: ``0`)
+
+clusterOptions
+---------------
+
+queue
+-----
+
+(sge,lsf)
+
+maxDuration
+------------
+(sge,slurm)
+
+maxMemory
+---------
+(sge)
+
+
+Inputs
+======
+
+
+Outputs
+=======
+
+
+
+Script
+======
+
+

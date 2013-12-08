@@ -1,0 +1,11 @@
+###############
+Basic concepts
+###############
+
+
+`Nextflow` is a workflow framework which focus mainly on three points:
+
+#. Ease composition of existing tools and user scripts
+#.
+#. Provide an abstraction over the underlying resources manager and make
+
