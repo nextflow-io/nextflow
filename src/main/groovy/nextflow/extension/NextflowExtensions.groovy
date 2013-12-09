@@ -38,6 +38,8 @@ import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
 import groovyx.gpars.group.DefaultPGroup
 import groovyx.gpars.group.PGroup
 import groovyx.gpars.scheduler.Pool
+import org.apache.commons.io.IOUtils
+
 /**
  * Provides extension methods to chunk text and file
  *
@@ -117,35 +119,39 @@ class NextflowExtensions {
         log.debug "Chunk size: $size"
 
         BufferedReader reader0 = reader instanceof BufferedReader ? reader : new BufferedReader(reader)
+        try {
+            // -- wrap the owner to intercept any reference to an external dataflow instance
+            final interceptor = new WritableChannelInterceptor(block)
 
-        // -- wrap the owner to intercept any reference to an external dataflow instance
-        final interceptor = new WritableChannelInterceptor(block)
+            String line
+            StringBuilder buffer = new StringBuilder()
+            int c=0
+            while( (line = reader0.readLine()) != null ) {
+                if ( c ) buffer << '\n'
+                buffer << line
+                if ( ++c == size ) {
+                    c = 0
+                    block.call( buffer.toString() )
 
-        String line
-        StringBuilder buffer = new StringBuilder()
-        int c=0
-        while( (line = reader0.readLine()) != null ) {
-            if ( c ) buffer << '\n'
-            buffer << line
-            if ( ++c == size ) {
-                c = 0
+                    buffer.setLength(0)
+                }
+            }
+
+            if ( buffer.size() ) {
                 block.call( buffer.toString() )
+            }
 
-                buffer.setLength(0)
+            // send a poison pill to any written channel
+            def close = options.autoClose
+            if( close == null || close == true ) {
+                interceptor.closeChannels()
+            }
+            else {
+                log.debug "Skipping channel autoClose"
             }
         }
-
-        if ( buffer.size() ) {
-            block.call( buffer.toString() )
-        }
-
-        // send a poison pill to any written channel
-        def close = options.autoClose
-        if( close == null || close == true ) {
-            interceptor.closeChannels()
-        }
-        else {
-            log.debug "Skipping channel autoClose"
+        finally {
+            IOUtils.closeQuietly(reader0)
         }
 
     }
@@ -356,53 +362,59 @@ class NextflowExtensions {
         log.debug "Chunk size: $size"
 
         BufferedReader reader0 = text instanceof BufferedReader ? text : new BufferedReader(text)
-        // -- wrap the owner to intercept any reference to an external dataflow instance
-        final interceptor = new WritableChannelInterceptor(block)
+        try {
 
-        String line
-        StringBuilder buffer = new StringBuilder()
-        int blockCount=0
-        boolean openBlock = false
-        while( (line = reader0.readLine()) != null ) {
+            // -- wrap the owner to intercept any reference to an external dataflow instance
+            final interceptor = new WritableChannelInterceptor(block)
 
-            if ( line == '' ) {
-                buffer << '\n'
-            }
-            else if ( !openBlock && line.charAt(0)=='>' ) {
-                openBlock = true
-                buffer << line << '\n'
-            }
-            else if ( openBlock && line.charAt(0)=='>') {
-                // another block is started
+            String line
+            StringBuilder buffer = new StringBuilder()
+            int blockCount=0
+            boolean openBlock = false
+            while( (line = reader0.readLine()) != null ) {
 
-                if ( ++blockCount == size ) {
-                    // invoke the closure, passing the read block as parameter
-                    block.call(buffer.toString())
+                if ( line == '' ) {
+                    buffer << '\n'
+                }
+                else if ( !openBlock && line.charAt(0)=='>' ) {
+                    openBlock = true
+                    buffer << line << '\n'
+                }
+                else if ( openBlock && line.charAt(0)=='>') {
+                    // another block is started
 
-                    buffer.setLength(0)
-                    blockCount=0
+                    if ( ++blockCount == size ) {
+                        // invoke the closure, passing the read block as parameter
+                        block.call(buffer.toString())
+
+                        buffer.setLength(0)
+                        blockCount=0
+                    }
+
+                    buffer << line << '\n'
+
+                }
+                else {
+                    buffer << line << '\n'
                 }
 
-                buffer << line << '\n'
+            }
 
+            if ( buffer.size() ) {
+                block.call(buffer.toString())
+            }
+
+            // send a poison pill to any written channel
+            def close = options.autoClose
+            if( close == null || close == true ) {
+                interceptor.closeChannels()
             }
             else {
-                buffer << line << '\n'
+                log.debug "Skipping channel autoClose"
             }
-
         }
-
-        if ( buffer.size() ) {
-            block.call(buffer.toString())
-        }
-
-        // send a poison pill to any written channel
-        def close = options.autoClose
-        if( close == null || close == true ) {
-            interceptor.closeChannels()
-        }
-        else {
-            log.debug "Skipping channel autoClose"
+        finally {
+            IOUtils.closeQuietly(reader0)
         }
     }
 
