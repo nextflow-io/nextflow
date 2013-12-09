@@ -1,8 +1,10 @@
 package nextflow.script
 
 import com.beust.jcommander.DynamicParameter
+import com.beust.jcommander.IStringConverter
 import com.beust.jcommander.Parameter
 import nextflow.Const
+import nextflow.util.Duration
 
 /**
  *
@@ -42,6 +44,9 @@ class CliOptions {
 
     @Parameter(names=['-ps','-pool-size'], description = 'The number of threads in the executor pool')
     Integer poolSize
+
+    @Parameter(names=['-pi','-poll-interval'], description = 'The executor poll interval (duration string ending with ms|s|m)', converter = DurationConverter)
+    long pollInterval
 
     @Parameter(names=['-qs','-queue-size'], description = 'The max number of task in execution queue')
     Integer queueSize
@@ -88,4 +93,15 @@ class CliOptions {
      */
     @Parameter(description = 'Script level arguments')
     List<String> arguments
+
+
+    static class DurationConverter implements IStringConverter<Long> {
+
+        @Override
+        Long convert(String value) {
+            if( !value ) throw new IllegalArgumentException()
+            if( value.isLong() ) {  return value.toLong() }
+            return Duration.create(value).toMillis()
+        }
+    }
 }

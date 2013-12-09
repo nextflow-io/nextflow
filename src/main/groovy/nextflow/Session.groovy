@@ -29,7 +29,7 @@ import groovyx.gpars.group.NonDaemonPGroup
 import groovyx.gpars.group.PGroup
 import groovyx.gpars.util.PoolUtils
 import jsr166y.Phaser
-import nextflow.processor.TaskScheduler
+import nextflow.processor.TaskDispatcher
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -43,9 +43,9 @@ class Session {
     final List<DataflowProcessor> allProcessors = []
 
     /**
-     * The scheduler monitoring the tasks execution
+     * Dispatch tasks for executions
      */
-    final TaskScheduler scheduler
+    final TaskDispatcher dispatcher
 
     /**
      * Holds the configuration object
@@ -143,7 +143,7 @@ class Session {
         pgroup = new NonDaemonPGroup( config.poolSize as int )
         Dataflow.activeParallelGroup.set(pgroup)
 
-        scheduler = new TaskScheduler(this)
+        dispatcher = new TaskDispatcher(this)
 
         log.debug ">>> phaser register (session)"
         phaser.register()
@@ -151,10 +151,6 @@ class Session {
 
     @PackageScope
     def getPhaser() { phaser }
-
-    def void start() {
-        scheduler.start()
-    }
 
     /**
      * Await the termination of all processors
@@ -193,6 +189,57 @@ class Session {
     def int taskDeregister() {
         log.debug "<<< phaser deregister (task)"
         phaser.arriveAndDeregister()
+    }
+
+
+    public int getQueueSize( String execName, int defValue ) {
+        // creating the running tasks queue
+        def size = null
+
+        // make sure that the *executor* is a map object
+        // it could also be a plain string (when it specifies just the its name)
+        if( config.executor instanceof Map ){
+            if( execName ) {
+                size = config.executor?."$execName"?.queueSize
+            }
+
+            if( !size && config.executor?.queueSize ) {
+                size = config.executor?.queueSize
+            }
+        }
+
+
+        if( !size ) {
+            size = defValue
+            log.debug "Undefined executor queueSize property runnable queue size -- fallback default value: $size"
+        }
+
+        return size
+    }
+
+    public long getPollInterval( String execName, long defValue = 1_000 ) {
+        // creating the running tasks queue
+        def result = null
+
+        // make sure that the *executor* is a map object
+        // it could also be a plain string (when it specifies just the its name)
+        if( config.executor instanceof Map ){
+            if( execName ) {
+                result = config.executor?."$execName"?.pollInterval
+            }
+
+            if( !result && config.executor?.pollInterval ) {
+                result = config.executor?.pollInterval
+            }
+        }
+
+
+        if( !result ) {
+            result = defValue
+            log.debug "Undefined executor queueSize property runnable queue size -- fallback on num of available processors-1: $result"
+        }
+
+        return result
     }
 
 

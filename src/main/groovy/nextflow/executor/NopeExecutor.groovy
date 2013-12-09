@@ -23,6 +23,8 @@ import java.nio.file.Paths
 
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskPollingMonitor
+import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 
 /**
@@ -32,6 +34,11 @@ import nextflow.processor.TaskRun
  */
 @Slf4j
 class NopeExecutor extends AbstractExecutor {
+
+    @Override
+    protected TaskMonitor createTaskMonitor() {
+        return new TaskPollingMonitor(session, 5, 50).start()
+    }
 
     @Override
     TaskHandler createTaskHandler(TaskRun task) {
@@ -53,18 +60,32 @@ class NopeTaskHandler extends TaskHandler {
 
         log.info ">> launching nope task: ${task}"
         task.workDirectory = Paths.get('.').toAbsolutePath()
-        status = Status.TERMINATED
+        status = TaskHandler.Status.SUBMITTED
         task.exitCode = 0
         task.stdout = task.script
     }
 
     @Override
-    boolean checkIfRunning() { true }
+    boolean checkIfRunning() {
+        log.debug "isRunning: $status"
+        if( isSubmitted() ) {
+            status = TaskHandler.Status.RUNNING
+            return true
+        }
+    }
 
     @Override
-    boolean checkIfTerminated() { return true }
+    boolean checkIfTerminated() {
+        log.debug "isTerminated: $status"
+        if( isRunning() ) {
+            status = TaskHandler.Status.TERMINATED
+            return true
+        }
+        false
+    }
 
     @Override
     void kill() { }
 
 }
+

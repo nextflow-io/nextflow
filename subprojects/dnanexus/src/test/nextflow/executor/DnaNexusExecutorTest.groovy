@@ -108,6 +108,7 @@ class DnaNexusExecutorTest extends Specification {
         handler.metaClass.checkStatus = { return [state:'runnable'] }
         when:
         handler.processJobId = '123'
+        handler.status = TaskHandler.Status.SUBMITTED
         then:
         handler.checkIfRunning()
 

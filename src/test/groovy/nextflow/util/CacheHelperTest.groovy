@@ -59,6 +59,9 @@ class CacheHelperTest extends Specification {
         CacheHelper.hasher( [f1: 1, f2: 'String1', f3: true] ) .hash() == aMap
         CacheHelper.hasher( ['A','B','C'] ).hash() == aList
         CacheHelper.hasher(file).hash() == aFile
+
+        CacheHelper.hasher(['abc',123]).hash() == CacheHelper.hasher(['abc',123]).hash()
+        CacheHelper.hasher(['abc',123]).hash() != CacheHelper.hasher([123,'abc']).hash()
     }
 
 

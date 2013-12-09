@@ -4,12 +4,14 @@ import java.nio.file.Path
 
 import groovy.io.FileType
 import groovy.util.logging.Slf4j
+import nextflow.Session
 import nextflow.exception.MissingFileException
 import nextflow.processor.FileHolder
 import nextflow.processor.FileInParam
 import nextflow.processor.FileOutParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 /**
  * Declares methods have to be implemented by a generic
@@ -26,10 +28,63 @@ abstract class AbstractExecutor {
     TaskConfig taskConfig
 
     /**
+     * The current session object
+     */
+    Session session
+
+    /**
+     * The executor simple name
+     */
+    String name
+
+    /**
+     * The queue holder that keep track of all tasks for this executor.
+     */
+    private TaskMonitor monitor
+
+
+    /**
+     * Let to post initialize the executor
+     */
+    def void init() {
+        if( !monitor ) {
+            monitor = session.dispatcher.getOrCreateMonitor(this.class) { createTaskMonitor() }
+        }
+    }
+
+    /**
+     * @return Create a new instance of the {@code TaskQueueHolder} component
+     */
+    abstract protected TaskMonitor createTaskMonitor()
+
+    /**
+     * @return A reference to the current {@code #queueHolder} object
+     */
+    TaskMonitor getTaskMonitor()  { monitor }
+
+    /**
      * @return Create a new {@code TaskHandler} to manage the scheduling
      * actions for this task
      */
     abstract TaskHandler createTaskHandler(TaskRun task)
+
+    /**
+     * Submit a task for execution
+     *
+     * @param task
+     * @return
+     */
+    TaskHandler submitTask( TaskRun task ) {
+        def handler = createTaskHandler(task)
+        monitor.put(handler)
+        try {
+            handler.submit()
+        }
+        catch( Exception e ) {
+            monitor.remove(handler)
+        }
+        return handler
+    }
 
 
     /**

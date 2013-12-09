@@ -231,7 +231,7 @@ class ProcessDefTransformImpl implements ASTTransformation {
 
         def methodCall = expression as MethodCallExpression
         def methodName = methodCall.getMethodAsString()
-        log.debug "convert > input method: $methodName"
+        log.trace "convert > input method: $methodName"
 
         if( methodName in ['val','env','file','each'] ) {
             //this methods require a special prefix '__in_'
@@ -249,7 +249,7 @@ class ProcessDefTransformImpl implements ASTTransformation {
     }
 
     def void convertOutputMethod( Expression expression ) {
-        log.debug "convert > output expression: $expression"
+        log.trace "convert > output expression: $expression"
 
         if( !(expression instanceof MethodCallExpression) ) {
             return
@@ -257,7 +257,7 @@ class ProcessDefTransformImpl implements ASTTransformation {
 
         def methodCall = expression as MethodCallExpression
         def methodName = methodCall.getMethodAsString()
-        log.debug "convert > output method: $methodName"
+        log.trace "convert > output method: $methodName"
 
         if( methodName in ['val','file'] ) {
             // prefix the method name with the string '__out_'

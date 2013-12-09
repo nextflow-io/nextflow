@@ -30,6 +30,8 @@ import nextflow.exception.InvalidExitException
 import nextflow.processor.FileInParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskPollingMonitor
+import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 import nextflow.util.CmdLineHelper
 import org.apache.commons.io.IOUtils
@@ -41,6 +43,19 @@ import org.apache.commons.io.IOUtils
  */
 @Slf4j
 abstract class AbstractGridExecutor extends AbstractExecutor {
+
+    /**
+     * Create a a queue holder for this executor
+     * @return
+     */
+    def TaskMonitor createTaskMonitor() {
+        final queueSize = session.getQueueSize(name, 50)
+        final pollInterval = session.getPollInterval(name, 1_000)
+        log.debug "Creating executor queue with size: $queueSize; poll-interval: $pollInterval"
+
+        return new TaskPollingMonitor(session, queueSize, pollInterval) .start()
+    }
+
 
     /*
      * Prepare and launch the task in the underlying execution platform
@@ -204,7 +219,7 @@ class GridTaskHandler extends TaskHandler {
                 }
                 // save the JobId in the
                 this.jobId = executor.parseJobId(result)
-                this.status = Status.RUNNING
+                this.status = Status.SUBMITTED
             }
             catch( Exception e ) {
                 task.exitCode = exitStatus
@@ -241,11 +256,7 @@ class GridTaskHandler extends TaskHandler {
     @Override
     boolean checkIfRunning() {
 
-        if( !isNew() ) {
-            return true
-        }
-
-        if( isNew() && startFile.exists() ) {
+        if( isSubmitted() && startFile.exists() ) {
             status = Status.RUNNING
             return true
         }
@@ -255,10 +266,6 @@ class GridTaskHandler extends TaskHandler {
 
     @Override
     boolean checkIfTerminated() {
-
-        if( isTerminated() ) {
-            return true
-        }
 
         if( isRunning() && exitFile.exists() ) {
 

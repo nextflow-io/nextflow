@@ -24,11 +24,12 @@ import groovy.util.logging.Slf4j
 import nextflow.processor.FileInParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskPollingMonitor
+import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 import nextflow.util.PosixProcess
 import org.apache.commons.io.IOUtils
 import org.codehaus.groovy.runtime.IOGroovyMethods
-
 /**
  * Executes the specified task on the locally exploiting the underlying Java thread pool
  *
@@ -37,9 +38,19 @@ import org.codehaus.groovy.runtime.IOGroovyMethods
 @Slf4j
 class LocalExecutor extends AbstractExecutor {
 
+
+    @Override
+    protected TaskMonitor createTaskMonitor() {
+        final defSize = Math.max( Runtime.getRuntime().availableProcessors()-1, 1 )
+        final queueSize = session.getQueueSize(name, defSize)
+        final pollInterval = session.getPollInterval(name, 50)
+        log.debug "Creating executor queue with size: $queueSize; poll-interval: $pollInterval"
+
+        return new TaskPollingMonitor(session, queueSize, pollInterval) .start()
+    }
+
     @Override
     def LocalTaskHandler createTaskHandler(TaskRun task) {
-
         assert task
         assert task.@script
         assert task.workDirectory
@@ -62,7 +73,7 @@ class LocalExecutor extends AbstractExecutor {
         // create the wrapper script
         bash.build()
 
-        new LocalTaskHandler( task, taskConfig )
+        new LocalTaskHandler( task, taskConfig  )
     }
 
 
@@ -92,14 +103,17 @@ class LocalTaskHandler extends TaskHandler {
 
     private boolean destroyed
 
-    LocalTaskHandler( TaskRun task, TaskConfig taskConfig ) {
+    LocalTaskHandler( TaskRun task, TaskConfig taskConfig  ) {
         super(task, taskConfig)
         // create the task handler
         this.exitFile = task.getCmdExitFile()
         this.outputFile = task.getCmdOutputFile()
         this.wrapperFile = task.getCmdWrapperFile()
         this.maxDurationMillis = taskConfig.maxDuration?.toMillis()
+
     }
+
+
 
     @Override
     def void submit() {
@@ -119,8 +133,8 @@ class LocalTaskHandler extends TaskHandler {
         // handle in/out
         pipeStdInput()
 
-        // mark as STARTED
-        status = Status.RUNNING
+        // mark as submitted -- transition to STARTED has to be managed by the scheduler
+        status = Status.SUBMITTED
     }
 
     /**
@@ -155,7 +169,13 @@ class LocalTaskHandler extends TaskHandler {
      */
     @Override
     boolean checkIfRunning() {
-        process != null && status == Status.RUNNING
+
+        if( isSubmitted() && process != null ) {
+            status = Status.RUNNING
+            return true
+        }
+
+        return false
     }
 
     /**
@@ -164,9 +184,7 @@ class LocalTaskHandler extends TaskHandler {
     @Override
     boolean checkIfTerminated() {
 
-        if( status == Status.TERMINATED ) {
-            return true
-        }
+        if( !isRunning() ) { return false }
 
         def done = process.hasExited()
         if( done ) {
@@ -217,3 +235,5 @@ class LocalTaskHandler extends TaskHandler {
     }
 
 }
+
+

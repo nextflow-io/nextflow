@@ -4,7 +4,7 @@ params.db = "$HOME/tools/blast-db/pdb/pdb"
 params.query = "$HOME/sample.fa"
 params.chunkSize = 1
 
-DB=params.db
+DB= file(params.db)
 seq = channel()
 
 inputFile = file(params.query)
