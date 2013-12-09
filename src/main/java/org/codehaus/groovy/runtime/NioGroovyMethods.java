@@ -36,6 +36,7 @@ import java.io.PrintWriter;
 import java.io.Writer;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -681,13 +682,16 @@ public class NioGroovyMethods extends DefaultGroovyMethodsSupport {
     public static void eachFile(final Path self, final FileType fileType, final Closure closure) throws IOException {
             //throws FileNotFoundException, IllegalArgumentException {
         checkDir(self);
-        Iterator<Path> itr = Files.newDirectoryStream(self).iterator();
-        while( itr.hasNext() ) {
-            Path path = itr.next();
-            if (fileType == FileType.ANY ||
-                    (fileType != FileType.FILES && Files.isDirectory(path)) ||
-                    (fileType != FileType.DIRECTORIES && Files.isRegularFile(path))) {
-                closure.call(path);
+
+        try ( DirectoryStream<Path> stream = Files.newDirectoryStream(self) ) {
+            Iterator<Path> itr = stream.iterator();
+            while( itr.hasNext() ) {
+                Path path = itr.next();
+                if (fileType == FileType.ANY ||
+                        (fileType != FileType.FILES && Files.isDirectory(path)) ||
+                        (fileType != FileType.DIRECTORIES && Files.isRegularFile(path))) {
+                    closure.call(path);
+                }
             }
         }
     }
@@ -738,16 +742,20 @@ public class NioGroovyMethods extends DefaultGroovyMethodsSupport {
     public static void eachFileRecurse(final Path self, final FileType fileType, final Closure closure) throws IOException { // throws FileNotFoundException, IllegalArgumentException {
             // throws FileNotFoundException, IllegalArgumentException {
         checkDir(self);
-        Iterator<Path> itr = Files.newDirectoryStream(self).iterator();
-        while ( itr.hasNext() ) {
-            Path path = itr.next();
-            if (Files.isDirectory(path)) {
-                if (fileType != FileType.FILES) closure.call(path);
-                eachFileRecurse(path, fileType, closure);
-            } else if (fileType != FileType.DIRECTORIES) {
-                closure.call(path);
+        try ( DirectoryStream<Path> stream = Files.newDirectoryStream(self)) {
+            Iterator<Path> itr = stream.iterator();
+            while ( itr.hasNext() ) {
+                Path path = itr.next();
+                if (Files.isDirectory(path)) {
+                    if (fileType != FileType.FILES) closure.call(path);
+                    eachFileRecurse(path, fileType, closure);
+                } else if (fileType != FileType.DIRECTORIES) {
+                    closure.call(path);
+                }
             }
+
         }
+
     }
 
     /**
@@ -924,49 +932,54 @@ public class NioGroovyMethods extends DefaultGroovyMethodsSupport {
         final Object excludeNameFilter = options.get("excludeNameFilter");
         final Closure sort = (Closure) options.get("sort");
 
-        final Iterator<Path> itr = Files.newDirectoryStream(self).iterator();
-        List<Path> files = new LinkedList<Path>();
-        while(itr.hasNext()) { files.add(itr.next()); }
+        try ( DirectoryStream<Path> stream = Files.newDirectoryStream(self) ) {
 
-        if (sort != null) files = DefaultGroovyMethods.sort(files, sort);
+            final Iterator<Path> itr = stream.iterator();
+            List<Path> files = new LinkedList<Path>();
+            while(itr.hasNext()) { files.add(itr.next()); }
 
-        for (Path path : files) {
-            if (Files.isDirectory(path)) {
-                if (type != FileType.FILES) {
+            if (sort != null) files = DefaultGroovyMethods.sort(files, sort);
+
+            for (Path path : files) {
+                if (Files.isDirectory(path)) {
+                    if (type != FileType.FILES) {
+                        if (closure != null && notFiltered(path, filter, nameFilter, excludeFilter, excludeNameFilter)) {
+                            Object closureResult = closure.call(path);
+                            if (closureResult == FileVisitResult.SKIP_SIBLINGS) break;
+                            if (closureResult == FileVisitResult.TERMINATE) return FileVisitResult.TERMINATE;
+                        }
+                    }
+                    if (maxDepth != 0) {
+                        Object preResult = null;
+                        if (pre != null) {
+                            preResult = pre.call(path);
+                        }
+                        if (preResult == FileVisitResult.SKIP_SIBLINGS) break;
+                        if (preResult == FileVisitResult.TERMINATE) return FileVisitResult.TERMINATE;
+                        if (preResult != FileVisitResult.SKIP_SUBTREE) {
+                            FileVisitResult terminated = traverse(path, options, closure, maxDepth - 1);
+                            if (terminated == FileVisitResult.TERMINATE) return terminated;
+                        }
+                        Object postResult = null;
+                        if (post != null) {
+                            postResult = post.call(path);
+                        }
+                        if (postResult == FileVisitResult.SKIP_SIBLINGS) break;
+                        if (postResult == FileVisitResult.TERMINATE) return FileVisitResult.TERMINATE;
+                    }
+                } else if (type != FileType.DIRECTORIES) {
                     if (closure != null && notFiltered(path, filter, nameFilter, excludeFilter, excludeNameFilter)) {
                         Object closureResult = closure.call(path);
                         if (closureResult == FileVisitResult.SKIP_SIBLINGS) break;
                         if (closureResult == FileVisitResult.TERMINATE) return FileVisitResult.TERMINATE;
                     }
                 }
-                if (maxDepth != 0) {
-                    Object preResult = null;
-                    if (pre != null) {
-                        preResult = pre.call(path);
-                    }
-                    if (preResult == FileVisitResult.SKIP_SIBLINGS) break;
-                    if (preResult == FileVisitResult.TERMINATE) return FileVisitResult.TERMINATE;
-                    if (preResult != FileVisitResult.SKIP_SUBTREE) {
-                        FileVisitResult terminated = traverse(path, options, closure, maxDepth - 1);
-                        if (terminated == FileVisitResult.TERMINATE) return terminated;
-                    }
-                    Object postResult = null;
-                    if (post != null) {
-                        postResult = post.call(path);
-                    }
-                    if (postResult == FileVisitResult.SKIP_SIBLINGS) break;
-                    if (postResult == FileVisitResult.TERMINATE) return FileVisitResult.TERMINATE;
-                }
-            } else if (type != FileType.DIRECTORIES) {
-                if (closure != null && notFiltered(path, filter, nameFilter, excludeFilter, excludeNameFilter)) {
-                    Object closureResult = closure.call(path);
-                    if (closureResult == FileVisitResult.SKIP_SIBLINGS) break;
-                    if (closureResult == FileVisitResult.TERMINATE) return FileVisitResult.TERMINATE;
-                }
             }
+
+            return FileVisitResult.CONTINUE;
+
         }
 
-        return FileVisitResult.CONTINUE;
     }
 
     /**
@@ -1032,17 +1045,20 @@ public class NioGroovyMethods extends DefaultGroovyMethodsSupport {
     public static void eachFileMatch(final Path self, final FileType fileType, final Object nameFilter, final Closure closure) throws IOException {
             // throws FileNotFoundException, IllegalArgumentException {
         checkDir(self);
-        Iterator<Path> itr = Files.newDirectoryStream(self).iterator();
-        BooleanReturningMethodInvoker bmi = new BooleanReturningMethodInvoker("isCase");
-        while ( itr.hasNext() ) {
-            Path currentPath = itr.next();
-            if ((fileType != FileType.FILES && Files.isDirectory(currentPath)) ||
-                    (fileType != FileType.DIRECTORIES && Files.isRegularFile(currentPath)))
-            {
-                if (bmi.invoke(nameFilter, currentPath.getFileName().toString()))
-                    closure.call(currentPath);
+        try ( DirectoryStream<Path> stream = Files.newDirectoryStream(self) ) {
+            Iterator<Path> itr = stream.iterator();
+            BooleanReturningMethodInvoker bmi = new BooleanReturningMethodInvoker("isCase");
+            while ( itr.hasNext() ) {
+                Path currentPath = itr.next();
+                if ((fileType != FileType.FILES && Files.isDirectory(currentPath)) ||
+                        (fileType != FileType.DIRECTORIES && Files.isRegularFile(currentPath)))
+                {
+                    if (bmi.invoke(nameFilter, currentPath.getFileName().toString()))
+                        closure.call(currentPath);
+                }
             }
         }
+
     }
 
     /**
@@ -1105,37 +1121,29 @@ public class NioGroovyMethods extends DefaultGroovyMethodsSupport {
             return false;
 
         // delete contained files
-        Iterator<Path> itr;
-        try {
-            itr = Files.newDirectoryStream(self).iterator();
-        } catch (IOException e ) {
-            return false;
-        }
+        try ( DirectoryStream<Path> stream = Files.newDirectoryStream(self) ) {
 
-        while (itr.hasNext()) {
-            Path path = itr.next();
-            if (Files.isDirectory(path)) {
-                if (!deleteDir(path)) {
-                    return false;
+            Iterator<Path> itr = stream.iterator();
+
+            while (itr.hasNext()) {
+                Path path = itr.next();
+                if (Files.isDirectory(path)) {
+                    if (!deleteDir(path)) {
+                        return false;
+                    }
                 }
-            }
-            else {
-                try {
+                else {
                     Files.delete(path);
-                } catch(IOException e) {
-                    return false;
                 }
             }
-        }
 
-        // now delete directory itself
-        try {
+            // now delete directory itself
             Files.delete(self);
-        } catch(IOException e) {
+            return true;
+        }
+        catch( IOException e ) {
             return false;
         }
-
-        return true;
     }
 
     /**

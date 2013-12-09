@@ -207,8 +207,14 @@ class FileHelper {
         }
 
         if ( Files.isDirectory(path) ) {
-            Iterator<Path> itr = Files.newDirectoryStream(path).iterator()
-            return !itr.hasNext()
+            def stream = Files.newDirectoryStream(path)
+            try {
+                Iterator<Path> itr = stream.iterator()
+                return !itr.hasNext()
+            }
+            finally {
+                stream.close()
+            }
         }
         else {
             Files.size(path)==0
