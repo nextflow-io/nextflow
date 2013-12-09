@@ -1,6 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.5.3 - 9 Dec 2013 
+- Fixed file close leaks
+- Fixed dDrectoryStream close leaks
+ 
+
 0.5.2 - 28 Nov 2013
 - Changed caching hash function to murmur3_128 to avoid cache collision
 - Fixed issue on process termination when resuming pipeline execution
