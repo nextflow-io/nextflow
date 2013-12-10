@@ -30,7 +30,6 @@ class ParallelTaskProcessor extends TaskProcessor {
     @Override
     protected void createOperator() {
 
-
         def opInputs = new ArrayList(taskConfig.inputs.channels)
         def opOutputs = new ArrayList(taskConfig.outputs.channels)
 
@@ -85,7 +84,6 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         def params = [inputs: opInputs, outputs: opOutputs, maxForks: maxForks, listeners: [new TaskProcessorInterceptor()] ]
         session.allProcessors << (processor = new DataflowOperator(group, params, wrapper).start())
-
 
     }
 
@@ -246,13 +244,16 @@ class ParallelTaskProcessor extends TaskProcessor {
         task.inputs.each { keys << it.key.name << it.value }
 
         def hash = CacheHelper.hasher(keys).hash()
-        Path folder = FileHelper.createWorkFolder(session.workDir, hash)
+        Path folder = FileHelper.getWorkFolder(session.workDir, hash)
+        log.trace "[${task.name}] cacheable folder: $folder"
+
         def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder)
         if( !cached ) {
             log.info "Running task > ${task.name}"
 
             // run the task
             task.workDirectory = createTaskFolder(folder, hash)
+            log.trace "[${task.name}] actual run folder: ${task.workDirectory}"
 
             // submit task for execution
             submitTask( task )
@@ -263,17 +264,9 @@ class ParallelTaskProcessor extends TaskProcessor {
     class TaskProcessorInterceptor extends DataflowEventAdapter {
 
         @Override
-        public void afterStart(final DataflowProcessor processor) {
-            // increment the session sync
-            log.debug "After start > register phaser for '$name'"
-            session.taskRegister()
-        }
-
-        @Override
         public List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
-            log.trace "Before run > ${currentTask.get()?.name ?: name} -- messages: ${messages}"
-            // register this task run -- note: this is deregistered by the 'finalizeTask0' method provided by the superclass
-            phaser.register()
+            log.trace "Before run > ${name} -- messages: ${messages}"
+            instanceCount.incrementAndGet()
             return messages;
         }
 
@@ -298,6 +291,11 @@ class ParallelTaskProcessor extends TaskProcessor {
 
             if( message == PoisonPill.instance ) {
                 log.trace "Poison pill arrived for task > ${currentTask.get()?.name ?: name} -- terminated"
+                receivedPoisonPill = true
+
+                // check if the task is terminated
+                checkProcessTermination()
+
                 // this control message avoid to stop the operator and
                 // propagate the PoisonPill to the downstream processes
                 return StopQuietly.instance
@@ -311,15 +309,6 @@ class ParallelTaskProcessor extends TaskProcessor {
         void afterRun(DataflowProcessor processor, List<Object> messages) {
             log.trace "After run > ${currentTask.get()?.name ?: name}"
             currentTask.remove()
-        }
-
-        @Override
-        public void afterStop(final DataflowProcessor processor) {
-            // decrement the session sync
-            log.debug "After stop > deregister phaser for '$name'"
-            session.taskDeregister()
-            // send poison pill to downstream channels
-            sendPoisonPill()
         }
 
         /**

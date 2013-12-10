@@ -22,6 +22,10 @@ package nextflow.processor
 import groovyx.gpars.dataflow.operator.ControlMessage
 
 /**
+ * Stop a dataflow operator without terminating it - and -
+ * preventing it forwards the poison pill to downstream channel
+ *
+ * See {@code DataflowOperatorActor#onMessage}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

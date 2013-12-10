@@ -15,6 +15,7 @@ import nextflow.Session
 @Slf4j
 class TaskPollingMonitor implements TaskMonitor {
 
+
     /**
      * The submitted tasks queue. It is implemented using a blocking queue,
      * so that no more than a fixed amount of tasks can be submitted concurrently
@@ -125,10 +126,10 @@ class TaskPollingMonitor implements TaskMonitor {
     private void checkAll( Collection<TaskHandler> collection ) {
         collection.each { TaskHandler handler ->
             try {
-                checkTask(handler)
+                checkTaskStatus(handler)
             }
             catch( Exception e ) {
-                dispatcher.notifyError(handler, e)
+                dispatcher.notifyError(e, handler)
             }
         }
     }
@@ -138,7 +139,7 @@ class TaskPollingMonitor implements TaskMonitor {
      *
      * @param handler The {@code TaskHandler} instance of the task to check
      */
-    private void checkTask( TaskHandler handler ) {
+    private void checkTaskStatus( TaskHandler handler ) {
         assert handler
 
         // check if it is started
@@ -147,7 +148,7 @@ class TaskPollingMonitor implements TaskMonitor {
         }
 
         // check if it is terminated
-        if( handler.checkIfTerminated()  ) {
+        if( handler.checkIfCompleted()  ) {
             // since completed *remove* the task from the processing queue
             queue.remove(handler)
             // finalize the tasks execution

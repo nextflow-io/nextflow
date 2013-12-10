@@ -247,7 +247,7 @@ class DxTaskHandler extends TaskHandler {
     }
 
     @Override
-    boolean checkIfTerminated() {
+    boolean checkIfCompleted() {
 
         if( !isRunning() ) { return false }
 
@@ -288,7 +288,7 @@ class DxTaskHandler extends TaskHandler {
             task.stdout = taskOutputFile
         }
 
-        status = TERMINATED
+        status = COMPLETED
         return true
 
     }

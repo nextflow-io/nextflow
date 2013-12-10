@@ -38,7 +38,6 @@ import org.codehaus.groovy.runtime.IOGroovyMethods
 @Slf4j
 class LocalExecutor extends AbstractExecutor {
 
-
     @Override
     protected TaskMonitor createTaskMonitor() {
         final defSize = Math.max( Runtime.getRuntime().availableProcessors()-1, 1 )
@@ -182,7 +181,7 @@ class LocalTaskHandler extends TaskHandler {
      * Check if the submitted job has terminated its execution
      */
     @Override
-    boolean checkIfTerminated() {
+    boolean checkIfCompleted() {
 
         if( !isRunning() ) { return false }
 
@@ -190,7 +189,7 @@ class LocalTaskHandler extends TaskHandler {
         if( done ) {
             task.exitCode = process.exitValue()
             task.stdout = outputFile
-            status = Status.TERMINATED
+            status = Status.COMPLETED
             destroy()
             return true
         }
@@ -203,7 +202,7 @@ class LocalTaskHandler extends TaskHandler {
                 destroy()
                 task.exitCode = process.exitValue()
                 task.stdout = outputFile
-                status = Status.TERMINATED
+                status = Status.COMPLETED
 
                 // signal has completed
                 return true

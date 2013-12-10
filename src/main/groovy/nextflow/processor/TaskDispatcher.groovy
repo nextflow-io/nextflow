@@ -43,7 +43,7 @@ class TaskDispatcher {
     final private Map<Class<? extends AbstractExecutor>, TaskMonitor> monitors = [:]
 
     /**
-     * Dispatcher constrcutor
+     * Dispatcher constructor
      *
      * @param session
      */
@@ -124,12 +124,11 @@ class TaskDispatcher {
      * @param handler
      * @param e
      */
-    public void notifyError(TaskHandler handler, Throwable e ) {
+    public void notifyError(Throwable e, TaskHandler handler = null ) {
 
-        handler.task.processor.handleException(e, handler.task)
+        handler.task.processor.handleException(e, handler?.task)
 
     }
-
 
 
 }

@@ -75,10 +75,10 @@ class NopeTaskHandler extends TaskHandler {
     }
 
     @Override
-    boolean checkIfTerminated() {
+    boolean checkIfCompleted() {
         log.debug "isTerminated: $status"
         if( isRunning() ) {
-            status = TaskHandler.Status.TERMINATED
+            status = TaskHandler.Status.COMPLETED
             return true
         }
         false

@@ -91,7 +91,7 @@ class MergeTaskProcessor extends TaskProcessor {
         def hash = hasher.hash()
         log.trace "Merging task > $name -- hash: $hash"
 
-        Path folder = FileHelper.createWorkFolder(session.workDir, hash)
+        Path folder = FileHelper.getWorkFolder(session.workDir, hash)
         log.trace "Merging task > $name -- trying cached: $folder"
 
         def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder)
@@ -244,14 +244,6 @@ class MergeTaskProcessor extends TaskProcessor {
      */
     class MergeProcessorInterceptor extends DataflowEventAdapter {
 
-        private volatile boolean gotPoisonPill
-
-        @Override
-        public void afterStart(final DataflowProcessor processor) {
-            // increment the session sync
-            log.debug "After start > register phaser for '$name'"
-            session.taskRegister()
-        }
 
         @Override
         public List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
@@ -262,18 +254,6 @@ class MergeTaskProcessor extends TaskProcessor {
         @Override
         void afterRun(DataflowProcessor processor, List<Object> MOCK_MESSAGES) {
             log.trace "After run > ${name}"
-        }
-
-        @Override
-        public void afterStop(final DataflowProcessor processor) {
-            // increment the session sync
-            log.debug "After stop > deregister phaser for '$name'"
-            session.taskDeregister()
-
-            if( gotPoisonPill ) {
-                // send poison pill to downstream channels
-                sendPoisonPill()
-            }
         }
 
         @Override
@@ -293,10 +273,8 @@ class MergeTaskProcessor extends TaskProcessor {
             if( message == PoisonPill.instance )  {
 
                 if( mergeIndex.get()>0 ) {
-                    gotPoisonPill = true
-                    // register this task run -- note: this is deregistered by the 'finalizeTask0' method provided by the superclass
-                    phaser.register()
-
+                    receivedPoisonPill = true
+                    instanceCount.incrementAndGet()
                     def task = MergeTaskProcessor.this.createTaskRun()
                     try {
                         MergeTaskProcessor.this.mergeTaskRun(task)

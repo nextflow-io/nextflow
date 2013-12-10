@@ -23,7 +23,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.spi.FileSystemProvider
 
-import com.google.common.hash.HashCode
+import embed.com.google.common.hash.HashCode
 import groovy.util.logging.Slf4j
 /**
  *
@@ -227,7 +227,7 @@ class FileHelper {
      * @param hash
      * @return
      */
-    final static Path createWorkFolder(Path bashPath, HashCode hash) {
+    final static Path getWorkFolder(Path bashPath, HashCode hash) {
         assert bashPath
         assert hash
 
