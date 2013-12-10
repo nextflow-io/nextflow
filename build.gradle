@@ -18,11 +18,7 @@
  */
 
 apply plugin: 'gradle-one-jar'
-<<<<<<< HEAD
-version = '0.5.3'
-=======
-version = '0.5.2'
->>>>>>> upstream
+version = '0.5.4'
 
 allprojects {
     apply plugin: 'groovy'
