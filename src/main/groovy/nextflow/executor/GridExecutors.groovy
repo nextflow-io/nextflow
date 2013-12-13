@@ -244,6 +244,8 @@ class GridTaskHandler extends TaskHandler {
 
     private long exitTimestampMillis
 
+    private int exitEmptyCount
+
     /**
      * When a process terminated save its exit status into the file defined by #exitFile
      *
@@ -288,9 +290,12 @@ class GridTaskHandler extends TaskHandler {
                 exitTimestampMillis = System.currentTimeMillis()
             }
 
-            if( System.currentTimeMillis() - exitTimestampMillis < 5_000 ) {
+            def delta = System.currentTimeMillis() - exitTimestampMillis
+            if( delta < 90_000 ) {
+                log.debug "File is returning an empty content ($exitEmptyCount): $exitFile -- Try to wait a while and .. pray."
                 return null
             }
+            log.warn "Unable to read command status from: $exitFile after $delta ms"
         }
 
         return Integer.MAX_VALUE
