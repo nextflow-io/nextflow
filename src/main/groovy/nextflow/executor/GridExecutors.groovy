@@ -223,7 +223,7 @@ class GridTaskHandler extends TaskHandler {
                 this.status = SUBMITTED
             }
             catch( Exception e ) {
-                task.exitCode = exitStatus
+                task.exitStatus = exitStatus
                 task.script = CmdLineHelper.toLine(cli)
                 task.stdout = result
                 status = COMPLETED
@@ -318,7 +318,7 @@ class GridTaskHandler extends TaskHandler {
         def _exit
         if( isRunning() && (_exit = readExitStatus()) != null ) {
             // finalize the task
-            task.exitCode = _exit
+            task.exitStatus = _exit
             task.stdout = outputFile
             status = COMPLETED
             return true

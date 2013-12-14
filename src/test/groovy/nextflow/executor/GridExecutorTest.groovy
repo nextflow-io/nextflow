@@ -100,7 +100,7 @@ class GridExecutorTest extends Specification {
         then:
         handler.checkIfCompleted()
         handler.status == TaskHandler.Status.COMPLETED
-        handler.task.exitCode == 33
+        handler.task.exitStatus == 33
 
     }
 
@@ -122,7 +122,7 @@ class GridExecutorTest extends Specification {
         sleep 5_100
         handler.checkIfCompleted()
         handler.status == TaskHandler.Status.COMPLETED
-        handler.task.exitCode == Integer.MAX_VALUE
+        handler.task.exitStatus == Integer.MAX_VALUE
 
     }
 
@@ -146,7 +146,7 @@ class GridExecutorTest extends Specification {
         then:
         handler.checkIfCompleted()
         handler.status == TaskHandler.Status.COMPLETED
-        handler.task.exitCode == 123
+        handler.task.exitStatus == 123
 
     }
 

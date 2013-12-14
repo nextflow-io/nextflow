@@ -187,7 +187,7 @@ class LocalTaskHandler extends TaskHandler {
 
         def done = process.hasExited()
         if( done ) {
-            task.exitCode = process.exitValue()
+            task.exitStatus = process.exitValue()
             task.stdout = outputFile
             status = Status.COMPLETED
             destroy()
@@ -200,7 +200,7 @@ class LocalTaskHandler extends TaskHandler {
              */
             if( elapsedTimeMillis() > maxDurationMillis ) {
                 destroy()
-                task.exitCode = process.exitValue()
+                task.exitStatus = process.exitValue()
                 task.stdout = outputFile
                 status = Status.COMPLETED
 

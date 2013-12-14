@@ -113,7 +113,7 @@ class TaskRun<T extends TaskHandler> {
     /**
      * The exit code returned by executing the task script
      */
-    int exitCode = Integer.MAX_VALUE
+    int exitStatus = Integer.MAX_VALUE
 
     /**
      * Flag set when the bind stage is completed successfully

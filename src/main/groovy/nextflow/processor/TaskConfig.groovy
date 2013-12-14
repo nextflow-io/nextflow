@@ -47,7 +47,7 @@ class TaskConfig implements Map {
             echo = false
             cacheable = true
             shell = ['/bin/bash','-ue']
-            validExitCodes = [0]
+            validExitStatus = [0]
             inputs = new InputsList()
             outputs = new OutputsList()
         }
@@ -265,19 +265,19 @@ class TaskConfig implements Map {
 
     Duration getMaxDuration() { configProperties.maxDuration }
 
-    TaskConfig validExitCodes( Object values ) {
+    TaskConfig validExitStatus( Object values ) {
 
         if( values instanceof List ) {
-            configProperties.validExitCodes = values
+            configProperties.validExitStatus = values
         }
         else {
-            configProperties.validExitCodes = [values]
+            configProperties.validExitStatus = [values]
         }
 
         return this
     }
 
-    List<Integer> getValidExitCodes() { configProperties.validExitCodes }
+    List<Integer> getValidExitStatus() { configProperties.validExitStatus }
 
 
 

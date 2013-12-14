@@ -432,7 +432,7 @@ abstract class TaskProcessor {
 
         def exitValue = exitFile.text.trim()
         def exitCode = exitValue.isInteger() ? exitValue.toInteger() : null
-        if( exitCode == null || !(exitCode in taskConfig.validExitCodes) ) {
+        if( exitCode == null || !(exitCode in taskConfig.validExitStatus) ) {
             log.trace "[$task.name] Exit code is not valid > $exitValue -- return false"
             return false
         }
@@ -443,7 +443,7 @@ abstract class TaskProcessor {
             log.info "Cached task > ${task.name}"
 
             // set the exit code in to the task object
-            task.exitCode = exitCode
+            task.exitStatus = exitCode
 
             // -- now bind the results
             finalizeTask0(task)
@@ -451,7 +451,7 @@ abstract class TaskProcessor {
         }
         catch( MissingFileException e ) {
             log.debug "[$task.name] Missed cache > ${e.getMessage()} -- folder: $folder"
-            task.exitCode = Integer.MAX_VALUE
+            task.exitStatus = Integer.MAX_VALUE
             task.workDirectory = null
             return false
         }
@@ -493,7 +493,7 @@ abstract class TaskProcessor {
                     message << "  $it"
                 }
 
-                message << "\nCommand exit status:\n  ${task.exitCode}"
+                message << "\nCommand exit status:\n  ${task.exitStatus}"
 
                 message << "\nCommand output:"
                 task.stdout?.eachLine {
@@ -938,7 +938,7 @@ abstract class TaskProcessor {
     final void finalizeTask( TaskRun task ) {
         try {
             // verify task exist status
-            boolean success = (task.exitCode in taskConfig.validExitCodes)
+            boolean success = (task.exitStatus in taskConfig.validExitStatus)
             if ( !success ) {
                 throw new InvalidExitException("Task '${task.name}' terminated with an error")
             }

@@ -21,7 +21,7 @@ class TaskConfigTest extends Specification {
         expect:
         config.shell ==  ['/bin/bash','-ue']
         config.cacheable
-        config.validExitCodes == [0]
+        config.validExitStatus == [0]
         config.errorStrategy == ErrorStrategy.TERMINATE
         config.inputs instanceof InputsList
         config.outputs instanceof OutputsList
@@ -106,7 +106,7 @@ class TaskConfigTest extends Specification {
         expect:
         config.containsKey('echo')
         config.containsKey('shell')
-        config.containsKey('validExitCodes')
+        config.containsKey('validExitStatus')
         config.containsKey('inputs')
         config.containsKey('outputs')
         !config.containsKey('xyz')

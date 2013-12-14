@@ -265,11 +265,11 @@ class DxTaskHandler extends TaskHandler {
          */
         Integer exitCode = result.output?.exit_code
         if( exitCode != null ) {
-            task.exitCode = exitCode
-            log.debug "Task ${task.name} > exit code > ${task.exitCode}"
+            task.exitStatus = exitCode
+            log.debug "Task ${task.name} > exit status > ${task.exitStatus}"
         }
         else {
-            log.debug "Task ${task.name} > missing exit code"
+            log.debug "Task ${task.name} > missing exit status"
         }
 
         /*

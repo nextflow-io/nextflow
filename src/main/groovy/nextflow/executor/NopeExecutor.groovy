@@ -61,7 +61,7 @@ class NopeTaskHandler extends TaskHandler {
         log.info ">> launching nope task: ${task}"
         task.workDirectory = Paths.get('.').toAbsolutePath()
         status = TaskHandler.Status.SUBMITTED
-        task.exitCode = 0
+        task.exitStatus = 0
         task.stdout = task.script
     }
 
