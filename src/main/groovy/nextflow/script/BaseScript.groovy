@@ -129,7 +129,7 @@ abstract class BaseScript extends Script {
 
         def hash = CacheHelper.hasher([ session.uniqueId, key, session.cacheable ? 0 : random.nextInt() ]).hash()
 
-        def file = FileHelper.createWorkFolder(session.workDir, hash)
+        def file = FileHelper.getWorkFolder(session.workDir, hash)
         if( !file.exists() && !file.mkdirs() ) {
             throw new IOException("Unable to create folder: $file -- Check file system permission" )
         }

@@ -24,12 +24,12 @@ process blast {
 
 process extract {
     input:
-    val top_hits
+    file top_hits
 
     output:
     file sequences
 
-    "blastdbcmd -db ${db} -entry_batch $top_hits > sequences"
+    "blastdbcmd -db ${db} -entry_batch top_hits > sequences"
 }
 
 process all(merge:true) {

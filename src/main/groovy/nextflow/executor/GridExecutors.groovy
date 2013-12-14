@@ -18,7 +18,6 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermissions
@@ -30,11 +29,13 @@ import nextflow.exception.InvalidExitException
 import nextflow.processor.FileInParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
-import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskMonitor
+import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.util.CmdLineHelper
 import org.apache.commons.io.IOUtils
+
+import static nextflow.processor.TaskHandler.Status.*
 
 /**
  * Generic task processor executing a task through a grid facility
@@ -219,13 +220,13 @@ class GridTaskHandler extends TaskHandler {
                 }
                 // save the JobId in the
                 this.jobId = executor.parseJobId(result)
-                this.status = Status.SUBMITTED
+                this.status = SUBMITTED
             }
             catch( Exception e ) {
                 task.exitCode = exitStatus
                 task.script = CmdLineHelper.toLine(cli)
                 task.stdout = result
-                status = Status.TERMINATED
+                status = COMPLETED
                 throw new InvalidExitException("Error submitting task '${task.name}' for execution", e )
             }
 
@@ -240,24 +241,71 @@ class GridTaskHandler extends TaskHandler {
 
     }
 
-    private int readExitStatus() {
-        if( exitFile && exitFile.exists() ) {
-            def status = exitFile.text
+
+    private long exitTimestampMillis
+
+    private int exitEmptyCount
+
+    /**
+     * When a process terminated save its exit status into the file defined by #exitFile
+     *
+     * @return The int value contained in the exit file or {@code null} if the file does not exist. When the
+     * file contains an invalid number return {@code Integer#MAX_VALUE}
+     */
+    private Integer readExitStatus() {
+
+        /*
+         * when the file does not exist return null, to force the monitor to continue to wait
+         */
+        if( !exitFile || !exitFile.exists() ) {
+            return null
+        }
+
+        /*
+         * read the exit file, it should contain the executed process exit status
+         */
+        def status = exitFile.text?.trim()
+        if( status ) {
             try {
-                return status.trim().toInteger()
+                return status.toInteger()
             }
             catch( Exception e ) {
-                log.warn "Unable to parse task exit file: $exitFile", e
+                log.warn "Unable to parse task exit file: $exitFile -- bad value: '$status'"
             }
         }
-        Integer.MAX_VALUE
+
+        else {
+            /*
+             * Since working with NFS it may happen that the file exists BUT it is empty due to network latencies,
+             * before retuning an invalid exit code, wait some seconds.
+             *
+             * More in detail:
+             * 1) the very first time that arrive here initialize the 'exitTimestampMillis' to the current timestamp
+             * 2) when the file is empty but less than 5 seconds are spent from the first check, return null
+             *    this will force the monitor to continue to wait for job termination
+             * 3) if more than 5 seconds are spent, and the file is empty return MAX_INT as an invalid exit status
+             *
+             */
+            if( !exitTimestampMillis ) {
+                exitTimestampMillis = System.currentTimeMillis()
+            }
+
+            def delta = System.currentTimeMillis() - exitTimestampMillis
+            if( delta < 90_000 ) {
+                log.debug "File is returning an empty content ($exitEmptyCount): $exitFile -- Try to wait a while and .. pray."
+                return null
+            }
+            log.warn "Unable to read command status from: $exitFile after $delta ms"
+        }
+
+        return Integer.MAX_VALUE
     }
 
     @Override
     boolean checkIfRunning() {
 
-        if( isSubmitted() && startFile.exists() ) {
-            status = Status.RUNNING
+        if( isSubmitted() && startFile && startFile.exists() ) {
+            status = RUNNING
             return true
         }
 
@@ -265,14 +313,14 @@ class GridTaskHandler extends TaskHandler {
     }
 
     @Override
-    boolean checkIfTerminated() {
+    boolean checkIfCompleted() {
 
-        if( isRunning() && exitFile.exists() ) {
-
+        def _exit
+        if( isRunning() && (_exit = readExitStatus()) != null ) {
             // finalize the task
-            task.exitCode = readExitStatus()
+            task.exitCode = _exit
             task.stdout = outputFile
-            status = Status.TERMINATED
+            status = COMPLETED
             return true
         }
 

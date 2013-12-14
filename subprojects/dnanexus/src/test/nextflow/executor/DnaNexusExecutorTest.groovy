@@ -130,7 +130,7 @@ class DnaNexusExecutorTest extends Specification {
         handler.processJobId = '123'
         handler.status = TaskHandler.Status.RUNNING
         then:
-        !handler.checkIfTerminated()
+        !handler.checkIfCompleted()
         handler.status == TaskHandler.Status.RUNNING
 
         when:
@@ -142,8 +142,8 @@ class DnaNexusExecutorTest extends Specification {
         handler.processJobId = '123'
         handler.status = TaskHandler.Status.RUNNING
         then:
-        handler.checkIfTerminated()
-        handler.status == TaskHandler.Status.TERMINATED
+        handler.checkIfCompleted()
+        handler.status == TaskHandler.Status.COMPLETED
         task2.exitCode == 33
         task2.stdout == 'Task says Hola'
 

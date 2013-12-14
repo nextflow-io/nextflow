@@ -18,11 +18,10 @@
  */
 package nextflow.processor
 import java.nio.file.Path
-import java.util.concurrent.Phaser
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
-import com.google.common.hash.HashCode
+import embed.com.google.common.hash.HashCode
 import groovy.transform.PackageScope
 import groovy.transform.Synchronized
 import groovy.util.logging.Slf4j
@@ -53,12 +52,12 @@ abstract class TaskProcessor {
     /**
      * Global count of all task instances
      */
-    static protected int allCount
+    static final protected allCount = new AtomicInteger()
 
     /**
-     * Count the number of instance (run) of this task
+     * Unique task index number (run)
      */
-    protected int instancesCount
+    final protected indexCount = new AtomicInteger()
 
     /**
      * The current workflow execution session
@@ -94,7 +93,7 @@ abstract class TaskProcessor {
     /**
      * Whenever all inputs for this task are *scalar* value, i.e. simple data types and not collections of values
      */
-    protected allScalarValues
+    protected volatile boolean allScalarValues
 
     /**
      * The underlying executor which will run the task
@@ -106,11 +105,6 @@ abstract class TaskProcessor {
      * definition as well as other execution meta-declaration
      */
     protected final TaskConfig taskConfig
-
-    /**
-     * Lock to protected against race-condition the task creation phase
-     */
-    private static final creationLock = new ReentrantLock(true)
 
     /**
      * Lock to protected against race-condition the folder creation phase
@@ -129,11 +123,34 @@ abstract class TaskProcessor {
     private final random = new Random()
 
     /**
-     * Count the errors showed
+     * Count the number errors showed
      */
     private final errorCount = new AtomicInteger()
 
-    protected Phaser phaser = new Phaser()
+    /**
+     * Count how many times the process finalization method has been invoked
+     *
+     * See {@code #finalizeTask0()}
+     * See {@code #checkProcessTermination}
+     */
+    protected final finalizeCount = new AtomicInteger()
+
+    /**
+     * Count how many times this process has been launched
+     */
+    protected final instanceCount = new AtomicInteger()
+
+    /**
+     * Flat set {@code true} when the processor receive a poison pill message (to stop it)
+     */
+    protected volatile boolean receivedPoisonPill
+
+    /**
+     * Flag set {@code true} when the processor termination has been invoked
+     *
+     * See {@code #checkProcessTermination}
+     */
+    protected volatile boolean terminated
 
     /* for testing purpose - do not remove */
     protected TaskProcessor() { }
@@ -236,7 +253,11 @@ abstract class TaskProcessor {
             taskConfig.stdout(dummy)
         }
 
+        // create the underlying dataflow operator
         createOperator()
+
+        // register the processor
+        session.taskRegister()
 
         /*
          * When there is a single output channel, return let returns that item
@@ -342,18 +363,9 @@ abstract class TaskProcessor {
     final protected TaskRun createTaskRun() {
         log.trace "Creating a new task > $name"
 
-        TaskRun result = null
-        creationLock.lock()
-        try {
-            allCount ++
-            instancesCount ++
-            result = new TaskRun(id: allCount, index: instancesCount, name: "$name ($instancesCount)", processor: this )
-        }
-        finally {
-            creationLock.unlock()
-        }
-
-        return result
+        def id = allCount.incrementAndGet()
+        def index = indexCount.incrementAndGet()
+        new TaskRun(id: id, index: index, name: "$name ($index)", processor: this )
     }
 
 
@@ -374,7 +386,7 @@ abstract class TaskProcessor {
                 // find another folder name that does NOT exist
                 while( true ) {
                     hash = CacheHelper.hasher( [hash.asInt(), random.nextInt() ] ).hash()
-                    folder = FileHelper.createWorkFolder(session.workDir, hash)
+                    folder = FileHelper.getWorkFolder(session.workDir, hash)
                     if( !folder.exists() ) {
                         break
                     }
@@ -403,7 +415,7 @@ abstract class TaskProcessor {
      */
     final boolean checkCachedOutput(TaskRun task, Path folder) {
         if( !folder.exists() ) {
-            log.trace "Cached folder does not exists > $folder -- return false"
+            log.trace "[$task.name] Cached folder does not exists > $folder -- return false"
             // no folder -> no cached result
             return false
         }
@@ -414,14 +426,14 @@ abstract class TaskProcessor {
         // check if exists the task exit code file
         def exitFile = task.getCmdExitFile()
         if( exitFile.empty() ) {
-            log.trace "Exit file is empty > $exitFile -- return false"
+            log.trace "[$task.name] Exit file is empty > $exitFile -- return false"
             return false
         }
 
         def exitValue = exitFile.text.trim()
         def exitCode = exitValue.isInteger() ? exitValue.toInteger() : null
         if( exitCode == null || !(exitCode in taskConfig.validExitCodes) ) {
-            log.trace "Exit code is not valid > $exitValue -- return false"
+            log.trace "[$task.name] Exit code is not valid > $exitValue -- return false"
             return false
         }
 
@@ -438,7 +450,7 @@ abstract class TaskProcessor {
             return true
         }
         catch( MissingFileException e ) {
-            log.debug "Missed cache > ${e.getMessage()} -- folder: $folder"
+            log.debug "[$task.name] Missed cache > ${e.getMessage()} -- folder: $folder"
             task.exitCode = Integer.MAX_VALUE
             task.workDirectory = null
             return false
@@ -508,6 +520,7 @@ abstract class TaskProcessor {
      * Send a poison pill over all the outputs channel
      */
     final protected synchronized void sendPoisonPill() {
+        log.trace "Forwarding Poison-pill for task > ${name}"
 
         taskConfig.outputs.eachParam { name, channel ->
             if( channel instanceof DataflowQueue ) {
@@ -947,7 +960,6 @@ abstract class TaskProcessor {
      * @param task The {@code TaskRun} instance to finalize
      * @param producedFiles The map of files to be bind the outputs
      */
-    @Synchronized
     private void finalizeTask0( TaskRun task ) {
         log.debug "Finalize task > ${task.name}"
 
@@ -956,16 +968,31 @@ abstract class TaskProcessor {
             bindOutputs(task)
         }
 
-        // deregister it
-        phaser.arriveAndDeregister()
+        checkProcessTermination(true)
+    }
 
-        // terminate the processor
-        def done = phaser.isTerminated()
-        log.trace "Finalize task > ${task.name} -- done: $done"
-        if( done ) {
-            processor.terminate()
+
+    @Synchronized
+    protected boolean checkProcessTermination( boolean isFinalize = false ) {
+
+        if( terminated ) {
+            return true
         }
 
+        def created = instanceCount.get()
+        def finalized = isFinalize ? finalizeCount.incrementAndGet() : finalizeCount.get()
+        // log.debug "Finalizing task > task: ${name}; finalize: $isFinalize; allScalarValues: ${allScalarValues}; receivedPoisonPill: ${receivedPoisonPill}; instancesCount: ${tot}; finalizeCount: ${count} "
+
+        def done = allScalarValues || ( receivedPoisonPill && created == finalized )
+        if( done ) {
+            log.debug "Finalizing task > ${name} -- isFinalize: $isFinalize"
+            sendPoisonPill()
+            session.taskDeregister()
+            processor.terminate()
+            terminated = true
+        }
+
+        return done
     }
 
 

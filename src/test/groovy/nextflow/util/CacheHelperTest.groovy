@@ -19,7 +19,7 @@
 
 package nextflow.util
 
-import com.google.common.hash.Hashing
+import embed.com.google.common.hash.Hashing
 import spock.lang.Specification
 
 /**

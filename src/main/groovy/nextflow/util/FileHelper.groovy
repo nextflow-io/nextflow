@@ -23,7 +23,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.spi.FileSystemProvider
 
-import com.google.common.hash.HashCode
+import embed.com.google.common.hash.HashCode
 import groovy.util.logging.Slf4j
 /**
  *
@@ -207,8 +207,14 @@ class FileHelper {
         }
 
         if ( Files.isDirectory(path) ) {
-            Iterator<Path> itr = Files.newDirectoryStream(path).iterator()
-            return !itr.hasNext()
+            def stream = Files.newDirectoryStream(path)
+            try {
+                Iterator<Path> itr = stream.iterator()
+                return !itr.hasNext()
+            }
+            finally {
+                stream.close()
+            }
         }
         else {
             Files.size(path)==0
@@ -221,7 +227,7 @@ class FileHelper {
      * @param hash
      * @return
      */
-    final static Path createWorkFolder(Path bashPath, HashCode hash) {
+    final static Path getWorkFolder(Path bashPath, HashCode hash) {
         assert bashPath
         assert hash
 

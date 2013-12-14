@@ -1,4 +1,4 @@
-import com.google.common.hash.HashCodes
+import embed.com.google.common.hash.HashCodes
 import nextflow.util.CacheHelper
 
 /*

@@ -21,9 +21,9 @@ package nextflow.util
 
 import java.nio.file.Path
 
-import com.google.common.hash.HashFunction
-import com.google.common.hash.Hasher
-import com.google.common.hash.Hashing
+import embed.com.google.common.hash.HashFunction
+import embed.com.google.common.hash.Hasher
+import embed.com.google.common.hash.Hashing
 import groovy.util.logging.Slf4j
 import nextflow.processor.FileHolder
 
