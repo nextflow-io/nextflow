@@ -49,7 +49,7 @@ class DnaNexusExecutor extends AbstractExecutor {
 
     def TaskMonitor createTaskMonitor() {
         final queueSize = session.getQueueSize(name, 10)
-        final pollInterval = session.getPollInterval(name, 15_000)
+        final pollInterval = session.getPollIntervalMillis(name, 15_000)
         log.debug "Creating executor queue with size: $queueSize; poll-interval: $pollInterval"
 
         return new TaskPollingMonitor(session, queueSize, pollInterval).start()

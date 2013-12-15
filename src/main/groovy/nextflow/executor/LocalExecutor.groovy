@@ -42,7 +42,7 @@ class LocalExecutor extends AbstractExecutor {
     protected TaskMonitor createTaskMonitor() {
         final defSize = Math.max( Runtime.getRuntime().availableProcessors()-1, 1 )
         final queueSize = session.getQueueSize(name, defSize)
-        final pollInterval = session.getPollInterval(name, 50)
+        final pollInterval = session.getPollIntervalMillis(name, 50)
         log.debug "Creating executor queue with size: $queueSize; poll-interval: $pollInterval"
 
         return new TaskPollingMonitor(session, queueSize, pollInterval) .start()

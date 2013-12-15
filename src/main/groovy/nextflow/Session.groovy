@@ -191,55 +191,43 @@ class Session {
         phaser.arriveAndDeregister()
     }
 
+    protected getExecConfigProp( String execName, String propName, Object defValue ) {
 
-    public int getQueueSize( String execName, int defValue ) {
-        // creating the running tasks queue
-        def size = null
-
-        // make sure that the *executor* is a map object
-        // it could also be a plain string (when it specifies just the its name)
-        if( config.executor instanceof Map ){
-            if( execName ) {
-                size = config.executor?."$execName"?.queueSize
-            }
-
-            if( !size && config.executor?.queueSize ) {
-                size = config.executor?.queueSize
-            }
-        }
-
-
-        if( !size ) {
-            size = defValue
-            log.debug "Undefined executor queueSize property runnable queue size -- fallback default value: $size"
-        }
-
-        return size
-    }
-
-    public long getPollInterval( String execName, long defValue = 1_000 ) {
-        // creating the running tasks queue
         def result = null
 
         // make sure that the *executor* is a map object
         // it could also be a plain string (when it specifies just the its name)
         if( config.executor instanceof Map ){
-            if( execName ) {
-                result = config.executor?."$execName"?.pollInterval
+            if( execName && config.executor[execName] instanceof Map ) {
+                result = config.executor[execName][propName]
             }
 
-            if( !result && config.executor?.pollInterval ) {
-                result = config.executor?.pollInterval
+            if( !result && config.executor[propName] ) {
+                result = config.executor[propName]
             }
         }
 
 
         if( !result ) {
             result = defValue
-            log.debug "Undefined executor queueSize property runnable queue size -- fallback on num of available processors-1: $result"
+            log.debug "Undefined executor property: '$propName' -- fallback default value: $result"
         }
 
         return result
+
+    }
+
+
+    public int getQueueSize( String execName, int defValue ) {
+        getExecConfigProp(execName, 'queueSize', defValue) as int
+    }
+
+    public long getPollIntervalMillis( String execName, long defValue = 1_000 ) {
+        getExecConfigProp( execName, 'pollInterval', defValue ) as long
+    }
+
+    public long getGridExitReadTimeoutMillis( String execName, long defValue = 0 ) {
+        getExecConfigProp( execName, 'exitReadTimeout', defValue ) as long
     }
 
 

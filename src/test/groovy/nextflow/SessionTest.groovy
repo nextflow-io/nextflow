@@ -78,24 +78,24 @@ class SessionTest extends Specification {
         when:
         session.config = [ executor:[sge:[pollInterval: 345] ] ]
         then:
-        session.getPollInterval('sge') == 345
-        session.getPollInterval('xxx') == 1_000
-        session.getPollInterval(null) == 1_000
-        session.getPollInterval(null, 2_000) == 2_000
+        session.getPollIntervalMillis('sge') == 345
+        session.getPollIntervalMillis('xxx') == 1_000
+        session.getPollIntervalMillis(null) == 1_000
+        session.getPollIntervalMillis(null, 2_000) == 2_000
 
         when:
         session.config = [ executor:[ pollInterval: 321, sge:[pollInterval:789] ] ]
         then:
-        session.getPollInterval('sge') == 789
-        session.getPollInterval('xxx') == 321
-        session.getPollInterval(null) == 321
+        session.getPollIntervalMillis('sge') == 789
+        session.getPollIntervalMillis('xxx') == 321
+        session.getPollIntervalMillis(null) == 321
 
         when:
         session.config = [ executor: 'lsf' ]
         then:
-        session.getPollInterval('sge', 33 ) == 33
-        session.getPollInterval('xxx', 44 ) == 44
-        session.getPollInterval(null, 55 ) == 55
+        session.getPollIntervalMillis('sge', 33 ) == 33
+        session.getPollIntervalMillis('xxx', 44 ) == 44
+        session.getPollIntervalMillis(null, 55 ) == 55
 
     }
 }

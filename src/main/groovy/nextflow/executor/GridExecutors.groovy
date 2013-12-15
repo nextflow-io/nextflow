@@ -51,7 +51,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
      */
     def TaskMonitor createTaskMonitor() {
         final queueSize = session.getQueueSize(name, 50)
-        final pollInterval = session.getPollInterval(name, 1_000)
+        final pollInterval = session.getPollIntervalMillis(name, 1_000)
         log.debug "Creating executor queue with size: $queueSize; poll-interval: $pollInterval"
 
         return new TaskPollingMonitor(session, queueSize, pollInterval) .start()
