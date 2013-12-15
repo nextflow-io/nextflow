@@ -48,9 +48,8 @@ class CliOptions {
     @Parameter(names=['-pi','-poll-interval'], description = 'The executor poll interval (duration string ending with ms|s|m)', converter = DurationConverter)
     long pollInterval
 
-    @Parameter(names=['-qs','-queue-size'], description = 'The max number of task in execution queue')
+    @Parameter(names=['-qs','-queue-size'], description = 'The max number of processes that can be executed in parallel by each executor')
     Integer queueSize
-
 
     @Parameter(names=['-test'], description = 'Test the function with the name specified')
     String test
