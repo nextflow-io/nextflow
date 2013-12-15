@@ -42,7 +42,7 @@ class CliOptions {
     @Parameter(names=['-resume'], description = 'Execute the script using the cached results, useful to continue executions that stopped by an error')
     String resume
 
-    @Parameter(names=['-ps','-pool-size'], description = 'The number of threads in the executor pool')
+    @Parameter(names=['-ps','-pool-size'], description = 'The number of threads in the execution pool', hidden = true)
     Integer poolSize
 
     @Parameter(names=['-pi','-poll-interval'], description = 'The executor poll interval (duration string ending with ms|s|m)', converter = DurationConverter)
