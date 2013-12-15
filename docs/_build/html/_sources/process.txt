@@ -39,7 +39,12 @@ the process scripts following the syntax showed below:
 Directives
 ==========
 
-The `directives` compartment contains the process configuration and execution options.
+In the `directive` compartment can be specified configuration options which will affect the execution of the current
+process. They have the following syntax::
+
+    name value [, value2 [,..]]
+
+Below are listed directives that can be applied to any process.
 
 
 cacheable
@@ -52,8 +57,9 @@ to disable caching feature for this process. For example::
 
     cache false
 
-    "your command here"
-
+    """
+    command not to be cached
+    """
   }
 
 
@@ -67,37 +73,64 @@ if you need to show the process output.
 errorStrategy
 --------------
 
-This
+The ``errorStrategy`` directive defines how an error condition is managed by the process. By default when an error status
+is returned by the execute script, the process stops immediately that in turns forces cause the entire pipeline to stops.
 
-See also `validExitCodes`_
+When using the directive ``errorStrategy 'ignore'`` the process do not stop on error condition and it just reports a message
+to notify the error event.
+
+For example::
+
+    process ignoreAnyError {
+      errorStrategy 'ignore'
+
+      "command to be executed"
+    }
+
+.. note:: By definition a command script is failing when it terminates with a non-zero exit status. To change this behavior
+  see `validExitStatus`_.
 
 
 executor
 --------
 
-(default: ``'local'``)
+The ``executor`` directive allows to specify the underlying system on which the process is actually executed. The following
+values can be used:
+
+- ``local``: The process is executed in the local computer where `Nextflow` is launched.
+
+- ``sge``: the process is executed using a Sun Grid Engine / `Open Grid Engine <http://gridscheduler.sourceforge.net/>`_.
+
+- ```lsf```: The process is executed via the `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ job scheduler.
+
+- ``slurm``: The process is executed via the SLURM job scheduler.
+
+- ``dnanexus``: The process is executed by submitting it to a `DNAnexus <http://www.dnanexus.com/>`_ cloud.
 
 
-validExitCodes
+
+validExitStatus
 -------------------
 
  (default: ``0`)
 
-clusterOptions
----------------
 
-queue
------
+..
+    clusterOptions
+    ---------------
 
-(sge,lsf)
+    queue
+    -----
 
-maxDuration
-------------
-(sge,slurm)
+    (sge,lsf)
 
-maxMemory
----------
-(sge)
+    maxDuration
+    ------------
+    (sge,slurm)
+
+    maxMemory
+    ---------
+    (sge)
 
 
 Inputs

@@ -1,6 +1,5 @@
 
 
-
 <!DOCTYPE html>
 <!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
@@ -8,7 +7,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Index &mdash; Nextflow 0.6.0 documentation</title>
+  <title>Basic concepts &mdash; Nextflow 0.6.0 documentation</title>
   
 
   
@@ -44,7 +43,9 @@
   
 
   
-    <link rel="top" title="Nextflow 0.6.0 documentation" href="index.html"/> 
+    <link rel="top" title="Nextflow 0.6.0 documentation" href="index.html"/>
+        <link rel="next" title="Process" href="process.html"/>
+        <link rel="prev" title="Get started" href="install.html"/> 
 
   <script src="//cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
 
@@ -68,16 +69,16 @@
       <div class="wy-menu wy-menu-vertical" data-spy="affix">
         
         
-            <ul>
+            <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="install.html">Get started</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="install.html#requirements">Requirements</a></li>
 <li class="toctree-l2"><a class="reference internal" href="install.html#installation">Installation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="install.html#verify-it">Verify it</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="basic.html">Basic concepts</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="basic.html#processes-and-channels">Processes and channels</a></li>
-<li class="toctree-l2"><a class="reference internal" href="basic.html#execution-abstraction">Execution abstraction</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Basic concepts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#processes-and-channels">Processes and channels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#execution-abstraction">Execution abstraction</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="process.html">Process</a><ul>
@@ -131,23 +132,99 @@
         <div class="rst-content">
           <ul class="wy-breadcrumbs">
   <li><a href="index.html">Docs</a> &raquo;</li>
-  <li><a href=""></a></li>
+  <li><a href="">Basic concepts</a></li>
     <li class="wy-breadcrumbs-aside">
+      
+        <a href="_sources/basic.txt" rel="nofollow"> View page source</a>
       
     </li>
 </ul>
 <hr/>
 
           
+  <div class="section" id="basic-concepts">
+<h1>Basic concepts<a class="headerlink" href="#basic-concepts" title="Permalink to this headline">¶</a></h1>
+<p><cite>Nextflow</cite> is a reactive workflow framework that ease the writing of computational pipelines with complex data.</p>
+<p>It is designed around the idea that the Linux platform is the lingua franca of data science, since it provides many
+simple command line and scripting tools, which by themselves are powerful, but when chained together facilitate complex
+data manipulations.</p>
+<p><cite>Nextflow</cite> extends this model adding to it the ability to define complex processes interactions and an high-level
+parallel computational environment based on the <cite>dataflow</cite> programming model.</p>
+<div class="section" id="processes-and-channels">
+<h2>Processes and channels<a class="headerlink" href="#processes-and-channels" title="Permalink to this headline">¶</a></h2>
+<p>In practice, Nextflow pipeline script is defined by composing many different processes.
+Each process can be written in any scripting language that can be executed by the Linux platform (BASH, Perl, Ruby, Python, etc).</p>
+<p>Processes are executed independently and are isolated each others i.e. they do not share a common (writable) state.
+The only way they can communicate is by using asynchronous FIFO queues, called <cite>channels</cite> in the Nextflow model.</p>
+<p>Any process can define one or more channels as <cite>input</cite> and <cite>output</cite>. The processes interaction and ultimately the
+pipeline execution flow is implicitly defined by these inputs and outputs declaration. For example:</p>
+<div class="highlight-python"><pre>params.query = "$HOME/sample.fa"
+params.db = "$HOME/tools/blast-db/pdb/pdb"
 
-<h1 id="index">Index</h1>
+db = file(params.db)
+query = file(params.query)
 
-<div class="genindex-jumpbox">
- 
+process blastSearch {
+    input:
+    file query
+
+    output:
+    file top_hits
+
+    """
+    blastp -db $db -query $query -outfmt 6 &gt; blast_result
+    cat blast_result | head -n 10 | cut -f 2 &gt; top_hits
+    """
+}
+
+
+process extractTopHits {
+    input:
+    file top_hits
+
+    output:
+    file sequences
+
+    """
+    blastdbcmd -db ${db} -entry_batch $top_hits &gt; sequences
+    """
+}</pre>
+</div>
+<p>In the above example are defined two processes, the execution order is not set by the fact the <tt class="docutils literal"><span class="pre">blastSearch</span></tt> process comes
+before the <tt class="docutils literal"><span class="pre">extractTopHits</span></tt> in the script, it could be written also in the other way around, but because the latter defines
+the channel <tt class="docutils literal"><span class="pre">top_hits</span></tt> in its inputs declaration while the <tt class="docutils literal"><span class="pre">blastSearch</span></tt> process has the channel define as in the outputs
+declaration.</p>
+</div>
+<div class="section" id="execution-abstraction">
+<h2>Execution abstraction<a class="headerlink" href="#execution-abstraction" title="Permalink to this headline">¶</a></h2>
+<p>While a process define <cite>what</cite> command or script has to be executed, the <cite>executor</cite> has the role to determine <cite>how</cite> that
+script is actually run in the target system.</p>
+<p>If not specified otherwise processes are executed in the local computer. Local executor is very useful for pipeline
+development and test, but for real world bioinformatics pipelines HPC or cloud platform may be required.</p>
+<p>In other words, <cite>Nextflow</cite> provides an abstraction between the pipeline functional logic and the underlying execution system.
+Thus it is possible to write a pipeline once and have it running on your computer, a grid platform or the cloud seamlessly,
+without modifying it, by simply defined the target execution platform in the configuration file.</p>
+<p>Alternatively the following HPC and cloud platforms are supported:</p>
+<ul class="simple">
+<li><a class="reference external" href="http://gridscheduler.sourceforge.net/">Sun/Open Grid Engine</a></li>
+<li><a class="reference external" href="http://www.ibm.com/systems/technicalcomputing/platformcomputing/products/lsf/">Platform LSF</a></li>
+<li><a class="reference external" href="https://computing.llnl.gov/linux/slurm/">SLURM</a></li>
+<li><a class="reference external" href="http://www.dnanexus.com">DNAnexus</a></li>
+</ul>
+</div>
 </div>
 
 
           <footer>
+  
+    <div class="rst-footer-buttons">
+      
+        <a href="process.html" class="btn btn-neutral float-right" title="Process"/>Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="install.html" class="btn btn-neutral" title="Get started"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
   
 
   <br><br>

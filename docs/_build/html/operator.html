@@ -44,7 +44,7 @@
 
   
     <link rel="top" title="Nextflow 0.6.0 documentation" href="index.html"/>
-        <link rel="next" title="Process" href="process.html"/>
+        <link rel="next" title="Executor" href="executor.html"/>
         <link rel="prev" title="Channel" href="channel.html"/> 
 
   <script src="//cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
@@ -77,6 +77,13 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="basic.html">Basic concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="process.html">Process</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="process.html#directives">Directives</a></li>
+<li class="toctree-l2"><a class="reference internal" href="process.html#inputs">Inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="process.html#outputs">Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="process.html#script">Script</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="channel.html">Channel</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="channel.html#channel-factory">Channel factory</a></li>
 <li class="toctree-l2"><a class="reference internal" href="channel.html#binding-values">Binding values</a></li>
@@ -92,8 +99,14 @@
 <li class="toctree-l2"><a class="reference internal" href="#math-operators">Math operators</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="process.html">Process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executor</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="executor.html#local-executor">Local executor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="executor.html#grid-executors">Grid executors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="executor.html#dnanexus">DNAnexus</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="config.html">Configuration file</a></li>
+<li class="toctree-l1"><a class="reference internal" href="resume.html">Caching &amp; Resuming</a></li>
 </ul>
 
         
@@ -821,7 +834,7 @@ For example:</p>
   
     <div class="rst-footer-buttons">
       
-        <a href="process.html" class="btn btn-neutral float-right" title="Process"/>Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="executor.html" class="btn btn-neutral float-right" title="Executor"/>Next <span class="icon icon-circle-arrow-right"></span></a>
       
       
         <a href="channel.html" class="btn btn-neutral" title="Channel"><span class="icon icon-circle-arrow-left"></span> Previous</a>
