@@ -3,7 +3,8 @@ Basic concepts
 ###############
 
 
-`Nextflow` is a reactive workflow framework that ease the writing of computational pipelines with complex data.
+`Nextflow` is a reactive workflow framework and a programming `DSL <http://en.wikipedia.org/wiki/Domain-specific_language>`_
+that ease the writing of computational pipelines with complex data.
 
 It is designed around the idea that the Linux platform is the lingua franca of data science, since it provides many
 simple command line and scripting tools, which by themselves are powerful, but when chained together facilitate complex
@@ -83,5 +84,26 @@ Alternatively the following HPC and cloud platforms are supported:
 * `Platform LSF <http://www.ibm.com/systems/technicalcomputing/platformcomputing/products/lsf/>`_
 * `SLURM <https://computing.llnl.gov/linux/slurm/>`_
 * `DNAnexus <http://www.dnanexus.com>`_
+
+
+
+Scripting language
+------------------
+
+Despite the fact `Nextflow` is designed to be used with a minimal learning curve,
+
+
+
+Running pipeline
+----------------
+
+
+Pipeline parameters
+--------------------
+
+
+Configuration options
+---------------------
+
 
 
