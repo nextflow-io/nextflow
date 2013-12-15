@@ -18,7 +18,6 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Files
 
 import nextflow.processor.TaskConfig
@@ -106,6 +105,7 @@ class GridExecutorTest extends Specification {
 
     def testCheckIfTerminateEmptyFile() {
 
+        given:
         def task = new TaskRun()
         task.workDirectory = Files.createTempDirectory('testHandler')
 
@@ -116,12 +116,17 @@ class GridExecutorTest extends Specification {
         def handler = new GridTaskHandler(task, config, executor)
         handler.status = TaskHandler.Status.RUNNING
         handler.exitFile.text = ''
+        handler.exitStatusReadTimeoutMillis = 1000
 
         then:
+        // the first try return false
         !handler.checkIfCompleted()
-        sleep 5_100
+        // wait more the timeout defined by the property 'exitStatusReadTimeoutMillis'
+        sleep 1_500
+        // now 'checkIfCompleted' returns true
         handler.checkIfCompleted()
         handler.status == TaskHandler.Status.COMPLETED
+        // but the 'exitStatus' not ZERO
         handler.task.exitStatus == Integer.MAX_VALUE
 
     }
@@ -129,6 +134,7 @@ class GridExecutorTest extends Specification {
 
     def testCheckIfTerminateEmptyWithLatency() {
 
+        setup:
         def task = new TaskRun()
         task.workDirectory = Files.createTempDirectory('testHandler')
         def config = Mock(TaskConfig)

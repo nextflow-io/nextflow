@@ -178,6 +178,8 @@ class GridTaskHandler extends TaskHandler {
     /** The unique job ID as provided by the underlying grid platform */
     private jobId
 
+    private long exitStatusReadTimeoutMillis
+
     GridTaskHandler( TaskRun task, TaskConfig config, AbstractGridExecutor executor ) {
         super(task, config)
         this.executor = executor
@@ -185,6 +187,7 @@ class GridTaskHandler extends TaskHandler {
         this.exitFile = task.getCmdExitFile()
         this.outputFile = task.getCmdOutputFile()
         this.wrapperFile = task.getCmdWrapperFile()
+        this.exitStatusReadTimeoutMillis = executor.session?.getGridExitReadTimeoutMillis( executor.name ) ?: 90_000
     }
 
     /*
@@ -291,7 +294,7 @@ class GridTaskHandler extends TaskHandler {
             }
 
             def delta = System.currentTimeMillis() - exitTimestampMillis
-            if( delta < 90_000 ) {
+            if( delta < exitStatusReadTimeoutMillis ) {
                 log.debug "File is returning an empty content ($exitEmptyCount): $exitFile -- Try to wait a while and .. pray."
                 return null
             }
