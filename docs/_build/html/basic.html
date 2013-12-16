@@ -149,20 +149,21 @@
   <div class="section" id="basic-concepts">
 <h1>Basic concepts<a class="headerlink" href="#basic-concepts" title="Permalink to this headline">¶</a></h1>
 <p><cite>Nextflow</cite> is a reactive workflow framework and a programming <a class="reference external" href="http://en.wikipedia.org/wiki/Domain-specific_language">DSL</a>
-that ease the writing of computational pipelines with complex data.</p>
-<p>It is designed around the idea that the Linux platform is the lingua franca of data science, since it provides many
-simple command line and scripting tools, which by themselves are powerful, but when chained together facilitate complex
+that eases the writing of computational pipelines with complex data.</p>
+<p>It is designed around the idea that the Linux platform is the lingua franca of data science. Linux provides many
+simple command lines and scripting tools, which by themselves are powerful, but when chained together facilitate complex
 data manipulations.</p>
-<p><cite>Nextflow</cite> extends this model adding to it the ability to define complex processes interactions and an high-level
+<p><cite>Nextflow</cite> extends this approach adding to it the ability to define complex program interactions and an high-level
 parallel computational environment based on the <cite>dataflow</cite> programming model.</p>
 <div class="section" id="processes-and-channels">
 <h2>Processes and channels<a class="headerlink" href="#processes-and-channels" title="Permalink to this headline">¶</a></h2>
-<p>In practice, Nextflow pipeline script is defined by composing many different processes.
+<p>In practice a Nextflow pipeline script is make by joining together many different processes.
 Each process can be written in any scripting language that can be executed by the Linux platform (BASH, Perl, Ruby, Python, etc).</p>
-<p>Processes are executed independently and are isolated each others i.e. they do not share a common (writable) state.
-The only way they can communicate is by using asynchronous FIFO queues, called <cite>channels</cite> in the Nextflow model.</p>
-<p>Any process can define one or more channels as <cite>input</cite> and <cite>output</cite>. The processes interaction and ultimately the
-pipeline execution flow is implicitly defined by these inputs and outputs declaration. For example:</p>
+<p>Processes are executed independently and are isolated from each other i.e. they do not share a common (writable) state.
+The only way they can communicate is by using asynchronous FIFO queues, called <cite>channels</cite> in the Nextflow lingo.</p>
+<p>Any process can define one or more channels as <cite>input</cite> and <cite>output</cite>. The interaction between these processes,
+and ultimately the pipeline execution flow itself, is implicitly defined by these input and output declarations.</p>
+<p>A Nextflow script looks like the following example:</p>
 <div class="highlight-python"><pre>params.query = "$HOME/sample.fa"
 params.db = "$HOME/tools/blast-db/pdb/pdb"
 
@@ -195,20 +196,20 @@ process extractTopHits {
     """
 }</pre>
 </div>
-<p>In the above example are defined two processes, the execution order is not set by the fact the <tt class="docutils literal"><span class="pre">blastSearch</span></tt> process comes
-before the <tt class="docutils literal"><span class="pre">extractTopHits</span></tt> in the script, it could be written also in the other way around, but because the latter defines
-the channel <tt class="docutils literal"><span class="pre">top_hits</span></tt> in its inputs declaration while the <tt class="docutils literal"><span class="pre">blastSearch</span></tt> process has the channel define as in the outputs
-declaration.</p>
+<p>In the above example two processes are defined. The execution order is not set by the fact that <tt class="docutils literal"><span class="pre">blastSearch</span></tt> process comes
+before the <tt class="docutils literal"><span class="pre">extractTopHits</span></tt> in the script (it could also be written the other way around) but because the first defines
+the channel <tt class="docutils literal"><span class="pre">top_hits</span></tt> in its output declarations while the <tt class="docutils literal"><span class="pre">extractTopHits</span></tt> process defines the same channel in its
+input declaration, and thus establishing a communication link from the <cite>blastSearch</cite> task towards the <cite>extractTopHits</cite> task.</p>
 </div>
 <div class="section" id="execution-abstraction">
 <h2>Execution abstraction<a class="headerlink" href="#execution-abstraction" title="Permalink to this headline">¶</a></h2>
-<p>While a process define <cite>what</cite> command or script has to be executed, the <cite>executor</cite> has the role to determine <cite>how</cite> that
-script is actually run in the target system.</p>
-<p>If not specified otherwise processes are executed in the local computer. Local executor is very useful for pipeline
-development and test, but for real world bioinformatics pipelines HPC or cloud platform may be required.</p>
-<p>In other words, <cite>Nextflow</cite> provides an abstraction between the pipeline functional logic and the underlying execution system.
+<p>While a process defines <cite>what</cite> command or script has to be executed, the <cite>executor</cite> has the role to determine <cite>how</cite>
+that script is actually run in the target system.</p>
+<p>If not specified otherwise processes are executed in the local computer. The local executor is very useful for pipeline
+development and test purposes, but for real world bioinformatics pipelines HPC or cloud platforms are required.</p>
+<p>In other words, <cite>Nextflow</cite> provides an abstraction between the pipeline&#8217;s functional logic and the underlying execution system.
 Thus it is possible to write a pipeline once and have it running on your computer, a grid platform or the cloud seamlessly,
-without modifying it, by simply defined the target execution platform in the configuration file.</p>
+without modifying it, by simply defining the target execution platform in the configuration file.</p>
 <p>Alternatively the following HPC and cloud platforms are supported:</p>
 <ul class="simple">
 <li><a class="reference external" href="http://gridscheduler.sourceforge.net/">Sun/Open Grid Engine</a></li>
@@ -219,7 +220,11 @@ without modifying it, by simply defined the target execution platform in the con
 </div>
 <div class="section" id="scripting-language">
 <h2>Scripting language<a class="headerlink" href="#scripting-language" title="Permalink to this headline">¶</a></h2>
-<p>Despite the fact <cite>Nextflow</cite> is designed to be used with a minimal learning curve,</p>
+<p>Beside the fact that <cite>Nextflow</cite> is designed to be used with a minimal learning curve, without having to study
+a new programming language and using your current skills, it also provides a powerful DSL scripting language.</p>
+<p>Nextflow scripting is a super-set of the <a class="reference external" href="http://en.wikipedia.org/wiki/Groovy_(programming_language)">Groovy programming language</a>
+which in turn is a super-set of the Java programming language, thus if you have some knowledge of these languages,
+or even only some confidence with the <cite>C/C++</cite> syntax, you will be comfortable using it.</p>
 </div>
 <div class="section" id="running-pipeline">
 <h2>Running pipeline<a class="headerlink" href="#running-pipeline" title="Permalink to this headline">¶</a></h2>
