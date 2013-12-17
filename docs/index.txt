@@ -17,6 +17,7 @@ Contents:
    channel
    operator
    executor
+   script
    config
    resume
 

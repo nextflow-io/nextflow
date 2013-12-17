@@ -99,10 +99,11 @@ Scripting language
 Beside the fact that `Nextflow` is designed to be used with a minimal learning curve, without having to study
 a new programming language and using your current skills, it also provides a powerful DSL scripting language.
 
-Nextflow scripting is a super-set of the `Groovy programming language <http://en.wikipedia.org/wiki/Groovy_(programming_language)>`_
+Nextflow scripting is an extension of the `Groovy programming language <http://en.wikipedia.org/wiki/Groovy_(programming_language)>`_
 which in turn is a super-set of the Java programming language, thus if you have some knowledge of these languages,
 or even only some confidence with the `C/C++` syntax, you will be comfortable using it.
 
+Read more about the Nextflow
 
 
 
