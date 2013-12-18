@@ -17,7 +17,7 @@ For a detailed description of the Groovy programming language, make references t
 * `Groovy in Action <http://www.manning.com/koenig2/>`_
 
 
-Scripting tutorial
+Language basics
 ==================
 
 
@@ -197,6 +197,130 @@ not broken up::
 
 
 
+Closures
+=========
+
+In very few words a closure is a block of code that can be passed as an argument to a function. That is you can define
+a chunk of code and then pass it around as if it were a string or an integer.
+
+More formally you can create functions that are first class objects.
+
+::
+
+    square = { it * it }
+
+
+The curly braces around the expression ``it * it`` tells the Groovy compiler to treat this expression as code.
+In this case, the designator ``it`` refers to whatever value is given to the function. Then this compiled function is
+assigned to the variable `'square`` much like those above. So now we can do something like this::
+
+
+    println square(9)
+
+and get the value 81.
+
+
+This is not very interesting until we find that we can pass this function ``square`` around as a method argument.
+There are some built in functions that take a function like this as an argument. One example is the ``collect`` method on lists.
+For example::
+
+    [ 1, 2, 3, 4 ].collect(square)
+
+
+This expression says, create an array with the values 1,2,3 and 4, then call the "collect" method, passing in the
+closure we defined above. The collect method runs through each item in the array, calls the closure on the item,
+then puts the result in a new array, resulting in:
+
+    [ 1, 4, 9, 16 ]
+
+
+For more methods you can call with closures as arguments, see the `Groovy GDK documentation <http://groovy.codehaus.org/groovy-jdk/>`_.
+
+
+By default closures take 1 parameter called "it", you can also create closures with named parameters.
+For example the method ``Map.each()`` can take a closure with two variables, to which it binds the `key` and the associated `value`::
+
+
+    printMapClosure = { key, value ->
+        println "$key = $value"
+    }
+
+    [ "Yue" : "Wu", "Mark" : "Williams", "sudha" : "Kumari" ].each(printMapClosure)
+
+
+Prints::
+
+
+    Yue=Wu
+    Mark=Williams
+    Sudha=Kumari
 
 
 
+
+
+Closures have another two important features. First they can access variables in the scope where they are defined and
+so they can `interact` with a variable (or more) outside itself.
+
+The second thing is that a closure can be defined in a `anonymous` manner, meaning that it is not given a name,
+and is defined in the place where the each method is called.
+
+As example showing both this features is the following fragment::
+
+    myMap = ["China": 1 , "India" : 2, "USA" : 3]
+
+    result = 0
+    myMap.keySet().each( { result+= myMap[it] } )
+
+    println result
+
+
+
+
+
+
+
+
+
+
+Regular expressions
+====================
+
+Regular expressions are the Swiss Army knife of text processing. They provide the programmer the ability to match
+and extract patterns from strings.
+
+Th
+
+
+Capturing groups
+----------------
+
+Version parsing in #groovylang:
+def (full, major, minor, patch, flavor) = (groovyVersion =~ /(\d+)\.(\d+)\.(\d+)-?(.+)/)[0]
+
+
+Remove Part of String With Regular Expression
+----------------------------------------------
+
+You can subtract a part of a String value using a regular expression pattern. The first match found is
+replaced with an empty String.
+
+For example::
+
+    // define the regexp pattern
+    wordStartsWithGr = ~/(?i)\s+Gr\w+/
+
+    // apply and verify the result
+    ('Hello Groovy world!' - wordStartsWithGr) == 'Hello world!'
+    ('Hi Grails users' - wordStartsWithGr) == 'Hi users'
+
+
+
+Remove first match of a word with 5 characters::
+
+    assert ('Remove first match of 5 letter word' - ~/\b\w{5}\b/) == 'Remove  match of 5 letter word'
+
+
+Remove first found numbers followed by a whitespace character::
+
+    assert ('Line contains 20 characters' - ~/\d+\s+/) == 'Line contains characters'
