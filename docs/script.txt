@@ -170,8 +170,6 @@ Multi-line strings
 
 A block of text that span multiple lines can be defined by delimiting it with triple single or double quotes, as shown below::
 
-For example::
-
     text = """
         hello there James
         how are you today?
@@ -384,3 +382,18 @@ Remove first found numbers followed by a whitespace character::
 
     assert ('Line contains 20 characters' - ~/\d+\s+/) == 'Line contains characters'
 
+
+
+Files and I/O
+==============
+
+::
+
+    def dir = file('somedir')
+    def cl = { Path f -> println f }
+    dir.eachDir cl
+    dir.eachFile cl
+    dir.eachDirRecurse cl
+    dir.eachFileRecurse cl
+    dir.eachDirMatch(~/.*/, cl)
+    dir.eachFileMatch(~/.*/, cl)

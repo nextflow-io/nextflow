@@ -13,11 +13,11 @@ Contents:
 
    install
    basic
+   script
    process
    channel
    operator
    executor
-   script
    config
    resume
 

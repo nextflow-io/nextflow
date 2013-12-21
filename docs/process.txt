@@ -15,7 +15,7 @@ a script that is executed by it. A basic process looks like the following exampl
   }
 
 
-More in details a process may contains four compartments defining the directives, inputs, outputs and finally
+More in details a process may contain four blocks defining the directives, inputs, outputs and finally
 the process scripts following the syntax showed below:
 
 ::
@@ -34,6 +34,373 @@ the process scripts following the syntax showed below:
      < user script to be executed >
 
   }
+
+
+
+Script
+=======
+
+The `script` block is a string statement that defines the command to be executed by the process to carry out its job.
+
+A process contains one and only script block, and it must be the last statement when the process contains
+inputs, outputs declarations.
+
+The entered string is executed as a `BASH <http://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ script in the
+`hosting` system. You can use any command, script or combination of them as you would be do launching them through
+a shell terminal.
+
+The only limitation to the commands that can be used in the script statement is given by the availability of those
+programs in the target execution system.
+
+
+The script block can be any simple string or multi-lines string. The latter simply the writing or non trivial scripts
+composed by multiple commands and that span on multiple lines. For example::
+
+    process doMoreThings {
+
+      """
+      blastp -db $db -query query.fa -outfmt 6 > blast_result
+      cat blast_result | head -n 10 | cut -f 2 > top_hits
+      blastdbcmd -db $db -entry_batch top_hits > sequences
+      """
+
+    }
+
+As explained in the script tutorial section, strings can be defined both by using a single-quote
+or double-quotes, and multi-lines strings are defined by triple single-quote or triple double-quotes characters.
+
+There is a subtle but important difference between them. Like in BASH, strings delimited by a ``"`` character support
+variable substitutions, while strings delimited by ``'`` do not.
+
+In the above code fragment the ``$db`` variable is replaced by the actual variable value defined somewhere in the
+pipeline script.
+
+.. warning:: Since Nextflow uses the same syntax of BASH for variable substitution in strings, you need to manage them
+  carefully depending if you need to evaluate a variable in the Nextflow context - or - in the BASH script environment
+  execution context.
+
+When you need to access an system environment variable  in your script you have two options. The first choice is as
+easy as defining your script block by using a single-quote string. For example::
+
+    process printPath {
+
+       '''
+       echo The path is: $PATH
+       '''
+
+    }
+
+The drawback of this solution is that you cannot use in your script block variables defined in the pipeline context.
+
+To fix this define your script by using a double-quotes string and `escape` the system environment variables by
+prefixing the with a back-slash ``\`` character, as shown in the following example::
+
+
+    process doOtherThings {
+
+      """
+      blastp -db \$DB -query query.fa -outfmt 6 > blast_result
+      cat blast_result | head -n $MAX | cut -f 2 > top_hits
+      blastdbcmd -db \$DB -entry_batch top_hits > sequences
+      """
+
+    }
+
+In this example the ``$MAX`` variable have to be defined somewhere before in the pipeline script.
+`Nextflow` replace it with the actual value before launching the script. Instead, the ``$DB`` variable
+must exist in the script execution environment and the BASH interpreter will manage it.
+
+
+Scripts `à la carte`
+--------------------
+
+The process script is interpreted by Nextflow as a BASH script by default, but you are not limited to it.
+
+You can use your favourite scripting language (e.g. Perl, Python, Ruby, R, etc), or even mix them in the same pipeline.
+
+A pipeline may be composed by processes that execute very different tasks. Using `Nextflow` you can choose the scripting
+language that fit better the task carried out by a specified process. For example for some processes `R` could be
+more useful than `Perl`, in other you may need to use `Python` because it provides access to a better library or API, etc.
+
+To use a scripting other than BASH, simply start your process script with the corresponding shebang declaration.
+For example::
+
+    process perlStuff {
+
+        """
+        #!/usr/bin/perl
+
+        print 'Hi there!' . '\n';
+        """
+
+    }
+
+    process pyStuff {
+
+        """
+        #!/usr/bin/python
+
+        x = 'Hello'
+        y = 'world!'
+        print "%s - %s" % (x,y)
+        """
+
+    }
+
+
+.. tip:: Since the actual location of the interpreter binary file can change across platforms, to make your scripts
+   more portable it is wise to use the ``env`` shell command followed the interpreter name, instead of the absolute path
+   to it. Thus for example, the `shebang` declaration for a Perl script, for example,
+   would look like to ``#!/usr/bin/env perl`` instead of the one in the above pipeline fragment.
+
+
+
+Inputs
+=======
+
+The `input` block is used to define the channels that the process is expecting to receive in input. It can be defined
+at most one input block and it can contain one or more inputs declarations. The input block follows the syntax shown below::
+
+    input:
+      <input classifier> [<input name> using] <channel> [attribute [,..]]
+
+Inputs definition starts by an input `classifier`, the name to be used for the input object in the process context
+followed by the keyword ``using`` and finally the actual channel over which inputs are received and some optional
+attributes.
+
+When the input name is the same as the channel name, it can be omitted together with ``using`` keyword.
+
+Inputs classifier permits to manage the received data by their effective type and apply some required semantic rule,
+and let Nextflow runtime to manage them accordingly the target execution platform (grid, cloud, etc).
+
+The provided classifiers are:
+
+- *env*: the input is used to define an environment variable in the process context;
+- *val*: handle data of any type;
+- *file*: the input is managed as file to be staged in the process context;
+- *stdin*: the received data is redirected to the process `stdin` special file;
+- *each*: executes the process for each entries of the collection received in input.
+
+
+Generic input values
+---------------------
+
+The ``val`` classifier permits to handle any value as an input data. The input can be referenced by its name as
+shown in the following example::
+
+    num = Channel.from( 1, 2, 3 )
+
+    process basicExample {
+      input:
+      val x using num
+
+      "echo process job $x"
+
+    }
+
+
+The above process is executed three times, each time a values is received over the ``values`` channel and will produce
+an output similar to the one shown below::
+
+    process job 3
+    process job 2
+    process job 1
+
+
+When the using the short input declaration form, the input data has the same name as name as the channel. Thus
+the above example can be written as shown below::
+
+    num = Channel.from( 1, 2, 3 )
+
+    process basicExample {
+      input:
+      val num
+
+      "echo process job $num"
+
+    }
+
+
+Input files
+-----------------
+
+The ``file`` classifier is used to stage the received data as files in the `process` execution context. For example::
+
+    proteins = Channel.files( '/some/path/*.fa' )
+
+    process blastThemAll {
+
+      input:
+      file 'query.fa' using proteins
+
+      "blastp -query query.fa -db nr"
+
+    }
+
+In the above example all the files ending with the suffix ``.fa`` in the specified path are sent over the channel ``proteins``.
+Then, the process declares that it receives a file named `query.fa` from the ``proteins`` channel.
+
+What happens is that any file that the process receives is staged with the name `query.fa` in separate execution context
+(a folder where the job will be executed) and an independent process execution is launched.
+
+.. tip:: By doing that the process can be execute one or multiple times, independently how many are the files provided
+  as input and their actual location in the underlying file system. In other words, `Nextflow` helps you in writing
+  pipeline tasks as self-contained and portable processes that are decoupled by the execution environment. This
+  also the reason why you should avoid as much possible to reference directly files or directories by using absolute or
+  relative paths in your pipeline processes.
+
+
+In some use cases, you may need to use the file original name that it is not know at the time of the process writing.
+
+In this case use the short syntax for the input declaration, i.e. without specifying the file name and the `using` keyword,
+and referring to it using the channel name as a variable. For example::
+
+
+    proteins = Channel.files( '/some/path/*.fa' )
+
+    process blastThemAll {
+
+      input:
+      file proteins
+
+      "blastp -query $proteins -db nr"
+
+    }
+
+
+.. TODO describe that file can handle channels containing any data type not only file
+
+
+Multiple files
+----------------
+
+A process can declare as file input a channel emitting a list of value instead of a simple value. In this case
+multiple files are staged in the process execution context appending to the name specified the an index number.
+For example::
+
+    fasta = Channel.files( "/some/path/*.fa" ).buffer(count:3)
+
+    process blastThemAll {
+        input:
+        file 'file' using fasta
+
+        "echo file*"
+
+    }
+
+::
+
+    file1 file2 file3
+    file1 file2 file3
+    ...
+
+The target input file name can contain the ``*`` and ``?`` wildcards that can be used
+to control the name of staged file when the process received multiple files. The following
+table shows how the wildcards are replaced depending the cardinality of the received
+input collection.
+
+============ ============== ==================================================
+Cardinality   Name pattern     Staged file names
+============ ============== ==================================================
+ 1           ``file*.ext``   ``file.ext``
+ 1           ``file?.ext``   ``file1.ext``
+ 1           ``file??.ext``  ``file01.ext``
+ many        ``file*.ext``   ``file1.ext``, ``file2.ext``, ``file3.ext``, ..
+ many        ``file?.ext``   ``file1.ext``, ``file2.ext``, ``file3.ext``, ..
+ many        ``file??.ext``  ``file01.ext``, ``file02.ext``, ``file03.ext``, ..
+============ ============== ==================================================
+
+The following fragment shows are wildcard is used in the file input declaration::
+
+
+    fasta = Channel.files( "/some/path/*.fa" ).buffer(count:3)
+
+    process blastThemAll {
+        input:
+        file 'file?.fa' using fasta
+
+        "cat file?.fa"
+
+    }
+
+
+
+Input stdin
+-----------------
+
+The ``stdin`` input classifier allows to forward the items emitted by a channel to the
+`standard input <http://en.wikipedia.org/wiki/Standard_streams#Standard_input_.28stdin.29>`_
+of the command script executed by the process. For example::
+
+    str = Channel.from('hello', 'hola', 'bonjour', 'ciao').map { it+'\n' }
+
+    process printAll {
+       input:
+       stdin str
+
+       """
+       cat -
+       """
+
+    }
+
+::
+
+    hola
+    bonjour
+    ciao
+    hello
+
+
+
+
+env input
+----------
+
+The ``env`` classifier allows to define an environment variable in the process execution context based on the values
+emitted by the specified channel. For example::
+
+    str = Channel.from('hello', 'hola', 'bonjour', 'ciao')
+
+    process printEnv {
+
+        input:
+        env HELLO using str
+
+        '''
+        echo $HELLO world!
+        '''
+
+    }
+
+::
+
+    hello world!
+    ciao world!
+    bonjour world!
+    hola world!
+
+
+each input
+-----------
+
+
+Multiple inputs
+----------------
+
+
+Combining inputs
+-----------------
+
+
+
+
+
+Outputs
+========
+
+
+
 
 
 Directives
@@ -101,7 +468,7 @@ values can be used:
 
 - ``sge``: the process is executed using a Sun Grid Engine / `Open Grid Engine <http://gridscheduler.sourceforge.net/>`_.
 
-- ```lsf```: The process is executed via the `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ job scheduler.
+- ``lsf``: The process is executed via the `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ job scheduler.
 
 - ``slurm``: The process is executed via the SLURM job scheduler.
 
@@ -112,7 +479,7 @@ values can be used:
 validExitStatus
 -------------------
 
- (default: ``0`)
+ (default: ``0``)
 
 
 ..
@@ -133,16 +500,7 @@ validExitStatus
     (sge)
 
 
-Inputs
-======
-
-
-Outputs
-=======
-
-
-
-Script
-======
+Parallel execution
+===================
 
 
