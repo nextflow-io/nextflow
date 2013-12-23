@@ -168,7 +168,7 @@ Inputs definition starts by an input `classifier`, the name to be used for the i
 followed by the keyword ``using`` and finally the actual channel over which inputs are received and some optional
 attributes.
 
-When the input name is the same as the channel name, it can be omitted together with ``using`` keyword.
+When the input name is the same as the channel name, it can be omitted together with the ``using`` keyword.
 
 Inputs classifier permits to manage the received data by their effective type and apply some required semantic rule,
 and let Nextflow runtime to manage them accordingly the target execution platform (grid, cloud, etc).
@@ -384,21 +384,105 @@ emitted by the specified channel. For example::
 each input
 -----------
 
-
-Multiple inputs
-----------------
-
-
-Combining inputs
------------------
-
-
-
+The ``each`` classifier accepts at input a collection of items. It will execute the process for each item in the
+provided collection.
 
 
 Outputs
 ========
 
+The `output` block is used to define the channels that the process to send out the produced results.
+It can be defined at most one output block and it can contain one or more outputs declarations.
+The output block follows the syntax shown below::
+
+    output:
+      <output classifier> [<output name> using] <channel> [attribute [,..]]
+
+Outputs definition starts by an output `classifier`, the name to be used for the output object in the process context
+followed by the keyword ``using`` and finally the actual channel over which outputs are sent and some optional
+attributes.
+
+When the output name is the same as the channel name, it can be omitted together with the ``using`` keyword.
+
+
+The provided classifiers are:
+
+- *val*: handle data of any type;
+- *file*: the output is managed as file to be staged in the process context;
+- *stdout*: the received data is redirected to the process `stdout` special file;
+
+
+Val output
+-------------
+
+The ``val`` classifier allows to output a `value` that has used in the process context and previously declared as input.
+For example::
+
+   methods = ['prot','dna', rna]
+
+   process anyValue {
+     input:
+     val x using methods
+
+     output:
+     val x using methods
+
+     '''
+     echo $x
+     '''
+
+   }
+
+
+File output
+-------------
+
+The `file` classifier allows to send one or more files as outputs over the specified channel. For example::
+
+
+    process blastAndOut {
+       output:
+       file 'blast_out' using hits
+
+       '''
+       blastp -query sequences.fa -outfmt 6 > blast_result
+       '''
+
+    }
+
+
+In the above example the `script` executes a `Blast` command and save its result to a file named ``blast_result``.
+Since this file is declared as an output, when the task is completed, this file is sent over the ``hits`` channel.
+A downstream `process` declaring the same channel as `input` will be able to get it.
+
+.. note:: If the channel specified as output has not been previously declared somewhere in the pipeline script, it
+  will implicitly created by the output declaration itself.
+
+
+Multiple files
+^^^^^^^^^^^^^^^
+
+In the file output it is possible to specify the usual Linux wildcards characters ``?`` and ``*``. By using them
+each file produced by the process whose name matches the specified pattern, is sent over the channel and emitted as a
+single item. For example::
+
+    process splitLetters {
+      output:
+      file 'chunk_*' using letters
+
+      '''
+      echo Hello | split -d -b 1 - chunk_
+      '''
+    }
+
+    letters.subscribe { println it }
+
+
+
+
+
+Standard output
+----------------
 
 
 
