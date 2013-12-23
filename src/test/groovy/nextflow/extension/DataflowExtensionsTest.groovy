@@ -65,9 +65,30 @@ class DataflowExtensionsTest extends Specification {
         int count = 0
         channel.subscribe { count++; } << 1 << 2 << 3
         sleep(100)
-
         then:
         count == 3
+
+        when:
+        count = 0
+        channel = Channel.from(1,2,3,4)
+        channel.subscribe { count++; }
+        sleep(100)
+        then:
+        count == 4
+
+
+        when:
+        int a=0
+        int b=0
+        def channel3 = Channel.from(1,2,3,4,5)
+        channel3.subscribe { if(it%2 != 0) a++ }
+        channel3.subscribe { if(it%2 == 0) b++; println ">> $it"  }
+        //channel3 << 1 << 2 << 3 << 4 << 5
+        sleep(100)
+        then:
+        a == 3
+        b == 2
+
 
     }
 
@@ -199,6 +220,13 @@ class DataflowExtensionsTest extends Specification {
         def channel = Channel.create()
         def result = channel.reduce { a, e -> a += e }
         channel << 1 << 2 << 3 << 4 << 5 << Channel.STOP
+        then:
+        result.getVal() == 15
+
+
+        when:
+        channel = Channel.from(1,2,3,4,5)
+        result = channel.reduce { a, e -> a += e }
         then:
         result.getVal() == 15
 
