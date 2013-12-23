@@ -7,6 +7,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util.regex.Pattern
 
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
@@ -15,11 +16,13 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.util.Duration
 import nextflow.util.FileHelper
 import org.codehaus.groovy.runtime.NullObject
+
 /**
  * Channel factory object
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 class Channel {
 
     static ControlMessage STOP = PoisonPill.getInstance()
@@ -108,10 +111,8 @@ class Channel {
 
     static DataflowChannel<Path> files( Pattern filePattern ) {
         assert filePattern
-
         // split the folder and the pattern
         def ( String folder, String pattern ) = getFolderAndPattern(filePattern.toString())
-
         filesImpl( 'regex', folder, pattern, false )
     }
 
@@ -136,6 +137,7 @@ class Channel {
 
     static private DataflowChannel<Path> filesImpl( String syntax, String folder, String pattern, boolean skipHidden )  {
         assert syntax in ['regex','glob']
+        log.debug "files for syntax: $syntax; folder: $folder; pattern: $pattern; skipHidden: $skipHidden"
 
         // now apply glob file search
         def path = FileHelper.asPath(folder)
@@ -176,8 +178,8 @@ class Channel {
             filePattern = filePattern.substring(i+3)
         }
 
-        def folder = null
-        def pattern = null
+        def folder
+        def pattern
         int p = filePattern.indexOf('*')
         if( p != -1 ) {
             i = filePattern.substring(0,p).lastIndexOf('/')
