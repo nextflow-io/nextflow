@@ -29,6 +29,7 @@ import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.Channel
 import nextflow.Const
 import nextflow.ExitCode
 import nextflow.Nextflow
@@ -328,7 +329,8 @@ class CliRunner {
         // define the imports
         def importCustomizer = new ImportCustomizer()
         importCustomizer.addImports( StringUtils.name, groovy.transform.Field.name )
-        importCustomizer.addImports(Path.name)
+        importCustomizer.addImports( Path.name )
+        importCustomizer.addImports( Channel.name )
         importCustomizer.addStaticStars( Nextflow.name )
         importCustomizer.addStaticImport( groovyx.gpars.dataflow.Dataflow.name, 'splitter' )
         importCustomizer.addStaticImport( groovyx.gpars.dataflow.Dataflow.name, 'operator' )
