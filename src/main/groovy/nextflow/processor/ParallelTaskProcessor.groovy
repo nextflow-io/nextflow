@@ -311,6 +311,11 @@ class ParallelTaskProcessor extends TaskProcessor {
             currentTask.remove()
         }
 
+        @Override
+        public void afterStop(final DataflowProcessor processor) {
+            log.debug "After stop > ${name}"
+        }
+
         /**
          * Invoked if an exception occurs. Unless overridden by subclasses this implementation returns true to terminate the operator.
          * If any of the listeners returns true, the operator will terminate.
