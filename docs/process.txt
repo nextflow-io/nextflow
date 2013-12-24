@@ -467,16 +467,26 @@ each file produced by the process whose name matches the specified pattern, is s
 single item. For example::
 
     process splitLetters {
-      output:
-      file 'chunk_*' using letters
 
-      '''
-      echo Hello | split -d -b 1 - chunk_
-      '''
+        output:
+        file 'chunk_*' using letters
+
+        '''
+        echo 'Hola' | split -b 1 - chunk_
+        '''
     }
 
-    letters.subscribe { println it }
+    letters.subscribe onNext: { println it.text }
 
+::
+
+    nextflow examples/splitter.nf
+    N E X T F L O W  ~  version 0.6.0
+    Running task > splitLetters (1)
+    H
+    o
+    l
+    a
 
 
 
