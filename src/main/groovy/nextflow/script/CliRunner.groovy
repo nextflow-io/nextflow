@@ -294,17 +294,15 @@ class CliRunner {
 
 
     def normalizeOutput() {
-        if ( output == null ) {
-            result = null
-        }
-        else if( output instanceof Collection || output.getClass().isArray()) {
-            result = (output as Collection).collect { normalizeOutput(it) }
+        if( output instanceof Collection || output.getClass().isArray()) {
+            result = (output as Collection)
         }
         else {
-            result = normalizeOutput(output)
+            result = output
         }
     }
 
+    @Deprecated
     def normalizeOutput(def value) {
         if ( value instanceof DataflowReadChannel || value instanceof DataflowWriteChannel ) {
             return session.isAborted() ? null : Nextflow.read(value)
