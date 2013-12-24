@@ -19,6 +19,7 @@
 
 package nextflow.script
 import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.exception.MissingLibraryException
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
@@ -46,10 +47,12 @@ class CliRunnerTest extends Specification {
             }
             """
 
-        def result = runner.execute(script)
+        runner.execute(script)
 
+        // when no outputs are specified, the 'stdout' is the default output
         then:
-        result == "echo Hello world"
+        runner.result instanceof DataflowVariable
+        runner.result.val == "echo Hello world"
 
 
     }
@@ -126,10 +129,10 @@ class CliRunnerTest extends Specification {
             }
 
             '''
-        def result = runner.execute(script)
+        runner.execute(script)
 
         then:
-        result == 'echo 1 - 3'
+        runner.getResult().val == 'echo 1 - 3'
         runner.getScript().getTaskProcessor().getName() == 'task2'
         runner.getScript().getTaskProcessor().taskConfig.name == 'task2'
         runner.getScript().getTaskProcessor().taskConfig.inputs[0].channel.getVal() == 1
@@ -155,10 +158,10 @@ class CliRunnerTest extends Specification {
                 "echo $x"
             }
             '''
-        def result = runner.execute(script)
+        runner.execute(script)
 
         then:
-        result == 'echo 1'
+        runner.getResult().val == 'echo 1'
         runner.script.taskProcessor.taskConfig.name == 'test'
 
     }
@@ -205,7 +208,7 @@ class CliRunnerTest extends Specification {
 
 
         expect:
-        runner.execute(script) == '1-2-3'
+        runner.execute(script).val == '1-2-3'
 
     }
 
