@@ -23,6 +23,7 @@ package nextflow.exception;
  * An expected result file is missing
  *
  * Note: THIS IS A PLAIN JAVA CLASS due to this bug
+ * http://jira.codehaus.org/browse/GROOVY-6080
  * http://blog.proxerd.pl/article/how-to-fix-incompatibleclasschangeerror-for-your-groovy-projects-running-on-jdk7
  *
  */
