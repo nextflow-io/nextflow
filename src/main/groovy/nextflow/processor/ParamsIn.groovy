@@ -1,5 +1,4 @@
 package nextflow.processor
-
 import groovy.transform.InheritConstructors
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
@@ -22,12 +21,12 @@ abstract class InParam {
     protected Object using
 
     @Lazy
-    DataflowReadChannel channel = { channelRef() } ()
+    DataflowReadChannel channel = channelRef()
 
 
     protected DataflowReadChannel channelRef() {
 
-        if( using ) {
+        if( using != null ) {
             return asChannel(using)
         }
         else if( script && script.getBinding().hasVariable(name) ) {

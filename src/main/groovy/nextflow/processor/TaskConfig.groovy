@@ -50,6 +50,7 @@ class TaskConfig implements Map {
             validExitStatus = [0]
             inputs = new InputsList()
             outputs = new OutputsList()
+            sharedDefs = new SharedList()
         }
 
         configProperties.errorStrategy = ErrorStrategy.TERMINATE
@@ -102,6 +103,10 @@ class TaskConfig implements Map {
         return configProperties.outputs
     }
 
+    SharedList getSharedDefs () {
+        return configProperties.sharedDefs
+    }
+
     boolean getEcho() {
         configProperties.echo
     }
@@ -132,7 +137,7 @@ class TaskConfig implements Map {
      *
      */
     def FileInParam __in_file( String name ) {
-        log.trace "input param > file: '$name'"
+        log.trace "__in_file: '$name'"
 
         def result = name == '-' ? new StdInParam(ownerScript) : new FileInParam(ownerScript, name)
         configProperties.inputs << result
@@ -141,7 +146,7 @@ class TaskConfig implements Map {
     }
 
     def ValueInParam __in_val( String name ) {
-        log.trace "input param > val: $name"
+        log.trace "__in_val: $name"
 
         def result = new ValueInParam(ownerScript,name)
         configProperties.inputs << result
@@ -150,7 +155,7 @@ class TaskConfig implements Map {
     }
 
     EnvInParam __in_env( String name ) {
-        log.trace "input param > env: '$name'"
+        log.trace "__in_env: '$name'"
 
         def result = new EnvInParam(ownerScript,name)
         configProperties.inputs << result
@@ -159,7 +164,7 @@ class TaskConfig implements Map {
     }
 
     EachInParam __in_each( String name ) {
-        log.trace "input param > each: '$name'"
+        log.trace "__in_each: '$name'"
 
         def result = new EachInParam(ownerScript,name)
         configProperties.inputs << result
@@ -168,7 +173,7 @@ class TaskConfig implements Map {
     }
 
     def FileOutParam __out_file( String name ) {
-        log.trace "output param > file: '$name'"
+        log.trace "__out_file: '$name'"
 
         def result = name == '-' ? new StdOutParam(ownerScript) : new FileOutParam(ownerScript,name)
         configProperties.outputs << result
@@ -177,7 +182,7 @@ class TaskConfig implements Map {
     }
 
     def ValueOutParam __out_val( String name ) {
-        log.trace "output param > val: $name"
+        log.trace "__out_val: $name"
 
         def result = new ValueOutParam(ownerScript,name)
         configProperties.outputs << result
@@ -185,8 +190,29 @@ class TaskConfig implements Map {
         result
     }
 
+
+    def ValueSharedParam __shared_val( String obj )  {
+        log.trace "__shared_val: $obj"
+
+        def result = new ValueSharedParam(ownerScript,obj)
+        configProperties.sharedDefs << result
+
+        return result
+    }
+
+    def FileSharedParam __shared_file( String obj )  {
+        log.trace "__shared_file: $obj"
+
+        def result = new FileSharedParam(ownerScript,obj)
+        configProperties.sharedDefs << result
+
+        return result
+    }
+
+
+
     StdInParam stdin( def channelRef = null  ) {
-        log.trace "input param > stdin - channelRef: $channelRef"
+        log.trace "__stdin: $channelRef"
 
         def result = new StdInParam(ownerScript)
         if( channelRef ) result.using(channelRef)
@@ -197,7 +223,7 @@ class TaskConfig implements Map {
     }
 
     StdOutParam stdout( def channelRef = null ) {
-        log.trace "output param > stdout - channelRef: $channelRef"
+        log.trace "__stdout: $channelRef"
 
         def result = new StdOutParam(ownerScript)
         if( channelRef ) result.using(channelRef)

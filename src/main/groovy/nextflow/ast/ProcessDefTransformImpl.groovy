@@ -177,6 +177,12 @@ class ProcessDefTransformImpl implements ASTTransformation {
                         }
                         break
 
+                    case 'shared':
+                        if( stm instanceof ExpressionStatement ) {
+                            convertSharedMethod( stm.getExpression() )
+                        }
+                        break
+
                     case 'exec':
                         iterator.remove()
                         execStatements << stm
@@ -249,10 +255,8 @@ class ProcessDefTransformImpl implements ASTTransformation {
         if( methodName in ['val','env','file','each'] ) {
             //this methods require a special prefix '__in_'
             methodCall.setMethod( new ConstantExpression('__in_' + methodName) )
-
             // the following methods require to replace a variable reference to a constant
             convertVarToConst(methodCall)
-
         }
 
         if( methodCall.objectExpression instanceof MethodCallExpression ) {
@@ -260,6 +264,33 @@ class ProcessDefTransformImpl implements ASTTransformation {
         }
 
     }
+
+
+    def void convertSharedMethod( Expression expression ) {
+        log.trace "convert > shared expression: $expression"
+
+        if( !(expression instanceof MethodCallExpression) ) {
+            return
+        }
+
+        def methodCall = expression as MethodCallExpression
+        def methodName = methodCall.getMethodAsString()
+        log.trace "convert > shared method: $methodName"
+
+        if( methodName in ['val','file'] ) {
+            //this methods require a special prefix '__shared_'
+            methodCall.setMethod( new ConstantExpression('__shared_' + methodName) )
+         }
+
+        if( methodName in ['val','file','using','into'] ) {
+            convertVarToConst(methodCall)
+        }
+
+        if( methodCall.objectExpression instanceof MethodCallExpression ) {
+            convertSharedMethod(methodCall.objectExpression)
+        }
+    }
+
 
     def void convertOutputMethod( Expression expression ) {
         log.trace "convert > output expression: $expression"

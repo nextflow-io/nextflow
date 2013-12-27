@@ -78,7 +78,7 @@ class TaskRun {
     } ()
 
     /**
-     * The *strategy* sued to retrieve the list of staged input files for this task.
+     * The *strategy* used to retrieve the list of staged input files for this task.
      * This sort of *hack* is required since task processed by the {@code MergeTaskProcessor} maintain
      * their own input files list, and so the task will need to access that list, and not the one
      * hold by the task itself
@@ -106,6 +106,7 @@ class TaskRun {
         assert param
         outputs[param] = value
     }
+
 
     /**
      * The value to be piped to the process stdin

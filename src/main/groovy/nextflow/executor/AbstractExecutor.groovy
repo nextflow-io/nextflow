@@ -1,6 +1,6 @@
 package nextflow.executor
-
 import java.nio.file.Path
+import java.util.concurrent.CountDownLatch
 
 import groovy.io.FileType
 import groovy.util.logging.Slf4j
@@ -74,16 +74,21 @@ abstract class AbstractExecutor {
      * @param task
      * @return
      */
-    TaskHandler submitTask( TaskRun task ) {
+    TaskHandler submitTask( TaskRun task, boolean blocking ) {
         def handler = createTaskHandler(task)
         monitor.put(handler)
         try {
+            // set a count down latch if the execution is blocking
+            if( blocking )
+                handler.latch = new CountDownLatch(1)
+            // now submit the task for execution
             handler.submit()
+            return handler
         }
         catch( Exception e ) {
             monitor.remove(handler)
+            return null
         }
-        return handler
     }
 
 

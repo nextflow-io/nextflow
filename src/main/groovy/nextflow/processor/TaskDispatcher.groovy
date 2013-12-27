@@ -84,7 +84,7 @@ class TaskDispatcher {
      *
      * @param task A {@code TaskRun} instance
      */
-    void submit( TaskRun task ) {
+    void submit( TaskRun task, boolean blocking ) {
         log.debug "Scheduling task: ${task}"
 
         if( session.isTerminated() ) {
@@ -96,7 +96,12 @@ class TaskDispatcher {
          * Note: queue is implemented as a fixed size blocking queue, when
          * there's not space *put* operation will block until, some other tasks finish
          */
-        task.processor.executor.submitTask(task)
+        def handler = task.processor.executor.submitTask(task, blocking)
+        if( handler && blocking ) {
+            log.trace "Task ${task} > blocking"
+            handler.latch.await()
+            log.trace "Task ${task} > complete"
+        }
     }
 
 
@@ -116,6 +121,9 @@ class TaskDispatcher {
 
         // finalize the tasks execution
         handler.task.processor.finalizeTask(handler.task)
+        // trigger the count down latch when it is a blocking task
+        handler.latch?.countDown()
+
     }
 
     /**

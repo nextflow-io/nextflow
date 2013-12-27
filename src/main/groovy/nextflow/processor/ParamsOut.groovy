@@ -18,13 +18,11 @@
  */
 
 package nextflow.processor
-
 import groovy.transform.InheritConstructors
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.Nextflow
-
 /**
  * Model a process generic input parameter
  *
@@ -67,11 +65,16 @@ abstract class OutParam {
     }
 
     protected DataflowWriteChannel channelRef( Object channel ) {
+        log.trace "output using > channel ref: $channel"
+        channelRef(script, channel, { new DataflowQueue() })
+    }
+
+    @groovy.transform.PackageScope
+    static DataflowWriteChannel channelRef( Script script, Object channel, Closure<DataflowWriteChannel> factory ) {
 
         if( channel instanceof String ) {
             // the channel is specified by name
             def local = channel
-            log.trace "output using > channel ref: $local"
 
             def binding = script.getBinding()
 
@@ -89,7 +92,8 @@ abstract class OutParam {
                 }
 
                 // instantiate the new channel
-                channel = Nextflow.channel()
+                channel = factory.call()
+
                 // bind it to the script on-fly
                 if( local != '-' && script) {
                     // bind the outputs to the script scope

@@ -13,6 +13,7 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.script.ScriptType
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
+
 /**
  * Defines the parallel tasks execution logic
  *
@@ -33,6 +34,16 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         def opInputs = new ArrayList(taskConfig.inputs.channels)
         def opOutputs = new ArrayList(taskConfig.outputs.channels)
+
+        // append the shared obj to the input list
+        def sharedCount = 0
+        taskConfig.sharedDefs.inChannels.each {
+            opInputs << it
+            sharedCount++
+        }
+
+        // only to force lazy output channels
+        def __dummy =  taskConfig.sharedDefs.outChannels
 
         /*
          * check if there are some iterators declaration
@@ -56,7 +67,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         if( iteratorIndexes ) {
             log.debug "Creating *combiner* operator for each param(s) at index(es): ${iteratorIndexes}"
 
-            final size = taskConfig.inputs.size()
+            final size = opInputs.size()
             // the script implementing the iterating process
             final forwarder = createForwardWrapper(size, iteratorIndexes)
             // the channel forwarding the data from the *iterator* process to the target task
@@ -75,14 +86,27 @@ class ParallelTaskProcessor extends TaskProcessor {
         /*
          * create a mock closure to trigger the operator
          */
-        final wrapper = createCallbackWrapper( taskConfig.inputs.size(), this.&invokeTask )
+        final wrapper = createCallbackWrapper( opInputs.size(), this.&invokeTask )
 
         /*
-         * create the output
+         * define the max forks attribute:
+         * - by default the process execution is parallel using the poolSize value
+         * - when there is at least one shared variable it is executed in serial mode (maxForks==1) to guarantee thread safe access
+         * - otherwise use the value defined by the user via 'taskConfig'
          */
-        def maxForks = taskConfig.maxForks ?: session.config.poolSize
+        def maxForks = session.config.poolSize
+        if( sharedCount ) {
+            maxForks = 1
+            blocking = true
+        }
+        else if( taskConfig.maxForks ) {
+            maxForks = taskConfig.maxForks
+        }
         log.debug "Creating operator > $name -- maxForks: $maxForks"
 
+        /*
+         * finally create the operator
+         */
         def params = [inputs: opInputs, outputs: opOutputs, maxForks: maxForks, listeners: [new TaskProcessorInterceptor()] ]
         session.allProcessors << (processor = new DataflowOperator(group, params, wrapper).start())
 
@@ -151,8 +175,8 @@ class ParallelTaskProcessor extends TaskProcessor {
      * @param values
      * @return
      */
-    final protected TaskRun initTaskRun(List values) {
-        log.trace "Creating a new task > $name"
+    final protected TaskRun beforeRun(List values) {
+        log.trace "Setup new task > $name"
 
         final TaskRun task = createTaskRun()
 
@@ -165,6 +189,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         // -- map the inputs to a map and use to delegate closure values interpolation
         def map = new DelegateMap(ownerScript)
         int count = 0
+
         /*
          * initialize the inputs for this task instances
          */
@@ -203,6 +228,35 @@ class ParallelTaskProcessor extends TaskProcessor {
             task.setInput(param, val)
         }
 
+        /*
+         * Initialize the shared inputs
+         */
+        taskConfig.sharedDefs.eachWithIndex { SharedParam entry, int index ->
+
+            // add the value to the task instance
+            // shared values are added always after the *plain* inputs
+            // so the get the actual it is required to take in account the
+            // inputs.size() as offset
+            def val
+            if( sharedObjs == null ) {
+                val = values.get(index + taskConfig.inputs.size())
+                sharedObjs = [:]
+                sharedObjs[entry] = val
+            }
+            else {
+                val = sharedObjs[entry]
+            }
+
+            switch(entry) {
+                case ValueSharedParam:
+                    map[entry.name] = val
+                    break
+
+                default:
+                    log.debug "Unsupported shared param type: ${entry?.class?.simpleName}"
+            }
+        }
+
 
         /*
          * initialize the task code to be executed
@@ -225,7 +279,7 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         // create and initialize the task instance to be executed
         List params = args instanceof List ? args : [args]
-        final task = initTaskRun(params)
+        final task = beforeRun(params)
 
         // -- call the closure and execute the script
         currentTask.set(task)
@@ -271,6 +325,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         @Override
         public List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
             log.trace "Before run > ${name} -- messages: ${messages}"
+            // this counter increment must be here, otherwise it is not coherent
             instanceCount.incrementAndGet()
             return messages;
         }
@@ -279,6 +334,16 @@ class ParallelTaskProcessor extends TaskProcessor {
         @Override
         void afterRun(DataflowProcessor processor, List<Object> messages) {
             log.trace "After run > ${currentTask.get()?.name ?: name}"
+
+            // bind shared outputs
+            ParallelTaskProcessor.this.sharedObjs?.each { param, obj ->
+
+                if( param.output != null ) {
+                    log.debug "Binding shared out param: ${param.name} = ${obj}"
+                    param.output.bind( obj )
+                }
+            }
+
             currentTask.remove()
         }
 

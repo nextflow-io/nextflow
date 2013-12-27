@@ -163,6 +163,17 @@ abstract class TaskProcessor {
      */
     protected volatile boolean terminated
 
+    /**
+     * Whener the process execution is required to be blocking in order to handle
+     * shared object in a thread safe manner
+     */
+    protected boolean blocking
+
+    /**
+     * Holds the values shared by multiple task instances
+     */
+    Map<SharedParam,Object> sharedObjs
+
     /* for testing purpose - do not remove */
     protected TaskProcessor() { }
 
@@ -698,6 +709,23 @@ abstract class TaskProcessor {
             }
         }
 
+        /*
+         * Shared objects behave as accumulators
+         * Copying back updated values from context map to buffer map so that can be accessed in the next iteration
+         *
+         */
+        sharedObjs?.keySet() .each { param ->
+
+            switch(param) {
+                case ValueSharedParam:
+                    sharedObjs[param] = context.get(param.name)
+                    break
+
+                default:
+                    throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
+            }
+        }
+
         // mark ready for output binding
         task.canBind = true
     }
@@ -993,7 +1021,7 @@ abstract class TaskProcessor {
      */
     final protected void submitTask( TaskRun task ) {
         // add the task to the collection of running tasks
-        session.dispatcher.submit(task)
+        session.dispatcher.submit(task, blocking)
     }
 
 
