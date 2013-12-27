@@ -18,9 +18,11 @@
  */
 
 package nextflow.processor
+import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.script.BaseScript
 import spock.lang.Specification
 import test.DummyProcessor
 import test.DummyScript
@@ -227,6 +229,31 @@ class TaskProcessorTest extends Specification {
 
     }
 
+
+    def testSaveAndReadContextMap () {
+
+        setup:
+        def file = Files.createTempFile('test.ctx',null)
+        def processor = [:] as TaskProcessor
+        def script = Mock(BaseScript)
+        def map = new TaskProcessor.DelegateMap(script)
+        map.alpha = 1
+        map.beta = 2
+
+        when:
+        processor.saveContextMap(map, file)
+        def result = processor.readContextMap(file)
+
+        then:
+        result.size() == 2
+        result.alpha == 1
+        result.beta == 2
+
+
+        cleanup:
+        file.delete()
+
+    }
 
 
 

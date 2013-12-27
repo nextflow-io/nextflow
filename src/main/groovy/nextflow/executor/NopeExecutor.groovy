@@ -57,28 +57,28 @@ class NopeTaskHandler extends TaskHandler {
 
     @Override
     void submit() {
-
         log.info ">> launching nope task: ${task}"
         task.workDirectory = Paths.get('.').toAbsolutePath()
-        status = TaskHandler.Status.SUBMITTED
-        task.exitStatus = 0
+        status = Status.SUBMITTED
         task.stdout = task.script
+        task.exitStatus = 0
     }
 
     @Override
     boolean checkIfRunning() {
         log.debug "isRunning: $status"
         if( isSubmitted() ) {
-            status = TaskHandler.Status.RUNNING
+            status = Status.RUNNING
             return true
         }
+        return false
     }
 
     @Override
     boolean checkIfCompleted() {
         log.debug "isTerminated: $status"
         if( isRunning() ) {
-            status = TaskHandler.Status.COMPLETED
+            status = Status.COMPLETED
             return true
         }
         false

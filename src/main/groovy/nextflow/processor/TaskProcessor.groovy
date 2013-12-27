@@ -21,6 +21,7 @@ import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
+import embed.AstNodeToScriptVisitor
 import embed.com.google.common.hash.HashCode
 import groovy.transform.PackageScope
 import groovy.transform.Synchronized
@@ -36,12 +37,17 @@ import nextflow.Nextflow
 import nextflow.Session
 import nextflow.exception.InvalidExitException
 import nextflow.exception.MissingFileException
+import nextflow.exception.MissingValueException
 import nextflow.exception.TaskException
 import nextflow.executor.AbstractExecutor
 import nextflow.script.BaseScript
+import nextflow.script.ScriptType
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
+import org.apache.commons.lang.SerializationUtils
+import org.apache.commons.lang.exception.ExceptionUtils
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -83,6 +89,11 @@ abstract class TaskProcessor {
      * The closure wrapping the script to be executed
      */
     protected Closure code
+
+    /**
+     *  Define the type of script hold by the {@code #code} property
+     */
+    protected ScriptType type = ScriptType.SCRIPTLET
 
     /**
      * The corresponding {@code DataflowProcessor} which will receive and
@@ -365,7 +376,7 @@ abstract class TaskProcessor {
 
         def id = allCount.incrementAndGet()
         def index = indexCount.incrementAndGet()
-        new TaskRun(id: id, index: index, name: "$name ($index)", processor: this )
+        new TaskRun(id: id, index: index, name: "$name ($index)", processor: this, type: type )
     }
 
 
@@ -420,36 +431,62 @@ abstract class TaskProcessor {
             return false
         }
 
-        // set the folder has the task working directory
-        task.workDirectory = folder
-
         // check if exists the task exit code file
-        def exitFile = task.getCmdExitFile()
-        if( exitFile.empty() ) {
-            log.trace "[$task.name] Exit file is empty > $exitFile -- return false"
-            return false
+        def exitCode = null
+        def exitFile = folder.resolve(TaskRun.CMD_EXIT)
+        if( task.type == ScriptType.SCRIPTLET ) {
+            if( exitFile.empty() ) {
+                log.trace "[$task.name] Exit file is empty > $exitFile -- return false"
+                return false
+            }
+
+            def exitValue = exitFile.text.trim()
+            exitCode = exitValue.isInteger() ? exitValue.toInteger() : null
+            if( exitCode == null || !(exitCode in taskConfig.validExitStatus) ) {
+                log.trace "[$task.name] Exit code is not valid > $exitValue -- return false"
+                return false
+            }
         }
 
-        def exitValue = exitFile.text.trim()
-        def exitCode = exitValue.isInteger() ? exitValue.toInteger() : null
-        if( exitCode == null || !(exitCode in taskConfig.validExitStatus) ) {
-            log.trace "[$task.name] Exit code is not valid > $exitValue -- return false"
-            return false
+        /*
+         * verify cached context map
+         */
+        def ctxMap = null
+        def ctxFile = folder.resolve(TaskRun.CMD_CONTEXT)
+        def outCount = task.getOutputsByType(ValueOutParam).size()
+        if( outCount ) {
+            if( !ctxFile.exists() ) {
+                log.trace "[$task.name] Contexy map file does not exist: $ctxFile -- return false"
+                return false
+            }
+            ctxMap = readContextMap(ctxFile)
         }
+
+        /*
+         * verify stdout file
+         */
+        def stdoutFile = folder.resolve( TaskRun.CMD_OUTFILE )
 
         try {
             // -- check if all output resources are available
-            collectOutputs(task)
+            collectOutputs(task, folder, stdoutFile, ctxMap)
             log.info "Cached task > ${task.name}"
 
             // set the exit code in to the task object
-            task.exitStatus = exitCode
+            task.workDirectory = folder
+            task.stdout = stdoutFile
+            if( exitCode != null ) {
+                task.exitStatus = exitCode
+            }
+            if( task.code && ctxMap ) {
+                task.code.delegate = ctxMap
+            }
 
             // -- now bind the results
             finalizeTask0(task)
             return true
         }
-        catch( MissingFileException e ) {
+        catch( MissingFileException | MissingValueException e ) {
             log.debug "[$task.name] Missed cache > ${e.getMessage()} -- folder: $folder"
             task.exitStatus = Integer.MAX_VALUE
             task.workDirectory = null
@@ -457,6 +494,7 @@ abstract class TaskProcessor {
         }
 
     }
+
 
     /**
      * Handles an error raised during the processor execution
@@ -487,20 +525,35 @@ abstract class TaskProcessor {
             message << error.getMessage()
 
             if( task ) {
-                // print the executed command
-                message << "Command executed:"
-                task.script.eachLine {
-                    message << "  $it"
+                /*
+                 * handle accordingly native code tasks
+                 */
+                if( task.type == ScriptType.GROOVY ) {
+                    messae << '\n'
+                    message << cleanStackTrace( error.cause )
+                    message << "Work dir:\n  ${task.workDirectory.toString()}"
                 }
 
-                message << "\nCommand exit status:\n  ${task.exitStatus}"
+                /*
+                 * or task executing scriptlets
+                 */
+                else {
+                    // print the executed command
+                    message << "Command executed:"
+                    task.script.eachLine {
+                        message << "  $it"
+                    }
 
-                message << "\nCommand output:"
-                task.stdout?.eachLine {
-                    message << "  $it"
+                    message << "\nCommand exit status:\n  ${task.exitStatus}"
+
+                    message << "\nCommand output:"
+                    task.stdout?.eachLine {
+                        message << "  $it"
+                    }
+
+                    message << "\nWork dir:\n  ${task.workDirectory.toString()}"
                 }
 
-                message << "\nCommand work dir:\n  ${task.workDirectory.toString()}"
             }
 
             message << "\nTip: when you have fixed the problem you may continue the execution appending to the nextflow command line the '-resume' option"
@@ -537,6 +590,40 @@ abstract class TaskProcessor {
 
         }
     }
+
+    private String getCodeScript( TaskRun task ) {
+
+        try {
+            def node = task.code.metaClass.classNode.getDeclaredMethods("doCall")[0].code
+            def writer = new StringWriter()
+            node.visit( new AstNodeToScriptVisitor(writer) )
+            writer.toString()
+        }
+        catch( Throwable e ) {
+            log.debug "Unable to obtain code for task: ${task.name}"
+            return null
+        }
+
+    }
+
+
+    private String cleanStackTrace( Throwable error ) {
+
+        def result = new StringBuilder()
+        ExceptionUtils.getStackTrace(error) .eachLine {
+            if( it.contains('org.codehaus.groovy.runtime.') ) return
+            if( it.contains('sun.reflect.')) return
+            if( it.contains('sun.reflect.')) return
+            if( it.contains('java.lang.reflect.Method.')) return
+            if( it.contains('org.codehaus.groovy.reflection.')) return
+            if( it.contains('groovy.lang.')) return
+
+            result.append(it).append('\n')
+        }
+
+        result.toString()
+    }
+
 
     /**
      * Bind the expected output files to the corresponding output channels
@@ -579,82 +666,114 @@ abstract class TaskProcessor {
         }
     }
 
+    final protected void collectOutputs( TaskRun task ) {
+        collectOutputs( task, task.workDirectory, task.@stdout, task.code?.delegate )
+    }
+
     /**
      * Once the task has completed this method is invoked to collected all the task results
      *
      * @param task
      */
-    final protected void collectOutputs( TaskRun task ) {
+    final protected void collectOutputs( TaskRun task, Path workDir, def stdout, Map context ) {
 
         task.outputs.keySet().each { OutParam param ->
-            collectOutputs(task, param)
+
+            switch( param ) {
+                case StdOutParam:
+                    collectStdOut(task, param, stdout)
+                    break
+
+                case FileOutParam:
+                    collectOutFiles(task, param, workDir)
+                    break
+
+                case ValueOutParam:
+                    collectOutValues(task, param, context)
+                    break
+
+                default:
+                    throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
+
+            }
         }
 
         // mark ready for output binding
         task.canBind = true
     }
 
-    protected void collectOutputs( TaskRun task, OutParam param ) {
-        assert task
-        assert param
-        log.trace "Collecting output for ${param.dump()}"
+    /**
+     * Collects the process 'std output'
+     *
+     * @param task The executed process instance
+     * @param param The declared {@code StdOutParam} object
+     * @param stdout The object holding the task produced std out object
+     */
+    protected void collectStdOut( TaskRun task, StdOutParam param, def stdout ) {
 
-        switch( param ) {
-            case StdOutParam:
-                task.setOutput(param, task.stdout)
-                break
-
-            case FileOutParam:
-                def all = []
-                def fileParam = param as FileOutParam
-                // type file parameter can contain a multiple files pattern separating them with a special character
-                def entries = fileParam.separatorChar ? fileParam.name.split(/\${fileParam.separatorChar}/) : [fileParam.name]
-                // for each of them collect the produced files
-                entries.each { String pattern ->
-                    def result = executor.collectResultFile(task, pattern)
-                    log.debug "Task ${task.name} > collected outputs for pattern '$pattern': $result"
-
-                    if( result instanceof List ) {
-                        // filter the result collection
-                        if( pattern.startsWith('*') && !fileParam.includeHidden ) {
-                            result = filterByRemovingHiddenFiles(result)
-                            log.trace "Task ${task.name} > after removing hidden files: ${result}"
-                        }
-
-                        // filter the inputs
-                        if( !fileParam.includeInputs ) {
-                            result = filterByRemovingStagedInputs(task, result)
-                            log.trace "Task ${task.name} > after removing staged inputs: ${result}"
-                        }
-
-                        all.addAll((List) result)
-                    }
-
-                    else if( result ) {
-                        all.add(result)
-                    }
-                }
-
-                task.setOutput( param, all.size()==1 ? all[0] : all )
-                break
-
-            case ValueOutParam:
-                // look into the task inputs value for an *ValueInParam* entry
-                // having the same *name* as the requested output name
-                def entry = task.getInputsByType(ValueInParam,EachInParam).find { it.key.name == param.name }
-                if( entry ) {
-                    task.setOutput( param, entry.value )
-                }
-                else {
-                    log.warn "Not a valid output parameter: '${param.name}' -- only values declared as input can be used in the output section"
-                }
-                break
-
-            default:
-                throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
-
+        if( stdout == null && task.type == ScriptType.SCRIPTLET ) {
+            throw new IllegalArgumentException("Missing 'stdout' for task > ${task.name}")
         }
+
+        if( stdout instanceof Path && !stdout.exists() ) {
+            throw new MissingFileException("Missing 'stdout' file: ${stdout} for task > ${task.name}")
+        }
+
+        task.setOutput(param, stdout)
     }
+
+
+    protected void collectOutFiles( TaskRun task, FileOutParam param, Path workDir ) {
+
+        def all = []
+        def fileParam = param as FileOutParam
+        // type file parameter can contain a multiple files pattern separating them with a special character
+        def entries = fileParam.separatorChar ? fileParam.name.split(/\${fileParam.separatorChar}/) : [fileParam.name]
+        // for each of them collect the produced files
+        entries.each { String pattern ->
+            def result = executor.collectResultFile(workDir, pattern, task.name)
+            log.debug "Task ${task.name} > collected outputs for pattern '$pattern': $result"
+
+            if( result instanceof List ) {
+                // filter the result collection
+                if( pattern.startsWith('*') && !fileParam.includeHidden ) {
+                    result = filterByRemovingHiddenFiles(result)
+                    log.trace "Task ${task.name} > after removing hidden files: ${result}"
+                }
+
+                // filter the inputs
+                if( !fileParam.includeInputs ) {
+                    result = filterByRemovingStagedInputs(task, result)
+                    log.trace "Task ${task.name} > after removing staged inputs: ${result}"
+                }
+
+                all.addAll((List) result)
+            }
+
+            else if( result ) {
+                all.add(result)
+            }
+        }
+
+        task.setOutput( param, all.size()==1 ? all[0] : all )
+
+    }
+
+    protected void collectOutValues( TaskRun task, ValueOutParam param, Map ctx ) {
+
+        // look into the task inputs value for an *ValueInParam* entry
+        // having the same *name* as the requested output name
+        if( !ctx.containsKey(param.name) ) {
+            throw new MissingValueException("Illegal output val parameter: ${param.name}")
+        }
+
+        // bind the value
+        def val = ctx.get(param.name)
+        task.setOutput( param, val )
+        log.trace "Collecting param: ${param.name}; value: ${val}"
+
+    }
+
 
     /**
      * Given a list of {@code Path} removes all the hidden file i.e. the ones which names starts with a dot char
@@ -885,45 +1004,44 @@ abstract class TaskProcessor {
     static class DelegateMap implements Map {
 
         @Delegate
-        private Map<String,Object> local
+        private Map<String,Object> holder
 
         private BaseScript script
 
         DelegateMap(BaseScript script) {
             this.script = script
-            this.local = [:]
+            this.holder = [:]
         }
 
-        DelegateMap(Map target) {
-            assert target != null
+        DelegateMap(BaseScript script, Map holder) {
+            assert holder != null
             this.script = script
-            this.local = target
+            this.holder = holder
         }
 
         @Override
         public Object get(Object property) {
 
-            if( local.containsKey(property) ) {
-                return local.get(property)
+            def result = null
+            if( holder.containsKey(property) ) {
+                return holder.get(property)
             }
-            else if ( script ){
-                try {
-                    return script.getProperty(property?.toString())
-                }
-                catch( MissingPropertyException e ) {
-                    log.trace "Unable to find a value for: '\$${property}' on script context"
-                }
+            // todo -- verify if it could better using "script.getBinding().getVariable()"
+            else if ( script && script.hasProperty(property)) {
+                return script.getProperty(property?.toString())
             }
 
-            // return the variable name prefixed with the '$' char
-            // so give a chance to the bash interpreted to evaluate it
-            return '$' + property
+            throw new MissingPropertyException("Unknown variable '$property' -- Make sure you didn't misspell it or define somewhere in the script before use it")
 
         }
 
         @Override
         public put(String property, Object newValue) {
-            local.put(property, newValue)
+            holder.put(property, newValue)
+        }
+
+        public Map getHolder() {
+            holder
         }
     }
 
@@ -936,14 +1054,32 @@ abstract class TaskProcessor {
      */
     @PackageScope
     final void finalizeTask( TaskRun task ) {
+        log.trace "finalizing task > ${task.name}"
         try {
             // verify task exist status
-            boolean success = (task.exitStatus in taskConfig.validExitStatus)
-            if ( !success ) {
-                throw new InvalidExitException("Task '${task.name}' terminated with an error")
+            if( task.type == ScriptType.GROOVY ) {
+                if( task.error ) {
+                    throw new InvalidExitException("Task '${task.name}' terminated with an error", task.error)
+                }
             }
+
+            else {
+                boolean success = (task.exitStatus in taskConfig.validExitStatus)
+                if ( !success ) {
+                    throw new InvalidExitException("Task '${task.name}' terminated with an error")
+                }
+            }
+
             // if it's OK collect results and finalize
             collectOutputs(task)
+
+            // save the context map for caching purpose
+            // only the 'cache' is active and
+            def cacheable = session.cacheable && task.processor.taskConfig.cacheable
+            if( cacheable && task.getOutputsByType(ValueOutParam).size() ) {
+                saveContextMap( (DelegateMap) task.code.delegate, task.getCmdContextFile() )
+            }
+
         }
         catch ( Throwable error ) {
             handleException(error, task)
@@ -995,6 +1131,15 @@ abstract class TaskProcessor {
         return done
     }
 
+
+    protected void saveContextMap( DelegateMap map, Path contextFile ) {
+        contextFile.bytes = SerializationUtils.serialize( map.getHolder() )
+    }
+
+    protected DelegateMap readContextMap( Path contextFile ) {
+        def map = (Map)SerializationUtils.deserialize( contextFile.bytes )
+        new DelegateMap(ownerScript,map)
+    }
 
 }
 

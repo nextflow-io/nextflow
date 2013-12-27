@@ -14,14 +14,13 @@ process perlTask {
     use strict;
     use warnings;
 
-    my $count;
-    my $range = ${params.range};
-    for ($count = 0; $count < 10; $count++) {
-     	print rand($range) . ', ' . rand($range) . "\\n";
+    my \$count;
+    my \$range = ${params.range};
+    for (\$count = 0; \$count < 10; \$count++) {
+     	print rand(\$range) . ', ' . rand(\$range) . "\\n";
     }
 
     """
-
 }
 
 
@@ -50,7 +49,6 @@ process pyTask {
     print "avg: %s - %s" % ( x/lines, y/lines )
 
     """
-
 
 }
 

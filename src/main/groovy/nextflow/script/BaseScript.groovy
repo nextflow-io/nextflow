@@ -188,12 +188,12 @@ abstract class BaseScript extends Script {
     /**
      * Create a task processor
      *
-     * @param name The name used to label this processor
-     * @param block The code block to be executed
+     * @param name The name of the process as defined in the script
+     * @param body The process declarations provided by the user
      * @return The {@code Processor} instance
      */
-    private createProcessor( Class<? extends TaskProcessor> processorClass, String name, Closure<String> block  ) {
-        assert block
+    private createProcessor( Class<? extends TaskProcessor> processorClass, String name, ScriptType type, Closure body ) {
+        assert body
 
         def taskConfig = new TaskConfig(this)
 
@@ -216,11 +216,16 @@ abstract class BaseScript extends Script {
         // Note: the config object is wrapped by a TaskConfigWrapper because it is required
         // to raise a MissingPropertyException when some values is missing, so that the Closure
         // will try to fallback on the owner object
-        def script = new TaskConfigWrapper(taskConfig).with ( block ) as Closure
+        def script = new TaskConfigWrapper(taskConfig).with ( body ) as Closure
         if ( !script ) throw new IllegalArgumentException("Missing script in the specified task block -- make sure it terminates with the script string to be executed")
 
         // load the executor to be used
         def execName = getExecutorName(taskConfig)
+        if( type == ScriptType.GROOVY && execName && execName != 'local' ) {
+            log.warn "Process '$name' cannot be executed by '$execName' executor -- Native processes are supported only by 'local' executor"
+            execName = 'local'
+        }
+
         def execClass = loadExecutorClass(execName)
         def execObj = execClass.newInstance()
         // inject the task configuration into the executor instance
@@ -230,6 +235,7 @@ abstract class BaseScript extends Script {
         execObj.init()
 
         def result = processorClass.newInstance( execObj, session, this, taskConfig, script )
+        result.type = type
         return taskProcessor = result
 
     }
@@ -270,16 +276,42 @@ abstract class BaseScript extends Script {
         return result
     }
 
-
-    def process( Map<String,?> args, String name, Closure code ) {
-        log.debug "Create task: $name -- $args "
+    /**
+     * Method to which is mapped the *process* declaration when using the following syntax:
+     *    <pre>
+     *        process myProcess( option: value[, [..]] ) &#123;
+     *        ..
+     *        &#125;
+     *    </pre>
+     *
+     * @param args The process options specified in the parenthesis after the process name, as shown in the above example
+     * @param name The name of the process, e.g. {@code myProcess} in the above example
+     * @param scriptlet Whenever the process carry out an system script {@code true} or a native groovy code {@code false}
+     * @param body The body of the process declaration. It holds all the process definitions: inputs, outputs, code, etc.
+     */
+    protected process( Map<String,?> args, String name, boolean scriptlet, Closure body ) {
+        log.trace "Create task: $name -- native: $scriptlet; args: $args "
         def clazz = args.merge ? MergeTaskProcessor : ParallelTaskProcessor
-        result = createProcessor(clazz, name, code).run()
+        def type = scriptlet ? ScriptType.SCRIPTLET : ScriptType.GROOVY
+        result = createProcessor(clazz, name, type, body).run()
     }
 
-    def process( String name, Closure code ) {
-        log.debug "Create task: $name -- noargs"
-        result = createProcessor(ParallelTaskProcessor, name, code).run()
+    /**
+     * Method to which is mapped the *process* declaration.
+     *
+     *    <pre>
+     *        process myProcess( option: value[, [..]] ) &#123;
+     *        ..
+     *        &#125;
+     *    </pre>
+     * @param name The name of the process, e.g. {@code myProcess} in the above example
+     * @param scriptlet Whenever the process carry out an system script {@code true} or a native groovy code {@code false}
+     * @param body The body of the process declaration. It holds all the process definitions: inputs, outputs, code, etc.
+     */
+    protected process( String name, boolean scriptlet, Closure body ) {
+        log.trace "Create task: $name -- script: $scriptlet"
+        def type = scriptlet ? ScriptType.SCRIPTLET : ScriptType.GROOVY
+        result = createProcessor(ParallelTaskProcessor, name, type, body).run()
     }
 
 
