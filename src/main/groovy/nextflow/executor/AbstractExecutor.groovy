@@ -94,10 +94,9 @@ abstract class AbstractExecutor {
      * @param fileName The file name, it may include file name wildcards
      * @return The list of files matching the specified name
      */
-    def collectResultFile( TaskRun task, String fileName ) {
+    def collectResultFile( Path workDirectory, String fileName, String taskName ) {
         assert fileName
-        assert task
-        assert task.workDirectory
+        assert workDirectory
 
         // replace any wildcards characters
         // TODO use newDirectoryStream here and eventually glob
@@ -105,19 +104,19 @@ abstract class AbstractExecutor {
 
         // when there's not change in the pattern, try to find a single file
         if( filePattern == fileName ) {
-            def result = task.workDirectory.resolve(fileName)
+            def result = workDirectory.resolve(fileName)
             if( !result.exists() ) {
-                throw new MissingFileException("Missing output file: '$fileName' expected by task: ${task.name}")
+                throw new MissingFileException("Missing output file: '$fileName' expected by task: ${taskName}")
             }
             return result
         }
 
         // scan to find the file with that name
         List files = []
-        task.workDirectory.eachFileMatch(FileType.ANY, ~/$filePattern/ ) { files << it }
+        workDirectory.eachFileMatch(FileType.ANY, ~/$filePattern/ ) { files << it }
 
         if( !files ) {
-            throw new MissingFileException("Missing output file(s): '$fileName' expected by task: ${task.name}")
+            throw new MissingFileException("Missing output file(s): '$fileName' expected by task: ${taskName}")
         }
 
         return files

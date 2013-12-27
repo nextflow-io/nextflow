@@ -180,6 +180,13 @@ class ProcessDefTransformImpl implements ASTTransformation {
                     case 'exec':
                         iterator.remove()
                         execStatements << stm
+                        break
+
+                    case 'script':
+                        iterator.remove()
+                        execStatements << stm
+                        break
+
                 }
             }
 
@@ -197,10 +204,11 @@ class ProcessDefTransformImpl implements ASTTransformation {
                 // append the new block to the
                 block.addStatement( new ExpressionStatement(execClosure) )
                 done = true
+
             }
 
             /*
-             * when the last statement is a string script, the 'exec:' label can be omitted
+             * when the last statement is a string script, the 'script:' label can be omitted
              */
             else if( len ) {
                 def stm = block.getStatements().get(len-1)
@@ -212,12 +220,17 @@ class ProcessDefTransformImpl implements ASTTransformation {
                 else if ( stm instanceof ExpressionStatement )  {
                     (done,line,coln) = wrapExpressionWithClosure(block, stm.expression, len)
                 }
+                // set the 'script' flag
+                currentLabel = 'script'
             }
 
+            // set the 'script' flag parameter
+            def flag = currentLabel == 'script' ? ConstantExpression.PRIM_TRUE : ConstantExpression.PRIM_FALSE
+            args.getExpressions().add( args.expressions.size()-1, flag )
 
             if (!done) {
-                log.trace "Not a valid task statement return type: ${stm.class.name} -- Task must terminate with string expression"
-                unit.addError( new SyntaxException("Not a valid task definition -- Make sure task ends with the script to be executed wrapped by quote characters", line,coln))
+                log.trace "Invalid 'process' definition -- Task must terminate with string expression"
+                unit.addError( new SyntaxException("Not a valid process definition -- Make sure task ends with the script to be executed wrapped by quote characters", line,coln))
             }
         }
     }

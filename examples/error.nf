@@ -7,7 +7,7 @@ process task1 {
     input:
     val x using channel(1,2,3)
 
-    exec:
+    script:
     "echo $x; exit 1"
 }
 
@@ -20,7 +20,7 @@ process task2 {
     input:
     val x using channel(4,5,6)
 
-    exec:
+    script:
     "echo $x"
 
  }

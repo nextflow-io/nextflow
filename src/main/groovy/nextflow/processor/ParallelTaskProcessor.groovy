@@ -10,6 +10,7 @@ import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.script.ScriptType
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
 /**
@@ -163,7 +164,7 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         // -- map the inputs to a map and use to delegate closure values interpolation
         def map = new DelegateMap(ownerScript)
-        int count =0
+        int count = 0
         /*
          * initialize the inputs for this task instances
          */
@@ -229,8 +230,12 @@ class ParallelTaskProcessor extends TaskProcessor {
         // -- call the closure and execute the script
         currentTask.set(task)
 
-        // Important! Here it call the user specific script and resolve the all variables ref
-        task.script = task.code.call()?.toString()?.stripIndent()
+        // Important!
+        // when the task is implemented by a script string
+        // Invokes the closure which return the script whit all the variables replaced with the actual values
+        if( type == ScriptType.SCRIPTLET ) {
+            task.script = task.code.call()?.toString()?.stripIndent()
+        }
 
         // create an hash for the inputs and code
         // Does it exist in the cache?
@@ -239,7 +244,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         //          YES --> return the outputs
         //          NO  --> launch the task
 
-        def keys = [session.uniqueId, task.script ]
+        def keys = [ session.uniqueId, task.script ]
         // add all the input name-value pairs to the key generator
         task.inputs.each { keys << it.key.name << it.value }
 
@@ -268,6 +273,13 @@ class ParallelTaskProcessor extends TaskProcessor {
             log.trace "Before run > ${name} -- messages: ${messages}"
             instanceCount.incrementAndGet()
             return messages;
+        }
+
+
+        @Override
+        void afterRun(DataflowProcessor processor, List<Object> messages) {
+            log.trace "After run > ${currentTask.get()?.name ?: name}"
+            currentTask.remove()
         }
 
         @Override
@@ -303,12 +315,6 @@ class ParallelTaskProcessor extends TaskProcessor {
             else {
                 return message;
             }
-        }
-
-        @Override
-        void afterRun(DataflowProcessor processor, List<Object> messages) {
-            log.trace "After run > ${currentTask.get()?.name ?: name}"
-            currentTask.remove()
         }
 
         @Override

@@ -32,4 +32,4 @@ process reverse {
     """
 }
 
-result.each { println it }
+result.subscribe { println it }

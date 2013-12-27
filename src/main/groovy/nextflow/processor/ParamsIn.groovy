@@ -64,7 +64,7 @@ abstract class InParam {
 
         // wrap any collections with a DataflowQueue
         if( value instanceof Collection ) {
-            return Nextflow.channel(value)
+            return Nextflow.channel(value as List)
         }
 
         // wrap any array with a DataflowQueue

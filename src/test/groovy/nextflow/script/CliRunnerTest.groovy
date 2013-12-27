@@ -198,14 +198,39 @@ class CliRunnerTest extends Specification {
             X = 1
             Y = 2
             process test {
-                input Y
-                def Z = 3
+                input:
+                val Y
 
-                "$X-$Y-$Z"
+                "$X-$Y-3"
             }
 
             '''
 
+
+        expect:
+        runner.execute(script).val == '1-2-3'
+
+    }
+
+    def 'test task variables 2' () {
+
+
+        setup:
+        def runner = new CliRunner( executor: 'nope' )
+
+        def script = '''
+            X = 1
+            Y = 2
+            process test {
+                input:
+                val Y
+
+                exec:
+                def Z = 3
+                "$X-$Y-$Z"
+            }
+
+            '''
 
         expect:
         runner.execute(script).val == '1-2-3'

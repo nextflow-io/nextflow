@@ -20,6 +20,8 @@
 package nextflow
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -104,6 +106,7 @@ class Session {
 
     private boolean terminated
 
+    private volatile ExecutorService execService
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -166,7 +169,8 @@ class Session {
 
     void destroy() {
         log.trace "Session destroying"
-        pgroup.shutdown()
+        if( pgroup ) pgroup.shutdown()
+        if( execService ) execService.shutdown()
         log.debug "Session destroyed"
     }
 
@@ -190,6 +194,21 @@ class Session {
         log.debug "<<< phaser deregister (task)"
         phaser.arriveAndDeregister()
     }
+
+    def ExecutorService getExecService() {
+
+        def local = execService
+        if( local )
+            return local
+
+        synchronized(this) {
+            if (execService == null) {
+                execService = Executors.newCachedThreadPool()
+            }
+            return execService
+        }
+    }
+
 
     protected getExecConfigProp( String execName, String propName, Object defValue ) {
 

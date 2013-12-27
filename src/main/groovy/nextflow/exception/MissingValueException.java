@@ -27,13 +27,13 @@ package nextflow.exception;
  * http://blog.proxerd.pl/article/how-to-fix-incompatibleclasschangeerror-for-your-groovy-projects-running-on-jdk7
  *
  */
-public class MissedCacheException extends TaskException {
+public class MissingValueException extends TaskException {
 
-    public MissedCacheException(String message) {
+    public MissingValueException(String message) {
         super(message);
     }
 
-    public MissedCacheException(String message, Throwable cause) {
+    public MissingValueException(String message, Throwable cause) {
         super(message, cause);
     }
 

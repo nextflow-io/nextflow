@@ -20,10 +20,12 @@
 package nextflow.processor
 
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.locks.ReentrantLock
 
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
+import nextflow.script.ScriptType
 
 /**
  * Models a task instance
@@ -33,7 +35,7 @@ import groovy.util.logging.Slf4j
 
 @Slf4j
 @ToString( includePackage = false, includeNames = true, includes = 'id,index,name,status,exitCode' )
-class TaskRun<T extends TaskHandler> {
+class TaskRun {
 
     static private final echoLock = new ReentrantLock(true)
 
@@ -130,16 +132,14 @@ class TaskRun<T extends TaskHandler> {
      */
     def String getStdout() {
 
-        if( stdout == null ) {
-            stdout = getCmdOutputFile()
-        }
-
         if( stdout instanceof Path ) {
             return stdout.exists() ? stdout.text : null
         }
-        else {
-            return stdout?.toString()
+        else if( stdout != null ) {
+            return stdout.toString()
         }
+
+        return null
     }
 
     /**
@@ -147,25 +147,23 @@ class TaskRun<T extends TaskHandler> {
      */
     void echoStdout() {
 
-        def out = stdout ?: getCmdOutputFile()
-
         // print the stdout
-        if( out instanceof Path ) {
-            if( !out.exists() ) {
+        if( stdout instanceof Path ) {
+            if( !stdout.exists() ) {
                 log.debug "Echo file does not exist: ${out}"
                 return
             }
 
             echoLock.lock()
             try {
-                out.withReader {  System.out << it }
+                stdout.withReader {  System.out << it }
             }
             finally {
                 echoLock.unlock()
             }
         }
-        else if( out != null ) {
-            print out.toString()
+        else if( stdout != null ) {
+            print stdout.toString()
         }
 
     }
@@ -176,6 +174,16 @@ class TaskRun<T extends TaskHandler> {
      */
     Path workDirectory
 
+    /**
+     * The type of the task code: native or external system command
+     */
+    ScriptType type
+
+    /**
+     * The runtime exception when execution groovy native code
+     */
+    Throwable error
+
     /*
      * The closure implementing this task
      */
@@ -185,6 +193,7 @@ class TaskRun<T extends TaskHandler> {
      * The script executed by the system
      */
     def script
+
 
     def String getScript() {
         if( script instanceof Path ) {
@@ -231,40 +240,55 @@ class TaskRun<T extends TaskHandler> {
         return environment
     }
 
+
+    static Path CMD_ENV = Paths.get('.command.env')
+    static Path CMD_SCRIPT = Paths.get('.command.sh')
+    static Path CMD_INFILE = Paths.get('.command.in')
+    static Path CMD_OUTFILE = Paths.get('.command.out')
+    static Path CMD_EXIT = Paths.get('.exitcode')
+    static Path CMD_START = Paths.get('.command.started')
+    static Path CMD_RUN = Paths.get('.command.run')
+    static Path CMD_CONTEXT = Paths.get('.command.ctx')
+
     /**
      * @return The location of the environment script used by this task
      */
-    Path getCmdEnvironmentFile() { workDirectory.resolve('.command.env') }
+    Path getCmdEnvironmentFile() { workDirectory.resolve(CMD_ENV) }
 
     /**
      * @return The location of the task script script to be executed
      */
-    Path getCmdScriptFile() { workDirectory.resolve('.command.sh') }
+    Path getCmdScriptFile() { workDirectory.resolve(CMD_SCRIPT) }
 
     /**
      * @return The location of the data file to be provided to this task
      */
-    Path getCmdInputFile() { workDirectory.resolve('.command.in') }
+    Path getCmdInputFile() { workDirectory.resolve(CMD_INFILE) }
 
     /**
      * @return The location of the data output by this task
      */
-    Path getCmdOutputFile() { workDirectory.resolve('.command.out') }
+    Path getCmdOutputFile() { workDirectory.resolve(CMD_OUTFILE) }
 
     /**
      * @return The location of the file where the task exit status is saved
      */
-    Path getCmdExitFile() { workDirectory.resolve('.exitcode') }
+    Path getCmdExitFile() { workDirectory.resolve(CMD_EXIT) }
 
     /**
      * @return The location of the created when the task starts
      */
-    Path getCmdStartedFile() { workDirectory.resolve('.command.started') }
+    Path getCmdStartedFile() { workDirectory.resolve(CMD_START) }
 
     /**
      * @return The location of the wrapper BASH script user to launch the user target script
      */
-    Path getCmdWrapperFile() { workDirectory.resolve('.command.run')  }
+    Path getCmdWrapperFile() { workDirectory.resolve(CMD_RUN)  }
+
+    /**
+     * @return The location of the file that holds the cached process context map
+     */
+    Path getCmdContextFile() { workDirectory.resolve(CMD_CONTEXT) }
 
 }
 
