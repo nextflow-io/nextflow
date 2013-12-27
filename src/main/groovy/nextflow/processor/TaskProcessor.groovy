@@ -21,7 +21,6 @@ import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
-import embed.AstNodeToScriptVisitor
 import embed.com.google.common.hash.HashCode
 import groovy.transform.PackageScope
 import groovy.transform.Synchronized
@@ -35,6 +34,7 @@ import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
 import nextflow.Nextflow
 import nextflow.Session
+import nextflow.ast.AstNodeToScriptVisitor
 import nextflow.exception.InvalidExitException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
