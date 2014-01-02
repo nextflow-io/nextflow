@@ -129,7 +129,7 @@ class MergeTaskProcessor extends TaskProcessor {
 
         taskConfig.inputs.eachWithIndex { InParam param, int index ->
 
-            final val = values[index]
+            def val = values[index]
 
             // define the *context* against which the script will be evaluated
             switch( param ) {
