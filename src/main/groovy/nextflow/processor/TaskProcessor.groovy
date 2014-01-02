@@ -17,6 +17,8 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.processor
+
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
@@ -876,21 +878,34 @@ abstract class TaskProcessor {
      * @param altName The name to be used when a temporary file is created.
      * @return The {@code Path} that will be staged in the task working folder
      */
-    protected FileHolder normalizeInputToFile( Object input, String altName ) {
+    protected FileHolder normalizeInputToFile( Object input, String altName, FileSpec fileSpec = null ) {
 
         if( input instanceof Path ) {
+            checkSpec(input,fileSpec)
             return new FileHolder(input)
         }
 
         def result = ownerScript.tempFile(altName)
-        result.text = input?.toString() ?: ''
-        return new FileHolder(input, result)
+        def source = input?.toString() ?: ''
+        result.text = source
+        return new FileHolder(source, result)
     }
 
-    protected List<FileHolder> normalizeInputToFiles( Object obj, int count ) {
+    protected void checkSpec(Path path, FileSpec fileSpec) {
+
+        if( !path.exists() && fileSpec?.create ) {
+            if( fileSpec.file )
+                Files.createFile(path)
+            else
+                Files.createDirectory(path)
+        }
+
+    }
+
+    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, FileSpec fileSpec = null ) {
 
         def files = (obj instanceof Collection ? obj : [obj]).collect {
-            normalizeInputToFile(it, "input.${++count}")
+            normalizeInputToFile(it, "input.${++count}", fileSpec)
         }
 
         return files
@@ -921,13 +936,12 @@ abstract class TaskProcessor {
      * @return
      */
     protected List<FileHolder> expandWildcards( String name, List<FileHolder> files ) {
-        assert name
         assert files != null
 
         final result = []
         if( files.size()==0 ) { return result }
 
-        if( name == '*' ) {
+        if( !name || name == '*' ) {
             return files
         }
 

@@ -29,7 +29,7 @@ class ParamsInTest extends Specification {
 
         then:
         param.name == 'x'
-        param.target == var
+        param.inTarget == var
         param.inChannel.val == 1
 
 

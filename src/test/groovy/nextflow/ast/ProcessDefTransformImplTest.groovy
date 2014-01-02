@@ -18,7 +18,7 @@
  */
 
 package nextflow.ast
-import java.nio.file.Path
+
 import java.nio.file.Paths
 
 import groovyx.gpars.dataflow.DataflowQueue
@@ -76,7 +76,7 @@ class ProcessDefTransformImplTest extends Specification {
         ValueInParam in1 = process.taskConfig.getInputs().get(0)
         then:
         in1.name == 'x'
-        in1.target == 1
+        in1.inTarget == 1
         in1.getInChannel() instanceof DataflowVariable
         in1.getInChannel().getVal() == 1
 
@@ -106,17 +106,17 @@ class ProcessDefTransformImplTest extends Specification {
 
         then:
         in1.name == 'q'
-        in1.target == 'hola'
+        in1.inTarget == 'hola'
         in1.inChannel instanceof DataflowVariable
         in1.inChannel.getVal() == 'hola'
 
         in2.name == 'p1'
-        in2.target == 1
+        in2.inTarget == 1
         in2.inChannel instanceof DataflowVariable
         in2.inChannel.getVal() == 1
 
         in3.name == 'p2'
-        in3.target == y
+        in3.inTarget == y
         in3.inChannel instanceof DataflowQueue
         in3.inChannel  == y
 
@@ -147,22 +147,22 @@ class ProcessDefTransformImplTest extends Specification {
 
         then:
         in1.name == 'X'
-        in1.target == 1
+        in1.inTarget == 1
         in1.inChannel instanceof DataflowVariable
         in1.inChannel.val == 1
 
         in2.name == 'y'
-        in2.target == 2
+        in2.inTarget == 2
         in2.inChannel instanceof DataflowVariable
         in2.inChannel.val == 2
 
         in3.name == 'w'
-        in3.target instanceof Closure
+        in3.inTarget instanceof Closure
         in3.inChannel instanceof DataflowVariable
         in3.inChannel.val == 'str'
 
         in4.name == 'z'
-        in4.target == [1,2,3]
+        in4.inTarget == [1,2,3]
         in4.inChannel instanceof DataflowQueue
         in4.inChannel.val == 1
         in4.inChannel.val == 2
@@ -205,21 +205,21 @@ class ProcessDefTransformImplTest extends Specification {
         // - the target holds the variable value
         // - the channel returns the variable value
         in1.name == 'blast_x'
-        in1.target == 'blah blah'
+        in1.inTarget == 'blah blah'
         in1.inChannel.getVal() == 'blah blah'
 
         // - the (file) name get the value specified by the 'as' keyword
         // - target get the 'blast_y' value
         // = the channel binds to 'blast_y' value
         in2.name == 'no_quote'
-        in2.target == 'blah blah'
+        in2.inTarget == 'blah blah'
         in2.inChannel.getVal() == 'blah blah'
 
         // - the (file) name get the value specified by the 'as' keyword
         // - target get the 'blast_z' value
         // = the channel binds to 'blast_z' value
         in3.name == 'file.txt'
-        in3.target == 'blah blah'
+        in3.inTarget == 'blah blah'
         in3.inChannel.getVal() == 'blah blah'
 
         // the file argument is not a variable, but an expression, thus
@@ -227,7 +227,7 @@ class ProcessDefTransformImplTest extends Specification {
         // - the target is the closure
         // - the channel holds the closure value
         in4.name == '*'
-        in4.target instanceof Closure
+        in4.inTarget instanceof Closure
         in4.inChannel.getVal() == 1
 
 
@@ -255,11 +255,11 @@ class ProcessDefTransformImplTest extends Specification {
 
         then:
         env1.name == 'VAR_1'
-        env1.target == 1
+        env1.inTarget == 1
         env1.inChannel.val == 1
 
         env2.name == 'VAR_2'
-        env2.target == 2
+        env2.inTarget == 2
         env2.inChannel instanceof DataflowVariable
         env2.inChannel.val == 2
 
@@ -297,19 +297,19 @@ class ProcessDefTransformImplTest extends Specification {
 
         then:
         each1.name == 'p1'
-        each1.target instanceof DataflowVariable
+        each1.inTarget instanceof DataflowVariable
         each1.inChannel.val == [1]
 
         each2.name == 'x2'
-        each2.target instanceof DataflowVariable
+        each2.inTarget instanceof DataflowVariable
         each2.inChannel.val == [1,2,3]
 
         each3.name == 'x3'
-        each3.target instanceof DataflowVariable
+        each3.inTarget instanceof DataflowVariable
         each3.inChannel.val == ['hola']
 
         each4.name == 'x4'
-        each4.target instanceof DataflowVariable
+        each4.inTarget instanceof DataflowVariable
         each4.inChannel.val == [6,7,8]
     }
 
@@ -338,7 +338,7 @@ class ProcessDefTransformImplTest extends Specification {
 
         then:
         stdin1.name == '-'
-        stdin1.target == 'hola'
+        stdin1.inTarget == 'hola'
         stdin1.inChannel instanceof DataflowVariable
         stdin1.inChannel.val == 'hola'
 
@@ -416,12 +416,12 @@ class ProcessDefTransformImplTest extends Specification {
         !binding.containsKey('y')
 
         out1.name == '-'
-        out1.@into == 'x'
+        out1.@outTarget == 'x'
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.x
 
         out2.name == '-'
-        out2.@into == 'y'
+        out2.@outTarget == 'y'
         out2.outChannel instanceof DataflowQueue
         out2.outChannel == binding.y
 
@@ -457,7 +457,7 @@ class ProcessDefTransformImplTest extends Specification {
         !binding.containsKey('x')
 
         out1.name == 'x'
-        out1.@into == null
+        out1.@outTarget == null
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.x
 
@@ -490,18 +490,18 @@ class ProcessDefTransformImplTest extends Specification {
 
         then:
         out1.name == 'xx'
-        out1.@into == null
+        out1.@outTarget == null
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.xx
 
         out2.name == 'pp'
-        out2.@into == 'qq'
+        out2.@outTarget == 'qq'
         out2.outChannel instanceof DataflowQueue
         out2.outChannel == binding.qq
         !binding.containsKey('pp')
 
         out3.name == 'vv'
-        out3.@into == 'ww'
+        out3.@outTarget == 'ww'
         out3.outChannel instanceof DataflowQueue
         out3.outChannel == binding.ww
         !binding.containsKey('vv')
@@ -534,7 +534,7 @@ class ProcessDefTransformImplTest extends Specification {
         !binding.containsKey('blast_x')
 
         out1.name == 'blast_x'
-        out1.@into == null
+        out1.@outTarget == null
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.blast_x
 
@@ -613,17 +613,17 @@ class ProcessDefTransformImplTest extends Specification {
         binding.containsKey('q')
 
         out1.name == 'file.txt'
-        out1.@into == null
+        out1.@outTarget == null
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.'file.txt'
 
         out2.name == '*.fa'
-        out2.@into == 'p'
+        out2.@outTarget == 'p'
         out2.outChannel instanceof DataflowQueue
         out2.outChannel == binding.'p'
 
         out3.name == '*.txt'
-        out3.@into == 'q'
+        out3.@outTarget == 'q'
         out3.outChannel instanceof DataflowQueue
         out3.outChannel == binding.'q'
         out3.outChannel == q
@@ -653,10 +653,10 @@ class ProcessDefTransformImplTest extends Specification {
 
         then:
         shared.name == 'x'
-        shared.target == shared.defValue()
-        shared.@into == null
+        shared.inTarget == null
+        shared.@outTarget == null
         shared.inChannel instanceof DataflowVariable
-        shared.inChannel.getVal() == shared.defValue()
+        shared.inChannel.getVal() == null
 
     }
 
@@ -686,15 +686,15 @@ class ProcessDefTransformImplTest extends Specification {
 
         // the 'x' shared variable binds to the default value (null)
         shared1.name == 'x'
-        shared1.@target == null
-        shared1.@into == null
+        shared1.@inTarget == null
+        shared1.@outTarget == null
         shared1.inChannel instanceof DataflowVariable
-        shared1.inChannel.getVal() == shared1.defValue()
+        shared1.inChannel.getVal() == null
 
         // the 'y' shared variable binds to the 'y' define in the script context
         shared2.name == 'y'
-        shared2.@target == 9
-        shared2.@into == null
+        shared2.@inTarget == 9
+        shared2.@outTarget == null
         shared2.inChannel instanceof DataflowVariable
         shared2.inChannel.getVal() == 9
 
@@ -728,22 +728,22 @@ class ProcessDefTransformImplTest extends Specification {
 
         // 'x1' shared var binds to the value defined by 'using' keyword
         shared1.name == 'x1'
-        shared1.@target == 'y'
-        shared1.@into == null
+        shared1.@inTarget == 'y'
+        shared1.@outTarget == null
         shared1.inChannel instanceof DataflowVariable
         shared1.inChannel.val == 'y'
 
         // 'x2' shared var bind to the value obtained by the closure define with the 'using' keyword
         shared2.name == 'x2'
-        shared2.@target instanceof Closure
-        shared2.@into == null
+        shared2.@inTarget instanceof Closure
+        shared2.@outTarget == null
         shared2.inChannel instanceof DataflowVariable
         shared2.inChannel.val == 'hola'
 
         // 'x3' shared var binds 'w' variable defined in the script context
         shared3.name == 'x3'
-        shared3.@target == 3
-        shared3.@into == null
+        shared3.@inTarget == 3
+        shared3.@outTarget == null
         shared3.inChannel instanceof DataflowVariable
         shared3.inChannel.val == 3
 
@@ -783,8 +783,8 @@ class ProcessDefTransformImplTest extends Specification {
         // the 'using' declares a primitive value
 
         shared1.name == 'x1'
-        shared1.@target == null
-        shared1.@into == 'p'
+        shared1.@inTarget == null
+        shared1.@outTarget == 'p'
         shared1.inChannel instanceof DataflowVariable
         shared1.outChannel instanceof DataflowVariable
         binding.containsKey('p')
@@ -792,8 +792,8 @@ class ProcessDefTransformImplTest extends Specification {
 
         // the 'using' declares a closure which is resolved to the final value ('hola')
         shared2.name == 'x2'
-        shared2.@target == 22
-        shared2.@into == 'q'
+        shared2.@inTarget == 22
+        shared2.@outTarget == 'q'
         shared2.inChannel instanceof DataflowVariable
 
         shared2.outChannel instanceof DataflowVariable
@@ -802,8 +802,8 @@ class ProcessDefTransformImplTest extends Specification {
 
         // the 'using' bind a variable declared in the script context (3)
         shared3.name == 'x3'
-        shared3.@target == 33
-        shared3.@into == 'w'
+        shared3.@inTarget == 33
+        shared3.@outTarget == 'w'
         shared3.inChannel instanceof DataflowVariable
         shared3.outChannel == w
 
@@ -822,12 +822,17 @@ class ProcessDefTransformImplTest extends Specification {
                 file y
                 file z as 'file.fasta'
                 file w as blast_result
+                file 'str' as 'file1.txt'
+                file str as 'file2.txt'
 
                 return ''
             }
             '''
 
-        def binding = [x: Paths.get('hola.txt')]
+        def binding = [
+                x: Paths.get('hola.txt'),
+                str: 'hello world'
+        ]
 
         when:
         TaskProcessor process = parse(text, binding).run()
@@ -836,43 +841,50 @@ class ProcessDefTransformImplTest extends Specification {
         FileSharedParam shared3 = process.taskConfig.getInputs().get(2)
         FileSharedParam shared4 = process.taskConfig.getInputs().get(3)
         FileSharedParam shared5 = process.taskConfig.getInputs().get(4)
+        FileSharedParam shared6 = process.taskConfig.getInputs().get(5)
+        FileSharedParam shared7 = process.taskConfig.getInputs().get(6)
 
         //  define a shared file by its name
         then:
         shared1.name == null
-        shared1.target == null
-        shared1.defValue() instanceof Path
-        shared1.defValue().name == 'file.txt'
+        shared1.fileName == 'file.txt'
+        shared1.inTarget == null
         shared1.inChannel instanceof DataflowVariable
-        shared1.inChannel.getVal() == shared1.defValue()
+        shared1.inChannel.getVal() == null
 
         // define a shared file 'x' that binds to the same variable in the script context
         // note: the variable may hold any type not only a Path.
         shared2.name == 'x'
-        shared2.target == Paths.get('hola.txt')
-        shared2.inChannel.getVal() == shared2.target
+        shared2.fileName == 'hola.txt'
+        shared2.inTarget == Paths.get('hola.txt')
+        shared2.inChannel.getVal() == shared2.inTarget
 
         // define a shared file 'y', since a variable with that name does not exist
         // binds to the default file
         shared3.name == 'y'
-        shared3.target == null
-        shared3.inChannel.getVal() == shared3.defValue()
+        shared3.fileName == 'y'
+        shared3.inTarget == null
+        shared3.inChannel.getVal() == null
 
         shared4.name == 'z'
-        shared4.target == null
-        shared4.defValue().name == 'file.fasta'
-        shared4.inChannel.getVal() == shared4.defValue()
+        shared4.fileName == 'file.fasta'
+        shared4.inTarget == null
+        shared4.inChannel.getVal() == null
 
         shared5.name == 'w'
-        shared5.target == null
-        shared5.defValue().name == 'blast_result'
-        shared5.inChannel.getVal() == shared5.defValue()
+        shared5.fileName == 'blast_result'
+        shared5.inTarget == null
+        shared5.inChannel.getVal() == null
 
-        cleanup:
-        shared1.defValue().parent.deleteDir()
-        shared3.defValue().parent.deleteDir()
-        shared4.defValue().parent.deleteDir()
-        shared5.defValue().parent.deleteDir()
+        shared6.name == null
+        shared6.fileName == 'file1.txt'
+        shared6.inTarget == 'str'
+        shared6.inChannel.getVal() == 'str'
+
+        shared7.name == 'str'
+        shared7.fileName == 'file2.txt'
+        shared7.inTarget == 'hello world'
+        shared7.inChannel.getVal() == 'hello world'
 
     }
 

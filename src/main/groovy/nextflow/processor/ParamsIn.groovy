@@ -10,25 +10,33 @@ import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Nextflow
 import nextflow.ast.ProcessVarRef
 
+/**
+ * Base class for input/output parameters
+ *
+ * @author Paolo DI Tommaso <paolo.ditommaso@gmail.com>
+ */
 @Slf4j
 abstract class BaseParam {
 
     final protected Script script
+
+    private boolean initialized
 
     protected BaseParam ( Script script ) {
         this.script = script
     }
 
     /**
-     * Initialize the parameter before use it
+     * Lazy initializer
      */
-    abstract BaseParam setup()
+    abstract BaseParam lazyInit()
 
-    private boolean initialized
-
-    final protected void lazyInit() {
+    /**
+     * Initialize the parameter fields if needed
+     */
+    final protected void init() {
         if( initialized ) return
-        setup()
+        lazyInit()
         initialized = true
     }
 
@@ -75,7 +83,18 @@ abstract class BaseParam {
 
     }
 
-    final protected DataflowWriteChannel outputValToChannel( Script script, Object channel, Class<DataflowWriteChannel> factory ) {
+    /**
+     * Creates a channel variable in the script context
+     *
+     * @param channel it can be a string representing a channel variable name in the script context. If
+     *      the variable does not exist it creates a {@code DataflowVariable} in the script with that name.
+     *      If the specified {@code value} is a {@code DataflowWriteChannel} object, use this object
+     *      as the output channel
+     *
+     * @param factory The type of the channel to create, either {@code DataflowVariable} or {@code DataflowQueue}
+     * @return The created (or specified) channel instance
+     */
+    final protected DataflowWriteChannel outputValToChannel( Object channel, Class<DataflowWriteChannel> factory ) {
 
         if( channel instanceof String ) {
             // the channel is specified by name
@@ -128,9 +147,11 @@ abstract class BaseParam {
         result
     }
 
-
 }
 
+/**
+ * Basic interface for *all* input parameters
+ */
 interface InParam {
 
     String getName()
@@ -138,8 +159,6 @@ interface InParam {
     DataflowReadChannel getInChannel()
 
     InParam _as( Object value )
-
-    Object defValue()
 
 }
 
@@ -161,16 +180,18 @@ abstract class BaseInParam extends BaseParam implements InParam {
     /**
      * the target object which hold the value of the parameter to bind in the process execution context
      */
-    protected Object target
+    protected Object inTarget
 
-    Object defValue() {
-        throw new IllegalStateException()
-    }
-
+    /**
+     * The channel to which the input value is bound
+     */
     private inChannel
 
+    /**
+     * @return The input channel instance used by this parameter to receive the process inputs
+     */
     DataflowReadChannel getInChannel() {
-        lazyInit()
+        init()
         return inChannel
     }
 
@@ -186,33 +207,33 @@ abstract class BaseInParam extends BaseParam implements InParam {
             // - use that name for the parameter itself
             // - get the variable value in the script binding
             this.name = obj.name
-            this.target = getScriptVar(obj.name, true)  // <-- true: raise an MissingPropertyException when it does not exist
+            this.inTarget = getScriptVar(obj.name, true)  // <-- true: raise an MissingPropertyException when it does not exist
         }
         else {
             // just set the parameter to the specified value
             // it must follow an 'as' keyword in the parameter definition
-            this.target = obj
+            this.inTarget = obj
         }
     }
 
+    /**
+     * Lazy parameter initializer.
+     *
+     * @return The parameter object itself
+     */
     @Override
-    BaseInParam setup() {
+    BaseInParam lazyInit() {
 
         // initialize the *inChannel* object based on the 'target' attribute
         def result
-        if( target instanceof Closure ) {
-            result = target.call()
-        }
-        else if( target != null ) {
-            result = target
+        if( inTarget instanceof Closure ) {
+            result = inTarget.call()
         }
         else {
-            // fallback on the default value
-            result = defValue()
+            result = inTarget
         }
 
         inChannel = inputValToChannel(result)
-
         return this
     }
 
@@ -229,26 +250,19 @@ abstract class BaseInParam extends BaseParam implements InParam {
      * @return
      */
     InParam _as( Object value ) {
-        alias(value)
-    }
-
-    /*
-     * Just a synonym for the "as" method
-     *
-     * @param value
-     * @return
-     */
-    protected InParam alias( Object value ) {
         this.name = value
         return this
     }
 
+    /**
+     * @return The parameter name
+     */
     def String getName() { name }
 
 }
 
 /**
- *  Model a process *file* input parameter
+ *  Represents a process *file* input parameter
  */
 @ToString(includePackage=false, includeSuper = true)
 class FileInParam extends BaseInParam  {
@@ -268,14 +282,14 @@ class FileInParam extends BaseInParam  {
 }
 
 /**
- *  Model a process *environment* input parameter
+ *  Represents a process *environment* input parameter
  */
 @InheritConstructors
 @ToString(includePackage=false, includeSuper = true)
 class EnvInParam extends BaseInParam { }
 
 /**
- *  Model a process *value* input parameter
+ *  Represents a process *value* input parameter
  */
 @ToString(includePackage=false, includeSuper = true)
 class ValueInParam extends BaseInParam {
@@ -287,7 +301,7 @@ class ValueInParam extends BaseInParam {
 }
 
 /**
- *  Model a process *stdin* input parameter
+ *  Represents a process *stdin* input parameter
  */
 @ToString(includePackage=false, includeSuper = true)
 class StdInParam extends BaseInParam {
@@ -297,14 +311,14 @@ class StdInParam extends BaseInParam {
         this.name = '-'
     }
 
-    def StdInParam alias( Object obj ) {
+    def StdInParam _as( Object obj ) {
         throw new IllegalAccessException("keyword 'as' not supported for 'stdin' definition")
     }
 
 }
 
 /**
- *  Model a process input *iterator* parameter
+ *  Represents a process input *iterator* parameter
  */
 @ToString(includePackage=false, includeSuper = true)
 class EachInParam extends BaseInParam {
@@ -314,8 +328,8 @@ class EachInParam extends BaseInParam {
 
         // everything is mapped to a collection
         // the collection is wrapped to a "scalar" dataflow variable
-        def list = Nextflow.list(target)
-        target = Nextflow.val(list)
+        def list = Nextflow.list(inTarget)
+        inTarget = Nextflow.val(list)
     }
 
 }

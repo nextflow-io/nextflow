@@ -192,17 +192,6 @@ class ParallelTaskProcessor extends TaskProcessor {
 
             // add the value to the task instance
             def val = values[index]
-            if( param instanceof SharedParam ) {
-                if( firstRun ) {
-                    sharedObjs[param] = val
-                }
-                else if( param instanceof ValueSharedParam ) {
-                    // the following times, the value eventually updated from the 'sharedObjs' map
-                    val = sharedObjs[param]
-                }
-            }
-
-            // otherwise put in on the map used to resolve the values evaluating the script
 
             switch(param) {
                 case EachInParam:
@@ -211,27 +200,41 @@ class ParallelTaskProcessor extends TaskProcessor {
                     break
 
                 case FileInParam:
-                    def fileParam = param as FileInParam
                     def normalized = normalizeInputToFiles(val,count)
-                    def resolved = expandWildcards( fileParam.name, normalized )
-                    ctx[ fileParam.name ] = singleItemOrList(resolved)
+                    def resolved = expandWildcards( param.name, normalized )
+                    ctx[ param.name ] = singleItemOrList(resolved)
                     count += resolved.size()
                     val = resolved
                     break
 
                 case FileSharedParam:
                     def fileParam = param as FileSharedParam
-                    def normalized = normalizeInputToFiles(val,count)
-                    if( normalized.size() > 1 )
-                        throw new IllegalStateException("Cannot share multiple files")
+                    if( firstRun ) {
+                        def normalized = normalizeInputToFiles(val,count)
+                        if( normalized.size() > 1 )
+                            throw new IllegalStateException("Cannot share multiple files")
 
-                    def resolved = expandWildcards( fileParam.name, normalized )
-                    ctx[ fileParam.name ] = singleItemOrList(resolved)
-                    count += resolved.size()
-                    val = resolved
+                        def resolved = expandWildcards( fileParam.fileName, normalized )
+                        count += resolved.size()
+                        val = resolved
+                        // track this obj
+                        sharedObjs[(SharedParam)param] = val
+                    }
+                    else {
+                        val = sharedObjs[(SharedParam)param]
+                    }
+
+                    if( fileParam.name )
+                        ctx[ fileParam.name ] = singleItemOrList(val)
+
                     break
 
                 case ValueSharedParam:
+                    if( firstRun )
+                        sharedObjs[(SharedParam)param] = val
+                    else
+                        val = sharedObjs[(SharedParam)param]
+
                     ctx[param.name] = val
                     break
 
@@ -292,6 +295,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         // add all the input name-value pairs to the key generator
         task.inputs.each { keys << it.key.name << it.value }
 
+        log.trace "[${task.name}] cache keys: ${keys}"
         def hash = CacheHelper.hasher(keys).hash()
         Path folder = FileHelper.getWorkFolder(session.workDir, hash)
         log.trace "[${task.name}] cacheable folder: $folder"
@@ -370,6 +374,10 @@ class ParallelTaskProcessor extends TaskProcessor {
             ParallelTaskProcessor.this.sharedObjs?.each { param, obj ->
                 if( !param.outChannel ) return
                 log.debug "Binding shared out param: ${param.name} = ${obj}"
+                if( obj instanceof Collection )
+                    obj = obj[0]
+                if( obj instanceof FileHolder )
+                    obj = obj.storePath
                 param.outChannel.bind( obj )
             }
         }

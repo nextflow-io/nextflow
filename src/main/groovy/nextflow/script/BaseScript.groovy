@@ -18,6 +18,8 @@
  */
 
 package nextflow.script
+
+import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.PackageScope
@@ -171,23 +173,31 @@ abstract class BaseScript extends Script {
     /**
      * @return Create a temporary directory
      */
-    Path tempDir() {
+    Path tempDir( String name = null, boolean create = true ) {
         def path = FileHelper.createTempFolder(session.workDir)
-        if( !path.exists() && !path.mkdirs() ) {
+        if( name )
+            path = path.resolve(name)
+
+        if( !path.exists() && create && !path.mkdirs() )
             throw new IOException("Unable to create folder: $path -- Check file system permission" )
-        }
+
         return path
     }
 
     /**
      * @return Create a temporary file
      */
-    Path tempFile( String name = null ) {
+    Path tempFile( String name = null, boolean create = false ) {
 
         if(!name)
-            name = 'temp.file'
+            name = 'file.tmp'
+
         def folder = tempDir()
-        return folder.resolve(name)
+        def result = folder.resolve(name)
+        if( create )
+            Files.createFile(result)
+
+        return result
     }
 
     /**

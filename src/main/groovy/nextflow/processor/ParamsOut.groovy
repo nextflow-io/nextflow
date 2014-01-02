@@ -31,10 +31,25 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 
 interface OutParam {
 
+    /**
+     * @return The parameter name getter
+     */
     String getName()
 
+    /**
+     * Defines the channel to which bind the output(s) in the script context
+     *
+     * @param value It can be a string representing a channel variable name in the script context. If
+     *      the variable does not exist it creates a {@code DataflowVariable} in the script with that name.
+     *      If the specified {@code value} is a {@code DataflowWriteChannel} object, use this object
+     *      as the output channel
+     * @return
+     */
     OutParam to( def value )
 
+    /**
+     * @return The output channel instance
+     */
     DataflowWriteChannel getOutChannel()
 
 }
@@ -46,7 +61,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     /** The out parameter name */
     protected String name
 
-    protected Object into
+    protected Object outTarget
 
     private outChannel
 
@@ -58,19 +73,19 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         this.name = name
     }
 
-    BaseOutParam setup() {
-        def value = into ?: name
-        outChannel = outputValToChannel(script, value, DataflowQueue)
+    BaseOutParam lazyInit() {
+        def value = outTarget ?: name
+        outChannel = outputValToChannel(value, DataflowQueue)
         return this
     }
 
     BaseOutParam to( def value ) {
-        this.into = value
+        this.outTarget = value
         return this
     }
 
     DataflowWriteChannel getOutChannel() {
-        lazyInit()
+        init()
         return outChannel
     }
 

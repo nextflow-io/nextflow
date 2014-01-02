@@ -240,7 +240,7 @@ class TaskConfig implements Map {
      * provided by the user for the current task
      */
     def void noInput() {
-        _in_val(false,'$') .alias(true)
+        _in_val(false,'$') ._as(true)
     }
 
 

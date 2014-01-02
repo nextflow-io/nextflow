@@ -18,6 +18,7 @@
  */
 
 package nextflow.processor
+
 import java.nio.file.Path
 
 import groovy.transform.ToString
@@ -26,58 +27,74 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.ast.ProcessVarRef
-import nextflow.script.BaseScript
+
+
 /**
  * 'SharedParam' Marker interface
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface SharedParam extends InParam, OutParam {
+interface SharedParam extends InParam, OutParam { }
 
-}
 
 /**
- * Model a process shared parameter that behaves both as input and output parameter
+ * Model a process shared parameter that behaves both as input and output value
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@ToString(includePackage=false, includeSuper = true)
 abstract class BaseSharedParam extends BaseParam implements SharedParam {
 
-    protected Object target
+    /** The value to which is bound this parameter in the process execution context */
+    protected Object inTarget
 
+    /** The name which is used to bind this parameter in the process execution context */
     protected String name
 
-    protected Object into
+    /** The target channel reference */
+    protected Object outTarget
 
     private inChannel
 
     private outChannel
 
 
-    protected BaseSharedParam( Script script ) {
+    protected BaseSharedParam( Script script, val ) {
         super(script)
+
+        if( val instanceof ProcessVarRef ) {
+            this.name = val.name
+            this.inTarget = getScriptVar(val.name)
+        }
+        else {
+            this.inTarget = val
+        }
     }
 
-    BaseSharedParam setup() {
+    /**
+     * Lazy initializer
+     *
+     * @return the parameter object itself
+     */
+    BaseSharedParam lazyInit() {
 
         /*
          * initialize *input* channel
          */
-        if( target instanceof Closure ) {
-            inChannel = sharedValToChannel( target.call() )
-        }
-        else if( target != null ) {
-            inChannel = sharedValToChannel( target )
+        if( inTarget instanceof Closure ) {
+            inChannel = sharedValToChannel( inTarget.call() )
         }
         else {
-            inChannel = sharedValToChannel( defValue() )
+            inChannel = sharedValToChannel( inTarget )
         }
 
         /*
          * initialize *output* channel
          */
-        if( into != null ) {
-            log.trace "shared output using > channel ref: $into"
-            outChannel = outputValToChannel( script, into, DataflowVariable )
+        if( outTarget != null ) {
+            log.trace "shared output using > channel ref: $outTarget"
+            outChannel = outputValToChannel( outTarget, DataflowVariable )
         }
 
         return this
@@ -95,93 +112,158 @@ abstract class BaseSharedParam extends BaseParam implements SharedParam {
      * @param value
      * @return
      */
-    SharedParam _as( Object value ) {
-        alias(value)
-    }
-
-    /*
-     * Just a synonym for the "as" method
-     *
-     * @param value
-     * @return
-     */
-    protected BaseSharedParam alias( Object value ) {
+    BaseSharedParam _as( Object value ) {
         this.name = value
         return this
     }
 
+    /**
+     * Define the channel to which the parameter output has to bind
+     *
+     * @param value it can be a string representing a channel variable name in the script context. If
+     *      the variable does not exist it creates a {@code DataflowVariable} in the script with that name.
+     *      If the specified {@code value} is a {@code DataflowWriteChannel} object, use this object
+     *      as the output channel
+     *
+     * @return The parameter object itself
+     * {@see #outputValToChannel()}
+     */
     BaseSharedParam to( Object value ) {
-        this.into = value
+        this.outTarget = value
         return this
     }
 
+    /**
+     * The parameter name getter
+     */
     String getName() { name }
 
+    /**
+     * Input channel getter
+     */
     DataflowReadChannel getInChannel() {
-        lazyInit()
+        init()
         inChannel
     }
 
+    /**
+     * Output channel getter
+     */
     DataflowWriteChannel getOutChannel() {
-        lazyInit()
+        init()
         outChannel
     }
 
 }
 
+/**
+ * Represents a shared value parameter
+ */
 
-
+@ToString(includePackage=false, includeSuper = true)
 class ValueSharedParam extends BaseSharedParam {
 
     ValueSharedParam ( Script script, def val ) {
-        super(script)
-
-        if( val instanceof ProcessVarRef ) {
-            this.name = val.name
-            this.target = getScriptVar(val.name)
-        }
-        else {
-            this.target = val
-        }
+        super(script, val)
     }
-
-    @Override
-    Object defValue() { null }
 
 }
 
 
+interface FileSpec {
 
+    String getName()
 
+    boolean getCreate()
+
+    boolean isDirectory()
+
+    boolean isFile()
+
+    FileSpec create(boolean flag)
+
+    FileSpec type( String str )
+
+}
 
 @ToString(includePackage=false, includeSuper = true)
-class FileSharedParam extends BaseSharedParam {
+class FileSharedParam extends BaseSharedParam implements FileSpec {
 
     private String fileName
 
-    @Lazy
-    private Path tempFile = { ((BaseScript)script).tempFile(fileName) } ()
+    private boolean isVar
 
     FileSharedParam( Script script, Object val ) {
-        super(script)
+        super(script, val)
+
+        // when only a string is entered, like:
+        //      file 'file_something'
+        //
+        // it is supposed to be the file name to be used,
+        // thus: clear the 'target' field and set the 'name'
+        //
 
         if( val instanceof ProcessVarRef ) {
-            this.name = val.name
-            this.target = getScriptVar(val.name)
+            isVar = true
+            fileName = name
         }
         else if( val instanceof String ) {
             fileName = val
+            inTarget = null
+        }
+        else {
+            fileName = name
+        }
+
+        if( inTarget instanceof Path ) {
+            fileName = inTarget.getName()
         }
     }
 
-    @Override
-    protected FileSharedParam alias( Object str ) {
-        this.fileName = str
+
+    FileSharedParam _as( value ) {
+        if( inTarget == null && !isVar ) {
+            inTarget = fileName
+        }
+        fileName = value
         return this
     }
 
-    Path defValue() {
-        tempFile
+    private String fType = 'file'
+
+    private boolean fCreate = true
+
+
+    String getFileName() {
+        return fileName
+    }
+
+    @Override
+    boolean getCreate() {
+        return fCreate
+    }
+
+    @Override
+    boolean isDirectory() {
+        return fType == 'dir'
+    }
+
+    @Override
+    boolean isFile() {
+        return fType == 'file'
+    }
+
+    @Override
+    FileSharedParam create(boolean flag) {
+        this.fCreate = flag
+        return this
+    }
+
+    @Override
+    FileSharedParam type(String value) {
+        assert value in ['file','dir']
+        fType = value
+        return this
     }
 
 }
