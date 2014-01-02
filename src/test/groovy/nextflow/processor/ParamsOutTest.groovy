@@ -42,10 +42,10 @@ class ParamsOutTest extends Specification {
          */
         when:
         def ch = new DataflowVariable()
-        def param = new FileOutParam(script,'x').using(ch)
+        def param = new FileOutParam(script,'x') .to(ch) 
         then:
         param.name == 'x'
-        param.channel.is(ch)
+        param.outChannel.is(ch)
 
         /*
          * creates a new *stdout* parameter
@@ -53,10 +53,10 @@ class ParamsOutTest extends Specification {
          */
         when:
         ch = new DataflowVariable()
-        param = new StdOutParam(script).using(ch)
+        param = new StdOutParam(script) .to(ch) 
         then:
         param.name == '-'
-        param.channel.is(ch)
+        param.outChannel.is(ch)
 
 
         /*
@@ -67,11 +67,10 @@ class ParamsOutTest extends Specification {
          * - the new instance is added to the script bindings
          */
         when:
-        def out = new  FileOutParam( script, 'simple.fa' ).using( 'channel1' )
+        def out = new  FileOutParam( script, 'simple.fa' ) .to('channel1') 
         then:
-        ! binding.hasVariable('channel1')
         out.name == 'simple.fa'
-        out.channel instanceof DataflowQueue
+        out.outChannel instanceof DataflowQueue
         binding.hasVariable('channel1')
         binding.getVariable('channel1') instanceof DataflowQueue
 
@@ -84,11 +83,10 @@ class ParamsOutTest extends Specification {
          * - the new instance is added to the script bindings
          */
         when:
-        out = new StdOutParam( script ) .using('channel2')
+        out = new StdOutParam( script ) .to('channel2') 
         then:
-        ! binding.hasVariable('channel2')
         out.name == '-'
-        out.channel instanceof DataflowQueue
+        out.outChannel instanceof DataflowQueue
         binding.hasVariable('channel2')
 
 
@@ -101,26 +99,26 @@ class ParamsOutTest extends Specification {
         when:
         def ch3 = Nextflow.val(3)
         binding.setVariable('channel3', ch3)
-        out = new FileOutParam(script, 'file.txt').using('channel3')
+        out = new FileOutParam(script, 'file.txt') .to('channel3') 
         then:
         out.name == 'file.txt'
-        out.channel.is(ch3)
+        out.outChannel.is(ch3)
         binding.getVariable('channel3').is( ch3 )
 
         /*
          *
          */
         when:
-        def out1 = new FileOutParam( script, 'file.txt' ) .using 'channel4' autoClose false joint true
-        def out2 = new FileOutParam( script, 'file.txt' ) .using 'channel4' autoClose true joint false
-        def out3 = new ValueOutParam( script, 'x' ) .using 'channel'
+        def out1 = new FileOutParam( script, 'file.txt' ) .to 'channel4' autoClose false flat true
+        def out2 = new FileOutParam( script, 'file.txt' ) .to 'channel4' autoClose true flat false
+        def out3 = new ValueOutParam( script, 'x' ) .to 'channel'
 
         then:
         !(out1 as FileOutParam).autoClose
-        (out1 as FileOutParam).joint
+        (out1 as FileOutParam).flat
 
         (out2 as FileOutParam).autoClose
-        !(out2 as FileOutParam).joint
+        !(out2 as FileOutParam).flat
 
         out3 instanceof ValueOutParam
         out3.name == 'x'

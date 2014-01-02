@@ -28,6 +28,25 @@ class TaskConfigTest extends Specification {
 
     }
 
+
+    def 'test merge' ()  {
+
+        setup:
+        def script = Mock(BaseScript)
+        def config = new TaskConfig(script)
+
+        expect:
+        !config.merge
+
+        when:
+        config.setProperty('merge',true)
+        then:
+        config.merge
+
+
+
+    }
+
     def 'test setting properties' () {
 
         setup:
@@ -124,9 +143,9 @@ class TaskConfigTest extends Specification {
         def config = new TaskConfig(script)
 
         when:
-        config.__in_file('filename.fa') .using(new DataflowVariable<>())
-        config.__in_val('x') .using(1)
-        config.stdin().using(new DataflowVariable<>())
+        config._in_file(false, new DataflowVariable<>()) ._as('filename.fa')
+        config._in_val(false,1) ._as('x')
+        config.stdin(false, new DataflowVariable<>())
 
         then:
         config.getInputs().size() == 3
@@ -153,9 +172,9 @@ class TaskConfigTest extends Specification {
 
         when:
         config.stdout()
-        config.__out_file('file1.fa').using('ch1')
-        config.__out_file('file2.fa').using('ch2')
-        config.__out_file('file3.fa').using('ch3')
+        config._out_file('file1.fa').to('ch1')
+        config._out_file('file2.fa').to('ch2')
+        config._out_file('file3.fa').to('ch3')
 
         then:
         config.outputs.size() == 4
@@ -184,46 +203,44 @@ class TaskConfigTest extends Specification {
 
         when:
         def config = new TaskConfig(script)
-        def val = config.__shared_val('xxx')
+        def val = config._share_val(true,'xxx')
         then:
         val instanceof ValueSharedParam
         val.name == 'xxx'
-        val.input.val == null
-        val.output == null
+        val.inChannel.val == null
+        val.outChannel == null
 
         when:
         binding.setVariable('yyy', 'Hola')
         config = new TaskConfig(script)
-        val = config.__shared_val('yyy')
+        val = config._share_val(true,'yyy')
         then:
         val instanceof ValueSharedParam
         val.name == 'yyy'
-        val.input.val == 'Hola'
-        val.output == null
+        val.inChannel.val == 'Hola'
+        val.outChannel == null
 
         // specifying a value with the 'using' method
         // that value is bound to the input channel
         when:
         config = new TaskConfig(script)
-        val = config.__shared_val('yyy')
-        val.using('Beta')
+        val = config._share_val(false,'Beta') ._as('yyy')
         then:
         val instanceof ValueSharedParam
         val.name == 'yyy'
-        val.input.val == 'Beta'
-        val.output == null
+        val.inChannel.val == 'Beta'
+        val.outChannel == null
 
         // specifying a 'closure' with the 'using' method
         // that value is bound to the input channel
         when:
         config = new TaskConfig(script)
-        val = config.__shared_val('yyy')
-        val.using {  return 99  }
+        val = config._share_val(false, { 99 }) ._as('yyy')
         then:
         val instanceof ValueSharedParam
         val.name == 'yyy'
-        val.input.val == 99
-        val.output == null
+        val.inChannel.val == 99
+        val.outChannel == null
 
 
         // specifying a 'channel' it is reused
@@ -233,26 +250,24 @@ class TaskConfigTest extends Specification {
         channel << 123
 
         config = new TaskConfig(script)
-        val = config.__shared_val('zzz')
-        val.using(channel)
+        val = config._share_val(false, channel) ._as('zzz')
         then:
         val instanceof ValueSharedParam
         val.name == 'zzz'
-        val.input.getVal() == 123
-        val.output == null
+        val.inChannel.getVal() == 123
+        val.outChannel == null
 
         // when a channel name is specified with the method 'into'
         // a DataflowVariable is created in the script context
         when:
         config = new TaskConfig(script)
-        val = config.__shared_val('x1')
-        val.into('x2')
+        val = config._share_val(true,'x1') .to('x2')
         then:
         val instanceof ValueSharedParam
         val.name == 'x1'
-        val.input.getVal() == null
-        val.output instanceof DataflowVariable
-        binding.getVariable('x2') == val.output
+        val.inChannel.getVal() == null
+        val.outChannel instanceof DataflowVariable
+        binding.getVariable('x2') == val.outChannel
 
     }
 

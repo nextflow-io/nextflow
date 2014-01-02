@@ -42,6 +42,8 @@ class TaskDispatcher {
      */
     final private Map<Class<? extends AbstractExecutor>, TaskMonitor> monitors = [:]
 
+    private volatile boolean started
+
     /**
      * Dispatcher constructor
      *
@@ -74,7 +76,18 @@ class TaskDispatcher {
 
         def result = create.call()
         monitors.put(type,result)
+
+        if( started ) {
+            log.debug "Starting monitor: ${result.class.simpleName}"
+            result.start()
+        }
+
         return result
+    }
+
+    void start() {
+        log.debug "Dispatcher > start"
+        started = true
     }
 
 

@@ -18,134 +18,131 @@
  */
 
 package nextflow.processor
+import java.nio.file.Path
+
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.expression.DataflowExpression
+import nextflow.ast.ProcessVarRef
 import nextflow.script.BaseScript
+/**
+ * 'SharedParam' Marker interface
+ */
+interface SharedParam extends InParam, OutParam {
+
+}
+
 /**
  * Model a process shared parameter that behaves both as input and output parameter
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@ToString(includePackage=false, includeNames = true)
-abstract class SharedParam {
+abstract class BaseSharedParam extends BaseParam implements SharedParam {
 
-    final protected Script script
+    protected Object target
 
     protected String name
 
-    protected Object using
-
     protected Object into
 
-    @Lazy
-    DataflowReadChannel input = { inputRef() }()
+    private inChannel
 
-    /**
-     * The channel over which entries are sent
-     */
-    @Lazy
-    DataflowWriteChannel output = outputRef()
+    private outChannel
 
 
-    SharedParam( Script script, String name ) {
-        this.script = script
-        this.name = name
+    protected BaseSharedParam( Script script ) {
+        super(script)
     }
 
-    SharedParam using( Object value ) {
-        this.using = value
+    BaseSharedParam setup() {
+
+        /*
+         * initialize *input* channel
+         */
+        if( target instanceof Closure ) {
+            inChannel = sharedValToChannel( target.call() )
+        }
+        else if( target != null ) {
+            inChannel = sharedValToChannel( target )
+        }
+        else {
+            inChannel = sharedValToChannel( defValue() )
+        }
+
+        /*
+         * initialize *output* channel
+         */
+        if( into != null ) {
+            log.trace "shared output using > channel ref: $into"
+            outChannel = outputValToChannel( script, into, DataflowVariable )
+        }
+
         return this
     }
 
-    SharedParam into( Object value ) {
+    /**
+     * Implements the {@code as} keyword for the shared param declaration
+     * NOTE: since {@code as} is a keyword for the groovy programming language
+     * the method as to be named {@code _as}.
+     *
+     * A special pre-process will replace the "as" from the user script to the "_as"
+     *
+     * @see nextflow.ast.SourceModifierParserPlugin
+     *
+     * @param value
+     * @return
+     */
+    SharedParam _as( Object value ) {
+        alias(value)
+    }
+
+    /*
+     * Just a synonym for the "as" method
+     *
+     * @param value
+     * @return
+     */
+    protected BaseSharedParam alias( Object value ) {
+        this.name = value
+        return this
+    }
+
+    BaseSharedParam to( Object value ) {
         this.into = value
         return this
     }
 
+    String getName() { name }
 
-    def String getName() { name }
-
-
-    abstract Object defValue()
-
-
-    protected DataflowReadChannel inputRef() {
-
-        def value
-        if( using != null ) {
-            value = using instanceof Closure ? using.call() : using
-        }
-        else if( script && script.getBinding().hasVariable(name) ) {
-            value = script.getBinding().getVariable(name)
-        }
-        else {
-            value = defValue()
-        }
-
-        return asChannel(value)
+    DataflowReadChannel getInChannel() {
+        lazyInit()
+        inChannel
     }
 
-    protected DataflowWriteChannel outputRef() {
-
-        if( into != null ) {
-            log.trace "shared output using > channel ref: $into"
-            return OutParam.channelRef( script, into, { new DataflowVariable() } )
-        }
-
-        return null
-    }
-
-
-    DataflowReadChannel asChannel( def value ) {
-
-        if( value instanceof DataflowExpression ) {
-            return value
-        }
-        else if( value instanceof DataflowReadChannel ) {
-            throw new IllegalArgumentException()
-        }
-
-        def result = new DataflowVariable()
-        result.bind(value)
-        result
+    DataflowWriteChannel getOutChannel() {
+        lazyInit()
+        outChannel
     }
 
 }
 
 
 
-/**
- *  Shared value parameter.
- *  <p>
- *      {@code shared: val <name> }
- *      <br>
- *      Declares a thread safe variable in the execution context with the specified 'name'.
- *      When exists a variable with the same name in the script context, tried to use it
- *      as the initial value to which it binds on the input channel
- *      <br>
- *      No output channel is defined
- * <p>
- *      {@code shared: val <name> using obj }
- *      Declares a thread safe variable in the execution context with the specified 'name'.
- *      The initial value is taken from the obj declared by the 'using' keyword
- *
- * <p>
- *      {@code shared: val <name> using obj into channelName }
- *      Declares a thread safe variable in the execution context with the specified 'name'.
- *      The initial value is taken from the obj declared by the 'using' keyword.
- *      When processor completes, bind the final value to the channel specified by the 'into' keyword
- *
- */
-@ToString(includePackage=false, includeSuper = true)
-class ValueSharedParam extends SharedParam {
+class ValueSharedParam extends BaseSharedParam {
 
-    ValueSharedParam ( Script script, String name ) {
-        super(script,name)
+    ValueSharedParam ( Script script, def val ) {
+        super(script)
+
+        if( val instanceof ProcessVarRef ) {
+            this.name = val.name
+            this.target = getScriptVar(val.name)
+        }
+        else {
+            this.target = val
+        }
     }
 
     @Override
@@ -156,52 +153,36 @@ class ValueSharedParam extends SharedParam {
 
 
 
-/**
- *  Model a process *file* input parameter
- */
+
 @ToString(includePackage=false, includeSuper = true)
-class FileSharedParam extends SharedParam  {
+class FileSharedParam extends BaseSharedParam {
 
-    String filePattern
+    private String fileName
 
-    FileSharedParam( Script script, String name ) {
-        super(script,name)
-        this.filePattern = name
-    }
+    @Lazy
+    private Path tempFile = { ((BaseScript)script).tempFile(fileName) } ()
 
-    Object defValue() {
-        ((BaseScript)script).tempFile(name)
+    FileSharedParam( Script script, Object val ) {
+        super(script)
+
+        if( val instanceof ProcessVarRef ) {
+            this.name = val.name
+            this.target = getScriptVar(val.name)
+        }
+        else if( val instanceof String ) {
+            fileName = val
+        }
     }
 
     @Override
-    protected DataflowReadChannel inputRef() {
-
-        if( !into ) {
-            this.filePattern = '*'
-        }
-        super.inputRef()
-
+    protected FileSharedParam alias( Object str ) {
+        this.fileName = str
+        return this
     }
 
-
-}
-
-
-
-/**
- * Container to hold all process outputs
- */
-class SharedList implements List<SharedParam> {
-
-    @Delegate
-    List<SharedParam> target = new LinkedList<>()
-
-    List<DataflowReadChannel> getInChannels() { target *.input }
-
-    List<DataflowWriteChannel> getOutChannels() { target *.output }
-
-    List<String> getNames() { target *. name }
-
+    Path defValue() {
+        tempFile
+    }
 
 }
 

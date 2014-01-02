@@ -27,9 +27,9 @@ process hola {
     echo true
 
     input:
-    val x using list1
-    each y using list2
-    each z using list3
+    val list1 as x
+    each list2 as y
+    each list3 as z
 
     """
     echo 'x: $x; y: $y; z: $z'

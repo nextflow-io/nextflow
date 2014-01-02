@@ -2,6 +2,7 @@ package nextflow.processor
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Nextflow
+import nextflow.ast.ProcessVarRef
 import spock.lang.Specification
 /**
  *
@@ -24,12 +25,12 @@ class ParamsInTest extends Specification {
          */
         when:
         def var = Nextflow.val(1)
-        def param = new FileInParam(script, 'x'); param.using(var)
+        FileInParam param = new FileInParam(script, var)._as('x')
+
         then:
         param.name == 'x'
-        param.filePattern == 'x'
-        param.channel.val == 1
-
+        param.target == var
+        param.inChannel.val == 1
 
 
         /*
@@ -38,25 +39,26 @@ class ParamsInTest extends Specification {
          *   it is created and associated to the parameter
          */
         when:
-        def input = new FileInParam(script, 'name.fa' ); input.using('hola')
+        def input = new FileInParam(script, 'hola' )._as('name.fa') 
 
         then:
         input instanceof FileInParam
         input.name == 'name.fa'
-        input.filePattern == 'name.fa'
-        input.channel instanceof DataflowVariable
-        input.channel.val == 'hola'
+        input.inChannel instanceof DataflowVariable
+        input.inChannel.val == 'hola'
 
 
         when:
         binding.setVariable('channel_x', Nextflow.val(1))
-        input = new FileInParam(script, 'channel_x')
-        def x = input.getChannel()
+        input = new FileInParam(script, new ProcessVarRef('channel_x')) 
+        def x = input.getInChannel()
         then:
         input.name == 'channel_x'
-        input.filePattern == '*'
-        input.channel == x
-        input.channel.val == 1
+        // TODO !!! filePattern returning '*'
+        // ????????
+        //input.filePattern == '*'
+        input.inChannel == x
+        input.inChannel.val == 1
 
 
         /*
@@ -65,35 +67,35 @@ class ParamsInTest extends Specification {
          *   it is created and associated to the parameter
          */
         when:
-        input = new StdInParam(script).using('hola')
+        input = new StdInParam(script,'hola')
         then:
         input instanceof StdInParam
         input.name == '-'
-        input.channel instanceof DataflowVariable
-        input.channel.val == 'hola'
+        input.inChannel instanceof DataflowVariable
+        input.inChannel.val == 'hola'
 
         /*
          * 'value' input param
          */
         when:
-        input = new ValueInParam(script, 'ref_name' ).using( [1,2,3] )
+        input = new ValueInParam(script, [1,2,3] )._as( 'ref_name' )
         then:
         input instanceof ValueInParam
         input.name == 'ref_name'
-        input.channel instanceof DataflowQueue
-        input.channel.val == 1
-        input.channel.val == 2
-        input.channel.val == 3
+        input.inChannel instanceof DataflowQueue
+        input.inChannel.val == 1
+        input.inChannel.val == 2
+        input.inChannel.val == 3
 
         /*
          * 'environment' input param
          */
         when:
-        input = new EnvInParam(script, 'var_name' ).using(10)
+        input = new EnvInParam(script, 10 )._as('var_name')
         then:
         input instanceof EnvInParam
         input.name == 'var_name'
-        input.channel instanceof DataflowVariable
+        input.inChannel instanceof DataflowVariable
 
 
         /*
@@ -105,10 +107,10 @@ class ParamsInTest extends Specification {
          */
         when:
         binding.setVariable('a_script_value', Nextflow.val(3) )
-        input = new ValueInParam(script, 'a_script_value' )
+        input = new ValueInParam(script, new ProcessVarRef('a_script_value') )
         then:
         input.name == 'a_script_value'
-        input.channel == script.getBinding().getVariable('a_script_value' )
+        input.inChannel == script.getBinding().getVariable('a_script_value' )
 
 
         /*
@@ -119,11 +121,11 @@ class ParamsInTest extends Specification {
          */
         when:
         binding.setVariable('a_script_x', 4 )
-        input = new ValueInParam(script, 'a_script_x' )
+        input = new ValueInParam(script, new ProcessVarRef('a_script_x') )
         then:
         input.name == 'a_script_x'
-        input.channel instanceof DataflowVariable
-        input.channel.val == 4
+        input.inChannel instanceof DataflowVariable
+        input.inChannel.val == 4
 
 
         /*
@@ -132,10 +134,9 @@ class ParamsInTest extends Specification {
          * - it results to an exception
          */
         when:
-        input = new ValueInParam(script, 'a_script_z' )
-        x = input.getChannel()
+        new ValueInParam(script, new ProcessVarRef('a_script_z' )) 
         then:
-        thrown(IllegalStateException)
+        thrown(MissingPropertyException)
 
     }
 

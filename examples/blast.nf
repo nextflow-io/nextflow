@@ -12,10 +12,10 @@ inputFile.chunkFasta( params.chunkSize ) { seq << it }
 
 process blast {
     input:
-    file 'seq.fa' using seq
+    file seq as 'seq.fa'
 
     output:
-    file 'out' using blast_result
+    file 'out' to blast_result
 
     """
     blastp -db $DB -query seq.fa -outfmt 6 > out
@@ -26,7 +26,7 @@ blast_all = blast_result.toList()
 
 process sort {
     input:
-    file 'hits_*' using blast_all
+    file blast_all as 'hits_*'
 
     output:
     stdout result

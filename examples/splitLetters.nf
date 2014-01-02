@@ -2,7 +2,7 @@
 process splitLetters {
 
     output:
-    file 'chunk_*' using letters
+    file 'chunk_*' to letters flat true
 
     '''
     echo 'Hola' | split -b 1 - chunk_

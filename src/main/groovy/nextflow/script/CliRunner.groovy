@@ -35,6 +35,7 @@ import nextflow.ExitCode
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.ast.ProcessDefTransform
+import nextflow.ast.SourcePreProcessor
 import nextflow.exception.InvalidArgumentException
 import nextflow.exception.MissingLibraryException
 import nextflow.util.FileHelper
@@ -215,6 +216,9 @@ class CliRunner {
         try {
             // parse the script
             script = parseScript(scriptText, args)
+            // start session
+            session.start()
+            // run the code
             run()
         }
         finally {
@@ -337,6 +341,7 @@ class CliRunner {
         importCustomizer.addStaticImport( groovyx.gpars.dataflow.Dataflow.name, 'selector' )
 
         def config = new CompilerConfiguration()
+        config.setPluginFactory(new SourcePreProcessor())
         config.addCompilationCustomizers( importCustomizer )
         config.scriptBaseClass = BaseScript.class.name
         config.addCompilationCustomizers( new ASTTransformationCustomizer(ProcessDefTransform))
@@ -376,7 +381,6 @@ class CliRunner {
 
         // -- launch the script execution
         output = script.run()
-
     }
 
     protected terminate() {

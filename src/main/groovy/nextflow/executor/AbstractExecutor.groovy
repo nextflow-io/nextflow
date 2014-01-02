@@ -1,4 +1,5 @@
 package nextflow.executor
+
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
 
@@ -7,12 +8,13 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.MissingFileException
 import nextflow.processor.FileHolder
-import nextflow.processor.FileInParam
 import nextflow.processor.FileOutParam
+import nextflow.processor.InParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
+
 /**
  * Declares methods have to be implemented by a generic
  * execution strategy
@@ -136,7 +138,7 @@ abstract class AbstractExecutor {
      * @param inputs An associative array mapping each {@code FileInParam} to the corresponding file (or generic value)
      * @return The BASH script to stage them
      */
-    def String stagingFilesScript( Map<FileInParam, List<FileHolder>> inputs, String separatorChar = '\n') {
+    def String stagingFilesScript( Map<InParam, List<FileHolder>> inputs, String separatorChar = '\n') {
         assert inputs != null
 
         def delete = []

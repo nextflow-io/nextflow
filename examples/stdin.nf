@@ -1,7 +1,9 @@
 str = Channel.from('hello', 'hola', 'bonjour', 'ciao').map { it+'\n' }
 
 process printAll {
-   input: stdin str
+   echo true
+   input:
+   stdin str
 
    """
    cat -

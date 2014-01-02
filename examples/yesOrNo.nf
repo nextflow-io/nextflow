@@ -21,7 +21,7 @@ process yesOrNo {
     echo true
 
     input:
-    val x using ( [1,2] )
+    val ( [1,2] ) as x
 
     script:
     if( x == 1 ) {

@@ -25,7 +25,7 @@ class MergeTaskProcessor extends TaskProcessor {
      * Collect the list of hashCode of each {@code TaskRun} object
      * required by this merge operation
      */
-    private List<Integer> mergeHashesList
+    private List<Long> mergeHashesList
 
     /*
      * The folder where the merge will be execute
@@ -64,7 +64,9 @@ class MergeTaskProcessor extends TaskProcessor {
         }
 
 
-        def params = [inputs: new ArrayList(taskConfig.inputs.channels), outputs: new ArrayList(taskConfig.outputs.channels), listeners: [new MergeProcessorInterceptor()] ]
+        def inChannels = new ArrayList(taskConfig.inputs.getChannels())
+        def outChannels = new ArrayList(taskConfig.outputs.getChannels())
+        def params = [inputs: inChannels, outputs: outChannels, listeners: [new MergeProcessorInterceptor()] ]
         processor = new DataflowOperator(group, params, wrapper)
         session.allProcessors.add(processor)
 
@@ -87,7 +89,7 @@ class MergeTaskProcessor extends TaskProcessor {
         //    and sorting them
         def hasher = CacheHelper.hasher(session.uniqueId)
         mergeHashesList.sort()
-        mergeHashesList.each { Integer entry ->  hasher = CacheHelper.hasher(hasher,entry) }
+        mergeHashesList.each { Long entry ->  hasher = CacheHelper.hasher(hasher,entry) }
         def hash = hasher.hash()
         log.trace "Merging task > $name -- hash: $hash"
 
@@ -143,7 +145,7 @@ class MergeTaskProcessor extends TaskProcessor {
                     // all the files to be staged
                     def fileParam = (FileInParam)param
                     def normalized = normalizeInputToFiles(val,count)
-                    def resolved = expandWildcards( fileParam.filePattern, normalized )
+                    def resolved = expandWildcards( fileParam.name, normalized )
                     filesMap[fileParam] = resolved
                     count += resolved.size()
                     // set the context
@@ -185,7 +187,7 @@ class MergeTaskProcessor extends TaskProcessor {
          * which maintains all the hashes for executions making-up this merge task
          */
         keys << commandToRun << 7
-        mergeHashesList << CacheHelper.hasher(keys).hash().asInt()
+        mergeHashesList << CacheHelper.hasher(keys).hash().asLong()
 
         // section marker
         mergeScript << "# task '$name' ($currentIndex)" << '\n'
@@ -232,10 +234,9 @@ class MergeTaskProcessor extends TaskProcessor {
 
     }
 
-    protected Map<FileInParam,List<FileHolder>> stagedProvider() {
-        (Map<FileInParam,List<FileHolder>>) inputsCollector.findAll { it.key instanceof FileInParam }
+    protected Map<InParam,List<FileHolder>> stagedProvider() {
+        (Map<InParam,List<FileHolder>>) inputsCollector.findAll { it.key instanceof FileInParam }
     }
-
 
 
     /**

@@ -18,7 +18,9 @@
  */
 
 package nextflow.processor
+
 import groovy.util.logging.Slf4j
+import nextflow.ast.ProcessVarRef
 import nextflow.script.BaseScript
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -50,7 +52,6 @@ class TaskConfig implements Map {
             validExitStatus = [0]
             inputs = new InputsList()
             outputs = new OutputsList()
-            sharedDefs = new SharedList()
         }
 
         configProperties.errorStrategy = ErrorStrategy.TERMINATE
@@ -103,12 +104,16 @@ class TaskConfig implements Map {
         return configProperties.outputs
     }
 
-    SharedList getSharedDefs () {
-        return configProperties.sharedDefs
+    List getSharedDefs () {
+        configProperties.inputs.findAll { it instanceof SharedParam }
     }
 
     boolean getEcho() {
         configProperties.echo
+    }
+
+    boolean getMerge() {
+        configProperties.merge?.toString()?.toLowerCase() in ['true','yes','on']
     }
 
     void setEcho( Object value ) {
@@ -131,49 +136,48 @@ class TaskConfig implements Map {
     /**
      * Define a *file* parameter which can be used both input or output declaration
      *
-     * @param name The file name
+     * @param obj The file name
      * @param direction The parameter direction, i.e. {@code in} or {@code out}
      * @return
      *
      */
-    def FileInParam __in_file( String name ) {
-        log.trace "__in_file: '$name'"
+    def FileInParam _in_file( boolean isVariable, Object obj ) {
 
-        def result = name == '-' ? new StdInParam(ownerScript) : new FileInParam(ownerScript, name)
+        def param = isVariable ? new ProcessVarRef(obj.toString()) : obj
+        def result = new FileInParam(ownerScript, param)
         configProperties.inputs << result
 
         return result
     }
 
-    def ValueInParam __in_val( String name ) {
-        log.trace "__in_val: $name"
+    def ValueInParam _in_val( boolean isVariable, Object obj ) {
 
-        def result = new ValueInParam(ownerScript,name)
+        def param = isVariable ? new ProcessVarRef(obj.toString()) : obj
+        def result = new ValueInParam(ownerScript, param)
         configProperties.inputs << result
 
         return result
     }
 
-    EnvInParam __in_env( String name ) {
-        log.trace "__in_env: '$name'"
+    EnvInParam _in_env( boolean isVariable, Object obj ) {
 
-        def result = new EnvInParam(ownerScript,name)
+        def param = isVariable ? new ProcessVarRef(obj.toString()) : obj
+        def result = new EnvInParam(ownerScript, param)
         configProperties.inputs << result
 
         result
     }
 
-    EachInParam __in_each( String name ) {
-        log.trace "__in_each: '$name'"
+    EachInParam _in_each( boolean isVariable, Object obj ) {
 
-        def result = new EachInParam(ownerScript,name)
+        def param = isVariable ? new ProcessVarRef(obj.toString()) : obj
+        def result = new EachInParam(ownerScript,param)
         configProperties.inputs << result
 
         return result
     }
 
-    def FileOutParam __out_file( String name ) {
-        log.trace "__out_file: '$name'"
+    def FileOutParam _out_file( String name ) {
 
         def result = name == '-' ? new StdOutParam(ownerScript) : new FileOutParam(ownerScript,name)
         configProperties.outputs << result
@@ -181,8 +185,7 @@ class TaskConfig implements Map {
         result
     }
 
-    def ValueOutParam __out_val( String name ) {
-        log.trace "__out_val: $name"
+    def ValueOutParam _out_val( String name ) {
 
         def result = new ValueOutParam(ownerScript,name)
         configProperties.outputs << result
@@ -191,31 +194,30 @@ class TaskConfig implements Map {
     }
 
 
-    def ValueSharedParam __shared_val( String obj )  {
-        log.trace "__shared_val: $obj"
+    def ValueSharedParam _share_val( boolean isVariable, def obj )  {
 
-        def result = new ValueSharedParam(ownerScript,obj)
-        configProperties.sharedDefs << result
-
-        return result
-    }
-
-    def FileSharedParam __shared_file( String obj )  {
-        log.trace "__shared_file: $obj"
-
-        def result = new FileSharedParam(ownerScript,obj)
-        configProperties.sharedDefs << result
+        def param = isVariable ? new ProcessVarRef(obj.toString()) : obj
+        def result = new ValueSharedParam(ownerScript, param)
+        configProperties.inputs << result
 
         return result
     }
 
+    def FileSharedParam _share_file( boolean isVariable, def obj )  {
+
+        def param = isVariable ? new ProcessVarRef(obj.toString()) : obj
+        def result = new FileSharedParam(ownerScript, param)
+        configProperties.inputs << result
+
+        return result
+    }
 
 
-    StdInParam stdin( def channelRef = null  ) {
-        log.trace "__stdin: $channelRef"
 
-        def result = new StdInParam(ownerScript)
-        if( channelRef ) result.using(channelRef)
+    StdInParam stdin( boolean isVariable, def obj ) {
+
+        def param = isVariable ? new ProcessVarRef(obj.toString()) : obj
+        def result = new StdInParam(ownerScript, param)
 
         configProperties.inputs << result
 
@@ -223,10 +225,10 @@ class TaskConfig implements Map {
     }
 
     StdOutParam stdout( def channelRef = null ) {
-        log.trace "__stdout: $channelRef"
 
         def result = new StdOutParam(ownerScript)
-        if( channelRef ) result.using(channelRef)
+        if( channelRef != null )
+            result.to(channelRef)
 
         configProperties.outputs << result
 
@@ -238,7 +240,7 @@ class TaskConfig implements Map {
      * provided by the user for the current task
      */
     def void noInput() {
-        __in_val('$') .using(true)
+        _in_val(false,'$') .alias(true)
     }
 
 

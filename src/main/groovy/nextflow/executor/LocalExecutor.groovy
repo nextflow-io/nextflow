@@ -24,7 +24,6 @@ import java.util.concurrent.Future
 
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.processor.FileInParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -49,7 +48,7 @@ class LocalExecutor extends AbstractExecutor {
         final pollInterval = session.getPollIntervalMillis(name, 50)
         log.debug "Creating executor queue with size: $queueSize; poll-interval: $pollInterval"
 
-        return new TaskPollingMonitor(session, queueSize, pollInterval) .start()
+        return new TaskPollingMonitor(session, queueSize, pollInterval)
     }
 
     @Override
@@ -75,7 +74,7 @@ class LocalExecutor extends AbstractExecutor {
 
         // staging input files
         bash.stagingScript = {
-            final files = task.getInputsByType(FileInParam)
+            final files = task.getInputFiles()
             final staging = stagingFilesScript(files)
             return staging
         }

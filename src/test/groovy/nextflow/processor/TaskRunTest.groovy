@@ -1,5 +1,7 @@
 package nextflow.processor
 
+import java.nio.file.Paths
+
 import spock.lang.Specification
 
 /**
@@ -14,7 +16,7 @@ class TaskRunTest extends Specification {
         setup:
         def script = Mock(Script)
         def task = new TaskRun()
-        task.setInput( new StdInParam(script), 'Hello' )
+        task.setInput( new StdInParam(script,'Hello') )
         task.setInput( new FileInParam(script, 'x'), 'file1' )
         task.setInput( new FileInParam(script, 'y'), 'file2' )
         task.setInput( new EnvInParam(script, 'z'), 'env' )
@@ -59,6 +61,26 @@ class TaskRunTest extends Specification {
 
         files.values()[0] == 'file1'
         files.values()[1] == 'file2'
+
+    }
+
+    def testGetInputFiles() {
+
+        setup:
+        def script = Mock(Script)
+        def task = new TaskRun()
+
+        def x = new ValueInParam(script, 'x')
+        def y = new FileInParam(script, 'y')
+        def z = new FileSharedParam(script, 'z')
+
+        task.setInput(x, 1)
+        task.setInput(y, [ new FileHolder(Paths.get('file_y_1')) ])
+        task.setInput(z, [ new FileHolder(Paths.get('file_z_1')), new FileHolder(Paths.get('file_z_2')) ])
+
+        expect:
+        task.getInputFiles().size() == 2
+        task.stagedInputs.size() == 3
 
     }
 

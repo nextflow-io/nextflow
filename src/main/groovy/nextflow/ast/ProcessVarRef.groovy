@@ -17,13 +17,18 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+package nextflow.ast
 
-proteins = Channel.files( "examples/data/p?.fa" ).buffer(count:2)
+import groovy.transform.Canonical
 
-process blastThemAll {
-    input:
-    file 'file' using proteins
+/**
+ * Represent a variable in the script binding
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@Canonical
+class ProcessVarRef {
 
-    "echo file*"
+    String name
 
 }

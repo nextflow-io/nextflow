@@ -10,7 +10,7 @@ queryFile.chunkFasta {
 
 process blast {
     input:
-    file 'query.fa' using fasta
+    file fasta as 'query.fa'
 
     output:
     file top_hits

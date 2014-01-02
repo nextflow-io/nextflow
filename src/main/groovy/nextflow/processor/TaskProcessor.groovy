@@ -172,7 +172,7 @@ abstract class TaskProcessor {
     /**
      * Holds the values shared by multiple task instances
      */
-    Map<SharedParam,Object> sharedObjs
+    Map<SharedParam,Object> sharedObjs = [:]
 
     /* for testing purpose - do not remove */
     protected TaskProcessor() { }
@@ -653,7 +653,7 @@ abstract class TaskProcessor {
 
             case FileOutParam:
                 log.trace "Task $name > Binding file: '$value' to '${param.name}'"
-                if( value instanceof Collection && !(param as FileOutParam).joint ) {
+                if( value instanceof Collection && (param as FileOutParam).flat ) {
                     value.each { processor.bindOutput(index, it) }
                 }
                 else {
@@ -719,6 +719,10 @@ abstract class TaskProcessor {
             switch(param) {
                 case ValueSharedParam:
                     sharedObjs[param] = context.get(param.name)
+                    break
+
+                case FileSharedParam:
+                    // the 'sharedObjs' is updated in the 'beforeRun' method
                     break
 
                 default:

@@ -5,7 +5,7 @@ process task1 {
     errorStrategy 'ignore'
 
     input:
-    val x using channel(1,2,3)
+    val channel(1,2,3) as x
 
     script:
     "echo $x; exit 1"
@@ -18,7 +18,7 @@ process task2 {
     maxForks 4
 
     input:
-    val x using channel(4,5,6)
+    val channel(4,5,6) as x
 
     script:
     "echo $x"

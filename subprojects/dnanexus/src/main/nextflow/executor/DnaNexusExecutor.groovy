@@ -18,7 +18,10 @@
 */
 
 package nextflow.executor
-import static nextflow.processor.TaskHandler.Status.*
+
+import static nextflow.processor.TaskHandler.Status.COMPLETED
+import static nextflow.processor.TaskHandler.Status.RUNNING
+import static nextflow.processor.TaskHandler.Status.SUBMITTED
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -26,13 +29,12 @@ import java.nio.file.Path
 import groovy.util.logging.Slf4j
 import nextflow.fs.dx.DxPath
 import nextflow.fs.dx.api.DxApi
-import nextflow.processor.FileInParam
 import nextflow.processor.FileOutParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskProcessor
-import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 /**
  * Executes script.nf indicated in dxapp.sh in the DnaNexus environment
@@ -52,7 +54,7 @@ class DnaNexusExecutor extends AbstractExecutor {
         final pollInterval = session.getPollIntervalMillis(name, 15_000)
         log.debug "Creating executor queue with size: $queueSize; poll-interval: $pollInterval"
 
-        return new TaskPollingMonitor(session, queueSize, pollInterval).start()
+        return new TaskPollingMonitor(session, queueSize, pollInterval)
     }
 
     /**
@@ -101,7 +103,7 @@ class DnaNexusExecutor extends AbstractExecutor {
         /*
          * create the stage inputs script
          */
-        def inputFiles = task.getInputsByType(FileInParam)
+        def inputFiles = task.getInputFiles()
         def stageScript = stagingFilesScript( inputFiles, '; ' )
 
         /*
@@ -117,6 +119,7 @@ class DnaNexusExecutor extends AbstractExecutor {
             obj.task_input = (taskInputFile as DxPath).getFileId()
         }
         obj.stage_inputs = stageScript
+        // todo Include shared output files as well
         obj.output_files = taskConfig.getOutputs().ofType(FileOutParam).collect { it.getName() }
 
         new DxTaskHandler(task, taskConfig, this, obj)

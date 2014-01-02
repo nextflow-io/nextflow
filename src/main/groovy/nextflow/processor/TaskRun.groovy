@@ -79,14 +79,14 @@ class TaskRun {
 
     /**
      * The *strategy* used to retrieve the list of staged input files for this task.
-     * This sort of *hack* is required since task processed by the {@code MergeTaskProcessor} maintain
+     * This sort of *hack* is required since tasks processed by the {@code MergeTaskProcessor} maintain
      * their own input files list, and so the task will need to access that list, and not the one
      * hold by the task itself
      *
      * See MergeTaskProcessor
      */
-    Closure<Map<FileInParam,List<FileHolder>>> stagedProvider = {
-           (Map<FileInParam,List<FileHolder>>) getInputsByType(FileInParam)
+    Closure<Map<InParam,List<FileHolder>>> stagedProvider = {
+           (Map<InParam,List<FileHolder>>) getInputFiles()
     }
 
 
@@ -151,7 +151,7 @@ class TaskRun {
         // print the stdout
         if( stdout instanceof Path ) {
             if( !stdout.exists() ) {
-                log.debug "Echo file does not exist: ${out}"
+                log.debug "Echo file does not exist: ${stdout}"
                 return
             }
 
@@ -203,6 +203,10 @@ class TaskRun {
         else {
             return script?.toString()
         }
+    }
+
+    def Map<InParam,List<FileHolder>> getInputFiles() {
+        (Map<InParam,List<FileHolder>>) getInputsByType( FileInParam, FileSharedParam )
     }
 
     /**

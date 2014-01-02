@@ -29,85 +29,49 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
  *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
+interface OutParam {
+
+    String getName()
+
+    OutParam to( def value )
+
+    DataflowWriteChannel getOutChannel()
+
+}
+
 @Slf4j
 @ToString(includePackage=false, includeNames = true)
-abstract class OutParam {
-
-    final Script script
+abstract class BaseOutParam extends BaseParam implements OutParam {
 
     /** The out parameter name */
     protected String name
 
-    protected Object using
+    protected Object into
+
+    private outChannel
 
     /** Whenever the channel has to closed on task termination */
     protected Boolean autoClose = Boolean.TRUE
 
-
-    /** The channel over which entries are sent */
-    @Lazy
-    DataflowWriteChannel channel = {
-
-        return using ? channelRef(using) : channelRef(name?.replaceAll(/\./,'_'))
-
-    } ()
-
-
-
-    OutParam( Script script, String name ) {
+    BaseOutParam( Script script, String name ) {
+        super(script)
         this.name = name
-        this.script = script
     }
 
-    OutParam using( def value ) {
-        this.using = value
+    BaseOutParam setup() {
+        def value = into ?: name
+        outChannel = outputValToChannel(script, value, DataflowQueue)
         return this
     }
 
-    protected DataflowWriteChannel channelRef( Object channel ) {
-        log.trace "output using > channel ref: $channel"
-        channelRef(script, channel, { new DataflowQueue() })
+    BaseOutParam to( def value ) {
+        this.into = value
+        return this
     }
 
-    @groovy.transform.PackageScope
-    static DataflowWriteChannel channelRef( Script script, Object channel, Closure<DataflowWriteChannel> factory ) {
-
-        if( channel instanceof String ) {
-            // the channel is specified by name
-            def local = channel
-
-            def binding = script.getBinding()
-
-            // look for that name in the 'script' context
-            channel = binding.hasVariable(local) ? binding.getVariable(local) : null
-            if( channel instanceof DataflowWriteChannel ) {
-                // that's OK -- nothing to do
-            }
-            else {
-                if( channel == null ) {
-                    log.debug "output > channel unknown: $local -- creating a new instance"
-                }
-                else {
-                    log.warn "Duplicate output channel name: '$channel' in the script context -- it's worth to rename it to avoid possible conflicts"
-                }
-
-                // instantiate the new channel
-                channel = factory.call()
-
-                // bind it to the script on-fly
-                if( local != '-' && script) {
-                    // bind the outputs to the script scope
-                    binding.setVariable(local, channel)
-                }
-            }
-        }
-
-
-        if( channel instanceof DataflowWriteChannel ) {
-            return channel
-        }
-
-        throw new IllegalArgumentException("Invalid output channel reference")
+    DataflowWriteChannel getOutChannel() {
+        lazyInit()
+        return outChannel
     }
 
     OutParam autoClose( boolean value ) {
@@ -119,7 +83,6 @@ abstract class OutParam {
 
     def Boolean getAutoClose() { autoClose }
 
-
 }
 
 
@@ -128,24 +91,33 @@ abstract class OutParam {
  */
 @InheritConstructors
 @ToString(includePackage=false, includeSuper = true, includeNames = true)
-class FileOutParam extends OutParam {
+class FileOutParam extends BaseOutParam implements OutParam {
 
     /**
      * Whenever multiple files matching the same name pattern have to be output as grouped collection
      * or bound as single entries
      */
-    protected Boolean joint = Boolean.FALSE
+    protected boolean flat = false
 
     /**
      * The character used to separate multiple names (pattern) in the output specification
      */
     protected String separatorChar = ':'
 
+    /**
+     * When {@code true} star wildcard (*) matches hidden files (files starting with a dot char)
+     * By default it does not, coherently with linux bash rule
+     */
     protected boolean includeHidden
 
+    /**
+     * When {@code true} file pattern includes input files as well as output files.
+     * By default a file pattern matches only against files produced by the process, not
+     * the ones received as input
+     */
     protected boolean includeInputs
 
-    boolean getJoint() { joint }
+    boolean getFlat() { flat }
 
     String getSeparatorChar() { separatorChar }
 
@@ -153,8 +125,8 @@ class FileOutParam extends OutParam {
 
     boolean getIncludeInputs() { includeInputs }
 
-    FileOutParam joint( boolean value ) {
-        this.joint = value
+    FileOutParam flat( boolean value ) {
+        this.flat = value
         return this
     }
 
@@ -180,13 +152,16 @@ class FileOutParam extends OutParam {
  */
 @InheritConstructors
 @ToString(includePackage=false, includeSuper = true, includeNames = true)
-class ValueOutParam extends OutParam { }
+class ValueOutParam extends BaseOutParam { }
 
 /**
  * Model the process *stdout* parameter
  */
 @ToString(includePackage=false, includeSuper = true, includeNames = true)
-class StdOutParam extends OutParam { StdOutParam(Script script) { super(script,'-') } }
+class StdOutParam extends BaseOutParam {
+    StdOutParam(Script script) { super(script,'-') }
+}
+
 
 /**
  * Container to hold all process outputs
@@ -194,16 +169,18 @@ class StdOutParam extends OutParam { StdOutParam(Script script) { super(script,'
 class OutputsList implements List<OutParam> {
 
     @Delegate
-    List<OutParam> target = new LinkedList<>()
+    private List<OutParam> target = new LinkedList<>()
 
-    List<DataflowWriteChannel> getChannels() { target *.channel }
+    List<DataflowWriteChannel> getChannels() {
+        target.collect { OutParam it -> it.getOutChannel() }
+    }
 
     List<String> getNames() { target *. name }
 
     def <T extends OutParam> List<T> ofType( Class<T> clazz ) { (List<T>) target.findAll { it.class == clazz } }
 
     void eachParam (Closure closure) {
-        target.each { OutParam param -> closure.call(param.name, param.channel) }
+        target.each { OutParam param -> closure.call(param.name, param.getOutChannel()) }
     }
 
 }

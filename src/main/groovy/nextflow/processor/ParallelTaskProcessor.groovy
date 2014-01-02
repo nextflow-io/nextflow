@@ -32,18 +32,11 @@ class ParallelTaskProcessor extends TaskProcessor {
     @Override
     protected void createOperator() {
 
-        def opInputs = new ArrayList(taskConfig.inputs.channels)
-        def opOutputs = new ArrayList(taskConfig.outputs.channels)
+        def opInputs = new ArrayList(taskConfig.inputs.getChannels())
+        def opOutputs = new ArrayList(taskConfig.outputs.getChannels())
 
         // append the shared obj to the input list
-        def sharedCount = 0
-        taskConfig.sharedDefs.inChannels.each {
-            opInputs << it
-            sharedCount++
-        }
-
-        // only to force lazy output channels
-        def __dummy =  taskConfig.sharedDefs.outChannels
+        def sharedCount = taskConfig.getInputs().count { it instanceof SharedParam }
 
         /*
          * check if there are some iterators declaration
@@ -96,6 +89,7 @@ class ParallelTaskProcessor extends TaskProcessor {
          */
         def maxForks = session.config.poolSize
         if( sharedCount ) {
+            log.debug "Process declares shared inputs -- Using thread safe mode (maxForks=1)"
             maxForks = 1
             blocking = true
         }
@@ -175,7 +169,7 @@ class ParallelTaskProcessor extends TaskProcessor {
      * @param values
      * @return
      */
-    final protected TaskRun beforeRun(List values) {
+    final protected TaskRun setupTask(List values) {
         log.trace "Setup new task > $name"
 
         final TaskRun task = createTaskRun()
@@ -187,7 +181,8 @@ class ParallelTaskProcessor extends TaskProcessor {
         taskConfig.outputs.each { OutParam param -> task.setOutput(param) }
 
         // -- map the inputs to a map and use to delegate closure values interpolation
-        def map = new DelegateMap(ownerScript)
+        final ctx = new DelegateMap(ownerScript)
+        final firstRun = task.index == 1
         int count = 0
 
         /*
@@ -196,23 +191,48 @@ class ParallelTaskProcessor extends TaskProcessor {
         taskConfig.inputs.eachWithIndex { InParam param, int index ->
 
             // add the value to the task instance
-            def val = values.get(index)
+            def val = values[index]
+            if( param instanceof SharedParam ) {
+                if( firstRun ) {
+                    sharedObjs[param] = val
+                }
+                else if( param instanceof ValueSharedParam ) {
+                    // the following times, the value eventually updated from the 'sharedObjs' map
+                    val = sharedObjs[param]
+                }
+            }
 
             // otherwise put in on the map used to resolve the values evaluating the script
 
             switch(param) {
                 case EachInParam:
                 case ValueInParam:
-                    map[param.name] = val
+                    ctx[param.name] = val
                     break
 
                 case FileInParam:
                     def fileParam = param as FileInParam
                     def normalized = normalizeInputToFiles(val,count)
-                    def resolved = expandWildcards( fileParam.filePattern, normalized )
-                    map[ fileParam.name ] = singleItemOrList(resolved)
+                    def resolved = expandWildcards( fileParam.name, normalized )
+                    ctx[ fileParam.name ] = singleItemOrList(resolved)
                     count += resolved.size()
                     val = resolved
+                    break
+
+                case FileSharedParam:
+                    def fileParam = param as FileSharedParam
+                    def normalized = normalizeInputToFiles(val,count)
+                    if( normalized.size() > 1 )
+                        throw new IllegalStateException("Cannot share multiple files")
+
+                    def resolved = expandWildcards( fileParam.name, normalized )
+                    ctx[ fileParam.name ] = singleItemOrList(resolved)
+                    count += resolved.size()
+                    val = resolved
+                    break
+
+                case ValueSharedParam:
+                    ctx[param.name] = val
                     break
 
                 case StdInParam:
@@ -229,40 +249,10 @@ class ParallelTaskProcessor extends TaskProcessor {
         }
 
         /*
-         * Initialize the shared inputs
-         */
-        taskConfig.sharedDefs.eachWithIndex { SharedParam entry, int index ->
-
-            // add the value to the task instance
-            // shared values are added always after the *plain* inputs
-            // so the get the actual it is required to take in account the
-            // inputs.size() as offset
-            def val
-            if( sharedObjs == null ) {
-                val = values.get(index + taskConfig.inputs.size())
-                sharedObjs = [:]
-                sharedObjs[entry] = val
-            }
-            else {
-                val = sharedObjs[entry]
-            }
-
-            switch(entry) {
-                case ValueSharedParam:
-                    map[entry.name] = val
-                    break
-
-                default:
-                    log.debug "Unsupported shared param type: ${entry?.class?.simpleName}"
-            }
-        }
-
-
-        /*
          * initialize the task code to be executed
          */
         task.code = this.code.clone() as Closure
-        task.code.delegate = map
+        task.code.delegate = ctx
         task.code.setResolveStrategy(Closure.DELEGATE_FIRST)
 
         return task
@@ -279,7 +269,7 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         // create and initialize the task instance to be executed
         List params = args instanceof List ? args : [args]
-        final task = beforeRun(params)
+        final task = setupTask(params)
 
         // -- call the closure and execute the script
         currentTask.set(task)
@@ -334,16 +324,6 @@ class ParallelTaskProcessor extends TaskProcessor {
         @Override
         void afterRun(DataflowProcessor processor, List<Object> messages) {
             log.trace "After run > ${currentTask.get()?.name ?: name}"
-
-            // bind shared outputs
-            ParallelTaskProcessor.this.sharedObjs?.each { param, obj ->
-
-                if( param.output != null ) {
-                    log.debug "Binding shared out param: ${param.name} = ${obj}"
-                    param.output.bind( obj )
-                }
-            }
-
             currentTask.remove()
         }
 
@@ -385,6 +365,13 @@ class ParallelTaskProcessor extends TaskProcessor {
         @Override
         public void afterStop(final DataflowProcessor processor) {
             log.debug "After stop > ${name}"
+
+            // bind shared outputs
+            ParallelTaskProcessor.this.sharedObjs?.each { param, obj ->
+                if( !param.outChannel ) return
+                log.debug "Binding shared out param: ${param.name} = ${obj}"
+                param.outChannel.bind( obj )
+            }
         }
 
         /**

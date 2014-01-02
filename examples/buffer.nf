@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, the authors.
+ * Copyright (c) 2012, the authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -18,48 +18,14 @@
  */
 
 
+proteins = Channel.files( "examples/data/p?.fa" ).buffer(count:2)
 
-params.in = '~/sample.fa'
-SPLIT = (System.properties['os.name'] == 'Mac OS X' ? 'gcsplit' : 'csplit')
-
-process split {
-    input:
-    file  file(params.in) as 'query.fa'
-
-    output:
-    file 'seq_*' to splits
-
-    """
-    $SPLIT query.fa '%^>%' '/^>/' '{*}' -f seq_
-    """
-}
-
-
-process printTwo {
+process blastThemAll {
     echo true
 
     input:
-    file splits as 'chunk'
+    file proteins as 'file'
 
-    output:
-    file 'chunk1:chunk3' to two_chunks flat true
+    "echo file*"
 
-    """
-    cat chunk* | rev
-    """
-
-}
-
-process printLast {
-    echo true
-
-    input:
-    file two_chunks as 'chunk'
-
-    output:
-    file 'chunk' to result
-
-    """
-    cat chunk
-    """
 }

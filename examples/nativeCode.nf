@@ -21,10 +21,10 @@
 process nativeCode {
 
     input:
-    val x using 'world'
+    val 'world' as x
 
     output:
-    val y using stream
+    val y to stream
 
     exec:
     y = "Hello $x"

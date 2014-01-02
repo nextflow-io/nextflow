@@ -1,5 +1,7 @@
+#!/usr/bin/env nextflow
+
 /*
- * Copyright (c) 2013, the authors.
+ * Copyright (c) 2012, the authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -17,49 +19,24 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+echo true
 
+process sayhello {
 
-params.in = '~/sample.fa'
-SPLIT = (System.properties['os.name'] == 'Mac OS X' ? 'gcsplit' : 'csplit')
-
-process split {
     input:
-    file  file(params.in) as 'query.fa'
+    val (['hello','hi']) as x
 
     output:
-    file 'seq_*' to splits
+    val y to all
+
+    share:
+    val ('world') as y to z
 
     """
-    $SPLIT query.fa '%^>%' '/^>/' '{*}' -f seq_
+    echo '$x $y!'
     """
 }
 
+z.subscribe { println "Complete: $it" }
 
-process printTwo {
-    echo true
-
-    input:
-    file splits as 'chunk'
-
-    output:
-    file 'chunk1:chunk3' to two_chunks flat true
-
-    """
-    cat chunk* | rev
-    """
-
-}
-
-process printLast {
-    echo true
-
-    input:
-    file two_chunks as 'chunk'
-
-    output:
-    file 'chunk' to result
-
-    """
-    cat chunk
-    """
-}
+all.subscribe { println "All: $it" }

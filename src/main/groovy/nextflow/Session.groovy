@@ -147,9 +147,14 @@ class Session {
         Dataflow.activeParallelGroup.set(pgroup)
 
         dispatcher = new TaskDispatcher(this)
+    }
 
-        log.debug ">>> phaser register (session)"
+
+    def Session start() {
+        log.debug "Session start > phaser register (session) "
         phaser.register()
+        dispatcher.start()
+        return this
     }
 
     @PackageScope

@@ -18,6 +18,10 @@
  */
 
 package nextflow.executor
+import static nextflow.processor.TaskHandler.Status.COMPLETED
+import static nextflow.processor.TaskHandler.Status.RUNNING
+import static nextflow.processor.TaskHandler.Status.SUBMITTED
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermissions
@@ -26,7 +30,6 @@ import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.InvalidExitException
-import nextflow.processor.FileInParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -34,9 +37,6 @@ import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.util.CmdLineHelper
 import org.apache.commons.io.IOUtils
-
-import static nextflow.processor.TaskHandler.Status.*
-
 /**
  * Generic task processor executing a task through a grid facility
  *
@@ -54,7 +54,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         final pollInterval = session.getPollIntervalMillis(name, 1_000)
         log.debug "Creating executor queue with size: $queueSize; poll-interval: $pollInterval"
 
-        return new TaskPollingMonitor(session, queueSize, pollInterval) .start()
+        return new TaskPollingMonitor(session, queueSize, pollInterval)
     }
 
 
@@ -79,7 +79,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
 
         // staging input files
         bash.stagingScript = {
-            final files = task.getInputsByType(FileInParam)
+            final files = task.getInputFiles()
             final staging = stagingFilesScript(files)
             return staging
         }
