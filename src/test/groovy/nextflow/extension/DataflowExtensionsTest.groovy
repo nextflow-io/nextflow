@@ -418,6 +418,21 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    def testToSortedList() {
+
+        when:
+        def channel = Channel.from(3,1,4,2)
+        then:
+        channel.toSortedList().val == [1,2,3,4]
+
+        when:
+        channel = Channel.create()
+        channel << Channel.STOP
+        then:
+        channel.toSortedList().val == []
+
+    }
+
     def testUnique() {
         expect:
         Channel.from(1,1,1,5,7,7,7,3,3).unique().toList().val == [1,5,7,3]

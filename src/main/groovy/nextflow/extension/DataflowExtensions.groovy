@@ -102,12 +102,15 @@ class DataflowExtensions {
             @Override
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
                 error = true
-                if( !events.onError ) return true
-                events.onError.call(e)
+                if( !events.onError ) {
+                    DataflowExtensions.log.error(e.message, e)
+                }
+                else {
+                    events.onError.call(e)
+                }
                 return true
             }
         }
-
 
 
         final Map<String, Object> parameters = new HashMap<String, Object>();
@@ -573,6 +576,14 @@ class DataflowExtensions {
      */
     static public final <V> DataflowReadChannel<V> toList(final DataflowReadChannel<V> channel) {
         return reduce(channel, []) { list, item -> list << item }
+    }
+
+    static public final <V> DataflowReadChannel<V> toSortedList(final DataflowReadChannel<V> channel, Closure closure = null) {
+        def reduced = reduce(channel, []) { list, item -> list << item }
+        def result = reduced.then { List list ->
+            closure ? list.sort(closure) : list.sort()
+        }
+        (DataflowVariable)result
     }
 
     /**
