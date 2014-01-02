@@ -177,9 +177,9 @@ class ProcessDefTransformImpl implements ASTTransformation {
                         }
                         break
 
-                    case 'shared':
+                    case 'share':
                         if( stm instanceof ExpressionStatement ) {
-                            convertSharedMethod( stm.getExpression() )
+                            convertShareMethod( stm.getExpression() )
                         }
                         break
 
@@ -241,6 +241,9 @@ class ProcessDefTransformImpl implements ASTTransformation {
         }
     }
 
+    /*
+     * handle *input* parameters
+     */
     def void convertInputMethod( Expression expression ) {
         log.trace "convert > input expression: $expression"
 
@@ -253,11 +256,19 @@ class ProcessDefTransformImpl implements ASTTransformation {
         log.trace "convert > input method: $methodName"
 
         if( methodName in ['val','env','file','each'] ) {
-            //this methods require a special prefix '__in_'
-            methodCall.setMethod( new ConstantExpression('__in_' + methodName) )
+            //this methods require a special prefix
+            methodCall.setMethod( new ConstantExpression('_in_' + methodName) )
             // the following methods require to replace a variable reference to a constant
+            convertVarToConst(methodCall,true)
+        }
+
+        else if( methodName == '_as'  ) {
             convertVarToConst(methodCall)
         }
+        else if( methodName == 'stdin' )  {
+            convertVarToConst(methodCall, true)
+        }
+
 
         if( methodCall.objectExpression instanceof MethodCallExpression ) {
             convertInputMethod(methodCall.objectExpression)
@@ -266,7 +277,13 @@ class ProcessDefTransformImpl implements ASTTransformation {
     }
 
 
-    def void convertSharedMethod( Expression expression ) {
+    /*
+     * handle *shared* parameters
+     */
+
+    static SHARE_METHOD_MAP = [val:'_share_val', file: '_share_file']
+
+    def void convertShareMethod( Expression expression ) {
         log.trace "convert > shared expression: $expression"
 
         if( !(expression instanceof MethodCallExpression) ) {
@@ -277,17 +294,19 @@ class ProcessDefTransformImpl implements ASTTransformation {
         def methodName = methodCall.getMethodAsString()
         log.trace "convert > shared method: $methodName"
 
-        if( methodName in ['val','file'] ) {
-            //this methods require a special prefix '__shared_'
-            methodCall.setMethod( new ConstantExpression('__shared_' + methodName) )
+        if( SHARE_METHOD_MAP.containsKey(methodName) ) {
+            methodCall.setMethod( new ConstantExpression( SHARE_METHOD_MAP[methodName] ) )
          }
 
-        if( methodName in ['val','file','using','into'] ) {
+        if( methodName in ['to','_as'] ) {
             convertVarToConst(methodCall)
+        }
+        else if( methodName in ['file','val']  ) {
+            convertVarToConst(methodCall, true)
         }
 
         if( methodCall.objectExpression instanceof MethodCallExpression ) {
-            convertSharedMethod(methodCall.objectExpression)
+            convertShareMethod(methodCall.objectExpression)
         }
     }
 
@@ -304,11 +323,11 @@ class ProcessDefTransformImpl implements ASTTransformation {
         log.trace "convert > output method: $methodName"
 
         if( methodName in ['val','file'] ) {
-            // prefix the method name with the string '__out_'
-            methodCall.setMethod( new ConstantExpression('__out_' + methodName) )
+            // prefix the method name with the string '_out_'
+            methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
         }
 
-        if( methodName in ['val','file','using','stdout'] ) {
+        if( methodName in ['val','file','to','stdout'] ) {
             convertVarToConst(methodCall)
         }
 
@@ -320,27 +339,43 @@ class ProcessDefTransformImpl implements ASTTransformation {
     }
 
     /**
-     * Converts a {@code VariableExpression} to a {@code ConstantExpression} having the same value as the variable name
+     * This method converts the a method call argument from a Variable to a Constant value
+     * so that it is possible to reference variable that not yet exist
      *
-     * @param methodCall
-     * @param index
+     * @param methodCall The method object for which it is required to change args definition
+     * @param flagVariable Whenever append a flag specified if the variable replacement has been applied
+     * @param index The index of the argument to modify
      * @return
      */
-    private List<Expression> convertVarToConst( MethodCallExpression methodCall, int index = 0 ) {
+    private List<Expression> convertVarToConst( MethodCallExpression methodCall, boolean flagVariable=false, int index = 0 ) {
 
         def args = methodCall.getArguments() as ArgumentListExpression
 
+        int i = 0
         List<Expression> newArgs = []
-        args.eachWithIndex { expr, i ->
+        for( Expression expr : args )  {
 
-            if( index == i && expr instanceof VariableExpression ) {
-                newArgs << new ConstantExpression(expr.getName())
+            if( index == i++ ) {
+                def isVariable = expr instanceof VariableExpression
+                // prefix the argument with a boolean to specify
+                // whether it is variable or a literal value
+                if( flagVariable ) {
+                    newArgs << ( isVariable ? ConstantExpression.PRIM_TRUE : ConstantExpression.PRIM_FALSE )
+                }
+
+                if( isVariable ) {
+                    // when it is a variable expression, replace it with a constant rapresenting
+                    // the variable name
+                    newArgs << new ConstantExpression( ((VariableExpression) expr).getName() )
+                    continue
+                }
             }
-            else {
-                newArgs << expr
-            }
+
+            newArgs << expr
 
         }
+
+
         methodCall.setArguments(new ArgumentListExpression(newArgs))
 
         return newArgs
