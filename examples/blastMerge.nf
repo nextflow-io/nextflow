@@ -22,19 +22,32 @@ process blast {
     """
 }
 
-blast_all = blast_result.toSortedList()
+process collectResult {
+    merge true
+
+    input:
+    file blast_result
+
+    output:
+    file blast_all
+
+    """
+    cat ${blast_result} >> blast_all
+    """
+}
+
 
 process sort {
     input:
-    file blast_all as 'hits_*'
+    file blast_all
 
     output:
     stdout result
 
     """
-    sort hits_*
+    sort ${blast_all}
     """
 }
 
 
-result.subscribe { println it }
+println result.val

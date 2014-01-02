@@ -1,3 +1,5 @@
+#!/usr/bin/env nextflow
+
 params.query = "$HOME/sample.fa"
 params.db = "$HOME/tools/blast-db/pdb/pdb"
 

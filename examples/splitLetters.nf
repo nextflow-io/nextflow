@@ -1,3 +1,4 @@
+#!/usr/bin/env nextflow
 
 process splitLetters {
 
