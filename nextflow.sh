@@ -41,7 +41,7 @@ fi
 declare -a args=()
 DEBUG=''
 MAIN_CLASS='nextflow.script.CliRunner'
-JVM_ARGS+=" -Djava.net.preferIPv4Stack=true -Djava.awt.headless=true -XX:+UseG1GC"
+JVM_ARGS+=" -Djava.net.preferIPv4Stack=true -Djava.awt.headless=true"
 
 #
 # classpath when the application is compiled with gradle
