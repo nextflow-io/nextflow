@@ -392,6 +392,17 @@ abstract class TaskProcessor {
         new TaskRun(id: id, index: index, name: "$name ($index)", processor: this, type: type )
     }
 
+    final protected getHashLog( HashCode hash ) {
+        def str = hash.toString()
+        def result = new StringBuilder()
+        result << str[0]
+        result << str[1]
+        result << '/'
+        for( int i=2; i<8 && i<str.size(); i++ ) {
+            result << str[i]
+        }
+        return result.toString()
+    }
 
     /**
      * Create a unique-folder where the task will be executed
@@ -437,7 +448,7 @@ abstract class TaskProcessor {
      * @param folder The folder where the outputs are stored (eventually)
      * @return {@code true} when all outputs are available, {@code false} otherwise
      */
-    final boolean checkCachedOutput(TaskRun task, Path folder) {
+    final boolean checkCachedOutput(TaskRun task, Path folder, HashCode hash) {
         if( !folder.exists() ) {
             log.trace "[$task.name] Cached folder does not exists > $folder -- return false"
             // no folder -> no cached result
@@ -483,7 +494,7 @@ abstract class TaskProcessor {
         try {
             // -- check if all output resources are available
             collectOutputs(task, folder, stdoutFile, ctxMap)
-            log.info "Cached task > ${task.name}"
+            log.info "[${getHashLog(hash)}] Cached process > ${task.name}"
 
             // set the exit code in to the task object
             task.workDirectory = folder

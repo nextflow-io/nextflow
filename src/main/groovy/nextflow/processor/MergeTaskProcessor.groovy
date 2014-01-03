@@ -96,11 +96,11 @@ class MergeTaskProcessor extends TaskProcessor {
         Path folder = FileHelper.getWorkFolder(session.workDir, hash)
         log.trace "Merging process > $name -- trying cached: $folder"
 
-        def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder)
+        def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder, hash)
         if( !cached ) {
 
             folder = createTaskFolder(folder, hash)
-            log.info "Running merge > ${name}"
+            log.info "[${getHashLog(hash)}] Running merge > ${name}"
 
             // -- set the folder where execute the script
             task.workDirectory = folder

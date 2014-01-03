@@ -300,9 +300,9 @@ class ParallelTaskProcessor extends TaskProcessor {
         Path folder = FileHelper.getWorkFolder(session.workDir, hash)
         log.trace "[${task.name}] cacheable folder: $folder"
 
-        def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder)
+        def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder, hash)
         if( !cached ) {
-            log.info "Running task > ${task.name}"
+            log.info "[${getHashLog(hash)}] Running process > ${task.name}"
 
             // run the task
             task.workDirectory = createTaskFolder(folder, hash)

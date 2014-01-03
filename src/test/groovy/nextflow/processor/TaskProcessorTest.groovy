@@ -23,6 +23,7 @@ import java.nio.file.Paths
 
 import nextflow.Session
 import nextflow.script.BaseScript
+import nextflow.util.CacheHelper
 import spock.lang.Specification
 import test.DummyProcessor
 import test.DummyScript
@@ -252,6 +253,16 @@ class TaskProcessorTest extends Specification {
 
         cleanup:
         file.delete()
+
+    }
+
+    def testGetHashLog() {
+
+        when:
+        def processor = [:] as TaskProcessor
+        def h = CacheHelper.hasher('x').hash()
+        then:
+        processor.getHashLog(h) == '76/9f897d'
 
     }
 
