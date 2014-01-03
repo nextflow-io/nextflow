@@ -205,29 +205,29 @@ class ProcessDefTransformImplTest extends Specification {
         // - the target holds the variable value
         // - the channel returns the variable value
         in1.name == 'blast_x'
-        in1.inTarget == 'blah blah'
+        in1.filePattern == null
         in1.inChannel.getVal() == 'blah blah'
 
         // - the (file) name get the value specified by the 'as' keyword
         // - target get the 'blast_y' value
         // = the channel binds to 'blast_y' value
-        in2.name == 'no_quote'
-        in2.inTarget == 'blah blah'
+        in2.name == 'blast_y'
+        in2.filePattern == 'no_quote'
         in2.inChannel.getVal() == 'blah blah'
 
         // - the (file) name get the value specified by the 'as' keyword
         // - target get the 'blast_z' value
         // = the channel binds to 'blast_z' value
-        in3.name == 'file.txt'
-        in3.inTarget == 'blah blah'
+        in3.name == 'blast_z'
+        in3.filePattern == 'file.txt'
         in3.inChannel.getVal() == 'blah blah'
 
         // the file argument is not a variable, but an expression, thus
         // - the (file) name is just '*'
         // - the target is the closure
         // - the channel holds the closure value
-        in4.name == '*'
-        in4.inTarget instanceof Closure
+        in4.name == null
+        in4.filePattern == null
         in4.inChannel.getVal() == 1
 
 
@@ -847,43 +847,36 @@ class ProcessDefTransformImplTest extends Specification {
         //  define a shared file by its name
         then:
         shared1.name == null
-        shared1.fileName == 'file.txt'
-        shared1.inTarget == null
+        shared1.filePattern == 'file.txt'
         shared1.inChannel instanceof DataflowVariable
         shared1.inChannel.getVal() == null
 
         // define a shared file 'x' that binds to the same variable in the script context
         // note: the variable may hold any type not only a Path.
         shared2.name == 'x'
-        shared2.fileName == 'hola.txt'
-        shared2.inTarget == Paths.get('hola.txt')
-        shared2.inChannel.getVal() == shared2.inTarget
+        shared2.filePattern == 'hola.txt'
+        shared2.inChannel.getVal() == Paths.get('hola.txt')
 
         // define a shared file 'y', since a variable with that name does not exist
         // binds to the default file
         shared3.name == 'y'
-        shared3.fileName == 'y'
-        shared3.inTarget == null
+        shared3.filePattern == 'y'
         shared3.inChannel.getVal() == null
 
         shared4.name == 'z'
-        shared4.fileName == 'file.fasta'
-        shared4.inTarget == null
+        shared4.filePattern == 'file.fasta'
         shared4.inChannel.getVal() == null
 
         shared5.name == 'w'
-        shared5.fileName == 'blast_result'
-        shared5.inTarget == null
+        shared5.filePattern == 'blast_result'
         shared5.inChannel.getVal() == null
 
         shared6.name == null
-        shared6.fileName == 'file1.txt'
-        shared6.inTarget == 'str'
+        shared6.filePattern == 'file1.txt'
         shared6.inChannel.getVal() == 'str'
 
         shared7.name == 'str'
-        shared7.fileName == 'file2.txt'
-        shared7.inTarget == 'hello world'
+        shared7.filePattern == 'file2.txt'
         shared7.inChannel.getVal() == 'hello world'
 
     }

@@ -264,6 +264,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
 /**
  *  Represents a process *file* input parameter
  */
+@Mixin(FileSpec)
 @ToString(includePackage=false, includeSuper = true)
 class FileInParam extends BaseInParam  {
 
@@ -272,13 +273,15 @@ class FileInParam extends BaseInParam  {
 
         if( obj instanceof String ) {
             name = obj
-        }
-
-        if( !name ) {
-            name = '*'
+            filePattern(obj)
         }
     }
 
+
+    FileInParam _as( value ) {
+        filePattern(value?.toString())
+        return this
+    }
 }
 
 /**

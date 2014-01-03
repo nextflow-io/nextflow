@@ -200,8 +200,9 @@ class ParallelTaskProcessor extends TaskProcessor {
                     break
 
                 case FileInParam:
+                    def fileParam = param as FileInParam
                     def normalized = normalizeInputToFiles(val,count)
-                    def resolved = expandWildcards( param.name, normalized )
+                    def resolved = expandWildcards( fileParam.filePattern, normalized )
                     ctx[ param.name ] = singleItemOrList(resolved)
                     count += resolved.size()
                     val = resolved
@@ -214,7 +215,7 @@ class ParallelTaskProcessor extends TaskProcessor {
                         if( normalized.size() > 1 )
                             throw new IllegalStateException("Cannot share multiple files")
 
-                        def resolved = expandWildcards( fileParam.fileName, normalized )
+                        def resolved = expandWildcards( fileParam.filePattern, normalized )
                         count += resolved.size()
                         val = resolved
                         // track this obj

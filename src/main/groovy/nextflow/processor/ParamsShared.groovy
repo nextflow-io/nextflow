@@ -170,26 +170,9 @@ class ValueSharedParam extends BaseSharedParam {
 }
 
 
-interface FileSpec {
-
-    String getName()
-
-    boolean getCreate()
-
-    boolean isDirectory()
-
-    boolean isFile()
-
-    FileSpec create(boolean flag)
-
-    FileSpec type( String str )
-
-}
-
+@Mixin(FileSpec)
 @ToString(includePackage=false, includeSuper = true)
-class FileSharedParam extends BaseSharedParam implements FileSpec {
-
-    private String fileName
+class FileSharedParam extends BaseSharedParam  {
 
     private boolean isVar
 
@@ -205,66 +188,34 @@ class FileSharedParam extends BaseSharedParam implements FileSpec {
 
         if( val instanceof ProcessVarRef ) {
             isVar = true
-            fileName = name
+            filePattern(name)
         }
         else if( val instanceof String ) {
-            fileName = val
+            filePattern(val)
             inTarget = null
         }
         else {
-            fileName = name
+            filePattern(name)
         }
 
         if( inTarget instanceof Path ) {
-            fileName = inTarget.getName()
+            filePattern(inTarget.getName())
         }
+
+        // set create file if not exist by default
+        create(true)
     }
 
 
     FileSharedParam _as( value ) {
         if( inTarget == null && !isVar ) {
-            inTarget = fileName
+            inTarget = getFilePattern()
         }
-        fileName = value
+        filePattern(value?.toString())
         return this
     }
 
-    private String fType = 'file'
 
-    private boolean fCreate = true
-
-
-    String getFileName() {
-        return fileName
-    }
-
-    @Override
-    boolean getCreate() {
-        return fCreate
-    }
-
-    @Override
-    boolean isDirectory() {
-        return fType == 'dir'
-    }
-
-    @Override
-    boolean isFile() {
-        return fType == 'file'
-    }
-
-    @Override
-    FileSharedParam create(boolean flag) {
-        this.fCreate = flag
-        return this
-    }
-
-    @Override
-    FileSharedParam type(String value) {
-        assert value in ['file','dir']
-        fType = value
-        return this
-    }
 
 }
 

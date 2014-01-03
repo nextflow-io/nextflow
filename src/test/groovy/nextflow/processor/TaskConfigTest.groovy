@@ -151,7 +151,8 @@ class TaskConfigTest extends Specification {
         config.getInputs().size() == 3
 
         config.inputs.get(0) instanceof FileInParam
-        config.inputs.get(0).name == 'filename.fa'
+        config.inputs.get(0).name == null
+        (config.inputs.get(0) as FileInParam).filePattern 'filename.fa'
 
         config.inputs.get(1) instanceof ValueInParam
         config.inputs.get(1).name == 'x'
@@ -159,7 +160,7 @@ class TaskConfigTest extends Specification {
         config.inputs.get(2).name == '-'
         config.inputs.get(2) instanceof StdInParam
 
-        config.inputs.names == [ 'filename.fa', 'x', '-' ]
+        config.inputs.names == [ null, 'x', '-' ]
         config.inputs.ofType( FileInParam ) == [ config.getInputs().get(0) ]
 
     }

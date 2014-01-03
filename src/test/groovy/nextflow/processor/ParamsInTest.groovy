@@ -28,7 +28,8 @@ class ParamsInTest extends Specification {
         FileInParam param = new FileInParam(script, var)._as('x')
 
         then:
-        param.name == 'x'
+        param.name == null
+        param.filePattern == 'x'
         param.inTarget == var
         param.inChannel.val == 1
 
@@ -39,11 +40,12 @@ class ParamsInTest extends Specification {
          *   it is created and associated to the parameter
          */
         when:
-        def input = new FileInParam(script, 'hola' )._as('name.fa') 
+        def input = new FileInParam(script, 'hola')._as('name.fa')
 
         then:
         input instanceof FileInParam
-        input.name == 'name.fa'
+        input.name == 'hola'
+        input.filePattern == 'name.fa'
         input.inChannel instanceof DataflowVariable
         input.inChannel.val == 'hola'
 
