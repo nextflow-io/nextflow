@@ -154,6 +154,7 @@ class ProcessDefTransformImpl implements ASTTransformation {
              * - converts the method after the 'output:' label as output parameters
              * - collect all the statement after the 'exec:' label
              */
+            def source = new StringBuilder()
             List<Statement> execStatements = []
             def iterator = block.getStatements().iterator()
             while( iterator.hasNext() ) {
@@ -186,11 +187,13 @@ class ProcessDefTransformImpl implements ASTTransformation {
                     case 'exec':
                         iterator.remove()
                         execStatements << stm
+                        readSource(stm,source,unit)
                         break
 
                     case 'script':
                         iterator.remove()
                         execStatements << stm
+                        readSource(stm,source,unit)
                         break
 
                 }
@@ -218,6 +221,7 @@ class ProcessDefTransformImpl implements ASTTransformation {
              */
             else if( len ) {
                 def stm = block.getStatements().get(len-1)
+                readSource(stm,source,unit)
 
                 if ( stm instanceof ReturnStatement  ){
                     (done,line,coln) = wrapExpressionWithClosure(block, stm.expression, len)
@@ -234,11 +238,25 @@ class ProcessDefTransformImpl implements ASTTransformation {
             def flag = currentLabel == 'script' ? ConstantExpression.PRIM_TRUE : ConstantExpression.PRIM_FALSE
             args.getExpressions().add( args.expressions.size()-1, flag )
 
+            // add the script fragment
+            args.getExpressions().add( args.expressions.size()-1, new ConstantExpression(source.toString()) )
+
             if (!done) {
                 log.trace "Invalid 'process' definition -- Process must terminate with string expression"
                 unit.addError( new SyntaxException("Not a valid process definition -- Make sure process ends with the script to be executed wrapped by quote characters", line,coln))
             }
         }
+    }
+
+
+    private void readSource( Statement statement, StringBuilder buffer, SourceUnit unit ) {
+
+        def line = statement.getLineNumber()
+        def last = statement.getLastLineNumber()
+        for( int i=line; i<=last; i++ ) {
+            buffer.append( unit.source.getLine(i, null) ) .append('\n')
+        }
+
     }
 
     /*

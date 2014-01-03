@@ -207,7 +207,7 @@ abstract class BaseScript extends Script {
      * @param body The process declarations provided by the user
      * @return The {@code Processor} instance
      */
-    private TaskProcessor createProcessor( String name, ScriptType type, Closure body, Map options = null ) {
+    private TaskProcessor createProcessor( String name, ScriptType type, Closure body, String source = null, Map options = null ) {
         assert body
 
         def taskConfig = new TaskConfig(this)
@@ -231,7 +231,7 @@ abstract class BaseScript extends Script {
         // will try to fallback on the owner object
         def script = new TaskConfigWrapper(taskConfig).with ( body ) as Closure
         if ( !script )
-            throw new IllegalArgumentException("Missing script in the specified task block -- make sure it terminates with the script string to be executed")
+            throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
         // load the executor to be used
         def execName = getExecutorName(taskConfig)
@@ -252,6 +252,7 @@ abstract class BaseScript extends Script {
         def processorClass = taskConfig.merge ? MergeTaskProcessor : ParallelTaskProcessor
         def result = processorClass.newInstance( execObj, session, this, taskConfig, script )
         result.type = type
+        result.source = source
         return result
 
     }
@@ -305,12 +306,12 @@ abstract class BaseScript extends Script {
      * @param scriptlet Whenever the process carry out an system script {@code true} or a native groovy code {@code false}
      * @param body The body of the process declaration. It holds all the process definitions: inputs, outputs, code, etc.
      */
-    protected process( Map<String,?> args, String name, boolean scriptlet, Closure body ) {
-        log.trace "Create task: $name -- native: $scriptlet; args: $args "
+    protected process( Map<String,?> args, String name, boolean scriptlet, String source, Closure body ) {
+        log.trace "Create process: $name -- native: $scriptlet; args: $args "
         def type = scriptlet ? ScriptType.SCRIPTLET : ScriptType.GROOVY
 
         // create the process
-        taskProcessor = createProcessor(name, type, body, args)
+        taskProcessor = createProcessor(name, type, body, source, args)
         if( isTest )
             return taskProcessor
 
@@ -330,12 +331,12 @@ abstract class BaseScript extends Script {
      * @param scriptlet Whenever the process carry out an system script {@code true} or a native groovy code {@code false}
      * @param body The body of the process declaration. It holds all the process definitions: inputs, outputs, code, etc.
      */
-    protected process( String name, boolean scriptlet, Closure body ) {
-        log.trace "Create task: $name -- script: $scriptlet"
+    protected process( String name, boolean scriptlet, String source, Closure body ) {
+        log.trace "Create process: $name -- script: $scriptlet"
         def type = scriptlet ? ScriptType.SCRIPTLET : ScriptType.GROOVY
 
         // create the process
-        taskProcessor = createProcessor(name, type, body)
+        taskProcessor = createProcessor(name, type, body, source )
         if( isTest )
             return taskProcessor
 

@@ -281,7 +281,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         // when the task is implemented by a script string
         // Invokes the closure which return the script whit all the variables replaced with the actual values
         if( type == ScriptType.SCRIPTLET ) {
-            task.script = task.code.call()?.toString()?.stripIndent()
+            task.script = getScriptlet(task.code)
         }
 
         // create an hash for the inputs and code

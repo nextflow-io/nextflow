@@ -37,10 +37,11 @@ import groovyx.gpars.group.PGroup
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.ast.AstNodeToScriptVisitor
-import nextflow.exception.InvalidExitException
+import nextflow.exception.ProcessFailedException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
-import nextflow.exception.TaskException
+import nextflow.exception.ProcessException
+import nextflow.exception.ProcessScriptException
 import nextflow.executor.AbstractExecutor
 import nextflow.script.BaseScript
 import nextflow.script.ScriptType
@@ -48,7 +49,6 @@ import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
 import org.apache.commons.lang.SerializationUtils
-import org.apache.commons.lang.exception.ExceptionUtils
 
 /**
  *
@@ -96,6 +96,11 @@ abstract class TaskProcessor {
      *  Define the type of script hold by the {@code #code} property
      */
     protected ScriptType type = ScriptType.SCRIPTLET
+
+    /**
+     * The source fragment as entered by the user for debugging purpose
+     */
+    protected String source
 
     /**
      * The corresponding {@code DataflowProcessor} which will receive and
@@ -519,6 +524,21 @@ abstract class TaskProcessor {
 
     }
 
+    /**
+     * Given the script closure, that hold the code entered by the user, returns
+     * the final script string to be executed
+     *
+     * @param code
+     * @return
+     */
+    final protected String getScriptlet( Closure<String> code ) {
+        try {
+            return code.call()?.toString()
+        }
+        catch( Throwable e ) {
+            throw new ProcessScriptException("Process script contains error(s)", e)
+        }
+    }
 
     /**
      * Handles an error raised during the processor execution
@@ -542,56 +562,65 @@ abstract class TaskProcessor {
             return true
         }
 
-        if( error instanceof TaskException ) {
-
-            // compose a readable error message
-            def message = []
-            message << error.getMessage()
-
-            if( task ) {
-                /*
-                 * handle accordingly native code tasks
-                 */
-                if( task.type == ScriptType.GROOVY ) {
-                    messae << '\n'
-                    message << cleanStackTrace( error.cause )
-                    message << "Work dir:\n  ${task.workDirectory.toString()}"
-                }
-
-                /*
-                 * or task executing scriptlets
-                 */
-                else {
-                    // print the executed command
-                    message << "Command executed:"
-                    task.script.eachLine {
-                        message << "  $it"
-                    }
-
-                    message << "\nCommand exit status:\n  ${task.exitStatus}"
-
-                    message << "\nCommand output:"
-                    task.stdout?.eachLine {
-                        message << "  $it"
-                    }
-
-                    message << "\nWork dir:\n  ${task.workDirectory.toString()}"
-                }
-
-            }
-
-            message << "\nTip: when you have fixed the problem you may continue the execution appending to the nextflow command line the '-resume' option"
-
-            log.error message.join('\n')
-
+        def message = []
+        message << "Error executing process > '${task?.name ?: name}'"
+        if( error instanceof ProcessException ) {
+            formatTaskError( message, error, task )
         }
         else {
-            log.error("Failed to execute task > '${task?.name ?: name}' -- Check the log file '.nextflow.log' for more details", error)
+            message << formatErrorCause( error )
+            message << "Tip: check the log file '.nextflow.log' for more details"
         }
+
+        log.error message.join('\n')
+        log.debug "Error details", error
 
         session.abort()
         return true
     }
+
+    final protected formatTaskError( List message, Throwable error, TaskRun task ) {
+
+        // compose a readable error message
+
+        /*
+         * task executing scriptlets
+         */
+        if( task?.script ) {
+            // print the executed command
+            message << "Command executed:\n"
+            task.script.eachLine {
+                message << "  $it"
+            }
+
+            message << "\nCommand exit status:\n  ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}"
+
+            message << "\nCommand output:"
+            task.stdout?.eachLine {
+                message << "  $it"
+            }
+
+        }
+        else {
+            if( source )  {
+                message << "\nSource block:"
+                source.stripIndent().eachLine {
+                    message << "  $it"
+                }
+            }
+
+            message << formatErrorCause( error )
+        }
+
+
+        if( task?.workDirectory )
+            message << "\nWork dir:\n  ${task.workDirectory.toString()}"
+
+        message << "\nTip: when you have fixed the problem you may continue the execution appending to the nextflow command line the '-resume' option"
+
+        return message
+    }
+
 
     /**
      * Send a poison pill over all the outputs channel
@@ -631,19 +660,13 @@ abstract class TaskProcessor {
     }
 
 
-    private String cleanStackTrace( Throwable error ) {
+    private String formatErrorCause( Throwable error ) {
 
         def result = new StringBuilder()
-        ExceptionUtils.getStackTrace(error) .eachLine {
-            if( it.contains('org.codehaus.groovy.runtime.') ) return
-            if( it.contains('sun.reflect.')) return
-            if( it.contains('sun.reflect.')) return
-            if( it.contains('java.lang.reflect.Method.')) return
-            if( it.contains('org.codehaus.groovy.reflection.')) return
-            if( it.contains('groovy.lang.')) return
+        result << '\nError cause:'
 
-            result.append(it).append('\n')
-        }
+        def message = error.cause?.getMessage() ?: ( error.getMessage() ?: error.toString() )
+        result.append('\n  ').append(message)
 
         result.toString()
     }
@@ -1116,14 +1139,14 @@ abstract class TaskProcessor {
             // verify task exist status
             if( task.type == ScriptType.GROOVY ) {
                 if( task.error ) {
-                    throw new InvalidExitException("Task '${task.name}' terminated with an error", task.error)
+                    throw new ProcessFailedException("Process '${task.name}' failed", task.error)
                 }
             }
 
             else {
                 boolean success = (task.exitStatus in taskConfig.validExitStatus)
                 if ( !success ) {
-                    throw new InvalidExitException("Task '${task.name}' terminated with an error")
+                    throw new ProcessFailedException("Process '${task.name}' failed")
                 }
             }
 

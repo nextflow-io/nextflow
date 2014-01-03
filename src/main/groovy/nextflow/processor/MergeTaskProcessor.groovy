@@ -178,7 +178,8 @@ class MergeTaskProcessor extends TaskProcessor {
         scriptClosure.delegate = contextMap
         scriptClosure.setResolveStrategy(Closure.DELEGATE_FIRST)
 
-        def commandToRun = normalizeScript(scriptClosure.call()?.toString())
+        def script = getScriptlet(scriptClosure)
+        def commandToRun = normalizeScript(script)
         def interpreter = fetchInterpreter(commandToRun)
 
 
