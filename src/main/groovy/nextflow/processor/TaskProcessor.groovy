@@ -304,7 +304,7 @@ abstract class TaskProcessor {
      * The interpreter to be used define bu the *taskConfig* property {@code shell}
      */
     def getShebangLine() {
-        assert taskConfig.shell, "Missing 'shell' property for task: $name"
+        assert taskConfig.shell, "Missing 'shell' property for process: $name"
 
         def shell = taskConfig.shell
         String result = shell instanceof List ? shell.join(' ') : shell
@@ -385,7 +385,7 @@ abstract class TaskProcessor {
      * @return The new newly created {@code TaskRun{
      */
     final protected TaskRun createTaskRun() {
-        log.trace "Creating a new task > $name"
+        log.trace "Creating a new process > $name"
 
         def id = allCount.incrementAndGet()
         def index = indexCount.incrementAndGet()
@@ -586,7 +586,7 @@ abstract class TaskProcessor {
      * Send a poison pill over all the outputs channel
      */
     final protected synchronized void sendPoisonPill() {
-        log.trace "Forwarding Poison-pill for task > ${name}"
+        log.trace "Forwarding Poison-pill for process > ${name}"
 
         taskConfig.outputs.eachParam { name, channel ->
             if( channel instanceof DataflowQueue ) {
@@ -613,7 +613,7 @@ abstract class TaskProcessor {
             writer.toString()
         }
         catch( Throwable e ) {
-            log.debug "Unable to obtain code for task: ${task.name}"
+            log.debug "Unable to obtain code for process: ${task.name}"
             return null
         }
 
@@ -649,12 +649,12 @@ abstract class TaskProcessor {
 
             switch( param ) {
             case StdOutParam:
-                log.trace "Task $name > Binding '$value' to stdout"
+                log.trace "Process $name > Binding '$value' to stdout"
                 processor.bindOutput(index, value instanceof Path ? value.text : value?.toString())
                 break
 
             case FileOutParam:
-                log.trace "Task $name > Binding file: '$value' to '${param.name}'"
+                log.trace "Process $name > Binding file: '$value' to '${param.name}'"
                 if( value instanceof Collection && (param as FileOutParam).flat ) {
                     value.each { processor.bindOutput(index, it) }
                 }
@@ -664,7 +664,7 @@ abstract class TaskProcessor {
                 break;
 
             case ValueOutParam:
-                log.trace "Task $name > Binding value: '$value' to '${param.name}'"
+                log.trace "Process $name > Binding value: '$value' to '${param.name}'"
                 processor.bindOutput(index, value)
                 break
 
@@ -746,11 +746,11 @@ abstract class TaskProcessor {
     protected void collectStdOut( TaskRun task, StdOutParam param, def stdout ) {
 
         if( stdout == null && task.type == ScriptType.SCRIPTLET ) {
-            throw new IllegalArgumentException("Missing 'stdout' for task > ${task.name}")
+            throw new IllegalArgumentException("Missing 'stdout' for process > ${task.name}")
         }
 
         if( stdout instanceof Path && !stdout.exists() ) {
-            throw new MissingFileException("Missing 'stdout' file: ${stdout} for task > ${task.name}")
+            throw new MissingFileException("Missing 'stdout' file: ${stdout} for process > ${task.name}")
         }
 
         task.setOutput(param, stdout)
@@ -766,19 +766,19 @@ abstract class TaskProcessor {
         // for each of them collect the produced files
         entries.each { String pattern ->
             def result = executor.collectResultFile(workDir, pattern, task.name)
-            log.debug "Task ${task.name} > collected outputs for pattern '$pattern': $result"
+            log.debug "Process ${task.name} > collected outputs for pattern '$pattern': $result"
 
             if( result instanceof List ) {
                 // filter the result collection
                 if( pattern.startsWith('*') && !fileParam.includeHidden ) {
                     result = filterByRemovingHiddenFiles(result)
-                    log.trace "Task ${task.name} > after removing hidden files: ${result}"
+                    log.trace "Process ${task.name} > after removing hidden files: ${result}"
                 }
 
                 // filter the inputs
                 if( !fileParam.includeInputs ) {
                     result = filterByRemovingStagedInputs(task, result)
-                    log.trace "Task ${task.name} > after removing staged inputs: ${result}"
+                    log.trace "Process ${task.name} > after removing staged inputs: ${result}"
                 }
 
                 all.addAll((List) result)
@@ -1100,7 +1100,7 @@ abstract class TaskProcessor {
      */
     @PackageScope
     final void finalizeTask( TaskRun task ) {
-        log.trace "finalizing task > ${task.name}"
+        log.trace "finalizing process > ${task.name}"
         try {
             // verify task exist status
             if( task.type == ScriptType.GROOVY ) {
@@ -1143,7 +1143,7 @@ abstract class TaskProcessor {
      * @param producedFiles The map of files to be bind the outputs
      */
     private void finalizeTask0( TaskRun task ) {
-        log.debug "Finalize task > ${task.name}"
+        log.debug "Finalize process > ${task.name}"
 
         // -- bind output (files)
         if( task.canBind ) {
@@ -1167,7 +1167,7 @@ abstract class TaskProcessor {
 
         def done = allScalarValues || ( receivedPoisonPill && created == finalized )
         if( done ) {
-            log.debug "Finalizing task > ${name} -- isFinalize: $isFinalize"
+            log.debug "Finalizing process > ${name} -- isFinalize: $isFinalize"
             sendPoisonPill()
             session.taskDeregister()
             processor.terminate()

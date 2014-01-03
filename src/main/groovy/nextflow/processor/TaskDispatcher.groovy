@@ -98,10 +98,10 @@ class TaskDispatcher {
      * @param task A {@code TaskRun} instance
      */
     void submit( TaskRun task, boolean blocking ) {
-        log.debug "Scheduling task: ${task}"
+        log.debug "Scheduling process: ${task}"
 
         if( session.isTerminated() ) {
-            new IllegalStateException("Session terminated - Cannot add task to execution queue: ${task}")
+            new IllegalStateException("Session terminated - Cannot add process to execution queue: ${task}")
         }
 
         /*
@@ -111,9 +111,9 @@ class TaskDispatcher {
          */
         def handler = task.processor.executor.submitTask(task, blocking)
         if( handler && blocking ) {
-            log.trace "Task ${task} > blocking"
+            log.trace "Process ${task} > blocking"
             handler.latch.await()
-            log.trace "Task ${task} > complete"
+            log.trace "Process ${task} > complete"
         }
     }
 

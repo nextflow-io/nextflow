@@ -235,8 +235,8 @@ class ProcessDefTransformImpl implements ASTTransformation {
             args.getExpressions().add( args.expressions.size()-1, flag )
 
             if (!done) {
-                log.trace "Invalid 'process' definition -- Task must terminate with string expression"
-                unit.addError( new SyntaxException("Not a valid process definition -- Make sure task ends with the script to be executed wrapped by quote characters", line,coln))
+                log.trace "Invalid 'process' definition -- Process must terminate with string expression"
+                unit.addError( new SyntaxException("Not a valid process definition -- Make sure process ends with the script to be executed wrapped by quote characters", line,coln))
             }
         }
     }
@@ -402,7 +402,7 @@ class ProcessDefTransformImpl implements ASTTransformation {
             return [true,0,0]
         }
         else {
-            log.trace "Invalid task result expression: ${expr} -- Only constant or string expression can be used"
+            log.trace "Invalid process result expression: ${expr} -- Only constant or string expression can be used"
         }
 
         return [false, expr.lineNumber, expr.columnNumber]

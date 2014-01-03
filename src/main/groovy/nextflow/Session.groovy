@@ -191,12 +191,12 @@ class Session {
     boolean isAborted() { aborted }
 
     def int taskRegister() {
-        log.debug ">>> phaser register (task)"
+        log.debug ">>> phaser register (process)"
         phaser.register()
     }
 
     def int taskDeregister() {
-        log.debug "<<< phaser deregister (task)"
+        log.debug "<<< phaser deregister (process)"
         phaser.arriveAndDeregister()
     }
 

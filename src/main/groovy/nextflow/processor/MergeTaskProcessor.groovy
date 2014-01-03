@@ -91,10 +91,10 @@ class MergeTaskProcessor extends TaskProcessor {
         mergeHashesList.sort()
         mergeHashesList.each { Long entry ->  hasher = CacheHelper.hasher(hasher,entry) }
         def hash = hasher.hash()
-        log.trace "Merging task > $name -- hash: $hash"
+        log.trace "Merging process > $name -- hash: $hash"
 
         Path folder = FileHelper.getWorkFolder(session.workDir, hash)
-        log.trace "Merging task > $name -- trying cached: $folder"
+        log.trace "Merging process > $name -- trying cached: $folder"
 
         def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder)
         if( !cached ) {
@@ -117,7 +117,7 @@ class MergeTaskProcessor extends TaskProcessor {
 
     protected void mergeScriptCollector( List values ) {
         final currentIndex = mergeIndex.incrementAndGet()
-        log.info "Collecting task > ${name} ($currentIndex)"
+        log.info "Collecting process > ${name} ($currentIndex)"
 
         // -- map the inputs to a map and use to delegate closure values interpolation
         def keys = []
@@ -160,7 +160,7 @@ class MergeTaskProcessor extends TaskProcessor {
                     break
 
                 default:
-                    log.debug "Task $name > unknown input param type: ${param?.class?.simpleName}"
+                    log.debug "Process $name > unknown input param type: ${param?.class?.simpleName}"
             }
 
             // store all the inputs
@@ -259,7 +259,7 @@ class MergeTaskProcessor extends TaskProcessor {
 
         @Override
         public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "Received message > task: ${name}; channel: $index; value: $message"
+            log.trace "Received message > process: ${name}; channel: $index; value: $message"
             return message
         }
 
@@ -287,7 +287,7 @@ class MergeTaskProcessor extends TaskProcessor {
                     return StopQuietly.instance
                 }
 
-                log.warn "No data collected by task > $name -- Won't execute it. Something may be wrong in your execution flow"
+                log.warn "No data collected by process > $name -- Won't execute it. Something may be wrong in your execution flow"
 
             }
 

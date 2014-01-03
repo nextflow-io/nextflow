@@ -56,7 +56,7 @@ class LocalExecutor extends AbstractExecutor {
         assert task
         assert task.workDirectory
 
-        log.debug "Launching task > ${task.name} -- work folder: ${task.workDirectory}"
+        log.debug "Launching process > ${task.name} -- work folder: ${task.workDirectory}"
 
         /*
          * when it is a native groovy code, use the native handler
@@ -163,7 +163,7 @@ class LocalTaskHandler extends TaskHandler {
                 IOGroovyMethods.withStream(new BufferedOutputStream(process.getOutputStream())) { writer -> writer << input }
             }
             catch( Exception e ) {
-                log.warn "Unable to pipe input data for task: ${task.name}"
+                log.warn "Unable to pipe input data for process: ${task.name}"
             }
         }
 

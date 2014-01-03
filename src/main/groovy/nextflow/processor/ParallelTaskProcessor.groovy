@@ -45,7 +45,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         def iteratorIndexes = []
         taskConfig.inputs.eachWithIndex { param, index ->
             if( param instanceof EachInParam ) {
-                log.trace "Task ${name} > got each param: ${param.name} at index: ${index} -- ${param.dump()}"
+                log.trace "Process ${name} > got each param: ${param.name} at index: ${index} -- ${param.dump()}"
                 iteratorIndexes << index
             }
         }
@@ -170,7 +170,7 @@ class ParallelTaskProcessor extends TaskProcessor {
      * @return
      */
     final protected TaskRun setupTask(List values) {
-        log.trace "Setup new task > $name"
+        log.trace "Setup new process > $name"
 
         final TaskRun task = createTaskRun()
 
@@ -351,7 +351,7 @@ class ParallelTaskProcessor extends TaskProcessor {
             }
 
             if( message == PoisonPill.instance ) {
-                log.trace "Poison pill arrived for task > ${currentTask.get()?.name ?: name} -- terminated"
+                log.trace "Poison pill arrived for process > ${currentTask.get()?.name ?: name} -- terminated"
                 receivedPoisonPill = true
 
                 // check if the task is terminated
@@ -404,26 +404,26 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         @Override
         public boolean onException(final DataflowProcessor processor, final Throwable e) {
-            log.error "task '$name' > error on internal iteration process", e
+            log.error "process '$name' > error on internal iteration process", e
             return true;
         }
 
         @Override
         public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "task '$name' > message arrived for iterator '${taskConfig.inputs.names[index]}' with value: '$message'"
+            log.trace "process '$name' > message arrived for iterator '${taskConfig.inputs.names[index]}' with value: '$message'"
             return message;
         }
 
         @Override
         public Object messageSentOut(final DataflowProcessor processor, final DataflowWriteChannel<Object> channel, final int index, final Object message) {
-            log.trace "task '$name' > message forwarded for iterator '${taskConfig.inputs.names[index]}' with value: '$message'"
+            log.trace "process '$name' > message forwarded for iterator '${taskConfig.inputs.names[index]}' with value: '$message'"
             return message;
         }
 
 
         @Override
         public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "task '$name' > control message arrived for iterator '${taskConfig.inputs.names[index]}'"
+            log.trace "process '$name' > control message arrived for iterator '${taskConfig.inputs.names[index]}'"
             return message;
         }
     }

@@ -17,25 +17,17 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.exception;
+package nextflow.exception
+
+import groovy.transform.InheritConstructors;
 
 /**
- * Reports a generic error during the 'Task' validation step
- *
- * Note: THIS IS A PLAIN JAVA CLASS due to this bug
- * http://jira.codehaus.org/browse/GROOVY-6080
- * http://blog.proxerd.pl/article/how-to-fix-incompatibleclasschangeerror-for-your-groovy-projects-running-on-jdk7
+ * Thrown when a process script terminates by an error condition
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public class TaskException extends Exception {
+@InheritConstructors
+class ProcessFailedException extends TaskException {
 
-    public TaskException(String message) {
-        super(message);
-    }
 
-    public TaskException(String message, Throwable cause) {
-        super(message,cause);
-    }
 }
-

@@ -113,7 +113,7 @@ abstract class AbstractExecutor {
         if( filePattern == fileName ) {
             def result = workDirectory.resolve(fileName)
             if( !result.exists() ) {
-                throw new MissingFileException("Missing output file: '$fileName' expected by task: ${taskName}")
+                throw new MissingFileException("Missing output file: '$fileName' expected by process: ${taskName}")
             }
             return result
         }
@@ -123,7 +123,7 @@ abstract class AbstractExecutor {
         workDirectory.eachFileMatch(FileType.ANY, ~/$filePattern/ ) { files << it }
 
         if( !files ) {
-            throw new MissingFileException("Missing output file(s): '$fileName' expected by task: ${taskName}")
+            throw new MissingFileException("Missing output file(s): '$fileName' expected by process: ${taskName}")
         }
 
         return files

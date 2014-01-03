@@ -66,7 +66,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         assert task.workDirectory
 
         final folder = task.workDirectory
-        log.debug "Launching task > ${task.name} -- work folder: $folder"
+        log.debug "Launching process > ${task.name} -- work folder: $folder"
 
         final bash = new BashWrapperBuilder(task)
         // set the input (when available)
@@ -198,7 +198,7 @@ class GridTaskHandler extends TaskHandler {
 
         // -- log the qsub command
         def cli = executor.getSubmitCommandLine(task, wrapperFile)
-        log.debug "sub command > '${cli}' -- task: ${task.name}"
+        log.debug "sub command > '${cli}' -- process: ${task.name}"
 
         /*
          * launch 'sub' script wrapper
@@ -273,7 +273,7 @@ class GridTaskHandler extends TaskHandler {
                 return status.toInteger()
             }
             catch( Exception e ) {
-                log.warn "Unable to parse task exit file: $exitFile -- bad value: '$status'"
+                log.warn "Unable to parse process exit file: $exitFile -- bad value: '$status'"
             }
         }
 
