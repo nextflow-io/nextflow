@@ -1127,4 +1127,11 @@ class DataflowExtensions {
         source.split( target as List )
     }
 
+    public static <T> List split( DataflowReadChannel<T> source, int n ) {
+        def list = []
+        n.times { list << newChannelBy(source) }
+        source.split(list)
+        return list
+    }
+
 }
