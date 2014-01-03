@@ -27,7 +27,7 @@ import groovy.transform.InheritConstructors;
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class ProcessFailedException extends TaskException {
+class ProcessFailedException extends ProcessException {
 
 
 }

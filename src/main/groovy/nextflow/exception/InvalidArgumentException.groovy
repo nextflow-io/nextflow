@@ -17,20 +17,17 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.exception;
+package nextflow.exception
+
+import groovy.transform.InheritConstructors;
 
 /**
- * Thrown when user tries to access a non-existing argument
- *
- * Note: THIS IS A PLAIN JAVA CLASS due to this bug
- * http://blog.proxerd.pl/article/how-to-fix-incompatibleclasschangeerror-for-your-groovy-projects-running-on-jdk7
+ * Thrown when user tries to use an invalid CLI argument
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public class InvalidArgumentException extends Exception {
+@InheritConstructors
+class InvalidArgumentException extends Exception {
 
-    public InvalidArgumentException( String message ) {
-        super(message);
-    }
 
 }

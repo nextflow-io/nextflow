@@ -29,7 +29,7 @@ import java.nio.file.attribute.PosixFilePermissions
 import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.exception.InvalidExitException
+import nextflow.exception.ProcessFailedException
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -230,7 +230,7 @@ class GridTaskHandler extends TaskHandler {
                 task.script = CmdLineHelper.toLine(cli)
                 task.stdout = result
                 status = COMPLETED
-                throw new InvalidExitException("Error submitting task '${task.name}' for execution", e )
+                throw new ProcessFailedException("Error submitting process '${task.name}' for execution", e )
             }
 
         }

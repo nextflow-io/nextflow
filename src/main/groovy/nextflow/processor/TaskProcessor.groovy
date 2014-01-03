@@ -521,8 +521,8 @@ abstract class TaskProcessor {
 
         // when is a task level error and the user has chosen to ignore error, just report and error message
         // return 'false' to DO NOT stop the execution
-        if( error instanceof TaskException && taskConfig.errorStrategy == ErrorStrategy.IGNORE ) {
-            log.warn "Error running task > ${error.getMessage()} -- error is ignored"
+        if( error instanceof ProcessException && taskConfig.errorStrategy == ErrorStrategy.IGNORE ) {
+            log.warn "Error running process > ${error.getMessage()} -- error is ignored"
             return false
         }
 

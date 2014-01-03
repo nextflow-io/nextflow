@@ -19,15 +19,14 @@
 
 package nextflow.exception
 
-import groovy.transform.InheritConstructors;
+import groovy.transform.InheritConstructors
 
 /**
- * An expected result file is missing
+ * Thrown when the process script cannot be retrieved
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+
 @InheritConstructors
-class MissingFileException extends ProcessException {
-
-
+class ProcessScriptException extends ProcessException {
 }
