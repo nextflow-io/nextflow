@@ -214,10 +214,10 @@ class CliRunner {
         assert scriptText
 
         try {
-            // parse the script
-            script = parseScript(scriptText, args)
             // start session
             session.start()
+            // parse the script
+            script = parseScript(scriptText, args)
             // run the code
             run()
         }
