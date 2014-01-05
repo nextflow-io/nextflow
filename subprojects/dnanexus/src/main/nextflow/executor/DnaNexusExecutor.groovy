@@ -29,7 +29,7 @@ import java.nio.file.Path
 import groovy.util.logging.Slf4j
 import nextflow.fs.dx.DxPath
 import nextflow.fs.dx.api.DxApi
-import nextflow.processor.FileOutParam
+import nextflow.script.FileOutParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor

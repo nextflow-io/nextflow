@@ -17,7 +17,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
+package nextflow.script
 
 /**
  *

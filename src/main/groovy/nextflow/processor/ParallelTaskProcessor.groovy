@@ -10,7 +10,17 @@ import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.script.EachInParam
+import nextflow.script.EnvInParam
+import nextflow.script.FileInParam
+import nextflow.script.FileSharedParam
+import nextflow.script.InParam
+import nextflow.script.OutParam
 import nextflow.script.ScriptType
+import nextflow.script.SharedParam
+import nextflow.script.StdInParam
+import nextflow.script.ValueInParam
+import nextflow.script.ValueSharedParam
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
 

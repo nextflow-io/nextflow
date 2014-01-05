@@ -22,6 +22,19 @@ package nextflow.processor
 import groovy.util.logging.Slf4j
 import nextflow.ast.ProcessVarRef
 import nextflow.script.BaseScript
+import nextflow.script.EachInParam
+import nextflow.script.EnvInParam
+import nextflow.script.FileInParam
+import nextflow.script.FileOutParam
+import nextflow.script.FileSharedParam
+import nextflow.script.InputsList
+import nextflow.script.OutputsList
+import nextflow.script.SharedParam
+import nextflow.script.StdInParam
+import nextflow.script.StdOutParam
+import nextflow.script.ValueInParam
+import nextflow.script.ValueOutParam
+import nextflow.script.ValueSharedParam
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 /**

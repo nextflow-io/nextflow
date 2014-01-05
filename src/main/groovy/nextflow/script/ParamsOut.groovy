@@ -17,12 +17,13 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
+package nextflow.script
 import groovy.transform.InheritConstructors
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
+
 /**
  * Model a process generic input parameter
  *
@@ -68,9 +69,12 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     /** Whenever the channel has to closed on task termination */
     protected Boolean autoClose = Boolean.TRUE
 
-    BaseOutParam( Script script, String name ) {
+    BaseOutParam( Script script, Object obj ) {
         super(script)
-        this.name = name
+        if( obj instanceof ScriptVar )
+            this.name = obj.name
+        else
+            this.name = ( obj?.toString() ?: null )
     }
 
     BaseOutParam lazyInit() {
@@ -80,7 +84,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     }
 
     BaseOutParam to( def value ) {
-        this.outTarget = value
+        this.outTarget = value instanceof ScriptVar ? value.name : value
         return this
     }
 
@@ -174,7 +178,10 @@ class ValueOutParam extends BaseOutParam { }
  */
 @ToString(includePackage=false, includeSuper = true, includeNames = true)
 class StdOutParam extends BaseOutParam {
-    StdOutParam(Script script) { super(script,'-') }
+
+    StdOutParam(Script script) {
+        super(script,'-')
+    }
 }
 
 

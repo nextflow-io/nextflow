@@ -1,4 +1,4 @@
-package nextflow.processor
+package nextflow.script
 import groovy.transform.InheritConstructors
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
@@ -8,7 +8,6 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Nextflow
-import nextflow.ast.ProcessVarRef
 
 /**
  * Base class for input/output parameters
@@ -199,21 +198,29 @@ abstract class BaseInParam extends BaseParam implements InParam {
      * @param script The global script object
      * @param obj
      */
-    protected BaseInParam( Script script, obj ) {
+    protected BaseInParam( Script script, Object obj ) {
         super(script)
+        create(obj)
+    }
 
-        if( obj instanceof ProcessVarRef ) {
+    /**
+     * Template constructor, subclasses may override it
+     *
+     * @param obj The given parameter object
+     */
+    protected void create(Object obj) {
+
+        if( obj instanceof ScriptVar ) {
             // when the value is a variable reference
             // - use that name for the parameter itself
             // - get the variable value in the script binding
-            this.name = obj.name
-            this.inTarget = getScriptVar(obj.name, true)  // <-- true: raise an MissingPropertyException when it does not exist
+            name = obj.name
+            inTarget = getScriptVar(obj.name, true)  // <-- true: raise an MissingPropertyException when it does not exist
         }
         else {
-            // just set the parameter to the specified value
-            // it must follow an 'as' keyword in the parameter definition
-            this.inTarget = obj
+            inTarget = obj
         }
+
     }
 
     /**
@@ -250,7 +257,10 @@ abstract class BaseInParam extends BaseParam implements InParam {
      * @return
      */
     InParam _as( Object value ) {
-        this.name = value
+        if( value instanceof ScriptVar )
+            name = value.name
+        else
+            name = value?.toString()
         return this
     }
 
@@ -265,21 +275,25 @@ abstract class BaseInParam extends BaseParam implements InParam {
  *  Represents a process *file* input parameter
  */
 @Mixin(FileSpec)
+@InheritConstructors
 @ToString(includePackage=false, includeSuper = true)
 class FileInParam extends BaseInParam  {
 
-    FileInParam( Script script, obj ) {
-        super(script, obj)
-
-        if( obj instanceof String ) {
-            name = obj
-            filePattern(obj)
-        }
-    }
-
-
     FileInParam _as( value ) {
-        filePattern(value?.toString())
+
+        switch( value ) {
+            case ScriptVar:
+                name = value.name
+                break
+
+            case String:
+                filePattern(value as String)
+                break
+
+            default:
+                new IllegalArgumentException()
+        }
+
         return this
     }
 }
@@ -294,24 +308,20 @@ class EnvInParam extends BaseInParam { }
 /**
  *  Represents a process *value* input parameter
  */
+@InheritConstructors
 @ToString(includePackage=false, includeSuper = true)
-class ValueInParam extends BaseInParam {
-
-    ValueInParam( Script script, Object val ) {
-        super(script, val)
-    }
-
-}
+class ValueInParam extends BaseInParam { }
 
 /**
  *  Represents a process *stdin* input parameter
  */
+@InheritConstructors
 @ToString(includePackage=false, includeSuper = true)
 class StdInParam extends BaseInParam {
 
-    StdInParam( Script script, def obj ) {
-        super(script,obj)
-        this.name = '-'
+    protected void create( Object obj ) {
+        super.create(obj)
+        name = '-'
     }
 
     def StdInParam _as( Object obj ) {
@@ -323,12 +333,12 @@ class StdInParam extends BaseInParam {
 /**
  *  Represents a process input *iterator* parameter
  */
+@InheritConstructors
 @ToString(includePackage=false, includeSuper = true)
 class EachInParam extends BaseInParam {
 
-    def EachInParam( Script script, Object value ) {
-        super(script,value)
-
+    protected void create(Object obj) {
+        super.create(obj)
         // everything is mapped to a collection
         // the collection is wrapped to a "scalar" dataflow variable
         def list = Nextflow.list(inTarget)

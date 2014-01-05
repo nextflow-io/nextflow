@@ -17,17 +17,17 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.ast
+package nextflow.script
 
 import groovy.transform.Canonical
 
 /**
- * Represent a variable in the script binding
+ * Presents a variable definition in the script context.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Canonical
-class ProcessVarRef {
+class ScriptVar {
 
     String name
 

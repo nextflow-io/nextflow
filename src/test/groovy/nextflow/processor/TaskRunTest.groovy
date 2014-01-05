@@ -2,6 +2,14 @@ package nextflow.processor
 
 import java.nio.file.Paths
 
+import nextflow.script.EnvInParam
+import nextflow.script.FileInParam
+import nextflow.script.FileOutParam
+import nextflow.script.FileSharedParam
+import nextflow.script.ScriptVar
+import nextflow.script.StdInParam
+import nextflow.script.StdOutParam
+import nextflow.script.ValueInParam
 import spock.lang.Specification
 
 /**

@@ -1,8 +1,7 @@
-package nextflow.processor
+package nextflow.script
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Nextflow
-import nextflow.ast.ProcessVarRef
 import spock.lang.Specification
 /**
  *
@@ -52,7 +51,7 @@ class ParamsInTest extends Specification {
 
         when:
         binding.setVariable('channel_x', Nextflow.val(1))
-        input = new FileInParam(script, new ProcessVarRef('channel_x')) 
+        input = new FileInParam(script, new ScriptVar('channel_x'))
         def x = input.getInChannel()
         then:
         input.name == 'channel_x'
@@ -109,7 +108,7 @@ class ParamsInTest extends Specification {
          */
         when:
         binding.setVariable('a_script_value', Nextflow.val(3) )
-        input = new ValueInParam(script, new ProcessVarRef('a_script_value') )
+        input = new ValueInParam(script, new ScriptVar('a_script_value') )
         then:
         input.name == 'a_script_value'
         input.inChannel == script.getBinding().getVariable('a_script_value' )
@@ -123,7 +122,7 @@ class ParamsInTest extends Specification {
          */
         when:
         binding.setVariable('a_script_x', 4 )
-        input = new ValueInParam(script, new ProcessVarRef('a_script_x') )
+        input = new ValueInParam(script, new ScriptVar('a_script_x') )
         then:
         input.name == 'a_script_x'
         input.inChannel instanceof DataflowVariable
@@ -136,7 +135,7 @@ class ParamsInTest extends Specification {
          * - it results to an exception
          */
         when:
-        new ValueInParam(script, new ProcessVarRef('a_script_z' )) 
+        new ValueInParam(script, new ScriptVar('a_script_z' ))
         then:
         thrown(MissingPropertyException)
 

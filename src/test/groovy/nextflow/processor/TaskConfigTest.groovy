@@ -2,6 +2,14 @@ package nextflow.processor
 
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.script.BaseScript
+import nextflow.script.FileInParam
+import nextflow.script.InputsList
+import nextflow.script.OutputsList
+import nextflow.script.ScriptVar
+import nextflow.script.StdInParam
+import nextflow.script.StdOutParam
+import nextflow.script.ValueInParam
+import nextflow.script.ValueSharedParam
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification

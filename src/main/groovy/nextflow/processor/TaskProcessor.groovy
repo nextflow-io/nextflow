@@ -44,7 +44,15 @@ import nextflow.exception.ProcessException
 import nextflow.exception.ProcessScriptException
 import nextflow.executor.AbstractExecutor
 import nextflow.script.BaseScript
+import nextflow.script.FileOutParam
+import nextflow.script.FileSharedParam
+import nextflow.script.FileSpec
+import nextflow.script.OutParam
 import nextflow.script.ScriptType
+import nextflow.script.SharedParam
+import nextflow.script.StdOutParam
+import nextflow.script.ValueOutParam
+import nextflow.script.ValueSharedParam
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper

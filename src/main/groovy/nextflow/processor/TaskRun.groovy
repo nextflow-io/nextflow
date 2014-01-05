@@ -25,7 +25,13 @@ import java.util.concurrent.locks.ReentrantLock
 
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
+import nextflow.script.EnvInParam
+import nextflow.script.FileInParam
+import nextflow.script.FileSharedParam
+import nextflow.script.InParam
+import nextflow.script.OutParam
 import nextflow.script.ScriptType
+import nextflow.script.StdInParam
 
 /**
  * Models a task instance

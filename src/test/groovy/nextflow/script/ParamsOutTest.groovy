@@ -17,7 +17,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
+package nextflow.script
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Nextflow
@@ -42,7 +42,7 @@ class ParamsOutTest extends Specification {
          */
         when:
         def ch = new DataflowVariable()
-        def param = new FileOutParam(script,'x') .to(ch) 
+        def param = new FileOutParam(script,'x') .to(ch)
         then:
         param.name == 'x'
         param.outChannel.is(ch)
@@ -53,7 +53,7 @@ class ParamsOutTest extends Specification {
          */
         when:
         ch = new DataflowVariable()
-        param = new StdOutParam(script) .to(ch) 
+        param = new StdOutParam(script) .to(ch)
         then:
         param.name == '-'
         param.outChannel.is(ch)

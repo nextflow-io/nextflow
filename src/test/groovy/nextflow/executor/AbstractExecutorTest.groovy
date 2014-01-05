@@ -1,6 +1,6 @@
 package nextflow.executor
 
-import nextflow.processor.FileInParam
+import nextflow.script.FileInParam
 import nextflow.processor.FileHolder
 import spock.lang.Specification
 /**

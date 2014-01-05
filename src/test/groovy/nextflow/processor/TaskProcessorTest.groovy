@@ -23,6 +23,8 @@ import java.nio.file.Paths
 
 import nextflow.Session
 import nextflow.script.BaseScript
+import nextflow.script.FileInParam
+import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
 import spock.lang.Specification
 import test.DummyProcessor

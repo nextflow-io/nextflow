@@ -25,17 +25,17 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.Nextflow
-import nextflow.processor.EachInParam
-import nextflow.processor.EnvInParam
-import nextflow.processor.FileInParam
-import nextflow.processor.FileOutParam
-import nextflow.processor.FileSharedParam
-import nextflow.processor.StdInParam
-import nextflow.processor.StdOutParam
+import nextflow.script.EachInParam
+import nextflow.script.EnvInParam
+import nextflow.script.FileInParam
+import nextflow.script.FileOutParam
+import nextflow.script.FileSharedParam
+import nextflow.script.StdInParam
+import nextflow.script.StdOutParam
 import nextflow.processor.TaskProcessor
-import nextflow.processor.ValueInParam
-import nextflow.processor.ValueOutParam
-import nextflow.processor.ValueSharedParam
+import nextflow.script.ValueInParam
+import nextflow.script.ValueOutParam
+import nextflow.script.ValueSharedParam
 import spock.lang.Specification
 /**
  *

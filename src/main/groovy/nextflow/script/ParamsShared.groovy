@@ -17,17 +17,14 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
+package nextflow.script
 
-import java.nio.file.Path
-
+import groovy.transform.InheritConstructors
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.ast.ProcessVarRef
-
 
 /**
  * 'SharedParam' Marker interface
@@ -60,15 +57,23 @@ abstract class BaseSharedParam extends BaseParam implements SharedParam {
     private outChannel
 
 
-    protected BaseSharedParam( Script script, val ) {
+    protected BaseSharedParam( Script script, Object obj ) {
         super(script)
+        create(obj)
+    }
 
-        if( val instanceof ProcessVarRef ) {
-            this.name = val.name
-            this.inTarget = getScriptVar(val.name)
+    /**
+     * Template constructor, subclasses may override it to provide custom object creation logic
+     *
+     * @param obj
+     */
+    protected void create(Object obj) {
+        if( obj instanceof ScriptVar ) {
+            name = obj.name
+            inTarget = getScriptVar(obj.name)
         }
         else {
-            this.inTarget = val
+            inTarget = obj
         }
     }
 
@@ -113,7 +118,10 @@ abstract class BaseSharedParam extends BaseParam implements SharedParam {
      * @return
      */
     BaseSharedParam _as( Object value ) {
-        this.name = value
+        if( value instanceof ScriptVar )
+            this.name = value.name
+        else
+            this.name = value?.toString()
         return this
     }
 
@@ -129,7 +137,7 @@ abstract class BaseSharedParam extends BaseParam implements SharedParam {
      * {@see #outputValToChannel()}
      */
     BaseSharedParam to( Object value ) {
-        this.outTarget = value
+        this.outTarget = value instanceof ScriptVar ? value.name : value?.toString()
         return this
     }
 
@@ -160,58 +168,62 @@ abstract class BaseSharedParam extends BaseParam implements SharedParam {
  * Represents a shared value parameter
  */
 
+@InheritConstructors
 @ToString(includePackage=false, includeSuper = true)
-class ValueSharedParam extends BaseSharedParam {
-
-    ValueSharedParam ( Script script, def val ) {
-        super(script, val)
-    }
-
-}
+class ValueSharedParam extends BaseSharedParam { }
 
 
 @Mixin(FileSpec)
+@InheritConstructors
 @ToString(includePackage=false, includeSuper = true)
 class FileSharedParam extends BaseSharedParam  {
 
-    private boolean isVar
-
-    FileSharedParam( Script script, Object val ) {
-        super(script, val)
-
-        // when only a string is entered, like:
-        //      file 'file_something'
-        //
-        // it is supposed to be the file name to be used,
-        // thus: clear the 'target' field and set the 'name'
-        //
-
-        if( val instanceof ProcessVarRef ) {
-            isVar = true
-            filePattern(name)
-        }
-        else if( val instanceof String ) {
-            filePattern(val)
-            inTarget = null
-        }
-        else {
-            filePattern(name)
-        }
-
-        if( inTarget instanceof Path ) {
-            filePattern(inTarget.getName())
-        }
-
-        // set create file if not exist by default
-        create(true)
-    }
+//    FileSharedParam( Script script, Object val ) {
+//        super(script, val)
+//
+//        // when only a string is entered, like:
+//        //      file 'file_something'
+//        //
+//        // it is supposed to be the file name to be used,
+//        // thus: clear the 'target' field and set the 'name'
+//        //
+//
+//        if( val instanceof ProcessVarRef ) {
+//            isVar = true
+//            filePattern(name)
+//        }
+//        else if( val instanceof String ) {
+//            filePattern(val)
+//            inTarget = null
+//        }
+//        else {
+//            filePattern(name)
+//        }
+//
+//        if( inTarget instanceof Path ) {
+//            filePattern(inTarget.getName())
+//        }
+//
+//        // set create file if not exist by default
+//        create(true)
+//    }
 
 
     FileSharedParam _as( value ) {
-        if( inTarget == null && !isVar ) {
-            inTarget = getFilePattern()
+
+        switch( value ) {
+            case ScriptVar:
+                name = value.name
+                break
+
+            case String:
+                filePattern(value as String)
+                break
+
+            default:
+                new IllegalArgumentException()
         }
-        filePattern(value?.toString())
+
         return this
     }
 

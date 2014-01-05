@@ -19,6 +19,8 @@
 
 package nextflow.processor
 
+import nextflow.script.FileInParam
+import nextflow.script.ValueInParam
 import spock.lang.Specification
 
 /**

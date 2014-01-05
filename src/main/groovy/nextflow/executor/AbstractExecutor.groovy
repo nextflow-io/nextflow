@@ -8,8 +8,8 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.MissingFileException
 import nextflow.processor.FileHolder
-import nextflow.processor.FileOutParam
-import nextflow.processor.InParam
+import nextflow.script.FileOutParam
+import nextflow.script.InParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
