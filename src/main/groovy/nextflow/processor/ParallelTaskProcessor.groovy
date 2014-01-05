@@ -191,7 +191,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         taskConfig.outputs.each { OutParam param -> task.setOutput(param) }
 
         // -- map the inputs to a map and use to delegate closure values interpolation
-        final ctx = new DelegateMap(ownerScript)
+        final ctx = new DelegateMap(ownerScript, taskConfig.getUndef())
         final firstRun = task.index == 1
         int count = 0
 

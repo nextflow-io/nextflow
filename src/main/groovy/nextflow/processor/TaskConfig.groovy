@@ -60,6 +60,7 @@ class TaskConfig implements Map {
         configProperties = new LinkedHashMap()
         configProperties.with {
             echo = false
+            undef = false
             cacheable = true
             shell = ['/bin/bash','-ue']
             validExitStatus = [0]
@@ -78,6 +79,18 @@ class TaskConfig implements Map {
         configProperties = cfg
         ownerScript = cfg.@ownerScript
         log.trace "TaskConfig >> ownerScript: $ownerScript"
+    }
+
+    private boolean toBool( value )  {
+        if( value instanceof Boolean ) {
+            configProperties.echo = value.booleanValue()
+        }
+        else if( value != null && value.toString().toLowerCase() in ['true','yes','on'] ) {
+            configProperties.echo = true
+        }
+        else {
+            configProperties.echo = false
+        }
     }
 
     def boolean containsKey(String name) {
@@ -130,20 +143,25 @@ class TaskConfig implements Map {
     }
 
     void setEcho( Object value ) {
-        if( value instanceof Boolean ) {
-            configProperties.echo = value.booleanValue()
-        }
-        else if( value ?.toString()?.toLowerCase() in ['true','yes','on']) {
-            configProperties.echo = true
-        }
-        else {
-            configProperties.echo = false
-        }
+        configProperties.echo = toBool(value)
     }
 
     TaskConfig echo( def value ) {
         setEcho(value)
         return this
+    }
+
+    void setUndef( def value ) {
+        configProperties.undef = toBool(value)
+    }
+
+    TaskConfig undef( def value ) {
+        configProperties.undef = toBool(value)
+        return this
+    }
+
+    boolean getUndef() {
+        configProperties.undef
     }
 
     /**

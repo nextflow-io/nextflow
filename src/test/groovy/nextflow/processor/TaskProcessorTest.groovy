@@ -236,9 +236,9 @@ class TaskProcessorTest extends Specification {
     def testSaveAndReadContextMap () {
 
         setup:
+        def script = Mock(BaseScript)
         def file = Files.createTempFile('test.ctx',null)
         def processor = [:] as TaskProcessor
-        def script = Mock(BaseScript)
         def map = new TaskProcessor.DelegateMap(script)
         map.alpha = 1
         map.beta = 2

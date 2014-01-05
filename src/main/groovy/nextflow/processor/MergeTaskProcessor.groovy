@@ -128,7 +128,7 @@ class MergeTaskProcessor extends TaskProcessor {
         // -- map the inputs to a map and use to delegate closure values interpolation
         def keys = []
         def stdin = null
-        def contextMap = new DelegateMap(ownerScript)
+        def contextMap = new DelegateMap(ownerScript, taskConfig.getUndef())
         Map<FileInParam,List<FileHolder>> filesMap = [:]
         Map<String,String> environment = [:]
         int count = 0

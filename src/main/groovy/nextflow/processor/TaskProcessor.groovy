@@ -1096,15 +1096,19 @@ abstract class TaskProcessor {
 
         private BaseScript script
 
-        DelegateMap(BaseScript script) {
+        private boolean undef
+
+        DelegateMap(BaseScript script, boolean undef = false) {
             this.script = script
             this.holder = [:]
+            this.undef = undef
         }
 
-        DelegateMap(BaseScript script, Map holder) {
+        DelegateMap(BaseScript script, Map holder, boolean undef) {
             assert holder != null
             this.script = script
             this.holder = holder
+            this.undef = undef
         }
 
         @Override
@@ -1226,7 +1230,8 @@ abstract class TaskProcessor {
 
     protected DelegateMap readContextMap( Path contextFile ) {
         def map = (Map)SerializationUtils.deserialize( contextFile.bytes )
-        new DelegateMap(ownerScript,map)
+        def undef = taskConfig?.getUndef() ?: false
+        new DelegateMap(ownerScript, map, undef)
     }
 
 }

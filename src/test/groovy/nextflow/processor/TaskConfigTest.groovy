@@ -136,10 +136,26 @@ class TaskConfigTest extends Specification {
         config.containsKey('validExitStatus')
         config.containsKey('inputs')
         config.containsKey('outputs')
+        config.containsKey('undef')
         !config.containsKey('xyz')
         !config.containsKey('maxForks')
         config.maxForks == null
 
+    }
+
+    def 'test undef' () {
+
+        setup:
+        def script = Mock(BaseScript)
+        def config = new TaskConfig(script)
+
+        expect:
+        config.undef == false
+
+        when:
+        config.undef(true)
+        then:
+        config.undef == true
 
     }
 
