@@ -151,11 +151,14 @@ class MergeTaskProcessor extends TaskProcessor {
                     // all the files to be staged
                     def fileParam = (FileInParam)param
                     def normalized = normalizeInputToFiles(val,count)
-                    def resolved = expandWildcards( fileParam.name, normalized )
+                    def resolved = expandWildcards( fileParam.filePattern, normalized )
+
                     filesMap[fileParam] = resolved
                     count += resolved.size()
                     // set the context
-                    contextMap[param.name] = singleItemOrList( resolved )
+                    if( param.name )
+                        contextMap[param.name] = singleItemOrList( resolved )
+
                     // set to *val* so that the list is added to the map of all inputs
                     val = resolved
                     break
