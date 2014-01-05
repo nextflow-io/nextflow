@@ -199,19 +199,19 @@ abstract class TaskProcessor {
      * @param session
      * @param script
      * @param taskConfig
-     * @param taskBlock
+     * @param taskBody
      */
-    TaskProcessor( AbstractExecutor executor, Session session, BaseScript script, TaskConfig taskConfig, Closure taskBlock ) {
+    TaskProcessor( AbstractExecutor executor, Session session, BaseScript script, TaskConfig taskConfig, Closure taskBody ) {
         assert executor
         assert session
         assert script
-        assert taskBlock
+        assert taskBody
 
         this.executor = executor
         this.session = session
         this.ownerScript = script
         this.taskConfig = taskConfig
-        this.code = taskBlock
+        this.code = taskBody
 
         /*
          * set the task name
