@@ -213,7 +213,8 @@ class ParallelTaskProcessor extends TaskProcessor {
                     def fileParam = param as FileInParam
                     def normalized = normalizeInputToFiles(val,count)
                     def resolved = expandWildcards( fileParam.filePattern, normalized )
-                    ctx[ param.name ] = singleItemOrList(resolved)
+                    if( param.name )
+                        ctx[ param.name ] = singleItemOrList(resolved)
                     count += resolved.size()
                     val = resolved
                     break
