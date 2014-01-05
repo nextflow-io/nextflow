@@ -145,7 +145,7 @@ class DnaNexusExecutorTest extends Specification {
         handler.checkIfCompleted()
         handler.status == TaskHandler.Status.COMPLETED
         task2.exitStatus == 33
-        task2.stdout == 'Process says Hola'
+        task2.stdout == 'Task says Hola'
 
 
         cleanup:
