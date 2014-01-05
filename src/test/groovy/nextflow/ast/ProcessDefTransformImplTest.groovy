@@ -183,9 +183,10 @@ class ProcessDefTransformImplTest extends Specification {
             process hola {
               input:
               file blast_x
-              file blast_y as no_quote
+              file blast_y as file_xxx
               file blast_z as 'file.txt'
               file { 1 }
+              file 'hello' as var_name as 'file.name'
 
               return ''
             }
@@ -198,21 +199,22 @@ class ProcessDefTransformImplTest extends Specification {
         FileInParam in2 = process.taskConfig.getInputs().get(1)
         FileInParam in3 = process.taskConfig.getInputs().get(2)
         FileInParam in4 = process.taskConfig.getInputs().get(3)
+        FileInParam in5 = process.taskConfig.getInputs().get(4)
 
         then:
         // verifies:
-        // - the (file) name is the same as the variable name
-        // - the target holds the variable value
-        // - the channel returns the variable value
+        // - the variable name is 'blast_x'
+        // - the filePattern is null
+        // - the channel returns the variable value as defined in the script
         in1.name == 'blast_x'
         in1.filePattern == null
         in1.inChannel.getVal() == 'blah blah'
 
-        // - the (file) name get the value specified by the 'as' keyword
-        // - target get the 'blast_y' value
+        // - the name is the one defined by the 'as' keyword
+        // - the filePattern is undefined
         // = the channel binds to 'blast_y' value
-        in2.name == 'blast_y'
-        in2.filePattern == 'no_quote'
+        in2.name == 'file_xxx'
+        in2.filePattern == null
         in2.inChannel.getVal() == 'blah blah'
 
         // - the (file) name get the value specified by the 'as' keyword
@@ -230,6 +232,9 @@ class ProcessDefTransformImplTest extends Specification {
         in4.filePattern == null
         in4.inChannel.getVal() == 1
 
+        in5.name == 'var_name'
+        in5.filePattern == 'file.name'
+        in5.inChannel.getVal() == 'hello'
 
     }
 
@@ -817,7 +822,7 @@ class ProcessDefTransformImplTest extends Specification {
 
             process hola {
                 share:
-                file 'file.txt'
+                file 'hola'
                 file x
                 file y
                 file z as 'file.fasta'
@@ -847,28 +852,28 @@ class ProcessDefTransformImplTest extends Specification {
         //  define a shared file by its name
         then:
         shared1.name == null
-        shared1.filePattern == 'file.txt'
+        shared1.filePattern == null
         shared1.inChannel instanceof DataflowVariable
-        shared1.inChannel.getVal() == null
+        shared1.inChannel.getVal() == 'hola'
 
         // define a shared file 'x' that binds to the same variable in the script context
         // note: the variable may hold any type not only a Path.
         shared2.name == 'x'
-        shared2.filePattern == 'hola.txt'
+        shared2.filePattern == null
         shared2.inChannel.getVal() == Paths.get('hola.txt')
 
         // define a shared file 'y', since a variable with that name does not exist
         // binds to the default file
         shared3.name == 'y'
-        shared3.filePattern == 'y'
+        shared3.filePattern == null
         shared3.inChannel.getVal() == null
 
         shared4.name == 'z'
         shared4.filePattern == 'file.fasta'
         shared4.inChannel.getVal() == null
 
-        shared5.name == 'w'
-        shared5.filePattern == 'blast_result'
+        shared5.name == 'blast_result'
+        shared5.filePattern == null
         shared5.inChannel.getVal() == null
 
         shared6.name == null

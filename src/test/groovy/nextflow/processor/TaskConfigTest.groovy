@@ -167,9 +167,9 @@ class TaskConfigTest extends Specification {
         def config = new TaskConfig(script)
 
         when:
-        config._in_file(false, new DataflowVariable<>()) ._as('filename.fa')
-        config._in_val(false,1) ._as('x')
-        config.stdin(false, new DataflowVariable<>())
+        config._in_file(new DataflowVariable<>()) ._as('filename.fa')
+        config._in_val(1) ._as('x')
+        config.stdin(new DataflowVariable<>())
 
         then:
         config.getInputs().size() == 3
@@ -228,7 +228,7 @@ class TaskConfigTest extends Specification {
 
         when:
         def config = new TaskConfig(script)
-        def val = config._share_val(true,'xxx')
+        def val = config._share_val( new ScriptVar('xxx'))
         then:
         val instanceof ValueSharedParam
         val.name == 'xxx'
@@ -238,7 +238,7 @@ class TaskConfigTest extends Specification {
         when:
         binding.setVariable('yyy', 'Hola')
         config = new TaskConfig(script)
-        val = config._share_val(true,'yyy')
+        val = config._share_val(new ScriptVar('yyy'))
         then:
         val instanceof ValueSharedParam
         val.name == 'yyy'
@@ -249,7 +249,7 @@ class TaskConfigTest extends Specification {
         // that value is bound to the input channel
         when:
         config = new TaskConfig(script)
-        val = config._share_val(false,'Beta') ._as('yyy')
+        val = config._share_val('Beta') ._as('yyy')
         then:
         val instanceof ValueSharedParam
         val.name == 'yyy'
@@ -260,7 +260,7 @@ class TaskConfigTest extends Specification {
         // that value is bound to the input channel
         when:
         config = new TaskConfig(script)
-        val = config._share_val(false, { 99 }) ._as('yyy')
+        val = config._share_val({ 99 }) ._as('yyy')
         then:
         val instanceof ValueSharedParam
         val.name == 'yyy'
@@ -275,7 +275,7 @@ class TaskConfigTest extends Specification {
         channel << 123
 
         config = new TaskConfig(script)
-        val = config._share_val(false, channel) ._as('zzz')
+        val = config._share_val(channel) ._as('zzz')
         then:
         val instanceof ValueSharedParam
         val.name == 'zzz'
@@ -286,7 +286,7 @@ class TaskConfigTest extends Specification {
         // a DataflowVariable is created in the script context
         when:
         config = new TaskConfig(script)
-        val = config._share_val(true,'x1') .to('x2')
+        val = config._share_val(new ScriptVar('x1')) .to('x2')
         then:
         val instanceof ValueSharedParam
         val.name == 'x1'

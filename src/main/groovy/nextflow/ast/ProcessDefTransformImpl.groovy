@@ -19,13 +19,16 @@
 
 package nextflow.ast
 import groovy.util.logging.Slf4j
+import nextflow.script.ScriptVar
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
+import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
+import org.codehaus.groovy.ast.expr.ConstructorCallExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
 import org.codehaus.groovy.ast.expr.MapExpression
@@ -277,16 +280,12 @@ class ProcessDefTransformImpl implements ASTTransformation {
             //this methods require a special prefix
             methodCall.setMethod( new ConstantExpression('_in_' + methodName) )
             // the following methods require to replace a variable reference to a constant
-            convertVarToConst(methodCall,true)
-        }
-
-        else if( methodName == '_as'  ) {
             convertVarToConst(methodCall)
         }
-        else if( methodName == 'stdin' )  {
-            convertVarToConst(methodCall, true)
-        }
 
+        else if( methodName in ['_as','stdin']  ) {
+            convertVarToConst(methodCall)
+        }
 
         if( methodCall.objectExpression instanceof MethodCallExpression ) {
             convertInputMethod(methodCall.objectExpression)
@@ -316,11 +315,8 @@ class ProcessDefTransformImpl implements ASTTransformation {
             methodCall.setMethod( new ConstantExpression( SHARE_METHOD_MAP[methodName] ) )
          }
 
-        if( methodName in ['to','_as'] ) {
+        if( methodName in ['to','_as','file','val'] ) {
             convertVarToConst(methodCall)
-        }
-        else if( methodName in ['file','val']  ) {
-            convertVarToConst(methodCall, true)
         }
 
         if( methodCall.objectExpression instanceof MethodCallExpression ) {
@@ -365,7 +361,7 @@ class ProcessDefTransformImpl implements ASTTransformation {
      * @param index The index of the argument to modify
      * @return
      */
-    private List<Expression> convertVarToConst( MethodCallExpression methodCall, boolean flagVariable=false, int index = 0 ) {
+    private List<Expression> convertVarToConst( MethodCallExpression methodCall, int index = 0 ) {
 
         def args = methodCall.getArguments() as ArgumentListExpression
 
@@ -374,17 +370,11 @@ class ProcessDefTransformImpl implements ASTTransformation {
         for( Expression expr : args )  {
 
             if( index == i++ ) {
-                def isVariable = expr instanceof VariableExpression
-                // prefix the argument with a boolean to specify
-                // whether it is variable or a literal value
-                if( flagVariable ) {
-                    newArgs << ( isVariable ? ConstantExpression.PRIM_TRUE : ConstantExpression.PRIM_FALSE )
-                }
-
-                if( isVariable ) {
+                if( expr instanceof VariableExpression ) {
                     // when it is a variable expression, replace it with a constant rapresenting
                     // the variable name
-                    newArgs << new ConstantExpression( ((VariableExpression) expr).getName() )
+                    def name = ((VariableExpression) expr).getName()
+                    newArgs << newObj( ScriptVar, name )
                     continue
                 }
             }
@@ -397,6 +387,15 @@ class ProcessDefTransformImpl implements ASTTransformation {
         methodCall.setArguments(new ArgumentListExpression(newArgs))
 
         return newArgs
+    }
+
+    def protected newObj( Class clazz, Object... params) {
+
+        def type = new ClassNode(clazz)
+        List<Expression> args = []
+        params.each { args << new ConstantExpression(it) }
+        return new ConstructorCallExpression(type, new ArgumentListExpression(args))
+
     }
 
 

@@ -23,10 +23,11 @@ class TaskRunTest extends Specification {
 
         setup:
         def script = Mock(Script)
+        script.getBinding() >> { new Binding('x': 1, 'y': 2) }
         def task = new TaskRun()
         task.setInput( new StdInParam(script,'Hello') )
-        task.setInput( new FileInParam(script, 'x'), 'file1' )
-        task.setInput( new FileInParam(script, 'y'), 'file2' )
+        task.setInput( new FileInParam(script, new ScriptVar('x')), 'file1' )
+        task.setInput( new FileInParam(script, new ScriptVar('y')), 'file2' )
         task.setInput( new EnvInParam(script, 'z'), 'env' )
 
 

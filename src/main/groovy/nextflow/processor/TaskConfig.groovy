@@ -18,9 +18,7 @@
  */
 
 package nextflow.processor
-
 import groovy.util.logging.Slf4j
-import nextflow.ast.ProcessVarRef
 import nextflow.script.BaseScript
 import nextflow.script.EachInParam
 import nextflow.script.EnvInParam
@@ -100,14 +98,12 @@ class TaskConfig implements Map {
     def methodMissing( String name, def args) {
 
         if( args instanceof Object[] ) {
-
             if( args.size()==1 ) {
                 configProperties[ name ] = args[0]
             }
             else {
                 configProperties[ name ] = args.toList()
             }
-
         }
         else {
             configProperties[ name ] = args
@@ -172,72 +168,66 @@ class TaskConfig implements Map {
      * @return
      *
      */
-    def FileInParam _in_file( boolean isVariable, Object obj ) {
+    def FileInParam _in_file( Object obj ) {
 
-        def param = isVariable ? new ProcessVarRef(obj.toString()) : obj
-        def result = new FileInParam(ownerScript, param)
+        def result = new FileInParam(ownerScript, obj)
         configProperties.inputs << result
 
         return result
     }
 
-    def ValueInParam _in_val( boolean isVariable, Object obj ) {
+    def ValueInParam _in_val( Object obj ) {
 
-        def param = isVariable ? new ProcessVarRef(obj.toString()) : obj
-        def result = new ValueInParam(ownerScript, param)
+        def result = new ValueInParam(ownerScript, obj)
         configProperties.inputs << result
 
         return result
     }
 
-    EnvInParam _in_env( boolean isVariable, Object obj ) {
+    EnvInParam _in_env( Object obj ) {
 
-        def param = isVariable ? new ProcessVarRef(obj.toString()) : obj
-        def result = new EnvInParam(ownerScript, param)
+        def result = new EnvInParam(ownerScript, obj)
         configProperties.inputs << result
 
         result
     }
 
-    EachInParam _in_each( boolean isVariable, Object obj ) {
+    EachInParam _in_each( Object obj ) {
 
-        def param = isVariable ? new ProcessVarRef(obj.toString()) : obj
-        def result = new EachInParam(ownerScript,param)
+        def result = new EachInParam(ownerScript,obj)
         configProperties.inputs << result
 
         return result
     }
 
-    def FileOutParam _out_file( String name ) {
+    def FileOutParam _out_file( obj ) {
 
-        def result = name == '-' ? new StdOutParam(ownerScript) : new FileOutParam(ownerScript,name)
+        def result = obj == '-' ? new StdOutParam(ownerScript) : new FileOutParam(ownerScript,obj)
         configProperties.outputs << result
 
         result
     }
 
-    def ValueOutParam _out_val( String name ) {
+    def ValueOutParam _out_val( Object obj ) {
 
-        def result = new ValueOutParam(ownerScript,name)
+        def result = new ValueOutParam(ownerScript,obj)
         configProperties.outputs << result
 
         result
     }
 
 
-    def ValueSharedParam _share_val( boolean isVariable, def obj )  {
+    def ValueSharedParam _share_val( def obj )  {
 
-        def param = isVariable ? new ProcessVarRef(obj.toString()) : obj
-        def result = new ValueSharedParam(ownerScript, param)
+        def result = new ValueSharedParam(ownerScript, obj)
         configProperties.inputs << result
 
         return result
     }
 
-    def FileSharedParam _share_file( boolean isVariable, def obj )  {
+    def FileSharedParam _share_file( def obj )  {
 
-        def param = isVariable ? new ProcessVarRef(obj.toString()) : obj
-        def result = new FileSharedParam(ownerScript, param)
+        def result = new FileSharedParam(ownerScript, obj)
         configProperties.inputs << result
 
         return result
@@ -245,11 +235,9 @@ class TaskConfig implements Map {
 
 
 
-    StdInParam stdin( boolean isVariable, def obj ) {
+    StdInParam stdin( def obj ) {
 
-        def param = isVariable ? new ProcessVarRef(obj.toString()) : obj
-        def result = new StdInParam(ownerScript, param)
-
+        def result = new StdInParam(ownerScript, obj)
         configProperties.inputs << result
 
         result
@@ -271,7 +259,7 @@ class TaskConfig implements Map {
      * provided by the user for the current task
      */
     def void noInput() {
-        _in_val(false,'$') ._as(true)
+        _in_val('$') ._as(true)
     }
 
 

@@ -43,7 +43,7 @@ class ParamsInTest extends Specification {
 
         then:
         input instanceof FileInParam
-        input.name == 'hola'
+        input.name == null
         input.filePattern == 'name.fa'
         input.inChannel instanceof DataflowVariable
         input.inChannel.val == 'hola'
