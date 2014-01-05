@@ -216,6 +216,29 @@ class CliRunnerTest extends Specification {
 
     }
 
+
+    def 'test task out file' () {
+
+
+        setup:
+        def runner = new CliRunner( executor: 'nope' )
+
+        def script = '''
+            X = file('filename')
+            process test {
+                input:
+                file X
+
+                "cat $X"
+            }
+
+            '''
+
+        expect:
+        runner.execute(script).val == 'cat filename'
+
+    }
+
     def 'test version' () {
 
         when:
