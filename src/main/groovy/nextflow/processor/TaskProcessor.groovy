@@ -574,14 +574,15 @@ abstract class TaskProcessor {
         message << "Error executing process > '${task?.name ?: name}'"
         if( error instanceof ProcessException ) {
             formatTaskError( message, error, task )
+            log.error message.join('\n')
         }
         else {
             message << formatErrorCause( error )
             message << "Tip: check the log file '.nextflow.log' for more details"
-        }
+            log.error message.join('\n')
+            log.debug "Error details", error
 
-        log.error message.join('\n')
-        log.debug "Error details", error
+        }
 
         session.abort()
         return true
@@ -590,6 +591,7 @@ abstract class TaskProcessor {
     final protected formatTaskError( List message, Throwable error, TaskRun task ) {
 
         // compose a readable error message
+        message << formatErrorCause( error )
 
         /*
          * task executing scriptlets
@@ -597,7 +599,7 @@ abstract class TaskProcessor {
         if( task?.script ) {
             // print the executed command
             message << "Command executed:\n"
-            task.script.eachLine {
+            task.script?.stripIndent().trim().eachLine {
                 message << "  $it"
             }
 
@@ -617,14 +619,12 @@ abstract class TaskProcessor {
                 }
             }
 
-            message << formatErrorCause( error )
         }
-
 
         if( task?.workDirectory )
             message << "\nWork dir:\n  ${task.workDirectory.toString()}"
 
-        message << "\nTip: when you have fixed the problem you may continue the execution appending to the nextflow command line the '-resume' option"
+        message << "\nTip: when you have fixed the problem you can continue the execution appending to the nextflow command line the '-resume' option"
 
         return message
     }
@@ -671,10 +671,10 @@ abstract class TaskProcessor {
     private String formatErrorCause( Throwable error ) {
 
         def result = new StringBuilder()
-        result << '\nError cause:'
+        result << '\nCause:\n'
 
         def message = error.cause?.getMessage() ?: ( error.getMessage() ?: error.toString() )
-        result.append('\n  ').append(message)
+        result.append('  ').append(message).append('\n')
 
         result.toString()
     }
@@ -1123,7 +1123,11 @@ abstract class TaskProcessor {
                 return script.getProperty(property?.toString())
             }
 
-            throw new MissingPropertyException("Unknown variable '$property' -- Make sure you didn't misspell it or define somewhere in the script before use it")
+            if( undef )
+                // so give a chance to the bash interpreted to evaluate it
+                return '$' + property
+            else
+                throw new MissingPropertyException("Unknown variable '$property' -- Make sure you didn't misspell it or define somewhere in the script before use it")
 
         }
 
@@ -1158,7 +1162,7 @@ abstract class TaskProcessor {
             else {
                 boolean success = (task.exitStatus in taskConfig.validExitStatus)
                 if ( !success ) {
-                    throw new ProcessFailedException("Process '${task.name}' failed")
+                    throw new ProcessFailedException("Process '${task.name}' terminated with an error exit status")
                 }
             }
 
