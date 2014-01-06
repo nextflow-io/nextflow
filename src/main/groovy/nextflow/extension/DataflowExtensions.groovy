@@ -1123,7 +1123,6 @@ class DataflowExtensions {
     public static <T> void split( DataflowReadChannel<T> source, DataflowWriteChannel<T>... target ) {
         assert source != null
         assert target
-
         source.split( target as List )
     }
 
@@ -1132,6 +1131,65 @@ class DataflowExtensions {
         n.times { list << newChannelBy(source) }
         source.split(list)
         return list
+    }
+
+    public static DataflowReadChannel chopFasta( DataflowReadChannel source, Map options = [:] ) {
+        chopImpl(source, NextflowExtensions.&chopFasta, options, null)
+    }
+
+    public static DataflowReadChannel chopFasta( DataflowReadChannel source, Map options = [:], Closure closure ) {
+        chopImpl(source, NextflowExtensions.&chopFasta, options, closure)
+    }
+
+    public static DataflowReadChannel chopLines( DataflowReadChannel source, Map options = [:]) {
+        chopImpl(source, NextflowExtensions.&readLines, options, null)
+    }
+
+    public static DataflowReadChannel chopLines( DataflowReadChannel source, Map options = [:], Closure closure ) {
+        chopImpl(source, NextflowExtensions.&readLines, options, closure)
+    }
+
+    public static DataflowReadChannel chopString( DataflowReadChannel source, Map options = [:] ) {
+        chopImpl(source, NextflowExtensions.&chopString, options, null)
+    }
+
+    public static DataflowReadChannel chopString( DataflowReadChannel source, Map options = [:], Closure closure ) {
+        chopImpl(source, NextflowExtensions.&chopString, options, closure)
+    }
+
+    public static DataflowReadChannel chopBytes( DataflowReadChannel source, Map options = [:] ) {
+        chopImpl(source, NextflowExtensions.&chopBytes, options, null)
+    }
+
+    public static DataflowReadChannel chopBytes( DataflowReadChannel source, Map options = [:], Closure closure ) {
+        chopImpl(source, NextflowExtensions.&chopBytes, options, closure)
+    }
+
+
+    private static chopImpl(DataflowReadChannel source, Closure chopper, Map options = [:], Closure closure) {
+
+        assert source instanceof DataflowQueue
+
+        int index = 0
+        def target = new DataflowQueue()
+
+        Closure proxy
+        if( closure == null )
+            proxy = { target.bind(it) }
+        else if( closure.maximumNumberOfParameters == 1 ) {
+            proxy = { target.bind( closure.call(it) ) }
+        }
+        else {
+            proxy = { target.bind( closure.call(it, index++) ) }
+        }
+
+        source.subscribe (
+                onNext: { entry -> chopper(entry,options, proxy) },
+                onComplete: { target << Channel.STOP }
+        )
+
+        return target
+
     }
 
 }

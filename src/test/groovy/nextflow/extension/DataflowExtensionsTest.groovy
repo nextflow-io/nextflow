@@ -768,39 +768,60 @@ class DataflowExtensionsTest extends Specification {
     }
 
 
-//    def testTap() {
-//
-//        when:
-//
-//        def log1 = Channel.create().subscribe { println "Log 1: $it" }
-//        def log2 = Channel.create().subscribe { println "Log 2: $it" }
-//
-//        Channel
-//                .from ( 'a', 'b', 'c' )
-//                .tap( log1 )
-//                .map { it * 2 }
-//                .tap( log2 )
-//                .subscribe { println "Result: $it" }
-//
-//        sleep 100
-//
-//        then:
-//        true
-//
-//    }
+    def testChopFasta() {
+
+        setup:
+        def fasta = """\
+                >1aboA
+                NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
+                NYITPVN
+                >1ycsB
+                KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
+                VPRNLLGLYP
+                ; comment
+                >1pht
+                GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
+                WLNGYNETTGERGDFPGTYVEYIGRKKISP
+                """.stripIndent()
+
+        when:
+        def records = Channel.from(fasta).chopFasta()
+        then:
+        records.val == '>1aboA\nNLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS\nNYITPVN\n'
+        records.val == '>1ycsB\nKGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY\nVPRNLLGLYP\n'
+        records.val == '>1pht\nGYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG\nWLNGYNETTGERGDFPGTYVEYIGRKKISP\n'
+        records.val == Channel.STOP
+
+        when:
+        def fasta2 = '''
+            >alpha123
+            WLNGYNETTGERGDFPGTYVEYIGRKKISP
+            VPRNLLGLYP
+            '''
+        records = Channel.from(fasta, fasta2).chopFasta(record:[id:true])
+        then:
+        records.val == [id:'1aboA']
+        records.val == [id:'1ycsB']
+        records.val == [id:'1pht']
+        records.val == [id:'alpha123']
+        records.val == Channel.STOP
 
 
+        when:
+        def ids = []
+        def list = []
+        Channel.from(fasta).chopFasta(record:[id:true]) { item, int index ->
+            list[index] = index
+            ids << item.id
+            return item
+        }
 
-//
-//    def testTap() {
-//
-//        when:
-//        def ch1 = Channel.create()
-//        def ch2 = Channel.create()
-//        ch2 = Channel.from(4,1,7,5).chainWith { "a_$it"} .tap(ch1)
-//        then:
-//        println ch1.toList().val
-//        println ch2.toList().val
-//
-//    }
+        sleep 100
+        then:
+        ids == ['1aboA','1ycsB','1pht']
+        list == [0,1,2]
+
+    }
+
+
 }
