@@ -44,6 +44,7 @@ allprojects {
 configurations {
     oneJarLib
     dnanexus.extendsFrom runtime
+    gdocLibs.extendsFrom runtime
 }
 
 
@@ -66,6 +67,17 @@ dependencies {
     dnanexus (project(':dnanexus')) {
         exclude module: 'nextflow'
     }
+
+    gdocLibs 'org.fusesource.jansi:jansi:1.11'
+    gdocLibs "org.codehaus.groovy:groovy-groovydoc:${groovyVer}"
+    gdocLibs "org.codehaus.groovy:groovy-ant:${groovyVer}"
+
+}
+
+// patched as described here
+// http://forums.gradle.org/gradle/topics/gradle_task_groovydoc_failing_with_noclassdeffounderror
+groovydoc {
+    groovyClasspath = project.configurations.gdocLibs
 }
 
 sourceSets.main.java.srcDirs = [] 
