@@ -1142,11 +1142,11 @@ class DataflowExtensions {
     }
 
     public static DataflowReadChannel chopLines( DataflowReadChannel source, Map options = [:]) {
-        chopImpl(source, NextflowExtensions.&readLines, options, null)
+        chopImpl(source, NextflowExtensions.&chopLines, options, null)
     }
 
     public static DataflowReadChannel chopLines( DataflowReadChannel source, Map options = [:], Closure closure ) {
-        chopImpl(source, NextflowExtensions.&readLines, options, closure)
+        chopImpl(source, NextflowExtensions.&chopLines, options, closure)
     }
 
     public static DataflowReadChannel chopString( DataflowReadChannel source, Map options = [:] ) {
