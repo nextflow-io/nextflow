@@ -4,7 +4,7 @@ process yesOrNo {
     echo true
 
     input:
-    val ( [1,2] ) as x
+    val x from 1,2
 
     script:
     if( x == 1 ) {

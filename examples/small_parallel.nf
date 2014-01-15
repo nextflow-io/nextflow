@@ -4,7 +4,7 @@ params.query = "$HOME/sample.fa"
 params.db = "$HOME/tools/blast-db/pdb/pdb"
 
 db = file(params.db)
-fasta = channel()
+fasta = Channel.create()
 queryFile = file(params.query)
 queryFile.chunkFasta {
     fasta << it
@@ -12,7 +12,7 @@ queryFile.chunkFasta {
 
 process blast {
     input:
-    file fasta as 'query.fa'
+    file 'query.fa' from fasta
 
     output:
     file top_hits

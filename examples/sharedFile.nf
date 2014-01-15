@@ -3,13 +3,14 @@
 lines = []
 lines << 'hello\n' << 'hi\n' << 'hola\n'
 
-process saveLines(echo: true) {
+process saveLines {
+    echo true
 
     input:
-    file lines as 'item'
+    file 'item' from lines
 
     share:
-    file result  to done
+    file result into done
 
 
     """

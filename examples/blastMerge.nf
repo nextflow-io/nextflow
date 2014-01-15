@@ -4,18 +4,18 @@ params.db = "$HOME/tools/blast-db/pdb/pdb"
 params.query = "$HOME/sample.fa"
 params.chunkSize = 1
 
-DB= file(params.db)
-seq = channel()
+DB = file(params.db)
+seq = Channel.create()
 
 inputFile = file(params.query)
 inputFile.chunkFasta( params.chunkSize ) { seq << it }
 
 process blast {
     input:
-    file seq as 'seq.fa'
+    file 'seq.fa' from seq
 
     output:
-    file 'out' to blast_result
+    file 'out' into blast_result
 
     """
     blastp -db $DB -query seq.fa -outfmt 6 > out

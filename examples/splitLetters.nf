@@ -3,7 +3,7 @@
 process splitLetters {
 
     output:
-    file 'chunk_*' to letters flat true
+    file 'chunk_*' into letters mode flatten
 
     '''
     echo 'Hola' | split -b 1 - chunk_

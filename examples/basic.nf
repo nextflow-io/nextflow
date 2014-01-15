@@ -8,10 +8,10 @@ SPLIT = (System.properties['os.name'] == 'Mac OS X' ? 'gcsplit' : 'csplit')
 process splitSequences {
 
     input:
-    file sequences as 'input.fa'
+    file 'input.fa' from sequences
 
     output:
-    file 'seq_*' to records
+    file 'seq_*' into records
 
     """
     $SPLIT input.fa '%^>%' '/^>/' '{*}' -f seq_
@@ -22,7 +22,7 @@ process splitSequences {
 process reverse {
 
     input:
-    file records as x
+    file x from records
     
     output:
     stdout result

@@ -5,13 +5,13 @@ echo true
 process sayhello {
 
     input:
-    val (['hello','hi']) as x
+    val x from (['hello','hi'])
 
     output:
-    val y to all
+    val y into all
 
     share:
-    val ('world') as y to z
+    val y from 'world' into z
 
     """
     echo '$x $y!'
@@ -27,12 +27,12 @@ process inc {
     echo true
 
     input:
-        val ([1,2,3,4]) as time
+        val time from 1,2,3,4
 
     share:
-        val 0 as x
-        val 10 as y
-        val '.' as w
+        val x from 0
+        val y from 10
+        val w from '.'
 
 
     script:

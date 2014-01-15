@@ -5,10 +5,10 @@ SPLIT = (System.properties['os.name'] == 'Mac OS X' ? 'gcsplit' : 'csplit')
 
 process split {
     input:
-    file  file(params.in) as 'query.fa'
+    file 'query.fa' from file(params.in)
 
     output:
-    file 'seq_*' to splits
+    file 'seq_*' into splits
 
     """
     $SPLIT query.fa '%^>%' '/^>/' '{*}' -f seq_
@@ -20,10 +20,10 @@ process printTwo {
     echo true
 
     input:
-    file splits as 'chunk'
+    file 'chunk' from splits
 
     output:
-    file 'chunk1:chunk3' to two_chunks flat true
+    file 'chunk1:chunk3' into two_chunks mode flatten
 
     """
     cat chunk* | rev
@@ -35,10 +35,10 @@ process printLast {
     echo true
 
     input:
-    file two_chunks as 'chunk'
+    file 'chunk' from two_chunks
 
     output:
-    file 'chunk' to result
+    file 'chunk' into result
 
     """
     cat chunk

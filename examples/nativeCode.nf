@@ -3,13 +3,14 @@
 process nativeCode {
 
     input:
-    val 'world' as x
+    val x from 'world'
 
     output:
-    val y to stream
+    val y into stream
 
     exec:
     y = "Hello $x"
+    println "workDir: $workDir"
 
 }
 
