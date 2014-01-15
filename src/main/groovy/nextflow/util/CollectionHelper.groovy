@@ -17,25 +17,41 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.exception;
+package nextflow.util
 
 /**
- * Reports a generic error during the 'Task' validation step
- *
- * Note: THIS IS A PLAIN JAVA CLASS due to this bug
- * http://jira.codehaus.org/browse/GROOVY-6080
- * http://blog.proxerd.pl/article/how-to-fix-incompatibleclasschangeerror-for-your-groovy-projects-running-on-jdk7
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public class TaskException extends Exception {
+class CollectionHelper {
 
-    public TaskException(String message) {
-        super(message);
+
+    static List flatten( Collection collection ) {
+        def result = []
+        flatten(collection, { result << it })
+        return result
     }
 
-    public TaskException(String message, Throwable cause) {
-        super(message,cause);
+    static void flatten( Collection list, Closure row ) {
+
+        def maxLen = 1
+        list.each { if( it instanceof Collection ) { maxLen = Math.max(maxLen,it.size()) } }
+
+        for( int i=0; i<maxLen; i++ ) {
+            def set = new ArrayList(list.size())
+
+            for( int j=0; j<list.size(); j++ ) {
+                def val = list[j]
+                if( val instanceof Collection )
+                    set[j] = i < val.size() ? val[i] : null
+                else
+                    set[j] = val
+            }
+
+            row.call(set)
+        }
+
+
     }
+
 }
-

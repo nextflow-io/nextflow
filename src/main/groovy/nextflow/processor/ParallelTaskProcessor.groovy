@@ -10,7 +10,16 @@ import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.script.EachInParam
+import nextflow.script.EnvInParam
+import nextflow.script.FileInParam
+import nextflow.script.FileSharedParam
+import nextflow.script.InParam
 import nextflow.script.ScriptType
+import nextflow.script.SharedParam
+import nextflow.script.StdInParam
+import nextflow.script.ValueInParam
+import nextflow.script.ValueSharedParam
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
 /**
@@ -31,8 +40,11 @@ class ParallelTaskProcessor extends TaskProcessor {
     @Override
     protected void createOperator() {
 
-        def opInputs = new ArrayList(taskConfig.inputs.channels)
-        def opOutputs = new ArrayList(taskConfig.outputs.channels)
+        def opInputs = new ArrayList(taskConfig.inputs.getChannels())
+        def opOutputs = new ArrayList(taskConfig.outputs.getChannels())
+
+        // append the shared obj to the input list
+        def sharedCount = taskConfig.getInputs().count { it instanceof SharedParam }
 
         /*
          * check if there are some iterators declaration
@@ -41,7 +53,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         def iteratorIndexes = []
         taskConfig.inputs.eachWithIndex { param, index ->
             if( param instanceof EachInParam ) {
-                log.trace "Task ${name} > got each param: ${param.name} at index: ${index} -- ${param.dump()}"
+                log.trace "Process ${name} > got each param: ${param.name} at index: ${index} -- ${param.dump()}"
                 iteratorIndexes << index
             }
         }
@@ -56,7 +68,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         if( iteratorIndexes ) {
             log.debug "Creating *combiner* operator for each param(s) at index(es): ${iteratorIndexes}"
 
-            final size = taskConfig.inputs.size()
+            final size = opInputs.size()
             // the script implementing the iterating process
             final forwarder = createForwardWrapper(size, iteratorIndexes)
             // the channel forwarding the data from the *iterator* process to the target task
@@ -75,14 +87,28 @@ class ParallelTaskProcessor extends TaskProcessor {
         /*
          * create a mock closure to trigger the operator
          */
-        final wrapper = createCallbackWrapper( taskConfig.inputs.size(), this.&invokeTask )
+        final wrapper = createCallbackWrapper( opInputs.size(), this.&invokeTask )
 
         /*
-         * create the output
+         * define the max forks attribute:
+         * - by default the process execution is parallel using the poolSize value
+         * - when there is at least one shared variable it is executed in serial mode (maxForks==1) to guarantee thread safe access
+         * - otherwise use the value defined by the user via 'taskConfig'
          */
-        def maxForks = taskConfig.maxForks ?: session.config.poolSize
+        def maxForks = session.config.poolSize
+        if( sharedCount ) {
+            log.debug "Process declares shared inputs -- Using thread safe mode (maxForks=1)"
+            maxForks = 1
+            blocking = true
+        }
+        else if( taskConfig.maxForks ) {
+            maxForks = taskConfig.maxForks
+        }
         log.debug "Creating operator > $name -- maxForks: $maxForks"
 
+        /*
+         * finally create the operator
+         */
         def params = [inputs: opInputs, outputs: opOutputs, maxForks: maxForks, listeners: [new TaskProcessorInterceptor()] ]
         session.allProcessors << (processor = new DataflowOperator(group, params, wrapper).start())
 
@@ -144,6 +170,7 @@ class ParallelTaskProcessor extends TaskProcessor {
 
     }
 
+
     /**
      * Create the {@code TaskDef} data structure and initialize the task execution context
      * with the received input values
@@ -151,43 +178,66 @@ class ParallelTaskProcessor extends TaskProcessor {
      * @param values
      * @return
      */
-    final protected TaskRun initTaskRun(List values) {
-        log.trace "Creating a new task > $name"
+    final protected TaskRun setupTask(List values) {
+        log.trace "Setup new process > $name"
 
         final TaskRun task = createTaskRun()
 
-        /*
-         * initialize the inputs/outputs for this task instance
-         */
-        taskConfig.inputs.each { InParam param -> task.setInput(param) }
-        taskConfig.outputs.each { OutParam param -> task.setOutput(param) }
-
         // -- map the inputs to a map and use to delegate closure values interpolation
-        def map = new DelegateMap(ownerScript)
+        final ctx = new DelegateMap(this)
+        final firstRun = task.index == 1
         int count = 0
+
         /*
          * initialize the inputs for this task instances
          */
-        taskConfig.inputs.eachWithIndex { InParam param, int index ->
+        task.inputs.keySet().each { InParam param ->
 
             // add the value to the task instance
-            def val = values.get(index)
-
-            // otherwise put in on the map used to resolve the values evaluating the script
+            def val = decodeInputValue(param,values)
 
             switch(param) {
                 case EachInParam:
                 case ValueInParam:
-                    map[param.name] = val
+                    ctx[param.name] = val
                     break
 
                 case FileInParam:
                     def fileParam = param as FileInParam
                     def normalized = normalizeInputToFiles(val,count)
                     def resolved = expandWildcards( fileParam.filePattern, normalized )
-                    map[ fileParam.name ] = singleItemOrList(resolved)
+                    ctx[ param.name ] = singleItemOrList(resolved)
                     count += resolved.size()
                     val = resolved
+                    break
+
+                case FileSharedParam:
+                    def fileParam = param as FileSharedParam
+                    if( firstRun ) {
+                        def normalized = normalizeInputToFiles(val,count)
+                        if( normalized.size() > 1 )
+                            throw new IllegalStateException("Cannot share multiple files")
+
+                        def resolved = expandWildcards( fileParam.filePattern, normalized )
+                        count += resolved.size()
+                        val = resolved
+                        // track this obj
+                        sharedObjs[(SharedParam)param] = val
+                    }
+                    else {
+                        val = sharedObjs[(SharedParam)param]
+                    }
+
+                    ctx[ fileParam.name ] = singleItemOrList(val)
+                    break
+
+                case ValueSharedParam:
+                    if( firstRun )
+                        sharedObjs[(SharedParam)param] = val
+                    else
+                        val = sharedObjs[(SharedParam)param]
+
+                    ctx[param.name] = val
                     break
 
                 case StdInParam:
@@ -203,12 +253,11 @@ class ParallelTaskProcessor extends TaskProcessor {
             task.setInput(param, val)
         }
 
-
         /*
          * initialize the task code to be executed
          */
         task.code = this.code.clone() as Closure
-        task.code.delegate = map
+        task.code.delegate = ctx
         task.code.setResolveStrategy(Closure.DELEGATE_FIRST)
 
         return task
@@ -225,7 +274,7 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         // create and initialize the task instance to be executed
         List params = args instanceof List ? args : [args]
-        final task = initTaskRun(params)
+        final task = setupTask(params)
 
         // -- call the closure and execute the script
         currentTask.set(task)
@@ -234,7 +283,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         // when the task is implemented by a script string
         // Invokes the closure which return the script whit all the variables replaced with the actual values
         if( type == ScriptType.SCRIPTLET ) {
-            task.script = task.code.call()?.toString()?.stripIndent()
+            task.script = getScriptlet(task.code)
         }
 
         // create an hash for the inputs and code
@@ -248,15 +297,16 @@ class ParallelTaskProcessor extends TaskProcessor {
         // add all the input name-value pairs to the key generator
         task.inputs.each { keys << it.key.name << it.value }
 
+        log.trace "[${task.name}] cache keys: ${keys}"
         def hash = CacheHelper.hasher(keys).hash()
         Path folder = FileHelper.getWorkFolder(session.workDir, hash)
         log.trace "[${task.name}] cacheable folder: $folder"
 
-        def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder)
+        def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder, hash)
         if( !cached ) {
-            log.info "Running task > ${task.name}"
+            log.info "[${getHashLog(hash)}] Running process > ${task.name}"
 
-            // run the task
+            // set the working directory
             task.workDirectory = createTaskFolder(folder, hash)
             log.trace "[${task.name}] actual run folder: ${task.workDirectory}"
 
@@ -271,6 +321,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         @Override
         public List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
             log.trace "Before run > ${name} -- messages: ${messages}"
+            // this counter increment must be here, otherwise it is not coherent
             instanceCount.incrementAndGet()
             return messages;
         }
@@ -302,7 +353,7 @@ class ParallelTaskProcessor extends TaskProcessor {
             }
 
             if( message == PoisonPill.instance ) {
-                log.trace "Poison pill arrived for task > ${currentTask.get()?.name ?: name} -- terminated"
+                log.trace "Poison pill arrived for process > ${currentTask.get()?.name ?: name} -- terminated"
                 receivedPoisonPill = true
 
                 // check if the task is terminated
@@ -320,6 +371,17 @@ class ParallelTaskProcessor extends TaskProcessor {
         @Override
         public void afterStop(final DataflowProcessor processor) {
             log.debug "After stop > ${name}"
+
+            // bind shared outputs
+            ParallelTaskProcessor.this.sharedObjs?.each { param, obj ->
+                if( !param.outChannel ) return
+                log.debug "Binding shared out param: ${param.name} = ${obj}"
+                if( obj instanceof Collection )
+                    obj = obj[0]
+                if( obj instanceof FileHolder )
+                    obj = obj.storePath
+                param.outChannel.bind( obj )
+            }
         }
 
         /**
@@ -344,26 +406,26 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         @Override
         public boolean onException(final DataflowProcessor processor, final Throwable e) {
-            log.error "task '$name' > error on internal iteration process", e
+            log.error "process '$name' > error on internal iteration process", e
             return true;
         }
 
         @Override
         public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "task '$name' > message arrived for iterator '${taskConfig.inputs.names[index]}' with value: '$message'"
+            log.trace "process '$name' > message arrived for iterator '${taskConfig.inputs.names[index]}' with value: '$message'"
             return message;
         }
 
         @Override
         public Object messageSentOut(final DataflowProcessor processor, final DataflowWriteChannel<Object> channel, final int index, final Object message) {
-            log.trace "task '$name' > message forwarded for iterator '${taskConfig.inputs.names[index]}' with value: '$message'"
+            log.trace "process '$name' > message forwarded for iterator '${taskConfig.inputs.names[index]}' with value: '$message'"
             return message;
         }
 
 
         @Override
         public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "task '$name' > control message arrived for iterator '${taskConfig.inputs.names[index]}'"
+            log.trace "process '$name' > control message arrived for iterator '${taskConfig.inputs.names[index]}'"
             return message;
         }
     }

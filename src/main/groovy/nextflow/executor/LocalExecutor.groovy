@@ -24,7 +24,6 @@ import java.util.concurrent.Future
 
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.processor.FileInParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -49,7 +48,7 @@ class LocalExecutor extends AbstractExecutor {
         final pollInterval = session.getPollIntervalMillis(name, 50)
         log.debug "Creating executor queue with size: $queueSize; poll-interval: $pollInterval"
 
-        return new TaskPollingMonitor(session, queueSize, pollInterval) .start()
+        return new TaskPollingMonitor(session, queueSize, pollInterval)
     }
 
     @Override
@@ -57,7 +56,7 @@ class LocalExecutor extends AbstractExecutor {
         assert task
         assert task.workDirectory
 
-        log.debug "Launching task > ${task.name} -- work folder: ${task.workDirectory}"
+        log.debug "Launching process > ${task.name} -- work folder: ${task.workDirectory}"
 
         /*
          * when it is a native groovy code, use the native handler
@@ -75,7 +74,7 @@ class LocalExecutor extends AbstractExecutor {
 
         // staging input files
         bash.stagingScript = {
-            final files = task.getInputsByType(FileInParam)
+            final files = task.getInputFiles()
             final staging = stagingFilesScript(files)
             return staging
         }
@@ -164,7 +163,7 @@ class LocalTaskHandler extends TaskHandler {
                 IOGroovyMethods.withStream(new BufferedOutputStream(process.getOutputStream())) { writer -> writer << input }
             }
             catch( Exception e ) {
-                log.warn "Unable to pipe input data for task: ${task.name}"
+                log.warn "Unable to pipe input data for process: ${task.name}"
             }
         }
 

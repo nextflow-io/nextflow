@@ -135,6 +135,7 @@ class NextflowExtensions {
 
         def body = new StringBuilder()
         fasta.eachLine { String line ->
+            line = line.trim()
             if( !line ) return
             if( line.startsWith(';')) return
             if( !head ) {
@@ -348,7 +349,7 @@ class NextflowExtensions {
         throw new IllegalAccessException("Object of class '${obj.class.name}' does not support 'chopText' method")
     }
 
-    static private chopLinesImpl( Reader reader, Map options = null , Closure<String> closure ) {
+    static private chopLinesImpl( Reader reader, Map options = null , Closure closure ) {
         assert reader != null
         assert options != null
 
@@ -360,7 +361,7 @@ class NextflowExtensions {
 
         BufferedReader reader0 = reader instanceof BufferedReader ? reader : new BufferedReader(reader)
 
-        String result = null
+        def result = null
         String line
         int index = 0
         StringBuilder buffer = new StringBuilder()
@@ -510,7 +511,7 @@ class NextflowExtensions {
         throw new IllegalAccessException("Object of class '${obj.class.name}' does not support 'chopString' method")
     }
 
-    static private chopStringImpl( Reader reader, Map options = [:] , Closure<String> closure  ) {
+    static private chopStringImpl( Reader reader, Map options = [:] , Closure closure  ) {
         assert reader != null
         assert options != null
 
@@ -521,8 +522,7 @@ class NextflowExtensions {
         if( into && !(into instanceof Collection) && !(into instanceof DataflowQueue) )
             throw new IllegalArgumentException("Argument 'into' can be a subclass of Collection or a DataflowQueue type -- Entered value type: ${into.class.name}")
 
-        String result = null
-
+        def result = null
         def index = 0
         def buffer = new StringBuilder()
         int c = 0

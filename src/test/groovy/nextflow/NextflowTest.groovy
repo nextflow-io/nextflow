@@ -1,9 +1,5 @@
 /*
-<<<<<<< HEAD
- * Copyright (c) 2012, the authors.
-=======
  * Copyright (c) 2013, the authors.
->>>>>>> beatriz/master
  *
  *   This file is part of 'Nextflow'.
  *

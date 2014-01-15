@@ -17,19 +17,17 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.ast
+package nextflow.exception
 
-import java.lang.annotation.ElementType
-import java.lang.annotation.Retention
-import java.lang.annotation.RetentionPolicy
-import java.lang.annotation.Target
-
-import org.codehaus.groovy.transform.GroovyASTTransformationClass
+import groovy.transform.InheritConstructors;
 
 /**
- * Marker interface which to apply AST transformation to {@code process} declaration
+ * An expected result file is missing
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Retention(RetentionPolicy.SOURCE)
-@Target(ElementType.METHOD)
-@GroovyASTTransformationClass(classes = [ProcessDefTransformImpl])
-@interface ProcessDefTransform {}
+@InheritConstructors
+class MissingFileException extends ProcessException {
+
+
+}

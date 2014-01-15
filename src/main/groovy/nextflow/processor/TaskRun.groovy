@@ -18,15 +18,19 @@
  */
 
 package nextflow.processor
-
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.locks.ReentrantLock
 
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
+import nextflow.script.EnvInParam
+import nextflow.script.FileInParam
+import nextflow.script.FileSharedParam
+import nextflow.script.InParam
+import nextflow.script.OutParam
 import nextflow.script.ScriptType
-
+import nextflow.script.StdInParam
 /**
  * Models a task instance
  *
@@ -78,15 +82,15 @@ class TaskRun {
     } ()
 
     /**
-     * The *strategy* sued to retrieve the list of staged input files for this task.
-     * This sort of *hack* is required since task processed by the {@code MergeTaskProcessor} maintain
+     * The *strategy* used to retrieve the list of staged input files for this task.
+     * This sort of *hack* is required since tasks processed by the {@code MergeTaskProcessor} maintain
      * their own input files list, and so the task will need to access that list, and not the one
      * hold by the task itself
      *
      * See MergeTaskProcessor
      */
-    Closure<Map<FileInParam,List<FileHolder>>> stagedProvider = {
-           (Map<FileInParam,List<FileHolder>>) getInputsByType(FileInParam)
+    Closure<Map<InParam,List<FileHolder>>> stagedProvider = {
+           (Map<InParam,List<FileHolder>>) getInputFiles()
     }
 
 
@@ -106,6 +110,7 @@ class TaskRun {
         assert param
         outputs[param] = value
     }
+
 
     /**
      * The value to be piped to the process stdin
@@ -150,7 +155,7 @@ class TaskRun {
         // print the stdout
         if( stdout instanceof Path ) {
             if( !stdout.exists() ) {
-                log.debug "Echo file does not exist: ${out}"
+                log.debug "Echo file does not exist: ${stdout}"
                 return
             }
 
@@ -202,6 +207,10 @@ class TaskRun {
         else {
             return script?.toString()
         }
+    }
+
+    def Map<InParam,List<FileHolder>> getInputFiles() {
+        (Map<InParam,List<FileHolder>>) getInputsByType( FileInParam, FileSharedParam )
     }
 
     /**

@@ -17,19 +17,40 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.exception;
+package nextflow.util
+
+import spock.lang.Specification
 
 /**
- * An expected result file is missing
  *
- * Note: THIS IS A PLAIN JAVA CLASS due to this bug
- * http://jira.codehaus.org/browse/GROOVY-6080
- * http://blog.proxerd.pl/article/how-to-fix-incompatibleclasschangeerror-for-your-groovy-projects-running-on-jdk7
- *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public class MissingLibraryException extends TaskException {
+class CollectionHelperTest extends Specification {
 
-    public MissingLibraryException(String message) {
-        super(message);
+    def testFlatten() {
+
+        expect:
+        CollectionHelper.flatten( [1,2,3] )  == [ [1,2,3] ]
+
+        CollectionHelper.flatten( ['a', [1,2,3]] ) == [ ['a', 1], ['a', 2], ['a', 3] ]
+
+        CollectionHelper.flatten( [ ['a','b'], [1,2,3,4]] ) == [
+                ['a', 1],
+                ['b', 2],
+                [null, 3],
+                [null, 4],
+
+        ]
+
+
+        CollectionHelper.flatten( [ 'x',  ['a','b'], [1,2,3,4]] ) == [
+                ['x', 'a', 1],
+                ['x', 'b', 2],
+                ['x', null, 3],
+                ['x', null, 4],
+        ]
+
     }
+
+
 }

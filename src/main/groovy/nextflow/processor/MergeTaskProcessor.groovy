@@ -9,6 +9,12 @@ import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.script.EnvInParam
+import nextflow.script.FileInParam
+import nextflow.script.InParam
+import nextflow.script.SetInParam
+import nextflow.script.StdInParam
+import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
 /**
@@ -25,7 +31,7 @@ class MergeTaskProcessor extends TaskProcessor {
      * Collect the list of hashCode of each {@code TaskRun} object
      * required by this merge operation
      */
-    private List<Integer> mergeHashesList
+    private List<Long> mergeHashesList
 
     /*
      * The folder where the merge will be execute
@@ -45,7 +51,12 @@ class MergeTaskProcessor extends TaskProcessor {
     private def mergeScript = new StringBuilder()
 
     /* Collect all the input values used by executing this task */
-    private Map<InParam,List> inputsCollector = [:]
+    private Map<InParam,List<FileHolder>> filesCollector = [:]
+
+    private List<InParam> inputsDefs = []
+
+    /* The reference to the last used context map */
+    private volatile Map contextMap
 
     /*
      * The merge task is composed by two operator, the first creates a single 'script' to be executed by second one
@@ -54,17 +65,26 @@ class MergeTaskProcessor extends TaskProcessor {
     protected void createOperator() {
         log.debug "Starting merge > ${name}"
 
+        /*
+         * traverse the params definitions extracting the param of type 'set' to its basic types
+         */
+        taskConfig.inputs.each { InParam param ->
+            if( param instanceof SetInParam )
+                param.inner.each { inputsDefs << it }
+            else
+                inputsDefs << param
+        }
+
+        // initialize the output values collector
+        inputsDefs.each { InParam param -> filesCollector[param] = [] }
+
         def wrapper = createCallbackWrapper(taskConfig.inputs.size(), this.&mergeScriptCollector)
         mergeHashesList = new LinkedList<>()
         mergeTempFolder = FileHelper.createTempFolder(session.workDir)
 
-        // initialize the output values collector
-        taskConfig.inputs.each { InParam param ->
-            inputsCollector[param] = []
-        }
-
-
-        def params = [inputs: new ArrayList(taskConfig.inputs.channels), outputs: new ArrayList(taskConfig.outputs.channels), listeners: [new MergeProcessorInterceptor()] ]
+        def inChannels = new ArrayList(taskConfig.inputs.getChannels())
+        def outChannels = new ArrayList(taskConfig.outputs.getChannels())
+        def params = [inputs: inChannels, outputs: outChannels, listeners: [new MergeProcessorInterceptor()] ]
         processor = new DataflowOperator(group, params, wrapper)
         session.allProcessors.add(processor)
 
@@ -72,33 +92,31 @@ class MergeTaskProcessor extends TaskProcessor {
         processor.start()
     }
 
+    protected void collectOutputs( TaskRun task ) {
+        collectOutputs( task, task.workDirectory, task.@stdout, contextMap )
+    }
+
     protected void mergeTaskRun(TaskRun task) {
 
         task.stagedProvider = this.&stagedProvider
-
-        /*
-         * initialize the *only* outputs for this task instance
-         * (inputs have been managed during the scripts collection stage)
-         */
-        taskConfig.outputs.each { OutParam param -> task.setOutput(param) }
 
         // -- create the unique hash number for this tasks,
         //    collecting the id of all the executed runs
         //    and sorting them
         def hasher = CacheHelper.hasher(session.uniqueId)
         mergeHashesList.sort()
-        mergeHashesList.each { Integer entry ->  hasher = CacheHelper.hasher(hasher,entry) }
+        mergeHashesList.each { Long entry ->  hasher = CacheHelper.hasher(hasher,entry) }
         def hash = hasher.hash()
-        log.trace "Merging task > $name -- hash: $hash"
+        log.trace "Merging process > $name -- hash: $hash"
 
         Path folder = FileHelper.getWorkFolder(session.workDir, hash)
-        log.trace "Merging task > $name -- trying cached: $folder"
+        log.trace "Merging process > $name -- trying cached: $folder"
 
-        def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder)
+        def cached = session.cacheable && taskConfig.cacheable && checkCachedOutput(task,folder, hash)
         if( !cached ) {
 
             folder = createTaskFolder(folder, hash)
-            log.info "Running merge > ${name}"
+            log.info "[${getHashLog(hash)}] Running merge > ${name}"
 
             // -- set the folder where execute the script
             task.workDirectory = folder
@@ -115,19 +133,21 @@ class MergeTaskProcessor extends TaskProcessor {
 
     protected void mergeScriptCollector( List values ) {
         final currentIndex = mergeIndex.incrementAndGet()
-        log.info "Collecting task > ${name} ($currentIndex)"
+        log.info "Collecting process > ${name} ($currentIndex)"
+
+        // -- the script evaluation context map
+        contextMap = new DelegateMap(this)
 
         // -- map the inputs to a map and use to delegate closure values interpolation
         def keys = []
         def stdin = null
-        def contextMap = new DelegateMap(ownerScript)
         Map<FileInParam,List<FileHolder>> filesMap = [:]
         Map<String,String> environment = [:]
         int count = 0
 
-        taskConfig.inputs.eachWithIndex { InParam param, int index ->
+        inputsDefs.each { InParam param ->
 
-            final val = values[index]
+            def val = decodeInputValue(param, values)
 
             // define the *context* against which the script will be evaluated
             switch( param ) {
@@ -144,10 +164,13 @@ class MergeTaskProcessor extends TaskProcessor {
                     def fileParam = (FileInParam)param
                     def normalized = normalizeInputToFiles(val,count)
                     def resolved = expandWildcards( fileParam.filePattern, normalized )
+
                     filesMap[fileParam] = resolved
                     count += resolved.size()
                     // set the context
                     contextMap[param.name] = singleItemOrList( resolved )
+                    // store all the inputs
+                    filesCollector.get(param).add(resolved)
                     // set to *val* so that the list is added to the map of all inputs
                     val = resolved
                     break
@@ -158,11 +181,9 @@ class MergeTaskProcessor extends TaskProcessor {
                     break
 
                 default:
-                    log.debug "Task $name > unknown input param type: ${param?.class?.simpleName}"
+                    log.debug "Process $name > unknown input param type: ${param?.class?.simpleName}"
             }
 
-            // store all the inputs
-            inputsCollector.get(param).add( val )
 
             // add all the input name-value pairs to the key generator
             keys << param.name << val
@@ -176,16 +197,16 @@ class MergeTaskProcessor extends TaskProcessor {
         scriptClosure.delegate = contextMap
         scriptClosure.setResolveStrategy(Closure.DELEGATE_FIRST)
 
-        def commandToRun = normalizeScript(scriptClosure.call()?.toString())
+        def script = getScriptlet(scriptClosure)
+        def commandToRun = normalizeScript(script)
         def interpreter = fetchInterpreter(commandToRun)
-
 
         /*
          * create a unique hash-code for this task run and save it into a list
          * which maintains all the hashes for executions making-up this merge task
          */
         keys << commandToRun << 7
-        mergeHashesList << CacheHelper.hasher(keys).hash().asInt()
+        mergeHashesList << CacheHelper.hasher(keys).hash().asLong()
 
         // section marker
         mergeScript << "# task '$name' ($currentIndex)" << '\n'
@@ -232,10 +253,7 @@ class MergeTaskProcessor extends TaskProcessor {
 
     }
 
-    protected Map<FileInParam,List<FileHolder>> stagedProvider() {
-        (Map<FileInParam,List<FileHolder>>) inputsCollector.findAll { it.key instanceof FileInParam }
-    }
-
+    protected Map<InParam,List<FileHolder>> stagedProvider() { filesCollector }
 
 
     /**
@@ -258,7 +276,7 @@ class MergeTaskProcessor extends TaskProcessor {
 
         @Override
         public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "Received message > task: ${name}; channel: $index; value: $message"
+            log.trace "Received message > process: ${name}; channel: $index; value: $message"
             return message
         }
 
@@ -286,7 +304,7 @@ class MergeTaskProcessor extends TaskProcessor {
                     return StopQuietly.instance
                 }
 
-                log.warn "No data collected by task > $name -- Won't execute it. Something may be wrong in your execution flow"
+                log.warn "No data collected by process > $name -- Won't execute it. Something may be wrong in your execution flow"
 
             }
 

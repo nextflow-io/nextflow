@@ -11,8 +11,8 @@ process printEnv {
     echo true
 
     input:
-    env 'HELLO_2' using '2'
-    env 'HELLO_X' using (['a','b','c'])
+    env HELLO_2 from '2'
+    env HELLO_X from ('a','b','c')
 
     "env | grep HELLO | sort"
 }

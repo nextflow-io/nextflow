@@ -17,20 +17,19 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.exception;
+package nextflow.ast
+
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
+
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 /**
- * Thrown when user tries to access a non-existing argument
- *
- * Note: THIS IS A PLAIN JAVA CLASS due to this bug
- * http://blog.proxerd.pl/article/how-to-fix-incompatibleclasschangeerror-for-your-groovy-projects-running-on-jdk7
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * Marker interface which to apply AST transformation to {@code process} declaration
  */
-public class InvalidArgumentException extends Exception {
-
-    public InvalidArgumentException( String message ) {
-        super(message);
-    }
-
-}
+@Retention(RetentionPolicy.SOURCE)
+@Target(ElementType.METHOD)
+@GroovyASTTransformationClass(classes = [NextflowDSLImpl])
+@interface NextflowDSL {}

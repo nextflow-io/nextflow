@@ -19,6 +19,7 @@
 
 package nextflow.script
 
+import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.PackageScope
@@ -58,8 +59,12 @@ abstract class BaseScript extends Script {
     @Lazy
     private Session session = { getBinding()?.getVariable('__$session') as Session } ()
 
-    private final random = new Random()
+    @Lazy
+    private boolean isTest = {
+        getBinding()?.hasVariable('__$TEST') ? getBinding().getVariable('__$TEST') : false
+    } ()
 
+    private final random = new Random()
 
     /**
      * Holds the configuration object which will used to execution the user tasks
@@ -168,21 +173,31 @@ abstract class BaseScript extends Script {
     /**
      * @return Create a temporary directory
      */
-    Path tempDir() {
+    Path tempDir( String name = null, boolean create = true ) {
         def path = FileHelper.createTempFolder(session.workDir)
-        if( !path.exists() && !path.mkdirs() ) {
+        if( name )
+            path = path.resolve(name)
+
+        if( !path.exists() && create && !path.mkdirs() )
             throw new IOException("Unable to create folder: $path -- Check file system permission" )
-        }
+
         return path
     }
 
     /**
      * @return Create a temporary file
      */
-    Path tempFile( String name = 'temp.file') {
+    Path tempFile( String name = null, boolean create = false ) {
+
+        if(!name)
+            name = 'file.tmp'
 
         def folder = tempDir()
-        return folder.resolve(name)
+        def result = folder.resolve(name)
+        if( create )
+            Files.createFile(result)
+
+        return result
     }
 
     /**
@@ -192,7 +207,7 @@ abstract class BaseScript extends Script {
      * @param body The process declarations provided by the user
      * @return The {@code Processor} instance
      */
-    private createProcessor( Class<? extends TaskProcessor> processorClass, String name, ScriptType type, Closure body ) {
+    private TaskProcessor createProcessor( String name, ScriptType type, Closure body, String source = null, Map options = null ) {
         assert body
 
         def taskConfig = new TaskConfig(this)
@@ -201,10 +216,8 @@ abstract class BaseScript extends Script {
         if( config.process instanceof Map ) {
             config.process .each { String key, value -> taskConfig.setProperty(key,value) }
         }
-        else if( config.task instanceof Map ) {
-            log.warn "Note: configuration attribute 'task' has been deprecated -- replace it by using attribute 'process'"
-            config.task.each { String key, value -> taskConfig.setProperty(key,value) }
-        }
+
+        options?.each { String key, value -> taskConfig.setProperty(key,value)}
 
         // set the task name in the config object
         if( name ) {
@@ -217,7 +230,8 @@ abstract class BaseScript extends Script {
         // to raise a MissingPropertyException when some values is missing, so that the Closure
         // will try to fallback on the owner object
         def script = new TaskConfigWrapper(taskConfig).with ( body ) as Closure
-        if ( !script ) throw new IllegalArgumentException("Missing script in the specified task block -- make sure it terminates with the script string to be executed")
+        if ( !script )
+            throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
         // load the executor to be used
         def execName = getExecutorName(taskConfig)
@@ -234,9 +248,12 @@ abstract class BaseScript extends Script {
         execObj.name = execName
         execObj.init()
 
+        // create processor class
+        def processorClass = taskConfig.merge ? MergeTaskProcessor : ParallelTaskProcessor
         def result = processorClass.newInstance( execObj, session, this, taskConfig, script )
         result.type = type
-        return taskProcessor = result
+        result.source = source
+        return result
 
     }
 
@@ -257,7 +274,6 @@ abstract class BaseScript extends Script {
             log.warn "Note: configuration attribute 'processor' has been deprecated -- replace it by using the attribute 'executor'"
         }
 
-        // fallback on config file definition
         if( !result ) {
             if( session.config.executor instanceof String ) {
                 result = session.config.executor
@@ -267,6 +283,7 @@ abstract class BaseScript extends Script {
             }
         }
 
+        // fallback on config file definition
         if( !result && session.config.processor instanceof String ) {
             result = session.config.processor
             log.warn "Note: configuration attribute 'processor' has been deprecated -- replace it by using the attribute 'executor' in the 'nextflow.conf' file"
@@ -289,11 +306,17 @@ abstract class BaseScript extends Script {
      * @param scriptlet Whenever the process carry out an system script {@code true} or a native groovy code {@code false}
      * @param body The body of the process declaration. It holds all the process definitions: inputs, outputs, code, etc.
      */
-    protected process( Map<String,?> args, String name, boolean scriptlet, Closure body ) {
-        log.trace "Create task: $name -- native: $scriptlet; args: $args "
-        def clazz = args.merge ? MergeTaskProcessor : ParallelTaskProcessor
+    protected process( Map<String,?> args, String name, boolean scriptlet, String source, Closure body ) {
+        log.trace "Create process: $name -- native: $scriptlet; args: $args "
         def type = scriptlet ? ScriptType.SCRIPTLET : ScriptType.GROOVY
-        result = createProcessor(clazz, name, type, body).run()
+
+        // create the process
+        taskProcessor = createProcessor(name, type, body, source, args)
+        if( isTest )
+            return taskProcessor
+
+        // launch it
+        result = taskProcessor.run()
     }
 
     /**
@@ -308,10 +331,17 @@ abstract class BaseScript extends Script {
      * @param scriptlet Whenever the process carry out an system script {@code true} or a native groovy code {@code false}
      * @param body The body of the process declaration. It holds all the process definitions: inputs, outputs, code, etc.
      */
-    protected process( String name, boolean scriptlet, Closure body ) {
-        log.trace "Create task: $name -- script: $scriptlet"
+    protected process( String name, boolean scriptlet, String source, Closure body ) {
+        log.trace "Create process: $name -- script: $scriptlet"
         def type = scriptlet ? ScriptType.SCRIPTLET : ScriptType.GROOVY
-        result = createProcessor(ParallelTaskProcessor, name, type, body).run()
+
+        // create the process
+        taskProcessor = createProcessor(name, type, body, source )
+        if( isTest )
+            return taskProcessor
+
+        // launch it
+        result = taskProcessor.run()
     }
 
 

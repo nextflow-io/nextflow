@@ -11,7 +11,7 @@ process foo {
     val y
 
     output:
-    val y using channel
+    val y into channel
 
     "echo $x - $y"
 

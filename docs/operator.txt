@@ -474,6 +474,11 @@ and emits the resulting collection to the channel returned by the operator itsel
     Done
 
 
+toSortedList( )
+---------------
+
+TODO
+
 
 Combining operators
 ===================
@@ -711,6 +716,9 @@ For example::
     Channel 2 emit: a
     Channel 2 emit: b
     Channel 2 emit: c
+
+
+.. TODO split(n)
 
 
 See also: `tap( )`_

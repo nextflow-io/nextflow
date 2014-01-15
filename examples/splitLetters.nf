@@ -1,8 +1,9 @@
+#!/usr/bin/env nextflow
 
 process splitLetters {
 
     output:
-    file 'chunk_*' using letters
+    file 'chunk_*' into letters mode flatten
 
     '''
     echo 'Hola' | split -b 1 - chunk_

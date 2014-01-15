@@ -17,19 +17,17 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.exception;
+package nextflow.exception
+
+import groovy.transform.InheritConstructors;
 
 /**
  * An expected result file is missing
  *
- * Note: THIS IS A PLAIN JAVA CLASS due to this bug
- * http://jira.codehaus.org/browse/GROOVY-6080
- * http://blog.proxerd.pl/article/how-to-fix-incompatibleclasschangeerror-for-your-groovy-projects-running-on-jdk7
- *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public class MissingFileException extends TaskException {
+@InheritConstructors
+class MissingLibraryException extends ProcessException {
 
-    public MissingFileException(String message) {
-        super(message);
-    }
+
 }

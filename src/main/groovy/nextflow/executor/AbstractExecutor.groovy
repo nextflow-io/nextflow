@@ -1,18 +1,20 @@
 package nextflow.executor
 
 import java.nio.file.Path
+import java.util.concurrent.CountDownLatch
 
 import groovy.io.FileType
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.MissingFileException
 import nextflow.processor.FileHolder
-import nextflow.processor.FileInParam
-import nextflow.processor.FileOutParam
+import nextflow.script.FileOutParam
+import nextflow.script.InParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
+
 /**
  * Declares methods have to be implemented by a generic
  * execution strategy
@@ -74,16 +76,21 @@ abstract class AbstractExecutor {
      * @param task
      * @return
      */
-    TaskHandler submitTask( TaskRun task ) {
+    TaskHandler submitTask( TaskRun task, boolean blocking ) {
         def handler = createTaskHandler(task)
         monitor.put(handler)
         try {
+            // set a count down latch if the execution is blocking
+            if( blocking )
+                handler.latch = new CountDownLatch(1)
+            // now submit the task for execution
             handler.submit()
+            return handler
         }
         catch( Exception e ) {
             monitor.remove(handler)
+            return null
         }
-        return handler
     }
 
 
@@ -106,7 +113,7 @@ abstract class AbstractExecutor {
         if( filePattern == fileName ) {
             def result = workDirectory.resolve(fileName)
             if( !result.exists() ) {
-                throw new MissingFileException("Missing output file: '$fileName' expected by task: ${taskName}")
+                throw new MissingFileException("Missing output file: '$fileName' expected by process: ${taskName}")
             }
             return result
         }
@@ -116,7 +123,7 @@ abstract class AbstractExecutor {
         workDirectory.eachFileMatch(FileType.ANY, ~/$filePattern/ ) { files << it }
 
         if( !files ) {
-            throw new MissingFileException("Missing output file(s): '$fileName' expected by task: ${taskName}")
+            throw new MissingFileException("Missing output file(s): '$fileName' expected by process: ${taskName}")
         }
 
         return files
@@ -131,7 +138,7 @@ abstract class AbstractExecutor {
      * @param inputs An associative array mapping each {@code FileInParam} to the corresponding file (or generic value)
      * @return The BASH script to stage them
      */
-    def String stagingFilesScript( Map<FileInParam, List<FileHolder>> inputs, String separatorChar = '\n') {
+    def String stagingFilesScript( Map<InParam, List<FileHolder>> inputs, String separatorChar = '\n') {
         assert inputs != null
 
         def delete = []

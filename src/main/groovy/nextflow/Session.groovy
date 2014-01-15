@@ -147,9 +147,14 @@ class Session {
         Dataflow.activeParallelGroup.set(pgroup)
 
         dispatcher = new TaskDispatcher(this)
+    }
 
-        log.debug ">>> phaser register (session)"
+
+    def Session start() {
+        log.debug "Session start > phaser register (session) "
         phaser.register()
+        dispatcher.start()
+        return this
     }
 
     @PackageScope
@@ -186,12 +191,12 @@ class Session {
     boolean isAborted() { aborted }
 
     def int taskRegister() {
-        log.debug ">>> phaser register (task)"
+        log.debug ">>> phaser register (process)"
         phaser.register()
     }
 
     def int taskDeregister() {
-        log.debug "<<< phaser deregister (task)"
+        log.debug "<<< phaser deregister (process)"
         phaser.arriveAndDeregister()
     }
 

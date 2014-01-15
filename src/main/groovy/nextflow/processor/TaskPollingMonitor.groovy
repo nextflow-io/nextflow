@@ -166,8 +166,13 @@ class TaskPollingMonitor implements TaskMonitor {
         Runtime.addShutdownHook {
             while( queue.size() ) {
                 TaskHandler handler = queue.poll()
-                log.warn "Killing pending task: ${handler.task.name}"
-                handler.kill()
+                try {
+                    log.warn "Killing pending process: ${handler.task.name}"
+                    handler.kill()
+                } catch( Throwable e ) {
+                    log.debug "Failed killing pending process: ${handler} -- cause: ${e.message}"
+                }
+
             }
         }
 

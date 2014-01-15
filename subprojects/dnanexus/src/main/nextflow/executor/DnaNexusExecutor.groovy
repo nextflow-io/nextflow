@@ -18,7 +18,10 @@
 */
 
 package nextflow.executor
-import static nextflow.processor.TaskHandler.Status.*
+
+import static nextflow.processor.TaskHandler.Status.COMPLETED
+import static nextflow.processor.TaskHandler.Status.RUNNING
+import static nextflow.processor.TaskHandler.Status.SUBMITTED
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -26,13 +29,12 @@ import java.nio.file.Path
 import groovy.util.logging.Slf4j
 import nextflow.fs.dx.DxPath
 import nextflow.fs.dx.api.DxApi
-import nextflow.processor.FileInParam
-import nextflow.processor.FileOutParam
+import nextflow.script.FileOutParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskProcessor
-import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 /**
  * Executes script.nf indicated in dxapp.sh in the DnaNexus environment
@@ -52,7 +54,7 @@ class DnaNexusExecutor extends AbstractExecutor {
         final pollInterval = session.getPollIntervalMillis(name, 15_000)
         log.debug "Creating executor queue with size: $queueSize; poll-interval: $pollInterval"
 
-        return new TaskPollingMonitor(session, queueSize, pollInterval).start()
+        return new TaskPollingMonitor(session, queueSize, pollInterval)
     }
 
     /**
@@ -67,7 +69,7 @@ class DnaNexusExecutor extends AbstractExecutor {
          * Setting the work directory
          */
         final scratch = task.workDirectory
-        log.debug "Lauching task > ${task.name} -- work folder: $scratch"
+        log.debug "Lauching process > ${task.name} -- work folder: $scratch"
 
         /*
          * Saving the environment to a file.
@@ -96,12 +98,12 @@ class DnaNexusExecutor extends AbstractExecutor {
          */
         Path taskScriptFile = task.getCmdScriptFile()
         taskScriptFile.text = task.processor.normalizeScript(task.script.toString())
-        log.debug "Creating script file for task > ${task.name}\n\n "
+        log.debug "Creating script file for process > ${task.name}\n\n "
 
         /*
          * create the stage inputs script
          */
-        def inputFiles = task.getInputsByType(FileInParam)
+        def inputFiles = task.getInputFiles()
         def stageScript = stagingFilesScript( inputFiles, '; ' )
 
         /*
@@ -117,6 +119,7 @@ class DnaNexusExecutor extends AbstractExecutor {
             obj.task_input = (taskInputFile as DxPath).getFileId()
         }
         obj.stage_inputs = stageScript
+        // todo Include shared output files as well
         obj.output_files = taskConfig.getOutputs().ofType(FileOutParam).collect { it.getName() }
 
         new DxTaskHandler(task, taskConfig, this, obj)
@@ -235,7 +238,7 @@ class DxTaskHandler extends TaskHandler {
 
             def result = checkStatus()
             String state = result.state
-            log.debug "Task ${task.name} > State: ${state}"
+            log.debug "Process ${task.name} > State: ${state}"
 
             if( state in ['idle', 'waiting_on_input', 'runnable', 'running', 'waiting_on_output','done','terminating'] ) {
                 status = RUNNING
@@ -254,7 +257,7 @@ class DxTaskHandler extends TaskHandler {
         def result = checkStatus()
         String state = result.state
         if( !state ) { throw new IllegalStateException() }
-        log.debug "Task ${task.name} > State: ${state}"
+        log.debug "Process ${task.name} > State: ${state}"
 
         if( !(state in ['done','terminating']) ) {
             return false
@@ -266,10 +269,10 @@ class DxTaskHandler extends TaskHandler {
         Integer exitCode = result.output?.exit_code
         if( exitCode != null ) {
             task.exitStatus = exitCode
-            log.debug "Task ${task.name} > exit status > ${task.exitStatus}"
+            log.debug "Process ${task.name} > exit status > ${task.exitStatus}"
         }
         else {
-            log.debug "Task ${task.name} > missing exit status"
+            log.debug "Process ${task.name} > missing exit status"
         }
 
         /*
@@ -280,11 +283,11 @@ class DxTaskHandler extends TaskHandler {
         // the file that will receive the stdout
         Path taskOutputFile = task.getCmdOutputFile()
         if( !taskOutputFile.exists()) {
-            log.warn "Task ${task.name} > output file does not exist: $taskOutputFile"
+            log.warn "Process ${task.name} > output file does not exist: $taskOutputFile"
             task.stdout = '(none)'
         }
         else {
-            log.debug "Task ${task.name} > out file: $taskOutputFile -- exists: ${taskOutputFile.exists()}; size: ${taskOutputFile.size()}"
+            log.debug "Process ${task.name} > out file: $taskOutputFile -- exists: ${taskOutputFile.exists()}; size: ${taskOutputFile.size()}"
             task.stdout = taskOutputFile
         }
 
@@ -306,7 +309,7 @@ class DxTaskHandler extends TaskHandler {
         }
 
         def response = api.jobDescribe(processJobId)
-        log.debug "Task ${task.name} > current result: ${response.toString()}\n"
+        log.debug "Process ${task.name} > current result: ${response.toString()}\n"
 
         lastStatusMillis = System.currentTimeMillis()
         lastStatusResult = response

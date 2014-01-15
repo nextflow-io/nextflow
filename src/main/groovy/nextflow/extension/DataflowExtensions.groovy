@@ -102,12 +102,15 @@ class DataflowExtensions {
             @Override
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
                 error = true
-                if( !events.onError ) return true
-                events.onError.call(e)
+                if( !events.onError ) {
+                    DataflowExtensions.log.error(e.message, e)
+                }
+                else {
+                    events.onError.call(e)
+                }
                 return true
             }
         }
-
 
 
         final Map<String, Object> parameters = new HashMap<String, Object>();
@@ -194,35 +197,40 @@ class DataflowExtensions {
     static public final <V> DataflowReadChannel<V> mapMany(final DataflowReadChannel<?> source, final Closure<V> closure) {
         assert source != null
 
-        def listeners = []
         DataflowQueue target = new DataflowQueue()
 
-        if( source instanceof DataflowExpression ) {
-            listeners << new DataflowEventAdapter() {
-                @Override
-                public void afterRun(final DataflowProcessor processor, final List<Object> messages) {
+        def listener = new DataflowEventAdapter() {
+            @Override
+            public void afterRun(final DataflowProcessor processor, final List<Object> messages) {
+                if( source instanceof DataflowExpression ) {
                     processor.bindOutput( Channel.STOP )
                     processor.terminate()
                 }
             }
+
+            @Override
+            public boolean onException(final DataflowProcessor processor, final Throwable e) {
+                DataflowExtensions.log.error "Error executing 'mapMany' operator", e
+                return true;
+            }
         }
 
 
-        Dataflow.operator(inputs: [source], outputs: [target], listeners: listeners) {  item ->
+        Dataflow.operator(inputs: [source], outputs: [target], listeners: [listener]) {  item ->
 
             item = closure ? closure.call(item) : item
 
             switch( item ) {
                 case Iterable:
-                    item.each { value -> bindOutput(value) }
+                    item.each { it -> bindOutput(it) }
                     break
 
                 case (Object[]):
-                    item.each { value -> bindOutput(value) }
+                    item.each { it -> bindOutput(it) }
                     break
 
                 case Map:
-                    item.each { entry -> bindOutput(entry) }
+                    item.each { it -> bindOutput(it) }
                     break
 
                 case Map.Entry:
@@ -240,8 +248,6 @@ class DataflowExtensions {
 
         return target
     }
-
-    static private UNDEF = new Object()
 
     /**
      *
@@ -573,6 +579,14 @@ class DataflowExtensions {
      */
     static public final <V> DataflowReadChannel<V> toList(final DataflowReadChannel<V> channel) {
         return reduce(channel, []) { list, item -> list << item }
+    }
+
+    static public final <V> DataflowReadChannel<V> toSortedList(final DataflowReadChannel<V> channel, Closure closure = null) {
+        def reduced = reduce(channel, []) { list, item -> list << item }
+        def result = reduced.then { List list ->
+            closure ? list.sort(closure) : list.sort()
+        }
+        (DataflowVariable)result
     }
 
     /**
@@ -1115,6 +1129,13 @@ class DataflowExtensions {
         source.split( target as List )
     }
 
+    public static <T> List split( DataflowReadChannel<T> source, int n ) {
+        def list = []
+        n.times { list << newChannelBy(source) }
+        source.split(list)
+        return list
+    }
+
     public static DataflowReadChannel chopFasta( DataflowReadChannel source, Map options = [:] ) {
         chopImpl(source, NextflowExtensions.&chopFasta, options, null)
     }
@@ -1124,11 +1145,11 @@ class DataflowExtensions {
     }
 
     public static DataflowReadChannel chopLines( DataflowReadChannel source, Map options = [:]) {
-        chopImpl(source, NextflowExtensions.&readLines, options, null)
+        chopImpl(source, NextflowExtensions.&chopLines, options, null)
     }
 
     public static DataflowReadChannel chopLines( DataflowReadChannel source, Map options = [:], Closure closure ) {
-        chopImpl(source, NextflowExtensions.&readLines, options, closure)
+        chopImpl(source, NextflowExtensions.&chopLines, options, closure)
     }
 
     public static DataflowReadChannel chopString( DataflowReadChannel source, Map options = [:] ) {

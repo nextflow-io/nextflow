@@ -42,6 +42,8 @@ class TaskDispatcher {
      */
     final private Map<Class<? extends AbstractExecutor>, TaskMonitor> monitors = [:]
 
+    private volatile boolean started
+
     /**
      * Dispatcher constructor
      *
@@ -74,7 +76,18 @@ class TaskDispatcher {
 
         def result = create.call()
         monitors.put(type,result)
+
+        if( started ) {
+            log.debug "Starting monitor: ${result.class.simpleName}"
+            result.start()
+        }
+
         return result
+    }
+
+    void start() {
+        log.debug "Dispatcher > start"
+        started = true
     }
 
 
@@ -84,11 +97,11 @@ class TaskDispatcher {
      *
      * @param task A {@code TaskRun} instance
      */
-    void submit( TaskRun task ) {
-        log.debug "Scheduling task: ${task}"
+    void submit( TaskRun task, boolean blocking ) {
+        log.debug "Scheduling process: ${task}"
 
         if( session.isTerminated() ) {
-            new IllegalStateException("Session terminated - Cannot add task to execution queue: ${task}")
+            new IllegalStateException("Session terminated - Cannot add process to execution queue: ${task}")
         }
 
         /*
@@ -96,7 +109,12 @@ class TaskDispatcher {
          * Note: queue is implemented as a fixed size blocking queue, when
          * there's not space *put* operation will block until, some other tasks finish
          */
-        task.processor.executor.submitTask(task)
+        def handler = task.processor.executor.submitTask(task, blocking)
+        if( handler && blocking ) {
+            log.trace "Process ${task} > blocking"
+            handler.latch.await()
+            log.trace "Process ${task} > complete"
+        }
     }
 
 
@@ -116,6 +134,9 @@ class TaskDispatcher {
 
         // finalize the tasks execution
         handler.task.processor.finalizeTask(handler.task)
+        // trigger the count down latch when it is a blocking task
+        handler.latch?.countDown()
+
     }
 
     /**

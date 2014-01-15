@@ -36,7 +36,7 @@ class CliOptions {
     @Parameter(names=['-c','-config'], description = 'Use the specified configuration file(s)')
     List<String> config
 
-    @Parameter(names=['-cache'], description = 'Enable/disable task(s) caching', arity = 1)
+    @Parameter(names=['-cache'], description = 'Enable/disable processes caching', arity = 1)
     boolean cacheable = true
 
     @Parameter(names=['-resume'], description = 'Execute the script using the cached results, useful to continue executions that stopped by an error')
@@ -54,7 +54,7 @@ class CliOptions {
     @Parameter(names=['-test'], description = 'Test the function with the name specified')
     String test
 
-    @Parameter(names=['-w', '-work-dir'], description = 'Directory where tasks results are stored')
+    @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate results are stored')
     String workDir = './work'
 
     /**

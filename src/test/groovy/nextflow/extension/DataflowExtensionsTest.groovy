@@ -197,6 +197,19 @@ class DataflowExtensionsTest extends Specification {
         result.val == Channel.STOP
     }
 
+
+    def testMapManyWithTuples () {
+
+        when:
+        def result = Channel.from( [1,2], ['a','b'] ).mapMany { it -> [it, it.reverse()] }
+        then:
+        result.val == [1,2]
+        result.val == [2,1]
+        result.val == ['a','b']
+        result.val == ['b','a']
+        result.val == Channel.STOP
+    }
+
     def testMapManyWithHashArray () {
 
         when:
@@ -313,6 +326,26 @@ class DataflowExtensionsTest extends Specification {
         Channel.just('x').last().val == 'x'
     }
 
+    def testSplit() {
+        when:
+        def result = Channel.from(1,2,3,4)
+        def (ch1, ch2) = result.split(2)
+
+        then:
+        ch1.val == 1
+        ch1.val == 2
+        ch1.val == 3
+        ch1.val == 4
+        ch1.val == Channel.STOP
+
+        ch2.val == 1
+        ch2.val == 2
+        ch2.val == 3
+        ch2.val == 4
+        ch2.val == Channel.STOP
+
+    }
+
 
 
     def testMin() {
@@ -415,6 +448,21 @@ class DataflowExtensionsTest extends Specification {
         channel << Channel.STOP
         then:
         channel.toList().val == []
+
+    }
+
+    def testToSortedList() {
+
+        when:
+        def channel = Channel.from(3,1,4,2)
+        then:
+        channel.toSortedList().val == [1,2,3,4]
+
+        when:
+        channel = Channel.create()
+        channel << Channel.STOP
+        then:
+        channel.toSortedList().val == []
 
     }
 

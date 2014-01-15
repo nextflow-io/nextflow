@@ -1,8 +1,10 @@
+#!/usr/bin/env nextflow
+
 params.query = "$HOME/sample.fa"
 params.db = "$HOME/tools/blast-db/pdb/pdb"
 
 db = file(params.db)
-fasta = channel()
+fasta = Channel.create()
 queryFile = file(params.query)
 queryFile.chunkFasta {
     fasta << it
@@ -10,7 +12,7 @@ queryFile.chunkFasta {
 
 process blast {
     input:
-    file 'query.fa' using fasta
+    file 'query.fa' from fasta
 
     output:
     file top_hits
@@ -32,7 +34,9 @@ process extract {
     "blastdbcmd -db ${db} -entry_batch top_hits > sequences"
 }
 
-process all(merge:true) {
+process all {
+    merge true
+
     input:
     val sequences
 

@@ -17,23 +17,18 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.exception;
+package nextflow.exception
+
+import groovy.transform.InheritConstructors;
 
 /**
- *
- * Note: THIS IS A PLAIN JAVA CLASS due to this bug
- * http://jira.codehaus.org/browse/GROOVY-6080
- * http://blog.proxerd.pl/article/how-to-fix-incompatibleclasschangeerror-for-your-groovy-projects-running-on-jdk7
+ * Base class for process execution errors
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public class InvalidExitException extends TaskException {
+@InheritConstructors
+class ProcessException extends Exception {
 
-    public InvalidExitException(String message) {
-        super(message);
-    }
 
-    public InvalidExitException(String message, Throwable e) {
-        super(message, e);
-    }
 }
+

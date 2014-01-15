@@ -22,7 +22,6 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.exception.MissingLibraryException
-import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import spock.lang.Specification
 /**
  *
@@ -69,9 +68,9 @@ class CliRunnerTest extends Specification {
             '''
             process simpleTask  {
                 input:
-                val x using 1
+                val x from 1
                 output:
-                stdout result
+                stdout into result
 
                 """echo $x"""
             }
@@ -94,7 +93,7 @@ class CliRunnerTest extends Specification {
             process otherTask  {
                 instanceType 'beta'
                 input:
-                val x using 1
+                val x from 1
                 output:
                 stdout result
 
@@ -120,8 +119,8 @@ class CliRunnerTest extends Specification {
             '''
             process task2  {
                 input:
-                val x using 1
-                val y using ([3])
+                val x from 1
+                val y from ([3])
                 output:
                 stdout result
 
@@ -135,9 +134,9 @@ class CliRunnerTest extends Specification {
         runner.getResult().val == 'echo 1 - 3'
         runner.getScript().getTaskProcessor().getName() == 'task2'
         runner.getScript().getTaskProcessor().taskConfig.name == 'task2'
-        runner.getScript().getTaskProcessor().taskConfig.inputs[0].channel.getVal() == 1
-        runner.getScript().getTaskProcessor().taskConfig.inputs[1].channel instanceof DataflowQueue
-        runner.getScript().getTaskProcessor().taskConfig.outputs[0].channel instanceof DataflowWriteChannel
+        runner.getScript().getTaskProcessor().taskConfig.inputs[0].inChannel.getVal() == 1
+        runner.getScript().getTaskProcessor().taskConfig.inputs[1].inChannel instanceof DataflowQueue
+        runner.getScript().getTaskProcessor().taskConfig.outputs[0].outChannel instanceof DataflowWriteChannel
     }
 
 
@@ -151,7 +150,7 @@ class CliRunnerTest extends Specification {
             '''
             process test  {
                 input:
-                val x using 1
+                val x from 1
                 output:
                 stdout result
 
@@ -166,27 +165,7 @@ class CliRunnerTest extends Specification {
 
     }
 
-    def 'test task with syntax error' () {
-        setup:
-        def runner = new CliRunner([task:[processor:'nope']])
 
-        /*
-         * this declaration returns a syntax error because the task code block
-         * does not terminate with a script to execute
-         */
-        when:
-        def script =
-            """
-            process task1  {
-                input x: 'hola'
-            }
-            """
-        runner.execute(script)
-
-        then:
-        thrown(MultipleCompilationErrorsException)
-
-    }
 
     def 'test task variables' () {
 
@@ -234,6 +213,29 @@ class CliRunnerTest extends Specification {
 
         expect:
         runner.execute(script).val == '1-2-3'
+
+    }
+
+
+    def 'test task out file' () {
+
+
+        setup:
+        def runner = new CliRunner( executor: 'nope' )
+
+        def script = '''
+            X = file('filename')
+            process test {
+                input:
+                file X
+
+                "cat $X"
+            }
+
+            '''
+
+        expect:
+        runner.execute(script).val == 'cat filename'
 
     }
 
