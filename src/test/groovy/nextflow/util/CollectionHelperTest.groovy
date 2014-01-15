@@ -17,50 +17,39 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.script
+package nextflow.util
+
+import spock.lang.Specification
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FileSpec {
+class CollectionHelperTest extends Specification {
 
-    private String fFilePattern
+    def testFlatten() {
 
-    private String fType = 'file'
+        expect:
+        CollectionHelper.flatten( [1,2,3] )  == [ [1,2,3] ]
 
-    private boolean fCreate
+        CollectionHelper.flatten( ['a', [1,2,3]] ) == [ ['a', 1], ['a', 2], ['a', 3] ]
 
-    FileSpec filePattern( String pattern ) {
-        this.fFilePattern = pattern
-        return this
-    }
+        CollectionHelper.flatten( [ ['a','b'], [1,2,3,4]] ) == [
+                ['a', 1],
+                ['b', 2],
+                [null, 3],
+                [null, 4],
 
-    String getFilePattern() {
-        return fFilePattern
-    }
+        ]
 
-    boolean getCreate() {
-        return fCreate
-    }
 
-    boolean isDirectory() {
-        return fType == 'dir'
-    }
+        CollectionHelper.flatten( [ 'x',  ['a','b'], [1,2,3,4]] ) == [
+                ['x', 'a', 1],
+                ['x', 'b', 2],
+                ['x', null, 3],
+                ['x', null, 4],
+        ]
 
-    boolean isFile() {
-        return fType == 'file'
-    }
-
-    FileSpec create(boolean flag) {
-        this.fCreate = flag
-        return this
-    }
-
-    FileSpec type(String value) {
-        assert value in ['file','dir']
-        fType = value
-        return this
     }
 
 

@@ -18,11 +18,8 @@
  */
 
 package nextflow.processor
-
 import nextflow.script.FileInParam
-import nextflow.script.ValueInParam
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -32,21 +29,19 @@ class MergeTaskProcessorTest extends Specification {
     def testProvider () {
 
         setup:
-        def script = Mock(Script)
+        def binding = new Binding()
         def files = [:]
-        def key1 = new FileInParam(script, 'file1')
-        def key2 = new FileInParam(script, 'file_')
-        def key3 = new ValueInParam(script, 'xxx')
+        def key1 = new FileInParam(binding, []).bind('file1')
+        def key2 = new FileInParam(binding, []).bind('file_')
         def val1 = [ FileHolder.get('xxx', 'file1') ]
         def val2 =  [ FileHolder.get('yyy', 'file2'), FileHolder.get('zzz', 'file3') ]
         def val3 =  'just a value'
         files[key1] = val1
         files[key2] = val2
-        files[key3] = val3
 
 
         def proc = [:] as MergeTaskProcessor
-        proc.inputsCollector = files
+        proc.filesCollector = files
 
         expect:
         proc.stagedProvider().size() == 2

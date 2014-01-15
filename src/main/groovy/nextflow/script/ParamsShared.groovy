@@ -18,14 +18,12 @@
  */
 
 package nextflow.script
-
 import groovy.transform.InheritConstructors
-import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
-
+import groovyx.gpars.dataflow.expression.DataflowExpression
 /**
  * 'SharedParam' Marker interface
  *
@@ -40,90 +38,65 @@ interface SharedParam extends InParam, OutParam { }
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@ToString(includePackage=false, includeSuper = true)
-abstract class BaseSharedParam extends BaseParam implements SharedParam {
+@InheritConstructors
+abstract class BaseSharedParam extends BaseInParam implements SharedParam {
 
-    /** The value to which is bound this parameter in the process execution context */
-    protected Object inTarget
+    protected intoObject
 
-    /** The name which is used to bind this parameter in the process execution context */
-    protected String name
-
-    /** The target channel reference */
-    protected Object outTarget
-
-    private inChannel
+    protected OutParam.Mode mode = BasicMode.standard
 
     private outChannel
-
-
-    protected BaseSharedParam( Script script, Object obj ) {
-        super(script)
-        create(obj)
-    }
-
-    /**
-     * Template constructor, subclasses may override it to provide custom object creation logic
-     *
-     * @param obj
-     */
-    protected void create(Object obj) {
-        if( obj instanceof ScriptVar ) {
-            name = obj.name
-            inTarget = getScriptVar(obj.name)
-        }
-        else {
-            inTarget = obj
-        }
-    }
 
     /**
      * Lazy initializer
      *
      * @return the parameter object itself
      */
-    BaseSharedParam lazyInit() {
+    void lazyInit() {
 
         /*
-         * initialize *input* channel
+         * initialize in channel
          */
-        if( inTarget instanceof Closure ) {
-            inChannel = sharedValToChannel( inTarget.call() )
-        }
-        else {
-            inChannel = sharedValToChannel( inTarget )
-        }
+        super.lazyInit()
+
 
         /*
          * initialize *output* channel
          */
-        if( outTarget != null ) {
-            log.trace "shared output using > channel ref: $outTarget"
-            outChannel = outputValToChannel( outTarget, DataflowVariable )
+        def importName = fromObject instanceof ScriptVar ? fromObject.name : null
+        def hasImported = importName && binding.hasVariable(importName)
+
+        if( intoObject instanceof ScriptVar ) {
+            // make sure that the output channel name is not the same as the input channel
+            if( hasImported && intoObject.name == importName )
+                throw new IllegalArgumentException("shared parameter 'into' cannot be same as the 'from' value -- specified value: ${intoObject.name}")
+
+            outChannel = outputValToChannel( intoObject.name, DataflowVariable )
+        }
+        else if( intoObject != null ) {
+            throw new IllegalArgumentException("shared parameter 'into' requires a variable identifier to be specified -- you entered: ${intoObject} [${intoObject.class.simpleName}]")
         }
 
-        return this
     }
 
-    /**
-     * Implements the {@code as} keyword for the shared param declaration
-     * NOTE: since {@code as} is a keyword for the groovy programming language
-     * the method as to be named {@code _as}.
-     *
-     * A special pre-process will replace the "as" from the user script to the "_as"
-     *
-     * @see nextflow.ast.SourceModifierParserPlugin
-     *
-     * @param value
-     * @return
-     */
-    BaseSharedParam _as( Object value ) {
-        if( value instanceof ScriptVar )
-            this.name = value.name
-        else
-            this.name = value?.toString()
-        return this
+    protected getScriptVar( String name ) {
+        getScriptVar(name,false)
     }
+
+    protected DataflowReadChannel inputValToChannel( def value ) {
+
+        if( value instanceof DataflowExpression ) {
+            return value
+        }
+        else if( value instanceof DataflowReadChannel ) {
+            throw new IllegalArgumentException()
+        }
+
+        def result = new DataflowVariable()
+        result.bind(value)
+        result
+    }
+
 
     /**
      * Define the channel to which the parameter output has to bind
@@ -136,22 +109,9 @@ abstract class BaseSharedParam extends BaseParam implements SharedParam {
      * @return The parameter object itself
      * {@see #outputValToChannel()}
      */
-    BaseSharedParam to( Object value ) {
-        this.outTarget = value instanceof ScriptVar ? value.name : value?.toString()
+    BaseSharedParam into( Object value ) {
+        this.intoObject = value
         return this
-    }
-
-    /**
-     * The parameter name getter
-     */
-    String getName() { name }
-
-    /**
-     * Input channel getter
-     */
-    DataflowReadChannel getInChannel() {
-        init()
-        inChannel
     }
 
     /**
@@ -162,6 +122,14 @@ abstract class BaseSharedParam extends BaseParam implements SharedParam {
         outChannel
     }
 
+
+    def BaseSharedParam mode( def mode ) {
+        this.mode = BasicMode.parseValue(mode)
+        return this
+    }
+
+    OutParam.Mode getMode() { mode }
+
 }
 
 /**
@@ -169,65 +137,52 @@ abstract class BaseSharedParam extends BaseParam implements SharedParam {
  */
 
 @InheritConstructors
-@ToString(includePackage=false, includeSuper = true)
-class ValueSharedParam extends BaseSharedParam { }
+class ValueSharedParam extends BaseSharedParam {  }
 
 
-@Mixin(FileSpec)
 @InheritConstructors
-@ToString(includePackage=false, includeSuper = true)
 class FileSharedParam extends BaseSharedParam  {
 
-//    FileSharedParam( Script script, Object val ) {
-//        super(script, val)
-//
-//        // when only a string is entered, like:
-//        //      file 'file_something'
-//        //
-//        // it is supposed to be the file name to be used,
-//        // thus: clear the 'target' field and set the 'name'
-//        //
-//
-//        if( val instanceof ProcessVarRef ) {
-//            isVar = true
-//            filePattern(name)
-//        }
-//        else if( val instanceof String ) {
-//            filePattern(val)
-//            inTarget = null
-//        }
-//        else {
-//            filePattern(name)
-//        }
-//
-//        if( inTarget instanceof Path ) {
-//            filePattern(inTarget.getName())
-//        }
-//
-//        // set create file if not exist by default
-//        create(true)
-//    }
+    String filePattern
 
-
-    FileSharedParam _as( value ) {
-
-        switch( value ) {
-            case ScriptVar:
-                name = value.name
-                break
-
-            case String:
-                filePattern(value as String)
-                break
-
-            default:
-                new IllegalArgumentException()
+    /**
+     * Define the file name
+     */
+    FileSharedParam name( name ) {
+        if( name instanceof String ) {
+            filePattern = name
+            return this
         }
 
-        return this
+        throw new IllegalArgumentException()
     }
 
+    String getName() {
 
+        if( bindObject instanceof Map ) {
+            def entry = bindObject.entrySet().first()
+            return entry?.key
+        }
+
+        return super.getName()
+
+    }
+
+    String getFilePattern() {
+
+        if( filePattern )
+            return filePattern
+
+        if( bindObject instanceof String )
+            return filePattern = bindObject
+
+        if( bindObject instanceof Map ) {
+            def entry = bindObject.entrySet().first()
+            return filePattern = entry?.value
+        }
+
+        return filePattern = '*'
+    }
 
 }
 

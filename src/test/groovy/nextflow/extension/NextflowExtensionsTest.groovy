@@ -223,6 +223,17 @@ class NextflowExtensionsTest extends Specification {
         result[1] == ">prot3\nDD\n>prot4\nEE\nFF\nGG\n"
         result[2] == ">prot5\nLL\nNN\n"
 
+
+        when:
+        def result2 = fasta.chopFasta(into: [], record: [id:true, seq: true] ) {
+            [ it.id, it.seq.size() ]
+        }
+
+        then:
+        result2[0] == [ 'prot1', 2 ]
+        result2[1] == [ 'prot2', 5 ]
+        result2[2] == [ 'prot3', 2 ]
+
     }
 
     def 'test chop string' () {

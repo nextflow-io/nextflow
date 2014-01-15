@@ -19,6 +19,9 @@
 
 package nextflow.processor
 
+import java.nio.file.Files
+import java.nio.file.Paths
+
 import nextflow.script.BaseScript
 import spock.lang.Specification
 
@@ -32,7 +35,7 @@ class DelegateMapTest extends Specification {
 
         setup:
         def script = Mock(BaseScript)
-        def map = new TaskProcessor.DelegateMap(script)
+        def map = new DelegateMap(script)
 
         when:
         map.x = 1
@@ -45,10 +48,39 @@ class DelegateMapTest extends Specification {
         thrown(MissingPropertyException)
 
         when:
-        def val = new TaskProcessor.DelegateMap(script,true).get('y')
+        def val = new DelegateMap(script,true).get('y')
         then:
         val == '$y'
 
+
+    }
+
+
+    def testSaveAndReadContextMap () {
+
+        setup:
+        def taskConfig = new TaskConfig([undef:false])
+        def file = Files.createTempFile('test.ctx',null)
+        def processor = [:] as TaskProcessor
+        processor.metaClass.getTaskConfig = { taskConfig }
+        processor.metaClass.isCacheable = { true }
+        def map = new DelegateMap(processor)
+        map.put('alpha', 1)
+        map.put('beta', 2)
+        map.put('file', Paths.get('Hola.txt'))
+
+        when:
+        map.save(file)
+        def result = DelegateMap.read(processor, file)
+
+        then:
+        result.size() == 3
+        result.alpha == 1
+        result.beta == 2
+        result.file.equals( Paths.get('Hola.txt') )
+
+        cleanup:
+        file.delete()
 
     }
 

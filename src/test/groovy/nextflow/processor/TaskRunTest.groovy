@@ -22,13 +22,14 @@ class TaskRunTest extends Specification {
     def testGetInputsByType() {
 
         setup:
-        def script = Mock(Script)
-        script.getBinding() >> { new Binding('x': 1, 'y': 2) }
+        def binding = new Binding('x': 1, 'y': 2)
         def task = new TaskRun()
-        task.setInput( new StdInParam(script,'Hello') )
-        task.setInput( new FileInParam(script, new ScriptVar('x')), 'file1' )
-        task.setInput( new FileInParam(script, new ScriptVar('y')), 'file2' )
-        task.setInput( new EnvInParam(script, 'z'), 'env' )
+        def list = []
+
+        task.setInput( new StdInParam(binding,list) )
+        task.setInput( new FileInParam(binding, list).bind(new ScriptVar('x')), 'file1' )
+        task.setInput( new FileInParam(binding, list).bind(new ScriptVar('y')), 'file2' )
+        task.setInput( new EnvInParam(binding, list).bind('z'), 'env' )
 
 
         when:
@@ -50,11 +51,13 @@ class TaskRunTest extends Specification {
     def testGetOutputsByType() {
 
         setup:
-        def script = Mock(Script)
+        def binding = new Binding()
         def task = new TaskRun()
-        task.setOutput( new FileOutParam(script, 'x'), 'file1' )
-        task.setOutput( new FileOutParam(script, 'y'), 'file2' )
-        task.setOutput( new StdOutParam(null), 'Hello' )
+        def list = []
+
+        task.setOutput( new FileOutParam(binding, list).bind('x'), 'file1' )
+        task.setOutput( new FileOutParam(binding, list).bind('y'), 'file2' )
+        task.setOutput( new StdOutParam(binding, list), 'Hello' )
 
 
         when:
@@ -76,12 +79,13 @@ class TaskRunTest extends Specification {
     def testGetInputFiles() {
 
         setup:
-        def script = Mock(Script)
+        def binding = new Binding()
         def task = new TaskRun()
+        def list = []
 
-        def x = new ValueInParam(script, 'x')
-        def y = new FileInParam(script, 'y')
-        def z = new FileSharedParam(script, 'z')
+        def x = new ValueInParam(binding, list).bind( new ScriptVar('x') )
+        def y = new FileInParam(binding, list).bind('y')
+        def z = new FileSharedParam(binding, list).bind('z')
 
         task.setInput(x, 1)
         task.setInput(y, [ new FileHolder(Paths.get('file_y_1')) ])

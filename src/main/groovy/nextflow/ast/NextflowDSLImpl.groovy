@@ -19,6 +19,10 @@
 
 package nextflow.ast
 import groovy.util.logging.Slf4j
+import nextflow.script.ScriptEnvWrap
+import nextflow.script.ScriptFileWrap
+import nextflow.script.ScriptStdinWrap
+import nextflow.script.ScriptStdoutWrap
 import nextflow.script.ScriptVar
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
@@ -33,6 +37,8 @@ import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
 import org.codehaus.groovy.ast.expr.MapExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
+import org.codehaus.groovy.ast.expr.PropertyExpression
+import org.codehaus.groovy.ast.expr.TupleExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
@@ -51,7 +57,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 
 @Slf4j
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
-class ProcessDefTransformImpl implements ASTTransformation {
+class NextflowDSLImpl implements ASTTransformation {
 
     def String currentTaskName
 
@@ -71,15 +77,11 @@ class ProcessDefTransformImpl implements ASTTransformation {
 
         new ClassCodeVisitorSupport() {
 
-
             protected SourceUnit getSourceUnit() { unit }
 
             void visitMethodCallExpression(MethodCallExpression methodCall) {
-
                 // pre-condition to be verified to apply the transformation
-                Boolean preCondition = methodCall.with {
-                    (getMethod() instanceof ConstantExpression && objectExpression?.getText() == 'this')
-                }
+                Boolean preCondition = methodCall.objectExpression?.getText() == 'this'
 
                 /*
                  * intercept the *process* method in order to transform the script closure
@@ -171,12 +173,14 @@ class ProcessDefTransformImpl implements ASTTransformation {
                 switch(currentLabel) {
                     case 'input':
                         if( stm instanceof ExpressionStatement ) {
+                            fixStdinStdout( stm )
                             convertInputMethod( stm.getExpression() )
                         }
                         break
 
                     case 'output':
                         if( stm instanceof ExpressionStatement ) {
+                            fixStdinStdout( stm )
                             convertOutputMethod( stm.getExpression() )
                         }
                         break
@@ -262,34 +266,63 @@ class ProcessDefTransformImpl implements ASTTransformation {
 
     }
 
+    protected void fixStdinStdout( ExpressionStatement stm ) {
+
+        if( stm.expression instanceof PropertyExpression ) {
+            def expr = (PropertyExpression)stm.expression
+            def obj = expr.objectExpression
+            def prop = expr.property as ConstantExpression
+            def target = new VariableExpression(prop.text)
+
+            if( obj instanceof MethodCallExpression && 'stdout' == obj.methodAsString ) {
+                def stdout = new MethodCallExpression( new VariableExpression('this'), 'stdout', new ArgumentListExpression()  )
+                def into = new MethodCallExpression(stdout, 'into', new ArgumentListExpression(target))
+                // remove replace the old one with the new one
+                stm.setExpression( into )
+            }
+            else if( obj instanceof MethodCallExpression && 'stdin' == obj.methodAsString ) {
+                def stdin = new MethodCallExpression( new VariableExpression('this'), 'stdin', new ArgumentListExpression()  )
+                def from = new MethodCallExpression(stdin, 'from', new ArgumentListExpression(target))
+                // remove replace the old one with the new one
+                stm.setExpression( from )
+            }
+        }
+    }
+
     /*
      * handle *input* parameters
      */
     def void convertInputMethod( Expression expression ) {
         log.trace "convert > input expression: $expression"
 
-        if( !(expression instanceof MethodCallExpression) ) {
-            return
+        if( expression instanceof MethodCallExpression ) {
+
+            def methodCall = expression as MethodCallExpression
+            def methodName = methodCall.getMethodAsString()
+            def nested = methodCall.objectExpression instanceof MethodCallExpression
+            log.trace "convert > input method: $methodName"
+
+            if( methodName in ['val','env','file','each', 'set','stdin'] ) {
+                //this methods require a special prefix
+                if( !nested )
+                    methodCall.setMethod( new ConstantExpression('_in_' + methodName) )
+                // the following methods require to replace a variable reference to a constant
+                fixMethodCall(methodCall)
+            }
+
+            // invoke on the next method call
+            if( expression.objectExpression instanceof MethodCallExpression ) {
+                convertInputMethod(methodCall.objectExpression)
+            }
         }
 
-        def methodCall = expression as MethodCallExpression
-        def methodName = methodCall.getMethodAsString()
-        log.trace "convert > input method: $methodName"
-
-        if( methodName in ['val','env','file','each'] ) {
-            //this methods require a special prefix
-            methodCall.setMethod( new ConstantExpression('_in_' + methodName) )
-            // the following methods require to replace a variable reference to a constant
-            convertVarToConst(methodCall)
+        else if( expression instanceof PropertyExpression ) {
+            // invoke on the next method call
+            if( expression.objectExpression instanceof MethodCallExpression ) {
+                convertInputMethod(expression.objectExpression)
+            }
         }
 
-        else if( methodName in ['_as','stdin']  ) {
-            convertVarToConst(methodCall)
-        }
-
-        if( methodCall.objectExpression instanceof MethodCallExpression ) {
-            convertInputMethod(methodCall.objectExpression)
-        }
 
     }
 
@@ -298,29 +331,24 @@ class ProcessDefTransformImpl implements ASTTransformation {
      * handle *shared* parameters
      */
 
-    static SHARE_METHOD_MAP = [val:'_share_val', file: '_share_file']
-
     def void convertShareMethod( Expression expression ) {
-        log.trace "convert > shared expression: $expression"
+        log.debug "convert > shared expression: $expression"
 
-        if( !(expression instanceof MethodCallExpression) ) {
-            return
-        }
+        if( expression instanceof MethodCallExpression ) {
+            def methodCall = expression as MethodCallExpression
+            def methodName = methodCall.getMethodAsString()
+            def nested = methodCall.objectExpression instanceof MethodCallExpression
+            log.trace "convert > shared method: $methodName"
 
-        def methodCall = expression as MethodCallExpression
-        def methodName = methodCall.getMethodAsString()
-        log.trace "convert > shared method: $methodName"
+            if( methodName in ['from','file','val','into','mode'] ) {
+                if( !nested )
+                    methodCall.setMethod( new ConstantExpression( '_share_' + methodName ) )
+                fixMethodCall(methodCall)
+            }
 
-        if( SHARE_METHOD_MAP.containsKey(methodName) ) {
-            methodCall.setMethod( new ConstantExpression( SHARE_METHOD_MAP[methodName] ) )
-         }
-
-        if( methodName in ['to','_as','file','val'] ) {
-            convertVarToConst(methodCall)
-        }
-
-        if( methodCall.objectExpression instanceof MethodCallExpression ) {
-            convertShareMethod(methodCall.objectExpression)
+            if( methodCall.objectExpression instanceof MethodCallExpression ) {
+                convertShareMethod(methodCall.objectExpression)
+            }
         }
     }
 
@@ -334,15 +362,16 @@ class ProcessDefTransformImpl implements ASTTransformation {
 
         def methodCall = expression as MethodCallExpression
         def methodName = methodCall.getMethodAsString()
+        def nested = methodCall.objectExpression instanceof MethodCallExpression
         log.trace "convert > output method: $methodName"
 
-        if( methodName in ['val','file'] ) {
+        if( methodName in ['val','file','set','flat', 'stdout'] && !nested ) {
             // prefix the method name with the string '_out_'
             methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
+            fixMethodCall(methodCall)
         }
-
-        if( methodName in ['val','file','to','stdout'] ) {
-            convertVarToConst(methodCall)
+        else if( methodName in ['into','mode'] ) {
+            fixMethodCall(methodCall)
         }
 
         // continue to traverse
@@ -351,6 +380,8 @@ class ProcessDefTransformImpl implements ASTTransformation {
         }
 
     }
+
+    private boolean withinSetMethod
 
     /**
      * This method converts the a method call argument from a Variable to a Constant value
@@ -361,41 +392,74 @@ class ProcessDefTransformImpl implements ASTTransformation {
      * @param index The index of the argument to modify
      * @return
      */
-    private List<Expression> convertVarToConst( MethodCallExpression methodCall, int index = 0 ) {
-
-        def args = methodCall.getArguments() as ArgumentListExpression
-
-        int i = 0
-        List<Expression> newArgs = []
-        for( Expression expr : args )  {
-
-            if( index == i++ ) {
-                if( expr instanceof VariableExpression ) {
-                    // when it is a variable expression, replace it with a constant rapresenting
-                    // the variable name
-                    def name = ((VariableExpression) expr).getName()
-                    newArgs << newObj( ScriptVar, name )
-                    continue
-                }
-            }
-
-            newArgs << expr
-
+    protected void fixMethodCall( MethodCallExpression methodCall ) {
+        withinSetMethod =  methodCall.methodAsString in ['_in_set','_out_set']
+        try {
+            varToConst(methodCall.getArguments())
+        } finally {
+            withinSetMethod = false
         }
-
-
-        methodCall.setArguments(new ArgumentListExpression(newArgs))
-
-        return newArgs
     }
 
-    def protected newObj( Class clazz, Object... params) {
+    protected Expression varToConst( Expression expr ) {
 
+        if( expr instanceof VariableExpression ) {
+            // when it is a variable expression, replace it with a constant representing
+            // the variable name
+            def name = ((VariableExpression) expr).getName()
+
+            /*
+             * the 'stdin' is used as placeholder for the standard input in the set definition. For example:
+             *
+             * input:
+             *    set( stdin, .. ) from q
+             */
+            if( name == 'stdin' && withinSetMethod )
+                return newObj( ScriptStdinWrap )
+
+            else if ( name == 'stdout' && withinSetMethod )
+                return newObj( ScriptStdoutWrap )
+
+            else
+                return newObj( ScriptVar, new ConstantExpression(name) )
+        }
+
+        /*
+         * replace 'file' method call in the set definition, for example:
+         *
+         * input:
+         *   set( file(fasta:'*.fa'), .. ) from q
+         */
+        if( expr instanceof MethodCallExpression && expr.methodAsString == 'file' && withinSetMethod ) {
+            def args = (TupleExpression) varToConst(expr.arguments)
+            return newObj( ScriptFileWrap, args )
+        }
+
+        if( expr instanceof MethodCallExpression && expr.methodAsString == 'env' && withinSetMethod ) {
+            def args = (TupleExpression) varToConst(expr.arguments)
+            return newObj( ScriptEnvWrap, args )
+        }
+
+        if( expr instanceof TupleExpression )  {
+            def list = expr.getExpressions()
+            list.eachWithIndex { Expression item, int i ->
+                list[i] = varToConst(item)
+            }
+            return expr
+        }
+
+        return expr
+    }
+
+    def protected newObj( Class clazz, TupleExpression args ) {
         def type = new ClassNode(clazz)
-        List<Expression> args = []
-        params.each { args << new ConstantExpression(it) }
-        return new ConstructorCallExpression(type, new ArgumentListExpression(args))
+        return new ConstructorCallExpression(type,args)
+    }
 
+    def protected newObj( Class clazz, Object... params ) {
+        def type = new ClassNode(clazz)
+        def args = new ArgumentListExpression( params as List<Expression>)
+        return new ConstructorCallExpression(type,args)
     }
 
 

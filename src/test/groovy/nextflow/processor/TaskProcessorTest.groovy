@@ -18,12 +18,12 @@
  */
 
 package nextflow.processor
-import java.nio.file.Files
+
 import java.nio.file.Paths
 
 import nextflow.Session
-import nextflow.script.BaseScript
 import nextflow.script.FileInParam
+import nextflow.script.ScriptVar
 import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
 import spock.lang.Specification
@@ -53,12 +53,13 @@ class TaskProcessorTest extends Specification {
 
         setup:
         def processor = [:] as TaskProcessor
-        def script = Mock(Script)
+        def binding = new Binding()
+        def holder = []
 
         def inputs = [:]
-        def key1 = new FileInParam(script, 'file1')
-        def key2 = new FileInParam(script, 'file_')
-        def key3 = new ValueInParam(script, 'xxx')
+        def key1 = new FileInParam(binding, holder).bind('file1')
+        def key2 = new FileInParam(binding, holder).bind('file_')
+        def key3 = new ValueInParam(binding, holder).bind( new ScriptVar('xxx') )
 
         def val1 = [ FileHolder.get('xxx', 'file.txt') ]
         def val2 =  [ FileHolder.get('yyy', 'file.2'), FileHolder.get('zzz', '.hidden') ]
@@ -232,31 +233,6 @@ class TaskProcessorTest extends Specification {
 
     }
 
-
-    def testSaveAndReadContextMap () {
-
-        setup:
-        def script = Mock(BaseScript)
-        def file = Files.createTempFile('test.ctx',null)
-        def processor = [:] as TaskProcessor
-        def map = new TaskProcessor.DelegateMap(script)
-        map.alpha = 1
-        map.beta = 2
-
-        when:
-        processor.saveContextMap(map, file)
-        def result = processor.readContextMap(file)
-
-        then:
-        result.size() == 2
-        result.alpha == 1
-        result.beta == 2
-
-
-        cleanup:
-        file.delete()
-
-    }
 
     def testGetHashLog() {
 

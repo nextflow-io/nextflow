@@ -18,6 +18,7 @@
  */
 
 package nextflow.processor
+
 import groovy.util.logging.Slf4j
 import nextflow.script.BaseScript
 import nextflow.script.EachInParam
@@ -25,8 +26,12 @@ import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
 import nextflow.script.FileOutParam
 import nextflow.script.FileSharedParam
+import nextflow.script.InParam
 import nextflow.script.InputsList
+import nextflow.script.OutParam
 import nextflow.script.OutputsList
+import nextflow.script.SetInParam
+import nextflow.script.SetOutParam
 import nextflow.script.SharedParam
 import nextflow.script.StdInParam
 import nextflow.script.StdOutParam
@@ -35,6 +40,7 @@ import nextflow.script.ValueOutParam
 import nextflow.script.ValueSharedParam
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+
 /**
  * Holds the task configuration properties
  *
@@ -95,7 +101,7 @@ class TaskConfig implements Map {
         return configProperties.containsKey(name)
     }
 
-    def methodMissing( String name, def args) {
+    def methodMissing( String name, def args ) {
 
         if( args instanceof Object[] ) {
             if( args.size()==1 ) {
@@ -111,6 +117,9 @@ class TaskConfig implements Map {
 
         return this
     }
+
+    @groovy.transform.PackageScope
+    BaseScript getOwnerScript() { ownerScript }
 
     /**
      * Type shortcut to {@code #configProperties.inputs}
@@ -160,106 +169,80 @@ class TaskConfig implements Map {
         configProperties.undef
     }
 
-    /**
-     * Define a *file* parameter which can be used both input or output declaration
-     *
-     * @param obj The file name
-     * @param direction The parameter direction, i.e. {@code in} or {@code out}
-     * @return
-     *
-     */
-    def FileInParam _in_file( Object obj ) {
+    /// input parameters
 
-        def result = new FileInParam(ownerScript, obj)
-        configProperties.inputs << result
-
-        return result
+    InParam _in_val( obj ) {
+        new ValueInParam(this).bind(obj)
     }
 
-    def ValueInParam _in_val( Object obj ) {
-
-        def result = new ValueInParam(ownerScript, obj)
-        configProperties.inputs << result
-
-        return result
+    InParam _in_file( obj ) {
+        new FileInParam(this).bind(obj)
     }
 
-    EnvInParam _in_env( Object obj ) {
+    InParam _in_each( obj ) {
+        new EachInParam(this).bind(obj)
+    }
 
-        def result = new EnvInParam(ownerScript, obj)
-        configProperties.inputs << result
+    InParam _in_set( Object... obj ) {
+        new SetInParam(this).bind(obj)
+    }
 
+    InParam _in_stdin( obj = null ) {
+        def result = new StdInParam(this)
+        if( obj ) result.bind(obj)
         result
     }
 
-    EachInParam _in_each( Object obj ) {
-
-        def result = new EachInParam(ownerScript,obj)
-        configProperties.inputs << result
-
-        return result
+    InParam _in_env( obj ) {
+        new EnvInParam(this).bind(obj)
     }
 
-    def FileOutParam _out_file( obj ) {
 
-        def result = obj == '-' ? new StdOutParam(ownerScript) : new FileOutParam(ownerScript,obj)
-        configProperties.outputs << result
+    /// output parameters
 
+    OutParam _out_val( Object obj ) {
+        new ValueOutParam(this).bind(obj)
+    }
+
+
+    OutParam _out_file( Object obj ) {
+        def result = obj == '-' ? new StdOutParam(this) : new FileOutParam(this)
+        result.bind(obj)
+    }
+
+    OutParam _out_set( Object... obj ) {
+        new SetOutParam(this) .bind(obj)
+    }
+
+    OutParam _out_stdout( obj = null ) {
+        def result = new StdOutParam(this).bind('-')
+        if( obj ) result.into(obj)
         result
     }
 
-    def ValueOutParam _out_val( Object obj ) {
+    /// shared parameters
 
-        def result = new ValueOutParam(ownerScript,obj)
-        configProperties.outputs << result
-
-        result
+    SharedParam _share_val( def obj )  {
+        new ValueSharedParam(this).bind(obj) as SharedParam
     }
 
-
-    def ValueSharedParam _share_val( def obj )  {
-
-        def result = new ValueSharedParam(ownerScript, obj)
-        configProperties.inputs << result
-
-        return result
-    }
-
-    def FileSharedParam _share_file( def obj )  {
-
-        def result = new FileSharedParam(ownerScript, obj)
-        configProperties.inputs << result
-
-        return result
+    SharedParam _share_file( def obj )  {
+        new FileSharedParam(this).bind(obj) as SharedParam
     }
 
 
 
-    StdInParam stdin( def obj ) {
-
-        def result = new StdInParam(ownerScript, obj)
-        configProperties.inputs << result
-
-        result
-    }
-
-    StdOutParam stdout( def channelRef = null ) {
-
-        def result = new StdOutParam(ownerScript)
-        if( channelRef != null )
-            result.to(channelRef)
-
-        configProperties.outputs << result
-
-        result
-    }
 
     /**
      * Defines a special *dummy* input parameter, when no inputs are
      * provided by the user for the current task
      */
-    def void noInput() {
-        _in_val('$') ._as(true)
+    def void fakeInput() {
+        new ValueInParam(this).from(true).bind('$')
+    }
+
+    def void fakeOutput( target ) {
+        new StdOutParam(this).bind('-').into(target)
     }
 
 
@@ -325,7 +308,6 @@ class TaskConfig implements Map {
     }
 
     List<Integer> getValidExitStatus() { configProperties.validExitStatus }
-
 
 
 }

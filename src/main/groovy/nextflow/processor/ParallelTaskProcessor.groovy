@@ -10,12 +10,12 @@ import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.exception.ProcessException
 import nextflow.script.EachInParam
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
 import nextflow.script.FileSharedParam
 import nextflow.script.InParam
-import nextflow.script.OutParam
 import nextflow.script.ScriptType
 import nextflow.script.SharedParam
 import nextflow.script.StdInParam
@@ -23,7 +23,6 @@ import nextflow.script.ValueInParam
 import nextflow.script.ValueSharedParam
 import nextflow.util.CacheHelper
 import nextflow.util.FileHelper
-
 /**
  * Defines the parallel tasks execution logic
  *
@@ -172,6 +171,30 @@ class ParallelTaskProcessor extends TaskProcessor {
 
     }
 
+    protected decodeInputValue( InParam param, List values ) {
+
+        def val = values[ param.index ]
+        if( param.mapIndex != -1 ) {
+            def list
+            if( val instanceof Map )
+                list = val.values()
+
+            else if( val instanceof Collection )
+                list = val
+            else
+               list = [val]
+
+            try {
+                return list[param.mapIndex]
+            }
+            catch( IndexOutOfBoundsException e ) {
+                throw new ProcessException(e)
+            }
+        }
+
+        return val
+    }
+
     /**
      * Create the {@code TaskDef} data structure and initialize the task execution context
      * with the received input values
@@ -184,24 +207,18 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         final TaskRun task = createTaskRun()
 
-        /*
-         * initialize the inputs/outputs for this task instance
-         */
-        taskConfig.inputs.each { InParam param -> task.setInput(param) }
-        taskConfig.outputs.each { OutParam param -> task.setOutput(param) }
-
         // -- map the inputs to a map and use to delegate closure values interpolation
-        final ctx = new DelegateMap(ownerScript, taskConfig.getUndef())
+        final ctx = new DelegateMap(this)
         final firstRun = task.index == 1
         int count = 0
 
         /*
          * initialize the inputs for this task instances
          */
-        taskConfig.inputs.eachWithIndex { InParam param, int index ->
+        task.inputs.keySet().each { InParam param ->
 
             // add the value to the task instance
-            def val = values[index]
+            def val = decodeInputValue(param,values)
 
             switch(param) {
                 case EachInParam:
@@ -213,8 +230,7 @@ class ParallelTaskProcessor extends TaskProcessor {
                     def fileParam = param as FileInParam
                     def normalized = normalizeInputToFiles(val,count)
                     def resolved = expandWildcards( fileParam.filePattern, normalized )
-                    if( param.name )
-                        ctx[ param.name ] = singleItemOrList(resolved)
+                    ctx[ param.name ] = singleItemOrList(resolved)
                     count += resolved.size()
                     val = resolved
                     break
@@ -236,9 +252,7 @@ class ParallelTaskProcessor extends TaskProcessor {
                         val = sharedObjs[(SharedParam)param]
                     }
 
-                    if( fileParam.name )
-                        ctx[ fileParam.name ] = singleItemOrList(val)
-
+                    ctx[ fileParam.name ] = singleItemOrList(val)
                     break
 
                 case ValueSharedParam:
@@ -316,7 +330,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         if( !cached ) {
             log.info "[${getHashLog(hash)}] Running process > ${task.name}"
 
-            // run the task
+            // set the working directory
             task.workDirectory = createTaskFolder(folder, hash)
             log.trace "[${task.name}] actual run folder: ${task.workDirectory}"
 

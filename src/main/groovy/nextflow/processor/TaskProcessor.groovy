@@ -18,7 +18,6 @@
  */
 package nextflow.processor
 
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
@@ -44,18 +43,23 @@ import nextflow.exception.ProcessException
 import nextflow.exception.ProcessScriptException
 import nextflow.executor.AbstractExecutor
 import nextflow.script.BaseScript
+import nextflow.script.BasicMode
 import nextflow.script.FileOutParam
 import nextflow.script.FileSharedParam
-import nextflow.script.FileSpec
+import nextflow.script.InParam
 import nextflow.script.OutParam
 import nextflow.script.ScriptType
+import nextflow.script.SetInParam
+import nextflow.script.SetOutParam
 import nextflow.script.SharedParam
 import nextflow.script.StdOutParam
 import nextflow.script.ValueOutParam
 import nextflow.script.ValueSharedParam
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
+import nextflow.util.CollectionHelper
 import nextflow.util.FileHelper
+import org.apache.commons.lang.SerializationException
 import org.apache.commons.lang.SerializationUtils
 
 /**
@@ -276,7 +280,7 @@ abstract class TaskProcessor {
          */
         log.trace "TaskConfig: ${taskConfig}"
         if( taskConfig.inputs.size() == 0 ) {
-            taskConfig.noInput()
+            taskConfig.fakeInput()
         }
 
         allScalarValues = !taskConfig.inputs.channels.any { !(it instanceof DataflowVariable) }
@@ -287,7 +291,7 @@ abstract class TaskProcessor {
          */
         if ( taskConfig.outputs.size() == 0 ) {
             def dummy =  allScalarValues ? Nextflow.val() : Nextflow.channel()
-            taskConfig.stdout(dummy)
+            taskConfig.fakeOutput(dummy)
         }
 
         // create the underlying dataflow operator
@@ -402,7 +406,29 @@ abstract class TaskProcessor {
 
         def id = allCount.incrementAndGet()
         def index = indexCount.incrementAndGet()
-        new TaskRun(id: id, index: index, name: "$name ($index)", processor: this, type: type )
+        def task = new TaskRun(id: id, index: index, name: "$name ($index)", processor: this, type: type )
+
+
+        /*
+         * initialize the inputs/outputs for this task instance
+         */
+        taskConfig.inputs.each { InParam param ->
+            if( param instanceof SetInParam )
+                param.inner.each { task.setInput(it)  }
+            else
+                task.setInput(param)
+        }
+
+
+        taskConfig.outputs.each { OutParam param ->
+            if( param instanceof SetOutParam ) {
+                param.inner.each { task.setOutput(it) }
+            }
+            else
+                task.setOutput(param)
+        }
+
+        return task
     }
 
     final protected getHashLog( HashCode hash ) {
@@ -496,7 +522,7 @@ abstract class TaskProcessor {
                 log.trace "[$task.name] Contexy map file does not exist: $ctxFile -- return false"
                 return false
             }
-            ctxMap = readContextMap(ctxFile)
+            ctxMap = DelegateMap.read(this, ctxFile)
         }
 
         /*
@@ -636,17 +662,17 @@ abstract class TaskProcessor {
     final protected synchronized void sendPoisonPill() {
         log.trace "Forwarding Poison-pill for process > ${name}"
 
-        taskConfig.outputs.eachParam { name, channel ->
+        taskConfig.outputs.each { param ->
+            def channel = param.outChannel
+
             if( channel instanceof DataflowQueue ) {
-                log.trace "Sending Poison-pill over $name channel"
                 channel.bind( PoisonPill.instance )
             }
             else if( channel instanceof DataflowStreamWriteAdapter ) {
-                log.trace "Sending Poison-pill over $name channel"
                 channel.bind( PoisonPill.instance )
             }
             else {
-                log.trace "Poison pill is not sent over $name channel"
+                log.trace "Poison pill is not sent over $param channel"
             }
 
         }
@@ -671,13 +697,14 @@ abstract class TaskProcessor {
     private String formatErrorCause( Throwable error ) {
 
         def result = new StringBuilder()
-        result << '\nCause:\n'
+        result << '\nCaused by:\n'
 
-        def message = error.cause?.getMessage() ?: ( error.getMessage() ?: error.toString() )
+        def message = error.cause?.toString() ?: ( error.getMessage() ?: error.toString() )
         result.append('  ').append(message).append('\n')
 
         result.toString()
     }
+
 
 
     /**
@@ -686,34 +713,55 @@ abstract class TaskProcessor {
      */
     synchronized protected void bindOutputs( TaskRun task ) {
 
-        // -- bind each produced file to its own channel
-        task.outputs.eachWithIndex { OutParam param, value, index ->
+        // -- creates the map of all tuple values to bind
+        Map<Short,List> tuples = [:]
+        taskConfig.getOutputs().each { OutParam p -> tuples.put(p.index,[]) }
+
+        // -- collects the values to bind
+        task.outputs.each { OutParam param, value ->
 
             switch( param ) {
             case StdOutParam:
-                log.trace "Process $name > Binding '$value' to stdout"
-                processor.bindOutput(index, value instanceof Path ? value.text : value?.toString())
-                break
+                log.debug "Process $name > normalize stdout param: $param"
+                value = value instanceof Path ? value.text : value?.toString()
 
             case FileOutParam:
-                log.trace "Process $name > Binding file: '$value' to '${param.name}'"
-                if( value instanceof Collection && (param as FileOutParam).flat ) {
-                    value.each { processor.bindOutput(index, it) }
-                }
-                else {
-                    processor.bindOutput(index, value)
-                }
-                break;
-
             case ValueOutParam:
-                log.trace "Process $name > Binding value: '$value' to '${param.name}'"
-                processor.bindOutput(index, value)
+                log.debug "Process $name > collecting out param: ${param} = $value"
+                tuples[param.index].add( value )
                 break
 
             default:
-                throw new IllegalArgumentException("Illegal output parameter type: ${param.class.simpleName}")
+                throw new IllegalArgumentException("Illegal output parameter type: $param")
             }
         }
+
+        // -- bind out the collected values
+        def maps = taskConfig.getOutputs().each { param ->
+            def list = tuples[param.index]
+            if( list == null ) throw new IllegalStateException()
+
+            if( param.mode == BasicMode.standard ) {
+                log.debug "Process $name > Binding out param: ${param} = ${list}"
+                bindOutParam(param, list)
+            }
+
+            else if( param.mode == BasicMode.flatten ) {
+                log.debug "Process $name > Flatting out param: ${param} = ${list}"
+
+                CollectionHelper.flatten( list ) {
+                    bindOutParam( param, it )
+                }
+
+            }
+
+            else if( param.mode == SetOutParam.CombineMode.combine ) {
+                log.debug "Process $name > Combining out param: ${param} = ${}"
+                def combs = list.combinations()
+                combs.each { bindOutParam(param, it) }
+            }
+        }
+
 
         // -- finally prints out the task output when 'echo' is true
         if( taskConfig.echo ) {
@@ -721,7 +769,12 @@ abstract class TaskProcessor {
         }
     }
 
-    final protected void collectOutputs( TaskRun task ) {
+    protected void bindOutParam( OutParam param, def values ) {
+        def x = values.size() == 1 ? values[0] : values
+        processor.bindOutput( param.index, x )
+    }
+
+    protected void collectOutputs( TaskRun task ) {
         collectOutputs( task, task.workDirectory, task.@stdout, task.code?.delegate )
     }
 
@@ -840,7 +893,7 @@ abstract class TaskProcessor {
         // look into the task inputs value for an *ValueInParam* entry
         // having the same *name* as the requested output name
         if( !ctx.containsKey(param.name) ) {
-            throw new MissingValueException("Illegal output val parameter: ${param.name}")
+            throw new MissingValueException("Missing value declared as output paramter: ${param.name}")
         }
 
         // bind the value
@@ -920,10 +973,9 @@ abstract class TaskProcessor {
      * @param altName The name to be used when a temporary file is created.
      * @return The {@code Path} that will be staged in the task working folder
      */
-    protected FileHolder normalizeInputToFile( Object input, String altName, FileSpec fileSpec = null ) {
+    protected FileHolder normalizeInputToFile( Object input, String altName ) {
 
         if( input instanceof Path ) {
-            checkSpec(input,fileSpec)
             return new FileHolder(input)
         }
 
@@ -933,21 +985,21 @@ abstract class TaskProcessor {
         return new FileHolder(source, result)
     }
 
-    protected void checkSpec(Path path, FileSpec fileSpec) {
+//    protected void checkSpec(Path path, FileSpec fileSpec) {
+//
+//        if( !path.exists() && fileSpec?.create ) {
+//            if( fileSpec.file )
+//                Files.createFile(path)
+//            else
+//                Files.createDirectory(path)
+//        }
+//
+//    }
 
-        if( !path.exists() && fileSpec?.create ) {
-            if( fileSpec.file )
-                Files.createFile(path)
-            else
-                Files.createDirectory(path)
-        }
-
-    }
-
-    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, FileSpec fileSpec = null ) {
+    protected List<FileHolder> normalizeInputToFiles( Object obj, int count ) {
 
         def files = (obj instanceof Collection ? obj : [obj]).collect {
-            normalizeInputToFile(it, "input.${++count}", fileSpec)
+            normalizeInputToFile(it, "input.${++count}")
         }
 
         return files
@@ -1080,66 +1132,18 @@ abstract class TaskProcessor {
      * @return {@code TaskDef}
      */
     final protected void submitTask( TaskRun task ) {
+
+        if( task.code?.delegate instanceof Map ) {
+            if( task.code.delegate.containsKey('workDir') ) {
+                log.warn "Process $name overrides value of reserved variable 'workDir' "
+            }
+            task.code.delegate['workDir'] = task.workDirectory
+        }
+
         // add the task to the collection of running tasks
         session.dispatcher.submit(task, blocking)
     }
 
-
-    /**
-     * Map used to delegate variable resolution to script scope
-     */
-    @Slf4j
-    static class DelegateMap implements Map {
-
-        @Delegate
-        private Map<String,Object> holder
-
-        private BaseScript script
-
-        private boolean undef
-
-        DelegateMap(BaseScript script, boolean undef = false) {
-            this.script = script
-            this.holder = [:]
-            this.undef = undef
-        }
-
-        DelegateMap(BaseScript script, Map holder, boolean undef) {
-            assert holder != null
-            this.script = script
-            this.holder = holder
-            this.undef = undef
-        }
-
-        @Override
-        public Object get(Object property) {
-
-            def result = null
-            if( holder.containsKey(property) ) {
-                return holder.get(property)
-            }
-            // todo -- verify if it could better using "script.getBinding().getVariable()"
-            else if ( script && script.hasProperty(property)) {
-                return script.getProperty(property?.toString())
-            }
-
-            if( undef )
-                // so give a chance to the bash interpreted to evaluate it
-                return '$' + property
-            else
-                throw new MissingPropertyException("Unknown variable '$property' -- Make sure you didn't misspell it or define somewhere in the script before use it")
-
-        }
-
-        @Override
-        public put(String property, Object newValue) {
-            holder.put(property, newValue)
-        }
-
-        public Map getHolder() {
-            holder
-        }
-    }
 
 
     /**
@@ -1171,9 +1175,8 @@ abstract class TaskProcessor {
 
             // save the context map for caching purpose
             // only the 'cache' is active and
-            def cacheable = session.cacheable && task.processor.taskConfig.cacheable
-            if( cacheable && task.getOutputsByType(ValueOutParam).size() ) {
-                saveContextMap( (DelegateMap) task.code.delegate, task.getCmdContextFile() )
+            if( cacheable && task.getOutputsByType(ValueOutParam).size() && task.code.delegate != null ) {
+                ((DelegateMap) task.code.delegate).save(task.getCmdContextFile())
             }
 
         }
@@ -1183,6 +1186,13 @@ abstract class TaskProcessor {
         finally {
             finalizeTask0(task)
         }
+    }
+
+    /**
+     * Whenever the process can be cached
+     */
+    protected boolean isCacheable() {
+        session.cacheable && taskConfig.cacheable
     }
 
     /**
@@ -1228,15 +1238,6 @@ abstract class TaskProcessor {
     }
 
 
-    protected void saveContextMap( DelegateMap map, Path contextFile ) {
-        contextFile.bytes = SerializationUtils.serialize( map.getHolder() )
-    }
-
-    protected DelegateMap readContextMap( Path contextFile ) {
-        def map = (Map)SerializationUtils.deserialize( contextFile.bytes )
-        def undef = taskConfig?.getUndef() ?: false
-        new DelegateMap(ownerScript, map, undef)
-    }
 
 }
 

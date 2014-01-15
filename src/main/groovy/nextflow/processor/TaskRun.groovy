@@ -18,7 +18,6 @@
  */
 
 package nextflow.processor
-
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.locks.ReentrantLock
@@ -32,7 +31,6 @@ import nextflow.script.InParam
 import nextflow.script.OutParam
 import nextflow.script.ScriptType
 import nextflow.script.StdInParam
-
 /**
  * Models a task instance
  *

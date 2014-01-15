@@ -197,6 +197,19 @@ class DataflowExtensionsTest extends Specification {
         result.val == Channel.STOP
     }
 
+
+    def testMapManyWithTuples () {
+
+        when:
+        def result = Channel.from( [1,2], ['a','b'] ).mapMany { it -> [it, it.reverse()] }
+        then:
+        result.val == [1,2]
+        result.val == [2,1]
+        result.val == ['a','b']
+        result.val == ['b','a']
+        result.val == Channel.STOP
+    }
+
     def testMapManyWithHashArray () {
 
         when:

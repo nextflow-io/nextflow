@@ -197,35 +197,40 @@ class DataflowExtensions {
     static public final <V> DataflowReadChannel<V> mapMany(final DataflowReadChannel<?> source, final Closure<V> closure) {
         assert source != null
 
-        def listeners = []
         DataflowQueue target = new DataflowQueue()
 
-        if( source instanceof DataflowExpression ) {
-            listeners << new DataflowEventAdapter() {
-                @Override
-                public void afterRun(final DataflowProcessor processor, final List<Object> messages) {
+        def listener = new DataflowEventAdapter() {
+            @Override
+            public void afterRun(final DataflowProcessor processor, final List<Object> messages) {
+                if( source instanceof DataflowExpression ) {
                     processor.bindOutput( Channel.STOP )
                     processor.terminate()
                 }
             }
+
+            @Override
+            public boolean onException(final DataflowProcessor processor, final Throwable e) {
+                DataflowExtensions.log.error "Error executing 'mapMany' operator", e
+                return true;
+            }
         }
 
 
-        Dataflow.operator(inputs: [source], outputs: [target], listeners: listeners) {  item ->
+        Dataflow.operator(inputs: [source], outputs: [target], listeners: [listener]) {  item ->
 
             item = closure ? closure.call(item) : item
 
             switch( item ) {
                 case Iterable:
-                    item.each { value -> bindOutput(value) }
+                    item.each { it -> bindOutput(it) }
                     break
 
                 case (Object[]):
-                    item.each { value -> bindOutput(value) }
+                    item.each { it -> bindOutput(it) }
                     break
 
                 case Map:
-                    item.each { entry -> bindOutput(entry) }
+                    item.each { it -> bindOutput(it) }
                     break
 
                 case Map.Entry:
@@ -243,8 +248,6 @@ class DataflowExtensions {
 
         return target
     }
-
-    static private UNDEF = new Object()
 
     /**
      *

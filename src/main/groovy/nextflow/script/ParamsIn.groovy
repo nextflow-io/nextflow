@@ -4,11 +4,9 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowReadChannel
-import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Nextflow
-
+import nextflow.processor.TaskConfig
 /**
  * Base class for input/output parameters
  *
@@ -17,18 +15,50 @@ import nextflow.Nextflow
 @Slf4j
 abstract class BaseParam {
 
-    final protected Script script
+    final protected Binding binding
+
+    final protected List<BaseParam> holder
+
+    final short index
+
+    final short mapIndex
 
     private boolean initialized
 
-    protected BaseParam ( Script script ) {
-        this.script = script
+    BaseParam ( Binding binding, List holder, int ownerIndex = -1 ) {
+        this.binding = binding
+        this.holder = holder
+
+        /*
+         * by default the index is got from 'holder' current size
+         * and the mapIndex is =1 (not defined)
+         */
+        if( ownerIndex == -1 ) {
+            index = holder.size()
+            mapIndex = -1
+        }
+
+        /*
+         * when the owner index is provided (not -1) it is used as
+         * the main index and the map index is got from the 'holder' size
+         */
+        else {
+            index = ownerIndex
+            mapIndex = holder.size()
+        }
+
+        // add the the param to the holder list
+        holder.add(this)
+    }
+
+    String toString() {
+        "${this.class.simpleName}[${index}]"
     }
 
     /**
      * Lazy initializer
      */
-    abstract BaseParam lazyInit()
+    protected abstract void lazyInit()
 
     /**
      * Initialize the parameter fields if needed
@@ -36,8 +66,11 @@ abstract class BaseParam {
     final protected void init() {
         if( initialized ) return
         lazyInit()
+
+        // flag as initialized
         initialized = true
     }
+
 
     /**
      * Get the value of variable {@code name} in the script context
@@ -46,9 +79,9 @@ abstract class BaseParam {
      * @param strict If {@code true} raises a {@code MissingPropertyException} when the specified variable does not exist
      * @return The variable object
      */
-    protected getScriptVar(String name, boolean strict = false) {
-        if( script.getBinding().hasVariable(name) ) {
-            return script.getBinding().getVariable(name)
+    protected getScriptVar(String name, boolean strict ) {
+        if( binding.hasVariable(name) ) {
+            return binding.getVariable(name)
         }
 
         if( strict )
@@ -57,7 +90,12 @@ abstract class BaseParam {
         return null
     }
 
-    final protected DataflowReadChannel inputValToChannel( def value ) {
+    protected getScriptVar( String name ) {
+        getScriptVar(name,true)
+    }
+
+
+    protected DataflowReadChannel inputValToChannel( def value ) {
 
         if ( value instanceof DataflowBroadcast )  {
             return value.createReadChannel()
@@ -99,8 +137,6 @@ abstract class BaseParam {
             // the channel is specified by name
             def local = channel
 
-            def binding = script.getBinding()
-
             // look for that name in the 'script' context
             channel = binding.hasVariable(local) ? binding.getVariable(local) : null
             if( channel instanceof DataflowWriteChannel ) {
@@ -118,7 +154,7 @@ abstract class BaseParam {
                 channel = factory.newInstance()
 
                 // bind it to the script on-fly
-                if( local != '-' && script) {
+                if( local != '-' && binding) {
                     // bind the outputs to the script scope
                     binding.setVariable(local, channel)
                 }
@@ -132,19 +168,6 @@ abstract class BaseParam {
         throw new IllegalArgumentException("Invalid output channel reference")
     }
 
-    final DataflowReadChannel sharedValToChannel( def value ) {
-
-        if( value instanceof DataflowExpression ) {
-            return value
-        }
-        else if( value instanceof DataflowReadChannel ) {
-            throw new IllegalArgumentException()
-        }
-
-        def result = new DataflowVariable()
-        result.bind(value)
-        result
-    }
 
 }
 
@@ -157,7 +180,13 @@ interface InParam {
 
     DataflowReadChannel getInChannel()
 
-    InParam _as( Object value )
+    InParam from( Object value )
+
+    InParam from( Object... values )
+
+    short index
+
+    short mapIndex
 
 }
 
@@ -168,18 +197,11 @@ interface InParam {
  */
 
 @Slf4j
-@ToString(includePackage=false, includeNames = true)
 abstract class BaseInParam extends BaseParam implements InParam {
 
-    /**
-     * The name used to bind this parameter in the process execution context (Map)
-     */
-    protected String name
+    protected fromObject
 
-    /**
-     * the target object which hold the value of the parameter to bind in the process execution context
-     */
-    protected Object inTarget
+    protected bindObject
 
     /**
      * The channel to which the input value is bound
@@ -194,34 +216,18 @@ abstract class BaseInParam extends BaseParam implements InParam {
         return inChannel
     }
 
+    BaseInParam( TaskConfig config ) {
+        this(config.getOwnerScript().getBinding(), config.getInputs())
+    }
+
     /**
      * @param script The global script object
      * @param obj
      */
-    protected BaseInParam( Script script, Object obj ) {
-        super(script)
-        create(obj)
+    BaseInParam( Binding binding, List holder, short ownerIndex = -1 ) {
+        super(binding,holder,ownerIndex)
     }
 
-    /**
-     * Template constructor, subclasses may override it
-     *
-     * @param obj The given parameter object
-     */
-    protected void create(Object obj) {
-
-        if( obj instanceof ScriptVar ) {
-            // when the value is a variable reference
-            // - use that name for the parameter itself
-            // - get the variable value in the script binding
-            name = obj.name
-            inTarget = getScriptVar(obj.name, true)  // <-- true: raise an MissingPropertyException when it does not exist
-        }
-        else {
-            inTarget = obj
-        }
-
-    }
 
     /**
      * Lazy parameter initializer.
@@ -229,87 +235,143 @@ abstract class BaseInParam extends BaseParam implements InParam {
      * @return The parameter object itself
      */
     @Override
-    BaseInParam lazyInit() {
+    protected void lazyInit() {
+
+        if( fromObject == null && bindObject == null ) {
+            throw new IllegalStateException("Missing 'bind' declaration in input parameter")
+        }
+
+        // fallback on the bind object if the 'fromObject' is not defined
+        if( fromObject == null ) {
+            fromObject = bindObject
+        }
 
         // initialize the *inChannel* object based on the 'target' attribute
         def result
-        if( inTarget instanceof Closure ) {
-            result = inTarget.call()
+        if( fromObject instanceof ScriptVar ) {
+            // when the value is a variable reference
+            // - use that name for the parameter itself
+            // - get the variable value in the script binding
+            result = getScriptVar(fromObject.name)
+        }
+        else if( fromObject instanceof Closure ) {
+            result = fromObject.call()
         }
         else {
-            result = inTarget
+            result = fromObject
         }
 
         inChannel = inputValToChannel(result)
-        return this
-    }
-
-    /**
-     * Implements the {@code as} keyword for the shared param declaration
-     * NOTE: since {@code as} is a keyword for the groovy programming language
-     * the method as to be named {@code _as}.
-     *
-     * A special pre-process will replace the "as" from the user script to the "_as"
-     *
-     * @see nextflow.ast.SourceModifierParserPlugin
-     *
-     * @param value
-     * @return
-     */
-    InParam _as( Object value ) {
-        if( value instanceof ScriptVar )
-            name = value.name
-        else
-            name = value?.toString()
-        return this
     }
 
     /**
      * @return The parameter name
      */
-    def String getName() { name }
+    def String getName() {
+        if( bindObject instanceof ScriptVar ) {
+            return bindObject.name
+        }
+
+        if( bindObject instanceof String ) {
+            return bindObject
+        }
+
+        throw new IllegalArgumentException()
+    }
+
+    BaseInParam bind( def obj ) {
+        this.bindObject = obj
+        return this
+    }
+
+    BaseInParam from( def obj ) {
+        fromObject = obj
+        return this
+    }
+
+    BaseInParam from( Object... obj ) {
+
+        def normalize = obj.collect {
+            if( it instanceof DataflowReadChannel )
+                throw new IllegalArgumentException("Multiple channels are not allowed on 'from' input declaration")
+
+            if( it instanceof Closure )
+                return it.call()
+            else
+                it
+        }
+
+        fromObject = normalize as List
+        return this
+    }
+
+
 
 }
 
 /**
  *  Represents a process *file* input parameter
  */
-@Mixin(FileSpec)
 @InheritConstructors
-@ToString(includePackage=false, includeSuper = true)
 class FileInParam extends BaseInParam  {
 
-    FileInParam _as( value ) {
+    String filePattern
 
-        switch( value ) {
-            case ScriptVar:
-                name = value.name
-                break
-
-            case String:
-                filePattern(value as String)
-                break
-
-            default:
-                new IllegalArgumentException()
+    /**
+     * Define the file name
+     */
+    FileInParam name( name ) {
+        if( name instanceof String ) {
+            filePattern = name
+            return this
         }
 
-        return this
+        throw new IllegalArgumentException()
     }
+
+    String getName() {
+
+        if( bindObject instanceof Map ) {
+            def entry = bindObject.entrySet().first()
+            return entry?.key
+        }
+
+        return super.getName()
+
+    }
+
+    String getFilePattern() {
+
+        if( filePattern )
+            return filePattern
+
+        if( bindObject instanceof String )
+            return filePattern = bindObject
+
+        if( bindObject instanceof Map ) {
+            def entry = bindObject.entrySet().first()
+            return filePattern = entry?.value
+        }
+
+        return filePattern = '*'
+    }
+
+
 }
 
 /**
  *  Represents a process *environment* input parameter
  */
 @InheritConstructors
-@ToString(includePackage=false, includeSuper = true)
-class EnvInParam extends BaseInParam { }
+class EnvInParam extends BaseInParam {
+
+
+}
 
 /**
  *  Represents a process *value* input parameter
  */
 @InheritConstructors
-@ToString(includePackage=false, includeSuper = true)
 class ValueInParam extends BaseInParam { }
 
 /**
@@ -319,14 +381,7 @@ class ValueInParam extends BaseInParam { }
 @ToString(includePackage=false, includeSuper = true)
 class StdInParam extends BaseInParam {
 
-    protected void create( Object obj ) {
-        super.create(obj)
-        name = '-'
-    }
-
-    def StdInParam _as( Object obj ) {
-        throw new IllegalAccessException("keyword 'as' not supported for 'stdin' definition")
-    }
+    String getName() { '-' }
 
 }
 
@@ -334,24 +389,73 @@ class StdInParam extends BaseInParam {
  *  Represents a process input *iterator* parameter
  */
 @InheritConstructors
-@ToString(includePackage=false, includeSuper = true)
 class EachInParam extends BaseInParam {
 
-    protected void create(Object obj) {
-        super.create(obj)
+    @Override
+    protected DataflowReadChannel inputValToChannel( value ) {
         // everything is mapped to a collection
         // the collection is wrapped to a "scalar" dataflow variable
-        def list = Nextflow.list(inTarget)
-        inTarget = Nextflow.val(list)
+        def list = Nextflow.list(value)
+        value = Nextflow.val(list)
+
+        super.inputValToChannel(value)
     }
 
+
 }
+
+@InheritConstructors
+class SetInParam extends BaseInParam {
+
+    final List<InParam> inner = []
+
+    SetInParam bind( Object... obj ) {
+
+        obj.each { item ->
+
+            if( item instanceof ScriptVar )
+                newItem(ValueInParam).bind(item)
+
+            else if( item instanceof ScriptFileWrap )
+                newItem(FileInParam).bind( [(item.name):item.filePattern] )
+
+            else if( item instanceof Map )
+                newItem(FileInParam).bind(item)
+
+            else if( item == '-' )
+                newItem(StdInParam)
+
+            else if( item instanceof String )
+                newItem(FileInParam).bind(item)
+
+            else if( item instanceof ScriptEnvWrap )
+                newItem(EnvInParam).bind(item.name)
+
+            else if( item instanceof ScriptStdinWrap )
+                newItem(StdInParam)
+
+            else
+                throw new IllegalArgumentException()
+        }
+
+        return this
+
+    }
+
+    private <T extends BaseInParam> T newItem( Class<T> type )  {
+        type.newInstance(binding, inner, index)
+    }
+
+
+}
+
 
 
 
 /**
  * Container to hold all process outputs
  */
+@Slf4j
 class InputsList implements List<InParam> {
 
     @Delegate

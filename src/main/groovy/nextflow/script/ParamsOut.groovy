@@ -19,11 +19,10 @@
 
 package nextflow.script
 import groovy.transform.InheritConstructors
-import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
-
+import nextflow.processor.TaskConfig
 /**
  * Model a process generic input parameter
  *
@@ -31,6 +30,8 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
  */
 
 interface OutParam {
+
+    interface Mode {  }
 
     /**
      * @return The parameter name getter
@@ -46,45 +47,89 @@ interface OutParam {
      *      as the output channel
      * @return
      */
-    OutParam to( def value )
+    OutParam into( def value )
 
     /**
      * @return The output channel instance
      */
     DataflowWriteChannel getOutChannel()
 
+    short getIndex()
+
+    Mode getMode()
+}
+
+enum BasicMode implements OutParam.Mode {
+
+    standard, flatten;
+
+    static OutParam.Mode parseValue( def x ) {
+
+        if( x instanceof OutParam.Mode ) {
+            return x
+        }
+
+        def value = x instanceof ScriptVar ? x.name : ( x instanceof String ? x : null )
+        if( value ) {
+            return BasicMode.valueOf(value)
+        }
+
+        throw new IllegalArgumentException("Not a valid output 'mode' value: $value")
+
+    }
 }
 
 @Slf4j
-@ToString(includePackage=false, includeNames = true)
 abstract class BaseOutParam extends BaseParam implements OutParam {
 
     /** The out parameter name */
     protected String name
 
-    protected Object outTarget
+    protected intoObject
 
     private outChannel
+
+    protected OutParam.Mode mode = BasicMode.standard
 
     /** Whenever the channel has to closed on task termination */
     protected Boolean autoClose = Boolean.TRUE
 
-    BaseOutParam( Script script, Object obj ) {
-        super(script)
+    BaseOutParam( Binding binding, List list, short ownerIndex = -1) {
+        super(binding,list,ownerIndex)
+    }
+
+    BaseOutParam( TaskConfig config ) {
+        super(config.getOwnerScript().getBinding(), config.getOutputs())
+    }
+
+
+    void lazyInit() {
+        def target
+        if( intoObject instanceof ScriptVar )
+            target = intoObject.name
+
+        else if( intoObject != null )
+            target = intoObject
+
+        else
+            target = name
+
+        // define the output channel
+        outChannel = outputValToChannel(target, DataflowQueue)
+    }
+
+    @groovy.transform.PackageScope
+    BaseOutParam bind( def obj ) {
         if( obj instanceof ScriptVar )
             this.name = obj.name
         else
             this.name = ( obj?.toString() ?: null )
-    }
 
-    BaseOutParam lazyInit() {
-        def value = outTarget ?: name
-        outChannel = outputValToChannel(value, DataflowQueue)
         return this
     }
 
-    BaseOutParam to( def value ) {
-        this.outTarget = value instanceof ScriptVar ? value.name : value
+    BaseOutParam into( def value ) {
+        intoObject = value
         return this
     }
 
@@ -93,14 +138,14 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         return outChannel
     }
 
-    OutParam autoClose( boolean value ) {
-        this.autoClose = value
+    def String getName() { name }
+
+    def BaseOutParam mode( def mode ) {
+        this.mode = BasicMode.parseValue(mode)
         return this
     }
 
-    def String getName() { name }
-
-    def Boolean getAutoClose() { autoClose }
+    OutParam.Mode getMode() { mode }
 
 }
 
@@ -109,14 +154,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
  * Model a process *file* output parameter
  */
 @InheritConstructors
-@ToString(includePackage=false, includeSuper = true, includeNames = true)
 class FileOutParam extends BaseOutParam implements OutParam {
-
-    /**
-     * Whenever multiple files matching the same name pattern have to be output as grouped collection
-     * or bound as single entries
-     */
-    protected boolean flat = false
 
     /**
      * The character used to separate multiple names (pattern) in the output specification
@@ -136,18 +174,11 @@ class FileOutParam extends BaseOutParam implements OutParam {
      */
     protected boolean includeInputs
 
-    boolean getFlat() { flat }
-
     String getSeparatorChar() { separatorChar }
 
     boolean getIncludeHidden() { includeHidden }
 
     boolean getIncludeInputs() { includeInputs }
-
-    FileOutParam flat( boolean value ) {
-        this.flat = value
-        return this
-    }
 
     FileOutParam separatorChar( String value ) {
         this.separatorChar = value
@@ -170,20 +201,69 @@ class FileOutParam extends BaseOutParam implements OutParam {
  * Model a process *value* output parameter
  */
 @InheritConstructors
-@ToString(includePackage=false, includeSuper = true, includeNames = true)
 class ValueOutParam extends BaseOutParam { }
 
 /**
  * Model the process *stdout* parameter
  */
-@ToString(includePackage=false, includeSuper = true, includeNames = true)
-class StdOutParam extends BaseOutParam {
+@InheritConstructors
+class StdOutParam extends BaseOutParam { }
 
-    StdOutParam(Script script) {
-        super(script,'-')
+
+@InheritConstructors
+class SetOutParam extends BaseOutParam {
+
+    enum CombineMode implements OutParam.Mode { combine }
+
+    final List<BaseOutParam> inner = []
+
+    String getName() { toString() }
+
+    SetOutParam bind( Object... obj ) {
+
+        obj.each { item ->
+            if( item instanceof ScriptVar )
+                create(ValueOutParam).bind(item)
+
+            else if( item instanceof ScriptStdoutWrap || item == '-'  )
+                create(StdOutParam).bind('-')
+
+            else if( item instanceof String )
+                create(FileOutParam).bind(item)
+
+            else
+                throw new IllegalArgumentException("Invalid map output parameter declaration -- item: ${item}")
+        }
+
+        return this
+    }
+
+    def void lazyInit() {
+        if( intoObject == null )
+            throw new IllegalStateException("Missing 'into' channel in output parameter declaration")
+
+        super.lazyInit()
+    }
+
+    protected <T extends BaseOutParam> T create(Class<T> type) {
+        type.newInstance(binding,inner,index)
+    }
+
+    def SetOutParam mode( def value ) {
+
+        def str = value instanceof String ? value : ( value instanceof ScriptVar ? value.name : null )
+        if( str ) {
+            try {
+                this.mode = CombineMode.valueOf(str)
+            }
+            catch( Exception e ) {
+                super.mode(value)
+            }
+        }
+
+        return this
     }
 }
-
 
 /**
  * Container to hold all process outputs
@@ -199,10 +279,8 @@ class OutputsList implements List<OutParam> {
 
     List<String> getNames() { target *. name }
 
-    def <T extends OutParam> List<T> ofType( Class<T> clazz ) { (List<T>) target.findAll { it.class == clazz } }
-
-    void eachParam (Closure closure) {
-        target.each { OutParam param -> closure.call(param.name, param.getOutChannel()) }
+    def <T extends OutParam> List<T> ofType( Class<T>... classes ) {
+        (List<T>) target.findAll { it.class in classes }
     }
 
 }

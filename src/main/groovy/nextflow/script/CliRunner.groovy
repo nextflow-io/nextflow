@@ -18,7 +18,6 @@
  */
 
 package nextflow.script
-
 import java.lang.reflect.Field
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
@@ -34,8 +33,7 @@ import nextflow.Const
 import nextflow.ExitCode
 import nextflow.Nextflow
 import nextflow.Session
-import nextflow.ast.ProcessDefTransform
-import nextflow.ast.SourcePreProcessor
+import nextflow.ast.NextflowDSL
 import nextflow.exception.InvalidArgumentException
 import nextflow.exception.MissingLibraryException
 import nextflow.util.FileHelper
@@ -342,10 +340,9 @@ class CliRunner {
         importCustomizer.addStaticImport( groovyx.gpars.dataflow.Dataflow.name, 'selector' )
 
         def config = new CompilerConfiguration()
-        config.setPluginFactory(new SourcePreProcessor())
         config.addCompilationCustomizers( importCustomizer )
         config.scriptBaseClass = BaseScript.class.name
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(ProcessDefTransform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         // extend the class-loader if required
         def gcl = new GroovyClassLoader()

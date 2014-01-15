@@ -68,9 +68,9 @@ class CliRunnerTest extends Specification {
             '''
             process simpleTask  {
                 input:
-                val 1 as x
+                val x from 1
                 output:
-                stdout result
+                stdout into result
 
                 """echo $x"""
             }
@@ -93,7 +93,7 @@ class CliRunnerTest extends Specification {
             process otherTask  {
                 instanceType 'beta'
                 input:
-                val 1 as x
+                val x from 1
                 output:
                 stdout result
 
@@ -119,8 +119,8 @@ class CliRunnerTest extends Specification {
             '''
             process task2  {
                 input:
-                val 1 as x
-                val ([3]) as y
+                val x from 1
+                val y from ([3])
                 output:
                 stdout result
 
@@ -150,7 +150,7 @@ class CliRunnerTest extends Specification {
             '''
             process test  {
                 input:
-                val 1 as x
+                val x from 1
                 output:
                 stdout result
 

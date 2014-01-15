@@ -21,7 +21,10 @@ package nextflow.ast
 
 import groovy.transform.InheritConstructors
 import org.codehaus.groovy.antlr.GroovySourceToken
+import spock.lang.Ignore
 import spock.lang.Specification
+import test.TestParser
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -38,7 +41,11 @@ class GroovyLexerTest extends Specification{
         }
     }
 
+    def disable() {
 
+    }
+
+    @Ignore
     def testLexer() {
 
         setup:
@@ -59,6 +66,7 @@ class GroovyLexerTest extends Specification{
 
     }
 
+    @Ignore
     def testLexerWithTwoProcess() {
 
         setup:
@@ -90,6 +98,7 @@ class GroovyLexerTest extends Specification{
     }
 
 
+    @Ignore
     def testLexerWithinIf() {
 
         setup:
@@ -124,7 +133,7 @@ class GroovyLexerTest extends Specification{
 
     }
 
-
+    @Ignore
     def testNoReplace() {
 
         setup:
@@ -165,8 +174,8 @@ class GroovyLexerTest extends Specification{
 
 
         /*
- * the 'as' in this input refers to the type
- */
+         * the 'as' in this input refers to the type
+         */
         when:
         parser = new TestParser(lexerFactory: { lexer=new Lexer(it) })
         script = '''
@@ -186,11 +195,6 @@ class GroovyLexerTest extends Specification{
 
     }
 
-
-    def testMixed() {
-
-
-    }
 
 
 

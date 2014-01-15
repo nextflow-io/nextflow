@@ -14,11 +14,11 @@ class AbstractExecutorTest extends Specification {
 
     def testStagingFilesScript() {
         setup:
-        def owner = Mock(Script)
+        def binding = new Binding()
         def executor = [:] as AbstractExecutor
 
-        def param1 = new FileInParam(owner, 'file.txt')
-        def param2 = new FileInParam(owner, 'seq_*.fa')
+        def param1 = new FileInParam(binding, []).bind('file.txt') as FileInParam
+        def param2 = new FileInParam(binding, []).bind('seq_*.fa') as FileInParam
         Map<FileInParam,List<FileHolder>> files = [:]
         files[param1] = [FileHolder.get('/home/data/sequences', 'file.txt')]
         files[param2] = [FileHolder.get('/home/data/file1','seq_1.fa'), FileHolder.get('/home/data/file2','seq_2.fa'), FileHolder.get('/home/data/file3','seq_3.fa') ]

@@ -12,7 +12,6 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
 import nextflow.script.InParam
-import nextflow.script.OutParam
 import nextflow.script.StdInParam
 import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
@@ -51,7 +50,10 @@ class MergeTaskProcessor extends TaskProcessor {
     private def mergeScript = new StringBuilder()
 
     /* Collect all the input values used by executing this task */
-    private Map<InParam,List> inputsCollector = [:]
+    private Map<InParam,List<FileHolder>> filesCollector = [:]
+
+    /* The reference to the last used context map */
+    private volatile Map contextMap
 
     /*
      * The merge task is composed by two operator, the first creates a single 'script' to be executed by second one
@@ -66,7 +68,7 @@ class MergeTaskProcessor extends TaskProcessor {
 
         // initialize the output values collector
         taskConfig.inputs.each { InParam param ->
-            inputsCollector[param] = []
+            filesCollector[param] = []
         }
 
 
@@ -80,15 +82,13 @@ class MergeTaskProcessor extends TaskProcessor {
         processor.start()
     }
 
+    protected void collectOutputs( TaskRun task ) {
+        collectOutputs( task, task.workDirectory, task.@stdout, contextMap )
+    }
+
     protected void mergeTaskRun(TaskRun task) {
 
         task.stagedProvider = this.&stagedProvider
-
-        /*
-         * initialize the *only* outputs for this task instance
-         * (inputs have been managed during the scripts collection stage)
-         */
-        taskConfig.outputs.each { OutParam param -> task.setOutput(param) }
 
         // -- create the unique hash number for this tasks,
         //    collecting the id of all the executed runs
@@ -125,10 +125,12 @@ class MergeTaskProcessor extends TaskProcessor {
         final currentIndex = mergeIndex.incrementAndGet()
         log.info "Collecting process > ${name} ($currentIndex)"
 
+        // -- the script evaluation context map
+        contextMap = new DelegateMap(this)
+
         // -- map the inputs to a map and use to delegate closure values interpolation
         def keys = []
         def stdin = null
-        def contextMap = new DelegateMap(ownerScript, taskConfig.getUndef())
         Map<FileInParam,List<FileHolder>> filesMap = [:]
         Map<String,String> environment = [:]
         int count = 0
@@ -156,9 +158,9 @@ class MergeTaskProcessor extends TaskProcessor {
                     filesMap[fileParam] = resolved
                     count += resolved.size()
                     // set the context
-                    if( param.name )
-                        contextMap[param.name] = singleItemOrList( resolved )
-
+                    contextMap[param.name] = singleItemOrList( resolved )
+                    // store all the inputs
+                    filesCollector.get(param).add(resolved)
                     // set to *val* so that the list is added to the map of all inputs
                     val = resolved
                     break
@@ -172,8 +174,6 @@ class MergeTaskProcessor extends TaskProcessor {
                     log.debug "Process $name > unknown input param type: ${param?.class?.simpleName}"
             }
 
-            // store all the inputs
-            inputsCollector.get(param).add( val )
 
             // add all the input name-value pairs to the key generator
             keys << param.name << val
@@ -190,7 +190,6 @@ class MergeTaskProcessor extends TaskProcessor {
         def script = getScriptlet(scriptClosure)
         def commandToRun = normalizeScript(script)
         def interpreter = fetchInterpreter(commandToRun)
-
 
         /*
          * create a unique hash-code for this task run and save it into a list
@@ -244,9 +243,7 @@ class MergeTaskProcessor extends TaskProcessor {
 
     }
 
-    protected Map<InParam,List<FileHolder>> stagedProvider() {
-        (Map<InParam,List<FileHolder>>) inputsCollector.findAll { it.key instanceof FileInParam }
-    }
+    protected Map<InParam,List<FileHolder>> stagedProvider() { filesCollector }
 
 
     /**
