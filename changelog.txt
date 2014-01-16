@@ -1,9 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.6.0 - xxx
+0.6.0 - 16 Jan 2014
 - New channel factory methods
-- Added new "reactive" operators to channel objects
+- New reactive operators on channel objects (similar to RxJava)
+- New shared parameters
+- New input/output set parameters
+- New conditional scripts using 
+- New groovy native processes   
 
 0.5.4 - 10 Dec 2013
 - Fixed an issue while checking an - empty - process exit file
