@@ -19,6 +19,8 @@
 
 package nextflow.processor
 
+import java.util.concurrent.CountDownLatch
+
 /**
  * Actions to handle the underlying job running the user task.
  *
@@ -56,6 +58,8 @@ public abstract class TaskHandler {
      * Task current status
      */
     Status status = Status.NEW
+
+    CountDownLatch latch
 
     /**
      * Model the start transition from {@code #SUBMITTED} to {@code STARTED}

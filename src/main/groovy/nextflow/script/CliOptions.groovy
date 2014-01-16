@@ -36,26 +36,25 @@ class CliOptions {
     @Parameter(names=['-c','-config'], description = 'Use the specified configuration file(s)')
     List<String> config
 
-    @Parameter(names=['-cache'], description = 'Enable/disable task(s) caching', arity = 1)
+    @Parameter(names=['-cache'], description = 'Enable/disable processes caching', arity = 1)
     boolean cacheable = true
 
     @Parameter(names=['-resume'], description = 'Execute the script using the cached results, useful to continue executions that stopped by an error')
     String resume
 
-    @Parameter(names=['-ps','-pool-size'], description = 'The number of threads in the executor pool')
+    @Parameter(names=['-ps','-pool-size'], description = 'The number of threads in the execution pool', hidden = true)
     Integer poolSize
 
     @Parameter(names=['-pi','-poll-interval'], description = 'The executor poll interval (duration string ending with ms|s|m)', converter = DurationConverter)
     long pollInterval
 
-    @Parameter(names=['-qs','-queue-size'], description = 'The max number of task in execution queue')
+    @Parameter(names=['-qs','-queue-size'], description = 'The max number of processes that can be executed in parallel by each executor')
     Integer queueSize
-
 
     @Parameter(names=['-test'], description = 'Test the function with the name specified')
     String test
 
-    @Parameter(names=['-w', '-work-dir'], description = 'Directory where tasks results are stored')
+    @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate results are stored')
     String workDir = './work'
 
     /**

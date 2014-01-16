@@ -262,6 +262,26 @@ class FilesExtensionsTest extends Specification {
         targetFolder.getParent()?.deleteDir()
 
 
+    }
+
+    def testFileShit() {
+
+        setup:
+        def file = new File('test_file_shift')
+        def path = Paths.get('test_path_shift')
+
+        when:
+        file << 'hola'
+        path << 'hello'
+
+        then:
+        file.text == 'hola'
+        path.text == 'hello'
+
+        cleanup:
+        file.delete()
+        path.delete()
+
 
     }
 

@@ -18,7 +18,6 @@
  */
 
 package nextflow.script
-
 import java.lang.reflect.Field
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
@@ -29,11 +28,12 @@ import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.Channel
 import nextflow.Const
 import nextflow.ExitCode
 import nextflow.Nextflow
 import nextflow.Session
-import nextflow.ast.ProcessDefTransform
+import nextflow.ast.NextflowDSL
 import nextflow.exception.InvalidArgumentException
 import nextflow.exception.MissingLibraryException
 import nextflow.util.FileHelper
@@ -41,6 +41,7 @@ import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import org.apache.commons.io.FilenameUtils
 import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang.exception.ExceptionUtils
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
@@ -212,8 +213,11 @@ class CliRunner {
         assert scriptText
 
         try {
+            // start session
+            session.start()
             // parse the script
             script = parseScript(scriptText, args)
+            // run the code
             run()
         }
         finally {
@@ -293,17 +297,15 @@ class CliRunner {
 
 
     def normalizeOutput() {
-        if ( output == null ) {
-            result = null
-        }
-        else if( output instanceof Collection || output.getClass().isArray()) {
-            result = (output as Collection).collect { normalizeOutput(it) }
+        if( output instanceof Collection || output.getClass().isArray()) {
+            result = (output as Collection)
         }
         else {
-            result = normalizeOutput(output)
+            result = output
         }
     }
 
+    @Deprecated
     def normalizeOutput(def value) {
         if ( value instanceof DataflowReadChannel || value instanceof DataflowWriteChannel ) {
             return session.isAborted() ? null : Nextflow.read(value)
@@ -328,7 +330,8 @@ class CliRunner {
         // define the imports
         def importCustomizer = new ImportCustomizer()
         importCustomizer.addImports( StringUtils.name, groovy.transform.Field.name )
-        importCustomizer.addImports(Path.name)
+        importCustomizer.addImports( Path.name )
+        importCustomizer.addImports( Channel.name )
         importCustomizer.addStaticStars( Nextflow.name )
         importCustomizer.addStaticImport( groovyx.gpars.dataflow.Dataflow.name, 'splitter' )
         importCustomizer.addStaticImport( groovyx.gpars.dataflow.Dataflow.name, 'operator' )
@@ -339,7 +342,7 @@ class CliRunner {
         def config = new CompilerConfiguration()
         config.addCompilationCustomizers( importCustomizer )
         config.scriptBaseClass = BaseScript.class.name
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(ProcessDefTransform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         // extend the class-loader if required
         def gcl = new GroovyClassLoader()
@@ -376,7 +379,6 @@ class CliRunner {
 
         // -- launch the script execution
         output = script.run()
-
     }
 
     protected terminate() {
@@ -562,11 +564,33 @@ class CliRunner {
             System.exit( ExitCode.INVALID_COMMAND_LINE_PARAMETER )
         }
 
+        catch ( MissingPropertyException e ) {
+            log.error errorMessage(e)
+            log.debug "Oops .. script failed", e
+            System.exit( ExitCode.MISSING_PROPERTY )
+        }
+
         catch( Throwable fail ) {
             log.error fail.message, fail
             System.exit( ExitCode.UNKNOWN_ERROR )
         }
 
+    }
+
+    static private errorMessage( MissingPropertyException e ) {
+
+        def pattern = ~/.*_run_closure\d+\.doCall\((.+\.nf:\d*)\).*/
+        def lines = ExceptionUtils.getStackTrace(e).split('\n')
+        def error = null
+        for( String str : lines ) {
+            def m = pattern.matcher(str)
+            if( m.matches() ) {
+                error = m.group(1)
+                break
+            }
+        }
+
+        return (e.message ?: e.toString()) + ( error ? " at $error" : '' )
     }
 
     static private void checkFileSystemProviders() {

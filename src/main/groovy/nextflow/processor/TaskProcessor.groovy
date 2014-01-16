@@ -34,13 +34,29 @@ import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
 import nextflow.Nextflow
 import nextflow.Session
-import nextflow.exception.InvalidExitException
+import nextflow.ast.AstNodeToScriptVisitor
 import nextflow.exception.MissingFileException
-import nextflow.exception.TaskException
+import nextflow.exception.MissingValueException
+import nextflow.exception.ProcessException
+import nextflow.exception.ProcessFailedException
+import nextflow.exception.ProcessScriptException
 import nextflow.executor.AbstractExecutor
 import nextflow.script.BaseScript
+import nextflow.script.BasicMode
+import nextflow.script.FileOutParam
+import nextflow.script.FileSharedParam
+import nextflow.script.InParam
+import nextflow.script.OutParam
+import nextflow.script.ScriptType
+import nextflow.script.SetInParam
+import nextflow.script.SetOutParam
+import nextflow.script.SharedParam
+import nextflow.script.StdOutParam
+import nextflow.script.ValueOutParam
+import nextflow.script.ValueSharedParam
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
+import nextflow.util.CollectionHelper
 import nextflow.util.FileHelper
 /**
  *
@@ -83,6 +99,16 @@ abstract class TaskProcessor {
      * The closure wrapping the script to be executed
      */
     protected Closure code
+
+    /**
+     *  Define the type of script hold by the {@code #code} property
+     */
+    protected ScriptType type = ScriptType.SCRIPTLET
+
+    /**
+     * The source fragment as entered by the user for debugging purpose
+     */
+    protected String source
 
     /**
      * The corresponding {@code DataflowProcessor} which will receive and
@@ -152,6 +178,17 @@ abstract class TaskProcessor {
      */
     protected volatile boolean terminated
 
+    /**
+     * Whener the process execution is required to be blocking in order to handle
+     * shared object in a thread safe manner
+     */
+    protected boolean blocking
+
+    /**
+     * Holds the values shared by multiple task instances
+     */
+    Map<SharedParam,Object> sharedObjs = [:]
+
     /* for testing purpose - do not remove */
     protected TaskProcessor() { }
 
@@ -162,19 +199,19 @@ abstract class TaskProcessor {
      * @param session
      * @param script
      * @param taskConfig
-     * @param taskBlock
+     * @param taskBody
      */
-    TaskProcessor( AbstractExecutor executor, Session session, BaseScript script, TaskConfig taskConfig, Closure taskBlock ) {
+    TaskProcessor( AbstractExecutor executor, Session session, BaseScript script, TaskConfig taskConfig, Closure taskBody ) {
         assert executor
         assert session
         assert script
-        assert taskBlock
+        assert taskBody
 
         this.executor = executor
         this.session = session
         this.ownerScript = script
         this.taskConfig = taskConfig
-        this.code = taskBlock
+        this.code = taskBody
 
         /*
          * set the task name
@@ -239,7 +276,7 @@ abstract class TaskProcessor {
          */
         log.trace "TaskConfig: ${taskConfig}"
         if( taskConfig.inputs.size() == 0 ) {
-            taskConfig.noInput()
+            taskConfig.fakeInput()
         }
 
         allScalarValues = !taskConfig.inputs.channels.any { !(it instanceof DataflowVariable) }
@@ -250,7 +287,7 @@ abstract class TaskProcessor {
          */
         if ( taskConfig.outputs.size() == 0 ) {
             def dummy =  allScalarValues ? Nextflow.val() : Nextflow.channel()
-            taskConfig.stdout(dummy)
+            taskConfig.fakeOutput(dummy)
         }
 
         // create the underlying dataflow operator
@@ -280,7 +317,7 @@ abstract class TaskProcessor {
      * The interpreter to be used define bu the *taskConfig* property {@code shell}
      */
     def getShebangLine() {
-        assert taskConfig.shell, "Missing 'shell' property for task: $name"
+        assert taskConfig.shell, "Missing 'shell' property for process: $name"
 
         def shell = taskConfig.shell
         String result = shell instanceof List ? shell.join(' ') : shell
@@ -361,13 +398,46 @@ abstract class TaskProcessor {
      * @return The new newly created {@code TaskRun{
      */
     final protected TaskRun createTaskRun() {
-        log.trace "Creating a new task > $name"
+        log.trace "Creating a new process > $name"
 
         def id = allCount.incrementAndGet()
         def index = indexCount.incrementAndGet()
-        new TaskRun(id: id, index: index, name: "$name ($index)", processor: this )
+        def task = new TaskRun(id: id, index: index, name: "$name ($index)", processor: this, type: type )
+
+
+        /*
+         * initialize the inputs/outputs for this task instance
+         */
+        taskConfig.inputs.each { InParam param ->
+            if( param instanceof SetInParam )
+                param.inner.each { task.setInput(it)  }
+            else
+                task.setInput(param)
+        }
+
+
+        taskConfig.outputs.each { OutParam param ->
+            if( param instanceof SetOutParam ) {
+                param.inner.each { task.setOutput(it) }
+            }
+            else
+                task.setOutput(param)
+        }
+
+        return task
     }
 
+    final protected getHashLog( HashCode hash ) {
+        def str = hash.toString()
+        def result = new StringBuilder()
+        result << str[0]
+        result << str[1]
+        result << '/'
+        for( int i=2; i<8 && i<str.size(); i++ ) {
+            result << str[i]
+        }
+        return result.toString()
+    }
 
     /**
      * Create a unique-folder where the task will be executed
@@ -413,49 +483,91 @@ abstract class TaskProcessor {
      * @param folder The folder where the outputs are stored (eventually)
      * @return {@code true} when all outputs are available, {@code false} otherwise
      */
-    final boolean checkCachedOutput(TaskRun task, Path folder) {
+    final boolean checkCachedOutput(TaskRun task, Path folder, HashCode hash) {
         if( !folder.exists() ) {
             log.trace "[$task.name] Cached folder does not exists > $folder -- return false"
             // no folder -> no cached result
             return false
         }
 
-        // set the folder has the task working directory
-        task.workDirectory = folder
-
         // check if exists the task exit code file
-        def exitFile = task.getCmdExitFile()
-        if( exitFile.empty() ) {
-            log.trace "[$task.name] Exit file is empty > $exitFile -- return false"
-            return false
+        def exitCode = null
+        def exitFile = folder.resolve(TaskRun.CMD_EXIT)
+        if( task.type == ScriptType.SCRIPTLET ) {
+            if( exitFile.empty() ) {
+                log.trace "[$task.name] Exit file is empty > $exitFile -- return false"
+                return false
+            }
+
+            def exitValue = exitFile.text.trim()
+            exitCode = exitValue.isInteger() ? exitValue.toInteger() : null
+            if( exitCode == null || !(exitCode in taskConfig.validExitStatus) ) {
+                log.trace "[$task.name] Exit code is not valid > $exitValue -- return false"
+                return false
+            }
         }
 
-        def exitValue = exitFile.text.trim()
-        def exitCode = exitValue.isInteger() ? exitValue.toInteger() : null
-        if( exitCode == null || !(exitCode in taskConfig.validExitCodes) ) {
-            log.trace "[$task.name] Exit code is not valid > $exitValue -- return false"
-            return false
+        /*
+         * verify cached context map
+         */
+        def ctxMap = null
+        def ctxFile = folder.resolve(TaskRun.CMD_CONTEXT)
+        if( task.hasCacheableValues() ) {
+            if( !ctxFile.exists() ) {
+                log.trace "[$task.name] Contexy map file does not exist: $ctxFile -- return false"
+                return false
+            }
+            ctxMap = DelegateMap.read(this, ctxFile)
         }
+
+        /*
+         * verify stdout file
+         */
+        def stdoutFile = folder.resolve( TaskRun.CMD_OUTFILE )
 
         try {
             // -- check if all output resources are available
-            collectOutputs(task)
-            log.info "Cached task > ${task.name}"
+            collectOutputs(task, folder, stdoutFile, ctxMap)
+            log.info "[${getHashLog(hash)}] Cached process > ${task.name}"
 
             // set the exit code in to the task object
-            task.exitCode = exitCode
+            task.workDirectory = folder
+            task.stdout = stdoutFile
+            if( exitCode != null ) {
+                task.exitStatus = exitCode
+            }
+            if( task.code && ctxMap ) {
+                task.code.delegate = ctxMap
+            }
 
             // -- now bind the results
             finalizeTask0(task)
             return true
         }
-        catch( MissingFileException e ) {
+        catch( MissingFileException | MissingValueException e ) {
             log.debug "[$task.name] Missed cache > ${e.getMessage()} -- folder: $folder"
-            task.exitCode = Integer.MAX_VALUE
+            task.exitStatus = Integer.MAX_VALUE
             task.workDirectory = null
             return false
         }
 
+    }
+
+
+    /**
+     * Given the script closure, that hold the code entered by the user, returns
+     * the final script string to be executed
+     *
+     * @param code
+     * @return
+     */
+    final protected String getScriptlet( Closure<String> code ) {
+        try {
+            return code.call()?.toString()
+        }
+        catch( Throwable e ) {
+            throw new ProcessScriptException("Process script contains error(s)", e)
+        }
     }
 
     /**
@@ -470,8 +582,8 @@ abstract class TaskProcessor {
 
         // when is a task level error and the user has chosen to ignore error, just report and error message
         // return 'false' to DO NOT stop the execution
-        if( error instanceof TaskException && taskConfig.errorStrategy == ErrorStrategy.IGNORE ) {
-            log.warn "Error running task > ${error.getMessage()} -- error is ignored"
+        if( error instanceof ProcessException && taskConfig.errorStrategy == ErrorStrategy.IGNORE ) {
+            log.warn "Error running process > ${error.getMessage()} -- error is ignored"
             return false
         }
 
@@ -480,63 +592,115 @@ abstract class TaskProcessor {
             return true
         }
 
-        if( error instanceof TaskException ) {
-
-            // compose a readable error message
-            def message = []
-            message << error.getMessage()
-
-            if( task ) {
-                // print the executed command
-                message << "Command executed:"
-                task.script.eachLine {
-                    message << "  $it"
-                }
-
-                message << "\nCommand exit status:\n  ${task.exitCode}"
-
-                message << "\nCommand output:"
-                task.stdout?.eachLine {
-                    message << "  $it"
-                }
-
-                message << "\nCommand work dir:\n  ${task.workDirectory.toString()}"
-            }
-
-            message << "\nTip: when you have fixed the problem you may continue the execution appending to the nextflow command line the '-resume' option"
-
+        def message = []
+        message << "Error executing process > '${task?.name ?: name}'"
+        if( error instanceof ProcessException ) {
+            formatTaskError( message, error, task )
             log.error message.join('\n')
-
         }
         else {
-            log.error("Failed to execute task > '${task?.name ?: name}' -- Check the log file '.nextflow.log' for more details", error)
+            message << formatErrorCause( error )
+            message << "Tip: check the log file '.nextflow.log' for more details"
+            log.error message.join('\n')
+            log.debug "Error details", error
         }
 
         session.abort()
         return true
     }
 
+    final protected formatTaskError( List message, Throwable error, TaskRun task ) {
+
+        // compose a readable error message
+        message << formatErrorCause( error )
+
+        /*
+         * task executing scriptlets
+         */
+        if( task?.script ) {
+            // print the executed command
+            message << "Command executed:\n"
+            task.script?.stripIndent().trim().eachLine {
+                message << "  $it"
+            }
+
+            message << "\nCommand exit status:\n  ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}"
+
+            message << "\nCommand output:"
+            task.stdout?.eachLine {
+                message << "  $it"
+            }
+
+        }
+        else {
+            if( source )  {
+                message << "\nSource block:"
+                source.stripIndent().eachLine {
+                    message << "  $it"
+                }
+            }
+
+        }
+
+        if( task?.workDirectory )
+            message << "\nWork dir:\n  ${task.workDirectory.toString()}"
+
+        message << "\nTip: when you have fixed the problem you can continue the execution appending to the nextflow command line the '-resume' option"
+
+        return message
+    }
+
+
     /**
      * Send a poison pill over all the outputs channel
      */
     final protected synchronized void sendPoisonPill() {
-        log.trace "Forwarding Poison-pill for task > ${name}"
+        log.trace "Forwarding Poison-pill for process > ${name}"
 
-        taskConfig.outputs.eachParam { name, channel ->
+        taskConfig.outputs.each { param ->
+            def channel = param.outChannel
+
             if( channel instanceof DataflowQueue ) {
-                log.trace "Sending Poison-pill over $name channel"
                 channel.bind( PoisonPill.instance )
             }
             else if( channel instanceof DataflowStreamWriteAdapter ) {
-                log.trace "Sending Poison-pill over $name channel"
                 channel.bind( PoisonPill.instance )
             }
             else {
-                log.trace "Poison pill is not sent over $name channel"
+                log.trace "Poison pill is not sent over $param channel"
             }
 
         }
     }
+
+    private String getCodeScript( TaskRun task ) {
+
+        try {
+            def node = task.code.metaClass.classNode.getDeclaredMethods("doCall")[0].code
+            def writer = new StringWriter()
+            node.visit( new AstNodeToScriptVisitor(writer) )
+            writer.toString()
+        }
+        catch( Throwable e ) {
+            log.debug "Unable to obtain code for process: ${task.name}"
+            return null
+        }
+
+    }
+
+
+    private String formatErrorCause( Throwable error ) {
+
+        def result = new StringBuilder()
+        result << '\nCaused by:\n'
+
+        def message = error.cause?.toString() ?: ( error.getMessage() ?: error.toString() )
+        result.append('  ').append(message).append('\n')
+
+        result.toString()
+    }
+
+
 
     /**
      * Bind the expected output files to the corresponding output channels
@@ -544,34 +708,56 @@ abstract class TaskProcessor {
      */
     synchronized protected void bindOutputs( TaskRun task ) {
 
-        // -- bind each produced file to its own channel
-        task.outputs.eachWithIndex { OutParam param, value, index ->
+        // -- creates the map of all tuple values to bind
+        Map<Short,List> tuples = [:]
+        taskConfig.getOutputs().each { OutParam p -> tuples.put(p.index,[]) }
+
+        // -- collects the values to bind
+        task.outputs.each { OutParam param, value ->
 
             switch( param ) {
             case StdOutParam:
-                log.trace "Task $name > Binding '$value' to stdout"
-                processor.bindOutput(index, value instanceof Path ? value.text : value?.toString())
-                break
+                log.trace "Process $name > normalize stdout param: $param"
+                value = value instanceof Path ? value.text : value?.toString()
 
             case FileOutParam:
-                log.trace "Task $name > Binding file: '$value' to '${param.name}'"
-                if( value instanceof Collection && !(param as FileOutParam).joint ) {
-                    value.each { processor.bindOutput(index, it) }
-                }
-                else {
-                    processor.bindOutput(index, value)
-                }
-                break;
-
             case ValueOutParam:
-                log.trace "Task $name > Binding value: '$value' to '${param.name}'"
-                processor.bindOutput(index, value)
+                log.trace "Process $name > collecting out param: ${param} = $value"
+                tuples[param.index].add( value )
                 break
 
             default:
-                throw new IllegalArgumentException("Illegal output parameter type: ${param.class.simpleName}")
+                throw new IllegalArgumentException("Illegal output parameter type: $param")
             }
         }
+
+        // -- bind out the collected values
+        def maps = taskConfig.getOutputs().each { param ->
+            def list = tuples[param.index]
+            if( list == null ) throw new IllegalStateException()
+
+            if( param.mode == BasicMode.standard ) {
+                log.trace "Process $name > Binding out param: ${param} = ${list}"
+                bindOutParam(param, list)
+            }
+
+            else if( param.mode == BasicMode.flatten ) {
+                log.trace "Process $name > Flatting out param: ${param} = ${list}"
+                CollectionHelper.flatten( list ) {
+                    bindOutParam( param, it )
+                }
+            }
+
+            else if( param.mode == SetOutParam.CombineMode.combine ) {
+                log.trace "Process $name > Combining out param: ${param} = ${list}"
+                def combs = list.combinations()
+                combs.each { bindOutParam(param, it) }
+            }
+
+            else
+                throw new IllegalStateException("Unknown bind output parameter type: ${param}")
+        }
+
 
         // -- finally prints out the task output when 'echo' is true
         if( taskConfig.echo ) {
@@ -579,82 +765,140 @@ abstract class TaskProcessor {
         }
     }
 
+    protected void bindOutParam( OutParam param, def values ) {
+        def x = values.size() == 1 ? values[0] : values
+        processor.bindOutput( param.index, x )
+    }
+
+    protected void collectOutputs( TaskRun task ) {
+        collectOutputs( task, task.workDirectory, task.@stdout, task.code?.delegate )
+    }
+
     /**
      * Once the task has completed this method is invoked to collected all the task results
      *
      * @param task
      */
-    final protected void collectOutputs( TaskRun task ) {
+    final protected void collectOutputs( TaskRun task, Path workDir, def stdout, Map context ) {
 
         task.outputs.keySet().each { OutParam param ->
-            collectOutputs(task, param)
+
+            switch( param ) {
+                case StdOutParam:
+                    collectStdOut(task, param, stdout)
+                    break
+
+                case FileOutParam:
+                    collectOutFiles(task, param, workDir)
+                    break
+
+                case ValueOutParam:
+                    collectOutValues(task, param, context)
+                    break
+
+                default:
+                    throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
+
+            }
+        }
+
+        /*
+         * Shared objects behave as accumulators
+         * Copying back updated values from context map to buffer map so that can be accessed in the next iteration
+         *
+         */
+        sharedObjs?.keySet() .each { param ->
+
+            switch(param) {
+                case ValueSharedParam:
+                    sharedObjs[param] = context.get(param.name)
+                    break
+
+                case FileSharedParam:
+                    // the 'sharedObjs' is updated in the 'beforeRun' method
+                    break
+
+                default:
+                    throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
+            }
         }
 
         // mark ready for output binding
         task.canBind = true
     }
 
-    protected void collectOutputs( TaskRun task, OutParam param ) {
-        assert task
-        assert param
-        log.trace "Collecting output for ${param.dump()}"
+    /**
+     * Collects the process 'std output'
+     *
+     * @param task The executed process instance
+     * @param param The declared {@code StdOutParam} object
+     * @param stdout The object holding the task produced std out object
+     */
+    protected void collectStdOut( TaskRun task, StdOutParam param, def stdout ) {
 
-        switch( param ) {
-            case StdOutParam:
-                task.setOutput(param, task.stdout)
-                break
-
-            case FileOutParam:
-                def all = []
-                def fileParam = param as FileOutParam
-                // type file parameter can contain a multiple files pattern separating them with a special character
-                def entries = fileParam.separatorChar ? fileParam.name.split(/\${fileParam.separatorChar}/) : [fileParam.name]
-                // for each of them collect the produced files
-                entries.each { String pattern ->
-                    def result = executor.collectResultFile(task, pattern)
-                    log.debug "Task ${task.name} > collected outputs for pattern '$pattern': $result"
-
-                    if( result instanceof List ) {
-                        // filter the result collection
-                        if( pattern.startsWith('*') && !fileParam.includeHidden ) {
-                            result = filterByRemovingHiddenFiles(result)
-                            log.trace "Task ${task.name} > after removing hidden files: ${result}"
-                        }
-
-                        // filter the inputs
-                        if( !fileParam.includeInputs ) {
-                            result = filterByRemovingStagedInputs(task, result)
-                            log.trace "Task ${task.name} > after removing staged inputs: ${result}"
-                        }
-
-                        all.addAll((List) result)
-                    }
-
-                    else if( result ) {
-                        all.add(result)
-                    }
-                }
-
-                task.setOutput( param, all.size()==1 ? all[0] : all )
-                break
-
-            case ValueOutParam:
-                // look into the task inputs value for an *ValueInParam* entry
-                // having the same *name* as the requested output name
-                def entry = task.getInputsByType(ValueInParam,EachInParam).find { it.key.name == param.name }
-                if( entry ) {
-                    task.setOutput( param, entry.value )
-                }
-                else {
-                    log.warn "Not a valid output parameter: '${param.name}' -- only values declared as input can be used in the output section"
-                }
-                break
-
-            default:
-                throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
-
+        if( stdout == null && task.type == ScriptType.SCRIPTLET ) {
+            throw new IllegalArgumentException("Missing 'stdout' for process > ${task.name}")
         }
+
+        if( stdout instanceof Path && !stdout.exists() ) {
+            throw new MissingFileException("Missing 'stdout' file: ${stdout} for process > ${task.name}")
+        }
+
+        task.setOutput(param, stdout)
     }
+
+
+    protected void collectOutFiles( TaskRun task, FileOutParam param, Path workDir ) {
+
+        def all = []
+        def fileParam = param as FileOutParam
+        // type file parameter can contain a multiple files pattern separating them with a special character
+        def entries = fileParam.separatorChar ? fileParam.name.split(/\${fileParam.separatorChar}/) : [fileParam.name]
+        // for each of them collect the produced files
+        entries.each { String pattern ->
+            def result = executor.collectResultFile(workDir, pattern, task.name)
+            log.trace "Process ${task.name} > collected outputs for pattern '$pattern': $result"
+
+            if( result instanceof List ) {
+                // filter the result collection
+                if( pattern.startsWith('*') && !fileParam.includeHidden ) {
+                    result = filterByRemovingHiddenFiles(result)
+                    log.trace "Process ${task.name} > after removing hidden files: ${result}"
+                }
+
+                // filter the inputs
+                if( !fileParam.includeInputs ) {
+                    result = filterByRemovingStagedInputs(task, result)
+                    log.trace "Process ${task.name} > after removing staged inputs: ${result}"
+                }
+
+                all.addAll((List) result)
+            }
+
+            else if( result ) {
+                all.add(result)
+            }
+        }
+
+        task.setOutput( param, all.size()==1 ? all[0] : all )
+
+    }
+
+    protected void collectOutValues( TaskRun task, ValueOutParam param, Map ctx ) {
+
+        // look into the task inputs value for an *ValueInParam* entry
+        // having the same *name* as the requested output name
+        if( !ctx.containsKey(param.name) ) {
+            throw new MissingValueException("Missing value declared as output paramter: ${param.name}")
+        }
+
+        // bind the value
+        def val = ctx.get(param.name)
+        task.setOutput( param, val )
+        log.trace "Collecting param: ${param.name}; value: ${val}"
+
+    }
+
 
     /**
      * Given a list of {@code Path} removes all the hidden file i.e. the ones which names starts with a dot char
@@ -732,9 +976,21 @@ abstract class TaskProcessor {
         }
 
         def result = ownerScript.tempFile(altName)
-        result.text = input?.toString() ?: ''
-        return new FileHolder(input, result)
+        def source = input?.toString() ?: ''
+        result.text = source
+        return new FileHolder(source, result)
     }
+
+//    protected void checkSpec(Path path, FileSpec fileSpec) {
+//
+//        if( !path.exists() && fileSpec?.create ) {
+//            if( fileSpec.file )
+//                Files.createFile(path)
+//            else
+//                Files.createDirectory(path)
+//        }
+//
+//    }
 
     protected List<FileHolder> normalizeInputToFiles( Object obj, int count ) {
 
@@ -770,13 +1026,12 @@ abstract class TaskProcessor {
      * @return
      */
     protected List<FileHolder> expandWildcards( String name, List<FileHolder> files ) {
-        assert name
         assert files != null
 
         final result = []
         if( files.size()==0 ) { return result }
 
-        if( name == '*' ) {
+        if( !name || name == '*' ) {
             return files
         }
 
@@ -866,6 +1121,32 @@ abstract class TaskProcessor {
 
 
 
+    protected decodeInputValue( InParam param, List values ) {
+
+        def val = values[ param.index ]
+        if( param.mapIndex != -1 ) {
+            def list
+            if( val instanceof Map )
+                list = val.values()
+
+            else if( val instanceof Collection )
+                list = val
+            else
+                list = [val]
+
+            try {
+                return list[param.mapIndex]
+            }
+            catch( IndexOutOfBoundsException e ) {
+                throw new ProcessException(e)
+            }
+        }
+
+        return val
+    }
+
+
+
     /**
      * Execute the specified task shell script
      *
@@ -873,59 +1154,18 @@ abstract class TaskProcessor {
      * @return {@code TaskDef}
      */
     final protected void submitTask( TaskRun task ) {
+
+        if( task.code?.delegate instanceof Map ) {
+            if( task.code.delegate.containsKey('workDir') ) {
+                log.warn "Process $name overrides value of reserved variable 'workDir' "
+            }
+            task.code.delegate['workDir'] = task.workDirectory
+        }
+
         // add the task to the collection of running tasks
-        session.dispatcher.submit(task)
+        session.dispatcher.submit(task, blocking)
     }
 
-
-    /**
-     * Map used to delegate variable resolution to script scope
-     */
-    @Slf4j
-    static class DelegateMap implements Map {
-
-        @Delegate
-        private Map<String,Object> local
-
-        private BaseScript script
-
-        DelegateMap(BaseScript script) {
-            this.script = script
-            this.local = [:]
-        }
-
-        DelegateMap(Map target) {
-            assert target != null
-            this.script = script
-            this.local = target
-        }
-
-        @Override
-        public Object get(Object property) {
-
-            if( local.containsKey(property) ) {
-                return local.get(property)
-            }
-            else if ( script ){
-                try {
-                    return script.getProperty(property?.toString())
-                }
-                catch( MissingPropertyException e ) {
-                    log.trace "Unable to find a value for: '\$${property}' on script context"
-                }
-            }
-
-            // return the variable name prefixed with the '$' char
-            // so give a chance to the bash interpreted to evaluate it
-            return '$' + property
-
-        }
-
-        @Override
-        public put(String property, Object newValue) {
-            local.put(property, newValue)
-        }
-    }
 
 
     /**
@@ -936,14 +1176,31 @@ abstract class TaskProcessor {
      */
     @PackageScope
     final void finalizeTask( TaskRun task ) {
+        log.trace "finalizing process > ${task.name}"
         try {
             // verify task exist status
-            boolean success = (task.exitCode in taskConfig.validExitCodes)
-            if ( !success ) {
-                throw new InvalidExitException("Task '${task.name}' terminated with an error")
+            if( task.type == ScriptType.GROOVY ) {
+                if( task.error ) {
+                    throw new ProcessFailedException("Process '${task.name}' failed", task.error)
+                }
             }
+
+            else {
+                boolean success = (task.exitStatus in taskConfig.validExitStatus)
+                if ( !success ) {
+                    throw new ProcessFailedException("Process '${task.name}' terminated with an error exit status")
+                }
+            }
+
             // if it's OK collect results and finalize
             collectOutputs(task)
+
+            // save the context map for caching purpose
+            // only the 'cache' is active and
+            if( cacheable && task.hasCacheableValues() && task.code.delegate != null ) {
+                ((DelegateMap) task.code.delegate).save(task.getCmdContextFile())
+            }
+
         }
         catch ( Throwable error ) {
             handleException(error, task)
@@ -954,6 +1211,13 @@ abstract class TaskProcessor {
     }
 
     /**
+     * Whenever the process can be cached
+     */
+    protected boolean isCacheable() {
+        session.cacheable && taskConfig.cacheable
+    }
+
+    /**
      * Finalize the task execution, checking the exit status
      * and binding output values accordingly
      *
@@ -961,7 +1225,7 @@ abstract class TaskProcessor {
      * @param producedFiles The map of files to be bind the outputs
      */
     private void finalizeTask0( TaskRun task ) {
-        log.debug "Finalize task > ${task.name}"
+        log.trace "Finalize process > ${task.name}"
 
         // -- bind output (files)
         if( task.canBind ) {
@@ -981,11 +1245,10 @@ abstract class TaskProcessor {
 
         def created = instanceCount.get()
         def finalized = isFinalize ? finalizeCount.incrementAndGet() : finalizeCount.get()
-        // log.debug "Finalizing task > task: ${name}; finalize: $isFinalize; allScalarValues: ${allScalarValues}; receivedPoisonPill: ${receivedPoisonPill}; instancesCount: ${tot}; finalizeCount: ${count} "
 
         def done = allScalarValues || ( receivedPoisonPill && created == finalized )
         if( done ) {
-            log.debug "Finalizing task > ${name} -- isFinalize: $isFinalize"
+            log.trace "Finalizing process > ${name} -- isFinalize: $isFinalize"
             sendPoisonPill()
             session.taskDeregister()
             processor.terminate()
@@ -994,6 +1257,7 @@ abstract class TaskProcessor {
 
         return done
     }
+
 
 
 }

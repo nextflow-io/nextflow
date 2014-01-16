@@ -3,7 +3,7 @@
 params.in = "${HOME}/sample.fa"
 
 fastaFile = file(params.in)
-seq = channel()
+seq = Channel.create()
 
 /*
  * Splits the input file in chunks containing a single sequences,

@@ -37,7 +37,7 @@ class NopeExecutor extends AbstractExecutor {
 
     @Override
     protected TaskMonitor createTaskMonitor() {
-        return new TaskPollingMonitor(session, 5, 50).start()
+        return new TaskPollingMonitor(session, 5, 50)
     }
 
     @Override
@@ -57,28 +57,28 @@ class NopeTaskHandler extends TaskHandler {
 
     @Override
     void submit() {
-
-        log.info ">> launching nope task: ${task}"
+        log.info ">> launching nope process: ${task}"
         task.workDirectory = Paths.get('.').toAbsolutePath()
-        status = TaskHandler.Status.SUBMITTED
-        task.exitCode = 0
+        status = Status.SUBMITTED
         task.stdout = task.script
+        task.exitStatus = 0
     }
 
     @Override
     boolean checkIfRunning() {
         log.debug "isRunning: $status"
         if( isSubmitted() ) {
-            status = TaskHandler.Status.RUNNING
+            status = Status.RUNNING
             return true
         }
+        return false
     }
 
     @Override
     boolean checkIfCompleted() {
         log.debug "isTerminated: $status"
         if( isRunning() ) {
-            status = TaskHandler.Status.COMPLETED
+            status = Status.COMPLETED
             return true
         }
         false

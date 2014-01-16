@@ -18,7 +18,7 @@
  */
 
 apply plugin: 'gradle-one-jar'
-version = '0.5.4'
+version = '0.6.0'
 
 allprojects {
     apply plugin: 'groovy'
@@ -38,6 +38,7 @@ allprojects {
         testCompile ("org.spockframework:spock-core:${spockVer}") {
             exclude module: 'groovy-all'
         }
+        //testCompile ('commons-cli:commons-cli:1.2')
     }
 }
 

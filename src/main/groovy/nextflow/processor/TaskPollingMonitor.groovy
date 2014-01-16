@@ -35,23 +35,23 @@ class TaskPollingMonitor implements TaskMonitor {
     /**
      * The time interval (in milliseconds) elapsed which execute a new poll
      */
-    final long pollInterval
+    final long pollIntervalMillis
 
     /**
      * Initialise the monitor, creatign the queue which will hold the tasks
      *
      * @param session
      * @param queueSize
-     * @param pollInterval
+     * @param pollIntervalMillis
      */
-    TaskPollingMonitor( Session session, int queueSize, long pollInterval ) {
+    TaskPollingMonitor( Session session, int queueSize, long pollIntervalMillis ) {
         assert session , "Session object cannot be null"
         assert queueSize, "Executor queue size cannot be zero"
-        assert pollInterval, "Executor polling interval cannot be zero"
+        assert pollIntervalMillis, "Executor polling interval cannot be zero"
 
         this.session = session
         this.dispatcher = session.dispatcher
-        this.pollInterval = pollInterval
+        this.pollIntervalMillis = pollIntervalMillis
         this.queue = new ArrayBlockingQueue<TaskHandler>(queueSize)
 
         killOnExit()
@@ -71,7 +71,7 @@ class TaskPollingMonitor implements TaskMonitor {
                 pollLoop()
             }
             finally {
-                log.debug "<<< phaser deregister (scheduler)"
+                log.debug "<<< phaser de-register (scheduler)"
                 session.phaser.arriveAndDeregister()
             }
         }
@@ -94,7 +94,7 @@ class TaskPollingMonitor implements TaskMonitor {
                 break
             }
 
-            def delta = pollInterval - (System.currentTimeMillis() - time)
+            def delta = this.pollIntervalMillis - (System.currentTimeMillis() - time)
             if( delta>0 ) { sleep(delta) }
 
         }
@@ -166,8 +166,13 @@ class TaskPollingMonitor implements TaskMonitor {
         Runtime.addShutdownHook {
             while( queue.size() ) {
                 TaskHandler handler = queue.poll()
-                log.warn "Killing pending task: ${handler.task.name}"
-                handler.kill()
+                try {
+                    log.warn "Killing pending process: ${handler.task.name}"
+                    handler.kill()
+                } catch( Throwable e ) {
+                    log.debug "Failed killing pending process: ${handler} -- cause: ${e.message}"
+                }
+
             }
         }
 

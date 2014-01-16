@@ -20,11 +20,11 @@
 package nextflow
 
 /**
+ * Application exit status
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 interface ExitCode {
-
 
     static final short OK = 0
 
@@ -35,6 +35,8 @@ interface ExitCode {
     static final short SESSION_ABORTED = 103
 
     static final short MISSING_UNIQUE_ID = 104
+
+    static final short MISSING_PROPERTY = 105
 
     static final short UNKNOWN_ERROR = 255
 

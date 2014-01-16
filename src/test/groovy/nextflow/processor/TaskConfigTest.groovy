@@ -2,6 +2,14 @@ package nextflow.processor
 
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.script.BaseScript
+import nextflow.script.FileInParam
+import nextflow.script.InputsList
+import nextflow.script.OutputsList
+import nextflow.script.ScriptVar
+import nextflow.script.StdInParam
+import nextflow.script.StdOutParam
+import nextflow.script.ValueInParam
+import nextflow.script.ValueSharedParam
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -21,10 +29,29 @@ class TaskConfigTest extends Specification {
         expect:
         config.shell ==  ['/bin/bash','-ue']
         config.cacheable
-        config.validExitCodes == [0]
+        config.validExitStatus == [0]
         config.errorStrategy == ErrorStrategy.TERMINATE
         config.inputs instanceof InputsList
         config.outputs instanceof OutputsList
+
+    }
+
+
+    def 'test merge' ()  {
+
+        setup:
+        def script = Mock(BaseScript)
+        def config = new TaskConfig(script)
+
+        expect:
+        !config.merge
+
+        when:
+        config.setProperty('merge',true)
+        then:
+        config.merge
+
+
 
     }
 
@@ -106,13 +133,29 @@ class TaskConfigTest extends Specification {
         expect:
         config.containsKey('echo')
         config.containsKey('shell')
-        config.containsKey('validExitCodes')
+        config.containsKey('validExitStatus')
         config.containsKey('inputs')
         config.containsKey('outputs')
+        config.containsKey('undef')
         !config.containsKey('xyz')
         !config.containsKey('maxForks')
         config.maxForks == null
 
+    }
+
+    def 'test undef' () {
+
+        setup:
+        def script = Mock(BaseScript)
+        def config = new TaskConfig(script)
+
+        expect:
+        config.undef == false
+
+        when:
+        config.undef(true)
+        then:
+        config.undef == true
 
     }
 
@@ -124,15 +167,16 @@ class TaskConfigTest extends Specification {
         def config = new TaskConfig(script)
 
         when:
-        config.__in_file('filename.fa') .using(new DataflowVariable<>())
-        config.__in_val('x') .using(1)
-        config.stdin().using(new DataflowVariable<>())
+        config._in_file([infile:'filename.fa'])
+        config._in_val('x') .from(1)
+        config._in_stdin()
 
         then:
         config.getInputs().size() == 3
 
         config.inputs.get(0) instanceof FileInParam
-        config.inputs.get(0).name == 'filename.fa'
+        config.inputs.get(0).name == 'infile'
+        (config.inputs.get(0) as FileInParam).filePattern == 'filename.fa'
 
         config.inputs.get(1) instanceof ValueInParam
         config.inputs.get(1).name == 'x'
@@ -140,7 +184,7 @@ class TaskConfigTest extends Specification {
         config.inputs.get(2).name == '-'
         config.inputs.get(2) instanceof StdInParam
 
-        config.inputs.names == [ 'filename.fa', 'x', '-' ]
+        config.inputs.names == [ 'infile', 'x', '-' ]
         config.inputs.ofType( FileInParam ) == [ config.getInputs().get(0) ]
 
     }
@@ -152,10 +196,10 @@ class TaskConfigTest extends Specification {
         def config = new TaskConfig(script)
 
         when:
-        config.stdout()
-        config.__out_file('file1.fa').using('ch1')
-        config.__out_file('file2.fa').using('ch2')
-        config.__out_file('file3.fa').using('ch3')
+        config._out_stdout()
+        config._out_file('file1.fa').into('ch1')
+        config._out_file('file2.fa').into('ch2')
+        config._out_file('file3.fa').into('ch3')
 
         then:
         config.outputs.size() == 4
@@ -167,6 +211,88 @@ class TaskConfigTest extends Specification {
         config.outputs[2].name == 'file2.fa'
         config.outputs[3].name == 'file3.fa'
 
+
+    }
+
+    /*
+     *  shared: val x (seed x)
+     *  shared: val x seed y
+     *  shared: val x seed y using z
+     */
+    def testSharedValue() {
+
+        setup:
+        def binding = new Binding()
+        def script = Mock(BaseScript)
+        script.getBinding() >> { binding }
+
+        when:
+        def config = new TaskConfig(script)
+        def val = config._share_val( new ScriptVar('xxx'))
+        then:
+        val instanceof ValueSharedParam
+        val.name == 'xxx'
+        val.inChannel.val == null
+        val.outChannel == null
+
+        when:
+        binding.setVariable('yyy', 'Hola')
+        config = new TaskConfig(script)
+        val = config._share_val(new ScriptVar('yyy'))
+        then:
+        val instanceof ValueSharedParam
+        val.name == 'yyy'
+        val.inChannel.val == 'Hola'
+        val.outChannel == null
+
+        // specifying a value with the 'using' method
+        // that value is bound to the input channel
+        when:
+        config = new TaskConfig(script)
+        val = config._share_val('yyy') .from('Beta')
+        then:
+        val instanceof ValueSharedParam
+        val.name == 'yyy'
+        val.inChannel.val == 'Beta'
+        val.outChannel == null
+
+        // specifying a 'closure' with the 'using' method
+        // that value is bound to the input channel
+        when:
+        config = new TaskConfig(script)
+        val = config._share_val('yyy') .from({ 99 })
+        then:
+        val instanceof ValueSharedParam
+        val.name == 'yyy'
+        val.inChannel.val == 99
+        val.outChannel == null
+
+
+        // specifying a 'channel' it is reused
+        // that value is bound to the input channel
+        when:
+        def channel = new DataflowVariable()
+        channel << 123
+
+        config = new TaskConfig(script)
+        val = config._share_val('zzz') .from(channel)
+        then:
+        val instanceof ValueSharedParam
+        val.name == 'zzz'
+        val.inChannel.getVal() == 123
+        val.outChannel == null
+
+        // when a channel name is specified with the method 'into'
+        // a DataflowVariable is created in the script context
+        when:
+        config = new TaskConfig(script)
+        val = config._share_val(new ScriptVar('x1')) .into( new ScriptVar('x2') )
+        then:
+        val instanceof ValueSharedParam
+        val.name == 'x1'
+        val.inChannel.getVal() == null
+        val.outChannel instanceof DataflowVariable
+        binding.getVariable('x2') == val.outChannel
 
     }
 

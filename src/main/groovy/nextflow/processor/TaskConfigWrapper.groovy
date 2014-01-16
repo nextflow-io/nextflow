@@ -38,7 +38,7 @@ class TaskConfigWrapper extends TaskConfig {
             return super.getProperty(name)
         }
 
-        throw new MissingPropertyException(name, this.getClass())
+        throw new MissingPropertyException("Unknown variable '$name'")
     }
 
 }

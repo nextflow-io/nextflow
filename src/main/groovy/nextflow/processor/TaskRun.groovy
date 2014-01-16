@@ -18,13 +18,20 @@
  */
 
 package nextflow.processor
-
 import java.nio.file.Path
 import java.util.concurrent.locks.ReentrantLock
 
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
-
+import nextflow.script.EnvInParam
+import nextflow.script.FileInParam
+import nextflow.script.FileOutParam
+import nextflow.script.FileSharedParam
+import nextflow.script.InParam
+import nextflow.script.OutParam
+import nextflow.script.ScriptType
+import nextflow.script.StdInParam
+import nextflow.script.ValueOutParam
 /**
  * Models a task instance
  *
@@ -33,7 +40,7 @@ import groovy.util.logging.Slf4j
 
 @Slf4j
 @ToString( includePackage = false, includeNames = true, includes = 'id,index,name,status,exitCode' )
-class TaskRun<T extends TaskHandler> {
+class TaskRun {
 
     static private final echoLock = new ReentrantLock(true)
 
@@ -76,15 +83,15 @@ class TaskRun<T extends TaskHandler> {
     } ()
 
     /**
-     * The *strategy* sued to retrieve the list of staged input files for this task.
-     * This sort of *hack* is required since task processed by the {@code MergeTaskProcessor} maintain
+     * The *strategy* used to retrieve the list of staged input files for this task.
+     * This sort of *hack* is required since tasks processed by the {@code MergeTaskProcessor} maintain
      * their own input files list, and so the task will need to access that list, and not the one
      * hold by the task itself
      *
      * See MergeTaskProcessor
      */
-    Closure<Map<FileInParam,List<FileHolder>>> stagedProvider = {
-           (Map<FileInParam,List<FileHolder>>) getInputsByType(FileInParam)
+    Closure<Map<InParam,List<FileHolder>>> stagedProvider = {
+           (Map<InParam,List<FileHolder>>) getInputFiles()
     }
 
 
@@ -105,6 +112,7 @@ class TaskRun<T extends TaskHandler> {
         outputs[param] = value
     }
 
+
     /**
      * The value to be piped to the process stdin
      */
@@ -113,7 +121,7 @@ class TaskRun<T extends TaskHandler> {
     /**
      * The exit code returned by executing the task script
      */
-    int exitCode = Integer.MAX_VALUE
+    int exitStatus = Integer.MAX_VALUE
 
     /**
      * Flag set when the bind stage is completed successfully
@@ -130,16 +138,14 @@ class TaskRun<T extends TaskHandler> {
      */
     def String getStdout() {
 
-        if( stdout == null ) {
-            stdout = getCmdOutputFile()
-        }
-
         if( stdout instanceof Path ) {
             return stdout.exists() ? stdout.text : null
         }
-        else {
-            return stdout?.toString()
+        else if( stdout != null ) {
+            return stdout.toString()
         }
+
+        return null
     }
 
     /**
@@ -147,25 +153,23 @@ class TaskRun<T extends TaskHandler> {
      */
     void echoStdout() {
 
-        def out = stdout ?: getCmdOutputFile()
-
         // print the stdout
-        if( out instanceof Path ) {
-            if( !out.exists() ) {
-                log.debug "Echo file does not exist: ${out}"
+        if( stdout instanceof Path ) {
+            if( !stdout.exists() ) {
+                log.trace "Echo file does not exist: ${stdout}"
                 return
             }
 
             echoLock.lock()
             try {
-                out.withReader {  System.out << it }
+                stdout.withReader {  System.out << it }
             }
             finally {
                 echoLock.unlock()
             }
         }
-        else if( out != null ) {
-            print out.toString()
+        else if( stdout != null ) {
+            print stdout.toString()
         }
 
     }
@@ -175,6 +179,16 @@ class TaskRun<T extends TaskHandler> {
      * The directory used to run the task
      */
     Path workDirectory
+
+    /**
+     * The type of the task code: native or external system command
+     */
+    ScriptType type
+
+    /**
+     * The runtime exception when execution groovy native code
+     */
+    Throwable error
 
     /*
      * The closure implementing this task
@@ -186,6 +200,7 @@ class TaskRun<T extends TaskHandler> {
      */
     def script
 
+
     def String getScript() {
         if( script instanceof Path ) {
             return script.text
@@ -193,6 +208,42 @@ class TaskRun<T extends TaskHandler> {
         else {
             return script?.toString()
         }
+    }
+
+    def boolean hasCacheableValues() {
+        outputs.keySet().any { it.class == ValueOutParam }
+    }
+
+    def Map<InParam,List<FileHolder>> getInputFiles() {
+        (Map<InParam,List<FileHolder>>) getInputsByType( FileInParam, FileSharedParam )
+    }
+
+    /**
+     * It is made of two parts:
+     *
+     * 1) Look at the {@code nextflow.script.FileOutParam} which name is the expected
+     *  output name
+     *
+     * 2) It looks shared file parameters, that being so are also output parameters
+     *  The problem here is that we need the real file name as it has been staged in
+     *  process execution folder. For this reason it uses the {@code #stagedProvider}
+     */
+    def List<String> getOutputFilesNames() {
+        def result = []
+
+        getOutputsByType(FileOutParam).keySet().each { FileOutParam param ->
+            result.add( param.name )
+        }
+
+        stagedProvider.call()?.each { InParam param, List<FileHolder> files ->
+            if( param instanceof FileSharedParam ) {
+                files.each { holder ->
+                    result.add( holder.stagePath.getName() )
+                }
+            }
+        }
+
+        return result
     }
 
     /**
@@ -231,40 +282,55 @@ class TaskRun<T extends TaskHandler> {
         return environment
     }
 
+
+    static final CMD_ENV = '.command.env'
+    static final CMD_SCRIPT = '.command.sh'
+    static final CMD_INFILE = '.command.in'
+    static final CMD_OUTFILE = '.command.out'
+    static final CMD_EXIT = '.exitcode'
+    static final CMD_START = '.command.started'
+    static final CMD_RUN = '.command.run'
+    static final CMD_CONTEXT = '.command.ctx'
+
     /**
      * @return The location of the environment script used by this task
      */
-    Path getCmdEnvironmentFile() { workDirectory.resolve('.command.env') }
+    Path getCmdEnvironmentFile() { workDirectory.resolve(CMD_ENV) }
 
     /**
      * @return The location of the task script script to be executed
      */
-    Path getCmdScriptFile() { workDirectory.resolve('.command.sh') }
+    Path getCmdScriptFile() { workDirectory.resolve(CMD_SCRIPT) }
 
     /**
      * @return The location of the data file to be provided to this task
      */
-    Path getCmdInputFile() { workDirectory.resolve('.command.in') }
+    Path getCmdInputFile() { workDirectory.resolve(CMD_INFILE) }
 
     /**
      * @return The location of the data output by this task
      */
-    Path getCmdOutputFile() { workDirectory.resolve('.command.out') }
+    Path getCmdOutputFile() { workDirectory.resolve(CMD_OUTFILE) }
 
     /**
      * @return The location of the file where the task exit status is saved
      */
-    Path getCmdExitFile() { workDirectory.resolve('.exitcode') }
+    Path getCmdExitFile() { workDirectory.resolve(CMD_EXIT) }
 
     /**
      * @return The location of the created when the task starts
      */
-    Path getCmdStartedFile() { workDirectory.resolve('.command.started') }
+    Path getCmdStartedFile() { workDirectory.resolve(CMD_START) }
 
     /**
      * @return The location of the wrapper BASH script user to launch the user target script
      */
-    Path getCmdWrapperFile() { workDirectory.resolve('.command.run')  }
+    Path getCmdWrapperFile() { workDirectory.resolve(CMD_RUN)  }
+
+    /**
+     * @return The location of the file that holds the cached process context map
+     */
+    Path getCmdContextFile() { workDirectory.resolve(CMD_CONTEXT) }
 
 }
 

@@ -11,13 +11,13 @@ process foo {
     val y
 
     output:
-    val x using channel
+    val y into channel
 
     "echo $x - $y"
 
 }
 
 
-channel.each {
-    println "got: $it"
+channel.subscribe {
+    println "foo out: $it"
 }

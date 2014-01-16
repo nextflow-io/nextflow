@@ -1,6 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.6.0 - xxx
+- New channel factory methods
+- Added new "reactive" operators to channel objects
+
 0.5.4 - 10 Dec 2013
 - Fixed an issue while checking an - empty - process exit file
 - Fixed a race condition while resuming cached tasks
@@ -10,7 +14,6 @@ NEXTFLOW CHANGE-LOG
 - Fixed DirectoryStream close leaks
 - Enhanced process executor, supporting multiple executors in the same pipeline
  
-
 0.5.2 - 28 Nov 2013
 - Changed caching hash function to murmur3_128 to avoid cache collision
 - Fixed issue on process termination when resuming pipeline execution

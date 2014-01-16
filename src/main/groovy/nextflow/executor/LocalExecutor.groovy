@@ -19,14 +19,17 @@
 
 package nextflow.executor
 import java.nio.file.Path
+import java.util.concurrent.Callable
+import java.util.concurrent.Future
 
 import groovy.util.logging.Slf4j
-import nextflow.processor.FileInParam
+import nextflow.Session
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
-import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskMonitor
+import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
+import nextflow.script.ScriptType
 import nextflow.util.PosixProcess
 import org.apache.commons.io.IOUtils
 import org.codehaus.groovy.runtime.IOGroovyMethods
@@ -42,37 +45,41 @@ class LocalExecutor extends AbstractExecutor {
     protected TaskMonitor createTaskMonitor() {
         final defSize = Math.max( Runtime.getRuntime().availableProcessors()-1, 1 )
         final queueSize = session.getQueueSize(name, defSize)
-        final pollInterval = session.getPollInterval(name, 50)
+        final pollInterval = session.getPollIntervalMillis(name, 50)
         log.debug "Creating executor queue with size: $queueSize; poll-interval: $pollInterval"
 
-        return new TaskPollingMonitor(session, queueSize, pollInterval) .start()
+        return new TaskPollingMonitor(session, queueSize, pollInterval)
     }
 
     @Override
-    def LocalTaskHandler createTaskHandler(TaskRun task) {
+    def TaskHandler createTaskHandler(TaskRun task) {
         assert task
-        assert task.@script
         assert task.workDirectory
 
-        log.debug "Launching task > ${task.name} -- work folder: ${task.workDirectory}"
+        /*
+         * when it is a native groovy code, use the native handler
+         */
+        if( task.type == ScriptType.GROOVY ) {
+            return new NativeTaskHandler(task,taskConfig,session)
+        }
 
+        /*
+         * otherwise as a bash script
+         */
         final bash = new BashWrapperBuilder(task)
-
-        // set the environment
         bash.environment = task.processor.getProcessEnvironment()
         bash.environment.putAll( task.getInputEnvironment() )
 
         // staging input files
         bash.stagingScript = {
-            final files = task.getInputsByType(FileInParam)
+            final files = task.getInputFiles()
             final staging = stagingFilesScript(files)
             return staging
         }
 
         // create the wrapper script
         bash.build()
-
-        new LocalTaskHandler( task, taskConfig  )
+        return new LocalTaskHandler(task,taskConfig,session)
     }
 
 
@@ -102,14 +109,16 @@ class LocalTaskHandler extends TaskHandler {
 
     private boolean destroyed
 
-    LocalTaskHandler( TaskRun task, TaskConfig taskConfig  ) {
+    private Session session
+
+    LocalTaskHandler( TaskRun task, TaskConfig taskConfig, Session session  ) {
         super(task, taskConfig)
         // create the task handler
         this.exitFile = task.getCmdExitFile()
         this.outputFile = task.getCmdOutputFile()
         this.wrapperFile = task.getCmdWrapperFile()
         this.maxDurationMillis = taskConfig.maxDuration?.toMillis()
-
+        this.session = session
     }
 
 
@@ -147,12 +156,12 @@ class LocalTaskHandler extends TaskHandler {
         final input = task.stdin
         if( !input ) { return }
 
-        Thread.start("Task ${task.name} > input feeder") {
+        session.getExecService().submit {
             try {
                 IOGroovyMethods.withStream(new BufferedOutputStream(process.getOutputStream())) { writer -> writer << input }
             }
             catch( Exception e ) {
-                log.warn "Unable to pipe input data for task: ${task.name}"
+                log.warn "Unable to pipe input data for process: ${task.name}"
             }
         }
 
@@ -187,7 +196,7 @@ class LocalTaskHandler extends TaskHandler {
 
         def done = process.hasExited()
         if( done ) {
-            task.exitCode = process.exitValue()
+            task.exitStatus = process.exitValue()
             task.stdout = outputFile
             status = Status.COMPLETED
             destroy()
@@ -200,7 +209,7 @@ class LocalTaskHandler extends TaskHandler {
              */
             if( elapsedTimeMillis() > maxDurationMillis ) {
                 destroy()
-                task.exitCode = process.exitValue()
+                task.exitStatus = process.exitValue()
                 task.stdout = outputFile
                 status = Status.COMPLETED
 
@@ -231,6 +240,71 @@ class LocalTaskHandler extends TaskHandler {
         IOUtils.closeQuietly(process.getErrorStream())
         process.destroy()
         destroyed = true
+    }
+
+}
+
+/**
+ * Executes a native piece of groovy code
+ */
+@Slf4j
+class NativeTaskHandler extends TaskHandler {
+
+    def Future<Throwable> result
+
+    private Session session
+
+    protected NativeTaskHandler(TaskRun task, TaskConfig taskConfig, Session session) {
+        super(task, taskConfig)
+        this.session = session
+    }
+
+
+    @Override
+    void submit() {
+        // submit for execution by using session executor service
+        // it returns an error when everything is OK
+        // of the exception throw in case of error
+        result = session.getExecService().submit({
+            try  {
+                return task.code.call()
+            }
+            catch( Throwable error ) {
+                return error
+            }
+
+        } as Callable)
+        status = Status.SUBMITTED
+    }
+
+    @Override
+    boolean checkIfRunning() {
+        if( isSubmitted() && result != null ) {
+            status = Status.RUNNING
+            return true
+        }
+
+        return false
+    }
+
+    @Override
+    boolean checkIfCompleted() {
+        if( isRunning() && result.isDone() ) {
+            status = Status.COMPLETED
+            if( result.get() instanceof Throwable ) {
+                task.error = result.get()
+            }
+            else {
+                task.stdout = result.get()
+            }
+            return true
+        }
+        return false
+    }
+
+    @Override
+    void kill() {
+        if( result ) result.cancel(true)
     }
 
 }

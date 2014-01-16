@@ -263,7 +263,6 @@ class FileHelper {
     static Path asPath( String str ) {
         assert str
 
-        log.debug "path string: $str"
         int p = str.indexOf('://')
         if( p == -1  ) {
             return Paths.get(str)

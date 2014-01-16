@@ -18,6 +18,10 @@
  */
 
 package nextflow.executor
+import static nextflow.processor.TaskHandler.Status.COMPLETED
+import static nextflow.processor.TaskHandler.Status.RUNNING
+import static nextflow.processor.TaskHandler.Status.SUBMITTED
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermissions
@@ -25,8 +29,7 @@ import java.nio.file.attribute.PosixFilePermissions
 import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.exception.InvalidExitException
-import nextflow.processor.FileInParam
+import nextflow.exception.ProcessFailedException
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -34,9 +37,6 @@ import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.util.CmdLineHelper
 import org.apache.commons.io.IOUtils
-
-import static nextflow.processor.TaskHandler.Status.*
-
 /**
  * Generic task processor executing a task through a grid facility
  *
@@ -51,10 +51,10 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
      */
     def TaskMonitor createTaskMonitor() {
         final queueSize = session.getQueueSize(name, 50)
-        final pollInterval = session.getPollInterval(name, 1_000)
+        final pollInterval = session.getPollIntervalMillis(name, 1_000)
         log.debug "Creating executor queue with size: $queueSize; poll-interval: $pollInterval"
 
-        return new TaskPollingMonitor(session, queueSize, pollInterval) .start()
+        return new TaskPollingMonitor(session, queueSize, pollInterval)
     }
 
 
@@ -66,10 +66,11 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         assert task.workDirectory
 
         final folder = task.workDirectory
-        log.debug "Launching task > ${task.name} -- work folder: $folder"
+        log.debug "Launching process > ${task.name} -- work folder: $folder"
 
         final bash = new BashWrapperBuilder(task)
         // set the input (when available)
+        bash.useSync = true
         bash.input = task.stdin
         bash.scratch = taskConfig.scratch
 
@@ -79,7 +80,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
 
         // staging input files
         bash.stagingScript = {
-            final files = task.getInputsByType(FileInParam)
+            final files = task.getInputFiles()
             final staging = stagingFilesScript(files)
             return staging
         }
@@ -178,6 +179,8 @@ class GridTaskHandler extends TaskHandler {
     /** The unique job ID as provided by the underlying grid platform */
     private jobId
 
+    private long exitStatusReadTimeoutMillis
+
     GridTaskHandler( TaskRun task, TaskConfig config, AbstractGridExecutor executor ) {
         super(task, config)
         this.executor = executor
@@ -185,6 +188,7 @@ class GridTaskHandler extends TaskHandler {
         this.exitFile = task.getCmdExitFile()
         this.outputFile = task.getCmdOutputFile()
         this.wrapperFile = task.getCmdWrapperFile()
+        this.exitStatusReadTimeoutMillis = executor.session?.getGridExitReadTimeoutMillis( executor.name ) ?: 90_000
     }
 
     /*
@@ -195,7 +199,7 @@ class GridTaskHandler extends TaskHandler {
 
         // -- log the qsub command
         def cli = executor.getSubmitCommandLine(task, wrapperFile)
-        log.debug "sub command > '${cli}' -- task: ${task.name}"
+        log.debug "sub command > '${cli}' -- process: ${task.name}"
 
         /*
          * launch 'sub' script wrapper
@@ -223,11 +227,11 @@ class GridTaskHandler extends TaskHandler {
                 this.status = SUBMITTED
             }
             catch( Exception e ) {
-                task.exitCode = exitStatus
+                task.exitStatus = exitStatus
                 task.script = CmdLineHelper.toLine(cli)
                 task.stdout = result
                 status = COMPLETED
-                throw new InvalidExitException("Error submitting task '${task.name}' for execution", e )
+                throw new ProcessFailedException("Error submitting process '${task.name}' for execution", e )
             }
 
         }
@@ -270,7 +274,7 @@ class GridTaskHandler extends TaskHandler {
                 return status.toInteger()
             }
             catch( Exception e ) {
-                log.warn "Unable to parse task exit file: $exitFile -- bad value: '$status'"
+                log.warn "Unable to parse process exit file: $exitFile -- bad value: '$status'"
             }
         }
 
@@ -291,7 +295,7 @@ class GridTaskHandler extends TaskHandler {
             }
 
             def delta = System.currentTimeMillis() - exitTimestampMillis
-            if( delta < 90_000 ) {
+            if( delta < exitStatusReadTimeoutMillis ) {
                 log.debug "File is returning an empty content ($exitEmptyCount): $exitFile -- Try to wait a while and .. pray."
                 return null
             }
@@ -318,7 +322,7 @@ class GridTaskHandler extends TaskHandler {
         def _exit
         if( isRunning() && (_exit = readExitStatus()) != null ) {
             // finalize the task
-            task.exitCode = _exit
+            task.exitStatus = _exit
             task.stdout = outputFile
             status = COMPLETED
             return true

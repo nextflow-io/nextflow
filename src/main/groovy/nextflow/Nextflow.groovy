@@ -18,7 +18,6 @@
  */
 
 package nextflow
-
 import java.nio.file.Path
 
 import groovy.io.FileType
@@ -32,7 +31,6 @@ import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
 import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import nextflow.util.ChannelListProxy
 import nextflow.util.FileHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>

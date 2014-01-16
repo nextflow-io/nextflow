@@ -18,10 +18,29 @@
  */
 
 package nextflow.processor
+
 import groovy.util.logging.Slf4j
 import nextflow.script.BaseScript
+import nextflow.script.EachInParam
+import nextflow.script.EnvInParam
+import nextflow.script.FileInParam
+import nextflow.script.FileOutParam
+import nextflow.script.FileSharedParam
+import nextflow.script.InParam
+import nextflow.script.InputsList
+import nextflow.script.OutParam
+import nextflow.script.OutputsList
+import nextflow.script.SetInParam
+import nextflow.script.SetOutParam
+import nextflow.script.SharedParam
+import nextflow.script.StdInParam
+import nextflow.script.StdOutParam
+import nextflow.script.ValueInParam
+import nextflow.script.ValueOutParam
+import nextflow.script.ValueSharedParam
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+
 /**
  * Holds the task configuration properties
  *
@@ -45,9 +64,10 @@ class TaskConfig implements Map {
         configProperties = new LinkedHashMap()
         configProperties.with {
             echo = false
+            undef = false
             cacheable = true
             shell = ['/bin/bash','-ue']
-            validExitCodes = [0]
+            validExitStatus = [0]
             inputs = new InputsList()
             outputs = new OutputsList()
         }
@@ -65,21 +85,31 @@ class TaskConfig implements Map {
         log.trace "TaskConfig >> ownerScript: $ownerScript"
     }
 
+    private boolean toBool( value )  {
+        if( value instanceof Boolean ) {
+            configProperties.echo = value.booleanValue()
+        }
+        else if( value != null && value.toString().toLowerCase() in ['true','yes','on'] ) {
+            configProperties.echo = true
+        }
+        else {
+            configProperties.echo = false
+        }
+    }
+
     def boolean containsKey(String name) {
         return configProperties.containsKey(name)
     }
 
-    def methodMissing( String name, def args) {
+    def methodMissing( String name, def args ) {
 
         if( args instanceof Object[] ) {
-
             if( args.size()==1 ) {
                 configProperties[ name ] = args[0]
             }
             else {
                 configProperties[ name ] = args.toList()
             }
-
         }
         else {
             configProperties[ name ] = args
@@ -87,6 +117,9 @@ class TaskConfig implements Map {
 
         return this
     }
+
+    @groovy.transform.PackageScope
+    BaseScript getOwnerScript() { ownerScript }
 
     /**
      * Type shortcut to {@code #configProperties.inputs}
@@ -102,20 +135,20 @@ class TaskConfig implements Map {
         return configProperties.outputs
     }
 
+    List getSharedDefs () {
+        configProperties.inputs.findAll { it instanceof SharedParam }
+    }
+
     boolean getEcho() {
         configProperties.echo
     }
 
+    boolean getMerge() {
+        configProperties.merge?.toString()?.toLowerCase() in ['true','yes','on']
+    }
+
     void setEcho( Object value ) {
-        if( value instanceof Boolean ) {
-            configProperties.echo = value.booleanValue()
-        }
-        else if( value ?.toString()?.toLowerCase() in ['true','yes','on']) {
-            configProperties.echo = true
-        }
-        else {
-            configProperties.echo = false
-        }
+        configProperties.echo = toBool(value)
     }
 
     TaskConfig echo( def value ) {
@@ -123,96 +156,93 @@ class TaskConfig implements Map {
         return this
     }
 
-    /**
-     * Define a *file* parameter which can be used both input or output declaration
-     *
-     * @param name The file name
-     * @param direction The parameter direction, i.e. {@code in} or {@code out}
-     * @return
-     *
-     */
-    def FileInParam __in_file( String name ) {
-        log.trace "input param > file: '$name'"
-
-        def result = name == '-' ? new StdInParam(ownerScript) : new FileInParam(ownerScript, name)
-        configProperties.inputs << result
-
-        return result
+    void setUndef( def value ) {
+        configProperties.undef = toBool(value)
     }
 
-    def ValueInParam __in_val( String name ) {
-        log.trace "input param > val: $name"
-
-        def result = new ValueInParam(ownerScript,name)
-        configProperties.inputs << result
-
-        return result
+    TaskConfig undef( def value ) {
+        configProperties.undef = toBool(value)
+        return this
     }
 
-    EnvInParam __in_env( String name ) {
-        log.trace "input param > env: '$name'"
+    boolean getUndef() {
+        configProperties.undef
+    }
 
-        def result = new EnvInParam(ownerScript,name)
-        configProperties.inputs << result
+    /// input parameters
 
+    InParam _in_val( obj ) {
+        new ValueInParam(this).bind(obj)
+    }
+
+    InParam _in_file( obj ) {
+        new FileInParam(this).bind(obj)
+    }
+
+    InParam _in_each( obj ) {
+        new EachInParam(this).bind(obj)
+    }
+
+    InParam _in_set( Object... obj ) {
+        new SetInParam(this).bind(obj)
+    }
+
+    InParam _in_stdin( obj = null ) {
+        def result = new StdInParam(this)
+        if( obj ) result.bind(obj)
         result
     }
 
-    EachInParam __in_each( String name ) {
-        log.trace "input param > each: '$name'"
-
-        def result = new EachInParam(ownerScript,name)
-        configProperties.inputs << result
-
-        return result
+    InParam _in_env( obj ) {
+        new EnvInParam(this).bind(obj)
     }
 
-    def FileOutParam __out_file( String name ) {
-        log.trace "output param > file: '$name'"
 
-        def result = name == '-' ? new StdOutParam(ownerScript) : new FileOutParam(ownerScript,name)
-        configProperties.outputs << result
+    /// output parameters
 
+    OutParam _out_val( Object obj ) {
+        new ValueOutParam(this).bind(obj)
+    }
+
+
+    OutParam _out_file( Object obj ) {
+        def result = obj == '-' ? new StdOutParam(this) : new FileOutParam(this)
+        result.bind(obj)
+    }
+
+    OutParam _out_set( Object... obj ) {
+        new SetOutParam(this) .bind(obj)
+    }
+
+    OutParam _out_stdout( obj = null ) {
+        def result = new StdOutParam(this).bind('-')
+        if( obj ) result.into(obj)
         result
     }
 
-    def ValueOutParam __out_val( String name ) {
-        log.trace "output param > val: $name"
+    /// shared parameters
 
-        def result = new ValueOutParam(ownerScript,name)
-        configProperties.outputs << result
-
-        result
+    SharedParam _share_val( def obj )  {
+        new ValueSharedParam(this).bind(obj) as SharedParam
     }
 
-    StdInParam stdin( def channelRef = null  ) {
-        log.trace "input param > stdin - channelRef: $channelRef"
-
-        def result = new StdInParam(ownerScript)
-        if( channelRef ) result.using(channelRef)
-
-        configProperties.inputs << result
-
-        result
+    SharedParam _share_file( def obj )  {
+        new FileSharedParam(this).bind(obj) as SharedParam
     }
 
-    StdOutParam stdout( def channelRef = null ) {
-        log.trace "output param > stdout - channelRef: $channelRef"
 
-        def result = new StdOutParam(ownerScript)
-        if( channelRef ) result.using(channelRef)
 
-        configProperties.outputs << result
-
-        result
-    }
 
     /**
      * Defines a special *dummy* input parameter, when no inputs are
      * provided by the user for the current task
      */
-    def void noInput() {
-        __in_val('$') .using(true)
+    def void fakeInput() {
+        new ValueInParam(this).from(true).bind('$')
+    }
+
+    def void fakeOutput( target ) {
+        new StdOutParam(this).bind('-').into(target)
     }
 
 
@@ -265,20 +295,19 @@ class TaskConfig implements Map {
 
     Duration getMaxDuration() { configProperties.maxDuration }
 
-    TaskConfig validExitCodes( Object values ) {
+    TaskConfig validExitStatus( Object values ) {
 
         if( values instanceof List ) {
-            configProperties.validExitCodes = values
+            configProperties.validExitStatus = values
         }
         else {
-            configProperties.validExitCodes = [values]
+            configProperties.validExitStatus = [values]
         }
 
         return this
     }
 
-    List<Integer> getValidExitCodes() { configProperties.validExitCodes }
-
+    List<Integer> getValidExitStatus() { configProperties.validExitStatus }
 
 
 }

@@ -80,10 +80,10 @@ while [ "$*" != "" ]; do
     if [ "$JREBEL_HOME" ]; then
     JVM_ARGS+=" -javaagent:$JREBEL_HOME/jrebel.jar -Drebel.log.file=./jrebel-client.log"
     else
-    echo "WARN: To use JReber define the JREBEL_HOME variable in environment"
+    echo "WARN: To use JRebel define the JREBEL_HOME variable in environment"
     fi
 
-  elif [ "$1" == '--remote-debugger' ]; then
+  elif [ "$1" == '-remote-debug' ]; then
     DEBUG='-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=8010'
 
   else

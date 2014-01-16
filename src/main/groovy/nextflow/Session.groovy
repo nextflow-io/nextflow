@@ -20,6 +20,8 @@
 package nextflow
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -104,6 +106,7 @@ class Session {
 
     private boolean terminated
 
+    private volatile ExecutorService execService
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -144,9 +147,14 @@ class Session {
         Dataflow.activeParallelGroup.set(pgroup)
 
         dispatcher = new TaskDispatcher(this)
+    }
 
-        log.debug ">>> phaser register (session)"
+
+    def Session start() {
+        log.debug "Session start > phaser register (session) "
         phaser.register()
+        dispatcher.start()
+        return this
     }
 
     @PackageScope
@@ -166,7 +174,8 @@ class Session {
 
     void destroy() {
         log.trace "Session destroying"
-        pgroup.shutdown()
+        if( pgroup ) pgroup.shutdown()
+        if( execService ) execService.shutdown()
         log.debug "Session destroyed"
     }
 
@@ -182,64 +191,67 @@ class Session {
     boolean isAborted() { aborted }
 
     def int taskRegister() {
-        log.debug ">>> phaser register (task)"
+        log.debug ">>> phaser register (process)"
         phaser.register()
     }
 
     def int taskDeregister() {
-        log.debug "<<< phaser deregister (task)"
+        log.debug "<<< phaser deregister (process)"
         phaser.arriveAndDeregister()
     }
 
+    def ExecutorService getExecService() {
 
-    public int getQueueSize( String execName, int defValue ) {
-        // creating the running tasks queue
-        def size = null
+        def local = execService
+        if( local )
+            return local
 
-        // make sure that the *executor* is a map object
-        // it could also be a plain string (when it specifies just the its name)
-        if( config.executor instanceof Map ){
-            if( execName ) {
-                size = config.executor?."$execName"?.queueSize
+        synchronized(this) {
+            if (execService == null) {
+                execService = Executors.newCachedThreadPool()
             }
-
-            if( !size && config.executor?.queueSize ) {
-                size = config.executor?.queueSize
-            }
+            return execService
         }
-
-
-        if( !size ) {
-            size = defValue
-            log.debug "Undefined executor queueSize property runnable queue size -- fallback default value: $size"
-        }
-
-        return size
     }
 
-    public long getPollInterval( String execName, long defValue = 1_000 ) {
-        // creating the running tasks queue
+
+    protected getExecConfigProp( String execName, String propName, Object defValue ) {
+
         def result = null
 
         // make sure that the *executor* is a map object
         // it could also be a plain string (when it specifies just the its name)
         if( config.executor instanceof Map ){
-            if( execName ) {
-                result = config.executor?."$execName"?.pollInterval
+            if( execName && config.executor[execName] instanceof Map ) {
+                result = config.executor[execName][propName]
             }
 
-            if( !result && config.executor?.pollInterval ) {
-                result = config.executor?.pollInterval
+            if( !result && config.executor[propName] ) {
+                result = config.executor[propName]
             }
         }
 
 
         if( !result ) {
             result = defValue
-            log.debug "Undefined executor queueSize property runnable queue size -- fallback on num of available processors-1: $result"
+            log.debug "Undefined executor property: '$propName' -- fallback default value: $result"
         }
 
         return result
+
+    }
+
+
+    public int getQueueSize( String execName, int defValue ) {
+        getExecConfigProp(execName, 'queueSize', defValue) as int
+    }
+
+    public long getPollIntervalMillis( String execName, long defValue = 1_000 ) {
+        getExecConfigProp( execName, 'pollInterval', defValue ) as long
+    }
+
+    public long getGridExitReadTimeoutMillis( String execName, long defValue = 0 ) {
+        getExecConfigProp( execName, 'exitReadTimeout', defValue ) as long
     }
 
 

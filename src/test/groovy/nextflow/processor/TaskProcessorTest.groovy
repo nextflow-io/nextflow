@@ -18,9 +18,14 @@
  */
 
 package nextflow.processor
+
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.script.FileInParam
+import nextflow.script.ScriptVar
+import nextflow.script.ValueInParam
+import nextflow.util.CacheHelper
 import spock.lang.Specification
 import test.DummyProcessor
 import test.DummyScript
@@ -48,12 +53,13 @@ class TaskProcessorTest extends Specification {
 
         setup:
         def processor = [:] as TaskProcessor
-        def script = Mock(Script)
+        def binding = new Binding()
+        def holder = []
 
         def inputs = [:]
-        def key1 = new FileInParam(script, 'file1')
-        def key2 = new FileInParam(script, 'file_')
-        def key3 = new ValueInParam(script, 'xxx')
+        def key1 = new FileInParam(binding, holder).bind('file1')
+        def key2 = new FileInParam(binding, holder).bind('file_')
+        def key3 = new ValueInParam(binding, holder).bind( new ScriptVar('xxx') )
 
         def val1 = [ FileHolder.get('xxx', 'file.txt') ]
         def val2 =  [ FileHolder.get('yyy', 'file.2'), FileHolder.get('zzz', '.hidden') ]
@@ -227,6 +233,16 @@ class TaskProcessorTest extends Specification {
 
     }
 
+
+    def testGetHashLog() {
+
+        when:
+        def processor = [:] as TaskProcessor
+        def h = CacheHelper.hasher('x').hash()
+        then:
+        processor.getHashLog(h) == '76/9f897d'
+
+    }
 
 
 
