@@ -56,8 +56,6 @@ class LocalExecutor extends AbstractExecutor {
         assert task
         assert task.workDirectory
 
-        log.debug "Launching process > ${task.name} -- work folder: ${task.workDirectory}"
-
         /*
          * when it is a native groovy code, use the native handler
          */

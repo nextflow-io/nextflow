@@ -96,7 +96,7 @@ class DelegateMap implements Map {
     public put(String property, Object newValue) {
         if( newValue instanceof Path ) {
             newValue = new SerializablePath(newValue)
-            log.debug "Swapping to serializable path in context map: $newValue"
+            log.trace "Swapping to serializable path in context map: $newValue"
         }
         else if( !(newValue instanceof Serializable) && cacheable ) {
             log.warn "Variable '$property' does not implement the Java Serializable interface -- Resume feature will not work for process '$name'"

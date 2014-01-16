@@ -608,7 +608,6 @@ abstract class TaskProcessor {
             message << "Tip: check the log file '.nextflow.log' for more details"
             log.error message.join('\n')
             log.debug "Error details", error
-
         }
 
         session.abort()
@@ -723,12 +722,12 @@ abstract class TaskProcessor {
 
             switch( param ) {
             case StdOutParam:
-                log.debug "Process $name > normalize stdout param: $param"
+                log.trace "Process $name > normalize stdout param: $param"
                 value = value instanceof Path ? value.text : value?.toString()
 
             case FileOutParam:
             case ValueOutParam:
-                log.debug "Process $name > collecting out param: ${param} = $value"
+                log.trace "Process $name > collecting out param: ${param} = $value"
                 tuples[param.index].add( value )
                 break
 
@@ -743,21 +742,19 @@ abstract class TaskProcessor {
             if( list == null ) throw new IllegalStateException()
 
             if( param.mode == BasicMode.standard ) {
-                log.debug "Process $name > Binding out param: ${param} = ${list}"
+                log.trace "Process $name > Binding out param: ${param} = ${list}"
                 bindOutParam(param, list)
             }
 
             else if( param.mode == BasicMode.flatten ) {
-                log.debug "Process $name > Flatting out param: ${param} = ${list}"
-
+                log.trace "Process $name > Flatting out param: ${param} = ${list}"
                 CollectionHelper.flatten( list ) {
                     bindOutParam( param, it )
                 }
-
             }
 
             else if( param.mode == SetOutParam.CombineMode.combine ) {
-                log.debug "Process $name > Combining out param: ${param} = ${}"
+                log.trace "Process $name > Combining out param: ${param} = ${list}"
                 def combs = list.combinations()
                 combs.each { bindOutParam(param, it) }
             }
@@ -1230,7 +1227,7 @@ abstract class TaskProcessor {
      * @param producedFiles The map of files to be bind the outputs
      */
     private void finalizeTask0( TaskRun task ) {
-        log.debug "Finalize process > ${task.name}"
+        log.trace "Finalize process > ${task.name}"
 
         // -- bind output (files)
         if( task.canBind ) {
@@ -1250,11 +1247,10 @@ abstract class TaskProcessor {
 
         def created = instanceCount.get()
         def finalized = isFinalize ? finalizeCount.incrementAndGet() : finalizeCount.get()
-        // log.debug "Finalizing task > task: ${name}; finalize: $isFinalize; allScalarValues: ${allScalarValues}; receivedPoisonPill: ${receivedPoisonPill}; instancesCount: ${tot}; finalizeCount: ${count} "
 
         def done = allScalarValues || ( receivedPoisonPill && created == finalized )
         if( done ) {
-            log.debug "Finalizing process > ${name} -- isFinalize: $isFinalize"
+            log.trace "Finalizing process > ${name} -- isFinalize: $isFinalize"
             sendPoisonPill()
             session.taskDeregister()
             processor.terminate()

@@ -71,7 +71,7 @@ class TaskPollingMonitor implements TaskMonitor {
                 pollLoop()
             }
             finally {
-                log.debug "<<< phaser deregister (scheduler)"
+                log.debug "<<< phaser de-register (scheduler)"
                 session.phaser.arriveAndDeregister()
             }
         }

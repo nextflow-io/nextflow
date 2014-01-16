@@ -144,7 +144,7 @@ class CustomLexer extends GroovyLexer {
             setLineLast( token.lineLast )
         }
 
-        log.debug "* token: '${token.text}' type: ${token.type} "
+        log.trace "* trace: '${token.text}' type: ${token.type} "
         return newToken
     }
 

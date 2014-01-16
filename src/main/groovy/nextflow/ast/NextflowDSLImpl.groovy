@@ -332,7 +332,7 @@ class NextflowDSLImpl implements ASTTransformation {
      */
 
     def void convertShareMethod( Expression expression ) {
-        log.debug "convert > shared expression: $expression"
+        log.trace "convert > shared expression: $expression"
 
         if( expression instanceof MethodCallExpression ) {
             def methodCall = expression as MethodCallExpression

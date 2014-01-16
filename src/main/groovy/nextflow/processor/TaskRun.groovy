@@ -155,7 +155,7 @@ class TaskRun {
         // print the stdout
         if( stdout instanceof Path ) {
             if( !stdout.exists() ) {
-                log.debug "Echo file does not exist: ${stdout}"
+                log.trace "Echo file does not exist: ${stdout}"
                 return
             }
 

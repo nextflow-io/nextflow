@@ -370,12 +370,12 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         @Override
         public void afterStop(final DataflowProcessor processor) {
-            log.debug "After stop > ${name}"
+            log.trace "After stop > ${name}"
 
             // bind shared outputs
             ParallelTaskProcessor.this.sharedObjs?.each { param, obj ->
                 if( !param.outChannel ) return
-                log.debug "Binding shared out param: ${param.name} = ${obj}"
+                log.trace "Binding shared out param: ${param.name} = ${obj}"
                 if( obj instanceof Collection )
                     obj = obj[0]
                 if( obj instanceof FileHolder )
