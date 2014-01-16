@@ -99,7 +99,7 @@ class DelegateMap implements Map {
             log.trace "Swapping to serializable path in context map: $newValue"
         }
         else if( !(newValue instanceof Serializable) && cacheable ) {
-            log.warn "Variable '$property' does not implement the Java Serializable interface -- Resume feature will not work for process '$name'"
+            log.warn "Variable '$property' [${newValue.class.simpleName}] does not implement the Java Serializable interface -- Resume feature will not work for process '$name'"
         }
         holder.put(property, newValue)
     }
