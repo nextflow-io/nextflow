@@ -38,7 +38,7 @@ class TaskPollingMonitor implements TaskMonitor {
     final long pollIntervalMillis
 
     /**
-     * Initialise the monitor, creatign the queue which will hold the tasks
+     * Initialise the monitor, creating the queue which will hold the tasks
      *
      * @param session
      * @param queueSize
