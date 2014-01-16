@@ -31,6 +31,8 @@ import nextflow.script.InParam
 import nextflow.script.OutParam
 import nextflow.script.ScriptType
 import nextflow.script.StdInParam
+import nextflow.script.ValueOutParam
+
 /**
  * Models a task instance
  *
@@ -207,6 +209,10 @@ class TaskRun {
         else {
             return script?.toString()
         }
+    }
+
+    def boolean hasCacheableValues() {
+        outputs.keySet().any { it.class == ValueOutParam }
     }
 
     def Map<InParam,List<FileHolder>> getInputFiles() {

@@ -17,7 +17,6 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.processor
-
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
@@ -36,10 +35,10 @@ import groovyx.gpars.group.PGroup
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.ast.AstNodeToScriptVisitor
-import nextflow.exception.ProcessFailedException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
+import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessScriptException
 import nextflow.executor.AbstractExecutor
 import nextflow.script.BaseScript
@@ -59,9 +58,6 @@ import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
 import nextflow.util.FileHelper
-import org.apache.commons.lang.SerializationException
-import org.apache.commons.lang.SerializationUtils
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -516,8 +512,7 @@ abstract class TaskProcessor {
          */
         def ctxMap = null
         def ctxFile = folder.resolve(TaskRun.CMD_CONTEXT)
-        def outCount = task.getOutputsByType(ValueOutParam).size()
-        if( outCount ) {
+        if( task.hasCacheableValues() ) {
             if( !ctxFile.exists() ) {
                 log.trace "[$task.name] Contexy map file does not exist: $ctxFile -- return false"
                 return false
@@ -758,6 +753,9 @@ abstract class TaskProcessor {
                 def combs = list.combinations()
                 combs.each { bindOutParam(param, it) }
             }
+
+            else
+                throw new IllegalStateException("Unknown bind output parameter type: ${param}")
         }
 
 
@@ -859,7 +857,7 @@ abstract class TaskProcessor {
         // for each of them collect the produced files
         entries.each { String pattern ->
             def result = executor.collectResultFile(workDir, pattern, task.name)
-            log.debug "Process ${task.name} > collected outputs for pattern '$pattern': $result"
+            log.trace "Process ${task.name} > collected outputs for pattern '$pattern': $result"
 
             if( result instanceof List ) {
                 // filter the result collection
@@ -1199,7 +1197,7 @@ abstract class TaskProcessor {
 
             // save the context map for caching purpose
             // only the 'cache' is active and
-            if( cacheable && task.getOutputsByType(ValueOutParam).size() && task.code.delegate != null ) {
+            if( cacheable && task.hasCacheableValues() && task.code.delegate != null ) {
                 ((DelegateMap) task.code.delegate).save(task.getCmdContextFile())
             }
 
