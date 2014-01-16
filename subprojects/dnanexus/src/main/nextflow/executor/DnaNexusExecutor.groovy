@@ -18,7 +18,6 @@
 */
 
 package nextflow.executor
-
 import static nextflow.processor.TaskHandler.Status.COMPLETED
 import static nextflow.processor.TaskHandler.Status.RUNNING
 import static nextflow.processor.TaskHandler.Status.SUBMITTED
@@ -29,7 +28,6 @@ import java.nio.file.Path
 import groovy.util.logging.Slf4j
 import nextflow.fs.dx.DxPath
 import nextflow.fs.dx.api.DxApi
-import nextflow.script.FileOutParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -120,7 +118,7 @@ class DnaNexusExecutor extends AbstractExecutor {
         }
         obj.stage_inputs = stageScript
         // todo Include shared output files as well
-        obj.output_files = taskConfig.getOutputs().ofType(FileOutParam).collect { it.getName() }
+        obj.output_files = task.getOutputFilesNames()
 
         new DxTaskHandler(task, taskConfig, this, obj)
     }

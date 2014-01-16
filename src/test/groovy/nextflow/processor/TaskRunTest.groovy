@@ -10,6 +10,7 @@ import nextflow.script.ScriptVar
 import nextflow.script.StdInParam
 import nextflow.script.StdOutParam
 import nextflow.script.ValueInParam
+import nextflow.script.ValueOutParam
 import spock.lang.Specification
 
 /**
@@ -95,6 +96,31 @@ class TaskRunTest extends Specification {
         task.getInputFiles().size() == 2
         task.stagedInputs.size() == 3
 
+    }
+
+
+    def testGetOutputFilesNames() {
+
+        setup:
+        def binding = new Binding()
+        def task = new TaskRun()
+        def list = []
+
+        when:
+        def i1 = new ValueInParam(binding, list).bind( new ScriptVar('x') )
+        def s1 = new FileSharedParam(binding, list).bind( new ScriptVar('y') )
+        def o1 = new FileOutParam(binding,list).bind('file_out.alpha')
+        def o2 = new ValueOutParam(binding,list).bind( 'x' )
+        def o3 = new FileOutParam(binding,list).bind('file_out.beta')
+
+        task.setInput(i1, 'Hello' )
+        task.setInput(s1, [ new FileHolder(Paths.get('file_shared.delta')) ])
+        task.setOutput(o1)
+        task.setOutput(o2)
+        task.setOutput(o3)
+
+        then:
+        task.getOutputFilesNames() == ['file_out.alpha', 'file_out.beta', 'file_shared.delta']
     }
 
 

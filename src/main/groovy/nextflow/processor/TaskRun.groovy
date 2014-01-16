@@ -19,20 +19,19 @@
 
 package nextflow.processor
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.concurrent.locks.ReentrantLock
 
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
+import nextflow.script.FileOutParam
 import nextflow.script.FileSharedParam
 import nextflow.script.InParam
 import nextflow.script.OutParam
 import nextflow.script.ScriptType
 import nextflow.script.StdInParam
 import nextflow.script.ValueOutParam
-
 /**
  * Models a task instance
  *
@@ -220,6 +219,34 @@ class TaskRun {
     }
 
     /**
+     * It is made of two parts:
+     *
+     * 1) Look at the {@code nextflow.script.FileOutParam} which name is the expected
+     *  output name
+     *
+     * 2) It looks shared file parameters, that being so are also output parameters
+     *  The problem here is that we need the real file name as it has been staged in
+     *  process execution folder. For this reason it uses the {@code #stagedProvider}
+     */
+    def List<String> getOutputFilesNames() {
+        def result = []
+
+        getOutputsByType(FileOutParam).keySet().each { FileOutParam param ->
+            result.add( param.name )
+        }
+
+        stagedProvider.call()?.each { InParam param, List<FileHolder> files ->
+            if( param instanceof FileSharedParam ) {
+                files.each { holder ->
+                    result.add( holder.stagePath.getName() )
+                }
+            }
+        }
+
+        return result
+    }
+
+    /**
      * Get the map of *input* objects by the given {@code InParam} type
      *
      * @param types One ore more subclass of {@code InParam}
@@ -256,14 +283,14 @@ class TaskRun {
     }
 
 
-    static Path CMD_ENV = Paths.get('.command.env')
-    static Path CMD_SCRIPT = Paths.get('.command.sh')
-    static Path CMD_INFILE = Paths.get('.command.in')
-    static Path CMD_OUTFILE = Paths.get('.command.out')
-    static Path CMD_EXIT = Paths.get('.exitcode')
-    static Path CMD_START = Paths.get('.command.started')
-    static Path CMD_RUN = Paths.get('.command.run')
-    static Path CMD_CONTEXT = Paths.get('.command.ctx')
+    static final CMD_ENV = '.command.env'
+    static final CMD_SCRIPT = '.command.sh'
+    static final CMD_INFILE = '.command.in'
+    static final CMD_OUTFILE = '.command.out'
+    static final CMD_EXIT = '.exitcode'
+    static final CMD_START = '.command.started'
+    static final CMD_RUN = '.command.run'
+    static final CMD_CONTEXT = '.command.ctx'
 
     /**
      * @return The location of the environment script used by this task
