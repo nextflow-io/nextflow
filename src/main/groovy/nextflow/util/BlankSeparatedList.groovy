@@ -4,7 +4,7 @@ package nextflow.util
  * the items by a blank space
  */
 
-public class BlankSeparatedList {
+public class BlankSeparatedList implements Serializable {
 
     // note: due to a bug with the groovy runtime, the class must no implement
     // the List interface, otherwise the toString() method is not invoked (Groovy 2.1.7)
