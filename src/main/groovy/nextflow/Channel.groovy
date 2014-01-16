@@ -125,9 +125,8 @@ class Channel {
         glob = glob ||  filePattern ==~ /.*\{.+\,.+\}.*/
 
         if( !glob ) {
-            return just( FileHelper.asPath(filePattern) )
+            return from(FileHelper.asPath(filePattern))
         }
-
 
         // split the folder and the pattern
         def ( String folder, String pattern ) = getFolderAndPattern(filePattern)
