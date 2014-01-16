@@ -15,3 +15,4 @@ Vagrantfile
 resources/*
 test/*
 tools/*
+docs/_build/
