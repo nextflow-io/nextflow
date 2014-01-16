@@ -1,12 +1,8 @@
 package nextflow
-
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import groovyx.gpars.dataflow.DataflowVariable
 import spock.lang.Specification
-
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -36,13 +32,11 @@ class ChannelTest extends Specification {
         when:
         def channel = Channel.files('/some/file.txt')
         then:
-        channel instanceof DataflowVariable
         channel.val == Paths.get('/some/file.txt')
 
         when:
         channel = Channel.files('/some/f{i}le.txt')
         then:
-        channel instanceof DataflowVariable
         channel.val == Paths.get('/some/f{i}le.txt')
 
     }
