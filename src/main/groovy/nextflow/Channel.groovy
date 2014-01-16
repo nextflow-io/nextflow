@@ -42,7 +42,7 @@ class Channel {
      * @param items
      * @return
      */
-    static <T> DataflowChannel<T> from( Iterable<T> items ) { Nextflow.channel(items) }
+    static <T> DataflowChannel<T> from( Collection<T> items ) { Nextflow.channel(items) }
 
     /**
      * Creates a channel sending the items in the collection over it

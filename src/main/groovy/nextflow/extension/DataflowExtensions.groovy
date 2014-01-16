@@ -221,7 +221,7 @@ class DataflowExtensions {
             item = closure ? closure.call(item) : item
 
             switch( item ) {
-                case Iterable:
+                case Collection:
                     item.each { it -> bindOutput(it) }
                     break
 
@@ -783,7 +783,7 @@ class DataflowExtensions {
         switch(other) {
             case DataflowQueue: source = ((DataflowQueue) other).toList(); break
             case DataflowExpression: source = other; break
-            case Iterable: source = Channel.just(other); break
+            case Collection: source = Channel.just(other); break
             default: throw new IllegalArgumentException()
         }
 
@@ -1019,8 +1019,8 @@ class DataflowExtensions {
                 def entry = (Map.Entry) obj
                 return entry.key
 
-            case Iterable:
-                def itr = ((Iterable)obj) .iterator()
+            case Collection:
+                def itr = ((Collection)obj) .iterator()
                 return itr.hasNext() ? itr.next() : null
 
             case (Object[]):
