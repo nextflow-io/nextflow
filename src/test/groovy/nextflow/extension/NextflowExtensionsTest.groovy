@@ -74,6 +74,7 @@ class NextflowExtensionsTest extends Specification {
         NextflowExtensions.parseFastaRecord(fasta, [seq:true, width: 20 ]) .seq == 'NLFVALYDFVASGDNTLSIT\nKGEKLRVLGYNHNGEWCEAQ\nTKNGQGWVPSNYITPVN'
         NextflowExtensions.parseFastaRecord(fasta, [head:true]) .head == '1aboA  xyz|beta|gamma'
         NextflowExtensions.parseFastaRecord(fasta, [desc:true, seq: true, width: 0]) .seq == 'NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPSNYITPVN'
+        NextflowExtensions.parseFastaRecord(fasta, [text: true]) .text == fasta
 
     }
 
