@@ -2,10 +2,10 @@
 Processes
 ###########
 
-In Nextflow a `process` in the basic processing `primitive` to execute a user provided script.
+In Nextflow a `process` is the basic processing `primitive` to execute a user script.
 
-The process definition starts with keyword ``process`` to which follows the process name and the process body
-delimited by curly brackets. The process ``body`` must contain a string which represents the command or, more generally,
+The process definition starts with keyword the ``process``, followed by process name and finally the process `body`
+delimited by curly brackets. The process body must contain a string which represents the command or, more generally,
 a script that is executed by it. A basic process looks like the following example::
 
   process sayHello {
@@ -15,8 +15,8 @@ a script that is executed by it. A basic process looks like the following exampl
   }
 
 
-More in details a process may contain five blocks respectively directives, inputs, outputs, share and finally
-the process scripts. The syntax is defined as following:
+more specifically a process may contain five different definition block, respectively: directives,
+inputs, outputs, shares and finally the process script. The syntax is defined as follows:
 
 ::
 
@@ -43,21 +43,21 @@ the process scripts. The syntax is defined as following:
 Script
 =======
 
-The `script` block is a string statement that defines the command to be executed by the process to carry out its job.
+The `script` block is a string statement that defines the command that is executed by the process to carry out its task.
 
-A process contains one and only script block, and it must be the last statement when the process contains
+A process contains one and only one script block, and it must be the last statement when the process contains
 input, output and share declarations.
 
 The entered string is executed as a `BASH <http://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ script in the
-`host` system. It can be any command, script or combination of them as you would use them through a shell terminal or a
-plain BASH script.
+`host` system. It can be any command, script or combination of them, that you would normally use in terminal shell
+or in a common BASH script.
 
 The only limitation to the commands that can be used in the script statement is given by the availability of those
 programs in the target execution system.
 
 
-The script block can be any simple string or multi-lines string. The latter simplify the writing of non trivial scripts
-composed by multiple commands spanning on multiple lines. For example::
+The script block can be a simple string or multi-line string. The latter simplifies the writing of non trivial scripts
+composed by multiple commands spanning over multiple lines. For example::
 
     process doMoreThings {
 
@@ -69,20 +69,19 @@ composed by multiple commands spanning on multiple lines. For example::
 
     }
 
-As explained in the script tutorial section, strings can be defined both by using a single-quote
-or double-quotes, and multi-lines strings are defined by three single-quote or three double-quotes characters.
+As explained in the script tutorial section, strings can be defined by using a single-quote
+or a double-quote, and multi-line strings are defined by three single-quote or three double-quote characters.
 
 There is a subtle but important difference between them. Like in BASH, strings delimited by a ``"`` character support
 variable substitutions, while strings delimited by ``'`` do not.
 
-In the above code fragment the ``$db`` variable is replaced by the actual variable value defined somewhere in the
+In the above code fragment the ``$db`` variable is replaced by the actual value defined somewhere in the
 pipeline script.
 
-.. warning:: Since Nextflow uses the same syntax of BASH for variable substitution in strings, you need to manage them
-  carefully depending if you need to evaluate a variable in the Nextflow context - or - in the BASH script environment
-  execution context.
+.. warning:: Since Nextflow uses the same BASH syntax for variable substitutions in strings, you need to manage them
+  carefully depending on if you want to evaluate a variable in the Nextflow context - or - in the BASH environment execution.
 
-When you need to access an system environment variable  in your script you have two options. The first choice is as
+When you need to access a system environment variable  in your script you have two options. The first choice is as
 easy as defining your script block by using a single-quote string. For example::
 
     process printPath {
@@ -93,10 +92,11 @@ easy as defining your script block by using a single-quote string. For example::
 
     }
 
-The drawback of this solution is that you cannot use in your script block variables defined in the pipeline script context.
+The drawback of this solution is that you will not able to access variables defined in the pipeline script context,
+in your script block.
 
-To fix this define your script by using a double-quotes string and `escape` the system environment variables by
-prefixing the with a back-slash ``\`` character, as shown in the following example::
+To fix this, define your script by using a double-quote string and `escape` the system environment variables by
+prefixing them with a back-slash ``\`` character, as shown in the following example::
 
 
     process doOtherThings {
@@ -109,8 +109,8 @@ prefixing the with a back-slash ``\`` character, as shown in the following examp
 
     }
 
-In this example the ``$MAX`` variable have to be defined somewhere before in the pipeline script.
-`Nextflow` replace it with the actual value before executing the script. Instead, the ``$DB`` variable
+In this example the ``$MAX`` variable has to be defined somewhere before, in the pipeline script.
+`Nextflow` replaces it with the actual value before executing the script. Instead, the ``$DB`` variable
 must exist in the script execution environment and the BASH interpreter will replace it with the actual value.
 
 
@@ -122,11 +122,11 @@ The process script is interpreted by Nextflow as a BASH script by default, but y
 You can use your favourite scripting language (e.g. Perl, Python, Ruby, R, etc), or even mix them in the same pipeline.
 
 A pipeline may be composed by processes that execute very different tasks. Using `Nextflow` you can choose the scripting
-language that fit better the task carried out by a specified process. For example for some processes `R` could be
-more useful than `Perl`, in other you may need to use `Python` because it provides access to a better library or API, etc.
+language that better fits the task carried out by a specified process. For example for some processes `R` could be
+more useful than `Perl`, in other you may need to use `Python` because it provides better access to a library or an API, etc.
 
-To use a scripting other than BASH, simply start your process script with the corresponding `shebang <http://en.wikipedia.org/wiki/Shebang_(Unix)>` declaration.
-For example::
+To use a scripting other than BASH, simply start your process script with the corresponding
+`shebang <http://en.wikipedia.org/wiki/Shebang_(Unix)>`_ declaration. For example::
 
     process perlStuff {
 
@@ -152,21 +152,21 @@ For example::
 
 
 .. tip:: Since the actual location of the interpreter binary file can change across platforms, to make your scripts
-   more portable it is wise to use the ``env`` shell command followed by the interpreter name, instead of the absolute path
-   to it. Thus, the `shebang` declaration for a Perl script, for example,
-   would look like to ``#!/usr/bin/env perl`` instead of the one in the above pipeline fragment.
+   more portable it is wise to use the ``env`` shell command followed by the interpreter's name, instead of the absolute
+   path of it. Thus, the `shebang` declaration for a Perl script, for example,
+   would look like: ``#!/usr/bin/env perl`` instead of the one in the above pipeline fragment.
 
 
 Conditional scripts
 -------------------
 
-Complex process scripts may require to evaluate conditions on the input parameters or use traditional flow control
-statements (i.e. ``if``, ``switch``, etc) in order to execute specific script command depending the current inputs
-configuration.
+Complex process scripts may need to evaluate conditions on the input parameters or use traditional flow control
+statements (i.e. ``if``, ``switch``, etc) in order to execute specific script commands, depending on the current
+inputs configuration.
 
-Conditional scripts are supported in Nextflow simply prefixing the script block with the keyword 'script:'.
-By doing that the interpreter will evaluates all the following statements to a code block that must return the final
-script string to be execute. It's much easier to use than to explain, for example::
+Process scripts can contain conditional statements by simply prefixing the script block with the keyword ``script:``.
+By doing that the interpreter will evaluate all the following statements as a code block that must return the
+script string to be executed. It's much easier to use than to explain, for example::
 
 
     seq_to_align = ...
@@ -198,19 +198,19 @@ script string to be execute. It's much easier to use than to explain, for exampl
     }
 
 
-In the above example the process will execute the script fragment depending by the value of ``mode`` parameter.
-By default it will executed the ``tcoffee`` script. Changing the mode variable to ``mafft`` or `clustalo` value, the
-others branches will be executed.
+In the above example the process will execute the script fragment depending on the value of the ``mode`` parameter.
+By default it will execute the ``tcoffee`` command, changing the ``mode`` variable to ``mafft`` or ``clustalo`` value,
+the other branches will be executed.
 
 
 Native execution
 ------------------
 
-Nextflow processes can execute native code other than system scripts as shown in the above script.
+Nextflow processes can execute native code other than system scripts as shown in the previous paragraphs.
 
-This means that instead of specifying the process command to be executed by providing a string script, you can
-define it by proving one or more statements, as you would in the rest of the pipeline script, simply starting
-with the ``exec:`` keyword. For example::
+This means that instead of specifying the process command to be executed as a string script, you can
+define it by providing one or more language statements, as you would do in the rest of the pipeline script.
+Simply starting the script definition block with the ``exec:`` keyword, for example::
 
     x = Channel.from( 'a', 'b', 'c')
 
@@ -229,9 +229,9 @@ Will display::
     Hello Mr. c
 
 
-.. warning:: Native processes are an incubating feature and have the following limitation: teh can executed only using
-    a `local` executor and cannot be executed when the `merge` feature is specified
-
+.. warning:: Native processes execution is an incubating feature and has the following limitations:
+    they can only be executed by using a `local` executor and they cannot be used when the `merge`
+    feature is specified.
 
 
 Inputs
