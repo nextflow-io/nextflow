@@ -17,21 +17,41 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-dependencies {
-    compile project(':')
-<<<<<<< HEAD
-    compile 'nextflow:dxfs:0.5.2'
-=======
-    compile ('nextflow:dxfs:0.5.1') {
-        exclude module: 'commons-logging'
+package nextflow.executor
+
+import nextflow.processor.TaskConfig
+import nextflow.processor.TaskHandler
+import nextflow.processor.TaskRun
+
+/**
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+class HzTaskHandler extends TaskHandler {
+
+    int slots = 1
+
+    protected HzTaskHandler(TaskRun task, TaskConfig taskConfig) {
+        super(task, taskConfig)
     }
->>>>>>> Hazelcast executor draft
 
-    testCompile project(':')
-    testCompile "org.codehaus.groovy:groovy-json:${groovyVer}"
-}
+    @Override
+    boolean checkIfRunning() {
+        return false
+    }
 
+    @Override
+    boolean checkIfCompleted() {
+        return false
+    }
 
-task compile(type: Copy) {
-    dependsOn compileJava, compileGroovy, processResources
+    @Override
+    void kill() {
+
+    }
+
+    @Override
+    void submit() {
+
+    }
 }

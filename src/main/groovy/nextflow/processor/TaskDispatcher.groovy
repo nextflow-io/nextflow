@@ -62,7 +62,8 @@ class TaskDispatcher {
      * closure in order to create a new {@code TaskMonitor} object,
      * add it to the map and return it.
      *
-     * NOTE: this method is not thread-safe by design
+     * NOTE: this method is not thread-safe by design since it is invoked
+     * only by the script interpreter.
      *
      * @param type
      * @param create

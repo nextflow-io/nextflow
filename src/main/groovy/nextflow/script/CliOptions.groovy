@@ -87,6 +87,9 @@ class CliOptions {
     @Parameter(names = ['-E'], description = 'Exports all the current system environment')
     boolean exportSysEnv
 
+    @Parameter(names = ['-d'], description = 'Start in cluster daemon mode', arity = 0)
+    boolean daemon
+
     /**
      * Extra parameters for the script execution
      */

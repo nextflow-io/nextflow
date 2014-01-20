@@ -38,6 +38,7 @@ import ch.qos.logback.core.spi.FilterReply
 import groovy.transform.PackageScope
 import nextflow.Const
 import org.apache.commons.lang.exception.ExceptionUtils
+import nextflow.script.CliOptions
 import org.slf4j.LoggerFactory
 
 /**
@@ -59,8 +60,12 @@ class LoggerHelper {
      * @param debugConf The list of packages for which use a Debug logging level
      * @param traceConf The list of packages for which use a Trace logging level
      */
-    static void configureLogger( String logFileName, boolean quiet, List<String> debugConf, List<String> traceConf ) {
-        assert logFileName
+    static void configureLogger( CliOptions options ) {
+
+        final String logFileName = options.daemon ? ".nf-daemon.log" : options.logFile
+        final boolean quiet = options.quiet
+        final List<String> debugConf = options.debug
+        final List<String> traceConf = options.trace
 
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory()
 

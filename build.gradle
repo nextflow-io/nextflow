@@ -18,7 +18,7 @@
  */
 
 apply plugin: 'gradle-one-jar'
-version = '0.6.2'
+version = '0.7.0'
 
 allprojects {
     apply plugin: 'groovy'
@@ -38,13 +38,13 @@ allprojects {
         testCompile ("org.spockframework:spock-core:${spockVer}") {
             exclude module: 'groovy-all'
         }
-        //testCompile ('commons-cli:commons-cli:1.2')
     }
 }
 
 configurations {
     oneJarLib
     dnanexus.extendsFrom runtime
+    hazelcast.extendsFrom runtime
     gdocLibs.extendsFrom runtime
 }
 
@@ -67,6 +67,10 @@ dependencies {
     oneJarLib files('one-jar/one-jar-boot-0.97.jar')
 
     dnanexus (project(':dnanexus')) {
+        exclude module: 'nextflow'
+    }
+
+    hazelcast (project(':hazelcast')) {
         exclude module: 'nextflow'
     }
 
@@ -163,7 +167,7 @@ task compile(type: Copy) {
     dependsOn buildInfo, compileJava, compileGroovy, processResources
 
     into "$buildDir/dependency-libs"
-    from configurations.runtime
+    from configurations.hazelcast
 }
 
 

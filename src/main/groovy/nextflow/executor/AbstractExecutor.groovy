@@ -80,7 +80,7 @@ abstract class AbstractExecutor {
      */
     TaskHandler submitTask( TaskRun task, boolean blocking ) {
         def handler = createTaskHandler(task)
-        monitor.put(handler)
+        monitor.offer(handler)
         try {
             // set a count down latch if the execution is blocking
             if( blocking )

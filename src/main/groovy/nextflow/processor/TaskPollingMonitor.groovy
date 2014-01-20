@@ -127,7 +127,7 @@ class TaskPollingMonitor implements TaskMonitor {
      * @param handler The {@code TaskHandler} instance for the task
      */
     @Override
-    def void put( TaskHandler handler ) {
+    def void offer( TaskHandler handler ) {
         queue.put( handler )
     }
 

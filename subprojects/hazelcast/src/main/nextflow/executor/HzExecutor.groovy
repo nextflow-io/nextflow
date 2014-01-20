@@ -16,22 +16,35 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
+package nextflow.executor
 
-dependencies {
-    compile project(':')
-<<<<<<< HEAD
-    compile 'nextflow:dxfs:0.5.2'
-=======
-    compile ('nextflow:dxfs:0.5.1') {
-        exclude module: 'commons-logging'
+import nextflow.processor.TaskHandler
+import nextflow.processor.TaskMonitor
+import nextflow.processor.TaskRun
+import nextflow.script.ScriptType
+
+/**
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+class HzExecutor extends AbstractExecutor {
+
+
+
+    @Override
+    protected TaskMonitor createTaskMonitor() {
+        return null
     }
->>>>>>> Hazelcast executor draft
 
-    testCompile project(':')
-    testCompile "org.codehaus.groovy:groovy-json:${groovyVer}"
-}
+    @Override
+    TaskHandler createTaskHandler(TaskRun task) {
+
+        if( task.type == ScriptType.GROOVY ) {
+            throw new UnsupportedOperationException("Native tasks are not supported")
+        }
+
+        return null
+    }
 
 
-task compile(type: Copy) {
-    dependsOn compileJava, compileGroovy, processResources
 }

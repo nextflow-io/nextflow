@@ -19,16 +19,11 @@
 
 dependencies {
     compile project(':')
-<<<<<<< HEAD
-    compile 'nextflow:dxfs:0.5.2'
-=======
-    compile ('nextflow:dxfs:0.5.1') {
+    compile ('com.hazelcast:hazelcast-all:3.1.5') {
         exclude module: 'commons-logging'
     }
->>>>>>> Hazelcast executor draft
 
     testCompile project(':')
-    testCompile "org.codehaus.groovy:groovy-json:${groovyVer}"
 }
 
 

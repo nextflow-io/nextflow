@@ -35,6 +35,7 @@ import nextflow.Nextflow
 import nextflow.Session
 import nextflow.ast.NextflowDSL
 import nextflow.exception.ConfigParseException
+import nextflow.daemon.DaemonLauncher
 import nextflow.exception.InvalidArgumentException
 import nextflow.exception.MissingLibraryException
 import nextflow.util.HistoryFile
@@ -452,7 +453,7 @@ class CliRunner {
         try {
             // -- parse the program arguments - and - configure the logger
             def options = parseMainArgs(args)
-            LoggerHelper.configureLogger( options.logFile, options.quiet, options.debug, options.trace )
+            LoggerHelper.configureLogger(options)
             log.debug "${Const.APP_NAME} ${args?.join(' ')}"
 
             // -- print out the version number, then exit
@@ -477,17 +478,20 @@ class CliRunner {
                 System.exit(ExitCode.OK)
             }
 
-            if( !options.arguments ) {
-                log.error "You didn't enter any script file on the program command line\n"
-                jcommander.usage()
-                System.exit( ExitCode.MISSING_SCRIPT_FILE )
-            }
+            File scriptFile = null
+            if( !options.daemon ) {
+                if( !options.arguments ) {
+                    log.error "You didn't enter any script file on the program command line\n"
+                    jcommander.usage()
+                    System.exit( ExitCode.MISSING_SCRIPT_FILE )
+                }
 
-            // -- check script name
-            File scriptFile = new File(options.arguments[0])
-            if ( !scriptFile.exists() ) {
-                log.error "The specified script does not exist: '$scriptFile'\n"
-                System.exit( ExitCode.MISSING_SCRIPT_FILE )
+                // -- check script name
+                scriptFile = new File(options.arguments[0])
+                if ( !scriptFile.exists() ) {
+                    log.error "The specified script does not exist: '$scriptFile'\n"
+                    System.exit( ExitCode.MISSING_SCRIPT_FILE )
+                }
             }
             scriptBaseName = scriptFile.getBaseName()
 
@@ -498,42 +502,14 @@ class CliRunner {
             // -- check file system providers
             checkFileSystemProviders()
 
-            // -- configuration file(s)
-            def configFiles = validateConfigFiles(options.config)
-            def config = buildConfig(configFiles, options.env, options.exportSysEnv)
+            // create the config object
+            def config = makeConfig(options)
 
-            // -- override 'process' parameters defined on the cmd line
-            options.process.each { name, value ->
-                config.process[name] = parseValue(value)
-            }
-
-            // -- check for the 'continue' flag
-            if( options.resume ) {
-                def uniqueId = options.resume
-                if( uniqueId == 'last' ) {
-                    uniqueId = HistoryFile.history.retrieveLastUniqueId()
-                    if( !uniqueId ) {
-                        log.error "It appears you have never executed it before -- Cannot use the '-resume' command line option"
-                        System.exit(ExitCode.MISSING_UNIQUE_ID)
-                    }
-                }
-                config.session.uniqueId = uniqueId
-            }
-
-            // -- other configuration parameters
-            if( options.poolSize ) {
-                config.poolSize = options.poolSize
-            }
-            if( options.queueSize ) {
-                config.executor.queueSize = options.queueSize
-            }
-            if( options.pollInterval ) {
-                config.executor.pollInterval = options.pollInterval
-            }
-
-            // -- add the command line parameters to the 'taskConfig' object
-            options.params?.each { name, value ->
-                config.params.put(name, parseValue(value))
+            // -- launch daemon
+            if( options.daemon ) {
+                log.debug "Launching cluster daemon"
+                launchDaemon(config)
+                return
             }
 
             // -- create a new runner instance
@@ -558,7 +534,6 @@ class CliRunner {
                 // -- run it!
                 runner.execute(scriptFile,scriptArgs)
             }
-
         }
 
         catch( ParameterException e ) {
@@ -784,5 +759,56 @@ class CliRunner {
             get(pos)
         }
 
+    }
+
+    static Map makeConfig( CliOptions options ) {
+
+        // -- configuration file(s)
+        def configFiles = validateConfigFiles(options.config)
+        def config = buildConfig(configFiles, options.env, options.exportSysEnv)
+
+        // -- override 'process' parameters defined on the cmd line
+        options.process.each { name, value ->
+            config.process[name] = parseValue(value)
+        }
+
+        // -- check for the 'continue' flag
+        if( options.resume ) {
+            def uniqueId = options.resume
+            if( uniqueId == 'last' ) {
+                uniqueId = HistoryFile.history.retrieveLastUniqueId()
+                if( !uniqueId ) {
+                    log.error "It appears you have never executed it before -- Cannot use the '-resume' command line option"
+                    System.exit(ExitCode.MISSING_UNIQUE_ID)
+                }
+            }
+            config.session.uniqueId = uniqueId
+        }
+
+        // -- other configuration parameters
+        if( options.poolSize ) {
+            config.poolSize = options.poolSize
+        }
+        if( options.queueSize ) {
+            config.executor.queueSize = options.queueSize
+        }
+        if( options.pollInterval ) {
+            config.executor.pollInterval = options.pollInterval
+        }
+
+        // -- add the command line parameters to the 'taskConfig' object
+        options.params?.each { name, value ->
+            config.params.put(name, parseValue(value))
+        }
+
+        return config
+    }
+
+    static launchDaemon( Map config ) {
+        def loader = ServiceLoader.load(DaemonLauncher).iterator()
+        if( !loader.hasNext() )
+            throw new IllegalStateException("No daemon services are available -- Cannot launch Nextflow in damon mode")
+
+        loader.next().launch(config)
     }
 }

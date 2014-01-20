@@ -15,7 +15,7 @@ interface TaskMonitor {
      *
      * @param handler {@code TaskHandler} instance
      */
-    def void put(TaskHandler handler)
+    def void offer(TaskHandler handler)
 
     /**
      * Remove the {@code TaskHandler} instance from the queue of tasks ro be processed

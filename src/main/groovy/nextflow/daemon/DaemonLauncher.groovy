@@ -17,21 +17,15 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-dependencies {
-    compile project(':')
-<<<<<<< HEAD
-    compile 'nextflow:dxfs:0.5.2'
-=======
-    compile ('nextflow:dxfs:0.5.1') {
-        exclude module: 'commons-logging'
-    }
->>>>>>> Hazelcast executor draft
+package nextflow.daemon
 
-    testCompile project(':')
-    testCompile "org.codehaus.groovy:groovy-json:${groovyVer}"
-}
+/**
+ * Generic interface to launch the cluster daemon
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+public interface DaemonLauncher {
 
+    void launch( Map config )
 
-task compile(type: Copy) {
-    dependsOn compileJava, compileGroovy, processResources
 }
