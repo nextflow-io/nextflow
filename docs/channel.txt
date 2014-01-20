@@ -1,6 +1,6 @@
-#######
-Channel
-#######
+#########
+Channels
+#########
 
 Nextflow is based on the Dataflow programming model in which processes communicate through channels.
 
