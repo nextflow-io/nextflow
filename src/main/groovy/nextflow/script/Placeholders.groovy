@@ -38,13 +38,13 @@ class ScriptVar {
  *
  *
  */
-class ScriptFileWrap {
+class ScriptFileCall {
 
     final String name
 
     final String filePattern
 
-    ScriptFileWrap( value ) {
+    ScriptFileCall( value ) {
 
         if( value instanceof ScriptVar ) {
             name = value.name
@@ -77,7 +77,7 @@ class ScriptFileWrap {
  * @see nextflow.ast.NextflowDSLImpl
  * @see SetInParam#bind(java.lang.Object[])
  */
-class ScriptStdinWrap { }
+class ScriptStdinCall { }
 
 /**
  * An object of this class replace the {@code stdout} token in input map declaration. For example:
@@ -89,9 +89,15 @@ class ScriptStdinWrap { }
  * @see nextflow.ast.NextflowDSLImpl
  * @see SetOutParam#bind(java.lang.Object[])
  */
-class ScriptStdoutWrap { }
+class ScriptStdoutCall { }
 
 @Canonical
-class ScriptEnvWrap {
+class ScriptEnvCall {
+    String name
+}
+
+
+@Canonical
+class ScriptValCall {
     String name
 }

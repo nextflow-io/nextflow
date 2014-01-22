@@ -409,6 +409,8 @@ class SetInParam extends BaseInParam {
 
     final List<InParam> inner = []
 
+    String getName() { toString() }
+
     SetInParam bind( Object... obj ) {
 
         obj.each { item ->
@@ -416,7 +418,7 @@ class SetInParam extends BaseInParam {
             if( item instanceof ScriptVar )
                 newItem(ValueInParam).bind(item)
 
-            else if( item instanceof ScriptFileWrap )
+            else if( item instanceof ScriptFileCall )
                 newItem(FileInParam).bind( [(item.name):item.filePattern] )
 
             else if( item instanceof Map )
@@ -428,10 +430,13 @@ class SetInParam extends BaseInParam {
             else if( item instanceof String )
                 newItem(FileInParam).bind(item)
 
-            else if( item instanceof ScriptEnvWrap )
+            else if( item instanceof ScriptValCall )
+                newItem(ValueInParam).bind(item.name)
+
+            else if( item instanceof ScriptEnvCall )
                 newItem(EnvInParam).bind(item.name)
 
-            else if( item instanceof ScriptStdinWrap )
+            else if( item instanceof ScriptStdinCall )
                 newItem(StdInParam)
 
             else

@@ -19,10 +19,11 @@
 
 package nextflow.ast
 import groovy.util.logging.Slf4j
-import nextflow.script.ScriptEnvWrap
-import nextflow.script.ScriptFileWrap
-import nextflow.script.ScriptStdinWrap
-import nextflow.script.ScriptStdoutWrap
+import nextflow.script.ScriptEnvCall
+import nextflow.script.ScriptFileCall
+import nextflow.script.ScriptStdinCall
+import nextflow.script.ScriptStdoutCall
+import nextflow.script.ScriptValCall
 import nextflow.script.ScriptVar
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
@@ -401,6 +402,23 @@ class NextflowDSLImpl implements ASTTransformation {
         }
     }
 
+    protected Expression varToStr( Expression expr ) {
+        if( expr instanceof VariableExpression ) {
+            def name = ((VariableExpression) expr).getName()
+            return new ConstantExpression(name)
+        }
+
+        if( expr instanceof TupleExpression )  {
+            def list = expr.getExpressions()
+            list.eachWithIndex { Expression item, int i ->
+                list[i] = varToStr(item)
+            }
+            return expr
+        }
+
+        return expr
+    }
+
     protected Expression varToConst( Expression expr ) {
 
         if( expr instanceof VariableExpression ) {
@@ -415,10 +433,10 @@ class NextflowDSLImpl implements ASTTransformation {
              *    set( stdin, .. ) from q
              */
             if( name == 'stdin' && withinSetMethod )
-                return newObj( ScriptStdinWrap )
+                return newObj( ScriptStdinCall )
 
             else if ( name == 'stdout' && withinSetMethod )
-                return newObj( ScriptStdoutWrap )
+                return newObj( ScriptStdoutCall )
 
             else
                 return newObj( ScriptVar, new ConstantExpression(name) )
@@ -432,13 +450,19 @@ class NextflowDSLImpl implements ASTTransformation {
          */
         if( expr instanceof MethodCallExpression && expr.methodAsString == 'file' && withinSetMethod ) {
             def args = (TupleExpression) varToConst(expr.arguments)
-            return newObj( ScriptFileWrap, args )
+            return newObj( ScriptFileCall, args )
         }
 
         if( expr instanceof MethodCallExpression && expr.methodAsString == 'env' && withinSetMethod ) {
-            def args = (TupleExpression) varToConst(expr.arguments)
-            return newObj( ScriptEnvWrap, args )
+            def args = (TupleExpression) varToStr(expr.arguments)
+            return newObj( ScriptEnvCall, args )
         }
+
+        if( expr instanceof MethodCallExpression && expr.methodAsString == 'val' && withinSetMethod ) {
+            def args = (TupleExpression) varToStr(expr.arguments)
+            return newObj( ScriptValCall, args )
+        }
+
 
         if( expr instanceof TupleExpression )  {
             def list = expr.getExpressions()

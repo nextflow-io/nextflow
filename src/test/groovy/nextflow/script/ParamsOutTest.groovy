@@ -183,6 +183,66 @@ class ParamsOutTest extends Specification {
 
     }
 
+    def testSetOutParams2() {
+
+        setup:
+        def text = '''
+            process hola {
+              output:
+                set val(x) into p
+                set val(y), stdout, file('*.fa') into q mode flatten
+                set stdout, val(z) into t mode combine
+
+              return ''
+            }
+            '''
+
+        def binding = [:]
+        TaskProcessor process = parse(text, binding).run()
+
+        when:
+        SetOutParam out1 = process.taskConfig.getOutputs().get(0)
+        SetOutParam out2 = process.taskConfig.getOutputs().get(1)
+        SetOutParam out3 = process.taskConfig.getOutputs().get(2)
+
+        then:
+        process.taskConfig.getOutputs().size() == 3
+
+        out1.outChannel instanceof DataflowQueue
+        out1.outChannel == binding.p
+        out1.inner.size() == 1
+        out1.inner[0] instanceof ValueOutParam
+        out1.inner[0].name == 'x'
+        out1.inner[0].index == 0
+        out1.mode == BasicMode.standard
+
+        out2.outChannel instanceof DataflowQueue
+        out2.outChannel == binding.q
+        out2.inner[0] instanceof ValueOutParam
+        out2.inner[0].name == 'y'
+        out2.inner[0].index == 1
+        out2.inner[1] instanceof StdOutParam
+        out2.inner[1].name == '-'
+        out2.inner[1].index == 1
+        out2.inner[2] instanceof FileOutParam
+        out2.inner[2].name == '*.fa'
+        out2.inner[2].index == 1
+        out2.inner.size() ==3
+        out2.mode == BasicMode.flatten
+
+        out3.outChannel instanceof DataflowQueue
+        out3.outChannel == binding.t
+        out3.inner.size() == 2
+        out3.inner[0] instanceof StdOutParam
+        out3.inner[0].name == '-'
+        out3.inner[0].index == 2
+        out3.inner[1] instanceof ValueOutParam
+        out3.inner[1].name == 'z'
+        out3.inner[1].index == 2
+        out3.mode == SetOutParam.CombineMode.combine
+
+    }
+
 
 
     def testStdOut() {

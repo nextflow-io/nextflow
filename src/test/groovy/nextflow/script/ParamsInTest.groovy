@@ -342,9 +342,9 @@ class ParamsInTest extends Specification {
         def text = '''
             process hola {
               input:
-              set( a, file(x), b ) from 1
-              set( x, file('y'), z ) from 2
-              set( v, file(xx:'yy'), w, stdin ) from 3
+              set( val(a), file(x), val(b) ) from 1
+              set( val(p), file('txt'), env('q') ) from 2
+              set( val(v), file(xx:'yy'), stdin, env(W) ) from 3
 
               return ''
             }
@@ -359,28 +359,44 @@ class ParamsInTest extends Specification {
         then:
         process.taskConfig.getInputs().size() == 3
 
-//        in0.name == null
-//        in0.route.size() == 3
-//        in0.route.get(0) == new SetInParam.MapItem(ValueInParam,'a',null)
-//        in0.route.get(1) == new SetInParam.MapItem(FileInParam,'x','*')
-//        in0.route.get(2) == new SetInParam.MapItem(ValueInParam,'b',null)
-//        in0.inChannel.val == 1
-//
-//        in1.name == null
-//        in1.route.size() == 3
-//        in1.route.get(0) == new SetInParam.MapItem(ValueInParam,'x',null)
-//        in1.route.get(1) == new SetInParam.MapItem(FileInParam,'y','y')
-//        in1.route.get(2) == new SetInParam.MapItem(ValueInParam,'z',null)
-//        in1.inChannel.val == 2
-//
-//        in2.name == null
-//        in2.route.size() == 4
-//        in2.route.get(0) == new SetInParam.MapItem(ValueInParam,'v',null)
-//        in2.route.get(1) == new SetInParam.MapItem(FileInParam,'xx','yy')
-//        in2.route.get(2) == new SetInParam.MapItem(ValueInParam,'w',null)
-//        in2.route.get(3) == new SetInParam.MapItem(StdInParam,'-',null)
-//        in2.inChannel.val == 3
+        in0.name == 'SetInParam[0]'
+        in0.inChannel.val == 1
+        in0.inner.size() == 3
+        in0.inner.get(0) instanceof ValueInParam
+        in0.inner.get(0).name == 'a'
+        in0.inner.get(0).mapIndex == 0
+        in0.inner.get(1) instanceof FileInParam
+        in0.inner.get(1).name == 'x'
+        in0.inner.get(1).filePattern == '*'
+        in0.inner.get(1).mapIndex == 1
+        in0.inner.get(2) instanceof ValueInParam
+        in0.inner.get(2).name == 'b'
+        in0.inner.get(2).mapIndex == 2
 
+        in1.inner.get(0) instanceof ValueInParam
+        in1.inner.get(0).name == 'p'
+        in1.inner.get(0).mapIndex == 0
+        in1.inner.get(1) instanceof FileInParam
+        in1.inner.get(1).name == 'txt'
+        in1.inner.get(1).filePattern == 'txt'
+        in1.inner.get(1).mapIndex == 1
+        in1.inner.get(2) instanceof EnvInParam
+        in1.inner.get(2).name == 'q'
+        in1.inner.get(2).mapIndex == 2
+
+        in2.inner.get(0) instanceof ValueInParam
+        in2.inner.get(0).name == 'v'
+        in2.inner.get(0).mapIndex == 0
+        in2.inner.get(1) instanceof FileInParam
+        in2.inner.get(1).name == 'xx'
+        in2.inner.get(1).filePattern == 'yy'
+        in2.inner.get(1).mapIndex == 1
+        in2.inner.get(2) instanceof StdInParam
+        in2.inner.get(2).name == '-'
+        in2.inner.get(2).mapIndex == 2
+        in2.inner.get(3) instanceof EnvInParam
+        in2.inner.get(3).name == 'W'
+        in2.inner.get(3).mapIndex == 3
 
     }
 

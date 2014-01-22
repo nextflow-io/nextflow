@@ -225,11 +225,17 @@ class SetOutParam extends BaseOutParam {
             if( item instanceof ScriptVar )
                 create(ValueOutParam).bind(item)
 
-            else if( item instanceof ScriptStdoutWrap || item == '-'  )
+            else if( item instanceof ScriptValCall )
+                create(ValueOutParam).bind(item.name)
+
+            else if( item instanceof ScriptStdoutCall || item == '-'  )
                 create(StdOutParam).bind('-')
 
             else if( item instanceof String )
                 create(FileOutParam).bind(item)
+
+            else if( item instanceof ScriptFileCall )
+                create(FileOutParam).bind(item.name)
 
             else
                 throw new IllegalArgumentException("Invalid map output parameter declaration -- item: ${item}")
