@@ -84,6 +84,10 @@ class DelegateMap implements Map {
 
     }
 
+    Object invokeMethod(String name, Object args) {
+        script.invokeMethod(name, args)
+    }
+
     public getProperty( String name ) {
         get((String)name)
     }
