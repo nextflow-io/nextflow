@@ -602,8 +602,8 @@ abstract class TaskProcessor {
             message << formatErrorCause( error )
             message << "Tip: check the log file '.nextflow.log' for more details"
             log.error message.join('\n')
-            log.debug "Error details", error
         }
+        log.debug "Error details", error
 
         session.abort()
         return true
@@ -694,7 +694,7 @@ abstract class TaskProcessor {
         def result = new StringBuilder()
         result << '\nCaused by:\n'
 
-        def message = error.cause?.toString() ?: ( error.getMessage() ?: error.toString() )
+        def message = error.cause?.getMessage() ?: ( error.getMessage() ?: error.toString() )
         result.append('  ').append(message).append('\n')
 
         result.toString()
