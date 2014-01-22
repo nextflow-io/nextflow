@@ -15,7 +15,7 @@ a script that is executed by it. A basic process looks like the following exampl
   }
 
 
-more specifically a process may contain five different definition block, respectively: directives,
+more specifically a process may contain five definition blocks, respectively: directives,
 inputs, outputs, shares and finally the process script. The syntax is defined as follows:
 
 ::
@@ -237,57 +237,72 @@ Will display::
 Inputs
 =======
 
-The `input` block is used to define the channels that a process is expecting to receive in input. It can be defined
-at most one input block and it can contain one or more inputs declarations. The input block follows the syntax shown below::
+Nextflow processes are isolated from each other but can communicate between themselves sending values through channels.
+
+The `input` block defines which channels the process is expecting to receive inputs data from. You can only define one
+input block at a time and it must contain one or more inputs declarations.
+
+The input block follows the syntax shown below::
 
     input:
-      <input classifier> <input name> [from channel]
-
-Inputs definition starts by an input `classifier`, the name to be used for the input object in the process context
-followed by the keyword ``from`` and finally the actual channel over which inputs are received and some optional
-attributes.
-
-When the input name is the same as the channel name, the ``from`` part of the declaration can be omitted.
-
-Inputs classifier permits to manage the received data by their effective type and apply some required semantic rule,
-and let Nextflow runtime to manage them accordingly the target execution platform (grid, cloud, etc).
-
-The provided classifiers are:
-
-- *env*: the input is used to define an environment variable in the process context;
-- *val*: handle data of any type;
-- *file*: the input is managed as file to be staged in the process context;
-- *stdin*: the received data is redirected to the process `stdin` special file;
-- *each*: executes the process for each entries of the collection received in input.
+      <input classifier> <input name> [from channel] [attributes]
 
 
-Generic input values
----------------------
+Input definitions start with an input `classifier` and the input `name`, followed by the keyword ``from`` and
+the actual channel over which inputs are received. Finally some input optional attributes can be specified.
 
-The ``val`` classifier permits to handle any value as an input data. The input can be referenced by its name as
-shown in the following example::
+.. note:: When the input name is the same as the channel name, the ``from`` part of the declaration can be omitted.
+
+The input classifier declares the `type` of data to be received. This information is used by Nextflow to apply the
+semantic rules associated to each classifier and handle it properly depending on the target execution platform
+(grid, cloud, etc).
+
+The classifiers available are the ones listed in the following table:
+
+=========== =============
+Classifier  Semantic
+=========== =============
+val         Lets you access the received input value by its name in the process script.
+env         Lets you use the received value to set an environment variable named
+            as the specified input name.
+file        Lets you handle the received value as a file, staging it properly in the execution context.
+stdin       Lets you forward the received value to the process `stdin` special file.
+set         Lets you handle a group of input values having one of the above classifiers.
+each        Lets you execute the process for each entry in the input collection.
+=========== =============
+
+
+Input of generic values
+-------------------------
+
+The ``val`` classifier allows you to receive data of any type as input. It can be accessed in the process script
+by using the specified input name, as shown in the following example::
 
     num = Channel.from( 1, 2, 3 )
 
     process basicExample {
       input:
-      val x using num
+      val x from num
 
       "echo process job $x"
 
     }
 
 
-The above process is executed three times, each time a values is received over the ``values`` channel and will produce
-an output similar to the one shown below::
+In the above example the process is executed three times, each time a value is received from the channel ``num``
+and used to process the script. Thus, it results in an output similar to the one shown below::
 
     process job 3
-    process job 2
     process job 1
+    process job 2
+
+.. note:: The `channel` guarantees that items are delivered in the same order as they have been sent - but -
+  since the process is executed in a parallel manner, there is no guarantee that they are processed in the
+  same order as they are received. In fact, in the above example, value ``3`` is processed before the others.
 
 
-When the using the short input declaration form, the input data has the same name as name as the channel. Thus
-the above example can be written as shown below::
+When the ``val`` has the same name as the channel from where the data is received, the ``from`` part can be omitted.
+Thus the above example can be written as shown below::
 
     num = Channel.from( 1, 2, 3 )
 
@@ -300,45 +315,32 @@ the above example can be written as shown below::
     }
 
 
-Input files
+Input of files
 -----------------
 
-The ``file`` classifier is used to stage the received data as files in the `process` execution context. For example::
+The ``file`` classifier allows you to receive a value as a file in the process execution context. This means that
+Nextflow will stage it in the process execution directory, and you can access it in the script by using the name
+specified in the input declaration. For example::
 
     proteins = Channel.files( '/some/path/*.fa' )
 
     process blastThemAll {
-
       input:
-      file 'query.fa' using proteins
+      file query_file from proteins
 
-      "blastp -query query.fa -db nr"
+      "blastp -query ${query_file} -db nr"
 
     }
 
-In the above example all the files ending with the suffix ``.fa`` in the specified path are sent over the channel ``proteins``.
-Then, the process declares that it receives a file named `query.fa` from the ``proteins`` channel.
+In the above example all the files ending with the suffix ``.fa`` are sent over the channel ``proteins``.
+Then, these files are received by the process which will execute a `BLAST` query on each of them.
 
-What happens is that any file that the process receives is staged with the name `query.fa` in separate execution context
-(a folder where the job will be executed) and an independent process execution is launched.
-
-.. tip:: By doing that the process can be execute one or multiple times, independently how many are the files provided
-  as input and their actual location in the underlying file system. In other words, `Nextflow` helps you in writing
-  pipeline tasks as self-contained and portable processes that are decoupled by the execution environment. This
-  also the reason why you should avoid as much possible to reference directly files or directories by using absolute or
-  relative paths in your pipeline processes.
-
-
-In some use cases, you may need to use the file original name that it is not know at the time of the process writing.
-
-In this case use the short syntax for the input declaration, i.e. without specifying the file name and the `using` keyword,
-and referring to it using the channel name as a variable. For example::
-
+When the file input name is the same as the channel name, the ``from`` part of the input declaration can be omitted.
+Thus, the above example could be written as shown below::
 
     proteins = Channel.files( '/some/path/*.fa' )
 
     process blastThemAll {
-
       input:
       file proteins
 
@@ -347,36 +349,82 @@ and referring to it using the channel name as a variable. For example::
     }
 
 
+It's worth noting that in the above examples, the name of the file in the file-system is not touched, you can
+access the file even without knowing its name because you can reference it in the process script by using the
+variable whose name is specified in the input file parameter declaration.
+
+There may be cases where your task needs to use a file whose name is fixed, it does not have to change along
+with the actual provided file. In this case you can specify its name by specifying the ``name`` attribute in the
+input file parameter declaration, as shown in the following example::
+
+    input:
+        file query_file name 'query.fa' from proteins
+
+
+Or alternatively using a shorter syntax::
+
+    input:
+        file 'query.fa' from proteins
+
+
+Using this, the previous example can be re-written as shown below::
+
+    proteins = Channel.files( '/some/path/*.fa' )
+
+    process blastThemAll {
+      input:
+      file 'query.fa' from proteins
+
+      "blastp -query query.fa -db nr"
+
+    }
+
+
+What happens in this example is that each file, that the process receives, is staged with the name ``query.fa``
+in a different execution context (i.e. the folder where the job is executed) and an independent process
+execution is launched.
+
+.. tip:: This allows you to execute the process command various time without worrying the files names changing.
+  In other words, `Nextflow` helps you write pipeline tasks that are self-contained and decoupled by the execution
+  environment. This is also the reason why you should avoid whenever possible to use absolute or relative paths
+  referencing files in your pipeline processes.
+
+
+
 .. TODO describe that file can handle channels containing any data type not only file
 
 
 Multiple files
-----------------
+----------------------
 
-A process can declare as file input a channel emitting a list of value instead of a simple value. In this case
-multiple files are staged in the process execution context appending to the name specified the an index number.
-For example::
+A process can declare as input file a channel that emits a collection of values, instead of a simple value.
+
+In this case, the script variable defined by the input file parameter will hold a list of files. You can
+use it as shown before, referring to all the files in the list, or by accessing a specific entry using the
+usual square brackets notation.
+
+When a target file name is defined in the input parameter and a collection of files is received by the process,
+the file name will be appended by a numerical suffix representing its ordinal position in the list. For example::
 
     fasta = Channel.files( "/some/path/*.fa" ).buffer(count:3)
 
     process blastThemAll {
         input:
-        file 'file' using fasta
+        file 'seq' from fasta
 
-        "echo file*"
+        "echo seq*"
 
     }
 
-::
+Will output::
 
-    file1 file2 file3
-    file1 file2 file3
+    seq1 seq2 seq3
+    seq1 seq2 seq3
     ...
 
-The target input file name can contain the ``*`` and ``?`` wildcards that can be used
-to control the name of staged file when the process received multiple files. The following
-table shows how the wildcards are replaced depending the cardinality of the received
-input collection.
+The target input file name can contain the ``*`` and ``?`` wildcards, that can be used
+to control the name of staged files. The following table shows how the wildcards are
+replaced depending on the cardinality of the received input collection.
 
 ============ ============== ==================================================
 Cardinality   Name pattern     Staged file names
@@ -389,27 +437,27 @@ Cardinality   Name pattern     Staged file names
  many        ``file??.ext``  ``file01.ext``, ``file02.ext``, ``file03.ext``, ..
 ============ ============== ==================================================
 
-The following fragment shows are wildcard is used in the file input declaration::
+The following fragment shows how a wildcard can be used in the input file declaration::
 
 
     fasta = Channel.files( "/some/path/*.fa" ).buffer(count:3)
 
     process blastThemAll {
         input:
-        file 'file?.fa' using fasta
+        file 'seq?.fa' from fasta
 
-        "cat file?.fa"
+        "cat seq1.fa seq2.fa seq3.fa"
 
     }
 
 
 
-Input stdin
------------------
+Input of type 'stdin'
+-----------------------
 
-The ``stdin`` input classifier allows to forward the items emitted by a channel to the
+The ``stdin`` input classifier allows you the forwarding of the value received from a channel to the
 `standard input <http://en.wikipedia.org/wiki/Standard_streams#Standard_input_.28stdin.29>`_
-of the command script executed by the process. For example::
+of the command executed by the process. For example::
 
     str = Channel.from('hello', 'hola', 'bonjour', 'ciao').map { it+'\n' }
 
@@ -423,7 +471,7 @@ of the command script executed by the process. For example::
 
     }
 
-::
+It will output::
 
     hola
     bonjour
@@ -433,18 +481,18 @@ of the command script executed by the process. For example::
 
 
 
-env input
-----------
+Input of type 'env'
+---------------------
 
-The ``env`` classifier allows to define an environment variable in the process execution context based on the values
-emitted by the specified channel. For example::
+The ``env`` classifier allows you to define an environment variable in the process execution context based
+on the value received from the channel. For example::
 
     str = Channel.from('hello', 'hola', 'bonjour', 'ciao')
 
     process printEnv {
 
         input:
-        env HELLO using str
+        env HELLO from str
 
         '''
         echo $HELLO world!
@@ -460,29 +508,148 @@ emitted by the specified channel. For example::
     hola world!
 
 
-each input
------------
 
-The ``each`` classifier accepts at input a collection of items. It will execute the process for each item in the
-provided collection.
+Input of type 'set'
+--------------------
+
+The ``set`` classifier allows you to group multiple parameters in a single parameter definition. It can be useful
+when a process receives, in input, tuples of values that need to be handled separately. Each element in the tuple
+is associated to a corresponding element with the ``set`` definition. For example::
+
+     tuple = Channel.from( [1, 'alpha'], [2, 'beta'], [3, 'delta'] )
+
+     process setExample {
+         input:
+         set val(x), file('latin.txt')  from tuple
+
+         """
+         echo Processing $x
+         cat - latin.txt > copy
+         """
+
+     }
+
+
+In the above example the ``set`` parameter is used to define the value ``x`` and the file ``latin.txt``,
+which will receive a value from the same channel.
+
+In the ``set`` declaration items can be defined by using the following classifiers: ``val``, ``env``, ``file`` and ``stdin``.
+
+A shorter notation can be used by applying the following substitution rules:
+
+============== =======
+long            short
+============== =======
+val(x)          x
+file(x)         (not supported)
+file('name')    'name'
+file(x:'name')  x:'name'
+stdin           '-'
+env(x)          (not supported)
+============== =======
+
+Thus the previous example could be rewritten as follows::
+
+      tuple = Channel.from( [1, 'alpha'], [2, 'beta'], [3, 'delta'] )
+
+      process setExample {
+          input:
+          set x, 'latin.txt' from tuple
+
+          """
+          echo Processing $x
+          cat - latin.txt > copy
+          """
+
+      }
+
+
+
+Input repeaters
+----------------
+
+The ``each`` classifier allows you to repeat the execution of a process for each item in a collection,
+every time new data is received. For example::
+
+  sequences = Channel.files('*.fa')
+  methods = ['regular', 'expresso', 'psicoffee']
+
+  process alignSequences {
+    input:
+    file seq from sequences
+    each mode from methods
+
+    """
+    t_coffee -in $seq -mode $mode > result
+    """
+
+  }
+
+
+In the above example every time a file of sequences is received as input by the process,
+it executes three T-coffee tasks, using a different value for the ``mode`` parameter.
+
+This is useful when you need to `repeat` the same task for a given set of parameters.
+
+.. note:: When multiple repeaters are declared, the process is executed for each *combination* them.
+
+Take in consideration the following example. The process declares, in input, a channel receiving a
+generic ``shape`` of values. Each time a new shape value is received, it `draws` it
+in two different colors and three different sizes::
+
+    shapes = Channel.from('circle','square', 'triangle' .. )
+
+    process combine {
+      input:
+      val shape from shapes
+      each color from 'red','blue'
+      each size from 1,2
+
+      "echo draw $shape $color with size: $size"
+
+    }
+
+Will output::
+
+    draw circle red with size: 1
+    draw circle red with size: 2
+    draw circle red with size: 3
+    draw circle blue with size: 1
+    draw circle blue with size: 2
+    draw circle blue with size: 3
+    draw square red with size: 1
+    draw square red with size: 2
+    draw square red with size: 3
+    draw square blue with size: 1
+    draw square blue with size: 2
+    draw square blue with size: 3
+    draw triangle red with size: 1
+    draw triangle red with size: 2
+    draw triangle red with size: 3
+    draw triangle blue with size: 1
+    draw triangle blue with size: 2
+    draw triangle blue with size: 3
+    ..
 
 
 Outputs
 ========
 
-The `output` block is used to define the channels that the process to send out the produced results.
+The `output` declaration block allows to define the channels used by the process to send out the results produced.
+
 It can be defined at most one output block and it can contain one or more outputs declarations.
 The output block follows the syntax shown below::
 
     output:
-      <output classifier> [<output name> using] <channel> [attribute [,..]]
+      <output classifier> <output name> [into <channel>] [attribute [,..]]
 
-Outputs definition starts by an output `classifier`, the name to be used for the output object in the process context
-followed by the keyword ``using`` and finally the actual channel over which outputs are sent and some optional
-attributes.
+Output definitions start by an output `classifier` and the output `name`, followed by the keyword ``into`` and
+the actual channel over which outputs are sent. Finally some optional attributes can be specified.
 
-When the output name is the same as the channel name, it can be omitted together with the ``using`` keyword.
+.. note:: When the output name is the same as the channel name, the ``into`` part of the declaration can be omitted.
 
+
+.. TODO the channel is implicitly create if does not exist
 
 The provided classifiers are:
 
@@ -491,88 +658,151 @@ The provided classifiers are:
 - *stdout*: the received data is redirected to the process `stdout` special file;
 
 
-Val output
--------------
+The classifiers that can be used in the output declaration block are the ones listed in the following table:
 
-The ``val`` classifier allows to output a `value` that has used in the process context and previously declared as input.
-For example::
+=========== =============
+Classifier  Semantic
+=========== =============
+val         Sends variable's with the name specified over the output channel.
+file        Sends a file produced by the process with the name specified over the output channel.
+stdout      Sends the executed process `stdout` over the output channel.
+set         Lets to send multiple values over the same output channel.
+=========== =============
 
-   methods = ['prot','dna', rna]
+
+Output values
+-------------------------
+
+The ``val`` classifier allows to output a `value` defined in the script context. In a common usage scenario,
+this is a value which has been defined in the `input` declaration block, as shown in the following example::
+
+   methods = ['prot','dna', 'rna']
 
    process anyValue {
      input:
-     val x using methods
+     val x from methods
 
      output:
-     val x using methods
+     val x into receiver
 
-     '''
-     echo $x
-     '''
+     "echo $x > file"
 
    }
 
-
-File output
--------------
-
-The `file` classifier allows to send one or more files as outputs over the specified channel. For example::
+   receiver.subscribe { println "Received: $it" }
 
 
-    process blastAndOut {
+Output files
+-----------------
+
+The ``file`` classifier allows to output one or more files, produced by the process, over the specified channel.
+For example::
+
+
+    process randomNum {
+
        output:
-       file 'blast_out' using hits
+       file 'result' into numbers
 
        '''
-       blastp -query sequences.fa -outfmt 6 > blast_result
+       echo $RANDOM > result
        '''
 
     }
 
+    numbers.subscribe { println "Received: " + it.text }
 
-In the above example the `script` executes a `Blast` command and save its result to a file named ``blast_result``.
-Since this file is declared as an output, when the task is completed, this file is sent over the ``hits`` channel.
-A downstream `process` declaring the same channel as `input` will be able to get it.
 
-.. note:: If the channel specified as output has not been previously declared somewhere in the pipeline script, it
+In the above example the process, when executed, creates a file named ``result`` containing a random number.
+Since a file parameter using the same name is declared between the outputs, when the task is completed that
+file is sent over the ``numbers`` channel. A downstream `process` declaring the same channel as `input` will
+be able to receive it.
+
+.. note:: If the channel specified as output has not been previously declared in the pipeline script, it
   will implicitly created by the output declaration itself.
 
 
-Multiple files
-^^^^^^^^^^^^^^^
+.. TODO explain Path object
 
-In the file output it is possible to specify the usual Linux wildcards characters ``?`` and ``*``. By using them
-each file produced by the process whose name matches the specified pattern, is sent over the channel and emitted as a
-single item. For example::
+Multiple files
+-----------------
+
+When declaring an output file it is possible to specify its name using the usual Linux wildcards characters ``?`` and ``*``.
+This allows to output all the files matching the specified file name pattern as single item. For example::
 
     process splitLetters {
 
         output:
-        file 'chunk_*' using letters
+        file 'chunk_*' into letters
 
         '''
-        echo 'Hola' | split -b 1 - chunk_
+        printf 'Hola' | split -b 1 - chunk_
         '''
     }
 
-    letters.subscribe onNext: { println it.text }
+    letters.subscribe { println it *.text }
 
 ::
 
-    nextflow examples/splitter.nf
-    N E X T F L O W  ~  version 0.6.0
-    Running task > splitLetters (1)
-    H
-    o
-    l
-    a
+    [H, o, l, a]
+
+
+.. TODO Advanced file output
+
+
+
+Output 'stdout' special file
+-------------------------------
+
+The ``stdout`` classifier allows to `capture` the `stdout` output of the executed process and send it over
+the channel specified in the output parameter declaration. For example::
+
+    process echoSomething {
+        output:
+        stdout channel
+
+        "echo Hello world!"
+
+    }
+
+    channel.subscribe { print "I say..  $it" }
 
 
 
 
-Standard output
-----------------
 
+Output 'set' of values
+--------------------------
+
+The ``set`` classifier allows to send multiple values into a single channel. This feature is useful
+when you need to `together` the result of multiple execution of the same process, as shown in the following
+example::
+
+    query = Channel.files '*.fa'
+    specie = Channel.from 'human', 'cow', 'horse'
+
+    process blast {
+
+    input:
+        val specie
+        file query
+
+    output:
+        set val(specie), file('result') into blastOuts
+
+
+    "blast -db nr -query $query" > result
+
+    }
+
+
+In the above example a `BLAST` task is execute for each pair of ``specie`` and ``query`` that aer received.
+When the task completes a tuple containing the current value of ``specie`` and the file ``result`` is set over
+the ``blastOuts`` channel.
+
+
+A ``set`` declaration can contains any combination of the following classifiers, previously described:
+ ``val``, ``file`` and ``stdout``.
 
 
 
@@ -672,8 +902,5 @@ validExitStatus
     ---------
     (sge)
 
-
-Parallel execution
-===================
 
 
