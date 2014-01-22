@@ -25,6 +25,7 @@ import java.nio.file.Path
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.exception.ProcessScriptException
 import nextflow.executor.AbstractExecutor
 import nextflow.executor.LocalExecutor
 import nextflow.executor.LsfExecutor
@@ -118,6 +119,10 @@ abstract class BaseScript extends Script {
      */
     def void exit( String message ) {
         exit(0, message)
+    }
+
+    def void error( String message = null ) {
+        throw message ? new ProcessScriptException(message) : new ProcessScriptException()
     }
 
     /**
