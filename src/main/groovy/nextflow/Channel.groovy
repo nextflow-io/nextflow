@@ -109,14 +109,28 @@ class Channel {
         return channel
     }
 
+    @Deprecated
     static DataflowChannel<Path> files( Pattern filePattern ) {
+        log.warn("Channel.files() method has been deprecated -- use Channel.path() instead")
+        path(filePattern)
+    }
+
+    @Deprecated
+    static DataflowChannel<Path> files( String filePattern ) {
+        log.warn("Channel.files() method has been deprecated -- use Channel.path() instead")
+        path(filePattern)
+    }
+
+
+    static DataflowChannel<Path> path( Pattern filePattern ) {
         assert filePattern
         // split the folder and the pattern
         def ( String folder, String pattern ) = getFolderAndPattern(filePattern.toString())
         filesImpl( 'regex', folder, pattern, false )
     }
 
-    static DataflowChannel<Path> files( String filePattern ) {
+
+    static DataflowChannel<Path> path( String filePattern ) {
         assert filePattern
 
         boolean glob  = false

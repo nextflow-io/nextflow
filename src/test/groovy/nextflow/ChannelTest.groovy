@@ -30,12 +30,12 @@ class ChannelTest extends Specification {
     def testSingleFile() {
 
         when:
-        def channel = Channel.files('/some/file.txt')
+        def channel = Channel.path('/some/file.txt')
         then:
         channel.val == Paths.get('/some/file.txt')
 
         when:
-        channel = Channel.files('/some/f{i}le.txt')
+        channel = Channel.path('/some/f{i}le.txt')
         then:
         channel.val == Paths.get('/some/f{i}le.txt')
 
@@ -54,21 +54,21 @@ class ChannelTest extends Specification {
         def file6 = Files.createFile(folder.resolve('file66.txt'))
 
         when:
-        def channel = Channel.files("$folder/{alpha,gamma}.txt")
+        def channel = Channel.path("$folder/{alpha,gamma}.txt")
         then:
         channel.val == folder.resolve('alpha.txt')
         channel.val == folder.resolve('gamma.txt')
         channel.val == Channel.STOP
 
         when:
-        channel = Channel.files("$folder/file?.txt")
+        channel = Channel.path("$folder/file?.txt")
         then:
         channel.val == folder.resolve('file4.txt')
         channel.val == folder.resolve('file5.txt')
         channel.val == Channel.STOP
 
         when:
-        channel = Channel.files("$folder/file*.txt")
+        channel = Channel.path("$folder/file*.txt")
         then:
         channel.val == folder.resolve('file4.txt')
         channel.val == folder.resolve('file5.txt')
@@ -91,14 +91,14 @@ class ChannelTest extends Specification {
         def file4 = Files.createFile(folder.resolve('gamma.txt'))
 
         when:
-        def channel = Channel.files("$folder/*")
+        def channel = Channel.path("$folder/*")
         then:
         channel.val == folder.resolve('delta.txt')
         channel.val == folder.resolve('gamma.txt')
         channel.val == Channel.STOP
 
         when:
-        channel = Channel.files("$folder/.*")
+        channel = Channel.path("$folder/.*")
         then:
         channel.val == folder.resolve('.alpha.txt')
         channel.val == folder.resolve('.beta.txt')
@@ -106,7 +106,7 @@ class ChannelTest extends Specification {
 
 
         when:
-        channel = Channel.files("$folder/{.*,*}")
+        channel = Channel.path("$folder/{.*,*}")
         then:
         channel.val == folder.resolve('.alpha.txt')
         channel.val == folder.resolve('.beta.txt')
@@ -132,7 +132,7 @@ class ChannelTest extends Specification {
         def file6 = Files.createFile(sub1.resolve('file6.txt'))
 
         when:
-        def channel = Channel.files("$folder/*.txt")
+        def channel = Channel.path("$folder/*.txt")
         then:
         channel.val == file1
         channel.val == file2
@@ -141,7 +141,7 @@ class ChannelTest extends Specification {
 
 
         when:
-        def channel2 = Channel.files("$folder/**.txt")
+        def channel2 = Channel.path("$folder/**.txt")
         then:
         channel2.val.toString() == file1.toString()
         channel2.val.toString() == file2.toString()
@@ -150,7 +150,7 @@ class ChannelTest extends Specification {
         channel2.val == Channel.STOP
 
         when:
-        def channel3 = Channel.files("$folder/sub1/**.log")
+        def channel3 = Channel.path("$folder/sub1/**.log")
         then:
         channel3.val.toString() == file5.toString()
         channel3.val == Channel.STOP
