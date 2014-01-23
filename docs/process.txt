@@ -245,10 +245,10 @@ input block at a time and it must contain one or more inputs declarations.
 The input block follows the syntax shown below::
 
     input:
-      <input classifier> <input name> [from channel] [attributes]
+      <input classifier> <input name> [from <source channel>] [attributes]
 
 
-Input definitions start with an input `classifier` and the input `name`, followed by the keyword ``from`` and
+An input definition starts with an input `classifier` and the input `name`, followed by the keyword ``from`` and
 the actual channel over which inputs are received. Finally some input optional attributes can be specified.
 
 .. note:: When the input name is the same as the channel name, the ``from`` part of the declaration can be omitted.
@@ -641,7 +641,7 @@ It can be defined at most one output block and it can contain one or more output
 The output block follows the syntax shown below::
 
     output:
-      <output classifier> <output name> [into <channel>] [attribute [,..]]
+      <output classifier> <output name> [into <target channel>] [attribute [,..]]
 
 Output definitions start by an output `classifier` and the output `name`, followed by the keyword ``into`` and
 the actual channel over which outputs are sent. Finally some optional attributes can be specified.
@@ -801,9 +801,115 @@ When the task completes a tuple containing the current value of ``specie`` and t
 the ``blastOuts`` channel.
 
 
-A ``set`` declaration can contains any combination of the following classifiers, previously described:
- ``val``, ``file`` and ``stdout``.
+A ``set`` declaration can contains any combination of the following classifiers, previously described: ``val``, ``file`` and ``stdout``.
 
+
+=======
+
+Shares declarations are a special type of process parameters that can act as an input and output parameter at the same time.
+
+The shares block is declared by using the syntax showed below::
+
+  share:
+    <share classifier> <parameter name> [from <source channel>] [into <target channel>] [attributes]
+
+
+A share definition begin with the share `classifier` to which follows the parameter `name`. Optionally can be used the
+``from`` keyword followed by the channel over which data is received, and the keyword ``into`` followed the channel name
+is going to receive the results produced by the process.
+
+Share parameters accept only the classifier listed in the following table:
+
+=========== =============
+Classifier  Semantic
+=========== =============
+val         Lets you access the received input value by its name in the process script and/or to send it over the output channel.
+file        Lets you handle the received value as a file, staging it properly in the execution context and/or send it as result over the output channel.
+=========== =============
+
+
+Shares parameters have some important differences compared to inputs or outputs parameters:
+
+* A share parameter can received only a single input value, which is bound in the process evaluation context before the first process execution.
+* If a share parameter declares an output channel it emits exactly one value, after the last process execution.
+* It allows you to `share` the parameter's value across multiple execution of the same process.
+* Whenever a share parameter is declared, the process is executed is a serial manner, instead of parallel.
+
+.. warning:: Share parameters cannot be used in a process that uses the `merge` feature.
+
+
+Share generic values
+---------------------
+
+The share ``val`` classifier allows you to declare a parameter which value can be accessed, in the script context, across
+different execution of the same process. For example::
+
+    process printCount {
+      input:
+      val cheers from 'Bonjour', 'Ciao', 'Hello', 'Hola'
+
+      share:
+      val count from 1 into result
+
+      script:
+      count += count
+      "echo $cheers world! "
+
+    }
+
+
+    result.subscribe  { println "Result = $it" }
+
+Will output::
+
+    Result = 16
+
+
+This example shows how the `state` of the ``count`` variable is maintained along all the execution of the process, and
+that on process termination the final value is send over the channel declared by the ``into`` keyword.
+
+Some caveats about shared value parameters:
+
+* The ``from`` declaration can be used to initialize the parameter value by specifying any variable in script context or
+  a `literal` value (as in the above example).
+
+* When the ``from`` declaration is omitted, the parameter is initialised to the variable's value in the script scope
+  having the same as the parameter.
+
+* When a variable with the parameter's name doesn't exist in the script scope and not ``from`` is specified,
+  the parameter it's initialized to ``null``.
+
+
+
+Share file
+------------
+
+The share ``file`` classifier allows you to declare a parameter that share its state using a file. For example::
+
+  process saveHello {
+      input:
+      val cheers from 'Bonjour', 'Ciao', 'Hello', 'Hola'
+
+      share:
+      file greetings into result
+
+      "echo '$cheers' >> $greetings "
+
+    }
+
+    result.subscribe { println it.text  }
+
+
+It will print::
+
+    Bonjour
+    Ciao
+    Hello
+    Hola
+
+
+This example shows how the content of the file is shared across all the execution of the process. When the process completes
+the file is sent over the channel declared output channel.
 
 
 Directives
