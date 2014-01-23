@@ -393,6 +393,8 @@ class EachInParam extends BaseInParam {
 
     @Override
     protected DataflowReadChannel inputValToChannel( value ) {
+        log.warn "Using queue channel on each parameter declaration should avoided -- take in consideration to change declaration for each: '$name' parameter"
+
         // everything is mapped to a collection
         // the collection is wrapped to a "scalar" dataflow variable
         def list = Nextflow.list(value)
