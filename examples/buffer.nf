@@ -1,5 +1,5 @@
 
-proteins = Channel.files( "examples/data/p?.fa" ).buffer(count:2)
+proteins = Channel.path( "examples/data/p?.fa" ).buffer(count:2)
 
 process blastThemAll {
     echo true

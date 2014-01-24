@@ -37,13 +37,13 @@ Each iterable item is send over the newly created channel. For example::
     myChannel = Channel.from( myIterableObj )
 
     // creating a channel by a list
-    myChannel = Channel.form( [1,2,3,4,5] )
+    myChannel = Channel.from( [1,2,3,4,5] )
 
 
 Square brackets can be omitted when passing a list a parameter, thus the following example it is identical to the previous one::
 
      // square brackets can be omitted
-     myChannel = Channel.form( 1,2,3,4,5 )
+     myChannel = Channel.from( 1,2,3,4,5 )
 
 
 
@@ -65,22 +65,22 @@ not ``null`` value can be specified as parameters, which is bound to the newly c
 
 
 
-files( )
+path( )
 --------
 
-You can create a channel emitting one or more files path by using the ``files( )`` method and specifying a path matcher
+You can create a channel emitting one or more file paths by using the ``path( )`` method and specifying a path matcher
 as argument. For example::
 
-    myFileChannel = Channel.files( '/data/some/bigfile.txt' )
+    myFileChannel = Channel.path( '/data/some/bigfile.txt' )
 
 The above line creates a channel and bind to it an item of type ``Path`` referring the specified file.
 
 .. note:: It does not check the file existence.
 
-Whenever the ``files`` arguments contains a ``*`` or ``?`` wildcard characters it is interpreted as a `glob` path matcher.
+Whenever the ``path`` arguments contains a ``*`` or ``?`` wildcard characters it is interpreted as a `glob` path matcher.
 For example::
 
-    myFileChannel = Channel.files( '/data/big/*.txt' )
+    myFileChannel = Channel.path( '/data/big/*.txt' )
 
 
 Creates a channel and sends over it as many ``Path`` items as many are the files with ``txt`` extension in the ``/data/big`` folder.
@@ -90,13 +90,13 @@ Creates a channel and sends over it as many ``Path`` items as many are the files
 In order the include hidden files you need to start your pattern with a period character. For example::
 
     // returns all hidden files in the path
-    myFileChannel = Channel.files( '/path/.*' )
+    myFileChannel = Channel.path( '/path/.*' )
 
     // returns all hidden files ending with .fa
-    myFileChannel = Channel.files( '/path/.*.fa' )
+    myFileChannel = Channel.path( '/path/.*.fa' )
 
     // returns all files (hidden and non-hidden)
-    myFileChannel = Channel.files( '/path/{.*,*}' )
+    myFileChannel = Channel.path( '/path/{.*,*}' )
 
 
 
