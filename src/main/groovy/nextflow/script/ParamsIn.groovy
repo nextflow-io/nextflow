@@ -389,6 +389,7 @@ class StdInParam extends BaseInParam {
  *  Represents a process input *iterator* parameter
  */
 @InheritConstructors
+@Slf4j
 class EachInParam extends BaseInParam {
 
     @Override
