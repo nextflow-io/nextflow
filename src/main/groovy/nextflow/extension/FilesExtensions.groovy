@@ -366,4 +366,13 @@ class FilesExtensions {
     }
 
 
+    static closeQuietly( Closeable self ) {
+        try {
+            self.close()
+        }
+        catch (IOException ioe) {
+            log.debug "Exception closing $self -- Cause: ${ioe.getMessage() ?: ioe.toString()}"
+        }
+    }
+
 }
