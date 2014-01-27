@@ -136,6 +136,7 @@ class Session {
             config.poolSize = PoolUtils.retrieveDefaultPoolSize()
         }
 
+        // todo this settings seems to be unused -- check it
         if( !config.queueSize ) {
             config.queueSize = PoolUtils.retrieveDefaultPoolSize()
         }
