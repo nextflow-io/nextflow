@@ -164,7 +164,7 @@ the global *Nextflow* configuration.
 Cloud support
 -------------
 
-*Nextflow* provide an experimental support for [DNAnexus](http://www.dnanexus.com) cloud platform.
+*Nextflow* provides an experimental support for [DNAnexus](http://www.dnanexus.com) cloud platform.
 
 Since this requires some extra runtime dependencies, to have Nextflow running on the DNAnexus you will need
 to compile and build *Nextflow* from source using the following command:
