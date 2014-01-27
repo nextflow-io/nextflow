@@ -1,6 +1,157 @@
-##################
+*******************
 Configuration file
-##################
+*******************
+
+When Nextflow is launched it look for a file named ``nextflow.config`` in the current working directory and the
+file ``~/.nextflow/config`` (in the user home directory).
+
+When they both exists they are merged, so that the settings in the first override the same that may appears in the
+second one.
+
+Alternatively, a custom file configuration file can be specified by using the command line option ``-c <config file name>``.
+
+.. note:: It's worth noting that by doing this, any ``nextflow.config`` and ``~/.nextflow/config`` files are both ignored.
+
+A Nextflow configuration file is a simple text file containing a set of properties defined using the syntax::
+
+  name = value
+
+Please note, string values need to wrapped quote characters while numbers and boolean values (``true``, ``false``) do not.
+Also note that values are typed, in the meaning that, for example ``1`` is different from ``'1'``, since the first is interpreted
+as the number one, while the latter is interpreted as a string value.
 
 
-to do
+Config Variables
+--------------------
+
+Configuration properties can be used as variables in the configuration file itself, by using the usual
+``$propertyName`` or ``${expression}`` syntax.
+
+
+For example::
+
+     propertyOne = 'world'
+     anotherProp = "Hello $propertyOne"
+     customPath = "$PATH:/my/app/folder"
+
+Please note, the usual rules for :ref:`string-interpolation` are applied, thus a string containing a variable
+reference must be wrapped by double-quote chars instead of single-quote chars.
+
+The same mechanism allows you to access environment variables defined in the hosting system. Any variable whose name is
+not defined in Nextflow configuration file(s) is supposed to be a reference to an environment variable with that name.
+So, in the above example property ``customPath`` is defined as the current system ``PATH`` to which is appended
+the string ``/my/app/folder``.
+
+.. warning:: If you are accessing an environment variable that may not exist in the system, your property may contain
+    an undefined value. You can avoid this by using a conditional expression in your property setting as shown in below.
+
+::
+
+    mySafeProperty = "${MY_FANCY_VARIABLE?:''}"
+
+
+Config  comments
+------------------
+
+Configuration file uses the same convention used by the Groovy or Java programming languages. Thus, use ``//`` to comment
+a single line or ``/*`` .. ``*/`` to comment a block on multiple lines.
+
+
+Config scopes
+------------------
+
+Configuration settings can be organized in different scopes by dot prefixing the property names with the a scope
+identifier or grouping the properties in the same scope using the curly brackets notation. These as shown in the
+following example::
+
+   alpha.x  = 1
+   alpha.y  = 'string value..'
+
+   beta {
+        p = 2
+        q = 'another string ..'
+   }
+
+
+
+Scope 'env'
+-----------
+
+The ``env`` scope allows you to define one or more environment variables that will be exported in the system environment
+of the process executed commands.
+
+Simply prefix your variable names with the ``env`` scope or include them into a curly brackets delimited block,
+as shown below::
+
+   env.ALPHA = 'some value'
+   env.BETA = "$HOME/some/path"
+
+   env {
+        DELTA = 'one more'
+        GAMMA = "/my/path:$PATH"
+   }
+
+
+
+
+Scope 'params'
+----------------
+
+The ``params`` allows you to define parameters that will be accessible in the pipelines script. Simply prefix the
+parameters names with the ``params`` scope or include them into a curly brackets delimited block, as shown below::
+
+     params.custom_param = 123
+     params.another_param = 'string value .. '
+
+     params {
+
+        alpha_1 = true
+        beta_2 = 'another string ..'
+
+     }
+
+
+
+
+Scope 'process'
+----------------
+
+The ``process`` configuration scope allows you to provide the default configuration for the processes in your pipeline.
+
+You can specify here any property described in the :ref:`process directive<process-directives>` and the executor sections.
+For examples::
+
+  process {
+    executor='sge'
+    queue='long'
+    clusterOptions = '-pe smp 10 -l virtual_free=64G,h_rt=30:00:00'
+  }
+
+
+By using this configuration all processes in your pipeline will be executed through the SGE cluster, with the specified
+settings.
+
+
+Scope 'executor'
+------------------
+
+The ``executor`` configuration scope allows to set the executor specific settings.
+
+===================== ==========
+Name
+===================== ==========
+queueSize
+pollInterval
+exitReadTimeout
+===================== ==========
+
+
+
+
+
+
+
+
+
+
+

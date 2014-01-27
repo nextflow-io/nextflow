@@ -1,6 +1,6 @@
-###########
+************
 Processes
-###########
+************
 
 In Nextflow a `process` is the basic processing `primitive` to execute a user script.
 
@@ -803,7 +803,7 @@ the ``blastOuts`` channel.
 
 A ``set`` declaration can contains any combination of the following classifiers, previously described: ``val``, ``file`` and ``stdout``.
 
-
+Shares
 =======
 
 Shares declarations are a special type of process parameters that can act as an input and output parameter at the same time.
@@ -912,15 +912,20 @@ This example shows how the content of the file is shared across all the executio
 the file is sent over the channel declared output channel.
 
 
+.. _process-directives:
+
 Directives
 ==========
 
-In the `directive` compartment can be specified configuration options which will affect the execution of the current
-process. They have the following syntax::
+Using the `directive` declarations block you can provide optional settings that will affect the execution of the current
+process.
+
+They must be entered at the top of the process `body`, before any other declaration blocks (i.e. ``input``, ``output``, etc) and
+they have the following syntax::
 
     name value [, value2 [,..]]
 
-Below are listed directives that can be applied to any process.
+Some directive are general available to any process, some other depends by the `executor` currently defined.
 
 
 cacheable
@@ -930,83 +935,119 @@ Whenever the process outputs have to caches across multiple pipeline executions.
 to disable caching feature for this process. For example::
 
   process noCacheThis {
-
     cache false
 
-    """
-    command not to be cached
-    """
+    script:
+    <your command string here>
   }
 
 
 echo
 -----
 
-Whenever print out the process standard output the current execution console. It is ``false`` by default, set to ``true``
-if you need to show the process output.
+By default the `stdout` produced by commands executed in any process is ignored.
+Setting the ``echo`` directive to ``true`` you can forward the process `stdout` to the current top
+running process `stdout` file, showing it in the shell terminal.
+
+For example::
+
+    process sayHello {
+      echo true
+
+      script:
+      "echo Hello"
+    }
+
+::
+
+    Hello
+
+Without specifying ``echo true`` you won't see the ``Hello`` string printed out when executing the above example.
+
 
 
 errorStrategy
 --------------
 
 The ``errorStrategy`` directive defines how an error condition is managed by the process. By default when an error status
-is returned by the execute script, the process stops immediately that in turns forces cause the entire pipeline to stops.
+is returned by the executed script, the process stops immediately that in turns force the entire pipeline to stop.
 
-When using the directive ``errorStrategy 'ignore'`` the process do not stop on error condition and it just reports a message
-to notify the error event.
+When setting the directive ``errorStrategy`` to ``ignore`` the process do not stop on a error condition and
+it just reports a message to notify the error event.
 
 For example::
 
     process ignoreAnyError {
-      errorStrategy 'ignore'
+       errorStrategy 'ignore'
 
-      "command to be executed"
+       script:
+       <your command string here>
     }
 
-.. note:: By definition a command script is failing when it terminates with a non-zero exit status. To change this behavior
+.. tip:: By definition a command script is failing when it terminates with a non-zero exit status. To change this behavior
   see `validExitStatus`_.
 
 
 executor
 --------
 
-The ``executor`` directive allows to specify the underlying system on which the process is actually executed. The following
-values can be used:
+The `executor` defines the underlying system where processes are executed. By default a process uses the executor
+defined globally in the ``nextflow.config`` file.
 
-- ``local``: The process is executed in the local computer where `Nextflow` is launched.
+The ``executor`` directive allows you to configure what executor has to be used by the process, overriding the default
+configuration. The following values can be used:
 
-- ``sge``: the process is executed using a Sun Grid Engine / `Open Grid Engine <http://gridscheduler.sourceforge.net/>`_.
+============== ==================
+Name            Executor
+============== ==================
+``local``      The process is executed in the computer where `Nextflow` is launched.
+``sge``        The process is executed using a Sun Grid Engine / `Open Grid Engine <http://gridscheduler.sourceforge.net/>`_.
+``lsf``        The process is executed via the `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ job scheduler.
+``slurm``      The process is executed via the SLURM job scheduler.
+``dnanexus``   The process is executed by submitting it to a `DNAnexus <http://www.dnanexus.com/>`_ cloud.
+============== ==================
 
-- ``lsf``: The process is executed via the `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ job scheduler.
+The following example show how to define the process's executor::
 
-- ``slurm``: The process is executed via the SLURM job scheduler.
 
-- ``dnanexus``: The process is executed by submitting it to a `DNAnexus <http://www.dnanexus.com/>`_ cloud.
+   process doSomething {
 
+      executor 'sge'
+
+      script:
+      <your script here>
+
+   }
+
+
+.. note:: Each executor provides its own set of configuration options that can set in the `directive` declarations block.
+   See :ref:`executors` section to read about specific executors' directives.
 
 
 validExitStatus
 -------------------
 
- (default: ``0``)
+A process is stopped when the executed command returns an error exit status. By default any error status
+other than ``0`` are interpreted as an error condition.
+
+The ``validExitStatus`` directive allows you to fine control which error status represents a successful command execution.
+You can specify a single value or multiple values like showed in following example::
 
 
-..
-    clusterOptions
-    ---------------
+    process returnOk {
+        validExitStatus 0,1,2
 
-    queue
-    -----
+         script:
+         """
+         echo Hello
+         exit 1
+         """
+    }
 
-    (sge,lsf)
 
-    maxDuration
-    ------------
-    (sge,slurm)
-
-    maxMemory
-    ---------
-    (sge)
+In the above example beside the fact that the command script terminates explicitly with a ``1`` exit status, the process
+will not return an error condition because that values is declared in as a `valid` status in the ``validExitStatus``
+directive.
 
 
 

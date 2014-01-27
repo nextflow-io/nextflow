@@ -1,6 +1,6 @@
-=================
+*****************
 Pipeline script
-=================
+*****************
 
 
 The Nextflow scripting language is an extension of the Groovy programming language whose syntax has been
@@ -141,6 +141,8 @@ Strings may be concatenated with ``+``. For example::
     a = "world"
     print "hello " + a + "\n"
 
+
+.. _string-interpolation:
 
 String interpolation
 ----------------------

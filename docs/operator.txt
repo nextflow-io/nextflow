@@ -1,6 +1,6 @@
-##########
+*******************
 Operators
-##########
+*******************
 
 Dataflow `operators` are methods that are be used to connect channels each other or transforms values
 emitted by channels by applying some user provided function.

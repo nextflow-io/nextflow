@@ -1,0 +1,108 @@
+.. _dnanexus-cloud:
+
+****************
+DNAnexus cloud
+****************
+
+DNAnexus is a cloud platform specific for genomics applications. Nextflow provides an experimental support for it that allows
+you to execute your pipeline in the DNAnexus platform taking the advantage of the cloud.
+
+
+Prerequisites
+==============
+
+You will need a DNAnexus account and the `DNAnexus SDK <https://wiki.dnanexus.com/Downloads#DNAnexus-Platform-SDK>`_ installed in your
+computer.
+
+Moreover, since extra runtime packages are required by Nextflow to be able to run in the cloud, you will need to download
+the full Nextflow source tree in your computer. You can do this by using the following `git` command::
+
+   git clone https://github.com/paoloditommaso/nextflow.git
+
+
+App packing
+============
+
+A Nextflow pipeline to be executed in the DNAnexus cloud needs to be packaged as a DNAnexus app (or applet).
+Thus you will need to use the ``dx-app-wizard`` command to create the application structure and copy in the
+application project folder, the pipeline script along with the Nextflow executable runtime.
+
+.. tip:: Read more about DNAnexus app build at `this link <https://wiki.dnanexus.com/Developer-Tutorials/Intro-to-Building-Apps>`_.
+
+Nextflow provides a shortcut that helps you to create the DNAnexus application scaffold pre-configured for work with it.
+
+Simply move in the Nextflow source root project, that you have cloned with `git`, and enter the command::
+
+   ./gradlew dnanexus
+
+
+This will:
+
+#. Build the Nextflow runtime wth the dependencies required
+#. Create a the DNAnexus app scheleton in the a folder named ``dx-project``
+#. Create the ``dxapp.json`` application manifest
+#. Create the ``dxapp.sh`` pipeline launcher
+#. Copy the Nextflow runtime to ``dx-project/resources/usr/bin/nextflow.jar``
+#. Copy some example scripts in to the folder ``dx-project/resources``
+
+
+You will need to add your pipeline script in the ``resources`` folder (adding any other eventually needed binary dependency)
+and modify the ``dxapp.json`` file providing you application name.
+
+When you have finished package and upload the app by using the DNAnexus `build` command, shown below::
+
+    dx build -f
+
+
+Execution
+==========
+
+Yon can launch it like any other DNAnexus app by using the `run` command, for example::
+
+    dx run nextflow
+
+By confirming the default option, it will just run a trivial `Hello world` script in the cloud, producing the following output::
+
+
+    Job Log
+    -------
+    Watching job job-BFY5Pz00kF9B7FY891602V7g. Press Ctrl+C to stop.
+    * Nextflow pipelines framework (nextflow:main) (running) job-BFY5Pz00kF9B7FY891602V7g
+      pditommaso 2014-01-27 13:58:36 (running for 0:00:05)
+    2014-01-27 14:02:18 Nextflow pipelines framework INFO Logging initialized (priority)
+    2014-01-27 14:02:22 Nextflow pipelines framework STDOUT Installing apt packages openjdk-7-jre-headless, dx-toolkit
+    2014-01-27 14:02:47 Nextflow pipelines framework STDOUT >>> Unpacking resources.tar.gz to /
+    2014-01-27 14:02:47 Nextflow pipelines framework STDOUT *** Downloading bundled file resources.tar.gz
+    2014-01-27 14:02:48 Nextflow pipelines framework STDOUT bash running (job ID job-BFY5Pz00kF9B7FY891602V7g)
+    2014-01-27 14:02:51 Nextflow pipelines framework STDOUT N E X T F L O W  ~  version 0.6.0
+    2014-01-27 14:02:54 Nextflow pipelines framework STDOUT [63/9a33ce] Running process > sayhello (1)
+    2014-01-27 14:04:09 Nextflow pipelines framework STDOUT Hello world!
+    2014-01-27 14:04:23 Nextflow pipelines framework STDOUT nextflow exitstatus > 0
+    2014-01-27 14:04:24 Nextflow pipelines framework STDOUT hello.log > file-BFY5Xf00kF97JFXyzJ3Xg637
+    * Nextflow pipelines framework (nextflow:main) (done) job-BFY5Pz00kF9B7FY891602V7g
+      pditommaso 2014-01-27 13:58:36 (runtime 0:02:11)
+      Output: -
+
+
+How it works
+=============
+
+The DNAnexus app is executed by the BASH script called ``dxapp.sh`` which defines two functions: `main` and `process`.
+
+The `main` function is the one that launch Nextflow pipeline script execution in the cloud, specifying the required
+configuration parameters.
+
+Since it is launched by specifying the ``dnanexus`` executor, it is able to manage the processes scheduling and
+executing in the DNAnexus platform.
+
+When a new process needs to be executed Nextflow will use the API provided by the DNAnexus platform to launch a new job
+and specifying the function `process`, in the ``dxapp.sh``, as job handler.
+
+Read more about the Nextflow's `dnanexus` executor configuration properties :ref:`here <dnanexus-executor>`.
+
+
+
+
+
+
+

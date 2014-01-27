@@ -1,6 +1,6 @@
-###############
+***************
 Basic concepts
-###############
+***************
 
 
 `Nextflow` is a reactive workflow framework and a programming `DSL <http://en.wikipedia.org/wiki/Domain-specific_language>`_

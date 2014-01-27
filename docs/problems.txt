@@ -1,6 +1,6 @@
-#################
+***************
 Know problems
-#################
+***************
 
 
 Using dash character in the file result in a error
