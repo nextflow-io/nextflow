@@ -624,11 +624,18 @@ abstract class TaskProcessor {
                 message << "  $it"
             }
 
+            // - the exit status
             message << "\nCommand exit status:\n  ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}"
 
+            // - the head of the process stdout
             message << "\nCommand output:"
-            task.stdout?.eachLine {
-                message << "  $it"
+            int MAX = 20
+            def c = task.dumpStdout(message, MAX)
+            if( c == MAX ) {
+                message << "  (more omitted..)"
+            }
+            else if( c == 0 ) {
+                message << "  (empty)"
             }
 
         }
@@ -649,6 +656,7 @@ abstract class TaskProcessor {
 
         return message
     }
+
 
 
     /**

@@ -125,4 +125,38 @@ class TaskRunTest extends Specification {
 
 
 
+    def testDumpStdout() {
+
+        setup:
+        def task = new TaskRun()
+        task.stdout = """
+            1
+            2
+            3
+            4
+            5
+            6
+            7
+            8
+            9
+            """.stripIndent()
+
+        when:
+        def lines = []
+        def count = task.dumpStdout(lines, 5)
+
+        then:
+        count == 5
+        lines.size() == 5
+        lines[0] == '  '
+        lines[1] == '  1'
+        lines[2] == '  2'
+        lines[3] == '  3'
+        lines[4] == '  4'
+
+
+
+    }
+
+
 }
