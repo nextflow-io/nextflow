@@ -18,7 +18,6 @@
  */
 
 package nextflow.extension
-
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
@@ -39,9 +38,7 @@ import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
 import groovyx.gpars.group.DefaultPGroup
 import groovyx.gpars.group.PGroup
 import groovyx.gpars.scheduler.Pool
-import org.apache.commons.io.IOUtils
 import nextflow.util.CacheHelper
-
 /**
  * Provides extension methods to chunk text and file
  *
@@ -370,17 +367,25 @@ class NextflowExtensions {
         int index = 0
         StringBuilder buffer = new StringBuilder()
         int c=0
-        while( (line = reader0.readLine()) != null ) {
-            if ( c ) buffer << '\n'
-            buffer << line
-            if ( ++c == size ) {
-                c = 0
-                result = chopInvoke(closure, buffer.toString(), index++ )
-                if( into != null )
-                    into << result
 
-                buffer.setLength(0)
+        try {
+
+            while( (line = reader0.readLine()) != null ) {
+                if ( c ) buffer << '\n'
+                buffer << line
+                if ( ++c == size ) {
+                    c = 0
+                    result = chopInvoke(closure, buffer.toString(), index++ )
+                    if( into != null )
+                        into << result
+
+                    buffer.setLength(0)
+                }
             }
+
+        }
+        finally {
+            reader0.closeQuietly()
         }
 
         /*
@@ -531,20 +536,27 @@ class NextflowExtensions {
         def buffer = new StringBuilder()
         int c = 0
         def ch
-        while( (ch=reader.read()) != -1 ) {
-            if( ignoreNewLine && ( ch == '\n' as char || ch == '\r' as char ))
-                continue
-            buffer.append( (char)ch )
-            if ( ++c == count ) {
-                c = 0
-                result = chopInvoke(closure, buffer.toString(), index++ )
-                if( into != null )
-                    into << result
 
-                buffer.setLength(0)
+        try {
+
+            while( (ch=reader.read()) != -1 ) {
+                if( ignoreNewLine && ( ch == '\n' as char || ch == '\r' as char ))
+                    continue
+                buffer.append( (char)ch )
+                if ( ++c == count ) {
+                    c = 0
+                    result = chopInvoke(closure, buffer.toString(), index++ )
+                    if( into != null )
+                        into << result
+
+                    buffer.setLength(0)
+                }
             }
-        }
 
+        }
+        finally {
+            reader.closeQuietly()
+        }
 
         /*
          * if there's something remaining in the buffer it's supposed
@@ -690,17 +702,25 @@ class NextflowExtensions {
         int index = 0
         byte[] buffer = new byte[count]
         byte item
-        while( (item=stream.read()) != -1 ) {
-            buffer[c] = (byte)item
 
-            if ( ++c == count ) {
-                c = 0
-                result = chopInvoke(closure, buffer, index++ )
-                if( into != null )
-                    into << result
+        try {
 
-                buffer = new byte[count]
+            while( (item=stream.read()) != -1 ) {
+                buffer[c] = (byte)item
+
+                if ( ++c == count ) {
+                    c = 0
+                    result = chopInvoke(closure, buffer, index++ )
+                    if( into != null )
+                        into << result
+
+                    buffer = new byte[count]
+                }
             }
+
+        }
+        finally {
+            stream.closeQuietly()
         }
 
 
@@ -913,40 +933,48 @@ class NextflowExtensions {
         int index = 0
         int blockCount=0
         boolean openBlock = false
-        while( (line = reader0.readLine()) != null ) {
 
-            if( line.startsWith(';')) continue
+        try {
 
-            if ( line == '' ) {
-                buffer << '\n'
-            }
-            else if ( !openBlock && line.charAt(0)=='>' ) {
-                openBlock = true
-                buffer << line << '\n'
-            }
-            else if ( openBlock && line.charAt(0)=='>') {
-                // another block is started
+            while( (line = reader0.readLine()) != null ) {
 
-                if ( ++blockCount == count ) {
-                    // invoke the closure, passing the read block as parameter
-                    def record = rec ? parseFastaRecord(buffer.toString(), (Map)options.record) : buffer.toString()
-                    result = chopInvoke(closure, record, index++ )
-                    if( into != null ) {
-                        into << result
+                if( line.startsWith(';')) continue
+
+                if ( line == '' ) {
+                    buffer << '\n'
+                }
+                else if ( !openBlock && line.charAt(0)=='>' ) {
+                    openBlock = true
+                    buffer << line << '\n'
+                }
+                else if ( openBlock && line.charAt(0)=='>') {
+                    // another block is started
+
+                    if ( ++blockCount == count ) {
+                        // invoke the closure, passing the read block as parameter
+                        def record = rec ? parseFastaRecord(buffer.toString(), (Map)options.record) : buffer.toString()
+                        result = chopInvoke(closure, record, index++ )
+                        if( into != null ) {
+                            into << result
+                        }
+
+                        buffer.setLength(0)
+                        blockCount=0
                     }
 
-                    buffer.setLength(0)
-                    blockCount=0
+                    buffer << line << '\n'
+
                 }
-
-                buffer << line << '\n'
-
-            }
-            else {
-                buffer << line << '\n'
+                else {
+                    buffer << line << '\n'
+                }
             }
 
         }
+        finally {
+            reader0.closeQuietly()
+        }
+
 
         /*
          * if there's something remaining in the buffer it's supposed
@@ -1070,7 +1098,7 @@ class NextflowExtensions {
             }
         }
         finally {
-            IOUtils.closeQuietly(reader0)
+            reader0.closeQuietly()
         }
 
     }
@@ -1346,7 +1374,7 @@ class NextflowExtensions {
             }
         }
         finally {
-            IOUtils.closeQuietly(reader0)
+            reader0.closeQuietly()
         }
     }
 
