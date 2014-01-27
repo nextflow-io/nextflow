@@ -796,44 +796,43 @@ example::
     }
 
 
-In the above example a `BLAST` task is execute for each pair of ``specie`` and ``query`` that aer received.
-When the task completes a tuple containing the current value of ``specie`` and the file ``result`` is set over
-the ``blastOuts`` channel.
+In the above example a `BLAST` task is executed for each pair of ``specie`` and ``query`` that are received.
+When the task completes a new tuple containing the value for ``specie`` and the file ``result`` is sent to the ``blastOuts`` channel.
 
 
-A ``set`` declaration can contains any combination of the following classifiers, previously described: ``val``, ``file`` and ``stdout``.
+A ``set`` declaration can contain any combination of the following classifiers, previously described: ``val``, ``file`` and ``stdout``.
 
 Shares
 =======
 
-Shares declarations are a special type of process parameters that can act as an input and output parameter at the same time.
+Share declarations are a special type of process parameter that can act as an `input` and `output` parameter at the same time.
 
-The shares block is declared by using the syntax showed below::
+The share block is declared by using the syntax shown below::
 
   share:
     <share classifier> <parameter name> [from <source channel>] [into <target channel>] [attributes]
 
 
-A share definition begin with the share `classifier` to which follows the parameter `name`. Optionally can be used the
-``from`` keyword followed by the channel over which data is received, and the keyword ``into`` followed the channel name
-is going to receive the results produced by the process.
+A share definition begins with the share `classifier` followed by the parameter `name`. Optionally the keyword ``from`` 
+can be used to specify the channel over which data is received, and the keyword ``into``, followed by a channel name, 
+can be used to specify the channel where the produced data has to be sent.
 
-Share parameters accept only the classifier listed in the following table:
+Share parameters accept only the classifiers listed in the following table:
 
 =========== =============
 Classifier  Semantic
 =========== =============
-val         Lets you access the received input value by its name in the process script and/or to send it over the output channel.
-file        Lets you handle the received value as a file, staging it properly in the execution context and/or send it as result over the output channel.
+val         Lets you access the input value in the process script and/or to send it over the output channel.
+file        Lets you handle the input value as a file, staging it properly in the execution context and/or send it as result over the output channel.
 =========== =============
 
 
-Shares parameters have some important differences compared to inputs or outputs parameters:
+Share parameters have some important differences compared to input or output parameters:
 
-* A share parameter can received only a single input value, which is bound in the process evaluation context before the first process execution.
-* If a share parameter declares an output channel it emits exactly one value, after the last process execution.
-* It allows you to `share` the parameter's value across multiple execution of the same process.
-* Whenever a share parameter is declared, the process is executed is a serial manner, instead of parallel.
+* A share parameter can only receive a single input value, which is bound in the script evaluation context before the process first execution.
+* If a share parameter declares an output channel it emits exactly one value, after the process last execution.
+* It allows you to `share` the parameter's value across multiple process executions.
+* Whenever a share parameter is declared, the process is executed serially, instead of in a parallel manner.
 
 .. warning:: Share parameters cannot be used in a process that uses the `merge` feature.
 
@@ -841,8 +840,8 @@ Shares parameters have some important differences compared to inputs or outputs 
 Share generic values
 ---------------------
 
-The share ``val`` classifier allows you to declare a parameter which value can be accessed, in the script context, across
-different execution of the same process. For example::
+The share ``val`` classifier allows you to declare a parameter whose value can be accessed, 
+in the script context, across multiple executions of the same process. For example::
 
     process printCount {
       input:
@@ -865,26 +864,26 @@ Will output::
     Result = 16
 
 
-This example shows how the `state` of the ``count`` variable is maintained along all the execution of the process, and
-that on process termination the final value is send over the channel declared by the ``into`` keyword.
+This example shows how the `state` of the ``count`` variable is maintained throughout the process executions, and
+how on process termination the final value is sent over the channel declared by the ``into`` keyword.
 
 Some caveats about shared value parameters:
 
-* The ``from`` declaration can be used to initialize the parameter value by specifying any variable in script context or
-  a `literal` value (as in the above example).
+* The ``from`` declaration can be used to initialise the parameter by specifying a variable defined in the 
+  pipeline script or by using a `literal` value (as in the above example).
 
 * When the ``from`` declaration is omitted, the parameter is initialised to the variable's value in the script scope
-  having the same as the parameter.
+  having the same name as the parameter.
 
-* When a variable with the parameter's name doesn't exist in the script scope and not ``from`` is specified,
-  the parameter it's initialized to ``null``.
+* When a variable with the parameter's name doesn't exist in the script scope and no ``from`` is specified,
+  the parameter is initialised to ``null``.
 
 
 
 Share file
 ------------
 
-The share ``file`` classifier allows you to declare a parameter that share its state using a file. For example::
+The share ``file`` classifier allows you to declare a parameter that shares its state using a file. For example::
 
   process saveHello {
       input:
@@ -908,8 +907,8 @@ It will print::
     Hola
 
 
-This example shows how the content of the file is shared across all the execution of the process. When the process completes
-the file is sent over the channel declared output channel.
+This example shows how the file content is shared through the process executions. When the process 
+completes, the file is sent over the channel declared as output.
 
 
 .. _process-directives:
@@ -920,22 +919,23 @@ Directives
 Using the `directive` declarations block you can provide optional settings that will affect the execution of the current
 process.
 
-They must be entered at the top of the process `body`, before any other declaration blocks (i.e. ``input``, ``output``, etc) and
-they have the following syntax::
+They must be entered at the top of the process `body`, before any other declaration blocks (i.e. ``input``, ``output``, etc) 
+and have the following syntax::
 
     name value [, value2 [,..]]
 
-Some directive are general available to any process, some other depends by the `executor` currently defined.
+Some directives are generally available to all processes, some others depends on the `executor` currently defined.
 
 
 cacheable
 ---------
 
-Whenever the process outputs have to caches across multiple pipeline executions. It is ``true`` by default, set to ``false``
-to disable caching feature for this process. For example::
+The ``cacheable`` directive allows you to cached the process results throughout multiple process executions. 
+The caching feature is enabled by default, you can disable it for a specific process by setting the ``cacheable``
+directive to ``false``. For example:: 
 
   process noCacheThis {
-    cache false
+    cacheable false
 
     script:
     <your command string here>
@@ -945,7 +945,7 @@ to disable caching feature for this process. For example::
 echo
 -----
 
-By default the `stdout` produced by commands executed in any process is ignored.
+By default the `stdout` produced by the commands executed in all processes is ignored.
 Setting the ``echo`` directive to ``true`` you can forward the process `stdout` to the current top
 running process `stdout` file, showing it in the shell terminal.
 
@@ -965,15 +965,14 @@ For example::
 Without specifying ``echo true`` you won't see the ``Hello`` string printed out when executing the above example.
 
 
-
 errorStrategy
 --------------
 
 The ``errorStrategy`` directive defines how an error condition is managed by the process. By default when an error status
-is returned by the executed script, the process stops immediately that in turns force the entire pipeline to stop.
+is returned by the executed script, the process stops immediately. This in turn forces the entire pipeline to stop.
 
-When setting the directive ``errorStrategy`` to ``ignore`` the process do not stop on a error condition and
-it just reports a message to notify the error event.
+When setting the ``errorStrategy`` directive to ``ignore`` the process doesn't stop on an error condition,
+it just reports a message notifying you of the error event.
 
 For example::
 
@@ -984,7 +983,7 @@ For example::
        <your command string here>
     }
 
-.. tip:: By definition a command script is failing when it terminates with a non-zero exit status. To change this behavior
+.. tip:: By definition a command script fails when it ends with a non-zero exit status. To change this behavior
   see `validExitStatus`_.
 
 
@@ -1004,10 +1003,10 @@ Name            Executor
 ``sge``        The process is executed using a Sun Grid Engine / `Open Grid Engine <http://gridscheduler.sourceforge.net/>`_.
 ``lsf``        The process is executed via the `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ job scheduler.
 ``slurm``      The process is executed via the SLURM job scheduler.
-``dnanexus``   The process is executed by submitting it to a `DNAnexus <http://www.dnanexus.com/>`_ cloud.
+``dnanexus``   The process is executed into the `DNAnexus <http://www.dnanexus.com/>`_ cloud.
 ============== ==================
 
-The following example show how to define the process's executor::
+The following example shows how to set the process's executor::
 
 
    process doSomething {
@@ -1020,18 +1019,18 @@ The following example show how to define the process's executor::
    }
 
 
-.. note:: Each executor provides its own set of configuration options that can set in the `directive` declarations block.
-   See :ref:`executors` section to read about specific executors' directives.
+.. note:: Each executor provides its own set of configuration options that can set be in the `directive` declarations block.
+   See :ref:`executors` section to read about specific executor directives.
 
 
 validExitStatus
 -------------------
 
-A process is stopped when the executed command returns an error exit status. By default any error status
-other than ``0`` are interpreted as an error condition.
+A process is terminated when the executed command returns an error exit status. By default any error status
+other than ``0`` is interpreted as an error condition.
 
-The ``validExitStatus`` directive allows you to fine control which error status represents a successful command execution.
-You can specify a single value or multiple values like showed in following example::
+The ``validExitStatus`` directive allows you to fine control which error status will represent a successful command execution.
+You can specify a single value or multiple values as shown in the following example::
 
 
     process returnOk {
@@ -1045,9 +1044,9 @@ You can specify a single value or multiple values like showed in following examp
     }
 
 
-In the above example beside the fact that the command script terminates explicitly with a ``1`` exit status, the process
-will not return an error condition because that values is declared in as a `valid` status in the ``validExitStatus``
-directive.
+In the above example, although the command script ends with a ``1`` exit status, the process
+will not return an error condition because the value ``1`` is declared as a `valid` status in 
+the ``validExitStatus`` directive.
 
 
 
