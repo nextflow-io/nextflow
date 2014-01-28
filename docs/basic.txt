@@ -17,7 +17,7 @@ parallel computational environment based on the `dataflow` programming model.
 Processes and channels
 ----------------------
 
-In practice a Nextflow pipeline script is make by joining together many different processes.
+In practice a Nextflow pipeline script is made by joining together many different processes.
 Each process can be written in any scripting language that can be executed by the Linux platform (BASH, Perl, Ruby, Python, etc).
 
 Processes are executed independently and are isolated from each other i.e. they do not share a common (writable) state.
@@ -67,7 +67,7 @@ before the ``extractTopHits`` in the script (it could also be written the other 
 the channel ``top_hits`` in its output declarations while the ``extractTopHits`` process defines the same channel in its
 input declaration, and thus establishing a communication link from the `blastSearch` task towards the `extractTopHits` task.
 
-.. <describe that both processes are launched at the same time>
+.. TODO describe that both processes are launched at the same time
 
 
 
@@ -78,13 +78,13 @@ While a process defines `what` command or script has to be executed, the `execut
 that script is actually run in the target system.
 
 If not specified otherwise processes are executed in the local computer. The local executor is very useful for pipeline
-development and test purposes, but for real world bioinformatics pipelines HPC or cloud platforms are required.
+development and test purposes, but for real world computational pipelines, an HPC or cloud platform is required.
 
 In other words, `Nextflow` provides an abstraction between the pipeline's functional logic and the underlying execution system.
 Thus it is possible to write a pipeline once and have it running on your computer, a grid platform or the cloud seamlessly,
 without modifying it, by simply defining the target execution platform in the configuration file.
 
-Alternatively the following HPC and cloud platforms are supported:
+The following HPC and cloud platforms are supported:
 
 * `Sun/Open Grid Engine <http://gridscheduler.sourceforge.net/>`_
 * `Platform LSF <http://www.ibm.com/systems/technicalcomputing/platformcomputing/products/lsf/>`_
@@ -96,27 +96,42 @@ Alternatively the following HPC and cloud platforms are supported:
 Scripting language
 ------------------
 
-Beside the fact that `Nextflow` is designed to be used with a minimal learning curve, without having to study
+Although `Nextflow` is designed to be used with a minimal learning curve, without having to study
 a new programming language and using your current skills, it also provides a powerful DSL scripting language.
 
 Nextflow scripting is an extension of the `Groovy programming language <http://en.wikipedia.org/wiki/Groovy_(programming_language)>`_
 which in turn is a super-set of the Java programming language, thus if you have some knowledge of these languages,
 or even only some confidence with the `C/C++` syntax, you will be comfortable using it.
 
-Read more about the Nextflow
+Read section :ref:`pipeline-script` to learn about Nextflow scripting language.
 
 
 
-Running pipeline
-----------------
+.. TODO Running pipeline
 
 
-Pipeline parameters
---------------------
+.. TODO Pipeline parameters
 
 
 Configuration options
 ---------------------
+
+Pipeline configuration properties are defined in a file named ``nextflow.config`` in the pipeline execution directory. 
+
+It allows to set what executor to use, the processes environment variables, pipeline parameters etc. 
+
+A basic configuration file looks like the following example::
+
+	process { 
+	  executor='sge'
+	  queue = 'cn-el6' 
+	}
+
+	env {
+	  PATH="$PWD/bowtie2:$PWD/tophat2:$PATH"
+	}
+
+Read section :ref:`config-file` to learn more about the Nextflow configuration file and settings.
 
 
 

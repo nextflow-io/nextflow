@@ -93,9 +93,9 @@ terminal command prompt. It will print the program help text, like showed below:
 
 
 .. hint:: If you are a Linux hacker and you are wondering what contains the ``nextflow`` binary file,
-    you may be interested to know that in practice it is an Java executable JAR file shipping the application
-    classes and libraries, and it has been pre-prepended a small BASH script file to it in order to make it self-runnable.
+    you may be interested to know that it is a Java executable JAR file that contains the application
+    classes and libraries, moreover it is pre-prepended by a small BASH script fragment in order to make it self-runnable.
 
-    You can also launch it as any other Java executable JAR, using the command: ``java -jar <nextflow full path> [program options]``
+    You can also launch it as any other Java executable JAR, by using the command: ``java -jar <nextflow full path> [program options]``
 
 
