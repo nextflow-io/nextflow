@@ -1,3 +1,5 @@
+.. _channel-page:
+
 **********
 Channels
 **********
@@ -169,7 +171,7 @@ specifying the expected value type, as showed in the following example::
     Got: beta; len: 4
     Got: lambda; len: 6
 
-Read more about `closures` at the following link: `Groovy Closure <http://groovy.codehaus.org/Closures>`_
+Read :ref:`script-closure` paragraph to learn more about `closure` feature.
 
 
 onNext, onCompleted, and onError
@@ -204,20 +206,9 @@ For example::
 
 
 
-Special messages
-================
-
-
-STOP
-----
-
-TODO
-
-
-VOID
-----
-
-TODO
+.. Special messages
+.. STOP
+.. VOID
 
 
 

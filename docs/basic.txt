@@ -69,6 +69,7 @@ input declaration, and thus establishing a communication link from the `blastSea
 
 .. TODO describe that both processes are launched at the same time
 
+Read :ref:`Channel <channel-page>` and :ref:`Process <process-page>` sections to learn more about these features.
 
 
 Execution abstraction
@@ -92,6 +93,8 @@ The following HPC and cloud platforms are supported:
 * `DNAnexus <http://www.dnanexus.com>`_
 
 
+Read :ref:`executor-page` section to learn more about Nextflow executors.
+
 
 Scripting language
 ------------------
@@ -103,7 +106,7 @@ Nextflow scripting is an extension of the `Groovy programming language <http://e
 which in turn is a super-set of the Java programming language, thus if you have some knowledge of these languages,
 or even only some confidence with the `C/C++` syntax, you will be comfortable using it.
 
-Read section :ref:`pipeline-script` to learn about Nextflow scripting language.
+Read :ref:`pipeline-page` section to learn about Nextflow scripting language.
 
 
 
@@ -131,7 +134,7 @@ A basic configuration file looks like the following example::
 	  PATH="$PWD/bowtie2:$PWD/tophat2:$PATH"
 	}
 
-Read section :ref:`config-file` to learn more about the Nextflow configuration file and settings.
+Read :ref:`config-page` section to learn more about the Nextflow configuration file and settings.
 
 
 

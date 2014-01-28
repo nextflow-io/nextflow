@@ -1,3 +1,5 @@
+.. _process-page:
+
 ************
 Processes
 ************
@@ -1020,7 +1022,7 @@ The following example shows how to set the process's executor::
 
 
 .. note:: Each executor provides its own set of configuration options that can set be in the `directive` declarations block.
-   See :ref:`executors` section to read about specific executor directives.
+   See :ref:`executor-page` section to read about specific executor directives.
 
 
 validExitStatus

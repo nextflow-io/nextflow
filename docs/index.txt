@@ -19,7 +19,6 @@ Contents:
    operator
    executor
    config
-   resume
    dnanexus
 
 

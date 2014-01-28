@@ -1,3 +1,5 @@
+.. _operator-page:
+
 *******************
 Operators
 *******************
@@ -235,28 +237,6 @@ Transform the items emitted by a channel by applying a function to each of them.
     25
     Done
 
-
-mapWithIndex( )
----------------
-
-Transform the items emitted by channel by applying a function to each of them that takes both the emitted item and
-the numerical index of that item in the source sequence, so that you can refer to both when you apply your transformation.
-
-For example::
-
-
-    Channel
-        .from( 'a', 'b', 'c' )
-        .mapWithIndex { item, index ->  [item+item, index] }
-        .subscribe onNext: { println it }, onComplete: { println 'Done' }
-
-
-::
-
-    [ 'aa', 0 ]
-    [ 'bb', 1 ]
-    [ 'cc', 2 ]
-    Done
 
 
 mapMany( )

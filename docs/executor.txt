@@ -1,4 +1,4 @@
-.. _executors:
+.. _executor-page:
 
 ***********
 Executors
@@ -232,7 +232,7 @@ DNAnexus
 The `DNAnexus` executor allows you to run your pipeline in the `DNAnexus <http://dnanexus.com/>`_ cloud platform.
 
 Nextflow pipeline to be executed in the DNAnexus platform need to be packaged as DNAnexus app. Read how bundle and
-deploy Nextflow apps in the :ref:`dnanexus-cloud` section.
+deploy Nextflow apps in the :ref:`dnanexus-page` section.
 
 The `dnanexus` executor allows your script to submit pipeline's processes in the DNAnexus cloud platform as separate jobs.
 It has to be specified in the configuration file or on the program command line options, as shown below::

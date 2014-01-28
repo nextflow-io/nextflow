@@ -1,4 +1,4 @@
-.. _dnanexus-cloud:
+.. _dnanexus-page:
 
 ****************
 DNAnexus cloud
