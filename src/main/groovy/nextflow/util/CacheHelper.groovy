@@ -78,7 +78,7 @@ class CacheHelper {
                 break
 
             case CharSequence:
-                hasher = hasher.putString( value as CharSequence );
+                hasher = hasher.putUnencodedChars( value as CharSequence );
                 break
 
             case Byte:
@@ -135,7 +135,7 @@ class CacheHelper {
 
     static private Hasher hashPath( Hasher hasher, Path file ) {
 
-        hasher = hasher.putString( file.toAbsolutePath().normalize().toString() )
+        hasher = hasher.putUnencodedChars( file.toAbsolutePath().normalize().toString() )
 
         if( file.exists() ) {
             return hasher.putLong( file.size() ) .putLong(file.lastModified())
@@ -147,7 +147,7 @@ class CacheHelper {
 
     static private Hasher hashFile( Hasher hasher, File file ) {
 
-        hasher = hasher.putString(file.absolutePath)
+        hasher = hasher.putUnencodedChars(file.absolutePath)
 
         if( file.exists() ) {
             return hasher .putLong(file.length()).putLong( file.lastModified())
