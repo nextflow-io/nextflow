@@ -15,6 +15,7 @@ import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.ChainWithClosure
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
+import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.operator.SeparationClosure
 import nextflow.Channel
 import org.codehaus.groovy.runtime.NullObject
@@ -846,36 +847,46 @@ class DataflowExtensions {
     static public final <V> DataflowReadChannel<V> buffer( final DataflowReadChannel<V> source, Object closingCriteria ) {
 
         def closure = new BooleanReturningMethodInvoker("isCase");
-        return bufferImpl(source, null, { Object it -> closure.invoke(closingCriteria, it) })
+        return bufferImpl(source, null, { Object it -> closure.invoke(closingCriteria, it) }, false)
 
     }
 
-    static public final <V> DataflowReadChannel<V> buffer( final DataflowReadChannel<V> channel, Object startingCriteria, Object closingCriteria  ) {
+    static public final <V> DataflowReadChannel<V> buffer( final DataflowReadChannel<V> channel, Object startingCriteria, Object closingCriteria ) {
         assert startingCriteria != null
         assert closingCriteria != null
 
         def c1 = new BooleanReturningMethodInvoker("isCase");
         def c2 = new BooleanReturningMethodInvoker("isCase");
 
-        return bufferImpl(channel, {Object it -> c1.invoke(startingCriteria, it)}, {Object it -> c2.invoke(closingCriteria, it)})
+        return bufferImpl(channel, {Object it -> c1.invoke(startingCriteria, it)}, {Object it -> c2.invoke(closingCriteria, it)}, false)
 
     }
 
-    static public final <V> DataflowReadChannel<V> buffer( DataflowReadChannel<V> source, Map params ) {
+    static public final <V> DataflowReadChannel<V> buffer( DataflowReadChannel<V> source, Map<String,?> params ) {
+        checkParamsMap('buffer', BUFFER_PARAMS, params )
 
         int _skip = (int)params?.skip ?: 0
-        int _count = (int)params.count
-        if( _count ) {
-            bufferWithSizeConstraint( source, _count, _skip )
+        int _size = (int)params.size
+        boolean _reminder = params?.keepReminder ?: false
+        if( _size ) {
+            bufferWithSizeConstraint( source, _size, _skip, _reminder )
         }
         else {
             throw new IllegalArgumentException()
         }
     }
 
+    static final BUFFER_PARAMS = ['size','skip','keepReminder']
+
+    static void checkParamsMap( String name, List<String> valid,  Map<String,?> params )  {
+        params.each {
+            if( !valid.contains(it.key) )
+                throw new IllegalArgumentException("Unknown argument argument '${it.key}' for operator '$name' -- Possible arguments: ${valid.join(', ')}")
+        }
+    }
 
 
-    static private <V> DataflowReadChannel<V> bufferWithSizeConstraint( final DataflowReadChannel<V> channel, int size, int skip = 0 ) {
+    static private <V> DataflowReadChannel<V> bufferWithSizeConstraint( final DataflowReadChannel<V> channel, int size, int skip, boolean reminder ) {
         assert size>0
 
         def skipCount = 0
@@ -900,24 +911,42 @@ class DataflowExtensions {
             return false
         }
 
-        return bufferImpl(channel, skip>0 ? startRule : null, closeRule )
+        return bufferImpl(channel, skip>0 ? startRule : null, closeRule, reminder )
     }
 
 
-    static private <V> DataflowReadChannel<V> bufferImpl( DataflowReadChannel<V> source, Closure startingCriteria, Closure closeCriteria ) {
+    static private <V> DataflowReadChannel<V> bufferImpl( DataflowReadChannel<V> source, Closure startingCriteria, Closure closeCriteria, boolean remainder ) {
         assert closeCriteria
+
+        // the result queue
+        final target = new DataflowQueue();
 
         // the list holding temporary collected elements
         def buffer = []
 
-        // the result queue
-        DataflowQueue target = new DataflowQueue();
+        // -- intercepts the PoisonPill and sent out the items remaining in the buffer when the 'remainder' flag is true
+        def listener = new DataflowEventAdapter() {
 
-        // open frame flag
+            public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+                if( message instanceof PoisonPill && remainder && buffer.size() )
+                    target.bind(buffer)
+
+                return message;
+            }
+
+            @Override
+            boolean onException(DataflowProcessor processor, Throwable e) {
+                DataflowExtensions.log.error("Buffer operator failure", e)
+                return true
+            }
+        }
+
+
+        // -- open frame flag
         boolean isOpen = startingCriteria == null
 
-        // the operator collecting the elements
-        Dataflow.operator(source, target) {
+        // -- the operator collecting the elements
+        Dataflow.operator( inputs: [source], outputs: [target], listeners: [listener]) {
             if( isOpen ) {
                 buffer << it
             }
@@ -937,6 +966,75 @@ class DataflowExtensions {
 
         return target
     }
+
+    static public final <V> DataflowReadChannel<V> collate( DataflowReadChannel<V> source, int size, boolean keepRemainder = true ) {
+        if( size <= 0 ) {
+            throw new IllegalArgumentException("Illegal argument 'size' for operator 'collate' -- it must be greater than zero: $size")
+        }
+
+        buffer( source, [size: size, keepReminder: keepRemainder] )
+    }
+
+    static public final <V> DataflowReadChannel<V> collate( DataflowReadChannel<V> source, int size, int step, boolean keepRemainder = true ) {
+        if( size <= 0 ) {
+            throw new IllegalArgumentException("Illegal argument 'size' for operator 'collate' -- it must be greater than zero: $size")
+        }
+
+        if( step <= 0 ) {
+            throw new IllegalArgumentException("Illegal argument 'step' for operator 'collate' -- it must be greater than zero: $step")
+        }
+
+        // the result queue
+        final target = new DataflowQueue();
+
+        // the list holding temporary collected elements
+        List<List<?>> allBuffers = []
+
+        // -- intercepts the PoisonPill and sent out the items remaining in the buffer when the 'remainder' flag is true
+        def listener = new DataflowEventAdapter() {
+
+            public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+                if( message instanceof PoisonPill && keepRemainder && allBuffers.size() ) {
+                    allBuffers.each {
+                        target.bind( it )
+                    }
+                }
+
+                return message;
+            }
+
+            @Override
+            boolean onException(DataflowProcessor processor, Throwable e) {
+                DataflowExtensions.log.error("Buffer operator failure", e)
+                return true
+            }
+        }
+
+
+        int index = 0
+
+        // -- the operator collecting the elements
+        Dataflow.operator( inputs: [source], outputs: [target], listeners: [listener]) {
+
+            if( index++ % step == 0 ) {
+                allBuffers.add( [] )
+            }
+
+            allBuffers.each { List list -> list.add(it) }
+
+            def buf = allBuffers.head()
+            if( buf.size() == size )  {
+                bindOutput(buf)
+                allBuffers = allBuffers.tail()
+            }
+
+        }
+
+        return target
+    }
+
+
+
 
     /**
      * Similar to https://github.com/Netflix/RxJava/wiki/Combining-Observables#merge

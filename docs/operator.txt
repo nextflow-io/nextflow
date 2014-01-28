@@ -384,12 +384,12 @@ the source channel into bundles:
     [2,3,4]      
   
 
-* ``buffer( count: n )``: emits bundles made up of exactly ``n`` values. Incomplete bundles 
+* ``buffer( size: n )``: emits bundles made up of exactly ``n`` values. Incomplete bundles
   are discarted. For example:: 
 
     Channel
         .from( 1,2,3,1,2,3,1 ) 
-        .buffer( count: 2 ) 
+        .buffer( size: 2 )
         .subscribe {  println it }
         
     // emitted values 
@@ -399,12 +399,12 @@ the source channel into bundles:
         
         
 
-* ``buffer( count: n, skip: m )``: like the previous emites bundles containing exactly ``n`` values,
+* ``buffer( size: n, skip: m )``: like the previous emites bundles containing exactly ``n`` values,
   but skip `m` values before to start gather values for the next bundle (including the first). For example:: 
 
     Channel
         .from( 1,2,3,4,5,1,2,3,4,5,1,2 ) 
-        .buffer( count:3, skip:2 ) 
+        .buffer( size:3, skip:2 )
         .subscribe {  println it }
         
     // emitted values 

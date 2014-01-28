@@ -597,9 +597,102 @@ class DataflowExtensionsTest extends Specification {
         r5.val == 3
         r5.val == Channel.STOP
 
+    }
 
+
+    def testCollate() {
+
+        when:
+        def r1 = Channel.from(1,2,3,1,2,3,1).collate( 2, false )
+        then:
+        r1.val == [1,2]
+        r1.val == [3,1]
+        r1.val == [2,3]
+        r1.val == Channel.STOP
+
+        when:
+        def r2 = Channel.from(1,2,3,1,2,3,1).collate( 2 )
+        then:
+        r2.val == [1,2]
+        r2.val == [3,1]
+        r2.val == [2,3]
+        r2.val == [1]
+        r2.val == Channel.STOP
 
     }
+
+    def testCollateWithStep() {
+
+        when:
+        def r1 = Channel.from(1,2,3,4).collate( 3, 1, false )
+        then:
+        r1.val == [1,2,3]
+        r1.val == [2,3,4]
+        r1.val == Channel.STOP
+
+        when:
+        def r2 = Channel.from(1,2,3,4).collate( 3, 1, true )
+        then:
+        r2.val == [1,2,3]
+        r2.val == [2,3,4]
+        r2.val == [3,4]
+        r2.val == [4]
+        r2.val == Channel.STOP
+
+        when:
+        def r3 = Channel.from(1,2,3,4).collate( 3, 1  )
+        then:
+        r3.val == [1,2,3]
+        r3.val == [2,3,4]
+        r3.val == [3,4]
+        r3.val == [4]
+        r3.val == Channel.STOP
+
+        when:
+        def r4 = Channel.from(1,2,3,4).collate( 4,4 )
+        then:
+        r4.val == [1,2,3,4]
+        r4.val == Channel.STOP
+
+        when:
+        def r5 = Channel.from(1,2,3,4).collate( 6,6 )
+        then:
+        r5.val == [1,2,3,4]
+        r5.val == Channel.STOP
+
+        when:
+        def r6 = Channel.from(1,2,3,4).collate( 6,6,false )
+        then:
+        r6.val == Channel.STOP
+
+    }
+
+    def testCollateIllegalArgs() {
+        when:
+        Channel.create().collate(0)
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        Channel.create().collate(-1)
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        Channel.create().collate(0,1)
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        Channel.create().collate(1,0)
+        then:
+        thrown(IllegalArgumentException)
+
+    }
+
+
+
+
 
     def testBufferClose() {
 
@@ -622,20 +715,48 @@ class DataflowExtensionsTest extends Specification {
     def testBufferWithCount() {
 
         when:
-        def r1 = Channel.from(1,2,3,1,2,3,1).buffer( count:2 )
+        def r1 = Channel.from(1,2,3,1,2,3,1).buffer( size:2 )
         then:
         r1.val == [1,2]
         r1.val == [3,1]
         r1.val == [2,3]
         r1.val == Channel.STOP
 
+        when:
+        r1 = Channel.from(1,2,3,1,2,3,1).buffer( size:2, keepReminder: true )
+        then:
+        r1.val == [1,2]
+        r1.val == [3,1]
+        r1.val == [2,3]
+        r1.val == [1]
+        r1.val == Channel.STOP
+
 
         when:
-        def r2 = Channel.from(1,2,3,4,5,1,2,3,4,5,1,2).buffer( count:3, skip:2 )
+        def r2 = Channel.from(1,2,3,4,5,1,2,3,4,5,1,2,9).buffer( size:3, skip:2 )
         then:
         r2.val == [3,4,5]
         r2.val == [3,4,5]
         r2.val == Channel.STOP
+
+        when:
+        r2 = Channel.from(1,2,3,4,5,1,2,3,4,5,1,2,9).buffer( size:3, skip:2, keepReminder: true )
+        then:
+        r2.val == [3,4,5]
+        r2.val == [3,4,5]
+        r2.val == [9]
+        r2.val == Channel.STOP
+
+    }
+
+    def testBufferInvalidArg() {
+
+        when:
+        Channel.create().buffer( xxx: true )
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == "Unknown argument argument 'xxx' for operator 'buffer' -- Possible arguments: size, skip, keepReminder"
 
 
     }
