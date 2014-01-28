@@ -205,6 +205,18 @@ Required dependencies
 Java 7 or higher
 
 
+Documentation
+--------------
+
+Nextflow documentation is available at this link http://nextflow.readthedocs.org
+
+Community
+----------
+
+You can post questions, or report problems by using the Nextflow Google group available
+at this link https://groups.google.com/forum/#!forum/nextflow
+
+
 License
 -------
 
