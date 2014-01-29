@@ -4,17 +4,29 @@
 Operators
 *******************
 
-Dataflow `operators` are methods that are be used to connect channels each other or transforms values
+Dataflow `operators` are methods that allows you to connect channels each others or to transform values
 emitted by channels by applying some user provided function.
+
+Operators can be separated in five groups:
+
+* `Filtering operators`_
+* `Transforming operators`_
+* `Combining operators`_
+* `Forking operators`_
+* `Math operators`_
+
 
 
 Filtering operators
 ===================
 
-filter( )
+Filtering operators allows you to filter the items emitted by a channel some specified rule.
+
+
+filter()
 ---------
 
-The ``filter( )`` operator allows you to filter data in the pipeline by using a boolean predicate. For example::
+The ``filter()`` operator allows you to filter data in a channel by using a boolean `predicate`. For example::
 
     Channel
         .from( 1, 2, 3, 4, 5 )
@@ -31,10 +43,11 @@ The ``filter( )`` operator allows you to filter data in the pipeline by using a 
 grep( )
 -------
 
-The ``grep( )`` operator allows to filter a channel by discarding all item that do not meet the specified condition. The condition
-can be a regular expression, a class, a literal value or a boolean expression.
+The ``grep( )`` operator allows to filter a channel by discarding all item that do not meet the specified condition.
+It works in a similar manner to the `filter()`_ operator but it allows a more flexible filtering condition. It can be
+either a regular expression, a class, a literal value or a boolean expression.
 
-Example using a regular expression::
+The following example shows how filter a channel by using a :ref:`script-regexp`::
 
     Channel
         .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
@@ -47,7 +60,7 @@ Example using a regular expression::
     aa
 
 
-Example specifying the class ``Number`` to discard all but the numbers::
+The following example shows how filter a channel by specifying the class ``Number`` so that only numbers are emitted::
 
     Channel
         .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
@@ -60,7 +73,7 @@ Example specifying the class ``Number`` to discard all but the numbers::
     4.5
 
 
-Example using a boolean expression::
+The following example shows how filter a channel by using a `boolean` expression::
 
      Channel
          .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
@@ -73,16 +86,16 @@ Example using a boolean expression::
      aa
      3
 
-.. warning:: Note in the above example that the filtering expression is wrapped by curly brackets instead of normal
-  round bracket, since it specifies a function (closure) passed as argument of the ``grep`` operator.
+.. warning:: In the above example note that the filtering expression is wrapped by curly brackets instead of normal
+  round bracket, since it specifies a function (closure) passed as argument of the ``grep`` operator. In other words
+  this is an shorter syntax for ``grep({ it.toString().size() == 1 })``
 
 
 
-
-unique( )
+unique()
 ---------
 
-Use the ``unique( )`` operator to remove duplicate items from a source channel and only emit single items with no repetition.
+The``unique()`` operator allows you to remove duplicate items from a channel and only emit single items with no repetition.
 
 For example::
 
@@ -113,10 +126,10 @@ For example ::
     4
 
 
-distinct( )
+distinct()
 -----------
 
-Use the distinct( ) method to remove duplicate consecutive items from a source channel. For example::
+The ``distinct()`` opeartor allows you to remove duplicate `consecutive` items from a channel. For example::
 
 
     Channel
@@ -158,8 +171,9 @@ For example::
 first( )
 --------
 
-The ``first( )`` operator creates a channel that emits the first item emitted by the source channel, or the first
-matching an optional condition. The condition can be a regular expression, a type or any closure evaluation a boolean expression. For example::
+The ``first( )`` operator creates a channel that emits the first item emitted by the source channel, or eventually
+the first item matching  an optional condition. The condition can be specified by using a :ref:`script-regexp`, a class type
+or any :ref:`closure <script-closure>` whose result evaluate to a `boolean` expression. For example::
 
 
     // no condition is specified, emits the very first item: 1
@@ -188,10 +202,10 @@ matching an optional condition. The condition can be a regular expression, a typ
         .subscribe { println it }
 
 
-take( )
+take()
 -------
 
-The ``take( )`` emits only the first `n` items emitted by an channel. For example::
+The ``take()`` operator allows you to filter only the first `n` items emitted by a channel. For example::
 
     Channel
         .from( 1,2,3,4,5,6 )
@@ -206,10 +220,19 @@ The ``take( )`` emits only the first `n` items emitted by an channel. For exampl
     Done
 
 
-last( )
+last()
 -------
 
-The ``last( )`` operator creates a channel that only emits the last item emitted by a source channel.
+The ``last()`` operator creates a channel that only emits the last item emitted by the source channel. For example::
+
+    Channel
+        .from( 1,2,3,4,5,6 )
+        .last()
+        .subscribe { println it }
+
+::
+
+    6
 
 
 Transforming operators

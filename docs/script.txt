@@ -277,6 +277,7 @@ As an example showing both these features see the following code fragment::
 
 
 
+.. _script-regexp:
 
 Regular expressions
 ====================
