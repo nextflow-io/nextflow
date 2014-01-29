@@ -4,8 +4,8 @@
 Operators
 *******************
 
-Dataflow `operators` are methods that allows you to connect channels each others or to transform values
-emitted by channels by applying some user provided function.
+Dataflow `operators` are methods that allows you to connect channels each other or to transform values
+emitted by a channel applying some user provided rules.
 
 Operators can be separated in five groups:
 
@@ -20,13 +20,22 @@ Operators can be separated in five groups:
 Filtering operators
 ===================
 
-Filtering operators allows you to filter the items emitted by a channel some specified rule.
+Given a channel, filtering operators allows you to select only the items that comply with a given rule.
 
+The available filter operators are:
 
-filter()
+* `distinct`_
+* `filter`_
+* `first`_
+* `grep`_
+* `last`_
+* `take`_
+* `unique`_
+
+filter
 ---------
 
-The ``filter()`` operator allows you to filter data in a channel by using a boolean `predicate`. For example::
+The ``filter`` operator allows you to get only the items emitted by a channel that satisfy a boolean `predicate`. For example::
 
     Channel
         .from( 1, 2, 3, 4, 5 )
@@ -39,15 +48,16 @@ The ``filter()`` operator allows you to filter data in a channel by using a bool
     3
     5
 
+.. note:: Using Nextflow a predicate is represented with a :ref:`closure <script-closure>` retuning a boolean value
 
-grep( )
+grep
 -------
 
-The ``grep( )`` operator allows to filter a channel by discarding all item that do not meet the specified condition.
-It works in a similar manner to the `filter()`_ operator but it allows a more flexible filtering condition. It can be
-either a regular expression, a class, a literal value or a boolean expression.
+The ``grep`` operator allows you to `filter` a channel by discarding all the items that do not meet a specified condition.
+It works in a similar manner to the `filter`_ operator but it lets use more flexible conditions. A grep condition can be
+either a :ref:`regular expression <script-regexp>`, a Java `class`, a literal value or a boolean predicate.
 
-The following example shows how filter a channel by using a :ref:`script-regexp`::
+The following example shows how filter a channel by using a regular expression::
 
     Channel
         .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
@@ -60,7 +70,7 @@ The following example shows how filter a channel by using a :ref:`script-regexp`
     aa
 
 
-The following example shows how filter a channel by specifying the class ``Number`` so that only numbers are emitted::
+The following example shows how filter a channel by specifying the class ``Number`` so that only numbers are returned::
 
     Channel
         .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
@@ -86,16 +96,16 @@ The following example shows how filter a channel by using a `boolean` expression
      aa
      3
 
-.. warning:: In the above example note that the filtering expression is wrapped by curly brackets instead of normal
-  round bracket, since it specifies a function (closure) passed as argument of the ``grep`` operator. In other words
-  this is an shorter syntax for ``grep({ it.toString().size() == 1 })``
+.. tip:: In the above example the filtering expression is wrapped by curly brackets instead of normal
+  round bracket, since it specifies a :ref:`closure <script-closure>` as the operator argument.
+  This just is an shorter syntax for ``grep({ it.toString().size() == 1 })``
 
 
 
-unique()
+unique
 ---------
 
-The``unique()`` operator allows you to remove duplicate items from a channel and only emit single items with no repetition.
+The ``unique`` operator allows you to remove duplicate items from a channel and only emit single items with no repetition.
 
 For example::
 
@@ -112,8 +122,8 @@ For example::
     3
 
 
-You can also specify an optional a function (closure) that customizes how it distinguishes between unique items.
-For example ::
+You can also specify an optional :ref:`closure <script-closure>` that customizes how it distinguishes between unique items.
+For example::
 
     Channel
         .from(1,3,4,5)
@@ -126,10 +136,11 @@ For example ::
     4
 
 
-distinct()
+distinct
 -----------
 
-The ``distinct()`` opeartor allows you to remove duplicate `consecutive` items from a channel. For example::
+The ``distinct`` operator allows you to remove `consecutive` duplicated items from a channel, so that each item emitted
+is different from the preceding one. For example::
 
 
     Channel
@@ -149,7 +160,7 @@ The ``distinct()`` opeartor allows you to remove duplicate `consecutive` items f
 
 
 
-You can also specify an optional a function (closure) that customizes how it distinguishes between distinct items.
+You can also specify an optional :ref:`closure <script-closure>` that customizes how it distinguishes between distinct items.
 For example::
 
     Channel
@@ -168,12 +179,12 @@ For example::
 
 
 
-first( )
+first
 --------
 
-The ``first( )`` operator creates a channel that emits the first item emitted by the source channel, or eventually
-the first item matching  an optional condition. The condition can be specified by using a :ref:`script-regexp`, a class type
-or any :ref:`closure <script-closure>` whose result evaluate to a `boolean` expression. For example::
+The ``first`` operator creates a channel that returns the first item emitted by the source channel, or eventually
+the first item that matches an optional condition. The condition can be specified by using a :ref:`regular expression<script-regexp>`,
+a Java `class` type or any boolean `predicate`. For example::
 
 
     // no condition is specified, emits the very first item: 1
@@ -195,17 +206,17 @@ or any :ref:`closure <script-closure>` whose result evaluate to a `boolean` expr
         .first( ~/aa.*/ )
         .subscribe { println it }
 
-    // emits the first item for which the expression evaluates to true: 4
+    // emits the first item for which the predicate evaluates to true: 4
     Channel
         .from( 1,2,3,4,5 )
         .first { it > 3 }
         .subscribe { println it }
 
 
-take()
+take
 -------
 
-The ``take()`` operator allows you to filter only the first `n` items emitted by a channel. For example::
+The ``take`` operator allows you to filter only the first `n` items emitted by a channel. For example::
 
     Channel
         .from( 1,2,3,4,5,6 )
@@ -220,10 +231,10 @@ The ``take()`` operator allows you to filter only the first `n` items emitted by
     Done
 
 
-last()
+last
 -------
 
-The ``last()`` operator creates a channel that only emits the last item emitted by the source channel. For example::
+The ``last`` operator creates a channel that only returns the last item emitted by the source channel. For example::
 
     Channel
         .from( 1,2,3,4,5,6 )
@@ -240,8 +251,21 @@ Transforming operators
 
 This section explains operators with which you can transform items that are emitted by channels.
 
+The available operators are:
 
-map( )
+* `map`_
+* `mapMany`_
+* `reduce`_
+* `groupBy`_
+* `buffer`_
+* `collate`_
+* `flatten`_
+* `toList`_
+* `toSortedList`_
+
+
+
+map
 ------
 
 Transform the items emitted by a channel by applying a function to each of them. For example::
@@ -262,7 +286,7 @@ Transform the items emitted by a channel by applying a function to each of them.
 
 
 
-mapMany( )
+mapMany
 ----------
 
 Transform the items emitted by a channel by applying a function to each of them and then flattens the results of that function.
@@ -306,10 +330,10 @@ Associative arrays are manged in the same way. Fo example::
     square: 9
 
 
-reduce( )
+reduce
 ---------
 
-The ``reduce( )`` operator applies a function of your choosing to the first item emitted by a source channel,
+The ``reduce`` operator applies a function of your choosing to the first item emitted by a source channel,
 then feeds the result of that function along with the second item emitted by the source channel into the same function,
 then feeds the result of that function along with the third item into the same function, and so on until all items have been emitted by the source channel.
 
@@ -328,17 +352,17 @@ For example::
     15
     Done
 
-There is also a version of ``reduce( )`` to which you can pass a seed item in addition to an accumulator function::
+There is also a version of ``reduce`` to which you can pass a `seed` item in addition to an accumulator function::
 
     myChannel.reduce( seedValue ) {  a, b -> ... }
 
 
 The seed value is used to initialize the accumulator argument i.e. the ``a`` argument in the above example.
 
-groupBy( )
+groupBy
 ----------
 
-The ``groupBy( )`` operator collects all the values emitted by the source channel grouping them by a key defined by 
+The ``groupBy`` operator collects all the values emitted by the source channel grouping them by a key defined by
 a user defined mapping function. When finished emits an associative array that maps each key with 
 the list of emitted values having that key.
 
@@ -358,18 +382,18 @@ When the mapping function is omitted, the grouping key is defined as following:
 
 * Any value of type ``Map`` is associated to the value of its first entry, or ``null`` when the map itself is empty.
 * Any value of type ``Map.Entry`` is associated to the value of its ``key`` attribute.
-* Any value of type ``Iterable``, ``Collection`` or ``Array`` is associated to its first entry.   
+* Any value of type ``Collection`` or ``Array`` is associated to its first entry.
 * Any other value, the value itself is used as key.
 
 
-buffer( )
+buffer
 ---------
 
-The ``buffer( )`` operator gathers the items emitted by the source channel into bundles and 
+The ``buffer`` operator gathers the items emitted by the source channel into bundles and
 and emits these bundles as its own emissions. 
 
 
-There are a number of ways with which you can regulate how ``buffer( )`` gathers items from 
+There are a number of ways with which you can regulate how ``buffer`` gathers items from
 the source channel into bundles:
 
 * ``buffer( closingCondition )``: starts to collect the values emitted by the channel into 
@@ -402,13 +426,13 @@ the source channel into bundles:
         .buffer( 2, 4 ) 
         .subscribe {  println it }
 
-    // emites bundles starting with '2' and ending with'4' 
+    // emits bundles starting with '2' and ending with'4'
     [2,3,4]
     [2,3,4]      
   
 
-* ``buffer( size: n )``: emits bundles made up of exactly ``n`` values. Incomplete bundles
-  are discarted. For example:: 
+* ``buffer( size: n )``: emits tuple made up of exactly ``n`` values. Incomplete tuple
+  are discarded. For example::
 
     Channel
         .from( 1,2,3,1,2,3,1 ) 
@@ -419,11 +443,25 @@ the source channel into bundles:
     [1, 2]
     [3, 1]
     [2, 3]
-        
-        
 
-* ``buffer( size: n, skip: m )``: like the previous emites bundles containing exactly ``n`` values,
-  but skip `m` values before to start gather values for the next bundle (including the first). For example:: 
+If you want to emit also the last, eventually incomplete tuple, add the parameter ``remainder`` specifying ``true``, for example::
+
+    Channel
+        .from( 1,2,3,1,2,3,1 )
+        .buffer( size: 2, remainder: true )
+        .subscribe {  println it }
+
+    // emitted values
+    [1, 2]
+    [3, 1]
+    [2, 3]
+    [1]
+
+
+
+* ``buffer( size: n, skip: m )``: like the previous emits tuple containing exactly ``n`` values,
+  but skip `m` values before to start collecting values for the next tuple (including the first).
+  For example::
 
     Channel
         .from( 1,2,3,4,5,1,2,3,4,5,1,2 ) 
@@ -434,11 +472,67 @@ the source channel into bundles:
     [3, 4, 5]
     [3, 4, 5]
 
+As before, incomplete tuple are not emitted. If you need to emit them add the parameter ``remainder``
+specifying ``true`` as showed in the previous example.
 
-flatten( )
+See also: `collate`_ operator.
+
+
+collate
+---------
+
+The ``collate`` operator transforms a channel in a such way that the emitted values are grouped in tuple containing `n` items. For example::
+
+    Channel
+        .from(1,2,3,1,2,3,1)
+        .collate( 3 )
+        .subscribe { println it }
+
+::
+
+        [1, 2, 3]
+        [1, 2, 3]
+        [1]
+
+As shown in the above example the last tuple may be incomplete e.g. contain less elements than the specified size.
+If you need toi avoid this specify ``false`` as second parameter. For example::
+
+    Channel
+        .from(1,2,3,1,2,3,1)
+        .collate( 3, false )
+        .subscribe { println it }
+
+::
+
+        [1, 2, 3]
+        [1, 2, 3]
+
+
+A second version of the ``collate`` operator allows to specify, after the `size`, the `step` by which elements are collected in tuple.
+For example::
+
+    Channel
+      .from(1,2,3,4)
+      .collate( 3, 1 )
+      .subscribe { println it }
+
+::
+
+    [1, 2, 3]
+    [2, 3, 4]
+    [3, 4]
+    [4]
+
+Like before, if you need to emit only complete tuple, specify ``false`` as third parameter.
+
+
+See also: `buffer`_ operator.
+
+
+flatten
 ----------
 
-The ``flatten( )`` operator transforms the items emitted by a channel so that any ``Collection`` or ``Array`` object 
+The ``flatten`` operator transforms the items emitted by a channel so that any ``Collection`` or ``Array`` object
 value is converted to its single items and emitted separately. For example:: 
 
     Channel
@@ -456,14 +550,14 @@ value is converted to its single items and emitted separately. For example::
     6
     
     
-See also: `mapMany( )`_
+See also: `mapMany`_ operator.
 
 
 
-toList( )
+toList
 ---------
 
-The ``toList( )`` operator collects all the values emitted by a channel to a ``List`` object 
+The ``toList`` operator collects all the values emitted by a channel to a ``List`` object
 and emits the resulting collection to the channel returned by the operator itself. For example::
 
     Channel
@@ -477,7 +571,7 @@ and emits the resulting collection to the channel returned by the operator itsel
     Done
 
 
-toSortedList( )
+toSortedList
 ---------------
 
 TODO
@@ -486,10 +580,21 @@ TODO
 Combining operators
 ===================
 
-into( )
+The combining operators are:
+
+* `into`_
+* `tap`_
+* `merge`_
+* `mix`_
+* `phase`_
+* `gather`_
+* `spread`_
+
+
+into
 -------
 
-The ``into( )`` operator connects two channels so that values emitted by the source channel 
+The ``into`` operator connects two channels so that values emitted by the source channel
 are forwarded to target channel. For example:: 
 
     target = Channel.create()
@@ -507,13 +612,13 @@ are forwarded to target channel. For example::
     d
     
 
-See also `tap( )`_ and `route( )`_.
+See also `tap`_ and `route`_ operators.
 
 
-tap( )
+tap
 ------
 
-The ``tap( )`` operator, combines the functions of `into( )`_ and `split( )`_ operators, is a such way that 
+The ``tap`` operator, combines the functions of `into`_ and `split`_ operators, is a such way that
 it connects two channels copying the values from the source into the `tapped` channel, at the same time 
 it splits the source channel into a newly create channel that is returned by the operator itself. 
 
@@ -548,15 +653,13 @@ For example::
 
 
 
-See also: 
-  * `into( )`_
-  * `split( )`_ 
+See also `into`_ and `split`_ operators
 
 
-merge( )
+merge
 --------
 
-The ``merge( )`` operator let to join the items emitted by two (or more) channels into a new one.
+The ``merge`` operator let to join the items emitted by two (or more) channels into a new one.
 
 For example, the following code merges together two channels, one of which emits a series of odd integers and the other
 of which emits a series of even integers::
@@ -580,10 +683,10 @@ When merging more than two channels specify them by wrapping them with a list, a
    channel1.merge( [channel2, channel3] ) {  item1, item2, item3 -> item1 + item2 + item3 }
 
 
-mix( )
+mix
 ------
 
-The ``mix( )`` operator combines the items emitted by two (or more) channels into a single channel.
+The ``mix`` operator combines the items emitted by two (or more) channels into a single channel.
 
 
 For example::
@@ -618,10 +721,10 @@ For example::
           3
 
 
-phase( )
+phase
 --------
 
-The ``phase( )`` operator creates a channel that synchronize the values emitted by two source channels,
+The ``phase`` operator creates a channel that synchronize the values emitted by two source channels,
 so that emitted items have the same key.
 
 The key is defined by default as the first entry in a array, list or map object,
@@ -668,11 +771,16 @@ An optional function can be provided in order to specify a custom key mapping st
 
 
 
+gather
+-------
 
-spread( )
+TODO
+
+
+spread
 ---------
 
-The ``spread( )`` operator combines the items emitted by the source channel with all the values defined by an array or an ``Iterable`` object specified as argument.
+The ``spread`` operator combines the items emitted by the source channel with all the values defined by an array or an ``Iterable`` object specified as argument.
 
 For example::
 
@@ -697,11 +805,18 @@ For example::
 Forking operators
 =================
 
+The forking operators are:
 
-split( )
+* `split`_
+* `choice`_
+* `separate`_
+* `route`_
+
+
+split
 --------
 
-The ``split( )`` operator copies the items emitted by a source channel into one or multiple channels specified as argument.
+The ``split`` operator copies the items emitted by a source channel into one or multiple channels specified as argument.
 For example::
 
     source = Channel.from( 'a', 'b', 'c' )
@@ -724,11 +839,13 @@ For example::
 .. TODO split(n)
 
 
-See also: `tap( )`_
+See also: `tap`_ operator.
 
 
-choice( )
+choice
 ----------
+
+TODO
 
 ::
 
@@ -736,7 +853,7 @@ choice( )
 
 
 
-separate( )
+separate
 ------------
 
 Separation is the opposite operation to merge. The supplied closure returns a list of values, each of which will be output into an output channel with the corresponding position index.
@@ -750,10 +867,10 @@ Separation is the opposite operation to merge. The supplied closure returns a li
 
 
 
-route( )
+route
 ----------
 
-The ``route( )`` operator forwards the items emitted by the source channel to a set of channels according
+The ``route`` operator forwards the items emitted by the source channel to a set of channels according
 a the map specified as a parameter. For example::
 
     channel1 = Channel.create()
@@ -764,18 +881,27 @@ a the map specified as a parameter. For example::
 
 TODO
 
-See also: `into( )`_
+See also: `into`_ operator.
+
 
 Math operators
 ==============
 
 This section explains operators that perform mathematical operations on the items emitted by channels.
 
+The math operator are:
 
-count( )
+* `count`_
+* `countBy`_
+* `min`_
+* `max`_
+* `sum`_
+
+
+count
 --------
 
-The ``count( )`` operator creates a channel that emits a single item: a number that represents the total number of
+The ``count`` operator creates a channel that emits a single item: a number that represents the total number of
 items emitted by the source channel.
 
 An optional parameter can be specified representing the condition to be satisfied by the item to count. For example::
@@ -800,10 +926,10 @@ An optional parameter can be specified representing the condition to be satisfie
         // -> 2
 
 
-countBy( )
+countBy
 ----------
 
-The ``countBy( )`` creates a channel which emits an associative array (map object) counting the occurence of the emitted
+The ``countBy`` creates a channel which emits an associative array (map object) counting the occurence of the emitted
 items in the source channel. For example::
 
     Channel
@@ -831,11 +957,10 @@ A optional grouping criteria can be specified by a function (closure) mapping ea
 
 
 
-
-min( )
+min
 ------
 
-The ``min( )`` operator waits until the source channel completes, and then emits the value that had the lowest value.
+The ``min`` operator waits until the source channel completes, and then emits the value that had the lowest value.
 For example::
 
     Channel
@@ -849,10 +974,10 @@ For example::
 
 
 
-max( )
+max
 ------
 
-The ``max( )`` operator waits until the source channel completes, and then emits the value that had the greatest value.
+The ``max`` operator waits until the source channel completes, and then emits the value that had the greatest value.
 For example::
 
     Channel
@@ -866,11 +991,10 @@ For example::
 
 
 
-sum( )
+sum
 ------
 
-
-The ``sum( )`` operators crates a channel that emits the sum of all values emitted by the source channel to which is applied.
+The ``sum`` operators crates a channel that emits the sum of all values emitted by the source channel to which is applied.
 For example::
 
     Channel
