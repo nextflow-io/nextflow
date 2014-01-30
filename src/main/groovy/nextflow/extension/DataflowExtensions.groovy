@@ -132,8 +132,17 @@ class DataflowExtensions {
 
     }
 
+    /*
+     * the list of valid subscription handlers
+     */
     static private VALID_HANDLERS = [ 'onNext', 'onComplete', 'onError' ]
 
+    /**
+     * Verify that the map contains only valid names of subscribe handlers.
+     * Throws an {@code IllegalArgumentException} when an invalid name is specified
+     *
+     * @param handlers The handlers map
+     */
     static private final checkSubscribeHandlers( Map handlers ) {
 
         if( !handlers ) {
@@ -211,7 +220,13 @@ class DataflowExtensions {
 
     }
 
-
+    /**
+     * Chain operator, this is a synonym of {@code DataflowReadChannel.chainWith}
+     *
+     * @param source
+     * @param closure
+     * @return
+     */
     public static <V> DataflowReadChannel<V> chain(final DataflowReadChannel<?> source, final Closure<V> closure) {
         final DataflowReadChannel<V> target = newChannelBy(source)
         newOperator(source, target, new ChainWithClosure<V>(closure))
@@ -219,6 +234,13 @@ class DataflowExtensions {
     }
 
 
+    /**
+     * Chain operator, this is a synonym of {@code DataflowReadChannel.chainWith}
+     *
+     * @param source
+     * @param closure
+     * @return
+     */
     public static <V> DataflowReadChannel<V> chain(final DataflowReadChannel<?> source, final Map<String, Object> params, final Closure<V> closure) {
 
         final DataflowReadChannel<V> target = newChannelBy(source)
@@ -260,6 +282,25 @@ class DataflowExtensions {
         return target;
 
     }
+
+    /**
+     * method used to invoke the closure in the {@code #map} and {@code #mapMany} operators
+     *
+     * @param item
+     * @param closure
+     * @return
+     */
+    static private mapClosureCall( Object item, Closure closure ) {
+        def result
+        final n = closure.getMaximumNumberOfParameters()
+        if( n>1 && item instanceof Collection && n==item.size() )
+            result = closure.call(*item)
+        else
+            result = closure.call(item)
+
+        return result
+    }
+
 
     /**
      * Transform the items emitted by a channel by applying a function to each of them and then flattens the results of that function.
@@ -362,7 +403,7 @@ class DataflowExtensions {
     }
 
     /**
-     *
+     * Implements the {@code #reduce} operator
      *
      * @param channel
      * @param seed
@@ -589,7 +630,12 @@ class DataflowExtensions {
         return target
     }
 
-
+    /**
+     * The last operator creates a channel that only returns the last item emitted by the source channel
+     *
+     * @param source The source channel
+     * @return A {@code DataflowVariable} emitting the `last` item in the channel
+     */
     static public final <V> DataflowReadChannel<V> last( final DataflowReadChannel<V> source  ) {
 
         def target = new DataflowVariable()
@@ -599,23 +645,6 @@ class DataflowExtensions {
 
     }
 
-//
-//
-//    /**
-//     * Emit items from a source Observable, but issue an exception if no item is emitted in a specified timespan
-//     *
-//     * See https://github.com/Netflix/RxJava/wiki/Filtering-Observables#timeout
-//     *
-//     * @param channel
-//     */
-//    static public final <V> DataflowReadChannel<V> timeout( final DataflowQueue channel, String duration ) {
-//        def millis = duration.isLong() ? duration.toLong() : Duration.create(duration).toMillis()
-//        timeout( channel, millis )
-//    }
-//
-//    static public final <V> DataflowReadChannel<V> timeout( final DataflowQueue channel, long duration, TimeUnit unit = TimeUnit.MILLISECONDS ) {
-//
-//    }
 
     /**
      * See https://github.com/Netflix/RxJava/wiki/Observable-Utility-Operators#parallel
@@ -653,6 +682,12 @@ class DataflowExtensions {
         return reduce(channel, []) { list, item -> list << item }
     }
 
+    /**
+     * Convert a {@code DataflowQueue} alias *channel* to a Java {@code List} sorting its content
+     *
+     * @param channel The channel to be converted
+     * @return A list holding all the items send over the channel
+     */
     static public final <V> DataflowReadChannel<V> toSortedList(final DataflowReadChannel<V> channel, Closure closure = null) {
         def reduced = reduce(channel, []) { list, item -> list << item }
         def result = reduced.then { List list ->
@@ -689,7 +724,11 @@ class DataflowExtensions {
         }
     }
 
-
+    /**
+     * Groups the items emitted by the source channel into groups determined by the supplied mapping closure and counts the frequency of the created groups
+     * @param source The source channel
+     * @return A {@code DataflowVariable} returning the a {@code Map} containing the counting values for each key
+     */
     static public final DataflowReadChannel<Map> countBy(final DataflowReadChannel<?> source ) {
         countBy(source, { it })
     }
@@ -711,10 +750,26 @@ class DataflowExtensions {
         }
     }
 
+    /**
+     * The min operator waits until the source channel completes, and then emits the value that had the lowest value
+     *
+     * @param channel The source channel
+     * @return A {@code DataflowVariable} returning the minimum value
+     */
     static public final <V> DataflowReadChannel<V> min(final DataflowReadChannel<V> channel) {
         reduce(channel) { min, val -> val<min ? val : min }
     }
 
+    /**
+     * The min operator waits until the source channel completes, and then emits the value that had the lowest value
+     *
+     * @param channel The source channel
+     * @param comparator If the closure has two parameters it is used like a traditional Comparator. I.e. it should compare
+     *      its two parameters for order, returning a negative integer, zero, or a positive integer when the first parameter
+     *      is less than, equal to, or greater than the second respectively. Otherwise, the Closure is assumed to take a single
+     *      parameter and return a Comparable (typically an Integer) which is then used for further comparison.
+     * @return  A {@code DataflowVariable} returning the minimum value
+     */
     static public final <V> DataflowReadChannel<V> min(final DataflowReadChannel<V> channel, Closure<V> comparator) {
 
         def _closure
@@ -728,14 +783,37 @@ class DataflowExtensions {
         reduce(channel, _closure)
     }
 
+    /**
+     * The min operator waits until the source channel completes, and then emits the value that had the lowest value
+     *
+     * @param channel The source channel
+     * @param comparator The a {@code Comparator} object
+     * @return A {@code DataflowVariable} returning the minimum value
+     */
     static public final <V> DataflowReadChannel<V>  min(final DataflowQueue<V> channel, Comparator comparator) {
         reduce(channel) { a, b -> comparator.compare(a,b)<0 ? a : b }
     }
 
+    /**
+     * The max operator waits until the source channel completes, and then emits the value that had the greatest value.
+     *
+     * @param channel The source channel
+     * @return A {@code DataflowVariable} emitting the maximum value
+     */
     static public final <V> DataflowReadChannel<V> max(final DataflowQueue channel) {
         reduce(channel) { max, val -> val>max ? val : max }
     }
 
+    /**
+     * The max operator waits until the source channel completes, and then emits the value that had the greatest value.
+     *
+     * @param channel The source channel
+     * @param comparator If the closure has two parameters it is used like a traditional Comparator. I.e. it should compare
+     *  its two parameters for order, returning a negative integer, zero, or a positive integer when the first parameter is
+     *  less than, equal to, or greater than the second respectively. Otherwise, the Closure is assumed to take a single
+     *  parameter and return a Comparable (typically an Integer) which is then used for further comparison
+     * @return A {@code DataflowVariable} emitting the maximum value
+     */
     static public final <V> DataflowReadChannel<V> max(final DataflowQueue<V> channel, Closure comparator) {
 
         def _closure
@@ -752,14 +830,34 @@ class DataflowExtensions {
         reduce(channel, _closure)
     }
 
+    /**
+     * The max operator waits until the source channel completes, and then emits the value that had the greatest value.
+     *
+     * @param channel The source channel
+     * @param comparator A {@code Comparator} object
+     * @return A {@code DataflowVariable} emitting the maximum value
+     */
     static public final <V> DataflowVariable<V> max(final DataflowQueue<V> channel, Comparator<V> comparator) {
         reduce(channel) { a, b -> comparator.compare(a,b)>0 ? a : b }
     }
 
+    /**
+     *  The sum operators crates a channel that emits the sum of all values emitted by the source channel to which is applied
+     *
+     * @param channel The source channel providing the values to sum
+     * @return A {@code DataflowVariable} emitting the final sum value
+     */
     static public final <V> DataflowReadChannel<V> sum(final DataflowQueue<V> channel) {
         reduce(channel, 0) { sum, val -> sum += val }
     }
 
+    /**
+     * The sum operators crates a channel that emits the sum of all values emitted by the source channel to which is applied
+     *
+     * @param channel  The source channel providing the values to sum
+     * @param closure  A closure that given an entry returns the value to sum
+     * @return A {@code DataflowVariable} emitting the final sum value
+     */
     static public final <V> DataflowReadChannel<V> sum(final DataflowQueue<V> channel, Closure<V> closure) {
         reduce(channel, 0) { sum, val -> sum += closure.call(val) }
     }
@@ -783,6 +881,14 @@ class DataflowExtensions {
         }
     }
 
+    /**
+     * Given a an associative array mapping a key with the destination channel, the operator route forwards the items emitted
+     * by the source channel to the target channel matching the key in the routing map
+     *
+     * @param source The source channel emitting the value to route
+     * @param targets The routing map i.e. a {@code Map} associating each key to the target channel
+     * @param mapper A optional mapping function that given an entry return its key
+     */
     static public final void route( final DataflowReadChannel source, Map<?,DataflowWriteChannel> targets, Closure mapper = DEFAULT_MAPPING_CLOSURE ) {
 
         source.subscribe (
@@ -1215,7 +1321,7 @@ class DataflowExtensions {
      * @param buffer The shared state buffering the channel received values
      * @param count The overall number of channel
      * @param current The current channel
-     * @param channel The channel over which the results are sent
+     * @param target The channel over which the results are sent
      * @param mapper A closure mapping a value to its key
      * @return A map with {@code OnNext} and {@code onComplete} methods entries
      */
@@ -1246,7 +1352,7 @@ class DataflowExtensions {
      *
      *
      * @param buffer The shared state buffer
-     * @param count The overall number of channels
+     * @param size The overall number of channels
      * @param current The current channel
      * @param item The value just arrived
      * @param mapper The mapping closure retrieving a key by the item just arrived over the current channel
