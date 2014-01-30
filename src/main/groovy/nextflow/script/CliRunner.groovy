@@ -54,9 +54,7 @@ import org.codehaus.groovy.control.customizers.ImportCustomizer
 class CliRunner {
 
     @InheritConstructors
-    static class CliArgumentException extends RuntimeException {
-
-    }
+    static class CliArgumentException extends RuntimeException { }
 
     /**
      * The underlying execution session
