@@ -29,7 +29,7 @@ import spock.lang.Specification
  */
 class CliRunnerTest extends Specification {
 
-    def 'test task' () {
+    def testProcess () {
 
         setup:
         def runner = new CliRunner([process:[executor:'nope']])
@@ -52,7 +52,6 @@ class CliRunnerTest extends Specification {
         then:
         runner.result instanceof DataflowVariable
         runner.result.val == "echo Hello world"
-
 
     }
 
@@ -110,7 +109,7 @@ class CliRunnerTest extends Specification {
     }
 
 
-    def 'test task with assignment' () {
+    def testProcessWithArgs () {
         setup:
         def runner = new CliRunner( executor: 'nope' )
 
@@ -140,7 +139,7 @@ class CliRunnerTest extends Specification {
     }
 
 
-    def 'test task echo' () {
+    def testProcessEcho () {
 
         setup:
         def runner = new CliRunner( executor: 'nope' )
@@ -167,7 +166,7 @@ class CliRunnerTest extends Specification {
 
 
 
-    def 'test task variables' () {
+    def testProcessVariables () {
 
 
         setup:
@@ -191,8 +190,7 @@ class CliRunnerTest extends Specification {
 
     }
 
-    def 'test task variables 2' () {
-
+    def testProcessVariables2 () {
 
         setup:
         def runner = new CliRunner( executor: 'nope' )
@@ -217,7 +215,7 @@ class CliRunnerTest extends Specification {
     }
 
 
-    def 'test task out file' () {
+    def testProcessOutFile () {
 
 
         setup:
@@ -239,7 +237,7 @@ class CliRunnerTest extends Specification {
 
     }
 
-    def 'test version' () {
+    def testVersion () {
 
         when:
         def opt = CliRunner.parseMainArgs('-v')
@@ -249,7 +247,7 @@ class CliRunnerTest extends Specification {
 
     }
 
-    def 'test help' () {
+    def testHelp () {
 
         when:
         def opt = CliRunner.parseMainArgs('-h')
@@ -260,7 +258,7 @@ class CliRunnerTest extends Specification {
     }
 
 
-    def 'test usage' () {
+    def testUsage () {
 
         when:
         CliRunner.parseMainArgs([] as String)
@@ -273,7 +271,7 @@ class CliRunnerTest extends Specification {
 
 
 
-    def 'buildConfigObject' () {
+    def buildConfigObject () {
 
         setup:
         def env = [PATH:'/local/bin', HOME:'/home/my']
@@ -291,7 +289,7 @@ class CliRunnerTest extends Specification {
 
     }
 
-    def 'buildConfigObject 2 ' () {
+    def buildConfigObject2 () {
 
         setup:
         def env = [HOME:'/home/my', PATH:'/local/bin', 'dot.key.name':'any text']
@@ -334,7 +332,7 @@ class CliRunnerTest extends Specification {
 
     }
 
-    def 'buildConfigObject 3 ' () {
+    def buildConfigObject3 () {
 
         setup:
         def env = [HOME:'/home/my', PATH:'/local/bin', 'dot.key.name':'any text']
@@ -362,7 +360,7 @@ class CliRunnerTest extends Specification {
     }
 
 
-    def 'test validateConfigFiles '() {
+    def testValidateConfigFiles () {
         when:
         def files = CliRunner.validateConfigFiles(['file1','file2'])
 
@@ -384,7 +382,7 @@ class CliRunnerTest extends Specification {
     }
 
 
-    def 'test config to map ' () {
+    def testConfigToMap  () {
 
         setup:
         def config = new ConfigSlurper().parse( 'task {field1=1; field2="two"}; env { x = 99 } ' )
@@ -403,7 +401,7 @@ class CliRunnerTest extends Specification {
     }
 
 
-    def 'test parseValue' () {
+    def tstParseValue () {
 
         expect:
         CliRunner.parseValue(str) == value
@@ -420,7 +418,7 @@ class CliRunnerTest extends Specification {
     }
 
 
-    def 'test normalize cmdline' () {
+    def testNormalizeCmdline () {
 
         expect:
         CliRunner.normalizeArgs('a','-bb','-ccc','dddd') == ['a','-bb','-ccc','dddd']
@@ -509,23 +507,6 @@ class CliRunnerTest extends Specification {
 
 
     }
-
-
-//    def test() {
-//
-//        when:
-//        def cfg = new ConfigSlurper()
-//        //cfg.setBinding(binding)
-//        def result = cfg.parse('''
-//            X = 1
-//            Z = "$Y"
-//            ''')
-//
-//        then:
-//        result.get('X') == 1
-//        result.Z == ''
-//
-//    }
 
 
 }
