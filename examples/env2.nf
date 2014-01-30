@@ -7,7 +7,7 @@ process printEnv {
     echo true
 
     input:
-    env str as HELLO
+    env HELLO from str
 
     '''
     echo $HELLO world!
