@@ -4,7 +4,7 @@
 Configuration file
 *******************
 
-When Nextflow is launched it looks for a file named ``nextflow.config`` in the current working directory and the
+When Nextflow is launched it looks for a file named ``nextflow.config`` in the current working directory and for the
 file ``~/.nextflow/config`` (in the user home directory).
 
 When both exist they are merged, so that the settings in the first override the same ones that may appear in the
@@ -18,7 +18,7 @@ A Nextflow configuration file is a simple text file containing a set of properti
 
   name = value
 
-Please note, string values need to be wrapped in quote characters while numbers and boolean values (``true``, ``false``) do not.
+Please note, string values need to be wrapped in quotation characters while numbers and boolean values (``true``, ``false``) do not.
 Also note that values are typed, meaning for example that, ``1`` is different from ``'1'``, since the first is interpreted
 as the number one, while the latter is interpreted as a string value.
 
@@ -45,7 +45,7 @@ So, in the above example the property ``customPath`` is defined as the current s
 the string ``/my/app/folder`` is appended.
 
 .. warning:: If you are accessing an environment variable that may not exist in the system, your property may contain
-    an undefined value. You can avoid this by using a conditional expression in your property setting as shown in below.
+    an undefined value. You can avoid this by using a conditional expression in your property definition as shown below.
 
 ::
 
@@ -62,8 +62,8 @@ a single line or ``/*`` .. ``*/`` to comment a block on multiple lines.
 Config scopes
 ------------------
 
-Configuration settings can be organized in different scopes by dot prefixing the property names with the a scope
-identifier or grouping the properties in the same scope using the curly brackets notation. These as shown in the
+Configuration settings can be organized in different scopes by dot prefixing the property names with a scope
+identifier or grouping the properties in the same scope using the curly brackets notation. This is shown in the
 following example::
 
    alpha.x  = 1
@@ -79,11 +79,10 @@ following example::
 Scope 'env'
 -----------
 
-The ``env`` scope allows you to define one or more environment variables that will be exported in the system environment
-of the process executed commands.
+The ``env`` scope allows you to define one or more environment variables that will be exported to the system environment
+where pipeline processes need to be executed.
 
-Simply prefix your variable names with the ``env`` scope or include them into a curly brackets delimited block,
-as shown below::
+Simply prefix your variable names with the ``env`` scope or surround them by curly brackets, as shown below::
 
    env.ALPHA = 'some value'
    env.BETA = "$HOME/some/path"
@@ -99,8 +98,8 @@ as shown below::
 Scope 'params'
 ----------------
 
-The ``params`` allows you to define parameters that will be accessible in the pipelines script. Simply prefix the
-parameters names with the ``params`` scope or include them into a curly brackets delimited block, as shown below::
+The ``params`` scope allows you to define parameters that will be accessible in the pipeline script. Simply prefix the
+parameter names with the ``params`` scope or surround them by curly brackets, as shown below::
 
      params.custom_param = 123
      params.another_param = 'string value .. '
@@ -137,7 +136,7 @@ settings.
 Scope 'executor'
 ------------------
 
-The ``executor`` configuration scope allows to set the executor specific settings.
+The ``executor`` configuration scope allows you to set the executor optional settings, listed in the following table.
 
 ===================== ==========
 Name
