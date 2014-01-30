@@ -4,17 +4,17 @@
 DNAnexus cloud
 ****************
 
-DNAnexus is a cloud platform specific for genomics applications. Nextflow provides an experimental support for it that allows
-you to execute your pipeline in the DNAnexus platform taking the advantage of the cloud.
+DNAnexus is a cloud platform specifically designed for genomics applications. Nextflow provides experimental support
+for the DNAnexus platform allowing you to execute your pipeline in the cloud.
 
 
 Prerequisites
 ==============
 
-You will need a DNAnexus account and the `DNAnexus SDK <https://wiki.dnanexus.com/Downloads#DNAnexus-Platform-SDK>`_ installed in your
-computer.
+You will need a DNAnexus account and the `DNAnexus SDK toolkit <https://wiki.dnanexus.com/Downloads#DNAnexus-Platform-SDK>`_
+installed in your computer.
 
-Moreover, since extra runtime packages are required by Nextflow to be able to run in the cloud, you will need to download
+Moreover, since extra runtime packages are required by Nextflow to enable it to run in the cloud, you will need to download
 the full Nextflow source tree in your computer. You can do this by using the following `git` command::
 
    git clone https://github.com/paoloditommaso/nextflow.git
@@ -23,33 +23,33 @@ the full Nextflow source tree in your computer. You can do this by using the fol
 App packing
 ============
 
-A Nextflow pipeline to be executed in the DNAnexus cloud needs to be packaged as a DNAnexus app (or applet).
-Thus you will need to use the ``dx-app-wizard`` command to create the application structure and copy in the
-application project folder, the pipeline script along with the Nextflow executable runtime.
+In order to execute a Nextflow pipeline in the DNAnexus cloud you need to package it as a DNAnexus app (or applet).
+Thus you will need to use the ``dx-app-wizard`` command to create the application structure and copy the pipeline script,
+along with the Nextflow runtime, in the app project folder..
 
-.. tip:: Read more about DNAnexus app build at `this link <https://wiki.dnanexus.com/Developer-Tutorials/Intro-to-Building-Apps>`_.
+.. tip:: Read more about DNAnexus applications at `this link <https://wiki.dnanexus.com/Developer-Tutorials/Intro-to-Building-Apps>`_.
 
-Nextflow provides a shortcut that helps you to create the DNAnexus application scaffold pre-configured for work with it.
+Nextflow provides a shortcut that helps you create the DNAnexus application skeleton pre-configured to work with it.
 
-Simply move in the Nextflow source root project, that you have cloned with `git`, and enter the command::
+Simply change to the Nextflow source project folder, that you have cloned with `git`, and type the command::
 
    ./gradlew dnanexus
 
 
 This will:
 
-#. Build the Nextflow runtime wth the dependencies required
-#. Create a the DNAnexus app scheleton in the a folder named ``dx-project``
+#. Build the Nextflow runtime with the required dependencies
+#. Create the DNAnexus app skeleton in the folder named ``dx-project``
 #. Create the ``dxapp.json`` application manifest
 #. Create the ``dxapp.sh`` pipeline launcher
-#. Copy the Nextflow runtime to ``dx-project/resources/usr/bin/nextflow.jar``
-#. Copy some example scripts in to the folder ``dx-project/resources``
+#. Copy the Nextflow runtime to the ``dx-project/resources/usr/bin`` folder
+#. Copy some example scripts to the ``dx-project/resources`` folder
 
 
-You will need to add your pipeline script in the ``resources`` folder (adding any other eventually needed binary dependency)
-and modify the ``dxapp.json`` file providing you application name.
+Then, you will need to add your pipeline script into the ``resources`` folder (adding any other eventually needed
+binary dependencies) and modify the ``dxapp.json`` file providing your application name.
 
-When you have finished package and upload the app by using the DNAnexus `build` command, shown below::
+When you have finished, package and upload the app by using the DNAnexus `build` command, as shown below::
 
     dx build -f
 
@@ -57,11 +57,14 @@ When you have finished package and upload the app by using the DNAnexus `build` 
 Execution
 ==========
 
-Yon can launch it like any other DNAnexus app by using the `run` command, for example::
+When ready, you can launch it like any other DNAnexus app, by using the `run` command, for example::
 
     dx run nextflow
 
-By confirming the default option, it will just run a trivial `Hello world` script in the cloud, producing the following output::
+.. tip:: Replace ``nextflow`` with your app name in the above example.
+
+By running this example and confirming the default options, a simple `Hello world` script will run in the cloud, producing
+the output shown below. ::
 
 
     Job Log
@@ -89,16 +92,17 @@ How it works
 
 The DNAnexus app is executed by the BASH script called ``dxapp.sh`` which defines two functions: `main` and `process`.
 
-The `main` function is the one that launch Nextflow pipeline script execution in the cloud, specifying the required
+The `main` function is the one that launches the Nextflow pipeline script execution in the cloud, specifying the required
 configuration parameters.
 
-Since it is launched by specifying the ``dnanexus`` executor, it is able to manage the processes scheduling and
-executing in the DNAnexus platform.
 
-When a new process needs to be executed Nextflow will use the API provided by the DNAnexus platform to launch a new job
-and specifying the function `process`, in the ``dxapp.sh``, as job handler.
+Nextflow will be able to manage the processes scheduling and execution in the cloud because it is launched by specifying
+the ``dnanexus``executor.
 
-Read more about the Nextflow's `dnanexus` executor configuration properties :ref:`here <dnanexus-executor>`.
+When a new process needs to be executed, Nextflow will use the DNAnexus API to run a new job, which in turn calls
+the function `process`, defined in the ``dxapp.sh`` script, specifying the target command to run.
+
+Read more about Nextflow's `dnanexus` executor configuration properties :ref:`here <dnanexus-executor>`.
 
 
 
