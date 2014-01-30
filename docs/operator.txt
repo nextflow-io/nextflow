@@ -582,13 +582,13 @@ Combining operators
 
 The combining operators are:
 
+* `cross`_
 * `into`_
-* `tap`_
 * `merge`_
 * `mix`_
 * `phase`_
-* `gather`_
 * `spread`_
+* `tap`_
 
 
 into
@@ -771,7 +771,7 @@ An optional function can be provided in order to specify a custom key mapping st
 
 
 
-gather
+cross
 -------
 
 TODO

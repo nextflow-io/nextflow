@@ -108,6 +108,8 @@ class Session {
 
     private volatile ExecutorService execService
 
+    static Session currentInstance
+
     /**
      * Creates a new session with an 'empty' (default) configuration
      */
@@ -124,6 +126,9 @@ class Session {
     def Session( Map config ) {
         assert config != null
         this.config = config
+
+        // poor man singleton
+        currentInstance = this
 
         // normalize taskConfig object
         if( config.process == null ) config.process = [:]

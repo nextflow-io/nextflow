@@ -162,6 +162,17 @@ class DataflowExtensionsTest extends Specification {
         result.val == Channel.STOP
     }
 
+    def testMapParamExpanding () {
+
+        when:
+        def result = Channel.from(1,2,3).map { [it, it] }.map { x, y -> x+y }
+        then:
+        result.val == 2
+        result.val == 4
+        result.val == 6
+        result.val == Channel.STOP
+    }
+
     def testSkip() {
 
         when:
@@ -173,15 +184,6 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
-    def testMapWithIndex() {
-        when:
-        def result = Channel.from('a','b','c').mapWithIndex { item, index -> [item, index]}
-        then:
-        result.val == [ 'a', 0 ]
-        result.val == [ 'b', 1 ]
-        result.val == [ 'c', 2 ]
-        result.val == Channel.STOP
-    }
 
     def testMapMany () {
 
@@ -611,11 +613,10 @@ class DataflowExtensionsTest extends Specification {
         r1.val == Channel.STOP
 
         when:
-        def r2 = Channel.from(1,2,3,1,2,3,1).collate( 2 )
+        def r2 = Channel.from(1,2,3,1,2,3,1).collate( 3 )
         then:
-        r2.val == [1,2]
-        r2.val == [3,1]
-        r2.val == [2,3]
+        r2.val == [1,2,3]
+        r2.val == [1,2,3]
         r2.val == [1]
         r2.val == Channel.STOP
 
@@ -723,7 +724,7 @@ class DataflowExtensionsTest extends Specification {
         r1.val == Channel.STOP
 
         when:
-        r1 = Channel.from(1,2,3,1,2,3,1).buffer( size:2, keepReminder: true )
+        r1 = Channel.from(1,2,3,1,2,3,1).buffer( size:2, remainder: true )
         then:
         r1.val == [1,2]
         r1.val == [3,1]
@@ -740,7 +741,7 @@ class DataflowExtensionsTest extends Specification {
         r2.val == Channel.STOP
 
         when:
-        r2 = Channel.from(1,2,3,4,5,1,2,3,4,5,1,2,9).buffer( size:3, skip:2, keepReminder: true )
+        r2 = Channel.from(1,2,3,4,5,1,2,3,4,5,1,2,9).buffer( size:3, skip:2, remainder: true )
         then:
         r2.val == [3,4,5]
         r2.val == [3,4,5]
@@ -756,7 +757,7 @@ class DataflowExtensionsTest extends Specification {
 
         then:
         IllegalArgumentException e = thrown()
-        e.message == "Unknown argument argument 'xxx' for operator 'buffer' -- Possible arguments: size, skip, keepReminder"
+        e.message == "Unknown argument argument 'xxx' for operator 'buffer' -- Possible arguments: size, skip, remainder"
 
 
     }
@@ -809,15 +810,15 @@ class DataflowExtensionsTest extends Specification {
 
         when:
         def map = [ : ]
-        result = DataflowExtensions.phaseImpl(map, 2, ch1, 'a', { it })
+        result = DataflowExtensions.phaseImpl(map, 2, 0, 'a', { it })
         then:
         result == null
-        map == [ a:[(ch1): ['a']] ]
+        map == [ a:[0: ['a']] ]
 
         when:
         map = [ : ]
-        result = DataflowExtensions.phaseImpl(map, 2, ch1, 'a', { it })
-        result = DataflowExtensions.phaseImpl(map, 2, ch2, 'a', { it })
+        result = DataflowExtensions.phaseImpl(map, 2, 0, 'a', { it })
+        result = DataflowExtensions.phaseImpl(map, 2, 1, 'a', { it })
         then:
         result == ['a','a']
         map == [ a:[:] ]
@@ -828,24 +829,24 @@ class DataflowExtensionsTest extends Specification {
         def r2
         def r3
         map = [ : ]
-        r1 = DataflowExtensions.phaseImpl(map, 3, ch1, 'a', { it })
-        r1 = DataflowExtensions.phaseImpl(map, 3, ch2, 'a', { it })
-        r1 = DataflowExtensions.phaseImpl(map, 3, ch3, 'a', { it })
+        r1 = DataflowExtensions.phaseImpl(map, 3, 0, 'a', { it })
+        r1 = DataflowExtensions.phaseImpl(map, 3, 1, 'a', { it })
+        r1 = DataflowExtensions.phaseImpl(map, 3, 2, 'a', { it })
 
-        r2 = DataflowExtensions.phaseImpl(map, 3, ch1, 'b', { it })
-        r2 = DataflowExtensions.phaseImpl(map, 3, ch2, 'b', { it })
-        r2 = DataflowExtensions.phaseImpl(map, 3, ch3, 'b', { it })
+        r2 = DataflowExtensions.phaseImpl(map, 3, 0, 'b', { it })
+        r2 = DataflowExtensions.phaseImpl(map, 3, 1, 'b', { it })
+        r2 = DataflowExtensions.phaseImpl(map, 3, 2, 'b', { it })
 
-        r3 = DataflowExtensions.phaseImpl(map, 3, ch1, 'z', { it })
-        r3 = DataflowExtensions.phaseImpl(map, 3, ch2, 'z', { it })
-        r3 = DataflowExtensions.phaseImpl(map, 3, ch2, 'z', { it })
-        r3 = DataflowExtensions.phaseImpl(map, 3, ch3, 'z', { it })
+        r3 = DataflowExtensions.phaseImpl(map, 3, 0, 'z', { it })
+        r3 = DataflowExtensions.phaseImpl(map, 3, 1, 'z', { it })
+        r3 = DataflowExtensions.phaseImpl(map, 3, 1, 'z', { it })
+        r3 = DataflowExtensions.phaseImpl(map, 3, 2, 'z', { it })
 
         then:
         r1 == ['a','a','a']
         r2 == ['b','b','b']
         r3 == ['z','z','z']
-        map == [ a:[:], b:[:], z:[(ch2):['z']] ]
+        map == [ a:[:], b:[:], z:[ 1:['z']] ]
 
     }
 
@@ -861,7 +862,6 @@ class DataflowExtensionsTest extends Specification {
         DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [1,2,3] as Object[] ) == 1
         DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( ['alpha','beta'] as String[] ) == 'alpha'
         DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( 99 ) == 99
-
 
     }
 
@@ -901,6 +901,59 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    def testCross() {
+
+        setup:
+        def ch1 = Channel.from(  [1, 'x'], [2,'y'], [3,'z'] )
+        def ch2 = Channel.from( [1,11], [1,13], [2,21],[2,22], [2,23], [4,1], [4,2]  )
+
+        when:
+        def result = ch1.cross(ch2)
+
+        then:
+        result.val == [ [1, 'x'], [1,11] ]
+        result.val == [ [1, 'x'], [1,13] ]
+        result.val == [ [2, 'y'], [2,21] ]
+        result.val == [ [2, 'y'], [2,22] ]
+        result.val == [ [2, 'y'], [2,23] ]
+        result.val == Channel.STOP
+
+    }
+
+    def testCross2() {
+
+        setup:
+        def ch1 = Channel.create()
+        def ch2 = Channel.from ( ['PF00006', 'PF00006_mafft.aln'], ['PF00006', 'PF00006_clustalo.aln'])
+
+        when:
+        Thread.start {  sleep 100;   ch1 << ['PF00006', 'PF00006.sp_lib'] << Channel.STOP }
+        def result = ch1.cross(ch2)
+
+        then:
+        result.val == [ ['PF00006', 'PF00006.sp_lib'], ['PF00006', 'PF00006_mafft.aln'] ]
+        result.val == [ ['PF00006', 'PF00006.sp_lib'], ['PF00006', 'PF00006_clustalo.aln'] ]
+        result.val == Channel.STOP
+
+    }
+
+
+    def testCross3() {
+
+        setup:
+        def ch1 = Channel.from([['PF00006', 'PF00006.sp_lib'] ])
+        def ch2 = Channel.create ( )
+
+        when:
+        Thread.start {  sleep 100;  ch2 << ['PF00006', 'PF00006_mafft.aln'] <<  ['PF00006', 'PF00006_clustalo.aln']<< Channel.STOP }
+        def result = ch1.cross(ch2)
+
+        then:
+        result.val == [ ['PF00006', 'PF00006.sp_lib'], ['PF00006', 'PF00006_mafft.aln'] ]
+        result.val == [ ['PF00006', 'PF00006.sp_lib'], ['PF00006', 'PF00006_clustalo.aln'] ]
+        result.val == Channel.STOP
+
+    }
 
     def testChopFasta() {
 
