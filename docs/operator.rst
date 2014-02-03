@@ -4,23 +4,23 @@
 Operators
 *******************
 
-Dataflow `operators` are methods that allows you to connect channels each other or to transform values
+Dataflow `operators` are methods that allow you to connect channels to each other or to transform values
 emitted by a channel applying some user provided rules.
 
-Operators can be separated in five groups:
+Operators can be separated in to five groups:
 
 * `Filtering operators`_
 * `Transforming operators`_
 * `Combining operators`_
 * `Forking operators`_
-* `Math operators`_
+* `Maths operators`_
 
 
 
 Filtering operators
 ===================
 
-Given a channel, filtering operators allows you to select only the items that comply with a given rule.
+Given a channel, filtering operators allow you to select only the items that comply with a given rule.
 
 The available filter operators are:
 
@@ -35,7 +35,7 @@ The available filter operators are:
 filter
 ---------
 
-The ``filter`` operator allows you to get only the items emitted by a channel that satisfy a boolean `predicate`. For example::
+The ``filter`` operator allows you to get only the items emitted by a channel, that satisfy a boolean `predicate`. For example::
 
     Channel
         .from( 1, 2, 3, 4, 5 )
@@ -54,10 +54,10 @@ grep
 -------
 
 The ``grep`` operator allows you to `filter` a channel by discarding all the items that do not meet a specified condition.
-It works in a similar manner to the `filter`_ operator but it lets use more flexible conditions. A grep condition can be
-either a :ref:`regular expression <script-regexp>`, a Java `class`, a literal value or a boolean predicate.
+It works in a similar manner to the `filter`_ operator but conditions can be specified in a more flexible manner. A grep
+condition can be either a :ref:`regular expression <script-regexp>`, a Java `class`, a literal value or a boolean predicate.
 
-The following example shows how filter a channel by using a regular expression::
+The following example shows how to filter a channel by using a regular expression::
 
     Channel
         .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
@@ -70,7 +70,7 @@ The following example shows how filter a channel by using a regular expression::
     aa
 
 
-The following example shows how filter a channel by specifying the class ``Number`` so that only numbers are returned::
+The following example shows how to filter a channel by specifying the class ``Number`` so that only numbers are returned::
 
     Channel
         .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
@@ -83,7 +83,7 @@ The following example shows how filter a channel by specifying the class ``Numbe
     4.5
 
 
-The following example shows how filter a channel by using a `boolean` expression::
+The following example shows how to filter a channel by using a `boolean` expression::
 
      Channel
          .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
@@ -96,8 +96,8 @@ The following example shows how filter a channel by using a `boolean` expression
      aa
      3
 
-.. tip:: In the above example the filtering expression is wrapped by curly brackets instead of normal
-  round bracket, since it specifies a :ref:`closure <script-closure>` as the operator argument.
+.. tip:: In the above example the filtering expression is wrapped in curly brackets instead of normal
+  round brackets, since it specifies a :ref:`closure <script-closure>` as the operator's argument.
   This just is an shorter syntax for ``grep({ it.toString().size() == 1 })``
 
 
@@ -122,7 +122,7 @@ For example::
     3
 
 
-You can also specify an optional :ref:`closure <script-closure>` that customizes how it distinguishes between unique items.
+You can also specify an optional :ref:`closure <script-closure>` that customizes the way it distinguishes between unique items.
 For example::
 
     Channel
@@ -139,7 +139,7 @@ For example::
 distinct
 -----------
 
-The ``distinct`` operator allows you to remove `consecutive` duplicated items from a channel, so that each item emitted
+The ``distinct`` operator allows you to remove `consecutive` duplicated items from a channel, so that each emitted item
 is different from the preceding one. For example::
 
 
@@ -160,7 +160,7 @@ is different from the preceding one. For example::
 
 
 
-You can also specify an optional :ref:`closure <script-closure>` that customizes how it distinguishes between distinct items.
+You can also specify an optional :ref:`closure <script-closure>` that customizes the way it distinguishes between distinct items.
 For example::
 
     Channel
@@ -884,7 +884,7 @@ TODO
 See also: `into`_ operator.
 
 
-Math operators
+Maths operators
 ==============
 
 This section explains operators that perform mathematical operations on the items emitted by channels.
