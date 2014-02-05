@@ -249,9 +249,9 @@ The ``last`` operator creates a channel that only returns the last item emitted 
 Transforming operators
 ======================
 
-This section explains operators with which you can transform items that are emitted by channels.
+Transforming operators are used to transform the items emitted by a channel to new values.
 
-The available operators are:
+These operators are:
 
 * `map`_
 * `mapMany`_
@@ -268,7 +268,9 @@ The available operators are:
 map
 ------
 
-Transform the items emitted by a channel by applying a function to each of them. For example::
+The ``map`` operator applies a function of your choosing to every item emitted by a channel, and 
+returns the items so obtained as a new channel. The function applied is called `mapping` function 
+and is expressed with a :ref:`closure <script-closure>` as shown in the example below::
 
     Channel
         .from( 1, 2, 3, 4, ,5 )
@@ -289,8 +291,9 @@ Transform the items emitted by a channel by applying a function to each of them.
 mapMany
 ----------
 
-Transform the items emitted by a channel by applying a function to each of them and then flattens the results of that function.
-
+The ``mapMany`` operator applies a function of your choosing to every item emitted by a channel, and 
+returns the items so obtained as a new channel. Whenever the `mapping` function return a list of items, 
+this list is flattened so that each single item is emitted on its own.  
 
 For example::
 
@@ -314,7 +317,7 @@ For example::
     Done
 
 
-Associative arrays are manged in the same way. Fo example::
+Associative arrays are handled in the same way. Fo example::
 
     Channel.from ( 1, 2, 3 )
            .mapMany { it -> [ number: it, square: it*it ] }
@@ -885,7 +888,7 @@ See also: `into`_ operator.
 
 
 Maths operators
-==============
+================
 
 This section explains operators that perform mathematical operations on the items emitted by channels.
 
