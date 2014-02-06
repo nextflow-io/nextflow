@@ -240,7 +240,7 @@ class Session {
 
         if( !result ) {
             result = defValue
-            log.debug "Undefined executor property: '$propName' -- fallback default value: $result"
+            log.trace "Undefined executor property: '$propName' -- fallback default value: $result"
         }
 
         return result
