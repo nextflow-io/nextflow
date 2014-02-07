@@ -26,6 +26,7 @@ import java.util.regex.Pattern
 
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
+import groovyx.gpars.agent.Agent
 import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
@@ -1621,5 +1622,23 @@ class NextflowExtensions {
 
     }
 
+
+    /**
+     * INTERNAL ONLY API
+     * <p>
+     * Add the {@code update} method to an {@code Agent} so that it call implicitly
+     * the {@code Agent#updateValue} method
+     *
+     */
+
+    static void update( Agent self, Closure message ) {
+        assert message != null
+
+        self.send {
+            message.call(it)
+            updateValue(it)
+        }
+
+    }
 
 }

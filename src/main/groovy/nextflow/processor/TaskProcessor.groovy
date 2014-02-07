@@ -23,8 +23,8 @@ import java.util.concurrent.locks.ReentrantLock
 
 import embed.com.google.common.hash.HashCode
 import groovy.transform.PackageScope
-import groovy.transform.Synchronized
 import groovy.util.logging.Slf4j
+import groovyx.gpars.agent.Agent
 import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
@@ -154,24 +154,6 @@ abstract class TaskProcessor {
     private final errorCount = new AtomicInteger()
 
     /**
-     * Count how many times the process finalization method has been invoked
-     *
-     * See {@code #finalizeTask0()}
-     * See {@code #checkProcessTermination}
-     */
-    protected final finalizeCount = new AtomicInteger()
-
-    /**
-     * Count how many times this process has been launched
-     */
-    protected final instanceCount = new AtomicInteger()
-
-    /**
-     * Flat set {@code true} when the processor receive a poison pill message (to stop it)
-     */
-    protected volatile boolean receivedPoisonPill
-
-    /**
      * Flag set {@code true} when the processor termination has been invoked
      *
      * See {@code #checkProcessTermination}
@@ -179,7 +161,7 @@ abstract class TaskProcessor {
     protected volatile boolean terminated
 
     /**
-     * Whener the process execution is required to be blocking in order to handle
+     * Whenever the process execution is required to be blocking in order to handle
      * shared object in a thread safe manner
      */
     protected boolean blocking
@@ -188,6 +170,11 @@ abstract class TaskProcessor {
      * Holds the values shared by multiple task instances
      */
     Map<SharedParam,Object> sharedObjs = [:]
+
+    /**
+     * The state is maintained by using an agent
+     */
+    protected Agent<StateObj> state
 
     /* for testing purpose - do not remove */
     protected TaskProcessor() { }
@@ -288,6 +275,16 @@ abstract class TaskProcessor {
         if ( taskConfig.outputs.size() == 0 ) {
             def dummy =  allScalarValues ? Nextflow.val() : Nextflow.channel()
             taskConfig.fakeOutput(dummy)
+        }
+
+        // the state agent
+        state = new Agent<>(new StateObj(allScalarValues))
+        state.addListener { StateObj old, StateObj obj ->
+            log.trace "<$name> Process state changed to: $obj"
+            if( !terminated && obj.isFinished() ) {
+                terminateProcess()
+                terminated = true
+            }
         }
 
         // create the underlying dataflow operator
@@ -663,19 +660,20 @@ abstract class TaskProcessor {
      * Send a poison pill over all the outputs channel
      */
     final protected synchronized void sendPoisonPill() {
-        log.trace "Forwarding Poison-pill for process > ${name}"
 
         taskConfig.outputs.each { param ->
             def channel = param.outChannel
 
             if( channel instanceof DataflowQueue ) {
+                log.trace "<$name> Sending a poisong pill for $param"
                 channel.bind( PoisonPill.instance )
             }
             else if( channel instanceof DataflowStreamWriteAdapter ) {
+                log.trace "<$name> Sending a poisong pill for $param"
                 channel.bind( PoisonPill.instance )
             }
             else {
-                log.trace "Poison pill is not sent over $param channel"
+                log.trace "<$name> Poison pill is not sent over $param channel"
             }
 
         }
@@ -1240,30 +1238,16 @@ abstract class TaskProcessor {
             bindOutputs(task)
         }
 
-        checkProcessTermination(true)
+        // increment the number of processes executed
+        state.update { StateObj it -> it.incCompleted() }
     }
 
 
-    @Synchronized
-    protected boolean checkProcessTermination( boolean isFinalize = false ) {
-
-        if( terminated ) {
-            return true
-        }
-
-        def created = instanceCount.get()
-        def finalized = isFinalize ? finalizeCount.incrementAndGet() : finalizeCount.get()
-
-        def done = allScalarValues || ( receivedPoisonPill && created == finalized )
-        if( done ) {
-            log.trace "Finalizing process > ${name} -- isFinalize: $isFinalize"
-            sendPoisonPill()
-            session.taskDeregister()
-            processor.terminate()
-            terminated = true
-        }
-
-        return done
+    protected void terminateProcess() {
+        log.debug "<${name}> Sending poison pills and temrinating process"
+        sendPoisonPill()
+        session.taskDeregister()
+        processor.terminate()
     }
 
 

@@ -315,21 +315,23 @@ class ParallelTaskProcessor extends TaskProcessor {
         }
     }
 
-
+    /**
+     *  Intercept dataflow process events
+     */
     class TaskProcessorInterceptor extends DataflowEventAdapter {
 
         @Override
         public List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
-            log.trace "Before run > ${name} -- messages: ${messages}"
+            log.trace "<${name}> Before run -- messages: ${messages}"
             // this counter increment must be here, otherwise it is not coherent
-            instanceCount.incrementAndGet()
+            state.update { StateObj it -> it.incSubmitted() }
             return messages;
         }
 
 
         @Override
         void afterRun(DataflowProcessor processor, List<Object> messages) {
-            log.trace "After run > ${currentTask.get()?.name ?: name}"
+            log.trace "<${currentTask.get()?.name ?: name}> After run"
             currentTask.remove()
         }
 
@@ -338,7 +340,7 @@ class ParallelTaskProcessor extends TaskProcessor {
             if( log.isTraceEnabled() ) {
                 def channelName = taskConfig.inputs?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
-                log.trace "Message arrived > ${taskName} -- ${channelName} => ${message}"
+                log.trace "<${taskName}> Message arrived -- ${channelName} => ${message}"
             }
 
             return message;
@@ -349,15 +351,12 @@ class ParallelTaskProcessor extends TaskProcessor {
             if( log.isTraceEnabled() ) {
                 def channelName = taskConfig.inputs?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
-                log.trace "Control message arrived > ${taskName} -- ${channelName} => ${message}"
+                log.trace "<${taskName}> Control message arrived ${channelName} => ${message}"
             }
 
             if( message == PoisonPill.instance ) {
-                log.trace "Poison pill arrived for process > ${currentTask.get()?.name ?: name} -- terminated"
-                receivedPoisonPill = true
-
-                // check if the task is terminated
-                checkProcessTermination()
+                log.debug "<${name}> Poison pill arrived"
+                state.update { StateObj it -> it.poison() }
 
                 // this control message avoid to stop the operator and
                 // propagate the PoisonPill to the downstream processes
@@ -370,7 +369,7 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         @Override
         public void afterStop(final DataflowProcessor processor) {
-            log.trace "After stop > ${name}"
+            log.debug "<${name}> After stop"
 
             // bind shared outputs
             ParallelTaskProcessor.this.sharedObjs?.each { param, obj ->

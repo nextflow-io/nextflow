@@ -265,34 +265,43 @@ class MergeTaskProcessor extends TaskProcessor {
 
         @Override
         public List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
-            log.trace "Before run > ${name} -- messages: ${messages}"
+            log.trace "<${name}> Before run -- messages: ${messages}"
             return messages;
         }
 
         @Override
-        void afterRun(DataflowProcessor processor, List<Object> MOCK_MESSAGES) {
-            log.trace "After run > ${name}"
+        void afterRun(DataflowProcessor processor, List<Object> messages ) {
+            log.trace "<${name}> After run -- messages: ${messages}"
+        }
+
+        @Override
+        public void afterStop(final DataflowProcessor processor) {
+            log.debug "<${name}> After stop"
         }
 
         @Override
         public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "Received message > process: ${name}; channel: $index; value: $message"
+            log.trace "<${name}> Received message -- channel: $index; value: $message"
             return message
         }
 
         public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
             if( log.isTraceEnabled() ) {
                 def inputs = taskConfig.inputs.names
-                log.trace "Control message arrived > ${name} -- ${inputs[index]} => ${message}"
+                log.trace "<${name}> Control message arrived -- ${inputs[index]} => ${message}"
             }
 
             // intercepts 'poison pill' message e.g. termination control message
             // in order the launch the task execution on the underlying system
             if( message == PoisonPill.instance )  {
+                log.debug "<${name}> Poison pill arrived"
 
                 if( mergeIndex.get()>0 ) {
-                    receivedPoisonPill = true
-                    instanceCount.incrementAndGet()
+                    state.update { StateObj it ->
+                        it.incSubmitted()    // increment the number of received message
+                        it.poison();     // signal that the poison pill has arrived
+                    }
+
                     def task = MergeTaskProcessor.this.createTaskRun()
                     try {
                         MergeTaskProcessor.this.mergeTaskRun(task)
