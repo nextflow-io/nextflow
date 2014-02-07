@@ -748,11 +748,11 @@ For example::
 phase
 --------
 
-The ``phase`` operator creates a channel that synchronize the values emitted by two source channels,
-so that emitted items have the same key.
+The ``phase`` operator creates a channel that synchronizes the values emitted by two other channels,
+in such a way that it emits pairs of items that have a matching key.
 
-The key is defined by default as the first entry in a array, list or map object,
-or the object itself for any other data type.
+The key is defined, by default, as the first entry in a array, a list or map object,
+or the value itself for any other data type.
 
 For example::
 
@@ -768,7 +768,8 @@ For example::
     [3,3]
 
 
-An optional function can be provided in order to specify a custom key mapping strategy. For example::
+Optionally, a mapping function can be specified in order to provide a custom rule to associate an item to a key,
+as shown in the following example::
 
 
     ch1 = Channel.from( [sequence: 'aaaaaa', key: 1], [sequence: 'bbbbbb', key: 2] )
@@ -804,9 +805,8 @@ TODO
 spread
 ---------
 
-The ``spread`` operator combines the items emitted by the source channel with all the values defined by an array or an ``Iterable`` object specified as argument.
-
-For example::
+The ``spread`` operator combines the items emitted by the source channel with all the values in an array
+or a ``Collection`` object. For example::
 
     Channel
         .from(1,2,3)
@@ -860,10 +860,31 @@ For example::
     Channel 2 emit: c
 
 
-.. TODO split(n)
+A second version of the ``split`` operator takes integer `n` as argument and return a list of `n` channel, each of whom
+emits a copy of the items emitted by the source channel. For example::
 
 
-See also: `tap`_ operator.
+    (split1,split2) = Channel.from( 'a','b','c').split(2)
+    split1.subscribe { println "Channel 1 emit: " + it }
+    split2.subscribe { println "Channel 2 emit: " + it }
+
+::
+
+    Channel 1 emit: a
+    Channel 1 emit: b
+    Channel 1 emit: c
+
+    Channel 2 emit: a
+    Channel 2 emit: b
+    Channel 2 emit: c
+
+
+.. note:: The above examples takes advantage of the :ref:`multiple assignment <script-multiple-assignment>` syntax
+  in order to assign two variables at once, with the list of channels returned by the ``split`` operator.
+
+
+
+See also `tap`_ operator.
 
 
 choice

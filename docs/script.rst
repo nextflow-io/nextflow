@@ -112,6 +112,21 @@ Learn more about maps at the following links:
 * `Java Map SDK <http://docs.oracle.com/javase/7/docs/api/java/util/Map.html>`_
 
 
+.. _script-multiple-assignment:
+
+Multiple assignment
+----------------------
+
+An array or a list object can used to assign multiple variables at once. For example::
+
+    (a, b, c) = [10, 20, 'foo']
+    assert a == 10 && b == 20 && c == 'foo'
+
+The three variables on the left of the assignment operator are initialized by the correspondent item in the list.
+
+Read more about `Multiple assignment <http://groovy.codehaus.org/Multiple+Assignment>`_ on the Groovy documentation.
+
+
 Conditional Execution
 ----------------------
 
