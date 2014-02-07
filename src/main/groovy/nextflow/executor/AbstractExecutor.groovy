@@ -49,8 +49,13 @@ abstract class AbstractExecutor {
      * Let to post initialize the executor
      */
     def void init() {
-        if( !monitor ) {
-            monitor = session.dispatcher.getOrCreateMonitor(this.class) { createTaskMonitor() }
+        // -- skip if already assigned, this is only for testing purpose
+        if( monitor ) return
+
+        // -- get the reference to the monitor class for this process
+        monitor = session.dispatcher.getOrCreateMonitor(this.class) {
+            log.info "[warm up] executor > $name"
+            createTaskMonitor()
         }
     }
 

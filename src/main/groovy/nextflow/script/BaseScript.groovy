@@ -239,8 +239,8 @@ abstract class BaseScript extends Script {
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
         // load the executor to be used
-        def execName = getExecutorName(taskConfig)
-        if( type == ScriptType.GROOVY && execName && execName != 'local' ) {
+        def execName = getExecutorName(taskConfig) ?: 'local'
+        if( type == ScriptType.GROOVY && execName != 'local' ) {
             log.warn "Process '$name' cannot be executed by '$execName' executor -- Native processes are supported only by 'local' executor"
             execName = 'local'
         }
