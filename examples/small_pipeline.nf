@@ -11,7 +11,7 @@ process blast {
     file query
     
     output:
-    file top_hits
+    file 'top_hits'
 
     """
     blastp -db $db -query $query -outfmt 6 > blast_result
@@ -25,7 +25,7 @@ process extractTopHits {
     file top_hits
 
     output:
-    file sequences
+    file 'sequences'
 
     "blastdbcmd -db ${db} -entry_batch $top_hits > sequences"
 }

@@ -29,7 +29,7 @@ process collectResult {
     file blast_result
 
     output:
-    file blast_all
+    file 'blast_all'
 
     """
     cat ${blast_result} >> blast_all

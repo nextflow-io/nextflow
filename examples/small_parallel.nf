@@ -15,7 +15,7 @@ process blast {
     file 'query.fa' from fasta
 
     output:
-    file top_hits
+    file 'top_hits'
 
     """
     blastp -db ${db} -query query.fa -outfmt 6 > blast_result
@@ -29,7 +29,7 @@ process extract {
     file top_hits
 
     output:
-    file sequences
+    file 'sequences'
 
     "blastdbcmd -db ${db} -entry_batch top_hits > sequences"
 }
@@ -41,7 +41,7 @@ process all {
     val sequences
 
     output:
-    file all_seq
+    file 'all_seq'
 
     "cat $sequences > all_seq"
 }
