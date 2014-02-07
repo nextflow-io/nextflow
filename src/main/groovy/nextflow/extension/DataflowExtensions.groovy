@@ -962,7 +962,8 @@ class DataflowExtensions {
             case DataflowQueue: source = ((DataflowQueue) other).toList(); break
             case DataflowExpression: source = other; break
             case Collection: source = Channel.just(other); break
-            default: throw new IllegalArgumentException()
+            case (Object[]): source = Channel.just(other as List); break
+            default: throw new IllegalArgumentException("Not a valid argument for 'spread' operator [${other?.class?.simpleName}]: ${other} -- Use a Collection or a channel instead. ")
         }
 
         newOperator( [channel, source], [target] ) { a, b ->
