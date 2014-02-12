@@ -34,6 +34,7 @@ import nextflow.ExitCode
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.ast.NextflowDSL
+import nextflow.exception.ConfigParseException
 import nextflow.exception.InvalidArgumentException
 import nextflow.exception.MissingLibraryException
 import nextflow.util.FileHelper
@@ -539,6 +540,8 @@ class CliRunner {
             runner.session.baseDir = scriptFile?.canonicalFile?.parentFile
             runner.libPath = options.libPath
 
+            log.debug "Script bin dir: ${runner.session.binDir}"
+
             // -- specify the arguments
             def scriptArgs = options.arguments.size()>1 ? options.arguments[1..-1] : null
 
@@ -560,6 +563,11 @@ class CliRunner {
             //       parsing the cli params the logging is not configured
             System.err.println "${e.getMessage()} -- Check the available command line parameters and syntax using '-h'"
             System.exit( ExitCode.INVALID_COMMAND_LINE_PARAMETER )
+        }
+
+        catch( ConfigParseException e )  {
+            log.error "${e.message}\n${e.cause}\n\n"
+            System.exit( ExitCode.INVALID_CONFIG)
         }
 
         catch ( MissingPropertyException e ) {
@@ -708,7 +716,12 @@ class CliRunner {
                 if ( text ) {
                     def cfg = new ConfigSlurper()
                     cfg.setBinding(binding)
-                    result.merge( cfg.parse(text) )
+                    try {
+                        result.merge( cfg.parse(text) )
+                    }
+                    catch( Exception e ) {
+                        throw new ConfigParseException("Failed to parse config file",e)
+                    }
                 }
             }
 
