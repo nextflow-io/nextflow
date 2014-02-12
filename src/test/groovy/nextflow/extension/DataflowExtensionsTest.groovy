@@ -188,7 +188,7 @@ class DataflowExtensionsTest extends Specification {
     def testMapMany () {
 
         when:
-        def result = Channel.from(1,2,3).mapMany { it -> [it, it*2] }
+        def result = Channel.from(1,2,3).flatMap { it -> [it, it*2] }
         then:
         result.val == 1
         result.val == 2
@@ -203,7 +203,7 @@ class DataflowExtensionsTest extends Specification {
     def testMapManyWithTuples () {
 
         when:
-        def result = Channel.from( [1,2], ['a','b'] ).mapMany { it -> [it, it.reverse()] }
+        def result = Channel.from( [1,2], ['a','b'] ).flatMap { it -> [it, it.reverse()] }
         then:
         result.val == [1,2]
         result.val == [2,1]
@@ -215,7 +215,7 @@ class DataflowExtensionsTest extends Specification {
     def testMapManyWithHashArray () {
 
         when:
-        def result = Channel.from(1,2,3).mapMany { it -> [ k: it, v: it*2] }
+        def result = Channel.from(1,2,3).flatMap { it -> [ k: it, v: it*2] }
         then:
         result.val == new MapEntry('k',1)
         result.val == new MapEntry('v',2)

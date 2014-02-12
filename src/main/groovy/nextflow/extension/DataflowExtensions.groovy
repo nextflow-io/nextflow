@@ -309,7 +309,7 @@ class DataflowExtensions {
      * @param closure The closure mapping the values emitted by the source channel
      * @return The channel emitting the mapped values
      */
-    static public final <V> DataflowReadChannel<V> mapMany(final DataflowReadChannel<?> source, final Closure<V> closure) {
+    static public final <V> DataflowReadChannel<V> flatMap(final DataflowReadChannel<?> source, final Closure<V> closure) {
         assert source != null
 
         final target = new DataflowQueue()
@@ -362,6 +362,18 @@ class DataflowExtensions {
         }
 
         return target
+    }
+
+    /**
+     * A synonym for {@code #flatMap}
+     *
+     * @param source
+     * @param closure
+     * @return
+     */
+    static public final <V> DataflowReadChannel<V> mapMany(final DataflowReadChannel<?> source, final Closure<V> closure) {
+        log.warn "Operator 'mapMany' as been deprecated -- use 'flatMap' instead"
+        flatMap(source,closure)
     }
 
     /**
