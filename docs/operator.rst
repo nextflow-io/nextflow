@@ -701,8 +701,8 @@ and the other which emits a series of even integers::
     [3, 4]
     [5, 6]
 
-
-When merging more than two channels they have to be specified by wrapping in square brackets, as shown in the following example::
+If you want to merge more than to channels, they must be specified as a list i.e. by wrapping 
+them in square brackets, as shown in the following example::
 
    channel1.merge( [channel2, channel3] ) {  item1, item2, item3 -> item1 + item2 + item3 }
 
@@ -732,8 +732,8 @@ For example::
         'z'
 
 .. note:: The items emitted by the resulting mixed channel may appear in any order,
-  regardless of which source channel they came from. So also the following example
-  may be a valid result of the above example.
+  regardless of which source channel they came from. Thus, the following example
+  it could be a possibile result of the above example as well.
 
 ::
 
@@ -751,7 +751,7 @@ phase
 The ``phase`` operator creates a channel that synchronizes the values emitted by two other channels,
 in such a way that it emits pairs of items that have a matching key.
 
-The key is defined, by default, as the first entry in a array, a list or map object,
+The key is defined, by default, as the first entry in an array, a list or map object,
 or the value itself for any other data type.
 
 For example::
@@ -799,14 +799,44 @@ as shown in the following example::
 cross
 -------
 
-TODO
+The ``cross`` operators allows you to combine the items of two channes in such a way that 
+the items of the source channel are emitted along with the items emitted by the target channel 
+for which they have a matching key.  
 
+The key is defined, by default, as the first entry in an array, a list or map object,
+or the value itself for any other data type. For example:: 
+
+	source = Channel.from( [1, 'alpha'], [2, 'beta'] )
+	target = Channel.from( [1, 'x'], [1, 'y'], [1, 'z'], [2,'p'], [2,'q'], [2,'t'] )
+
+	source.cross(target).subscribe { println it }
+
+It will output:: 
+
+	[ [1, alpha], [1, x] ]
+	[ [1, alpha], [1, y] ]
+	[ [1, alpha], [1, z] ]
+	[ [2, beta],  [2, p] ]
+	[ [2, beta],  [2, q] ]
+	[ [2, beta],  [2, t] ]
+
+The above example shows how the items emitted by the source channels are associated to the ones
+emitted by the target channel (on the right) having the same key. 
+
+There are two important cavets when using the ``cross`` operator: 
+
+	#. The operator is not `reflexive`, i.e. the result of ``a.cross(b)`` is different from ``b.cross(a)`` 
+	#. The source channel should emits items for which there's no key repetition i.e. the emitted 
+	   items have an unique key identifier. 
+
+Optionally, a mapping function can be specified in order to provide a custom rule to associate an item to a key,
+in a similar manner as shown for the `phase`_ operator.
 
 spread
 ---------
 
 The ``spread`` operator combines the items emitted by the source channel with all the values in an array
-or a ``Collection`` object. For example::
+or a ``Collection`` object specified as the operator argument. For example::
 
     Channel
         .from(1,2,3)
@@ -840,7 +870,7 @@ The forking operators are:
 split
 --------
 
-The ``split`` operator copies the items emitted by a source channel into one or multiple channels specified as argument.
+The ``split`` operator copies the items emitted by a source channel into one or more channels specified as an argument.
 For example::
 
     source = Channel.from( 'a', 'b', 'c' )
@@ -860,8 +890,8 @@ For example::
     Channel 2 emit: c
 
 
-A second version of the ``split`` operator takes integer `n` as argument and return a list of `n` channel, each of whom
-emits a copy of the items emitted by the source channel. For example::
+A second version of the ``split`` operator takes an integer `n` as argument and returns a list of `n` channels, each of which
+emits a copy of the items as emitted by the source channel. For example::
 
 
     (split1,split2) = Channel.from( 'a','b','c').split(2)
@@ -879,8 +909,8 @@ emits a copy of the items emitted by the source channel. For example::
     Channel 2 emit: c
 
 
-.. note:: The above examples takes advantage of the :ref:`multiple assignment <script-multiple-assignment>` syntax
-  in order to assign two variables at once, with the list of channels returned by the ``split`` operator.
+.. note:: The above example takes advantage of the :ref:`multiple assignment <script-multiple-assignment>` syntax
+  in order to assign two variables at once using the list of channels returned by the ``split`` operator.
 
 
 
@@ -890,51 +920,124 @@ See also `tap`_ operator.
 choice
 ----------
 
-TODO
+The ``choice`` operator allows you to send the items emitted by a source channel to one out of two (or many) output channels. 
+
+The destination channel is selected by using a :ref:`closure <script-closure>` that must return the `index` number of the channel
+where the item has to be sent. The first channel is identified by the index ``0``, the second as ``1`` and so on. 
+
+The following example sends all the items less or equals than ``100``
 
 ::
+  
+    source = Channel.from 'Hello world', 'Hola', 'Hello John'
+    queue1 = Channel.create()
+    queue2 = Channel.create()
 
-    queue1.choice([queue2, queue3, queue4]) {a -> a % 3}
+    source.choice( queue1, queue2 ) { a -> a =~ /^Hello.*/ ? 0 : 1 }
+
+    queue1.subscribe { println it }
 
 
+
+If you want to use more than two channels in the ``choice`` operator, they must be specified as a list 
+i.e. by wrapping them in square brackets, as shown in the following example::
+
+    source.choice( [queue1, queue2, queue3] ) { a -> a % 3 }
+     
 
 separate
 ------------
 
-Separation is the opposite operation to merge. The supplied closure returns a list of values, each of which will be output into an output channel with the corresponding position index.
+The ``separate`` operator lets you to copy the items emitted by the source channel into multiple channels, 
+while each of this can receive a `separate` version of the same item. 
 
+The operator applies a function of your choosing to every item emitted by the source channel. 
+This function must return a list of values as many are the output channels. Each entry in the result 
+list will be output into the output channel with the corresponding position index. For example:: 
+
+    queue1 = Channel.create()
+    queue2 = Channel.create()
+
+    Channel
+        .from ( 2,4,8 ) 
+        .separate( queue1, queue2 ) { a -> [a+1, a*a] }
+
+    queue1.subscribe { println "Channel 1: $it" }
+    queue2.subscribe { println "Channel 2: $it" }
+	
 ::
 
-    queue1.separate([queue2, queue3, queue4]) {a -> [a-1, a, a+1]}
+	Channel 1: 3
+	Channel 2: 4
+	Channel 1: 5
+	Channel 2: 16
+	Channel 2: 64
+	Channel 1: 9
 
-    def (queue2, queue3, queue4) = queue1.separate(3) {a -> [a-1, a, a+1]}
+.. note:: If you want to use more than two channels in the ``separate`` operator, they must be specified 
+	as a list  i.e. by wrapping them in square brackets.
+	
 
+A second version of the ``separate`` operator takes an integer `n` as argument and returns a list of `n` channels, 
+each of which get a value from the corresponding element in the list return by the closure as explained above.
+For example::	
 
+  source = Channel.from(1,2,3)
+  (queue1, queue2, queue3) = source.separate(3) { a -> [a, a+, a*a] }
+
+.. note:: The above example takes advantage of the :ref:`multiple assignment <script-multiple-assignment>` syntax
+  in order to assign two variables at once using the list of channels returned by the ``separate`` operator.
+
+See also `choice`_, `split`_ and `map`_ operators.
 
 
 route
 ----------
 
-The ``route`` operator forwards the items emitted by the source channel to a set of channels according
-a the map specified as a parameter. For example::
+The ``route`` operator allows you to forward the items emitted by the source channel 
+to the channel associated to the item's key. 
 
-    channel1 = Channel.create()
+The channels keys need to be specified by using a map parameter as the operator argument, 
+that associates each channel to its key. 
 
+The item's key is defined, by default, as the first entry in an array, a list or map object,
+or the value itself for any other data type.
+
+Optionally, a mapping function can be specified as parameter in order to provide a custom 
+rule to associate an item to a key, as shown in the example below::
+
+For example::
+
+    r1 = Channel.create()
+    r2 = Channel.create()
+    r3 = Channel.create()
+	
     Channel
-        .from(1,3,2,1,1,2,1,4,2)
+        .from('hello','ciao','hola', 'hi', 'x', 'bonjour')
+        .route ( b: r1, c: r2, h: r3 ) { it[0] }
 
+	r3.subscribe { println it }        
 
-TODO
+:: 
 
-See also: `into`_ operator.
+	hello
+	hola
+	hi
+
+In the above example all the string items starting with the letter ``b`` are copied to the 
+channel ``r1``, the items that begins with ``c`` to the channel ``r2`` and the ones beginning
+with ``h`` are copied to the channel ``r3``. Other items eventually existing are discarded. 
+ 
+
+See also: `into`_, `choice`_  and `separate`_ operators.
 
 
 Maths operators
 ================
 
-This section explains operators that perform mathematical operations on the items emitted by channels.
+This section talks about operators that performs maths operations on channels.
 
-The math operator are:
+The maths operators are:
 
 * `count`_
 * `countBy`_
@@ -947,15 +1050,18 @@ count
 --------
 
 The ``count`` operator creates a channel that emits a single item: a number that represents the total number of
-items emitted by the source channel.
-
-An optional parameter can be specified representing the condition to be satisfied by the item to count. For example::
+items emitted by the source channel. For example:: 
 
         Channel
             .from(9,1,7,5)
             .count()
             .subscribe { println it }
         // -> 4
+
+
+An optional parameter can be provided in order to select which items are to be counted. 
+The selection criteria can be specified either as a :ref:`regular expression <script-regexp>`, 
+a literal value, a Java class, or a `boolean predicate` that need to be satisfied. For example::
 
 
         Channel
@@ -969,13 +1075,20 @@ An optional parameter can be specified representing the condition to be satisfie
             .count ( ~/c/ )
             .subscribe { println it }
         // -> 2
+        
+        Channel
+            .from('a','c','c','q','b')
+            .count { it <= 'c' }
+            .subscribe { println it }
+        // -> 4
 
 
 countBy
 ----------
 
-The ``countBy`` creates a channel which emits an associative array (map object) counting the occurence of the emitted
-items in the source channel. For example::
+The ``countBy`` operator creates a channel which emits an associative array (i.e. ``Map`` object) 
+that counts the occurrences of the emitted items in the source channel having the same key. 
+For example::
 
     Channel
         .from( 'x', 'y', 'x', 'x', 'z', 'y' )
@@ -987,7 +1100,8 @@ items in the source channel. For example::
     [x:3, y:2, z:1]
 
 
-A optional grouping criteria can be specified by a function (closure) mapping each item to a grouping key. For example::
+A optional grouping criteria can be specified by using a :ref:`closure <script-closure>` 
+that associates each item to the grouping key. For example::
 
 
     Channel
@@ -1005,7 +1119,7 @@ A optional grouping criteria can be specified by a function (closure) mapping ea
 min
 ------
 
-The ``min`` operator waits until the source channel completes, and then emits the value that had the lowest value.
+The ``min`` operator waits until the source channel completes, and then emits the item that has the lowest value.
 For example::
 
     Channel
@@ -1017,12 +1131,34 @@ For example::
 
   Min value is 2
 
+An optional :ref:`closure <script-closure>` parameter can be specified in order to provide 
+a function that returns the value to be compared. The example below shows how find out the string item
+having the minimum length:: 
+
+    Channel
+    	.from("hello","hi","hey")
+    	.min { it.size() } 
+    	.subscribe {  println it }
+
+::
+
+	 "hi"
+
+Alternatively it is possibile to specify a comparator function i.e. a closure taking two parameters 
+that represents two emitted items to be compared. For example:: 
+
+
+    Channel
+    	.from("hello","hi","hey")
+    	.min { a,b -> a.size() <=> b.size() } 
+    	.subscribe {  println it }
+
 
 
 max
 ------
 
-The ``max`` operator waits until the source channel completes, and then emits the value that had the greatest value.
+The ``max`` operator waits until the source channel completes, and then emits the item that has the greatest value.
 For example::
 
     Channel
@@ -1035,29 +1171,57 @@ For example::
   Max value is 8
 
 
+An optional :ref:`closure <script-closure>` parameter can be specified in order to provide 
+a function that returns the value to be compared. The example below shows how find out the string item
+having the maximum length:: 
+
+    Channel
+    	.from("hello","hi","hey")
+    	.max { it.size() } 
+    	.subscribe {  println it }
+
+::
+
+	 "hello"
+
+Alternatively it is possibile to specify a comparator function i.e. a closure taking two parameters 
+that represents two emitted items to be compared. For example:: 
+
+
+    Channel
+    	.from("hello","hi","hey")
+    	.max { a,b -> a.size() <=> b.size() } 
+    	.subscribe {  println it }
+
+
 
 sum
 ------
 
-The ``sum`` operators crates a channel that emits the sum of all values emitted by the source channel to which is applied.
+The ``sum`` operator crates a channel that emits the sum of all the items emitted by the channel itself.
 For example::
 
     Channel
         .from( 8, 6, 2, 5 )
-        .min()
+        .sum()
         .subscribe { println "The sum is $it" }
-
-
 
 ::
 
     The sum is 21
 
 
+An optional :ref:`closure <script-closure>` parameter can be specified in order to provide 
+a function that given an item returns the value to be summed. For example:: 
 
+	Channel
+		.from( 4, 1, 7, 5 )
+		.sum { it * it } 
+		.subscribe {  println "Square: $it" } 
 
+::
 
-
+	Square: 91
 
 
 
