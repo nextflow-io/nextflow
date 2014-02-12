@@ -14,9 +14,7 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.ControlMessage
 import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.util.Duration
-import nextflow.util.FileHelper
 import org.codehaus.groovy.runtime.NullObject
-
 /**
  * Channel factory object
  *
@@ -122,6 +120,16 @@ class Channel {
     }
 
 
+    static DataflowChannel<Path> path( filePattern ) {
+        assert filePattern
+
+        if( filePattern instanceof Pattern )
+            path(filePattern)
+
+        else
+            path(filePattern.toString())
+    }
+
     static DataflowChannel<Path> path( Pattern filePattern ) {
         assert filePattern
         // split the folder and the pattern
@@ -139,7 +147,7 @@ class Channel {
         glob = glob ||  filePattern ==~ /.*\{.+\,.+\}.*/
 
         if( !glob ) {
-            return from(FileHelper.asPath(filePattern))
+            return from( filePattern as Path )
         }
 
         // split the folder and the pattern
@@ -153,7 +161,7 @@ class Channel {
         log.debug "files for syntax: $syntax; folder: $folder; pattern: $pattern; skipHidden: $skipHidden"
 
         // now apply glob file search
-        def path = FileHelper.asPath(folder)
+        def path = folder as Path
         def glob = "$syntax:${folder}${pattern}"
         def matcher = path.getFileSystem().getPathMatcher(glob)
         def channel = new DataflowQueue<Path>()

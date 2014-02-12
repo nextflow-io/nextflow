@@ -41,7 +41,9 @@ import groovyx.gpars.group.PGroup
 import groovyx.gpars.scheduler.Pool
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
+import nextflow.util.FileHelper
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
+import org.codehaus.groovy.runtime.ResourceGroovyMethods
 import org.codehaus.groovy.runtime.StringGroovyMethods
 
 /**
@@ -1656,6 +1658,9 @@ class NextflowExtensions {
         if( type == Duration ) {
             return new Duration(self)
         }
+        else if( Path.isAssignableFrom(type) ) {
+            return FileHelper.asPath(self)
+        }
 
         StringGroovyMethods.asType(self, type);
     }
@@ -1670,6 +1675,9 @@ class NextflowExtensions {
     static def asType( GString self, Class type ) {
         if( type == Duration ) {
             return new Duration(self.toString())
+        }
+        else if( Path.isAssignableFrom(type) ) {
+            return FileHelper.asPath(self)
         }
 
         StringGroovyMethods.asType(self, type);
@@ -1688,6 +1696,21 @@ class NextflowExtensions {
         }
 
         DefaultGroovyMethods.asType(self, type);
+    }
+
+    /**
+     * Converts a {@code File} to a {@code Path} object
+     *
+     * @param self
+     * @param type
+     * @return
+     */
+    static def asType( File self, Class type ) {
+        if( Path.isAssignableFrom(type) ) {
+            return self.toPath()
+        }
+
+        ResourceGroovyMethods.asType(self, type);
     }
 
 

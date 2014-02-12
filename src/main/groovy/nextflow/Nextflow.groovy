@@ -38,35 +38,6 @@ import nextflow.util.FileHelper
 @Slf4j
 class Nextflow {
 
-    static registerTypes() {
-
-        String.metaClass.define {
-            oldAsType = String.metaClass.getMetaMethod("asType", [Class] as Class[])
-            asType = { Class clazz ->
-                if (clazz == Path) {
-                    FileHelper.asPath((String)delegate)
-                }
-                else {
-                    oldAsType.invoke(delegate, clazz)
-                }
-            }
-        }
-
-        GString.metaClass.define {
-            oldAsType = String.metaClass.getMetaMethod("asType", [Class] as Class[])
-            asType = { Class clazz ->
-                if (clazz == Path) {
-                    FileHelper.asPath((String)delegate)
-                }
-                else {
-                    oldAsType.invoke(delegate, clazz)
-                }
-            }
-        }
-
-    }
-
-
     /**
      * Read a value from the specified channel
      *

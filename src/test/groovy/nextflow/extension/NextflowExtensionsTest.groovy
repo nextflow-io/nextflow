@@ -20,6 +20,8 @@
 package nextflow.extension
 
 import java.nio.charset.Charset
+import java.nio.file.Path
+import java.nio.file.Paths
 
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.operator.PoisonPill
@@ -486,6 +488,22 @@ class NextflowExtensionsTest extends Specification {
         2_000 as Duration == Duration.of('2 second')
         '1s' as Duration == Duration.of('1 second')
         "$x min" as Duration == Duration.of('3 min')
+
+    }
+
+    def testAsPath() {
+
+        setup:
+        def x = 'Hello'
+
+        expect:
+        'file.txt' as Path == Paths.get('file.txt')
+        '/some/path/file.txt' as Path == Paths.get('/some/path/file.txt')
+        "name.fa" as Path == Paths.get('name.fa')
+        "/some/path/${x}.txt" as Path == Paths.get('/some/path/Hello.txt')
+
+        new File('/path/to/file') as Path == Paths.get('/path/to/file')
+
 
     }
 

@@ -213,7 +213,7 @@ class FilesExtensions {
     }
 
     def static Path moveTo( Path source, String target ) {
-        moveTo(source, FileHelper.asPath(target))
+        moveTo(source, target as Path )
     }
 
     /**
@@ -291,7 +291,7 @@ class FilesExtensions {
 
     def static boolean exists(Path self, LinkOption... options) {
 
-        return Files.exists(self,options)
+        return options ? Files.exists(self,options) : Files.exists(self)
 
     }
 
@@ -352,7 +352,7 @@ class FilesExtensions {
     }
 
     def static boolean renameTo(Path self, String target) {
-        renameTo( self, FileHelper.asPath(target) )
+        renameTo( self, target as Path )
     }
 
     // TODO implements using the new API

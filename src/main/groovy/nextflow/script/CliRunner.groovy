@@ -37,7 +37,6 @@ import nextflow.ast.NextflowDSL
 import nextflow.exception.ConfigParseException
 import nextflow.exception.InvalidArgumentException
 import nextflow.exception.MissingLibraryException
-import nextflow.util.FileHelper
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import org.apache.commons.io.FilenameUtils
@@ -536,7 +535,7 @@ class CliRunner {
             // -- create a new runner instance
             def runner = new CliRunner(config)
             runner.session.cacheable = options.cacheable
-            runner.session.workDir = FileHelper.asPath( options.workDir )
+            runner.session.workDir = options.workDir as Path
             runner.session.baseDir = scriptFile?.canonicalFile?.parentFile
             runner.libPath = options.libPath
 
