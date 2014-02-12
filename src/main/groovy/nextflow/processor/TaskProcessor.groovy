@@ -278,7 +278,7 @@ abstract class TaskProcessor {
         }
 
         // the state agent
-        state = new Agent<>(new StateObj(allScalarValues))
+        state = new Agent<>(new StateObj(allScalarValues,name))
         state.addListener { StateObj old, StateObj obj ->
             log.trace "<$name> Process state changed to: $obj"
             if( !terminated && obj.isFinished() ) {

@@ -245,6 +245,50 @@ class TaskProcessorTest extends Specification {
     }
 
 
+    def testState() {
+
+        when:
+        def state = new Agent<StateObj>(new StateObj())
+        int i = 0
+        state.addListener { a, b -> i++ }
+
+        state.update { StateObj it ->  it.incSubmitted()  }
+        state.update { StateObj it ->  it.incCompleted() }
+        state.update  { StateObj it ->  it.poison()  }
+        state.await()
+        then:
+        state.val.finished
+        i == 3
+
+        when:
+        state = new Agent<StateObj>(new StateObj())
+        state.update { StateObj it ->  it.incSubmitted()  }
+        state.update  { StateObj it ->  it.poison()  }
+        state.await()
+        then:
+        !state.val.finished
+
+    }
+
+    def testState2() {
+
+        when:
+        def agent = new Agent<List>([])
+        int i = 0
+        agent.addListener { a, b -> println ">>: $a -- $b"; i++ }
+
+        agent << { it.add(1); (this as Agent).updateValue(it) }
+        agent << { it.add(2); (this as Agent).updateValue(it) }
+        agent.await()
+        then:
+        agent.val == [1,2]
+        //i == 2
+
+
+
+
+    }
+
 
 
 }

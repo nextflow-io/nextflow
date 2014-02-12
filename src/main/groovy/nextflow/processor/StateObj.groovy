@@ -21,6 +21,7 @@ package nextflow.processor
 
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 
 /**
  * This object keeps track of a process termination state. This is needed to send out a poison-pill
@@ -29,6 +30,7 @@ import groovy.transform.PackageScope
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @EqualsAndHashCode
 @PackageScope
 class StateObj implements Serializable, Cloneable {
@@ -37,9 +39,11 @@ class StateObj implements Serializable, Cloneable {
     private int completed
     private boolean poisoned
     private boolean allScalarValues
+    private String name
 
-    StateObj( boolean allScalarValues = false ) {
+    StateObj( boolean allScalarValues = false, String name = null ) {
         this.allScalarValues = allScalarValues
+        this.name = name
     }
 
     /**
@@ -56,7 +60,7 @@ class StateObj implements Serializable, Cloneable {
      * Increment the number of completed tasks
      */
     void incCompleted() {
-        if( completed<submitted )
+        if( completed < submitted )
             completed++
 
         else
@@ -64,6 +68,7 @@ class StateObj implements Serializable, Cloneable {
     }
 
     void poison() {
+        log.debug "<$name> State before poison: $this"
         poisoned = true
     }
 
@@ -77,6 +82,7 @@ class StateObj implements Serializable, Cloneable {
         result.completed = this.completed
         result.poisoned = this.poisoned
         result.allScalarValues = this.allScalarValues
+        result.name = this.name
         return result
     }
 
