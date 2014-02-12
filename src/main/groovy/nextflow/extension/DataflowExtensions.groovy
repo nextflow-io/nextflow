@@ -58,7 +58,10 @@ class DataflowExtensions {
         if( !channels.containsKey('listeners') )
             channels.listeners = [ DEF_ERROR_LISTENER ]
 
-        Session.currentInstance?.allProcessors << Dataflow.operator(channels, code)
+        final op = Dataflow.operator(channels, code)
+        if( Session.currentInstance?.allProcessors != null ) {
+            Session.currentInstance.allProcessors << op
+        }
     }
 
     /**
@@ -107,7 +110,10 @@ class DataflowExtensions {
         params.outputs = [output]
         params.listeners = [listener]
 
-        Session.currentInstance?.allProcessors << Dataflow.operator(params, code)
+        final op = Dataflow.operator(params, code)
+        if( Session.currentInstance?.allProcessors != null ) {
+            Session.currentInstance.allProcessors << op
+        }
     }
 
 
