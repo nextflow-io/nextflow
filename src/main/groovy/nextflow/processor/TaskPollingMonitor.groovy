@@ -1,10 +1,10 @@
 package nextflow.processor
-
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.BlockingQueue
 
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.util.Duration
 /**
  *
  * Monitors the queued tasks waiting for their termination
@@ -37,22 +37,29 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     final long pollIntervalMillis
 
+    final Duration dumpInterval
+
+    final int queueSize
+
     /**
      * Initialise the monitor, creating the queue which will hold the tasks
      *
      * @param session
-     * @param queueSize
-     * @param pollIntervalMillis
+     * @param defQueueSize
+     * @param defPollInterval
      */
-    TaskPollingMonitor( Session session, int queueSize, long pollIntervalMillis ) {
-        assert session , "Session object cannot be null"
-        assert queueSize, "Executor queue size cannot be zero"
-        assert pollIntervalMillis, "Executor polling interval cannot be zero"
+    TaskPollingMonitor( Session session, String name, int defQueueSize, Duration defPollInterval ) {
+        assert name, "Executor name cannot be empty"
+        assert session, "Session object cannot be null"
 
         this.session = session
         this.dispatcher = session.dispatcher
-        this.pollIntervalMillis = pollIntervalMillis
-        this.queue = new ArrayBlockingQueue<TaskHandler>(queueSize)
+        this.pollIntervalMillis = session.getPollInterval(name, defPollInterval).toMillis()
+        this.queueSize = session.getQueueSize(name, defQueueSize)
+        this.dumpInterval = session.getMonitorDumpInterval(name)
+
+        log.debug "Creating executor '$name' > queue size: $queueSize; poll-interval: $pollIntervalMillis; dump-interval: $dumpInterval"
+        this.queue = new ArrayBlockingQueue<TaskHandler>(defQueueSize)
 
         killOnExit()
     }
@@ -83,6 +90,7 @@ class TaskPollingMonitor implements TaskMonitor {
      * Implements the polling strategy
      */
     protected void pollLoop() {
+
         while( true ) {
             long time = System.currentTimeMillis()
             log.trace "Scheduler queue size: ${queue.size()}"
@@ -95,10 +103,17 @@ class TaskPollingMonitor implements TaskMonitor {
             }
 
             def delta = this.pollIntervalMillis - (System.currentTimeMillis() - time)
-            if( delta>0 ) { sleep(delta) }
+            if( delta>0 ) {
+                sleep(delta)
+            }
 
+            // dump this line every two minutes
+            dumpInterval.throttle(true) {
+                log.debug "!!Tasks to be completed: ${queue.size()} -- first: ${queue.peek()}"
+            }
         }
     }
+
 
     /**
      * Add an entry to the queue of monitored tasks
@@ -164,15 +179,19 @@ class TaskPollingMonitor implements TaskMonitor {
     private void killOnExit()  {
 
         Runtime.addShutdownHook {
+            if( !queue.size() ) return
+            log.warn "Killing pending processes (${queue.size()})"
+
+            int c = 0
             while( queue.size() ) {
                 TaskHandler handler = queue.poll()
                 try {
-                    log.warn "Killing pending process: ${handler.task.name}"
+                    log.debug "Killing process (${++c}): $handler"
                     handler.kill()
-                } catch( Throwable e ) {
+                }
+                catch( Throwable e ) {
                     log.debug "Failed killing pending process: ${handler} -- cause: ${e.message}"
                 }
-
             }
         }
 

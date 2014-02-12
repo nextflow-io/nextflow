@@ -34,6 +34,8 @@ import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.util.Duration
+
 /**
  * Executes script.nf indicated in dxapp.sh in the DnaNexus environment
  *
@@ -48,11 +50,7 @@ import nextflow.processor.TaskRun
 class DnaNexusExecutor extends AbstractExecutor {
 
     def TaskMonitor createTaskMonitor() {
-        final queueSize = session.getQueueSize(name, 10)
-        final pollInterval = session.getPollIntervalMillis(name, 15_000)
-        log.debug "Creating executor queue with size: $queueSize; poll-interval: $pollInterval"
-
-        return new TaskPollingMonitor(session, queueSize, pollInterval)
+        return new TaskPollingMonitor(session, name, 10, Duration.of('15 sec'))
     }
 
     /**

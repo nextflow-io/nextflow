@@ -23,6 +23,7 @@ import java.nio.file.Paths
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.Dataflow
@@ -32,6 +33,8 @@ import groovyx.gpars.group.PGroup
 import groovyx.gpars.util.PoolUtils
 import jsr166y.Phaser
 import nextflow.processor.TaskDispatcher
+import nextflow.util.Duration
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -89,7 +92,6 @@ class Session {
             log.debug "Script base path does not exist or is not a directory: ${path}"
             return null
         }
-        log.debug "Setting script bin dir: ${path}"
         return path
     }()
 
@@ -232,32 +234,44 @@ class Session {
                 result = config.executor[execName][propName]
             }
 
-            if( !result && config.executor[propName] ) {
+            if( result==null && config.executor[propName] ) {
                 result = config.executor[propName]
             }
         }
 
 
-        if( !result ) {
+        if( result==null ) {
             result = defValue
-            log.debug "Undefined executor property: '$propName' -- fallback default value: $result"
+            log.trace "Undefined executor property: '$propName' -- fallback default value: $result"
         }
 
         return result
 
     }
 
-
+    @Memoized
     public int getQueueSize( String execName, int defValue ) {
         getExecConfigProp(execName, 'queueSize', defValue) as int
     }
 
-    public long getPollIntervalMillis( String execName, long defValue = 1_000 ) {
-        getExecConfigProp( execName, 'pollInterval', defValue ) as long
+    @Memoized
+    public Duration getPollInterval( String execName, Duration defValue = Duration.of('1sec') ) {
+        getExecConfigProp( execName, 'pollInterval', defValue ) as Duration
     }
 
-    public long getGridExitReadTimeoutMillis( String execName, long defValue = 0 ) {
-        getExecConfigProp( execName, 'exitReadTimeout', defValue ) as long
+    @Memoized
+    public Duration getExitReadTimeout( String execName, Duration defValue = Duration.of('90sec') ) {
+        getExecConfigProp( execName, 'exitReadTimeout', defValue ) as Duration
+    }
+
+    @Memoized
+    public Duration getMonitorDumpInterval( String execName, Duration defValue = Duration.of('5min')) {
+        getExecConfigProp(execName, 'dumpInterval', defValue) as Duration
+    }
+
+    @Memoized
+    public Duration getQueueStatInterval( String execName, Duration defValue = Duration.of('1min') ) {
+        getExecConfigProp(execName, 'queueStatInterval', defValue) as Duration
     }
 
 

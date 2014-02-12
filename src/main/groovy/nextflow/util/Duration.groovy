@@ -19,17 +19,19 @@
 
 package nextflow.util
 
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 
+import groovy.transform.Canonical
 import groovy.transform.EqualsAndHashCode
+import groovy.util.logging.Slf4j
 import org.apache.commons.lang.time.DurationFormatUtils
-
 /**
  * A simple time duration representation
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @EqualsAndHashCode(includes = 'durationInMillis')
 class Duration implements Comparable<Duration> {
 
@@ -44,7 +46,6 @@ class Duration implements Comparable<Duration> {
     static private final HOURS = ['h','hour','hours']
 
     static private final DAYS = ['d','day','days']
-
 
     /**
      * Duration in millis
@@ -108,8 +109,22 @@ class Duration implements Comparable<Duration> {
         this.durationInMillis = unit.toMillis(value0)
     }
 
-    static Duration create( String str ) {
+    static Duration of( long value ) {
+        new Duration(value)
+    }
+
+    static Duration of( String str ) {
         new Duration(str)
+    }
+
+    static Duration of( String str, Duration fallback ) {
+        try {
+            return new Duration(str)
+        }
+        catch( IllegalArgumentException e ) {
+            log.debug "Not a valid duration value: $str -- Fallback on default value: $fallback"
+            return fallback
+        }
     }
 
     long toMillis() {
@@ -184,50 +199,49 @@ class Duration implements Comparable<Duration> {
         result.join(' ')
     }
 
-    /**
-     * Waits indefinitely the specified condition is verified
-     *
-     * @param condition A closure returning a condition to be satisfied, if waits until the condition is {@code false}
-     *          and exit when {@code true}
-     */
-    static final protected  waitFor( Closure<Boolean> condition ) {
-        waitFor((Duration)null, condition)
-    }
-
-
-    /**
-     * Waits until the specified condition is verified or throws an exception of type {@code TimeoutException}
-     * when the specified duration is exceeded
-     *
-     * @param maxDuration
-     * @param condition
-     */
-    static final waitFor( Duration maxDuration, Closure<Boolean> condition ) {
-        long time = System.currentTimeMillis()
-
-        while( true ) {
-            if( condition.call() ) {
-                break
-            }
-
-            if( maxDuration && (System.currentTimeMillis()-time > maxDuration.durationInMillis ) ) {
-                throw new TimeoutException("Wait condition exceed time-out: $maxDuration")
-            }
-
-            sleep(200)
-        }
-    }
-
-    static final waitFor( String duration, Closure<Boolean> condition ) {
-        waitFor(new Duration(duration), condition)
-    }
-
-    static final waitFor( long millis, Closure<Boolean> condition ) {
-        waitFor(new Duration(millis), condition)
-    }
 
     @Override
     int compareTo(Duration that) {
         return this.durationInMillis <=> that.durationInMillis
     }
+
+    @Canonical
+    static class ThrottleObj {
+        Object result
+        long timestamp
+    }
+
+    def throttle( Closure closure ) {
+        throttle0( durationInMillis, null, closure)
+    }
+
+    def throttle( seed, Closure closure ) {
+        def initialValue = new ThrottleObj( seed, System.currentTimeMillis() )
+        throttle0( durationInMillis, initialValue, closure)
+    }
+
+    static final Map<Integer,ThrottleObj> throttleMap = new ConcurrentHashMap<>()
+
+    private static throttle0( long delayMillis, ThrottleObj initialValue, Closure closure ) {
+        assert closure != null
+
+        def key = 17
+        key  = 31 * key + closure.class.hashCode()
+        key  = 31 * key + closure.owner.hashCode()
+        key  = 31 * key + closure.delegate?.hashCode() ?: 0
+
+        ThrottleObj obj = throttleMap.get(key)
+        if( obj == null ) {
+            obj = initialValue ?: new ThrottleObj()
+            throttleMap.put(key,obj)
+        }
+
+        if( System.currentTimeMillis() - obj.timestamp > delayMillis ) {
+            obj.timestamp = System.currentTimeMillis()
+            obj.result = closure.call()
+        }
+
+        obj.result
+    }
+
 }

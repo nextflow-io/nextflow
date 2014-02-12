@@ -30,12 +30,14 @@ import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessFailedException
+import nextflow.exception.ProcessSubmitException
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.util.CmdLineHelper
+import nextflow.util.Duration
 import org.apache.commons.io.IOUtils
 /**
  * Generic task processor executing a task through a grid facility
@@ -45,18 +47,25 @@ import org.apache.commons.io.IOUtils
 @Slf4j
 abstract class AbstractGridExecutor extends AbstractExecutor {
 
+
+    protected Duration queueInterval
+
+    /**
+     * Initialize the executor class
+     */
+    void init() {
+        super.init()
+        queueInterval = session.getQueueStatInterval(name)
+        log.debug "Creating executor '$name' > queue-stat-interval: ${queueInterval}"
+    }
+
     /**
      * Create a a queue holder for this executor
      * @return
      */
     def TaskMonitor createTaskMonitor() {
-        final queueSize = session.getQueueSize(name, 50)
-        final pollInterval = session.getPollIntervalMillis(name, 1_000)
-        log.debug "Creating executor queue with size: $queueSize; poll-interval: $pollInterval"
-
-        return new TaskPollingMonitor(session, queueSize, pollInterval)
+        return new TaskPollingMonitor(session, name, 50, Duration.of('1 sec'))
     }
-
 
     /*
      * Prepare and launch the task in the underlying execution platform
@@ -120,7 +129,12 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         new ProcessBuilder(killTaskCommand(jobId)).start()
     }
 
-    abstract List<String> killTaskCommand(def jobId);
+    /**
+     * The command to be used to kill a grid job
+     * @param jobId The job ID to be kill
+     * @return The command line to be used to kill the specified job
+     */
+    protected abstract List<String> killTaskCommand(def jobId);
 
     /**
      * @return Parse the {@code clusterOptions} configuration option and return the entries as a list of values
@@ -152,6 +166,80 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         value instanceof Collection ? value.join(' ') : value.toString()
     }
 
+    /**
+     * Status as returned by the grid engine
+     */
+    static protected enum QueueStatus { WAIT, RUNNING, HOLD, ERROR }
+
+    /**
+     * @return The status for all the scheduled and running jobs
+     */
+    Map<?,QueueStatus> getQueueStatus() {
+
+        List cmd = queueStatusCommand( taskConfig.queue )
+        if( !cmd ) return null
+
+        try {
+            log.trace "Getting grid queue status: ${cmd.join(' ')}"
+
+            def process = new ProcessBuilder(cmd).start()
+            def result = process.text
+            process.waitForOrKill( 10 * 1000 )
+            def exit = process.exitValue()
+
+            log.trace "status result > exit: $exit\n$result\n"
+
+            return ( exit == 0 ) ? parseQueueStatus( result ) : null
+
+        }
+        catch( Exception e ) {
+            log.warn "Unable to fetch queue status -- See the log file for details", e
+            return null
+        }
+
+    }
+
+    /**
+     * @param queue The command for which the status of jobs has be to read
+     * @return The command line to be used to retried the job statuses
+     */
+    protected abstract List<String> queueStatusCommand(queue)
+
+    /**
+     * Parse the command stdout produced by the command line {@code #queueStatusCommand}
+     * @param text
+     * @return
+     */
+    protected abstract Map<?,QueueStatus> parseQueueStatus( String text )
+
+    /**
+     * Store jobs status
+     */
+    private Map<Object,QueueStatus> fQueueStatus = null
+
+    /**
+     * Verify that a job in a 'active' state i.e. RUNNING or HOLD
+     *
+     * @param jobId The job for which verify the status
+     * @return {@code true} if the job is in RUNNING or HOLD status, or even if it is temporarily unable
+     *  to retrieve the job status for some
+     */
+    public boolean checkActiveStatus( jobId ) {
+
+        // -- fetch the queue status
+        fQueueStatus = queueInterval.throttle(null) { getQueueStatus() }
+        if( fQueueStatus == null ) // no data is returned, so return true
+            return true
+
+        if( !fQueueStatus.containsKey(jobId) )
+            return false
+
+        return fQueueStatus[jobId] == QueueStatus.RUNNING || fQueueStatus[jobId] == QueueStatus.HOLD
+
+    }
+
+
+
 }
 
 
@@ -181,14 +269,17 @@ class GridTaskHandler extends TaskHandler {
 
     private long exitStatusReadTimeoutMillis
 
+    final static private READ_TIMEOUT = Duration.of('90sec')
+
     GridTaskHandler( TaskRun task, TaskConfig config, AbstractGridExecutor executor ) {
         super(task, config)
+
         this.executor = executor
         this.startFile = task.getCmdStartedFile()
         this.exitFile = task.getCmdExitFile()
         this.outputFile = task.getCmdOutputFile()
         this.wrapperFile = task.getCmdWrapperFile()
-        this.exitStatusReadTimeoutMillis = executor.session?.getGridExitReadTimeoutMillis( executor.name ) ?: 90_000
+        this.exitStatusReadTimeoutMillis = (executor.session?.getExitReadTimeout(executor.name,READ_TIMEOUT) ?: READ_TIMEOUT).toMillis()
     }
 
     /*
@@ -199,7 +290,7 @@ class GridTaskHandler extends TaskHandler {
 
         // -- log the qsub command
         def cli = executor.getSubmitCommandLine(task, wrapperFile)
-        log.debug "sub command > '${cli}' -- process: ${task.name}"
+        log.trace "sub command > '${cli}' -- process: ${task.name}"
 
         /*
          * launch 'sub' script wrapper
@@ -219,9 +310,12 @@ class GridTaskHandler extends TaskHandler {
                 // -- wait the the process completes
                 result = process.text
                 exitStatus = process.waitFor()
+                log.trace "submit command > ${cli.join(' ')} -- exit: $exitStatus \n$result\n"
+
                 if( exitStatus ) {
-                    new IllegalStateException("Grid submit command returned an error exit status: $exitStatus")
+                    throw new ProcessSubmitException("Failed to submit job to the grid engine job for execution")
                 }
+
                 // save the JobId in the
                 this.jobId = executor.parseJobId(result)
                 this.status = SUBMITTED
@@ -246,9 +340,9 @@ class GridTaskHandler extends TaskHandler {
     }
 
 
-    private long exitTimestampMillis
+    private long exitTimestampMillis1
 
-    private int exitEmptyCount
+    private long exitTimestampMillis2
 
     /**
      * When a process terminated save its exit status into the file defined by #exitFile
@@ -256,13 +350,34 @@ class GridTaskHandler extends TaskHandler {
      * @return The int value contained in the exit file or {@code null} if the file does not exist. When the
      * file contains an invalid number return {@code Integer#MAX_VALUE}
      */
-    private Integer readExitStatus() {
+    protected Integer readExitStatus() {
+
+        // -- fetch the job status before return a result
+        final active = executor.checkActiveStatus(jobId)
 
         /*
          * when the file does not exist return null, to force the monitor to continue to wait
          */
         if( !exitFile || !exitFile.exists() ) {
-            return null
+
+            // -- if the job is active, this means that it is still running and thus the exit file cannot exist
+            //    returns null to continue to wait
+            if( active )
+                return null
+
+            // -- if the job is not active, something is going wrong
+            //  * before returning an error code make (due to NFS latency) the file status could be in a incoherent state
+            if( !exitTimestampMillis1 ) {
+                log.debug "Exit file does not exist but the job is not running for task: $this -- Try to wait before kill it"
+                exitTimestampMillis1 = System.currentTimeMillis()
+            }
+
+            def delta = System.currentTimeMillis() - exitTimestampMillis1
+            if( delta < exitStatusReadTimeoutMillis ) {
+                return null
+            }
+
+            return Integer.MAX_VALUE
         }
 
         /*
@@ -290,13 +405,13 @@ class GridTaskHandler extends TaskHandler {
              * 3) if more than 5 seconds are spent, and the file is empty return MAX_INT as an invalid exit status
              *
              */
-            if( !exitTimestampMillis ) {
-                exitTimestampMillis = System.currentTimeMillis()
+            if( !exitTimestampMillis2 ) {
+                log.debug "File is returning an empty content $this -- Try to wait a while and .. pray."
+                exitTimestampMillis2 = System.currentTimeMillis()
             }
 
-            def delta = System.currentTimeMillis() - exitTimestampMillis
+            def delta = System.currentTimeMillis() - exitTimestampMillis2
             if( delta < exitStatusReadTimeoutMillis ) {
-                log.debug "File is returning an empty content ($exitEmptyCount): $exitFile -- Try to wait a while and .. pray."
                 return null
             }
             log.warn "Unable to read command status from: $exitFile after $delta ms"
@@ -308,9 +423,13 @@ class GridTaskHandler extends TaskHandler {
     @Override
     boolean checkIfRunning() {
 
-        if( isSubmitted() && startFile && startFile.exists() ) {
-            status = RUNNING
-            return true
+        if( isSubmitted()  ) {
+
+            if( startFile && startFile.exists() ) {
+                status = RUNNING
+                return true
+            }
+
         }
 
         return false
@@ -319,13 +438,16 @@ class GridTaskHandler extends TaskHandler {
     @Override
     boolean checkIfCompleted() {
 
+        // verify the exit file exists
         def _exit
         if( isRunning() && (_exit = readExitStatus()) != null ) {
+
             // finalize the task
             task.exitStatus = _exit
             task.stdout = outputFile
             status = COMPLETED
             return true
+
         }
 
         return false
@@ -336,6 +458,7 @@ class GridTaskHandler extends TaskHandler {
     void kill() {
         executor.killTask(jobId)
     }
+
 
 }
 
@@ -374,12 +497,13 @@ class SgeExecutor extends AbstractGridExecutor {
 
         // max task duration
         if( taskConfig.maxDuration ) {
-            result << '-l' << "h_rt=${taskConfig.maxDuration.format('HH:mm:ss')}"
+            final duration = taskConfig.maxDuration as Duration
+            result << "-l" << "h_rt=${duration.format('HH:mm:ss')}"
         }
 
         // task max memory
         if( taskConfig.maxMemory ) {
-            result << '-l' << "virtual_free=${taskConfig.maxMemory.toString().replaceAll(/[\sB]/,'')}"
+            result << "-l" << "virtual_free=${taskConfig.maxMemory.toString().replaceAll(/[\sB]/,'')}"
         }
 
         // -- at the end append the command script wrapped file name
@@ -397,13 +521,48 @@ class SgeExecutor extends AbstractGridExecutor {
     def parseJobId( String text ) {
         // return always the last line
         def lines = text.trim().readLines()
-        return lines ? lines[-1].trim() : null
+        def id = lines[-1].trim()
+        if( id?.toString()?.isInteger() )
+            return id
+
+        throw new IllegalStateException("Invalid SGE submit response:\n$text\n\n")
     }
 
 
     @PackageScope
     List<String> killTaskCommand(jobId) {
         ['qdel', '-j', jobId?.toString()]
+    }
+
+    @Override
+    protected List<String> queueStatusCommand(Object queue) {
+        def result = ['qstat']
+        if( queue )
+            result << '-q' << queue.toString()
+
+        return result
+    }
+
+    static Map DECODE_STATUS = [
+            'r': QueueStatus.RUNNING,
+            'qw': QueueStatus.WAIT,
+            'hqw': QueueStatus.HOLD,
+            'Eqw': QueueStatus.ERROR
+    ]
+
+    @Override
+    protected Map<?, QueueStatus> parseQueueStatus(String text) {
+
+        def result = [:]
+        text?.readLines()?.eachWithIndex { String row, int i ->
+            if( i< 2 ) return
+            def cols = row.split(/\s+/)
+            if( cols.size()>5 ) {
+                result.put( cols[0], DECODE_STATUS[cols[4]] )
+            }
+        }
+
+        return result
     }
 
 }
@@ -462,12 +621,24 @@ class LsfExecutor extends AbstractGridExecutor {
             }
         }
 
-        new IllegalStateException("Not a valid 'bsub' output:\n$text");
+        new IllegalStateException("Invalid LSF submit response:\n$text\n\n");
     }
 
     @Override
     List<String> killTaskCommand( def jobId ) {
         ['bkill', jobId?.toString() ]
+    }
+
+    @Override
+    protected List<String> queueStatusCommand(Object queue) {
+        // TODO
+        return null
+    }
+
+    @Override
+    protected Map<?, QueueStatus> parseQueueStatus(String text) {
+        // TODO
+        return null
     }
 }
 
@@ -537,11 +708,23 @@ class SlurmExecutor extends AbstractGridExecutor {
             }
         }
 
-        throw new IllegalStateException()
+        throw new IllegalStateException("Invalid SLURM submit response:\n$text\n\n")
     }
 
 
-    List<String> killTaskCommand(def jobId) {
+    protected List<String> killTaskCommand(def jobId) {
         ['scancel', jobId?.toString() ]
+    }
+
+    @Override
+    protected List<String> queueStatusCommand(Object queue) {
+        // TODO
+        return null
+    }
+
+    @Override
+    protected Map<?, QueueStatus> parseQueueStatus(String text) {
+        // TODO
+        return null
     }
 }

@@ -22,7 +22,6 @@ import java.nio.file.Paths
 
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
-import nextflow.script.BaseScript
 import spock.lang.Specification
 /**
  *
@@ -34,13 +33,13 @@ class LsfExecutorTest extends Specification {
     def 'test bsub cmd line' () {
 
         setup:
-        def script = Mock(BaseScript)
-        def config = new TaskConfig(script)
-        config.queue 'hpc-queue1'
-        config.maxMemory '2GB'
-        config.maxDuration '3h'
-        config.clusterOptions " -M 4000  -R 'rusage[mem=4000] select[mem>4000]' --X \"abc\" "
-        config.name 'task'
+        def map = [:]
+        map.queue = 'hpc-queue1'
+        map.maxMemory = '2GB'
+        map.maxDuration = '3h'
+        map.clusterOptions = " -M 4000  -R 'rusage[mem=4000] select[mem>4000]' --X \"abc\" "
+        map.name = 'task'
+        def config = new TaskConfig(map)
 
         // dummy script
         def wrapper = Paths.get('.job.sh')

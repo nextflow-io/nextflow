@@ -25,6 +25,7 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.group.NonDaemonPGroup
 import nextflow.Nextflow
+import nextflow.util.Duration
 import spock.lang.Specification
 /**
  *
@@ -475,5 +476,19 @@ class NextflowExtensionsTest extends Specification {
         NextflowExtensions.getCharset(xx:'iso-8859-1') == Charset.defaultCharset()
 
     }
+
+    def testAsDuration() {
+
+        setup:
+        def x = 3;
+
+        expect:
+        2_000 as Duration == Duration.of('2 second')
+        '1s' as Duration == Duration.of('1 second')
+        "$x min" as Duration == Duration.of('3 min')
+
+    }
+
+
 
 }

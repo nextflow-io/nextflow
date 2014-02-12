@@ -84,6 +84,7 @@ class TaskConfigTest extends Specification {
         config.maxDuration '1h'
         then:
         config.maxDuration == new Duration('1h')
+        config.maxDuration as Duration == new Duration('1h')
 
         // maxMemory property
         when:
@@ -97,6 +98,14 @@ class TaskConfigTest extends Specification {
         then:
         config.hola == 99
 
+    }
+
+    def testParseProperties() {
+
+        when:
+        def config = new TaskConfig( maxDuration:'1h' )
+        then:
+        config.maxDuration as Duration == Duration.of('1h')
     }
 
 

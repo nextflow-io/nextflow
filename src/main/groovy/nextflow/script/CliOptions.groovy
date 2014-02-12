@@ -100,7 +100,7 @@ class CliOptions {
         Long convert(String value) {
             if( !value ) throw new IllegalArgumentException()
             if( value.isLong() ) {  return value.toLong() }
-            return Duration.create(value).toMillis()
+            return Duration.of(value).toMillis()
         }
     }
 }

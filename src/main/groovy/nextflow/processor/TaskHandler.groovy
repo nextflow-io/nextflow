@@ -99,4 +99,8 @@ public abstract class TaskHandler {
 
     boolean isCompleted()  { return status == Status.COMPLETED  }
 
+    String toString() {
+        return "TaskHandler[ status: $status; id: ${task.id}; name: ${task.name}; exit: ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}; workDir: ${task.workDirectory}]"
+    }
+
 }

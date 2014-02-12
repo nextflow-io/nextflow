@@ -40,6 +40,10 @@ import groovyx.gpars.group.DefaultPGroup
 import groovyx.gpars.group.PGroup
 import groovyx.gpars.scheduler.Pool
 import nextflow.util.CacheHelper
+import nextflow.util.Duration
+import org.codehaus.groovy.runtime.DefaultGroovyMethods
+import org.codehaus.groovy.runtime.StringGroovyMethods
+
 /**
  * Provides extension methods to chunk text and file
  *
@@ -1640,5 +1644,51 @@ class NextflowExtensions {
         }
 
     }
+
+    /**
+     * Converts a {@code String} to a {@code Duration} object
+     *
+     * @param self
+     * @param type
+     * @return
+     */
+    static def asType( String self, Class type ) {
+        if( type == Duration ) {
+            return new Duration(self)
+        }
+
+        StringGroovyMethods.asType(self, type);
+    }
+
+    /**
+     * Converts a {@code GString} to a {@code Duration} object
+     *
+     * @param self
+     * @param type
+     * @return
+     */
+    static def asType( GString self, Class type ) {
+        if( type == Duration ) {
+            return new Duration(self.toString())
+        }
+
+        StringGroovyMethods.asType(self, type);
+    }
+
+    /**
+     * Converts a {@code Number} to a {@code Duration} object
+     *
+     * @param self
+     * @param type
+     * @return
+     */
+    static def asType( Number self, Class type ) {
+        if( type == Duration ) {
+            return new Duration(self.longValue())
+        }
+
+        DefaultGroovyMethods.asType(self, type);
+    }
+
 
 }

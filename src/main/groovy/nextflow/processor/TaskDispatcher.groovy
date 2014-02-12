@@ -98,7 +98,7 @@ class TaskDispatcher {
      * @param task A {@code TaskRun} instance
      */
     void submit( TaskRun task, boolean blocking ) {
-        log.debug "Scheduling process: ${task}"
+        log.trace "Scheduling process: ${task}"
 
         if( session.isTerminated() ) {
             new IllegalStateException("Session terminated - Cannot add process to execution queue: ${task}")

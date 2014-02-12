@@ -138,13 +138,15 @@ Scope 'executor'
 
 The ``executor`` configuration scope allows you to set the executor optional settings, listed in the following table.
 
-===================== ==========
-Name
-===================== ==========
-queueSize
+===================== =====================
+Name                  Description
+===================== =====================
+queueSize             The number of tasks the executor will handle in a parallel manner.
 pollInterval
 exitReadTimeout
-===================== ==========
+dumpInterval
+queueStatInterval
+===================== =====================
 
 
 

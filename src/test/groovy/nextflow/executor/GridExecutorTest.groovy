@@ -83,6 +83,7 @@ class GridExecutorTest extends Specification {
 
     }
 
+
     def testCheckIfTerminatedTrue() {
 
         setup:
@@ -111,6 +112,7 @@ class GridExecutorTest extends Specification {
 
         def config = Mock(TaskConfig)
         def executor = Mock(AbstractGridExecutor)
+        executor.checkActiveStatus(_) >> { return true }
 
         when:
         def handler = new GridTaskHandler(task, config, executor)
@@ -139,6 +141,7 @@ class GridExecutorTest extends Specification {
         task.workDirectory = Files.createTempDirectory('testHandler')
         def config = Mock(TaskConfig)
         def executor = Mock(AbstractGridExecutor)
+        executor.checkActiveStatus(_) >> { true }
 
         when:
         def handler = new GridTaskHandler(task, config, executor)

@@ -91,7 +91,7 @@ class Channel {
 
     static DataflowChannel interval(String duration, Closure closure ) {
 
-        def millis = Duration.create(duration).toMillis()
+        def millis = Duration.of(duration).toMillis()
         def timer = new Timer()
         def channel = create()
         long index = 0

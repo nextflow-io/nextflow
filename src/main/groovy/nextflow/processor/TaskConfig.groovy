@@ -293,7 +293,6 @@ class TaskConfig implements Map {
         return this
     }
 
-    Duration getMaxDuration() { configProperties.maxDuration }
 
     TaskConfig validExitStatus( Object values ) {
 

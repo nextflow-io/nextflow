@@ -26,6 +26,7 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
+import nextflow.util.Duration
 
 /**
  * Dummy executor, only for test purpose
@@ -37,7 +38,7 @@ class NopeExecutor extends AbstractExecutor {
 
     @Override
     protected TaskMonitor createTaskMonitor() {
-        return new TaskPollingMonitor(session, 5, 50)
+        return new TaskPollingMonitor(session, name, 5, Duration.of('50ms'))
     }
 
     @Override

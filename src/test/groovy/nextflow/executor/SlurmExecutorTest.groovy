@@ -45,7 +45,7 @@ class SlurmExecutorTest extends Specification {
         exec.taskConfig = config
 
         when:
-        config.maxDuration( Duration.create('1h') )
+        config.maxDuration( Duration.of('1h') )
         config.clusterOptions = '-x -y -z'
         then:
         exec.getSubmitCommandLine(task,script).join(' ') == 'sbatch -D /work/path -J nf-task_555 -o /dev/null -t 01:00:00 -x -y -z script.sh'

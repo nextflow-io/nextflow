@@ -30,6 +30,7 @@ import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.script.ScriptType
+import nextflow.util.Duration
 import nextflow.util.PosixProcess
 import org.apache.commons.io.IOUtils
 import org.codehaus.groovy.runtime.IOGroovyMethods
@@ -43,12 +44,10 @@ class LocalExecutor extends AbstractExecutor {
 
     @Override
     protected TaskMonitor createTaskMonitor() {
-        final defSize = Math.max( Runtime.getRuntime().availableProcessors()-1, 1 )
-        final queueSize = session.getQueueSize(name, defSize)
-        final pollInterval = session.getPollIntervalMillis(name, 50)
-        log.debug "Creating executor queue with size: $queueSize; poll-interval: $pollInterval"
 
-        return new TaskPollingMonitor(session, queueSize, pollInterval)
+        final defSize = Math.max( Runtime.getRuntime().availableProcessors()-1, 1 )
+        return new TaskPollingMonitor(session, name, defSize, Duration.of('50 ms'))
+
     }
 
     @Override

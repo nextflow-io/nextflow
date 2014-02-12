@@ -94,7 +94,7 @@ abstract class AbstractExecutor {
         }
         catch( Exception e ) {
             monitor.remove(handler)
-            return null
+            throw e
         }
     }
 
