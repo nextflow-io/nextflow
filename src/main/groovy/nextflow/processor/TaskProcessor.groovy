@@ -594,13 +594,13 @@ abstract class TaskProcessor {
         if( error instanceof ProcessException ) {
             formatTaskError( message, error, task )
             log.error message.join('\n')
+            log.trace "Process $name error trace:", error
         }
         else {
             message << formatErrorCause( error )
             message << "Tip: check the log file '.nextflow.log' for more details"
-            log.error message.join('\n')
+            log.error message.join('\n'), error
         }
-        log.debug "Error details", error
 
         session.abort()
         return true
@@ -615,24 +615,27 @@ abstract class TaskProcessor {
          * task executing scriptlets
          */
         if( task?.script ) {
-            // print the executed command
+            // - print the executed command
             message << "Command executed:\n"
-            task.script?.stripIndent().trim().eachLine {
-                message << "  $it"
+            task.script?.stripIndent()?.trim()?.eachLine {
+                message << "  ${it}"
             }
 
             // - the exit status
             message << "\nCommand exit status:\n  ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}"
 
-            // - the head of the process stdout
+            // - the tail of the process stdout
             message << "\nCommand output:"
-            int MAX = 20
-            def c = task.dumpStdout(message, MAX)
-            if( c == MAX ) {
+            final max = 50
+            def lines = task.dumpStdout(max)
+            if( lines.size() == max ) {
                 message << "  (more omitted..)"
             }
-            else if( c == 0 ) {
+            else if( lines.size() == 0 ) {
                 message << "  (empty)"
+            }
+            lines.each {
+                message << "  ${task.workDirectory ? it.replace(task.workDirectory.toString()+'/','') : it }"
             }
 
         }
@@ -1192,6 +1195,9 @@ abstract class TaskProcessor {
             }
 
             else {
+                if( task.exitStatus == Integer.MAX_VALUE)
+                    throw new ProcessFailedException("Process '${task.name}' terminated for an unknown reason -- Likely it has been terminated by the external system")
+
                 boolean success = (task.exitStatus in taskConfig.validExitStatus)
                 if ( !success ) {
                     throw new ProcessFailedException("Process '${task.name}' terminated with an error exit status")

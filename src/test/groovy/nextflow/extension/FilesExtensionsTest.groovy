@@ -282,9 +282,91 @@ class FilesExtensionsTest extends Specification {
         file.delete()
         path.delete()
 
+    }
+
+    def testFileTail() {
+
+        setup:
+        def file = File.createTempFile('tailtest','txt')
+        file.deleteOnExit()
+
+        when:
+        file.text = '''
+        1
+        22
+        333
+        4444
+        55555
+        666666
+        7777777
+        88888888
+        999999999
+        '''.stripIndent()
+
+        then:
+        file.tail(1).toString() == '999999999'
+        file.tail(2).toString() == '88888888\n999999999'
+        file.tail(2,null,8).toString() == '88888888\n999999999'
+        file.tail(2,null,9).toString() == '88888888\n999999999'
+        file.tail(2,null,10).toString() == '88888888\n999999999'
+        file.tail(2,null,11).toString() == '88888888\n999999999'
+        file.tail(2,null,12).toString() == '88888888\n999999999'
+
+        when:
+        def file2 = File.createTempFile('tailtest','txt')
+        file2.deleteOnExit()
+        file2.text = '''
+        1
+        22
+        333
+        4444
+        55555
+        666666
+        7777777
+
+
+        88888888
+
+        999999999'''.stripIndent()
+
+        then:
+        file2.tail(1).toString() == '999999999'
+        file2.tail(3).toString() == '88888888\n\n999999999'
+        file2.tail(6).toString() == '7777777\n\n\n88888888\n\n999999999'
+        file2.tail(6,null,8).toString() == '7777777\n\n\n88888888\n\n999999999'
+        file2.tail(6,null,9).toString() == '7777777\n\n\n88888888\n\n999999999'
+        file2.tail(6,null,10).toString() == '7777777\n\n\n88888888\n\n999999999'
+        file2.tail(6,null,11).toString() == '7777777\n\n\n88888888\n\n999999999'
+        file2.tail(6,null,12).toString() == '7777777\n\n\n88888888\n\n999999999'
 
     }
 
 
+    def testFileHead() {
 
+        setup:
+        def file = File.createTempFile('tailtest','txt')
+        file.deleteOnExit()
+
+        when:
+        file.text = '''\
+        1
+        22
+        333
+
+
+        4444
+        55555
+        666666
+        7777777
+        88888888
+        999999999
+        '''.stripIndent()
+
+        then:
+        file.head(1).toString() == '1'
+        file.head(2).toString() == '1\n22'
+        file.head(6).toString() == '1\n22\n333\n\n\n4444'
+
+    }
 }

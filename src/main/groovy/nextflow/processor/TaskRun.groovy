@@ -178,42 +178,20 @@ class TaskRun {
      * Dump the first {@code max} line of the task {@code #stdout}
      *
      * @param message The message buffer that will hold teh first lines
-     * @param max The maximum number of lines to dump (default: 20)
+     * @param n The maximum number of lines to dump (default: 20)
      * @return The actual number of dumped lines into {@code message} buffer
      */
-    int dumpStdout(List message, int max = 20) {
+    List dumpStdout(int n = 50) {
 
-        int result = 0
-        Reader reader = null
-        try {
-            if( stdout instanceof Path ) {
-                result = dumpStdoutImpl(message, stdout.newReader(), max)
-            }
-            else {
-                result = dumpStdoutImpl(message, new StringReader(stdout.toString()), max)
-            }
+        if( stdout instanceof Path )
+            return stdout.tail(n).readLines()
 
-        }
-        finally {
-            reader?.closeQuietly()
-        }
+        def result = (stdout?.toString() ?: '(none)') .readLines()
+        if( result.size()>n )
+            return result[-n..-1]
 
         return result
     }
-
-
-    private int dumpStdoutImpl( List message, Reader reader, int max ) {
-
-        int c = 0
-        String line
-        while( (line=reader.readLine()) != null && c < max) {
-            c++
-            message << "  $line"
-        }
-
-        return c
-    }
-
 
 
     /**

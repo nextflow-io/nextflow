@@ -1,4 +1,6 @@
 package nextflow.extension
+import java.nio.ByteBuffer
+import java.nio.channels.SeekableByteChannel
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.LinkOption
@@ -10,6 +12,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileAttribute
 
 import groovy.util.logging.Slf4j
+import nextflow.util.ByteBufferBackedInputStream
 import nextflow.util.FileHelper
 /**
  * Add utility methods to standard classes {@code File} and {@code Path}
@@ -18,6 +21,11 @@ import nextflow.util.FileHelper
  */
 @Slf4j
 class FilesExtensions {
+
+    private static CR = 0x0D
+
+    private static LF = 0x0A
+
 
     /**
      * Check if a file - or - a directory is empty
@@ -365,13 +373,209 @@ class FilesExtensions {
         self.toFile().listFiles().collect { it.toPath() } as Path[]
     }
 
-
-    static closeQuietly( Closeable self ) {
+    /**
+     * Close a file in safe manner i.e. without throwing eventual exception raised by the *close* operation
+     *
+     * @param self A {@code Closable} object
+     */
+    static void closeQuietly( Closeable self ) {
         try {
             self.close()
         }
         catch (IOException ioe) {
             log.debug "Exception closing $self -- Cause: ${ioe.getMessage() ?: ioe.toString()}"
+        }
+    }
+
+
+    static private DEFAULT_TAIL_BLOCK_SIZE = 5 * 1024
+
+    /**
+     * Read the last 'n' lines from a {@code SeekableByteChannel} without reading the previous content.
+     * <p>
+     * The method does not close the channel object, thus the caller has to close it.
+     *
+     *
+     * @param channel The channel from where read the ending lines
+     * @param n The number of lines to be read
+     * @param charset The charset to use, it can be specified by using a string e.g. 'UTF-8' or a {@code Charset} object.
+     *      When {@code null} is specified the current default charset is used.
+     * @param blockSize The size of the block read when reading the channel tail
+     * @return The 'n' lines as {@code CharSequence} object
+     */
+    static CharSequence tail( SeekableByteChannel channel, int n, def charset = null, int blockSize = DEFAULT_TAIL_BLOCK_SIZE ) {
+        assert channel != null
+        assert n > 0
+
+        final len = channel.size()
+        final buffer = ByteBuffer.allocate(blockSize)
+        final result = new StringBuilder()
+        long count = 0
+
+        final charsetObj = NextflowExtensions.getCharset(charset)
+
+        long pos = len
+        while( pos>0 ) {
+            pos = Math.max( 0, pos-blockSize )
+            channel.position(pos)
+            int l = channel.read(buffer)
+
+            buffer.flip()
+            boolean isHeadLF = buffer.get(0) == LF
+            boolean isTailLF = buffer.get(l-1) == LF
+
+            def stream = new BufferedReader( new InputStreamReader(new ByteBufferBackedInputStream(buffer), charsetObj) )
+            def lines = stream.readLines()
+            int i = lines.size()-1
+            while( i >= 0 ) {
+                final ln = lines[i]
+
+                if( isTailLF && lines.size()-1 == i && result.size() ) {
+                    result.insert(0, System.lineSeparator())
+                    isTailLF = false
+                    count++
+                }
+
+                // prepend a new line into the result buffer
+                result.insert(0,ln)
+
+                // if there are more lines (since 'i' is greater than zero) add a new line separator
+                // and increment the 'count' of total added lines
+                if( i ) {
+                    count++
+
+                    // when the requested number of lines have been read, return
+                    if( count < n )
+                        result.insert(0, System.lineSeparator() )
+                    else
+                        return result
+                }
+
+                // decrement the lines pointer
+                i--
+            }
+
+            // reset the buffer to read the new block
+            buffer.clear()
+        }
+
+        return result
+    }
+
+    /**
+     * Read the last 'n' lines from a {@code Path} without reading all the file content
+     *
+     * @param channel The channel from where read the ending lines
+     * @param n The number of lines to be read
+     * @param charset The charset to use, it can be specified by using a string e.g. 'UTF-8' or a {@code Charset} object.
+     *      When {@code null} is specified the current default charset is used.
+     * @param blockSize The size of the block read when reading the channel tail
+     * @return The 'n' lines as {@code CharSequence} object
+     */
+    static CharSequence tail( Path path, int n, charset = null, int blockSize = DEFAULT_TAIL_BLOCK_SIZE) {
+        def channel = Files.newByteChannel(path)
+        try {
+            return tail( channel, n, charset, blockSize )
+        }
+        finally {
+            channel.closeQuietly()
+        }
+    }
+
+    /**
+     * Read the last 'n' lines from a {@code File} without reading all the file content
+     *
+     * @param channel The channel from where read the ending lines
+     * @param n The number of lines to be read
+     * @param charset The charset to use, it can be specified by using a string e.g. 'UTF-8' or a {@code Charset} object.
+     *      When {@code null} is specified the current default charset is used.
+     * @param blockSize The size of the block read when reading the channel tail
+     * @return The 'n' lines as {@code CharSequence} object
+     */
+    static CharSequence tail( File file, int n, charset = null, int blockSize = DEFAULT_TAIL_BLOCK_SIZE ) {
+        tail(file.toPath(), n, charset, blockSize)
+    }
+
+    /**
+     * Read 'n' lines from the beginning of a {@code Reader} object.
+     * <p>
+     * The method does not close the reader object, thus the caller has to call the close method on it.
+     *
+     * @param reader The source object from where read the first 'n' lines
+     * @param n The number of lines to read
+     * @return The read lines as a {@code CharSequence} object
+     */
+    static CharSequence head( Reader reader, int n ) {
+        assert n
+
+        final result = new StringBuilder()
+        final reader0 = reader instanceof BufferedReader ? reader : new BufferedReader(reader)
+
+        def line
+        int count = 0
+        while( (line=reader0.readLine()) != null && count<n ) {
+            if( count )
+                result.append( System.lineSeparator() )
+            result.append(line)
+            count ++
+        }
+
+        return result
+    }
+
+    /**
+     * Read 'n' lines from the beginning of a {@code InputStream} object.
+     * <p>
+     * The method does not close the stream object, thus the caller has to call the close method on it.
+     *
+     * @param reader The source object from where read the first 'n' lines
+     * @param n The number of lines to read
+     * @param charset The charset to use, it can be specified by using a string e.g. 'UTF-8' or a {@code Charset} object.
+     *      When {@code null} is specified the current default charset is used.
+     * @return The read lines as a {@code CharSequence} object
+     */
+    static CharSequence head( InputStream stream, int n, charset ) {
+        def charsetObj = NextflowExtensions.getCharset(charset)
+        head( new InputStreamReader(stream, charsetObj), n)
+    }
+
+    /**
+     * Read the top from the beginning of a {@code File} object, stopping as soon as
+     * 'n' lines has been read.
+     *
+     * @param file The source file from where read the first 'n' lines
+     * @param n The number of lines to read
+     * @param charset The charset to use, it can be specified by using a string e.g. 'UTF-8' or a {@code Charset} object.
+     *      When {@code null} is specified the current default charset is used.
+     * @return The read lines as a {@code CharSequence} object
+     */
+
+    static CharSequence head( File file, int n, charset = null ) {
+        head(file.toPath(), n, charset)
+    }
+
+    /**
+     * Read the top from the beginning of a {@code Path} object, stopping as soon as
+     * 'n' lines has been read.
+     *
+     * @param path The source file from where read the first 'n' lines
+     * @param n The number of lines to read
+     * @param charset The charset to use, it can be specified by using a string e.g. 'UTF-8' or a {@code Charset} object.
+     *      When {@code null} is specified the current default charset is used.
+     * @return The read lines as a {@code CharSequence} object
+     */
+
+    static CharSequence head( Path path, int n, charset = null ) {
+        assert path != null
+        assert n
+
+        def charsetObj = NextflowExtensions.getCharset(charset)
+        def reader = Files.newBufferedReader(path,charsetObj)
+        try {
+            head(reader,n)
+        }
+        finally {
+            reader.closeQuietly()
         }
     }
 
