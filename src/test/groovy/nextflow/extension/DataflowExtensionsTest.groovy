@@ -551,6 +551,49 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+
+    def testSpreadTuple() {
+
+        when:
+        def result = Channel.from([1, 'x'], [2,'y'], [3, 'z']).spread( ['alpha','beta','gamma'] )
+
+        then:
+        result.val == [1, 'x', 'alpha']
+        result.val == [1, 'x', 'beta']
+        result.val == [1, 'x', 'gamma']
+
+        result.val == [2, 'y', 'alpha']
+        result.val == [2, 'y', 'beta']
+        result.val == [2, 'y', 'gamma']
+
+        result.val == [3, 'z', 'alpha']
+        result.val == [3, 'z', 'beta']
+        result.val == [3, 'z', 'gamma']
+
+        result.val == Channel.STOP
+    }
+
+    def testSpreadMap() {
+
+        when:
+        def result = Channel.from([id:1, val:'x'], [id:2,val:'y'], [id:3, val:'z']).spread( ['alpha','beta','gamma'] )
+
+        then:
+        result.val == [[id:1, val:'x'], 'alpha']
+        result.val == [[id:1, val:'x'], 'beta']
+        result.val == [[id:1, val:'x'], 'gamma']
+
+        result.val == [[id:2,val:'y'], 'alpha']
+        result.val == [[id:2,val:'y'], 'beta']
+        result.val == [[id:2,val:'y'], 'gamma']
+
+        result.val == [[id:3, val:'z'], 'alpha']
+        result.val == [[id:3, val:'z'], 'beta']
+        result.val == [[id:3, val:'z'], 'gamma']
+
+        result.val == Channel.STOP
+    }
+
     def testFlatten() {
 
         when:
