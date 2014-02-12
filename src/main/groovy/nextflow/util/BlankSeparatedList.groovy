@@ -1,10 +1,14 @@
 package nextflow.util
+
+import groovy.transform.EqualsAndHashCode
+
 /**
  * A list of staged paths, which renders its content just separating
  * the items by a blank space
  */
 
-public class BlankSeparatedList implements Serializable {
+@EqualsAndHashCode
+public class BlankSeparatedList {
 
     // note: due to a bug with the groovy runtime, the class must no implement
     // the List interface, otherwise the toString() method is not invoked (Groovy 2.1.7)

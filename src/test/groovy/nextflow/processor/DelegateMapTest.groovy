@@ -23,6 +23,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.script.BaseScript
+import nextflow.util.BlankSeparatedList
 import spock.lang.Specification
 
 /**
@@ -63,21 +64,22 @@ class DelegateMapTest extends Specification {
         def file = Files.createTempFile('test.ctx',null)
         def processor = [:] as TaskProcessor
         processor.metaClass.getTaskConfig = { taskConfig }
-        processor.metaClass.isCacheable = { true }
         def map = new DelegateMap(processor)
         map.alpha = 1
         map.beta = 2
         map.file = Paths.get('Hola.txt')
+        map.list = new BlankSeparatedList( Paths.get('A'), Paths.get('B'), Paths.get('C') )
 
         when:
         map.save(file)
         def result = DelegateMap.read(processor, file)
 
         then:
-        result.size() == 3
+        result.size() == 4
         result.alpha == 1
         result.beta == 2
         result.file.equals( Paths.get('Hola.txt') )
+        result.list == new BlankSeparatedList( Paths.get('A'), Paths.get('B'), Paths.get('C') )
 
         cleanup:
         file.delete()

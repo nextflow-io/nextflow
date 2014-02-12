@@ -18,16 +18,19 @@
  */
 
 package nextflow.processor
+
 import java.nio.file.FileSystemNotFoundException
 import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
 
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.script.BaseScript
+import nextflow.util.BlankSeparatedList
 import org.apache.commons.lang.SerializationException
 import org.apache.commons.lang.SerializationUtils
-
 /**
  * Map used to delegate variable resolution to script scope
  *
@@ -45,23 +48,19 @@ class DelegateMap implements Map {
 
     private boolean undef
 
-    private boolean cacheable
-
 
     DelegateMap( TaskProcessor processor, Map holder = null ) {
         this.holder = holder ?: [:]
         this.script = processor.ownerScript
         this.undef = processor.taskConfig.getUndef()
-        this.cacheable = processor.isCacheable()
         this.name = processor.name
     }
 
     @Deprecated
-    DelegateMap(BaseScript script, boolean undef = false, cacheable = true) {
+    DelegateMap(BaseScript script, boolean undef = false) {
         this.script = script
         this.holder = [:]
         this.undef = undef
-        this.cacheable = cacheable
     }
 
 
@@ -98,31 +97,83 @@ class DelegateMap implements Map {
 
     @Override
     public put(String property, Object newValue) {
-        if( newValue instanceof Path ) {
-            newValue = new SerializablePath(newValue)
-            log.trace "Swapping to serializable path in context map: $newValue"
-        }
-        else if( !(newValue instanceof Serializable) && cacheable ) {
-            log.warn "Variable '$property' [${newValue.class.simpleName}] does not implement the Java Serializable interface -- Resume feature will not work for process '$name'"
-        }
         holder.put(property, newValue)
     }
 
-
+    /**
+     * The the delegate object to the file specified. It takes care to converts {@code Path} objects
+     * (that are not serializable) to objects of type {@code SafePath}
+     *
+     * @param contextFile The file where store the {@code DelegateMap} instance
+     */
     def void save( Path contextFile ) {
         try {
-            contextFile.bytes = SerializationUtils.serialize((Serializable)holder)
+            def copy = safeMap(holder)
+            contextFile.bytes = SerializationUtils.serialize(copy)
         }
         catch( SerializationException e ) {
             log.warn "Cannot serialize context map. Cause: ${e.cause} -- Resume will not work on this process"
+            log.trace "Serialization failed for map: \n${dumpMap(holder)}\n", e
         }
     }
 
-    static DelegateMap read( TaskProcessor processor, Path contextFile ) {
-        def map = (Map)SerializationUtils.deserialize( contextFile.bytes )
-        new DelegateMap(processor, map)
+    /**
+     * Replaces the entry which value is a {@code Path} with a {@code SafePath}
+     *
+     * @param map The map to
+     * @return
+     */
+    @PackageScope
+    static Serializable safeMap( Map map ) {
+        def result = [:]
+        map.each { key, value -> result[key] = safeItem(value) }
+        return result
     }
 
+    @PackageScope
+    static Serializable safeItem( value ) {
+
+        if( value instanceof Serializable || value == null ) {
+            return value
+        }
+
+        if( value instanceof Path ) {
+            return new SafePath(value)
+        }
+
+        if( value instanceof BlankSeparatedList ) {
+            return new SafeList(value)
+        }
+
+        return value
+    }
+
+    @PackageScope
+    static String dumpMap( Map map ) {
+        def result = []
+        result << "[ "
+        map.each { key, value -> result << "  '$key':[${value?.class?.name}] = ${value}" }
+        result << "]"
+        return result.join('\n')
+    }
+
+    /**
+     * Read the context map from the file specified
+     *
+     * @param processor The current {@code TaskProcessor}
+     * @param contextFile The file used to store the context map
+     * @return A new {@code DelegateMap} instance holding the values read from map file
+     */
+    static DelegateMap read( TaskProcessor processor, Path contextFile ) {
+        def map = (Map)SerializationUtils.deserialize( contextFile.bytes )
+        map.each {  key, value ->
+            if( value instanceof SafePath )
+                map[key] = value.toPath()
+            else if( value instanceof SafeList )
+                map[key] = value.toList()
+        }
+        new DelegateMap(processor, map)
+    }
 
 
     /**
@@ -131,62 +182,69 @@ class DelegateMap implements Map {
      * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
      */
     @Slf4j
-    static class SerializablePath implements Serializable, Path {
+    @EqualsAndHashCode
+    static final class SafePath implements Serializable {
 
-        @Delegate
-        Path target
+        private static final long serialVersionUID = - 2333294071875114518L ;
 
-        SerializablePath(Path path) {
-            this.target = path
+        String scheme
+        String path
+
+        SafePath(Path target) {
+            scheme = target.getFileSystem().provider().getScheme()
+            path = target.toString()
         }
 
-
-        private void writeObject(ObjectOutputStream stream) throws IOException {
-            final scheme = target.getFileSystem().provider().getScheme()
-            final path = 'file'.equalsIgnoreCase(scheme) ? target.toString() : target.toUri().toString()
-
-            log.trace "Serializing path object -- scheme: $scheme; path: $path"
-            stream.writeObject(scheme)
-            stream.writeObject(path)
-        }
-
-        private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException {
-            final String scheme = stream.readObject()
-            final String path = stream.readObject()
-            log.trace "De-serializing path object -- scheme: $scheme; path: $path"
+        public Path toPath() {
 
             if( "file".equalsIgnoreCase(scheme) ) {
-                target = FileSystems.getDefault().getPath(path)
-                return
+                return FileSystems.getDefault().getPath(path)
             }
 
             // try to find provider
             for (FileSystemProvider provider: FileSystemProvider.installedProviders()) {
                 if (provider.getScheme().equalsIgnoreCase(scheme)) {
-                    target = provider.getPath(new URI(path))
-                    return
+                    return provider.getPath(new URI(path))
                 }
             }
 
-            throw new FileSystemNotFoundException("Provider \"" + scheme + "\" not installed");
+            throw new FileSystemNotFoundException("Provider \"$scheme\" not installed");
+        }
+    }
+
+    /**
+     * Holds a list that can be safely serialised
+     */
+    static final class SafeList implements Serializable {
+
+        private static final long serialVersionUID = 2310939302448910665L ;
+
+        final List target
+
+        SafeList( BlankSeparatedList list ) {
+            target = new ArrayList<>(list.size())
+            list.eachWithIndex { entry, int i ->
+                target[i] = safeItem(entry)
+            }
         }
 
+        /**
+         * @return back the list as a {@code BlankSeparatedList} instance
+         */
+        BlankSeparatedList toList() {
+            def copy = new ArrayList(target.size())
+            target.each {
 
-        boolean equals( Object other ) {
-            return target.equals(other)
-        }
+                if( it instanceof SafePath )
+                    copy.add(it.toPath())
+                else
+                    copy.add(it)
+            }
 
-        int hashCode() {
-            return target.hashCode()
-        }
-
-        int compareTo(Path other) {
-            target.compareTo(other)
-        }
-
-        String toString() {
-            target.toString()
+            return new BlankSeparatedList(copy)
         }
 
     }
+
+
 }
