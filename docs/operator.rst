@@ -253,13 +253,13 @@ Transforming operators are used to transform the items emitted by a channel to n
 
 These operators are:
 
-* `map`_
-* `flatMap`_
-* `reduce`_
-* `groupBy`_
 * `buffer`_
 * `collate`_
 * `flatten`_
+* `flatMap`_
+* `groupBy`_
+* `map`_
+* `reduce`_
 * `toList`_
 * `toSortedList`_
 
@@ -861,9 +861,9 @@ Forking operators
 
 The forking operators are:
 
-* `split`_
 * `choice`_
 * `separate`_
+* `split`_
 * `route`_
 
 
@@ -890,8 +890,9 @@ For example::
     Channel 2 emit: c
 
 
-A second version of the ``split`` operator takes an integer `n` as argument and returns a list of `n` channels, each of which
-emits a copy of the items as emitted by the source channel. For example::
+A second version of the ``split`` operator takes an integer `n` as an argument and returns 
+a list of `n` channels, each of which emits a copy of the items there were emitted by the 
+source channel. For example::
 
 
     (split1,split2) = Channel.from( 'a','b','c').split(2)
@@ -920,12 +921,14 @@ See also `tap`_ operator.
 choice
 ----------
 
-The ``choice`` operator allows you to send the items emitted by a source channel to one out of two (or many) output channels. 
+The ``choice`` operator allows you to forward the items emitted by a source channel to two 
+(or more) output channels, `choosing` one out of them at a time. 
 
 The destination channel is selected by using a :ref:`closure <script-closure>` that must return the `index` number of the channel
 where the item has to be sent. The first channel is identified by the index ``0``, the second as ``1`` and so on. 
 
-The following example sends all the items less or equals than ``100``
+The following example sends all string items beginning with ``Hello`` into ``queue1``, 
+the others into ``queue2``  
 
 ::
   
@@ -948,12 +951,12 @@ i.e. by wrapping them in square brackets, as shown in the following example::
 separate
 ------------
 
-The ``separate`` operator lets you to copy the items emitted by the source channel into multiple channels, 
-while each of this can receive a `separate` version of the same item. 
+The ``separate`` operator lets you copy the items emitted by the source channel into multiple 
+channels, which each of these can receive a `separate` version of the same item. 
 
 The operator applies a function of your choosing to every item emitted by the source channel. 
-This function must return a list of values as many are the output channels. Each entry in the result 
-list will be output into the output channel with the corresponding position index. For example:: 
+This function must return a list of as many values as there are output channels. Each entry in the result 
+list will be assigned to the output channel with the corresponding position index. For example:: 
 
     queue1 = Channel.create()
     queue2 = Channel.create()
@@ -978,8 +981,8 @@ list will be output into the output channel with the corresponding position inde
 	as a list  i.e. by wrapping them in square brackets.
 	
 
-A second version of the ``separate`` operator takes an integer `n` as argument and returns a list of `n` channels, 
-each of which get a value from the corresponding element in the list return by the closure as explained above.
+A second version of the ``separate`` operator takes an integer `n` as an argument and returns a list of `n` channels, 
+each of which gets a value from the corresponding element in the list returned by the closure as explained above.
 For example::	
 
   source = Channel.from(1,2,3)
@@ -988,23 +991,23 @@ For example::
 .. note:: The above example takes advantage of the :ref:`multiple assignment <script-multiple-assignment>` syntax
   in order to assign two variables at once using the list of channels returned by the ``separate`` operator.
 
-See also `choice`_, `split`_ and `map`_ operators.
+See also: `choice`_, `split`_ and `map`_ operators.
 
 
 route
 ----------
 
 The ``route`` operator allows you to forward the items emitted by the source channel 
-to the channel associated to the item's key. 
+to a channel which is associated with the item's key. 
 
-The channels keys need to be specified by using a map parameter as the operator argument, 
-that associates each channel to its key. 
+The channel's keys are specified by using a map parameter as the operator argument, 
+that associates each channel with a key identifier. 
 
 The item's key is defined, by default, as the first entry in an array, a list or map object,
 or the value itself for any other data type.
 
-Optionally, a mapping function can be specified as parameter in order to provide a custom 
-rule to associate an item to a key, as shown in the example below::
+Optionally, a mapping function can be specified as a parameter in order to provide a custom 
+rule to associate an item with a key, as shown in the example below::
 
 For example::
 
@@ -1025,7 +1028,7 @@ For example::
 	hi
 
 In the above example all the string items starting with the letter ``b`` are copied to the 
-channel ``r1``, the items that begins with ``c`` to the channel ``r2`` and the ones beginning
+channel ``r1``, the items that begin with ``c`` to the channel ``r2`` and the ones beginning
 with ``h`` are copied to the channel ``r3``. Other items eventually existing are discarded. 
  
 
@@ -1061,7 +1064,7 @@ items emitted by the source channel. For example::
 
 An optional parameter can be provided in order to select which items are to be counted. 
 The selection criteria can be specified either as a :ref:`regular expression <script-regexp>`, 
-a literal value, a Java class, or a `boolean predicate` that need to be satisfied. For example::
+a literal value, a Java class, or a `boolean predicate` that needs to be satisfied. For example::
 
 
         Channel
@@ -1100,8 +1103,8 @@ For example::
     [x:3, y:2, z:1]
 
 
-A optional grouping criteria can be specified by using a :ref:`closure <script-closure>` 
-that associates each item to the grouping key. For example::
+An optional grouping criteria can be specified by using a :ref:`closure <script-closure>` 
+that associates each item with the grouping key. For example::
 
 
     Channel
@@ -1132,8 +1135,8 @@ For example::
   Min value is 2
 
 An optional :ref:`closure <script-closure>` parameter can be specified in order to provide 
-a function that returns the value to be compared. The example below shows how find out the string item
-having the minimum length:: 
+a function that returns the value to be compared. The example below shows how to find the string 
+item that has the minimum length:: 
 
     Channel
     	.from("hello","hi","hey")
@@ -1144,8 +1147,8 @@ having the minimum length::
 
 	 "hi"
 
-Alternatively it is possibile to specify a comparator function i.e. a closure taking two parameters 
-that represents two emitted items to be compared. For example:: 
+Alternatively it is possibile to specify a comparator function i.e. a :ref:`closure <script-closure>` 
+taking two parameters that represent two emitted items to be compared. For example:: 
 
 
     Channel
@@ -1172,8 +1175,8 @@ For example::
 
 
 An optional :ref:`closure <script-closure>` parameter can be specified in order to provide 
-a function that returns the value to be compared. The example below shows how find out the string item
-having the maximum length:: 
+a function that returns the value to be compared. The example below shows how to find the string 
+item that has the maximum length:: 
 
     Channel
     	.from("hello","hi","hey")
@@ -1184,8 +1187,8 @@ having the maximum length::
 
 	 "hello"
 
-Alternatively it is possibile to specify a comparator function i.e. a closure taking two parameters 
-that represents two emitted items to be compared. For example:: 
+Alternatively it is possibile to specify a comparator function i.e. a :ref:`closure <script-closure>` 
+taking two parameters that represent two emitted items to be compared. For example:: 
 
 
     Channel
@@ -1198,7 +1201,7 @@ that represents two emitted items to be compared. For example::
 sum
 ------
 
-The ``sum`` operator crates a channel that emits the sum of all the items emitted by the channel itself.
+The ``sum`` operator creates a channel that emits the sum of all the items emitted by the channel itself.
 For example::
 
     Channel
@@ -1212,7 +1215,7 @@ For example::
 
 
 An optional :ref:`closure <script-closure>` parameter can be specified in order to provide 
-a function that given an item returns the value to be summed. For example:: 
+a function that, given an item, returns the value to be summed. For example:: 
 
 	Channel
 		.from( 4, 1, 7, 5 )
