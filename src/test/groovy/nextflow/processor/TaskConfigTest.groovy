@@ -11,6 +11,7 @@ import nextflow.script.StdOutParam
 import nextflow.script.ValueInParam
 import nextflow.script.ValueSharedParam
 import nextflow.util.Duration
+import nextflow.util.HashMode
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
@@ -302,6 +303,28 @@ class TaskConfigTest extends Specification {
         val.inChannel.getVal() == null
         val.outChannel instanceof DataflowVariable
         binding.getVariable('x2') == val.outChannel
+
+    }
+
+    def testIsCacheable() {
+
+        when:
+        def config = new TaskConfig(map)
+        then:
+        config.cacheable == result
+        config.isCacheable() == result
+        config.getHashMode() == mode
+
+        where:
+        result | mode               | map
+        true   | HashMode.STANDARD  | [:]
+        true   | HashMode.STANDARD  | [cache:true]
+        true   | HashMode.STANDARD  | [cache:'yes']
+        true   | HashMode.DEEP      | [cache:'deep']
+        false  | HashMode.STANDARD  | [cache:false]
+        false  | HashMode.STANDARD  | [cache:'false']
+        false  | HashMode.STANDARD  | [cache:'off']
+        false  | HashMode.STANDARD  | [cache:'no']
 
     }
 

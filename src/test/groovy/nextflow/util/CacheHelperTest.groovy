@@ -19,6 +19,8 @@
 
 package nextflow.util
 
+import java.nio.file.Files
+
 import embed.com.google.common.hash.Hashing
 import spock.lang.Specification
 
@@ -62,6 +64,46 @@ class CacheHelperTest extends Specification {
 
         CacheHelper.hasher(['abc',123]).hash() == CacheHelper.hasher(['abc',123]).hash()
         CacheHelper.hasher(['abc',123]).hash() != CacheHelper.hasher([123,'abc']).hash()
+    }
+
+
+    def testHashContent() {
+        setup:
+        def path1 = Files.createTempFile('test-hash-content',null)
+        def path2 = Files.createTempFile('test-hash-content',null)
+        def path3 = Files.createTempFile('test-hash-content',null)
+
+        path1.text = '''
+            line 1
+            line 2
+            line 3 the file content
+            '''
+
+
+        path2.text = '''
+            line 1
+            line 2
+            line 3 the file content
+            '''
+
+        path3.text = '''
+            line 1
+            line 1
+            line 1 the file content
+            '''
+
+        expect:
+        CacheHelper.hashContent(path1) == CacheHelper.hashContent(path2)
+        CacheHelper.hashContent(path1) != CacheHelper.hashContent(path3)
+        CacheHelper.hashContent(path1, Hashing.md5()) == CacheHelper.hashContent(path2,Hashing.md5())
+        CacheHelper.hashContent(path1, Hashing.md5()) != CacheHelper.hashContent(path3,Hashing.md5())
+
+        cleanup:
+        path1.delete()
+        path2.delete()
+        path3.delete()
+
+
     }
 
 

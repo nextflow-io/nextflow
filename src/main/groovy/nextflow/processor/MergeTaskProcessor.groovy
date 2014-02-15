@@ -103,7 +103,8 @@ class MergeTaskProcessor extends TaskProcessor {
         // -- create the unique hash number for this tasks,
         //    collecting the id of all the executed runs
         //    and sorting them
-        def hasher = CacheHelper.hasher(session.uniqueId)
+        final hashMode = taskConfig.getHashMode()
+        def hasher = CacheHelper.hasher(session.uniqueId, hashMode)
         mergeHashesList.sort()
         mergeHashesList.each { Long entry ->  hasher = CacheHelper.hasher(hasher,entry) }
         def hash = hasher.hash()
@@ -197,6 +198,7 @@ class MergeTaskProcessor extends TaskProcessor {
         scriptClosure.delegate = contextMap
         scriptClosure.setResolveStrategy(Closure.DELEGATE_FIRST)
 
+        def hashMode = taskConfig.getHashMode()
         def script = getScriptlet(scriptClosure)
         def commandToRun = normalizeScript(script)
         def interpreter = fetchInterpreter(commandToRun)
@@ -206,7 +208,7 @@ class MergeTaskProcessor extends TaskProcessor {
          * which maintains all the hashes for executions making-up this merge task
          */
         keys << commandToRun << 7
-        mergeHashesList << CacheHelper.hasher(keys).hash().asLong()
+        mergeHashesList << CacheHelper.hasher(keys, hashMode).hash().asLong()
 
         // section marker
         mergeScript << "# task '$name' ($currentIndex)" << '\n'

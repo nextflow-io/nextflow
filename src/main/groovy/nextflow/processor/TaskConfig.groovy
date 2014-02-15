@@ -39,6 +39,7 @@ import nextflow.script.ValueInParam
 import nextflow.script.ValueOutParam
 import nextflow.script.ValueSharedParam
 import nextflow.util.Duration
+import nextflow.util.HashMode
 import nextflow.util.MemoryUnit
 
 /**
@@ -48,6 +49,10 @@ import nextflow.util.MemoryUnit
  */
 @Slf4j
 class TaskConfig implements Map {
+
+    private static transient BOOL_YES = ['true','yes','on']
+
+    private static transient BOOL_NO = ['false','no','off']
 
     @Delegate
     protected final Map configProperties
@@ -75,6 +80,7 @@ class TaskConfig implements Map {
         configProperties.errorStrategy = ErrorStrategy.TERMINATE
     }
 
+    /* Only for testing purpose */
     protected TaskConfig( Map delegate ) {
         configProperties = delegate
     }
@@ -89,7 +95,7 @@ class TaskConfig implements Map {
         if( value instanceof Boolean ) {
             configProperties.echo = value.booleanValue()
         }
-        else if( value != null && value.toString().toLowerCase() in ['true','yes','on'] ) {
+        else if( value != null && value.toString().toLowerCase() in BOOL_YES ) {
             configProperties.echo = true
         }
         else {
@@ -118,6 +124,14 @@ class TaskConfig implements Map {
         return this
     }
 
+    public getProperty( String name ) {
+        if( name == 'cacheable' )
+            isCacheable()
+        else
+            configProperties.get(name)
+    }
+
+
     @groovy.transform.PackageScope
     BaseScript getOwnerScript() { ownerScript }
 
@@ -144,7 +158,7 @@ class TaskConfig implements Map {
     }
 
     boolean getMerge() {
-        configProperties.merge?.toString()?.toLowerCase() in ['true','yes','on']
+        configProperties.merge?.toString() in BOOL_YES
     }
 
     void setEcho( Object value ) {
@@ -308,5 +322,22 @@ class TaskConfig implements Map {
 
     List<Integer> getValidExitStatus() { configProperties.validExitStatus }
 
+    boolean isCacheable() {
+        def value = configProperties.cache
+        if( value == null )
+            return true
+
+        if( value instanceof Boolean )
+            return value
+
+        if( value instanceof String && value in BOOL_NO )
+            return false
+
+        return true
+    }
+
+    HashMode getHashMode() {
+        configProperties.cache == 'deep' ? HashMode.DEEP : HashMode.STANDARD
+    }
 
 }

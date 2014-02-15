@@ -19,13 +19,18 @@
 
 package nextflow.util
 
+import java.nio.file.Files
 import java.nio.file.Path
 
+import embed.com.google.common.hash.Funnels
+import embed.com.google.common.hash.HashCode
 import embed.com.google.common.hash.HashFunction
 import embed.com.google.common.hash.Hasher
 import embed.com.google.common.hash.Hashing
 import groovy.util.logging.Slf4j
 import nextflow.processor.FileHolder
+
+enum HashMode { STANDARD, DEEP }
 
 /**
  * Provide helper method to handle caching
@@ -35,15 +40,19 @@ import nextflow.processor.FileHolder
 @Slf4j
 class CacheHelper {
 
-    static Hasher hasher( def value ) {
-        hasher( Hashing.murmur3_128(), value )
+    static HashFunction defaultHasher() {
+        Hashing.murmur3_128()
     }
 
-    static Hasher hasher( HashFunction function, def value ) {
-        hasher( function.newHasher(), value )
+    static Hasher hasher( value, HashMode mode = null) {
+        hasher( defaultHasher(), value, mode )
     }
 
-    static Hasher hasher( Hasher hasher, def value ) {
+    static Hasher hasher( HashFunction function, value, HashMode mode = null ) {
+        hasher( function.newHasher(), value, mode )
+    }
+
+    static Hasher hasher( Hasher hasher, value, HashMode mode = null ) {
         assert hasher
 
         if( value == null ) return hasher
@@ -91,31 +100,31 @@ class CacheHelper {
 
             case (Object[]):
                 for( def item: (value as Object[]) ) {
-                    hasher = CacheHelper.hasher( hasher, item as Object )
+                    hasher = CacheHelper.hasher( hasher, item as Object, mode )
                 }
                 break
 
             case Collection:
-                value.each { hasher = CacheHelper.hasher( hasher, it )  }
+                value.each { hasher = CacheHelper.hasher( hasher, it, mode )  }
                 break
 
             case Map:
                 value.each { name, item ->
-                    hasher = CacheHelper.hasher( hasher, item )
+                    hasher = CacheHelper.hasher( hasher, item, mode )
                 }
                 break
 
 
             case FileHolder:
-                hasher = CacheHelper.hasher(hasher, ((FileHolder) value).sourceObj )
+                hasher = CacheHelper.hasher(hasher, ((FileHolder) value).sourceObj, mode )
                 break
 
             case Path:
-                hasher = hashPath(hasher, (Path)value)
+                hasher = hashFile(hasher, (Path)value, mode)
                 break;
 
             case File:
-                hasher = hashFile(hasher, (File)value)
+                hasher = hashFile(hasher, (File)value, mode)
                 break
 
             case UUID:
@@ -132,8 +141,46 @@ class CacheHelper {
         return hasher
     }
 
+    /**
+     * Hashes the specified file
+     *
+     * @param hasher The current {@code Hasher} object
+     * @param file The {@code File} object to hash
+     * @param mode When {@code mode} is equals to the string {@code deep} is used teh file content
+     *   in order to create the hash key for this file, otherwise just the file metadata information
+     *   (full name, size and last update timestamp)
+     * @return The updated {@code Hasher} object
+     */
+    static private Hasher hashFile( Hasher hasher, File file, HashMode mode = null ) {
+        hashFile(hasher, file.toPath(), mode)
+    }
 
-    static private Hasher hashPath( Hasher hasher, Path file ) {
+    /**
+     * Hashes the specified file
+     *
+     * @param hasher The current {@code Hasher} object
+     * @param file The {@code Path} object to hash
+     * @param mode When {@code mode} is equals to the string {@code deep} is used teh file content
+     *   in order to create the hash key for this file, otherwise just the file metadata information
+     *   (full name, size and last update timestamp)
+     * @return The updated {@code Hasher} object
+     */
+    static private Hasher hashFile( Hasher hasher, Path path, HashMode mode = null ) {
+        if( mode == HashMode.DEEP && Files.isRegularFile(path))
+            hashFileContent(hasher, path)
+
+        else
+            hashFileMetadata(hasher, path)
+    }
+
+    /**
+     * Hashes the file by using the metadata information: full path string, size and last update timestamp
+     *
+     * @param hasher The current {@code Hasher} object
+     * @param file file The {@code Path} object to hash
+     * @return The updated {@code Hasher} object
+     */
+    static private Hasher hashFileMetadata( Hasher hasher, Path file ) {
 
         hasher = hasher.putUnencodedChars( file.toAbsolutePath().normalize().toString() )
 
@@ -145,18 +192,33 @@ class CacheHelper {
         }
     }
 
-    static private Hasher hashFile( Hasher hasher, File file ) {
 
-        hasher = hasher.putUnencodedChars(file.absolutePath)
+    /**
+     * Hashes the file by reading file content
+     *
+     * @param hasher The current {@code Hasher} object
+     * @param file file The {@code Path} object to hash
+     * @return The updated {@code Hasher} object
+     */
 
-        if( file.exists() ) {
-            return hasher .putLong(file.length()).putLong( file.lastModified())
+    static private Hasher hashFileContent( Hasher hasher, Path path ) {
+
+        def output = Funnels.asOutputStream(hasher)
+        path.withInputStream { input ->
+            output << input
         }
-        else {
-            return hasher
-        }
+        output.closeQuietly()
+        hasher
+    }
 
 
+    static HashCode hashContent( Path file, HashFunction function = null ) {
+
+        if( !function )
+            function = defaultHasher()
+
+        Hasher hasher = function.newHasher();
+        hashFileContent(hasher, file).hash()
     }
 
 }

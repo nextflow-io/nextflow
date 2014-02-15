@@ -929,19 +929,36 @@ and have the following syntax::
 Some directives are generally available to all processes, some others depends on the `executor` currently defined.
 
 
-cacheable
+cache
 ---------
 
-The ``cacheable`` directive allows you to cached the process results throughout multiple process executions. 
-The caching feature is enabled by default, you can disable it for a specific process by setting the ``cacheable``
+The ``cache`` directive allows you to store the process results to a local cache. Any following attempt to execute
+the process along with the same inputs will cause the process execution to be skipped, producing the stored data as
+the actual results.
+
+The caching feature generates a unique `key` by indexing the process script and inputs. This key is used
+identify univocally the outputs produced by the process execution.
+
+
+The cache is enabled by default, you can disable it for a specific process by setting the ``cache``
 directive to ``false``. For example:: 
 
   process noCacheThis {
-    cacheable false
+    cache false
 
     script:
     <your command string here>
   }
+
+The ``cache`` directive possible values are shown in the following table:
+
+===================== =================
+Value                 Description
+===================== =================
+``false``             Disable cache feature.
+``true`` (default)    Cache process outputs. Input files are indexed by using the meta-data information (name, size and last update timestamp).
+``'deep'``            Cache process outputs. Input files are indexed by their content.
+===================== =================
 
 
 echo

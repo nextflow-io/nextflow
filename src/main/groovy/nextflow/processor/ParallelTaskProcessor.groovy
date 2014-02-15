@@ -297,8 +297,9 @@ class ParallelTaskProcessor extends TaskProcessor {
         // add all the input name-value pairs to the key generator
         task.inputs.each { keys << it.key.name << it.value }
 
-        log.trace "[${task.name}] cache keys: ${keys}"
-        def hash = CacheHelper.hasher(keys).hash()
+        final mode = taskConfig.getHashMode()
+        log.trace "[${task.name}] cache keys: ${keys} -- mode: $mode"
+        def hash = CacheHelper.hasher(keys, mode).hash()
         Path folder = FileHelper.getWorkFolder(session.workDir, hash)
         log.trace "[${task.name}] cacheable folder: $folder"
 
