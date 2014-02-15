@@ -79,7 +79,6 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
 
         final bash = new BashWrapperBuilder(task)
         // set the input (when available)
-        bash.useSync = true
         bash.input = task.stdin
         bash.scratch = taskConfig.scratch
 

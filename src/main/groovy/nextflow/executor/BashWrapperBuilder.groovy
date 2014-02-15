@@ -120,7 +120,6 @@ class BashWrapperBuilder {
         wrapper << '#!/bin/bash -Eeu' << ENDL
         wrapper << 'trap onexit 1 2 3 15 ERR' << ENDL
         wrapper << 'function onexit() { local exit_status=${1:-$?}; printf $exit_status > ' << exitedFile.toString()
-        if( useSync ) wrapper << ' && sync'
         wrapper << '; exit $exit_status; }' << ENDL
         wrapper << 'touch ' << startedFile.toString() << ENDL
 
