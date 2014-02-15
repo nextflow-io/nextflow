@@ -62,6 +62,7 @@ dependencies {
     compile "commons-io:commons-io:${commonsIoVer}"
     compile "com.beust:jcommander:${jcommanderVer}"
     compile "com.google.code.findbugs:jsr305:${jsr305Ver}"
+    compile "com.esotericsoftware.kryo:kryo:2.22"
 
     oneJarLib files('one-jar/one-jar-boot-0.97.jar')
 

@@ -1,6 +1,6 @@
 dependencies {
     compile project(':')
-    compile 'nextflow:dxfs:0.5.1'
+    compile 'nextflow:dxfs:0.5.2'
 
     testCompile project(':')
     testCompile "org.codehaus.groovy:groovy-json:${groovyVer}"

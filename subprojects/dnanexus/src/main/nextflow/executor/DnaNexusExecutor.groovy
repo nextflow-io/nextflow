@@ -26,7 +26,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
+import nextflow.fs.dx.DxFileSystem
+import nextflow.fs.dx.DxFileSystemSerializer
 import nextflow.fs.dx.DxPath
+import nextflow.fs.dx.DxPathSerializer
 import nextflow.fs.dx.api.DxApi
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
@@ -35,6 +38,7 @@ import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
+import nextflow.util.KryoHelper
 
 /**
  * Executes script.nf indicated in dxapp.sh in the DnaNexus environment
@@ -48,6 +52,13 @@ import nextflow.util.Duration
 
 @Slf4j
 class DnaNexusExecutor extends AbstractExecutor {
+
+    def void init() {
+        super.init()
+        // -- register the serializer for the Dx file system objects
+        KryoHelper.register(DxPath, DxPathSerializer)
+        KryoHelper.register(DxFileSystem, DxFileSystemSerializer)
+    }
 
     def TaskMonitor createTaskMonitor() {
         return new TaskPollingMonitor(session, name, 10, Duration.of('15 sec'))

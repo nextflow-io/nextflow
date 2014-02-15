@@ -18,19 +18,12 @@
  */
 
 package nextflow.processor
-
-import java.nio.file.FileSystemNotFoundException
-import java.nio.file.FileSystems
 import java.nio.file.Path
-import java.nio.file.spi.FileSystemProvider
 
-import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.script.BaseScript
-import nextflow.util.BlankSeparatedList
-import org.apache.commons.lang.SerializationException
-import org.apache.commons.lang.SerializationUtils
+import nextflow.util.KryoHelper
 /**
  * Map used to delegate variable resolution to script scope
  *
@@ -108,45 +101,14 @@ class DelegateMap implements Map {
      */
     def void save( Path contextFile ) {
         try {
-            def copy = safeMap(holder)
-            contextFile.bytes = SerializationUtils.serialize(copy)
+            KryoHelper.write(holder,contextFile)
         }
-        catch( SerializationException e ) {
-            log.warn "Cannot serialize context map. Cause: ${e.cause} -- Resume will not work on this process"
-            log.trace "Serialization failed for map: \n${dumpMap(holder)}\n", e
+        catch( Exception e ) {
+            log.warn "Cannot serialize context map. Cause: ${e.cause} -- Resume will not work on this process", e
+            log.debug "Unable to serialize object: ${dumpMap(holder)}"
         }
     }
 
-    /**
-     * Replaces the entry which value is a {@code Path} with a {@code SafePath}
-     *
-     * @param map The map to
-     * @return
-     */
-    @PackageScope
-    static Serializable safeMap( Map map ) {
-        def result = [:]
-        map.each { key, value -> result[key] = safeItem(value) }
-        return result
-    }
-
-    @PackageScope
-    static Serializable safeItem( value ) {
-
-        if( value instanceof Serializable || value == null ) {
-            return value
-        }
-
-        if( value instanceof Path ) {
-            return new SafePath(value)
-        }
-
-        if( value instanceof BlankSeparatedList ) {
-            return new SafeList(value)
-        }
-
-        return value
-    }
 
     @PackageScope
     static String dumpMap( Map map ) {
@@ -165,84 +127,9 @@ class DelegateMap implements Map {
      * @return A new {@code DelegateMap} instance holding the values read from map file
      */
     static DelegateMap read( TaskProcessor processor, Path contextFile ) {
-        def map = (Map)SerializationUtils.deserialize( contextFile.bytes )
-        map.each {  key, value ->
-            if( value instanceof SafePath )
-                map[key] = value.toPath()
-            else if( value instanceof SafeList )
-                map[key] = value.toList()
-        }
+
+        def map = (Map)KryoHelper.read(contextFile)
         new DelegateMap(processor, map)
-    }
-
-
-    /**
-     * Wrapper class to serialize a Path storing its URI representation
-     *
-     * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
-     */
-    @Slf4j
-    @EqualsAndHashCode
-    static final class SafePath implements Serializable {
-
-        private static final long serialVersionUID = - 2333294071875114518L ;
-
-        String scheme
-        String path
-
-        SafePath(Path target) {
-            scheme = target.getFileSystem().provider().getScheme()
-            path = target.toString()
-        }
-
-        public Path toPath() {
-
-            if( "file".equalsIgnoreCase(scheme) ) {
-                return FileSystems.getDefault().getPath(path)
-            }
-
-            // try to find provider
-            for (FileSystemProvider provider: FileSystemProvider.installedProviders()) {
-                if (provider.getScheme().equalsIgnoreCase(scheme)) {
-                    return provider.getPath(new URI(path))
-                }
-            }
-
-            throw new FileSystemNotFoundException("Provider \"$scheme\" not installed");
-        }
-    }
-
-    /**
-     * Holds a list that can be safely serialised
-     */
-    static final class SafeList implements Serializable {
-
-        private static final long serialVersionUID = 2310939302448910665L ;
-
-        final List target
-
-        SafeList( BlankSeparatedList list ) {
-            target = new ArrayList<>(list.size())
-            list.eachWithIndex { entry, int i ->
-                target[i] = safeItem(entry)
-            }
-        }
-
-        /**
-         * @return back the list as a {@code BlankSeparatedList} instance
-         */
-        BlankSeparatedList toList() {
-            def copy = new ArrayList(target.size())
-            target.each {
-
-                if( it instanceof SafePath )
-                    copy.add(it.toPath())
-                else
-                    copy.add(it)
-            }
-
-            return new BlankSeparatedList(copy)
-        }
 
     }
 
