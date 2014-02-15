@@ -278,7 +278,7 @@ class GridTaskHandler extends TaskHandler {
         this.exitFile = task.getCmdExitFile()
         this.outputFile = task.getCmdOutputFile()
         this.wrapperFile = task.getCmdWrapperFile()
-        this.exitStatusReadTimeoutMillis = (executor.session?.getExitReadTimeout(executor.name,READ_TIMEOUT) ?: READ_TIMEOUT).toMillis()
+        this.exitStatusReadTimeoutMillis = (executor.session?.getExitReadTimeout(executor.name) ?: READ_TIMEOUT).toMillis()
     }
 
     /*
@@ -351,13 +351,18 @@ class GridTaskHandler extends TaskHandler {
      */
     protected Integer readExitStatus() {
 
-        // -- fetch the job status before return a result
-        final active = executor.checkActiveStatus(jobId)
-
         /*
          * when the file does not exist return null, to force the monitor to continue to wait
          */
         if( !exitFile || !exitFile.exists() ) {
+            // -- fetch the job status before return a result
+            final active = executor.checkActiveStatus(jobId)
+
+            // --
+            def elapsed = System.currentTimeMillis() - startFile.lastModified()
+            if( elapsed < executor.queueInterval.toMillis() * 2.5 ) {
+                return null
+            }
 
             // -- if the job is active, this means that it is still running and thus the exit file cannot exist
             //    returns null to continue to wait
