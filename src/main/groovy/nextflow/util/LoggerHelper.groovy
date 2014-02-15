@@ -36,6 +36,7 @@ import ch.qos.logback.core.rolling.RollingFileAppender
 import ch.qos.logback.core.rolling.TriggeringPolicyBase
 import ch.qos.logback.core.spi.FilterReply
 import nextflow.Const
+import org.apache.commons.lang.exception.ExceptionUtils
 import org.slf4j.LoggerFactory
 
 /**
@@ -213,6 +214,27 @@ class LoggerHelper {
             return false;
         }
 
+    }
+
+
+
+    /**
+     * Find out the script line where the error has thrown
+     */
+    static errorMessage( Throwable e ) {
+
+        def pattern = ~/.*_run_closure\d+\.doCall\((.+\.nf:\d*)\).*/
+        def lines = ExceptionUtils.getStackTrace(e).split('\n')
+        def error = null
+        for( String str : lines ) {
+            def m = pattern.matcher(str)
+            if( m.matches() ) {
+                error = m.group(1)
+                break
+            }
+        }
+
+        return (e.message ?: e.toString()) + ( error ? " at $error" : '' )
     }
 
 }
