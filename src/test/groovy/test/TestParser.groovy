@@ -18,7 +18,6 @@
  */
 
 package test
-
 import java.nio.file.Path
 
 import nextflow.Channel
@@ -31,7 +30,6 @@ import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
-
 /**
  * An helper class to parse nextflow script snippets
  *
@@ -39,11 +37,20 @@ import org.codehaus.groovy.control.customizers.ImportCustomizer
  */
 class TestParser {
 
-    def session = new Session()
+    def session
 
     def Closure<CustomLexer> lexerFactory
 
-    def parseScript ( String scriptText, Map map ) {
+    TestParser( Map session = null ) {
+        this.session = session ? new Session(session) : new Session()
+    }
+
+    TestParser( Session session1 ) {
+        this.session = session1
+    }
+
+
+    def parseScript ( String scriptText, Map map = null ) {
         parseScript(scriptText, new Binding(map))
     }
 

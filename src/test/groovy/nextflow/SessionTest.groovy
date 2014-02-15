@@ -45,7 +45,7 @@ class SessionTest extends Specification {
 
         when:
         def session = [:] as Session
-        session.config = [ executor:[sge:[queueSize: 123] ] ]
+        session.config = [ executor:['$sge':[queueSize: 123] ] ]
         then:
         session.getQueueSize('sge', 1) == 123
         session.getQueueSize('xxx', 1) == 1
@@ -53,7 +53,7 @@ class SessionTest extends Specification {
 
         when:
         def session2 = [:] as Session
-        session2.config = [ executor:[ queueSize: 321, sge:[queueSize:789] ] ]
+        session2.config = [ executor:[ queueSize: 321, '$sge':[queueSize:789] ] ]
         then:
         session2.getQueueSize('sge', 2) == 789
         session2.getQueueSize('xxx', 2) == 321
@@ -75,7 +75,7 @@ class SessionTest extends Specification {
 
         when:
         def session1 = [:] as Session
-        session1.config = [ executor:[sge:[pollInterval: 345] ] ]
+        session1.config = [ executor:['$sge':[pollInterval: 345] ] ]
         then:
         session1.getPollInterval('sge').toMillis() == 345
         session1.getPollInterval('xxx').toMillis() == 1_000
@@ -84,7 +84,7 @@ class SessionTest extends Specification {
 
         when:
         def session2 = [:] as Session
-        session2.config = [ executor:[ pollInterval: 321, sge:[pollInterval:789] ] ]
+        session2.config = [ executor:[ pollInterval: 321, '$sge':[pollInterval:789] ] ]
         then:
         session2.getPollInterval('sge').toMillis() == 789
         session2.getPollInterval('xxx').toMillis() == 321
@@ -104,7 +104,7 @@ class SessionTest extends Specification {
 
         setup:
         def session1 = [:] as Session
-        session1.config = [ executor:[sge:[exitReadTimeout: '5s'] ] ]
+        session1.config = [ executor:['$sge':[exitReadTimeout: '5s'] ] ]
 
         expect:
         session1.getExitReadTimeout('sge') == '5sec' as Duration
@@ -116,7 +116,7 @@ class SessionTest extends Specification {
 
         setup:
         def session1 = [:] as Session
-        session1.config = [ executor:[sge:[queueStatInterval: '4sec'] ] ]
+        session1.config = [ executor:['$sge':[queueStatInterval: '4sec'] ] ]
 
         expect:
         session1.getQueueStatInterval('sge') == '4sec' as Duration
@@ -128,7 +128,7 @@ class SessionTest extends Specification {
 
         setup:
         def session1 = [:] as Session
-        session1.config = [ executor:[sge:[dumpInterval: '6sec'] ] ]
+        session1.config = [ executor:['$sge':[dumpInterval: '6sec'] ] ]
 
         expect:
         session1.getMonitorDumpInterval('sge') == '6sec' as Duration

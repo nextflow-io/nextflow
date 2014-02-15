@@ -18,11 +18,16 @@
  */
 
 package nextflow.script
+
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.Session
 import nextflow.exception.MissingLibraryException
+import nextflow.processor.TaskConfig
+import nextflow.processor.TaskProcessor
 import spock.lang.Specification
+import test.TestParser
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -505,6 +510,47 @@ class CliRunnerTest extends Specification {
         path1.deleteDir()
         path2.deleteDir()
 
+
+    }
+
+    def testProcessNameOptions ( ) {
+
+        setup:
+        // -- this represent the configuration file
+        def config = '''
+            executor = 'nope'
+
+            process.delta = '333'
+            process.$hola.beta = '222'
+            process.$hola.gamma = '555'
+
+            process.$ciao.beta = '999'
+
+            '''
+
+        def script = '''
+            process hola {
+              alpha 1
+              beta 2
+
+              input:
+              val x
+
+              return ''
+            }
+            '''
+
+        def session = new Session( new ConfigSlurper().parse(config))
+
+        when:
+        TaskProcessor process = new TestParser(session).parseScript(script).run()
+
+        then:
+        process.taskConfig instanceof TaskConfig
+        process.taskConfig.alpha == 1
+        process.taskConfig.beta == '222'  // !! this value is overridden by the one in the config file
+        process.taskConfig.delta == '333'
+        process.taskConfig.gamma == '555'
 
     }
 

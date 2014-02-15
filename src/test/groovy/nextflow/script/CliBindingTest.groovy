@@ -20,6 +20,7 @@
 package nextflow.script
 
 import nextflow.Session
+import nextflow.util.ReadOnlyMap
 import spock.lang.Specification
 /**
  *
@@ -62,8 +63,8 @@ class CliBindingTest extends Specification {
     def 'test read only map ' () {
 
         setup:
-        CliBinding.ReadOnlyMap map1 = new CliBinding.ReadOnlyMap([:], ['x','y'])
-        CliBinding.ReadOnlyMap map2 = new CliBinding.ReadOnlyMap([x:1,y:2,z:3])
+        ReadOnlyMap map1 = new ReadOnlyMap([:], ['x','y'])
+        ReadOnlyMap map2 = new ReadOnlyMap([x:1,y:2,z:3])
 
         when:
         map1.x = 10

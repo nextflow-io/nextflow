@@ -41,6 +41,7 @@ import nextflow.script.ValueSharedParam
 import nextflow.util.Duration
 import nextflow.util.HashMode
 import nextflow.util.MemoryUnit
+import nextflow.util.ReadOnlyMap
 
 /**
  * Holds the task configuration properties
@@ -61,12 +62,16 @@ class TaskConfig implements Map {
 
     /**
      * Initialize the taskConfig object with the defaults values
+     *
+     * @param script The owner {@code BaseScript} configuration object
+     * @param important The values specified by this map won't be overridden by attributes
+     *      having the same name defined at the task level
      */
-    TaskConfig( BaseScript script ) {
+    TaskConfig( BaseScript script, Map important = null ) {
 
         ownerScript = script
 
-        configProperties = new LinkedHashMap()
+        configProperties = important ? new ReadOnlyMap(important) : new LinkedHashMap()
         configProperties.with {
             echo = false
             undef = false

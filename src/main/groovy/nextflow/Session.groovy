@@ -36,6 +36,7 @@ import nextflow.processor.TaskDispatcher
 import nextflow.util.Duration
 
 /**
+ * Holds the information on the current execution
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -115,6 +116,7 @@ class Session {
 
     private volatile ExecutorService execService
 
+    /* Poor man singleton object */
     static Session currentInstance
 
     /**
@@ -235,8 +237,8 @@ class Session {
         // make sure that the *executor* is a map object
         // it could also be a plain string (when it specifies just the its name)
         if( config.executor instanceof Map ){
-            if( execName && config.executor[execName] instanceof Map ) {
-                result = config.executor[execName][propName]
+            if( execName && config.executor['$'+execName] instanceof Map ) {
+                result = config.executor['$'+execName][propName]
             }
 
             if( result==null && config.executor[propName] ) {
@@ -254,26 +256,62 @@ class Session {
 
     }
 
+    /**
+     * Defines the number of tasks the executor will handle in a parallel manner
+     *
+     * @param execName The executor name
+     * @param defValue The default value if setting is not defined in the configuration file
+     * @return The value of tasks to handle in parallel
+     */
     @Memoized
     public int getQueueSize( String execName, int defValue ) {
         getExecConfigProp(execName, 'queueSize', defValue) as int
     }
 
+    /**
+     * Determines how often a poll occurs to check for a process termination
+     *
+     * @param execName The executor name
+     * @param defValue The default value if setting is not defined in the configuration file
+     * @return A {@code Duration} object. Default '1 second'
+     */
     @Memoized
     public Duration getPollInterval( String execName, Duration defValue = Duration.of('1sec') ) {
         getExecConfigProp( execName, 'pollInterval', defValue ) as Duration
     }
 
+    /**
+     *  Determines how long the executors waits before return an error status when a process is
+     *  terminated but the exit file does not exist or it is empty. This setting is used only by grid executors
+     *
+     * @param execName The executor name
+     * @param defValue The default value if setting is not defined in the configuration file
+     * @return A {@code Duration} object. Default '90 second'
+     */
     @Memoized
     public Duration getExitReadTimeout( String execName, Duration defValue = Duration.of('90sec') ) {
         getExecConfigProp( execName, 'exitReadTimeout', defValue ) as Duration
     }
 
+    /**
+     * Determines how often the executor status is written in the application log file
+     *
+     * @param execName The executor name
+     * @param defValue The default value if setting is not defined in the configuration file
+     * @return A {@code Duration} object. Default '5 minutes'
+     */
     @Memoized
     public Duration getMonitorDumpInterval( String execName, Duration defValue = Duration.of('5min')) {
         getExecConfigProp(execName, 'dumpInterval', defValue) as Duration
     }
 
+    /**
+     * Determines how often the queue status is fetched from the cluster system. This setting is used only by grid executors
+     *
+     * @param execName The executor name
+     * @param defValue  The default value if setting is not defined in the configuration file
+     * @return A {@code Duration} object. Default '1 minute'
+     */
     @Memoized
     public Duration getQueueStatInterval( String execName, Duration defValue = Duration.of('1min') ) {
         getExecConfigProp(execName, 'queueStatInterval', defValue) as Duration

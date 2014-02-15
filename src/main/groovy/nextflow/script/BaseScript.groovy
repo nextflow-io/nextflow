@@ -215,16 +215,40 @@ abstract class BaseScript extends Script {
     private TaskProcessor createProcessor( String name, ScriptType type, Closure body, String source = null, Map options = null ) {
         assert body
 
-        def taskConfig = new TaskConfig(this)
-
-        // set 'default' properties defined in the configuration file in the 'task' section
-        if( config.process instanceof Map ) {
-            config.process .each { String key, value -> taskConfig.setProperty(key,value) }
+        /*
+         * check if exists 'attributes' defined in the 'process' scope for this process, e.g.
+         *
+         * process.$name.attribute1 = xxx
+         * process.$name.attribute2 = yyy
+         *
+         */
+        Map importantAttributes = null
+        if( config.process instanceof Map && config.process['$'+name] instanceof Map ) {
+            importantAttributes = (Map)config.process['$'+name]
         }
+
+        // -- the config object
+        def taskConfig = new TaskConfig(this, importantAttributes)
+
+        // -- set 'default' properties defined in the configuration file in the 'process' section
+        if( config.process instanceof Map ) {
+            config.process .each { String key, value ->
+                if( key.startsWith('$')) return
+                taskConfig.setProperty(key,value)
+            }
+        }
+
+        /*
+         * options that may be passed along the process declaration e.g.
+         *
+         * process name ( x: 1, ... ) {
+         *
+         * }
+         */
 
         options?.each { String key, value -> taskConfig.setProperty(key,value)}
 
-        // set the task name in the config object
+        // -- set the task name in the config object
         if( name ) {
             taskConfig.name = name
         }

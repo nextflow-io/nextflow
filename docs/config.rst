@@ -132,6 +132,27 @@ For examples::
 By using this configuration all processes in your pipeline will be executed through the SGE cluster, with the specified
 settings.
 
+It is possible to set the properties for a specific process in your pipeline by prefixing the process name with
+the symbol ``$`` and using it as special scope identifier. For example::
+
+  process.queue = 'short'
+  process.$hello.queue = 'long'
+
+
+The above configuration example sets the ``queue`` property to ``'short'`` as default value for all processes in your
+pipeline, but the process ``hello`` for which the ``queue`` property is set to ``'long'``.
+
+When using the curly brackets notation, the above can be written as shown below::
+
+  process {
+    queue = 'short'
+
+    $hello {
+        queue = 'long'
+    }
+  }
+
+
 
 Scope 'executor'
 ------------------
@@ -142,13 +163,42 @@ The ``executor`` configuration scope allows you to set the executor optional set
 Name                  Description
 ===================== =====================
 queueSize             The number of tasks the executor will handle in a parallel manner.
-pollInterval
-exitReadTimeout
-dumpInterval
-queueStatInterval
+pollInterval          Determines how often a poll occurs to check for a process termination.
+dumpInterval          Determines how often the executor status is written in the application log file (default: ``5min``)
+queueStatInterval     Determines how often the queue status is fetched from the cluster system. This setting is used only by grid executors (default: ``1min``)
+exitReadTimeout       Determines how long the executors waits before return an error status when a process is terminated but the `exit` file does not exist or it is empty. This setting is used only by grid executors (default: ``90sec``)
 ===================== =====================
 
 
+The executor settings can be defined as shown below::
+
+   executor {
+     queueSize = 200
+     pollInterval = '30 sec'
+   }
+
+
+When using two (or more) different executors in your pipeline, you can specify their settings separately by prefixing
+the executor name with the symbol ``$`` and using it as special scope identifier. For example::
+
+  executor {
+    $sge {
+        queueSize = 100
+        pollInterval = '30sec'
+    }
+
+    $local {
+        queueSize = 20
+        pollInterval = '1sec'
+    }
+  }
+
+The above configuration example can be rewritten using the dot notation as shown below::
+
+  executor.$sge.queueSize = 100
+  executor.$sge.pollInterval = '30sec'
+  executor.$local.queueSize = 10
+  executor.$local.pollInterval = '1sec'
 
 
 

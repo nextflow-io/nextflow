@@ -21,6 +21,7 @@ package nextflow.script
 
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.util.ReadOnlyMap
 import org.apache.commons.lang.StringUtils
 
 /**
@@ -99,38 +100,6 @@ class CliBinding extends Binding {
         session.config.env as Map
     }
 
-
-
-    /**
-     * A class for which value cannot be changed
-     */
-    static class ReadOnlyMap extends LinkedHashMap {
-
-        List<String> readOnlyNames
-
-        /**
-         * @param map0 Initial map values
-         * @param readOnlyNames1 The list of values that cannot be changed after obj construction,
-         *          when {@code null} all the value in the initial map cannot be changed
-         *
-         */
-        ReadOnlyMap( Map map0, List<String> readOnlyNames1 = null  ) {
-            super(map0)
-            readOnlyNames = new ArrayList( readOnlyNames1 != null ? readOnlyNames1 : map0.keySet() )
-        }
-
-        def put(Object name, Object value) {
-            final RO = name in readOnlyNames
-            if ( !RO ) {
-                super.put(name,value)
-            }
-        }
-
-        def force( Object name, Object value ) {
-            super.put(name,value)
-        }
-
-    }
 
     /**
      * Holds parameter immutable values
