@@ -63,6 +63,11 @@ class Session {
     def boolean cacheable
 
     /**
+     * whenever it has been launched in resume mode
+     */
+    def boolean resumeMode
+
+    /**
      * The script name
      */
     def String scriptName = 'script1'
