@@ -971,6 +971,10 @@ class DataflowExtensions {
         outputs
     }
 
+    static public final void separate( final DataflowQueue channel, DataflowWriteChannel out1, DataflowWriteChannel out2, Closure mapper ) {
+        channel.separate([out1,out2], mapper)
+    }
+
     static public final DataflowReadChannel spread( final DataflowReadChannel channel, Object other ) {
 
         DataflowQueue target = new DataflowQueue()
@@ -1499,6 +1503,10 @@ class DataflowExtensions {
         n.times { list << newChannelBy(source) }
         source.split(list)
         return list
+    }
+
+    public static void choice( DataflowReadChannel source, DataflowWriteChannel target1, DataflowWriteChannel target2, Closure<Integer> mapper ) {
+        source.choice([target1,target2], mapper)
     }
 
     public static DataflowReadChannel chopFasta( DataflowReadChannel source, Map options = [:] ) {
