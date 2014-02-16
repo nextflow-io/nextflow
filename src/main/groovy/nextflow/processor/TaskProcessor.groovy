@@ -732,11 +732,28 @@ abstract class TaskProcessor {
         if( task?.workDirectory )
             message << "\nWork dir:\n  ${task.workDirectory.toString()}"
 
-        message << "\nTip: when you have fixed the problem you can continue the execution appending to the nextflow command line the '-resume' option"
+        message << "\nTip: ${getRndTip()}"
 
         return message
     }
 
+    static List tips = [
+            'when you have fixed the problem you can continue the execution appending to the nextflow command line the option \'-resume\'',
+            "you can try to figure out what's wrong by changing to the process work dir and showing the script file named: '${TaskRun.CMD_SCRIPT}'",
+            "view the complete command output by changing to the process work dir and entering the command: 'cat ${TaskRun.CMD_OUTFILE}'",
+            "you can replicate the issue by changing to the process work dir and entering the command: 'bash ${TaskRun.CMD_RUN}'"
+    ]
+
+    static Random RND = Random.newInstance()
+
+    /**
+     * Display a random tip at the bottom of the error report
+     *
+     * @return The tip string to display
+     */
+    protected String getRndTip() {
+        tips[ RND.nextInt( tips.size() ) ]
+    }
 
 
     /**
