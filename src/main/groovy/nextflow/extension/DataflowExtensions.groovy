@@ -1568,4 +1568,39 @@ class DataflowExtensions {
 
     }
 
+
+    private static append( DataflowWriteChannel result, List<DataflowReadChannel> channels, int index ) {
+        def current = channels[index++]
+        def next = index < channels.size() ? channels[index] : null
+
+        current.subscribe ([
+                onNext: { result.bind(it) },
+                onComplete: {
+                    if(next) append(result, channels, index)
+                    else result.bind(Channel.STOP)
+                }
+        ])
+    }
+
+    /**
+     * Creates a channel that emits the items in same order as they are emitted by two or more channel
+     *
+     * @param source
+     * @param target
+     * @return
+     */
+    static final DataflowWriteChannel concat( DataflowReadChannel source, DataflowReadChannel... target ) {
+        assert source != null
+        assert target
+
+        final result = new DataflowQueue()
+        final allChannels = [source]
+        allChannels.addAll(target)
+
+        append(result, allChannels, 0)
+
+        return result
+    }
+
+
 }

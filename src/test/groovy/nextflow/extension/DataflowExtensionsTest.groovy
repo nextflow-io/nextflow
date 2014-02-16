@@ -1053,5 +1053,42 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    def testConcat() {
+
+        when:
+        def c1 = Channel.from(1,2,3)
+        def c2 = Channel.from('a','b','c')
+        def all = c1.concat(c2)
+        then:
+        all.val == 1
+        all.val == 2
+        all.val == 3
+        all.val == 'a'
+        all.val == 'b'
+        all.val == 'c'
+        all.val == Channel.STOP
+
+
+        when:
+        def d1 = Channel.create()
+        def d2 = Channel.from('a','b','c')
+        def d3 = Channel.create()
+        def result = d1.concat(d2,d3)
+
+        Thread.start { sleep 20; d3 << 'p' << 'q' << Channel.STOP }
+        Thread.start { sleep 100; d1 << 1 << 2 << Channel.STOP }
+
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 'a'
+        result.val == 'b'
+        result.val == 'c'
+        result.val == 'p'
+        result.val == 'q'
+        result.val == Channel.STOP
+
+    }
+
 
 }
