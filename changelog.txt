@@ -1,6 +1,22 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.6.1 - 16 Feb 2014
+- Added operator 'cross()'
+- Added operator 'collate()'
+- Added options 'remainder' to 'buffer()' operator
+- Added 'deep' option to cache directive in order to index file content.
+- Added Kryo based serialization
+- Added 'storeDir' process directive to cache process results permanently
+- Added 'watch' channel factory method that watches for files changes
+- Added parametric input/output file names
+- Renaming "mapMany" to "flatMap"
+- Enhanced stability for grid executors
+- SGE executor periodically invokes the 'qstat' command to fetch the queue jobs status
+- Processes and executors can be configured separately in the configuration file by using the $name special scope
+- Completed Path methods extension equivalent to legacy File
+- Reporting a random tip when a process fail
+
 0.6.0 - 16 Jan 2014
 - New channel factory methods
 - New reactive operators on channel objects (similar to RxJava)
