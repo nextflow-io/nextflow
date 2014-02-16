@@ -20,6 +20,14 @@ Channel factory
 Channels may be created implicitly by the process output(s) declaration or explicitly using the following channel
 factory methods.
 
+The available factory methods are:
+
+* `create( )`_
+* `from( )`_
+* `just( )`_
+* `path( )`_
+* `watch( )`_
+
 
 create( )
 ---------
@@ -32,7 +40,7 @@ Creates a new `channel` by using the method ``create( )`` method, as showed belo
 from( )
 -------
 
-You can create transform any object that supports ``Iterable`` into a channel by using the ``from( )`` method.
+You can create transform any object that supports ``Collection`` into a channel by using the ``from( )`` method.
 Each iterable item is send over the newly created channel. For example::
 
     // creating a channel by a generic iterable object
@@ -100,6 +108,45 @@ In order the include hidden files you need to start your pattern with a period c
     // returns all files (hidden and non-hidden)
     myFileChannel = Channel.path( '/path/{.*,*}' )
 
+
+Learn more about `glob` patterns at `this link <http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob>`_
+
+watch( )
+---------
+
+The ``watch`` factory method watches a folder for one or more files matching a specified pattern. As soon as a
+there is a file that meets the specified condition, this file is emitted over the channel returned by the ``watch`` method.
+For example::
+
+     Channel
+        .watch( '/path/*.fa' )
+        .subscribe { println "Fasta file: $it" }
+
+
+By default it watches only for new files created in the specified folder. Optionally, it is possible to provide a
+second argument that specifies what event(s) to watch. The supported events are:
+
+=========== ================
+Name        Description
+=========== ================
+``create``  A new file is created (default)
+``modify``  A file is modified
+``delete``  A file is deleted
+=========== ================
+
+You can specified one more of these events by using a comma separated string, as shown below::
+
+     Channel
+        .watch( '/path/*.fa', 'create,modify' )
+        .subscribe { println "File created or modified: $it" }
+
+
+.. warning:: The ``watch`` factory wait endlessly for files that matches the specified pattern and event(s).
+  Thus, whenever you use it in your script, the resulting pipeline will never finish.
+
+See also: `path( )`_ factory method
+
+Learn more about `glob` patterns at `this link <http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob>`_
 
 
 Binding values

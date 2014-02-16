@@ -1,8 +1,13 @@
 package nextflow
+import static java.nio.file.StandardWatchEventKinds.*
+
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
+import java.nio.file.WatchEvent
+import java.nio.file.WatchKey
+import java.nio.file.WatchService
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.regex.Pattern
 
@@ -144,7 +149,7 @@ class Channel {
         boolean glob  = false
         glob |= filePattern.contains('*')
         glob |= filePattern.contains('?')
-        glob = glob ||  filePattern ==~ /.*\{.+\,.+\}.*/
+        glob = glob || filePattern ==~ /.*\{.+,.+\}.*/
 
         if( !glob ) {
             return from( filePattern as Path )
@@ -156,14 +161,23 @@ class Channel {
         filesImpl('glob', folder, pattern, pattern.startsWith('*')  )
     }
 
+    /**
+     * Implement the logic for files matching
+     *
+     * @param syntax The "syntax" to match file names, either {@code regex} or {@code glob}
+     * @param folder The parent folder
+     * @param pattern The file name pattern
+     * @param skipHidden Whenever skip the hidden files
+     * @return A dataflow channel instance emitting the file matching the specified criteria
+     */
     static private DataflowChannel<Path> filesImpl( String syntax, String folder, String pattern, boolean skipHidden )  {
         assert syntax in ['regex','glob']
         log.debug "files for syntax: $syntax; folder: $folder; pattern: $pattern; skipHidden: $skipHidden"
 
         // now apply glob file search
         def path = folder as Path
-        def glob = "$syntax:${folder}${pattern}"
-        def matcher = path.getFileSystem().getPathMatcher(glob)
+        def rule = "$syntax:${folder}${pattern}"
+        def matcher = path.getFileSystem().getPathMatcher(rule)
         def channel = new DataflowQueue<Path>()
 
         Thread.start {
@@ -172,7 +186,7 @@ class Channel {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attr) throws IOException {
                     if (matcher.matches(file) && ( !skipHidden || !Files.isHidden(file) )) {
-                        channel.bind(file)
+                        channel.bind(file.toAbsolutePath())
                     }
                     return FileVisitResult.CONTINUE;
                 }
@@ -214,7 +228,7 @@ class Channel {
             pattern = filePattern.substring(i+1)
         }
         else {
-            folder = '.'
+            folder = './'
             pattern = filePattern
         }
 
@@ -259,5 +273,141 @@ class Channel {
         return (DataflowQueue) source.chopFasta(options, closure)
     }
 
+    static private DataflowChannel<Path> watchImpl( String syntax, String folder, String pattern, boolean skipHidden, String events ) {
+        assert syntax in ['regex','glob']
+        log.debug "Watch service for path: $folder; syntax: $syntax; pattern: $pattern; skipHidden: $skipHidden; events: $events"
+
+        // now apply glob file search
+        final path = folder as Path
+        final rule = "$syntax:${folder}${pattern}"
+        final matcher = path.getFileSystem().getPathMatcher(rule)
+        final eventsToWatch = stringToWatchEvents(events)
+        final result = create()
+
+        Thread.start {
+            WatchService watcher = path.getFileSystem().newWatchService()
+            path.register(watcher, eventsToWatch)
+
+            while( true ) {
+                // wait for key to be signaled
+                try {
+                    WatchKey key = watcher.take();
+
+                    for (WatchEvent<?> event: key.pollEvents()) {
+                        WatchEvent.Kind<?> kind = event.kind();
+
+                        if( kind == OVERFLOW ) {
+                            log.debug "Watcher on path > $path -- get a OVERFLOW event"
+                            continue
+                        }
+
+                        // The filename is the context of the event.
+                        Path fileName = (event as WatchEvent<Path>).context();
+                        log.trace "Watcher path > $path -- event: $kind; fileName: $fileName"
+                        Path target = path.resolve(fileName)
+
+                        if (matcher.matches(target) && ( !skipHidden || !Files.isHidden(target) )) {
+                            log.trace "File watcher: $target matching: $rule -- event: $kind"
+                            result.bind(target.toAbsolutePath())
+                        }
+
+                    }
+
+                    // Reset the key -- this step is critical if you want to
+                    // receive further watch events.  If the key is no longer valid,
+                    // the directory is inaccessible so exit the loop.
+                    boolean valid = key.reset();
+                    if (!valid) {
+                        break;
+                    }
+                }
+                catch (Exception e) {
+                    log.debug "Exception while watching path: $path", e
+                    return;
+                }
+
+            }
+        }
+
+        return result
+    }
+
+
+    /**
+     * Watch the a folder for the specified events emitting the files that matches
+     * the specified regular expression.
+     *
+     *
+     * @param filePattern
+     *          The file pattern to match e.g. /*.fasta/
+     *
+     * @param events
+     *          The events to watch, a comma separated string of the following values:
+     *          {@code create}, {@code modify}, {@code delete}
+     *
+     * @return  A dataflow channel that will emit the matching files
+     *
+     */
+    static DataflowChannel<Path> watch( Pattern filePattern, String events = 'create' ) {
+        assert filePattern
+        // split the folder and the pattern
+        def ( String folder, String pattern ) = getFolderAndPattern(filePattern.toString())
+        watchImpl( 'regex', folder, pattern, false, events )
+    }
+
+    /**
+     * Watch the a folder for the specified events emitting the files that matches
+     * the specified {@code glob} pattern.
+     *
+     * @link http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
+     *
+     * @param filePattern
+     *          The file pattern to match e.g. /some/path/*.fasta
+     *
+     * @param events
+     *          The events to watch, a comma separated string of the following values:
+     *          {@code create}, {@code modify}, {@code delete}
+     *
+     * @return  A dataflow channel that will emit the matching files
+     *
+     */
+    static DataflowChannel<Path> watch( String filePattern, String events = 'create' ) {
+        def ( String folder, String pattern ) = getFolderAndPattern(filePattern)
+        watchImpl('glob', folder, pattern, pattern.startsWith('*'), events)
+    }
+
+
+
+    static private EVENT_MAP = [
+            'create':ENTRY_CREATE,
+            'delete':ENTRY_DELETE,
+            'modify':ENTRY_MODIFY
+    ]
+
+    /**
+     * Converts a comma separated events string to the corresponding {@code WatchEvent.Kind} instances
+     *
+     * @param events the list of events to watch
+     * @return
+     */
+    @PackageScope
+    static WatchEvent.Kind<Path>[]  stringToWatchEvents(String events = null){
+        def result = []
+        if( !events )
+            result << ENTRY_CREATE
+
+        else {
+            events.split(',').each {
+                def ev = it.trim().toLowerCase()
+                def val = EVENT_MAP[ev]
+                if( !val )
+                    throw new IllegalArgumentException("Invalid watch event: $it -- Valid values are: ${EVENT_MAP.keySet().join(', ')}")
+                result << val
+            }
+        }
+
+        result as WatchEvent.Kind<Path>[]
+
+    }
 
 }

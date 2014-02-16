@@ -1,6 +1,7 @@
 package nextflow
 import java.nio.file.Files
 import java.nio.file.Paths
+import static java.nio.file.StandardWatchEventKinds.*
 
 import spock.lang.Specification
 /**
@@ -16,12 +17,15 @@ class ChannelTest extends Specification {
         Channel.getFolderAndPattern( '/some/file/*.txt' ) == ['/some/file/', '*.txt']
         Channel.getFolderAndPattern( '/some/file/*' ) == ['/some/file/', '*']
         Channel.getFolderAndPattern( '/some/file/' ) == ['/some/file/', '']
+        Channel.getFolderAndPattern( 'path/filename.txt' ) == ['path/', 'filename.txt']
+        Channel.getFolderAndPattern( 'filename.txt' ) == ['./', 'filename.txt']
+        Channel.getFolderAndPattern( './file.txt' ) == ['./', 'file.txt']
 
         Channel.getFolderAndPattern( '/some/file/**/*.txt' ) == ['/some/file/', '**/*.txt']
 
         Channel.getFolderAndPattern( 'dxfs:///some/file/**/*.txt' ) == ['dxfs:///some/file/', '**/*.txt']
         Channel.getFolderAndPattern( 'dxfs://some/file/**/*.txt' ) == ['dxfs://some/file/', '**/*.txt']
-        Channel.getFolderAndPattern( 'dxfs://*.txt' ) == ['dxfs://.', '*.txt']
+        Channel.getFolderAndPattern( 'dxfs://*.txt' ) == ['dxfs://./', '*.txt']
         Channel.getFolderAndPattern( 'dxfs:///*.txt' ) == ['dxfs:///', '*.txt']
         Channel.getFolderAndPattern( 'dxfs:///**/*.txt' ) == ['dxfs:///', '**/*.txt']
     }
@@ -192,6 +196,20 @@ class ChannelTest extends Specification {
         result.val .id == '1aboA'
         result.val .id == '1ycsB'
         result.val == Channel.STOP
+
+    }
+
+    def testStringEvents() {
+
+        when:
+        Channel.stringToWatchEvents('xxx')
+        then:
+        thrown(IllegalArgumentException)
+
+        expect:
+        Channel.stringToWatchEvents() == [ ENTRY_CREATE ]
+        Channel.stringToWatchEvents('create,delete') == [ENTRY_CREATE, ENTRY_DELETE]
+        Channel.stringToWatchEvents('Create , MODIFY ') == [ENTRY_CREATE, ENTRY_MODIFY]
 
     }
 
