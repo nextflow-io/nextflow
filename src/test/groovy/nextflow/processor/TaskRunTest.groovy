@@ -1,5 +1,6 @@
 package nextflow.processor
 
+import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.script.EnvInParam
@@ -12,7 +13,6 @@ import nextflow.script.TokenVar
 import nextflow.script.ValueInParam
 import nextflow.script.ValueOutParam
 import spock.lang.Specification
-
 /**
  *
  *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -128,7 +128,15 @@ class TaskRunTest extends Specification {
     def testDumpStdout() {
 
         setup:
+        def file = Files.createTempFile('dumptest',null)
         def task = new TaskRun()
+
+        when:
+        task.stdout = '1\n2'
+        then:
+        task.dumpStdout(5) == ['1','2']
+
+        when:
         task.stdout = """
             1
             2
@@ -140,21 +148,31 @@ class TaskRunTest extends Specification {
             8
             9
             """.stripIndent()
+        then:
+        task.dumpStdout(5) == ['5','6','7','8','9']
+
 
         when:
-        def lines = []
-        def count = task.dumpStdout(lines, 5)
-
+        task = new TaskRun()
+        task.stdout = file
+        file.text = """
+            a
+            b
+            c
+            d
+            e
+            f
+            g
+            h
+            i
+            """.stripIndent()
         then:
-        count == 5
-        lines.size() == 5
-        lines[0] == '  '
-        lines[1] == '  1'
-        lines[2] == '  2'
-        lines[3] == '  3'
-        lines[4] == '  4'
+        task.dumpStdout(5) == ['e','f','g','h','i']
 
 
+
+        cleanup:
+        file?.delete()
 
     }
 

@@ -554,5 +554,54 @@ class CliRunnerTest extends Specification {
 
     }
 
+    def testProcessNameOptions2( ) {
+
+        setup:
+        // -- this represent the configuration file
+        def config = '''
+            executor = 'nope'
+
+            process {
+                delta = '333'
+
+                $hola {
+                    beta = '222'
+                    gamma = '555'
+                }
+
+                $ciao {
+                    beta = '999'
+                }
+            }
+
+
+            '''
+
+        def script = '''
+            process hola {
+              alpha 1
+              beta 2
+
+              input:
+              val x
+
+              return ''
+            }
+            '''
+
+        def session = new Session( new ConfigSlurper().parse(config))
+
+        when:
+        TaskProcessor process = new TestParser(session).parseScript(script).run()
+
+        then:
+        process.taskConfig instanceof TaskConfig
+        process.taskConfig.alpha == 1
+        process.taskConfig.beta == '222'  // !! this value is overridden by the one in the config file
+        process.taskConfig.delta == '333'
+        process.taskConfig.gamma == '555'
+
+    }
+
 
 }

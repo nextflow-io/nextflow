@@ -23,6 +23,7 @@ import java.nio.file.Files
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
+import nextflow.util.Duration
 import spock.lang.Specification
 /**
  *
@@ -72,7 +73,8 @@ class GridExecutorTest extends Specification {
         setup:
         def task = Mock(TaskRun)
         def config = Mock(TaskConfig)
-        def executor = Mock(AbstractGridExecutor)
+        def executor = [:] as AbstractGridExecutor
+        executor.queueInterval = Duration.of('1min')
 
         when:
         def handler = new GridTaskHandler(task, config, executor)

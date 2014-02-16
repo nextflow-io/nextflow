@@ -359,7 +359,7 @@ class GridTaskHandler extends TaskHandler {
             final active = executor.checkActiveStatus(jobId)
 
             // --
-            def elapsed = System.currentTimeMillis() - startFile.lastModified()
+            def elapsed = System.currentTimeMillis() - (startFile?.lastModified() ?: 0)
             if( elapsed < executor.queueInterval.toMillis() * 2.5 ) {
                 return null
             }
