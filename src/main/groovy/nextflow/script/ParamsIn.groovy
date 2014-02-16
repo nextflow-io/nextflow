@@ -173,8 +173,8 @@ abstract class BaseParam {
         if( context && context.containsKey(name) )
             return context.get(name)
 
-        if( binding.hasVariable(name) )
-            return binding.getVariable(name)
+//        if( binding.hasVariable(name) )
+//            return binding.getVariable(name)
 
         if( strict )
             throw new MissingPropertyException(name)

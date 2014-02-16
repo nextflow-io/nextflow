@@ -125,7 +125,6 @@ class ParamsOutTest extends Specification {
 
         setup:
         def text = '''
-            z = /script_file/
 
             process hola {
               output:
@@ -142,7 +141,7 @@ class ParamsOutTest extends Specification {
 
         def binding = [:]
         TaskProcessor process = parse(text, binding).run()
-        def ctx = [x: 'hola', y:99]
+        def ctx = [x: 'hola', y:99, z:'script_file']
 
         when:
         FileOutParam out1 = process.taskConfig.getOutputs().get(0)

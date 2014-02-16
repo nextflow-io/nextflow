@@ -30,6 +30,7 @@ class SessionTest extends Specification {
         session.binDir == null
 
         when:
+        session = new Session()
         session.baseDir = base
         then:
         session.baseDir == base

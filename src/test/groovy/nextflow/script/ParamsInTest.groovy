@@ -183,10 +183,9 @@ class ParamsInTest extends Specification {
 
     def testInputFilesWithGString() {
         setup:
-        def ctx = [y: 'hello', z:'the_file_name']
+        def ctx = [x: 'main.txt', y: 'hello', z:'the_file_name']
         def text = '''
             q = java.nio.file.Paths.get('file.txt')
-            x = 'main.txt'
 
             process hola {
               input:
@@ -382,7 +381,6 @@ class ParamsInTest extends Specification {
 
         setup:
         def text = '''
-            x = 'the_file'
             q = 'the file content'
 
             process hola {
@@ -400,20 +398,21 @@ class ParamsInTest extends Specification {
         SetInParam in1 = process.taskConfig.getInputs().get(0)
         SetInParam in2 = process.taskConfig.getInputs().get(1)
         SetInParam in3 = process.taskConfig.getInputs().get(2)
+        def ctx = [x:'the_file']
 
         then:
         in1.inChannel.val == 'the file content'
         in1.inner[0] instanceof FileInParam
         (in1.inner[0] as FileInParam).name == 'name_$x'
-        (in1.inner[0] as FileInParam).filePattern == 'name_$x'
+        (in1.inner[0] as FileInParam).getFilePattern(ctx) == 'name_$x'
 
         in2.inner[0] instanceof FileInParam
         (in2.inner[0] as FileInParam).name == 'name_$x.txt'
-        (in2.inner[0] as FileInParam).filePattern == 'name_the_file.txt'
+        (in2.inner[0] as FileInParam).getFilePattern(ctx) == 'name_the_file.txt'
 
         in3.inner[0] instanceof FileInParam
         (in3.inner[0] as FileInParam).name == 'hola_$x'
-        (in3.inner[0] as FileInParam).filePattern == 'hola_the_file'
+        (in3.inner[0] as FileInParam).getFilePattern(ctx) == 'hola_the_file'
 
     }
 
