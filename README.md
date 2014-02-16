@@ -27,8 +27,8 @@ to which is added the ability to coordinate and synchronize the processes execut
 Quick start
 -----------
 
-Nextflow does not require any installation procedure, just download the <a href="http://goo.gl/062sh" target='_blank'>executable package here</a> and
-save it somewhere on your computer.
+Nextflow does not require any installation procedure, just download the executable package at the
+[Github releases page](https://github.com/nextflow-io/nextflow/releases) and save it somewhere on your computer.
 
 Grant the execute permission to the downloaded package using the following command `chmod +x nextflow`, after that you are ready to use it.
 You can to execute the command `nextflow -h` to show the program help.
@@ -179,8 +179,9 @@ Read more about the building procedure in the following section.
 Build from source
 -----------------
 
-*Nextflow* is written in [Groovy](groovy.codehaus.org) (a scripting language for the JVM). A precompiled, ready-to-run,
-package is available at this link http://goo.gl/062sh, thus it is not necessary to compile it in order to use it. 
+*Nextflow* is written in [Groovy](http://groovy.codehaus.org) (a scripting language for the JVM). A precompiled,
+ready-to-run, package is available at the [Github releases page](https://github.com/nextflow-io/nextflow/releases),
+thus it is not necessary to compile it in order to use it.
 
 If you are interested in modifying the source code, or contributing to the project, it worth knowing that 
 the build process is based on the [Gradle](http://www.gradle.org/) build automation system. 
