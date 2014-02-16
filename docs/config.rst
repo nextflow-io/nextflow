@@ -157,7 +157,7 @@ When using the curly brackets notation, the above can be written as shown below:
 Scope 'executor'
 ------------------
 
-The ``executor`` configuration scope allows you to set the executor optional settings, listed in the following table.
+The ``executor`` configuration scope allows you to set the optional executor settings, listed in the following table.
 
 ===================== =====================
 Name                  Description
