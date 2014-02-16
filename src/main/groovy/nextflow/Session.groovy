@@ -83,23 +83,6 @@ class Session {
      */
     def File baseDir
 
-    /**
-     * The folder where script binaries file are located, by default the folder 'bin'
-     * in the script base directory
-     */
-    @Lazy
-    File binDir = {
-        if( !baseDir ) {
-            log.debug "Script base directory is null";
-            return null
-        }
-        def path = new File(baseDir, 'bin')
-        if( !path.exists() || !path.isDirectory() ) {
-            log.debug "Script base path does not exist or is not a directory: ${path}"
-            return null
-        }
-        return path
-    }()
 
     /**
      * The unique identifier of this session
@@ -174,6 +157,26 @@ class Session {
 
     @PackageScope
     def getPhaser() { phaser }
+
+    /**
+     * The folder where script binaries file are located, by default the folder 'bin'
+     * in the script base directory
+     */
+    @Memoized
+    def File getBinDir() {
+        if( !baseDir ) {
+            log.debug "Script base directory is null";
+            return null
+        }
+
+        def path = new File(baseDir, 'bin')
+        if( !path.exists() || !path.isDirectory() ) {
+            log.debug "Script base path does not exist or is not a directory: ${path}"
+            return null
+        }
+
+        return path
+    }
 
     /**
      * Await the termination of all processors
