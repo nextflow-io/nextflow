@@ -16,3 +16,6 @@ resources/*
 test/*
 tools/*
 docs/_build/
+dx-project/
+*.txt
+cache/
