@@ -146,6 +146,7 @@ class MergeTaskProcessor extends TaskProcessor {
         Map<String,String> environment = [:]
         int count = 0
 
+        def secondPass = [:]
         inputsDefs.each { InParam param ->
 
             def val = decodeInputValue(param, values)
@@ -161,20 +162,8 @@ class MergeTaskProcessor extends TaskProcessor {
                     break
 
                 case FileInParam:
-                    // all the files to be staged
-                    def fileParam = (FileInParam)param
-                    def normalized = normalizeInputToFiles(val,count)
-                    def resolved = expandWildcards( fileParam.filePattern, normalized )
-
-                    filesMap[fileParam] = resolved
-                    count += resolved.size()
-                    // set the context
-                    contextMap[param.name] = singleItemOrList( resolved )
-                    // store all the inputs
-                    filesCollector.get(param).add(resolved)
-                    // set to *val* so that the list is added to the map of all inputs
-                    val = resolved
-                    break
+                    secondPass[param] = val
+                    return // <-- leave here because we do not want to add it to the keys in this loop
 
                 case EnvInParam:
                     // the environment variables for this 'iteration'
@@ -185,6 +174,24 @@ class MergeTaskProcessor extends TaskProcessor {
                     log.debug "Process $name > unknown input param type: ${param?.class?.simpleName}"
             }
 
+            // add all the input name-value pairs to the key generator
+            keys << param.name << val
+        }
+
+        secondPass.each { FileInParam param, val ->
+            // all the files to be staged
+            def fileParam = (FileInParam)param
+            def normalized = normalizeInputToFiles(val,count)
+            def resolved = expandWildcards( fileParam.getFilePattern(contextMap), normalized )
+
+            filesMap[fileParam] = resolved
+            count += resolved.size()
+            // set the context
+            contextMap[param.name] = singleItemOrList( resolved )
+            // store all the inputs
+            filesCollector.get(param).add(resolved)
+            // set to *val* so that the list is added to the map of all inputs
+            val = resolved
 
             // add all the input name-value pairs to the key generator
             keys << param.name << val

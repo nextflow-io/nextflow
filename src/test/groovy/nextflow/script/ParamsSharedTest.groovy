@@ -281,9 +281,9 @@ class ParamsSharedTest extends Specification {
         where:
         value                       | expected
         'flatten'                   | BasicMode.flatten
-        new ScriptVar('flatten')    | BasicMode.flatten
+        new TokenVar('flatten')    | BasicMode.flatten
         'standard'                  | BasicMode.standard
-        new ScriptVar('standard')   | BasicMode.standard
+        new TokenVar('standard')   | BasicMode.standard
 
     }
 

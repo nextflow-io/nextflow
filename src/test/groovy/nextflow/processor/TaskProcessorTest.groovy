@@ -21,9 +21,10 @@ package nextflow.processor
 
 import java.nio.file.Paths
 
+import groovyx.gpars.agent.Agent
 import nextflow.Session
 import nextflow.script.FileInParam
-import nextflow.script.ScriptVar
+import nextflow.script.TokenVar
 import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
 import spock.lang.Specification
@@ -59,7 +60,7 @@ class TaskProcessorTest extends Specification {
         def inputs = [:]
         def key1 = new FileInParam(binding, holder).bind('file1')
         def key2 = new FileInParam(binding, holder).bind('file_')
-        def key3 = new ValueInParam(binding, holder).bind( new ScriptVar('xxx') )
+        def key3 = new ValueInParam(binding, holder).bind( new TokenVar('xxx') )
 
         def val1 = [ FileHolder.get('xxx', 'file.txt') ]
         def val2 =  [ FileHolder.get('yyy', 'file.2'), FileHolder.get('zzz', '.hidden') ]

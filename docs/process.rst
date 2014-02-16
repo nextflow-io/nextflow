@@ -392,11 +392,10 @@ execution is launched.
   referencing files in your pipeline processes.
 
 
-
 .. TODO describe that file can handle channels containing any data type not only file
 
 
-Multiple files
+Multiple input files
 ----------------------
 
 A process can declare as input file a channel that emits a collection of values, instead of a simple value.
@@ -452,6 +451,29 @@ The following fragment shows how a wildcard can be used in the input file declar
 
     }
 
+
+Parametric input file names
+----------------------------
+
+When the input file name is specified by using the ``name`` file clause or the short `string` notation, you
+are allowed to use other input values as variables in the file name string. For example::
+
+
+  process simpleCount {
+    input:
+    val x from species
+    file "${x}.fa" from genomes
+
+    """
+    cat ${x}.fa | grep '>'
+    """
+  }
+
+
+In the above example, the file name of the input file is set by using the current value of the ``x`` input value.
+
+This allows you to stage the input files in the script working directory with a name that is coherent
+with the current execution context.
 
 
 Input of type 'stdin'
@@ -565,6 +587,7 @@ Thus the previous example could be rewritten as follows::
 
       }
 
+File names can contain parametric values as explained in the `Parametric input file names`_ section.
 
 
 Input repeaters
@@ -704,7 +727,7 @@ For example::
     process randomNum {
 
        output:
-       file 'result' into numbers
+       file 'result.txt' into numbers
 
        '''
        echo $RANDOM > result
@@ -715,7 +738,7 @@ For example::
     numbers.subscribe { println "Received: " + it.text }
 
 
-In the above example the process, when executed, creates a file named ``result`` containing a random number.
+In the above example the process, when executed, creates a file named ``result.txt`` containing a random number.
 Since a file parameter using the same name is declared between the outputs, when the task is completed that
 file is sent over the ``numbers`` channel. A downstream `process` declaring the same channel as `input` will
 be able to receive it.
@@ -726,8 +749,8 @@ be able to receive it.
 
 .. TODO explain Path object
 
-Multiple files
------------------
+Multiple output files
+-----------------------
 
 When declaring an output file it is possible to specify its name using the usual Linux wildcards characters ``?`` and ``*``.
 This allows to output all the files matching the specified file name pattern as single item. For example::
@@ -751,6 +774,27 @@ This allows to output all the files matching the specified file name pattern as 
 
 .. TODO Advanced file output
 
+Parametric output file names
+-----------------------------
+
+In the output file name you can use values defined in the input declaration block as variables. For example::
+
+
+  process align {
+    input:
+    val x from species
+    file seq from sequences
+
+    output:
+    file "${x}.aln" into genomes
+
+    """
+    t_coffee -in $seq > ${x}.aln
+    """
+  }
+
+In the above example, each time the process is executed an alignment file is produced whose name depends
+by the actual value of the ``x`` input.
 
 
 Output 'stdout' special file
@@ -802,7 +846,20 @@ In the above example a `BLAST` task is executed for each pair of ``specie`` and 
 When the task completes a new tuple containing the value for ``specie`` and the file ``result`` is sent to the ``blastOuts`` channel.
 
 
-A ``set`` declaration can contain any combination of the following classifiers, previously described: ``val``, ``file`` and ``stdout``.
+A `set` declaration can contain any combination of the following classifiers, previously described: ``val``, ``file`` and ``stdout``.
+
+.. tip:: Variable identifiers are interpreted as `values` while strings literals are interpreted as `files` by default,
+  thus the above output `set` can be rewritten using a short notation as shown below.
+
+
+::
+
+    output:
+        set specie, 'result' into blastOuts
+
+
+
+File names can contain parametric values as explained in the `Parametric output file names`_ section.
 
 Shares
 =======

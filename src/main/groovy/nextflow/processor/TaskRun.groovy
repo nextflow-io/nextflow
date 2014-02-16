@@ -21,6 +21,7 @@ package nextflow.processor
 import java.nio.file.Path
 import java.util.concurrent.locks.ReentrantLock
 
+import groovy.transform.Memoized
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.script.EnvInParam
@@ -30,6 +31,7 @@ import nextflow.script.FileSharedParam
 import nextflow.script.InParam
 import nextflow.script.OutParam
 import nextflow.script.ScriptType
+import nextflow.script.SharedParam
 import nextflow.script.StdInParam
 import nextflow.script.ValueOutParam
 /**
@@ -39,7 +41,7 @@ import nextflow.script.ValueOutParam
  */
 
 @Slf4j
-@ToString( includePackage = false, includeNames = true, includes = 'id,index,name,status,exitCode' )
+@ToString( includePackage = false, includeNames = true, includes = 'id,index,name,status,exitCode,workDirectory' )
 class TaskRun {
 
     static private final echoLock = new ReentrantLock(true)
@@ -233,8 +235,11 @@ class TaskRun {
         }
     }
 
+    /**
+     * Check whenever there are values to be cached
+     */
     def boolean hasCacheableValues() {
-        outputs.keySet().any { it.class == ValueOutParam }
+        outputs.keySet().any { it.class == ValueOutParam } || inputs.keySet().any { it instanceof SharedParam }
     }
 
     def Map<InParam,List<FileHolder>> getInputFiles() {
@@ -251,11 +256,12 @@ class TaskRun {
      *  The problem here is that we need the real file name as it has been staged in
      *  process execution folder. For this reason it uses the {@code #stagedProvider}
      */
+    @Memoized
     def List<String> getOutputFilesNames() {
         def result = []
 
         getOutputsByType(FileOutParam).keySet().each { FileOutParam param ->
-            result.add( param.name )
+            result.addAll( param.getFilePatterns((Map)code?.delegate))
         }
 
         stagedProvider.call()?.each { InParam param, List<FileHolder> files ->
@@ -316,9 +322,9 @@ class TaskRun {
     static final CMD_INFILE = '.command.in'
     static final CMD_OUTFILE = '.command.out'
     static final CMD_EXIT = '.exitcode'
-    static final CMD_START = '.command.started'
+    static final CMD_START = '.command.begin'
     static final CMD_RUN = '.command.run'
-    static final CMD_CONTEXT = '.command.ctx'
+    static final CMD_CONTEXT = '.command.val'
 
     /**
      * @return The location of the environment script used by this task

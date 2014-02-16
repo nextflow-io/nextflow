@@ -18,12 +18,11 @@
  */
 
 package nextflow.script
+import static test.TestParser.parse
+
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.processor.TaskProcessor
 import spock.lang.Specification
-
-import static test.TestParser.parse
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -121,6 +120,148 @@ class ParamsOutTest extends Specification {
         out3.mode == BasicMode.standard
         !binding.containsKey('p')
     }
+
+    def testFileOutParamsWithVariables() {
+
+        setup:
+        def text = '''
+            z = /script_file/
+
+            process hola {
+              output:
+              file "${x}_name" into channel1
+              file "${x}_${y}.fa" into channel2
+              file "simple.txt" into channel3
+              file "${z}.txt:${x}.fa" into channel4
+              set "${z}.txt:${x}.fa" into channel5
+              set file("${z}.txt:${x}.fa") into channel6
+
+              return ''
+            }
+            '''
+
+        def binding = [:]
+        TaskProcessor process = parse(text, binding).run()
+        def ctx = [x: 'hola', y:99]
+
+        when:
+        FileOutParam out1 = process.taskConfig.getOutputs().get(0)
+        FileOutParam out2 = process.taskConfig.getOutputs().get(1)
+        FileOutParam out3 = process.taskConfig.getOutputs().get(2)
+        FileOutParam out4 = process.taskConfig.getOutputs().get(3)
+        SetOutParam out5 = process.taskConfig.getOutputs().get(4)
+        SetOutParam out6 = process.taskConfig.getOutputs().get(5)
+
+        then:
+        process.taskConfig.getOutputs().size() == 6
+
+        out1.name == null
+        out1.getFilePatterns(ctx) == ['hola_name']
+        out1.outChannel instanceof DataflowQueue
+        out1.outChannel == binding.channel1
+
+        out2.name == null
+        out2.getFilePatterns(ctx) == ['hola_99.fa']
+        out2.outChannel instanceof DataflowQueue
+        out2.outChannel == binding.channel2
+
+        out3.name == 'simple.txt'
+        out3.getFilePatterns(ctx) == ['simple.txt']
+        out3.outChannel instanceof DataflowQueue
+        out3.outChannel == binding.channel3
+
+        out4.name == null
+        out4.getFilePatterns(ctx) == ['script_file.txt','hola.fa']
+        out4.outChannel instanceof DataflowQueue
+        out4.outChannel == binding.channel4
+
+        out5.outChannel instanceof DataflowQueue
+        out5.outChannel == binding.channel5
+        out5.inner[0] instanceof FileOutParam
+        (out5.inner[0] as FileOutParam) .getFilePatterns(ctx) == ['script_file.txt','hola.fa']
+
+        out6.outChannel instanceof DataflowQueue
+        out6.outChannel == binding.channel6
+        out6.inner[0] instanceof FileOutParam
+        (out6.inner[0] as FileOutParam) .getFilePatterns(ctx) == ['script_file.txt','hola.fa']
+
+    }
+
+    def testFileOutWithGString2 () {
+
+        setup:
+        def text = '''
+
+            process hola {
+              output:
+              file x
+              file "$y" into q
+              set file(z) into p
+              file u
+
+              return ''
+            }
+            '''
+
+        def binding = [:]
+        TaskProcessor process = parse(text, binding).run()
+        def ctx = [ x: 'hola', y:'hola_2', z: 'hola_z' ]
+
+        when:
+        FileOutParam out1 = process.taskConfig.getOutputs().get(0)
+        FileOutParam out2 = process.taskConfig.getOutputs().get(1)
+        SetOutParam out3 = process.taskConfig.getOutputs().get(2)
+        FileOutParam out4 = process.taskConfig.getOutputs().get(3)
+
+
+        then:
+        out1.name == 'x'
+        out1.getFilePatterns(ctx) == ['hola']
+        out1.outChannel instanceof DataflowQueue
+        out1.outChannel == binding.x
+
+        out2.name == null
+        out2.getFilePatterns(ctx) == ['hola_2']
+        out2.outChannel instanceof DataflowQueue
+        out2.outChannel == binding.q
+
+        out3.inner[0] instanceof FileOutParam
+        (out3.inner[0] as FileOutParam).name == 'z'
+        (out3.inner[0] as FileOutParam).getFilePatterns(ctx) == ['hola_z']
+
+        out4.name == 'u'
+        out4.getFilePatterns(ctx) == ['u']
+        out4.outChannel instanceof DataflowQueue
+        out4.outChannel == binding.u
+    }
+
+    def testFileOutWithGString3 () {
+
+        setup:
+        def text = '''
+
+            process hola {
+              output:
+              file "$x"
+
+              return ''
+            }
+            '''
+
+        def binding = [:]
+        TaskProcessor process = parse(text, binding).run()
+
+        when:
+        FileOutParam out1 = process.taskConfig.getOutputs().get(0)
+        def x = out1.outChannel
+
+        then:
+        thrown(IllegalArgumentException)
+
+
+
+    }
+
 
 
     def testSetOutParams() {
@@ -305,9 +446,9 @@ class ParamsOutTest extends Specification {
         where:
         value                       | expected
         'combine'                   | SetOutParam.CombineMode.combine
-        new ScriptVar('combine')    | SetOutParam.CombineMode.combine
+        new TokenVar('combine')    | SetOutParam.CombineMode.combine
         'flatten'                   | BasicMode.flatten
-        new ScriptVar('flatten')    | BasicMode.flatten
+        new TokenVar('flatten')    | BasicMode.flatten
 
     }
 

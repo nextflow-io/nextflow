@@ -181,6 +181,47 @@ class ParamsInTest extends Specification {
 
     }
 
+    def testInputFilesWithGString() {
+        setup:
+        def ctx = [y: 'hello', z:'the_file_name']
+        def text = '''
+            q = java.nio.file.Paths.get('file.txt')
+            x = 'main.txt'
+
+            process hola {
+              input:
+              file "$x" from q
+              file "${y}.txt" from "str"
+              file f2 name "${z}.fa" from q
+
+              return ''
+            }
+            '''
+
+        when:
+        TaskProcessor process = parse(text).run()
+        FileInParam in1 = process.taskConfig.getInputs().get(0)
+        FileInParam in2 = process.taskConfig.getInputs().get(1)
+        FileInParam in3 = process.taskConfig.getInputs().get(2)
+
+        then:
+        process.taskConfig.getInputs().size() == 3
+
+        in1.name == '$x'
+        in1.getFilePattern(ctx) == 'main.txt'
+        in1.inChannel.val == Paths.get('file.txt')
+
+        in2.name == '$y.txt'
+        in2.getFilePattern(ctx) == 'hello.txt'
+        in2.inChannel.val == "str"
+
+        in3.name == 'f2'
+        in3.getFilePattern(ctx) == 'the_file_name.fa'
+        in3.inChannel.val == Paths.get('file.txt')
+
+
+    }
+
     def testFromStdin() {
         setup:
         def text = '''
@@ -334,6 +375,45 @@ class ParamsInTest extends Specification {
         in5.inner.get(1).index == 4
         in5.inner.get(1).mapIndex == 1
         in5.inChannel.val == 0
+
+    }
+
+    def testSetFileWithGString() {
+
+        setup:
+        def text = '''
+            x = 'the_file'
+            q = 'the file content'
+
+            process hola {
+              input:
+              set ('name_$x') from q
+              set ("name_${x}.txt") from q
+              set (file("hola_$x")) from q
+
+              return ''
+            }
+            '''
+
+        when:
+        TaskProcessor process = parse(text).run()
+        SetInParam in1 = process.taskConfig.getInputs().get(0)
+        SetInParam in2 = process.taskConfig.getInputs().get(1)
+        SetInParam in3 = process.taskConfig.getInputs().get(2)
+
+        then:
+        in1.inChannel.val == 'the file content'
+        in1.inner[0] instanceof FileInParam
+        (in1.inner[0] as FileInParam).name == 'name_$x'
+        (in1.inner[0] as FileInParam).filePattern == 'name_$x'
+
+        in2.inner[0] instanceof FileInParam
+        (in2.inner[0] as FileInParam).name == 'name_$x.txt'
+        (in2.inner[0] as FileInParam).filePattern == 'name_the_file.txt'
+
+        in3.inner[0] instanceof FileInParam
+        (in3.inner[0] as FileInParam).name == 'hola_$x'
+        (in3.inner[0] as FileInParam).filePattern == 'hola_the_file'
 
     }
 

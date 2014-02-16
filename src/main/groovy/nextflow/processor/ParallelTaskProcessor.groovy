@@ -32,6 +32,7 @@ import nextflow.util.FileHelper
 @InheritConstructors
 class ParallelTaskProcessor extends TaskProcessor {
 
+
     /**
      * Keeps track of the task instance executed by the current thread
      */
@@ -191,6 +192,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         /*
          * initialize the inputs for this task instances
          */
+        def secondPass = [:]
         task.inputs.keySet().each { InParam param ->
 
             // add the value to the task instance
@@ -203,13 +205,8 @@ class ParallelTaskProcessor extends TaskProcessor {
                     break
 
                 case FileInParam:
-                    def fileParam = param as FileInParam
-                    def normalized = normalizeInputToFiles(val,count)
-                    def resolved = expandWildcards( fileParam.filePattern, normalized )
-                    ctx[ param.name ] = singleItemOrList(resolved)
-                    count += resolved.size()
-                    val = resolved
-                    break
+                    secondPass[param] = val
+                    return // <-- leave it, because we do not want to add this 'val' in this loop
 
                 case FileSharedParam:
                     def fileParam = param as FileSharedParam
@@ -248,6 +245,20 @@ class ParallelTaskProcessor extends TaskProcessor {
                 default:
                     log.debug "Unsupported input param type: ${param?.class?.simpleName}"
             }
+
+            // add the value to the task instance context
+            task.setInput(param, val)
+        }
+
+        // -- all file parameters are processed in a second pass
+        //    so that we can use resolve the variables that eventually are in the file name
+        secondPass.each { FileInParam param, val ->
+            def fileParam = param as FileInParam
+            def normalized = normalizeInputToFiles(val,count)
+            def resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
+            ctx[ param.name ] = singleItemOrList(resolved)
+            count += resolved.size()
+            val = resolved
 
             // add the value to the task instance context
             task.setInput(param, val)
@@ -369,16 +380,22 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         @Override
         public void afterStop(final DataflowProcessor processor) {
-            log.debug "<${name}> After stop"
+            log.debug "<${name}> After stop -- shareObjs ${ParallelTaskProcessor.this.sharedObjs}"
 
             // bind shared outputs
             ParallelTaskProcessor.this.sharedObjs?.each { param, obj ->
-                if( !param.outChannel ) return
+
+                if( !param.outChannel )
+                    return
+
                 log.trace "Binding shared out param: ${param.name} = ${obj}"
-                if( obj instanceof Collection )
-                    obj = obj[0]
-                if( obj instanceof FileHolder )
-                    obj = obj.storePath
+                if( param instanceof FileSharedParam ) {
+                    if( obj instanceof Collection )
+                        obj = obj[0]
+                    if( obj instanceof FileHolder )
+                        obj = obj.storePath
+                }
+
                 param.outChannel.bind( obj )
             }
         }

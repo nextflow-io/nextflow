@@ -19,12 +19,13 @@
 
 package nextflow.ast
 import groovy.util.logging.Slf4j
-import nextflow.script.ScriptEnvCall
-import nextflow.script.ScriptFileCall
-import nextflow.script.ScriptStdinCall
-import nextflow.script.ScriptStdoutCall
-import nextflow.script.ScriptValCall
-import nextflow.script.ScriptVar
+import nextflow.script.TokenEnvCall
+import nextflow.script.TokenFileCall
+import nextflow.script.TokenGString
+import nextflow.script.TokenStdinCall
+import nextflow.script.TokenStdoutCall
+import nextflow.script.TokenValCall
+import nextflow.script.TokenVar
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.ClassNode
@@ -36,6 +37,7 @@ import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.ConstructorCallExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
+import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.expr.MapExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
@@ -307,8 +309,21 @@ class NextflowDSLImpl implements ASTTransformation {
                 //this methods require a special prefix
                 if( !nested )
                     methodCall.setMethod( new ConstantExpression('_in_' + methodName) )
-                // the following methods require to replace a variable reference to a constant
+
                 fixMethodCall(methodCall)
+            }
+
+            /*
+             * Handles a GString a file name, like this:
+             *
+             *      input:
+             *        file x name "$var_name" from q
+             *
+             */
+            else if( methodName == 'name' && isWithinMethod(expression, 'file') ) {
+                withinFileMethod = true
+                varToConst(methodCall.getArguments())
+                withinFileMethod = false
             }
 
             // invoke on the next method call
@@ -324,7 +339,14 @@ class NextflowDSLImpl implements ASTTransformation {
             }
         }
 
+    }
 
+    protected boolean isWithinMethod(MethodCallExpression method, String name) {
+        if( method.objectExpression instanceof MethodCallExpression ) {
+            return isWithinMethod(method.objectExpression as MethodCallExpression, name)
+        }
+
+        return method.getMethodAsString() == name
     }
 
 
@@ -366,11 +388,12 @@ class NextflowDSLImpl implements ASTTransformation {
         def nested = methodCall.objectExpression instanceof MethodCallExpression
         log.trace "convert > output method: $methodName"
 
-        if( methodName in ['val','file','set','flat', 'stdout'] && !nested ) {
+        if( methodName in ['val','file','set','stdout'] && !nested ) {
             // prefix the method name with the string '_out_'
             methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
             fixMethodCall(methodCall)
         }
+
         else if( methodName in ['into','mode'] ) {
             fixMethodCall(methodCall)
         }
@@ -384,6 +407,8 @@ class NextflowDSLImpl implements ASTTransformation {
 
     private boolean withinSetMethod
 
+    private boolean withinFileMethod
+
     /**
      * This method converts the a method call argument from a Variable to a Constant value
      * so that it is possible to reference variable that not yet exist
@@ -394,13 +419,21 @@ class NextflowDSLImpl implements ASTTransformation {
      * @return
      */
     protected void fixMethodCall( MethodCallExpression methodCall ) {
-        withinSetMethod =  methodCall.methodAsString in ['_in_set','_out_set']
+        final name = methodCall.methodAsString
+
+        withinSetMethod = name == '_in_set' || name == '_out_set'
+        withinFileMethod = name == '_in_file' || name == '_out_file'
+
         try {
             varToConst(methodCall.getArguments())
+
         } finally {
             withinSetMethod = false
+            withinFileMethod = false
         }
+
     }
+
 
     protected Expression varToStr( Expression expr ) {
         if( expr instanceof VariableExpression ) {
@@ -433,13 +466,32 @@ class NextflowDSLImpl implements ASTTransformation {
              *    set( stdin, .. ) from q
              */
             if( name == 'stdin' && withinSetMethod )
-                return newObj( ScriptStdinCall )
+                return newObj( TokenStdinCall )
 
+            /*
+             * input:
+             *    set( stdout, .. )
+             */
             else if ( name == 'stdout' && withinSetMethod )
-                return newObj( ScriptStdoutCall )
+                return newObj( TokenStdoutCall )
 
             else
-                return newObj( ScriptVar, new ConstantExpression(name) )
+                return newObj( TokenVar, new ConstantExpression(name) )
+        }
+
+        /*
+         * Handles GStrings in declaration file this
+         * output:
+         *   file "$name" into xx
+         *   set( "$name" ) into xx
+         *   set( file("$name") ) into xx
+         */
+        if( expr instanceof GStringExpression && ( withinFileMethod || withinSetMethod ) ) {
+
+            def strings = expr.getStrings()
+            def varNames = expr.getValues().collect { VariableExpression it -> new ConstantExpression(it.name) }
+
+            return newObj( TokenGString, new ConstantExpression(expr.text), new ListExpression(strings), new ListExpression(varNames) )
         }
 
         /*
@@ -450,20 +502,28 @@ class NextflowDSLImpl implements ASTTransformation {
          */
         if( expr instanceof MethodCallExpression && expr.methodAsString == 'file' && withinSetMethod ) {
             def args = (TupleExpression) varToConst(expr.arguments)
-            return newObj( ScriptFileCall, args )
+            return newObj( TokenFileCall, args )
         }
 
+        /*
+         * input:
+         *  set( env(VAR_NAME) ) from q
+         */
         if( expr instanceof MethodCallExpression && expr.methodAsString == 'env' && withinSetMethod ) {
             def args = (TupleExpression) varToStr(expr.arguments)
-            return newObj( ScriptEnvCall, args )
+            return newObj( TokenEnvCall, args )
         }
 
+        /*
+         * input:
+         *   set( val(x) ) from q
+         */
         if( expr instanceof MethodCallExpression && expr.methodAsString == 'val' && withinSetMethod ) {
             def args = (TupleExpression) varToStr(expr.arguments)
-            return newObj( ScriptValCall, args )
+            return newObj( TokenValCall, args )
         }
 
-
+        // -- TupleExpression or ArgumentListExpression
         if( expr instanceof TupleExpression )  {
             def list = expr.getExpressions()
             list.eachWithIndex { Expression item, int i ->
@@ -475,18 +535,44 @@ class NextflowDSLImpl implements ASTTransformation {
         return expr
     }
 
+    /**
+     * Creates a new {@code ConstructorCallExpression} for the specified class and arguments
+     *
+     * @param clazz The {@code Class} for which the create a constructor call expression
+     * @param args The arguments to be passed to the constructor
+     * @return The instance for the constructor call
+     */
     def protected newObj( Class clazz, TupleExpression args ) {
         def type = new ClassNode(clazz)
         return new ConstructorCallExpression(type,args)
     }
 
+    /**
+     * Creates a new {@code ConstructorCallExpression} for the specified class and arguments
+     * specified using an open array. Te
+     *
+     * @param clazz The {@code Class} for which the create a constructor call expression
+     * @param args The arguments to be passed to the constructor, they will be wrapped by in a {@code ArgumentListExpression}
+     * @return The instance for the constructor call
+     */
     def protected newObj( Class clazz, Object... params ) {
         def type = new ClassNode(clazz)
         def args = new ArgumentListExpression( params as List<Expression>)
         return new ConstructorCallExpression(type,args)
     }
 
-
+    /**
+     * Wrap a generic expression with in a closure expression
+     *
+     * @param block The block to which the resulting closure has to be appended
+     * @param expr The expression to the wrapped in a closure
+     * @param len
+     * @return A tuple in which:
+     *      <li>1st item: {@code true} if successful or {@code false} otherwise
+     *      <li>2nd item: on error condition the line containing the error in the source script, zero otherwise
+     *      <li>3nd item: on error condition the column containing the error in the source script, zero otherwise
+     *
+     */
     def List wrapExpressionWithClosure( BlockStatement block, Expression expr, int len ) {
         if( expr instanceof GStringExpression || expr instanceof ConstantExpression ) {
             // remove the last expression

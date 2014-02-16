@@ -63,10 +63,10 @@ abstract class BaseSharedParam extends BaseInParam implements SharedParam {
         /*
          * initialize *output* channel
          */
-        def importName = fromObject instanceof ScriptVar ? fromObject.name : null
+        def importName = fromObject instanceof TokenVar ? fromObject.name : null
         def hasImported = importName && binding.hasVariable(importName)
 
-        if( intoObject instanceof ScriptVar ) {
+        if( intoObject instanceof TokenVar ) {
             // make sure that the output channel name is not the same as the input channel
             if( hasImported && intoObject.name == importName )
                 throw new IllegalArgumentException("shared parameter 'into' cannot be same as the 'from' value -- specified value: ${intoObject.name}")

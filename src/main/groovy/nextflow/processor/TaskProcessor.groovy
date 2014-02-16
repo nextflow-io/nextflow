@@ -65,6 +65,7 @@ import nextflow.util.FileHelper
 @Slf4j
 abstract class TaskProcessor {
 
+
     /**
      * Global count of all task instances
      */
@@ -429,6 +430,16 @@ abstract class TaskProcessor {
         return task
     }
 
+    /**
+     * Given an {@code HashCode} instance renders only the first 8 characters using the format showed below:
+     *      <pre>
+     *          2f/0075a6
+     *     </pre>
+     *
+     *
+     * @param hash An {@code HashCode} object
+     * @return The short representation of the specified hash code as string
+     */
     final protected getHashLog( HashCode hash ) {
         def str = hash.toString()
         def result = new StringBuilder()
@@ -562,14 +573,16 @@ abstract class TaskProcessor {
         /*
          * verify cached context map
          */
-        def ctxMap = null
+        Map ctxMap = null
         def ctxFile = folder.resolve(TaskRun.CMD_CONTEXT)
         if( task.hasCacheableValues() ) {
             if( !ctxFile.exists() ) {
-                log.trace "[$task.name] Contexy map file does not exist: $ctxFile -- return false"
+                log.trace "[$task.name] Context map file does not exist: $ctxFile -- return false"
                 return false
             }
+
             ctxMap = DelegateMap.read(this, ctxFile)
+            populateSharedCtx(task, ctxMap)
         }
 
         /*
@@ -597,7 +610,7 @@ abstract class TaskProcessor {
             return true
         }
         catch( MissingFileException | MissingValueException e ) {
-            log.debug "[$task.name] Missed cache > ${e.getMessage()} -- folder: $folder"
+            log.trace "[$task.name] Missed cache > ${e.getMessage()} -- folder: $folder"
             task.exitStatus = Integer.MAX_VALUE
             task.workDirectory = null
             return false
@@ -605,6 +618,18 @@ abstract class TaskProcessor {
 
     }
 
+    /**
+     * Populate the 'shared' status context map with entries
+     *
+     * @param task
+     * @param ctx
+     * @return
+     */
+    final protected populateSharedCtx( TaskRun task, Map ctx ) {
+        task.inputs.keySet().findAll { it.class instanceof SharedParam } .each { SharedParam param ->
+            sharedObjs[param.name] = ctx[param.name]
+        }
+    }
 
     /**
      * Given the script closure, that hold the code entered by the user, returns
@@ -845,19 +870,20 @@ abstract class TaskProcessor {
      */
     final protected void collectOutputs( TaskRun task, Path workDir, def stdout, Map context ) {
 
+        log.trace "<$name> collecting output: ${task.outputs}"
         task.outputs.keySet().each { OutParam param ->
 
             switch( param ) {
                 case StdOutParam:
-                    collectStdOut(task, param, stdout)
+                    collectStdOut(task, (StdOutParam)param, stdout)
                     break
 
                 case FileOutParam:
-                    collectOutFiles(task, param, workDir)
+                    collectOutFiles(task, (FileOutParam)param, workDir, context)
                     break
 
                 case ValueOutParam:
-                    collectOutValues(task, param, context)
+                    collectOutValues(task, (ValueOutParam)param, context)
                     break
 
                 default:
@@ -869,9 +895,9 @@ abstract class TaskProcessor {
         /*
          * Shared objects behave as accumulators
          * Copying back updated values from context map to buffer map so that can be accessed in the next iteration
-         *
          */
-        sharedObjs?.keySet() .each { param ->
+        log.trace "<${name}> collecting sharedObjs: $sharedObjs"
+        sharedObjs?.keySet()?.each { param ->
 
             switch(param) {
                 case ValueSharedParam:
@@ -912,12 +938,12 @@ abstract class TaskProcessor {
     }
 
 
-    protected void collectOutFiles( TaskRun task, FileOutParam param, Path workDir ) {
+    protected void collectOutFiles( TaskRun task, FileOutParam param, Path workDir, Map context ) {
 
         def all = []
         def fileParam = param as FileOutParam
         // type file parameter can contain a multiple files pattern separating them with a special character
-        def entries = fileParam.separatorChar ? fileParam.name.split(/\${fileParam.separatorChar}/) : [fileParam.name]
+        def entries = param.getFilePatterns(context)
         // for each of them collect the produced files
         entries.each { String pattern ->
             def result = executor.collectResultFile(workDir, pattern, task.name)
@@ -1220,7 +1246,7 @@ abstract class TaskProcessor {
     final protected void submitTask( TaskRun task ) {
 
         if( task.code?.delegate instanceof Map ) {
-            if( task.code.delegate.containsKey('workDir') ) {
+            if( ((Map)task.code.delegate).containsKey('workDir') ) {
                 log.warn "Process $name overrides value of reserved variable 'workDir' "
             }
             task.code.delegate['workDir'] = task.workDirectory
@@ -1264,7 +1290,7 @@ abstract class TaskProcessor {
 
             // save the context map for caching purpose
             // only the 'cache' is active and
-            if( cacheable && task.hasCacheableValues() && task.code.delegate != null ) {
+            if( isCacheable() && task.hasCacheableValues() && task.code.delegate != null ) {
                 ((DelegateMap) task.code.delegate).save(task.getCmdContextFile())
             }
 
@@ -1305,7 +1331,7 @@ abstract class TaskProcessor {
 
 
     protected void terminateProcess() {
-        log.debug "<${name}> Sending poison pills and temrinating process"
+        log.debug "<${name}> Sending poison pills and terminating process"
         sendPoisonPill()
         session.taskDeregister()
         processor.terminate()

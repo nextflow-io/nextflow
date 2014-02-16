@@ -169,6 +169,19 @@ abstract class BaseParam {
     }
 
 
+    final protected resolveName( Map context, String name, boolean strict = true ) {
+        if( context && context.containsKey(name) )
+            return context.get(name)
+
+        if( binding.hasVariable(name) )
+            return binding.getVariable(name)
+
+        if( strict )
+            throw new MissingPropertyException(name)
+
+        return name
+    }
+
 }
 
 /**
@@ -237,7 +250,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
     @Override
     protected void lazyInit() {
 
-        if( fromObject == null && bindObject == null ) {
+        if( fromObject == null && (bindObject == null || bindObject instanceof TokenGString ) ) {
             throw new IllegalStateException("Missing 'bind' declaration in input parameter")
         }
 
@@ -248,7 +261,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
 
         // initialize the *inChannel* object based on the 'target' attribute
         def result
-        if( fromObject instanceof ScriptVar ) {
+        if( fromObject instanceof TokenVar ) {
             // when the value is a variable reference
             // - use that name for the parameter itself
             // - get the variable value in the script binding
@@ -268,7 +281,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
      * @return The parameter name
      */
     def String getName() {
-        if( bindObject instanceof ScriptVar ) {
+        if( bindObject instanceof TokenVar ) {
             return bindObject.name
         }
 
@@ -315,14 +328,19 @@ abstract class BaseInParam extends BaseParam implements InParam {
 @InheritConstructors
 class FileInParam extends BaseInParam  {
 
-    String filePattern
+    protected filePattern
 
     /**
      * Define the file name
      */
-    FileInParam name( name ) {
-        if( name instanceof String ) {
-            filePattern = name
+    FileInParam name( obj ) {
+        if( obj instanceof String ) {
+            filePattern = obj
+            return this
+        }
+
+        if( obj instanceof TokenGString ) {
+            filePattern = obj
             return this
         }
 
@@ -336,24 +354,39 @@ class FileInParam extends BaseInParam  {
             return entry?.key
         }
 
+        if( bindObject instanceof TokenGString ) {
+            return bindObject.text
+        }
+
         return super.getName()
 
     }
 
-    String getFilePattern() {
+    String getFilePattern(Map ctx = null) {
 
-        if( filePattern )
-            return filePattern
-
-        if( bindObject instanceof String )
-            return filePattern = bindObject
+        if( filePattern != null  )
+            return resolve(ctx,filePattern)
 
         if( bindObject instanceof Map ) {
             def entry = bindObject.entrySet().first()
-            return filePattern = entry?.value
+            return resolve(ctx, entry?.value)
         }
 
+        if( bindObject instanceof TokenVar )
+            return filePattern = '*'
+
+        if( bindObject != null )
+            return resolve(ctx, bindObject)
+
         return filePattern = '*'
+    }
+
+    private resolve( Map ctx, value ) {
+        if( value instanceof TokenGString )
+            value.resolve { String it -> resolveName(ctx,it) }
+
+        else
+            return value
     }
 
 
@@ -418,11 +451,11 @@ class SetInParam extends BaseInParam {
 
         obj.each { item ->
 
-            if( item instanceof ScriptVar )
+            if( item instanceof TokenVar )
                 newItem(ValueInParam).bind(item)
 
-            else if( item instanceof ScriptFileCall )
-                newItem(FileInParam).bind( [(item.name):item.filePattern] )
+            else if( item instanceof TokenFileCall )
+                newItem(FileInParam).bind( item.target )
 
             else if( item instanceof Map )
                 newItem(FileInParam).bind(item)
@@ -433,14 +466,17 @@ class SetInParam extends BaseInParam {
             else if( item instanceof String )
                 newItem(FileInParam).bind(item)
 
-            else if( item instanceof ScriptValCall )
+            else if( item instanceof TokenValCall )
                 newItem(ValueInParam).bind(item.name)
 
-            else if( item instanceof ScriptEnvCall )
+            else if( item instanceof TokenEnvCall )
                 newItem(EnvInParam).bind(item.name)
 
-            else if( item instanceof ScriptStdinCall )
+            else if( item instanceof TokenStdinCall )
                 newItem(StdInParam)
+
+            else if( item instanceof TokenGString )
+                newItem(FileInParam).bind(item)
 
             else
                 throw new IllegalArgumentException()

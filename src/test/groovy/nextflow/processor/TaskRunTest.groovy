@@ -6,9 +6,9 @@ import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
 import nextflow.script.FileOutParam
 import nextflow.script.FileSharedParam
-import nextflow.script.ScriptVar
 import nextflow.script.StdInParam
 import nextflow.script.StdOutParam
+import nextflow.script.TokenVar
 import nextflow.script.ValueInParam
 import nextflow.script.ValueOutParam
 import spock.lang.Specification
@@ -28,8 +28,8 @@ class TaskRunTest extends Specification {
         def list = []
 
         task.setInput( new StdInParam(binding,list) )
-        task.setInput( new FileInParam(binding, list).bind(new ScriptVar('x')), 'file1' )
-        task.setInput( new FileInParam(binding, list).bind(new ScriptVar('y')), 'file2' )
+        task.setInput( new FileInParam(binding, list).bind(new TokenVar('x')), 'file1' )
+        task.setInput( new FileInParam(binding, list).bind(new TokenVar('y')), 'file2' )
         task.setInput( new EnvInParam(binding, list).bind('z'), 'env' )
 
 
@@ -84,7 +84,7 @@ class TaskRunTest extends Specification {
         def task = new TaskRun()
         def list = []
 
-        def x = new ValueInParam(binding, list).bind( new ScriptVar('x') )
+        def x = new ValueInParam(binding, list).bind( new TokenVar('x') )
         def y = new FileInParam(binding, list).bind('y')
         def z = new FileSharedParam(binding, list).bind('z')
 
@@ -107,8 +107,8 @@ class TaskRunTest extends Specification {
         def list = []
 
         when:
-        def i1 = new ValueInParam(binding, list).bind( new ScriptVar('x') )
-        def s1 = new FileSharedParam(binding, list).bind( new ScriptVar('y') )
+        def i1 = new ValueInParam(binding, list).bind( new TokenVar('x') )
+        def s1 = new FileSharedParam(binding, list).bind( new TokenVar('y') )
         def o1 = new FileOutParam(binding,list).bind('file_out.alpha')
         def o2 = new ValueOutParam(binding,list).bind( 'x' )
         def o3 = new FileOutParam(binding,list).bind('file_out.beta')

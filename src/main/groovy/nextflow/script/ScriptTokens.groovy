@@ -20,6 +20,7 @@
 package nextflow.script
 
 import groovy.transform.Canonical
+import org.codehaus.groovy.runtime.GStringImpl
 
 /**
  * Presents a variable definition in the script context.
@@ -27,7 +28,7 @@ import groovy.transform.Canonical
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Canonical
-class ScriptVar {
+class TokenVar {
 
     /** The variable name */
     String name
@@ -35,34 +36,19 @@ class ScriptVar {
 }
 
 /**
- *
+ *  A token used by the DSL to identify a 'file' declaration in a 'set' parameter, for example:
+ *      <pre>
+ *      input:
+ *      set( file('name'), ... )
+ *      </pre>
  *
  */
-class ScriptFileCall {
+class TokenFileCall {
 
-    final String name
+    final Object target
 
-    final String filePattern
-
-    ScriptFileCall( value ) {
-
-        if( value instanceof ScriptVar ) {
-            name = value.name
-            filePattern = '*'
-        }
-        else if( value instanceof Map ) {
-            def entry = value.entrySet().first()
-            name = entry.key
-            filePattern = entry.value?.toString()
-        }
-        else if( value instanceof String ) {
-            name = value
-            filePattern = value
-        }
-        else {
-            throw new IllegalArgumentException()
-        }
-
+    TokenFileCall( value ) {
+        this.target = value
     }
 
 }
@@ -77,7 +63,7 @@ class ScriptFileCall {
  * @see nextflow.ast.NextflowDSLImpl
  * @see SetInParam#bind(java.lang.Object[])
  */
-class ScriptStdinCall { }
+class TokenStdinCall { }
 
 /**
  * An object of this class replace the {@code stdout} token in input map declaration. For example:
@@ -89,15 +75,56 @@ class ScriptStdinCall { }
  * @see nextflow.ast.NextflowDSLImpl
  * @see SetOutParam#bind(java.lang.Object[])
  */
-class ScriptStdoutCall { }
+class TokenStdoutCall { }
 
+/**
+ * Token used by the DSL to identify a environment variable declaration, like this
+ *     <pre>
+ *     input:
+ *     set( env(X), ... )
+ *     <pre>
+ */
 @Canonical
-class ScriptEnvCall {
+class TokenEnvCall {
     String name
 }
 
 
+/**
+ * This class is used to identify a 'val' when used like in this example:
+ * <pre>
+ *  input:
+ *  set ( val(x), ...  )
+ *
+ *  output:
+ *  set( val(y), ...  )
+ *
+ * </pre>
+ *
+ */
 @Canonical
-class ScriptValCall {
+class TokenValCall {
     String name
+}
+
+
+/**
+ * This class is used to replace a GString usage in the output file declaration, for example:
+ *
+ *     <pre>
+ *         output:
+ *         file "${x}.txt" into something
+ *     </pre>
+ *
+ */
+@Canonical
+class TokenGString {
+    String text
+    List<String> strings
+    List<String> valNames
+
+    String resolve( Closure map ) {
+        def values = valNames.collect { String it -> map(it) }
+        return new GStringImpl(values as Object[], strings as String[]).toString()
+    }
 }

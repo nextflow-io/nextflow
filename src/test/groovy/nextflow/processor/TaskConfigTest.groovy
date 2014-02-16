@@ -5,9 +5,9 @@ import nextflow.script.BaseScript
 import nextflow.script.FileInParam
 import nextflow.script.InputsList
 import nextflow.script.OutputsList
-import nextflow.script.ScriptVar
 import nextflow.script.StdInParam
 import nextflow.script.StdOutParam
+import nextflow.script.TokenVar
 import nextflow.script.ValueInParam
 import nextflow.script.ValueSharedParam
 import nextflow.util.Duration
@@ -238,7 +238,7 @@ class TaskConfigTest extends Specification {
 
         when:
         def config = new TaskConfig(script)
-        def val = config._share_val( new ScriptVar('xxx'))
+        def val = config._share_val( new TokenVar('xxx'))
         then:
         val instanceof ValueSharedParam
         val.name == 'xxx'
@@ -248,7 +248,7 @@ class TaskConfigTest extends Specification {
         when:
         binding.setVariable('yyy', 'Hola')
         config = new TaskConfig(script)
-        val = config._share_val(new ScriptVar('yyy'))
+        val = config._share_val(new TokenVar('yyy'))
         then:
         val instanceof ValueSharedParam
         val.name == 'yyy'
@@ -296,7 +296,7 @@ class TaskConfigTest extends Specification {
         // a DataflowVariable is created in the script context
         when:
         config = new TaskConfig(script)
-        val = config._share_val(new ScriptVar('x1')) .into( new ScriptVar('x2') )
+        val = config._share_val(new TokenVar('x1')) .into( new TokenVar('x2') )
         then:
         val instanceof ValueSharedParam
         val.name == 'x1'

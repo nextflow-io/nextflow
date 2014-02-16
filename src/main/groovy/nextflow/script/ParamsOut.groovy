@@ -69,7 +69,7 @@ enum BasicMode implements OutParam.Mode {
             return x
         }
 
-        def value = x instanceof ScriptVar ? x.name : ( x instanceof String ? x : null )
+        def value = x instanceof TokenVar ? x.name : ( x instanceof String ? x : null )
         if( value ) {
             return BasicMode.valueOf(value)
         }
@@ -83,9 +83,9 @@ enum BasicMode implements OutParam.Mode {
 abstract class BaseOutParam extends BaseParam implements OutParam {
 
     /** The out parameter name */
-    protected String name
+    protected nameObj
 
-    protected intoObject
+    protected intoObj
 
     private outChannel
 
@@ -102,17 +102,19 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         super(config.getOwnerScript().getBinding(), config.getOutputs())
     }
 
-
     void lazyInit() {
         def target
-        if( intoObject instanceof ScriptVar )
-            target = intoObject.name
+        if( intoObj instanceof TokenVar )
+            target = intoObj.name
 
-        else if( intoObject != null )
-            target = intoObject
+        else if( intoObj != null )
+            target = intoObj
+
+        else if( nameObj instanceof String )
+            target = nameObj
 
         else
-            target = name
+            throw new IllegalArgumentException("Missing 'into' in output param declaration")
 
         // define the output channel
         outChannel = outputValToChannel(target, DataflowQueue)
@@ -120,16 +122,17 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     @groovy.transform.PackageScope
     BaseOutParam bind( def obj ) {
-        if( obj instanceof ScriptVar )
-            this.name = obj.name
+        if( obj instanceof TokenVar )
+            this.nameObj = obj.name
+
         else
-            this.name = ( obj?.toString() ?: null )
+            this.nameObj = ( obj?.toString() ?: null )
 
         return this
     }
 
     BaseOutParam into( def value ) {
-        intoObject = value
+        intoObj = value
         return this
     }
 
@@ -138,7 +141,14 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         return outChannel
     }
 
-    def String getName() { name }
+    def String getName() {
+
+        if( nameObj != null )
+            return nameObj.toString()
+
+        throw new IllegalStateException("Missing 'name' property in output parameter")
+    }
+
 
     def BaseOutParam mode( def mode ) {
         this.mode = BasicMode.parseValue(mode)
@@ -174,6 +184,8 @@ class FileOutParam extends BaseOutParam implements OutParam {
      */
     protected boolean includeInputs
 
+    private TokenGString gstring
+
     String getSeparatorChar() { separatorChar }
 
     boolean getIncludeHidden() { includeHidden }
@@ -194,6 +206,47 @@ class FileOutParam extends BaseOutParam implements OutParam {
         this.includeHidden = flag
         return this
     }
+
+    BaseOutParam bind( obj ) {
+
+        if( obj instanceof TokenGString ) {
+            gstring = obj
+            return this
+        }
+
+        if( obj instanceof TokenVar ) {
+            this.nameObj = obj.name
+            gstring = new TokenGString(obj.name, [''], [obj.name])
+            return this
+        }
+
+        // fallback on super class
+        super.bind(obj)
+    }
+
+    List<String> getFilePatterns(Map context) {
+
+        def nameString
+        if( gstring ) {
+            def strict = getName() == null
+            nameString = gstring.resolve { String it -> resolveName(context, it, strict) }
+        }
+        else {
+            nameString = nameObj
+        }
+
+        return separatorChar ? nameString.split(/\${separatorChar}/) : [nameString]
+    }
+
+    /**
+     * Override the default to allow null as a value name
+     * @return
+     */
+    String getName() {
+        return nameObj ? super.getName() : null
+    }
+
+
 }
 
 
@@ -222,20 +275,24 @@ class SetOutParam extends BaseOutParam {
     SetOutParam bind( Object... obj ) {
 
         obj.each { item ->
-            if( item instanceof ScriptVar )
+            if( item instanceof TokenVar )
                 create(ValueOutParam).bind(item)
 
-            else if( item instanceof ScriptValCall )
+            else if( item instanceof TokenValCall )
                 create(ValueOutParam).bind(item.name)
 
-            else if( item instanceof ScriptStdoutCall || item == '-'  )
+            else if( item instanceof TokenStdoutCall || item == '-'  )
                 create(StdOutParam).bind('-')
 
             else if( item instanceof String )
                 create(FileOutParam).bind(item)
 
-            else if( item instanceof ScriptFileCall )
-                create(FileOutParam).bind(item.name)
+            else if( item instanceof TokenFileCall )
+                // note that 'filePattern' can be a string or a Gstring
+                create(FileOutParam).bind(item.target)
+
+            else if( item instanceof TokenGString )
+                create(FileOutParam).bind(item)
 
             else
                 throw new IllegalArgumentException("Invalid map output parameter declaration -- item: ${item}")
@@ -245,7 +302,7 @@ class SetOutParam extends BaseOutParam {
     }
 
     def void lazyInit() {
-        if( intoObject == null )
+        if( intoObj == null )
             throw new IllegalStateException("Missing 'into' channel in output parameter declaration")
 
         super.lazyInit()
@@ -257,7 +314,7 @@ class SetOutParam extends BaseOutParam {
 
     def SetOutParam mode( def value ) {
 
-        def str = value instanceof String ? value : ( value instanceof ScriptVar ? value.name : null )
+        def str = value instanceof String ? value : ( value instanceof TokenVar ? value.name : null )
         if( str ) {
             try {
                 this.mode = CombineMode.valueOf(str)
