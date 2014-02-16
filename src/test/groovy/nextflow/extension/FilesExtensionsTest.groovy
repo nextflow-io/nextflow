@@ -1,5 +1,4 @@
 package nextflow.extension
-
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -369,4 +368,252 @@ class FilesExtensionsTest extends Specification {
         file.head(6).toString() == '1\n22\n333\n\n\n4444'
 
     }
+
+    def testFileList() {
+
+        given:
+        def sourceFolder =  Files.createTempDirectory('folderToCopy')
+        def path1 = sourceFolder.resolve('file1')
+        def path2 = sourceFolder.resolve('file2')
+        def path3 = sourceFolder.resolve('file3')
+        def sub1 = Files.createTempDirectory(sourceFolder, 'sub1')
+        def path4 = sub1.resolve('file4')
+        def path5 = sub1.resolve('file5')
+        path1.text = 'Hello1'
+        path2.text = 'Hello2'
+        path3.text = 'Hello3'
+        path4.text = 'Hello4'
+        path5.text = 'Hello5'
+
+        when:
+        def files = sourceFolder.toFile().listFiles()
+        def paths = sourceFolder.listFiles()
+
+        then:
+        files.size() == 4
+        files[0] == new File(sourceFolder.toString(), 'file1')
+        files[1] == new File(sourceFolder.toString(), 'file2')
+        files[2] == new File(sourceFolder.toString(), 'file3')
+        files[3] == sub1.toFile()
+
+        paths.size() == 4
+        paths[0] == path1
+        paths[1] == path2
+        paths[2] == path3
+        paths[3] == sub1
+
+        expect:
+        path1.toFile().listFiles() == null
+        path1.listFiles() == null
+
+
+        cleanup:
+        sourceFolder.deleteDir()
+    }
+
+
+    def testSetReadonly() {
+
+        setup:
+        def file1 = File.createTempFile('testfile',null)
+        def file2 = File.createTempFile('testfile',null)
+        file1.deleteOnExit()
+        file2.deleteOnExit()
+
+        when:
+        file1.setReadOnly()
+        def OK = file2.toPath().setReadOnly()
+
+        then:
+        OK
+        file1.toPath().getPermissions() == file2.toPath().getPermissions()
+
+        expect:
+        !Paths.get('none').setReadOnly()
+    }
+
+    def testSetExecutable () {
+        setup:
+        def file1 = File.createTempFile('testfile',null)
+        def file2 = File.createTempFile('testfile',null)
+        file1.deleteOnExit()
+        file2.deleteOnExit()
+
+        when:
+        file1.setExecutable(true,false)
+        def OK = file2.toPath().setExecutable(true,false)
+        println "file1: ${file1.toPath().getPermissions()}"
+        println "file2: ${file2.toPath().getPermissions()}"
+        then:
+        OK
+        file1.toPath().getPermissions() == file2.toPath().getPermissions()
+
+        when:
+        file1.setExecutable(true)
+        file2.toPath().setExecutable(true)
+        println "file1: ${file1.toPath().getPermissions()}"
+        println "file2: ${file2.toPath().getPermissions()}"
+        then:
+        file1.toPath().getPermissions() == file2.toPath().getPermissions()
+
+        when:
+        file1.setExecutable(false)
+        file2.toPath().setExecutable(false)
+        println "file1: ${file1.toPath().getPermissions()}"
+        println "file2: ${file2.toPath().getPermissions()}"
+        then:
+        file1.toPath().getPermissions() == file2.toPath().getPermissions()
+
+        when:
+        file1.setExecutable(false,false)
+        file2.toPath().setExecutable(false,false)
+        println "file1: ${file1.toPath().getPermissions()}"
+        println "file2: ${file2.toPath().getPermissions()}"
+        then:
+        file1.toPath().getPermissions() == file2.toPath().getPermissions()
+
+        expect:
+        !Paths.get('none').setExecutable(true)
+
+    }
+
+    def testSetWritable() {
+        setup:
+        def file1 = File.createTempFile('testfile',null)
+        def file2 = File.createTempFile('testfile',null)
+        file1.deleteOnExit()
+        file2.deleteOnExit()
+
+        when:
+        file1.setWritable(true,false)
+        def OK = file2.toPath().setWritable(true,false)
+        println "file1: ${file1.toPath().getPermissions()}"
+        println "file2: ${file2.toPath().getPermissions()}"
+        then:
+        OK
+        file1.toPath().getPermissions() == file2.toPath().getPermissions()
+
+        when:
+        file1.setWritable(true)
+        file2.toPath().setWritable(true)
+        println "file1: ${file1.toPath().getPermissions()}"
+        println "file2: ${file2.toPath().getPermissions()}"
+        then:
+        file1.toPath().getPermissions() == file2.toPath().getPermissions()
+
+        when:
+        file1.setWritable(false)
+        file2.toPath().setWritable(false)
+        println "file1: ${file1.toPath().getPermissions()}"
+        println "file2: ${file2.toPath().getPermissions()}"
+        then:
+        file1.toPath().getPermissions() == file2.toPath().getPermissions()
+
+        when:
+        file1.setWritable(false,false)
+        file2.toPath().setWritable(false,false)
+        println "file1: ${file1.toPath().getPermissions()}"
+        println "file2: ${file2.toPath().getPermissions()}"
+        then:
+        file1.toPath().getPermissions() == file2.toPath().getPermissions()
+
+        expect:
+        !Paths.get('none').setWritable(true)
+
+
+    }
+
+    def testSetReadable() {
+        setup:
+        def file1 = File.createTempFile('testfile',null)
+        def file2 = File.createTempFile('testfile',null)
+        file1.deleteOnExit()
+        file2.deleteOnExit()
+
+        when:
+        file1.setReadable(true,false)
+        def OK = file2.toPath().setReadable(true,false)
+        println "file1: ${file1.toPath().getPermissions()}"
+        println "file2: ${file2.toPath().getPermissions()}"
+        then:
+        OK
+        file1.toPath().getPermissions() == file2.toPath().getPermissions()
+
+        when:
+        file1.setReadable(true)
+        file2.toPath().setReadable(true)
+        println "file1: ${file1.toPath().getPermissions()}"
+        println "file2: ${file2.toPath().getPermissions()}"
+        then:
+        file1.toPath().getPermissions() == file2.toPath().getPermissions()
+
+        when:
+        file1.setReadable(false)
+        file2.toPath().setReadable(false)
+        println "file1: ${file1.toPath().getPermissions()}"
+        println "file2: ${file2.toPath().getPermissions()}"
+        then:
+        file1.toPath().getPermissions() == file2.toPath().getPermissions()
+
+        when:
+        file1.setReadable(false,false)
+        file2.toPath().setReadable(false,false)
+        println "file1: ${file1.toPath().getPermissions()}"
+        println "file2: ${file2.toPath().getPermissions()}"
+        then:
+        file1.toPath().getPermissions() == file2.toPath().getPermissions()
+
+
+        expect:
+        !Paths.get('none').setReadable(true)
+
+    }
+
+    def testDigitToPerm() {
+
+        expect:
+        FilesExtensions.digitToPerm(1).toString() == '--x'
+        FilesExtensions.digitToPerm(2).toString() == '-w-'
+        FilesExtensions.digitToPerm(3).toString() == '-wx'
+        FilesExtensions.digitToPerm(4).toString() == 'r--'
+        FilesExtensions.digitToPerm(5).toString() == 'r-x'
+        FilesExtensions.digitToPerm(6).toString() == 'rw-'
+        FilesExtensions.digitToPerm(7).toString() == 'rwx'
+
+    }
+
+    def testSetPermission() {
+        setup:
+        def file1 = File.createTempFile('testfile',null)
+        file1.deleteOnExit()
+
+        when:
+        file1.setReadable(true,false)
+        def ok = file1.toPath().setPermissions(6,4,4)
+        then:
+        ok
+        file1.toPath().getPermissions() == 'rw-r--r--'
+
+        expect:
+        !Paths.get('none').setPermissions(6,6,6)
+
+    }
+
+    def testSetPermissionString() {
+        setup:
+        def file1 = File.createTempFile('testfile',null)
+        file1.deleteOnExit()
+
+        when:
+        file1.setReadable(true,false)
+        def ok = file1.toPath().setPermissions('rw-rw-rw-')
+        then:
+        ok
+        file1.toPath().getPermissions() == 'rw-rw-rw-'
+
+        expect:
+        !Paths.get('none').setPermissions('rw-rw-rw-')
+
+    }
+
 }

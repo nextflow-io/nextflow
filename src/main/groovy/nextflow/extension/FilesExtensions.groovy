@@ -10,7 +10,11 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileAttribute
+import java.nio.file.attribute.FileTime
+import java.nio.file.attribute.PosixFilePermission
+import java.nio.file.attribute.PosixFilePermissions
 
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.util.ByteBufferBackedInputStream
 import nextflow.util.FileHelper
@@ -57,8 +61,55 @@ class FilesExtensions {
      * @see File#delete()
      */
 
-    def static delete( Path path ) {
-        Files.delete(path)
+    def static boolean delete( Path path ) {
+        try {
+            Files.delete(path)
+            return true
+        }
+        catch( IOException e ) {
+            return false
+        }
+    }
+
+    /**
+     * Deletes a directory with all contained files and subdirectories.
+     * <p>The method returns
+     * <ul>
+     * <li>true, when deletion was successful</li>
+     * <li>true, when it is called for a non existing directory</li>
+     * <li>false, when it is called for a file which isn't a directory</li>
+     * <li>false, when directory couldn't be deleted</li>
+     * </ul>
+     *
+     * @param path
+     * @return
+     */
+    def static boolean deleteDir(Path path) {
+        if( !Files.exists(path) )
+             return true
+
+        if( !Files.isDirectory(path) )
+            return false
+
+        try {
+            Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                    Files.delete(file)
+                    FileVisitResult.CONTINUE
+                }
+
+                public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
+                    Files.delete(dir)
+                    FileVisitResult.CONTINUE
+                }
+
+            })
+            return true
+        }
+        catch( IOException e ) {
+            return false
+        }
     }
 
     /**
@@ -286,6 +337,12 @@ class FilesExtensions {
         getExtension(file.toPath())
     }
 
+    /**
+     * Retrieve the file name extension
+     *
+     * @param file A {@code Path} referencing a file
+     * @return The file name extension (not including the dot) or an empty string if the file has not extension
+     */
     def static String getExtension( Path file ) {
         assert file
         String name = file.getFileName()
@@ -354,23 +411,59 @@ class FilesExtensions {
         Files.isRegularFile(self,options)
     }
 
-    // TODO implements using the new API
     def static boolean renameTo(Path self, Path target) {
-            self.toFile().renameTo(target.toFile())
+        Files.move(self,target)
     }
 
     def static boolean renameTo(Path self, String target) {
         renameTo( self, target as Path )
     }
 
-    // TODO implements using the new API
+    /**
+     * List the content of a given path folder. The method is semantically
+     * equivalent to {@code File#list()}
+     *
+     * @param self The folder to list
+     * @return A list of strings or {@code null} if the path is not a folder
+     */
     def static String[] list(Path self) {
-        self.toFile().list()
+        listFiles(self).collect { self.toString() } as String[]
     }
 
-    // TODO implements using the new API
+    /**
+     * List the content of a given path folder. The method is semantically
+     * equivalent to {@code File#listFiles()}
+     *
+     * @param self The folder to list
+     * @return A list of {@code Path} or {@code null} if the path is not a folder
+     */
     def static Path[] listFiles(Path self) {
-        self.toFile().listFiles().collect { it.toPath() } as Path[]
+
+        if( !self.isDirectory() )
+            return null
+
+        def result = []
+        Files.walkFileTree(self, new SimpleFileVisitor<Path>() {
+
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                result.add( file )
+                FileVisitResult.CONTINUE
+            }
+
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                if( self == dir )
+                    FileVisitResult.CONTINUE
+
+                else {
+                    result.add(dir)
+                    FileVisitResult.SKIP_SUBTREE
+                }
+            }
+
+        } )
+
+        return result as Path[]
+
     }
 
     /**
@@ -578,5 +671,268 @@ class FilesExtensions {
             reader.closeQuietly()
         }
     }
+
+    /**
+     * Sets the last-modified time of the file or directory named by this
+     * {@code Path}.
+     *
+     * @param self The {@code Path} to which set the last modified time
+     * @param time The new last-modified time, measured in milliseconds since
+     *             the epoch (00:00:00 GMT, January 1, 1970)
+     * @return <code>true</code> if and only if the operation succeeded;
+     *          <code>false</code> otherwise
+     */
+    static boolean setLastModified(Path self, long time) {
+        try {
+            Files.setLastModifiedTime(self, FileTime.fromMillis(time))
+            return true
+        }
+        catch( IOException e ) {
+            log.debug "Unable to set last-modified-time: $time to path: $self"
+            return false
+        }
+    }
+
+    /**
+     * Sets the owner's or everybody's execute permission for the specified file.
+     *
+     * @param self  The {@code Path} for which set the permissions
+     *
+     * @param executable
+     *          If <code>true</code>, sets the access permission to allow execute
+     *          operations; if <code>false</code> to disallow execute operations
+     *
+     * @param ownerOnly
+     *          If <code>true</code>, the execute permission applies only to the
+     *          owner's execute permission; otherwise, it applies to everybody.
+     *          If the underlying file system can not distinguish the owner's
+     *          execute permission from that of others, then the permission will
+     *          apply to everybody, regardless of this value.
+     *
+     * @return  <code>true</code> if and only if the operation succeeded.  The
+     *          operation will fail if the user does not have permission to
+     *          change the access permissions of this file.
+     *
+     */
+    static boolean setExecutable(Path self, boolean executable, boolean ownerOnly = true) {
+        def perms = null
+        try {
+            perms = Files.getPosixFilePermissions(self)
+            if( executable ) {
+                perms.add(PosixFilePermission.OWNER_EXECUTE)
+                if( !ownerOnly ) {
+                    perms.add(PosixFilePermission.GROUP_EXECUTE)
+                    perms.add(PosixFilePermission.OTHERS_EXECUTE)
+                }
+            }
+            else {
+                perms.remove(PosixFilePermission.OWNER_EXECUTE)
+                if( !ownerOnly ) {
+                    perms.remove(PosixFilePermission.GROUP_EXECUTE)
+                    perms.remove(PosixFilePermission.OTHERS_EXECUTE)
+                }
+            }
+            Files.setPosixFilePermissions(self, perms)
+            return true
+        }
+        catch( IOException e ) {
+            log.debug "Unable to set executable permissions: $perms to path: $self"
+            return false
+        }
+    }
+
+    /**
+     * A convenience method to set the owner's read permission for the specified file
+     *
+     * @param self The {@code Path} for which set the readable permissions
+     *
+     * @param readable
+     *          If <code>true</code>, sets the access permission to allow read
+     *          operations; if <code>false</code> to disallow read operations
+     *
+     * @param ownerOnly
+     *          If <code>true</code>, sets the access permission to allow read
+     *          operations; if <code>false</code> to disallow read operations
+     *
+     * @return
+     *          <code>true</code> if and only if the operation succeeded.  The
+     *          operation will fail if the user does not have permission to
+     *          change the access permissions of this file.
+     */
+    static boolean setReadable(Path self, boolean readable, boolean ownerOnly = true) {
+        def perms = null
+        try {
+            perms = Files.getPosixFilePermissions(self)
+            if( readable ) {
+                perms.add(PosixFilePermission.OWNER_READ)
+                if( !ownerOnly ) {
+                    perms.add(PosixFilePermission.GROUP_READ)
+                    perms.add(PosixFilePermission.OTHERS_READ)
+                }
+            }
+            else {
+                perms.remove(PosixFilePermission.OWNER_READ)
+                if( !ownerOnly ) {
+                    perms.remove(PosixFilePermission.GROUP_READ)
+                    perms.remove(PosixFilePermission.OTHERS_READ)
+                }
+            }
+
+            Files.setPosixFilePermissions(self, perms)
+            return true
+        }
+        catch( IOException e ) {
+            log.debug "Unable to set readable permissions: $perms to path: $self"
+            return false
+        }
+    }
+
+    /**
+     *    * Marks the file or directory named by this abstract pathname so that
+     * only read operations are allowed.
+     * @param self
+     * @return
+     */
+    static boolean setReadOnly( Path self ) {
+        Set<PosixFilePermission> perms = PosixFilePermissions.fromString("r--r--r--");
+        try {
+            Files.setPosixFilePermissions(self, perms)
+            return true
+        }
+        catch( IOException e ) {
+            log.debug "Unable to set read-only permissions: $perms to path: $self"
+            return false
+        }
+    }
+
+    /**
+     * Sets the owner's or everybody's write permission for the specified file.
+     *
+     * @param self The {@code Path} for which set the permissions
+     *
+     * @param writable
+     *          If <code>true</code>, sets the access permission to allow write
+     *          operations; if <code>false</code> to disallow write operations
+     *
+     * @param ownerOnly
+     *          If <code>true</code>, the write permission applies only to the
+     *          owner's write permission; otherwise, it applies to everybody.  If
+     *          the underlying file system can not distinguish the owner's write
+     *          permission from that of others, then the permission will apply to
+     *          everybody, regardless of this value.
+     * @return  <code>true</code> if and only if the operation succeeded.
+     */
+    static boolean setWritable(Path self, boolean writable, boolean ownerOnly = true ) {
+        def perms = null
+        try {
+            perms = Files.getPosixFilePermissions(self)
+            if( writable ) {
+                perms.add(PosixFilePermission.OWNER_WRITE)
+                if( !ownerOnly ) {
+                    perms.add(PosixFilePermission.GROUP_WRITE)
+                    perms.add(PosixFilePermission.OTHERS_WRITE)
+                }
+            }
+            else {
+                perms.remove(PosixFilePermission.OWNER_WRITE)
+                if( !ownerOnly ) {
+                    perms.remove(PosixFilePermission.GROUP_WRITE)
+                    perms.remove(PosixFilePermission.OTHERS_WRITE)
+                }
+            }
+
+            Files.setPosixFilePermissions(self, perms)
+            return true
+        }
+        catch( IOException e ) {
+            log.debug "Unable to set permissions: $perms to path: $self"
+            return false
+        }
+
+    }
+
+    /**
+     * Get the file Unix permission as a string e.g. {@code rw-r--r--}
+     *
+     * @param self The {@code Path} for which the permissions string
+     * @return Unix permission as a string e.g. {@code rw-r--r--}
+     */
+    static String getPermissions(Path self) {
+        def perms = Files.getPosixFilePermissions(self)
+        PosixFilePermissions.toString(perms)
+    }
+
+    /**
+     * Set the file Unix permissions using a string like {@code rw-r--r--}
+     *
+     * @param self The {@code Path} file for which set the permissions.
+     * @param permsString The permissions string e.g. {@code rw-r--r--}. It must contain 9 letters.
+     */
+    static boolean setPermissions( Path self, String permsString ) {
+        Set<PosixFilePermission> perms = PosixFilePermissions.fromString(permsString);
+
+        try {
+            Files.setPosixFilePermissions(self, perms)
+            return true
+        }
+        catch( IOException e ) {
+            log.debug "Unable to set permissions: $permsString to path: $self"
+            return false
+        }
+    }
+
+    @PackageScope
+    static  digitToPerm( int value, StringBuilder sb = new StringBuilder() ) {
+        assert value >= 0 && value < 8
+
+        def x = (value & 1) == 1
+        def w = (value & 2) == 2
+        def r = (value & 4) == 4
+
+        if (r) {
+            sb.append('r');
+        } else {
+            sb.append('-');
+        }
+        if (w) {
+            sb.append('w');
+        } else {
+            sb.append('-');
+        }
+        if (x) {
+            sb.append('x');
+        } else {
+            sb.append('-');
+        }
+
+    }
+
+    /**
+     * Set the file Unix permission using the digit representing the respectively
+     * the permissions for the owner, the group and others.
+     *
+     * @see http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation
+     *
+     * @param self The {@code Path} file for which set the permissions
+     * @param owner The owner permissions using a octal numeric representation.
+     * @param group The group permissions using a octal numeric representation.
+     * @param other The others permissions using a octal numeric representation.
+     */
+    static boolean setPermissions( Path self, int owner, int group, int other ) {
+        def str = new StringBuilder()
+        digitToPerm(owner, str)
+        digitToPerm(group, str)
+        digitToPerm(other, str)
+        Set<PosixFilePermission> perms = PosixFilePermissions.fromString(str.toString());
+        try {
+            Files.setPosixFilePermissions(self, perms)
+            return true
+        }
+        catch( IOException e ) {
+            log.debug "Unable to set permissions: $perms to path: $self"
+            return false
+        }
+    }
+
 
 }
