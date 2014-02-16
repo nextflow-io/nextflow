@@ -928,6 +928,15 @@ and have the following syntax::
 
 Some directives are generally available to all processes, some others depends on the `executor` currently defined.
 
+The directives are:
+
+* `cache`_
+* `echo`_
+* `errorStrategy`_
+* `executor`_
+* `storeDir`_
+* `validExitStatus`_
+
 
 cache
 ---------
@@ -1007,7 +1016,7 @@ For example::
 
 
 executor
---------
+---------
 
 The `executor` defines the underlying system where processes are executed. By default a process uses the executor
 defined globally in the ``nextflow.config`` file.
@@ -1042,6 +1051,45 @@ The following example shows how to set the process's executor::
    See :ref:`executor-page` section to read about specific executor directives.
 
 
+storeDir
+---------
+
+The ``storeDir`` directive allows you to define a directory that is used as `permanent` cache for your process results.
+
+In more detail, it affects the process execution in two main ways:
+
+#. The process is executed only if the files declared in the `output` clause do not exists in directory specified by
+   the ``storeDir`` directive. When the files exist the process execution is skipped and these files are used as
+   the actual process result.
+
+#. Whenever a process complete successfully the files listed in the `output` declaration block are copied in the directory
+   specified by the ``storeDir`` directive.
+
+The following example shows how use the ``storeDir`` directive to create a directory containing a BLAST database
+for each specie specified by an input parameter::
+
+  genomes = Channel.path(params.genomes)
+
+  process formatBlastDatabases {
+
+    storeDir '/db/genomes'
+
+    input:
+    file specie from genomes
+
+    output:
+    file "${dbName}.*" into blastDb
+
+    script:
+    dbName = specie.baseName
+    """
+    makeblastdb -dbtype nucl -in ${specie} -out ${dbName}
+    """
+
+  }
+
+
+
 validExitStatus
 -------------------
 
@@ -1066,6 +1114,4 @@ You can specify a single value or multiple values as shown in the following exam
 In the above example, although the command script ends with a ``1`` exit status, the process
 will not return an error condition because the value ``1`` is declared as a `valid` status in 
 the ``validExitStatus`` directive.
-
-
 

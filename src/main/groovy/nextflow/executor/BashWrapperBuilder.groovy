@@ -30,7 +30,6 @@ class BashWrapperBuilder {
 
     BashWrapperBuilder( TaskRun task )  {
         assert task
-        assert task.workDirectory
         this.task = task
     }
 
@@ -147,8 +146,8 @@ class BashWrapperBuilder {
         if( input != null ) wrapper << ' < ' << inputFile.toString()
         wrapper << ' ) &> ' << outputFile.toAbsolutePath() << ENDL
 
-        def unstaging
-        if( changeDir && unstagingScript && (unstaging=unstagingScript.call()) ) {
+        if( (changeDir || task.workDirectory != task.getTargetDir() ) && unstagingScript  ) {
+            def unstaging = unstagingScript.call()
             wrapper << unstaging << ENDL
         }
 

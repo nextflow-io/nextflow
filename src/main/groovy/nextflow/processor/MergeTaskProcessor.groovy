@@ -93,7 +93,7 @@ class MergeTaskProcessor extends TaskProcessor {
     }
 
     protected void collectOutputs( TaskRun task ) {
-        collectOutputs( task, task.workDirectory, task.@stdout, contextMap )
+        collectOutputs( task, task.getTargetDir(), task.@stdout, contextMap )
     }
 
     protected void mergeTaskRun(TaskRun task) {

@@ -286,12 +286,11 @@ class ParallelTaskProcessor extends TaskProcessor {
             task.script = getScriptlet(task.code)
         }
 
-        // create an hash for the inputs and code
-        // Does it exist in the cache?
-        // NO --> launch the task
-        // YES --> Does it exited OK and exists the expected outputs?
-        //          YES --> return the outputs
-        //          NO  --> launch the task
+        // -- verify if exists a stored result for this case,
+        //    if true skip the execution and return the stored data
+        if( checkStoredOutput(task) ) {
+            return
+        }
 
         def keys = [ session.uniqueId, task.script ]
         // add all the input name-value pairs to the key generator

@@ -1,5 +1,4 @@
 package nextflow.executor
-
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
 
@@ -8,13 +7,11 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.MissingFileException
 import nextflow.processor.FileHolder
-import nextflow.script.FileOutParam
-import nextflow.script.InParam
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
-
+import nextflow.script.InParam
 /**
  * Declares methods have to be implemented by a generic
  * execution strategy
@@ -192,23 +189,31 @@ abstract class AbstractExecutor {
     String unstageOutputFilesScript( final TaskRun task, final String separatorChar = '\n' ) {
 
         // collect all the expected names (pattern) for files to be un-staged
-        def result = new StringBuilder()
-        def fileOutNames = []
-        task.getOutputsByType(FileOutParam).keySet().each { FileOutParam param ->
-            fileOutNames.addAll( param.name.split( param.separatorChar ) as List )
-        }
+        def result = []
+        def fileOutNames = task.getOutputFilesNames()
 
         // create a bash script that will copy the out file to the working directory
-        log.debug "Unstaging file names: $fileOutNames"
+        log.trace "Unstaging file names: $fileOutNames"
         if( fileOutNames ) {
-            result << 'for item in "' << fileOutNames.unique().join(' ') << '"; do' << separatorChar
-            result << 'for name in `ls $item 2>/dev/null`; do' << separatorChar
-            result << '  cp $name ' << task.workDirectory.toString() << separatorChar
-            result << 'done' << separatorChar
-            result << 'done' << separatorChar
+            def cmd = 'cp -r'
+            if( task.workDirectory != task.getTargetDir() ) {
+                cmd = 'mv'
+                result << "mkdir -p ${task.getTargetDir().toString() }"
+            }
+            result << "for item in \"${fileOutNames.unique().join(' ')}\"; do"
+            result << 'if [ -d "$item" ]; then'
+            result << "  target=\"${task.getTargetDir().toString()}\""
+            result << '  mkdir -p "$target/$(dirname $item)"'
+            result << '  ' + cmd + ' "$(dirname $item)/$(basename $item)" "$target/$(dirname $item)" '
+            result << 'else'
+            result << '  for name in `ls $item 2>/dev/null`; do'
+            result << '    ' +cmd+ ' $name ' + task.getTargetDir().toString()
+            result << '  done'
+            result << 'fi'
+            result << 'done'
         }
 
-        return result.toString()
+        return result.join(separatorChar)
     }
 
 }

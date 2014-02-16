@@ -126,8 +126,12 @@ class DnaNexusExecutor extends AbstractExecutor {
             obj.task_input = (taskInputFile as DxPath).getFileId()
         }
         obj.stage_inputs = stageScript
-        // todo Include shared output files as well
         obj.output_files = task.getOutputFilesNames()
+
+        def target = task.getTargetDir().toString()
+        if( target.startsWith('dxfs://') )
+            target = target.substring('dxfs://'.size())
+        obj.target_dir = target
 
         new DxTaskHandler(task, taskConfig, this, obj)
     }

@@ -193,6 +193,10 @@ class TaskRun {
         return result
     }
 
+    /**
+     * Directory to store final results
+     */
+    Path storeDir
 
     /**
      * The directory used to run the task
@@ -299,6 +303,11 @@ class TaskRun {
             environment.put( param.name, value?.toString() )
         }
         return environment
+    }
+
+
+    Path getTargetDir() {
+        storeDir ?: workDirectory
     }
 
 

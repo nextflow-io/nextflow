@@ -76,6 +76,11 @@ class LocalExecutor extends AbstractExecutor {
             return staging
         }
 
+        // unstage script
+        bash.unstagingScript = {
+            return unstageOutputFilesScript(task)
+        }
+
         // create the wrapper script
         bash.build()
         return new LocalTaskHandler(task,taskConfig,session)

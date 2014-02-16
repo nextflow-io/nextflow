@@ -401,6 +401,11 @@ abstract class TaskProcessor {
         def index = indexCount.incrementAndGet()
         def task = new TaskRun(id: id, index: index, name: "$name ($index)", processor: this, type: type )
 
+        if( taskConfig.storeDir ) {
+            def path = Nextflow.file(taskConfig.storeDir)
+            if( !(path instanceof Path) ) throw new IllegalArgumentException("Invalid path for 'storeDir' attribute: ${taskConfig.storeDir}")
+            task.storeDir = path
+        }
 
         /*
          * initialize the inputs/outputs for this task instance
@@ -471,6 +476,56 @@ abstract class TaskProcessor {
             folderLock.unlock()
         }
 
+    }
+
+
+    final boolean checkStoredOutput( TaskRun task ) {
+        if( !task.storeDir ) {
+            log.trace "[$task.name] Store dir not set -- return false"
+            return false
+        }
+
+        // -- when store path is set, only output params of type 'file' can be specified
+        Map ctx = (Map)task.code.delegate
+        def invalid = task.getOutputs().keySet().any {
+            if( it instanceof ValueOutParam ) {
+                return !ctx.containsKey(it.name)
+            }
+            if( it instanceof FileOutParam ) {
+                return false
+            }
+            return true
+        }
+        if( invalid ) {
+            log.warn "[$task.name] Store dir can be used when using 'file' outputs"
+            return false
+        }
+
+        if( !task.storeDir.exists() ) {
+            log.trace "[$task.name] Store dir does not exists > ${task.storeDir} -- return false"
+            // no folder -> no cached result
+            return false
+        }
+
+
+        try {
+            // -- check if all output resources are available
+            collectOutputs(task)
+            log.info "[skipping] Stored process > ${task.name}"
+
+            // set the exit code in to the task object
+            task.exitStatus = taskConfig.getValidExitStatus()[0]
+
+            // -- now bind the results
+            finalizeTask0(task)
+            return true
+        }
+        catch( MissingFileException | MissingValueException e ) {
+            log.trace "[$task.name] Missed store > ${e.getMessage()} -- folder: ${task.storeDir}"
+            task.exitStatus = Integer.MAX_VALUE
+            task.workDirectory = null
+            return false
+        }
     }
 
     /**
@@ -780,7 +835,7 @@ abstract class TaskProcessor {
     }
 
     protected void collectOutputs( TaskRun task ) {
-        collectOutputs( task, task.workDirectory, task.@stdout, task.code?.delegate )
+        collectOutputs( task, task.getTargetDir(), task.@stdout, (Map)task.code?.delegate )
     }
 
     /**
