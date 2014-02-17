@@ -14,6 +14,8 @@ operation which stops the receiving process until the message has arrived.
 
 
 
+.. _channel-factory:
+
 Channel factory
 ===============
 
@@ -29,6 +31,8 @@ The available factory methods are:
 * `watch( )`_
 
 
+.. _channel-create:
+
 create( )
 ---------
 
@@ -36,6 +40,8 @@ Creates a new `channel` by using the method ``create( )`` method, as showed belo
 
     myChannel = Channel.create()
 
+
+.. _channel-from:
 
 from( )
 -------
@@ -57,6 +63,8 @@ Square brackets can be omitted when passing a list a parameter, thus the followi
 
 
 
+.. _channel-just:
+
 just( )
 -------
 
@@ -74,6 +82,8 @@ not ``null`` value can be specified as parameters, which is bound to the newly c
     myChannel = Channel.just( [1,2,3,4,5] )
 
 
+
+.. _channel-path:
 
 path( )
 --------
@@ -110,6 +120,8 @@ In order the include hidden files you need to start your pattern with a period c
 
 
 Learn more about `glob` patterns at `this link <http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob>`_
+
+.. _channel-watch:
 
 watch( )
 ---------
@@ -179,6 +191,8 @@ an identical result as the previous one::
 Observing events
 =================
 
+
+.. _channel-subscribe:
 
 subscribe( )
 ------------
