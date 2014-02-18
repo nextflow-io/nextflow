@@ -866,19 +866,30 @@ class FilesExtensions {
      * Set the file Unix permissions using a string like {@code rw-r--r--}
      *
      * @param self The {@code Path} file for which set the permissions.
-     * @param permsString The permissions string e.g. {@code rw-r--r--}. It must contain 9 letters.
+     * @param permissions The permissions string e.g. {@code rw-r--r--}. It must contain 9 letters.
      */
-    static boolean setPermissions( Path self, String permsString ) {
-        Set<PosixFilePermission> perms = PosixFilePermissions.fromString(permsString);
+    static boolean setPermissions( Path self, String permissions ) {
+        Set<PosixFilePermission> perms = PosixFilePermissions.fromString(permissions);
 
         try {
             Files.setPosixFilePermissions(self, perms)
             return true
         }
         catch( IOException e ) {
-            log.debug "Unable to set permissions: $permsString to path: $self"
+            log.debug "Unable to set permissions: $permissions to path: $self"
             return false
         }
+    }
+
+    /**
+     * Set the file Unix permissions using a string like {@code rw-r--r--}
+     *
+     * @param self The {@code File} object for which set the permissions.
+     * @param permissions The permissions string e.g. {@code rw-r--r--}. It must contain 9 letters.
+     */
+
+    static boolean setPermissions( File self, String permissions ) {
+        setPermissions(self.toPath(),permissions)
     }
 
     @PackageScope
@@ -932,6 +943,21 @@ class FilesExtensions {
             log.debug "Unable to set permissions: $perms to path: $self"
             return false
         }
+    }
+
+    /**
+     * Set the file Unix permission using the digit representing the respectively
+     * the permissions for the owner, the group and others.
+     *
+     * @see http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation
+     *
+     * @param self The {@code File} object for which set the permissions
+     * @param owner The owner permissions using a octal numeric representation.
+     * @param group The group permissions using a octal numeric representation.
+     * @param other The others permissions using a octal numeric representation.
+     */
+    static boolean setPermissions( File self, int owner, int group, int other ) {
+        setPermissions(self.toPath(), owner, group, other)
     }
 
 
