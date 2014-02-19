@@ -42,16 +42,22 @@ class TaskPollingMonitor implements TaskMonitor {
     final int queueSize
 
     /**
+     * The name of the executor associated to this monitor
+     */
+    final String name
+
+    /**
      * Initialise the monitor, creating the queue which will hold the tasks
      *
      * @param session
      * @param defQueueSize
      * @param defPollInterval
      */
-    TaskPollingMonitor( Session session, String name, int defQueueSize, Duration defPollInterval ) {
-        assert name, "Executor name cannot be empty"
+    TaskPollingMonitor( Session session, String execName, int defQueueSize, Duration defPollInterval ) {
+        assert execName, "Executor name cannot be empty"
         assert session, "Session object cannot be null"
 
+        this.name = execName
         this.session = session
         this.dispatcher = session.dispatcher
         this.pollIntervalMillis = session.getPollInterval(name, defPollInterval).toMillis()
@@ -59,7 +65,7 @@ class TaskPollingMonitor implements TaskMonitor {
         this.dumpInterval = session.getMonitorDumpInterval(name)
 
         log.debug "Creating executor '$name' > queue size: $queueSize; poll-interval: $pollIntervalMillis; dump-interval: $dumpInterval"
-        this.queue = new ArrayBlockingQueue<TaskHandler>(defQueueSize)
+        this.queue = new ArrayBlockingQueue<TaskHandler>(queueSize,true)
 
         killOnExit()
     }
@@ -109,7 +115,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
             // dump this line every two minutes
             dumpInterval.throttle(true) {
-                log.debug "!!Tasks to be completed: ${queue.size()} -- first: ${queue.peek()}"
+                log.debug "!! executor $name > tasks to be completed: ${queue.size()} -- first: ${queue.peek()}"
             }
         }
     }
