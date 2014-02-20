@@ -608,6 +608,7 @@ Combining operators
 The combining operators are:
 
 * `cross`_
+* `concat`_
 * `into`_
 * `merge`_
 * `mix`_
@@ -635,9 +636,33 @@ are forwarded to the target channel. For example::
     b
     c
     d
-    
 
-See also `tap`_ and `route`_ operators.
+When the items emitted by the source channel are tuples of values, the operator ``into`` allows you to specify a list of
+channels as parameters, so that the value `i-th` in a tuple will be assigned to the target channel with the corresponding
+position index. For example::
+
+
+     alpha = Channel.create()
+     delta = Channel.create()
+
+     Channel
+        .from([1,2], ['a','b'], ['p','q'])
+        .into( alpha, delta )
+
+     alpha.subscribe { println "first : $it" }
+     delta.subscribe { println "second: $it" }
+
+It will output::
+
+        first : 1
+        first : a
+        first : p
+        second: 2
+        second: b
+        second: q
+
+
+See also `tap`_, `separate`_ and `route`_ operators.
 
 
 tap
@@ -832,6 +857,35 @@ There are two important cavets when using the ``cross`` operator:
 Optionally, a mapping function can be specified in order to provide a custom rule to associate an item to a key,
 in a similar manner as shown for the `phase`_ operator.
 
+concat
+--------
+
+The ``concat`` operator allows you to `concatenate` the items emitted by two or more channels to a new channel, in such
+a way that the items emitted by the resulting channel are in same order as the channels were specified on operator invocation.
+
+In other words, it guarantees that given any `n` channels, the concatenation channel emits the items proceeding from the channel `i+1 th`
+only after `all` the items proceeding from the channel `i th` were emitted.
+
+For example::
+
+    a = Channel.from('a','b','c')
+    b = Channel.from(1,2,3)
+    c = Channel.from('p','q')
+
+    c.concat( b, a ).subscribe { println it }
+
+It will output::
+
+    p
+    q
+    1
+    2
+    3
+    a
+    b
+    c
+
+
 spread
 ---------
 
@@ -991,7 +1045,7 @@ For example::
 .. note:: The above example takes advantage of the :ref:`multiple assignment <script-multiple-assignment>` syntax
   in order to assign two variables at once using the list of channels returned by the ``separate`` operator.
 
-See also: `choice`_, `split`_ and `map`_ operators.
+See also: `into`_, `choice`_, `split`_ and `map`_ operators.
 
 
 route
