@@ -315,7 +315,6 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         def cached = isCacheable() && session.resumeMode && checkCachedOutput(task, folder, hash)
         if( !cached ) {
-            log.info "[${getHashLog(hash)}] Running process > ${task.name}"
 
             // set the working directory
             task.workDirectory = createTaskFolder(folder, hash)
@@ -323,6 +322,7 @@ class ParallelTaskProcessor extends TaskProcessor {
 
             // submit task for execution
             submitTask( task )
+            log.info "[${getHashLog(hash)}] Submitted process > ${task.name}"
         }
     }
 
