@@ -460,6 +460,9 @@ class CliRunner {
                 println getVersion(true)
                 System.exit(ExitCode.OK)
             }
+            else {
+                log.debug getVersion(true)
+            }
 
             // -- print the history of executed commands
             if( options.history ) {
