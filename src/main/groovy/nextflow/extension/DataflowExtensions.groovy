@@ -317,7 +317,7 @@ class DataflowExtensions {
      * @param closure The closure mapping the values emitted by the source channel
      * @return The channel emitting the mapped values
      */
-    static public final <V> DataflowReadChannel<V> flatMap(final DataflowReadChannel<?> source, final Closure<V> closure) {
+    static public final <V> DataflowReadChannel<V> flatMap(final DataflowReadChannel<?> source, final Closure<V> closure=null) {
         assert source != null
 
         final target = new DataflowQueue()
@@ -341,7 +341,7 @@ class DataflowExtensions {
 
         newOperator(source, target, listener) {  item ->
 
-            def result = mapClosureCall(item, closure)
+            def result = closure != null ? mapClosureCall(item, closure) : item
             def proc = ((DataflowProcessor) getDelegate())
 
             switch( result ) {
@@ -380,7 +380,7 @@ class DataflowExtensions {
      * @param closure
      * @return
      */
-    static public final <V> DataflowReadChannel<V> mapMany(final DataflowReadChannel<?> source, final Closure<V> closure) {
+    static public final <V> DataflowReadChannel<V> mapMany(final DataflowReadChannel<?> source, final Closure<V> closure=null) {
         log.warn "Operator 'mapMany' as been deprecated -- use 'flatMap' instead"
         flatMap(source,closure)
     }
