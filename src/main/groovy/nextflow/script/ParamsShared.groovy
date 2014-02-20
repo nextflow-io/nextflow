@@ -89,7 +89,7 @@ abstract class BaseSharedParam extends BaseInParam implements SharedParam {
             return value
         }
         else if( value instanceof DataflowReadChannel ) {
-            log.warn "Using queue channel on share 'from' declaration should avoided -- take in consideration to change declaration for share: '$name' parameter"
+            log.warn "Using queue channel on share 'from' declaration should be avoided -- take in consideration to change declaration for share: '$name' parameter"
             value = value.toList()
         }
 

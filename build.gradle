@@ -18,7 +18,7 @@
  */
 
 apply plugin: 'gradle-one-jar'
-version = '0.6.1'
+version = '0.6.2'
 
 allprojects {
     apply plugin: 'groovy'

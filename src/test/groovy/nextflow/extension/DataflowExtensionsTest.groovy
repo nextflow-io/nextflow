@@ -501,6 +501,33 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    def testSeparate2() {
+
+        when:
+        def s1 = Channel.create()
+        def s2 = Channel.create()
+        Channel.from(1,2,3,4)
+                .map { it }
+                .separate(s1,s2) { item -> [item+1, item*item] }
+
+        then:
+        s1.val == 2
+        s1.val == 3
+        s1.val == 4
+        s1.val == 5
+        s1.val == Channel.STOP
+        s2.val == 1
+        s2.val == 4
+        s2.val == 9
+        s2.val == 16
+        s2.val == Channel.STOP
+
+
+
+
+
+    }
+
     def testSpread() {
 
         when:
@@ -1041,8 +1068,8 @@ class DataflowExtensionsTest extends Specification {
         def ids = []
         def list = []
         Channel.from(fasta).chopFasta(record:[id:true]) { item, int index ->
-            list[index] = index
             ids << item.id
+            list << index
             return item
         }
 
@@ -1051,6 +1078,75 @@ class DataflowExtensionsTest extends Specification {
         ids == ['1aboA','1ycsB','1pht']
         list == [0,1,2]
 
+    }
+
+    def testConcat() {
+
+        when:
+        def c1 = Channel.from(1,2,3)
+        def c2 = Channel.from('a','b','c')
+        def all = c1.concat(c2)
+        then:
+        all.val == 1
+        all.val == 2
+        all.val == 3
+        all.val == 'a'
+        all.val == 'b'
+        all.val == 'c'
+        all.val == Channel.STOP
+
+
+        when:
+        def d1 = Channel.create()
+        def d2 = Channel.from('a','b','c')
+        def d3 = Channel.create()
+        def result = d1.concat(d2,d3)
+
+        Thread.start { sleep 20; d3 << 'p' << 'q' << Channel.STOP }
+        Thread.start { sleep 100; d1 << 1 << 2 << Channel.STOP }
+
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 'a'
+        result.val == 'b'
+        result.val == 'c'
+        result.val == 'p'
+        result.val == 'q'
+        result.val == Channel.STOP
+
+    }
+
+    def testInto() {
+        when:
+        def x = Channel.create()
+        def y = Channel.create()
+        def source = Channel.from([1,2], ['a','b'], ['p','q'])
+        source.into(x,y)
+        then:
+        x.val == 1
+        x.val == 'a'
+        x.val == 'p'
+        x.val == Channel.STOP
+        y.val == 2
+        y.val == 'b'
+        y.val == 'q'
+        y.val == Channel.STOP
+
+        when:
+        def x2 = Channel.create()
+        def y2 = Channel.create()
+        def source2 = Channel.from([1,2], ['a','c','b'], 'z')
+        source2.into(x2,y2)
+        then:
+        x2.val == 1
+        x2.val == 'a'
+        x2.val == 'z'
+        x2.val == Channel.STOP
+        y2.val == 2
+        y2.val == 'c'
+        y2.val == null
+        y2.val == Channel.STOP
     }
 
 

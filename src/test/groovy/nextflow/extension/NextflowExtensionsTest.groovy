@@ -65,8 +65,8 @@ class NextflowExtensionsTest extends Specification {
     def testFastaRecord() {
         def fasta = /
             ;
-            >1aboA  xyz|beta|gamma
 
+            >1aboA  xyz|beta|gamma
             NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
             NYITPVN
             /.stripIndent()
@@ -75,9 +75,10 @@ class NextflowExtensionsTest extends Specification {
         NextflowExtensions.parseFastaRecord(fasta, [id:true]) .id == '1aboA'
         NextflowExtensions.parseFastaRecord(fasta, [seq:true]) .seq == 'NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS\nNYITPVN'
         NextflowExtensions.parseFastaRecord(fasta, [seq:true, width: 20 ]) .seq == 'NLFVALYDFVASGDNTLSIT\nKGEKLRVLGYNHNGEWCEAQ\nTKNGQGWVPSNYITPVN'
-        NextflowExtensions.parseFastaRecord(fasta, [head:true]) .head == '1aboA  xyz|beta|gamma'
-        NextflowExtensions.parseFastaRecord(fasta, [desc:true, seq: true, width: 0]) .seq == 'NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPSNYITPVN'
-        NextflowExtensions.parseFastaRecord(fasta, [text: true]) .text == fasta
+        NextflowExtensions.parseFastaRecord(fasta, [head:true]) .head == '>1aboA  xyz|beta|gamma'
+        NextflowExtensions.parseFastaRecord(fasta, [seq:true, width: 0]) .seq == 'NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPSNYITPVN'
+        NextflowExtensions.parseFastaRecord(fasta, [text:true]) .text == fasta
+        NextflowExtensions.parseFastaRecord(fasta, [desc:true]) .desc == 'xyz|beta|gamma'
 
     }
 

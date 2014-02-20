@@ -54,8 +54,8 @@ class TaskPollingMonitor implements TaskMonitor {
      * @param defPollInterval
      */
     TaskPollingMonitor( Session session, String execName, int defQueueSize, Duration defPollInterval ) {
-        assert execName, "Executor name cannot be empty"
         assert session, "Session object cannot be null"
+        assert execName, "Executor name cannot be empty"
 
         this.name = execName
         this.session = session

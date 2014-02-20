@@ -39,7 +39,8 @@ class DataflowExtensions {
     static private DEF_ERROR_LISTENER = new DataflowEventAdapter() {
         @Override
         public boolean onException(final DataflowProcessor processor, final Throwable e) {
-            DataflowExtensions.log.error("Operator unknown error", e)
+            DataflowExtensions.log.error("Unknown operator error -- see '.nextflow.log' for details", e)
+            Session.currentInstance?.abort()
             return true;
         }
     }
@@ -197,7 +198,8 @@ class DataflowExtensions {
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
                 error = true
                 if( !events.onError ) {
-                    DataflowExtensions.log.error(e.message, e)
+                    DataflowExtensions.log.error("Unknown 'subscribe' operator error -- see '.nextflow.log' for details", e)
+                    Session.currentInstance?.abort()
                 }
                 else {
                     events.onError.call(e)
@@ -315,7 +317,7 @@ class DataflowExtensions {
      * @param closure The closure mapping the values emitted by the source channel
      * @return The channel emitting the mapped values
      */
-    static public final <V> DataflowReadChannel<V> flatMap(final DataflowReadChannel<?> source, final Closure<V> closure) {
+    static public final <V> DataflowReadChannel<V> flatMap(final DataflowReadChannel<?> source, final Closure<V> closure=null) {
         assert source != null
 
         final target = new DataflowQueue()
@@ -331,14 +333,15 @@ class DataflowExtensions {
 
             @Override
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                DataflowExtensions.log.error "Operator 'mapMany' error", e
+                DataflowExtensions.log.error("Unknown 'flatMap' operator error -- see '.nextflow.log' for details", e)
+                Session.currentInstance?.abort()
                 return true;
             }
         }
 
         newOperator(source, target, listener) {  item ->
 
-            def result = mapClosureCall(item, closure)
+            def result = closure != null ? mapClosureCall(item, closure) : item
             def proc = ((DataflowProcessor) getDelegate())
 
             switch( result ) {
@@ -377,7 +380,7 @@ class DataflowExtensions {
      * @param closure
      * @return
      */
-    static public final <V> DataflowReadChannel<V> mapMany(final DataflowReadChannel<?> source, final Closure<V> closure) {
+    static public final <V> DataflowReadChannel<V> mapMany(final DataflowReadChannel<?> source, final Closure<V> closure=null) {
         log.warn "Operator 'mapMany' as been deprecated -- use 'flatMap' instead"
         flatMap(source,closure)
     }
@@ -464,7 +467,8 @@ class DataflowExtensions {
             }
 
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                DataflowExtensions.log.error('Dataflow reduce() exception', e)
+                DataflowExtensions.log.error("Unknown 'reduce' operator error -- see '.nextflow.log' for details", e)
+                Session.currentInstance?.abort()
                 return true;
             }
         }
@@ -963,7 +967,7 @@ class DataflowExtensions {
     }
 
 
-    static public final List<DataflowReadChannel> separate( final DataflowQueue channel, int n, Closure mapper ) {
+    static public final List<DataflowReadChannel> separate( final DataflowReadChannel channel, int n, Closure mapper ) {
 
         def outputs = []
         n.times { outputs << new DataflowQueue() }
@@ -971,7 +975,7 @@ class DataflowExtensions {
         outputs
     }
 
-    static public final void separate( final DataflowQueue channel, DataflowWriteChannel out1, DataflowWriteChannel out2, Closure mapper ) {
+    static public final void separate( final DataflowReadChannel channel, DataflowWriteChannel out1, DataflowWriteChannel out2, Closure<List<Object>> mapper ) {
         channel.separate([out1,out2], mapper)
     }
 
@@ -1013,7 +1017,8 @@ class DataflowExtensions {
                 }
 
                 public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                    DataflowExtensions.log.error("Operator 'flatten' error")
+                    DataflowExtensions.log.error("Unknown 'spread' operator error -- see '.nextflow.log' for details", e)
+                    Session.currentInstance?.abort()
                     return true;
                 }
             }
@@ -1143,7 +1148,8 @@ class DataflowExtensions {
 
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
-                DataflowExtensions.log.error("Operator 'buffer' error", e)
+                DataflowExtensions.log.error("Unknown 'buffer' operator error -- see '.nextflow.log' for details", e)
+                Session.currentInstance?.abort()
                 return true
             }
         }
@@ -1212,7 +1218,8 @@ class DataflowExtensions {
 
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
-                DataflowExtensions.log.error("Buffer operator failure", e)
+                DataflowExtensions.log.error("Unknown 'collate' operator error -- see '.nextflow.log' for details", e)
+                Session.currentInstance?.abort()
                 return true
             }
         }
@@ -1567,5 +1574,72 @@ class DataflowExtensions {
         return target
 
     }
+
+
+    private static append( DataflowWriteChannel result, List<DataflowReadChannel> channels, int index ) {
+        def current = channels[index++]
+        def next = index < channels.size() ? channels[index] : null
+
+        current.subscribe ([
+                onNext: { result.bind(it) },
+                onComplete: {
+                    if(next) append(result, channels, index)
+                    else result.bind(Channel.STOP)
+                }
+        ])
+    }
+
+    /**
+     * Creates a channel that emits the items in same order as they are emitted by two or more channel
+     *
+     * @param source
+     * @param target
+     * @return
+     */
+    static final DataflowWriteChannel concat( DataflowReadChannel source, DataflowReadChannel... target ) {
+        assert source != null
+        assert target
+
+        final result = new DataflowQueue()
+        final allChannels = [source]
+        allChannels.addAll(target)
+
+        append(result, allChannels, 0)
+
+        return result
+    }
+
+    /**
+     * When the items emitted by the source channel are tuples of values, the operator into allows you to specify a
+     * list of channels as parameters, so that the value i-th in a tuple will be assigned to the target channel
+     * with the corresponding position index.
+     *
+     * @param source The source channel
+     * @param target An open array of target channels
+     */
+    static final void into( DataflowReadChannel source, final DataflowWriteChannel... target ) {
+
+        final size = target.size()
+        int count = 0
+        Closure<List<Object>> result = { it ->
+            def tuple = it as List
+            if( tuple.size() == size )
+                return tuple
+
+            else {
+                if( count++ == 0 )
+                    log.warn "The target channels number ($size) for the 'into' operator do not match the items number (${tuple.size()}) of the receveid tuple: $tuple"
+
+                def result = new ArrayList(size)
+                size.times { i ->
+                    result[i] = i < tuple.size() ? tuple[i] : null
+                }
+                return result
+            }
+        }
+
+        source.separate( target as List<DataflowWriteChannel>, result )
+    }
+
 
 }

@@ -1,6 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.6.2 - 20 Feb 2014
+- Added 'concat' operator to concatenate two or more channels
+- Added 'into(ch1,ch2...)' operator which maps tuple elements into the corresponding target channel
+- Implemented queue status check for SLURM grid executor
+- Implemented queue status check for LSF grid executor
+- Improved grid executors stability
+- Fixed a bug when setting setting the monitor queue size
+
 0.6.1 - 16 Feb 2014
 - Added operator 'cross()'
 - Added operator 'collate()'

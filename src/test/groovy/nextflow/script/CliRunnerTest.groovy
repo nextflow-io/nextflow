@@ -603,5 +603,32 @@ class CliRunnerTest extends Specification {
 
     }
 
+//
+//    def testParamsOverride() {
+//
+//        given:
+//        def config = '''
+//            params.cpus = 10
+//
+//            derived.value = "x ${params.cpus}"
+//            '''
+//
+//        when:
+//        def obj = new ConfigSlurper().parse(config)
+//        then:
+//        obj.params.cpus == 10
+//        obj.derived.value == 'x 10'
+//
+//
+//        when:
+//        def map = [params:[cpus:20] ]
+//        def parser = new ConfigSlurper()
+//        parser.setBinding(map)
+//        obj = parser.parse(config)
+//        then:
+//        obj.params.cpus == 20
+//        obj.derived.value == 'x 20'
+//    }
+
 
 }

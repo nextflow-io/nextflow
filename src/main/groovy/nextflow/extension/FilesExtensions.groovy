@@ -383,20 +383,99 @@ class FilesExtensions {
         }
     }
 
+    /**
+     * Tests whether the application can read the file denoted by this
+     * abstract pathname.
+     *
+     * @param self
+     * @return  <code>true</code> if and only if the file specified by this
+     *          abstract pathname exists <em>and</em> can be read by the
+     *          application; <code>false</code> otherwise
+     *
+     */
     def static boolean canRead(Path self) {
-        Files.isReadable(self)
+        try {
+            Files.isReadable(self)
+        }
+        catch( IOException e ) {
+            log.trace("Cannot get read permission on file: $self -- Cause: ${e.getMessage()}")
+            return false
+        }
     }
 
+    /**
+     * Tests whether the application can modify the file denoted by this
+     * abstract pathname.
+     *
+     * @param self
+     * @return  <code>true</code> if and only if the file system actually
+     *          contains a file denoted by this abstract pathname <em>and</em>
+     *          the application is allowed to write to the file;
+     *          <code>false</code> otherwise.
+     *
+     */
     def static boolean canWrite(Path self) {
-        Files.isWritable(self)
+        try {
+            Files.isWritable(self)
+        }
+        catch( IOException e ) {
+            log.trace("Cannot get write permission on file: $self -- Cause: ${e.getMessage()}")
+            return false
+        }
     }
 
+    /**
+     * Tests whether the application can execute the file denoted by this
+     * abstract pathname.
+     *
+     * @param self
+     * @return  <code>true</code> if and only if the abstract pathname exists
+     *          <em>and</em> the application is allowed to execute the file
+     *
+     * @throws  SecurityException
+     *          If a security manager exists and its <code>{@link
+     *          java.lang.SecurityManager#checkExec(java.lang.String)}</code>
+     *          method denies execute access to the file
+     *
+     */
     def static boolean canExecute(Path self) {
-        Files.isExecutable(self)
+        try {
+            Files.isExecutable(self)
+        }
+        catch( IOException e ) {
+            log.trace("Cannot get execute permission on file: $self -- Cause: ${e.getMessage()}")
+            return false
+        }
     }
 
+    /**
+     * Returns the time that the file denoted by this abstract pathname was
+     * last modified.
+     *
+     * <p> Where it is required to distinguish an I/O exception from the case
+     * where {@code 0L} is returned, or where several attributes of the
+     * same file are required at the same time, or where the time of last
+     * access or the creation time are required, then the {@link
+     * java.nio.file.Files#readAttributes(Path,Class,LinkOption[])
+     * Files.readAttributes} method may be used.
+     *
+     * @return  A <code>long</code> value representing the time the file was
+     *          last modified, measured in milliseconds since the epoch
+     *          (00:00:00 GMT, January 1, 1970), or <code>0L</code> if the
+     *          file does not exist or if an I/O error occurs
+     *
+     * @param self
+     * @param options
+     * @return
+     */
     def static long lastModified(Path self,LinkOption...options) {
-        Files.getLastModifiedTime(self,options).toMillis()
+        try {
+            Files.getLastModifiedTime(self,options).toMillis()
+        }
+        catch( IOException e ) {
+            log.trace "Cannot get lastModified time on file: $self -- Cause: ${e.getMessage()}"
+            return 0
+        }
     }
 
     def static boolean isHidden(Path self) {
