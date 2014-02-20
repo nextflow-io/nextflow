@@ -1609,5 +1609,37 @@ class DataflowExtensions {
         return result
     }
 
+    /**
+     * When the items emitted by the source channel are tuples of values, the operator into allows you to specify a
+     * list of channels as parameters, so that the value i-th in a tuple will be assigned to the target channel
+     * with the corresponding position index.
+     *
+     * @param source The source channel
+     * @param target An open array of target channels
+     */
+    static final void into( DataflowReadChannel source, final DataflowWriteChannel... target ) {
+
+        final size = target.size()
+        int count = 0
+        Closure<List<Object>> result = { it ->
+            def tuple = it as List
+            if( tuple.size() == size )
+                return tuple
+
+            else {
+                if( count++ == 0 )
+                    log.warn "The target channels number ($size) for the 'into' operator do not match the items number (${tuple.size()}) of the receveid tuple: $tuple"
+
+                def result = new ArrayList(size)
+                size.times { i ->
+                    result[i] = i < tuple.size() ? tuple[i] : null
+                }
+                return result
+            }
+        }
+
+        source.separate( target as List<DataflowWriteChannel>, result )
+    }
+
 
 }

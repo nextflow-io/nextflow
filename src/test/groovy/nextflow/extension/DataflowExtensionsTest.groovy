@@ -501,6 +501,33 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    def testSeparate2() {
+
+        when:
+        def s1 = Channel.create()
+        def s2 = Channel.create()
+        Channel.from(1,2,3,4)
+                .map { it }
+                .separate(s1,s2) { item -> [item+1, item*item] }
+
+        then:
+        s1.val == 2
+        s1.val == 3
+        s1.val == 4
+        s1.val == 5
+        s1.val == Channel.STOP
+        s2.val == 1
+        s2.val == 4
+        s2.val == 9
+        s2.val == 16
+        s2.val == Channel.STOP
+
+
+
+
+
+    }
+
     def testSpread() {
 
         when:
@@ -1041,8 +1068,8 @@ class DataflowExtensionsTest extends Specification {
         def ids = []
         def list = []
         Channel.from(fasta).chopFasta(record:[id:true]) { item, int index ->
-            list[index] = index
             ids << item.id
+            list << index
             return item
         }
 
@@ -1088,6 +1115,38 @@ class DataflowExtensionsTest extends Specification {
         result.val == 'q'
         result.val == Channel.STOP
 
+    }
+
+    def testInto() {
+        when:
+        def x = Channel.create()
+        def y = Channel.create()
+        def source = Channel.from([1,2], ['a','b'], ['p','q'])
+        source.into(x,y)
+        then:
+        x.val == 1
+        x.val == 'a'
+        x.val == 'p'
+        x.val == Channel.STOP
+        y.val == 2
+        y.val == 'b'
+        y.val == 'q'
+        y.val == Channel.STOP
+
+        when:
+        def x2 = Channel.create()
+        def y2 = Channel.create()
+        def source2 = Channel.from([1,2], ['a','c','b'], 'z')
+        source2.into(x2,y2)
+        then:
+        x2.val == 1
+        x2.val == 'a'
+        x2.val == 'z'
+        x2.val == Channel.STOP
+        y2.val == 2
+        y2.val == 'c'
+        y2.val == null
+        y2.val == Channel.STOP
     }
 
 
