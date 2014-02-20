@@ -448,6 +448,7 @@ class CliRunner {
      */
     public static void main(String... args)  {
 
+        def scriptBaseName = null
         try {
             // -- parse the program arguments - and - configure the logger
             def options = parseMainArgs(args)
@@ -485,6 +486,7 @@ class CliRunner {
                 log.error "The specified script does not exist: '$scriptFile'\n"
                 System.exit( ExitCode.MISSING_SCRIPT_FILE )
             }
+            scriptBaseName = scriptFile.getBaseName()
 
             if( !options.quiet ) {
                 println "N E X T F L O W  ~  version ${Const.APP_VER}"
@@ -570,8 +572,7 @@ class CliRunner {
         }
 
         catch ( MissingPropertyException e ) {
-            log.error LoggerHelper.errorMessage(e)
-            log.debug "Oops .. script failed", e
+            log.error LoggerHelper.getErrorMessage(e, scriptBaseName), e
             System.exit( ExitCode.MISSING_PROPERTY )
         }
 
