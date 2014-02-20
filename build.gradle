@@ -146,6 +146,14 @@ task buildInfo << {
         println "WARN: Unable to find current build number"
     }
     file.text = src
+
+    // -- update sphynx
+    def major = version.split(/\./)[0..1].join('.')
+    file = new File('docs/conf.py')
+    src = file.text
+    src = src.replaceAll(/version *= *'[0-9\.]+'/, "version = '$major'" as String)
+    src = src.replaceAll(/release *= *'[0-9\.]+'/, "release = '$version'" as String)
+    file.text = src
 }
 
 /*
