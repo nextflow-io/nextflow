@@ -285,7 +285,7 @@ class GridTaskHandler extends TaskHandler {
 
         // -- log the qsub command
         def cli = executor.getSubmitCommandLine(task, wrapperFile)
-        log.trace "sub command > '${cli}' -- process: ${task.name}"
+        log.trace "submit ${task.name} > cli: ${cli}"
 
         /*
          * launch 'sub' script wrapper
@@ -305,7 +305,7 @@ class GridTaskHandler extends TaskHandler {
                 // -- wait the the process completes
                 result = process.text
                 exitStatus = process.waitFor()
-                log.trace "submit command > ${cli.join(' ')} -- exit: $exitStatus \n$result\n"
+                log.trace "submit ${task.name} > exit: $exitStatus\n$result\n"
 
                 if( exitStatus ) {
                     throw new ProcessSubmitException("Failed to submit job to the grid engine job for execution")
@@ -368,7 +368,7 @@ class GridTaskHandler extends TaskHandler {
             // -- if the job is not active, something is going wrong
             //  * before returning an error code make (due to NFS latency) the file status could be in a incoherent state
             if( !exitTimestampMillis1 ) {
-                log.debug "Exit file does not exist but the job is not running for task: $this -- Try to wait before kill it"
+                log.debug "Exit file does not exist and the job is not running for task: $this -- Try to wait before kill it"
                 exitTimestampMillis1 = System.currentTimeMillis()
             }
 
@@ -377,6 +377,7 @@ class GridTaskHandler extends TaskHandler {
                 return null
             }
 
+            log.debug "Failed to get exist status for process ${this} -- exitStatusReadTimeoutMillis: $exitStatusReadTimeoutMillis; delta: $delta"
             return Integer.MAX_VALUE
         }
 
@@ -439,11 +440,11 @@ class GridTaskHandler extends TaskHandler {
     boolean checkIfCompleted() {
 
         // verify the exit file exists
-        def _exit
-        if( isRunning() && (_exit = readExitStatus()) != null ) {
+        def exit
+        if( isRunning() && (exit = readExitStatus()) != null ) {
 
             // finalize the task
-            task.exitStatus = _exit
+            task.exitStatus = exit
             task.stdout = outputFile
             status = COMPLETED
             return true
@@ -459,6 +460,16 @@ class GridTaskHandler extends TaskHandler {
         executor.killTask(jobId)
     }
 
+    protected StringBuilder toStringBuilder( StringBuilder builder ) {
+        builder << "jobId: $jobId; "
+
+        super.toStringBuilder(builder)
+
+        builder << " started: " << (startFile.exists() ? startFile.lastModified() : '-') << ';'
+        builder << " exited: " << (exitFile.exists() ? exitFile.lastModified() : '-') << '; '
+
+        return builder
+    }
 
 }
 
