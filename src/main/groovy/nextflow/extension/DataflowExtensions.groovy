@@ -967,7 +967,7 @@ class DataflowExtensions {
     }
 
 
-    static public final List<DataflowReadChannel> separate( final DataflowQueue channel, int n, Closure mapper ) {
+    static public final List<DataflowReadChannel> separate( final DataflowReadChannel channel, int n, Closure mapper ) {
 
         def outputs = []
         n.times { outputs << new DataflowQueue() }
@@ -975,7 +975,7 @@ class DataflowExtensions {
         outputs
     }
 
-    static public final void separate( final DataflowQueue channel, DataflowWriteChannel out1, DataflowWriteChannel out2, Closure mapper ) {
+    static public final void separate( final DataflowReadChannel channel, DataflowWriteChannel out1, DataflowWriteChannel out2, Closure<List<Object>> mapper ) {
         channel.separate([out1,out2], mapper)
     }
 
