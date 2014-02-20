@@ -61,7 +61,7 @@ class NextflowExtensions {
 
     static private PATTERN_LEFT_TRIM = /^\s+/
 
-    static private PATTERN_FASTA_DESC = ~/^\S+\s+(.*)/
+    static private PATTERN_FASTA_DESC = ~/^>\S+\s+(.*)/
 
     /**
      * Remove blank chars at the end of the string
@@ -123,7 +123,7 @@ class NextflowExtensions {
      *      <li>{@code id} The fasta ID
      *      <li>{@code seq} The sequence string
      *      <li>{@code desc} The description in the fasta header
-     *      <li>{@code head} The fasta header (first line w/o the '>' character)
+     *      <li>{@code head} The fasta header (first line including the '>' character)
      *      <li>{@code text} The complete fasta text block
      *      <li>{@code width} The width of the fasta formatted block. If 0 is specified the sequence is not broken into multiple lines
      *      <li>{@code hash} The hashCode of the entered FASTA sequence
@@ -144,7 +144,8 @@ class NextflowExtensions {
             if( !line ) return
             if( line.startsWith(';')) return
             if( !head ) {
-                head = line.substring(1);
+                if( line.startsWith('>') )
+                    head = line
                 return
             }
 
@@ -156,8 +157,9 @@ class NextflowExtensions {
 
         def result = [:]
         if( record.id && head ) {
-            int p = head.indexOf(' ')
-            result.id = p != -1 ? head.substring(0,p) : head
+            def clean = head.substring(1) // 'remove the '>' char'
+            int p = clean.indexOf(' ')
+            result.id = p != -1 ? clean.substring(0,p) : clean
         }
         if( record.desc && head ) {
             def m = PATTERN_FASTA_DESC.matcher(head)
