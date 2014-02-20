@@ -121,7 +121,7 @@ class Const {
       N E X T F L O W
       Version ${APP_VER} build ${APP_BUILDNUM}
       last modified ${APP_TIMESTAMP_UTC} ${deltaLocal()}
-      http://nextflow-project.org
+      http://nextflow.io
 """
 
 }
