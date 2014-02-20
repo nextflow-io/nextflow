@@ -39,7 +39,8 @@ class DataflowExtensions {
     static private DEF_ERROR_LISTENER = new DataflowEventAdapter() {
         @Override
         public boolean onException(final DataflowProcessor processor, final Throwable e) {
-            DataflowExtensions.log.error("Operator unknown error", e)
+            DataflowExtensions.log.error("Unknown operator error -- see '.nextflow.log' for details", e)
+            Session.currentInstance?.abort()
             return true;
         }
     }
@@ -197,7 +198,8 @@ class DataflowExtensions {
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
                 error = true
                 if( !events.onError ) {
-                    DataflowExtensions.log.error(e.message, e)
+                    DataflowExtensions.log.error("Unknown 'subscribe' operator error -- see '.nextflow.log' for details", e)
+                    Session.currentInstance?.abort()
                 }
                 else {
                     events.onError.call(e)
@@ -331,7 +333,8 @@ class DataflowExtensions {
 
             @Override
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                DataflowExtensions.log.error "Operator 'mapMany' error", e
+                DataflowExtensions.log.error("Unknown 'flatMap' operator error -- see '.nextflow.log' for details", e)
+                Session.currentInstance?.abort()
                 return true;
             }
         }
@@ -464,7 +467,8 @@ class DataflowExtensions {
             }
 
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                DataflowExtensions.log.error('Dataflow reduce() exception', e)
+                DataflowExtensions.log.error("Unknown 'reduce' operator error -- see '.nextflow.log' for details", e)
+                Session.currentInstance?.abort()
                 return true;
             }
         }
@@ -1013,7 +1017,8 @@ class DataflowExtensions {
                 }
 
                 public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                    DataflowExtensions.log.error("Operator 'flatten' error")
+                    DataflowExtensions.log.error("Unknown 'spread' operator error -- see '.nextflow.log' for details", e)
+                    Session.currentInstance?.abort()
                     return true;
                 }
             }
@@ -1143,7 +1148,8 @@ class DataflowExtensions {
 
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
-                DataflowExtensions.log.error("Operator 'buffer' error", e)
+                DataflowExtensions.log.error("Unknown 'buffer' operator error -- see '.nextflow.log' for details", e)
+                Session.currentInstance?.abort()
                 return true
             }
         }
@@ -1212,7 +1218,8 @@ class DataflowExtensions {
 
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
-                DataflowExtensions.log.error("Buffer operator failure", e)
+                DataflowExtensions.log.error("Unknown 'collate' operator error -- see '.nextflow.log' for details", e)
+                Session.currentInstance?.abort()
                 return true
             }
         }
