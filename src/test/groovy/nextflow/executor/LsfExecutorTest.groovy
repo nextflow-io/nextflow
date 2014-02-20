@@ -81,4 +81,42 @@ class LsfExecutorTest extends Specification {
 
     }
 
+    def testQstatCommand() {
+
+        setup:
+        def executor = [:] as LsfExecutor
+        def text =
+                """
+                6795348,RUN,Feb 17 13:26
+                6795349,RUN,Feb 17 13:26
+                6795351,PEND,Feb 17 13:26
+                6795353,PSUSP,Feb 17 13:26
+                6795354,EXIT,Feb 17 13:26
+                """.stripIndent().trim()
+
+
+        when:
+        def result = executor.parseQueueStatus(text)
+        then:
+        result.size() == 5
+        result['6795348'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['6795349'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['6795351'] == AbstractGridExecutor.QueueStatus.PENDING
+        result['6795353'] == AbstractGridExecutor.QueueStatus.HOLD
+        result['6795354'] == AbstractGridExecutor.QueueStatus.ERROR
+
+    }
+
+
+    def testQueueStatusCommand() {
+
+        setup:
+        def executor = [:] as LsfExecutor
+
+        expect:
+        executor.queueStatusCommand(null) == ['bjobs', '-o',  'JOBID STAT SUBMIT_TIME delimiter=\',\'', '-noheader']
+        executor.queueStatusCommand('long') == ['bjobs', '-o',  'JOBID STAT SUBMIT_TIME delimiter=\',\'', '-noheader', '-q', 'long']
+
+    }
+
 }

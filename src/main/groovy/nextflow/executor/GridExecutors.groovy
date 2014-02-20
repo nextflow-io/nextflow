@@ -22,9 +22,7 @@ import static nextflow.processor.TaskHandler.Status.COMPLETED
 import static nextflow.processor.TaskHandler.Status.RUNNING
 import static nextflow.processor.TaskHandler.Status.SUBMITTED
 
-import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.attribute.PosixFilePermissions
 
 import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
@@ -168,7 +166,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
     /**
      * Status as returned by the grid engine
      */
-    static protected enum QueueStatus { WAIT, RUNNING, HOLD, ERROR }
+    static protected enum QueueStatus { PENDING, RUNNING, HOLD, ERROR, DONE }
 
     /**
      * @return The status for all the scheduled and running jobs
@@ -236,8 +234,6 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         return fQueueStatus[jobId] == QueueStatus.RUNNING || fQueueStatus[jobId] == QueueStatus.HOLD
 
     }
-
-
 
 }
 
@@ -547,9 +543,9 @@ class SgeExecutor extends AbstractGridExecutor {
         return result
     }
 
-    static Map DECODE_STATUS = [
+    static private Map DECODE_STATUS = [
             'r': QueueStatus.RUNNING,
-            'qw': QueueStatus.WAIT,
+            'qw': QueueStatus.PENDING,
             'hqw': QueueStatus.HOLD,
             'Eqw': QueueStatus.ERROR
     ]
@@ -558,8 +554,8 @@ class SgeExecutor extends AbstractGridExecutor {
     protected Map<?, QueueStatus> parseQueueStatus(String text) {
 
         def result = [:]
-        text?.readLines()?.eachWithIndex { String row, int i ->
-            if( i< 2 ) return
+        text?.eachLine{ String row, int index ->
+            if( index< 2 ) return
             def cols = row.split(/\s+/)
             if( cols.size()>5 ) {
                 result.put( cols[0], DECODE_STATUS[cols[4]] )
@@ -587,7 +583,7 @@ class LsfExecutor extends AbstractGridExecutor {
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
 
         // note: LSF requires the job script file to be executable
-        Files.setPosixFilePermissions( scriptFile, PosixFilePermissions.fromString('rwx------'))
+        scriptFile.setPermissions(7,0,0)
 
         final result = new ArrayList<String>()
         result << 'bsub'
@@ -635,14 +631,41 @@ class LsfExecutor extends AbstractGridExecutor {
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-        // TODO
-        return null
+
+        def result = ['bjobs', '-o',  'JOBID STAT SUBMIT_TIME delimiter=\',\'', '-noheader']
+
+        if( queue )
+            result << '-q' << queue
+
+        return result
+
     }
+
+    private static Map DECODE_STATUS = [
+        'PEND': QueueStatus.PENDING,
+        'RUN': QueueStatus.RUNNING,
+        'PSUSP': QueueStatus.HOLD,
+        'USUSP': QueueStatus.HOLD,
+        'SSUSP': QueueStatus.HOLD,
+        'DONE': QueueStatus.DONE,
+        'EXIT': QueueStatus.ERROR,
+        'UNKWN': QueueStatus.ERROR,
+        'ZOMBI': QueueStatus.ERROR,
+    ]
 
     @Override
     protected Map<?, QueueStatus> parseQueueStatus(String text) {
-        // TODO
-        return null
+
+        def result = [:]
+
+        text.eachLine { String line ->
+            def cols = line.split(',')
+            if( cols.size() == 3 ) {
+                result.put( cols[0], DECODE_STATUS.get(cols[1]) )
+            }
+        }
+
+        return result
     }
 }
 
@@ -654,6 +677,7 @@ class LsfExecutor extends AbstractGridExecutor {
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @InheritConstructors
 class SlurmExecutor extends AbstractGridExecutor {
 
@@ -722,13 +746,36 @@ class SlurmExecutor extends AbstractGridExecutor {
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-        // TODO
-        return null
+        if( queue )
+            log.debug "SLURM executor does not support queue parameter on queue status"
+
+        return ['squeue','-h','-o \'%i %t\'']
     }
+
+    static private Map STATUS_MAP = [
+            'PD': QueueStatus.PENDING,  // (pending)
+            'R': QueueStatus.RUNNING,   // (running)
+            'CA': QueueStatus.ERROR,    // (cancelled)
+            'CF': QueueStatus.PENDING,  // (configuring)
+            'CG': QueueStatus.RUNNING,  // (completing)
+            'CD': QueueStatus.DONE,     // (completed)
+            'F': QueueStatus.ERROR,     // (failed),
+            'TO': QueueStatus.ERROR,    // (timeout),
+            'NF': QueueStatus.ERROR     // (node failure)
+    ]
 
     @Override
     protected Map<?, QueueStatus> parseQueueStatus(String text) {
-        // TODO
-        return null
+
+        def result = [:]
+
+        text.eachLine { String line ->
+            def cols = line.split(/\s+/)
+            if( cols.size() == 2 ) {
+                result.put( cols[0], STATUS_MAP.get(cols[1]) )
+            }
+        }
+
+        return result
     }
 }

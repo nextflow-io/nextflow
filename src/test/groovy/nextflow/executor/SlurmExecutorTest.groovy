@@ -51,4 +51,41 @@ class SlurmExecutorTest extends Specification {
         exec.getSubmitCommandLine(task,script).join(' ') == 'sbatch -D /work/path -J nf-task_555 -o /dev/null -t 01:00:00 -x -y -z script.sh'
     }
 
+    def testQstatCommand() {
+
+        setup:
+        def executor = [:] as SlurmExecutor
+        def text =
+                """
+                5 PD
+                6 PD
+                13 R
+                14 CA
+                15 F
+                4 R
+                """.stripIndent().trim()
+
+
+        when:
+        def result = executor.parseQueueStatus(text)
+        then:
+        result.size() == 6
+        result['4'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['5'] == AbstractGridExecutor.QueueStatus.PENDING
+        result['6'] == AbstractGridExecutor.QueueStatus.PENDING
+        result['13'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['14'] == AbstractGridExecutor.QueueStatus.ERROR
+        result['15'] == AbstractGridExecutor.QueueStatus.ERROR
+
+    }
+
+    def testQueueStatusCommand() {
+        when:
+        def exec = [:] as SlurmExecutor
+        then:
+        exec.queueStatusCommand(null) == ['squeue','-h','-o \'%i %t\'']
+        exec.queueStatusCommand('xxx') == ['squeue','-h','-o \'%i %t\'']
+
+
+    }
 }
