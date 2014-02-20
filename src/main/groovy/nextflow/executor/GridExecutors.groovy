@@ -350,7 +350,7 @@ class GridTaskHandler extends TaskHandler {
         /*
          * when the file does not exist return null, to force the monitor to continue to wait
          */
-        if( !exitFile || !exitFile.exists() ) {
+        if( !exitFile || !exitFile.exists() || !exitFile.lastModified() ) {
             // -- fetch the job status before return a result
             final active = executor.checkActiveStatus(jobId)
 
@@ -425,7 +425,7 @@ class GridTaskHandler extends TaskHandler {
 
         if( isSubmitted()  ) {
 
-            if( startFile && startFile.exists() ) {
+            if( startFile && startFile.exists() && startFile.lastModified() > 0) {
                 status = RUNNING
                 return true
             }
