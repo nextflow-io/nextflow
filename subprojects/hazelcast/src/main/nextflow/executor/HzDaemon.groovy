@@ -19,39 +19,29 @@
 
 package nextflow.executor
 
-import nextflow.processor.TaskConfig
-import nextflow.processor.TaskHandler
-import nextflow.processor.TaskRun
+import com.hazelcast.config.Config
+import com.hazelcast.core.Hazelcast
+import com.hazelcast.core.HazelcastInstance
+import groovy.util.logging.Slf4j
+import nextflow.daemon.DaemonLauncher
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class HzTaskHandler extends TaskHandler {
+@Slf4j
+class HzDaemon implements DaemonLauncher {
 
-    int slots = 1
+    HazelcastInstance hazelcast
 
-    protected HzTaskHandler(TaskRun task, TaskConfig taskConfig) {
-        super(task, taskConfig)
-    }
-
-    @Override
-    boolean checkIfRunning() {
-        return false
-    }
+    HzDaemon() { }
 
     @Override
-    boolean checkIfCompleted() {
-        return false
-    }
-
-    @Override
-    void kill() {
-
-    }
-
-    @Override
-    void submit() {
-
+    void launch(Map properties) {
+        log.debug "Launching Hazelcast instance"
+        def cfg = new Config();
+        cfg.setProperty('hazelcast.logging.type', 'slf4j')
+        cfg.setProperty('hazelcast.system.log.enabled','true')
+        hazelcast = Hazelcast.newHazelcastInstance(cfg)
     }
 }
