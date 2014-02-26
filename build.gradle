@@ -18,7 +18,7 @@
  */
 
 apply plugin: 'gradle-one-jar'
-version = '0.6.2'
+version = '0.6.3'
 
 allprojects {
     apply plugin: 'groovy'
@@ -63,6 +63,7 @@ dependencies {
     compile "com.beust:jcommander:${jcommanderVer}"
     compile "com.google.code.findbugs:jsr305:${jsr305Ver}"
     compile "com.esotericsoftware.kryo:kryo:${kryoVer}"
+    compile files('lib/guava-cache-16.0.1.jar')
 
     oneJarLib files('one-jar/one-jar-boot-0.97.jar')
 
