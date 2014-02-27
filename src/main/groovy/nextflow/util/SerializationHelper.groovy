@@ -41,10 +41,19 @@ class KryoHelper {
 
     static final Map<Class,Object> serializers
 
+    static final ThreadLocal<Kryo> threadLocal
+
     static {
         serializers = [:]
         serializers.put( PATH_CLASS, PathSerializer )
         serializers.put( GStringImpl, GStringSerializer)
+
+        threadLocal = new ThreadLocal<Kryo>() {
+            @Override
+            protected Kryo initialValue() {
+                newInstance()
+            }
+        };
     }
 
     /**
@@ -61,6 +70,14 @@ class KryoHelper {
      * @return A new instance {@code Kryo} instance
      */
     static Kryo kryo() {
+        threadLocal.get()
+    }
+
+
+    /**
+     * @return A new instance {@code Kryo} instance
+     */
+    static private Kryo newInstance() {
         def result = new Kryo()
         serializers.each { k, v ->
             if( v instanceof Class )
