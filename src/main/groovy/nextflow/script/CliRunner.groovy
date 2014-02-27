@@ -34,10 +34,11 @@ import nextflow.ExitCode
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.ast.NextflowDSL
-import nextflow.exception.ConfigParseException
 import nextflow.daemon.DaemonLauncher
+import nextflow.exception.ConfigParseException
 import nextflow.exception.InvalidArgumentException
 import nextflow.exception.MissingLibraryException
+import nextflow.util.FileHelper
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import org.apache.commons.io.FilenameUtils
@@ -354,16 +355,26 @@ class CliRunner {
         libraries?.each { File lib -> def path = lib.absolutePath
             log.debug "Adding to the classpath library: ${path}"
             gcl.addClasspath(path)
+            session.addClasspath(path)
         }
 
+        // set the bytecode target directory
+        def targetDir = FileHelper.createTempFolder(session.workDir).toFile()
+        config.setTargetDirectory(targetDir)
+        session.addClasspath(targetDir)
+
         // run and wait for termination
+        BaseScript result
         def groovy = new GroovyShell(gcl, bindings, config)
         if ( scriptFile ) {
-            groovy.parse( scriptText, scriptFile?.toString() ) as BaseScript
+            result = groovy.parse( scriptText, scriptFile?.toString() ) as BaseScript
         }
         else {
-            groovy.parse( scriptText ) as BaseScript
+            result = groovy.parse( scriptText ) as BaseScript
         }
+
+        session.scriptClassName = result.class.name
+        return result
     }
 
 

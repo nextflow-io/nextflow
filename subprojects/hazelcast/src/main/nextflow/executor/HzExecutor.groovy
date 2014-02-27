@@ -18,24 +18,9 @@
  */
 package nextflow.executor
 import java.nio.file.Path
-import java.util.concurrent.Callable
 
-import com.hazelcast.client.HazelcastClient
-import com.hazelcast.client.config.ClientConfig
-import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IExecutorService
-import com.hazelcast.core.IQueue
-import com.hazelcast.core.ITopic
-import com.hazelcast.core.Member
-import com.hazelcast.core.MembershipEvent
-import com.hazelcast.core.MembershipListener
-import com.hazelcast.core.Message
-import com.hazelcast.core.MessageListener
-import com.hazelcast.core.MultiExecutionCallback
-import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.Session
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -141,7 +126,7 @@ class HzTaskHandler extends TaskHandler {
     private final Path outputFile
 
     @PackageScope
-    volatile HzBashResult result
+    volatile HzCmdResult result
 
     protected HzTaskHandler(TaskRun task, TaskConfig taskConfig, HzExecutor executor) {
         super(task, taskConfig)
@@ -156,7 +141,7 @@ class HzTaskHandler extends TaskHandler {
         final List cmd = new ArrayList(taskConfig.shell ?: 'bash' as List ) << wrapperFile.getName()
 
         // submit to an hazelcast node for execution
-        def command = new HzBashCmd( executor.senderId, task.id, task.workDirectory, cmd )
+        def command = new HzCmdCall( executor.senderId, task.id, task.workDirectory, cmd )
         executor.connector.executorsQueue.add( command )
 
         // mark as submitted -- transition to STARTED has to be managed by the scheduler
@@ -188,8 +173,10 @@ class HzTaskHandler extends TaskHandler {
             // -- the task output depend by the kind of the task executed
             if( result.isScriptlet() )
                 task.stdout = outputFile
-            else
+            else {
                 task.stdout = result.value
+                task.code.delegate = result.context
+            }
 
             // -- set the task result error (if any)
             task.error = result.error

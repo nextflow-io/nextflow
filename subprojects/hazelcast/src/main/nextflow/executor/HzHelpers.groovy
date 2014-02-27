@@ -18,17 +18,14 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Path
 import java.util.concurrent.Callable
 
-import groovy.transform.Canonical
 import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.processor.DelegateMap
 import nextflow.script.ScriptType
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -48,18 +45,30 @@ interface HzConst {
 /**
  * Keep track of the remote session classpath
  */
-@Canonical
+@EqualsAndHashCode
 class HzRemoteSession implements Serializable {
 
     final UUID id
 
-    final List<URL> classpath = []
+    final List<URL> classpath
+
+    final String scriptClassName
+
+    HzRemoteSession() { }
 
     HzRemoteSession(Session session) {
-        id = session.uniqueId
+        id = session.getUniqueId()
         classpath = session.getClasspath()
+        scriptClassName = session.getScriptClassName()
+    }
+
+    HzRemoteSession( UUID uuid, List<URL> classpath, String className ) {
+        this.id = uuid
+        this.classpath = classpath
+        this.scriptClassName = className
     }
 }
+
 
 /**
  * Launches BASH task on a remote Hazelcast node
@@ -68,7 +77,7 @@ class HzRemoteSession implements Serializable {
  */
 @Slf4j
 @EqualsAndHashCode
-class HzBashCmd implements Callable, Serializable {
+class HzCmdCall implements Callable, Serializable {
 
     private static final long serialVersionUID = - 5552939711667527410L
 
@@ -90,14 +99,14 @@ class HzBashCmd implements Callable, Serializable {
     /**
      * The context map when the command is a Groovy task
      */
-    final DelegateMap context
+    final Map context
 
     /**
      * The type of the script: Groovy native or Shell script
      */
     final ScriptType type
 
-    HzBashCmd( UUID sender, taskId, Path workDir, List cmdLine ) {
+    HzCmdCall( UUID sender, taskId, Path workDir, List cmdLine ) {
         assert sender
         assert taskId
         assert workDir
@@ -112,7 +121,7 @@ class HzBashCmd implements Callable, Serializable {
     }
 
 
-    HzBashCmd( UUID sender, taskId, Path workDir, Closure code ) {
+    HzCmdCall( UUID sender, taskId, Path workDir, Closure code ) {
         assert sender
         assert taskId
         assert workDir
@@ -149,6 +158,7 @@ class HzBashCmd implements Callable, Serializable {
 
     private doGroovyCall() {
         log.trace "Launching groovy command > ${taskId}"
+        code.delegate = context
         code.call()
     }
 
@@ -163,7 +173,7 @@ class HzBashCmd implements Callable, Serializable {
  * The result on a remote execution
  */
 @EqualsAndHashCode
-class HzBashResult implements Serializable {
+class HzCmdResult implements Serializable {
 
     private static final long serialVersionUID = - 6956540465417153122L ;
 
@@ -194,6 +204,11 @@ class HzBashResult implements Serializable {
     final Throwable error
 
     /**
+     * The update context (only for groovy closure task)
+     */
+    final Map context
+
+    /**
      * @return Whenever is a shell script task
      */
     boolean isScriptlet() { type == ScriptType.SCRIPTLET }
@@ -210,16 +225,17 @@ class HzBashResult implements Serializable {
      * @param result
      * @param error
      */
-    HzBashResult( HzBashCmd cmd, result, Throwable error ) {
-        this(cmd.sender, cmd.type, cmd.taskId, result, error)
+    HzCmdResult( HzCmdCall cmd, result, Throwable error ) {
+        this(cmd.sender, cmd.type, cmd.taskId, result, error, cmd.context)
     }
 
-    HzBashResult( UUID sender, ScriptType type, taskId, result, Throwable error ) {
+    HzCmdResult( UUID sender, ScriptType type, taskId, result, Throwable error, Map context ) {
         this.sender = sender
         this.type = type
         this.taskId = taskId
         this.value = result
         this.error = error
+        this.context = context
     }
 
     String toString() {

@@ -50,9 +50,9 @@ class HzDaemon implements HzConst, DaemonLauncher {
 
     private volatile int count
 
-    private IQueue<HzBashCmd> tasksQueue
+    private IQueue<HzCmdCall> tasksQueue
 
-    private ITopic<HzBashResult> resultsTopic
+    private ITopic<HzCmdResult> resultsTopic
 
     private ExecutorService executor
 
@@ -101,7 +101,7 @@ class HzDaemon implements HzConst, DaemonLauncher {
         }
     }
 
-    protected void execute( HzBashCmd task ) {
+    protected void execute( HzCmdCall task ) {
         log.trace "Executing task command > $task"
 
         executor.submit( {
@@ -127,17 +127,17 @@ class HzDaemon implements HzConst, DaemonLauncher {
 
     }
 
-    private publishResultBack( HzBashCmd cmd, result, Throwable error ) {
+    private publishResultBack( HzCmdCall cmd, result, Throwable error ) {
         log.trace "Publishing command result: $cmd"
 
         try {
-            final obj = new HzBashResult(cmd,result,error)
+            final obj = new HzCmdResult(cmd,result,error)
             resultsTopic.publish(obj)
 
         }
         catch( Throwable throwable ) {
             log.debug "Unable to publish command result: $cmd", throwable
-            resultsTopic.publish( new HzBashResult(cmd,result,throwable) )
+            resultsTopic.publish( new HzCmdResult(cmd,result,throwable) )
         }
 
     }

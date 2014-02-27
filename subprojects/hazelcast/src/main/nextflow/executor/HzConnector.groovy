@@ -45,13 +45,13 @@ import nextflow.processor.TaskPollingMonitor
  * @author Paolo Di Tommaso
  */
 @Slf4j
-class HzConnector implements HzConst, MembershipListener, MessageListener<HzBashResult> {
+class HzConnector implements HzConst, MembershipListener, MessageListener<HzCmdResult> {
 
     private HazelcastInstance hazelcast
 
-    private ITopic<HzBashResult> resultsTopic
+    private ITopic<HzCmdResult> resultsTopic
 
-    private IQueue<HzBashCmd> executorsQueue
+    private IQueue<HzCmdCall> executorsQueue
 
     @PackageScope
     private final Map<Member,Integer> slotsFor = [:]
@@ -94,7 +94,7 @@ class HzConnector implements HzConst, MembershipListener, MessageListener<HzBash
 
 
     @PackageScope
-    Queue<HzBashCmd> getExecutorsQueue() {
+    Queue<HzCmdCall> getExecutorsQueue() {
         return executorsQueue
     }
 
@@ -140,10 +140,10 @@ class HzConnector implements HzConst, MembershipListener, MessageListener<HzBash
     /**
      * This method is invoked for message on topic {@code #TASK_RESULTS_NAME}
      *
-     * @param message The {@code HzBashResult} represent the result of a task executed in the Hazelcast cluster
+     * @param message The {@code HzCmdResult} represent the result of a task executed in the Hazelcast cluster
      */
     @Override
-    void onMessage(Message<HzBashResult> message) {
+    void onMessage(Message<HzCmdResult> message) {
         log.trace "Received command message: $message"
 
         // -- make sure the sender match with the current session id

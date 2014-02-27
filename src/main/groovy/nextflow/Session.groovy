@@ -73,6 +73,11 @@ class Session {
     def String scriptName = 'script1'
 
     /**
+     * The script class name
+     */
+    def String scriptClassName
+
+    /**
      * The folder where tasks temporary files are stored
      */
     def Path workDir = Paths.get('./work')
@@ -98,7 +103,9 @@ class Session {
 
     private volatile ExecutorService execService
 
-    private List<Closure<Void>> shutdownHooks = []
+    final private List<Closure<Void>> shutdownHooks = []
+
+    final private List<URL> classpath = []
 
     /* Poor man singleton object */
     static Session currentInstance
@@ -177,6 +184,18 @@ class Session {
         }
 
         return path
+    }
+
+    def List<URL> getClasspath() {
+        return new ArrayList<URL>(classpath)
+    }
+
+    def void addClasspath( File file ) {
+        classpath << ( file.toURI().toURL() )
+    }
+
+    def void addClasspath( String file ) {
+        addClasspath(new File(file))
     }
 
     /**
