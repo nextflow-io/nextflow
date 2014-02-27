@@ -144,6 +144,8 @@ class HzConnector implements HzConst, MembershipListener, MessageListener<HzBash
     /** The nextflow session object */
     private Session session
 
+    private Map<UUID,RemoteSession> allSessions
+
 
     /**
      * Factory method. Use this method to create an instance of the Hazelcast connect
@@ -194,6 +196,9 @@ class HzConnector implements HzConst, MembershipListener, MessageListener<HzBash
         executorsQueue = hazelcast.getQueue(TASK_SUBMITS_NAME)
         resultsTopic = hazelcast.getTopic(TASK_RESULTS_NAME)
         resultsTopic.addMessageListener(this)
+        // publish the session on the cluster
+        allSessions = hazelcast.getMap(SESSION_MAP)
+        allSessions.put(session.uniqueId, new RemoteSession(session)  )
 
         // add the members listener
         final cluster = hazelcast.getCluster()
@@ -206,7 +211,10 @@ class HzConnector implements HzConst, MembershipListener, MessageListener<HzBash
 
         // register for the shutdown
         session.onShutdown {
-          if( hazelcast ) hazelcast.shutdown()
+            if( !hazelcast ) return
+            log.info "Shutting down hazelcast connector"
+            allSessions.remove(session.getUniqueId())
+            hazelcast.shutdown()
         }
     }
 
@@ -218,26 +226,26 @@ class HzConnector implements HzConst, MembershipListener, MessageListener<HzBash
      */
     @Override
     void onMessage(Message<HzBashResult> message) {
-        log.trace "Getting message: $message"
+        log.trace "Received command message: $message"
 
         // -- make sure the sender match with the current session id
         def result = message.getMessageObject()
         if( result.sender != session.uniqueId ) {
-            log.trace "Discarding result: $result"
+            log.debug "Discarding command result: $result"
             return
         }
 
         // -- find out the task handler for the task id of the completed task
-        log.trace "Getting task result: $result"
+        log.trace "Received command result: $result"
         def handler = (HzTaskHandler)taskMonitor.getTaskHandlerBy(result.taskId)
-        log.trace "Received result for handler: $handler"
 
         if( !handler ) {
-            log.warn "Last task for result: $result"
+            log.warn "Lost task for command result: $result"
             return
         }
 
         // -- set the result value and *signal* the monitor in order to trigger a status check cycle
+        log.trace "Setting result: $result to handler: $handler"
         handler.result = result
         taskMonitor.signalComplete()
 
@@ -288,7 +296,7 @@ class HzConnector implements HzConst, MembershipListener, MessageListener<HzBash
 
     @PackageScope
     IExecutorService remote() {
-        hazelcast.getExecutorService('default')
+        hazelcast.getExecutorService(EXEC_SERVICE)
     }
 
 
@@ -383,7 +391,7 @@ class HzTaskHandler extends TaskHandler {
 
     @Override
     boolean checkIfRunning() {
-        if( isSubmitted() && result == null ) {
+        if( isSubmitted() ) {
             log.trace "Task ${task.name} > RUNNING"
             status = TaskHandler.Status.RUNNING
             return true

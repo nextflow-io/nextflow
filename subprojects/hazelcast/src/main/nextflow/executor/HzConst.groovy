@@ -31,4 +31,6 @@ interface HzConst {
 
     final String EXEC_SERVICE = 'default'
 
+    final String SESSION_MAP = 'sessionMap'
+
 }

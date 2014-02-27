@@ -184,10 +184,12 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     @Override
     boolean drop(TaskHandler handler) {
-        log.debug "Removing task: $handler"
-        if( !handler )
+        if( !handler ) {
+            log.debug "Unknown task handler to drop: $handler"
             return false
+        }
 
+        log.trace "Dropping task handler: $handler"
         mutex.withLock {
             if( pollingQueue.remove(handler) ) {
                 notFull.signal()

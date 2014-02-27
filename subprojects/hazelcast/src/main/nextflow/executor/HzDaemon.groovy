@@ -33,6 +33,7 @@ import com.hazelcast.core.ITopic
 import groovy.transform.Canonical
 import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
+import nextflow.Session
 import nextflow.daemon.DaemonLauncher
 import nextflow.processor.DelegateMap
 import nextflow.script.ScriptType
@@ -42,7 +43,7 @@ import nextflow.script.ScriptType
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class HzDaemon implements DaemonLauncher, HzConst {
+class HzDaemon implements HzConst, DaemonLauncher {
 
     private HazelcastInstance hazelcast
 
@@ -60,6 +61,8 @@ class HzDaemon implements DaemonLauncher, HzConst {
 
     private ExecutorService executor
 
+    private Map<UUID, RemoteSession> allSessions
+
     HzDaemon() { }
 
     @Override
@@ -70,6 +73,11 @@ class HzDaemon implements DaemonLauncher, HzConst {
         def cfg = new Config();
         hazelcast = Hazelcast.newHazelcastInstance(cfg)
 
+        tasksQueue = hazelcast.getQueue(TASK_SUBMITS_NAME)
+        resultsTopic = hazelcast.getTopic(TASK_RESULTS_NAME)
+        allSessions = hazelcast.getMap(SESSION_MAP)
+
+        // -- wait for tasks to be processed
         processTasks()
     }
 
@@ -80,8 +88,6 @@ class HzDaemon implements DaemonLauncher, HzConst {
 
         // the shared queue
         mutex = new ReentrantLock()
-        tasksQueue = hazelcast.getQueue(TASK_SUBMITS_NAME)
-        resultsTopic = hazelcast.getTopic(TASK_RESULTS_NAME)
         executor = Executors.newCachedThreadPool()
 
         Thread.start {
@@ -101,7 +107,7 @@ class HzDaemon implements DaemonLauncher, HzConst {
     }
 
     protected void execute( HzBashCmd task ) {
-        log.trace "Executing task > $task"
+        log.trace "Executing task command > $task"
 
         executor.submit( {
 
@@ -114,7 +120,6 @@ class HzDaemon implements DaemonLauncher, HzConst {
                 error = ex
             }
             finally {
-                log.trace "Completed task > $task"
                 publishResultBack(task,result,error)
                 mutex.withLock {
                     count--;
@@ -128,20 +133,38 @@ class HzDaemon implements DaemonLauncher, HzConst {
     }
 
     private publishResultBack( HzBashCmd cmd, result, Throwable error ) {
+        log.trace "Publishing command result: $cmd"
 
         try {
-            resultsTopic.publish( new HzBashResult(cmd,result,error) )
+            final obj = new HzBashResult(cmd,result,error)
+            resultsTopic.publish(obj)
+
         }
         catch( Throwable throwable ) {
-            log.debug "Unable to publish result of task command: $cmd", throwable
+            log.debug "Unable to publish command result: $cmd", throwable
             resultsTopic.publish( new HzBashResult(cmd,result,throwable) )
         }
 
     }
 
+
 }
 
+/**
+ * Keep track of the remote session classpath
+ */
+@Canonical
+class RemoteSession implements Serializable {
 
+    final UUID id
+
+    final List<URL> classpath = []
+
+    RemoteSession(Session session) {
+        id = session.uniqueId
+        classpath = session.getClasspath()
+    }
+}
 
 /**
  * Launches BASH task on a remote Hazelcast node
@@ -219,7 +242,7 @@ class HzBashCmd implements Callable, Serializable {
     }
 
     private Integer doBashCall( ) {
-        log.trace "Launching task > ${commandLine.join(' ')}"
+        log.trace "Launching script command > ${commandLine.join(' ')}"
         ProcessBuilder builder = new ProcessBuilder()
                 .directory(workDir)
                 .command(commandLine)
@@ -230,7 +253,7 @@ class HzBashCmd implements Callable, Serializable {
     }
 
     private doGroovyCall() {
-        log.trace "Launching groovy task > ${taskId}"
+        log.trace "Launching groovy command > ${taskId}"
         code.call()
     }
 
@@ -244,7 +267,7 @@ class HzBashCmd implements Callable, Serializable {
 /**
  * The result on a remote execution
  */
-@Canonical
+@EqualsAndHashCode
 class HzBashResult implements Serializable {
 
     private static final long serialVersionUID = - 6956540465417153122L ;
@@ -294,6 +317,14 @@ class HzBashResult implements Serializable {
      */
     HzBashResult( HzBashCmd cmd, result, Throwable error ) {
         this(cmd.sender, cmd.type, cmd.taskId, result, error)
+    }
+
+    HzBashResult( UUID sender, ScriptType type, taskId, result, Throwable error ) {
+        this.sender = sender
+        this.type = type
+        this.taskId = taskId
+        this.value = result
+        this.error = error
     }
 
     String toString() {
