@@ -34,7 +34,6 @@ import groovyx.gpars.util.PoolUtils
 import jsr166y.Phaser
 import nextflow.processor.TaskDispatcher
 import nextflow.util.Duration
-
 /**
  * Holds the information on the current execution
  *
@@ -98,6 +97,8 @@ class Session {
     private boolean terminated
 
     private volatile ExecutorService execService
+
+    private List<Closure<Void>> shutdownHooks = []
 
     /* Poor man singleton object */
     static Session currentInstance
@@ -194,6 +195,7 @@ class Session {
         log.trace "Session destroying"
         if( pgroup ) pgroup.shutdown()
         if( execService ) execService.shutdown()
+        shutdownHooks.each { it.call() }
         log.debug "Session destroyed"
     }
 
@@ -218,18 +220,20 @@ class Session {
         phaser.arriveAndDeregister()
     }
 
+    @Memoized
     def ExecutorService getExecService() {
+        execService = Executors.newCachedThreadPool()
+    }
 
-        def local = execService
-        if( local )
-            return local
+    /**
+     * Register a shutdown hook to close services when the session terminates
+     * @param Closure
+     */
+    def void onShutdown( Closure shutdown ) {
+        if( !shutdown )
+            return
 
-        synchronized(this) {
-            if (execService == null) {
-                execService = Executors.newCachedThreadPool()
-            }
-            return execService
-        }
+        shutdownHooks << shutdown
     }
 
 

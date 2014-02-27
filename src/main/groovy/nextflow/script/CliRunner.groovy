@@ -492,8 +492,8 @@ class CliRunner {
                     log.error "The specified script does not exist: '$scriptFile'\n"
                     System.exit( ExitCode.MISSING_SCRIPT_FILE )
                 }
+                scriptBaseName = scriptFile.getBaseName()
             }
-            scriptBaseName = scriptFile.getBaseName()
 
             if( !options.quiet ) {
                 println "N E X T F L O W  ~  version ${Const.APP_VER}"
@@ -761,6 +761,14 @@ class CliRunner {
 
     }
 
+    /**
+     * Given the command line options {@code CliOptions} object
+     * read the application configuration file and returns the
+     * config object
+     *
+     * @param options The {@code CliOptions} as specified by the user
+     * @return A the application options hold in a {@code Map} object
+     */
     static Map makeConfig( CliOptions options ) {
 
         // -- configuration file(s)
@@ -804,6 +812,11 @@ class CliRunner {
         return config
     }
 
+    /**
+     * Launch the daemon service
+     *
+     * @param config The nextflow configuration map
+     */
     static launchDaemon( Map config ) {
         def loader = ServiceLoader.load(DaemonLauncher).iterator()
         if( !loader.hasNext() )

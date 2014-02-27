@@ -19,6 +19,8 @@
 
 package nextflow.processor
 
+import java.util.concurrent.ConcurrentLinkedQueue
+
 import nextflow.Session
 import nextflow.util.Duration
 import spock.lang.Specification
@@ -37,14 +39,13 @@ class TaskPollingMonitorTest extends Specification {
         def defSize = 99
         def defPollDuration = Duration.of('44s')
         when:
-        def monitor = new TaskPollingMonitor(session, name, defSize, defPollDuration)
+        def monitor = TaskPollingMonitor.create(session, name, defSize, defPollDuration)
         then:
-        monitor.name == name
         monitor.dispatcher == session.dispatcher
         monitor.pollIntervalMillis == Duration.of('1h').toMillis()
-        monitor.queueSize == 11
+        monitor.capacity == 11
         monitor.dumpInterval ==  Duration.of('3h')
-        monitor.queue.remainingCapacity() == monitor.queueSize
+        monitor.pollingQueue instanceof ConcurrentLinkedQueue
 
     }
 

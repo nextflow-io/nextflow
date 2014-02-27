@@ -19,6 +19,8 @@
 
 package nextflow.processor
 
+import java.util.concurrent.CountDownLatch
+
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.executor.AbstractExecutor
@@ -55,6 +57,11 @@ class TaskDispatcher {
 
     }
 
+
+    /* ONLY FOR TEST PURPOSE */
+    protected TaskDispatcher( ) {}
+
+
     /**
      *
      * Get an instance of {@code TaskMonitor} in the {@code #monitors} map,
@@ -86,6 +93,31 @@ class TaskDispatcher {
         return result
     }
 
+    /**
+     * Get the monitor associated to the executor type or instance
+     *
+     * @param executor
+     * @return
+     */
+    TaskMonitor getMonitor( executor ) {
+        assert executor
+
+        def result = null
+        if( executor instanceof AbstractExecutor )
+            result = monitors.get(executor.class)
+
+        else if( executor instanceof Class )
+            result = monitors.get(executor)
+
+        if( !result )
+            throw new IllegalStateException("Missing monitor for executor: $executor")
+
+        return result
+    }
+
+    /**
+     * Flag the dispatcher as started
+     */
     void start() {
         log.debug "Dispatcher > start"
         started = true
@@ -98,36 +130,50 @@ class TaskDispatcher {
      *
      * @param task A {@code TaskRun} instance
      */
-    void submit( TaskRun task, boolean blocking ) {
+    void submit( TaskRun task, boolean awaitTermination ) {
         log.trace "Scheduling process: ${task}"
 
         if( session.isTerminated() ) {
             new IllegalStateException("Session terminated - Cannot add process to execution queue: ${task}")
         }
 
+        final executor = task.processor.executor
+        final monitor = getMonitor(executor)
+        final handler = executor.createTaskHandler(task)
+
+        // set a count down latch if the execution is blocking
+        if( awaitTermination )
+            handler.latch = new CountDownLatch(1)
+
         /*
          * Add the task to the queue for processing
          * Note: queue is implemented as a fixed size blocking queue, when
          * there's not space *put* operation will block until, some other tasks finish
          */
-        def handler = task.processor.executor.submitTask(task, blocking)
-        if( handler && blocking ) {
+        monitor.put(handler)
+        if( handler && handler.latch ) {
             log.trace "Process ${task} > blocking"
             handler.latch.await()
             log.trace "Process ${task} > complete"
         }
     }
 
+    /**
+     * Notifies that a task has been submitted
+     */
+    public void notifySubmitted( TaskHandler handler ) {
+
+    }
 
     /**
-     * Notify task start event
+     * Notifies task start event
      */
     public void notifyStarted(TaskHandler handler) {
 
     }
 
     /**
-     * Notify task termination event
+     * Notifies task termination event
      *
      * @param handler
      */

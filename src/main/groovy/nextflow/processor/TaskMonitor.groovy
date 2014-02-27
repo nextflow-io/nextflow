@@ -15,18 +15,23 @@ interface TaskMonitor {
      *
      * @param handler {@code TaskHandler} instance
      */
-    def void offer(TaskHandler handler)
+    def void put(TaskHandler handler)
 
     /**
      * Remove the {@code TaskHandler} instance from the queue of tasks ro be processed
      *
      * @param handler A not null {@code TaskHandler} instance
      */
-    def boolean remove(TaskHandler handler)
+    def boolean drop(TaskHandler handler)
 
     /**
      * Start the monitoring activity for the queued tasks
      * @return The instance itself, useful to chain methods invocation
      */
     def TaskMonitor start()
+
+    /**
+     * Notify when a task terminates
+     */
+    void signalComplete()
 }

@@ -384,7 +384,8 @@ abstract class BaseScript extends Script {
             'oge':  SgeExecutor.name,
             'lsf': LsfExecutor.name,
             'slurm': SlurmExecutor.name,
-            'dnanexus': 'nextflow.executor.DnaNexusExecutor'
+            'dnanexus': 'nextflow.executor.DnaNexusExecutor',
+            'hazelcast': 'nextflow.executor.HzExecutor'
     ]
 
     @PackageScope

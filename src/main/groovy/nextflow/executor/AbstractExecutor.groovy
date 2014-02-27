@@ -1,8 +1,8 @@
 package nextflow.executor
 import java.nio.file.Path
-import java.util.concurrent.CountDownLatch
 
 import groovy.io.FileType
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.MissingFileException
@@ -49,12 +49,13 @@ abstract class AbstractExecutor {
         // -- skip if already assigned, this is only for testing purpose
         if( monitor ) return
 
-        // -- get the reference to the monitor class for this process
+        // -- get the reference to the monitor class for this executor
         monitor = session.dispatcher.getOrCreateMonitor(this.class) {
             log.info "[warm up] executor > $name"
             createTaskMonitor()
         }
     }
+
 
     /**
      * @return Create a new instance of the {@code TaskQueueHolder} component
@@ -64,6 +65,7 @@ abstract class AbstractExecutor {
     /**
      * @return A reference to the current {@code #queueHolder} object
      */
+    @PackageScope
     TaskMonitor getTaskMonitor()  { monitor }
 
     /**
@@ -71,29 +73,6 @@ abstract class AbstractExecutor {
      * actions for this task
      */
     abstract TaskHandler createTaskHandler(TaskRun task)
-
-    /**
-     * Submit a task for execution
-     *
-     * @param task
-     * @return
-     */
-    TaskHandler submitTask( TaskRun task, boolean blocking ) {
-        def handler = createTaskHandler(task)
-        monitor.offer(handler)
-        try {
-            // set a count down latch if the execution is blocking
-            if( blocking )
-                handler.latch = new CountDownLatch(1)
-            // now submit the task for execution
-            handler.submit()
-            return handler
-        }
-        catch( Exception e ) {
-            monitor.remove(handler)
-            throw e
-        }
-    }
 
 
     /**

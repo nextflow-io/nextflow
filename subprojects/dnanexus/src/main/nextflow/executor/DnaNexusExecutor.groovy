@@ -61,7 +61,7 @@ class DnaNexusExecutor extends AbstractExecutor {
     }
 
     def TaskMonitor createTaskMonitor() {
-        return new TaskPollingMonitor(session, name, 10, Duration.of('15 sec'))
+        return TaskPollingMonitor.create(session, name, 10, Duration.of('15 sec'))
     }
 
     /**
