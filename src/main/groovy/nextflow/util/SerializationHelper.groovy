@@ -47,6 +47,8 @@ class KryoHelper {
         serializers = [:]
         serializers.put( PATH_CLASS, PathSerializer )
         serializers.put( GStringImpl, GStringSerializer)
+        serializers.put( URL, URLSerializer )
+        serializers.put( UUID, UUIDSerializer )
 
         threadLocal = new ThreadLocal<Kryo>() {
             @Override
@@ -98,11 +100,11 @@ class KryoHelper {
      * @param file A {@code Path} reference to a file
      * @return The de-serialized object
      */
-    static read( Path file ) {
+    static <T> T deserialize( Path file ) {
         Input input = null
         try {
             input = new Input(Files.newInputStream(file))
-            return kryo().readClassAndObject(input)
+            return (T)kryo().readClassAndObject(input)
         }
         finally {
             input?.closeQuietly()
@@ -115,8 +117,8 @@ class KryoHelper {
      * @param file A {@code File} reference to a file
      * @return The de-serialized object
      */
-    static read( File file ) {
-        read(file.toPath())
+    static <T> T deserialize( File file ) {
+        (T)deserialize(file.toPath())
     }
 
     /**
@@ -125,7 +127,7 @@ class KryoHelper {
      * @param object The object to serialize
      * @param toFile A {@code Path} reference to the file where store the object
      */
-    static void write( object, Path toFile ) {
+    static void serialize( object, Path toFile ) {
         def output = null
         try {
             output = new Output(Files.newOutputStream(toFile) )
@@ -143,8 +145,8 @@ class KryoHelper {
      * @param object The object to serialize
      * @param toFile A {@code File} reference to the file where store the object
      */
-    static void write( object, File toFile ) {
-        write(object,toFile.toPath())
+    static void serialize( object, File toFile ) {
+        serialize(object,toFile.toPath())
     }
 
 }
@@ -207,5 +209,41 @@ class GStringSerializer extends Serializer<GStringImpl> {
         Object[] values = kryo.readObject(stream, Object[].class)
         String[] strings = kryo.readObject(stream, String[].class)
         return new GStringImpl(values, strings)
+    }
+}
+
+
+
+@Slf4j
+class URLSerializer extends Serializer<URL> {
+
+    @Override
+    void write(Kryo kryo, Output output, URL url) {
+        log.trace "URL serialization > $url"
+        output.writeString(url.toString())
+    }
+
+    @Override
+    URL read(Kryo kryo, Input input, Class<URL> type) {
+        log.trace "URL de-serialization"
+        return new URL(input.readString())
+    }
+}
+
+@Slf4j
+class UUIDSerializer extends Serializer<UUID> {
+
+    @Override
+    void write(Kryo kryo, Output output, UUID obj) {
+        log.trace "UUID serialization > $obj"
+        output.writeLong( obj.mostSignificantBits )
+        output.writeLong( obj.leastSignificantBits )
+    }
+
+    @Override
+    UUID read(Kryo kryo, Input input, Class<UUID> type) {
+        long mostBits = input.readLong()
+        long leastBits = input.readLong()
+        return new UUID(mostBits, leastBits)
     }
 }

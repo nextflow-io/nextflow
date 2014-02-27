@@ -101,7 +101,7 @@ class DelegateMap implements Map {
      */
     def void save( Path contextFile ) {
         try {
-            KryoHelper.write(holder,contextFile)
+            KryoHelper.serialize(holder,contextFile)
         }
         catch( Exception e ) {
             log.warn "Cannot serialize context map. Cause: ${e.cause} -- Resume will not work on this process", e
@@ -128,7 +128,7 @@ class DelegateMap implements Map {
      */
     static DelegateMap read( TaskProcessor processor, Path contextFile ) {
 
-        def map = (Map)KryoHelper.read(contextFile)
+        def map = (Map)KryoHelper.deserialize(contextFile)
         new DelegateMap(processor, map)
 
     }
