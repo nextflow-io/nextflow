@@ -29,9 +29,9 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.runtime.GStringImpl
-
 /**
  * Helper class to get a {@code Kryo} object ready to be used
  */
@@ -46,9 +46,10 @@ class KryoHelper {
     static {
         serializers = [:]
         serializers.put( PATH_CLASS, PathSerializer )
-        serializers.put( GStringImpl, GStringSerializer)
         serializers.put( URL, URLSerializer )
+        serializers.put( GStringImpl, GStringSerializer)
         serializers.put( UUID, UUIDSerializer )
+        serializers.put( File, FileSerializer )
 
         threadLocal = new ThreadLocal<Kryo>() {
             @Override
@@ -80,18 +81,23 @@ class KryoHelper {
      * @return A new instance {@code Kryo} instance
      */
     static private Kryo newInstance() {
-        def result = new Kryo()
+        def kryo = new Kryo()
+        // special serializers
+        UnmodifiableCollectionsSerializer.registerSerializers(kryo)
+
+        // users serializers
         serializers.each { k, v ->
             if( v instanceof Class )
-                result.register(k,(Serializer)v.newInstance())
+                kryo.register(k,(Serializer)v.newInstance())
 
             else if( v instanceof Closure<Serializer> )
-                result.register(k, v.call(result))
+                kryo.register(k, v.call(kryo))
 
             else
-                result.register(k)
+                kryo.register(k)
         }
-        return result
+
+        return kryo
     }
 
     /**
@@ -242,8 +248,28 @@ class UUIDSerializer extends Serializer<UUID> {
 
     @Override
     UUID read(Kryo kryo, Input input, Class<UUID> type) {
+        log.trace "UUID de-serialization"
         long mostBits = input.readLong()
         long leastBits = input.readLong()
         return new UUID(mostBits, leastBits)
     }
 }
+
+
+@Slf4j
+class FileSerializer extends Serializer<File> {
+
+    @Override
+    void write(Kryo kryo, Output output, File file) {
+        log.trace "File serialization > $file"
+        output.writeString(file.toString())
+    }
+
+    @Override
+    File read(Kryo kryo, Input input, Class<File> type) {
+        log.trace "File de-serialization"
+        return new File(input.readString())
+    }
+}
+
+
