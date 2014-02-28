@@ -12,6 +12,8 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 import nextflow.script.InParam
+import nextflow.script.ScriptType
+
 /**
  * Declares methods have to be implemented by a generic
  * execution strategy
@@ -19,6 +21,7 @@ import nextflow.script.InParam
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@SupportedScriptTypes( [ScriptType.SCRIPTLET] )
 abstract class AbstractExecutor {
 
     /**

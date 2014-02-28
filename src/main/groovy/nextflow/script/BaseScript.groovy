@@ -32,6 +32,7 @@ import nextflow.executor.LsfExecutor
 import nextflow.executor.NopeExecutor
 import nextflow.executor.SgeExecutor
 import nextflow.executor.SlurmExecutor
+import nextflow.executor.SupportedScriptTypes
 import nextflow.processor.MergeTaskProcessor
 import nextflow.processor.ParallelTaskProcessor
 import nextflow.processor.TaskConfig
@@ -264,12 +265,14 @@ abstract class BaseScript extends Script {
 
         // load the executor to be used
         def execName = getExecutorName(taskConfig) ?: 'local'
-        if( type == ScriptType.GROOVY && execName != 'local' ) {
-            log.warn "Process '$name' cannot be executed by '$execName' executor -- Native processes are supported only by 'local' executor"
+        def execClass = loadExecutorClass(execName)
+
+        if( !isTypeSupported(type, execClass) ) {
+            log.warn "Process '$name' cannot be executed by '$execName' executor -- Using 'local' executor instead"
             execName = 'local'
+            execClass = LocalExecutor.class
         }
 
-        def execClass = loadExecutorClass(execName)
         def execObj = execClass.newInstance()
         // inject the task configuration into the executor instance
         execObj.taskConfig = taskConfig
@@ -408,6 +411,25 @@ abstract class BaseScript extends Script {
 
     }
 
+
+    @PackageScope
+    static boolean isTypeSupported( ScriptType type, executor ) {
+
+
+        if( executor instanceof AbstractExecutor ) {
+            executor = executor.class
+        }
+
+        if( executor instanceof Class ) {
+            def annotation = executor.getAnnotation(SupportedScriptTypes)
+            if( !annotation )
+                throw new IllegalArgumentException("Specified argument is not a valid executor class: $executor -- Missing 'SupportedScriptTypes' annotation")
+
+            return type in annotation.value()
+        }
+
+        throw new IllegalArgumentException("Specified argument is not a valid executor class: $executor")
+    }
 
 
 

@@ -39,6 +39,7 @@ import org.apache.commons.io.IOUtils
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@SupportedScriptTypes( [ScriptType.SCRIPTLET, ScriptType.GROOVY] )
 class LocalExecutor extends AbstractExecutor {
 
     @Override
