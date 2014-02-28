@@ -56,6 +56,9 @@ class DelegateMap implements Map {
         this.undef = undef
     }
 
+    public Map getHolder() {
+        return holder
+    }
 
     @Override
     public Object get(Object property) {

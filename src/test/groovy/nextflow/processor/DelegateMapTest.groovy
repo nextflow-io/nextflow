@@ -62,28 +62,34 @@ class DelegateMapTest extends Specification {
         def file = Files.createTempFile('test.ctx',null)
         def processor = [:] as TaskProcessor
         processor.metaClass.getTaskConfig = { taskConfig }
-        def x = 'Hola'
+        def str = 'Hola'
         def map = new DelegateMap(processor)
         map.alpha = 1
-        map.beta = "${x}.txt"
+        map.beta = "${str}.txt"
         map.file = Paths.get('Hola.txt')
         map.list = new BlankSeparatedList( Paths.get('A'), Paths.get('B'), Paths.get('C') )
+        map.holder = 'just a string'
 
         when:
         map.save(file)
         def result = DelegateMap.read(processor, file)
 
         then:
-        result.size() == 4
+        result.size() == 5
         result.alpha == 1
-        result.beta == "${x}.txt"
+        result.beta == "${str}.txt"
         result.file.equals( Paths.get('Hola.txt') )
         result.list == new BlankSeparatedList( Paths.get('A'), Paths.get('B'), Paths.get('C') )
+        result.holder == 'just a string'
+        result.get('holder') == 'just a string'
+        result.getHolder() instanceof Map
+        result.getHolder().get('alpha') == 1
 
         cleanup:
         file.delete()
 
     }
+
 
 
 
