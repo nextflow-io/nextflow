@@ -3,6 +3,7 @@
 .nextflow.log*
 build/**
 subprojects/**/build/
+subprojects/**/*.iml
 out/**
 piper/**
 tmp/*
@@ -19,3 +20,4 @@ docs/_build/
 dx-project/
 *.txt
 cache/
+lib/commons-cli-1.2.jar
