@@ -3,6 +3,7 @@
 .nextflow.log*
 build/**
 subprojects/**/build/
+subprojects/**/*.iml
 out/**
 piper/**
 tmp/*
