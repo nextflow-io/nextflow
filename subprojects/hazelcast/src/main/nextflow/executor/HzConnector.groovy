@@ -71,7 +71,7 @@ class HzConnector implements HzConst, MembershipListener, MessageListener<HzCmdR
     @Memoized
     static HzConnector create( TaskPollingMonitor monitor ) {
         log.debug "Creating Hazelcast connector object for monitor: $monitor"
-        new  HzConnector( monitor, monitor.session)
+        new  HzConnector( monitor, monitor.session )
     }
 
     /**
@@ -109,6 +109,7 @@ class HzConnector implements HzConst, MembershipListener, MessageListener<HzCmdR
         System.setProperty('hazelcast.system.log.enabled','true')
 
         def cfg = new ClientConfig()
+        HzSerializerConfig.registerAll(cfg.getSerializationConfig())
         hazelcast = HazelcastClient.newHazelcastClient(cfg)
 
         executorsQueue = hazelcast.getQueue(TASK_SUBMITS_NAME)

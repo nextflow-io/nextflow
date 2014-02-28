@@ -18,7 +18,6 @@
  */
 
 package nextflow.executor
-
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.locks.Condition
@@ -31,7 +30,6 @@ import com.hazelcast.core.IQueue
 import com.hazelcast.core.ITopic
 import groovy.util.logging.Slf4j
 import nextflow.daemon.DaemonLauncher
-
 /**
  * Run the Hazelcast daemon used to process user processes
  *
@@ -58,22 +56,48 @@ class HzDaemon implements HzConst, DaemonLauncher {
 
     private Map<UUID, HzRemoteSession> allSessions
 
-    HzDaemon() { }
+    /**
+     * Poor man singleton. The current daemon instance
+     */
+    static HzDaemon current
+
+    HzDaemon() {  }
 
     @Override
     void launch(Map properties) {
         log.info "Launching Hazelcast daemon .. "
         System.setProperty('hazelcast.logging.type','slf4j')
         System.setProperty('hazelcast.system.log.enabled','true')
-        def cfg = new Config();
+        def cfg = new Config()
+        HzSerializerConfig.registerAll(cfg.getSerializationConfig())
         hazelcast = Hazelcast.newHazelcastInstance(cfg)
 
         tasksQueue = hazelcast.getQueue(TASK_SUBMITS_NAME)
         resultsTopic = hazelcast.getTopic(TASK_RESULTS_NAME)
         allSessions = hazelcast.getMap(SESSION_MAP)
 
+        // -- set the current instance
+        current = this
+
         // -- wait for tasks to be processed
         processTasks()
+    }
+
+    static ClassLoader getClassLoaderFor(UUID sessionId) {
+        if( !current )
+            throw new IllegalStateException('Missing daemon instance')
+
+        def session = current.allSessions.get(sessionId)
+        if( !session )
+            throw new IllegalStateException("Missing remote session for ID: $sessionId")
+
+        def loader = new GroovyClassLoader()
+        session.classpath.each { URL url ->
+            log.debug "Adding classpath url: $url"
+            loader.addURL(url)
+        }
+
+        return loader
     }
 
     /**

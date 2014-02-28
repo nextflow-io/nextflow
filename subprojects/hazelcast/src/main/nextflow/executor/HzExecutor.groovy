@@ -21,6 +21,7 @@ import java.nio.file.Path
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.processor.DelegateMap
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -33,6 +34,7 @@ import nextflow.util.Duration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@SupportedScriptTypes( [ScriptType.SCRIPTLET, ScriptType.GROOVY] )
 class HzExecutor extends AbstractExecutor  {
 
     @PackageScope
@@ -63,7 +65,7 @@ class HzExecutor extends AbstractExecutor  {
     TaskHandler createTaskHandler(TaskRun task) {
 
         if( task.type == ScriptType.GROOVY ) {
-            throw new UnsupportedOperationException("Native tasks are not supported")
+            return HzTaskHandler.createGroovyHandler(task, taskConfig,this)
         }
 
         /*
@@ -88,7 +90,7 @@ class HzExecutor extends AbstractExecutor  {
         // create the wrapper script
         bash.build()
 
-        new HzTaskHandler(task, taskConfig, this)
+        HzTaskHandler.createScriptHandler(task, taskConfig, this)
     }
 
 
@@ -119,29 +121,51 @@ class HzTaskHandler extends TaskHandler {
 
     private HzExecutor executor
 
-    private final Path exitFile
+    private Path exitFile
 
-    private final Path wrapperFile
+    private Path wrapperFile
 
-    private final Path outputFile
+    private Path outputFile
+
+    private ScriptType type
 
     @PackageScope
     volatile HzCmdResult result
 
-    protected HzTaskHandler(TaskRun task, TaskConfig taskConfig, HzExecutor executor) {
-        super(task, taskConfig)
-        this.executor = executor
-        this.exitFile = task.getCmdExitFile()
-        this.outputFile = task.getCmdOutputFile()
-        this.wrapperFile = task.getCmdWrapperFile()
+
+    static HzTaskHandler createScriptHandler( TaskRun task, TaskConfig taskConfig, HzExecutor executor ) {
+        def handler = new HzTaskHandler(task,taskConfig)
+        handler.executor = executor
+        handler.exitFile = task.getCmdExitFile()
+        handler.outputFile = task.getCmdOutputFile()
+        handler.wrapperFile = task.getCmdWrapperFile()
+        handler.type = ScriptType.SCRIPTLET
+        return handler
+    }
+
+    static createGroovyHandler( TaskRun task, TaskConfig taskConfig, HzExecutor executor ) {
+        def handler = new HzTaskHandler(task,taskConfig)
+        handler.executor = executor
+        handler.type = ScriptType.GROOVY
+        return handler
+    }
+
+    private HzTaskHandler(TaskRun task, TaskConfig config) {
+        super(task,config)
     }
 
     @Override
     void submit() {
-        final List cmd = new ArrayList(taskConfig.shell ?: 'bash' as List ) << wrapperFile.getName()
 
         // submit to an hazelcast node for execution
-        def command = new HzCmdCall( executor.senderId, task.id, task.workDirectory, cmd )
+        HzCmdCall command
+        if( type == ScriptType.SCRIPTLET ) {
+            final List cmdLine = new ArrayList(taskConfig.shell ?: 'bash' as List ) << wrapperFile.getName()
+            command = new HzCmdCall( executor.senderId, task.id, task.workDirectory, cmdLine )
+        }
+        else {
+            command = new HzCmdCall( executor.senderId, task.id, task.workDirectory, task.code )
+        }
         executor.connector.executorsQueue.add( command )
 
         // mark as submitted -- transition to STARTED has to be managed by the scheduler
@@ -167,15 +191,15 @@ class HzTaskHandler extends TaskHandler {
             status = TaskHandler.Status.COMPLETED
 
             // -- set the task exit code (only when it is a scriptlet task)
-            if( result.isScriptlet() && result.value instanceof Integer )
+            if( isScriptlet() && result.value instanceof Integer )
                 task.exitStatus = result.value as Integer
 
             // -- the task output depend by the kind of the task executed
-            if( result.isScriptlet() )
+            if( isScriptlet() )
                 task.stdout = outputFile
             else {
                 task.stdout = result.value
-                task.code.delegate = result.context
+                task.code.delegate = new DelegateMap( task.processor, result.context )
             }
 
             // -- set the task result error (if any)
@@ -193,6 +217,16 @@ class HzTaskHandler extends TaskHandler {
         // not implemented
         // see also https://groups.google.com/d/msg/hazelcast/-SVy4k1-QrA/rlUee3i4POAJ
     }
+
+    /**
+     * @return Whenever is a shell script task
+     */
+    boolean isScriptlet() { type == ScriptType.SCRIPTLET }
+
+    /**
+     * @return Whenever is a groovy closure task
+     */
+    boolean isGroovy() { type == ScriptType.GROOVY }
 
 }
 
