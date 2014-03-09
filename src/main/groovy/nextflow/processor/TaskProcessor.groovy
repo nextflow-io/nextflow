@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
 import embed.com.google.common.hash.HashCode
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
@@ -1031,6 +1032,7 @@ abstract class TaskProcessor {
     /**
      * @return The map holding the shell environment variables for the task to be executed
      */
+    @Memoized
     def Map<String,String> getProcessEnvironment() {
 
         def result = [:]
