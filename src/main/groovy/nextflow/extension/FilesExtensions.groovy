@@ -1001,7 +1001,7 @@ class FilesExtensions {
      * Set the file Unix permission using the digit representing the respectively
      * the permissions for the owner, the group and others.
      *
-     * @see http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation
+     * @link http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation
      *
      * @param self The {@code Path} file for which set the permissions
      * @param owner The owner permissions using a octal numeric representation.
@@ -1028,7 +1028,7 @@ class FilesExtensions {
      * Set the file Unix permission using the digit representing the respectively
      * the permissions for the owner, the group and others.
      *
-     * @see http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation
+     * @link http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation
      *
      * @param self The {@code File} object for which set the permissions
      * @param owner The owner permissions using a octal numeric representation.
