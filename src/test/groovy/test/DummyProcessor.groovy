@@ -5,6 +5,7 @@ import nextflow.executor.NopeExecutor
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
+import nextflow.script.TaskBody
 
 /**
  *
@@ -13,7 +14,7 @@ import nextflow.script.BaseScript
 class DummyProcessor extends TaskProcessor {
 
     DummyProcessor(Session session, BaseScript script, TaskConfig taskConfig) {
-        super(new NopeExecutor(), session, new DummyScript(), taskConfig, {})
+        super(new NopeExecutor(), session, new DummyScript(), taskConfig, new TaskBody({}, '..', true))
     }
 
     @Override

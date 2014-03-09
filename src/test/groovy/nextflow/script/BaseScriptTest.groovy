@@ -1,8 +1,11 @@
 package nextflow.script
 
+import static test.TestParser.parse
+
 import nextflow.executor.AbstractExecutor
 import nextflow.executor.LocalExecutor
 import nextflow.executor.SgeExecutor
+import nextflow.processor.TaskProcessor
 import spock.lang.Specification
 /**
  *
@@ -48,5 +51,34 @@ class BaseScriptTest extends Specification {
         BaseScript.isTypeSupported(ScriptType.GROOVY, new LocalExecutor())
     }
 
+    def testVarRefs( ) {
+
+        setup:
+        def text = '''
+
+        String x = 1
+
+        @Field
+        String = 'Ciao'
+
+        z = 'str'
+
+        process hola {
+
+          /
+          println $x + $y + $z
+          /
+        }
+        '''
+        when:
+        TaskProcessor process = parse(text).run()
+        then:
+        process.taskBody.valRefs == [
+                new TokenValRef('x', 13, 20),
+                new TokenValRef('y', 13, 25),
+                new TokenValRef('z', 13, 30) ] as Set
+
+        process.taskBody.getValNames().sort() == ['x','y','z']
+    }
 
 }

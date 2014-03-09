@@ -22,6 +22,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.script.BaseScript
+import nextflow.script.TaskBody
 import nextflow.util.BlankSeparatedList
 import spock.lang.Specification
 /**
@@ -62,6 +63,7 @@ class DelegateMapTest extends Specification {
         def file = Files.createTempFile('test.ctx',null)
         def processor = [:] as TaskProcessor
         processor.metaClass.getTaskConfig = { taskConfig }
+        processor.metaClass.getTaskBody = { new TaskBody(null,'source',true) }
         def str = 'Hola'
         def map = new DelegateMap(processor)
         map.alpha = 1

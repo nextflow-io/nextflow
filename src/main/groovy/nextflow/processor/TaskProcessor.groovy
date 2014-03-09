@@ -34,7 +34,6 @@ import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
 import nextflow.Nextflow
 import nextflow.Session
-import nextflow.ast.AstNodeToScriptVisitor
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
@@ -52,6 +51,7 @@ import nextflow.script.SetInParam
 import nextflow.script.SetOutParam
 import nextflow.script.SharedParam
 import nextflow.script.StdOutParam
+import nextflow.script.TaskBody
 import nextflow.script.ValueOutParam
 import nextflow.script.ValueSharedParam
 import nextflow.util.BlankSeparatedList
@@ -97,19 +97,9 @@ abstract class TaskProcessor {
     protected String name
 
     /**
-     * The closure wrapping the script to be executed
+     * The piece of code to be execute provided by the user
      */
-    protected Closure code
-
-    /**
-     *  Define the type of script hold by the {@code #code} property
-     */
-    protected ScriptType type = ScriptType.SCRIPTLET
-
-    /**
-     * The source fragment as entered by the user for debugging purpose
-     */
-    protected String source
+    protected TaskBody taskBody
 
     /**
      * The corresponding {@code DataflowProcessor} which will receive and
@@ -189,7 +179,7 @@ abstract class TaskProcessor {
      * @param taskConfig
      * @param taskBody
      */
-    TaskProcessor( AbstractExecutor executor, Session session, BaseScript script, TaskConfig taskConfig, Closure taskBody ) {
+    TaskProcessor( AbstractExecutor executor, Session session, BaseScript script, TaskConfig taskConfig, TaskBody taskBody ) {
         assert executor
         assert session
         assert script
@@ -199,7 +189,7 @@ abstract class TaskProcessor {
         this.session = session
         this.ownerScript = script
         this.taskConfig = taskConfig
-        this.code = taskBody
+        this.taskBody = taskBody
 
         /*
          * set the task name
@@ -233,6 +223,23 @@ abstract class TaskProcessor {
      * @return The {@code BaseScript} object which represents pipeline script
      */
     BaseScript getOwnerScript() { ownerScript }
+
+    /**
+     *  Define the type of script hold by the {@code #code} property
+     */
+    protected ScriptType getType() { taskBody.type }
+
+    /**
+     * The source fragment as entered by the user for debugging purpose
+     */
+    protected String getSource() { taskBody.source }
+
+    protected Closure getCode() { taskBody.closure }
+
+    /**
+     * @return The user provided script block
+     */
+    public TaskBody getTaskBody() { taskBody }
 
     /**
      * Launch the 'script' define by the code closure as a local bash script
@@ -779,21 +786,6 @@ abstract class TaskProcessor {
         }
     }
 
-    private String getCodeScript( TaskRun task ) {
-
-        try {
-            def node = task.code.metaClass.classNode.getDeclaredMethods("doCall")[0].code
-            def writer = new StringWriter()
-            node.visit( new AstNodeToScriptVisitor(writer) )
-            writer.toString()
-        }
-        catch( Throwable e ) {
-            log.debug "Unable to obtain code for process: ${task.name}"
-            return null
-        }
-
-    }
-
 
     private String formatErrorCause( Throwable error ) {
 
@@ -1088,16 +1080,6 @@ abstract class TaskProcessor {
         return new FileHolder(source, result)
     }
 
-//    protected void checkSpec(Path path, FileSpec fileSpec) {
-//
-//        if( !path.exists() && fileSpec?.create ) {
-//            if( fileSpec.file )
-//                Files.createFile(path)
-//            else
-//                Files.createDirectory(path)
-//        }
-//
-//    }
 
     protected List<FileHolder> normalizeInputToFiles( Object obj, int count ) {
 

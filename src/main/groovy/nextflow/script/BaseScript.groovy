@@ -213,7 +213,7 @@ abstract class BaseScript extends Script {
      * @param body The process declarations provided by the user
      * @return The {@code Processor} instance
      */
-    private TaskProcessor createProcessor( String name, ScriptType type, Closure body, String source = null, Map options = null ) {
+    private TaskProcessor createProcessor( String name, Closure body, Map options = null ) {
         assert body
 
         /*
@@ -259,7 +259,7 @@ abstract class BaseScript extends Script {
         // Note: the config object is wrapped by a TaskConfigWrapper because it is required
         // to raise a MissingPropertyException when some values is missing, so that the Closure
         // will try to fallback on the owner object
-        def script = new TaskConfigWrapper(taskConfig).with ( body ) as Closure
+        def script = new TaskConfigWrapper(taskConfig).with ( body ) as TaskBody
         if ( !script )
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
@@ -267,7 +267,7 @@ abstract class BaseScript extends Script {
         def execName = getExecutorName(taskConfig) ?: 'local'
         def execClass = loadExecutorClass(execName)
 
-        if( !isTypeSupported(type, execClass) ) {
+        if( !isTypeSupported(script.type, execClass) ) {
             log.warn "Process '$name' cannot be executed by '$execName' executor -- Using 'local' executor instead"
             execName = 'local'
             execClass = LocalExecutor.class
@@ -283,8 +283,6 @@ abstract class BaseScript extends Script {
         // create processor class
         def processorClass = taskConfig.merge ? MergeTaskProcessor : ParallelTaskProcessor
         def result = processorClass.newInstance( execObj, session, this, taskConfig, script )
-        result.type = type
-        result.source = source
         return result
 
     }
@@ -335,15 +333,12 @@ abstract class BaseScript extends Script {
      *
      * @param args The process options specified in the parenthesis after the process name, as shown in the above example
      * @param name The name of the process, e.g. {@code myProcess} in the above example
-     * @param scriptlet Whenever the process carry out an system script {@code true} or a native groovy code {@code false}
      * @param body The body of the process declaration. It holds all the process definitions: inputs, outputs, code, etc.
      */
-    protected process( Map<String,?> args, String name, boolean scriptlet, String source, Closure body ) {
-        log.trace "Create process: $name -- native: $scriptlet; args: $args "
-        def type = scriptlet ? ScriptType.SCRIPTLET : ScriptType.GROOVY
+    protected process( Map<String,?> args, String name, Closure body ) {
 
         // create the process
-        taskProcessor = createProcessor(name, type, body, source, args)
+        taskProcessor = createProcessor(name, body, args)
         if( isTest )
             return taskProcessor
 
@@ -360,15 +355,12 @@ abstract class BaseScript extends Script {
      *        &#125;
      *    </pre>
      * @param name The name of the process, e.g. {@code myProcess} in the above example
-     * @param scriptlet Whenever the process carry out an system script {@code true} or a native groovy code {@code false}
      * @param body The body of the process declaration. It holds all the process definitions: inputs, outputs, code, etc.
      */
-    protected process( String name, boolean scriptlet, String source, Closure body ) {
-        log.trace "Create process: $name -- script: $scriptlet"
-        def type = scriptlet ? ScriptType.SCRIPTLET : ScriptType.GROOVY
+    protected process( String name, Closure body ) {
 
         // create the process
-        taskProcessor = createProcessor(name, type, body, source )
+        taskProcessor = createProcessor(name, body )
         if( isTest )
             return taskProcessor
 

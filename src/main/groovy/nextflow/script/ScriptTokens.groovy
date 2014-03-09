@@ -20,6 +20,8 @@
 package nextflow.script
 
 import groovy.transform.Canonical
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
 import org.codehaus.groovy.runtime.GStringImpl
 
 /**
@@ -126,5 +128,58 @@ class TokenGString {
     String resolve( Closure map ) {
         def values = valNames.collect { String it -> map(it) }
         return new GStringImpl(values as Object[], strings as String[]).toString()
+    }
+}
+
+/**
+ * Holds process script meta-data
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+class TaskBody {
+
+    Closure closure
+
+    String source
+
+    ScriptType type
+
+    Set<TokenValRef> valRefs
+
+    TaskBody( Closure closure, String source, boolean scriptlet ) {
+        this.closure = closure
+        this.source = source
+        this.type = scriptlet ? ScriptType.SCRIPTLET : ScriptType.GROOVY
+    }
+
+    TaskBody( Closure closure, String source, boolean scriptlet, TokenValRef... values ) {
+        this(closure, source, scriptlet)
+        this.valRefs = values != null ? values as Set : new HashSet<>()
+    }
+
+    String toString() {
+        "TaskBody[closure: $closure; variables: $valRefs]"
+    }
+
+    /**
+     * @return The list of variable names references by the user script
+     */
+    Set<String> getValNames() {
+        valRefs *. name
+    }
+}
+
+
+@ToString
+@EqualsAndHashCode
+class TokenValRef {
+    String name
+    int lineNum
+    int colNum
+
+    TokenValRef( String name, int lineNum = -1, int colNum = -1 ) {
+        this.name = name
+        this.lineNum = lineNum
+        this.colNum = colNum
     }
 }
