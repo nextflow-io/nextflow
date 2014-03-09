@@ -247,6 +247,9 @@ buildscript {
 
 /*
  * Creates a self-contained *fat* jar shipping all required dependencies
+ *
+ * @link https://github.com/rholder/gradle-one-jar
+ * @link http://one-jar.sourceforge.net/index.php?page=frameworks&file=frameworks
  */
 
 task onejar(type: OneJar) {
@@ -278,6 +281,23 @@ task dxjar(type: OneJar, dependsOn: configurations.dnanexus ) {
     doFirst { def path=new File("$buildDir/one-jar-build"); if(path.exists()) path.deleteDir() }
 }
 
+/*
+ * Creates a self-contained *fat* jar shipping all required dependencies
+ * including Hazelcast stuff
+ */
+task hzjar(type: OneJar, dependsOn: configurations.hazelcast ) {
+    mainClass = 'nextflow.script.CliRunner'
+    manifest {
+        attributes 'One-Jar-URL-Factory': 'com.simontuffs.onejar.JarClassLoader$OneJarURLFactory'
+        attributes 'Timestamp': String.valueOf(System.currentTimeMillis())
+    }
+    useStable = false
+    oneJarConfiguration = configurations.oneJarLib
+    targetConfiguration = configurations.hazelcast
+
+    doFirst { def path=new File("$buildDir/one-jar-build"); if(path.exists()) path.deleteDir() }
+}
+
 
 /*
  * Create a self-contained executable package
@@ -293,6 +313,28 @@ task pack(dependsOn: onejar) << {
      * Create the bash startup file
      */
     def distFile = new File(oneJarDistPath).absoluteFile
+    if( !distFile.getParentFile().exists() ) { distFile.getParentFile().mkdirs()  }
+    if( distFile.exists() ) distFile.delete()
+
+    def out = new FileOutputStream(oneJarDistPath);
+    out << new FileInputStream(oneJarShellStub)
+    out << new FileInputStream(oneJarTempPath)
+
+    "chmod +x ${distFile}".execute()
+
+    // copy also the plain jar
+    ant.echo( "Nextflow executable created. Launch with: '$oneJarDistPath'" )
+    ant.echo( "Done" );
+
+}
+
+task packWithHazelcast(dependsOn: hzjar) << {
+
+    /*
+     * Create the bash startup file
+     */
+    //oneJarDistPath += '-hz'
+    def distFile = new File("$oneJarDistPath").absoluteFile
     if( !distFile.getParentFile().exists() ) { distFile.getParentFile().mkdirs()  }
     if( distFile.exists() ) distFile.delete()
 
