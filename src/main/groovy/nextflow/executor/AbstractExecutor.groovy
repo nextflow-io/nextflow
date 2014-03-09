@@ -177,21 +177,8 @@ abstract class AbstractExecutor {
         // create a bash script that will copy the out file to the working directory
         log.trace "Unstaging file names: $fileOutNames"
         if( fileOutNames ) {
-            def cmd = 'cp -r'
-            if( task.workDirectory != task.getTargetDir() ) {
-                cmd = 'mv'
-                result << "mkdir -p ${task.getTargetDir().toString() }"
-            }
             result << "for item in \"${fileOutNames.unique().join(' ')}\"; do"
-            result << 'if [ -d "$item" ]; then'
-            result << "  target=\"${task.getTargetDir().toString()}\""
-            result << '  mkdir -p "$target/$(dirname $item)"'
-            result << '  ' + cmd + ' "$(dirname $item)/$(basename $item)" "$target/$(dirname $item)" '
-            result << 'else'
-            result << '  for name in `ls $item 2>/dev/null`; do'
-            result << '    ' +cmd+ ' $name ' + task.getTargetDir().toString()
-            result << '  done'
-            result << 'fi'
+            result << '  rsync -rRz $item ' + task.getTargetDir().toString()
             result << 'done'
         }
 
