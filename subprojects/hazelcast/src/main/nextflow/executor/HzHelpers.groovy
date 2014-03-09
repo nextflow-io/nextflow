@@ -18,13 +18,14 @@
  */
 
 package nextflow.executor
-import java.nio.file.Path
 import java.util.concurrent.Callable
 
 import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
+import nextflow.Const
 import nextflow.Session
 import nextflow.processor.DelegateMap
+import nextflow.processor.TaskRun
 import nextflow.script.ScriptType
 import org.apache.commons.lang.SerializationUtils
 /**
@@ -34,13 +35,17 @@ import org.apache.commons.lang.SerializationUtils
  */
 interface HzConst {
 
-    final String TASK_RESULTS_NAME = 'results'
+    final String TASK_RESULTS_TOPIC = 'results'
 
-    final String TASK_SUBMITS_NAME = 'tasks'
+    final String TASK_SUBMITS_QUEUE = 'taskSubmits'
+
+    final String TASK_STARTS_TOPIC = 'taskStarts'
 
     final String EXEC_SERVICE = 'default'
 
     final String SESSION_MAP = 'sessionMap'
+
+    final String DEFAULT_GROUP_NAME = Const.APP_NAME
 }
 
 /**
@@ -53,6 +58,7 @@ class HzRemoteSession implements Serializable {
 
     final List<URL> classpath
 
+    /* this may be removed */
     final String scriptClassName
 
     HzRemoteSession() { }
@@ -63,10 +69,10 @@ class HzRemoteSession implements Serializable {
         scriptClassName = session.getScriptClassName()
     }
 
-    HzRemoteSession( UUID uuid, List<URL> classpath, String className ) {
+    /** only for test */
+    protected HzRemoteSession( UUID uuid, List<URL> classpath  ) {
         this.id = uuid
         this.classpath = classpath
-        this.scriptClassName = className
     }
 }
 
@@ -86,16 +92,16 @@ class HzCmdCall implements Callable, Serializable {
 
     final taskId
 
-    /* Note: use a File instead instead of a Path, because the latter is not serializable*/
+    /**
+     * Note: use a File instead instead of a Path, because the latter is not serializable
+     */
     final File workDir
 
-    /** The command line to be executed */
+    /**
+     * The command line to be executed
+     */
     final List commandLine
 
-    /**
-     * The context map when the command is a Groovy task
-     */
-    final Map context
 
     /**
      * The type of the script: Groovy native or Shell script
@@ -103,54 +109,52 @@ class HzCmdCall implements Callable, Serializable {
     final ScriptType type
 
     /**
-     * Store the closure as bye array
+     * Store the closure as byte array
      */
     final byte[] codeBytes
+
+    /**
+     * The delegate map serialized as an array of bytes
+     */
+    final byte[] delegateBytes
 
     /**
      * The code to be execute the command is a Groovy task
      */
     private transient Closure codeObj
 
+    private transient DelegateMap delegateMap
+
+
     /** ONLY FOR de-serialization purposes -- required by kryo serializer */
     protected HzCmdCall() {}
 
-    HzCmdCall( UUID sender, taskId, Path workDir, List cmdLine ) {
-        assert sender
-        assert taskId
-        assert workDir
+    HzCmdCall( UUID senderId, TaskRun task , List cmdLine ) {
+        assert task
         assert cmdLine
 
-        this.sender = sender
-        this.taskId = taskId
-        this.workDir = workDir.toFile()
+        this.sender = senderId
+        this.taskId = task.id
+        this.workDir = task.workDirectory.toFile()
         this.commandLine = cmdLine
         this.type = ScriptType.SCRIPTLET
 
     }
 
-
-    HzCmdCall( UUID sender, taskId, Path workDir, Closure code ) {
-        assert sender
-        assert taskId
-        assert workDir
-        assert code
-
-        this.sender = sender
-        this.taskId = taskId
-        this.workDir = workDir.toFile()
-        this.codeObj = code.dehydrate()
+    HzCmdCall( UUID senderId, TaskRun task ) {
+        assert task
+        this.sender = senderId
+        this.taskId = task.id
+        this.workDir = task.workDirectory.toFile()
+        this.codeObj = task.code.dehydrate()
+        this.delegateMap = task.code.delegate as DelegateMap
         this.type = ScriptType.GROOVY
+        // serialize to byte arrays
+        this.delegateBytes = this.delegateMap.dehydrate()
         this.codeBytes = SerializationUtils.serialize(this.codeObj)
-
-        if( code.delegate instanceof DelegateMap ) {
-            this.context = (code.delegate as DelegateMap).getHolder()
-        }
-        else if( code.delegate instanceof Map) {
-            this.context = (Map)code.delegate
-        }
-
     }
+
+    DelegateMap getDelegateMap() { delegateMap }
 
     @Override
     Object call() throws Exception {
@@ -174,15 +178,21 @@ class HzCmdCall implements Callable, Serializable {
 
     private doGroovyCall() {
         log.trace "Launching groovy command > ${taskId}"
-        if( codeObj == null ) {
-            if( !codeBytes )
-                throw new IllegalStateException('Missing closure byte-code')
 
-            def loader = HzDaemon.getClassLoaderFor(sender)
-            codeObj = InputStreamDeserializer.deserialize(codeBytes,loader)
+        // lookup for the class loader to be used to recreate the closure and the map holding the closure context e.g. variables
+        def loader = HzDaemon.getClassLoaderFor(sender)
+
+        if( delegateMap == null ) {
+            delegateMap = DelegateMap.rehydrate(delegateBytes, loader)
+            log.trace "Rehydrate delegate: $delegateMap"
         }
 
-        codeObj.delegate = context
+        if( codeObj == null ) {
+            Closure closure = InputStreamDeserializer.deserialize(codeBytes,loader)
+            // *rehydrate* the closure so that it can be executed
+            codeObj = closure.rehydrate( delegateMap, delegateMap.getScript(), delegateMap.getScript() )
+        }
+
         codeObj.call()
 
     }
@@ -236,7 +246,7 @@ class HzCmdResult implements Serializable {
      * @param error
      */
     HzCmdResult( HzCmdCall cmd, result, Throwable error ) {
-        this(cmd.sender, cmd.taskId, result, error, cmd.context)
+        this(cmd.sender, cmd.taskId, result, error, cmd.delegateMap?.getHolder())
     }
 
     HzCmdResult( UUID sender, taskId, result, Throwable error, Map context ) {
@@ -278,5 +288,29 @@ class HzCmdResult implements Serializable {
         result = 31 * result + (context != null ? context.hashCode() : 0)
         return result
     }
+}
+
+/**
+ * Notify that a task has started
+ */
+class HzCmdStart implements Serializable {
+
+    private static final long serialVersionUID = - 2956715576155083803L ;
+
+    /**
+     * The session ID of the sender
+     */
+    final UUID sender
+
+    /**
+     * The unique task ID
+     */
+    final def taskId
+
+    HzCmdStart( HzCmdCall cmd ) {
+        this.sender = cmd.sender
+        this.taskId = cmd.taskId
+    }
+
 }
 

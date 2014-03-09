@@ -18,14 +18,14 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Paths
 
 import com.hazelcast.config.Config
 import com.hazelcast.core.Hazelcast
 import com.hazelcast.core.HazelcastInstance
+import nextflow.processor.DelegateMap
+import nextflow.processor.TaskRun
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -54,10 +54,27 @@ class HzSerializerTest extends Specification {
         then:
         map.get('item') == obj
 
-        when:
+
+    }
+
+    def testCmdCall() {
+
+        setup:
+        def script = {  } as Script
+        Config cfg = new Config()
+        HzSerializerConfig.registerAll( cfg.getSerializationConfig() )
+        HazelcastInstance hz = Hazelcast.newHazelcastInstance(cfg)
+        Map map = hz.getMap('map')
+
+        def uuid = UUID.randomUUID()
+        def task = new TaskRun(id: 123 )
         def closure = { 'Hello' }
-        closure.delegate = [x:1, path: Paths.get('/hola')]
-        def cmd = new HzCmdCall(UUID.randomUUID(),1, path, closure )
+        closure.delegate = new DelegateMap(script, [x:1, path: Paths.get('/hola')], false, 'hello')
+        task.code = closure
+        task.workDirectory = Paths.get('/some/file')
+
+        when:
+        def cmd = new HzCmdCall( uuid, task )
         map.put( 'cmd', cmd )
         def result = new HzCmdResult(cmd, 'Bravo', new IllegalArgumentException() )
         map.put( 'result', result )

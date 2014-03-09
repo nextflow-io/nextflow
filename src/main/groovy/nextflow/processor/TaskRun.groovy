@@ -261,7 +261,7 @@ class TaskRun {
         def result = []
 
         getOutputsByType(FileOutParam).keySet().each { FileOutParam param ->
-            result.addAll( param.getFilePatterns((Map)code?.delegate))
+            result.addAll( param.getFilePatterns((Map)code?.delegate) )
         }
 
         stagedProvider.call()?.each { InParam param, List<FileHolder> files ->

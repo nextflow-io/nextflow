@@ -20,9 +20,12 @@
 package nextflow.processor
 import java.nio.file.Path
 
+import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.script.BaseScript
+import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.util.KryoHelper
 /**
  * Map used to delegate variable resolution to script scope
@@ -35,29 +38,75 @@ class DelegateMap implements Map {
     @Delegate
     final private Map<String,Object> holder
 
+    /**
+     * The main script owning the process
+     */
     private Script script
 
+    /**
+     * The process name
+     */
     private String name
 
+    /**
+     * When {@code true} referencing unknown variable names will true a {@code MissingPropertyException}
+     */
     private boolean undef
 
+    /**
+     * The name of the variables not hold by the target map, but available in script binding object
+     */
+    private transient Set<String> bindingNames
 
-    DelegateMap( TaskProcessor processor, Map holder = null ) {
+    DelegateMap( TaskProcessor processor, Map holder ) {
         this.holder = holder ?: [:]
         this.script = processor.ownerScript
         this.undef = processor.taskConfig.getUndef()
         this.name = processor.name
+
+        // fetch all the variables names referenced by the script body and retain
+        // only the ones not declared as input or output, because these are supposed to
+        // to be the ones provided by the *external* script context
+        bindingNames = processor.getTaskBody().getValNames() ?: []
+        if( bindingNames ) {
+            Set<String> declaredNames = []
+            declaredNames.addAll( processor.taskConfig.getInputs().getNames() )
+            declaredNames.addAll( processor.taskConfig.getOutputs().getNames()  )
+            if( declaredNames )
+                bindingNames = bindingNames - declaredNames
+        }
+
+        log.trace "Binding names for '$name' > $bindingNames"
     }
 
-    @Deprecated
-    DelegateMap(BaseScript script, boolean undef = false) {
+
+    private DelegateMap(Script script, Map holder, boolean undef, String name) {
         this.script = script
-        this.holder = [:]
+        this.holder = holder
         this.undef = undef
+        this.name = name
+        def names = script.getBinding()?.getVariables()?.keySet()
+        this.bindingNames = names ? new HashSet<>(names) : new HashSet<>()
+        log.trace "Binding names for '$name' > $bindingNames"
     }
 
+    /**
+     * @return The inner map holding the process variables
+     */
     public Map getHolder() {
         return holder
+    }
+
+    /**
+     * @return The script instance to which this map reference i.e. the main script object
+     */
+    public Script getScript() {
+       script
+    }
+
+    @Override
+    String toString() {
+        "DelegateMap[process: $name; undef: $undef; script: ${script?.class?.name}; holder: ${holder}]"
     }
 
     @Override
@@ -66,9 +115,9 @@ class DelegateMap implements Map {
         if( holder.containsKey(property) ) {
             return holder.get(property)
         }
-        // TODO verify if it could better using "script.getBinding().getVariable()"
-        else if ( script && script.hasProperty(property)) {
-            return script.getProperty(property?.toString())
+
+        else if ( script && script.binding?.hasVariable(property?.toString())) {
+            return script.binding.getVariable(property.toString())
         }
 
         if( undef )
@@ -108,7 +157,7 @@ class DelegateMap implements Map {
         }
         catch( Exception e ) {
             log.warn "Cannot serialize context map. Cause: ${e.cause} -- Resume will not work on this process", e
-            log.debug "Unable to serialize object: ${dumpMap(holder)}"
+            log.debug "Failed to serialize delegate map items: ${dumpMap(holder)}"
         }
     }
 
@@ -135,6 +184,87 @@ class DelegateMap implements Map {
         new DelegateMap(processor, map)
 
     }
+
+
+    /**
+     * Serialize the {@code DelegateMap} instance to a byte array
+     */
+    def byte[] dehydrate() {
+        def kryo = KryoHelper.kryo()
+        def buffer = new ByteArrayOutputStream(5*1024)
+        def out = new Output(buffer)
+        out.writeString(name)
+        out.writeBoolean(undef)
+        kryo.writeClassAndObject(out,holder)
+
+        // -- the script class
+        kryo.writeObject(out, script.class)
+
+        // -- only the binding values for which there's an entry in the holder map
+        final copy = new Binding()
+        bindingNames.each { it -> checkAndSet(copy, it) }
+        log.trace "Delegate for $name > binding copy: ${copy.getVariables()}"
+        kryo.writeObject(out, copy)
+
+        out.flush()
+        return buffer.toByteArray()
+    }
+
+    private void checkAndSet( Binding target, String name ) {
+        final binding = this.script.getBinding()
+        if( !binding.hasVariable(name) )
+            return
+
+        def val = binding.getVariable(name)
+        if( val instanceof DataflowReadChannel || val instanceof DataflowWriteChannel )
+            return
+
+        if( val instanceof Path || val instanceof Serializable ) {
+            target.setVariable(name, val)
+        }
+
+    }
+
+    /**
+     * Deserialize and create a new instance of the {@code DelegateMap} using the provided byte array serialized binary
+     *
+     * @param binary
+     *          The binary output of a previous {@code #dehydrate} invocation
+     * @param loader
+     *          An optional class loader to be used to resolve script class when this object
+     *          need to be reacted in a remote JVM
+     * @return
+     *      A {@code DelegateMap} object instantiated using the provided binary byte[]
+     */
+    static DelegateMap rehydrate(byte[] binary, ClassLoader loader = null) {
+        assert binary
+        final kryo = KryoHelper.kryo()
+
+        def ClassLoader prev = null
+        if( loader ) {
+            prev = kryo.getClassLoader()
+            kryo.setClassLoader(loader)
+        }
+
+        try {
+            def input = new Input(new ByteArrayInputStream(binary))
+            def name = input.readString()
+            def undef = input.readBoolean()
+            Map holder = (Map)kryo.readClassAndObject(input)
+            Class<Script> clazz = kryo.readObject(input,Class)
+            Binding binding = kryo.readObject(input,Binding)
+
+            Script script = clazz.newInstance()
+            script.setBinding(binding)
+            return new DelegateMap(script, holder, undef, name)
+        }
+        finally {
+            // set back the original class loader
+            if( prev ) kryo.setClassLoader(prev)
+        }
+
+    }
+
 
 
 }

@@ -18,7 +18,6 @@
  */
 
 package nextflow.executor
-
 import java.util.concurrent.Callable
 
 import com.hazelcast.client.HazelcastClient
@@ -31,27 +30,28 @@ import com.hazelcast.core.Member
 import com.hazelcast.core.MembershipEvent
 import com.hazelcast.core.MembershipListener
 import com.hazelcast.core.Message
-import com.hazelcast.core.MessageListener
 import com.hazelcast.core.MultiExecutionCallback
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.processor.TaskHandler
 import nextflow.processor.TaskPollingMonitor
-
 /**
  * Creates a connector for the Hazelcast cluster
  *
  * @author Paolo Di Tommaso
  */
 @Slf4j
-class HzConnector implements HzConst, MembershipListener, MessageListener<HzCmdResult> {
+class HzConnector implements HzConst, MembershipListener {
 
     private HazelcastInstance hazelcast
 
     private ITopic<HzCmdResult> resultsTopic
 
-    private IQueue<HzCmdCall> executorsQueue
+    private ITopic<HzCmdStart> startsTopic
+
+    private IQueue<HzCmdCall> submitQueue
 
     @PackageScope
     private final Map<Member,Integer> slotsFor = [:]
@@ -95,9 +95,21 @@ class HzConnector implements HzConst, MembershipListener, MessageListener<HzCmdR
 
     @PackageScope
     Queue<HzCmdCall> getExecutorsQueue() {
-        return executorsQueue
+        return submitQueue
     }
 
+    protected getHzConfigProperty( String key, defValue = null )  {
+        session.getExecConfigProp('hazelcast', key, defValue)
+    }
+
+    protected String getHzGroup() {
+        getHzConfigProperty('group', DEFAULT_GROUP_NAME)
+    }
+
+    protected List<String> getHzAddresses() {
+        def result = getHzConfigProperty('address')
+        return result ? result.toString().split(',') as List<String> : []
+    }
 
     /**
      * Initialize the Hazelcast client connection
@@ -105,16 +117,37 @@ class HzConnector implements HzConst, MembershipListener, MessageListener<HzCmdR
      * @return A {@code HazelcastInstance} instance
      */
     protected void initialize() {
+        // -- configure the logging
         System.setProperty('hazelcast.logging.type','slf4j')
         System.setProperty('hazelcast.system.log.enabled','true')
 
+        // -- get info from the config file available from the session
         def cfg = new ClientConfig()
+        def group = getHzGroup()
+        log.debug "Hz client config > group: $group"
+        cfg.getGroupConfig().setName(group)
+        getHzAddresses().each {
+            log.debug "Hz client config > Adding address: $it"
+            cfg.addAddress(it)
+        }
+
+        /*
+         * create the main Hazelcast instance
+         */
         HzSerializerConfig.registerAll(cfg.getSerializationConfig())
         hazelcast = HazelcastClient.newHazelcastClient(cfg)
 
-        executorsQueue = hazelcast.getQueue(TASK_SUBMITS_NAME)
-        resultsTopic = hazelcast.getTopic(TASK_RESULTS_NAME)
-        resultsTopic.addMessageListener(this)
+        // -- queue where tasks are submitted
+        submitQueue = hazelcast.getQueue(TASK_SUBMITS_QUEUE)
+
+        // -- topic that notify when a task has started
+        startsTopic = hazelcast.getTopic(TASK_STARTS_TOPIC)
+        startsTopic.addMessageListener( this.&onTaskStartMessage )
+
+        // -- topic that notify when a task has completed
+        resultsTopic = hazelcast.getTopic(TASK_RESULTS_TOPIC)
+        resultsTopic.addMessageListener( this.&onTaskCompleteMessage )
+
         // publish the session on the cluster
         allSessions = hazelcast.getMap(SESSION_MAP)
         allSessions.put(session.uniqueId, new HzRemoteSession(session)  )
@@ -133,8 +166,37 @@ class HzConnector implements HzConst, MembershipListener, MessageListener<HzCmdR
             if( !hazelcast ) return
             log.info "Shutting down hazelcast connector"
             allSessions.remove(session.getUniqueId())
-            hazelcast.shutdown()
+            hazelcast.getLifecycleService().shutdown()
         }
+    }
+
+    /**
+     * Notify what member has launched a task
+     * @param message
+     */
+    void onTaskStartMessage (Message<HzCmdStart> message ) {
+        log.trace "Received message for command start: $message"
+
+        // -- make sure the sender match with the current session id
+        def result = message.getMessageObject()
+        if( result.sender != session.uniqueId ) {
+            log.debug "Discarding message command start: $result"
+            return
+        }
+
+        // -- find out the task handler for the task id of the completed task
+        log.trace "Received command start: $result"
+        def handler = (HzTaskHandler)taskMonitor.getTaskHandlerBy(result.taskId)
+
+        if( !handler ) {
+            log.warn "Lost task for command start: $result"
+            return
+        }
+
+        // -- set the result value and *signal* the monitor in order to trigger a status check cycle
+        log.trace "Setting start: $result to handler: $handler"
+        handler.runningMember = message.getPublishingMember()
+
     }
 
 
@@ -143,9 +205,8 @@ class HzConnector implements HzConst, MembershipListener, MessageListener<HzCmdR
      *
      * @param message The {@code HzCmdResult} represent the result of a task executed in the Hazelcast cluster
      */
-    @Override
-    void onMessage(Message<HzCmdResult> message) {
-        log.trace "Received command message: $message"
+    void onTaskCompleteMessage(Message<HzCmdResult> message) {
+        log.trace "Received message for command result: $message"
 
         // -- make sure the sender match with the current session id
         def result = message.getMessageObject()
@@ -163,12 +224,11 @@ class HzConnector implements HzConst, MembershipListener, MessageListener<HzCmdR
             return
         }
 
-        // -- set the result value and *signal* the monitor in order to trigger a status check cycle
-        log.trace "Setting result: $result to handler: $handler"
         handler.result = result
         taskMonitor.signalComplete()
 
     }
+
 
     /**
      * Invoked by Hazelcast when a new cluster member is added
@@ -209,6 +269,29 @@ class HzConnector implements HzConst, MembershipListener, MessageListener<HzCmdR
         // -- reduce the monitor capacity by the number of slots provided by the member removed
         slotsFor.remove(e.member)
         taskMonitor.capacityDec(slots)
+
+        /*
+         * !! reschedule all tasks that where running in a stopped node
+         */
+        def queue = new LinkedList(taskMonitor.getPollingQueue())
+        def died = queue.findAll { HzTaskHandler handler ->
+            handler.runningMember == e.member && handler.status != TaskHandler.Status.COMPLETED
+        }
+
+        if( !died )
+            return
+
+        log.debug "!! Some tasks were running on stopped node ${e.member} -- Rescheduling ${died}"
+        died.each { HzTaskHandler handler ->
+            final count = handler.tryCount++
+            if( count > 2 ) {
+                log.debug "!! Task exceed maximum times of tries -- Stopping $handler"
+                handler.status = TaskHandler.Status.COMPLETED
+            }
+            else {
+                handler.submit()
+            }
+        }
 
     }
 

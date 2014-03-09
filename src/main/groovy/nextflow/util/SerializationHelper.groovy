@@ -136,11 +136,38 @@ class KryoHelper {
     static void serialize( object, Path toFile ) {
         def output = null
         try {
-            output = new Output(Files.newOutputStream(toFile) )
+            output = new Output(Files.newOutputStream(toFile))
             kryo().writeClassAndObject(output, object)
         }
         finally {
             output?.closeQuietly()
+        }
+    }
+
+    static byte[] serialize( object ) {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream(4*1024)
+        def output = new Output(buffer)
+        kryo().writeClassAndObject(output, object)
+        output.flush()
+        return buffer.toByteArray()
+    }
+
+    static <T> T deserialize( byte[] binary, ClassLoader loader = null ) {
+        def kryo = kryo()
+        def ClassLoader prev = null
+        if( loader ) {
+            prev = kryo.getClassLoader()
+            kryo.setClassLoader(loader)
+        }
+
+        try {
+            def buffer = new ByteArrayInputStream(binary)
+            return (T)kryo.readClassAndObject(new Input(buffer))
+        }
+        finally {
+            if( prev ) {
+                kryo.setClassLoader(loader)
+            }
         }
     }
 

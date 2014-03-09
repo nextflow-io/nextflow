@@ -62,7 +62,8 @@ class LoggerHelper {
      */
     static void configureLogger( CliOptions options ) {
 
-        final String logFileName = options.daemon ? ".nf-daemon.log" : options.logFile
+        final String logFileName = options.logFile ? options.logFile : (options.daemon ? ".nf-daemon.log" : ".${Const.APP_NAME}.log")
+
         final boolean quiet = options.quiet
         final List<String> debugConf = options.debug
         final List<String> traceConf = options.trace

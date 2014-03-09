@@ -19,6 +19,7 @@
 package nextflow.executor
 import java.nio.file.Path
 
+import com.hazelcast.core.Member
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.processor.DelegateMap
@@ -99,14 +100,6 @@ class HzExecutor extends AbstractExecutor  {
     }
 
 
-    /**
-     * The sender ID is the current session ID
-     */
-    @PackageScope
-    UUID getSenderId() {
-        return session.uniqueId
-    }
-
 }
 
 
@@ -129,8 +122,20 @@ class HzTaskHandler extends TaskHandler {
 
     private ScriptType type
 
+    /**
+     * The member where the job has started
+     */
+    @PackageScope
+    volatile Member runningMember
+
+    /**
+     * The result object for this task
+     */
     @PackageScope
     volatile HzCmdResult result
+
+    @PackageScope
+    volatile int tryCount
 
 
     static HzTaskHandler createScriptHandler( TaskRun task, TaskConfig taskConfig, HzExecutor executor ) {
@@ -158,13 +163,14 @@ class HzTaskHandler extends TaskHandler {
     void submit() {
 
         // submit to an hazelcast node for execution
+        final sender = task.processor.session.uniqueId
         HzCmdCall command
         if( type == ScriptType.SCRIPTLET ) {
             final List cmdLine = new ArrayList(taskConfig.shell ?: 'bash' as List ) << wrapperFile.getName()
-            command = new HzCmdCall( executor.senderId, task.id, task.workDirectory, cmdLine )
+            command = new HzCmdCall( sender,  task, cmdLine )
         }
         else {
-            command = new HzCmdCall( executor.senderId, task.id, task.workDirectory, task.code )
+            command = new HzCmdCall( sender, task )
         }
         executor.connector.executorsQueue.add( command )
 
@@ -174,8 +180,8 @@ class HzTaskHandler extends TaskHandler {
 
     @Override
     boolean checkIfRunning() {
-        if( isSubmitted() ) {
-            log.trace "Task ${task.name} > RUNNING"
+        if( isSubmitted() && runningMember != null ) {
+            log.trace "Task ${task.name} > RUNNING on member ${runningMember}"
             status = TaskHandler.Status.RUNNING
             return true
         }

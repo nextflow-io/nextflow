@@ -33,6 +33,7 @@ import groovyx.gpars.group.PGroup
 import groovyx.gpars.util.PoolUtils
 import jsr166y.Phaser
 import nextflow.processor.TaskDispatcher
+import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 /**
  * Holds the information on the current execution
@@ -256,30 +257,13 @@ class Session {
     }
 
 
-    protected getExecConfigProp( String execName, String propName, Object defValue ) {
+    @Memoized
+    public getExecConfigProp( String execName, String propName, Object defValue ) {
+        if( config.executor instanceof Map )
+            ConfigHelper.getConfigProperty(config.executor as Map, execName, propName, defValue )
 
-        def result = null
-
-        // make sure that the *executor* is a map object
-        // it could also be a plain string (when it specifies just the its name)
-        if( config.executor instanceof Map ){
-            if( execName && config.executor['$'+execName] instanceof Map ) {
-                result = config.executor['$'+execName][propName]
-            }
-
-            if( result==null && config.executor[propName] ) {
-                result = config.executor[propName]
-            }
-        }
-
-
-        if( result==null ) {
-            result = defValue
-            log.trace "Undefined executor property: '$propName' -- fallback default value: $result"
-        }
-
-        return result
-
+        else
+            return defValue
     }
 
     /**

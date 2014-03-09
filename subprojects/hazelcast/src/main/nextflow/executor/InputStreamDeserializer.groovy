@@ -57,6 +57,8 @@ class InputStreamDeserializer extends ObjectInputStream {
      * @return
      */
     static <T> T deserialize( byte[] bytes, ClassLoader loader ) {
+        assert bytes
+
         def buffer = new ByteArrayInputStream(bytes)
         (T)new InputStreamDeserializer(buffer, loader).readObject()
     }

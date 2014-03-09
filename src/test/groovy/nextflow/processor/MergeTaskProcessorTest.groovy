@@ -49,7 +49,6 @@ class MergeTaskProcessorTest extends Specification {
         proc.stagedProvider().get(key2) == val2
 
 
-
     }
 
 }

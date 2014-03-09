@@ -25,6 +25,7 @@ import java.nio.file.spi.FileSystemProvider
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.ParameterException
 import groovy.transform.InheritConstructors
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
@@ -127,6 +128,20 @@ class CliRunner {
 
         return str
 
+    }
+
+    static private wrapValue( value ) {
+        if( !value )
+            return ''
+
+        value = value.toString().trim()
+        if( value == 'true' || value == 'false')
+            return value
+
+        if( value.isNumber() )
+            return value
+
+        return "'$value'"
     }
 
     def void setLibPath( String str ) {
@@ -405,53 +420,16 @@ class CliRunner {
 
     static JCommander jcommander
 
-    static private CliOptions parseMainArgs(String... args) {
+    @PackageScope
+    static CliOptions parseMainArgs(String... args) {
 
         def result = new CliOptions()
-        jcommander = new JCommander(result, normalizeArgs( args ) as String[] )
+        jcommander = new JCommander(result, CliOptions.normalizeArgs(args) as String[] )
         jcommander.setProgramName( Const.APP_NAME )
 
         return result
     }
 
-    static protected List<String> normalizeArgs( String ... args ) {
-
-        def normalized = []
-        int i=0
-        while( true ) {
-            if( i==args.size() ) { break }
-
-            def current = args[i++]
-            normalized << current
-
-            if( current == '-resume' ) {
-                if( i<args.size() && !args[i].startsWith('-') && (args[i]=='last' || args[i] =~~ /[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{8}/) ) {
-                    normalized << args[i++]
-                }
-                else {
-                    normalized << 'last'
-                }
-            }
-            else if( current == '-test' && (i==args.size() || args[i].startsWith('-'))) {
-                normalized << '%all'
-            }
-
-            else if( current ==~ /^\-\-[a-zA-Z\d].*/ && !current.contains('=')) {
-                current += '='
-                current += ( i<args.size() ? args[i++] : 'true' )
-                normalized[-1] = current
-            }
-
-            else if( current ==~ /^\-process\..+/ && !current.contains('=')) {
-                current += '='
-                current += ( i<args.size() ? args[i++] : 'true' )
-                normalized[-1] = current
-            }
-
-        }
-
-        return normalized
-    }
 
     /**
      * Program entry method
@@ -490,7 +468,7 @@ class CliRunner {
             }
 
             File scriptFile = null
-            if( !options.daemon ) {
+            if( !options.isDaemon() ) {
                 if( !options.arguments ) {
                     log.error "You didn't enter any script file on the program command line\n"
                     jcommander.usage()
@@ -517,7 +495,7 @@ class CliRunner {
             def config = makeConfig(options)
 
             // -- launch daemon
-            if( options.daemon ) {
+            if( options.isDaemon() ) {
                 log.debug "Launching cluster daemon"
                 launchDaemon(config)
                 return
@@ -642,7 +620,10 @@ class CliRunner {
     }
 
 
-    def static Map buildConfig( List<File> files, Map<String,String> vars = null, boolean exportSysEnv = false  ) {
+    def static Map buildConfig( List<File> files, CliOptions options ) {
+
+        final Map<String,String> vars = options.env
+        final boolean exportSysEnv = options.exportSysEnv
 
         def texts = []
         files?.each { File file ->
@@ -664,6 +645,15 @@ class CliRunner {
             log.debug "Adding following variables to session environment: $vars"
             env.putAll(vars)
         }
+
+        // -- add the daemon obj from the command line args
+        def daemon = new StringBuilder()
+        options.daemonOptions?.each { k, v ->
+            daemon << "daemon." << k << '=' << wrapValue(v) << '\n'
+        }
+
+        if( daemon )
+            texts << daemon.toString()
 
         buildConfig0( env, texts )
     }
@@ -784,7 +774,7 @@ class CliRunner {
 
         // -- configuration file(s)
         def configFiles = validateConfigFiles(options.config)
-        def config = buildConfig(configFiles, options.env, options.exportSysEnv)
+        def config = buildConfig(configFiles, options)
 
         // -- override 'process' parameters defined on the cmd line
         options.process.each { name, value ->
@@ -833,6 +823,10 @@ class CliRunner {
         if( !loader.hasNext() )
             throw new IllegalStateException("No daemon services are available -- Cannot launch Nextflow in damon mode")
 
-        loader.next().launch(config)
+        def daemonConfig = config.daemon instanceof Map ? config.daemon : [:]
+        log.debug "Daemon config > $daemonConfig"
+
+        // launch it
+        loader.next().launch(daemonConfig)
     }
 }

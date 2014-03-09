@@ -137,7 +137,7 @@ class MergeTaskProcessor extends TaskProcessor {
         log.info "Collecting process > ${name} ($currentIndex)"
 
         // -- the script evaluation context map
-        contextMap = new DelegateMap(this)
+        contextMap = [:]
 
         // -- map the inputs to a map and use to delegate closure values interpolation
         def keys = []
@@ -202,7 +202,7 @@ class MergeTaskProcessor extends TaskProcessor {
          * initialize the task code to be executed
          */
         Closure scriptClosure = this.code.clone() as Closure
-        scriptClosure.delegate = contextMap
+        scriptClosure.delegate = new DelegateMap(this,contextMap)
         scriptClosure.setResolveStrategy(Closure.DELEGATE_FIRST)
 
         def hashMode = taskConfig.getHashMode()

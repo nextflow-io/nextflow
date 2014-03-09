@@ -57,7 +57,7 @@ public abstract class TaskHandler {
     /**
      * Task current status
      */
-    Status status = Status.NEW
+    volatile Status status = Status.NEW
 
     CountDownLatch latch
 

@@ -185,7 +185,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         final TaskRun task = createTaskRun()
 
         // -- map the inputs to a map and use to delegate closure values interpolation
-        final ctx = new DelegateMap(this)
+        final contextMap = [:]
         final firstRun = task.index == 1
         int count = 0
 
@@ -201,7 +201,7 @@ class ParallelTaskProcessor extends TaskProcessor {
             switch(param) {
                 case EachInParam:
                 case ValueInParam:
-                    ctx[param.name] = val
+                    contextMap[param.name] = val
                     break
 
                 case FileInParam:
@@ -225,7 +225,7 @@ class ParallelTaskProcessor extends TaskProcessor {
                         val = sharedObjs[(SharedParam)param]
                     }
 
-                    ctx[ fileParam.name ] = singleItemOrList(val)
+                    contextMap[ fileParam.name ] = singleItemOrList(val)
                     break
 
                 case ValueSharedParam:
@@ -234,7 +234,7 @@ class ParallelTaskProcessor extends TaskProcessor {
                     else
                         val = sharedObjs[(SharedParam)param]
 
-                    ctx[param.name] = val
+                    contextMap[param.name] = val
                     break
 
                 case StdInParam:
@@ -255,8 +255,8 @@ class ParallelTaskProcessor extends TaskProcessor {
         secondPass.each { FileInParam param, val ->
             def fileParam = param as FileInParam
             def normalized = normalizeInputToFiles(val,count)
-            def resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
-            ctx[ param.name ] = singleItemOrList(resolved)
+            def resolved = expandWildcards( fileParam.getFilePattern(contextMap), normalized )
+            contextMap[ param.name ] = singleItemOrList(resolved)
             count += resolved.size()
             val = resolved
 
@@ -268,7 +268,7 @@ class ParallelTaskProcessor extends TaskProcessor {
          * initialize the task code to be executed
          */
         task.code = this.code.clone() as Closure
-        task.code.delegate = ctx
+        task.code.delegate = new DelegateMap(this, contextMap)
         task.code.setResolveStrategy(Closure.DELEGATE_FIRST)
 
         return task
