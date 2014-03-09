@@ -99,7 +99,7 @@ class Session {
 
     private boolean aborted
 
-    private boolean terminated
+    private volatile boolean terminated
 
     private volatile ExecutorService execService
 

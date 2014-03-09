@@ -167,8 +167,8 @@ class TaskPollingMonitor implements TaskMonitor {
             while ( pollingQueue.size() >= capacity )
                 notFull.await();
 
-            handler.submit()
-            // the entry is appended to the 'submitQueue', not directly to 'pollingQueue'
+            if( !session.isTerminated())
+                handler.submit()
 
             pollingQueue.add(handler)
         }
