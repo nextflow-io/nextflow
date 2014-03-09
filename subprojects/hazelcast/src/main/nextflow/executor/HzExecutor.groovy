@@ -72,9 +72,7 @@ class HzExecutor extends AbstractExecutor  {
         /*
          * otherwise as a bash script
          */
-        final bash = new BashWrapperBuilder(task)
-        bash.environment = task.processor.getProcessEnvironment()
-        bash.environment.putAll( task.getInputEnvironment() )
+        final bash = new BashWrapperBuilder(task, taskConfig)
 
         // staging input files
         bash.stagingScript = {

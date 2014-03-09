@@ -1,6 +1,8 @@
 package nextflow.executor
 import java.nio.file.Path
 
+import nextflow.processor.FileHolder
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 /**
@@ -25,12 +27,22 @@ class BashWrapperBuilder {
 
     String wrapperScript
 
-    boolean useSync
-
+    String dockerContainerName
 
     BashWrapperBuilder( TaskRun task )  {
         assert task
         this.task = task
+    }
+
+    BashWrapperBuilder( TaskRun task, TaskConfig taskConfig ) {
+        this(task)
+        // set the input (when available)
+        this.input = task.stdin
+        this.scratch = taskConfig.scratch
+        this.dockerContainerName = taskConfig.dockerize
+        // set the environment
+        this.environment = task.processor.getProcessEnvironment()
+        this.environment.putAll( task.getInputEnvironment() )
     }
 
     /* this constructor is used only for testing purpose */
@@ -142,6 +154,11 @@ class BashWrapperBuilder {
 
         // execute the command script
         wrapper << '( '
+        // execute by invoking the command through a Docker container
+        if( dockerContainerName ) {
+            wrapper << "docker run ${dockerMounts} -w \$PWD $dockerContainerName "
+        }
+
         wrapper << interpreter << ' ' << scriptFile.toString()
         if( input != null ) wrapper << ' < ' << inputFile.toString()
         wrapper << ' ) &> ' << outputFile.toAbsolutePath() << ENDL
@@ -155,6 +172,20 @@ class BashWrapperBuilder {
 
         wrapperFile.text = wrapperScript = wrapper.toString()
         return wrapperFile
+    }
+
+
+    protected String getDockerMounts() {
+
+        def result = new StringBuilder()
+        def List<FileHolder> files = []
+        task.getInputFiles().each { files.addAll( it.value ) }
+        def paths = files.collect { FileHolder file -> file.storePath.parent.toAbsolutePath() }.unique()
+        paths.each { result << "-v $it:$it " }
+        // append by default the current path
+        result << '-v $PWD:$PWD'
+
+        return result.toString()
     }
 
 }
