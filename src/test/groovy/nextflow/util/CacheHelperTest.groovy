@@ -35,19 +35,19 @@ class CacheHelperTest extends Specification {
         setup:
         def anInteger = Hashing.murmur3_128().newHasher().putInt(1).hash()
         def aLong = Hashing.murmur3_128().newHasher().putLong(100L).hash()
-        def aString = Hashing.murmur3_128().newHasher().putString('Hola').hash()
+        def aString = Hashing.murmur3_128().newHasher().putUnencodedChars('Hola').hash()
         def aDouble = Hashing.murmur3_128().newHasher().putDouble(10.5).hash()
         def aBool = Hashing.murmur3_128().newHasher().putBoolean(true).hash()
         def aByteArray = Hashing.murmur3_128().newHasher().putBytes([0x1,0x2,0x3] as byte[]).hash()
         def anObjectArray = Hashing.murmur3_128().newHasher().putInt(1).putInt(2).putInt(3).hash()
-        def aMap =  Hashing.murmur3_128().newHasher().putInt(1).putString('String1').putBoolean(true).hash()
-        def aList = Hashing.murmur3_128().newHasher().putString('A').putString('B').putString('C').hash()
+        def aMap =  Hashing.murmur3_128().newHasher().putInt(1).putUnencodedChars('String1').putBoolean(true).hash()
+        def aList = Hashing.murmur3_128().newHasher().putUnencodedChars('A').putUnencodedChars('B').putUnencodedChars('C').hash()
 
         def file = File.createTempFile('xxx','yyy')
         file.deleteOnExit()
         file.text = 'Hello'
 
-        def aFile = Hashing.murmur3_128().newHasher().putString(file.absolutePath).putLong(file.length()).putLong(file.lastModified()).hash()
+        def aFile = Hashing.murmur3_128().newHasher().putUnencodedChars(file.absolutePath).putLong(file.length()).putLong(file.lastModified()).hash()
 
 
         expect:
