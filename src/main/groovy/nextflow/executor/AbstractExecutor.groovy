@@ -177,6 +177,7 @@ abstract class AbstractExecutor {
         // create a bash script that will copy the out file to the working directory
         log.trace "Unstaging file names: $fileOutNames"
         if( fileOutNames ) {
+            result << "mkdir -p ${task.getTargetDir()}"
             result << "for item in \"${fileOutNames.unique().join(' ')}\"; do"
             result << '  rsync -rRz $item ' + task.getTargetDir().toString()
             result << 'done'
