@@ -106,8 +106,8 @@ class HzConnector implements HzConst, MembershipListener {
         getHzConfigProperty('group', DEFAULT_GROUP_NAME)
     }
 
-    protected List<String> getHzAddresses() {
-        def result = getHzConfigProperty('address')
+    protected List<String> getHzJoinAddress() {
+        def result = getHzConfigProperty('join')
         return result ? result.toString().split(',') as List<String> : []
     }
 
@@ -126,8 +126,8 @@ class HzConnector implements HzConst, MembershipListener {
         def group = getHzGroup()
         log.debug "Hz client config > group: $group"
         cfg.getGroupConfig().setName(group)
-        getHzAddresses().each {
-            log.debug "Hz client config > Adding address: $it"
+        getHzJoinAddress().each {
+            log.debug "Hz client config > Adding join address: $it"
             cfg.addAddress(it)
         }
 

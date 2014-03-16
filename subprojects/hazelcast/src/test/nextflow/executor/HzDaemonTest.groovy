@@ -54,4 +54,32 @@ class HzDaemonTest extends Specification{
         daemon.getConfigObj().getNetworkConfig().getJoin().getTcpIpConfig().enabled
         daemon.getConfigObj().getNetworkConfig().getJoin().getTcpIpConfig().getMembers() == ['192.178.1.2','192.178.1.3:10','192.178.1.4:20']
     }
+
+    def testGetInterfaces() {
+
+        setup:
+        def daemon
+        List<String> addresses
+
+        when:
+        daemon = [:] as HzDaemon
+        addresses = daemon.getHzInterfaces()
+        then:
+        addresses == []
+
+
+        when:
+        daemon = [:] as HzDaemon
+        daemon.config = [interface: '172.5.1.*,172.5.2.*']
+        addresses = daemon.getHzInterfaces()
+        then:
+        addresses == ['172.5.1.*','172.5.2.*']
+
+//        when:
+//        daemon = [:] as HzDaemon
+//        daemon.config = [interface: 'lo0']
+//        addresses = daemon.getHzInterfaces()
+//        then:
+//        addresses == ['127.0.0.1']
+    }
 }

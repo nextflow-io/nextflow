@@ -150,6 +150,29 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
         getHzProperty('slots', Runtime.getRuntime().availableProcessors()) as Integer
     }
 
+    protected List<String> getHzInterfaces() {
+        def result = []
+        def interfaceNames = getHzProperty('interface')?.toString()?.split(',') as List<String>
+        interfaceNames?.each {
+            if( it.contains('.') )
+                result << it // it is supposed to be an interface IP address, add it to the list
+
+            else
+                result.addAll( findInterfaceAddressesByName(it) )
+        }
+        return result
+    }
+
+    protected List<String> findInterfaceAddressesByName( String name ) {
+        assert name
+        def result = []
+        NetworkInterface interfaces = NetworkInterface.getNetworkInterfaces().find { NetworkInterface net -> net.name == name || net.displayName == name }
+        interfaces?.getInetAddresses()?.each { InetAddress addr ->
+            if( addr instanceof Inet4Address )
+                result << addr.getHostAddress()
+        }
+        return result
+    }
 
     @Memoized
     protected Config getConfigObj () {
@@ -162,6 +185,15 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
         if( getHzPort() ) {
             log.debug "Hazelcast config > port: ${getHzPort()}"
             network.setPort( getHzPort() )
+        }
+
+        def interfaces = getHzInterfaces()
+        if( interfaces ) {
+            network.getInterfaces().setEnabled(true)
+            interfaces.each {
+                log.debug "Hazelcast config > setting network interface address: $it"
+                network.getInterfaces().addInterface(it)
+            }
         }
 
         def join = getHzProperty('join') as String ?: 'multicast'
@@ -182,7 +214,7 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
             }
         }
 
-
+        log.debug("Hazelcast config > obj: ${result.toString()}")
         return result
     }
 
@@ -192,6 +224,8 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
     protected initialize() {
         System.setProperty('hazelcast.logging.type','slf4j')
         System.setProperty('hazelcast.system.log.enabled','true')
+        // -- see https://groups.google.com/d/msg/hazelcast/P-gu4em9WNk/b1uovn-k8rYJ
+        System.setProperty('hazelcast.socket.bind.any', 'false')
 
         // -- define the number of jobs this manage in parallel
         capacity = getHzSlots()

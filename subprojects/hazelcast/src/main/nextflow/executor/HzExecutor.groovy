@@ -190,8 +190,7 @@ class HzTaskHandler extends TaskHandler {
     @Override
     boolean checkIfCompleted() {
 
-        if( isRunning() && result != null ) {
-            // TODO Add a check on the result file existence due to NFS latency
+        if( isRunning() && result != null && exitFile.lastModified()>0 ) {
             status = TaskHandler.Status.COMPLETED
 
             // -- set the task exit code (only when it is a scriptlet task)
