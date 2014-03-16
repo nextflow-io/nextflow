@@ -89,6 +89,7 @@ abstract class BaseScript extends Script {
     @PackageScope
     Object getResult() { result }
 
+
     /**
      * Enable disable task 'echo' configuration property
      * @param value
@@ -298,12 +299,6 @@ abstract class BaseScript extends Script {
         // create the processor object
         def result = taskConfig.executor?.toString()
 
-        // fallback on deprecated attribute
-        if( !result && taskConfig.processor instanceof String ) {
-            result = taskConfig.processor
-            log.warn "Note: configuration attribute 'processor' has been deprecated -- replace it by using the attribute 'executor'"
-        }
-
         if( !result ) {
             if( session.config.executor instanceof String ) {
                 result = session.config.executor
@@ -311,12 +306,6 @@ abstract class BaseScript extends Script {
             else if( session.config.executor?.name instanceof String ) {
                 result = session.config.executor.name
             }
-        }
-
-        // fallback on config file definition
-        if( !result && session.config.processor instanceof String ) {
-            result = session.config.processor
-            log.warn "Note: configuration attribute 'processor' has been deprecated -- replace it by using the attribute 'executor' in the 'nextflow.conf' file"
         }
 
         log.debug "<< taskConfig executor: $result"
