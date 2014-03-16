@@ -53,7 +53,7 @@ class CliOptions {
     String test
 
     @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate results are stored')
-    String workDir = './work'
+    String workDir = 'work'
 
     /**
      * Print out the version number and exit
