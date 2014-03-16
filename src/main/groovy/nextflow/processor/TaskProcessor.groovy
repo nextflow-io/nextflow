@@ -461,43 +461,66 @@ abstract class TaskProcessor {
     }
 
     /**
-     * Create a unique-folder where the task will be executed
+     * Try to check if exists a previously executed process result in the a cached folder. If it exists
+     * use the that result and skip the process execution, otherwise the task is sumitted for execution.
      *
-     * @param folder
+     * @param task
+     *      The {@code TaskRun} instance to be executed
      * @param hash
+     *      The unique {@code HashCode} for the given task inputs
+     * @param script
+     *      The script to be run (only when it's a merge task)
      * @return
+     *      {@code false} when a cached result has been found and the execution has skipped,
+     *      or {@code true} if the task has been submitted for execution
+     *
      */
-    final protected Path createTaskFolder( Path folder, HashCode hash  ) {
+    final protected boolean checkCachedOrLaunchTask( TaskRun task, HashCode hash, String script = null ) {
 
-        folderLock.lock()
-        try {
-
-            if( folder.exists() ) {
-
-                // find another folder name that does NOT exist
-                while( true ) {
-                    hash = CacheHelper.hasher( [hash.asInt(), random.nextInt() ] ).hash()
-                    folder = FileHelper.getWorkFolder(session.workDir, hash)
-                    if( !folder.exists() ) {
-                        break
-                    }
-                }
+        int tries = 0
+        while( true ) {
+            if( tries++ ) {
+                hash = CacheHelper.defaultHasher().newHasher().putBytes(hash.asBytes()).putInt(tries).hash()
             }
+
+            final folder = FileHelper.getWorkFolder(session.workDir, hash)
+            final exists = folder.exists()
+            log.trace "[${task.name}] Cacheable folder: $folder -- exists: $exists; try: $tries"
+
+            def cached = isCacheable() && session.resumeMode && exists && checkCachedOutput(task, folder, hash)
+            if( cached )
+                return false
+
+            if( exists )
+                continue
 
             if( !folder.mkdirs() ) {
                 throw new IOException("Unable to create folder: $folder -- check file system permission")
             }
 
-            return folder
-        }
+            // set the working directory
+            task.hash = hash
+            task.workDirectory = folder
+            if( script )
+                task.script = script
 
-        finally {
-            folderLock.unlock()
+            log.trace "[${task.name}] actual run folder: ${task.workDirectory}"
+
+            // submit task for execution
+            submitTask( task )
+            return true
         }
 
     }
 
-
+    /**
+     * Check if exists a *storeDir* for the specified task. When if exists
+     * and contains the expected result files, the process execution is skipped.
+     *
+     * @param task The task for which check the stored output
+     * @return {@code true} when the folder exists and it contains the expected outputs,
+     *      {@code false} otherwise
+     */
     final boolean checkStoredOutput( TaskRun task ) {
         if( !task.storeDir ) {
             log.trace "[$task.name] Store dir not set -- return false"
@@ -555,11 +578,6 @@ abstract class TaskProcessor {
      * @return {@code true} when all outputs are available, {@code false} otherwise
      */
     final boolean checkCachedOutput(TaskRun task, Path folder, HashCode hash) {
-        if( !folder.exists() ) {
-            log.trace "[$task.name] Cached folder does not exists > $folder -- return false"
-            // no folder -> no cached result
-            return false
-        }
 
         // check if exists the task exit code file
         def exitCode = null

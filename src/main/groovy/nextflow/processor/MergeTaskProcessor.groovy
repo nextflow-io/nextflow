@@ -110,26 +110,9 @@ class MergeTaskProcessor extends TaskProcessor {
         def hash = hasher.hash()
         log.trace "Merging process > $name -- hash: $hash"
 
-        Path folder = FileHelper.getWorkFolder(session.workDir, hash)
-        log.trace "Merging process > $name -- trying cached: $folder"
-
-        def cached = isCacheable() && session.resumeMode && checkCachedOutput(task,folder, hash)
-        if( !cached ) {
-
-            folder = createTaskFolder(folder, hash)
-            log.info "[${getHashLog(hash)}] Running merge > ${name}"
-
-            // -- set the folder where execute the script
-            task.workDirectory = folder
-
-            // -- set the aggregate script to be executed
-            task.script = mergeScript.toString()
-
-            // -- submit task for execution !
-            submitTask( task )
-
-        }
-
+        def submitted = checkCachedOrLaunchTask( task, hash, mergeScript.toString() )
+        if( submitted )
+            log.info "[${getHashLog(task.hash)}] Running merge > ${name}"
     }
 
     protected void mergeScriptCollector( List values ) {

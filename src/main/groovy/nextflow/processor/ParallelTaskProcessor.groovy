@@ -1,5 +1,4 @@
 package nextflow.processor
-import java.nio.file.Path
 
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
@@ -21,7 +20,6 @@ import nextflow.script.StdInParam
 import nextflow.script.ValueInParam
 import nextflow.script.ValueSharedParam
 import nextflow.util.CacheHelper
-import nextflow.util.FileHelper
 /**
  * Defines the parallel tasks execution logic
  *
@@ -309,21 +307,11 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         final mode = taskConfig.getHashMode()
         log.trace "[${task.name}] cache keys: ${keys} -- mode: $mode"
-        def hash = CacheHelper.hasher(keys, mode).hash()
-        Path folder = FileHelper.getWorkFolder(session.workDir, hash)
-        log.trace "[${task.name}] cacheable folder: $folder"
+        final hash = CacheHelper.hasher(keys, mode).hash()
 
-        def cached = isCacheable() && session.resumeMode && checkCachedOutput(task, folder, hash)
-        if( !cached ) {
-
-            // set the working directory
-            task.workDirectory = createTaskFolder(folder, hash)
-            log.trace "[${task.name}] actual run folder: ${task.workDirectory}"
-
-            // submit task for execution
-            submitTask( task )
-            log.info "[${getHashLog(hash)}] Submitted process > ${task.name}"
-        }
+        def submitted = checkCachedOrLaunchTask(task,hash)
+        if( submitted )
+            log.info "[${getHashLog(task.hash)}] Submitted process > ${task.name}"
     }
 
     /**

@@ -21,6 +21,7 @@ package nextflow.processor
 import java.nio.file.Path
 import java.util.concurrent.locks.ReentrantLock
 
+import embed.com.google.common.hash.HashCode
 import groovy.transform.Memoized
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
@@ -60,6 +61,11 @@ class TaskRun {
      * Task name
      */
     def String name
+
+    /**
+     * The unique hash code associated to this task
+     */
+    def HashCode hash
 
     /*
      * The processor that creates this 'task'
