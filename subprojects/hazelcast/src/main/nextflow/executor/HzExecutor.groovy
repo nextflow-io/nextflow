@@ -190,7 +190,7 @@ class HzTaskHandler extends TaskHandler {
     @Override
     boolean checkIfCompleted() {
 
-        if( isRunning() && result != null && exitFile.lastModified()>0 ) {
+        if( isRunning() && result != null && (!exitFile || exitFile.lastModified()>0) ) {
             status = TaskHandler.Status.COMPLETED
 
             // -- set the task exit code (only when it is a scriptlet task)

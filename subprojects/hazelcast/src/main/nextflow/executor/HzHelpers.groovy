@@ -21,6 +21,7 @@ package nextflow.executor
 import java.util.concurrent.Callable
 
 import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.Session
@@ -53,6 +54,8 @@ interface HzConst {
  */
 @EqualsAndHashCode
 class HzRemoteSession implements Serializable {
+
+    private static final long serialVersionUID = - 3956143328835315200L ;
 
     final UUID id
 
@@ -293,6 +296,8 @@ class HzCmdResult implements Serializable {
 /**
  * Notify that a task has started
  */
+@ToString
+@EqualsAndHashCode
 class HzCmdStart implements Serializable {
 
     private static final long serialVersionUID = - 2956715576155083803L ;
