@@ -23,12 +23,7 @@ class BashWrapperBuilderTest extends Specification {
         when:
         builder.scratch = '$SOME_DIR'
         then:
-        builder.changeToScratchDirectory() == 'NF_SCRATCH=$SOME_DIR && cd $NF_SCRATCH'
-
-        when:
-        builder.scratch = '$SOME_DIR'
-        then:
-        builder.changeToScratchDirectory() == 'NF_SCRATCH=$SOME_DIR && cd $NF_SCRATCH'
+        builder.changeToScratchDirectory() == 'NF_SCRATCH=${SOME_DIR:-`mktemp -d`} && cd $NF_SCRATCH'
 
         when:
         builder.scratch = '/my/temp'

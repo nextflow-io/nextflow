@@ -68,7 +68,7 @@ class BashWrapperBuilder {
 
         // when it is defined by a variable, just use it
         if( scratch.startsWith('$') ) {
-            return "NF_SCRATCH=$scratch && cd \$NF_SCRATCH"
+            return "NF_SCRATCH=\${${scratch.substring(1)}:-`mktemp -d`} && cd \$NF_SCRATCH"
         }
 
         if( scratch.toLowerCase() in ['ramdisk','ram-disk']) {
