@@ -46,7 +46,7 @@ class LocalExecutor extends AbstractExecutor {
     protected TaskMonitor createTaskMonitor() {
 
         final defSize = Math.max( Runtime.getRuntime().availableProcessors()-1, 1 )
-        return TaskPollingMonitor.create(session, name, defSize, Duration.of('1s'))
+        return TaskPollingMonitor.create(session, name, defSize, Duration.of('100ms'))
 
     }
 
