@@ -159,6 +159,9 @@ class Session {
 
     def Session start() {
         log.debug "Session start > phaser register (session) "
+
+        Runtime.getRuntime().addShutdownHook { shutdown() }
+
         phaser.register()
         dispatcher.start()
         return this
@@ -215,8 +218,23 @@ class Session {
         log.trace "Session destroying"
         if( pgroup ) pgroup.shutdown()
         if( execService ) execService.shutdown()
-        shutdownHooks.each { it.call() }
+        shutdown()
         log.debug "Session destroyed"
+    }
+
+    final protected void shutdown() {
+
+        shutdownHooks.each {
+            try {
+                it.call()
+            }
+            catch( Exception e ) {
+                log.debug "Failed executing shutdown hook: $it", e
+            }
+        }
+
+        // -- after the first time remove all of them to avoid it's called twice
+        shutdownHooks.clear()
     }
 
     void abort() {
