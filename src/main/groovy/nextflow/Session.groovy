@@ -81,7 +81,7 @@ class Session {
     /**
      * The folder where tasks temporary files are stored
      */
-    def Path workDir = Paths.get('./work')
+    def Path workDir = Paths.get('work').toAbsolutePath()
 
     /**
      * The folder where the main script is contained

@@ -505,7 +505,7 @@ class CliRunner {
             def runner = new CliRunner(config)
             runner.session.cacheable = options.cacheable
             runner.session.resumeMode = options.resume != null
-            runner.session.workDir = options.workDir as Path
+            runner.session.workDir = Paths.get(options.workDir).toAbsolutePath()
             runner.session.baseDir = scriptFile?.canonicalFile?.parentFile
             runner.libPath = options.libPath
 
