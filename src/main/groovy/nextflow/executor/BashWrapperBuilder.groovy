@@ -1,10 +1,9 @@
 package nextflow.executor
 import java.nio.file.Path
 
-import nextflow.processor.FileHolder
-import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.util.DockerHelper
 /**
  * Builder to create the BASH script which is used to
  * wrap and launch the user task
@@ -29,20 +28,19 @@ class BashWrapperBuilder {
 
     String dockerContainerName
 
-    BashWrapperBuilder( TaskRun task )  {
-        assert task
-        this.task = task
-    }
 
-    BashWrapperBuilder( TaskRun task, TaskConfig taskConfig ) {
-        this(task)
+    BashWrapperBuilder( TaskRun task ) {
+        this.task = task
+
         // set the input (when available)
         this.input = task.stdin
-        this.scratch = taskConfig.scratch
-        this.dockerContainerName = taskConfig.dockerize
+        this.scratch = task.scratch
+        this.dockerContainerName = task.container
+
         // set the environment
         this.environment = task.processor.getProcessEnvironment()
         this.environment.putAll( task.getInputEnvironment() )
+
     }
 
     /* this constructor is used only for testing purpose */
@@ -135,7 +133,9 @@ class BashWrapperBuilder {
         wrapper << 'touch ' << startedFile.toString() << ENDL
 
         // source the environment
-        wrapper << '[ -f '<< environmentFile.toString() << ' ]' << ' && source ' << environmentFile.toString() << ENDL
+        if( !dockerContainerName ) {
+            wrapper << '[ -f '<< environmentFile.toString() << ' ]' << ' && source ' << environmentFile.toString() << ENDL
+        }
 
         // whenever it has to change to the scratch directory
         def changeDir = changeToScratchDirectory()
@@ -154,9 +154,17 @@ class BashWrapperBuilder {
 
         // execute the command script
         wrapper << '( '
+
         // execute by invoking the command through a Docker container
         if( dockerContainerName ) {
-            wrapper << "docker run ${dockerMounts} -w \$PWD $dockerContainerName "
+            def mountPaths = DockerHelper.inputFilesToPaths(task.getInputFiles())
+            mountPaths << task.processor.session.workDir
+            def binDir = task.processor.session.binDir
+            if( binDir )
+                mountPaths << binDir
+
+            def theFile = !environmentFile.empty() ? environmentFile : null
+            wrapper << DockerHelper.getRun(dockerContainerName, mountPaths, theFile) << ' '
         }
 
         wrapper << interpreter << ' ' << scriptFile.toString()
@@ -175,17 +183,6 @@ class BashWrapperBuilder {
     }
 
 
-    protected String getDockerMounts() {
 
-        def result = new StringBuilder()
-        def List<FileHolder> files = []
-        task.getInputFiles().each { files.addAll( it.value ) }
-        def paths = files.collect { FileHolder file -> file.storePath.parent.toAbsolutePath() }.unique()
-        paths.each { result << "-v $it:$it " }
-        // append by default the current path
-        result << '-v $PWD:$PWD'
-
-        return result.toString()
-    }
 
 }

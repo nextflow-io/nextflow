@@ -16,6 +16,7 @@ import nextflow.script.SetInParam
 import nextflow.script.StdInParam
 import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
+import nextflow.util.DockerHelper
 import nextflow.util.FileHelper
 /**
  * Defines the 'merge' processing policy
@@ -192,6 +193,7 @@ class MergeTaskProcessor extends TaskProcessor {
         def script = getScriptlet(scriptClosure)
         def commandToRun = normalizeScript(script)
         def interpreter = fetchInterpreter(commandToRun)
+        String dockerContainer = taskConfig.container
 
         /*
          * create a unique hash-code for this task run and save it into a list
@@ -209,7 +211,7 @@ class MergeTaskProcessor extends TaskProcessor {
         }
 
         // add the variables to be exported
-        if( environment ) {
+        if( environment && !dockerContainer ) {
             mergeScript << bashEnvironmentScript(environment)
         }
 
@@ -239,6 +241,19 @@ class MergeTaskProcessor extends TaskProcessor {
 
         // stage this script itself
         mergeScript << executor.stageInputFileScript(scriptFile, scriptName) << '\n'
+
+        // check if it has to be execute through a Docker container
+        if( dockerContainer ) {
+            def mountPaths = DockerHelper.inputFilesToPaths(filesMap)
+            mountPaths << mergeTempFolder
+            mountPaths << session.workDir
+            if( session.binDir )
+                mountPaths << session.binDir
+
+            def dockerize = DockerHelper.getRun(dockerContainer, mountPaths, environment)
+
+            mergeScript << (dockerize.toString()) << ' '
+        }
 
         // create a unique script collecting all the commands
         mergeScript << interpreter << ' ' << scriptCommand << '\n'

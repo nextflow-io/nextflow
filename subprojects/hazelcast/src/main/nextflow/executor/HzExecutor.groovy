@@ -72,7 +72,7 @@ class HzExecutor extends AbstractExecutor  {
         /*
          * otherwise as a bash script
          */
-        final bash = new BashWrapperBuilder(task, taskConfig)
+        final bash = new BashWrapperBuilder(task)
 
         // staging input files
         bash.stagingScript = {

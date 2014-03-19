@@ -75,7 +75,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         final folder = task.workDirectory
         log.debug "Launching process > ${task.name} -- work folder: $folder"
 
-        final bash = new BashWrapperBuilder(task, taskConfig)
+        final bash = new BashWrapperBuilder(task)
 
         // staging input files
         bash.stagingScript = {

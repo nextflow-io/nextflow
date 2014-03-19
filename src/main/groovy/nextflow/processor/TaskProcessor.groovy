@@ -416,6 +416,9 @@ abstract class TaskProcessor {
             task.storeDir = path
         }
 
+        // -- set the scratch folder
+        task.scratch = taskConfig.scratch
+
         /*
          * initialize the inputs/outputs for this task instance
          */

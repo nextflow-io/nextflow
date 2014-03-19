@@ -269,6 +269,9 @@ class ParallelTaskProcessor extends TaskProcessor {
         task.code.delegate = new DelegateMap(this, contextMap)
         task.code.setResolveStrategy(Closure.DELEGATE_FIRST)
 
+        // set the docker container to be used
+        task.container = taskConfig.container
+
         return task
     }
 

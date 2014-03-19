@@ -175,13 +175,13 @@ class Session {
      * in the script base directory
      */
     @Memoized
-    def File getBinDir() {
+    def Path getBinDir() {
         if( !baseDir ) {
             log.debug "Script base directory is null";
             return null
         }
 
-        def path = new File(baseDir, 'bin')
+        def path = new File(baseDir, 'bin').toPath()
         if( !path.exists() || !path.isDirectory() ) {
             log.debug "Script base path does not exist or is not a directory: ${path}"
             return null

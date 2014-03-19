@@ -231,6 +231,17 @@ class TaskRun {
      */
     def script
 
+    /**
+     * The scratch property has defined in the configuration object
+     */
+    def scratch
+
+
+    /**
+    * The name of a docker container where the task is supposed to run when provided
+     */
+    def String container
+
 
     def String getScript() {
         if( script instanceof Path ) {
