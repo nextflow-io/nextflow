@@ -726,7 +726,8 @@ abstract class TaskProcessor {
         if( task?.script ) {
             // - print the executed command
             message << "Command executed:\n"
-            task.script?.stripIndent()?.trim()?.eachLine {
+            def dumpScript = this instanceof MergeTaskProcessor ? this.getSource() : task.script
+            dumpScript?.stripIndent()?.trim()?.eachLine {
                 message << "  ${it}"
             }
 
