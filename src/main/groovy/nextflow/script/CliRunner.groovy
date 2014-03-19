@@ -647,13 +647,21 @@ class CliRunner {
         }
 
         // -- add the daemon obj from the command line args
-        def daemon = new StringBuilder()
-        options.daemonOptions?.each { k, v ->
-            daemon << "daemon." << k << '=' << wrapValue(v) << '\n'
+        if( options.daemonOptions )  {
+            def str = new StringBuilder()
+            options.daemonOptions.each { k, v ->
+                str << "daemon." << k << '=' << wrapValue(v) << '\n'
+            }
+            texts << str.toString()
         }
 
-        if( daemon )
-            texts << daemon.toString()
+        if( options.executorOptions )  {
+            def str = new StringBuilder()
+            options.executorOptions.each { k, v ->
+                str << "executor." << k << '=' << wrapValue(v) << '\n'
+            }
+            texts << str.toString()
+        }
 
         buildConfig0( env, texts )
     }

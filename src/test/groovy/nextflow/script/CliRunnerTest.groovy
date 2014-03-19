@@ -592,11 +592,25 @@ class CliRunnerTest extends Specification {
     }
 
     def testCommandDaemonOptions() {
+
         when:
         def opt = new CliOptions(daemonOptions: [group:'pippo', join:'192.168.0.1', 'x.y.z': 123])
         def result = CliRunner.buildConfig([], opt)
         then:
         result.daemon == [group:'pippo', join:'192.168.0.1', x:[y:[z:123]]]
+
+    }
+
+    def testCommandExecutorOptions() {
+
+        when:
+        def opt = new CliOptions(executorOptions: [ alpha: 1, 'beta.x': 'hola', 'beta.y': 'ciao' ])
+        def result = CliRunner.buildConfig([], opt)
+        then:
+        result.executor.alpha == 1
+        result.executor.beta.x == 'hola'
+        result.executor.beta.y == 'ciao'
+
 
     }
 

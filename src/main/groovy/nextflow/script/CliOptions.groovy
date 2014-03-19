@@ -91,6 +91,11 @@ class CliOptions {
     @DynamicParameter(names = ['-daemon.'], description = 'Starts in daemon mode and provides extra options', hidden = true )
     Map<String,String> daemonOptions = [:]
 
+    @DynamicParameter(names = ['-executor.'], description = 'Executor(s) options', hidden = true )
+    Map<String,String> executorOptions = [:]
+
+
+
     /**
      * Extra parameters for the script execution
      */
@@ -150,6 +155,12 @@ class CliOptions {
             }
 
             else if( current ==~ /^\-daemon\..+/ && !current.contains('=')) {
+                current += '='
+                current += ( i<args.size() ? args[i++] : 'true' )
+                normalized[-1] = current
+            }
+
+            else if( current ==~ /^\-executor\..+/ && !current.contains('=')) {
                 current += '='
                 current += ( i<args.size() ? args[i++] : 'true' )
                 normalized[-1] = current

@@ -51,6 +51,9 @@ class CliOptionsTest extends Specification {
         CliOptions.normalizeArgs('-x', '1', '-daemon.alpha','2', '3') == ['-x', '1', '-daemon.alpha=2', '3']
         CliOptions.normalizeArgs('-x', '1', '-daemon.echo') == ['-x', '1', '-daemon.echo=true']
 
+        CliOptions.normalizeArgs('-x', '1', '-executor.alpha','2', '3') == ['-x', '1', '-executor.alpha=2', '3']
+        CliOptions.normalizeArgs('-x', '1', '-executor.echo') == ['-x', '1', '-executor.echo=true']
+
         CliOptions.normalizeArgs('-x', '1', '-that.alpha','2', '3') == ['-x', '1', '-that.alpha','2', '3']
     }
 
