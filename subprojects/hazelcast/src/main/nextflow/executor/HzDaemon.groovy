@@ -38,6 +38,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.daemon.DaemonLauncher
 import nextflow.util.ConfigHelper
+import org.apache.commons.lang.StringUtils
 
 /**
  * Run the Hazelcast daemon used to process user processes
@@ -152,7 +153,8 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
 
     protected List<String> getHzInterfaces() {
         def result = []
-        def interfaceNames = getHzProperty('interface')?.toString()?.split(',') as List<String>
+        def value = getHzProperty('interface') as String
+        def interfaceNames = value ? StringUtils.split(value, ", \n").collect { it.trim() } : null
         interfaceNames?.each {
             if( it.contains('.') )
                 result << it // it is supposed to be an interface IP address, add it to the list
@@ -204,7 +206,7 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
             network.getJoin().getTcpIpConfig().setEnabled(false)
         }
         else {
-            def members = join ? join.split(',') as List : []
+            def members = join ? StringUtils.split(join, ", \n").collect { it.trim() } : []
             log.debug "Hazelcast config > setup with TCP joining members: $members"
             network.getJoin().getMulticastConfig().setEnabled(false)
             network.getJoin().getTcpIpConfig().setEnabled(true)

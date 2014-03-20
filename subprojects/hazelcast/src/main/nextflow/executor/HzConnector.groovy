@@ -37,6 +37,8 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskPollingMonitor
+import org.apache.commons.lang.StringUtils
+
 /**
  * Creates a connector for the Hazelcast cluster
  *
@@ -87,6 +89,9 @@ class HzConnector implements HzConst, MembershipListener {
 
     }
 
+    /** Only for test -- DO NOT USE */
+    protected HzConnector() {}
+
 
     TaskPollingMonitor getTaskMonitor() {
         monitor
@@ -108,7 +113,7 @@ class HzConnector implements HzConst, MembershipListener {
 
     protected List<String> getHzJoinAddress() {
         def result = getHzConfigProperty('join')
-        return result ? result.toString().split(',') as List<String> : []
+        return result ? StringUtils.split(result.toString(), ", \n").collect { it.trim()  } : []
     }
 
     /**

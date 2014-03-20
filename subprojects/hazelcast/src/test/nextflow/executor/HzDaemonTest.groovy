@@ -47,7 +47,7 @@ class HzDaemonTest extends Specification{
 
         when:
         daemon = [:] as HzDaemon
-        daemon.config = [join:'192.178.1.2,192.178.1.3:10,192.178.1.4:20']
+        daemon.config = [join:'192.178.1.2,192.178.1.3:10 \n 192.178.1.4:20']
         then:
         daemon.getConfigObj().getGroupConfig().getName() == HzConst.DEFAULT_GROUP_NAME
         !daemon.getConfigObj().getNetworkConfig().getJoin().getMulticastConfig().enabled
