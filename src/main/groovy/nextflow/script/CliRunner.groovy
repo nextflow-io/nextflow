@@ -20,6 +20,7 @@
 package nextflow.script
 import java.lang.reflect.Field
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.nio.file.spi.FileSystemProvider
 
 import com.beust.jcommander.JCommander
@@ -48,7 +49,7 @@ import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
 /**
- * Application entry class
+ * Application main class
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -450,9 +451,6 @@ class CliRunner {
                 println getVersion(true)
                 System.exit(ExitCode.OK)
             }
-            else {
-                log.debug getVersion(true)
-            }
 
             // -- print the history of executed commands
             if( options.history ) {
@@ -461,27 +459,34 @@ class CliRunner {
             }
 
             // -- print out the program help, then exit
-            if( options.help || !args ) {
+            if( options.help ) {
                 println Const.LOGO
                 jcommander.usage()
                 System.exit(ExitCode.OK)
             }
 
+            log.debug "${getVersion(true)} [$localName]"
             File scriptFile = null
             if( !options.isDaemon() ) {
-                if( !options.arguments ) {
-                    log.error "You didn't enter any script file on the program command line\n"
-                    jcommander.usage()
-                    System.exit( ExitCode.MISSING_SCRIPT_FILE )
+                // -- the script is the first item in the args
+                if( options.arguments ) {
+                    scriptFile = new File(options.arguments[0])
+                    if ( !scriptFile.exists() ) {
+                        log.error "The specified script does not exist: '$scriptFile'\n"
+                        System.exit( ExitCode.MISSING_SCRIPT_FILE )
+                    }
+                    scriptBaseName = scriptFile.getBaseName()
+                }
+                // -- try to get the script from the stdin
+                else {
+                    scriptFile = tryReadFromStdin()
+                    if( !scriptFile || scriptFile.empty() ) {
+                        log.error "You didn't enter any script file on the program command line\n"
+                        jcommander.usage()
+                        System.exit( ExitCode.MISSING_SCRIPT_FILE )
+                    }
                 }
 
-                // -- check script name
-                scriptFile = new File(options.arguments[0])
-                if ( !scriptFile.exists() ) {
-                    log.error "The specified script does not exist: '$scriptFile'\n"
-                    System.exit( ExitCode.MISSING_SCRIPT_FILE )
-                }
-                scriptBaseName = scriptFile.getBaseName()
             }
 
             if( !options.quiet ) {
@@ -512,7 +517,7 @@ class CliRunner {
             log.debug "Script bin dir: ${runner.session.binDir}"
 
             // -- specify the arguments
-            def scriptArgs = options.arguments.size()>1 ? options.arguments[1..-1] : null
+            def scriptArgs = options.arguments?.size()>1 ? options.arguments[1..-1] : []
 
             if( options.test ) {
                 runner.test(scriptFile, options.test, scriptArgs )
@@ -548,6 +553,16 @@ class CliRunner {
             System.exit( ExitCode.UNKNOWN_ERROR )
         }
 
+    }
+
+    static File tryReadFromStdin() {
+        if( !System.in.available() )
+            return null
+
+        File result = File.createTempFile('nextflow', null)
+        result.deleteOnExit()
+        System.in.withReader { reader -> result << reader }
+        return result
     }
 
     static private void checkFileSystemProviders() {
@@ -836,5 +851,9 @@ class CliRunner {
 
         // launch it
         loader.next().launch(daemonConfig)
+    }
+
+    static private getLocalName() {
+        InetAddress.getLocalHost().getHostName()
     }
 }
