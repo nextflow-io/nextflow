@@ -22,6 +22,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.script.BaseScript
+import nextflow.script.TaskBody
 import nextflow.util.BlankSeparatedList
 import spock.lang.Specification
 /**
@@ -34,7 +35,7 @@ class DelegateMapTest extends Specification {
 
         setup:
         def script = Mock(BaseScript)
-        def map = new DelegateMap(script)
+        def map = new DelegateMap(script, [:], false, 'hola')
 
         when:
         map.x = 1
@@ -47,7 +48,7 @@ class DelegateMapTest extends Specification {
         thrown(MissingPropertyException)
 
         when:
-        def val = new DelegateMap(script,true).get('y')
+        def val = new DelegateMap(script,[:], true, 'hola').get('y')
         then:
         val == '$y'
 
@@ -62,28 +63,63 @@ class DelegateMapTest extends Specification {
         def file = Files.createTempFile('test.ctx',null)
         def processor = [:] as TaskProcessor
         processor.metaClass.getTaskConfig = { taskConfig }
-        def x = 'Hola'
-        def map = new DelegateMap(processor)
+        processor.metaClass.getTaskBody = { new TaskBody(null,'source',true) }
+        def str = 'Hola'
+        def map = new DelegateMap(processor, [:])
         map.alpha = 1
-        map.beta = "${x}.txt"
+        map.beta = "${str}.txt"
         map.file = Paths.get('Hola.txt')
         map.list = new BlankSeparatedList( Paths.get('A'), Paths.get('B'), Paths.get('C') )
+        map.holder = 'just a string'
 
         when:
         map.save(file)
         def result = DelegateMap.read(processor, file)
 
         then:
-        result.size() == 4
+        result.size() == 5
         result.alpha == 1
-        result.beta == "${x}.txt"
+        result.beta == "${str}.txt"
         result.file.equals( Paths.get('Hola.txt') )
         result.list == new BlankSeparatedList( Paths.get('A'), Paths.get('B'), Paths.get('C') )
+        result.holder == 'just a string'
+        result.get('holder') == 'just a string'
+        result.getHolder() instanceof Map
+        result.getHolder().get('alpha') == 1
 
         cleanup:
         file.delete()
 
     }
+
+
+    def testDehydrateRehydrate() {
+
+        setup:
+        def bind = new Binding(x:1, y:2)
+        def script = new Script() {
+            @Override
+            Object run() {
+                return null
+            }
+        }
+        script.setBinding(bind)
+
+        def local = [p:3, q:4, path: Paths.get('some/path')]
+        def delegate = new DelegateMap( script, local, false, 'hola' )
+
+        when:
+        def bytes = delegate.dehydrate()
+        def copy = DelegateMap.rehydrate(bytes)
+
+        then:
+        delegate == copy
+        delegate.getHolder() == copy.getHolder()
+        copy.getHolder() == local
+
+
+    }
+
 
 
 

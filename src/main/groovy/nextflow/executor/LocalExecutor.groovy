@@ -33,20 +33,20 @@ import nextflow.script.ScriptType
 import nextflow.util.Duration
 import nextflow.util.PosixProcess
 import org.apache.commons.io.IOUtils
-import org.codehaus.groovy.runtime.IOGroovyMethods
 /**
  * Executes the specified task on the locally exploiting the underlying Java thread pool
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@SupportedScriptTypes( [ScriptType.SCRIPTLET, ScriptType.GROOVY] )
 class LocalExecutor extends AbstractExecutor {
 
     @Override
     protected TaskMonitor createTaskMonitor() {
 
         final defSize = Math.max( Runtime.getRuntime().availableProcessors()-1, 1 )
-        return new TaskPollingMonitor(session, name, defSize, Duration.of('50 ms'))
+        return TaskPollingMonitor.create(session, name, defSize, Duration.of('100ms'))
 
     }
 
@@ -59,15 +59,13 @@ class LocalExecutor extends AbstractExecutor {
          * when it is a native groovy code, use the native handler
          */
         if( task.type == ScriptType.GROOVY ) {
-            return new NativeTaskHandler(task,taskConfig,session)
+            return new NativeTaskHandler(task,taskConfig,this)
         }
 
         /*
          * otherwise as a bash script
          */
         final bash = new BashWrapperBuilder(task)
-        bash.environment = task.processor.getProcessEnvironment()
-        bash.environment.putAll( task.getInputEnvironment() )
 
         // staging input files
         bash.stagingScript = {
@@ -83,7 +81,7 @@ class LocalExecutor extends AbstractExecutor {
 
         // create the wrapper script
         bash.build()
-        return new LocalTaskHandler(task,taskConfig,session)
+        return new LocalTaskHandler(task,taskConfig,this)
     }
 
 
@@ -113,16 +111,22 @@ class LocalTaskHandler extends TaskHandler {
 
     private boolean destroyed
 
+    private LocalExecutor executor
+
     private Session session
 
-    LocalTaskHandler( TaskRun task, TaskConfig taskConfig, Session session  ) {
+    private volatile result
+
+
+    LocalTaskHandler( TaskRun task, TaskConfig taskConfig, LocalExecutor executor  ) {
         super(task, taskConfig)
         // create the task handler
         this.exitFile = task.getCmdExitFile()
         this.outputFile = task.getCmdOutputFile()
         this.wrapperFile = task.getCmdWrapperFile()
         this.maxDurationMillis = taskConfig.maxDuration?.toMillis()
-        this.session = session
+        this.executor = executor
+        this.session = executor.session
     }
 
 
@@ -134,41 +138,29 @@ class LocalTaskHandler extends TaskHandler {
         List cmd = new ArrayList(taskConfig.shell ?: 'bash' as List ) << wrapperFile.getName()
         log.trace "Launch cmd line: ${cmd.join(' ')}"
 
-        ProcessBuilder builder = new ProcessBuilder()
-                .directory(task.workDirectory.toFile())
-                .command(cmd)
-                .redirectErrorStream(true)
+        session.getExecService().submit( {
 
-        // -- start the execution and notify the event to the monitor
-        process = new PosixProcess(builder.start())
+            try {
+                ProcessBuilder builder = new ProcessBuilder()
+                        .directory(task.workDirectory.toFile())
+                        .command(cmd)
+                        .redirectErrorStream(true)
 
-        // handle in/out
-        pipeStdInput()
+                // -- start the execution and notify the event to the monitor
+                process = new PosixProcess(builder.start())
+                result = process.waitFor()
+            }
+            catch( Throwable ex ) {
+                result = ex
+            }
+            finally {
+                executor.getTaskMonitor().signalComplete()
+            }
+
+        } )
 
         // mark as submitted -- transition to STARTED has to be managed by the scheduler
         status = Status.SUBMITTED
-    }
-
-    /**
-     * Pipe the process input to the running process and save the stdout to the specified *output* file
-     */
-    private pipeStdInput() {
-
-        /*
-         * Pipe the input data using a parallel thread
-         */
-        final input = task.stdin
-        if( !input ) { return }
-
-        session.getExecService().submit {
-            try {
-                IOGroovyMethods.withStream(new BufferedOutputStream(process.getOutputStream())) { writer -> writer << input }
-            }
-            catch( Exception e ) {
-                log.warn "Unable to pipe input data for process: ${task.name}"
-            }
-        }
-
     }
 
 
@@ -198,9 +190,9 @@ class LocalTaskHandler extends TaskHandler {
 
         if( !isRunning() ) { return false }
 
-        def done = process.hasExited()
-        if( done ) {
-            task.exitStatus = process.exitValue()
+        if( result != null ) {
+            task.exitStatus = result instanceof Integer ? result : Integer.MAX_VALUE
+            task.error = result instanceof Throwable ? result : null
             task.stdout = outputFile
             status = Status.COMPLETED
             destroy()
@@ -213,7 +205,6 @@ class LocalTaskHandler extends TaskHandler {
              */
             if( elapsedTimeMillis() > maxDurationMillis ) {
                 destroy()
-                task.exitStatus = process.exitValue()
                 task.stdout = outputFile
                 status = Status.COMPLETED
 
@@ -254,13 +245,16 @@ class LocalTaskHandler extends TaskHandler {
 @Slf4j
 class NativeTaskHandler extends TaskHandler {
 
-    def Future<Throwable> result
+    def Future<Object> result
 
     private Session session
 
-    protected NativeTaskHandler(TaskRun task, TaskConfig taskConfig, Session session) {
+    private AbstractExecutor executor
+
+    protected NativeTaskHandler(TaskRun task, TaskConfig taskConfig, AbstractExecutor executor) {
         super(task, taskConfig)
-        this.session = session
+        this.executor = executor
+        this.session = executor.session
     }
 
 
@@ -275,6 +269,9 @@ class NativeTaskHandler extends TaskHandler {
             }
             catch( Throwable error ) {
                 return error
+            }
+            finally {
+                executor.getTaskMonitor().signalComplete()
             }
 
         } as Callable)
@@ -296,7 +293,7 @@ class NativeTaskHandler extends TaskHandler {
         if( isRunning() && result.isDone() ) {
             status = Status.COMPLETED
             if( result.get() instanceof Throwable ) {
-                task.error = result.get()
+                task.error = (Throwable)result.get()
             }
             else {
                 task.stdout = result.get()

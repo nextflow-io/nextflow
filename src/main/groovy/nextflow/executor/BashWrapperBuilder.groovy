@@ -3,6 +3,7 @@ import java.nio.file.Path
 
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.util.DockerHelper
 /**
  * Builder to create the BASH script which is used to
  * wrap and launch the user task
@@ -25,12 +26,21 @@ class BashWrapperBuilder {
 
     String wrapperScript
 
-    boolean useSync
+    String dockerContainerName
 
 
-    BashWrapperBuilder( TaskRun task )  {
-        assert task
+    BashWrapperBuilder( TaskRun task ) {
         this.task = task
+
+        // set the input (when available)
+        this.input = task.stdin
+        this.scratch = task.scratch
+        this.dockerContainerName = task.container
+
+        // set the environment
+        this.environment = task.processor.getProcessEnvironment()
+        this.environment.putAll( task.getInputEnvironment() )
+
     }
 
     /* this constructor is used only for testing purpose */
@@ -58,7 +68,7 @@ class BashWrapperBuilder {
 
         // when it is defined by a variable, just use it
         if( scratch.startsWith('$') ) {
-            return "NF_SCRATCH=$scratch && cd \$NF_SCRATCH"
+            return "NF_SCRATCH=\${${scratch.substring(1)}:-`mktemp -d`} && cd \$NF_SCRATCH"
         }
 
         if( scratch.toLowerCase() in ['ramdisk','ram-disk']) {
@@ -123,7 +133,9 @@ class BashWrapperBuilder {
         wrapper << 'touch ' << startedFile.toString() << ENDL
 
         // source the environment
-        wrapper << '[ -f '<< environmentFile.toString() << ' ]' << ' && source ' << environmentFile.toString() << ENDL
+        if( !dockerContainerName ) {
+            wrapper << '[ -f '<< environmentFile.toString() << ' ]' << ' && source ' << environmentFile.toString() << ENDL
+        }
 
         // whenever it has to change to the scratch directory
         def changeDir = changeToScratchDirectory()
@@ -142,6 +154,19 @@ class BashWrapperBuilder {
 
         // execute the command script
         wrapper << '( '
+
+        // execute by invoking the command through a Docker container
+        if( dockerContainerName ) {
+            def mountPaths = DockerHelper.inputFilesToPaths(task.getInputFiles())
+            mountPaths << task.processor.session.workDir
+            def binDir = task.processor.session.binDir
+            if( binDir )
+                mountPaths << binDir
+
+            def theFile = !environmentFile.empty() ? environmentFile : null
+            wrapper << DockerHelper.getRun(dockerContainerName, mountPaths, theFile) << ' '
+        }
+
         wrapper << interpreter << ' ' << scriptFile.toString()
         if( input != null ) wrapper << ' < ' << inputFile.toString()
         wrapper << ' ) &> ' << outputFile.toAbsolutePath() << ENDL
@@ -156,5 +181,8 @@ class BashWrapperBuilder {
         wrapperFile.text = wrapperScript = wrapper.toString()
         return wrapperFile
     }
+
+
+
 
 }

@@ -423,31 +423,6 @@ class CliRunnerTest extends Specification {
     }
 
 
-    def testNormalizeCmdline () {
-
-        expect:
-        CliRunner.normalizeArgs('a','-bb','-ccc','dddd') == ['a','-bb','-ccc','dddd']
-        CliRunner.normalizeArgs('a','-bb','-ccc','-resume', 'last') == ['a','-bb','-ccc','-resume','last']
-        CliRunner.normalizeArgs('a','-bb','-ccc','-resume') == ['a','-bb','-ccc','-resume','last']
-        CliRunner.normalizeArgs('a','-bb','-ccc','-resume','1d2c942a-345d-420b-b7c7-18d90afc6c33', 'zzz') == ['a','-bb','-ccc','-resume','1d2c942a-345d-420b-b7c7-18d90afc6c33', 'zzz']
-
-        CliRunner.normalizeArgs('x','-test') == ['x','-test','%all']
-        CliRunner.normalizeArgs('x','-test','alpha') == ['x','-test','alpha']
-        CliRunner.normalizeArgs('x','-test','-other') == ['x','-test','%all','-other']
-
-        CliRunner.normalizeArgs('--alpha=1') == ['--alpha=1']
-        CliRunner.normalizeArgs('--alpha','1') == ['--alpha=1']
-        CliRunner.normalizeArgs('-x', '1', 'script.nf', '--long', 'v1', '--more', 'v2', '--flag') == ['-x','1','script.nf','--long=v1','--more=v2','--flag=true']
-
-        CliRunner.normalizeArgs('-x', '1', '-process.alpha','2', '3') == ['-x', '1', '-process.alpha=2', '3']
-        CliRunner.normalizeArgs('-x', '1', '-process.echo') == ['-x', '1', '-process.echo=true']
-
-
-        CliRunner.normalizeArgs('-x', '1', '-that.alpha','2', '3') == ['-x', '1', '-that.alpha','2', '3']
-    }
-
-
-
     def testAddLibPath() {
 
         setup:
@@ -600,6 +575,42 @@ class CliRunnerTest extends Specification {
         process.taskConfig.beta == '222'  // !! this value is overridden by the one in the config file
         process.taskConfig.delta == '333'
         process.taskConfig.gamma == '555'
+
+    }
+
+
+    def testCommandLineOptions() {
+
+        when:
+        def opt = CliRunner.parseMainArgs('-daemon.x=1', '-daemon.y.z=2')
+
+
+        then:
+        opt.daemonOptions.x == '1'
+        opt.daemonOptions.'y.z'== '2'
+
+    }
+
+    def testCommandDaemonOptions() {
+
+        when:
+        def opt = new CliOptions(daemonOptions: [group:'pippo', join:'192.168.0.1', 'x.y.z': 123])
+        def result = CliRunner.buildConfig([], opt)
+        then:
+        result.daemon == [group:'pippo', join:'192.168.0.1', x:[y:[z:123]]]
+
+    }
+
+    def testCommandExecutorOptions() {
+
+        when:
+        def opt = new CliOptions(executorOptions: [ alpha: 1, 'beta.x': 'hola', 'beta.y': 'ciao' ])
+        def result = CliRunner.buildConfig([], opt)
+        then:
+        result.executor.alpha == 1
+        result.executor.beta.x == 'hola'
+        result.executor.beta.y == 'ciao'
+
 
     }
 

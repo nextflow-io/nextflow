@@ -19,9 +19,9 @@
 package nextflow.processor
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.locks.ReentrantLock
 
 import embed.com.google.common.hash.HashCode
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
@@ -34,7 +34,6 @@ import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
 import nextflow.Nextflow
 import nextflow.Session
-import nextflow.ast.AstNodeToScriptVisitor
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
@@ -52,6 +51,7 @@ import nextflow.script.SetInParam
 import nextflow.script.SetOutParam
 import nextflow.script.SharedParam
 import nextflow.script.StdOutParam
+import nextflow.script.TaskBody
 import nextflow.script.ValueOutParam
 import nextflow.script.ValueSharedParam
 import nextflow.util.BlankSeparatedList
@@ -97,19 +97,9 @@ abstract class TaskProcessor {
     protected String name
 
     /**
-     * The closure wrapping the script to be executed
+     * The piece of code to be execute provided by the user
      */
-    protected Closure code
-
-    /**
-     *  Define the type of script hold by the {@code #code} property
-     */
-    protected ScriptType type = ScriptType.SCRIPTLET
-
-    /**
-     * The source fragment as entered by the user for debugging purpose
-     */
-    protected String source
+    protected TaskBody taskBody
 
     /**
      * The corresponding {@code DataflowProcessor} which will receive and
@@ -134,20 +124,11 @@ abstract class TaskProcessor {
     protected final TaskConfig taskConfig
 
     /**
-     * Lock to protected against race-condition the folder creation phase
-     */
-    private static final folderLock = new ReentrantLock(true)
-
-    /**
      * Used for framework generated task names
      */
     @Deprecated
     private static final AtomicInteger tasksCount = new AtomicInteger()
 
-    /*
-     * Internally used, random number generator
-     */
-    private final random = new Random()
 
     /**
      * Count the number errors showed
@@ -189,7 +170,7 @@ abstract class TaskProcessor {
      * @param taskConfig
      * @param taskBody
      */
-    TaskProcessor( AbstractExecutor executor, Session session, BaseScript script, TaskConfig taskConfig, Closure taskBody ) {
+    TaskProcessor( AbstractExecutor executor, Session session, BaseScript script, TaskConfig taskConfig, TaskBody taskBody ) {
         assert executor
         assert session
         assert script
@@ -199,7 +180,7 @@ abstract class TaskProcessor {
         this.session = session
         this.ownerScript = script
         this.taskConfig = taskConfig
-        this.code = taskBody
+        this.taskBody = taskBody
 
         /*
          * set the task name
@@ -233,6 +214,23 @@ abstract class TaskProcessor {
      * @return The {@code BaseScript} object which represents pipeline script
      */
     BaseScript getOwnerScript() { ownerScript }
+
+    /**
+     *  Define the type of script hold by the {@code #code} property
+     */
+    protected ScriptType getType() { taskBody.type }
+
+    /**
+     * The source fragment as entered by the user for debugging purpose
+     */
+    protected String getSource() { taskBody.source }
+
+    protected Closure getCode() { taskBody.closure }
+
+    /**
+     * @return The user provided script block
+     */
+    public TaskBody getTaskBody() { taskBody }
 
     /**
      * Launch the 'script' define by the code closure as a local bash script
@@ -408,6 +406,9 @@ abstract class TaskProcessor {
             task.storeDir = path
         }
 
+        // -- set the scratch folder
+        task.scratch = taskConfig.scratch
+
         /*
          * initialize the inputs/outputs for this task instance
          */
@@ -453,43 +454,66 @@ abstract class TaskProcessor {
     }
 
     /**
-     * Create a unique-folder where the task will be executed
+     * Try to check if exists a previously executed process result in the a cached folder. If it exists
+     * use the that result and skip the process execution, otherwise the task is sumitted for execution.
      *
-     * @param folder
+     * @param task
+     *      The {@code TaskRun} instance to be executed
      * @param hash
+     *      The unique {@code HashCode} for the given task inputs
+     * @param script
+     *      The script to be run (only when it's a merge task)
      * @return
+     *      {@code false} when a cached result has been found and the execution has skipped,
+     *      or {@code true} if the task has been submitted for execution
+     *
      */
-    final protected Path createTaskFolder( Path folder, HashCode hash  ) {
+    final protected boolean checkCachedOrLaunchTask( TaskRun task, HashCode hash, String script = null ) {
 
-        folderLock.lock()
-        try {
-
-            if( folder.exists() ) {
-
-                // find another folder name that does NOT exist
-                while( true ) {
-                    hash = CacheHelper.hasher( [hash.asInt(), random.nextInt() ] ).hash()
-                    folder = FileHelper.getWorkFolder(session.workDir, hash)
-                    if( !folder.exists() ) {
-                        break
-                    }
-                }
+        int tries = 0
+        while( true ) {
+            if( tries++ ) {
+                hash = CacheHelper.defaultHasher().newHasher().putBytes(hash.asBytes()).putInt(tries).hash()
             }
+
+            final folder = FileHelper.getWorkFolder(session.workDir, hash)
+            final exists = folder.exists()
+            log.trace "[${task.name}] Cacheable folder: $folder -- exists: $exists; try: $tries"
+
+            def cached = isCacheable() && session.resumeMode && exists && checkCachedOutput(task, folder, hash)
+            if( cached )
+                return false
+
+            if( exists )
+                continue
 
             if( !folder.mkdirs() ) {
                 throw new IOException("Unable to create folder: $folder -- check file system permission")
             }
 
-            return folder
-        }
+            // set the working directory
+            task.hash = hash
+            task.workDirectory = folder
+            if( script )
+                task.script = script
 
-        finally {
-            folderLock.unlock()
+            log.trace "[${task.name}] actual run folder: ${task.workDirectory}"
+
+            // submit task for execution
+            submitTask( task )
+            return true
         }
 
     }
 
-
+    /**
+     * Check if exists a *storeDir* for the specified task. When if exists
+     * and contains the expected result files, the process execution is skipped.
+     *
+     * @param task The task for which check the stored output
+     * @return {@code true} when the folder exists and it contains the expected outputs,
+     *      {@code false} otherwise
+     */
     final boolean checkStoredOutput( TaskRun task ) {
         if( !task.storeDir ) {
             log.trace "[$task.name] Store dir not set -- return false"
@@ -547,11 +571,6 @@ abstract class TaskProcessor {
      * @return {@code true} when all outputs are available, {@code false} otherwise
      */
     final boolean checkCachedOutput(TaskRun task, Path folder, HashCode hash) {
-        if( !folder.exists() ) {
-            log.trace "[$task.name] Cached folder does not exists > $folder -- return false"
-            // no folder -> no cached result
-            return false
-        }
 
         // check if exists the task exit code file
         def exitCode = null
@@ -697,7 +716,8 @@ abstract class TaskProcessor {
         if( task?.script ) {
             // - print the executed command
             message << "Command executed:\n"
-            task.script?.stripIndent()?.trim()?.eachLine {
+            def dumpScript = this instanceof MergeTaskProcessor ? this.getSource() : task.script
+            dumpScript?.stripIndent()?.trim()?.eachLine {
                 message << "  ${it}"
             }
 
@@ -777,21 +797,6 @@ abstract class TaskProcessor {
             }
 
         }
-    }
-
-    private String getCodeScript( TaskRun task ) {
-
-        try {
-            def node = task.code.metaClass.classNode.getDeclaredMethods("doCall")[0].code
-            def writer = new StringWriter()
-            node.visit( new AstNodeToScriptVisitor(writer) )
-            writer.toString()
-        }
-        catch( Throwable e ) {
-            log.debug "Unable to obtain code for process: ${task.name}"
-            return null
-        }
-
     }
 
 
@@ -1039,6 +1044,7 @@ abstract class TaskProcessor {
     /**
      * @return The map holding the shell environment variables for the task to be executed
      */
+    @Memoized
     def Map<String,String> getProcessEnvironment() {
 
         def result = [:]
@@ -1088,16 +1094,6 @@ abstract class TaskProcessor {
         return new FileHolder(source, result)
     }
 
-//    protected void checkSpec(Path path, FileSpec fileSpec) {
-//
-//        if( !path.exists() && fileSpec?.create ) {
-//            if( fileSpec.file )
-//                Files.createFile(path)
-//            else
-//                Files.createDirectory(path)
-//        }
-//
-//    }
 
     protected List<FileHolder> normalizeInputToFiles( Object obj, int count ) {
 

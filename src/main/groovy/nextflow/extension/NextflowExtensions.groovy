@@ -18,10 +18,12 @@
  */
 
 package nextflow.extension
+
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.locks.Lock
 import java.util.regex.Pattern
 
 import groovy.transform.TupleConstructor
@@ -1648,6 +1650,51 @@ class NextflowExtensions {
         }
 
     }
+
+    /**
+     * Invokes the specify closure including it with a lock/unlock calls pair
+     *
+     * @param self
+     * @param interruptible
+     * @param closure
+     * @return the closure result
+     */
+    static <T> T withLock( Lock self, boolean interruptible = false, Closure<T> closure ) {
+        // acquire the lock
+        if( interruptible )
+            self.lockInterruptibly()
+        else
+            self.lock()
+
+        try {
+            return closure.call()
+        }
+        finally {
+            self.unlock();
+        }
+    }
+
+    /**
+     * Invokes the specify closure only if it is able to acquire a lock
+     *
+     * @param self
+     * @param interruptible
+     * @param closure
+     * @return the closure result
+     */
+    static boolean tryLock( Lock self, Closure closure ) {
+        if( !self.tryLock() )
+            return false
+
+        try {
+            closure.call()
+        }
+        finally {
+            self.unlock()
+            return true
+        }
+    }
+
 
     /**
      * Converts a {@code String} to a {@code Duration} object

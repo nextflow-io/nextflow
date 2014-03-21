@@ -1,4 +1,5 @@
 include 'dnanexus'
+include 'hazelcast'
 
 rootProject.children.each { prj ->
     prj.projectDir = new File("$rootDir/subprojects/$prj.name")

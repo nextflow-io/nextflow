@@ -35,7 +35,7 @@ class HistoryFile extends File {
 
     def append( UUID key, Object... args ) {
         assert key
-        assert args
+        assert args != null
 
         append(key.toString(), args)
     }

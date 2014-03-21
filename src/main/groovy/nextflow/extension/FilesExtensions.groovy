@@ -4,6 +4,8 @@ import java.nio.channels.SeekableByteChannel
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.LinkOption
+import java.nio.file.NoSuchFileException
+import java.nio.file.NotLinkException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.SimpleFileVisitor
@@ -1001,7 +1003,7 @@ class FilesExtensions {
      * Set the file Unix permission using the digit representing the respectively
      * the permissions for the owner, the group and others.
      *
-     * @see http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation
+     * @link http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation
      *
      * @param self The {@code Path} file for which set the permissions
      * @param owner The owner permissions using a octal numeric representation.
@@ -1028,7 +1030,7 @@ class FilesExtensions {
      * Set the file Unix permission using the digit representing the respectively
      * the permissions for the owner, the group and others.
      *
-     * @see http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation
+     * @link http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation
      *
      * @param self The {@code File} object for which set the permissions
      * @param owner The owner permissions using a octal numeric representation.
@@ -1040,4 +1042,31 @@ class FilesExtensions {
     }
 
 
+    static void deleteOnExit(Path self) {
+        Runtime.getRuntime().addShutdownHook { self.delete() }
+    }
+
+    /**
+     * Resolve a symbolic link to the actual target file, in a similar manner to the
+     * Linux {@code readlink -f} command.
+     * <p>
+     * It canonicalize by following every symlink in every component of the given name recursively;
+     * all but the last component must exist.
+     *
+     * @param self
+     * @return The resolved target path of the source path itself it is not a file or the file does not exist
+     */
+    static Path resolveSymLink(Path self) {
+        try {
+            def path = Files.readSymbolicLink(self)
+            return resolveSymLink(path)
+        }
+        catch( NotLinkException | NoSuchFileException e ) {
+            return self
+        }
+    }
+
+    static File resolveSymLink(File self) {
+        self.toPath().resolveSymLink().toFile()
+    }
 }

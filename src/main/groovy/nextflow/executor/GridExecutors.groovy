@@ -62,7 +62,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
      * @return
      */
     def TaskMonitor createTaskMonitor() {
-        return new TaskPollingMonitor(session, name, 50, Duration.of('1 sec'))
+        return TaskPollingMonitor.create(session, name, 50, Duration.of('1 sec'))
     }
 
     /*
@@ -76,13 +76,6 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
         log.debug "Launching process > ${task.name} -- work folder: $folder"
 
         final bash = new BashWrapperBuilder(task)
-        // set the input (when available)
-        bash.input = task.stdin
-        bash.scratch = taskConfig.scratch
-
-        // set the environment
-        bash.environment = task.processor.getProcessEnvironment()
-        bash.environment.putAll( task.getInputEnvironment() )
 
         // staging input files
         bash.stagingScript = {

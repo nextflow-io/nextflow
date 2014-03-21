@@ -22,9 +22,11 @@ import groovy.util.logging.Slf4j
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenGString
+import nextflow.script.TaskBody
 import nextflow.script.TokenStdinCall
 import nextflow.script.TokenStdoutCall
 import nextflow.script.TokenValCall
+import nextflow.script.TokenValRef
 import nextflow.script.TokenVar
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
@@ -221,7 +223,10 @@ class NextflowDSLImpl implements ASTTransformation {
                 def execClosure = new ClosureExpression( Parameter.EMPTY_ARRAY, execBlock )
 
                 // append the new block to the
-                block.addStatement( new ExpressionStatement(execClosure) )
+                // set the 'script' flag parameter
+                def flag = currentLabel == 'script'
+                def wrap = makeScriptWrapper(execClosure, source, flag, unit)
+                block.addStatement( new ExpressionStatement(wrap)  )
                 done = true
 
             }
@@ -234,22 +239,15 @@ class NextflowDSLImpl implements ASTTransformation {
                 readSource(stm,source,unit)
 
                 if ( stm instanceof ReturnStatement  ){
-                    (done,line,coln) = wrapExpressionWithClosure(block, stm.expression, len)
+                    (done,line,coln) = wrapExpressionWithClosure(block, stm.expression, len, source, unit)
                 }
 
                 else if ( stm instanceof ExpressionStatement )  {
-                    (done,line,coln) = wrapExpressionWithClosure(block, stm.expression, len)
+                    (done,line,coln) = wrapExpressionWithClosure(block, stm.expression, len, source, unit)
                 }
                 // set the 'script' flag
                 currentLabel = 'script'
             }
-
-            // set the 'script' flag parameter
-            def flag = currentLabel == 'script' ? ConstantExpression.PRIM_TRUE : ConstantExpression.PRIM_FALSE
-            args.getExpressions().add( args.expressions.size()-1, flag )
-
-            // add the script fragment
-            args.getExpressions().add( args.expressions.size()-1, new ConstantExpression(source.toString()) )
 
             if (!done) {
                 log.trace "Invalid 'process' definition -- Process must terminate with string expression"
@@ -258,7 +256,40 @@ class NextflowDSLImpl implements ASTTransformation {
         }
     }
 
+    /**
+     * Wrap the user provided piece of code, either a script or a closure with a {@code TaskBody} object
+     *
+     * @param closure
+     * @param source
+     * @param scriptOrNative
+     * @param unit
+     * @return a {@code TaskBody} object
+     */
+    private makeScriptWrapper( ClosureExpression closure, CharSequence source, boolean scriptOrNative, SourceUnit unit ) {
 
+        final newArgs = []
+        newArgs << (closure)
+        newArgs << ( new ConstantExpression(source.toString()) )
+        newArgs << ( scriptOrNative ? ConstantExpression.PRIM_TRUE : ConstantExpression.PRIM_FALSE )
+
+        final variables = fetchVariables(closure,unit)
+        variables.each { TokenValRef var ->
+            def pName = new ConstantExpression(var.name)
+            def pLine = new ConstantExpression(var.lineNum)
+            def pCol = new ConstantExpression(var.colNum)
+            newArgs << newObj( TokenValRef, pName, pLine, pCol )
+        }
+
+        newObj(TaskBody, newArgs as Object[] )
+    }
+
+    /**
+     * Read the user provided script source string
+     *
+     * @param statement
+     * @param buffer
+     * @param unit
+     */
     private void readSource( Statement statement, StringBuilder buffer, SourceUnit unit ) {
 
         def line = statement.getLineNumber()
@@ -573,7 +604,7 @@ class NextflowDSLImpl implements ASTTransformation {
      *      <li>3nd item: on error condition the column containing the error in the source script, zero otherwise
      *
      */
-    def List wrapExpressionWithClosure( BlockStatement block, Expression expr, int len ) {
+    def List wrapExpressionWithClosure( BlockStatement block, Expression expr, int len, source, unit ) {
         if( expr instanceof GStringExpression || expr instanceof ConstantExpression ) {
             // remove the last expression
             block.statements.remove(len-1)
@@ -584,7 +615,9 @@ class NextflowDSLImpl implements ASTTransformation {
             closureExp.variableScope.parent = block.variableScope
 
             // append to the list of statement
-            block.statements.add( new ExpressionStatement(closureExp) )
+            //def wrap = newObj(TaskBody, closureExp, new ConstantExpression(source.toString()), ConstantExpression.TRUE)
+            def wrap = makeScriptWrapper(closureExp, source, true, unit )
+            block.statements.add( new ExpressionStatement(wrap) )
 
             return [true,0,0]
         }
@@ -644,5 +677,51 @@ class NextflowDSLImpl implements ASTTransformation {
         // now continue as before !
         convertProcessBlock(methodCall, unit)
     }
+
+    /**
+     * Fetch all the variable references in a closure expression
+     *
+     * @param closure
+     * @param unit
+     * @return
+     */
+    def Set<TokenValRef> fetchVariables( ClosureExpression closure, SourceUnit unit ) {
+        def visitor = new VariableVisitor(unit)
+        visitor.visitClosureExpression(closure)
+        return visitor.allVariables
+    }
+
+    /**
+     * Visit a closure and collect all referenced variable names
+     */
+    static class VariableVisitor extends ClassCodeVisitorSupport {
+
+        final Map<String,TokenValRef> fAllVariables = [:]
+
+        final SourceUnit sourceUnit
+
+        VariableVisitor( SourceUnit unit ) {
+            this.sourceUnit = unit
+        }
+
+        public void visitVariableExpression(VariableExpression var) {
+            if( var.name == 'this' )
+                return
+
+            def token = new TokenValRef(var.name, var.lineNumber, var.columnNumber)
+            log.trace token.toString()
+
+            if( !fAllVariables.containsKey(var.name))
+                fAllVariables[var.name] = token
+        }
+
+        @Override
+        protected SourceUnit getSourceUnit() {
+            return sourceUnit
+        }
+
+        Set<TokenValRef> getAllVariables() { new HashSet<TokenValRef>(fAllVariables.values()) }
+    }
+
 
 }

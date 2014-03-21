@@ -1,11 +1,9 @@
 package nextflow.script
-
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.IStringConverter
 import com.beust.jcommander.Parameter
-import nextflow.Const
+import groovy.transform.PackageScope
 import nextflow.util.Duration
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -22,7 +20,7 @@ class CliOptions {
     boolean history
 
     @Parameter(names=['-log'], description = 'Define the application log file')
-    String logFile = ".${Const.APP_NAME}.log"
+    String logFile
 
     @Parameter(names=['-lib'], description = 'Library extension path')
     String libPath
@@ -55,7 +53,7 @@ class CliOptions {
     String test
 
     @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate results are stored')
-    String workDir = './work'
+    String workDir = 'work'
 
     /**
      * Print out the version number and exit
@@ -81,17 +79,35 @@ class CliOptions {
     @DynamicParameter(names = ['-process.'], description = 'Set default process options' )
     Map<String,String> process = [:]
 
-    @DynamicParameter(names = ['-e'], description = 'Add the specified variable to execution environment')
+    @DynamicParameter(names = ['-e.'], description = 'Add the specified variable to execution environment')
     Map<String,String> env = [:]
 
     @Parameter(names = ['-E'], description = 'Exports all the current system environment')
     boolean exportSysEnv
+
+    @Parameter(names = ['-d'], description = 'Start in cluster daemon mode', arity = 0)
+    boolean daemon
+
+    @DynamicParameter(names = ['-daemon.'], description = 'Starts in daemon mode and provides extra options', hidden = true )
+    Map<String,String> daemonOptions = [:]
+
+    @DynamicParameter(names = ['-executor.'], description = 'Executor(s) options', hidden = true )
+    Map<String,String> executorOptions = [:]
+
+    @Parameter(names = ['-bg'], description = 'Launch the pipeline as a background job', arity = 0)
+    boolean background
+
 
     /**
      * Extra parameters for the script execution
      */
     @Parameter(description = 'Script level arguments')
     List<String> arguments
+
+
+    boolean isDaemon() {
+        return daemon || daemonOptions.size() > 0
+    }
 
 
     static class DurationConverter implements IStringConverter<Long> {
@@ -103,4 +119,57 @@ class CliOptions {
             return Duration.of(value).toMillis()
         }
     }
+
+
+    @PackageScope
+    static List<String> normalizeArgs( String ... args ) {
+
+        def normalized = []
+        int i=0
+        while( true ) {
+            if( i==args.size() ) { break }
+
+            def current = args[i++]
+            normalized << current
+
+            if( current == '-resume' ) {
+                if( i<args.size() && !args[i].startsWith('-') && (args[i]=='last' || args[i] =~~ /[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{8}/) ) {
+                    normalized << args[i++]
+                }
+                else {
+                    normalized << 'last'
+                }
+            }
+            else if( current == '-test' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '%all'
+            }
+
+            else if( current ==~ /^\-\-[a-zA-Z\d].*/ && !current.contains('=')) {
+                current += '='
+                current += ( i<args.size() ? args[i++] : 'true' )
+                normalized[-1] = current
+            }
+
+            else if( current ==~ /^\-process\..+/ && !current.contains('=')) {
+                current += '='
+                current += ( i<args.size() ? args[i++] : 'true' )
+                normalized[-1] = current
+            }
+
+            else if( current ==~ /^\-daemon\..+/ && !current.contains('=')) {
+                current += '='
+                current += ( i<args.size() ? args[i++] : 'true' )
+                normalized[-1] = current
+            }
+
+            else if( current ==~ /^\-executor\..+/ && !current.contains('=')) {
+                current += '='
+                current += ( i<args.size() ? args[i++] : 'true' )
+                normalized[-1] = current
+            }
+        }
+
+        return normalized
+    }
+
 }

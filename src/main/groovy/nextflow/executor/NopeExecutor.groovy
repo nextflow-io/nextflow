@@ -38,7 +38,7 @@ class NopeExecutor extends AbstractExecutor {
 
     @Override
     protected TaskMonitor createTaskMonitor() {
-        return new TaskPollingMonitor(session, name, 5, Duration.of('50ms'))
+        return TaskPollingMonitor.create(session, name, 5, Duration.of('50ms'))
     }
 
     @Override

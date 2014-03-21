@@ -1,0 +1,105 @@
+#!/bin/bash
+#
+#  Copyright (c) 2013, Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+#
+#  This file is part of Nextflow.
+#
+#  Nextflow is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Nextflow is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+
+function get() {
+    if command -v curl &>/dev/null; then
+        GET="curl -s -f -L $1 -o $2"
+    elif command -v wget &>/dev/null; then
+        GET="wget -q $1 -O $2"
+    else
+        echo "Error: cannot find 'curl' nor 'wget' utility --  please install one of them"
+        exit 1
+    fi
+
+    printf "Downloading $1. It may require some seconds, please wait .. "
+    $GET; status=$?
+    echo -e "\r \033[K"
+    if [ $status -ne 0 ]; then
+        echo "Error: cannot download nextflow required file -- make sure you can connect the internet"
+        echo ""
+        echo "Alternatively you can download the file:"
+        echo "    $1"
+        echo ""
+        echo "And save it as:"
+        echo "    $2"
+        echo ""
+        exit 1
+    fi
+}
+
+NXF_PACK=${NXF_PACK:-one}
+
+# Check if it is required to run in background
+bg=''
+for opt in "$@"; do
+    case $opt in
+    -bg) bg=1;;
+    -d|-daemon.*) bg=1; NXF_PACK='hz';;
+    -self-update|self-update)
+        tmpfile=$(mktemp -t XXXXX)
+        get "http://nextflow.io/nextflow" "$tmpfile"
+        set -e
+        mv $tmpfile $0; chmod +x $0
+        bash $0 -version
+        exit 0
+        ;;
+    hazelcast) NXF_PACK='hz'
+    ;;
+    esac
+done
+
+[[ $NXF_EXECUTOR_NAME = 'hazelcast' ]] && NXF_PACK='hz'
+
+NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
+NXF_VER=${NXF_VER:-'0.7.0'}
+NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACK.jar}
+NXF_BIN=${NXF_BIN:-$NXF_HOME/app/$NXF_VER/$NXF_JAR}
+NXF_BASE=${NXF_BASE:-https://github.com/nextflow-io/nextflow/releases/download}
+NXF_PATH=$(dirname $NXF_BIN)
+NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
+
+if [ ! -f "$NXF_BIN" ]; then
+    # Check Java version
+    java -version 2>&1 | awk '/version/ {print $3}' | grep '"1\.7\..*"' > /dev/null
+    if [ $? -ne 0 ]; then
+         echo "Error: cannot find Java or it's a wrong version --  please make sure that Java 7 it's installed"
+         exit 1
+    fi
+
+    mkdir -p $NXF_PATH
+    get "$NXF_URL" "$NXF_BIN"
+    chmod +x $NXF_BIN
+fi
+
+# Find out Java
+java=java
+if test -n "$JAVA_HOME"
+then
+	java="$JAVA_HOME/bin/java"
+fi
+
+if [ "$bg" = '' ]; then
+ exec "$java" -Djava.awt.headless=true $java_args -jar "$NXF_BIN" "$@"
+ exit 1
+fi
+
+"$java" -Djava.awt.headless=true $java_args -jar "$NXF_BIN" "$@" &
+disown
+printf $! > .nxf-daemon.pid
+exit 0

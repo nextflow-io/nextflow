@@ -21,6 +21,7 @@ package nextflow.processor
 import java.nio.file.Path
 import java.util.concurrent.locks.ReentrantLock
 
+import embed.com.google.common.hash.HashCode
 import groovy.transform.Memoized
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
@@ -60,6 +61,11 @@ class TaskRun {
      * Task name
      */
     def String name
+
+    /**
+     * The unique hash code associated to this task
+     */
+    def HashCode hash
 
     /*
      * The processor that creates this 'task'
@@ -225,6 +231,17 @@ class TaskRun {
      */
     def script
 
+    /**
+     * The scratch property has defined in the configuration object
+     */
+    def scratch
+
+
+    /**
+    * The name of a docker container where the task is supposed to run when provided
+     */
+    def String container
+
 
     def String getScript() {
         if( script instanceof Path ) {
@@ -261,7 +278,7 @@ class TaskRun {
         def result = []
 
         getOutputsByType(FileOutParam).keySet().each { FileOutParam param ->
-            result.addAll( param.getFilePatterns((Map)code?.delegate))
+            result.addAll( param.getFilePatterns((Map)code?.delegate) )
         }
 
         stagedProvider.call()?.each { InParam param, List<FileHolder> files ->

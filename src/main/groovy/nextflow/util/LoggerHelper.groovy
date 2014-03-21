@@ -38,6 +38,7 @@ import ch.qos.logback.core.spi.FilterReply
 import groovy.transform.PackageScope
 import nextflow.Const
 import org.apache.commons.lang.exception.ExceptionUtils
+import nextflow.script.CliOptions
 import org.slf4j.LoggerFactory
 
 /**
@@ -59,8 +60,13 @@ class LoggerHelper {
      * @param debugConf The list of packages for which use a Debug logging level
      * @param traceConf The list of packages for which use a Trace logging level
      */
-    static void configureLogger( String logFileName, boolean quiet, List<String> debugConf, List<String> traceConf ) {
-        assert logFileName
+    static void configureLogger( CliOptions options ) {
+
+        final String logFileName = options.logFile ? options.logFile : (options.daemon ? ".nxf-daemon.log" : ".${Const.APP_NAME}.log")
+
+        final boolean quiet = options.quiet
+        final List<String> debugConf = options.debug
+        final List<String> traceConf = options.trace
 
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory()
 
@@ -69,7 +75,7 @@ class LoggerHelper {
         root.detachAndStopAllAppenders()
 
         // -- define the console appender
-        Map<String,Level> packages = [:]
+        Map<String,Level> packages = [ 'com.hazelcast': Level.WARN ]
         packages[Const.MAIN_PACKAGE] = quiet ? Level.WARN : Level.INFO
         debugConf?.each { packages[it] = Level.DEBUG }
         traceConf?.each { packages[it] = Level.TRACE }
@@ -78,11 +84,13 @@ class LoggerHelper {
         filter.setContext(loggerContext)
         filter.start()
 
-        final consoleAppender = new ConsoleAppender()
-        consoleAppender.setContext(loggerContext)
-        consoleAppender.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
-        consoleAppender.addFilter(filter)
-        consoleAppender.start()
+        final consoleAppender = !options.isDaemon() ? new ConsoleAppender() : null
+        if( consoleAppender )  {
+            consoleAppender.setContext(loggerContext)
+            consoleAppender.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
+            consoleAppender.addFilter(filter)
+            consoleAppender.start()
+        }
 
         // -- the file appender
         def fileAppender = new RollingFileAppender()
@@ -111,7 +119,8 @@ class LoggerHelper {
         // -- configure the ROOT logger
         root.setLevel(Level.INFO)
         root.addAppender(fileAppender)
-        root.addAppender(consoleAppender)
+        if( consoleAppender )
+            root.addAppender(consoleAppender)
 
         // -- main package logger
         def mainLevel = packages[Const.MAIN_PACKAGE]
@@ -119,7 +128,8 @@ class LoggerHelper {
         logger.setLevel( mainLevel == Level.TRACE ? Level.TRACE : Level.DEBUG )
         logger.setAdditive(false)
         logger.addAppender(fileAppender)
-        logger.addAppender(consoleAppender)
+        if( consoleAppender )
+            logger.addAppender(consoleAppender)
 
 
         // -- debug packages specified by the user
@@ -137,9 +147,11 @@ class LoggerHelper {
             logger.setLevel(Level.TRACE)
             logger.setAdditive(false)
             logger.addAppender(fileAppender)
-            logger.addAppender(consoleAppender)
+            if( consoleAppender )
+                logger.addAppender(consoleAppender)
         }
     }
+
 
 
     /*

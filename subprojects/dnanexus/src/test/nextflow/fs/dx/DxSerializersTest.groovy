@@ -46,8 +46,8 @@ class DxSerializersTest extends Specification {
         store.deleteOnExit()
 
         when:
-        KryoHelper.write(pathObj, store)
-        def copy = (DxPath)KryoHelper.read(store)
+        KryoHelper.serialize(pathObj, store)
+        def copy = (DxPath)KryoHelper.deserialize(store)
 
         then:
         copy == pathObj

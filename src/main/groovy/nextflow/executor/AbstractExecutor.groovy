@@ -1,8 +1,8 @@
 package nextflow.executor
 import java.nio.file.Path
-import java.util.concurrent.CountDownLatch
 
 import groovy.io.FileType
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.MissingFileException
@@ -12,6 +12,8 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 import nextflow.script.InParam
+import nextflow.script.ScriptType
+
 /**
  * Declares methods have to be implemented by a generic
  * execution strategy
@@ -19,6 +21,7 @@ import nextflow.script.InParam
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@SupportedScriptTypes( [ScriptType.SCRIPTLET] )
 abstract class AbstractExecutor {
 
     /**
@@ -49,12 +52,13 @@ abstract class AbstractExecutor {
         // -- skip if already assigned, this is only for testing purpose
         if( monitor ) return
 
-        // -- get the reference to the monitor class for this process
+        // -- get the reference to the monitor class for this executor
         monitor = session.dispatcher.getOrCreateMonitor(this.class) {
             log.info "[warm up] executor > $name"
             createTaskMonitor()
         }
     }
+
 
     /**
      * @return Create a new instance of the {@code TaskQueueHolder} component
@@ -64,6 +68,7 @@ abstract class AbstractExecutor {
     /**
      * @return A reference to the current {@code #queueHolder} object
      */
+    @PackageScope
     TaskMonitor getTaskMonitor()  { monitor }
 
     /**
@@ -71,29 +76,6 @@ abstract class AbstractExecutor {
      * actions for this task
      */
     abstract TaskHandler createTaskHandler(TaskRun task)
-
-    /**
-     * Submit a task for execution
-     *
-     * @param task
-     * @return
-     */
-    TaskHandler submitTask( TaskRun task, boolean blocking ) {
-        def handler = createTaskHandler(task)
-        monitor.put(handler)
-        try {
-            // set a count down latch if the execution is blocking
-            if( blocking )
-                handler.latch = new CountDownLatch(1)
-            // now submit the task for execution
-            handler.submit()
-            return handler
-        }
-        catch( Exception e ) {
-            monitor.remove(handler)
-            throw e
-        }
-    }
 
 
     /**
@@ -195,21 +177,9 @@ abstract class AbstractExecutor {
         // create a bash script that will copy the out file to the working directory
         log.trace "Unstaging file names: $fileOutNames"
         if( fileOutNames ) {
-            def cmd = 'cp -r'
-            if( task.workDirectory != task.getTargetDir() ) {
-                cmd = 'mv'
-                result << "mkdir -p ${task.getTargetDir().toString() }"
-            }
+            result << "mkdir -p ${task.getTargetDir()}"
             result << "for item in \"${fileOutNames.unique().join(' ')}\"; do"
-            result << 'if [ -d "$item" ]; then'
-            result << "  target=\"${task.getTargetDir().toString()}\""
-            result << '  mkdir -p "$target/$(dirname $item)"'
-            result << '  ' + cmd + ' "$(dirname $item)/$(basename $item)" "$target/$(dirname $item)" '
-            result << 'else'
-            result << '  for name in `ls $item 2>/dev/null`; do'
-            result << '    ' +cmd+ ' $name ' + task.getTargetDir().toString()
-            result << '  done'
-            result << 'fi'
+            result << '  rsync -rRz $item ' + task.getTargetDir().toString()
             result << 'done'
         }
 

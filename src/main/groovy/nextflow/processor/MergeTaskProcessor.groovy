@@ -16,6 +16,7 @@ import nextflow.script.SetInParam
 import nextflow.script.StdInParam
 import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
+import nextflow.util.DockerHelper
 import nextflow.util.FileHelper
 /**
  * Defines the 'merge' processing policy
@@ -110,26 +111,9 @@ class MergeTaskProcessor extends TaskProcessor {
         def hash = hasher.hash()
         log.trace "Merging process > $name -- hash: $hash"
 
-        Path folder = FileHelper.getWorkFolder(session.workDir, hash)
-        log.trace "Merging process > $name -- trying cached: $folder"
-
-        def cached = isCacheable() && session.resumeMode && checkCachedOutput(task,folder, hash)
-        if( !cached ) {
-
-            folder = createTaskFolder(folder, hash)
-            log.info "[${getHashLog(hash)}] Running merge > ${name}"
-
-            // -- set the folder where execute the script
-            task.workDirectory = folder
-
-            // -- set the aggregate script to be executed
-            task.script = mergeScript.toString()
-
-            // -- submit task for execution !
-            submitTask( task )
-
-        }
-
+        def submitted = checkCachedOrLaunchTask( task, hash, mergeScript.toString() )
+        if( submitted )
+            log.info "[${getHashLog(task.hash)}] Running merge > ${name}"
     }
 
     protected void mergeScriptCollector( List values ) {
@@ -137,7 +121,7 @@ class MergeTaskProcessor extends TaskProcessor {
         log.info "Collecting process > ${name} ($currentIndex)"
 
         // -- the script evaluation context map
-        contextMap = new DelegateMap(this)
+        contextMap = [:]
 
         // -- map the inputs to a map and use to delegate closure values interpolation
         def keys = []
@@ -202,13 +186,14 @@ class MergeTaskProcessor extends TaskProcessor {
          * initialize the task code to be executed
          */
         Closure scriptClosure = this.code.clone() as Closure
-        scriptClosure.delegate = contextMap
+        scriptClosure.delegate = new DelegateMap(this,contextMap)
         scriptClosure.setResolveStrategy(Closure.DELEGATE_FIRST)
 
         def hashMode = taskConfig.getHashMode()
         def script = getScriptlet(scriptClosure)
         def commandToRun = normalizeScript(script)
         def interpreter = fetchInterpreter(commandToRun)
+        String dockerContainer = taskConfig.container
 
         /*
          * create a unique hash-code for this task run and save it into a list
@@ -226,7 +211,7 @@ class MergeTaskProcessor extends TaskProcessor {
         }
 
         // add the variables to be exported
-        if( environment ) {
+        if( environment && !dockerContainer ) {
             mergeScript << bashEnvironmentScript(environment)
         }
 
@@ -256,6 +241,19 @@ class MergeTaskProcessor extends TaskProcessor {
 
         // stage this script itself
         mergeScript << executor.stageInputFileScript(scriptFile, scriptName) << '\n'
+
+        // check if it has to be execute through a Docker container
+        if( dockerContainer ) {
+            def mountPaths = DockerHelper.inputFilesToPaths(filesMap)
+            mountPaths << mergeTempFolder
+            mountPaths << session.workDir
+            if( session.binDir )
+                mountPaths << session.binDir
+
+            def dockerize = DockerHelper.getRun(dockerContainer, mountPaths, environment)
+
+            mergeScript << (dockerize.toString()) << ' '
+        }
 
         // create a unique script collecting all the commands
         mergeScript << interpreter << ' ' << scriptCommand << '\n'

@@ -11,9 +11,6 @@ process task1 {
     "echo $x; exit 1"
 }
 
-sleep 500
-
-
 process task2 {
     maxForks 4
 

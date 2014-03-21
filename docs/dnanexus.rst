@@ -97,7 +97,7 @@ configuration parameters.
 
 
 Nextflow will be able to manage the processes scheduling and execution in the cloud because it is launched by specifying
-the ``dnanexus``executor.
+the ``dnanexus`` executor.
 
 When a new process needs to be executed, Nextflow will use the DNAnexus API to run a new job, which in turn calls
 the function `process`, defined in the ``dxapp.sh`` script, specifying the target command to run.

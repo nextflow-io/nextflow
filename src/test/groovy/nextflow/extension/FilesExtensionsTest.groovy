@@ -616,4 +616,34 @@ class FilesExtensionsTest extends Specification {
 
     }
 
+
+    def testReadLink() {
+        when:
+        def path = Paths.get('/path/to/notExitingFile')
+        then:
+        path.resolveSymLink() == path
+
+        when:
+        def file = Files.createTempFile('testFile',null)
+        file.text = 'hola'
+        def link1 = Paths.get('link1'); link1.delete()
+        def link2 = Paths.get('link2'); link2.delete()
+        Files.createSymbolicLink(link1, file)
+        Files.createSymbolicLink( link2, link1 )
+
+        then:
+        file.text == 'hola'
+        link1.text == 'hola'
+        link2.text == 'hola'
+
+        file.resolveSymLink() == file
+        link1.resolveSymLink() == file
+        link2.resolveSymLink() == file
+
+        cleanup:
+        file?.delete()
+        link1?.delete()
+        link2?.delete()
+    }
+
 }

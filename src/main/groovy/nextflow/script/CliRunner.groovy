@@ -20,11 +20,13 @@
 package nextflow.script
 import java.lang.reflect.Field
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.nio.file.spi.FileSystemProvider
 
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.ParameterException
 import groovy.transform.InheritConstructors
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
@@ -34,9 +36,11 @@ import nextflow.ExitCode
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.ast.NextflowDSL
+import nextflow.daemon.DaemonLauncher
 import nextflow.exception.ConfigParseException
 import nextflow.exception.InvalidArgumentException
 import nextflow.exception.MissingLibraryException
+import nextflow.util.FileHelper
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import org.apache.commons.io.FilenameUtils
@@ -45,7 +49,7 @@ import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
 /**
- * Application entry class
+ * Application main class
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -125,6 +129,20 @@ class CliRunner {
 
         return str
 
+    }
+
+    static private wrapValue( value ) {
+        if( !value )
+            return ''
+
+        value = value.toString().trim()
+        if( value == 'true' || value == 'false')
+            return value
+
+        if( value.isNumber() )
+            return value
+
+        return "'$value'"
     }
 
     def void setLibPath( String str ) {
@@ -353,16 +371,26 @@ class CliRunner {
         libraries?.each { File lib -> def path = lib.absolutePath
             log.debug "Adding to the classpath library: ${path}"
             gcl.addClasspath(path)
+            session.addClasspath(path)
         }
 
+        // set the bytecode target directory
+        def targetDir = FileHelper.createTempFolder(session.workDir).toFile()
+        config.setTargetDirectory(targetDir)
+        session.addClasspath(targetDir)
+
         // run and wait for termination
+        BaseScript result
         def groovy = new GroovyShell(gcl, bindings, config)
         if ( scriptFile ) {
-            groovy.parse( scriptText, scriptFile?.toString() ) as BaseScript
+            result = groovy.parse( scriptText, scriptFile?.toString() ) as BaseScript
         }
         else {
-            groovy.parse( scriptText ) as BaseScript
+            result = groovy.parse( scriptText ) as BaseScript
         }
+
+        session.scriptClassName = result.class.name
+        return result
     }
 
 
@@ -393,53 +421,16 @@ class CliRunner {
 
     static JCommander jcommander
 
-    static private CliOptions parseMainArgs(String... args) {
+    @PackageScope
+    static CliOptions parseMainArgs(String... args) {
 
         def result = new CliOptions()
-        jcommander = new JCommander(result, normalizeArgs( args ) as String[] )
+        jcommander = new JCommander(result, CliOptions.normalizeArgs(args) as String[] )
         jcommander.setProgramName( Const.APP_NAME )
 
         return result
     }
 
-    static protected List<String> normalizeArgs( String ... args ) {
-
-        def normalized = []
-        int i=0
-        while( true ) {
-            if( i==args.size() ) { break }
-
-            def current = args[i++]
-            normalized << current
-
-            if( current == '-resume' ) {
-                if( i<args.size() && !args[i].startsWith('-') && (args[i]=='last' || args[i] =~~ /[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{8}/) ) {
-                    normalized << args[i++]
-                }
-                else {
-                    normalized << 'last'
-                }
-            }
-            else if( current == '-test' && (i==args.size() || args[i].startsWith('-'))) {
-                normalized << '%all'
-            }
-
-            else if( current ==~ /^\-\-[a-zA-Z\d].*/ && !current.contains('=')) {
-                current += '='
-                current += ( i<args.size() ? args[i++] : 'true' )
-                normalized[-1] = current
-            }
-
-            else if( current ==~ /^\-process\..+/ && !current.contains('=')) {
-                current += '='
-                current += ( i<args.size() ? args[i++] : 'true' )
-                normalized[-1] = current
-            }
-
-        }
-
-        return normalized
-    }
 
     /**
      * Program entry method
@@ -452,16 +443,13 @@ class CliRunner {
         try {
             // -- parse the program arguments - and - configure the logger
             def options = parseMainArgs(args)
-            LoggerHelper.configureLogger( options.logFile, options.quiet, options.debug, options.trace )
+            LoggerHelper.configureLogger(options)
             log.debug "${Const.APP_NAME} ${args?.join(' ')}"
 
             // -- print out the version number, then exit
             if ( options.version ) {
                 println getVersion(true)
                 System.exit(ExitCode.OK)
-            }
-            else {
-                log.debug getVersion(true)
             }
 
             // -- print the history of executed commands
@@ -471,25 +459,35 @@ class CliRunner {
             }
 
             // -- print out the program help, then exit
-            if( options.help || !args ) {
+            if( options.help ) {
                 println Const.LOGO
                 jcommander.usage()
                 System.exit(ExitCode.OK)
             }
 
-            if( !options.arguments ) {
-                log.error "You didn't enter any script file on the program command line\n"
-                jcommander.usage()
-                System.exit( ExitCode.MISSING_SCRIPT_FILE )
-            }
+            log.debug "${getVersion(true)} [$localName]"
+            File scriptFile = null
+            if( !options.isDaemon() ) {
+                // -- the script is the first item in the args
+                if( options.arguments ) {
+                    scriptFile = new File(options.arguments[0])
+                    if ( !scriptFile.exists() ) {
+                        log.error "The specified script does not exist: '$scriptFile'\n"
+                        System.exit( ExitCode.MISSING_SCRIPT_FILE )
+                    }
+                    scriptBaseName = scriptFile.getBaseName()
+                }
+                // -- try to get the script from the stdin
+                else {
+                    scriptFile = tryReadFromStdin()
+                    if( !scriptFile || scriptFile.empty() ) {
+                        log.error "You didn't enter any script file on the program command line\n"
+                        jcommander.usage()
+                        System.exit( ExitCode.MISSING_SCRIPT_FILE )
+                    }
+                }
 
-            // -- check script name
-            File scriptFile = new File(options.arguments[0])
-            if ( !scriptFile.exists() ) {
-                log.error "The specified script does not exist: '$scriptFile'\n"
-                System.exit( ExitCode.MISSING_SCRIPT_FILE )
             }
-            scriptBaseName = scriptFile.getBaseName()
 
             if( !options.quiet ) {
                 println "N E X T F L O W  ~  version ${Const.APP_VER}"
@@ -498,56 +496,28 @@ class CliRunner {
             // -- check file system providers
             checkFileSystemProviders()
 
-            // -- configuration file(s)
-            def configFiles = validateConfigFiles(options.config)
-            def config = buildConfig(configFiles, options.env, options.exportSysEnv)
+            // create the config object
+            def config = makeConfig(options)
 
-            // -- override 'process' parameters defined on the cmd line
-            options.process.each { name, value ->
-                config.process[name] = parseValue(value)
-            }
-
-            // -- check for the 'continue' flag
-            if( options.resume ) {
-                def uniqueId = options.resume
-                if( uniqueId == 'last' ) {
-                    uniqueId = HistoryFile.history.retrieveLastUniqueId()
-                    if( !uniqueId ) {
-                        log.error "It appears you have never executed it before -- Cannot use the '-resume' command line option"
-                        System.exit(ExitCode.MISSING_UNIQUE_ID)
-                    }
-                }
-                config.session.uniqueId = uniqueId
-            }
-
-            // -- other configuration parameters
-            if( options.poolSize ) {
-                config.poolSize = options.poolSize
-            }
-            if( options.queueSize ) {
-                config.executor.queueSize = options.queueSize
-            }
-            if( options.pollInterval ) {
-                config.executor.pollInterval = options.pollInterval
-            }
-
-            // -- add the command line parameters to the 'taskConfig' object
-            options.params?.each { name, value ->
-                config.params.put(name, parseValue(value))
+            // -- launch daemon
+            if( options.isDaemon() ) {
+                log.debug "Launching cluster daemon"
+                launchDaemon(config)
+                return
             }
 
             // -- create a new runner instance
             def runner = new CliRunner(config)
             runner.session.cacheable = options.cacheable
             runner.session.resumeMode = options.resume != null
-            runner.session.workDir = options.workDir as Path
+            runner.session.workDir = Paths.get(options.workDir).toAbsolutePath()
             runner.session.baseDir = scriptFile?.canonicalFile?.parentFile
             runner.libPath = options.libPath
 
             log.debug "Script bin dir: ${runner.session.binDir}"
 
             // -- specify the arguments
-            def scriptArgs = options.arguments.size()>1 ? options.arguments[1..-1] : null
+            def scriptArgs = options.arguments?.size()>1 ? options.arguments[1..-1] : []
 
             if( options.test ) {
                 runner.test(scriptFile, options.test, scriptArgs )
@@ -558,7 +528,6 @@ class CliRunner {
                 // -- run it!
                 runner.execute(scriptFile,scriptArgs)
             }
-
         }
 
         catch( ParameterException e ) {
@@ -584,6 +553,16 @@ class CliRunner {
             System.exit( ExitCode.UNKNOWN_ERROR )
         }
 
+    }
+
+    static File tryReadFromStdin() {
+        if( !System.in.available() )
+            return null
+
+        File result = File.createTempFile('nextflow', null)
+        result.deleteOnExit()
+        System.in.withReader { reader -> result << reader }
+        return result
     }
 
     static private void checkFileSystemProviders() {
@@ -656,7 +635,10 @@ class CliRunner {
     }
 
 
-    def static Map buildConfig( List<File> files, Map<String,String> vars = null, boolean exportSysEnv = false  ) {
+    def static Map buildConfig( List<File> files, CliOptions options ) {
+
+        final Map<String,String> vars = options.env
+        final boolean exportSysEnv = options.exportSysEnv
 
         def texts = []
         files?.each { File file ->
@@ -677,6 +659,23 @@ class CliRunner {
         if( vars ) {
             log.debug "Adding following variables to session environment: $vars"
             env.putAll(vars)
+        }
+
+        // -- add the daemon obj from the command line args
+        if( options.daemonOptions )  {
+            def str = new StringBuilder()
+            options.daemonOptions.each { k, v ->
+                str << "daemon." << k << '=' << wrapValue(v) << '\n'
+            }
+            texts << str.toString()
+        }
+
+        if( options.executorOptions )  {
+            def str = new StringBuilder()
+            options.executorOptions.each { k, v ->
+                str << "executor." << k << '=' << wrapValue(v) << '\n'
+            }
+            texts << str.toString()
         }
 
         buildConfig0( env, texts )
@@ -784,5 +783,77 @@ class CliRunner {
             get(pos)
         }
 
+    }
+
+    /**
+     * Given the command line options {@code CliOptions} object
+     * read the application configuration file and returns the
+     * config object
+     *
+     * @param options The {@code CliOptions} as specified by the user
+     * @return A the application options hold in a {@code Map} object
+     */
+    static Map makeConfig( CliOptions options ) {
+
+        // -- configuration file(s)
+        def configFiles = validateConfigFiles(options.config)
+        def config = buildConfig(configFiles, options)
+
+        // -- override 'process' parameters defined on the cmd line
+        options.process.each { name, value ->
+            config.process[name] = parseValue(value)
+        }
+
+        // -- check for the 'continue' flag
+        if( options.resume ) {
+            def uniqueId = options.resume
+            if( uniqueId == 'last' ) {
+                uniqueId = HistoryFile.history.retrieveLastUniqueId()
+                if( !uniqueId ) {
+                    log.error "It appears you have never executed it before -- Cannot use the '-resume' command line option"
+                    System.exit(ExitCode.MISSING_UNIQUE_ID)
+                }
+            }
+            config.session.uniqueId = uniqueId
+        }
+
+        // -- other configuration parameters
+        if( options.poolSize ) {
+            config.poolSize = options.poolSize
+        }
+        if( options.queueSize ) {
+            config.executor.queueSize = options.queueSize
+        }
+        if( options.pollInterval ) {
+            config.executor.pollInterval = options.pollInterval
+        }
+
+        // -- add the command line parameters to the 'taskConfig' object
+        options.params?.each { name, value ->
+            config.params.put(name, parseValue(value))
+        }
+
+        return config
+    }
+
+    /**
+     * Launch the daemon service
+     *
+     * @param config The nextflow configuration map
+     */
+    static launchDaemon( Map config ) {
+        def loader = ServiceLoader.load(DaemonLauncher).iterator()
+        if( !loader.hasNext() )
+            throw new IllegalStateException("No daemon services are available -- Cannot launch Nextflow in damon mode")
+
+        def daemonConfig = config.daemon instanceof Map ? config.daemon : [:]
+        log.debug "Daemon config > $daemonConfig"
+
+        // launch it
+        loader.next().launch(daemonConfig)
+    }
+
+    static private getLocalName() {
+        InetAddress.getLocalHost().getHostName()
     }
 }

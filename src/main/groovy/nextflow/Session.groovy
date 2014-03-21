@@ -33,8 +33,8 @@ import groovyx.gpars.group.PGroup
 import groovyx.gpars.util.PoolUtils
 import jsr166y.Phaser
 import nextflow.processor.TaskDispatcher
+import nextflow.util.ConfigHelper
 import nextflow.util.Duration
-
 /**
  * Holds the information on the current execution
  *
@@ -74,9 +74,14 @@ class Session {
     def String scriptName = 'script1'
 
     /**
+     * The script class name
+     */
+    def String scriptClassName
+
+    /**
      * The folder where tasks temporary files are stored
      */
-    def Path workDir = Paths.get('./work')
+    def Path workDir = Paths.get('work').toAbsolutePath()
 
     /**
      * The folder where the main script is contained
@@ -95,9 +100,13 @@ class Session {
 
     private boolean aborted
 
-    private boolean terminated
+    private volatile boolean terminated
 
     private volatile ExecutorService execService
+
+    final private List<Closure<Void>> shutdownHooks = []
+
+    final private List<URL> classpath = []
 
     /* Poor man singleton object */
     static Session currentInstance
@@ -150,6 +159,9 @@ class Session {
 
     def Session start() {
         log.debug "Session start > phaser register (session) "
+
+        Runtime.getRuntime().addShutdownHook { shutdown() }
+
         phaser.register()
         dispatcher.start()
         return this
@@ -163,19 +175,31 @@ class Session {
      * in the script base directory
      */
     @Memoized
-    def File getBinDir() {
+    def Path getBinDir() {
         if( !baseDir ) {
             log.debug "Script base directory is null";
             return null
         }
 
-        def path = new File(baseDir, 'bin')
+        def path = new File(baseDir, 'bin').toPath()
         if( !path.exists() || !path.isDirectory() ) {
             log.debug "Script base path does not exist or is not a directory: ${path}"
             return null
         }
 
         return path
+    }
+
+    def List<URL> getClasspath() {
+        return new ArrayList<URL>(classpath)
+    }
+
+    def void addClasspath( File file ) {
+        classpath << ( file.toURI().toURL() )
+    }
+
+    def void addClasspath( String file ) {
+        addClasspath(new File(file))
     }
 
     /**
@@ -194,7 +218,23 @@ class Session {
         log.trace "Session destroying"
         if( pgroup ) pgroup.shutdown()
         if( execService ) execService.shutdown()
+        shutdown()
         log.debug "Session destroyed"
+    }
+
+    final protected void shutdown() {
+
+        shutdownHooks.each {
+            try {
+                it.call()
+            }
+            catch( Exception e ) {
+                log.debug "Failed executing shutdown hook: $it", e
+            }
+        }
+
+        // -- after the first time remove all of them to avoid it's called twice
+        shutdownHooks.clear()
     }
 
     void abort() {
@@ -218,45 +258,33 @@ class Session {
         phaser.arriveAndDeregister()
     }
 
+    @Memoized
     def ExecutorService getExecService() {
+        execService = Executors.newCachedThreadPool()
+    }
 
-        def local = execService
-        if( local )
-            return local
+    /**
+     * Register a shutdown hook to close services when the session terminates
+     * @param Closure
+     */
+    def void onShutdown( Closure shutdown ) {
+        if( !shutdown )
+            return
 
-        synchronized(this) {
-            if (execService == null) {
-                execService = Executors.newCachedThreadPool()
-            }
-            return execService
-        }
+        shutdownHooks << shutdown
     }
 
 
-    protected getExecConfigProp( String execName, String propName, Object defValue ) {
+    @Memoized
+    public getExecConfigProp( String execName, String name, Object defValue, Map env = null  ) {
+        def result = ConfigHelper.getConfigProperty(config.executor, execName, name )
+        if( result != null )
+            return result
 
-        def result = null
-
-        // make sure that the *executor* is a map object
-        // it could also be a plain string (when it specifies just the its name)
-        if( config.executor instanceof Map ){
-            if( execName && config.executor['$'+execName] instanceof Map ) {
-                result = config.executor['$'+execName][propName]
-            }
-
-            if( result==null && config.executor[propName] ) {
-                result = config.executor[propName]
-            }
-        }
-
-
-        if( result==null ) {
-            result = defValue
-            log.trace "Undefined executor property: '$propName' -- fallback default value: $result"
-        }
-
-        return result
-
+        // -- try to fallback sys env
+        def key = "NXF_EXECUTOR_${name.toUpperCase().replaceAll(/\./,'_')}".toString()
+        if( env == null ) env = System.getenv()
+        return env.containsKey(key) ? env.get(key) : defValue
     }
 
     /**

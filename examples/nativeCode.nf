@@ -7,7 +7,7 @@ process nativeCode {
     val x from 'world'
 
     output:
-    val x into stream
+    val y into stream
 
     exec:
     y = "Hello $x"

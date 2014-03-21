@@ -137,4 +137,20 @@ class SessionTest extends Specification {
 
     }
 
+    def testGetExecConfigProp() {
+
+        when:
+        def session = [:] as Session
+        session.config = [ executor: [x:123, y:222, '$hazelcast': [y:333] ] ]
+        then:
+        session.getExecConfigProp( 'hazelcast', 'x', null ) == 123
+        session.getExecConfigProp( 'hazelcast', 'y', null ) == 333
+        session.getExecConfigProp( 'local', 'y', null ) == 222
+        session.getExecConfigProp( 'local', 'y', 'beta') == 222
+        session.getExecConfigProp( 'hazelcast', 'z', null ) ==  null
+        session.getExecConfigProp( 'hazelcast', 'z', 'alpha') == 'alpha'
+        session.getExecConfigProp( 'hazelcast', 'z', 'alpha', [NXF_EXECUTOR_Z:'hola']) == 'hola'
+        session.getExecConfigProp( 'hazelcast', 'p.q.z', null, [NXF_EXECUTOR_P_Q_Z:'hello']) == 'hello'
+    }
+
 }

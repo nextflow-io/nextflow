@@ -29,9 +29,9 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.runtime.GStringImpl
-
 /**
  * Helper class to get a {@code Kryo} object ready to be used
  */
@@ -41,10 +41,22 @@ class KryoHelper {
 
     static final Map<Class,Object> serializers
 
+    static final ThreadLocal<Kryo> threadLocal
+
     static {
         serializers = [:]
         serializers.put( PATH_CLASS, PathSerializer )
+        serializers.put( URL, URLSerializer )
         serializers.put( GStringImpl, GStringSerializer)
+        serializers.put( UUID, UUIDSerializer )
+        serializers.put( File, FileSerializer )
+
+        threadLocal = new ThreadLocal<Kryo>() {
+            @Override
+            protected Kryo initialValue() {
+                newInstance()
+            }
+        };
     }
 
     /**
@@ -61,18 +73,31 @@ class KryoHelper {
      * @return A new instance {@code Kryo} instance
      */
     static Kryo kryo() {
-        def result = new Kryo()
+        threadLocal.get()
+    }
+
+
+    /**
+     * @return A new instance {@code Kryo} instance
+     */
+    static private Kryo newInstance() {
+        def kryo = new Kryo()
+        // special serializers
+        UnmodifiableCollectionsSerializer.registerSerializers(kryo)
+
+        // users serializers
         serializers.each { k, v ->
             if( v instanceof Class )
-                result.register(k,(Serializer)v.newInstance())
+                kryo.register(k,(Serializer)v.newInstance())
 
             else if( v instanceof Closure<Serializer> )
-                result.register(k, v.call(result))
+                kryo.register(k, v.call(kryo))
 
             else
-                result.register(k)
+                kryo.register(k)
         }
-        return result
+
+        return kryo
     }
 
     /**
@@ -81,11 +106,11 @@ class KryoHelper {
      * @param file A {@code Path} reference to a file
      * @return The de-serialized object
      */
-    static read( Path file ) {
+    static <T> T deserialize( Path file ) {
         Input input = null
         try {
             input = new Input(Files.newInputStream(file))
-            return kryo().readClassAndObject(input)
+            return (T)kryo().readClassAndObject(input)
         }
         finally {
             input?.closeQuietly()
@@ -98,8 +123,8 @@ class KryoHelper {
      * @param file A {@code File} reference to a file
      * @return The de-serialized object
      */
-    static read( File file ) {
-        read(file.toPath())
+    static <T> T deserialize( File file ) {
+        (T)deserialize(file.toPath())
     }
 
     /**
@@ -108,14 +133,41 @@ class KryoHelper {
      * @param object The object to serialize
      * @param toFile A {@code Path} reference to the file where store the object
      */
-    static void write( object, Path toFile ) {
+    static void serialize( object, Path toFile ) {
         def output = null
         try {
-            output = new Output(Files.newOutputStream(toFile) )
+            output = new Output(Files.newOutputStream(toFile))
             kryo().writeClassAndObject(output, object)
         }
         finally {
             output?.closeQuietly()
+        }
+    }
+
+    static byte[] serialize( object ) {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream(4*1024)
+        def output = new Output(buffer)
+        kryo().writeClassAndObject(output, object)
+        output.flush()
+        return buffer.toByteArray()
+    }
+
+    static <T> T deserialize( byte[] binary, ClassLoader loader = null ) {
+        def kryo = kryo()
+        def ClassLoader prev = null
+        if( loader ) {
+            prev = kryo.getClassLoader()
+            kryo.setClassLoader(loader)
+        }
+
+        try {
+            def buffer = new ByteArrayInputStream(binary)
+            return (T)kryo.readClassAndObject(new Input(buffer))
+        }
+        finally {
+            if( prev ) {
+                kryo.setClassLoader(loader)
+            }
         }
     }
 
@@ -126,8 +178,8 @@ class KryoHelper {
      * @param object The object to serialize
      * @param toFile A {@code File} reference to the file where store the object
      */
-    static void write( object, File toFile ) {
-        write(object,toFile.toPath())
+    static void serialize( object, File toFile ) {
+        serialize(object,toFile.toPath())
     }
 
 }
@@ -192,3 +244,59 @@ class GStringSerializer extends Serializer<GStringImpl> {
         return new GStringImpl(values, strings)
     }
 }
+
+
+
+@Slf4j
+class URLSerializer extends Serializer<URL> {
+
+    @Override
+    void write(Kryo kryo, Output output, URL url) {
+        log.trace "URL serialization > $url"
+        output.writeString(url.toString())
+    }
+
+    @Override
+    URL read(Kryo kryo, Input input, Class<URL> type) {
+        log.trace "URL de-serialization"
+        return new URL(input.readString())
+    }
+}
+
+@Slf4j
+class UUIDSerializer extends Serializer<UUID> {
+
+    @Override
+    void write(Kryo kryo, Output output, UUID obj) {
+        log.trace "UUID serialization > $obj"
+        output.writeLong( obj.mostSignificantBits )
+        output.writeLong( obj.leastSignificantBits )
+    }
+
+    @Override
+    UUID read(Kryo kryo, Input input, Class<UUID> type) {
+        log.trace "UUID de-serialization"
+        long mostBits = input.readLong()
+        long leastBits = input.readLong()
+        return new UUID(mostBits, leastBits)
+    }
+}
+
+
+@Slf4j
+class FileSerializer extends Serializer<File> {
+
+    @Override
+    void write(Kryo kryo, Output output, File file) {
+        log.trace "File serialization > $file"
+        output.writeString(file.toString())
+    }
+
+    @Override
+    File read(Kryo kryo, Input input, Class<File> type) {
+        log.trace "File de-serialization"
+        return new File(input.readString())
+    }
+}
+
+
