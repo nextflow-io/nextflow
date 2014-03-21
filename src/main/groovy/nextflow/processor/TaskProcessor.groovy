@@ -19,7 +19,6 @@
 package nextflow.processor
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.locks.ReentrantLock
 
 import embed.com.google.common.hash.HashCode
 import groovy.transform.Memoized
@@ -125,20 +124,11 @@ abstract class TaskProcessor {
     protected final TaskConfig taskConfig
 
     /**
-     * Lock to protected against race-condition the folder creation phase
-     */
-    private static final folderLock = new ReentrantLock(true)
-
-    /**
      * Used for framework generated task names
      */
     @Deprecated
     private static final AtomicInteger tasksCount = new AtomicInteger()
 
-    /*
-     * Internally used, random number generator
-     */
-    private final random = new Random()
 
     /**
      * Count the number errors showed
