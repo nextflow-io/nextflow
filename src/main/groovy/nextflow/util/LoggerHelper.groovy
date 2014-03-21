@@ -62,7 +62,7 @@ class LoggerHelper {
      */
     static void configureLogger( CliOptions options ) {
 
-        final String logFileName = options.logFile ? options.logFile : (options.daemon ? ".nf-daemon.log" : ".${Const.APP_NAME}.log")
+        final String logFileName = options.logFile ? options.logFile : (options.daemon ? ".nxf-daemon.log" : ".${Const.APP_NAME}.log")
 
         final boolean quiet = options.quiet
         final List<String> debugConf = options.debug
@@ -84,11 +84,13 @@ class LoggerHelper {
         filter.setContext(loggerContext)
         filter.start()
 
-        final consoleAppender = new ConsoleAppender()
-        consoleAppender.setContext(loggerContext)
-        consoleAppender.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
-        consoleAppender.addFilter(filter)
-        consoleAppender.start()
+        final consoleAppender = !options.isDaemon() ? new ConsoleAppender() : null
+        if( consoleAppender )  {
+            consoleAppender.setContext(loggerContext)
+            consoleAppender.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
+            consoleAppender.addFilter(filter)
+            consoleAppender.start()
+        }
 
         // -- the file appender
         def fileAppender = new RollingFileAppender()
@@ -117,7 +119,8 @@ class LoggerHelper {
         // -- configure the ROOT logger
         root.setLevel(Level.INFO)
         root.addAppender(fileAppender)
-        root.addAppender(consoleAppender)
+        if( consoleAppender )
+            root.addAppender(consoleAppender)
 
         // -- main package logger
         def mainLevel = packages[Const.MAIN_PACKAGE]
@@ -125,7 +128,8 @@ class LoggerHelper {
         logger.setLevel( mainLevel == Level.TRACE ? Level.TRACE : Level.DEBUG )
         logger.setAdditive(false)
         logger.addAppender(fileAppender)
-        logger.addAppender(consoleAppender)
+        if( consoleAppender )
+            logger.addAppender(consoleAppender)
 
 
         // -- debug packages specified by the user
@@ -143,9 +147,11 @@ class LoggerHelper {
             logger.setLevel(Level.TRACE)
             logger.setAdditive(false)
             logger.addAppender(fileAppender)
-            logger.addAppender(consoleAppender)
+            if( consoleAppender )
+                logger.addAppender(consoleAppender)
         }
     }
+
 
 
     /*
