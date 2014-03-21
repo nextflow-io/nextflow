@@ -254,7 +254,28 @@ The list of instance types, that can be used for this property, is available in 
 <https://wiki.dnanexus.com/API-Specification-v1.0.0/IO-and-Run-Specifications#Run-Specification>`_ page.
 
 
+.. _hazelcast-executor:
 
+Hazelcast executor
+===================
+
+The ``hazelcast`` executor allows you to run your pipeline in a `Hazelcast <http://hazelcast.org>`_ cluster,
+a light-weight data-grid technology, integrated natively with Nextflow.
+
+The executor configuration properties are listed below:
+
+=============== ================
+Property         Description
+=============== ================
+name :sup:`*`   The name of the executor to use: ``hazelcast``
+join :sup:`*`   The IP address of one more more cluster nodes to which connect. Multiple addresses has to separated by a comma or a blank character.
+group           The name of the cluster to which connect. Default: ``nextflow``
+=============== ================
+
+:sup:`(*) mandatory`
+
+
+Read about the cluster set-up and configuration in the :ref:`hazelcast-page` page.
 
 
 

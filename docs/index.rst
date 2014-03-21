@@ -20,6 +20,7 @@ Contents:
    executor
    config
    dnanexus
+   hazelcast
    example
 
    

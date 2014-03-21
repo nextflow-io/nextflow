@@ -1063,8 +1063,6 @@ or the value itself for any other data type.
 Optionally, a mapping function can be specified as a parameter in order to provide a custom 
 rule to associate an item with a key, as shown in the example below::
 
-For example::
-
     r1 = Channel.create()
     r2 = Channel.create()
     r3 = Channel.create()

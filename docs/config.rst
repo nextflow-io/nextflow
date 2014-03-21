@@ -162,6 +162,7 @@ The ``executor`` configuration scope allows you to set the optional executor set
 ===================== =====================
 Name                  Description
 ===================== =====================
+name                  The name of the executor to be used e.g. ``local``, ``sge``, etc
 queueSize             The number of tasks the executor will handle in a parallel manner.
 pollInterval          Determines how often a poll occurs to check for a process termination.
 dumpInterval          Determines how often the executor status is written in the application log file (default: ``5min``)
@@ -172,10 +173,11 @@ exitReadTimeout       Determines how long the executors waits before return an e
 
 The executor settings can be defined as shown below::
 
-   executor {
-     queueSize = 200
-     pollInterval = '30 sec'
-   }
+    executor {
+        name = 'sge'
+        queueSize = 200
+        pollInterval = '30 sec'
+    }
 
 
 When using two (or more) different executors in your pipeline, you can specify their settings separately by prefixing

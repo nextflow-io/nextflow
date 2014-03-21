@@ -204,6 +204,7 @@ In the above example the process will execute the script fragment depending on t
 By default it will execute the ``tcoffee`` command, changing the ``mode`` variable to ``mafft`` or ``clustalo`` value,
 the other branches will be executed.
 
+.. _process-native:
 
 Native execution
 ------------------
@@ -988,9 +989,13 @@ Some directives are generally available to all processes, some others depends on
 The directives are:
 
 * `cache`_
+* `container`_
 * `echo`_
 * `errorStrategy`_
 * `executor`_
+* `maxForks`_
+* `merge`_
+* `scratch`_
 * `storeDir`_
 * `validExitStatus`_
 
@@ -1025,6 +1030,35 @@ Value                 Description
 ``true`` (default)    Cache process outputs. Input files are indexed by using the meta-data information (name, size and last update timestamp).
 ``'deep'``            Cache process outputs. Input files are indexed by their content.
 ===================== =================
+
+container
+__________
+
+The ``container`` directive allows you to execute the process script in a `Docker <http://docker.io>`_ container.
+
+It requires the Docker daemon to be running in machine where the pipeline is executed, i.e. the local machine when using the
+*local* executor or the cluster nodes when the pipeline is deployed through a *grid* executor.
+
+For example::
+
+
+    process runThisInDocker {
+
+      container 'dockerbox:tag'
+
+      """
+      <your holy script here>
+      """
+
+    }
+
+
+Simply replace in the above script ``dockerbox:tag`` with the Docker container name you want to use.
+
+.. tip:: This can be very useful to execute your scripts into a replicable self-contained environment or to deploy your pipeline in the cloud.
+
+.. note:: This directive is ignore for processes :ref:`executed natively <process-native>`.
+
 
 
 echo
@@ -1107,6 +1141,124 @@ The following example shows how to set the process's executor::
 .. note:: Each executor provides its own set of configuration options that can set be in the `directive` declarations block.
    See :ref:`executor-page` section to read about specific executor directives.
 
+maxForks
+---------
+
+The ``maxForks`` directive allows you to define the maximum number of process instances that can be executed in parallel.
+By default this value is equals to the number of CPU cores available plus 1.
+
+If you want to execute a process in a sequential manner, set this directive to one. For exaple::
+
+    process doNotParallelizeIt {
+
+       maxForks 1
+
+       '''
+       <your script here>
+       '''
+
+    }
+
+
+
+
+merge
+-------
+
+The ``merge`` directive allow you to write a task that `gather` the results of a upstream processes.
+
+The main differences with a normal process are:
+
+    * A merge process is executed in a sequential manner.
+    * A merge process is executed always in the same (unique to it) working directory.
+    * Outputs of a merge process are bound only once, at the end of the process execution.
+
+For example::
+
+  process collectData {
+
+    merge true
+
+    input:
+    val x from 'alpha','beta','delta'
+
+    output:
+    file result_file
+
+    """
+    echo $x >> result_file
+    """
+  }
+
+  result_file.subscribe  { println it.text  }
+
+
+It will print the content of the result file::
+
+    alpha
+    beta
+    delta
+
+
+scratch
+--------
+
+The ``scratch`` directive allows you to execute the process in a temporary folder that is local to the execution node.
+
+This is useful when your pipeline is launched by using a `grid` executor, because it permits to decrease the NFS
+overhead by running the pipeline processes in a temporary directory in the local disk of the actual execution node.
+Only the files declared as output in the process definition will be copied in the pipeline working area.
+
+In its basic form simply specify ``true`` at the directive value, as shown below::
+
+  process simpleTask {
+
+    scratch true
+
+    output:
+    file 'data_out'
+
+    '''
+    <task script>
+    '''
+  }
+
+
+By doing this, it tries to execute the script in the directory defined by the variable ``$TMPDIR`` in the execution node.
+If this variable does not exist, it will create a new temporary directory by using the Linux command ``mktemp``.
+
+A custom environment variable, other than ``$TMPDIR``, can be specified by simply using it as the scratch value, for
+example::
+
+  scratch '$MY_GRID_TMP'
+
+Note, it must be wrapped by single quotation characters, otherwise the variable will be evaluated in the
+pipeline script context.
+
+.. warning:: The variable must guarantee to provide a unique temporary folder for each process invocation, usually such
+    a variable is defined by the batch scheduler platform.
+
+
+You can also provide a specific folder path as scratch value, for example::
+
+  scratch '/tmp/my/path'
+
+By doing this, a new temporary directory will be created in the specified path each time a process is executed.
+
+Finally, when the ``ram-disk`` string is provided as ``scratch`` value, the process will be execute in the node
+RAM virtual disk.
+
+Summary of allowed values:
+
+=========== ==================
+scratch     Description
+=========== ==================
+false       Do not use the scratch folder
+true        Use the scratch folder defined by ``$TMPDIR`` variable, fallback to ``mktemp`` if that variable do not exists
+$<YOUR_VAR> Use the scratch folder defined by the ``$<YOUR_VAR>`` environment variable, or fallback to ``mktemp`` if that variable do not exists
+/tmp/my     Create a temporary scratch directory in the specified directory
+ram-disk    Create a temporary scratch directory in the RAM disk
+=========== ==================
 
 storeDir
 ---------
@@ -1145,7 +1297,7 @@ for each specie specified by an input parameter::
 
   }
 
-
+.. warning:: The ``storeDir`` directive cannot be used with a `merge` process.
 
 validExitStatus
 -------------------
