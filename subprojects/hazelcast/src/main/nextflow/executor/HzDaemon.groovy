@@ -133,27 +133,34 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
         return cfg
     }
 
-    protected getHzProperty( String name, defValue = null ) {
-        ConfigHelper.getConfigProperty(config, 'hazelcast', name, defValue)
+    protected getDaemonProperty( String name, defValue = null, Map env = null ) {
+        def result = ConfigHelper.getConfigProperty(config, 'hazelcast', name)
+        if( result != null )
+            return result
+
+        // -- try to fallback on sys env
+        if( env == null ) env = System.getenv()
+        def key = "NXF_DAEMON_${name.toUpperCase().replaceAll(/\./,'_')}".toString()
+        return env.containsKey(key) ? env.get(key) : defValue
     }
 
     @Memoized
-    protected getHzPort () {
-        getHzProperty('port') as Integer
+    protected getDaemonPort() {
+        getDaemonProperty('port') as Integer
     }
 
     @Memoized
-    protected String getHzGroupName() {
-        getHzProperty('group', DEFAULT_GROUP_NAME)
+    protected String getDaemonGroupName() {
+        getDaemonProperty('group', DEFAULT_GROUP_NAME)
     }
 
-    protected int getHzSlots() {
-        getHzProperty('slots', Runtime.getRuntime().availableProcessors()) as Integer
+    protected int getDaemonSlots() {
+        getDaemonProperty('slots', Runtime.getRuntime().availableProcessors()) as Integer
     }
 
-    protected List<String> getHzInterfaces() {
+    protected List<String> getDaemonInterfaces() {
         def result = []
-        def value = getHzProperty('interface') as String
+        def value = getDaemonProperty('interface') as String
         def interfaceNames = value ? StringUtils.split(value, ", \n").collect { it.trim() } : null
         interfaceNames?.each {
             if( it.contains('.') )
@@ -179,17 +186,17 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
     @Memoized
     protected Config getConfigObj () {
         def result = new Config()
-        def groupName = getHzGroupName()
+        def groupName = daemonGroupName
         log.debug "Hazelcast config > group name: $groupName"
         result.getGroupConfig().setName(groupName)
 
         def network = result.getNetworkConfig()
-        if( getHzPort() ) {
-            log.debug "Hazelcast config > port: ${getHzPort()}"
-            network.setPort( getHzPort() )
+        if( getDaemonPort() ) {
+            log.debug "Hazelcast config > port: ${daemonPort}"
+            network.setPort(daemonPort)
         }
 
-        def interfaces = getHzInterfaces()
+        def interfaces = daemonInterfaces
         if( interfaces ) {
             network.getInterfaces().setEnabled(true)
             interfaces.each {
@@ -198,7 +205,7 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
             }
         }
 
-        def join = getHzProperty('join') as String ?: 'multicast'
+        def join = getDaemonProperty('join') as String ?: 'multicast'
 
         if( join == 'multicast') {
             log.debug "Hazelcast config > setup UDP/multicast"
@@ -230,7 +237,7 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
         System.setProperty('hazelcast.socket.bind.any', 'false')
 
         // -- define the number of jobs this manage in parallel
-        capacity = getHzSlots()
+        capacity = getDaemonSlots()
         log.debug "Hazelcast config > slots: $capacity"
         if( capacity <= 0 )
             throw new IllegalArgumentException("Daemon 'slots' parameter cannot be less than 1")

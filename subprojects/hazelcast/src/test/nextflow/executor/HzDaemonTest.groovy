@@ -63,7 +63,7 @@ class HzDaemonTest extends Specification{
 
         when:
         daemon = [:] as HzDaemon
-        addresses = daemon.getHzInterfaces()
+        addresses = daemon.getDaemonInterfaces()
         then:
         addresses == []
 
@@ -71,7 +71,7 @@ class HzDaemonTest extends Specification{
         when:
         daemon = [:] as HzDaemon
         daemon.config = [interface: '172.5.1.*,172.5.2.*']
-        addresses = daemon.getHzInterfaces()
+        addresses = daemon.getDaemonInterfaces()
         then:
         addresses == ['172.5.1.*','172.5.2.*']
 
@@ -81,5 +81,20 @@ class HzDaemonTest extends Specification{
 //        addresses = daemon.getHzInterfaces()
 //        then:
 //        addresses == ['127.0.0.1']
+    }
+
+    def testDaemonProperty() {
+
+        when:
+        def daemon = [:] as HzDaemon
+        daemon.config = [x:123, y:222, '$hazelcast': [y:333] ]
+        then:
+        daemon.getDaemonProperty('x') == 123
+        daemon.getDaemonProperty('y') == 333
+        daemon.getDaemonProperty('z') == null
+        daemon.getDaemonProperty('z', 'alpha') == 'alpha'
+        daemon.getDaemonProperty('z', 'alpha', [NXF_DAEMON_Z:'hola']) == 'hola'
+        daemon.getDaemonProperty('p.q.z', null, [NXF_DAEMON_P_Q_Z:'hello']) == 'hello'
+
     }
 }

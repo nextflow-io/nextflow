@@ -276,12 +276,15 @@ class Session {
 
 
     @Memoized
-    public getExecConfigProp( String execName, String propName, Object defValue ) {
-        if( config.executor instanceof Map )
-            ConfigHelper.getConfigProperty(config.executor as Map, execName, propName, defValue )
+    public getExecConfigProp( String execName, String name, Object defValue, Map env = null  ) {
+        def result = ConfigHelper.getConfigProperty(config.executor, execName, name )
+        if( result != null )
+            return result
 
-        else
-            return defValue
+        // -- try to fallback sys env
+        def key = "NXF_EXECUTOR_${name.toUpperCase().replaceAll(/\./,'_')}".toString()
+        if( env == null ) env = System.getenv()
+        return env.containsKey(key) ? env.get(key) : defValue
     }
 
     /**

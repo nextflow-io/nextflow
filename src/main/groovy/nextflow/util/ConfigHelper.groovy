@@ -30,7 +30,7 @@ import groovy.util.logging.Slf4j
 class ConfigHelper {
 
 
-    def static getConfigProperty( Map config, String execName, String propName, defValue ) {
+    def static getConfigProperty( def config, String execName, String propName ) {
         def result = null
 
         // make sure that the *executor* is a map object
@@ -41,12 +41,6 @@ class ConfigHelper {
 
         if( result==null && config instanceof Map && config[propName] ) {
             result = config[propName]
-        }
-
-
-        if( result==null ) {
-            result = defValue
-            log.trace "Undefined executor property: '$propName' -- fallback default value: $result"
         }
 
         return result
