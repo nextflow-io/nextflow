@@ -27,9 +27,9 @@ function get() {
         exit 1
     fi
 
-    printf "Downloading $1. It may require some seconds, please wait .. "
+    printf "Downloading nextflow dependencies. It may require some seconds, please wait .. "
     $GET; status=$?
-    echo -e "\r \033[K"
+    printf "\r\033[K"
     if [ $status -ne 0 ]; then
         echo "Error: cannot download nextflow required file -- make sure you can connect the internet"
         echo ""
@@ -37,7 +37,7 @@ function get() {
         echo "    $1"
         echo ""
         echo "And save it as:"
-        echo "    $2"
+        echo "    ${3:-$2}"
         echo ""
         exit 1
     fi
@@ -53,7 +53,7 @@ for opt in "$@"; do
     -d|-daemon.*) bg=1; NXF_PACK='hz';;
     -self-update|self-update)
         tmpfile=$(mktemp -t XXXXX)
-        get "http://nextflow.io/nextflow" "$tmpfile"
+        get "http://nextflow.io/nextflow" "$tmpfile" "$0"
         set -e
         mv $tmpfile $0; chmod +x $0
         bash $0 -version
