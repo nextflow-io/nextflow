@@ -94,6 +94,8 @@ class CliOptions {
     @DynamicParameter(names = ['-executor.'], description = 'Executor(s) options', hidden = true )
     Map<String,String> executorOptions = [:]
 
+    @Parameter(names = ['-bg'], description = 'Launch the pipeline as a background job', arity = 0)
+    boolean background
 
 
     /**
