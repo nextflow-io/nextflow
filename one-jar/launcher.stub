@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 #  Copyright (c) 2013, Paolo Di Tommaso <paolo.ditommaso@gmail.com>
 #
@@ -20,20 +20,34 @@
 MYSELF=`which "$0" 2>/dev/null`
 [ $? -gt 0 -a -f "$0" ] && MYSELF="./$0"
 
-#
 # Cleanup paths for Cygwin.
-#
 case "`uname`" in
 CYGWIN*)
 	MYSELF=`cygpath --windows --mixed --path "$MYSELF"`
 	;;
 esac
 
+# Find out Java
 java=java
 if test -n "$JAVA_HOME"
 then
 	java="$JAVA_HOME/bin/java"
 fi
 
-exec "$java" -Djava.awt.headless=true $java_args -jar "$MYSELF" "$@"
-exit 1
+# Check if it is required to run in background
+bg=''
+for opt in "$@"; do
+  case $opt in
+  -bg|-d|-daemon.*) bg='YES';;
+  esac
+done
+
+if [ "$bg" = '' ]; then
+ exec "$java" -Djava.awt.headless=true $java_args -jar "$MYSELF" "$@"
+ exit 1
+fi
+
+"$java" -Djava.awt.headless=true $java_args -jar "$MYSELF" "$@" &
+disown
+printf $! > .nextflow.pid
+exit 0
