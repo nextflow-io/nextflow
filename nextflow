@@ -43,6 +43,22 @@ function get() {
     fi
 }
 
+function download() {
+    tmpfile=$(mktemp -t XXXXX)
+    get "http://nextflow.io/releases/latest/nextflow" "$tmpfile" "$1"
+    set -e
+    mv $tmpfile $1; 
+    chmod +x $1
+    bash $1 -version
+    echo "done"
+}
+
+# check self-install
+if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then 
+    download 'nextflow'
+    exit 0 
+fi  
+
 NXF_PACK=${NXF_PACK:-one}
 
 # Check if it is required to run in background
@@ -51,16 +67,8 @@ for opt in "$@"; do
     case $opt in
     -bg) bg=1;;
     -d|-daemon.*) bg=1; NXF_PACK='hz';;
-    -self-update|self-update)
-        tmpfile=$(mktemp -t XXXXX)
-        get "http://nextflow.io/nextflow" "$tmpfile" "$0"
-        set -e
-        mv $tmpfile $0; chmod +x $0
-        bash $0 -version
-        exit 0
-        ;;
-    hazelcast) NXF_PACK='hz'
-    ;;
+    hazelcast) NXF_PACK='hz';;
+    -self-update|self-update) download $0; exit 0;;
     esac
 done
 
@@ -84,22 +92,34 @@ if [ ! -f "$NXF_BIN" ]; then
 
     mkdir -p $NXF_PATH
     get "$NXF_URL" "$NXF_BIN"
-    chmod +x $NXF_BIN
 fi
 
 # Find out Java
-java=java
-if test -n "$JAVA_HOME"
-then
-	java="$JAVA_HOME/bin/java"
+JAVA=java
+[[ -n "$JAVA_HOME" ]] && JAVA="$JAVA_HOME/bin/java"
+
+if [ -z "NXF_OPTIONS" ]; then
+    NXF_OPTIONS="-Djava.awt.headless=true"
+else 
+    NXF_OPTIONS="-Djava.awt.headless=true $NXF_OPTIONS"
 fi
 
-if [ "$bg" = '' ]; then
- exec "$java" -Djava.awt.headless=true $java_args -jar "$NXF_BIN" "$@"
- exit 1
+# Set the class-path
+if [ -n "$NXF_CLASSPATH" ]; then
+    NXF_OPTIONS="$NXF_OPTIONS -cp $NXF_CLASSPATH"
 fi
 
-"$java" -Djava.awt.headless=true $java_args -jar "$NXF_BIN" "$@" &
-disown
-printf $! > .nxf-daemon.pid
-exit 0
+# Start in daemon mode
+NXF_DAEMON_PID=${NXF_DAEMON_PID:-'.nxf-daemon.pid'}
+if [ -n "$bg" ]; then
+  "$JAVA" $NXF_OPTIONS -jar "$NXF_BIN" "$@" &
+  disown
+  printf $! > $NXF_DAEMON_PID
+  exit 0
+fi
+
+
+exec "$JAVA" $NXF_OPTIONS -jar "$NXF_BIN" "$@"
+exit 1
+
+
