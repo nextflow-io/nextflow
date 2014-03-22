@@ -50,7 +50,11 @@ function download() {
     mv $tmpfile $1; 
     chmod +x $1
     bash $1 -version
-    echo "done"
+    echo ''
+    echo -e $'Nextflow installation completed. Please note:'
+    echo -e $'- the executable file \'nextflow\' has been created in this folder'
+    echo -e $'- you may complete the installation copying it to directory in your $PATH'
+    echo ''
 }
 
 # check self-install
