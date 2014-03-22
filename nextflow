@@ -44,7 +44,10 @@ function get() {
 }
 
 function download() {
-    tmpfile=$(mktemp -t XXXXX)
+    if [ "$(uname)" = 'Darwin' ]; then tmpfile=$(mktemp $PWD/XXXXX); 
+    else tmpfile=$(mktemp -t XXXXX --tmpdir=$PWD); 
+    fi
+    
     get "http://nextflow.io/releases/latest/nextflow" "$tmpfile" "$1"
     set -e
     mv $tmpfile $1; 
