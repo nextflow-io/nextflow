@@ -81,7 +81,7 @@ for opt in "$@"; do
     hazelcast)
       NXF_PACK='hz';;
     -download)
-      rm -rf $NXF_HOME/app/$NXF_VER
+      rm -rf $NXF_HOME/framework/$NXF_VER
       $0 -version
       exit 0;;
     -self-update|self-update)
@@ -92,7 +92,7 @@ done
 
 [[ $NXF_EXECUTOR_NAME = 'hazelcast' ]] && NXF_PACK='hz'
 NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACK.jar}
-NXF_BIN=${NXF_BIN:-$NXF_HOME/app/$NXF_VER/$NXF_JAR}
+NXF_BIN=${NXF_BIN:-$NXF_HOME/framework/$NXF_VER/$NXF_JAR}
 NXF_BASE=${NXF_BASE:-http://nextflow.io/releases}
 NXF_PATH=$(dirname $NXF_BIN)
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
