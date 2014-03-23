@@ -21,7 +21,7 @@ function get() {
     if command -v wget &>/dev/null; then
         GET="wget -q $1 -O $2"
     elif command -v curl &>/dev/null; then
-        GET="curl -s -f -L $1 -o $2"
+        GET="curl -fsSL $1 -o $2"
     else
         echo "Error: cannot find 'curl' nor 'wget' utility --  please install one of them"
         exit 1
@@ -62,7 +62,7 @@ function install() {
 
 # check self-install
 if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then 
-    install 'nextflow'
+    install "$PWD/nextflow"
     exit 0 
 fi  
 
