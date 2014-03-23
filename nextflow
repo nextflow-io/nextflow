@@ -18,10 +18,10 @@
 #  along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
 
 function get() {
-    if command -v curl &>/dev/null; then
-        GET="curl -s -f -L $1 -o $2"
-    elif command -v wget &>/dev/null; then
+    if command -v wget &>/dev/null; then
         GET="wget -q $1 -O $2"
+    elif command -v curl &>/dev/null; then
+        GET="curl -s -f -L $1 -o $2"
     else
         echo "Error: cannot find 'curl' nor 'wget' utility --  please install one of them"
         exit 1
@@ -43,7 +43,7 @@ function get() {
     fi
 }
 
-function download() {
+function install() {
     if [ "$(uname)" = 'Darwin' ]; then tmpfile=$(mktemp $PWD/XXXXX); 
     else tmpfile=$(mktemp -t XXXXX --tmpdir=$PWD); 
     fi
@@ -52,7 +52,7 @@ function download() {
     set -e
     mv $tmpfile $1; 
     chmod +x $1
-    bash $1 -version
+    bash $1 -download
     echo ''
     echo -e $'Nextflow installation completed. Please note:'
     echo -e $'- the executable file \'nextflow\' has been created in this folder'
@@ -62,30 +62,38 @@ function download() {
 
 # check self-install
 if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then 
-    download 'nextflow'
+    install 'nextflow'
     exit 0 
 fi  
 
+NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
+NXF_VER=${NXF_VER:-'0.7.0'}
 NXF_PACK=${NXF_PACK:-one}
 
 # Check if it is required to run in background
 bg=''
 for opt in "$@"; do
     case $opt in
-    -bg) bg=1;;
-    -d|-daemon.*) bg=1; NXF_PACK='hz';;
-    hazelcast) NXF_PACK='hz';;
-    -self-update|self-update) download $0; exit 0;;
+    -bg)
+      bg=1;;
+    -d|-daemon.*)
+      bg=1; NXF_PACK='hz';;
+    hazelcast)
+      NXF_PACK='hz';;
+    -download)
+      rm -rf $NXF_HOME/app/$NXF_VER
+      $0 -version
+      exit 0;;
+    -self-update|self-update)
+      install $0;
+      exit 0;;
     esac
 done
 
 [[ $NXF_EXECUTOR_NAME = 'hazelcast' ]] && NXF_PACK='hz'
-
-NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
-NXF_VER=${NXF_VER:-'0.7.0'}
 NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACK.jar}
 NXF_BIN=${NXF_BIN:-$NXF_HOME/app/$NXF_VER/$NXF_JAR}
-NXF_BASE=${NXF_BASE:-https://github.com/nextflow-io/nextflow/releases/download}
+NXF_BASE=${NXF_BASE:-http://nextflow.io/releases}
 NXF_PATH=$(dirname $NXF_BIN)
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
 
@@ -117,14 +125,13 @@ if [ -n "$NXF_CLASSPATH" ]; then
 fi
 
 # Start in daemon mode
-NXF_DAEMON_PID=${NXF_DAEMON_PID:-'.nxf-daemon.pid'}
 if [ -n "$bg" ]; then
+  NXF_PID_FILE=${NXF_PID_FILE:-'.nextflow.pid'}
   "$JAVA" $NXF_OPTIONS -jar "$NXF_BIN" "$@" &
   disown
-  printf $! > $NXF_DAEMON_PID
+  printf $! > $NXF_PID_FILE
   exit 0
 fi
-
 
 exec "$JAVA" $NXF_OPTIONS -jar "$NXF_BIN" "$@"
 exit 1
