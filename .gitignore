@@ -1,7 +1,7 @@
 .idea/**
 .gradle/**
 .nextflow.log*
-.nf-*.log*
+.nxf-*.log*
 build/**
 lib/commons-cli-1.2.jar
 subprojects/**/build/
