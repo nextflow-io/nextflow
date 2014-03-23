@@ -328,6 +328,8 @@ class GridTaskHandler extends TaskHandler {
     }
 
 
+    private long startedMillis
+
     private long exitTimestampMillis1
 
     private long exitTimestampMillis2
@@ -348,7 +350,7 @@ class GridTaskHandler extends TaskHandler {
             final active = executor.checkActiveStatus(jobId)
 
             // --
-            def elapsed = System.currentTimeMillis() - (startFile?.lastModified() ?: 0)
+            def elapsed = System.currentTimeMillis() - startedMillis
             if( elapsed < executor.queueInterval.toMillis() * 2.5 ) {
                 return null
             }
@@ -421,6 +423,9 @@ class GridTaskHandler extends TaskHandler {
 
             if( startFile && startFile.exists() && startFile.lastModified() > 0) {
                 status = RUNNING
+                // use local timestamp because files are created on remote nodes which
+                // may not have a synchronized clock
+                startedMillis = System.currentTimeMillis()
                 return true
             }
 
