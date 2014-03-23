@@ -421,13 +421,16 @@ class CliRunner {
 
     static JCommander jcommander
 
+    static boolean fullVersion
+
     @PackageScope
     static CliOptions parseMainArgs(String... args) {
 
+        def options = CliOptions.normalizeArgs(args)
         def result = new CliOptions()
-        jcommander = new JCommander(result, CliOptions.normalizeArgs(args) as String[] )
+        jcommander = new JCommander(result, options as String[] )
         jcommander.setProgramName( Const.APP_NAME )
-
+        fullVersion = '-version' in options
         return result
     }
 
@@ -448,7 +451,7 @@ class CliRunner {
 
             // -- print out the version number, then exit
             if ( options.version ) {
-                println getVersion(true)
+                println getVersion(fullVersion)
                 System.exit(ExitCode.OK)
             }
 
@@ -481,9 +484,9 @@ class CliRunner {
                 else {
                     scriptFile = tryReadFromStdin()
                     if( !scriptFile || scriptFile.empty() ) {
-                        log.error "You didn't enter any script file on the program command line\n"
+                        println Const.LOGO
                         jcommander.usage()
-                        System.exit( ExitCode.MISSING_SCRIPT_FILE )
+                        System.exit(ExitCode.OK)
                     }
                 }
 
@@ -720,15 +723,13 @@ class CliRunner {
 
     static String getVersion(boolean full = false) {
 
-        Const.with {
-            if ( full ) {
-                "${getAPP_NAME()} version ${APP_VER}.${APP_BUILDNUM} ~ build timestamp ${APP_TIMESTAMP_UTC}"
-                //"${getAPP_NAME()} version ${APP_VER}.${APP_BUILDNUM} ~ build timestamp ${APP_TIMESTAMP_UTC} ~ jvm: ${System.getProperty('java.version')} (${ System.getProperty('java.vendor')}) ~ os: ${System.getProperty('os.name')} ${ System.getProperty('os.version')} (${ System.getProperty('os.arch')})"
-            }
-            else {
-                APP_VER
-            }
+        if ( full ) {
+            Const.LOGO
         }
+        else {
+            "${Const.getAPP_NAME()} version ${Const.APP_VER}.${Const.APP_BUILDNUM}"
+        }
+
     }
 
     /**
