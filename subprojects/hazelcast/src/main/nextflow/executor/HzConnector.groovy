@@ -199,7 +199,7 @@ class HzConnector implements HzConst, MembershipListener {
         }
 
         // -- set the result value and *signal* the monitor in order to trigger a status check cycle
-        log.trace "Setting start: $result to handler: $handler"
+        log.debug "Task ${handler.task.name} (id: ${handler.task.id}) > SUBMIT ACK"
         handler.runningMember = message.getPublishingMember()
 
     }

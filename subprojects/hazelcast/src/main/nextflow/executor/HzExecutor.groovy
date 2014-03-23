@@ -174,6 +174,7 @@ class HzTaskHandler extends TaskHandler {
 
         // mark as submitted -- transition to STARTED has to be managed by the scheduler
         status = TaskHandler.Status.SUBMITTED
+        log.debug "Task ${task.name} (id: ${task.id}) > SUBMITTED"
     }
 
     @Override
@@ -208,7 +209,7 @@ class HzTaskHandler extends TaskHandler {
             // -- set the task result error (if any)
             task.error = result.error
 
-            log.trace "Task ${task.name} > DONE (${task.exitStatus})"
+            log.debug "Task ${task.name} (id: ${task.id}) > DONE (${task.exitStatus})"
             return true
         }
 
