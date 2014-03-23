@@ -162,18 +162,22 @@ class TaskPollingMonitor implements TaskMonitor {
         // This guarantee that the 'pollingQueue' does not contain
         // more entries than the specified 'capacity'
         //
+        boolean done = false
         mutex.withLock(true) {
 
             while ( pollingQueue.size() >= capacity )
                 notFull.await();
 
-            if( !session.isTerminated())
+            if( !session.isTerminated()) {
+                pollingQueue.add(handler)
                 handler.submit()
+                done = true
+            }
 
-            pollingQueue.add(handler)
         }
 
-        dispatcher.notifySubmitted(handler)
+        if( done )
+            dispatcher.notifySubmitted(handler)
     }
 
     /**
