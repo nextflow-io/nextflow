@@ -38,7 +38,7 @@ terminal command prompt. It will print the program help text, like showed below:
           N E X T F L O W
           Version 0.5.2 build 1109
           last modified 28-11-2013 18:33 UTC (19:33 CEST)
-          http://nextflow-project.org
+          http://nextflow.io
 
     Usage: nextflow [options] <script file> [script arguments]
       Options:

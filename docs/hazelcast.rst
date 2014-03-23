@@ -26,7 +26,7 @@ as shown below::
     nextflow -d
 
 The process will run in the background. The daemon output is stored in the log file ``.nxf-daemon.log``. The daemon
-process ``PID`` is saved in the file ``.nxf-daemon.pid`` in the same folder.
+process ``PID`` is saved in the file ``.nextflow.pid`` in the same folder.
 
 If you don't see members joining, then it is likely because multicast is not available.
 
