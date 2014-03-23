@@ -307,8 +307,19 @@ task packAll( dependsOn: [compile, pack, packHz, packDx]) {
 
 }
 
+
+final s3CmdOpts="--access_key=${nxfAwsAccess} --secret_key=${nfxAwsSecret} -q --acl-public"
+
 /*
- * Tag and upload the release to github
+ * Publish 'nextflow' launcher
+ */
+task publish(type: Exec) {
+    def cmd = "s3cmd put nextflow s3://nextflow.io/releases/latest/nextflow $s3CmdOpts"
+    commandLine 'bash', '-c', cmd
+}
+
+/*
+ * Tag and upload the release
  */
 task release(type: Exec, dependsOn: [compile, test, packAll]) {
 
@@ -320,12 +331,20 @@ task release(type: Exec, dependsOn: [compile, test, packAll]) {
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
     temp.text =  """\
+    # tag the release
     git tag -a v$version && git push origin v$version
-    github-release release -u nextflow-io -r nextflow -t v$version --pre-release;
-    github-release upload -u nextflow-io -r nextflow -t v$version --file ${file0} --name ${file0.name};
-    github-release upload -u nextflow-io -r nextflow -t v$version --file ${file1} --name ${file1.name};
-    github-release upload -u nextflow-io -r nextflow -t v$version --file ${file2} --name ${file2.name};
-    github-release upload -u nextflow-io -r nextflow -t v$version --file ${file3} --name ${file3.name};
+    github-release release -u nextflow-io -r nextflow -t v$version --pre-release
+    github-release upload -u nextflow-io -r nextflow -t v$version --file ${file0} --name ${file0.name}
+
+    # upload assets
+    s3cmd put ${file0} s3://nextflow.io/releases/v$version/${file0.name} $s3CmdOpts
+    s3cmd put ${file1} s3://nextflow.io/releases/v$version/${file1.name} $s3CmdOpts
+    s3cmd put ${file2} s3://nextflow.io/releases/v$version/${file2.name} $s3CmdOpts
+    s3cmd put ${file3} s3://nextflow.io/releases/v$version/${file3.name} $s3CmdOpts
+
+    # publish the script as the latest
+    s3cmd put nextflow s3://nextflow.io/releases/latest/nextflow $s3CmdOpts
+
     """.stripIndent()
 
     commandLine 'bash', temp.absolutePath
