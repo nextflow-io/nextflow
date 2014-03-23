@@ -473,11 +473,14 @@ class CliRunner {
             if( !options.isDaemon() ) {
                 // -- the script is the first item in the args
                 if( options.arguments ) {
-                    scriptFile = new File(options.arguments[0])
-                    if ( !scriptFile.exists() ) {
-                        log.error "The specified script does not exist: '$scriptFile'\n"
+                    try {
+                        scriptFile = getScriptFile(options.arguments[0])
+                    }
+                    catch( IOException e ) {
+                        log.error "The specified script does not exist: '${options.arguments[0]}'\n", e
                         System.exit( ExitCode.MISSING_SCRIPT_FILE )
                     }
+
                     scriptBaseName = scriptFile.getBaseName()
                 }
                 // -- try to get the script from the stdin
@@ -558,14 +561,36 @@ class CliRunner {
 
     }
 
-    static File tryReadFromStdin() {
+    static protected File tryReadFromStdin() {
         if( !System.in.available() )
             return null
 
-        File result = File.createTempFile('nextflow', null)
+        getScriptFromStream(System.in)
+    }
+
+    static protected File getScriptFromStream( InputStream input, String name = 'nextflow' ) {
+        input != null
+        File result = File.createTempFile(name, null)
         result.deleteOnExit()
-        System.in.withReader { reader -> result << reader }
+        input.withReader { reader -> result << reader }
         return result
+    }
+
+    static protected File getScriptFile( String urlOrPath ) {
+        def lower = urlOrPath.toLowerCase()
+        def isUrl = ['http','https','ftp'].any { lower.startsWith(it+'://') }
+
+        if( isUrl ) {
+            def url = new URL(urlOrPath)
+            def fileName = new File(url.getPath()).getBaseName()
+            return getScriptFromStream( url.newInputStream(), fileName )
+        }
+
+        def file = new File(urlOrPath)
+        if( !file.exists() ) {
+            throw new FileNotFoundException("File do not exist: $file")
+        }
+        return file
     }
 
     static private void checkFileSystemProviders() {
