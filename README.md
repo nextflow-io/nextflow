@@ -27,14 +27,14 @@ to which is added the ability to coordinate and synchronize the processes execut
 Quick start
 -----------
 
-Nextflow does not require any installation procedure, just download the executable package at the
-[Github releases page](https://github.com/nextflow-io/nextflow/releases) and save it somewhere on your computer.
+Nextflow does not require any installation procedure, just download the distribution package by copying and pasting
+this command in your terminal:
 
-Grant the execute permission to the downloaded package using the following command `chmod +x nextflow`, after that you are ready to use it.
-You can to execute the command `nextflow -h` to show the program help.
+    wget -qO- get.nextflow.io | bash
 
-Create a file named `hello.nf` with the following content and copy it
-to the path where you downloaded the Nextflow package.
+It creates the ``nextflow`` executable file in the current directory. You may want to move it to a folder accessible from your ``$PATH``.
+
+Create a file named `hello.nf` with the following content and copy it to the path where you downloaded the Nextflow package.
 
     process sayHello {
     
@@ -193,17 +193,13 @@ You can compile *Nextflow* by typing the following command in the project home d
 The very first time you run it, it will automatically download all the libraries required by the build process. 
 It may take some minutes to complete.
 
-When complete, execute the program by using the `nextflow.sh` launch script in the project directory.
-
-In order to create the self-contained executable package launch Gradle specifying the *pack* task, using the following command:
-
-    $ ./gradlew pack
+When complete, execute the program by using the `run.sh` launch script in the project directory.
 
 
 Required dependencies
 ---------------------
 
-Java 7 or higher
+Oracle Java 7 (Java 8 will be supported as soon as Groovy 2.3 will be released).
 
 
 Documentation
