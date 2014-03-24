@@ -237,7 +237,7 @@ buildscript {
  */
 
 def homeDir = System.properties['user.home']
-def nextflowDir = "$homeDir/.nextflow/app/$version"
+def nextflowDir = "$homeDir/.nextflow/framework/$version"
 
 task pack(type: OneJar) {
     mainClass = 'nextflow.script.CliRunner'
