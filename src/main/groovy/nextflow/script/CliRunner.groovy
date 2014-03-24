@@ -469,7 +469,7 @@ class CliRunner {
                 System.exit(ExitCode.OK)
             }
 
-            log.debug "${getVersion(true)} [$localName]"
+            log.debug "${getVersion()} ~ host: ${localNameAndAddress}"
             File scriptFile = null
             if( !options.isDaemon() ) {
                 // -- the script is the first item in the args
@@ -880,7 +880,8 @@ class CliRunner {
         loader.next().launch(daemonConfig)
     }
 
-    static private getLocalName() {
-        InetAddress.getLocalHost().getHostName()
+    static private getLocalNameAndAddress() {
+        def host = InetAddress.getLocalHost()
+        "${host.getHostName()} [${host.getHostAddress()}]"
     }
 }
