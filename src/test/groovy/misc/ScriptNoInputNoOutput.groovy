@@ -1,6 +1,6 @@
-package misc
 /*
- * Copyright (c) 2012, the authors.
+ * Copyright (c) 2013-2014, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2014, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -18,6 +18,7 @@ package misc
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+package misc
 import nextflow.Session
 def session = new Session()
 

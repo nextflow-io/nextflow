@@ -1,12 +1,6 @@
-import groovyx.gpars.dataflow.Dataflow
-import groovyx.gpars.dataflow.DataflowQueue
-import groovyx.gpars.dataflow.DataflowReadChannel
-import groovyx.gpars.group.DefaultPGroup
-import nextflow.NGroup
-import org.codehaus.groovy.runtime.InvokerHelper
-
 /*
- * Copyright (c) 2012, the authors.
+ * Copyright (c) 2013-2014, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2014, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -24,7 +18,12 @@ import org.codehaus.groovy.runtime.InvokerHelper
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
+import groovyx.gpars.dataflow.Dataflow
+import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.group.DefaultPGroup
+import nextflow.NGroup
+import org.codehaus.groovy.runtime.InvokerHelper
 
 Dataflow.usingGroup(new NGroup()) {
 

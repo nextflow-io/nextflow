@@ -1,10 +1,6 @@
-package nextflow.fs.dx
-
-import nextflow.fs.dx.api.DxApi
-import nextflow.util.KryoHelper
-import spock.lang.Specification
 /*
- * Copyright (c) 2012, the authors.
+ * Copyright (c) 2013-2014, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2014, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -22,6 +18,11 @@ import spock.lang.Specification
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+package nextflow.fs.dx
+
+import nextflow.fs.dx.api.DxApi
+import nextflow.util.KryoHelper
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>

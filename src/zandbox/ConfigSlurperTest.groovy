@@ -1,6 +1,7 @@
 
 /*
- * Copyright (c) 2012, the authors.
+ * Copyright (c) 2013-2014, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2014, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *

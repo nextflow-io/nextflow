@@ -1,7 +1,6 @@
-import java.util.concurrent.atomic.AtomicInteger
-
 /*
- * Copyright (c) 2012, the authors.
+ * Copyright (c) 2013-2014, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2014, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -18,6 +17,8 @@ import java.util.concurrent.atomic.AtomicInteger
  *   You should have received a copy of the GNU General Public License
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  *
