@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -eE
 #
 #  Copyright (c) 2013, Paolo Di Tommaso <paolo.ditommaso@gmail.com>
 #
@@ -28,7 +28,9 @@ function get() {
     fi
 
     printf "Downloading nextflow dependencies. It may require some seconds, please wait .. "
+    set +e
     $GET; status=$?
+    set -e
     printf "\r\033[K"
     if [ $status -ne 0 ]; then
         echo "Error: cannot download nextflow required file -- make sure you can connect the internet"
@@ -49,8 +51,7 @@ function install() {
     fi
     
     get "http://nextflow.io/releases/latest/nextflow" "$tmpfile" "$1"
-    set -e
-    mv $tmpfile $1; 
+    mv $tmpfile $1;
     chmod +x $1
     bash $1 -download
     echo ''
@@ -61,7 +62,12 @@ function install() {
 }
 
 # check self-install
-if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then 
+if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
+    if [ -d nextflow ]; then
+        echo "The install procedure needs to create a file named 'nextflow' in this folder, but a directory with this name already exists."
+        echo "Please renamed/delete that directory, or execute the Nextflow install procedure in another folder."
+        exit 1
+    fi
     install "$PWD/nextflow"
     exit 0 
 fi  
