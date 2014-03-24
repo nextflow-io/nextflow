@@ -37,6 +37,7 @@ import nextflow.processor.TaskRun
 import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
 import org.apache.commons.io.IOUtils
+import org.apache.commons.lang.StringUtils
 /**
  * Generic task processor executing a task through a grid facility
  *
@@ -189,6 +190,15 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
 
     }
 
+    @PackageScope
+    String dumpQueueStatus() {
+        def result = new StringBuilder()
+        fQueueStatus?.each { k, v ->
+            result << '  job: ' << StringUtils.leftPad(k?.toString(),6) << ': ' << v?.toString() << '\n'
+        }
+        return result.toString()
+    }
+
     /**
      * @param queue The command for which the status of jobs has be to read
      * @return The command line to be used to retried the job statuses
@@ -205,7 +215,7 @@ abstract class AbstractGridExecutor extends AbstractExecutor {
     /**
      * Store jobs status
      */
-    private Map<Object,QueueStatus> fQueueStatus = null
+    protected Map<Object,QueueStatus> fQueueStatus = null
 
     /**
      * Verify that a job in a 'active' state i.e. RUNNING or HOLD
@@ -373,6 +383,10 @@ class GridTaskHandler extends TaskHandler {
             }
 
             log.debug "Failed to get exist status for process ${this} -- exitStatusReadTimeoutMillis: $exitStatusReadTimeoutMillis; delta: $delta"
+
+            // -- dump current queue stats
+            log.debug "Current queue status:\n" + executor.dumpQueueStatus()
+
             return Integer.MAX_VALUE
         }
 
@@ -463,7 +477,7 @@ class GridTaskHandler extends TaskHandler {
 
         super.toStringBuilder(builder)
 
-        builder << " started: " << (startFile.exists() ? startFile.lastModified() : '-') << ';'
+        builder << " started: " << (startedMillis ? startedMillis : '-') << ';'
         builder << " exited: " << (exitFile.exists() ? exitFile.lastModified() : '-') << '; '
 
         return builder

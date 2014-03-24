@@ -105,6 +105,36 @@ class SgeExecutorTest extends Specification {
 
     }
 
+    def testParseQueueDump() {
+
+        setup:
+        def executor = [:] as SgeExecutor
+        def text =
+                """
+        job-ID  prior   name       user         state submit/start at     queue                          slots ja-task-ID
+        -----------------------------------------------------------------------------------------------------------------
+        7548318 0.00050 nf-exonera pditommaso   r     02/10/2014 12:30:51 long@node-hp0214.linux.crg.es      1
+        7548348 0.00050 nf-exonera pditommaso   r     02/10/2014 12:32:43 long@node-hp0204.linux.crg.es      1
+        7548349 0.00050 nf-exonera pditommaso   hqw   02/10/2014 12:32:56 long@node-hp0303.linux.crg.es      1
+        7548904 0.00050 nf-exonera pditommaso   qw    02/10/2014 13:07:09                                    1
+        7548960 0.00050 nf-exonera pditommaso   Eqw   02/10/2014 13:08:11                                    1
+        """.stripIndent().trim()
+
+
+        when:
+        executor.fQueueStatus = executor.parseQueueStatus(text)
+        then:
+        executor.dumpQueueStatus().readLines().sort() == [
+                '  job: 7548318: RUNNING',
+                '  job: 7548348: RUNNING',
+                '  job: 7548349: HOLD',
+                '  job: 7548904: PENDING',
+                '  job: 7548960: ERROR'
+        ]
+
+
+    }
+
     def testQueueStatusCommand() {
 
         setup:
