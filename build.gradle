@@ -309,7 +309,7 @@ task packAll( dependsOn: [compile, pack, packHz, packDx]) {
 }
 
 
-final s3CmdOpts="--access_key=${nxfAwsAccess} --secret_key=${nfxAwsSecret} -q --acl-public"
+final s3CmdOpts="--access_key=${System.getenv('NXF_AWS_ACCESS')} --secret_key=${System.getenv('NXF_AWS_SECRET')} -q --acl-public"
 
 /*
  * Publish 'nextflow' launcher

@@ -280,21 +280,22 @@ class HzConnector implements HzConst, MembershipListener {
          * !! reschedule all tasks that where running in a stopped node
          */
         def queue = new LinkedList(taskMonitor.getPollingQueue())
-        def died = queue.findAll { HzTaskHandler handler ->
+        def deadTasks = queue.findAll { HzTaskHandler handler ->
             handler.runningMember == e.member && handler.status != TaskHandler.Status.COMPLETED
         }
 
-        if( !died )
+        if( !deadTasks )
             return
 
-        log.debug "!! Some tasks were running on stopped node ${e.member} -- Rescheduling ${died}"
-        died.each { HzTaskHandler handler ->
+        log.debug "!! Some tasks were running on stopped node ${e.member} -- Rescheduling ${deadTasks}"
+        deadTasks.each { HzTaskHandler handler ->
             final count = handler.tryCount++
             if( count > 2 ) {
                 log.debug "!! Task exceed maximum times of tries -- Stopping $handler"
                 handler.status = TaskHandler.Status.COMPLETED
             }
             else {
+                handler.runningMember = null
                 handler.submit()
             }
         }
