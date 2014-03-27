@@ -1,7 +1,8 @@
 Nextflow
 ========
 
-A *reactive* workflow framework for bioinformatics pipelines
+*"Dataflow variables are spectacularly expressive in concurrent programming"*
+<br>[Henri E. Bal , Jennifer G. Steiner , Andrew S. Tanenbaum](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.145.7873)
 
 Rationale
 ---------
