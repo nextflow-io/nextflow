@@ -309,13 +309,13 @@ task packAll( dependsOn: [compile, pack, packHz, packDx]) {
 }
 
 
-final s3CmdOpts="--access_key=${System.getenv('NXF_AWS_ACCESS')} --secret_key=${System.getenv('NXF_AWS_SECRET')} -q --acl-public"
+final s3CmdOpts="-q --no-mime-magic --reduced-redundancy --acl-public --access_key=${System.getenv('NXF_AWS_ACCESS')} --secret_key=${System.getenv('NXF_AWS_SECRET')}"
 
 /*
  * Publish 'nextflow' launcher
  */
 task publish(type: Exec) {
-    def cmd = "s3cmd put nextflow s3://nextflow.io/releases/latest/nextflow $s3CmdOpts"
+    def cmd = "s3cmd put nextflow s3://www.nextflow.io/releases/latest/nextflow $s3CmdOpts"
     commandLine 'bash', '-c', cmd
 }
 
@@ -339,13 +339,13 @@ task release(type: Exec, dependsOn: [compile, test, packAll]) {
     github-release upload -u nextflow-io -r nextflow -t v$version --file ${file0} --name ${file0.name}
 
     # upload assets
-    s3cmd put ${file0} s3://nextflow.io/releases/v$version/${file0.name} $s3CmdOpts
-    s3cmd put ${file1} s3://nextflow.io/releases/v$version/${file1.name} $s3CmdOpts
-    s3cmd put ${file2} s3://nextflow.io/releases/v$version/${file2.name} $s3CmdOpts
-    s3cmd put ${file3} s3://nextflow.io/releases/v$version/${file3.name} $s3CmdOpts
+    s3cmd put ${file0} s3://www.nextflow.io/releases/v$version/${file0.name} $s3CmdOpts
+    s3cmd put ${file1} s3://www.nextflow.io/releases/v$version/${file1.name} $s3CmdOpts
+    s3cmd put ${file2} s3://www.nextflow.io/releases/v$version/${file2.name} $s3CmdOpts
+    s3cmd put ${file3} s3://www.nextflow.io/releases/v$version/${file3.name} $s3CmdOpts
 
     # publish the script as the latest
-    s3cmd put nextflow s3://nextflow.io/releases/latest/nextflow $s3CmdOpts
+    s3cmd put ${file0} s3://www.nextflow.io/releases/latest/nextflow $s3CmdOpts
 
     """.stripIndent()
 
