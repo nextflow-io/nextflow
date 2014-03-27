@@ -228,5 +228,3 @@ and <a href='http://www.gpars.org/' target='_blank'>Gpars</a>
 
 YourKit is kindly supporting this open source project with its full-featured Java Profiler.
 Read more http://www.yourkit.com
-
-[![githalytics.com alpha](https://cruel-carlota.pagodabox.com/d102686dfa0eec991524739bacd362e8 "githalytics.com")](http://githalytics.com/paoloditommaso/nextflow)
