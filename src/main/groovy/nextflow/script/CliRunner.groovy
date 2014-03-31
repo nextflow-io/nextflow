@@ -365,8 +365,11 @@ class CliRunner {
         if( libraries == null ) {
             // if no user defined libraries are provided
             // try to add the 'lib' folder in the local path if exist
-            def localLib = new File('lib')
-            if( localLib.exists() ) { addLibPaths(localLib) }
+            def localLib = session.baseDir ? new File(session.baseDir,'lib') : new File('lib')
+            if( localLib.exists() ) {
+                log.debug "Using default localLib path: $localLib"
+                addLibPaths(localLib)
+            }
         }
 
         libraries?.each { File lib -> def path = lib.absolutePath
