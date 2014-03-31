@@ -19,7 +19,6 @@
  */
 
 package nextflow.extension
-
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
@@ -48,7 +47,6 @@ import nextflow.util.FileHelper
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.codehaus.groovy.runtime.ResourceGroovyMethods
 import org.codehaus.groovy.runtime.StringGroovyMethods
-
 /**
  * Provides extension methods to chunk text and file
  *
@@ -60,11 +58,11 @@ import org.codehaus.groovy.runtime.StringGroovyMethods
 @Slf4j
 class NextflowExtensions {
 
-    static private PATTERN_RIGHT_TRIM = ~/\s+$/
+    static private Pattern PATTERN_RIGHT_TRIM = ~/\s+$/
 
-    static private PATTERN_LEFT_TRIM = /^\s+/
+    static private Pattern PATTERN_LEFT_TRIM = ~/^\s+/
 
-    static private PATTERN_FASTA_DESC = ~/^>\S+\s+(.*)/
+    static private Pattern PATTERN_FASTA_DESC = ~/^>\S+\s+(.*)/
 
     /**
      * Remove blank chars at the end of the string
