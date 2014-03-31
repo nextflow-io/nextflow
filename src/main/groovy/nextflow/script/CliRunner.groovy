@@ -530,8 +530,8 @@ class CliRunner {
                 runner.test(scriptFile, options.test, scriptArgs )
             }
             else {
-                // -- set a shutdown hook to save the current session ID and command lines
-                addShutdownHook { HistoryFile.history.append( runner.session.uniqueId, args ) }
+                // -- add this run to the local history
+                HistoryFile.history.append( runner.session.uniqueId, args )
                 // -- run it!
                 runner.execute(scriptFile,scriptArgs)
             }
