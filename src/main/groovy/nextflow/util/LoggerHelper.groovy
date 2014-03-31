@@ -76,7 +76,7 @@ class LoggerHelper {
         root.detachAndStopAllAppenders()
 
         // -- define the console appender
-        Map<String,Level> packages = [ 'com.hazelcast': Level.WARN ]
+        Map<String,Level> packages = [ 'com.hazelcast': Level.WARN, 'com.hazelcast.client.connection.nio.ClientConnection': Level.ERROR ]
         packages[Const.MAIN_PACKAGE] = quiet ? Level.WARN : Level.INFO
         debugConf?.each { packages[it] = Level.DEBUG }
         traceConf?.each { packages[it] = Level.TRACE }
