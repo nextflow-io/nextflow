@@ -198,9 +198,7 @@ abstract class AbstractExecutor {
         log.trace "Unstaging file names: $fileOutNames"
         if( fileOutNames ) {
             result << "mkdir -p ${task.getTargetDir()}"
-            result << "for item in \"${fileOutNames.unique().join(' ')}\"; do"
-            result << '  rsync -rRz $item ' + task.getTargetDir().toString()
-            result << 'done'
+            result << "rsync -rRzl ${fileOutNames.unique().join(' ')} ${task.getTargetDir().toString()}"
         }
 
         return result.join(separatorChar)
