@@ -31,18 +31,13 @@ class Const {
 
     static final File APP_HOME_DIR
 
-    static final File APP_TMP_DIR
-
     static {
+
         APP_HOME_DIR = new File( System.getProperty("user.home"), ".${APP_NAME}" )
         if( !APP_HOME_DIR.exists() && !APP_HOME_DIR.mkdir() ) {
             throw new IllegalStateException("Cannot create path '${APP_HOME_DIR}' -- check file system access permission")
         }
 
-        APP_TMP_DIR = new File(APP_HOME_DIR, 'tmp')
-        if( !APP_TMP_DIR.exists() && !APP_TMP_DIR.mkdirs()) {
-            throw new IllegalStateException("Cannot create path '${APP_TMP_DIR}' -- check file system access permission")
-        }
     }
 
     /**
