@@ -19,6 +19,8 @@
  */
 
 package nextflow.ast
+
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
@@ -55,6 +57,7 @@ import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.syntax.SyntaxException
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
+
 /**
  * Implement some syntax sugars of Nextflow DSL scripting.
  *
@@ -62,8 +65,9 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
  */
 
 @Slf4j
+@CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
-class NextflowDSLImpl implements ASTTransformation {
+public class NextflowDSLImpl implements ASTTransformation {
 
     def String currentTaskName
 
@@ -72,14 +76,14 @@ class NextflowDSLImpl implements ASTTransformation {
     @Override
     void visit(ASTNode[] astNodes, SourceUnit unit) {
 
-        createVisitor(unit).visitClass(astNodes[1])
+        createVisitor(unit).visitClass((ClassNode)astNodes[1])
 
     }
 
     /*
      * create the code visitor
      */
-    def createVisitor( SourceUnit unit ) {
+    protected ClassCodeVisitorSupport createVisitor( SourceUnit unit ) {
 
         new ClassCodeVisitorSupport() {
 
@@ -147,7 +151,7 @@ class NextflowDSLImpl implements ASTTransformation {
      * @param methodCall
      * @param unit
      */
-    def void convertProcessBlock( MethodCallExpression methodCall, SourceUnit unit ) {
+    protected void convertProcessBlock( MethodCallExpression methodCall, SourceUnit unit ) {
         log.trace "Apply task closure transformation to method call: $methodCall"
 
         def args = methodCall.arguments as ArgumentListExpression
@@ -240,11 +244,17 @@ class NextflowDSLImpl implements ASTTransformation {
                 readSource(stm,source,unit)
 
                 if ( stm instanceof ReturnStatement  ){
-                    (done,line,coln) = wrapExpressionWithClosure(block, stm.expression, len, source, unit)
+                    List result = wrapExpressionWithClosure(block, stm.getExpression(), len, source, unit)
+                    done = result[0]
+                    line = result[1] as int
+                    coln = result[2] as int
                 }
 
                 else if ( stm instanceof ExpressionStatement )  {
-                    (done,line,coln) = wrapExpressionWithClosure(block, stm.expression, len, source, unit)
+                    List result = wrapExpressionWithClosure(block, stm.getExpression(), len, source, unit)
+                    done = result[0]
+                    line = result[1] as int
+                    coln = result[2] as int
                 }
                 // set the 'script' flag
                 currentLabel = 'script'
@@ -266,7 +276,7 @@ class NextflowDSLImpl implements ASTTransformation {
      * @param unit
      * @return a {@code TaskBody} object
      */
-    private makeScriptWrapper( ClosureExpression closure, CharSequence source, boolean scriptOrNative, SourceUnit unit ) {
+    private Expression makeScriptWrapper( ClosureExpression closure, CharSequence source, boolean scriptOrNative, SourceUnit unit ) {
 
         final newArgs = []
         newArgs << (closure)
@@ -274,7 +284,7 @@ class NextflowDSLImpl implements ASTTransformation {
         newArgs << ( scriptOrNative ? ConstantExpression.PRIM_TRUE : ConstantExpression.PRIM_FALSE )
 
         final variables = fetchVariables(closure,unit)
-        variables.each { TokenValRef var ->
+        for( TokenValRef var: variables ) {
             def pName = new ConstantExpression(var.name)
             def pLine = new ConstantExpression(var.lineNum)
             def pCol = new ConstantExpression(var.colNum)
@@ -309,13 +319,13 @@ class NextflowDSLImpl implements ASTTransformation {
             def prop = expr.property as ConstantExpression
             def target = new VariableExpression(prop.text)
 
-            if( obj instanceof MethodCallExpression && 'stdout' == obj.methodAsString ) {
+            if( obj instanceof MethodCallExpression && 'stdout' == obj.getMethodAsString() ) {
                 def stdout = new MethodCallExpression( new VariableExpression('this'), 'stdout', new ArgumentListExpression()  )
                 def into = new MethodCallExpression(stdout, 'into', new ArgumentListExpression(target))
                 // remove replace the old one with the new one
                 stm.setExpression( into )
             }
-            else if( obj instanceof MethodCallExpression && 'stdin' == obj.methodAsString ) {
+            else if( obj instanceof MethodCallExpression && 'stdin' == obj.getMethodAsString() ) {
                 def stdin = new MethodCallExpression( new VariableExpression('this'), 'stdin', new ArgumentListExpression()  )
                 def from = new MethodCallExpression(stdin, 'from', new ArgumentListExpression(target))
                 // remove replace the old one with the new one
@@ -327,7 +337,7 @@ class NextflowDSLImpl implements ASTTransformation {
     /*
      * handle *input* parameters
      */
-    def void convertInputMethod( Expression expression ) {
+    protected void convertInputMethod( Expression expression ) {
         log.trace "convert > input expression: $expression"
 
         if( expression instanceof MethodCallExpression ) {
@@ -386,7 +396,7 @@ class NextflowDSLImpl implements ASTTransformation {
      * handle *shared* parameters
      */
 
-    def void convertShareMethod( Expression expression ) {
+    protected void convertShareMethod( Expression expression ) {
         log.trace "convert > shared expression: $expression"
 
         if( expression instanceof MethodCallExpression ) {
@@ -408,7 +418,7 @@ class NextflowDSLImpl implements ASTTransformation {
     }
 
 
-    def void convertOutputMethod( Expression expression ) {
+    protected void convertOutputMethod( Expression expression ) {
         log.trace "convert > output expression: $expression"
 
         if( !(expression instanceof MethodCallExpression) ) {
@@ -520,8 +530,8 @@ class NextflowDSLImpl implements ASTTransformation {
          */
         if( expr instanceof GStringExpression && ( withinFileMethod || withinSetMethod ) ) {
 
-            def strings = expr.getStrings()
-            def varNames = expr.getValues().collect { VariableExpression it -> new ConstantExpression(it.name) }
+            def strings = (List<Expression>)expr.getStrings()
+            def varNames = (List<Expression>)expr.getValues().collect { VariableExpression it -> new ConstantExpression(it.name) }
 
             return newObj( TokenGString, new ConstantExpression(expr.text), new ListExpression(strings), new ListExpression(varNames) )
         }
@@ -574,7 +584,7 @@ class NextflowDSLImpl implements ASTTransformation {
      * @param args The arguments to be passed to the constructor
      * @return The instance for the constructor call
      */
-    def protected newObj( Class clazz, TupleExpression args ) {
+    protected Expression newObj( Class clazz, TupleExpression args ) {
         def type = new ClassNode(clazz)
         return new ConstructorCallExpression(type,args)
     }
@@ -587,7 +597,7 @@ class NextflowDSLImpl implements ASTTransformation {
      * @param args The arguments to be passed to the constructor, they will be wrapped by in a {@code ArgumentListExpression}
      * @return The instance for the constructor call
      */
-    def protected newObj( Class clazz, Object... params ) {
+    protected Expression newObj( Class clazz, Object... params ) {
         def type = new ClassNode(clazz)
         def args = new ArgumentListExpression( params as List<Expression>)
         return new ConstructorCallExpression(type,args)
@@ -605,15 +615,14 @@ class NextflowDSLImpl implements ASTTransformation {
      *      <li>3nd item: on error condition the column containing the error in the source script, zero otherwise
      *
      */
-    def List wrapExpressionWithClosure( BlockStatement block, Expression expr, int len, source, unit ) {
+    protected List wrapExpressionWithClosure( BlockStatement block, Expression expr, int len, CharSequence source, SourceUnit unit ) {
         if( expr instanceof GStringExpression || expr instanceof ConstantExpression ) {
             // remove the last expression
             block.statements.remove(len-1)
 
             // and replace it by a wrapping closure
             def closureExp = new ClosureExpression( Parameter.EMPTY_ARRAY, new ExpressionStatement(expr) )
-            closureExp.variableScope = new VariableScope()
-            closureExp.variableScope.parent = block.variableScope
+            closureExp.variableScope = new VariableScope(block.variableScope)
 
             // append to the list of statement
             //def wrap = newObj(TaskBody, closureExp, new ConstantExpression(source.toString()), ConstantExpression.TRUE)
@@ -643,7 +652,7 @@ class NextflowDSLImpl implements ASTTransformation {
      * @param methodCall
      * @param unit
      */
-    def void convertProcessDef( MethodCallExpression methodCall, SourceUnit unit ) {
+    protected void convertProcessDef( MethodCallExpression methodCall, SourceUnit unit ) {
         log.trace "Converts 'process' ${methodCall.arguments} "
 
         assert methodCall.arguments instanceof ArgumentListExpression
@@ -686,7 +695,7 @@ class NextflowDSLImpl implements ASTTransformation {
      * @param unit
      * @return
      */
-    def Set<TokenValRef> fetchVariables( ClosureExpression closure, SourceUnit unit ) {
+    protected Set<TokenValRef> fetchVariables( ClosureExpression closure, SourceUnit unit ) {
         def visitor = new VariableVisitor(unit)
         visitor.visitClosureExpression(closure)
         return visitor.allVariables
@@ -710,7 +719,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 return
 
             def token = new TokenValRef(var.name, var.lineNumber, var.columnNumber)
-            log.trace token.toString()
+            NextflowDSLImpl.log.trace token.toString()
 
             if( !fAllVariables.containsKey(var.name))
                 fAllVariables[var.name] = token
@@ -721,7 +730,9 @@ class NextflowDSLImpl implements ASTTransformation {
             return sourceUnit
         }
 
-        Set<TokenValRef> getAllVariables() { new HashSet<TokenValRef>(fAllVariables.values()) }
+        Set<TokenValRef> getAllVariables() {
+            new HashSet<TokenValRef>(fAllVariables.values())
+        }
     }
 
 
