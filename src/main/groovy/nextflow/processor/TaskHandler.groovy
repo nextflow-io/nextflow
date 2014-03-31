@@ -101,7 +101,7 @@ public abstract class TaskHandler {
     boolean isCompleted()  { return status == Status.COMPLETED  }
 
     protected StringBuilder toStringBuilder(StringBuilder builder) {
-        builder << "name: ${task.name}; status: $status; exit: ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}; workDir: ${task.workDirectory}"
+        builder << "id: ${task.id}; name: ${task.name}; status: $status; exit: ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}; workDir: ${task.workDirectory}"
     }
 
     String toString() {
