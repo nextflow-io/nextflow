@@ -19,7 +19,6 @@
  */
 
 package nextflow.util
-
 import java.util.concurrent.atomic.AtomicBoolean
 
 import ch.qos.logback.classic.Level
@@ -38,10 +37,9 @@ import ch.qos.logback.core.rolling.TriggeringPolicyBase
 import ch.qos.logback.core.spi.FilterReply
 import groovy.transform.PackageScope
 import nextflow.Const
-import org.apache.commons.lang.exception.ExceptionUtils
 import nextflow.script.CliOptions
+import org.apache.commons.lang.exception.ExceptionUtils
 import org.slf4j.LoggerFactory
-
 /**
  * Helper methods to setup the logging subsystem
  *
@@ -85,7 +83,7 @@ class LoggerHelper {
         filter.setContext(loggerContext)
         filter.start()
 
-        final consoleAppender = !options.isDaemon() ? new ConsoleAppender() : null
+        final consoleAppender = System.console() ? new ConsoleAppender() : null
         if( consoleAppender )  {
             consoleAppender.setContext(loggerContext)
             consoleAppender.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
@@ -116,7 +114,6 @@ class LoggerHelper {
         fileAppender.setTriggeringPolicy(new RollOnStartupPolicy())
         fileAppender.start()
 
-
         // -- configure the ROOT logger
         root.setLevel(Level.INFO)
         root.addAppender(fileAppender)
@@ -139,7 +136,8 @@ class LoggerHelper {
             logger.setLevel(Level.DEBUG)
             logger.setAdditive(false)
             logger.addAppender(fileAppender)
-            logger.addAppender(consoleAppender)
+            if( consoleAppender )
+                logger.addAppender(consoleAppender)
         }
 
         // -- trace packages specified by the user
@@ -151,6 +149,9 @@ class LoggerHelper {
             if( consoleAppender )
                 logger.addAppender(consoleAppender)
         }
+
+        if(!consoleAppender)
+            logger.debug "Console appender: disabled"
     }
 
 
