@@ -178,7 +178,7 @@ class NextflowExtensions {
             }
             else if( record.width.toString().isInteger()) {
                 def buff = new StringBuilder()
-                int len = record.width.toInteger()
+                int len = record.width as int
 
                 if( len > 0 ) {
                     body.chopString(count:len, ignoreNewLine: true) { str ->
