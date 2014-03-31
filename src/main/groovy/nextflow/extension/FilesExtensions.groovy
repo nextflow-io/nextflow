@@ -153,7 +153,7 @@ class FilesExtensions {
      * @param target
      * @return
      */
-    def static copyTo( Path source, Path target ) {
+    def static Path copyTo( Path source, Path target ) {
 
         if( source.isDirectory() ) {
             def parent = target.getParent()
