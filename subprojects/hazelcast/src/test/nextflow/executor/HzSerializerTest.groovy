@@ -77,11 +77,11 @@ class HzSerializerTest extends Specification {
         when:
         def cmd = new HzCmdCall( uuid, task )
         map.put( 'cmd', cmd )
-        def result = new HzCmdResult(cmd, 'Bravo', new IllegalArgumentException() )
+        def result = HzCmdNotify.result(cmd, 'Bravo', new IllegalArgumentException() )
         map.put( 'result', result )
         then:
         map.get('cmd') == cmd
-        map.get('result').sender == result.sender
+        map.get('result').sessionId == result.sessionId
         map.get('result').context == result.context
         map.get('result').taskId == result.taskId
 

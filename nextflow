@@ -49,7 +49,7 @@ function install() {
     else tmpfile=$(mktemp -t XXXXX --tmpdir=$PWD) || exit $?
     fi
     
-    get "http://nextflow.io/releases/latest/nextflow" "$tmpfile" "$1" || exit $?
+    get "http://www.nextflow.io/releases/latest/nextflow" "$tmpfile" "$1" || exit $?
     mv $tmpfile $1 || exit $?
     chmod +x $1 || exit $?
     bash $1 -download || exit $?
@@ -74,7 +74,7 @@ if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
 fi  
 
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
-NXF_VER=${NXF_VER:-'0.7.0'}
+NXF_VER=${NXF_VER:-'0.7.1'}
 NXF_PACK=${NXF_PACK:-one}
 
 # Check if it is required to run in background
@@ -84,7 +84,7 @@ for opt in "$@"; do
     -bg)
       bg=1;;
     -d|-daemon.*)
-      bg=1; NXF_PACK='hz';;
+      NXF_PACK='hz';;
     hazelcast)
       NXF_PACK='hz';;
     -download)
@@ -100,7 +100,7 @@ done
 [[ $NXF_EXECUTOR_NAME = 'hazelcast' ]] && NXF_PACK='hz'
 NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACK.jar}
 NXF_BIN=${NXF_BIN:-$NXF_HOME/framework/$NXF_VER/$NXF_JAR}
-NXF_BASE=${NXF_BASE:-http://nextflow.io/releases}
+NXF_BASE=${NXF_BASE:-http://www.nextflow.io/releases}
 NXF_PATH=$(dirname $NXF_BIN)
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
 

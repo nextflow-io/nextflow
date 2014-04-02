@@ -64,7 +64,7 @@ class HzSerializerConfig {
     }
 
     static SerializerConfig getHzCmdCallConfig() {
-        log.debug "Registering Hazelcast Path serializer"
+        log.debug "Registering Hazelcast HzCmdCall serializer"
         new SerializerConfig()
                 .setTypeClass( HzCmdCall )
                 .setImplementation( new HzCmdCallSerializer() )
@@ -72,10 +72,10 @@ class HzSerializerConfig {
     }
 
     static SerializerConfig getHzCmdResultConfig() {
-        log.debug "Registering Hazelcast Path serializer"
+        log.debug "Registering Hazelcast HzCmdNotify serializer"
         new SerializerConfig()
-                .setTypeClass( HzCmdResult )
-                .setImplementation( new HzCmdResultSerializer() )
+                .setTypeClass( HzCmdNotify )
+                .setImplementation( new HzCmdNotifySerializer() )
 
     }
 
@@ -92,7 +92,6 @@ class HzSerializerConfig {
 
         @Override
         void write(ObjectDataOutput stream, Object obj) throws IOException {
-            log.trace "Hz serialization (${typeId}): $obj"
             Output output = new Output((OutputStream) stream);
             KryoHelper.kryo().writeClassAndObject(output, obj)
             output.flush();
@@ -100,7 +99,6 @@ class HzSerializerConfig {
 
         @Override
         Object read(ObjectDataInput stream) throws IOException {
-            log.trace "Hz de-serializing (${typeId})"
             Input input = new Input((InputStream)stream);
             return KryoHelper.kryo().readClassAndObject(input)
         }
@@ -128,7 +126,7 @@ class HzSerializerConfig {
         int getTypeId() { 103 }
     }
 
-    static class HzCmdResultSerializer extends GlobalSerializer {
+    static class HzCmdNotifySerializer extends GlobalSerializer {
         int getTypeId() { 104 }
     }
 

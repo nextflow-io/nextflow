@@ -21,12 +21,14 @@
 package nextflow.processor
 
 /**
+ * Strategies to handle a process execution fault
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 enum ErrorStrategy {
 
+    TERMINATE,  // on error, terminate gracefully
     IGNORE,     // on error, ignore it an go-on
-    TERMINATE   // on error, terminate gracefully
+    RETRY       // on error, retry
 
 }

@@ -23,7 +23,7 @@ requires Java 7 to be installed.
 In the case your network supports *multicast* discovery, simply launch the Nextflow daemon in each cluster node
 as shown below::
 
-    nextflow -d
+    nextflow -d -bg
 
 The process will run in the background. The daemon output is stored in the log file ``.nxf-daemon.log``. The daemon
 process ``PID`` is saved in the file ``.nextflow.pid`` in the same folder.
@@ -39,26 +39,28 @@ If you don't see members joining, then it is likely because multicast is not ava
 In the case the multicast discovery is not available in your network, you will need to provide at least one (or more)
 IP address of well known members to connect to. For example::
 
-    nextflow -d -daemon.join 192.168.1.104
+    nextflow -bg -daemon.join 192.168.1.104
 
 Configuration options
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 The following daemon configuration options can be used.
 
-=========== ================
-Name        Description
-=========== ================
-port        The TCP port to which the daemon will connect. Default: ``5701``
-join        The IP address(es) of one more more cluster nodes to which the daemon make part. By using the value ``multicast``
-group       The cluster name of which this node makes part. It allows to create separate clusters. Default: ``nextflow``
-slots       The number of slots this damon node provides i.e. of process that can execute in parallel. By it is equal to the number of CPU cores.
-interface   The network interfaces that Hazelcast has to use. It can be the interface IP address or name.
-=========== ================
+=========================== ================
+Name                        Description
+=========================== ================
+port                        TCP port to which the daemon will connect. Default: ``5701``
+join                        IP address(es) of one more more cluster nodes to which the daemon make part. By using the value ``multicast``
+group                       Cluster name of which this node makes part. It allows to create separate clusters. Default: ``nextflow``
+slots                       TNumber of slots this damon node provides i.e. of process that can execute in parallel. By it is equal to the number of CPU cores.
+interface                   Network interfaces that Hazelcast has to use. It can be the interface IP address or name.
+connectionMonitorInterval   Minimum interval to consider a connection error as critical in milliseconds (default: 300).
+connectionMonitorMaxFaults  Maximum IO error count before disconnecting from a node (default: 5).
+=========================== ================
 
 These options can be specified as command line parameters by pre-pending them the prefix ``-daemon.``, as shown below::
 
-    nextflow -d -daemon.port 5705 -daemon.interface eth0
+    nextflow -bg -daemon.port 5705 -daemon.interface eth0
 
 The same options can be entered in the nextflow configuration file named ``nextflow.config``, as shown below::
 

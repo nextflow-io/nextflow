@@ -80,6 +80,8 @@ class TaskPollingMonitor implements TaskMonitor {
 
     private int capacity
 
+    private Queue<Closure> eventsQueue
+
     /**
      * Initialise the monitor, creating the queue which will hold the tasks
      *
@@ -97,6 +99,7 @@ class TaskPollingMonitor implements TaskMonitor {
         this.capacity = capacity
 
         this.pollingQueue = new ConcurrentLinkedQueue<>()
+        this.eventsQueue = new ConcurrentLinkedQueue<>()
 
     }
 
@@ -147,13 +150,13 @@ class TaskPollingMonitor implements TaskMonitor {
      * @return The new capacity value
      */
     protected int capacityInc( int slots = 1 ) {
-
+        def result = 0
         mutex.withLock {
-            def result = capacity += slots
+            result = capacity += slots
             notFull.signal()
-            return result
         }
-
+        log.debug "Monitor current capacity: $result (after inc: $slots)"
+        return result
     }
 
     /**
@@ -164,9 +167,13 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     protected int capacityDec( int slots = 1 ) {
 
+        def result = 0
         mutex.withLock {
-            return capacity -= slots
+            result = capacity -= slots
         }
+
+        log.debug "Monitor current capacity: $result (after dec: $slots)"
+        return result
     }
 
 
@@ -274,8 +281,11 @@ class TaskPollingMonitor implements TaskMonitor {
             long time = System.currentTimeMillis()
             log.trace "Scheduler queue size: ${pollingQueue.size()}"
 
+            // process all scheduled events
+            processEvents()
+
             // check all running tasks for termination
-            checkAll(pollingQueue)
+            checkAll()
 
             if( session.isTerminated() && pollingQueue.size() == 0 ) {
                 break
@@ -316,22 +326,62 @@ class TaskPollingMonitor implements TaskMonitor {
 
 
     /**
+     * Check and update the queue tasks status
+     *
      * @param collection The collections of tasks to check
      */
-    protected void checkAll( Collection<TaskHandler> collection ) {
+    protected void checkAll() {
 
-        collection.each { handler ->
-
+        for( TaskHandler handler : pollingQueue ) {
             try {
                 checkTaskStatus(handler)
             }
-            catch( Exception e ) {
-                dispatcher.notifyError(e, handler)
+            catch (Exception error) {
+                handleException(handler, error)
             }
-
         }
 
     }
+
+    /**
+     * Applies and consumes all the queued events
+     */
+    final protected processEvents() {
+
+        Iterator<Closure> itr = eventsQueue.iterator()
+        while( itr.hasNext() ) {
+            Closure event = itr.next()
+            try {
+                event.call()
+            }
+            finally {
+                itr.remove()
+            }
+        }
+
+    }
+
+
+    /**
+     * Task handler status should never be updated from an external thread, but their updated
+     * must be delegate to the task monitor by using this method.
+     *
+     */
+    final void schedule( boolean signal = true, Closure event ) {
+        eventsQueue.add( event )
+        if( signal )
+            signalComplete()
+    }
+
+    final protected void handleException( TaskHandler handler, Exception error ) {
+        try {
+            handler.task.processor.resumeOrDie(handler?.task, error)
+        }
+        finally {
+            dispatcher.notifyError(handler, error)
+        }
+    }
+
 
     /**
      * Check the status of the given task
@@ -350,6 +400,12 @@ class TaskPollingMonitor implements TaskMonitor {
         if( handler.checkIfCompleted()  ) {
             // since completed *remove* the task from the processing queue
             drop(handler)
+
+            // finalize the tasks execution
+            handler.task.processor.finalizeTask(handler.task)
+            // trigger the count down latch when it is a blocking task
+            handler.latch?.countDown()
+
             // finalize the tasks execution
             dispatcher.notifyTerminated(handler)
         }

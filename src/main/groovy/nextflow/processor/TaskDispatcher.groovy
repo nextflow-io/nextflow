@@ -169,7 +169,7 @@ class TaskDispatcher {
     /**
      * Notifies task start event
      */
-    public void notifyStarted(TaskHandler handler) {
+    public void notifyStarted( TaskHandler handler ) {
 
     }
 
@@ -178,12 +178,7 @@ class TaskDispatcher {
      *
      * @param handler
      */
-    public void notifyTerminated(TaskHandler handler) {
-
-        // finalize the tasks execution
-        handler.task.processor.finalizeTask(handler.task)
-        // trigger the count down latch when it is a blocking task
-        handler.latch?.countDown()
+    public void notifyTerminated( TaskHandler handler ) {
 
     }
 
@@ -193,9 +188,7 @@ class TaskDispatcher {
      * @param handler
      * @param e
      */
-    public void notifyError(Throwable e, TaskHandler handler = null ) {
-
-        handler.task.processor.handleException(e, handler?.task)
+    public void notifyError( TaskHandler handler, Throwable e ) {
 
     }
 

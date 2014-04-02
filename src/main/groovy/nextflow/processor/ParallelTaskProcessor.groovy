@@ -332,7 +332,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         log.trace "[${task.name}] cache keys: ${keys} -- mode: $mode"
         final hash = CacheHelper.hasher(keys, mode).hash()
 
-        def submitted = checkCachedOrLaunchTask(task,hash)
+        def submitted = checkCachedOrLaunchTask(task,hash,resumable)
         if( submitted )
             log.info "[${getHashLog(task.hash)}] Submitted process > ${task.name}"
     }

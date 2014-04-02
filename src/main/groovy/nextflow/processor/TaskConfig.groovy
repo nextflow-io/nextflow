@@ -81,6 +81,7 @@ class TaskConfig implements Map {
             validExitStatus = [0]
             inputs = new InputsList()
             outputs = new OutputsList()
+            maxRetries = 3
         }
 
         configProperties.errorStrategy = ErrorStrategy.TERMINATE
@@ -131,10 +132,16 @@ class TaskConfig implements Map {
     }
 
     public getProperty( String name ) {
-        if( name == 'cacheable' )
-            isCacheable()
-        else
-            configProperties.get(name)
+        switch( name ) {
+            case 'cacheable':
+                return isCacheable()
+
+            case 'errorStrategy':
+                return getErrorStrategy()
+
+            default:
+                return configProperties.get(name)
+        }
     }
 
 
@@ -266,21 +273,17 @@ class TaskConfig implements Map {
     }
 
 
-    TaskConfig errorStrategy( Object value ) {
-        assert value
-
-        if( value instanceof ErrorStrategy ) {
-            configProperties.errorStrategy = value
-        }
-        else {
-            configProperties.errorStrategy = ErrorStrategy.valueOf(value.toString().toUpperCase())
-        }
-
-        return this
-    }
-
     ErrorStrategy getErrorStrategy() {
-        configProperties.errorStrategy
+        switch( configProperties.errorStrategy ) {
+            case CharSequence:
+                return configProperties.errorStrategy.toUpperCase() as ErrorStrategy
+            case ErrorStrategy:
+                return configProperties.errorStrategy
+            case null:
+                return null
+            default:
+                throw new IllegalArgumentException("Not a valid 'ErrorStrategy' value: ${configProperties.errorStrategy}")
+        }
     }
 
 
@@ -344,6 +347,10 @@ class TaskConfig implements Map {
 
     HashMode getHashMode() {
         configProperties.cache == 'deep' ? HashMode.DEEP : HashMode.STANDARD
+    }
+
+    int getMaxRetries() {
+        configProperties.maxRetries ? configProperties.maxRetries as int : 0
     }
 
 }

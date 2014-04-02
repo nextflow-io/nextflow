@@ -29,8 +29,10 @@ import com.hazelcast.config.FileSystemXmlConfig
 import com.hazelcast.config.UrlXmlConfig
 import com.hazelcast.core.Hazelcast
 import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.core.IMap
 import com.hazelcast.core.IQueue
-import com.hazelcast.core.ITopic
+import com.hazelcast.core.Member
+import com.hazelcast.core.MemberAttributeEvent
 import com.hazelcast.core.MembershipEvent
 import com.hazelcast.core.MembershipListener
 import com.hazelcast.instance.MemberImpl
@@ -40,7 +42,6 @@ import nextflow.Const
 import nextflow.daemon.DaemonLauncher
 import nextflow.util.ConfigHelper
 import org.apache.commons.lang.StringUtils
-
 /**
  * Run the Hazelcast daemon used to process user processes
  *
@@ -61,9 +62,9 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
 
     private IQueue<HzCmdCall> tasksQueue
 
-    private ITopic<HzCmdResult> resultsTopic
+    private  IQueue<HzCmdNotify> eventsQueue
 
-    private ITopic<HzCmdStart> startsTopic
+    private IMap<String,HzNodeInfo> allMembers
 
     private ExecutorService executor
 
@@ -75,6 +76,8 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
     static HzDaemon current
 
     private Map config
+
+    private Member thisMember
 
     HzDaemon() {  }
 
@@ -145,18 +148,34 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
         return env.containsKey(key) ? env.get(key) : defValue
     }
 
-    @Memoized
-    protected getDaemonPort() {
+    protected getPort() {
         getDaemonProperty('port') as Integer
     }
 
-    @Memoized
-    protected String getDaemonGroupName() {
+    protected String getGroupName() {
         getDaemonProperty('group', DEFAULT_GROUP_NAME)
     }
 
-    protected int getDaemonSlots() {
+    protected int getSlots() {
         getDaemonProperty('slots', Runtime.getRuntime().availableProcessors()) as Integer
+    }
+
+    /**
+     * @link http://hazelcast.org/docs/latest/manual/html-single/#system-property
+     *
+     * @return Minimum interval to consider a connection error as critical in milliseconds.
+     */
+    protected String getConnectionMonitorInterval() {
+        getDaemonProperty('connectionMonitorInterval', '300') as String
+    }
+
+    /**
+     * @link http://hazelcast.org/docs/latest/manual/html-single/#system-property
+     *
+     * @return Maximum IO error count before disconnecting from a node
+     */
+    protected String getConnectionMonitorMaxFaults() {
+        getDaemonProperty('connectionMonitorMaxFaults', '5') as String
     }
 
     protected List<String> getDaemonInterfaces() {
@@ -187,14 +206,14 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
     @Memoized
     protected Config getConfigObj () {
         def result = new Config()
-        def groupName = daemonGroupName
+        def groupName = groupName
         log.debug "Hazelcast config > group name: $groupName"
         result.getGroupConfig().setName(groupName)
 
         def network = result.getNetworkConfig()
-        if( getDaemonPort() ) {
-            log.debug "Hazelcast config > port: ${daemonPort}"
-            network.setPort(daemonPort)
+        if( getPort() ) {
+            log.debug "Hazelcast config > port: ${port}"
+            network.setPort(port)
         }
 
         def interfaces = daemonInterfaces
@@ -224,6 +243,9 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
             }
         }
 
+        // -- config data structures
+        //result.getMapConfig(MEMBERS_MAP)
+
         log.debug("Hazelcast config > obj: ${result.toString()}")
         return result
     }
@@ -234,11 +256,23 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
     protected initialize() {
         System.setProperty('hazelcast.logging.type','slf4j')
         System.setProperty('hazelcast.system.log.enabled','true')
+        System.setProperty('hazelcast.memcache.enabled','false')
+        System.setProperty('hazelcast.rest.enabled', 'false')
+        System.setProperty('hazelcast.version.check.enabled', 'false')
         // -- see https://groups.google.com/d/msg/hazelcast/P-gu4em9WNk/b1uovn-k8rYJ
         System.setProperty('hazelcast.socket.bind.any', 'false')
 
+        // -- connection properties
+        final interval = getConnectionMonitorInterval()
+        log.debug "Hazelcast config > connectionMonitorInterval: $interval millis"
+        System.setProperty('hazelcast.connection.monitor.interval', interval)
+
+        final maxFaults = getConnectionMonitorMaxFaults()
+        log.debug "Hazelcast config > connectionMonitorMaxFaults: $maxFaults"
+        System.setProperty('hazelcast.connection.monitor.max.faults', maxFaults)
+
         // -- define the number of jobs this manage in parallel
-        capacity = getDaemonSlots()
+        capacity = getSlots()
         log.debug "Hazelcast config > slots: $capacity"
         if( capacity <= 0 )
             throw new IllegalArgumentException("Daemon 'slots' parameter cannot be less than 1")
@@ -252,22 +286,27 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
         // -- add serializer and create a new instance
         HzSerializerConfig.registerAll(cfg.getSerializationConfig())
         hazelcast = Hazelcast.newHazelcastInstance(cfg)
+        thisMember = hazelcast.getCluster().getLocalMember()
 
         // -- set up distributed data structures
         tasksQueue = hazelcast.getQueue(TASK_SUBMITS_QUEUE)
-        resultsTopic = hazelcast.getTopic(TASK_RESULTS_TOPIC)
-        startsTopic = hazelcast.getTopic(TASK_STARTS_TOPIC)
-        allSessions = hazelcast.getMap(SESSION_MAP)
+        eventsQueue = hazelcast.getQueue(TASK_EVENTS_QUEUE)
+        allSessions = hazelcast.getMap(SESSIONS_MAP)
+        allMembers = hazelcast.getMap(MEMBERS_MAP)
         hazelcast.getCluster().addMembershipListener(this)
 
         // -- report info
         def cluster = hazelcast.getCluster()
-        final local = cluster.getLocalMember() as MemberImpl
+        final local = thisMember as MemberImpl
         final address = "${local.getAddress().getHost()}:${local.getAddress().getPort()}"
         log.info "Member [${address}] joined cluster '${cfg.getGroupConfig().getName()}' -- Total nodes: ${cluster.getMembers().size()}"
 
         // -- set the current instance
         current = this
+
+        // -- set this member in the map
+        final nodeInfo = new HzNodeInfo(capacity)
+        allMembers.put( local.getUuid(), nodeInfo )
 
         // -- shutdown on JVM exit
         Runtime.getRuntime().addShutdownHook {
@@ -276,7 +315,7 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
                 hazelcast?.shutdown()
             }
             catch( Exception e ) {
-                log.debug "Error during node shutdown", e
+                log.debug "Error during node shutdown. Cause: ${e.message}"
             }
         }
     }
@@ -340,7 +379,7 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
         log.trace "Executing task command > $task"
 
         // -- notify the execution of this task
-        startsTopic.publish(new HzCmdStart(task))
+        notifyStart(task)
 
         // -- execute the task
         executor.submit( {
@@ -351,11 +390,11 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
                 result = task.call()
             }
             catch( Throwable ex ) {
-                log.debug("!Error running task: $task", ex)
+                log.debug("Error running task: $task", ex)
                 error = ex
             }
             finally {
-                publishCmdResult(task,result,error)
+                notifyResult(task,result,error)
                 mutex.withLock {
                     count--;
                     notFull.signal()
@@ -368,23 +407,29 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
     }
 
     /**
+     * Add the command start notification in the event queue
+     * @param cmd
+     */
+    private void notifyStart( HzCmdCall cmd ) {
+        eventsQueue.put( HzCmdNotify.start(cmd, thisMember.getUuid()) )
+    }
+
+    /**
      * Publish the command result
      *
      * @param cmd The {@code HzCmdCall} that originates the result
      * @param result The actual command result
      * @param error The thrown exception eventually
      */
-    private void publishCmdResult( HzCmdCall cmd, result, Throwable error ) {
+    private void notifyResult( HzCmdCall cmd, result, Throwable error ) {
         log.trace "Publishing command result: $cmd"
 
         try {
-            final obj = new HzCmdResult(cmd,result,error)
-            resultsTopic.publish(obj)
-
+            eventsQueue.put( HzCmdNotify.result(cmd, result, error) )
         }
         catch( Throwable throwable ) {
-            log.debug("!Unable to publish command result: $cmd -- Publishing error cause instead: ${throwable.getMessage()?:throwable}")
-            resultsTopic.publish( new HzCmdResult(cmd,result,throwable) )
+            log.debug("Unable to publish command result: $cmd -- Publishing error cause instead: ${throwable.getMessage()?:throwable}")
+            eventsQueue.put( HzCmdNotify.result(cmd,result,throwable) )
         }
 
     }
@@ -399,9 +444,9 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
         log.info "Nextflow cluster member remove: ${event.member}"
     }
 
-    def String getHostNameAndAddress() {
-        def host = InetAddress.getLocalHost()
-        return "${host.getHostName()} [${host.getHostAddress()}]"
+    @Override
+    void memberAttributeChanged(MemberAttributeEvent memberAttributeEvent) {
+        /* ignore this */
     }
 }
 

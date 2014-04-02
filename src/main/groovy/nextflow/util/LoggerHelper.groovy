@@ -83,7 +83,7 @@ class LoggerHelper {
         filter.setContext(loggerContext)
         filter.start()
 
-        final consoleAppender = System.console() ? new ConsoleAppender() : null
+        final consoleAppender = options.isDaemon() && options.isBackground() ? null : new ConsoleAppender()
         if( consoleAppender )  {
             consoleAppender.setContext(loggerContext)
             consoleAppender.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )

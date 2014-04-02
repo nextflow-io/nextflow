@@ -51,7 +51,7 @@ class InputStreamDeserializer extends ObjectInputStream {
     }
 
     /**
-     * Deserialize an object given its bytes representation and a custom classloader
+     * Deserialize an object given its bytes representation and a custom class-loader
      *
      * @param bytes
      * @param loader

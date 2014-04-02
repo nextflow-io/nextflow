@@ -19,7 +19,7 @@
  */
 
 apply plugin: 'gradle-one-jar'
-version = '0.7.0'
+version = '0.7.1'
 
 allprojects {
     apply plugin: 'groovy'
@@ -88,8 +88,9 @@ groovydoc {
     groovyClasspath = project.configurations.gdocLibs
 }
 
-sourceSets.main.java.srcDirs = [] 
+sourceSets.main.java.srcDirs = []
 sourceSets.main.groovy.srcDirs = ['src/main/java', 'src/main/groovy']
+sourceSets.main.resources.srcDirs = ['src/main/resources']
 
 compileGroovy {
     options.compilerArgs = ['-XDignore.symbol.file']

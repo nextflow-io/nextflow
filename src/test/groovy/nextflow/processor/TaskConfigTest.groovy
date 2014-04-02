@@ -348,5 +348,45 @@ class TaskConfigTest extends Specification {
 
     }
 
+    def testErrorStrategy() {
+
+        when:
+        def config = new TaskConfig(map)
+        then:
+        config.errorStrategy == strategy
+        config.getErrorStrategy() == strategy
+        where:
+        strategy                    | map
+        null                        | [:]
+        ErrorStrategy.TERMINATE     | [errorStrategy: 'terminate']
+        ErrorStrategy.TERMINATE     | [errorStrategy: 'TERMINATE']
+        ErrorStrategy.IGNORE        | [errorStrategy: 'ignore']
+        ErrorStrategy.IGNORE        | [errorStrategy: 'Ignore']
+        ErrorStrategy.RETRY         | [errorStrategy: 'retry']
+        ErrorStrategy.RETRY         | [errorStrategy: 'Retry']
+
+    }
+
+    def testErrorStrategy2() {
+
+        when:
+        def config = new TaskConfig([:])
+        config.errorStrategy( value )
+        then:
+        config.errorStrategy == expect
+        config.getErrorStrategy() == expect
+
+        where:
+        expect                      | value
+        null                        | null
+        ErrorStrategy.TERMINATE     | 'terminate'
+        ErrorStrategy.TERMINATE     | 'TERMINATE'
+        ErrorStrategy.IGNORE        | 'ignore'
+        ErrorStrategy.IGNORE        | 'Ignore'
+        ErrorStrategy.RETRY         | 'retry'
+        ErrorStrategy.RETRY         | 'Retry'
+
+    }
+
 
 }

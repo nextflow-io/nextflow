@@ -469,7 +469,7 @@ abstract class TaskProcessor {
      *      or {@code true} if the task has been submitted for execution
      *
      */
-    final protected boolean checkCachedOrLaunchTask( TaskRun task, HashCode hash, String script = null ) {
+    final protected boolean checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache, String script = null ) {
 
         int tries = 0
         while( true ) {
@@ -481,7 +481,7 @@ abstract class TaskProcessor {
             final exists = folder.exists()
             log.trace "[${task.name}] Cacheable folder: $folder -- exists: $exists; try: $tries"
 
-            def cached = isCacheable() && session.resumeMode && exists && checkCachedOutput(task, folder, hash)
+            def cached = shouldTryCache && exists && checkCachedOutput(task, folder, hash)
             if( cached )
                 return false
 
@@ -676,34 +676,67 @@ abstract class TaskProcessor {
      *         {@code false} ignore the error and continue to process other pending tasks
      */
     final protected boolean handleException( Throwable error, TaskRun task = null ) {
+        log.trace "Handling error: $error -- task: $task"
+        resumeOrDie( task, error ) == ErrorStrategy.TERMINATE
+    }
 
-        // when is a task level error and the user has chosen to ignore error, just report and error message
-        // return 'false' to DO NOT stop the execution
-        if( error instanceof ProcessException && taskConfig.errorStrategy == ErrorStrategy.IGNORE ) {
-            log.warn "Error running process > ${error.getMessage()} -- error is ignored"
-            return false
-        }
+    /**
+     *
+     * @param task The {@code TaskRun} instance that raised an error
+     * @param error The error object
+     * @return The {@code ErrorStrategy} applied
+     */
+    final protected ErrorStrategy resumeOrDie( TaskRun task, Throwable error ) {
 
-        // make sure the error is showed only the very first time
-        if( errorCount.getAndIncrement()>0 ) {
-            return true
-        }
+        try {
+            // do not recoverable error, just trow it again
+            if( error instanceof Error ) throw error
 
-        def message = []
-        message << "Error executing process > '${task?.name ?: name}'"
-        if( error instanceof ProcessException ) {
-            formatTaskError( message, error, task )
-            log.error message.join('\n')
-            log.trace "Process $name error trace:", error
+            final errorIndex = errorCount.getAndIncrement()
+
+            // when is a task level error and the user has chosen to ignore error, just report and error message
+            // return 'false' to DO NOT stop the execution
+            if( error instanceof ProcessException ) {
+                if( taskConfig.getErrorStrategy() == ErrorStrategy.IGNORE ) {
+                    log.warn "Error running process > ${error.getMessage()} -- error is ignored"
+                    return ErrorStrategy.IGNORE
+                }
+
+                if( task && taskConfig.getErrorStrategy() == ErrorStrategy.RETRY && errorIndex < taskConfig.getMaxRetries() ) {
+                    Thread.start {
+                        checkCachedOrLaunchTask( task, task.hash, false )
+                        log.info "[${getHashLog(task.hash)}] Re-submitted process > ${task.name}"
+                    }
+                    return ErrorStrategy.RETRY
+                }
+            }
+
+            // make sure the error is showed only the very first time
+            if( errorIndex > 0 ) {
+                return ErrorStrategy.TERMINATE
+            }
+
+            def message = []
+            message << "Error executing process > '${task?.name ?: name}'"
+            if( error instanceof ProcessException ) {
+                formatTaskError( message, error, task )
+                log.error message.join('\n')
+                log.trace "Process $name error trace:", error
+            }
+            else {
+                message << formatErrorCause( error )
+                message << "Tip: check the log file '.nextflow.log' for more details"
+                log.error message.join('\n'), error
+            }
         }
-        else {
-            message << formatErrorCause( error )
-            message << "Tip: check the log file '.nextflow.log' for more details"
-            log.error message.join('\n'), error
+        catch( Throwable e ) {
+            // no recoverable error
+            log.error("Unexpected error -- Aborting. Look at log file for details", e )
         }
 
         session.abort()
-        return true
+        return ErrorStrategy.TERMINATE
+
     }
 
     final protected formatTaskError( List message, Throwable error, TaskRun task ) {
@@ -1280,41 +1313,39 @@ abstract class TaskProcessor {
      */
     @PackageScope
     final void finalizeTask( TaskRun task ) {
-        log.trace "finalizing process > ${task.name}"
-        try {
-            // verify task exist status
-            if( task.type == ScriptType.GROOVY ) {
-                if( task.error ) {
-                    throw new ProcessFailedException("Process '${task.name}' failed", task.error)
-                }
-            }
+        log.trace "finalizing process > ${task.name} -- $task"
 
-            else {
-                if( task.exitStatus == Integer.MAX_VALUE)
+        def strategy = null
+        try {
+            if( task.type == ScriptType.SCRIPTLET ) {
+                if( task.exitStatus == Integer.MAX_VALUE )
                     throw new ProcessFailedException("Process '${task.name}' terminated for an unknown reason -- Likely it has been terminated by the external system")
 
                 boolean success = (task.exitStatus in taskConfig.validExitStatus)
-                if ( !success ) {
+                if ( !success )
                     throw new ProcessFailedException("Process '${task.name}' terminated with an error exit status")
-                }
             }
 
-            // if it's OK collect results and finalize
+            // -- verify task exist status
+            if( task.error )
+                throw new ProcessFailedException("Process '${task.name}' failed", task.error)
+
+            // -- if it's OK collect results and finalize
             collectOutputs(task)
 
             // save the context map for caching purpose
             // only the 'cache' is active and
-            if( isCacheable() && task.hasCacheableValues() && task.code.delegate != null ) {
-                ((DelegateMap) task.code.delegate).save(task.getCmdContextFile())
-            }
+            if( isCacheable() && task.hasCacheableValues() && task.code.delegate != null )
+                (task.code.delegate as DelegateMap).save(task.getCmdContextFile())
 
         }
         catch ( Throwable error ) {
-            handleException(error, task)
+            strategy = resumeOrDie(task, error)
         }
-        finally {
+
+        // -- finalize the task
+        if( strategy != ErrorStrategy.RETRY )
             finalizeTask0(task)
-        }
     }
 
     /**
@@ -1322,6 +1353,10 @@ abstract class TaskProcessor {
      */
     protected boolean isCacheable() {
         session.cacheable && taskConfig.cacheable
+    }
+
+    protected boolean isResumable() {
+        isCacheable() && session.resumeMode
     }
 
     /**

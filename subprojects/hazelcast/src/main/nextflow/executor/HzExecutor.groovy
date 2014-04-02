@@ -20,7 +20,6 @@
 package nextflow.executor
 import java.nio.file.Path
 
-import com.hazelcast.core.Member
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.processor.DelegateMap
@@ -125,16 +124,13 @@ class HzTaskHandler extends TaskHandler {
      * The member where the job has started
      */
     @PackageScope
-    volatile Member runningMember
+    volatile String runningMember
 
     /**
      * The result object for this task
      */
     @PackageScope
-    volatile HzCmdResult result
-
-    @PackageScope
-    volatile int tryCount
+    HzCmdNotify result
 
 
     static HzTaskHandler createScriptHandler( TaskRun task, TaskConfig taskConfig, HzExecutor executor ) {
@@ -175,13 +171,13 @@ class HzTaskHandler extends TaskHandler {
 
         // mark as submitted -- transition to STARTED has to be managed by the scheduler
         status = TaskHandler.Status.SUBMITTED
-        log.debug "Task ${task.name} (id: ${task.id}) > SUBMITTED"
+        log.trace "Task $task > Submitted"
     }
 
     @Override
     boolean checkIfRunning() {
         if( isSubmitted() && runningMember != null ) {
-            log.trace "Task ${task.name} > RUNNING on member ${runningMember}"
+            log.trace "Task ${task} > RUNNING on member ${runningMember}"
             status = TaskHandler.Status.RUNNING
             return true
         }
@@ -210,7 +206,7 @@ class HzTaskHandler extends TaskHandler {
             // -- set the task result error (if any)
             task.error = result.error
 
-            log.debug "Task ${task.name} (id: ${task.id}) > DONE (${task.exitStatus})"
+            log.trace "Task ${task} > DONE"
             return true
         }
 
@@ -221,6 +217,12 @@ class HzTaskHandler extends TaskHandler {
     void kill() {
         // not implemented
         // see also https://groups.google.com/d/msg/hazelcast/-SVy4k1-QrA/rlUee3i4POAJ
+    }
+
+
+    protected StringBuilder toStringBuilder(StringBuilder builder) {
+        super.toStringBuilder(builder)
+        builder << "; running: $runningMember"
     }
 
     /**

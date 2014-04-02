@@ -27,7 +27,7 @@
     <orderEntry type="library" scope="TEST" name="Gradle: junit-dep-4.10" level="project" />
     <orderEntry type="library" exported="" name="Gradle: groovy-2.2.2" level="project" />
     <orderEntry type="library" scope="TEST" name="Gradle: objenesis-2.1" level="project" />
-    <orderEntry type="library" exported="" name="Gradle: hazelcast-all-3.1.6" level="project" />
+    <orderEntry type="library" exported="" name="Gradle: hazelcast-all-3.2" level="project" />
   </component>
 </module>
 

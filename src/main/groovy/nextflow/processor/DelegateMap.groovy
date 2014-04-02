@@ -81,7 +81,7 @@ class DelegateMap implements Map {
     }
 
 
-    private DelegateMap(Script script, Map holder, boolean undef, String name) {
+    protected DelegateMap(Script script, Map holder, boolean undef, String name) {
         this.script = script
         this.holder = holder
         this.undef = undef
@@ -89,6 +89,11 @@ class DelegateMap implements Map {
         def names = script.getBinding()?.getVariables()?.keySet()
         this.bindingNames = names ? new HashSet<>(names) : new HashSet<>()
         log.trace "Binding names for '$name' > $bindingNames"
+    }
+
+    /** ONLY FOR TEST PURPOSE -- do not use */
+    protected DelegateMap () {
+
     }
 
     /**

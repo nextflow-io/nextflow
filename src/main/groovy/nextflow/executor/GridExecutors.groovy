@@ -268,7 +268,7 @@ class GridTaskHandler extends TaskHandler {
 
     private long exitStatusReadTimeoutMillis
 
-    final static private READ_TIMEOUT = Duration.of('90sec')
+    final static private READ_TIMEOUT = Duration.of('270sec') // 4.5 minutes
 
     GridTaskHandler( TaskRun task, TaskConfig config, AbstractGridExecutor executor ) {
         super(task, config)

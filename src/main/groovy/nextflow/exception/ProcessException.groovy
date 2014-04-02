@@ -30,6 +30,7 @@ import groovy.transform.InheritConstructors;
 @InheritConstructors
 class ProcessException extends Exception {
 
+    static instance = new ProcessException("Unknown process error")
 
 }
 
