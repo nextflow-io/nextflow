@@ -68,11 +68,11 @@ dependencies {
 
     oneJarLib files('one-jar/one-jar-boot-0.97.jar')
 
-    dnanexus (project(':dnanexus')) {
+    dnanexus (project(':nxf-dnanexus')) {
         exclude module: 'nextflow'
     }
 
-    hazelcast (project(':hazelcast')) {
+    hazelcast (project(':nxf-hazelcast')) {
         exclude module: 'nextflow'
     }
 

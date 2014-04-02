@@ -1,5 +1,6 @@
-include 'dnanexus'
-include 'hazelcast'
+include 'nxf-dnanexus'
+include 'nxf-hazelcast'
+include 'nxf-gridgain'
 
 rootProject.children.each { prj ->
     prj.projectDir = new File("$rootDir/subprojects/$prj.name")
