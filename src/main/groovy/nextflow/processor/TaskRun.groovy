@@ -24,7 +24,6 @@ import java.util.concurrent.locks.ReentrantLock
 
 import embed.com.google.common.hash.HashCode
 import groovy.transform.Memoized
-import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
@@ -43,7 +42,6 @@ import nextflow.script.ValueOutParam
  */
 
 @Slf4j
-@ToString( includePackage = false, includeNames = true, includes = 'id,index,name,status,exitCode,workDirectory' )
 class TaskRun {
 
     static private final echoLock = new ReentrantLock(true)
@@ -383,6 +381,13 @@ class TaskRun {
      * @return The location of the file that holds the cached process context map
      */
     Path getCmdContextFile() { workDirectory.resolve(CMD_CONTEXT) }
+
+
+    String toString( ) {
+
+        "id: $id; name: $name; type: $type; status: $exitStatus; error: $error; workDirectory: $workDirectory"
+
+    }
 
 }
 
