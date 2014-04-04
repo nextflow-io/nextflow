@@ -29,7 +29,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class HzCmdNotifyTest extends Specification {
+class HzCmdStatusTest extends Specification {
 
     def testFactoryMethods() {
 
@@ -47,35 +47,35 @@ class HzCmdNotifyTest extends Specification {
          * *start* message
          */
         when:
-        def message = HzCmdNotify.start( cmd, 'xxx-yyy' )
+        def message = HzCmdStatus.start( cmd, 'xxx-yyy' )
         then:
         message.sessionId == sessionId
         message.taskId == '123'
         message.memberId == 'xxx-yyy'
-        message.event == HzCmdNotify.Event.START
+        message.event == HzCmdStatus.Event.START
 
         /*
          * *result* message
          */
         when:
-        message = HzCmdNotify.result( cmd, 33, new RuntimeException() )
+        message = HzCmdStatus.result( cmd, 33, new RuntimeException() )
         then:
         message.sessionId == sessionId
         message.taskId == '123'
         message.value == 33
         message.error instanceof RuntimeException
         message.context == ctx
-        message.event == HzCmdNotify.Event.COMPLETE
+        message.event == HzCmdStatus.Event.COMPLETE
 
         /*
          * error message
          */
         when:
-        message = HzCmdNotify.error( sessionId, 'task_x' )
+        message = HzCmdStatus.error( sessionId, 'task_x' )
         then:
         message.sessionId == sessionId
         message.taskId == 'task_x'
-        message.event == HzCmdNotify.Event.COMPLETE
+        message.event == HzCmdStatus.Event.COMPLETE
 
 
     }

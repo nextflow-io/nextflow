@@ -211,7 +211,7 @@ class HzCmdCall implements Callable, Serializable {
 /**
  * The result on a remote execution
  */
-class HzCmdNotify implements Serializable {
+class HzCmdStatus implements Serializable {
 
     static final private long serialVersionUID = - 6956540465417153122L ;
 
@@ -254,14 +254,19 @@ class HzCmdNotify implements Serializable {
     final String memberId
 
     /**
-     * Create a HzCmdNotify to notify a start event
+     * just to make it unique
+     */
+    final long lastUpdate
+
+    /**
+     * Create a HzCmdStatus to notify a start event
      *
      * @param cmd
      * @param memberId
      * @return
      */
-    static HzCmdNotify start( HzCmdCall cmd, String memberId ) {
-        new HzCmdNotify( cmd.sessionId, cmd.taskId, null, null, null, Event.START, memberId )
+    static HzCmdStatus start( HzCmdCall cmd, String memberId ) {
+        new HzCmdStatus( sessionId: cmd.sessionId, taskId: cmd.taskId, event: Event.START, memberId: memberId )
     }
 
     /**
@@ -271,13 +276,27 @@ class HzCmdNotify implements Serializable {
      * @param value
      * @param error
      */
-    static HzCmdNotify result( HzCmdCall cmd, value, Throwable error ) {
-        new HzCmdNotify(cmd.sessionId, cmd.taskId, value, error, cmd.delegateMap?.getHolder())
+    static HzCmdStatus result( HzCmdCall cmd, value, Throwable error ) {
+        new HzCmdStatus( sessionId: cmd.sessionId, taskId: cmd.taskId, value: value, error: error, context: cmd.delegateMap?.getHolder() )
     }
 
-    static HzCmdNotify error( UUID sessionId, taskId ) {
-        new HzCmdNotify( sessionId, taskId, null, ProcessException.instance )
+    static HzCmdStatus error( UUID sessionId, taskId ) {
+        new HzCmdStatus( sessionId: sessionId, taskId: taskId, error: ProcessException.instance )
     }
+
+
+    /* NOTE: do not include the 'clock' attribute in the list of fields to copy */
+    private static final FIELDS_TO_COPY = ['sessionId','taskId','value','error','context','event','memberId']
+
+    final HzCmdStatus copyWith( Map params ) {
+        final that = [:]
+        for( String key : FIELDS_TO_COPY ) {
+            that[key] = params.containsKey(key) ? params.get(key): this."$key"
+        }
+
+        new HzCmdStatus(that)
+    }
+
 
     /**
      *
@@ -289,18 +308,19 @@ class HzCmdNotify implements Serializable {
      * @param event Kind of notification
      * @param memberId Cluster {@code Member} unique ID where the task is running
      */
-    protected HzCmdNotify( UUID sessionId, taskId, value, Throwable error, Map context = null, Event event = Event.COMPLETE, String memberId = null ) {
-        this.sessionId = sessionId
-        this.taskId = taskId
-        this.value = value
-        this.error = error
-        this.context = context
-        this.event = event
-        this.memberId = memberId
+    protected HzCmdStatus( Map params ) {
+        this.sessionId = params.sessionId
+        this.taskId = params.taskId
+        this.value = params.value
+        this.error = params.error
+        this.context = params.context
+        this.event = params.event ?: Event.COMPLETE
+        this.memberId = params.memberId
+        this.lastUpdate = params.clock ?: System.currentTimeMillis()
     }
 
     /** ONLY FOR de-serialization purposes -- required by kryo serializer */
-    protected HzCmdNotify() {}
+    protected HzCmdStatus() {}
 
     String toString() {
         "${getClass().simpleName}[taskId: $taskId; event: $event; session: $sessionId; result: ${value}; error: ${error}; memberId: $memberId ]"
@@ -310,7 +330,7 @@ class HzCmdNotify implements Serializable {
         if (this.is(o)) return true
         if (getClass() != o.class) return false
 
-        HzCmdNotify that = (HzCmdNotify) o
+        HzCmdStatus that = (HzCmdStatus) o
 
         if (event != that.event) return false
         if (context != that.context) return false
@@ -319,7 +339,7 @@ class HzCmdNotify implements Serializable {
         if (value != that.value) return false
         if (error?.class != that.error?.class) return false
         if (memberId != that.memberId ) return false
-
+        if (lastUpdate != that.lastUpdate ) return false
         return true
     }
 
@@ -332,6 +352,7 @@ class HzCmdNotify implements Serializable {
         result = 31 * result + (error != null ? error.hashCode() : 0)
         result = 31 * result + (context != null ? context.hashCode() : 0)
         result = 31 * result + (memberId != null ? memberId.hashCode() : 0)
+        result = 31 * result + lastUpdate
         return result
     }
 

@@ -130,7 +130,7 @@ class HzTaskHandler extends TaskHandler {
      * The result object for this task
      */
     @PackageScope
-    HzCmdNotify result
+    HzCmdStatus result
 
 
     static HzTaskHandler createScriptHandler( TaskRun task, TaskConfig taskConfig, HzExecutor executor ) {
