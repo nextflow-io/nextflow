@@ -19,9 +19,7 @@
  */
 
 package nextflow.processor
-
 import java.util.concurrent.CountDownLatch
-
 /**
  * Actions to handle the underlying job running the user task.
  *
@@ -63,6 +61,11 @@ public abstract class TaskHandler {
     CountDownLatch latch
 
     /**
+     * The system timestamp the last time one of the status has changed
+     */
+    long lastUpdate
+
+    /**
      * Model the start transition from {@code #SUBMITTED} to {@code STARTED}
      */
     abstract boolean checkIfRunning()
@@ -87,9 +90,14 @@ public abstract class TaskHandler {
 
     def void setStatus( Status status ) {
 
-        if ( this.status == status || status == null ) { return }
+        // skip if the status is the same aam
+        if ( this.status == status || status == null )
+            return
 
+        // change the status
         this.status = status
+        this.lastUpdate = System.currentTimeMillis()
+
     }
 
     boolean isNew() { return status == Status.NEW }
