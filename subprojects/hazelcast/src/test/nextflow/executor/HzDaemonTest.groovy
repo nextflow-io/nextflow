@@ -64,7 +64,7 @@ class HzDaemonTest extends Specification{
 
         when:
         daemon = [:] as HzDaemon
-        addresses = daemon.getDaemonInterfaces()
+        addresses = daemon.getNetworkInterfaces()
         then:
         addresses == []
 
@@ -72,7 +72,7 @@ class HzDaemonTest extends Specification{
         when:
         daemon = [:] as HzDaemon
         daemon.config = [interface: '172.5.1.*,172.5.2.*']
-        addresses = daemon.getDaemonInterfaces()
+        addresses = daemon.getNetworkInterfaces()
         then:
         addresses == ['172.5.1.*','172.5.2.*']
 

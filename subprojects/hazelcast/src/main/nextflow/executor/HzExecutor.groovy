@@ -55,7 +55,7 @@ class HzExecutor extends AbstractExecutor  {
      */
     @Override
     protected TaskMonitor createTaskMonitor() {
-        TaskPollingMonitor.create(session, name, Duration.of('1s'))
+        TaskPollingMonitor.create(session, name, Duration.of('5s'))
     }
 
 
@@ -132,6 +132,16 @@ class HzTaskHandler extends TaskHandler {
     @PackageScope
     HzCmdStatus result
 
+    def void setResult( HzCmdStatus result ) {
+        this.result = result
+        this.lastUpdate = System.currentTimeMillis()
+    }
+
+    def void setRunningMember( String value ) {
+        this.runningMember = value
+        this.lastUpdate = System.currentTimeMillis()
+    }
+
 
     static HzTaskHandler createScriptHandler( TaskRun task, TaskConfig taskConfig, HzExecutor executor ) {
         def handler = new HzTaskHandler(task,taskConfig)
@@ -156,6 +166,10 @@ class HzTaskHandler extends TaskHandler {
 
     @Override
     void submit() {
+
+        // clear previous state, eventually
+        result = null
+        runningMember = null
 
         // submit to an hazelcast node for execution
         final sender = task.processor.session.uniqueId

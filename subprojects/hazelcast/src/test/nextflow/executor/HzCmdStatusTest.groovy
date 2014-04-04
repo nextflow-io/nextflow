@@ -77,6 +77,44 @@ class HzCmdStatusTest extends Specification {
         message.taskId == 'task_x'
         message.event == HzCmdStatus.Event.COMPLETE
 
+    }
+
+    def testConstructor() {
+
+        when:
+        def uuid = UUID.randomUUID()
+        def err = new RuntimeException()
+        def cmd = new HzCmdStatus( sessionId: uuid, taskId: '2', value: '3', error: err, context: [a:1,b:2], memberId: 'abc' )
+        then:
+        cmd.sessionId == uuid
+        cmd.taskId == '2'
+        cmd.value == '3'
+        cmd.error == err
+        cmd.context == [a:1,b:2]
+        cmd.memberId == 'abc'
+
+        when:
+        def id2 = UUID.randomUUID()
+        def copy1 = cmd.copyWith( sessionId: id2 )
+        then:
+        copy1.sessionId == id2
+        copy1.taskId == '2'
+        copy1.value == '3'
+        copy1.error == err
+        copy1.context == [a:1,b:2]
+        copy1.memberId == 'abc'
+        copy1 != cmd
+
+        when:
+        def copy2 = cmd.copyWith( taskId: 'omega' )
+        then:
+        copy2.sessionId == uuid
+        copy2.taskId == 'omega'
+        copy2.value == '3'
+        copy2.error == err
+        copy2.context == [a:1,b:2]
+        copy2.memberId == 'abc'
+        copy2 != cmd
 
     }
 

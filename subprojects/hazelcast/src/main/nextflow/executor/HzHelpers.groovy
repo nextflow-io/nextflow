@@ -40,11 +40,13 @@ interface HzConst {
 
     final String TASK_SUBMITS_QUEUE = 'taskSubmits'
 
-    final String TASK_EVENTS_QUEUE = 'taskEvents'
+    final String ALL_NODES_MAP = 'allNodes'
 
-    final String MEMBERS_MAP = 'membersMap'
+    final String ALL_TASKS_MAP = 'allTasks'
 
     final String SESSIONS_MAP = 'sessionsMap'
+
+    final String EXEC_SERVICE = 'executor'
 
     final String DEFAULT_GROUP_NAME = Const.APP_NAME
 
@@ -374,4 +376,15 @@ class HzNodeInfo implements Serializable {
     final int slots
 
 }
+
+
+@Canonical
+class HzTaskKey implements Serializable {
+
+    UUID sessionId;
+
+    Object taskId
+
+}
+
 
