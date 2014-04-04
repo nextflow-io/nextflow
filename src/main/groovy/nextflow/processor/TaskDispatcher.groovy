@@ -47,6 +47,11 @@ class TaskDispatcher {
 
     private volatile boolean started
 
+    private List<Closure> submitListeners = []
+    private List<Closure> startListeners = []
+    private List<Closure> completeListeners = []
+    private List<Closure> errorListeners = []
+
     /**
      * Dispatcher constructor
      *
@@ -159,18 +164,48 @@ class TaskDispatcher {
         }
     }
 
+    public void addSubmitListener(Closure closure) {
+        submitListeners << closure
+    }
+
+    public void addStartListener(Closure closure) {
+        startListeners << closure
+    }
+
+    public void addCompleteListener(Closure closure) {
+        completeListeners << closure
+    }
+
+    public void addErrorListener(Closure closure) {
+        errorListeners << closure
+    }
+
     /**
      * Notifies that a task has been submitted
      */
-    public void notifySubmitted( TaskHandler handler ) {
-
+    public void notifySubmit( TaskHandler handler ) {
+        for( Closure closure : submitListeners ) {
+            try {
+                closure.call(handler)
+            }
+            catch( Exception e ) {
+                log.error(e.getMessage(), e)
+            }
+        }
     }
 
     /**
      * Notifies task start event
      */
-    public void notifyStarted( TaskHandler handler ) {
-
+    public void notifyStart( TaskHandler handler ) {
+        for( Closure closure : startListeners ) {
+            try {
+                closure.call(handler)
+            }
+            catch( Exception e ) {
+                log.error(e.getMessage(), e)
+            }
+        }
     }
 
     /**
@@ -178,8 +213,15 @@ class TaskDispatcher {
      *
      * @param handler
      */
-    public void notifyTerminated( TaskHandler handler ) {
-
+    public void notifyComplete( TaskHandler handler ) {
+        for( Closure closure : completeListeners ) {
+            try {
+                closure.call(handler)
+            }
+            catch( Exception e ) {
+                log.error(e.getMessage(), e)
+            }
+        }
     }
 
     /**
@@ -188,9 +230,19 @@ class TaskDispatcher {
      * @param handler
      * @param e
      */
-    public void notifyError( TaskHandler handler, Throwable e ) {
-
+    public void notifyError( TaskHandler handler, Throwable error ) {
+        for( Closure closure : errorListeners ) {
+            try {
+                int n = closure.getMaximumNumberOfParameters()
+                n == 1 ? closure.call(handler) : closure.call(handler,error)
+            }
+            catch( Exception e ) {
+                log.error(e.getMessage(), e)
+            }
+        }
     }
+
+
 
 
 }
