@@ -19,14 +19,15 @@
  */
 
 package nextflow.executor
+
 import com.hazelcast.client.HazelcastClient
 import com.hazelcast.client.config.ClientConfig
+import com.hazelcast.core.EntryEvent
+import com.hazelcast.core.EntryListener
 import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.core.IExecutorService
 import com.hazelcast.core.IMap
 import com.hazelcast.core.IQueue
-import com.hazelcast.core.ItemEvent
-import com.hazelcast.core.ItemEventType
-import com.hazelcast.core.ItemListener
 import com.hazelcast.core.Member
 import com.hazelcast.core.MemberAttributeEvent
 import com.hazelcast.core.MembershipEvent
@@ -44,22 +45,22 @@ import org.apache.commons.lang.StringUtils
  * @author Paolo Di Tommaso
  */
 @Slf4j
-class HzConnector implements HzConst, MembershipListener, ItemListener {
+class HzConnector implements HzConst, MembershipListener {
 
     private HazelcastInstance hazelcast
 
     private IQueue<HzCmdCall> submitQueue
 
-    private IQueue<HzCmdNotify> eventsQueue
-
-    private IMap<String,HzNodeInfo> allMembers
-
-    private TaskPollingMonitor monitor
-
     /** The nextflow session object */
     private Session session
 
-    private Map<UUID,HzRemoteSession> allSessions
+    private IMap<UUID,HzRemoteSession> allSessions
+
+    private IMap<String,HzNodeInfo> allNodes
+
+    private IMap<HzTaskKey, HzCmdStatus> allTasks
+
+    private TaskPollingMonitor monitor
 
     private capacityFactory = 1.5f
 
@@ -89,10 +90,14 @@ class HzConnector implements HzConst, MembershipListener, ItemListener {
     /** Only for test -- DO NOT USE */
     protected HzConnector() {}
 
-
     @PackageScope
     Queue<HzCmdCall> getExecutorsQueue() {
         return submitQueue
+    }
+
+    @PackageScope
+    IExecutorService remote() {
+        hazelcast.getExecutorService(EXEC_SERVICE)
     }
 
     protected getHzConfigProperty( String key, defValue = null )  {
@@ -137,18 +142,18 @@ class HzConnector implements HzConst, MembershipListener, ItemListener {
         // -- queue where tasks are submitted
         submitQueue = hazelcast.getQueue(TASK_SUBMITS_QUEUE)
 
-        eventsQueue = hazelcast.getQueue(TASK_EVENTS_QUEUE)
-        eventsQueue.addItemListener(this,true)
+        allTasks = hazelcast.getMap(ALL_TASKS_MAP)
+        allTasks.addEntryListener( new TaskEntryListener(), true )
 
         // publish the session on the cluster
         allSessions = hazelcast.getMap(SESSIONS_MAP)
-        allSessions.put(session.uniqueId, new HzRemoteSession(session)  )
+        allSessions.put( session.uniqueId, new HzRemoteSession(session) )
 
-        allMembers = hazelcast.getMap(MEMBERS_MAP)
-        def capacity = 0
-        allMembers.values().each { HzNodeInfo it -> capacity += it.slots }
-        log.debug "Cluster initial capacity > $capacity"
-        capacityInc(capacity)
+        // fetch the current number of slots for each member
+        def tot = 0
+        allNodes = hazelcast.getMap(ALL_NODES_MAP)
+        allNodes.each { key, node -> tot += node.slots }
+        capacityInc(tot)
 
         // add the members listener
         final cluster = hazelcast.getCluster()
@@ -156,14 +161,19 @@ class HzConnector implements HzConst, MembershipListener, ItemListener {
         Set members  = cluster.getMembers();
         log.debug "Cluster members (${members.size()}): ${ members.size() <= 10 ? members.join(', ') : members.take(10).join(', ') + " ..." }"
 
+        monitor.register( this.&pollingWatchdog )
+        monitor.dispatcher.addCompleteListener(this.&removeCompleteTask)
+
         // register for the shutdown
         session.onShutdown {
             if( !hazelcast ) return
             log.info "Shutting down hazelcast connector"
             allSessions.remove(session.getUniqueId())
+            allTasks.keySet().each { HzTaskKey key -> if(key.sessionId==session.getUniqueId()) allTasks.remove(key) }
             hazelcast.shutdown()
         }
     }
+
 
     private void capacityInc( int value ) {
         log.debug "Incrementing capacity by $value slots"
@@ -177,87 +187,11 @@ class HzConnector implements HzConst, MembershipListener, ItemListener {
         monitor.capacityDec(capacity)
     }
 
-    /*
-     * Get invoked when a new task is queued by a remote daemon
-     */
-    @Override
-    void itemAdded(ItemEvent event) {
-
-        if( event?.eventType != ItemEventType.ADDED ) {
-            log.debug "Not interested on this event: $event"
-        }
-
-        HzCmdNotify message = (HzCmdNotify)event.item
-        log.trace "Received notification: $message"
-        if( !message ) {
-            return
-        }
-
-        if( message.sessionId != session.uniqueId ) {
-            log.trace "Discarding command notification since belongs to other client: $message"
-            return
-        }
-
-        // just consume this entry
-        eventsQueue.remove(message)
-
-        /*
-         * find out the task handler for the task id of the completed task
-         */
-        def handler = (HzTaskHandler)monitor.getTaskHandlerBy(message.taskId)
-        if( !handler ) {
-            log.warn "Lost task for command start: ${message.taskId}"
-            return
-        }
-
-        /*
-         * when it is a task completion notification,
-         * update the handler with that object
-         */
-        if( message.isComplete() ) {
-            log.trace "Task complete > ${message}"
-            monitor.schedule {
-                handler.result = message
-            }
-            return
-        }
-
-        /*
-         * .. otherwise it is an task task notification
-         */
-
-        /*
-         * make sure the cluster member is still available
-         */
-        if( isAvailable(message.memberId) ) {
-            // -- set the result value and *signal* the monitor in order to trigger a status check cycle
-            log.trace "Received task start ACK > ${message.memberId} to ${handler}"
-            monitor.schedule {
-                handler.runningMember = message.memberId
-            }
-        }
-        else {
-            // -- set an error result for the handler
-            log.trace "Cluster member no more available: ${message.memberId} -- Notify error for taskId: ${message.taskId}"
-            monitor.schedule {
-                handler.result = HzCmdNotify.error( session.getUniqueId(), message.taskId )
-            }
-        }
-
-
-
-//        if( handler.runningMember == null ) {
-//            handler.status = TaskHandler.Status.COMPLETED
-//        }
-//        else {
-//            log.trace "Ignoring handler: $handler -- this is supposed to be managed by 'memberRemoved' method"
-//        }
-
-    }
-
-    @Override
-    void itemRemoved(ItemEvent item) {
-        /* ignored */
+    @PackageScope
+    void setMember( Member member, HzNodeInfo info ) {
+        assert info
+        allNodes[member.getUuid()] = info
+        capacityInc( info.slots )
     }
 
 
@@ -270,14 +204,18 @@ class HzConnector implements HzConst, MembershipListener, ItemListener {
     void memberAdded(MembershipEvent e) {
         log.debug "Cluster member added: ${e.member}"
 
-        HzNodeInfo node = allMembers.get( e.member.getUuid() )
-        if( !node ) {
-            log.debug "Oops .. no cluster node info for added member: ${e.member}"
-            return
+        HzNodeInfo node = allNodes.get( e.member.getUuid() )
+        if( node ) {
+            // -- increase the monitor capacity by the number of slots provided by the member added
+            capacityInc(node.slots)
         }
-
-        // -- increase the monitor capacity by the number of slots provided by the member added
-        capacityInc(node.slots)
+        else {
+            log.debug "Oops .. no cluster node info for added member: ${e.member}"
+            int sum = allNodes.values() *. slots .sum() as int
+            int cnt = allNodes.size()
+            int avg = cnt && sum ? sum/cnt : 1
+            capacityInc(avg)
+        }
 
     }
 
@@ -291,15 +229,16 @@ class HzConnector implements HzConst, MembershipListener, ItemListener {
         log.debug "Cluster member removed > ${event.member} -- ${event.member?.getUuid()}"
 
         final memberId = event.member?.getUuid()
-        final node = allMembers.get(memberId)
-        if( !node ) {
+        final node = allNodes.get(memberId)
+        if( node ) {
+            // -- reduce the monitor capacity by the number of slots provided by the member removed
+            capacityDec(node.slots)
+            allNodes.remove(memberId)
+        }
+        else {
             log.debug "Oops .. no node info for removed cluster: ${event.member}"
-            return
         }
 
-        // -- reduce the monitor capacity by the number of slots provided by the member removed
-        capacityDec(node.slots)
-        allMembers.remove(memberId)
 
         /*
          * !! reschedule all tasks that where running in a stopped node
@@ -318,7 +257,7 @@ class HzConnector implements HzConst, MembershipListener, ItemListener {
         log.debug "!! Some tasks were running on stopped node ${event.member} -- ${deadTasks}"
         monitor.schedule {
             for( HzTaskHandler handler : deadTasks ) {
-                handler.result = HzCmdNotify.error( session.getUniqueId(), handler.task.id )
+                handler.result = HzCmdStatus.error( session.getUniqueId(), handler.task.id )
             }
         }
 
@@ -339,7 +278,7 @@ class HzConnector implements HzConst, MembershipListener, ItemListener {
      */
     protected boolean isAvailable( String memberId ) {
         assert memberId
-        def result = allMembers.containsKey( memberId )
+        def result = allNodes.containsKey( memberId )
         return result
     }
 
@@ -348,5 +287,162 @@ class HzConnector implements HzConst, MembershipListener, ItemListener {
         /* ignore this */
     }
 
+    final protected HzTaskKey key( taskId ) {
+        new HzTaskKey( session.getUniqueId(), taskId )
+    }
+
+
+    final protected void removeCompleteTask( TaskHandler handler ) {
+        if( handler instanceof HzTaskHandler ) {
+            log.debug "Removing from AllTasks taskId: ${handler.task.id}"
+            allTasks.remove( key(handler.task.id) )
+        }
+    }
+
+    /**
+     * Watch the scheduled task status
+     */
+    final protected void pollingWatchdog( TaskPollingMonitor monitor ) {
+
+        // find all still in submit status after more that X
+        // if not in the queue --> bad
+        // if it is in the queue and there is a free slot --> bad
+
+        final now = System.currentTimeMillis()
+        final interval = HzDaemon.HEARTBEAT_DURATION.toMillis() * 5
+
+        final handlers = (List<HzTaskHandler>) monitor.findTaskHandlers { HzTaskHandler handler -> handler.isSubmitted() && now-handler.lastUpdate > interval }
+        final pendingIds = handlers.collect { it.task.id }
+        if( pendingIds ) {
+            final queueIds = submitQueue.findAll { HzCmdCall it -> it.sessionId == session.uniqueId }.collect { HzCmdCall it -> it.taskId }
+            for( def taskId : pendingIds ) {
+                if( taskId in queueIds ) {
+                    // the taskId in the queue of submitted tasks, it should check if all nodes are busy
+                    // otherwise there's something bad
+                    // TODO
+                    log.debug "% Task is in the submit queue waiting to be processed > taskId: $taskId"
+                }
+                else {
+                    log.debug "% Task in submit status but does not exist in the submit queue > taskId: $taskId"
+                    def bad = handlers.find { HzTaskHandler it -> it.task.id == taskId }
+                    if( bad ) {
+                        bad.result = HzCmdStatus.error( session.getUniqueId(), taskId )
+                    }
+                    else {
+                        log.debug "% Missing handler for submitted taskId: $taskId"
+                    }
+                }
+            }
+        }
+
+
+        // find all in running state and last update more than X
+        // --> kill and resubmit
+        final runningTasks = allTasks.values().findAll {
+            HzCmdStatus it -> it.sessionId == session.getUniqueId() && it.isStart() && now-it.lastUpdate > interval
+        }
+
+        if( runningTasks ) {
+            for( HzCmdStatus cmd : runningTasks ) {
+                def handler = (HzTaskHandler)monitor.getTaskHandlerById(cmd.taskId)
+                if( handler ) {
+                    log.debug "% Task in running status evicted > taskId: ${cmd.taskId}"
+                    handler.result = HzCmdStatus.error( session.getUniqueId(), cmd.taskId )
+                }
+                else {
+                    log.debug "% Missing handler for runnig taskId: ${cmd.taskId}"
+                }
+            }
+        }
+
+    }
+
+
+    @Slf4j
+    class TaskEntryListener implements EntryListener<HzTaskKey, HzCmdStatus> {
+
+        @Override
+        void entryAdded(EntryEvent<HzTaskKey, HzCmdStatus> event) {
+            if( event.key.sessionId == session.uniqueId ) {
+                log.trace "Received ADD task event: $event"
+                handleEntry( event.getValue() )
+            }
+            else {
+                log.trace "Discarding ADD task event for other client: ${event}"
+            }
+        }
+
+        @Override
+        void entryUpdated(EntryEvent<HzTaskKey, HzCmdStatus> event) {
+            if( event.key.sessionId == session.uniqueId ) {
+                log.trace "Received UPDATE task event: $event"
+                handleEntry( event.getValue() )
+            }
+            else {
+                log.trace "Discarding UPDATE task event for other client: ${event}"
+            }
+        }
+
+        @Override
+        void entryRemoved(EntryEvent<HzTaskKey, HzCmdStatus> event) {
+            /* ignore this */
+        }
+
+
+        @Override
+        void entryEvicted(EntryEvent<HzTaskKey, HzCmdStatus> event) {
+            log.debug "AllTasks evicted entry  > ${event.getValue()}"
+        }
+
+        private handleEntry ( HzCmdStatus event ) {
+
+            if( !event ) {
+                log.trace "Oops .. Empty task event -- ignore it"
+                return
+            }
+
+            /*
+             * find out the task handler for the task id of the completed task
+             */
+            def handler = (HzTaskHandler)monitor.getTaskHandlerById(event.taskId)
+            if( !handler ) {
+                log.warn "Unknow task with ID: ${event.taskId}"
+                return
+            }
+
+            /*
+             * when it is a task completion notification,
+             * update the handler with that object
+             */
+            if( event.isComplete() ) {
+                log.trace "Task complete > ${event}"
+                monitor.schedule {
+                    handler.result = event
+                }
+                return // exit here
+            }
+
+            /*
+             * Otherwise this event notifies that the task has started
+             * Make sure the cluster member is still available
+             */
+            if( isAvailable(event.memberId) ) {
+                // -- set the result value and *signal* the monitor in order to trigger a status check cycle
+                log.trace "Received task start ACK > ${event.memberId} to ${handler}"
+                monitor.schedule {
+                    handler.runningMember = event.memberId
+                }
+            }
+            else {
+                // -- set an error result for the handler
+                log.trace "Cluster member no more available: ${event.memberId} -- Notify error for taskId: ${event.taskId}"
+                monitor.schedule {
+                    handler.result = HzCmdStatus.error( session.getUniqueId(), event.taskId )
+                }
+            }
+        }
+
+
+    }
 
 }

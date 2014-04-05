@@ -41,6 +41,8 @@ interface ExitCode {
 
     static final short INVALID_CONFIG = 106
 
+    static final short DAEMON_NOT_FOUND = 107
+
     static final short UNKNOWN_ERROR = 255
 
 

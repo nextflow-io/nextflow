@@ -18,21 +18,37 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-dependencies {
-    compile project(':')
-    compile ("org.gridgain:gridgain-platform:6.0.2")  {
-        exclude module: 'commons-logging'
-        exclude module: 'slf4j-log4j12'
-        exclude module: 'scala-compiler'
-        exclude module: 'scala-library'
-        exclude module: 'scala-reflect'
-        //exclude module: 'log4j'
+package nextflow.executor
+
+import groovy.transform.EqualsAndHashCode
+import nextflow.Session
+
+/**
+ * Wrap the client session and classpath data, in order to enable
+ * remote closure execution
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@EqualsAndHashCode
+class GgClient implements Serializable {
+
+    private static final long serialVersionUID = - 3956143328835315200L ;
+
+    final UUID sessionId
+
+    final List<URL> classpath
+
+    GgClient() { }
+
+    GgClient(Session session) {
+        sessionId = session.getUniqueId()
+        classpath = session.getClasspath()
     }
 
-    testCompile project(':')
-}
+    /** only for test */
+    protected GgClient( UUID uuid, List<URL> classpath  ) {
+        this.sessionId = uuid
+        this.classpath = classpath
+    }
 
-
-task compile(type: Copy) {
-    dependsOn compileJava, compileGroovy, processResources
 }

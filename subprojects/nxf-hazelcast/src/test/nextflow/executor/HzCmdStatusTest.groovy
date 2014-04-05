@@ -29,7 +29,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class HzCmdNotifyTest extends Specification {
+class HzCmdStatusTest extends Specification {
 
     def testFactoryMethods() {
 
@@ -47,36 +47,74 @@ class HzCmdNotifyTest extends Specification {
          * *start* message
          */
         when:
-        def message = HzCmdNotify.start( cmd, 'xxx-yyy' )
+        def message = HzCmdStatus.start( cmd, 'xxx-yyy' )
         then:
         message.sessionId == sessionId
         message.taskId == '123'
         message.memberId == 'xxx-yyy'
-        message.event == HzCmdNotify.Event.START
+        message.event == HzCmdStatus.Event.START
 
         /*
          * *result* message
          */
         when:
-        message = HzCmdNotify.result( cmd, 33, new RuntimeException() )
+        message = HzCmdStatus.result( cmd, 33, new RuntimeException() )
         then:
         message.sessionId == sessionId
         message.taskId == '123'
         message.value == 33
         message.error instanceof RuntimeException
         message.context == ctx
-        message.event == HzCmdNotify.Event.COMPLETE
+        message.event == HzCmdStatus.Event.COMPLETE
 
         /*
          * error message
          */
         when:
-        message = HzCmdNotify.error( sessionId, 'task_x' )
+        message = HzCmdStatus.error( sessionId, 'task_x' )
         then:
         message.sessionId == sessionId
         message.taskId == 'task_x'
-        message.event == HzCmdNotify.Event.COMPLETE
+        message.event == HzCmdStatus.Event.COMPLETE
 
+    }
+
+    def testConstructor() {
+
+        when:
+        def uuid = UUID.randomUUID()
+        def err = new RuntimeException()
+        def cmd = new HzCmdStatus( sessionId: uuid, taskId: '2', value: '3', error: err, context: [a:1,b:2], memberId: 'abc' )
+        then:
+        cmd.sessionId == uuid
+        cmd.taskId == '2'
+        cmd.value == '3'
+        cmd.error == err
+        cmd.context == [a:1,b:2]
+        cmd.memberId == 'abc'
+
+        when:
+        def id2 = UUID.randomUUID()
+        def copy1 = cmd.copyWith( sessionId: id2 )
+        then:
+        copy1.sessionId == id2
+        copy1.taskId == '2'
+        copy1.value == '3'
+        copy1.error == err
+        copy1.context == [a:1,b:2]
+        copy1.memberId == 'abc'
+        copy1 != cmd
+
+        when:
+        def copy2 = cmd.copyWith( taskId: 'omega' )
+        then:
+        copy2.sessionId == uuid
+        copy2.taskId == 'omega'
+        copy2.value == '3'
+        copy2.error == err
+        copy2.context == [a:1,b:2]
+        copy2.memberId == 'abc'
+        copy2 != cmd
 
     }
 

@@ -19,4 +19,4 @@
 #
 
 
-nextflow.executor.HzDaemon
+nextflow.executor.GgDaemon

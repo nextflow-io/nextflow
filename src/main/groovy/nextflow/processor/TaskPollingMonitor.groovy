@@ -19,7 +19,6 @@
  */
 
 package nextflow.processor
-
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
@@ -82,6 +81,8 @@ class TaskPollingMonitor implements TaskMonitor {
 
     private Queue<Closure> eventsQueue
 
+    private Queue<Closure> listenersQueue
+
     /**
      * Initialise the monitor, creating the queue which will hold the tasks
      *
@@ -100,6 +101,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
         this.pollingQueue = new ConcurrentLinkedQueue<>()
         this.eventsQueue = new ConcurrentLinkedQueue<>()
+        this.listenersQueue = new ConcurrentLinkedQueue<>()
 
     }
 
@@ -127,6 +129,8 @@ class TaskPollingMonitor implements TaskMonitor {
     }
 
     protected Queue<TaskHandler> getPollingQueue() { pollingQueue }
+
+    public TaskDispatcher getDispatcher() { dispatcher }
 
     /**
      * Set the number of tasks the monitor will handle in parallel.
@@ -204,7 +208,7 @@ class TaskPollingMonitor implements TaskMonitor {
         }
 
         if( done )
-            dispatcher.notifySubmitted(handler)
+            dispatcher.notifySubmit(handler)
     }
 
     /**
@@ -237,9 +241,29 @@ class TaskPollingMonitor implements TaskMonitor {
      * @param taskId
      * @return
      */
-    TaskHandler getTaskHandlerBy( final taskId ) {
+    TaskHandler getTaskHandlerById( final taskId ) {
         pollingQueue.find { handler -> handler.task.id == taskId }
     }
+
+    /**
+     * Find all {@code TaskHandler} in the specified status
+     *
+     * @param status The status of the required task handlers
+     * @return The list of {@code TaskHandler} win the specified {@code TaskHandler.Status}, or an empty list if not tashs are found.
+     */
+    TaskHandler getTaskHandlerByStatus( final TaskHandler.Status status ) {
+        pollingQueue.find { handler -> handler.status == status }
+    }
+
+    /**
+     * Find all the task handlers that matches the specified closure
+     * @param closure
+     * @return
+     */
+    List<TaskHandler> findTaskHandlers( Closure closure = null ) {
+        closure ? pollingQueue.findAll(closure) : pollingQueue.findAll()
+    }
+
 
     /**
      * Launch the monitoring thread
@@ -285,7 +309,9 @@ class TaskPollingMonitor implements TaskMonitor {
             processEvents()
 
             // check all running tasks for termination
-            checkAll()
+            checkAllTasks()
+
+            processListeners()
 
             if( session.isTerminated() && pollingQueue.size() == 0 ) {
                 break
@@ -330,7 +356,7 @@ class TaskPollingMonitor implements TaskMonitor {
      *
      * @param collection The collections of tasks to check
      */
-    protected void checkAll() {
+    protected void checkAllTasks() {
 
         for( TaskHandler handler : pollingQueue ) {
             try {
@@ -359,6 +385,35 @@ class TaskPollingMonitor implements TaskMonitor {
             }
         }
 
+    }
+
+    /**
+     * Process all registered monitor listeners
+     *
+     * See #register
+     */
+    final protected processListeners() {
+
+        for( Closure closure : listenersQueue ) {
+            try {
+                closure.call(this)
+            }
+            catch( Exception e ) {
+                log.error "Error processing monitor listener", e
+            }
+        }
+
+    }
+
+    /**
+     * Add a new listener to the task monitor
+     *
+     * @param listener
+     * @return
+     */
+    final void register( Closure listener ) {
+        if( !listener ) return
+        listenersQueue << listener
     }
 
 
@@ -393,7 +448,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
         // check if it is started
         if( handler.checkIfRunning() ) {
-            dispatcher.notifyStarted(handler)
+            dispatcher.notifyStart(handler)
         }
 
         // check if it is terminated
@@ -407,7 +462,7 @@ class TaskPollingMonitor implements TaskMonitor {
             handler.latch?.countDown()
 
             // finalize the tasks execution
-            dispatcher.notifyTerminated(handler)
+            dispatcher.notifyComplete(handler)
         }
 
     }

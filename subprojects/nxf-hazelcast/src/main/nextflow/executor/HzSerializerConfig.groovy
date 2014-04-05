@@ -72,9 +72,9 @@ class HzSerializerConfig {
     }
 
     static SerializerConfig getHzCmdResultConfig() {
-        log.debug "Registering Hazelcast HzCmdNotify serializer"
+        log.debug "Registering Hazelcast HzCmdStatus serializer"
         new SerializerConfig()
-                .setTypeClass( HzCmdNotify )
+                .setTypeClass( HzCmdStatus )
                 .setImplementation( new HzCmdNotifySerializer() )
 
     }

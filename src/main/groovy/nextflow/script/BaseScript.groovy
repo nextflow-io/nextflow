@@ -370,7 +370,9 @@ abstract class BaseScript extends Script {
             'lsf': LsfExecutor.name,
             'slurm': SlurmExecutor.name,
             'dnanexus': 'nextflow.executor.DnaNexusExecutor',
-            'hazelcast': 'nextflow.executor.HzExecutor'
+            'hazelcast': 'nextflow.executor.HzExecutor',
+            'gg': 'nextflow.executor.GgExecutor',
+            'gridgain': 'nextflow.executor.GgExecutor'
     ]
 
     @PackageScope

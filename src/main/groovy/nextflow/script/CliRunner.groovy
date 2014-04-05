@@ -872,15 +872,31 @@ class CliRunner {
      * @param config The nextflow configuration map
      */
     static launchDaemon( Map config ) {
-        def loader = ServiceLoader.load(DaemonLauncher).iterator()
-        if( !loader.hasNext() )
-            throw new IllegalStateException("No daemon services are available -- Cannot launch Nextflow in damon mode")
 
         def daemonConfig = config.daemon instanceof Map ? config.daemon : [:]
         log.debug "Daemon config > $daemonConfig"
 
+
+        DaemonLauncher instance
+        if( daemonConfig.name ) {
+            try {
+                instance = (DaemonLauncher)Class.forName(daemonConfig.name as String).newInstance()
+            }
+            catch( Exception e ) {
+                throw new IllegalStateException("Cannot load daemon: ${daemonConfig.name}")
+            }
+        }
+        else {
+            def loader = ServiceLoader.load(DaemonLauncher).iterator()
+            if( !loader.hasNext() )
+                throw new IllegalStateException("No daemon services are available -- Cannot launch Nextflow in damon mode")
+
+            instance = loader.next()
+        }
+
+
         // launch it
-        loader.next().launch(daemonConfig)
+        instance.launch(daemonConfig)
     }
 
     static private getLocalNameAndAddress() {

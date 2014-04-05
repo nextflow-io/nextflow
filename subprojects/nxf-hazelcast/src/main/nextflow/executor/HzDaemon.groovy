@@ -19,14 +19,18 @@
  */
 
 package nextflow.executor
+
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.locks.Condition
+import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
 import com.hazelcast.config.Config
 import com.hazelcast.config.FileSystemXmlConfig
 import com.hazelcast.config.UrlXmlConfig
+import com.hazelcast.core.EntryEvent
+import com.hazelcast.core.EntryListener
 import com.hazelcast.core.Hazelcast
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
@@ -41,6 +45,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.daemon.DaemonLauncher
 import nextflow.util.ConfigHelper
+import nextflow.util.Duration
 import org.apache.commons.lang.StringUtils
 /**
  * Run the Hazelcast daemon used to process user processes
@@ -49,6 +54,8 @@ import org.apache.commons.lang.StringUtils
  */
 @Slf4j
 class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
+
+    static HEARTBEAT_DURATION = Duration.of('5s')
 
     private HazelcastInstance hazelcast
 
@@ -62,13 +69,17 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
 
     private IQueue<HzCmdCall> tasksQueue
 
-    private  IQueue<HzCmdNotify> eventsQueue
-
-    private IMap<String,HzNodeInfo> allMembers
-
     private ExecutorService executor
 
-    private Map<UUID, HzRemoteSession> allSessions
+    private IMap<UUID, HzRemoteSession> allSessions
+
+    private IMap<HzTaskKey, HzCmdStatus> allTasks
+
+    private Map<String,HzNodeInfo> allNodes
+
+    private Map<HzTaskKey, HzCmdStatus> runningTasks = [:]
+
+    private final Lock tasksLock = new ReentrantLock()
 
     /**
      * Poor man singleton. The current daemon instance
@@ -137,6 +148,14 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
         return cfg
     }
 
+    /**
+     * Get the daemon configuration property
+     *
+     * @param name The name of the configuration attribute
+     * @param defValue The default attribute value, if the specified name does not exist in the configuration
+     * @param env The environment used as fallback if attribute in the configuration file
+     * @return The attribute value found or the {@code defValue} if not exist
+     */
     protected getDaemonProperty( String name, defValue = null, Map env = null ) {
         def result = ConfigHelper.getConfigProperty(config, 'hazelcast', name)
         if( result != null )
@@ -148,14 +167,23 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
         return env.containsKey(key) ? env.get(key) : defValue
     }
 
+    /**
+     * @return The daemon port
+     */
     protected getPort() {
         getDaemonProperty('port') as Integer
     }
 
+    /**
+     * @return The cluster group name
+     */
     protected String getGroupName() {
         getDaemonProperty('group', DEFAULT_GROUP_NAME)
     }
 
+    /**
+     * @return The slot provided by the cluster node i.e. the number of processor
+     */
     protected int getSlots() {
         getDaemonProperty('slots', Runtime.getRuntime().availableProcessors()) as Integer
     }
@@ -178,7 +206,10 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
         getDaemonProperty('connectionMonitorMaxFaults', '5') as String
     }
 
-    protected List<String> getDaemonInterfaces() {
+    /**
+     * @return A list of network IP addresses used by the deamon to bind
+     */
+    protected List<String> getNetworkInterfaces() {
         def result = []
         def value = getDaemonProperty('interface') as String
         def interfaceNames = value ? StringUtils.split(value, ", \n").collect { it.trim() } : null
@@ -203,6 +234,9 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
         return result
     }
 
+    /**
+     * @return Creates the hazelcast configuration object
+     */
     @Memoized
     protected Config getConfigObj () {
         def result = new Config()
@@ -216,7 +250,7 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
             network.setPort(port)
         }
 
-        def interfaces = daemonInterfaces
+        def interfaces = networkInterfaces
         if( interfaces ) {
             network.getInterfaces().setEnabled(true)
             interfaces.each {
@@ -290,9 +324,10 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
 
         // -- set up distributed data structures
         tasksQueue = hazelcast.getQueue(TASK_SUBMITS_QUEUE)
-        eventsQueue = hazelcast.getQueue(TASK_EVENTS_QUEUE)
+        allNodes = hazelcast.getMap(ALL_NODES_MAP)
+        allTasks = hazelcast.getMap(ALL_TASKS_MAP)
         allSessions = hazelcast.getMap(SESSIONS_MAP)
-        allMembers = hazelcast.getMap(MEMBERS_MAP)
+        allSessions.addEntryListener( new SessionEntryListener(), false )
         hazelcast.getCluster().addMembershipListener(this)
 
         // -- report info
@@ -301,22 +336,70 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
         final address = "${local.getAddress().getHost()}:${local.getAddress().getPort()}"
         log.info "Member [${address}] joined cluster '${cfg.getGroupConfig().getName()}' -- Total nodes: ${cluster.getMembers().size()}"
 
+        // -- set the current node info
+        allNodes.put( local.getUuid(), new HzNodeInfo(capacity)  )
+
         // -- set the current instance
         current = this
 
-        // -- set this member in the map
-        final nodeInfo = new HzNodeInfo(capacity)
-        allMembers.put( local.getUuid(), nodeInfo )
+        registerHeartbeat()
+        // shutdown on termination
+        Runtime.getRuntime().addShutdownHook { shutdown() }
+    }
 
-        // -- shutdown on JVM exit
-        Runtime.getRuntime().addShutdownHook {
-            log.info "Shutting down node"
-            try {
-                hazelcast?.shutdown()
+    /**
+     * launch a thread that update periodically the current running tasks
+     */
+    final protected void registerHeartbeat() {
+        final MAX_DELTA = HEARTBEAT_DURATION.toMillis()
+
+        def heartbeat = {
+
+            while( true ) {
+                sleep(MAX_DELTA)
+                if( !hazelcast?.getLifecycleService()?.isRunning() ) break
+
+                final now = System.currentTimeMillis()
+                runningTasks.each { key, value ->
+                    if( now-value.lastUpdate < MAX_DELTA )
+                        return
+
+                    log.debug "% Update status for task: $value"
+                    def newValue = value.copyWith( clock: now )
+
+                    tasksLock.with {
+                        runningTasks.put(key, newValue)
+                        def replaced = allTasks.replace(key, value, newValue)
+                        if( !replaced ) {
+                            log.warn "% Failed to update task status: $newValue"
+                        }
+                    }
+
+                }
             }
-            catch( Exception e ) {
-                log.debug "Error during node shutdown. Cause: ${e.message}"
-            }
+            log.debug "% Heartbeat thread terminated"
+
+        } as Runnable
+
+
+        def thread = new Thread(heartbeat)
+        thread.setName('HzDaemon heartbeat')
+        thread.setDaemon(true)
+        thread.run()
+    }
+
+    /**
+     * Shutdown the Hazelcast instance
+     */
+    final protected void shutdown() {
+        if( !hazelcast ) return
+        log.info "Shutting down node"
+        try {
+            hazelcast.shutdown()
+            hazelcast = null
+        }
+        catch( Throwable e ) {
+            // do not care
         }
     }
 
@@ -411,7 +494,18 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
      * @param cmd
      */
     private void notifyStart( HzCmdCall cmd ) {
-        eventsQueue.put( HzCmdNotify.start(cmd, thisMember.getUuid()) )
+
+        // add this task id in the map of all processed tasks
+        final stateObj = HzCmdStatus.start(cmd, thisMember.getUuid())
+        final key = new HzTaskKey( cmd.sessionId, cmd.taskId )
+
+        tasksLock.withLock {
+            // map of current running tasks
+            runningTasks[ key ] = stateObj
+            // add to the shared obj
+            allTasks[ key ] = stateObj
+        }
+
     }
 
     /**
@@ -424,12 +518,12 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
     private void notifyResult( HzCmdCall cmd, result, Throwable error ) {
         log.trace "Publishing command result: $cmd"
 
-        try {
-            eventsQueue.put( HzCmdNotify.result(cmd, result, error) )
-        }
-        catch( Throwable throwable ) {
-            log.debug("Unable to publish command result: $cmd -- Publishing error cause instead: ${throwable.getMessage()?:throwable}")
-            eventsQueue.put( HzCmdNotify.result(cmd,result,throwable) )
+        // add this task id in the map of all processed tasks
+        final key = new HzTaskKey( cmd.sessionId, cmd.taskId )
+
+        tasksLock.withLock {
+            allTasks[ key ] = HzCmdStatus.result(cmd, result, error)
+            runningTasks.remove( key )
         }
 
     }
@@ -447,6 +541,43 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
     @Override
     void memberAttributeChanged(MemberAttributeEvent memberAttributeEvent) {
         /* ignore this */
+    }
+
+
+    @Slf4j
+    class SessionEntryListener implements EntryListener<UUID,HzRemoteSession> {
+
+        /**
+         * When a session entry is removed (i.e. when a client disconnect)
+         * remove all the eventually remaining task id
+         * @param event
+         */
+        @Override
+        void entryRemoved(EntryEvent<UUID, HzRemoteSession> event) {
+            final sessionId = event.getKey()
+            log.debug "Removing session id: ${sessionId}"
+            def list = []
+            HzDaemon.this.allTasks.keySet().each { HzTaskKey key ->
+                if( key.sessionId == sessionId ) {
+                    list << key.taskId
+                    HzDaemon.this.allTasks.remove(key)
+                }
+            }
+            if( list )
+                log.debug "Evicted ${list.size()} tasks from session: $sessionId -- $list"
+        }
+
+        /** do not used */
+        @Override
+        void entryAdded(EntryEvent<UUID, HzRemoteSession> event) { }
+
+        /** do not used */
+        @Override
+        void entryUpdated(EntryEvent<UUID, HzRemoteSession> event) { }
+
+        /** do not used */
+        @Override
+        void entryEvicted(EntryEvent<UUID, HzRemoteSession> event) { }
     }
 }
 

@@ -24,6 +24,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.Lock
+import java.util.concurrent.locks.ReentrantLock
 import java.util.regex.Pattern
 
 import groovy.transform.TupleConstructor
@@ -1759,6 +1760,22 @@ class NextflowExtensions {
         }
 
         ResourceGroovyMethods.asType(self, type);
+    }
+
+
+    private static Lock MAP_LOCK = new ReentrantLock()
+
+    static def <T> T getOrCreate( Map self, key, factory ) {
+
+        MAP_LOCK.withLock {
+            if( self.containsKey(key) )
+                return self.get(key)
+
+            def result = factory instanceof Closure ? factory.call() : factory
+            self.put(key,result)
+            return result
+        }
+
     }
 
 
