@@ -19,20 +19,20 @@
  */
 
 package nextflow.processor
-
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.executor.AbstractExecutor
+import nextflow.executor.Executor
 import nextflow.executor.LocalExecutor
 import nextflow.executor.LsfExecutor
 import nextflow.executor.NopeExecutor
+import nextflow.executor.ServiceName
 import nextflow.executor.SgeExecutor
 import nextflow.executor.SlurmExecutor
 import nextflow.executor.SupportedScriptTypes
 import nextflow.script.BaseScript
 import nextflow.script.ScriptType
 import nextflow.script.TaskBody
+import nextflow.util.ServiceDiscover
 
 /**
  *
@@ -41,21 +41,16 @@ import nextflow.script.TaskBody
 @Slf4j
 class ProcessFactory {
 
-
     /*
-   * Map the executor class to its 'friendly' name
-   */
-    static executorsMap = [
-            'nope': NopeExecutor.name,
-            'local': LocalExecutor.name,
-            'sge':  SgeExecutor.name,
-            'oge':  SgeExecutor.name,
-            'lsf': LsfExecutor.name,
-            'slurm': SlurmExecutor.name,
-            'dnanexus': 'nextflow.executor.DnaNexusExecutor',
-            'hazelcast': 'nextflow.executor.HzExecutor',
-            'gg': 'nextflow.executor.GgExecutor',
-            'gridgain': 'nextflow.executor.GgExecutor'
+     * Map the executor class to its 'friendly' name
+     */
+    final protected Map executorsMap = [
+            'nope': NopeExecutor,
+            'local': LocalExecutor,
+            'sge':  SgeExecutor,
+            'oge':  SgeExecutor,
+            'lsf': LsfExecutor,
+            'slurm': SlurmExecutor
     ]
 
     private final Session session
@@ -64,25 +59,66 @@ class ProcessFactory {
 
     private BaseScript owner
 
+    /* only for test -- do not use */
+    protected ProcessFactory() {
+
+    }
+
     ProcessFactory( BaseScript ownerScript, Session session, Map config = null ) {
         this.owner = ownerScript
         this.session = session
         this.config = config != null ? config : session.config
+
+        // discover non-core executors
+        for( Class<Executor> exec : ServiceDiscover.load(Executor).iterator() ) {
+            log.debug "Discovered executor class: ${exec.name}"
+            executorsMap.put(findNameByClass(exec), exec.name)
+        }
     }
 
-    @PackageScope
-    static Class<? extends AbstractExecutor> loadExecutorClass(String executorName) {
-        log.debug ">> processorType: $executorName"
-        def className = executorName ? executorsMap[ executorName?.toLowerCase()  ] : LocalExecutor.name
+    /**
+     * Extract the executor name by using the annotation {@code ServiceName} or fallback to simple classname
+     * if the annotation is not provided
+     *
+     * @param clazz
+     * @return
+     */
+    def static String findNameByClass( Class<Executor> clazz ) {
+        def annotation = clazz.getAnnotation(ServiceName)
+        if( annotation )
+            return annotation.value()
 
-        // if the className is empty (because the 'processorType' does not map to any class, fallback to the 'processorType' itself)
-        if( !className ) {
-            className = executorName
+        def name = clazz.getSimpleName().toLowerCase()
+        if( name.endsWith('executor') ) {
+            name = name.subSequence(0, name.size()-'executor'.length())
         }
 
-        log.debug "Loading executor class: ${className}"
+        return name
+    }
+
+    protected Class<? extends Executor> loadExecutorClass(String executorName) {
+        log.debug ">> processorType: '$executorName'"
+        if( !executorName )
+            return LocalExecutor
+
+        def clazz =  executorsMap[executorName.toLowerCase()]
+        if( !clazz )
+            throw new IllegalArgumentException("Unknown executor name: $executorName")
+
+        if( clazz instanceof Class )
+            return clazz
+
+        if( !(clazz instanceof String ) )
+            throw new IllegalArgumentException("Not a valid executor class object: $clazz")
+
+        // if the className is empty (because the 'processorType' does not map to any class, fallback to the 'processorType' itself)
+        if( !clazz ) {
+            clazz = executorName
+        }
+
+        log.debug "Loading executor class: ${clazz}"
         try {
-            Thread.currentThread().getContextClassLoader().loadClass(className) as Class<AbstractExecutor>
+            Thread.currentThread().getContextClassLoader().loadClass(clazz as String) as Class<Executor>
         }
         catch( Exception e ) {
             throw new IllegalArgumentException("Cannot find a valid class for specified executor: '${executorName}'")
@@ -91,10 +127,9 @@ class ProcessFactory {
     }
 
 
-    @PackageScope
-    static boolean isTypeSupported( ScriptType type, executor ) {
+    protected boolean isTypeSupported( ScriptType type, executor ) {
 
-        if( executor instanceof AbstractExecutor ) {
+        if( executor instanceof Executor ) {
             executor = executor.class
         }
 

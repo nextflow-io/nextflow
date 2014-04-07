@@ -35,8 +35,9 @@ import nextflow.util.Duration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@ServiceName('hazelcast')
 @SupportedScriptTypes( [ScriptType.SCRIPTLET, ScriptType.GROOVY] )
-class HzExecutor extends AbstractExecutor  {
+class HzExecutor extends Executor  {
 
     @PackageScope
     HzConnector connector

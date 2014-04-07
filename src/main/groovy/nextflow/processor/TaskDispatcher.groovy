@@ -24,7 +24,7 @@ import java.util.concurrent.CountDownLatch
 
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.executor.AbstractExecutor
+import nextflow.executor.Executor
 
 /**
  * Monitor tasks execution for completion notifying their results
@@ -43,7 +43,7 @@ class TaskDispatcher {
      * Map each executor class with its tasks monitor, in other words there's one {@code TaskMonitor}
      * instance for each type of executor
      */
-    final private Map<Class<? extends AbstractExecutor>, TaskMonitor> monitors = [:]
+    final private Map<Class<? extends Executor>, TaskMonitor> monitors = [:]
 
     private volatile boolean started
 
@@ -82,7 +82,7 @@ class TaskDispatcher {
      * @param create
      * @return
      */
-    TaskMonitor getOrCreateMonitor( Class<? extends AbstractExecutor> type, Closure<TaskMonitor> create ) {
+    TaskMonitor getOrCreateMonitor( Class<? extends Executor> type, Closure<TaskMonitor> create ) {
 
         if( monitors.containsKey(type) ) {
             return monitors.get(type)
@@ -109,7 +109,7 @@ class TaskDispatcher {
         assert executor
 
         def result = null
-        if( executor instanceof AbstractExecutor )
+        if( executor instanceof Executor )
             result = monitors.get(executor.class)
 
         else if( executor instanceof Class )

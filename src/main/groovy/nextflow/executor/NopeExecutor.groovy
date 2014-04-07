@@ -35,7 +35,7 @@ import nextflow.util.Duration
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class NopeExecutor extends AbstractExecutor {
+class NopeExecutor extends Executor {
 
     @Override
     protected TaskMonitor createTaskMonitor() {

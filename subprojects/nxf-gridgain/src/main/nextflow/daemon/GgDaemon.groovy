@@ -21,6 +21,7 @@
 package nextflow.daemon
 import groovy.util.logging.Slf4j
 import nextflow.executor.GgConfigFactory
+import nextflow.executor.ServiceName
 import org.gridgain.grid.Grid
 import org.gridgain.grid.GridConfiguration
 import org.gridgain.grid.GridGain
@@ -31,6 +32,7 @@ import org.gridgain.grid.GridGain
  */
 
 @Slf4j
+@ServiceName('gridgain')
 class GgDaemon implements DaemonLauncher {
 
     Grid grid

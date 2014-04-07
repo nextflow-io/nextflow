@@ -56,8 +56,9 @@ import org.jetbrains.annotations.Nullable
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@ServiceName('gridgain')
 @SupportedScriptTypes( [ScriptType.SCRIPTLET, ScriptType.GROOVY] )
-class GgExecutor extends AbstractExecutor {
+class GgExecutor extends Executor {
 
     @PackageScope
     GgConnector connector

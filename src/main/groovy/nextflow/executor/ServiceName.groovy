@@ -19,27 +19,20 @@
  */
 
 package nextflow.executor
-
 import java.lang.annotation.ElementType
-import java.lang.annotation.Inherited
 import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
-
-import nextflow.script.ScriptType
-
 /**
- * Define the script type runnable by the executor
+ * Define the executor name
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
-@Inherited
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@interface SupportedScriptTypes {
+@interface ServiceName {
 
-    ScriptType[] value()
-
+    String value()
 
 }

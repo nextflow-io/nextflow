@@ -52,7 +52,8 @@ import nextflow.util.KryoHelper
 
 
 @Slf4j
-class DnaNexusExecutor extends AbstractExecutor {
+@ServiceName('dnanexus')
+class DnaNexusExecutor extends Executor {
 
     def void init() {
         super.init()

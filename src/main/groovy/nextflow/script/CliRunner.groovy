@@ -41,9 +41,11 @@ import nextflow.daemon.DaemonLauncher
 import nextflow.exception.ConfigParseException
 import nextflow.exception.InvalidArgumentException
 import nextflow.exception.MissingLibraryException
+import nextflow.executor.ServiceName
 import nextflow.util.FileHelper
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
+import nextflow.util.ServiceDiscover
 import org.apache.commons.io.FilenameUtils
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.control.CompilerConfiguration
@@ -878,20 +880,17 @@ class CliRunner {
 
 
         DaemonLauncher instance
-        if( daemonConfig.name ) {
-            try {
-                instance = (DaemonLauncher)Class.forName(daemonConfig.name as String).newInstance()
+        def name = daemonConfig.name as String
+        if( name ) {
+            if( name.contains('.') ) {
+                instance = loadDaemonByClass(name)
             }
-            catch( Exception e ) {
-                throw new IllegalStateException("Cannot load daemon: ${daemonConfig.name}")
+            else {
+                instance = loadDaemonByName(name)
             }
         }
         else {
-            def loader = ServiceLoader.load(DaemonLauncher).iterator()
-            if( !loader.hasNext() )
-                throw new IllegalStateException("No daemon services are available -- Cannot launch Nextflow in damon mode")
-
-            instance = loader.next()
+            instance = loadDaemonFirst()
         }
 
 
@@ -902,5 +901,41 @@ class CliRunner {
     static private getLocalNameAndAddress() {
         def host = InetAddress.getLocalHost()
         "${host.getHostName()} [${host.getHostAddress()}]"
+    }
+
+
+    static DaemonLauncher loadDaemonByName( String name ) {
+
+        Class<DaemonLauncher> clazz = null
+        for( Class item : ServiceDiscover.load(DaemonLauncher).iterator() ) {
+            log.debug "Discovered daemon class: ${item.name}"
+            ServiceName annotation = item.getAnnotation(ServiceName)
+            if( annotation && annotation.value() == name ) {
+                clazz = item
+                break
+            }
+        }
+
+        if( !clazz )
+            throw new IllegalArgumentException("Unknown daemon name: $name")
+
+        clazz.newInstance()
+    }
+
+    static DaemonLauncher loadDaemonByClass( String name ) {
+        try {
+            return (DaemonLauncher)Class.forName(name).newInstance()
+        }
+        catch( Exception e ) {
+            throw new IllegalStateException("Cannot load daemon: ${name}")
+        }
+    }
+
+    static DaemonLauncher loadDaemonFirst() {
+        def loader = ServiceLoader.load(DaemonLauncher).iterator()
+        if( !loader.hasNext() )
+            throw new IllegalStateException("No daemon services are available -- Cannot launch Nextflow in damon mode")
+
+        return loader.next()
     }
 }

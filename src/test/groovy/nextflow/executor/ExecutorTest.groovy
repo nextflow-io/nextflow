@@ -27,7 +27,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class AbstractExecutorTest extends Specification {
+class ExecutorTest extends Specification {
 
 
 
@@ -35,7 +35,7 @@ class AbstractExecutorTest extends Specification {
     def testStagingFilesScript() {
         setup:
         def binding = new Binding()
-        def executor = [:] as AbstractExecutor
+        def executor = [:] as Executor
 
         def param1 = new FileInParam(binding, []).bind('file.txt') as FileInParam
         def param2 = new FileInParam(binding, []).bind('seq_*.fa') as FileInParam

@@ -42,7 +42,7 @@ import nextflow.script.ScriptType
  */
 @Slf4j
 @SupportedScriptTypes( [ScriptType.SCRIPTLET] )
-abstract class AbstractExecutor {
+abstract class Executor {
 
     /**
      * The object holding the configuration declared by this task

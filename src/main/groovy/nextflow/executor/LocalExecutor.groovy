@@ -41,7 +41,7 @@ import org.apache.commons.io.IOUtils
  */
 @Slf4j
 @SupportedScriptTypes( [ScriptType.SCRIPTLET, ScriptType.GROOVY] )
-class LocalExecutor extends AbstractExecutor {
+class LocalExecutor extends Executor {
 
     @Override
     protected TaskMonitor createTaskMonitor() {
@@ -250,9 +250,9 @@ class NativeTaskHandler extends TaskHandler {
 
     private Session session
 
-    private AbstractExecutor executor
+    private Executor executor
 
-    protected NativeTaskHandler(TaskRun task, TaskConfig taskConfig, AbstractExecutor executor) {
+    protected NativeTaskHandler(TaskRun task, TaskConfig taskConfig, Executor executor) {
         super(task, taskConfig)
         this.executor = executor
         this.session = executor.session

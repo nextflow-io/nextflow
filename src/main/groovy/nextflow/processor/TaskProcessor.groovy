@@ -40,7 +40,7 @@ import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessScriptException
-import nextflow.executor.AbstractExecutor
+import nextflow.executor.Executor
 import nextflow.script.BaseScript
 import nextflow.script.BasicMode
 import nextflow.script.FileOutParam
@@ -116,7 +116,7 @@ abstract class TaskProcessor {
     /**
      * The underlying executor which will run the task
      */
-    protected final AbstractExecutor executor
+    protected final Executor executor
 
     /**
      * The corresponding task configuration properties, it holds the inputs/outputs
@@ -171,7 +171,7 @@ abstract class TaskProcessor {
      * @param taskConfig
      * @param taskBody
      */
-    TaskProcessor( AbstractExecutor executor, Session session, BaseScript script, TaskConfig taskConfig, TaskBody taskBody ) {
+    TaskProcessor( Executor executor, Session session, BaseScript script, TaskConfig taskConfig, TaskBody taskBody ) {
         assert executor
         assert session
         assert script

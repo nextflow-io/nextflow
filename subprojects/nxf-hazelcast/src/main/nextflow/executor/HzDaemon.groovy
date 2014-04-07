@@ -52,6 +52,7 @@ import org.apache.commons.lang.StringUtils
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@ServiceName('hazelcast')
 class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
 
     static HEARTBEAT_DURATION = Duration.of('5s')

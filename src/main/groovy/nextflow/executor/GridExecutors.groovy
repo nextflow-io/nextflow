@@ -45,7 +45,7 @@ import org.apache.commons.lang.StringUtils
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-abstract class AbstractGridExecutor extends AbstractExecutor {
+abstract class AbstractGridExecutor extends Executor {
 
 
     protected Duration queueInterval
