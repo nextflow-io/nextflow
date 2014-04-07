@@ -223,7 +223,7 @@ class LoggerHelper {
                 return false;
             }
 
-            if (firstTime.getAndSet(false)) {
+            if (firstTime.getAndSet(false) && !activeFile.empty() ) {
                 return true;
             }
             return false;
