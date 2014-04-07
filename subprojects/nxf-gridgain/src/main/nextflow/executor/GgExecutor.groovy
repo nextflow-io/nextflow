@@ -24,6 +24,7 @@ import java.nio.file.Path
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.exception.ProcessException
 import nextflow.processor.DelegateMap
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
@@ -35,12 +36,20 @@ import nextflow.util.Duration
 import nextflow.util.InputStreamDeserializer
 import nextflow.util.KryoHelper
 import org.apache.commons.lang.SerializationUtils
+import org.gridgain.grid.GridException
 import org.gridgain.grid.GridFuture
+import org.gridgain.grid.GridNode
+import org.gridgain.grid.compute.GridComputeJob
+import org.gridgain.grid.compute.GridComputeJobResult
+import org.gridgain.grid.compute.GridComputeLoadBalancer
+import org.gridgain.grid.compute.GridComputeTaskAdapter
 import org.gridgain.grid.lang.GridCallable
 import org.gridgain.grid.lang.GridInClosure
 import org.gridgain.grid.logger.GridLogger
+import org.gridgain.grid.resources.GridLoadBalancerResource
 import org.gridgain.grid.resources.GridLoggerResource
 import org.gridgain.grid.resources.GridUserResource
+import org.jetbrains.annotations.Nullable
 
 /**
  * A Nextflow executor based on GridGain services
@@ -67,7 +76,7 @@ class GgExecutor extends AbstractExecutor {
      */
     @Override
     protected TaskMonitor createTaskMonitor() {
-        TaskPollingMonitor.create(session, name, 10, Duration.of('1s'))
+        TaskPollingMonitor.create(session, name, Duration.of('1s'))
     }
 
 
@@ -114,8 +123,41 @@ class GgExecutor extends AbstractExecutor {
         connector.getCluster().compute().call(command)
     }
 
-}
+    GridFuture execute( GridComputeJob task ) {
+        connector.getCluster().compute().execute( new GgTaskWrapper(task), null)
+    }
 
+
+    /*
+     * link http://atlassian.gridgain.com/wiki/display/GG60/Load+Balancing
+     */
+    static class GgTaskWrapper extends GridComputeTaskAdapter  {
+
+        // Inject load balancer.
+        @GridLoadBalancerResource
+        transient GridComputeLoadBalancer balancer
+
+        private GridComputeJob theJob
+
+        GgTaskWrapper( GridComputeJob job ) {
+            this.theJob = job
+        }
+
+        @Override
+        Map<? extends GridComputeJob, GridNode> map(List nodes, @Nullable Object arg) throws GridException {
+
+            Map<GridComputeJob, GridNode> jobUnit = [:]
+            jobUnit.put(theJob, balancer.getBalancedNode(theJob, null))
+            return jobUnit
+        }
+
+        @Override
+        Object reduce(List list) throws GridException {
+            return list.get(0)
+        }
+    }
+
+}
 
 
 /**
@@ -170,10 +212,10 @@ class GgTaskHandler extends TaskHandler {
         final sessionId = task.processor.session.uniqueId
         if( type == ScriptType.SCRIPTLET ) {
             final List cmdLine = new ArrayList(taskConfig.shell ?: 'bash' as List ) << wrapperFile.getName()
-            future = executor.call( new GgBashTask( task, cmdLine ) )
+            future = executor.execute( new GgBashTask( task, cmdLine ) )
         }
         else {
-            future = executor.call( new GgClosureTask( task, sessionId ) )
+            future = executor.execute( new GgClosureTask( task, sessionId ) )
         }
 
         future.listenAsync( { executor.getTaskMonitor().signalComplete(); } as GridInClosure )
@@ -197,19 +239,29 @@ class GgTaskHandler extends TaskHandler {
     @Override
     boolean checkIfCompleted() {
 
-        if( isRunning() && future.isDone() && (!exitFile || exitFile.lastModified()>0) ) {
+        if( isRunning() && (future.isDone() || future.isCancelled()) && (!exitFile || exitFile.lastModified()>0) ) {
             status = TaskHandler.Status.COMPLETED
+
+            final result = (GridComputeJobResult)future.get()
+            if( result.getException() ) {
+                task.error = result.getException()
+                return true
+            }
+
+            if( result.isCancelled() ) {
+                task.error = ProcessException.CANCELLED_ERROR
+                return true
+            }
 
             // -- the task output depend by the kind of the task executed
             if( isScriptlet() ) {
                 task.stdout = outputFile
-                task.exitStatus = future.get() as Integer
+                task.exitStatus = result.getData() as Integer
             }
             else {
-                def result = future.get() as GgResult
-                task.stdout = result.value
-                task.code.delegate = new DelegateMap( task.processor, result.context )
-                task.error = result.error
+                def data = result.getData() as GgResultData
+                task.stdout = data.value
+                task.code.delegate = new DelegateMap( task.processor, data.context )
             }
 
             log.trace "Task ${task} > DONE"
@@ -241,12 +293,14 @@ class GgTaskHandler extends TaskHandler {
 /**
  * Execute a remote shell task
  */
-class GgBashTask implements GridCallable<Integer> {
+class GgBashTask implements GridCallable<Integer>, GridComputeJob {
 
     private static final long serialVersionUID = - 5552939711667527410L
 
     @GridLoggerResource
     private transient GridLogger log;
+
+    private transient Process process
 
     /**
      * Note: use a File instead instead of a Path, because the latter is not serializable
@@ -277,12 +331,17 @@ class GgBashTask implements GridCallable<Integer> {
         this.name = task.name
         this.workDir = task.workDirectory.toFile()
         this.commandLine = cmdLine
-
     }
 
 
     @Override
     Integer call() throws Exception {
+        execute() as Integer
+    }
+
+
+    @Override
+    Object execute() throws GridException {
         log.debug "Launching script for task > ${name}"
 
         ProcessBuilder builder = new ProcessBuilder()
@@ -290,11 +349,26 @@ class GgBashTask implements GridCallable<Integer> {
                 .command(commandLine)
                 .redirectErrorStream(true)
 
-        def process = builder.start()
-        return process.waitFor()
-
+        process = builder.start()
+        def result = process.waitFor()
+        // make sure to destroy the process and close the streams
+        try { process.destroy() }
+        catch( Throwable e ) { }
+        // return the exit value
+        return result
     }
 
+    @Override
+    void cancel() {
+        if( process ) {
+            log.debug "Cancelling process for task > $name"
+            process.destroy()
+        }
+        else {
+            log.debug "No process to cancel for task > $name"
+        }
+
+    }
 
 
     String toString() {
@@ -306,7 +380,7 @@ class GgBashTask implements GridCallable<Integer> {
 /**
  * Execute in a remote cluster note a groovy closure task
  */
-class GgClosureTask implements GridCallable<GgResult> {
+class GgClosureTask implements GridComputeJob, GridCallable {
 
     private static final long serialVersionUID = 5515528753549263068L
 
@@ -358,10 +432,8 @@ class GgClosureTask implements GridCallable<GgResult> {
         this.delegateObj = (task.code.delegate as DelegateMap).dehydrate()
     }
 
-
     @Override
-    GgResult call() throws Exception {
-
+    Object execute() throws GridException {
         log.debug "Running closure for task > ${name}"
 
         try {
@@ -369,13 +441,24 @@ class GgClosureTask implements GridCallable<GgResult> {
             def delegate = DelegateMap.rehydrate(delegateObj,loader)
             Closure closure = InputStreamDeserializer.deserialize(codeObj,loader)
             Object result = closure.rehydrate(delegate, delegate.getScript(), delegate.getScript()).call()
-            return new GgResult(value: result, context: delegate?.getHolder())
+            return new GgResultData(value: result, context: delegate?.getHolder())
         }
-        catch( Throwable e ) {
+        catch( Exception e ) {
             log.error("Cannot execute closure for task > $name", e)
-            return new GgResult(error: e)
+            throw new ProcessException(e)
         }
+    }
 
+
+    @Override
+    void cancel() {
+
+    }
+
+
+    @Override
+    GgResultData call() throws Exception {
+        (GgResultData)execute()
     }
 
 }
@@ -384,7 +467,7 @@ class GgClosureTask implements GridCallable<GgResult> {
  * Models the result of a remote closure task execution
  */
 @EqualsAndHashCode
-class GgResult implements Serializable {
+class GgResultData implements Serializable {
 
     private static final long serialVersionUID = - 7200781198107958188L ;
 

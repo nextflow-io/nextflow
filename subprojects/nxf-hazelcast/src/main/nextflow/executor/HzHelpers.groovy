@@ -284,7 +284,7 @@ class HzCmdStatus implements Serializable {
     }
 
     static HzCmdStatus error( UUID sessionId, taskId ) {
-        new HzCmdStatus( sessionId: sessionId, taskId: taskId, error: ProcessException.instance )
+        new HzCmdStatus( sessionId: sessionId, taskId: taskId, error: ProcessException.UNKNOWN_ERROR )
     }
 
 

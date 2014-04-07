@@ -20,6 +20,7 @@
 
 package nextflow.executor
 
+import nextflow.util.DaemonConfig
 import spock.lang.Specification
 
 /**
@@ -32,14 +33,14 @@ class HzDaemonTest extends Specification{
 
         when:
         def daemon = [:] as HzDaemon
-        daemon.config = [:]
+        daemon.config = new DaemonConfig('hazlecast',[:])
         then:
         daemon.getConfigObj().getGroupConfig().getName() == HzConst.DEFAULT_GROUP_NAME
         daemon.getConfigObj().getNetworkConfig().getJoin().getMulticastConfig().enabled
 
         when:
         daemon = [:] as HzDaemon
-        daemon.config = [join:'multicast', group:'pippo', port:12345]
+        daemon.config = new DaemonConfig('hazelcast',[join:'multicast', group:'pippo', port:12345])
         then:
         daemon.getConfigObj().getGroupConfig().getName() == 'pippo'
         daemon.getConfigObj().getNetworkConfig().getPort() == 12345
@@ -48,7 +49,7 @@ class HzDaemonTest extends Specification{
 
         when:
         daemon = [:] as HzDaemon
-        daemon.config = [join:'192.178.1.2,192.178.1.3:10 \n 192.178.1.4:20']
+        daemon.config = new DaemonConfig('hazelcast', [join:'192.178.1.2,192.178.1.3:10 \n 192.178.1.4:20'])
         then:
         daemon.getConfigObj().getGroupConfig().getName() == HzConst.DEFAULT_GROUP_NAME
         !daemon.getConfigObj().getNetworkConfig().getJoin().getMulticastConfig().enabled
@@ -56,46 +57,5 @@ class HzDaemonTest extends Specification{
         daemon.getConfigObj().getNetworkConfig().getJoin().getTcpIpConfig().getMembers() == ['192.178.1.2','192.178.1.3:10','192.178.1.4:20']
     }
 
-    def testGetInterfaces() {
 
-        setup:
-        def daemon
-        List<String> addresses
-
-        when:
-        daemon = [:] as HzDaemon
-        addresses = daemon.getNetworkInterfaces()
-        then:
-        addresses == []
-
-
-        when:
-        daemon = [:] as HzDaemon
-        daemon.config = [interface: '172.5.1.*,172.5.2.*']
-        addresses = daemon.getNetworkInterfaces()
-        then:
-        addresses == ['172.5.1.*','172.5.2.*']
-
-//        when:
-//        daemon = [:] as HzDaemon
-//        daemon.config = [interface: 'lo0']
-//        addresses = daemon.getHzInterfaces()
-//        then:
-//        addresses == ['127.0.0.1']
-    }
-
-    def testDaemonProperty() {
-
-        when:
-        def daemon = [:] as HzDaemon
-        daemon.config = [x:123, y:222, '$hazelcast': [y:333] ]
-        then:
-        daemon.getDaemonProperty('x') == 123
-        daemon.getDaemonProperty('y') == 333
-        daemon.getDaemonProperty('z') == null
-        daemon.getDaemonProperty('z', 'alpha') == 'alpha'
-        daemon.getDaemonProperty('z', 'alpha', [NXF_DAEMON_Z:'hola']) == 'hola'
-        daemon.getDaemonProperty('p.q.z', null, [NXF_DAEMON_P_Q_Z:'hello']) == 'hello'
-
-    }
 }

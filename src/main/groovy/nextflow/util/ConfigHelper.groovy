@@ -21,6 +21,7 @@
 package nextflow.util
 
 import groovy.util.logging.Slf4j
+import org.apache.commons.lang.StringUtils
 
 /**
  * Helper method to handle configuration object
@@ -46,5 +47,77 @@ class ConfigHelper {
 
         return result
     }
+
+}
+
+/**
+ * Helper class retrieve daemon configuration properties
+ */
+class DaemonConfig {
+
+    final String scope
+
+    final Map config
+
+    final Map fallbackEnvironment
+
+
+    DaemonConfig( String scope, Map config, Map env = null ) {
+        assert scope
+        assert config != null
+
+        this.scope = scope
+        this.config = config
+        this.fallbackEnvironment = env
+    }
+
+    def <T> T getAttribute( String name, defValue = null ) {
+        def result = ConfigHelper.getConfigProperty(config, scope, name)
+        if( result != null )
+            return result
+
+        // -- try to fallback on env
+        if( fallbackEnvironment ) {
+            def key = "NXF_DAEMON_${name.toUpperCase().replaceAll(/\./,'_')}".toString()
+            result = fallbackEnvironment.get(key)
+        }
+
+        return result != null ? result : defValue
+    }
+
+
+
+    /**
+     * Get the network interface IP addresses. When the it specified by its name
+     * it will resolve to the actual IP address
+     *
+     * @return The list of address or an empty list if attribute is not specified
+     */
+    List<String> getNetworkInterfaceAddresses() {
+        def result = []
+        def value = getAttribute('interface') as String
+        def interfaceNames = value ? StringUtils.split(value, ", \n").collect { it.trim() } : null
+        interfaceNames?.each {
+            if( it.contains('.') )
+                result << it // it is supposed to be an interface IP address, add it to the list
+
+            else
+                result.addAll( findInterfaceAddressesByName(it) )
+        }
+        return result
+    }
+
+
+    protected List<String> findInterfaceAddressesByName( String name ) {
+        assert name
+        def result = []
+        NetworkInterface interfaces = NetworkInterface.getNetworkInterfaces().find { NetworkInterface net -> net.name == name || net.displayName == name }
+        interfaces?.getInetAddresses()?.each { InetAddress addr ->
+            if( addr instanceof Inet4Address )
+                result << addr.getHostAddress()
+        }
+        return result
+    }
+
 
 }

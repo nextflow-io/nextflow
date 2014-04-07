@@ -138,8 +138,13 @@ class TaskPollingMonitor implements TaskMonitor {
      *
      * @param value
      */
-    protected void setCapacity( int value ) {
-        this.capacity = value
+    final void capacitySet( int newValue ) {
+        if( newValue > capacity ) {
+            capacityInc(newValue-capacity)
+        }
+        else if( newValue < capacity ) {
+            capacityDec( capacity-newValue )
+        }
     }
 
     /**

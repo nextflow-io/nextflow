@@ -46,7 +46,7 @@ class GgClassLoaderProvider {
     @Memoized
     ClassLoader getClassLoaderFor( UUID sessionId ) {
         assert sessionId
-        GridCache<UUID, GgClient> allSessions = grid.cache( GgConfig.SESSIONS_CACHE )
+        GridCache<UUID, GgClient> allSessions = grid.cache( GgConfigFactory.SESSIONS_CACHE )
 
         if( !allSessions )
             throw new IllegalStateException('Missing session cache object ')

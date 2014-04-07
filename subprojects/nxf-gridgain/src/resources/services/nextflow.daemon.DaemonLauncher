@@ -19,4 +19,4 @@
 #
 
 
-nextflow.executor.GgDaemon
+nextflow.daemon.GgDaemon

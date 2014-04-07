@@ -18,13 +18,12 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.executor
+package nextflow.daemon
 import groovy.util.logging.Slf4j
-import nextflow.daemon.DaemonLauncher
+import nextflow.executor.GgConfigFactory
 import org.gridgain.grid.Grid
 import org.gridgain.grid.GridConfiguration
 import org.gridgain.grid.GridGain
-
 /**
  * Launch the GridGain daemon
  *
@@ -41,11 +40,11 @@ class GgDaemon implements DaemonLauncher {
     @Override
     void launch(Map config) {
         log.info "Configuring GridGain cluster daemon"
+        cfg = new GgConfigFactory('worker', config).create()
         run()
     }
 
     void run() {
-        cfg = GgConfig.create('worker')
         grid = GridGain.start(cfg);
     }
 

@@ -19,7 +19,6 @@
  */
 
 package nextflow.executor
-
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.locks.Condition
@@ -44,7 +43,7 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.daemon.DaemonLauncher
-import nextflow.util.ConfigHelper
+import nextflow.util.DaemonConfig
 import nextflow.util.Duration
 import org.apache.commons.lang.StringUtils
 /**
@@ -86,16 +85,16 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
      */
     static HzDaemon current
 
-    private Map config
-
     private Member thisMember
+
+    private DaemonConfig config
 
     HzDaemon() {  }
 
     @Override
     void launch(Map properties) {
         log.info "Configuring Hazelcast cluster daemon"
-        this.config = properties
+        config = new DaemonConfig('hazelcast', properties, System.getenv() )
 
         // -- initialize
         initialize()
@@ -148,44 +147,26 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
         return cfg
     }
 
-    /**
-     * Get the daemon configuration property
-     *
-     * @param name The name of the configuration attribute
-     * @param defValue The default attribute value, if the specified name does not exist in the configuration
-     * @param env The environment used as fallback if attribute in the configuration file
-     * @return The attribute value found or the {@code defValue} if not exist
-     */
-    protected getDaemonProperty( String name, defValue = null, Map env = null ) {
-        def result = ConfigHelper.getConfigProperty(config, 'hazelcast', name)
-        if( result != null )
-            return result
-
-        // -- try to fallback on sys env
-        if( env == null ) env = System.getenv()
-        def key = "NXF_DAEMON_${name.toUpperCase().replaceAll(/\./,'_')}".toString()
-        return env.containsKey(key) ? env.get(key) : defValue
-    }
 
     /**
      * @return The daemon port
      */
     protected getPort() {
-        getDaemonProperty('port') as Integer
+        config.getAttribute('port') as Integer
     }
 
     /**
      * @return The cluster group name
      */
     protected String getGroupName() {
-        getDaemonProperty('group', DEFAULT_GROUP_NAME)
+        config.getAttribute('group', DEFAULT_GROUP_NAME)
     }
 
     /**
      * @return The slot provided by the cluster node i.e. the number of processor
      */
     protected int getSlots() {
-        getDaemonProperty('slots', Runtime.getRuntime().availableProcessors()) as Integer
+        config.getAttribute('slots', Runtime.getRuntime().availableProcessors()) as Integer
     }
 
     /**
@@ -194,7 +175,7 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
      * @return Minimum interval to consider a connection error as critical in milliseconds.
      */
     protected String getConnectionMonitorInterval() {
-        getDaemonProperty('connectionMonitorInterval', '300') as String
+        config.getAttribute('connectionMonitorInterval', '300') as String
     }
 
     /**
@@ -203,36 +184,9 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
      * @return Maximum IO error count before disconnecting from a node
      */
     protected String getConnectionMonitorMaxFaults() {
-        getDaemonProperty('connectionMonitorMaxFaults', '5') as String
+        config.getAttribute('connectionMonitorMaxFaults', '5') as String
     }
 
-    /**
-     * @return A list of network IP addresses used by the deamon to bind
-     */
-    protected List<String> getNetworkInterfaces() {
-        def result = []
-        def value = getDaemonProperty('interface') as String
-        def interfaceNames = value ? StringUtils.split(value, ", \n").collect { it.trim() } : null
-        interfaceNames?.each {
-            if( it.contains('.') )
-                result << it // it is supposed to be an interface IP address, add it to the list
-
-            else
-                result.addAll( findInterfaceAddressesByName(it) )
-        }
-        return result
-    }
-
-    protected List<String> findInterfaceAddressesByName( String name ) {
-        assert name
-        def result = []
-        NetworkInterface interfaces = NetworkInterface.getNetworkInterfaces().find { NetworkInterface net -> net.name == name || net.displayName == name }
-        interfaces?.getInetAddresses()?.each { InetAddress addr ->
-            if( addr instanceof Inet4Address )
-                result << addr.getHostAddress()
-        }
-        return result
-    }
 
     /**
      * @return Creates the hazelcast configuration object
@@ -250,7 +204,7 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
             network.setPort(port)
         }
 
-        def interfaces = networkInterfaces
+        def interfaces = config.getNetworkInterfaceAddresses()
         if( interfaces ) {
             network.getInterfaces().setEnabled(true)
             interfaces.each {
@@ -259,7 +213,7 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
             }
         }
 
-        def join = getDaemonProperty('join') as String ?: 'multicast'
+        def join = config.getAttribute('join') as String ?: 'multicast'
 
         if( join == 'multicast') {
             log.debug "Hazelcast config > setup UDP/multicast"
