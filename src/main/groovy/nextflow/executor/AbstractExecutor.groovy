@@ -124,7 +124,12 @@ abstract class AbstractExecutor {
 
         // scan to find the file with that name
         List files = []
-        workDirectory.eachFileMatch(FileType.ANY, ~/$filePattern/ ) { files << it }
+        try {
+            workDirectory.eachFileMatch(FileType.ANY, ~/$filePattern/ ) { files << it }
+        }
+        catch( IOException e ) {
+            throw new MissingFileException("Cannot access folder: '$workDirectory' expected by process: ${taskName}", e)
+        }
 
         if( !files ) {
             throw new MissingFileException("Missing output file(s): '$fileName' expected by process: ${taskName}")
