@@ -48,6 +48,36 @@ class ConfigHelper {
         return result
     }
 
+
+
+    static parseValue( String str ) {
+
+        if ( str == null ) return null
+
+        if ( str.toLowerCase() == 'true') return Boolean.TRUE
+        if ( str.toLowerCase() == 'false' ) return Boolean.FALSE
+
+        if ( str.isInteger() ) return str.toInteger()
+        if ( str.isLong() ) return str.toLong()
+        if ( str.isDouble() ) return str.toDouble()
+        // try as duration as well
+        try { return new Duration(str) }
+        catch( IllegalArgumentException e ) { }
+
+        return str
+
+    }
+
+    static parseValue( obj ) {
+        if( obj instanceof String )
+            return parseValue((String)obj)
+
+        if( obj instanceof GString )
+            return parseValue(obj.toString())
+
+        return obj
+    }
+
 }
 
 /**
@@ -72,9 +102,17 @@ class DaemonConfig {
     }
 
     def <T> T getAttribute( String name, defValue = null ) {
-        def result = ConfigHelper.getConfigProperty(config, scope, name)
+        def result
+        if( scope && config instanceof Map && config['$'+scope] instanceof Map ) {
+            result = getAttrValue( "\$${scope}.$name", config )
+        }
+
         if( result != null )
-            return result
+            return (T)result
+
+        result = getAttrValue( name, config )
+        if( result != null )
+            return (T)result
 
         // -- try to fallback on env
         if( fallbackEnvironment ) {
@@ -82,7 +120,42 @@ class DaemonConfig {
             result = fallbackEnvironment.get(key)
         }
 
-        return result != null ? result : defValue
+        return (T) result != null ? result : defValue
+    }
+
+    private Object getAttrValue( String key, map ) {
+
+        if( !(map instanceof Map) )
+            return null
+
+        def p = key.indexOf('.')
+        if( p == -1 )
+            return ConfigHelper.parseValue(map.get(key))
+
+        String parent = key.substring(0,p)
+        return getAttrValue( key.substring(p+1), map.get(parent) )
+    }
+
+    def List<String> getAttributesNames( String key = null ) {
+        getAttrNames(key, config)
+    }
+
+    private List<String> getAttrNames( String key, map ) {
+
+        if( !key ) {
+           return map instanceof Map ? new ArrayList<>(map.keySet()) : []
+        }
+
+        def p = key.indexOf('.')
+        if( p != -1 ) {
+            String parent = key.substring(0,p)
+            return getAttrNames( key.substring(p+1), map.get(parent) )
+        }
+        else {
+            def entry = map.get(key)
+            entry instanceof Map ? new ArrayList<>(entry.keySet()) : []
+        }
+
     }
 
 
@@ -118,6 +191,7 @@ class DaemonConfig {
         }
         return result
     }
+
 
 
 }

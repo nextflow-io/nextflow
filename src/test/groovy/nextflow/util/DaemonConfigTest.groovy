@@ -69,6 +69,32 @@ class DaemonConfigTest extends Specification {
 
     }
 
+    def testGetNestedNames() {
+
+        when:
+        def cfg = new DaemonConfig('none', [x:1, y:2, tcp: [alpha: 'a', beta: 'b', gamma: [uno:1, due: 2]] ])
+        then:
+        cfg.getAttributesNames().sort() == ['x','y','tcp'].sort()
+        cfg.getAttributesNames('tcp') == ['alpha','beta', 'gamma']
+        cfg.getAttributesNames('tcp.gamma') == ['uno','due']
+
+    }
+
+
+    def testNestedValues() {
+
+        when:
+        def cfg = new DaemonConfig('none', [x:1, y:2, tcp: [alpha: 'a', beta: 'b', gamma: [uno:1, due: 2]] ])
+        then:
+        cfg.getAttribute('x') == 1
+        cfg.getAttribute('tcp.alpha') == 'a'
+        cfg.getAttribute('tcp.beta') == 'b'
+        cfg.getAttribute('tcp.gamma') == [ uno:1, due: 2]
+        cfg.getAttribute('tcp.gamma.uno') == 1
+        cfg.getAttribute('tcp.gamma.due') == 2
+
+    }
+
 
 
 }

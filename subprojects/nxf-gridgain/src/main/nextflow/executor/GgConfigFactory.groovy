@@ -19,16 +19,19 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Paths
 
 import com.amazonaws.auth.BasicAWSCredentials
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.util.DaemonConfig
+import nextflow.util.Duration
+import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang.reflect.MethodUtils
 import org.gridgain.grid.GridConfiguration
 import org.gridgain.grid.cache.GridCacheConfiguration
 import org.gridgain.grid.logger.slf4j.GridSlf4jLogger
+import org.gridgain.grid.spi.collision.jobstealing.GridJobStealingCollisionSpi
 import org.gridgain.grid.spi.discovery.tcp.GridTcpDiscoverySpi
 import org.gridgain.grid.spi.discovery.tcp.ipfinder.multicast.GridTcpDiscoveryMulticastIpFinder
 import org.gridgain.grid.spi.discovery.tcp.ipfinder.s3.GridTcpDiscoveryS3IpFinder
@@ -61,6 +64,7 @@ class GgConfigFactory {
         this.config = new DaemonConfig('gridgain', config, role == 'worker' ? System.getenv() : null )
     }
 
+
     /**
      * Main factory method, creates the {@code GridConfiguration} object
      * @return
@@ -75,9 +79,12 @@ class GgConfigFactory {
         cfg.setGridName( GRID_NAME )
         cfg.setUserAttributes( ROLE: role )
         cfg.setGridLogger( new GridSlf4jLogger() )
+        // this is not really used -- just set to avoid it complaining
+        cfg.setGridGainHome( System.getProperty('user.home') )
 
+        collisionConfig(cfg)
         discoveryConfig(cfg)
-        loadBalancingConfig(cfg)
+        balancingConfig(cfg)
         cacheConfig(cfg)
 
         return cfg
@@ -96,13 +103,30 @@ class GgConfigFactory {
 
 
     /**
+     * http://atlassian.gridgain.com/wiki/display/GG60/Job+Collision+Resolution
+     * http://atlassian.gridgain.com/wiki/display/GG60/Collision+Resolution+SPI
+     */
+    private collisionConfig( GridConfiguration cfg ) {
+
+        def slots = config.getAttribute('slots', Runtime.getRuntime().availableProcessors() ) as int
+        def maxActivesJobs = slots * 3
+        log.debug "GridGain config > setting slots: $slots -- maxActivesJobs: $maxActivesJobs"
+
+        def strategy = new GridJobStealingCollisionSpi()
+        strategy.setActiveJobsThreshold( maxActivesJobs )
+        cfg.setCollisionSpi( strategy )
+
+    }
+
+
+    /**
      * the *early* load balancing strategy
      *
      * http://www.gridgain.com/javadoc/org/gridgain/grid/spi/loadbalancing/adaptive/GridAdaptiveLoadBalancingSpi.html
      * http://atlassian.gridgain.com/wiki/display/GG60/Load+Balancing+SPI
      * http://atlassian.gridgain.com/wiki/display/GG60/Load+Balancing
      */
-    static private void loadBalancingConfig( GridConfiguration cfg ) {
+    private void balancingConfig( GridConfiguration cfg ) {
 
         cfg.setLoadBalancingSpi( new GridAdaptiveLoadBalancingSpi() )
     }
@@ -189,9 +213,25 @@ class GgConfigFactory {
             log.warn "GrigGain config > unknown discovery method: $join"
         }
 
+        // check some optional params
+        config.getAttributesNames('tcp').each {
+            checkAndSet(discoverCfg,'tcp.' + it )
+        }
         cfg.setDiscoverySpi( discoverCfg )
+
+        // check
     }
 
+    protected void checkAndSet( def discoverCfg, String name, defValue = null ) {
+        def value = config.getAttribute(name, defValue)
+        if( value != null ) {
+            def p = name.split(/\./)[-1]
+            def x = value instanceof Duration ? value.toMillis() : value
+            def n = 'set' + StringUtils.capitalize(p)
+            log.debug "GridGain config > $name [$n]: $x [${x.class.name}]"
+            MethodUtils.invokeMethod(discoverCfg, n, x)
+        }
+    }
 
 
 

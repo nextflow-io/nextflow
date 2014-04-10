@@ -19,6 +19,9 @@
  */
 
 package nextflow.script
+
+import static nextflow.util.ConfigHelper.parseValue
+
 import java.lang.reflect.Field
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -51,6 +54,7 @@ import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
+
 /**
  * Application main class
  *
@@ -118,21 +122,6 @@ class CliRunner {
         this(configToMap(config))
     }
 
-
-    static private parseValue( String str ) {
-
-        if ( str == null ) return null
-
-        if ( str?.toLowerCase() == 'true') return Boolean.TRUE
-        if ( str?.toLowerCase() == 'false' ) return Boolean.FALSE
-
-        if ( str.isInteger() ) return str.toInteger()
-        if ( str.isLong() ) return str.toLong()
-        if ( str.isDouble() ) return str.toDouble()
-
-        return str
-
-    }
 
     static private wrapValue( value ) {
         if( !value )
