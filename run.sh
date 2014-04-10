@@ -41,7 +41,7 @@ fi
 declare -a args=()
 DEBUG=''
 MAIN_CLASS='nextflow.script.CliRunner'
-JVM_ARGS+=" -Djava.net.preferIPv4Stack=true -Djava.awt.headless=true"
+JVM_ARGS+=" -Djava.net.preferIPv4Stack=true -Djava.awt.headless=true -Xms512m"
 
 #
 # classpath when the application is compiled with gradle
@@ -50,6 +50,9 @@ if [ -e "$base_dir/build/classes/main" ]; then
   CLASSPATH="$base_dir/build/classes/main"
   CLASSPATH+=":$base_dir/build/classes/test"
   CLASSPATH+=":$base_dir/build/resources/main"
+  CLASSPATH+=":$base_dir/subprojects/nxf-dnxnexus/src/resources"
+  CLASSPATH+=":$base_dir/subprojects/nxf-gridgain/src/resources"
+  CLASSPATH+=":$base_dir/subprojects/nxf-hazlecast/src/resources"
   for file in $base_dir/build/dependency-libs/*.jar; do
     CLASSPATH+=":$file";
   done
