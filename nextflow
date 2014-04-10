@@ -121,9 +121,9 @@ JAVA=java
 [[ -n "$JAVA_HOME" ]] && JAVA="$JAVA_HOME/bin/java"
 
 if [ -z "NXF_OPTIONS" ]; then
-    NXF_OPTIONS="-Djava.awt.headless=true"
+    NXF_OPTIONS="-Djava.awt.headless=true -Xms512m"
 else 
-    NXF_OPTIONS="-Djava.awt.headless=true $NXF_OPTIONS"
+    NXF_OPTIONS="-Djava.awt.headless=true -Xms512m $NXF_OPTIONS"
 fi
 
 # Set the class-path
