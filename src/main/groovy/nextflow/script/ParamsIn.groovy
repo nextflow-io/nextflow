@@ -447,7 +447,7 @@ class EachInParam extends BaseInParam {
 
     @Override
     protected DataflowReadChannel inputValToChannel( value ) {
-        log.warn "Using queue channel on each parameter declaration be should avoided -- take in consideration to change declaration for each: '$name' parameter"
+        log.warn "Using queue channel on each parameter declaration should be avoided -- take in consideration to change declaration for each: '$name' parameter"
 
         // everything is mapped to a collection
         // the collection is wrapped to a "scalar" dataflow variable
