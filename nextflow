@@ -75,7 +75,6 @@ fi
 
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_VER=${NXF_VER:-'0.7.1'}
-NXF_PACK=${NXF_PACK:-one}
 
 # Check if it is required to run in background
 bg=''
@@ -84,9 +83,11 @@ for opt in "$@"; do
     -bg)
       bg=1;;
     -d|-daemon.*)
-      NXF_PACK='hz';;
+      [ -z "$NXF_PACK" ] && NXF_PACK='gg';;
+    gridgain)
+      [ -z "$NXF_PACK" ] && NXF_PACK='gg';;
     hazelcast)
-      NXF_PACK='hz';;
+      [ -z "$NXF_PACK" ] && NXF_PACK='hz';;
     -download)
       rm -rf $NXF_HOME/framework/$NXF_VER || exit $?
       $0 -version || exit $? 
@@ -97,7 +98,9 @@ for opt in "$@"; do
     esac
 done
 
+[[ $NXF_EXECUTOR_NAME = 'gridgain' ]] && NXF_PACK='gg'
 [[ $NXF_EXECUTOR_NAME = 'hazelcast' ]] && NXF_PACK='hz'
+NXF_PACK=${NXF_PACK:-one}
 NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACK.jar}
 NXF_BIN=${NXF_BIN:-$NXF_HOME/framework/$NXF_VER/$NXF_JAR}
 NXF_BASE=${NXF_BASE:-http://www.nextflow.io/releases}

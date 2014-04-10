@@ -46,6 +46,7 @@ configurations {
     oneJarLib
     dnanexus.extendsFrom runtime
     hazelcast.extendsFrom runtime
+    gridgain.extendsFrom runtime
     gdocLibs.extendsFrom runtime
 }
 
@@ -73,6 +74,10 @@ dependencies {
     }
 
     hazelcast (project(':nxf-hazelcast')) {
+        exclude module: 'nextflow'
+    }
+
+    gridgain (project(':nxf-gridgain')) {
         exclude module: 'nextflow'
     }
 
@@ -153,8 +158,9 @@ task buildInfo << {
 task compile(type: Copy) {
     dependsOn buildInfo, compileJava, compileGroovy, processResources
 
-    into "$buildDir/dependency-libs"
     from configurations.hazelcast
+    from configurations.gridgain
+    into "$buildDir/dependency-libs"
 }
 
 
@@ -302,10 +308,33 @@ task packHz(type: OneJar, dependsOn: configurations.hazelcast ) {
     }
 }
 
+
+/*
+ * Creates a self-contained *fat* jar shipping all required dependencies
+ * including Hazelcast stuff
+ */
+task packGg(type: OneJar, dependsOn: configurations.gridgain ) {
+    mainClass = 'nextflow.script.CliRunner'
+    manifest {
+        attributes 'One-Jar-URL-Factory': 'com.simontuffs.onejar.JarClassLoader$OneJarURLFactory'
+        attributes 'Timestamp': String.valueOf(System.currentTimeMillis())
+    }
+    useStable = false
+    classifier = 'gg'
+    oneJarConfiguration = configurations.oneJarLib
+    targetConfiguration = configurations.gridgain
+
+    doFirst { def path=new File("$buildDir/one-jar-build"); if(path.exists()) path.deleteDir() }
+    doLast {
+        ant.copy(file: "$buildDir/libs/nextflow-${version}-gg.jar", todir: nextflowDir, overwrite: true)
+        println "\n>Nextflow GG package copied to: $nextflowDir"
+    }
+}
+
 /*
  * Compile and pack all packages
  */
-task packAll( dependsOn: [compile, pack, packHz, packDx]) {
+task packAll( dependsOn: [compile, pack, packHz, packDx, packGg]) {
 
 }
 
@@ -329,6 +358,7 @@ task release(type: Exec, dependsOn: [compile, test, packAll]) {
     def file1 = file("$buildDir/libs/nextflow-${version}-one.jar").absoluteFile
     def file2 = file("$buildDir/libs/nextflow-${version}-dx.jar").absoluteFile
     def file3 = file("$buildDir/libs/nextflow-${version}-hz.jar").absoluteFile
+    def file4 = file("$buildDir/libs/nextflow-${version}-gg.jar").absoluteFile
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
@@ -344,6 +374,7 @@ task release(type: Exec, dependsOn: [compile, test, packAll]) {
     s3cmd put ${file1} s3://www.nextflow.io/releases/v$version/${file1.name} $s3CmdOpts
     s3cmd put ${file2} s3://www.nextflow.io/releases/v$version/${file2.name} $s3CmdOpts
     s3cmd put ${file3} s3://www.nextflow.io/releases/v$version/${file3.name} $s3CmdOpts
+    s3cmd put ${file4} s3://www.nextflow.io/releases/v$version/${file4.name} $s3CmdOpts
 
     # publish the script as the latest
     s3cmd put ${file0} s3://www.nextflow.io/releases/latest/nextflow $s3CmdOpts
