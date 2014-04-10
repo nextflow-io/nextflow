@@ -687,22 +687,24 @@ abstract class TaskProcessor {
      * @return The {@code ErrorStrategy} applied
      */
     final protected ErrorStrategy resumeOrDie( TaskRun task, Throwable error ) {
+        log.debug "Handling unexpected condition for\n  task: $task\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
         try {
             // do not recoverable error, just trow it again
             if( error instanceof Error ) throw error
 
             final errorIndex = errorCount.getAndIncrement()
+            final taskStrategy = taskConfig.getErrorStrategy()
 
             // when is a task level error and the user has chosen to ignore error, just report and error message
             // return 'false' to DO NOT stop the execution
             if( error instanceof ProcessException ) {
-                if( taskConfig.getErrorStrategy() == ErrorStrategy.IGNORE ) {
+                if( taskStrategy == ErrorStrategy.IGNORE ) {
                     log.warn "Error running process > ${error.getMessage()} -- error is ignored"
                     return ErrorStrategy.IGNORE
                 }
 
-                if( task && taskConfig.getErrorStrategy() == ErrorStrategy.RETRY && errorIndex < taskConfig.getMaxRetries() ) {
+                if( task && taskStrategy == ErrorStrategy.RETRY && errorIndex < taskConfig.getMaxRetries() ) {
                     Thread.start {
                         checkCachedOrLaunchTask( task, task.hash, false )
                         log.info "[${getHashLog(task.hash)}] Re-submitted process > ${task.name}"
@@ -712,7 +714,7 @@ abstract class TaskProcessor {
             }
 
             // make sure the error is showed only the very first time
-            if( errorIndex > 0 ) {
+            if( errorIndex > 0 && taskStrategy != ErrorStrategy.RETRY ) {
                 return ErrorStrategy.TERMINATE
             }
 
