@@ -176,7 +176,8 @@ class HzTaskHandler extends TaskHandler {
         final sender = task.processor.session.uniqueId
         HzCmdCall command
         if( type == ScriptType.SCRIPTLET ) {
-            final List cmdLine = new ArrayList(taskConfig.shell ?: 'bash' as List ) << wrapperFile.getName()
+            def val = (taskConfig.shell ?: 'bash') as List
+            final List cmdLine = new ArrayList(val) << wrapperFile.getName()
             command = new HzCmdCall( sender,  task, cmdLine )
         }
         else {
