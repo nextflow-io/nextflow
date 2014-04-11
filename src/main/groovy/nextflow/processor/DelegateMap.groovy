@@ -34,7 +34,7 @@ import nextflow.util.KryoHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class DelegateMap implements Map {
+class DelegateMap implements Map<String,Object> {
 
     @Delegate
     final private Map<String,Object> holder
