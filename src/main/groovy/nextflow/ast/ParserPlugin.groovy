@@ -22,12 +22,12 @@ package nextflow.ast
 
 import java.lang.reflect.Field
 
-import antlr.LexerSharedInputState
-import antlr.RecognitionException
-import antlr.Token
-import antlr.TokenStreamException
-import antlr.TokenStreamRecognitionException
 import groovy.util.logging.Slf4j
+import groovyjarjarantlr.LexerSharedInputState
+import groovyjarjarantlr.RecognitionException
+import groovyjarjarantlr.Token
+import groovyjarjarantlr.TokenStreamException
+import groovyjarjarantlr.TokenStreamRecognitionException
 import org.codehaus.groovy.antlr.AntlrParserPlugin
 import org.codehaus.groovy.antlr.GroovySourceToken
 import org.codehaus.groovy.antlr.SourceBuffer
