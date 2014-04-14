@@ -541,7 +541,7 @@ class CliRunner {
 
         catch( ConfigParseException e )  {
             log.error "${e.message}\n${e.cause}\n\n"
-            System.exit( ExitCode.INVALID_CONFIG)
+            System.exit(ExitCode.INVALID_CONFIG)
         }
 
         catch ( MissingPropertyException e ) {
@@ -550,7 +550,7 @@ class CliRunner {
         }
 
         catch( Throwable fail ) {
-            log.error fail.message, fail
+            log.error("${fail.toString()} -- See the file '.nextflow.log' for more error details", fail)
             System.exit( ExitCode.UNKNOWN_ERROR )
         }
 
