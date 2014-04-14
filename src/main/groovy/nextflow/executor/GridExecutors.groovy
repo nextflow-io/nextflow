@@ -278,7 +278,8 @@ class GridTaskHandler extends TaskHandler {
         this.exitFile = task.getCmdExitFile()
         this.outputFile = task.getCmdOutputFile()
         this.wrapperFile = task.getCmdWrapperFile()
-        this.exitStatusReadTimeoutMillis = (executor.session?.getExitReadTimeout(executor.name) ?: READ_TIMEOUT).toMillis()
+        final timeout = executor.session?.getExitReadTimeout(executor.name, READ_TIMEOUT) ?: READ_TIMEOUT
+        this.exitStatusReadTimeoutMillis = timeout.toMillis()
     }
 
     /*
