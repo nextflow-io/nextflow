@@ -84,25 +84,32 @@ class TaskPollingMonitor implements TaskMonitor {
     private Queue<Closure> listenersQueue
 
     /**
-     * Initialise the monitor, creating the queue which will hold the tasks
+     * Create the task polling monitor with the provided named parameters object.
+     * <p>
+     * Valid parameters are:
+     * <li>name: The executor name
+     * <li>session: The current {@code Session}
+     * <li>capacity: The maximum number of this monitoring queue
+     * <li>pollInterval: Determines how often a poll occurs to check for a process termination
+     * <li>dumpInterval: Determines how often the executor status is written in the application log file
      *
-     * @param session
-     * @param execName
-     * @param defPollInterval
+     * @param params
      */
-    TaskPollingMonitor( Session session, int capacity, Duration pollInterval, Duration dumpInterval = Duration.of('5min') ) {
-        assert session, "Session object cannot be null"
+    TaskPollingMonitor( Map params ) {
+        assert params
+        assert params.session instanceof Session
+        assert params.name != null
+        assert params.pollInterval != null
 
-        this.session = session
+        this.session = params.session as Session
         this.dispatcher = session.dispatcher
-        this.pollIntervalMillis = pollInterval.toMillis()
-        this.dumpInterval = dumpInterval
-        this.capacity = capacity
+        this.pollIntervalMillis = ( params.pollInterval as Duration ).toMillis()
+        this.dumpInterval = (params.dumpInterval as Duration) ?: Duration.of('5min')
+        this.capacity = (params.capacity ?: 0) as int
 
         this.pollingQueue = new ConcurrentLinkedQueue<>()
         this.eventsQueue = new ConcurrentLinkedQueue<>()
         this.listenersQueue = new ConcurrentLinkedQueue<>()
-
     }
 
 
@@ -114,7 +121,7 @@ class TaskPollingMonitor implements TaskMonitor {
         final dumpInterval = session.getMonitorDumpInterval(name)
 
         log.debug "Creating task monitor for executor '$name' > capacity: $capacity; pollInterval: $pollInterval; dumpInterval: $dumpInterval "
-        new TaskPollingMonitor(session, capacity, pollInterval, dumpInterval)
+        new TaskPollingMonitor(name: name, session: session, capacity: capacity, pollInterval: pollInterval, dumpInterval: dumpInterval)
     }
 
     static TaskPollingMonitor create( Session session, String name, Duration defPollInterval ) {
@@ -125,7 +132,7 @@ class TaskPollingMonitor implements TaskMonitor {
         final dumpInterval = session.getMonitorDumpInterval(name)
 
         log.debug "Creating task monitor for executor '$name' > pollInterval: $pollInterval; dumpInterval: $dumpInterval "
-        new TaskPollingMonitor(session, 0, pollInterval, dumpInterval)
+        new TaskPollingMonitor(name: name, session: session, pollInterval: pollInterval, dumpInterval: dumpInterval)
     }
 
     protected Queue<TaskHandler> getPollingQueue() { pollingQueue }
