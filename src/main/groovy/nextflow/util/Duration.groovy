@@ -168,6 +168,11 @@ class Duration implements Comparable<Duration> {
     }
 
     String toString() {
+
+        if( durationInMillis < 1000 ) {
+            return durationInMillis + 'ms'
+        }
+
         def value = format("d:H:m:s").split(':').collect { Integer.parseInt(it) }
         def result = []
 

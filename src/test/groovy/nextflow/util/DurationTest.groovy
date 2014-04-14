@@ -81,6 +81,7 @@ class DurationTest extends Specification {
     def 'test toString' () {
 
         expect:
+        new Duration(100).toString() == '100ms'
         new Duration(1000).toString() == '1sec'
         new Duration(61 * 1000).toString() == '1min 1sec'
         new Duration(60 * 60 * 1000 + 1000).toString() == '1hour 1sec'
