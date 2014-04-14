@@ -29,6 +29,7 @@ import nextflow.util.Duration
 import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.reflect.MethodUtils
 import org.gridgain.grid.GridConfiguration
+import org.gridgain.grid.GridGain
 import org.gridgain.grid.cache.GridCacheConfiguration
 import org.gridgain.grid.logger.slf4j.GridSlf4jLogger
 import org.gridgain.grid.spi.collision.jobstealing.GridJobStealingCollisionSpi
@@ -75,17 +76,36 @@ class GgConfigFactory {
         System.setProperty('GRIDGAIN_DEBUG_ENABLED','true')
         System.setProperty('GRIDGAIN_UPDATE_NOTIFIER','false')
 
-        def cfg = new GridConfiguration()
+        GridConfiguration cfg
+
+        // -- try loading a config file
+        String url = config.getAttribute('config.url')
+        String file = config.getAttribute('config.file')
+        if( file ) {
+            log.debug "GridGain config > using config file: $file"
+            cfg = GridGain.loadConfiguration(file).get1()
+        }
+
+        // -- try config by reading remote URL
+        else if( url ) {
+            log.debug "GridGain config > using config URL: $url"
+            return GridGain.loadConfiguration(new URL(url)).get1()
+        }
+
+        // fallback of default
+        else {
+            cfg = new GridConfiguration()
+            collisionConfig(cfg)
+            discoveryConfig(cfg)
+            balancingConfig(cfg)
+            cacheConfig(cfg)
+        }
+
         cfg.setGridName( GRID_NAME )
         cfg.setUserAttributes( ROLE: role )
         cfg.setGridLogger( new GridSlf4jLogger() )
         // this is not really used -- just set to avoid it complaining
         cfg.setGridGainHome( System.getProperty('user.home') )
-
-        collisionConfig(cfg)
-        discoveryConfig(cfg)
-        balancingConfig(cfg)
-        cacheConfig(cfg)
 
         return cfg
     }
