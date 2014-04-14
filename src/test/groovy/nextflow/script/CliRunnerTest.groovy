@@ -27,6 +27,7 @@ import nextflow.Session
 import nextflow.exception.MissingLibraryException
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
+import nextflow.util.ConfigHelper
 import spock.lang.Specification
 import test.TestParser
 /**
@@ -406,22 +407,6 @@ class CliRunnerTest extends Specification {
 
     }
 
-
-    def tstParseValue () {
-
-        expect:
-        CliRunner.parseValue(str) == value
-
-        where:
-        str         | value
-        'hola'      | 'hola'
-        '1'         | 1
-        "${Long.MAX_VALUE}" | Long.MAX_VALUE
-        'True'      | true
-        'False'     | false
-        "10.2"      | 10.2
-
-    }
 
 
     def testAddLibPath() {
