@@ -42,6 +42,7 @@ class TaskPollingMonitorTest extends Specification {
         when:
         def monitor = TaskPollingMonitor.create(session, name, defSize, defPollDuration)
         then:
+        monitor.name == 'hello'
         monitor.dispatcher == session.dispatcher
         monitor.pollIntervalMillis == Duration.of('1h').toMillis()
         monitor.capacity == 11
