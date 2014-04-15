@@ -155,45 +155,7 @@ class FileHelperTest extends Specification {
 
     }
 
-    def 'test tryCreateDir' () {
-        setup:
-        def file1 = new File('xTestFolder')
-        file1.delete()
 
-        when:
-        def path = FileHelper.tryCreateDir( file1 )
-
-        then:
-        path.exists()
-        path.name ==  'xTestFolder'
-
-        cleanup:
-        path?.deleteOnExit()
-        file1.delete()
-    }
-
-    def 'test tryCreateDir 2' () {
-
-        setup:
-        new File('yTestFolder1').mkdir()
-        new File('yTestFolder2').mkdir()
-
-        /*
-         * try to create 'testFolder1' but already exists as well along 'testFolder2'
-         */
-        when:
-        def path = FileHelper.tryCreateDir( new File('yTestFolder1') )
-
-        then:
-        path.exists()
-        path.name ==  'yTestFolder3'
-
-        cleanup:
-        path?.delete()
-        new File('yTestFolder1').delete()
-        new File('yTestFolder2').delete()
-
-    }
 
     def 'tests parent' () {
 

@@ -25,12 +25,16 @@ import java.nio.file.Paths
 import java.nio.file.spi.FileSystemProvider
 
 import embed.com.google.common.hash.HashCode
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.extension.FilesExtensions
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class FileHelper {
 
     static private Random rndGen = new Random()
@@ -48,7 +52,7 @@ class FileHelper {
             path = System.properties['user.home']
         }
         else if ( path.startsWith('~/') ) {
-            path = System.properties['user.home'] + path[1..-1]
+            path = System.properties['user.home'].toString() + path[1..-1]
         }
 
 
@@ -118,51 +122,6 @@ class FileHelper {
         }
     }
 
-    /**
-     * Try to create the create specified folder. If the folder already exists 'increment' the folder name
-     * by adding +1 to the name itself. For example
-     * <p>
-     *     {@code /some/path/name1}  become {@code /some/path/name2}
-     *
-     *
-     * @param path
-     * @return
-     */
-    @Deprecated
-    static File tryCreateDir( File path ) {
-        assert path
-
-        path = path.canonicalFile
-        assert path != new File('/')
-
-
-        int count=0
-        while( true ) {
-
-            if( path.exists() ) {
-                def (name, index) = nameParts( path.name )
-                path = new File( path.parentFile, "${name}${index+1}")
-                count++
-
-                if( count>100 ) {
-                    throw new RuntimeException("Unable to create a work directory using path: '$path' -- delete unused directories '${path.parentFile}/${name}*'")
-                }
-                else if( count == 20 ) {
-                    log.warn "Too many temporary work directory -- delete unused directories '${path.parentFile}/${name}*' "
-                }
-
-                continue
-            }
-
-            if( !path.mkdirs() ) {
-                throw new IOException("Unable to create path: ${path} -- Verify the access permission")
-            }
-
-            return path
-
-        }
-
-    }
 
 
     def static List nameParts( String name ) {
@@ -174,7 +133,8 @@ class FileHelper {
 
         def matcher = name =~ /^(\S*)?(\D)(\d+)$/
         if( matcher.matches() ) {
-            return [ matcher[0][1] + matcher[0][2], matcher[0][3].toString().toInteger() ]
+            def entries = (String[])matcher[0]
+            return [ entries[1] + entries[2], entries[3].toString().toInteger() ]
         }
         else {
             return [name,0]
@@ -248,11 +208,11 @@ class FileHelper {
             def bucket = hash.substring(0,2)
             def result = basePath.resolve( "tmp/$bucket/${hash.substring(2)}" )
 
-            if( result.exists() ) {
+            if( FilesExtensions.exists(result) ) {
                 if( ++count > 100 ) { throw new IOException("Unable to create a unique temporary path: $result") }
                 continue
             }
-            if( !result.mkdirs() ) {
+            if( !FilesExtensions.mkdirs(result) ) {
                 throw new IOException("Unable to create temporary parth: $result -- Verify file system access permission")
             }
 
