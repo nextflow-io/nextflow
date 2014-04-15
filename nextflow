@@ -82,12 +82,14 @@ for opt in "$@"; do
     case $opt in
     -bg)
       bg=1;;
-    -d|-daemon.*)
-      [ -z "$NXF_PACK" ] && NXF_PACK='gg';;
     gridgain)
-      [ -z "$NXF_PACK" ] && NXF_PACK='gg';;
+      NXF_PACK='gg';;
     hazelcast)
-      [ -z "$NXF_PACK" ] && NXF_PACK='hz';;
+      NXF_PACK='hz';;
+    -d|-daemon.*)
+      [[ $NXF_DAEMON_NAME = 'gridgain' || $NXF_EXECUTOR_NAME = 'gridgain' ]] && NXF_PACK='gg'
+      [[ $NXF_DAEMON_NAME = 'hazelcast' || $NXF_EXECUTOR_NAME = 'hazelcast' ]] && NXF_PACK='hz'
+      [ -z "$NXF_PACK" ] && NXF_PACK='gg';;
     -download)
       rm -rf $NXF_HOME/framework/$NXF_VER || exit $?
       $0 -version || exit $? 
@@ -98,8 +100,7 @@ for opt in "$@"; do
     esac
 done
 
-[[ $NXF_EXECUTOR_NAME = 'gridgain' ]] && NXF_PACK='gg'
-[[ $NXF_EXECUTOR_NAME = 'hazelcast' ]] && NXF_PACK='hz'
+
 NXF_PACK=${NXF_PACK:-one}
 NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACK.jar}
 NXF_BIN=${NXF_BIN:-$NXF_HOME/framework/$NXF_VER/$NXF_JAR}
