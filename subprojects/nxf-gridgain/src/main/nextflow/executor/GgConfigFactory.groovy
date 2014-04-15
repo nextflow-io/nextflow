@@ -37,6 +37,7 @@ import org.gridgain.grid.spi.discovery.tcp.GridTcpDiscoverySpi
 import org.gridgain.grid.spi.discovery.tcp.ipfinder.multicast.GridTcpDiscoveryMulticastIpFinder
 import org.gridgain.grid.spi.discovery.tcp.ipfinder.s3.GridTcpDiscoveryS3IpFinder
 import org.gridgain.grid.spi.discovery.tcp.ipfinder.sharedfs.GridTcpDiscoverySharedFsIpFinder
+import org.gridgain.grid.spi.discovery.tcp.ipfinder.vm.GridTcpDiscoveryVmIpFinder
 import org.gridgain.grid.spi.loadbalancing.adaptive.GridAdaptiveLoadBalancingSpi
 /**
  * Creates a the GridGain configuration object common to master and worker nodes
@@ -101,7 +102,9 @@ class GgConfigFactory {
             cacheConfig(cfg)
         }
 
-        cfg.setGridName( GRID_NAME )
+        final groupName = config.getAttribute( 'group', GRID_NAME ) as String
+        log.debug "GridGain config > group name: $groupName"
+        cfg.setGridName(groupName)
         cfg.setUserAttributes( ROLE: role )
         cfg.setGridLogger( new GridSlf4jLogger() )
         // this is not really used -- just set to avoid it complaining
@@ -215,7 +218,7 @@ class GgConfigFactory {
 
             discoverCfg.setIpFinder(finder)
         }
-        else if( join?.startsWith('file:') ) {
+        else if( join?.startsWith('path:') ) {
             def path = Paths.get(join.substring(5).trim())
             if( path.exists() ) {
                 log.debug "GridGain config > discovery path: $path"
@@ -229,6 +232,14 @@ class GgConfigFactory {
             finder.setPath(path.toString())
             discoverCfg.setIpFinder(finder)
         }
+        else if( join?.startsWith('ip:') ) {
+            def ips = StringUtils.split(join.substring(3).trim().toString(), ", \n") as List<String>
+            log.debug "GridGain config > discovery IPs: ${ips.join(', ')}"
+            def finder = new GridTcpDiscoveryVmIpFinder()
+            finder.setAddresses(ips)
+            discoverCfg.setIpFinder(finder)
+
+        }
         else if( join ) {
             log.warn "GrigGain config > unknown discovery method: $join"
         }
@@ -239,7 +250,6 @@ class GgConfigFactory {
         }
         cfg.setDiscoverySpi( discoverCfg )
 
-        // check
     }
 
     protected void checkAndSet( def discoverCfg, String name, defValue = null ) {
