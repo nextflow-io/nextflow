@@ -87,7 +87,7 @@ class TaskPollingMonitor implements TaskMonitor {
      * Create the task polling monitor with the provided named parameters object.
      * <p>
      * Valid parameters are:
-     * <li>name: The executor name
+     * <li>name: The name of the executor for which the polling monitor is created
      * <li>session: The current {@code Session}
      * <li>capacity: The maximum number of this monitoring queue
      * <li>pollInterval: Determines how often a poll occurs to check for a process termination
@@ -101,6 +101,7 @@ class TaskPollingMonitor implements TaskMonitor {
         assert params.name != null
         assert params.pollInterval != null
 
+        this.name = params.name
         this.session = params.session as Session
         this.dispatcher = session.dispatcher
         this.pollIntervalMillis = ( params.pollInterval as Duration ).toMillis()
