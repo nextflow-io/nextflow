@@ -20,7 +20,6 @@
 
 package nextflow.util
 import java.nio.file.Path
-import java.nio.file.Paths
 /**
  * A trie data structure specialised to find the longest common paths
  * in a given list of paths
@@ -83,7 +82,7 @@ class PathTrie {
      * @param path
      */
     void add( String path ) {
-        add( Paths.get(path) )
+        add( FileHelper.asPath(path) )
     }
 
     /**

@@ -27,7 +27,6 @@ import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.NotLinkException
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.BasicFileAttributes
@@ -219,7 +218,7 @@ class FilesExtensions {
      * @return
      */
     def static File copyTo( File source, String target ) {
-        copyTo(source.toPath(), Paths.get(target)).toFile()
+        copyTo(source.toPath(), FileHelper.asPath(target)).toFile()
     }
 
     /**
@@ -230,7 +229,7 @@ class FilesExtensions {
      * @return
      */
     def static Path copyTo( Path source, String target ) {
-        copyTo(source, Paths.get(target))
+        copyTo(source, FileHelper.asPath(target))
     }
 
     /**
@@ -252,7 +251,7 @@ class FilesExtensions {
      * @return
      */
     def static File moveTo( File source, String target ) {
-        moveTo(source.toPath(), Paths.get(target)).toFile()
+        moveTo(source.toPath(), FileHelper.asPath(target)).toFile()
     }
 
     /**
@@ -294,7 +293,7 @@ class FilesExtensions {
     }
 
     def static Path moveTo( Path source, String target ) {
-        moveTo(source, target as Path )
+        moveTo(source, FileHelper.asPath(target) )
     }
 
     /**
@@ -517,7 +516,7 @@ class FilesExtensions {
     }
 
     def static boolean renameTo(Path self, String target) {
-        renameTo( self, target as Path )
+        renameTo( self, FileHelper.asPath(target) )
     }
 
     /**

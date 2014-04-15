@@ -20,7 +20,6 @@
 
 package nextflow
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -36,6 +35,7 @@ import jsr166y.Phaser
 import nextflow.processor.TaskDispatcher
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
+import nextflow.util.FileHelper
 /**
  * Holds the information on the current execution
  *
@@ -82,7 +82,7 @@ class Session {
     /**
      * The folder where tasks temporary files are stored
      */
-    def Path workDir = Paths.get('work').toAbsolutePath()
+    def Path workDir = FileHelper.asPath('work').toAbsolutePath()
 
     /**
      * The folder where the main script is contained

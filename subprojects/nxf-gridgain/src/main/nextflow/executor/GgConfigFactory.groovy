@@ -19,13 +19,13 @@
  */
 
 package nextflow.executor
-import java.nio.file.Paths
 
 import com.amazonaws.auth.BasicAWSCredentials
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.util.DaemonConfig
 import nextflow.util.Duration
+import nextflow.util.FileHelper
 import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.reflect.MethodUtils
 import org.gridgain.grid.GridConfiguration
@@ -219,7 +219,7 @@ class GgConfigFactory {
             discoverCfg.setIpFinder(finder)
         }
         else if( join?.startsWith('path:') ) {
-            def path = Paths.get(join.substring(5).trim())
+            def path = FileHelper.asPath(join.substring(5).trim())
             if( path.exists() ) {
                 log.debug "GridGain config > discovery path: $path"
             }

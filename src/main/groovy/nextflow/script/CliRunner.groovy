@@ -19,12 +19,10 @@
  */
 
 package nextflow.script
-
 import static nextflow.util.ConfigHelper.parseValue
 
 import java.lang.reflect.Field
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.nio.file.spi.FileSystemProvider
 
 import com.beust.jcommander.JCommander
@@ -54,7 +52,6 @@ import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
-
 /**
  * Application main class
  *
@@ -511,7 +508,8 @@ class CliRunner {
             def runner = new CliRunner(config)
             runner.session.cacheable = options.cacheable
             runner.session.resumeMode = options.resume != null
-            runner.session.workDir = Paths.get(options.workDir).toAbsolutePath()
+            // note -- make sure to use 'FileHelper.asPath' since it guarantee to handle correctly non-standard file system e.g. 'dxfs'
+            runner.session.workDir = FileHelper.asPath(options.workDir).toAbsolutePath()
             runner.session.baseDir = scriptFile?.canonicalFile?.parentFile
             runner.libPath = options.libPath
 
