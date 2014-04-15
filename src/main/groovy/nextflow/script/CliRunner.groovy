@@ -887,12 +887,22 @@ class CliRunner {
         instance.launch(daemonConfig)
     }
 
+    /**
+     * @return A string holding the local host name and address used for logging
+     */
     static private getLocalNameAndAddress() {
         def host = InetAddress.getLocalHost()
         "${host.getHostName()} [${host.getHostAddress()}]"
     }
 
-
+    /**
+     * Load a {@code DaemonLauncher} instance of the its *friendly* name i.e. the name provided
+     * by using the {@code ServiceName} annotation on the daemon class definition
+     *
+     * @param name The executor name e.g. {@code gridgain}
+     * @return The daemon launcher instance
+     * @throws IllegalStateException if the class does not exist or it cannot be instantiated
+     */
     static DaemonLauncher loadDaemonByName( String name ) {
 
         Class<DaemonLauncher> clazz = null
@@ -906,11 +916,23 @@ class CliRunner {
         }
 
         if( !clazz )
-            throw new IllegalArgumentException("Unknown daemon name: $name")
+            throw new IllegalStateException("Unknown daemon name: $name")
 
-        clazz.newInstance()
+        try {
+            clazz.newInstance()
+        }
+        catch( Exception e ) {
+            throw new IllegalStateException("Unable to launch executor: $name", e)
+        }
     }
 
+    /**
+     * Load a class implementing the {@code DaemonLauncher} interface by the specified class name
+     *
+     * @param name The fully qualified class name e.g. {@code nextflow.executor.LocalExecutor}
+     * @return The daemon launcher instance
+     * @throws IllegalStateException if the class does not exist or it cannot be instantiated
+     */
     static DaemonLauncher loadDaemonByClass( String name ) {
         try {
             return (DaemonLauncher)Class.forName(name).newInstance()
@@ -920,6 +942,10 @@ class CliRunner {
         }
     }
 
+    /**
+     * @return The first available instance of a class implementing {@code DaemonLauncher}
+     * @throws IllegalStateException when no class implementing {@code DaemonLauncher} is available
+     */
     static DaemonLauncher loadDaemonFirst() {
         def loader = ServiceLoader.load(DaemonLauncher).iterator()
         if( !loader.hasNext() )
