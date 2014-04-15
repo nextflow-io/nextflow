@@ -398,8 +398,8 @@ task dnanexus(dependsOn: packDx) << {
     def target = new File(binFolder,'nextflow.jar')
     ant.copy(file: "$buildDir/libs/nextflow-${version}-dx.jar", tofile: target, overwrite: true)
 
-    def dxApp = file('./subprojects/dnanexus/dxapp.json')
-    def dxScript = file('./subprojects/dnanexus/dxapp.sh')
+    def dxApp = file('./subprojects/nxf-dnanexus/dxapp.json')
+    def dxScript = file('./subprojects/nxf-dnanexus/dxapp.sh')
 
     // copy the 'dxapp.json' if not exists
     target = new File(dxProject, dxApp.name)
