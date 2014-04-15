@@ -19,6 +19,7 @@
  */
 package nextflow.processor
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 import embed.com.google.common.hash.HashCode
@@ -132,9 +133,20 @@ abstract class TaskProcessor {
 
 
     /**
-     * Count the number errors showed
+     * Count the number of time an error occurred
      */
     private final errorCount = new AtomicInteger()
+
+
+    /**
+     * Set to true the very first time the error is shown
+     */
+    private final errorShown = new AtomicBoolean()
+
+    /**
+     * Used to show the override warning message only the very first time
+     */
+    private final overrideWarnShown = new AtomicBoolean()
 
     /**
      * Flag set {@code true} when the processor termination has been invoked
@@ -693,28 +705,32 @@ abstract class TaskProcessor {
             // do not recoverable error, just trow it again
             if( error instanceof Error ) throw error
 
-            final errorIndex = errorCount.getAndIncrement()
+            final taskErrCount = task ? task.failCount.getAndIncrement() : 0
+            final procErrCount = errorCount.getAndIncrement()
             final taskStrategy = taskConfig.getErrorStrategy()
 
             // when is a task level error and the user has chosen to ignore error, just report and error message
             // return 'false' to DO NOT stop the execution
-            if( error instanceof ProcessException ) {
+            if( task && error instanceof ProcessException ) {
+
+                // IGNORE strategy -- just continue
                 if( taskStrategy == ErrorStrategy.IGNORE ) {
                     log.warn "Error running process > ${error.getMessage()} -- error is ignored"
                     return ErrorStrategy.IGNORE
                 }
 
-                if( task && taskStrategy == ErrorStrategy.RETRY && errorIndex < taskConfig.getMaxRetries() ) {
-                    Thread.start {
+                // RETRY strategy -- check that process do not exceed 'maxError' and the task do not exceed 'maxRetries'
+                if( taskStrategy == ErrorStrategy.RETRY && procErrCount < taskConfig.getMaxErrors() && taskErrCount < taskConfig.getMaxRetries() ) {
+                    session.execService.submit {
                         checkCachedOrLaunchTask( task, task.hash, false )
                         log.info "[${getHashLog(task.hash)}] Re-submitted process > ${task.name}"
-                    }
+                    } as Runnable
                     return ErrorStrategy.RETRY
                 }
             }
 
-            // make sure the error is showed only the very first time
-            if( errorIndex > 0 && taskStrategy != ErrorStrategy.RETRY ) {
+            // MAKE sure the error is showed only the very first time
+            if( errorShown.getAndSet(true) ) {
                 return ErrorStrategy.TERMINATE
             }
 
@@ -1295,7 +1311,7 @@ abstract class TaskProcessor {
     final protected void submitTask( TaskRun task ) {
 
         if( task.code?.delegate instanceof Map ) {
-            if( ((Map)task.code.delegate).containsKey('workDir') ) {
+            if( ((Map)task.code.delegate).containsKey('workDir') && !overrideWarnShown.getAndSet(true)) {
                 log.warn "Process $name overrides value of reserved variable 'workDir' "
             }
             task.code.delegate['workDir'] = task.workDirectory

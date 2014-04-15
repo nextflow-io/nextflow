@@ -20,6 +20,7 @@
 
 package nextflow.processor
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
 import embed.com.google.common.hash.HashCode
@@ -237,9 +238,14 @@ class TaskRun {
 
 
     /**
-    * The name of a docker container where the task is supposed to run when provided
+     * The name of a docker container where the task is supposed to run when provided
      */
     def String container
+
+    /**
+     * The number of times the execution of the task has failed
+     */
+    def failCount = new AtomicInteger()
 
 
     def String getScript() {

@@ -81,7 +81,8 @@ class TaskConfig implements Map {
             validExitStatus = [0]
             inputs = new InputsList()
             outputs = new OutputsList()
-            maxRetries = 3
+            maxRetries = 1
+            maxErrors = 3
         }
 
         configProperties.errorStrategy = ErrorStrategy.TERMINATE
@@ -352,5 +353,10 @@ class TaskConfig implements Map {
     int getMaxRetries() {
         configProperties.maxRetries ? configProperties.maxRetries as int : 0
     }
+
+    int getMaxErrors() {
+        configProperties.maxErrors ? configProperties.maxErrors as int : 0
+    }
+
 
 }
