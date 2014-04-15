@@ -21,6 +21,7 @@ Contents:
    config
    dnanexus
    hazelcast
+   gridgain
    example
 
    

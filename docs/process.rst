@@ -993,7 +993,9 @@ The directives are:
 * `echo`_
 * `errorStrategy`_
 * `executor`_
+* `maxErrors`_
 * `maxForks`_
+* `maxRetries`_
 * `merge`_
 * `scratch`_
 * `storeDir`_
@@ -1087,8 +1089,9 @@ Without specifying ``echo true`` you won't see the ``Hello`` string printed out 
 errorStrategy
 --------------
 
-The ``errorStrategy`` directive defines how an error condition is managed by the process. By default when an error status
-is returned by the executed script, the process stops immediately. This in turn forces the entire pipeline to stop.
+The ``errorStrategy`` directive allows you to define how an error condition is managed by the process. By default when
+an error status is returned by the executed script, the process stops immediately. This in turn forces the entire pipeline
+to terminate.
 
 When setting the ``errorStrategy`` directive to ``ignore`` the process doesn't stop on an error condition,
 it just reports a message notifying you of the error event.
@@ -1105,6 +1108,18 @@ For example::
 .. tip:: By definition a command script fails when it ends with a non-zero exit status. To change this behavior
   see `validExitStatus`_.
 
+Alternatively, you can specify the ``retry`` `error strategy`, which allows you to re-submit for execution a process
+returning an error condition. For example::
+
+    process retryIfFail {
+       errorStrategy 'retry'
+
+       script:
+       <your command string here>
+    }
+
+
+The number of times a failing process is re-executed is defined by the `maxRetries`_ and `maxErrors`_ directives.
 
 executor
 ---------
@@ -1141,6 +1156,25 @@ The following example shows how to set the process's executor::
 .. note:: Each executor provides its own set of configuration options that can set be in the `directive` declarations block.
    See :ref:`executor-page` section to read about specific executor directives.
 
+
+maxErrors
+----------
+
+The ``maxErrors`` directive allows you to specify the maximum number of times a process can fail when using the ``Retry`` `error strategy`.
+By default this value is set to ``3``, you can change to a different value as show in the example below::
+
+    process retryIfFail {
+      errorStrategy 'retry'
+      maxErrors 5
+
+      """
+      echo 'do this as that .. '
+      """
+    }
+
+See also: `errorStrategy`_ and `maxRetries`_.
+
+
 maxForks
 ---------
 
@@ -1160,6 +1194,29 @@ If you want to execute a process in a sequential manner, set this directive to o
     }
 
 
+maxRetries
+-----------
+
+The ``maxRetries`` directive allows you to define the maximum number of times a process instance can be
+re-submitted in case of failure. This value is applied only when using the ``retry`` `error strategy`. By default
+only one retry is allowed, you can increase this value as shown below::
+
+    process retryIfFail {
+        errorStrategy 'retry'
+        maxRetries 3
+
+        """
+        echo 'do this as that .. '
+        """
+    }
+
+
+.. note:: There is a subtle but important difference between ``maxRetries`` and the ``maxErrors`` directive.
+    The latter defines the total number of errors that are allowed during the process execution (the same process can
+    launch different execution instances), while the ``maxRetries`` defines the maximum number of times the same process
+    execution can be retried in case of an error.
+
+See also: `errorStrategy`_ and `maxErrors`_.
 
 
 merge

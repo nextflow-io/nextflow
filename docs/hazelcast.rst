@@ -11,6 +11,7 @@ a light-weight and efficient data-grid technology.
 Hazelcast is packaged with Nextflow itself so you won't need to install it separately or configure other third party
 software.
 
+.. warning:: This an experimental feature.
 
 .. _hazelcast-daemon:
 
@@ -23,7 +24,7 @@ requires Java 7 to be installed.
 In the case your network supports *multicast* discovery, simply launch the Nextflow daemon in each cluster node
 as shown below::
 
-    nextflow -d -bg
+    nextflow -daemon.name hazelcast -bg
 
 The process will run in the background. The daemon output is stored in the log file ``.nxf-daemon.log``. The daemon
 process ``PID`` is saved in the file ``.nextflow.pid`` in the same folder.
@@ -39,7 +40,7 @@ If you don't see members joining, then it is likely because multicast is not ava
 In the case the multicast discovery is not available in your network, you will need to provide at least one (or more)
 IP address of well known members to connect to. For example::
 
-    nextflow -bg -daemon.join 192.168.1.104
+    nextflow -daemon.name hazelcast -daemon.join 192.168.1.104 -bg
 
 Configuration options
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -56,16 +57,18 @@ slots                       TNumber of slots this damon node provides i.e. of pr
 interface                   Network interfaces that Hazelcast has to use. It can be the interface IP address or name.
 connectionMonitorInterval   Minimum interval to consider a connection error as critical in milliseconds (default: 300).
 connectionMonitorMaxFaults  Maximum IO error count before disconnecting from a node (default: 5).
+
 =========================== ================
 
 These options can be specified as command line parameters by pre-pending them the prefix ``-daemon.``, as shown below::
 
-    nextflow -bg -daemon.port 5705 -daemon.interface eth0
+    nextflow -daemon.name hazelcast -daemon.port 5705 -daemon.interface eth0 -bg
 
 The same options can be entered in the nextflow configuration file named ``nextflow.config``, as shown below::
 
 
   daemon {
+    name = 'hazelcast'
     port = '5705'
     join = '192.168.1.104'
     interface = 'eth0'
