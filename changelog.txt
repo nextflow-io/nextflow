@@ -1,6 +1,21 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.7.1 - 14 Apr 2014
+- Fixed an issue with 'scratch' directive i.e. Fixed issue when copying a symlink
+- Added 'Retry' error handling strategy and 'maxRetries' and 'maxErrors' process directives
+- Added GridGain cluster sub-module
+- Added TaskDispatcher submit, start, complete and error listeners
+- Added new ServiceDiscovery to handle sub-modules executors
+- Added Map#getOrCreate() extension method
+- Using @CompileStatic for AST transformation
+- Removing unused APP_TMP_DIR const
+- Renamed class 'AbstractExecutor' to 'Executor'
+- Added ProcessFactory class
+- Refactored sub-modules directory structure
+- Define the default 'lib' path relative to the pipeline 'baseDir' i.e. relative to the main script location
+- Save the history entry just before launch the execution
+
 0.7.0 - 24 Mar 2014
 - New self-downloadable and self-updatable script launcher
 - New cluster mode, Nextflow can run as a daemon node by using Hazelcast cluster (incubating)
