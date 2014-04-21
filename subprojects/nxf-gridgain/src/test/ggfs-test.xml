@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2013-2014, Centre for Genomic Regulation (CRG).
+  ~ Copyright (c) 2013-2014, Paolo Di Tommaso and the respective authors.
+  ~
+  ~   This file is part of 'Nextflow'.
+  ~
+  ~   Nextflow is free software: you can redistribute it and/or modify
+  ~   it under the terms of the GNU General Public License as published by
+  ~   the Free Software Foundation, either version 3 of the License, or
+  ~   (at your option) any later version.
+  ~
+  ~   Nextflow is distributed in the hope that it will be useful,
+  ~   but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~   GNU General Public License for more details.
+  ~
+  ~   You should have received a copy of the GNU General Public License
+  ~   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="
+        http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+        http://www.springframework.org/schema/util
+        http://www.springframework.org/schema/util/spring-util-2.0.xsd">
+    <bean id="grid.cfg" scope="singleton" class="org.gridgain.grid.GridConfiguration">
+
+        <!--
+        <property name="gridLogger" >
+            <bean class="org.gridgain.grid.logger.java.GridJavaLogger" />
+        </property>
+        -->
+
+        <property name="ggfsConfiguration">
+            <list>
+                <bean class="org.gridgain.grid.ggfs.GridGgfsConfiguration">
+                    <property name="name" value="ggfs"/>
+                    <property name="defaultMode" value="PRIMARY" />
+                    <property name="metaCacheName" value="ggfs-meta"/>
+                    <property name="dataCacheName" value="ggfs-data"/>
+
+                    <!-- Must correlate with cache affinity mapper. -->
+                    <property name="blockSize" value="#{128 * 1024}"/>
+                    <property name="perNodeBatchSize" value="512"/>
+                    <property name="perNodeParallelBatchCount" value="16"/>
+
+                    <!-- Set number of prefetch blocks.
+                    <property name="prefetchBlocks" value="32"/>
+                    -->
+
+                    <!--
+                        This will disable IPC endpoint binding thus preventing Hadoop clients from connecting to GGFS.
+                        With this option set to false the only possible way to interact with GGFS is through
+                        GridGain API.
+                    <property name="ipcEndpointEnabled" value="false"/>
+                    -->
+
+                    <!--
+                        Example of configured IPC loopback endpoint.
+                    -->
+                    <!-- <property name="ipcEndpointConfiguration" value="{type:'tcp'}"/> -->
+
+                    <!--
+                        Example of configured shared memory endpoint.
+                    -->
+                    <!-- <property name="ipcEndpointConfiguration" value="{type:'shmem', port:'10500'}"/> -->
+                </bean>
+            </list>
+        </property>
+
+        <property name="cacheConfiguration">
+            <list>
+                <bean class="org.gridgain.grid.cache.GridCacheConfiguration">
+                    <property name="name" value="ggfs-data"/>
+                    <property name="cacheMode" value="PARTITIONED"/>
+                    <property name="atomicityMode" value="TRANSACTIONAL"/>
+                    <property name="queryIndexEnabled" value="false"/>
+                    <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+                    <property name="distributionMode" value="PARTITIONED_ONLY"/>
+                    <property name="backups" value="0"/>
+                    <property name="affinityMapper">
+                        <bean class="org.gridgain.grid.ggfs.GridGgfsGroupDataBlocksKeyMapper">
+                            <!-- Haw many blocks in row will be stored on the same node. -->
+                            <constructor-arg value="512"/>
+                        </bean>
+                    </property>
+                </bean>
+
+                <bean class="org.gridgain.grid.cache.GridCacheConfiguration">
+                    <property name="name" value="ggfs-meta"/>
+                    <property name="cacheMode" value="REPLICATED"/>
+                    <property name="atomicityMode" value="TRANSACTIONAL"/>
+                    <property name="queryIndexEnabled" value="false"/>
+                    <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+                </bean>
+            </list>
+        </property>
+
+
+</bean>
+</beans>

@@ -41,6 +41,8 @@ dependencies {
         exclude module: 'hibernate-commons-annotations'
     }
 
+    //compile 'org.apache.hadoop:hadoop-core:1.2.1'
+
     testCompile project(':')
 }
 

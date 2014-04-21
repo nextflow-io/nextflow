@@ -107,6 +107,12 @@ class GgConfigFactory {
         cfg.setGridName(groupName)
         cfg.setUserAttributes( ROLE: role )
         cfg.setGridLogger( new GridSlf4jLogger() )
+
+//        final addresses = config.getNetworkInterfaceAddresses()
+//        if( addresses ) {
+//            cfg.setLocalHost( addresses.get(0) )
+//        }
+
         // this is not really used -- just set to avoid it complaining
         cfg.setGridGainHome( System.getProperty('user.home') )
 
