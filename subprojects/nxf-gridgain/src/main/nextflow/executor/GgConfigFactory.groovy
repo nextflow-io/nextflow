@@ -76,6 +76,7 @@ class GgConfigFactory {
         // configure
         System.setProperty('GRIDGAIN_DEBUG_ENABLED','true')
         System.setProperty('GRIDGAIN_UPDATE_NOTIFIER','false')
+        System.setProperty('GRIDGAIN_HOME', System.getProperty('user.dir'))
 
         GridConfiguration cfg
 
