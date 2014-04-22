@@ -28,6 +28,7 @@ import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
 import nextflow.fs.dx.DxFileSystem
+import nextflow.fs.dx.DxFileSystemProvider
 import nextflow.fs.dx.DxFileSystemSerializer
 import nextflow.fs.dx.DxPath
 import nextflow.fs.dx.DxPathSerializer
@@ -39,6 +40,7 @@ import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
+import nextflow.util.FileHelper
 import nextflow.util.KryoHelper
 
 /**
@@ -54,6 +56,11 @@ import nextflow.util.KryoHelper
 @Slf4j
 @ServiceName('dnanexus')
 class DnaNexusExecutor extends Executor {
+
+    static {
+        // call to force the installation of the DX file system provider
+        FileHelper.getOrInstallProvider(DxFileSystemProvider)
+    }
 
     def void init() {
         super.init()

@@ -19,7 +19,6 @@
  */
 
 package nextflow.file.ggfs
-
 import javax.transaction.NotSupportedException
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.AccessMode
@@ -27,7 +26,6 @@ import java.nio.file.CopyOption
 import java.nio.file.DirectoryStream
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileStore
-import java.nio.file.FileSystem
 import java.nio.file.FileSystemAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.LinkOption
@@ -48,7 +46,6 @@ import nextflow.util.OnlyCloseChannel
 import org.gridgain.grid.Grid
 import org.gridgain.grid.GridGain
 import org.gridgain.grid.ggfs.GridGgfs
-
 /**
  * Implements a GridGain file system provider complaint with JSR203 a.k.a. NIO2
  *
@@ -106,13 +103,17 @@ class GgFileSystemProvider extends FileSystemProvider {
      *          If the file system has already been created
      */
     @Override
-    synchronized FileSystem newFileSystem(URI uri, Map<String, ?> env) throws IOException {
+    synchronized GgFileSystem newFileSystem(URI uri, Map<String, ?> env) throws IOException {
 
         if( currentFileSystem )
             throw new FileSystemAlreadyExistsException("File system object already exists -- URI: $uri")
 
         def ggfs = getGgfs(env)
         return currentFileSystem = new GgFileSystem(this, ggfs)
+    }
+
+    GgFileSystem newFileSystem(Map<String, ?> env) throws IOException {
+        newFileSystem((URI)null, env)
     }
 
     static private Grid getGrid( Map env ) {
@@ -521,4 +522,6 @@ class GgFileSystemProvider extends FileSystemProvider {
     void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
         throw new UnsupportedOperationException();
     }
+
+
 }

@@ -22,6 +22,8 @@ package nextflow.daemon
 import groovy.util.logging.Slf4j
 import nextflow.executor.GgConfigFactory
 import nextflow.executor.ServiceName
+import nextflow.file.ggfs.GgFileSystemProvider
+import nextflow.util.FileHelper
 import org.gridgain.grid.Grid
 import org.gridgain.grid.GridConfiguration
 import org.gridgain.grid.GridGain
@@ -47,7 +49,15 @@ class GgDaemon implements DaemonLauncher {
     }
 
     void run() {
+        // launch the grid instance
+        log.debug "Launching GridGain"
         grid = GridGain.start(cfg);
+
+        // configure the file system
+        log.debug "Configuring GridGain file system"
+        GgFileSystemProvider provider = FileHelper.getOrInstallProvider( GgFileSystemProvider )
+        provider.newFileSystem( grid: grid )
+
     }
 
 

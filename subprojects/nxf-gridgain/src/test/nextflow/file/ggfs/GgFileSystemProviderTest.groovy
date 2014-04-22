@@ -44,6 +44,7 @@ class GgFileSystemProviderTest extends Specification {
 
     // run before the first feature method
     def setupSpec() {
+        System.properties.setProperty('GRIDGAIN_HOME', new File('.').absolutePath)
 
         /*
          * configure and launch the grid
@@ -55,13 +56,14 @@ class GgFileSystemProviderTest extends Specification {
         assert file.exists()
         def cfg = GridGain.loadConfiguration(file.absolutePath).get1()
         cfg.setGridLogger( new GridSlf4jLogger() )
+        cfg.setGridGainHome( new File('.').absolutePath )
         def grid = GridGain.start(cfg)
 
         /*
          * get the installed provider for GgFileSystem
          */
         provider = (GgFileSystemProvider)FileSystemProvider.installedProviders().find { it.scheme == 'ggfs' }
-        fs = (GgFileSystem)provider.newFileSystem( URI.create('ggfs:///'), [grid:grid] )
+        fs = (GgFileSystem)provider.newFileSystem( grid:grid )
 
     }
 

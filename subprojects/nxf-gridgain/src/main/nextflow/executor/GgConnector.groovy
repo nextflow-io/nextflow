@@ -22,8 +22,10 @@ package nextflow.executor
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.file.ggfs.GgFileSystemProvider
 import nextflow.processor.TaskPollingMonitor
 import nextflow.util.Duration
+import nextflow.util.FileHelper
 import org.gridgain.grid.Grid
 import org.gridgain.grid.GridConfiguration
 import org.gridgain.grid.GridGain
@@ -76,6 +78,12 @@ class GgConnector implements GridDiscoverySpiListener {
          */
         grid = GridGain.start(cfg);
 
+        // configure the file system
+        log.debug "Configuring GridGain file system"
+        GgFileSystemProvider provider = FileHelper.getOrInstallProvider( GgFileSystemProvider )
+        provider.newFileSystem( grid: grid )
+
+        // thread to watch for topology changes and update the scheduler queue accordingly
         watcher = topologyWatcher()
 
         /*

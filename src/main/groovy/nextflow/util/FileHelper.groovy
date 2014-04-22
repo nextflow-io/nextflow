@@ -19,6 +19,8 @@
  */
 
 package nextflow.util
+
+import java.lang.reflect.Field
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -248,5 +250,33 @@ class FileHelper {
             }
         }
         return null;
+    }
+
+    /**
+     * Get the instance of the specified {@code FileSystemProvider} class. If the provider is not
+     * in the list of installed provided, it creates a new instance and add it to the list
+     *
+     * @see {@code FileSystemProvider#installedProviders}
+     *
+     * @param clazz A class extending {@code FileSystemProvider}
+     * @return An instance of the specified class
+     */
+    synchronized static <T extends FileSystemProvider> T getOrInstallProvider( Class<T> clazz ) {
+
+        def result = FileSystemProvider.installedProviders().find { it.class == clazz }
+        if( result )
+            return (T)result
+
+        // try to load DnaNexus file system provider dynamically
+        result = clazz.newInstance()
+
+        // add it manually
+        Field field = FileSystemProvider.class.getDeclaredField('installedProviders')
+        field.setAccessible(true)
+        List installedProviders = new ArrayList((List)field.get(null))
+        installedProviders.add( result )
+        field.set(this, Collections.unmodifiableList(installedProviders))
+        log.debug "> Added '${clazz.simpleName}' to list of installed providers [${result.scheme}]"
+        return result
     }
 }
