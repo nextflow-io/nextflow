@@ -28,7 +28,7 @@ import nextflow.processor.FileHolder
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class DockerHelper {
+class DockerBuilder {
 
     /**
      * Get the volumes command line options for the given list of input files
@@ -39,6 +39,9 @@ class DockerHelper {
      * @return
      */
     static CharSequence getVolumes(List<Path> mountPaths, StringBuilder result = new StringBuilder() ) {
+
+        // always provide external /tmp
+        result << '-v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp '
 
         // find the longest commons paths and mount only them
         def trie = new PathTrie()
@@ -87,25 +90,33 @@ class DockerHelper {
     /**
      * Get the Docker run command line for the given list of parameters
      *
-     * @param dockerContainerName
-     * @param mountPaths
-     * @param binDir
-     * @param environment
-     * @param result
+     * @param params
+     *          <li>containerName: The container string name to be used (mandatory)
+     *          <li>mount: One or more {@code Path} to be mounter by the container
+     *          <li>env: A {@code Path} locating the environment file to be used by the container
+     *          <li>profile:
+     * @param result A {@code StringBuilder} that will contain the final docker command
      * @return
      */
-    static CharSequence getRun( String dockerContainerName, List<Path> mountPaths, environment, StringBuilder result = new StringBuilder() ) {
+    static CharSequence getRun( Map params, StringBuilder result = new StringBuilder() ) {
+        assert params.containerName
 
-        result << 'docker run --rm '
+        result << 'docker run --rm -u $(id -u) '
 
-        if( environment )
-            result << getEnv(environment) << ' '
+        if( params.profile )
+            result << getEnv(params.profile) << ' '
+
+        if( params.env )
+            result << getEnv(params.env) << ' '
 
         // mount the input folders
-        result << getVolumes(mountPaths) << ' -w $PWD '
+        if( params.mount )
+            result << getVolumes(params.mount as List<Path>)
+
+        result << ' -w $PWD '
 
         // finally the container name
-        result << dockerContainerName
+        result << (params.containerName)
 
         return result
     }

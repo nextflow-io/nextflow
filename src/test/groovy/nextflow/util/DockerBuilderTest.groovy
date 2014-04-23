@@ -26,7 +26,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class DockerHelperTest extends Specification {
+class DockerBuilderTest extends Specification {
 
 
 
@@ -37,19 +37,19 @@ class DockerHelperTest extends Specification {
         def real = [ Paths.get('/user/yo/nextflow/bin'), Paths.get('/user/yo/nextflow/work'), Paths.get('/db/pdb/local/data') ]
 
         expect:
-        DockerHelper.getVolumes([]).toString() == '-v $PWD:$PWD'
-        DockerHelper.getVolumes(files).toString() == '-v /folder:/folder -v $PWD:$PWD'
-        DockerHelper.getVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v $PWD:$PWD'
+        DockerBuilder.getVolumes([]).toString() == '-v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp -v $PWD:$PWD'
+        DockerBuilder.getVolumes(files).toString() == '-v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp -v /folder:/folder -v $PWD:$PWD'
+        DockerBuilder.getVolumes(real).toString()  == '-v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp -v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v $PWD:$PWD'
     }
 
 
     def testDockerEnv() {
 
         expect:
-        DockerHelper.getEnv('X=1').toString() == '-e "X=1"'
-        DockerHelper.getEnv([VAR_X:1, VAR_Y: 2]).toString() == '-e "VAR_X=1" -e "VAR_Y=2"'
-        DockerHelper.getEnv( Paths.get('/some/file.env') ).toString() == '-e "BASH_ENV=file.env"'
-        DockerHelper.getEnv( new File('/some/file.env') ).toString() == '-e "BASH_ENV=file.env"'
+        DockerBuilder.getEnv('X=1').toString() == '-e "X=1"'
+        DockerBuilder.getEnv([VAR_X:1, VAR_Y: 2]).toString() == '-e "VAR_X=1" -e "VAR_Y=2"'
+        DockerBuilder.getEnv( Paths.get('/some/file.env') ).toString() == '-e "BASH_ENV=file.env"'
+        DockerBuilder.getEnv( new File('/some/file.env') ).toString() == '-e "BASH_ENV=file.env"'
     }
 
     def testDockerRunCommandLine() {
@@ -59,9 +59,9 @@ class DockerHelperTest extends Specification {
         def files =  [Paths.get('/home/db'), Paths.get('/home/db') ]
 
         expect:
-        DockerHelper.getRun('fedora', [], null ).toString() == 'docker run --rm -v $PWD:$PWD -w $PWD fedora'
-        DockerHelper.getRun('fedora', [], envFile ).toString() == 'docker run --rm -e "BASH_ENV=env-file" -v $PWD:$PWD -w $PWD fedora'
-        DockerHelper.getRun('fedora', files, envFile).toString() == 'docker run --rm -e "BASH_ENV=env-file" -v /home/db:/home/db -v $PWD:$PWD -w $PWD fedora'
+        DockerBuilder.getRun('fedora', [], null ).toString() == 'docker run --rm -u $(id -u) -v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp -v $PWD:$PWD -w $PWD fedora'
+        DockerBuilder.getRun('fedora', [], envFile ).toString() == 'docker run --rm -u $(id -u) -e "BASH_ENV=env-file" -v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp -v $PWD:$PWD -w $PWD fedora'
+        DockerBuilder.getRun('fedora', files, envFile).toString() == 'docker run --rm -u $(id -u) -e "BASH_ENV=env-file" -v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp -v /home/db:/home/db -v $PWD:$PWD -w $PWD fedora'
 
     }
 

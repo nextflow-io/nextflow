@@ -23,7 +23,7 @@ import java.nio.file.Path
 
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import nextflow.util.DockerHelper
+import nextflow.util.DockerBuilder
 /**
  * Builder to create the BASH script which is used to
  * wrap and launch the user task
@@ -177,14 +177,16 @@ class BashWrapperBuilder {
 
         // execute by invoking the command through a Docker container
         if( dockerContainerName ) {
-            def mountPaths = DockerHelper.inputFilesToPaths(task.getInputFiles())
-            mountPaths << task.processor.session.workDir
-            def binDir = task.processor.session.binDir
-            if( binDir )
-                mountPaths << binDir
+            def docker = new DockerBuilder(dockerContainerName)
+                .addMountForInputs( task.getInputFiles() )
+                .addMount( task.processor.session.workDir )
+                .addMount( task.processor.session.binDir )
 
-            def theFile = !environmentFile.empty() ? environmentFile : null
-            wrapper << DockerHelper.getRun(dockerContainerName, mountPaths, theFile) << ' '
+            // set the environment
+            if( !environmentFile.empty() )
+                docker.addEnv( environmentFile )
+
+            wrapper << docker.build() << ' '
         }
 
         wrapper << interpreter << ' ' << scriptFile.toString()

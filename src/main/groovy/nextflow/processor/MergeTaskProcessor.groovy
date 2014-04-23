@@ -20,6 +20,7 @@
 
 package nextflow.processor
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.InheritConstructors
@@ -36,7 +37,7 @@ import nextflow.script.SetInParam
 import nextflow.script.StdInParam
 import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
-import nextflow.util.DockerHelper
+import nextflow.util.DockerBuilder
 import nextflow.util.FileHelper
 /**
  * Defines the 'merge' processing policy
@@ -264,15 +265,29 @@ class MergeTaskProcessor extends TaskProcessor {
 
         // check if it has to be execute through a Docker container
         if( dockerContainer ) {
-            def mountPaths = DockerHelper.inputFilesToPaths(filesMap)
-            mountPaths << mergeTempFolder
-            mountPaths << session.workDir
-            if( session.binDir )
-                mountPaths << session.binDir
+            def docker = new DockerBuilder(dockerContainer)
+                    .addMountForInputs( filesMap )
+                    .addMount(mergeTempFolder)
+                    .addMount(session.workDir)
+                    .addMount(session.binDir)
 
-            def dockerize = DockerHelper.getRun(dockerContainer, mountPaths, environment)
+            /*
+             * Add the docker file -- This is a bit tricky:
+             * Check if some environment variables are defined at process level
+             * if so they will be saved by the BashWrapperBuilder by using the file name defined by TaskRun.CMD_ENV
+             * so here add that file to the list of environment variables to be evaluated
+             */
+            if( getProcessEnvironment() )  {
+                docker.addEnv( Paths.get(TaskRun.CMD_ENV) )
+            }
 
-            mergeScript << (dockerize.toString()) << ' '
+            /*
+             * add the environment variables for this script 'iteration'
+             */
+            if( environment )
+                docker.addEnv(environment)
+
+            mergeScript << (docker.build()) << ' '
         }
 
         // create a unique script collecting all the commands
