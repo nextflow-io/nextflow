@@ -21,14 +21,71 @@
 package nextflow.util
 import java.nio.file.Path
 
+import groovy.transform.PackageScope
 import nextflow.processor.FileHolder
 
 /**
- * Helper methods to handler Docker containers
+ * Helper methods to handle Docker containers
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class DockerBuilder {
+
+    final String containerName
+
+    final List env = []
+
+    List<Path> mounts = []
+
+    DockerBuilder( String name ) {
+        this.containerName = name
+    }
+
+    DockerBuilder addEnv( entry ) {
+        env.add(entry)
+        return this
+    }
+
+    DockerBuilder addMount( Path path ) {
+        if( path )
+            mounts.add(path)
+        return this
+    }
+
+    DockerBuilder addMount( Collection<Path> paths ) {
+        if( paths )
+            mounts.addAll( paths )
+        return this
+    }
+
+    DockerBuilder addMountForInputs( Map<?,List<FileHolder>> inputFiles ) {
+
+        mounts.addAll( inputFilesToPaths(inputFiles) )
+        return this
+    }
+
+
+    CharSequence build(StringBuilder result = new StringBuilder()) {
+        assert containerName
+
+        result << 'docker run --rm -u $(id -u) '
+
+        // add the environment
+        for( def entry : env ) {
+            result << makeEnv(entry) << ' '
+        }
+
+        // mount the input folders
+        result << makeVolumes(mounts)
+        result << ' -w $PWD '
+
+        // finally the container name
+        result << (containerName)
+
+        return result
+
+    }
+
 
     /**
      * Get the volumes command line options for the given list of input files
@@ -38,7 +95,8 @@ class DockerBuilder {
      * @param result
      * @return
      */
-    static CharSequence getVolumes(List<Path> mountPaths, StringBuilder result = new StringBuilder() ) {
+    @PackageScope
+    static CharSequence makeVolumes(List<Path> mountPaths, StringBuilder result = new StringBuilder() ) {
 
         // always provide external /tmp
         result << '-v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp '
@@ -63,7 +121,8 @@ class DockerBuilder {
      * @param result
      * @return
      */
-    static CharSequence getEnv( env, StringBuilder result = new StringBuilder() ) {
+    @PackageScope
+    static CharSequence makeEnv( env, StringBuilder result = new StringBuilder() ) {
         // append the environment configuration
         if( env instanceof File ) {
             env = env.toPath()
@@ -87,41 +146,8 @@ class DockerBuilder {
         return result
     }
 
-    /**
-     * Get the Docker run command line for the given list of parameters
-     *
-     * @param params
-     *          <li>containerName: The container string name to be used (mandatory)
-     *          <li>mount: One or more {@code Path} to be mounter by the container
-     *          <li>env: A {@code Path} locating the environment file to be used by the container
-     *          <li>profile:
-     * @param result A {@code StringBuilder} that will contain the final docker command
-     * @return
-     */
-    static CharSequence getRun( Map params, StringBuilder result = new StringBuilder() ) {
-        assert params.containerName
 
-        result << 'docker run --rm -u $(id -u) '
-
-        if( params.profile )
-            result << getEnv(params.profile) << ' '
-
-        if( params.env )
-            result << getEnv(params.env) << ' '
-
-        // mount the input folders
-        if( params.mount )
-            result << getVolumes(params.mount as List<Path>)
-
-        result << ' -w $PWD '
-
-        // finally the container name
-        result << (params.containerName)
-
-        return result
-    }
-
-
+    @PackageScope
     static List<Path> inputFilesToPaths( Map<?,List<FileHolder>> inputFiles ) {
 
         def List<Path> files = []
