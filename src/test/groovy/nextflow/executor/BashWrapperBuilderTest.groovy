@@ -38,22 +38,22 @@ class BashWrapperBuilderTest extends Specification {
         when:
         builder.scratch = true
         then:
-        builder.changeToScratchDirectory() == 'NF_SCRATCH=${TMPDIR:-`mktemp -d`} && cd $NF_SCRATCH'
+        builder.changeToScratchDirectory() == 'NXF_SCRATCH=${TMPDIR:-`mktemp -d`} && cd $NXF_SCRATCH'
 
         when:
         builder.scratch = '$SOME_DIR'
         then:
-        builder.changeToScratchDirectory() == 'NF_SCRATCH=${SOME_DIR:-`mktemp -d`} && cd $NF_SCRATCH'
+        builder.changeToScratchDirectory() == 'NXF_SCRATCH=${SOME_DIR:-`mktemp -d`} && cd $NXF_SCRATCH'
 
         when:
         builder.scratch = '/my/temp'
         then:
-        builder.changeToScratchDirectory() == 'NF_SCRATCH=$(mktemp -d -p /my/temp) && cd $NF_SCRATCH'
+        builder.changeToScratchDirectory() == 'NXF_SCRATCH=$(mktemp -d -p /my/temp) && cd $NXF_SCRATCH'
 
         when:
         builder.scratch = '/my/temp'
         then:
-        builder.changeToScratchDirectory() == 'NF_SCRATCH=$(mktemp -d -p /my/temp) && cd $NF_SCRATCH'
+        builder.changeToScratchDirectory() == 'NXF_SCRATCH=$(mktemp -d -p /my/temp) && cd $NXF_SCRATCH'
 
     }
 

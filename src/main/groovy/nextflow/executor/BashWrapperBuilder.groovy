@@ -80,7 +80,7 @@ class BashWrapperBuilder {
          * try to use the 'TMP' variable, if does not exist fallback to a tmp folder
          */
         if( scratch == true ) {
-            return 'NF_SCRATCH=${TMPDIR:-`mktemp -d`} && cd $NF_SCRATCH'
+            return 'NXF_SCRATCH=${TMPDIR:-`mktemp -d`} && cd $NXF_SCRATCH'
         }
 
         // convert to string for safety
@@ -88,15 +88,15 @@ class BashWrapperBuilder {
 
         // when it is defined by a variable, just use it
         if( scratch.startsWith('$') ) {
-            return "NF_SCRATCH=\${${scratch.substring(1)}:-`mktemp -d`} && cd \$NF_SCRATCH"
+            return "NXF_SCRATCH=\${${scratch.substring(1)}:-`mktemp -d`} && cd \$NXF_SCRATCH"
         }
 
         if( scratch.toLowerCase() in ['ramdisk','ram-disk']) {
-            return 'NF_SCRATCH=$(mktemp -d -p /dev/shm/) && cd $NF_SCRATCH'
+            return 'NXF_SCRATCH=$(mktemp -d -p /dev/shm/) && cd $NXF_SCRATCH'
         }
 
 
-        return "NF_SCRATCH=\$(mktemp -d -p $scratch) && cd \$NF_SCRATCH"
+        return "NXF_SCRATCH=\$(mktemp -d -p $scratch) && cd \$NXF_SCRATCH"
 
     }
 
