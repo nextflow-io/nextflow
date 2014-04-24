@@ -23,7 +23,7 @@ The process that follows, receives these files and it simply `reverses` their co
     .gist-meta a:hover{color:#0e4071 !important}
     .gist .file-data { background-color: white; }
     </style>
-    <script src="https://gist.github.com/paoloditommaso/92fea4525cd66c286904.js"></script>
+    <script src="https://gist.github.com/pditommaso/92fea4525cd66c286904.js"></script>
 
 
 In more detail:
