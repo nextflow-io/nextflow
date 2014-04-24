@@ -19,7 +19,6 @@
  */
 
 package nextflow.executor
-
 import com.amazonaws.auth.BasicAWSCredentials
 import groovy.util.logging.Slf4j
 import nextflow.Const
@@ -30,7 +29,14 @@ import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.reflect.MethodUtils
 import org.gridgain.grid.GridConfiguration
 import org.gridgain.grid.GridGain
+import org.gridgain.grid.cache.GridCacheAtomicityMode
 import org.gridgain.grid.cache.GridCacheConfiguration
+import org.gridgain.grid.cache.GridCacheDistributionMode
+import org.gridgain.grid.cache.GridCacheMode
+import org.gridgain.grid.cache.GridCacheWriteSynchronizationMode
+import org.gridgain.grid.ggfs.GridGgfsConfiguration
+import org.gridgain.grid.ggfs.GridGgfsGroupDataBlocksKeyMapper
+import org.gridgain.grid.ggfs.GridGgfsMode
 import org.gridgain.grid.logger.slf4j.GridSlf4jLogger
 import org.gridgain.grid.spi.collision.jobstealing.GridJobStealingCollisionSpi
 import org.gridgain.grid.spi.discovery.tcp.GridTcpDiscoverySpi
@@ -73,10 +79,11 @@ class GgConfigFactory {
      */
     GridConfiguration create( ) {
 
-        // configure
-        System.setProperty('GRIDGAIN_DEBUG_ENABLED','true')
         System.setProperty('GRIDGAIN_UPDATE_NOTIFIER','false')
-        System.setProperty('GRIDGAIN_HOME', System.getProperty('user.dir'))
+
+        if( config.getAttribute('debug') as Boolean )
+            System.setProperty('GRIDGAIN_DEBUG_ENABLED','true')
+
 
         GridConfiguration cfg
 
@@ -101,6 +108,7 @@ class GgConfigFactory {
             discoveryConfig(cfg)
             balancingConfig(cfg)
             cacheConfig(cfg)
+            ggfsConfig(cfg)
         }
 
         final groupName = config.getAttribute( 'group', GRID_NAME ) as String
@@ -115,7 +123,7 @@ class GgConfigFactory {
 //        }
 
         // this is not really used -- just set to avoid it complaining
-        cfg.setGridGainHome( System.getProperty('user.home') )
+        cfg.setGridGainHome( System.getProperty('user.dir') )
 
         return cfg
     }
@@ -128,7 +136,37 @@ class GgConfigFactory {
         def sessionCfg = new GridCacheConfiguration()
         sessionCfg.setName(SESSIONS_CACHE)
         sessionCfg.setStartSize(64)
-        cfg.setCacheConfiguration(sessionCfg)
+
+        /*
+         * set the data cache for this ggfs
+         */
+        def dataCfg = new GridCacheConfiguration()
+        dataCfg.with {
+            name = 'ggfs-data'
+            cacheMode = GridCacheMode.PARTITIONED
+            atomicityMode  = GridCacheAtomicityMode.TRANSACTIONAL
+            queryIndexEnabled = false
+            writeSynchronizationMode = GridCacheWriteSynchronizationMode.FULL_SYNC
+            distributionMode = GridCacheDistributionMode.PARTITIONED_ONLY
+            backups = 0
+            affinityMapper = new GridGgfsGroupDataBlocksKeyMapper(512)
+        }
+        cfg.setCacheConfiguration(dataCfg)
+
+        /*
+         * set the meta cache for this ggfs
+         */
+        def metaCfg = new GridCacheConfiguration()
+        metaCfg.with {
+            name = 'ggfs-meta'
+            cacheMode = GridCacheMode.REPLICATED
+            atomicityMode  = GridCacheAtomicityMode.TRANSACTIONAL
+            queryIndexEnabled = false
+            writeSynchronizationMode = GridCacheWriteSynchronizationMode.FULL_SYNC
+        }
+
+
+        cfg.setCacheConfiguration(sessionCfg, metaCfg, dataCfg)
     }
 
 
@@ -270,6 +308,25 @@ class GgConfigFactory {
         }
     }
 
+
+    /*
+     * ggfs configuration
+     */
+    protected void ggfsConfig( GridConfiguration cfg ) {
+
+        def ggfsCfg = new GridGgfsConfiguration()
+        ggfsCfg.with {
+            name = 'ggfs'
+            defaultMode = GridGgfsMode.PRIMARY
+            metaCacheName = 'ggfs-meta'
+            dataCacheName = 'ggfs-data'
+            blockSize = 128 * 1024
+            perNodeBatchSize = 512
+            perNodeParallelBatchCount = 16
+        }
+        cfg.setGgfsConfiguration(ggfsCfg)
+
+    }
 
 
 }

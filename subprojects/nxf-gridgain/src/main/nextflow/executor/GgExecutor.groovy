@@ -19,13 +19,18 @@
  */
 
 package nextflow.executor
+import java.nio.file.Files
 import java.nio.file.Path
 
+import groovy.io.FileType
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessException
+import nextflow.extension.FilesExtensions
 import nextflow.processor.DelegateMap
+import nextflow.processor.FileHolder
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -50,12 +55,12 @@ import org.gridgain.grid.resources.GridLoadBalancerResource
 import org.gridgain.grid.resources.GridLoggerResource
 import org.gridgain.grid.resources.GridUserResource
 import org.jetbrains.annotations.Nullable
-
 /**
  * A Nextflow executor based on GridGain services
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 @ServiceName('gridgain')
 @SupportedScriptTypes( [ScriptType.SCRIPTLET, ScriptType.GROOVY] )
 class GgExecutor extends Executor {
@@ -95,18 +100,7 @@ class GgExecutor extends Executor {
          * otherwise as a bash script
          */
         final bash = new BashWrapperBuilder(task)
-
-        // staging input files
-        bash.stagingScript = {
-            final files = task.getInputFiles()
-            final staging = stagingFilesScript(files)
-            return staging
-        }
-
-        // unstage script
-        bash.unstagingScript = {
-            return unstageOutputFilesScript(task)
-        }
+        bash.scratch = '$NF_SCRATCH'
 
         // create the wrapper script
         bash.build()
@@ -129,7 +123,9 @@ class GgExecutor extends Executor {
     }
 
 
-    /*
+    /**
+     * An adapter for GridGain compute task
+     *
      * link http://atlassian.gridgain.com/wiki/display/GG60/Load+Balancing
      */
     static class GgTaskWrapper extends GridComputeTaskAdapter  {
@@ -162,7 +158,7 @@ class GgExecutor extends Executor {
 
 
 /**
- * A task handler for Hazelcast cluster
+ * A task handler for GridGain  cluster
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -195,7 +191,7 @@ class GgTaskHandler extends TaskHandler {
         return handler
     }
 
-    static createGroovyHandler( TaskRun task, TaskConfig taskConfig, GgExecutor executor ) {
+    static GgTaskHandler createGroovyHandler( TaskRun task, TaskConfig taskConfig, GgExecutor executor ) {
         def handler = new GgTaskHandler(task,taskConfig)
         handler.executor = executor
         handler.type = ScriptType.GROOVY
@@ -212,7 +208,8 @@ class GgTaskHandler extends TaskHandler {
         // submit to an hazelcast node for execution
         final sessionId = task.processor.session.uniqueId
         if( type == ScriptType.SCRIPTLET ) {
-            final List cmdLine = new ArrayList(taskConfig.shell ?: 'bash' as List ) << wrapperFile.getName()
+            final List shell = (taskConfig.shell ?: 'bash') as List
+            final List cmdLine = new ArrayList(shell) << wrapperFile.getName()
             future = executor.execute( new GgBashTask( task, cmdLine ) )
         }
         else {
@@ -240,7 +237,7 @@ class GgTaskHandler extends TaskHandler {
     @Override
     boolean checkIfCompleted() {
 
-        if( isRunning() && (future.isDone() || future.isCancelled()) && (!exitFile || exitFile.lastModified()>0) ) {
+        if( isRunning() && (future.isCancelled() || (future.isDone() && (!exitFile || exitFile.lastModified()>0)))  ) {
             status = TaskHandler.Status.COMPLETED
 
             final result = (GridComputeJobResult)future.get()
@@ -278,7 +275,6 @@ class GgTaskHandler extends TaskHandler {
     }
 
 
-
     /**
      * @return Whenever is a shell script task
      */
@@ -292,9 +288,226 @@ class GgTaskHandler extends TaskHandler {
 }
 
 /**
- * Execute a remote shell task
+ * Models a task executed remotely in a GridGain cluster node
+ *
+ * @param < T > The type of the value returned by the {@code #call} method
  */
-class GgBashTask implements GridCallable<Integer>, GridComputeJob {
+@CompileStatic
+abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
+
+    @GridLoggerResource
+    private transient GridLogger log;
+
+    /**
+     * This field is used to transport the class attributes as a unique serialized byte array
+     */
+    private byte[] payload
+
+    /**
+     * Holds the class attributes in this map. Note: is defined as 'transient' because
+     * the map content is serialized as a byte[] and saved to the {@code payload} field
+     */
+    private transient Map<String,Object> attrs = [:]
+
+    /**
+     * The local scratch dir where the task is actually executed in the remote node.
+     * Note: is declared transient because it is valid only on the remote-side execution,
+     * thus it do not need to be transported
+     *
+     */
+    protected transient Path scratchDir
+
+    /**
+     * Create
+     * @param task
+     */
+    protected GgBaseTask( TaskRun task ) {
+
+        attrs.taskId = task.id
+        attrs.name = task.name
+        attrs.workDir = task.workDirectory
+        attrs.targetDir = task.targetDir
+        attrs.inputFiles = [:]
+        attrs.outputFiles = []
+
+        // -- The a mapping of input files and target names
+        def allFiles = task.getInputFiles().values()
+        for( List<FileHolder> entry : allFiles ) {
+            if( entry ) for( FileHolder it : entry ) {
+                attrs.inputFiles[ it.stagePath.name ] = it.storePath
+            }
+        }
+
+        // -- the list of expected file names in the scratch dir
+        attrs.outputFiles = task.getOutputFilesNames()
+
+        payload = KryoHelper.serialize(attrs)
+    }
+
+    /** ONLY FOR TESTING PURPOSE */
+    protected GgBaseTask() {}
+
+    /**
+     * @return The task unique ID
+     */
+    protected Object getTaskId() { attrs.taskId }
+
+    /**
+     * @return The task descriptive name (only for debugging)
+     */
+    protected String getName() { attrs.name }
+
+    /**
+     * @return The path where result files have to be copied
+     */
+    protected Path getTargetDir() { (Path)attrs.targetDir }
+
+    /**
+     * @return The task working directory i.e. the folder containing the scripts files, but
+     * it is not the actual task execution directory
+     */
+    protected Path getWorkDir() { (Path)attrs.workDir }
+
+    /**
+     * @return The a mapping of input files and target names
+     */
+    Map<String,Path> getInputFiles() { (Map<String,Path>)attrs.inputFiles }
+
+    /**
+     * @return the list of expected file names in the scratch dir
+     */
+    List<String> getOutputFiles() { (List<String>)attrs.outputFiles }
+
+    /**
+     * Copies to the task input files to the execution folder, that is {@code scratchDir}
+     * folder created when this method is invoked
+     *
+     */
+    protected void stage() {
+
+        if( attrs == null && payload )
+            attrs = (Map<String,Object>)KryoHelper.deserialize(payload)
+
+        // create a local scratch dir
+        // note: this directory HAS TO INJECTED AS VALUE FOR ENV VAR 'NF_SCRATCH' FOR BASH TASK
+        scratchDir = Files.createTempDirectory('nxf-task')
+
+        if( !inputFiles )
+            return
+
+        // move the input files there
+        for( Map.Entry<String,Path> entry : inputFiles.entrySet() ) {
+            def target = scratchDir.resolve(entry.key)
+            log?.debug "Task $name > staging path: '${entry.value}' to: '$target'"
+            FilesExtensions.copyTo(entry.value, target)
+        }
+    }
+
+    /**
+     * Copy back the task output files from the execution directory in the local node storage
+     * to the task {@code targetDir}
+     */
+    protected void unstage() {
+        log?.debug "Unstaging file names: $outputFiles"
+
+        if( !outputFiles )
+            return
+
+        // create a bash script that will copy the out file to the working directory
+        if( !Files.exists(targetDir) )
+            Files.createDirectories(targetDir)
+
+        for( String name : outputFiles ) {
+            try {
+                copyToTargetDir(name)
+            }
+            catch( IOException e ) {
+                log.error("Unable to copy result file: $name to target dir", e)
+            }
+        }
+
+    }
+
+    /**
+     * Copy the file with the specified name from the task execution folder
+     * to the {@code targetDir}
+     *
+     * @param fileName A file name relative to the {@code scratchDir}.
+     *        It can contain the {@code *} and {@code ?} wildcards
+     */
+    protected void copyToTargetDir( String fileName ) {
+
+        // TODO keep this aligned with "Executor#collectResultFile"
+
+        String filePattern = fileName.replace("?", ".?").replace("*", ".*")
+
+        // when there's not change in the pattern, try to find a single file
+        if( filePattern == fileName ) {
+            FilesExtensions.copyTo( scratchDir.resolve(fileName), targetDir )
+        }
+        else {
+            scratchDir.eachFileMatch(FileType.ANY, ~/$filePattern/ ) { Path source ->
+                FilesExtensions.copyTo( source, targetDir )
+            }
+        }
+    }
+
+    /**
+     * Invoke the task execution. It calls the following methods in this sequence: {@code stage}, {@code execute0} and {@code unstage}
+     *
+     * @return The {@code execute0} result value
+     * @throws ProcessException
+     */
+    @Override
+    final T call() throws Exception {
+        try {
+            /*
+             * stage the input files in the working are`
+             */
+            stage()
+
+            /*
+             * execute the task
+             */
+            final T result = execute0()
+
+            /*
+             * copy back the result files to the shared area
+             */
+            unstage()
+
+            // return the exit status eventually
+            return result
+        }
+        catch( Exception e ) {
+            log.error("Cannot execute closure for task > $name", e)
+            throw new ProcessException(e)
+        }
+
+    }
+
+    /**
+     * Just a synonym for {@code #call}
+     *
+     * @return The value returned by the task execution
+     */
+    final Object execute() {
+        call()
+    }
+
+    /**
+     * The actual task executor code provided by the extending subclass
+     *
+     * @return The value returned by the task execution
+     */
+    protected abstract T execute0()
+}
+
+/**
+ * Execute a remote shell task into a remote GridGain cluster node
+ */
+@CompileStatic
+class GgBashTask extends GgBaseTask<Integer>  {
 
     private static final long serialVersionUID = - 5552939711667527410L
 
@@ -304,57 +517,38 @@ class GgBashTask implements GridCallable<Integer>, GridComputeJob {
     private transient Process process
 
     /**
-     * Note: use a File instead instead of a Path, because the latter is not serializable
-     */
-    final File workDir
-
-    /**
      * The command line to be executed
      */
     final List commandLine
 
-    /**
-     * The task name
-     */
-    final String name
-
-    /**
-     * The task id
-     */
-    final taskId
-
 
     GgBashTask( TaskRun task , List cmdLine ) {
-        assert task
-        assert cmdLine
-
-        this.taskId = task.id
-        this.name = task.name
-        this.workDir = task.workDirectory.toFile()
+        super(task)
         this.commandLine = cmdLine
     }
 
 
     @Override
-    Integer call() throws Exception {
-        execute() as Integer
-    }
-
-
-    @Override
-    Object execute() throws GridException {
-        log.debug "Launching script for task > ${name}"
+    protected Integer execute0() throws GridException {
+        log.debug "Launching task > ${name}"
 
         ProcessBuilder builder = new ProcessBuilder()
-                .directory(workDir)
+                .directory(workDir.toFile())
                 .command(commandLine)
                 .redirectErrorStream(true)
 
+        // set the 'scratch' dir
+        builder.environment().put('NF_SCRATCH', scratchDir.toString())
+
+        // launch and wait
         process = builder.start()
         def result = process.waitFor()
+
         // make sure to destroy the process and close the streams
         try { process.destroy() }
         catch( Throwable e ) { }
+
+        log.debug "Completed task > $name - exitStatus: $result"
         // return the exit value
         return result
     }
@@ -373,15 +567,16 @@ class GgBashTask implements GridCallable<Integer>, GridComputeJob {
 
 
     String toString() {
-        "${getClass().simpleName}[taskId: $taskId; name: $name; workDir: ${workDir}]"
+        "${getClass().simpleName}[taskId: $taskId; name: $name; workDir: $workDir; scratchDir: ${scratchDir}]"
     }
 
 }
 
 /**
- * Execute in a remote cluster note a groovy closure task
+ * Execute a groovy closure task in a remote GridGain node
  */
-class GgClosureTask implements GridComputeJob, GridCallable {
+@CompileStatic
+class GgClosureTask extends GgBaseTask<GgResultData> {
 
     private static final long serialVersionUID = 5515528753549263068L
 
@@ -398,21 +593,6 @@ class GgClosureTask implements GridComputeJob, GridCallable {
     final UUID sessionId
 
     /**
-     * The task unique ID
-     */
-    final taskId
-
-    /**
-     * The task descriptive name (only for debugging)
-     */
-    final String name
-
-    /**
-     * The task working directory
-     */
-    final File workDir
-
-    /**
      * The task closure serialized as a byte array
      */
     final byte[] codeObj
@@ -424,30 +604,23 @@ class GgClosureTask implements GridComputeJob, GridCallable {
 
 
     GgClosureTask( TaskRun task, UUID sessionId ) {
+        super(task)
         assert task
         this.sessionId = sessionId
-        this.taskId = task.id
-        this.name = task.name
-        this.workDir = task.workDirectory.toFile()
         this.codeObj = SerializationUtils.serialize(task.code.dehydrate())
         this.delegateObj = (task.code.delegate as DelegateMap).dehydrate()
     }
 
     @Override
-    Object execute() throws GridException {
+    protected GgResultData execute0() throws GridException {
         log.debug "Running closure for task > ${name}"
 
-        try {
-            def loader = provider.getClassLoaderFor(sessionId)
-            def delegate = DelegateMap.rehydrate(delegateObj,loader)
-            Closure closure = InputStreamDeserializer.deserialize(codeObj,loader)
-            Object result = closure.rehydrate(delegate, delegate.getScript(), delegate.getScript()).call()
-            return new GgResultData(value: result, context: delegate?.getHolder())
-        }
-        catch( Exception e ) {
-            log.error("Cannot execute closure for task > $name", e)
-            throw new ProcessException(e)
-        }
+        def loader = provider.getClassLoaderFor(sessionId)
+        def delegate = DelegateMap.rehydrate(delegateObj,loader)
+        Closure closure = (Closure)InputStreamDeserializer.deserialize(codeObj,loader)
+        Object result = closure.rehydrate(delegate, delegate.getScript(), delegate.getScript()).call()
+        return new GgResultData(value: result, context: delegate?.getHolder())
+
     }
 
 
@@ -456,17 +629,12 @@ class GgClosureTask implements GridComputeJob, GridCallable {
 
     }
 
-
-    @Override
-    GgResultData call() throws Exception {
-        (GgResultData)execute()
-    }
-
 }
 
 /**
  * Models the result of a remote closure task execution
  */
+@CompileStatic
 @EqualsAndHashCode
 class GgResultData implements Serializable {
 
