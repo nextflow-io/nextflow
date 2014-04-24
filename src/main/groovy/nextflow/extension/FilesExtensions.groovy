@@ -155,6 +155,8 @@ class FilesExtensions {
      * @return The target {@link Path} file
      */
     def static Path copyTo( Path source, Path target ) {
+        assert source
+        assert target
 
         if( source.isDirectory() ) {
             def parent = target.getParent()
