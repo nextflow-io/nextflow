@@ -167,7 +167,7 @@ class GgFileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     * GridGain do not support {@code SeekableByteChannel} implemente this method only
+     * GridGain do not support {@code SeekableByteChannel} implemented this method only
      * to have {@code Files.create} to work properly
      *
      * @param path
