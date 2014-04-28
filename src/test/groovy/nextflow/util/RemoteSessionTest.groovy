@@ -19,36 +19,51 @@
  */
 
 package nextflow.util
-
 import java.nio.file.Files
-import java.nio.file.Paths
 
+import nextflow.Session
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ConfigHelperTest extends Specification {
+class RemoteSessionTest extends Specification {
 
-    def testParseValue () {
+    def testZipUnzipFolder() {
 
-        expect:
-        ConfigHelper.parseValue(str) == value
+        given:
+        def path = Files.createTempDirectory('zip-test')
+        path.resolve('file1').text = 'File 1'
+        path.resolve('file2').text = 'File 2'
+        path.resolve('dir').mkdir()
+        path.resolve('dir/file3').text = 'File 3'
+        path.resolve('dir/file4').text = 'File 4'
 
-        where:
-        str         | value
-        'hola'      | 'hola'
-        '1'         | 1
-        "${Long.MAX_VALUE}" | Long.MAX_VALUE
-        'True'      | true
-        'False'     | false
-        "10.2"      | 10.2
-        '5sec'      | Duration.of('5sec')
+        when:
+        def remote = [:]  as RemoteSession
+        def bytes = remote.zip(path.toFile())
+        then:
+        bytes.size()>0
+
+        when:
+        def target = remote.unzip(bytes)
+        then:
+        target.isDirectory()
+        target.list().sort() == ['file1','file2','dir'].sort()
+        new File(target, 'dir').list().sort() == ['file3','file4'].sort()
+        new File(target,'file1').text == 'File 1'
+        new File(target,'file2').text == 'File 2'
+        new File(target,'dir/file3').text == 'File 3'
+        new File(target,'dir/file4').text == 'File 4'
+
+        cleanup:
+        path?.deleteDir()
+        target?.deleteDir()
 
     }
 
-    def testResolveClasspaths() {
+
+    def testGetClassPath() {
 
         given:
         def path1 = Files.createTempDirectory('path1')
@@ -62,22 +77,20 @@ class ConfigHelperTest extends Specification {
         path2.resolve('file5').text = 'File 5'
         path2.resolve('file6.jar').text = 'File 6'
 
-        def path3 = Paths.get('/some/file')
+        def session = new Session()
+        session.@libDir = [ path1.toFile(), path2.toFile() ]
 
         when:
-        def list = ConfigHelper.resolveClassPaths([path1?.toFile(), path2?.toFile(), path3?.toFile()])
+        def remote = new RemoteSession(session)
         then:
-        list.size() == 4
-        list.contains( path1.toFile() )
-        list.contains( path1.resolve('file2.jar').toFile() )
-        list.contains( path2.toFile() )
-        list.contains( path2.resolve('file6.jar').toFile() )
+        remote.getLibDir().size() == 2
+        remote.getClasspath().size() == 4
+        remote.isLibInitialized
 
         cleanup:
+        remote.close()
         path1?.deleteDir()
         path2?.deleteDir()
-
     }
-
 
 }

@@ -25,6 +25,10 @@ import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.spi.FileSystemProvider
 
+import nextflow.Session
+import nextflow.processor.TaskProcessor
+import nextflow.script.BaseScript
+import nextflow.util.FileHelper
 import org.apache.commons.io.IOUtils
 import org.gridgain.grid.GridGain
 import org.gridgain.grid.logger.slf4j.GridSlf4jLogger
@@ -295,10 +299,44 @@ class GgFileSystemProviderTest extends Specification {
         then:
         !Files.exists(file1)
 
+    }
 
+
+    def testTempFolder() {
+
+        when:
+        def file1 = new GgPath(fs, rndName('/work') )
+        def folder = FileHelper.createTempFolder(file1)
+        then:
+        folder.exists()
+
+        when:
+        def file2 = folder.resolve('just_a_file')
+        file2.text = 'Hello'
+        then:
+        file2.text == 'Hello'
 
     }
 
+    def testTempFolder2() {
+
+        given:
+        def session = new Session()
+        session.workDir = new GgPath(fs, rndName('/work') )
+        def binding = new Binding()
+        binding.setVariable('__$session', session)
+
+        def script = new BaseScript(binding) { Object run() { return null } }
+        def proc = [:] as TaskProcessor
+        proc.ownerScript = script
+
+        when:
+        def holder = proc.normalizeInputToFile('Hello', 'input.1')
+        println ">> ${holder.storePath}"
+        then:
+        holder.sourceObj == 'Hello'
+        holder.storePath.text == 'Hello'
+    }
 
 
     // run after the last feature method

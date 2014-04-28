@@ -56,7 +56,7 @@ class LocalExecutor extends Executor {
     @Override
     def TaskHandler createTaskHandler(TaskRun task) {
         assert task
-        assert task.workDirectory
+        assert task.workDir
 
         /*
          * when it is a native groovy code, use the native handler
@@ -124,9 +124,9 @@ class LocalTaskHandler extends TaskHandler {
     LocalTaskHandler( TaskRun task, TaskConfig taskConfig, LocalExecutor executor  ) {
         super(task, taskConfig)
         // create the task handler
-        this.exitFile = task.getCmdExitFile()
-        this.outputFile = task.getCmdOutputFile()
-        this.wrapperFile = task.getCmdWrapperFile()
+        this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
+        this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
+        this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
         this.maxDurationMillis = taskConfig.maxDuration?.toMillis()
         this.executor = executor
         this.session = executor.session
@@ -145,7 +145,7 @@ class LocalTaskHandler extends TaskHandler {
 
             try {
                 ProcessBuilder builder = new ProcessBuilder()
-                        .directory(task.workDirectory.toFile())
+                        .directory(task.workDir.toFile())
                         .command(cmd)
                         .redirectErrorStream(true)
 

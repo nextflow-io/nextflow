@@ -78,7 +78,7 @@ class GgExecutorTest extends Specification {
         sourceFile2.text = 'Content for file2'
 
         def binding = new Binding()
-        def task = new TaskRun(id: 123, name: 'TestRun', workDirectory: Paths.get('/some/path'), storeDir: targetPath)
+        def task = new TaskRun(id: 123, name: 'TestRun', workDir: Paths.get('/some/path'), storeDir: targetPath)
         def s1 = new FileInParam(binding, []).bind( new TokenVar('x') )
         task.setInput(s1, [ new FileHolder(sourceFile1), new FileHolder(sourceFile2) ])
 

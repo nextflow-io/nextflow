@@ -52,7 +52,7 @@ class LsfExecutorTest extends Specification {
 
         when:
         def task = new TaskRun(name: 'task 1')
-        task.workDirectory = Paths.get('/xxx')
+        task.workDir = Paths.get('/xxx')
 
         then:
         executor.getSubmitCommandLine(task, wrapper) == ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './.job.sh']

@@ -95,7 +95,7 @@ abstract class TaskProcessor {
     /**
      * The script object which defines this task
      */
-    protected final BaseScript ownerScript
+    protected BaseScript ownerScript
 
     /**
      * Gpars thread pool
@@ -497,11 +497,11 @@ abstract class TaskProcessor {
 
             // set the working directory
             task.hash = hash
-            task.workDirectory = folder
+            task.workDir = folder
             if( script )
                 task.script = script
 
-            log.trace "[${task.name}] actual run folder: ${task.workDirectory}"
+            log.trace "[${task.name}] actual run folder: ${task.workDir}"
 
             // submit task for execution
             submitTask( task, runType )
@@ -562,7 +562,7 @@ abstract class TaskProcessor {
         catch( MissingFileException | MissingValueException e ) {
             log.trace "[$task.name] Missed store > ${e.getMessage()} -- folder: ${task.storeDir}"
             task.exitStatus = Integer.MAX_VALUE
-            task.workDirectory = null
+            task.workDir = null
             return false
         }
     }
@@ -619,7 +619,7 @@ abstract class TaskProcessor {
 
             // set the exit code in to the task object
             task.hash = hash
-            task.workDirectory = folder
+            task.workDir = folder
             task.stdout = stdoutFile
             if( exitCode != null ) {
                 task.exitStatus = exitCode
@@ -637,7 +637,7 @@ abstract class TaskProcessor {
         catch( MissingFileException | MissingValueException e ) {
             log.trace "[$task.name] Missed cache > ${e.getMessage()} -- folder: $folder"
             task.exitStatus = Integer.MAX_VALUE
-            task.workDirectory = null
+            task.workDir = null
             return false
         }
 
@@ -776,7 +776,7 @@ abstract class TaskProcessor {
                 message << "  (empty)"
             }
             lines.each {
-                message << "  ${task.workDirectory ? it.replace(task.workDirectory.toString()+'/','') : it }"
+                message << "  ${task.workDir ? it.replace(task.workDir.toString()+'/','') : it }"
             }
 
         }
@@ -790,8 +790,8 @@ abstract class TaskProcessor {
 
         }
 
-        if( task?.workDirectory )
-            message << "\nWork dir:\n  ${task.workDirectory.toString()}"
+        if( task?.workDir )
+            message << "\nWork dir:\n  ${task.workDir.toString()}"
 
         message << "\nTip: ${getRndTip()}"
 
@@ -1303,7 +1303,7 @@ abstract class TaskProcessor {
             if( ((Map)task.code.delegate).containsKey('workDir') && !overrideWarnShown.getAndSet(true)) {
                 log.warn "Process $name overrides value of reserved variable 'workDir' "
             }
-            task.code.delegate['workDir'] = task.workDirectory
+            task.code.delegate['workDir'] = task.workDir
         }
 
         // add the task to the collection of running tasks
@@ -1342,8 +1342,10 @@ abstract class TaskProcessor {
 
             // save the context map for caching purpose
             // only the 'cache' is active and
-            if( isCacheable() && task.hasCacheableValues() && task.code.delegate != null )
-                ((DelegateMap)task.code.delegate).save(task.getCmdContextFile())
+            if( isCacheable() && task.hasCacheableValues() && task.code.delegate != null ) {
+                def target = task.workDir.resolve(TaskRun.CMD_CONTEXT)
+                ((DelegateMap)task.code.delegate).save(target)
+            }
 
         }
         catch ( Throwable error ) {

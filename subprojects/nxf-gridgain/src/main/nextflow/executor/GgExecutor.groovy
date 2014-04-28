@@ -93,19 +93,12 @@ class GgExecutor extends Executor {
     TaskHandler createTaskHandler(TaskRun task) {
 
         if( task.type == ScriptType.GROOVY ) {
-            return GgTaskHandler.createGroovyHandler(task, taskConfig,this)
+            GgTaskHandler.createGroovyHandler(task, taskConfig,this)
+        }
+        else {
+            GgTaskHandler.createScriptHandler(task, taskConfig, this)
         }
 
-        /*
-         * otherwise as a bash script
-         */
-        final bash = new BashWrapperBuilder(task)
-        bash.scratch = '$NF_SCRATCH'
-
-        // create the wrapper script
-        bash.build()
-
-        GgTaskHandler.createScriptHandler(task, taskConfig, this)
     }
 
 
@@ -167,12 +160,6 @@ class GgTaskHandler extends TaskHandler {
 
     private GgExecutor executor
 
-    private Path exitFile
-
-    private Path wrapperFile
-
-    private Path outputFile
-
     private ScriptType type
 
 
@@ -184,9 +171,6 @@ class GgTaskHandler extends TaskHandler {
     static GgTaskHandler createScriptHandler( TaskRun task, TaskConfig taskConfig, GgExecutor executor ) {
         def handler = new GgTaskHandler(task,taskConfig)
         handler.executor = executor
-        handler.exitFile = task.getCmdExitFile()
-        handler.outputFile = task.getCmdOutputFile()
-        handler.wrapperFile = task.getCmdWrapperFile()
         handler.type = ScriptType.SCRIPTLET
         return handler
     }
@@ -208,9 +192,8 @@ class GgTaskHandler extends TaskHandler {
         // submit to an hazelcast node for execution
         final sessionId = task.processor.session.uniqueId
         if( type == ScriptType.SCRIPTLET ) {
-            final List shell = (taskConfig.shell ?: 'bash') as List
-            final List cmdLine = new ArrayList(shell) << wrapperFile.getName()
-            future = executor.execute( new GgBashTask( task, cmdLine ) )
+            final shell = (taskConfig.shell ?: 'bash') as List
+            future = executor.execute( new GgBashTask( task, shell ) )
         }
         else {
             future = executor.execute( new GgClosureTask( task, sessionId ) )
@@ -325,7 +308,7 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
 
         attrs.taskId = task.id
         attrs.name = task.name
-        attrs.workDir = task.workDirectory
+        attrs.workDir = task.workDir
         attrs.targetDir = task.targetDir
         attrs.inputFiles = [:]
         attrs.outputFiles = []
@@ -519,12 +502,12 @@ class GgBashTask extends GgBaseTask<Integer>  {
     /**
      * The command line to be executed
      */
-    final List commandLine
+    final List shell
 
 
-    GgBashTask( TaskRun task , List cmdLine ) {
+    GgBashTask( TaskRun task , List shell ) {
         super(task)
-        this.commandLine = cmdLine
+        this.shell = shell
     }
 
 
@@ -534,7 +517,7 @@ class GgBashTask extends GgBaseTask<Integer>  {
 
         ProcessBuilder builder = new ProcessBuilder()
                 .directory(workDir.toFile())
-                .command(commandLine)
+                .command(shell)
                 .redirectErrorStream(true)
 
         // set the 'scratch' dir

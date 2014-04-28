@@ -41,6 +41,8 @@ import java.nio.file.spi.FileSystemProvider
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Session
+import nextflow.executor.GgGridFactory
 import nextflow.extension.FilesExtensions
 import nextflow.util.OnlyCloseChannel
 import org.gridgain.grid.Grid
@@ -68,13 +70,25 @@ class GgFileSystemProvider extends FileSystemProvider {
     private GgFileSystem currentFileSystem
 
     /**
+     * The underlying {@link Grid} instance
+     */
+    private Grid grid
+
+    /**
      * Returns the URI scheme that identifies this provider.
      *
      * @return  The string {@code 'ggfs'}
      */
     @Override
     String getScheme() {
-        return SCHEME
+        SCHEME
+    }
+
+    /**
+     * @return The underlying {@link Grid} instance
+     */
+    Grid getGrid() {
+        grid
     }
 
     /**
@@ -108,19 +122,33 @@ class GgFileSystemProvider extends FileSystemProvider {
         if( currentFileSystem )
             throw new FileSystemAlreadyExistsException("File system object already exists -- URI: $uri")
 
-        def ggfs = getGgfs(env)
+        def ggfs = getGgfsFor(env)
         return currentFileSystem = new GgFileSystem(this, ggfs)
     }
 
+    /**
+     * Short-cut for {@link #newFileSystem(java.net.URI, java.util.Map)}
+     *
+     * @param env
+     * @return
+     * @throws IOException
+     */
     GgFileSystem newFileSystem(Map<String, ?> env) throws IOException {
         newFileSystem((URI)null, env)
     }
 
-    static private Grid getGrid( Map env ) {
+
+    static private Grid getGridFor( Map env ) {
 
         def grid = env.get('grid')
-        if( !grid )
-            return GridGain.grid()
+        if( !grid ) {
+            if( env.containsKey('session') ) {
+                return new GgGridFactory( env.session as Session ).start()
+            }
+            else {
+                return GridGain.grid()
+            }
+        }
 
         if( grid instanceof String )
             return GridGain.grid(grid as String)
@@ -134,14 +162,14 @@ class GgFileSystemProvider extends FileSystemProvider {
         throw new IllegalStateException("Cannot access underlying GridGain instance -- not a valid grid identifier: [${grid?.class?.name} $grid]")
     }
 
-    static private GridGgfs getGgfs( Map env ) {
+    private GridGgfs getGgfsFor( Map env ) {
 
         // -- now find out the grid file system object
         def ggfs = env.get('ggfs')
         if( ggfs instanceof GridGgfs )
             return (GridGgfs)ggfs
 
-        def grid = getGrid(env)
+        grid = getGridFor(env)
         if( !ggfs )
             return grid.ggfs('ggfs')
 

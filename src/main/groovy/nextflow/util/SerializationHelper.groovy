@@ -217,7 +217,7 @@ class PathSerializer extends Serializer<Path> {
         // try to find provider
         for (FileSystemProvider provider: FileSystemProvider.installedProviders()) {
             if (provider.getScheme().equalsIgnoreCase(scheme)) {
-                return provider.getPath(new URI(path))
+                return provider.getPath(URI.create("$scheme://$path"))
             }
         }
 

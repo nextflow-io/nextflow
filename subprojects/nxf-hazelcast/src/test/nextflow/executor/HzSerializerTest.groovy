@@ -72,7 +72,7 @@ class HzSerializerTest extends Specification {
         def closure = { 'Hello' }
         closure.delegate = new DelegateMap(script, [x:1, path: Paths.get('/hola')], false, 'hello')
         task.code = closure
-        task.workDirectory = Paths.get('/some/file')
+        task.workDir = Paths.get('/some/file')
 
         when:
         def cmd = new HzCmdCall( uuid, task )

@@ -36,7 +36,10 @@ class GridExecutorTest extends Specification {
     def testCheckIfNotRunning(){
 
         setup:
+        def work = Files.createTempDirectory('test')
         def task = Mock(TaskRun)
+        task.getWorkDir() >> work
+
         def config = Mock(TaskConfig)
         def executor = Mock(AbstractGridExecutor)
 
@@ -52,8 +55,10 @@ class GridExecutorTest extends Specification {
     def testCheckIfRunning(){
 
         setup:
+        def workDir = Files.createTempDirectory('checkIfRunTest')
+        workDir.resolve(TaskRun.CMD_START).text = 'yes'
         def task = Mock(TaskRun)
-        task.getCmdStartedFile() >> Files.createTempFile('checkIfRun',null)
+        task.getWorkDir() >> workDir
 
         def config = Mock(TaskConfig)
         def executor = Mock(AbstractGridExecutor)
@@ -65,6 +70,8 @@ class GridExecutorTest extends Specification {
         handler.checkIfRunning()
         handler.status == TaskHandler.Status.RUNNING
 
+        cleanup:
+        workDir.deleteDir()
     }
 
 
@@ -72,7 +79,9 @@ class GridExecutorTest extends Specification {
     def testCheckIfTerminated(){
 
         setup:
+        def work = Files.createTempDirectory('test')
         def task = Mock(TaskRun)
+        task.getWorkDir() >> work
         def config = Mock(TaskConfig)
         def executor = [:] as AbstractGridExecutor
         executor.queueInterval = Duration.of('1min')
@@ -91,7 +100,7 @@ class GridExecutorTest extends Specification {
 
         setup:
         def task = new TaskRun()
-        task.workDirectory = Files.createTempDirectory('testHandler')
+        task.workDir = Files.createTempDirectory('testHandler')
 
         def config = Mock(TaskConfig)
         def executor = Mock(AbstractGridExecutor)
@@ -111,7 +120,7 @@ class GridExecutorTest extends Specification {
 
         given:
         def task = new TaskRun()
-        task.workDirectory = Files.createTempDirectory('testHandler')
+        task.workDir = Files.createTempDirectory('testHandler')
 
         def config = Mock(TaskConfig)
         def executor = Mock(AbstractGridExecutor)
@@ -141,7 +150,7 @@ class GridExecutorTest extends Specification {
 
         setup:
         def task = new TaskRun()
-        task.workDirectory = Files.createTempDirectory('testHandler')
+        task.workDir = Files.createTempDirectory('testHandler')
         def config = Mock(TaskConfig)
         def executor = Mock(AbstractGridExecutor)
         executor.checkActiveStatus(_) >> { true }

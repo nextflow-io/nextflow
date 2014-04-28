@@ -45,6 +45,7 @@ import nextflow.Const
 import nextflow.daemon.DaemonLauncher
 import nextflow.util.DaemonConfig
 import nextflow.util.Duration
+import nextflow.util.RemoteSession
 import org.apache.commons.lang.StringUtils
 /**
  * Run the Hazelcast daemon used to process user processes
@@ -71,7 +72,7 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
 
     private ExecutorService executor
 
-    private IMap<UUID, HzRemoteSession> allSessions
+    private IMap<UUID, RemoteSession> allSessions
 
     private IMap<HzTaskKey, HzCmdStatus> allTasks
 
@@ -500,7 +501,7 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
 
 
     @Slf4j
-    class SessionEntryListener implements EntryListener<UUID,HzRemoteSession> {
+    class SessionEntryListener implements EntryListener<UUID,RemoteSession> {
 
         /**
          * When a session entry is removed (i.e. when a client disconnect)
@@ -508,7 +509,7 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
          * @param event
          */
         @Override
-        void entryRemoved(EntryEvent<UUID, HzRemoteSession> event) {
+        void entryRemoved(EntryEvent<UUID, RemoteSession> event) {
             final sessionId = event.getKey()
             log.debug "Removing session id: ${sessionId}"
             def list = []
@@ -524,15 +525,15 @@ class HzDaemon implements HzConst, DaemonLauncher, MembershipListener {
 
         /** do not used */
         @Override
-        void entryAdded(EntryEvent<UUID, HzRemoteSession> event) { }
+        void entryAdded(EntryEvent<UUID, RemoteSession> event) { }
 
         /** do not used */
         @Override
-        void entryUpdated(EntryEvent<UUID, HzRemoteSession> event) { }
+        void entryUpdated(EntryEvent<UUID, RemoteSession> event) { }
 
         /** do not used */
         @Override
-        void entryEvicted(EntryEvent<UUID, HzRemoteSession> event) { }
+        void entryEvicted(EntryEvent<UUID, RemoteSession> event) { }
     }
 }
 

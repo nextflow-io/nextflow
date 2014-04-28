@@ -22,16 +22,19 @@ package nextflow.executor
 import com.amazonaws.auth.BasicAWSCredentials
 import groovy.util.logging.Slf4j
 import nextflow.Const
+import nextflow.Session
 import nextflow.util.DaemonConfig
 import nextflow.util.Duration
 import nextflow.util.FileHelper
 import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.reflect.MethodUtils
+import org.gridgain.grid.Grid
 import org.gridgain.grid.GridConfiguration
 import org.gridgain.grid.GridGain
 import org.gridgain.grid.cache.GridCacheAtomicityMode
 import org.gridgain.grid.cache.GridCacheConfiguration
 import org.gridgain.grid.cache.GridCacheDistributionMode
+import org.gridgain.grid.cache.GridCacheMemoryMode
 import org.gridgain.grid.cache.GridCacheMode
 import org.gridgain.grid.cache.GridCacheWriteSynchronizationMode
 import org.gridgain.grid.ggfs.GridGgfsConfiguration
@@ -46,12 +49,12 @@ import org.gridgain.grid.spi.discovery.tcp.ipfinder.sharedfs.GridTcpDiscoverySha
 import org.gridgain.grid.spi.discovery.tcp.ipfinder.vm.GridTcpDiscoveryVmIpFinder
 import org.gridgain.grid.spi.loadbalancing.adaptive.GridAdaptiveLoadBalancingSpi
 /**
- * Creates a the GridGain configuration object common to master and worker nodes
+ * Grid factory class. It can be used to create a {@link GridConfiguration} or the {@link Grid} instance directly
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class GgConfigFactory {
+class GgGridFactory {
 
     static final SESSIONS_CACHE = 'allSessions'
 
@@ -62,22 +65,42 @@ class GgConfigFactory {
     private final DaemonConfig config
 
     /**
+     * Create a grid factory object for the given role and configuration params
+     *
      * @param role The role for the cluster member to be configured, either {@code master} or {@code worker}
      * @param config a {@code Map} holding the configuration properties to be used
      */
-    GgConfigFactory( String role, Map config ) {
+    GgGridFactory( String role, Map config ) {
         assert role in ['master','worker'], "Parameter 'role' can be either 'master' or 'worker'"
         log.debug "Configuration properties for role: '$role' -- ${config}"
         this.role = role
         this.config = new DaemonConfig('gridgain', config, role == 'worker' ? System.getenv() : null )
     }
 
+    /**
+     * Creates a grid factory object by using the given {@link nextflow.Session} object.
+     * @param session
+     */
+    GgGridFactory( Session session ) {
+        this('master', session.config.executor ?: [:])
+    }
+
+    /**
+     * Creates teh config object and starts a GridGain instance
+     *
+     * @return The {@link Grid} instance
+     * @throws org.gridgain.grid.GridException If grid could not be started. This exception will be thrown
+     *      also if named grid has already been started.
+     */
+    Grid start() {
+        GridGain.start( config() )
+    }
 
     /**
      * Main factory method, creates the {@code GridConfiguration} object
      * @return
      */
-    GridConfiguration create( ) {
+    GridConfiguration config() {
 
         System.setProperty('GRIDGAIN_UPDATE_NOTIFIER','false')
 
@@ -131,11 +154,14 @@ class GgConfigFactory {
     /*
      * The *session* cache
      */
-    private void cacheConfig( GridConfiguration cfg ) {
+    protected void cacheConfig( GridConfiguration cfg ) {
 
         def sessionCfg = new GridCacheConfiguration()
-        sessionCfg.setName(SESSIONS_CACHE)
-        sessionCfg.setStartSize(64)
+        sessionCfg.with {
+            name = SESSIONS_CACHE
+            startSize = 64
+            offHeapMaxMemory = 0
+        }
 
         /*
          * set the data cache for this ggfs
@@ -148,8 +174,12 @@ class GgConfigFactory {
             queryIndexEnabled = false
             writeSynchronizationMode = GridCacheWriteSynchronizationMode.FULL_SYNC
             distributionMode = GridCacheDistributionMode.PARTITIONED_ONLY
-            backups = 0
             affinityMapper = new GridGgfsGroupDataBlocksKeyMapper(512)
+            backups = 0
+            // configure Off-heap memory
+            // http://atlassian.gridgain.com/wiki/display/GG60/Off-Heap+Memory
+            offHeapMaxMemory = 0
+            memoryMode = GridCacheMemoryMode.OFFHEAP_TIERED
         }
         cfg.setCacheConfiguration(dataCfg)
 
@@ -170,11 +200,32 @@ class GgConfigFactory {
     }
 
 
+
+    /*
+     * ggfs configuration
+     */
+    protected void ggfsConfig( GridConfiguration cfg ) {
+
+        def ggfsCfg = new GridGgfsConfiguration()
+        ggfsCfg.with {
+            name = 'ggfs'
+            defaultMode = GridGgfsMode.PRIMARY
+            metaCacheName = 'ggfs-meta'
+            dataCacheName = 'ggfs-data'
+            blockSize = 128 * 1024
+            perNodeBatchSize = 512
+            perNodeParallelBatchCount = 16
+        }
+        cfg.setGgfsConfiguration(ggfsCfg)
+
+    }
+
+
     /**
      * http://atlassian.gridgain.com/wiki/display/GG60/Job+Collision+Resolution
      * http://atlassian.gridgain.com/wiki/display/GG60/Collision+Resolution+SPI
      */
-    private collisionConfig( GridConfiguration cfg ) {
+    protected collisionConfig( GridConfiguration cfg ) {
 
         def slots = config.getAttribute('slots', Runtime.getRuntime().availableProcessors() ) as int
         def maxActivesJobs = slots * 3
@@ -194,7 +245,7 @@ class GgConfigFactory {
      * http://atlassian.gridgain.com/wiki/display/GG60/Load+Balancing+SPI
      * http://atlassian.gridgain.com/wiki/display/GG60/Load+Balancing
      */
-    private void balancingConfig( GridConfiguration cfg ) {
+    protected void balancingConfig( GridConfiguration cfg ) {
 
         cfg.setLoadBalancingSpi( new GridAdaptiveLoadBalancingSpi() )
     }
@@ -308,25 +359,6 @@ class GgConfigFactory {
         }
     }
 
-
-    /*
-     * ggfs configuration
-     */
-    protected void ggfsConfig( GridConfiguration cfg ) {
-
-        def ggfsCfg = new GridGgfsConfiguration()
-        ggfsCfg.with {
-            name = 'ggfs'
-            defaultMode = GridGgfsMode.PRIMARY
-            metaCacheName = 'ggfs-meta'
-            dataCacheName = 'ggfs-data'
-            blockSize = 128 * 1024
-            perNodeBatchSize = 512
-            perNodeParallelBatchCount = 16
-        }
-        cfg.setGgfsConfiguration(ggfsCfg)
-
-    }
 
 
 }

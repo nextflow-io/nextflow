@@ -40,7 +40,7 @@ class HzCmdStatusTest extends Specification {
 
         def closure = { -> }
         closure.delegate = map
-        def task = new TaskRun(id:'123', workDirectory: Paths.get('xxx'), code: closure)
+        def task = new TaskRun(id:'123', workDir: Paths.get('xxx'), code: closure)
         def cmd = new HzCmdCall( sessionId, task )
 
         /*

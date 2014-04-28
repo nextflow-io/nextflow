@@ -19,11 +19,12 @@
  */
 
 package nextflow.util
-
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import com.github.marschall.memoryfilesystem.MemoryFileSystemBuilder
+import nextflow.Session
 import spock.lang.Specification
 /**
  *
@@ -33,9 +34,14 @@ class FileHelperTest extends Specification {
 
     def 'test asPath' () {
 
+        given:
+        new Session()
+        MemoryFileSystemBuilder.newEmpty().build("test")
+
         expect:
         FileHelper.asPath('file.txt') == Paths.get('file.txt')
         FileHelper.asPath('file:///file.txt') == Paths.get( URI.create('file:///file.txt') )
+        FileHelper.asPath('memory:test/some/file') == Paths.get('memory:test/some/file')
 
     }
 

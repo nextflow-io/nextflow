@@ -147,9 +147,9 @@ class HzTaskHandler extends TaskHandler {
     static HzTaskHandler createScriptHandler( TaskRun task, TaskConfig taskConfig, HzExecutor executor ) {
         def handler = new HzTaskHandler(task,taskConfig)
         handler.executor = executor
-        handler.exitFile = task.getCmdExitFile()
-        handler.outputFile = task.getCmdOutputFile()
-        handler.wrapperFile = task.getCmdWrapperFile()
+        handler.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
+        handler.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
+        handler.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
         handler.type = ScriptType.SCRIPTLET
         return handler
     }

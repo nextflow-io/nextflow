@@ -42,6 +42,7 @@ allprojects {
         testCompile ("org.spockframework:spock-core:${spockVer}") {
             exclude module: 'groovy-all'
         }
+        testCompile 'com.github.marschall:memoryfilesystem:0.5.4'
     }
 
 }

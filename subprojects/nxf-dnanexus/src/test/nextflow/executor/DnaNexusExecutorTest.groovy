@@ -138,9 +138,9 @@ class DnaNexusExecutorTest extends Specification {
 
         setup:
         def api = Mock(DxApi)
-        def outFile = Files.createTempFile('testOutFile', null)
+        def workDir = Files.createTempDirectory('testWorkDir', null)
         def task = Mock(TaskRun)
-        task.getCmdOutputFile() >> outFile
+        task.getWorkDir() >> workDir
         def config = Mock(TaskConfig)
         def exec = Mock(DnaNexusExecutor)
 
@@ -155,8 +155,8 @@ class DnaNexusExecutorTest extends Specification {
 
         when:
         def task2 = new TaskRun()
-        task2.workDirectory = Files.createTempDirectory('testHandler')
-        task2.getCmdOutputFile().text = 'Task says Hola'
+        task2.workDir = Files.createTempDirectory('testHandler')
+        task2.workDir.resolve(TaskRun.CMD_OUTFILE).text = 'Task says Hola'
         handler = new DxTaskHandler(task2, config, exec, [:], api);
         handler.metaClass.checkStatus = { return [state:'done', output:[exit_code:33]] }
         handler.processJobId = '123'
@@ -169,7 +169,7 @@ class DnaNexusExecutorTest extends Specification {
 
 
         cleanup:
-        task2.workDirectory?.deleteDir()
+        task2.workDir?.deleteDir()
     }
 
 

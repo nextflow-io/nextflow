@@ -27,11 +27,11 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class GgConfigFactoryTest extends Specification {
+class GgGridFactoryTest extends Specification {
 
     def test() {
         when:
-        def cfg = new GgConfigFactory('master', [tcp:[
+        def cfg = new GgGridFactory('master', [tcp:[
                 localAddress:'127.1.2.3',
                 localPort:8888,
                 ackTimeout: '11s',
@@ -43,7 +43,7 @@ class GgConfigFactoryTest extends Specification {
                 networkTimeout: '10s',
                 joinTimeout: 100,
 
-            ], ]).create()
+            ], ]).config()
         def tcp = cfg.getDiscoverySpi() as GridTcpDiscoverySpi
         then:
         tcp.getLocalAddress() == '127.1.2.3'

@@ -48,6 +48,8 @@ class BashWrapperBuilder {
 
     String dockerContainerName
 
+    Path workDir
+
 
     BashWrapperBuilder( TaskRun task ) {
         this.task = task
@@ -55,6 +57,7 @@ class BashWrapperBuilder {
         // set the input (when available)
         this.input = task.stdin
         this.scratch = task.scratch
+        this.workDir = task.workDir
         this.dockerContainerName = task.container
 
         // set the environment
@@ -107,13 +110,13 @@ class BashWrapperBuilder {
 
     Path build() {
 
-        final scriptFile = task.getCmdScriptFile()
-        final inputFile = task.getCmdInputFile()
-        final environmentFile = task.getCmdEnvironmentFile()
-        final startedFile = task.getCmdStartedFile()
-        final outputFile = task.getCmdOutputFile()
-        final exitedFile = task.getCmdExitFile()
-        final wrapperFile = task.getCmdWrapperFile()
+        final scriptFile = workDir.resolve(TaskRun.CMD_SCRIPT)
+        final inputFile = workDir.resolve(TaskRun.CMD_INFILE)
+        final environmentFile = workDir.resolve(TaskRun.CMD_ENV)
+        final startedFile = workDir.resolve(TaskRun.CMD_START)
+        final outputFile = workDir.resolve(TaskRun.CMD_OUTFILE)
+        final exitedFile = workDir.resolve(TaskRun.CMD_EXIT)
+        final wrapperFile = workDir.resolve(TaskRun.CMD_RUN)
 
         /*
          * the script file
@@ -193,7 +196,7 @@ class BashWrapperBuilder {
         if( input != null ) wrapper << ' < ' << inputFile.toString()
         wrapper << ' ) &> ' << outputFile.toAbsolutePath() << ENDL
 
-        if( (changeDir || task.workDirectory != task.getTargetDir() ) && unstagingScript  ) {
+        if( (changeDir || task.workDir != task.getTargetDir() ) && unstagingScript  ) {
             def unstaging = unstagingScript.call()
             wrapper << unstaging << ENDL
         }

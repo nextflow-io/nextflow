@@ -25,7 +25,6 @@ import groovy.transform.Canonical
 import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
 import nextflow.Const
-import nextflow.Session
 import nextflow.exception.ProcessException
 import nextflow.processor.DelegateMap
 import nextflow.processor.TaskRun
@@ -53,35 +52,7 @@ interface HzConst {
 
 }
 
-/**
- * Keep track of the remote session classpath
- */
-@EqualsAndHashCode
-class HzRemoteSession implements Serializable {
 
-    private static final long serialVersionUID = - 3956143328835315200L ;
-
-    final UUID id
-
-    final List<URL> classpath
-
-    /* this may be removed */
-    final String scriptClassName
-
-    HzRemoteSession() { }
-
-    HzRemoteSession(Session session) {
-        id = session.getUniqueId()
-        classpath = session.getClasspath()
-        scriptClassName = session.getScriptClassName()
-    }
-
-    /** only for test */
-    protected HzRemoteSession( UUID uuid, List<URL> classpath  ) {
-        this.id = uuid
-        this.classpath = classpath
-    }
-}
 
 
 /**
@@ -142,7 +113,7 @@ class HzCmdCall implements Callable, Serializable {
 
         this.sessionId = sessionId
         this.taskId = task.id
-        this.workDir = task.workDirectory.toFile()
+        this.workDir = task.workDir.toFile()
         this.commandLine = cmdLine
         this.type = ScriptType.SCRIPTLET
 
@@ -152,7 +123,7 @@ class HzCmdCall implements Callable, Serializable {
         assert task
         this.sessionId = sessionId
         this.taskId = task.id
-        this.workDir = task.workDirectory.toFile()
+        this.workDir = task.workDir.toFile()
         this.codeObj = task.code.dehydrate()
         this.delegateMap = task.code.delegate as DelegateMap
         this.type = ScriptType.GROOVY

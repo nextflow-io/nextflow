@@ -26,12 +26,14 @@ import java.nio.file.PathMatcher
 import java.nio.file.WatchService
 import java.nio.file.attribute.UserPrincipalLookupService
 import java.nio.file.spi.FileSystemProvider
+import java.util.regex.Pattern
 
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableSet
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import org.gridgain.grid.ggfs.GridGgfs
+
 /**
  * Implements a {@code FileSystem} for the GridGain provider
  *
@@ -130,13 +132,38 @@ class GgFileSystem extends FileSystem {
     }
 
     /**
-     * TODO
-     * @param syntaxAndPattern
-     * @return
+     * @Inheritdoc
      */
     @Override
-    PathMatcher getPathMatcher(String syntaxAndPattern) {
-        throw new UnsupportedOperationException("Method 'getUserPrincipalLookupService' not implemented yet")
+    PathMatcher getPathMatcher(String syntaxAndInput) {
+
+        int pos = syntaxAndInput.indexOf(':');
+        if (pos <= 0 || pos == syntaxAndInput.length())
+            throw new IllegalArgumentException();
+
+        String syntax = syntaxAndInput.substring(0, pos);
+        String input = syntaxAndInput.substring(pos+1);
+
+        String expr;
+        if (syntax == 'glob') {
+            expr = Globs.toUnixRegexPattern(input);
+        }
+        else if (syntax == 'regex' ) {
+            expr = input;
+        }
+        else {
+            throw new UnsupportedOperationException("Syntax '$syntax' not recognized");
+        }
+
+        // return matcher
+        final Pattern pattern = Pattern.compile(expr);
+        return new PathMatcher() {
+            @Override
+            public boolean matches(Path path) {
+                return pattern.matcher(path.toString()).matches();
+            }
+        };
+
     }
 
     /**

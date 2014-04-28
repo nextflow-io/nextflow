@@ -38,6 +38,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskPollingMonitor
+import nextflow.util.RemoteSession
 import org.apache.commons.lang.StringUtils
 /**
  * Creates a connector for the Hazelcast cluster
@@ -54,7 +55,7 @@ class HzConnector implements HzConst, MembershipListener {
     /** The nextflow session object */
     private Session session
 
-    private IMap<UUID,HzRemoteSession> allSessions
+    private IMap<UUID,RemoteSession> allSessions
 
     private IMap<String,HzNodeInfo> allNodes
 
@@ -147,7 +148,7 @@ class HzConnector implements HzConst, MembershipListener {
 
         // publish the session on the cluster
         allSessions = hazelcast.getMap(SESSIONS_MAP)
-        allSessions.put( session.uniqueId, new HzRemoteSession(session) )
+        allSessions.put( session.uniqueId, new RemoteSession(session) )
 
         // fetch the current number of slots for each member
         def tot = 0

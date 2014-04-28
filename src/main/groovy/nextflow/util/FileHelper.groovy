@@ -19,17 +19,24 @@
  */
 
 package nextflow.util
-
 import java.lang.reflect.Field
+import java.nio.file.FileSystem
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.spi.FileSystemProvider
+import java.util.concurrent.locks.Lock
+import java.util.concurrent.locks.ReentrantLock
 
 import embed.com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.Session
 import nextflow.extension.FilesExtensions
+import nextflow.extension.NextflowExtensions
+
 /**
  * Provides some helper method handling files
  *
@@ -227,22 +234,29 @@ class FileHelper {
         assert str
 
         int p = str.indexOf('://')
-        if( p == -1  ) {
+        if( p == -1 ) {
             return Paths.get(str)
         }
 
-        String scheme = str.substring(0, p).trim()
-        def provider = getProviderByScheme(scheme)
-        if( !provider ) {
-            throw new IllegalArgumentException("Unknown file scheme: $scheme");
-        }
+        final uri = URI.create(str)
+        if( uri.scheme == 'file' )
+            return Paths.get(uri.path)
 
-        return provider.getPath( URI.create(str) )
-
+        FileSystems.getFileSystem(uri).provider().getPath(uri)
     }
 
+    /**
+     * Lazy create and memoize this object since it will never change
+     * @return A map holding the current session
+     */
+    @Memoized
+    static private Map getEnvMap() {
+        assert Session.currentInstance, "Session is not available -- make sure to call this after Session object has been created"
+        [session: Session.currentInstance]
+    }
 
-    private static FileSystemProvider getProviderByScheme( String scheme ) {
+    @Memoized
+    static FileSystemProvider getProviderFor( String scheme ) {
 
         for (FileSystemProvider provider : FileSystemProvider.installedProviders()) {
             if ( scheme == provider.getScheme() ) {
@@ -279,4 +293,33 @@ class FileHelper {
         log.debug "> Added '${clazz.simpleName}' to list of installed providers [${result.scheme}]"
         return result
     }
+
+    private static Lock _fs_lock = new ReentrantLock()
+
+    /**
+     * Acquire or create the file system for the given {@link URI}
+     *
+     * @param uri A {@link URI} locating a file into a file system
+     * @param env An option environment specification that may be used to instantiate the underlying file system.
+     *          As defined by {@link FileSystemProvider#newFileSystem(java.net.URI, java.util.Map)}
+     * @return The corresponding {@link FileSystem} object
+     * @throws IllegalArgumentException if does not exist a valid provider for the given URI scheme
+     */
+    static FileSystem getOrCreateFileSystemFor( URI uri, Map env = null ) {
+        assert uri
+
+        def provider = getProviderFor(uri.scheme)
+        if( !provider )
+            throw new IllegalArgumentException("Cannot a find a file system provider for scheme: ${uri.scheme}")
+
+        def fs = provider.getFileSystem(uri)
+        if( fs ) return fs
+
+        return (FileSystem)NextflowExtensions.withLock(_fs_lock) {
+            fs = provider.getFileSystem(uri)
+            fs ?: provider.newFileSystem(uri, env)
+        }
+    }
+
+
 }
