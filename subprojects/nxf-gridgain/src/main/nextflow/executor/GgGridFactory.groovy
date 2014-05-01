@@ -104,8 +104,11 @@ class GgGridFactory {
 
         System.setProperty('GRIDGAIN_UPDATE_NOTIFIER','false')
 
-        if( config.getAttribute('debug') as Boolean )
+        if( config.getAttribute('debug') as Boolean ) {
+            log.debug "Debugging ENABLED"
             System.setProperty('GRIDGAIN_DEBUG_ENABLED','true')
+        }
+
 
 
         GridConfiguration cfg

@@ -113,7 +113,7 @@ class DnaNexusExecutor extends Executor {
          * Saving the task script file in the appropriate task's working folder
          */
         Path taskScriptFile = scratch.resolve(TaskRun.CMD_SCRIPT)
-        taskScriptFile.text = task.processor.normalizeScript(task.script.toString())
+        taskScriptFile.text = TaskProcessor.normalizeScript(task.script.toString(), taskConfig.shell)
         log.debug "Creating script file for process > ${task.name}\n\n "
 
         /*

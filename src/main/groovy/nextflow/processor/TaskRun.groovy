@@ -345,33 +345,14 @@ class TaskRun {
     }
 
 
-    static final CMD_ENV = '.command.env'
-    static final CMD_SCRIPT = '.command.sh'
-    static final CMD_INFILE = '.command.in'
-    static final CMD_OUTFILE = '.command.out'
-    static final CMD_EXIT = '.exitcode'
-    static final CMD_START = '.command.begin'
-    static final CMD_RUN = '.command.run'
-    static final CMD_CONTEXT = '.command.val'
-
-
-    /**
-     * @return The location of the file where the task exit status is saved
-     */
-    @Deprecated
-    Path getCmdExitFile() { workDir.resolve(CMD_EXIT) }
-
-    /**
-     * @return The location of the created when the task starts
-     */
-    @Deprecated
-    Path getCmdStartedFile() { workDir.resolve(CMD_START) }
-
-    /**
-     * @return The location of the wrapper BASH script user to launch the user target script
-     */
-    @Deprecated
-    Path getCmdWrapperFile() { workDir.resolve(CMD_RUN)  }
+    static final String CMD_ENV = '.command.env'
+    static final String CMD_SCRIPT = '.command.sh'
+    static final String CMD_INFILE = '.command.in'
+    static final String CMD_OUTFILE = '.command.out'
+    static final String CMD_EXIT = '.exitcode'
+    static final String CMD_START = '.command.begin'
+    static final String CMD_RUN = '.command.run'
+    static final String CMD_CONTEXT = '.command.val'
 
 
 

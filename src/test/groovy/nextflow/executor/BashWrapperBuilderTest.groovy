@@ -20,6 +20,8 @@
 
 package nextflow.executor
 
+import java.nio.file.Paths
+
 import spock.lang.Specification
 /**
  *
@@ -55,6 +57,32 @@ class BashWrapperBuilderTest extends Specification {
         then:
         builder.changeToScratchDirectory() == 'NXF_SCRATCH=$(mktemp -d -p /my/temp) && cd $NXF_SCRATCH'
 
+    }
+
+
+    def testMapConstructor() {
+
+        when:
+        def wrapper = new BashWrapperBuilder(
+                input: 'alpha',
+                scratch: '$var_x',
+                workDir: Paths.get('a'),
+                targetDir: Paths.get('b'),
+                container: 'docker_x',
+                environment: [a:1, b:2],
+                script: 'echo ciao',
+                shell: 'bash -e'
+        )
+
+        then:
+        wrapper.scratch == '$var_x'
+        wrapper.input == 'alpha'
+        wrapper.workDir == Paths.get('a')
+        wrapper.targetDir == Paths.get('b')
+        wrapper.dockerContainerName == 'docker_x'
+        wrapper.environment ==  [a:1, b:2]
+        wrapper.script ==  'echo ciao'
+        wrapper.shell == 'bash -e'
     }
 
 

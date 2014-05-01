@@ -50,6 +50,12 @@ class BashWrapperBuilder {
 
     Path workDir
 
+    Path targetDir
+
+    String script
+
+    def shell
+
 
     BashWrapperBuilder( TaskRun task ) {
         this.task = task
@@ -58,16 +64,30 @@ class BashWrapperBuilder {
         this.input = task.stdin
         this.scratch = task.scratch
         this.workDir = task.workDir
+        this.targetDir = task.targetDir
         this.dockerContainerName = task.container
 
         // set the environment
         this.environment = task.processor.getProcessEnvironment()
         this.environment.putAll( task.getInputEnvironment() )
 
+        this.shell = task.processor.taskConfig.shell
+        this.script = task.script.toString()
+
     }
 
-    /* this constructor is used only for testing purpose */
-    protected BashWrapperBuilder () { task = null }
+    BashWrapperBuilder( Map params ) {
+        task = null
+        this.shell = params.shell
+        this.script = params.script?.toString()
+        this.input = params.input
+        this.scratch = params.scratch
+        this.workDir = params.workDir
+        this.targetDir = params.targetDir
+        this.dockerContainerName = params.container
+        this.environment = params.environment
+
+    }
 
     /**
      * @return The bash script fragment to change to the 'scratch' directory if it has been specified in the task configuration
@@ -87,14 +107,14 @@ class BashWrapperBuilder {
         }
 
         // convert to string for safety
-        scratch = scratch.toString()
+        final scratchStr = scratch.toString()
 
         // when it is defined by a variable, just use it
-        if( scratch.startsWith('$') ) {
-            return "NXF_SCRATCH=\${${scratch.substring(1)}:-`mktemp -d`} && cd \$NXF_SCRATCH"
+        if( scratchStr.startsWith('$') ) {
+            return "NXF_SCRATCH=\${${scratchStr.substring(1)}:-`mktemp -d`} && cd \$NXF_SCRATCH"
         }
 
-        if( scratch.toLowerCase() in ['ramdisk','ram-disk']) {
+        if( scratchStr.toLowerCase() in ['ramdisk','ram-disk']) {
             return 'NXF_SCRATCH=$(mktemp -d -p /dev/shm/) && cd $NXF_SCRATCH'
         }
 
@@ -109,6 +129,8 @@ class BashWrapperBuilder {
      */
 
     Path build() {
+        assert workDir, "Missing 'workDir' property in BashWrapperBuilder object"
+        assert script, "Missing 'script' property in BashWrapperBuilder object"
 
         final scriptFile = workDir.resolve(TaskRun.CMD_SCRIPT)
         final inputFile = workDir.resolve(TaskRun.CMD_INFILE)
@@ -121,8 +143,12 @@ class BashWrapperBuilder {
         /*
          * the script file
          */
-        final taskScript = task.processor.normalizeScript(task.script.toString())
-        scriptFile.text = taskScript
+        final taskScript = scriptFile.text = TaskProcessor.normalizeScript(script, shell)
+
+        /*
+         * fetch the script interpreter
+         */
+        final interpreter = TaskProcessor.fetchInterpreter(taskScript)
 
         /*
          * save the input when required
@@ -172,18 +198,17 @@ class BashWrapperBuilder {
             wrapper << staging << ENDL
         }
 
-        // fetch the script interpreter
-        final interpreter = task.processor.fetchInterpreter(taskScript)
-
         // execute the command script
         wrapper << '( '
 
         // execute by invoking the command through a Docker container
         if( dockerContainerName ) {
             def docker = new DockerBuilder(dockerContainerName)
-                .addMountForInputs( task.getInputFiles() )
-                .addMount( task.processor.session.workDir )
-                .addMount( task.processor.session.binDir )
+            if( task ) {
+                docker.addMountForInputs( task.getInputFiles() )
+                      .addMount( task.processor.session.workDir )
+                      .addMount( task.processor.session.binDir )
+            }
 
             // set the environment
             if( !environmentFile.empty() )
@@ -196,7 +221,7 @@ class BashWrapperBuilder {
         if( input != null ) wrapper << ' < ' << inputFile.toString()
         wrapper << ' ) &> ' << outputFile.toAbsolutePath() << ENDL
 
-        if( (changeDir || task.workDir != task.getTargetDir() ) && unstagingScript  ) {
+        if( (changeDir || workDir != targetDir) && unstagingScript  ) {
             def unstaging = unstagingScript.call()
             wrapper << unstaging << ENDL
         }

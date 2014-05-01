@@ -337,10 +337,9 @@ abstract class TaskProcessor {
      * @return A string 'she-bang' formatted to the added on top script to be executed.
      * The interpreter to be used define bu the *taskConfig* property {@code shell}
      */
-    def getShebangLine() {
-        assert taskConfig.shell, "Missing 'shell' property for process: $name"
+    static shebangLine(shell) {
+        assert shell, "Missing 'shell' property in process configuration"
 
-        def shell = taskConfig.shell
         String result = shell instanceof List ? shell.join(' ') : shell
         if( result.startsWith('/') ) {
             result = '#!' + result
@@ -358,7 +357,7 @@ abstract class TaskProcessor {
      * also if the script does not start with a {@code shebang} line,
      * add the default by using the current {@code #shell} attribute
      */
-    def String normalizeScript(String script) {
+    static String normalizeScript(String script, shell) {
         assert script != null
 
         def result = new StringBuilder()
@@ -366,7 +365,7 @@ abstract class TaskProcessor {
         result << '\n'
 
         if( result[0] != '#' || result[1] != '!') {
-            result.insert(0, shebangLine +'\n')
+            result.insert(0, shebangLine(shell) +'\n')
         }
 
         return result.toString()
@@ -378,7 +377,7 @@ abstract class TaskProcessor {
      *
      * @return The interpreter as defined in the she-bang declaration, for example {@code /usr/bin/env perl}
      */
-    def String fetchInterpreter( String script ) {
+    static String fetchInterpreter( String script ) {
         assert script != null
 
         if( script[0] == '#' && script[1] == '!') {

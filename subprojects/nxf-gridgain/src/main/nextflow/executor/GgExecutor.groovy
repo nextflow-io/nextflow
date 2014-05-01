@@ -156,11 +156,16 @@ class GgExecutor extends Executor {
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class GgTaskHandler extends TaskHandler {
 
     private GgExecutor executor
 
     private ScriptType type
+
+    private Path exitFile
+
+    private Path outputFile
 
 
     /**
@@ -172,6 +177,8 @@ class GgTaskHandler extends TaskHandler {
         def handler = new GgTaskHandler(task,taskConfig)
         handler.executor = executor
         handler.type = ScriptType.SCRIPTLET
+        handler.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
+        handler.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         return handler
     }
 
@@ -192,8 +199,7 @@ class GgTaskHandler extends TaskHandler {
         // submit to an hazelcast node for execution
         final sessionId = task.processor.session.uniqueId
         if( type == ScriptType.SCRIPTLET ) {
-            final shell = (taskConfig.shell ?: 'bash') as List
-            future = executor.execute( new GgBashTask( task, shell ) )
+            future = executor.execute( new GgBashTask(task) )
         }
         else {
             future = executor.execute( new GgClosureTask( task, sessionId ) )
@@ -372,7 +378,6 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
             attrs = (Map<String,Object>)KryoHelper.deserialize(payload)
 
         // create a local scratch dir
-        // note: this directory HAS TO INJECTED AS VALUE FOR ENV VAR 'NF_SCRATCH' FOR BASH TASK
         scratchDir = Files.createTempDirectory('nxf-task')
 
         if( !inputFiles )
@@ -502,12 +507,40 @@ class GgBashTask extends GgBaseTask<Integer>  {
     /**
      * The command line to be executed
      */
-    final List shell
+    List shell
 
+    String container
 
-    GgBashTask( TaskRun task , List shell ) {
+    Map environment
+
+    Object stdin
+
+    String script
+
+    GgBashTask( TaskRun task ) {
         super(task)
-        this.shell = shell
+        this.stdin = task.stdin
+        this.container = task.container
+        this.environment = task.processor.getProcessEnvironment()
+        this.shell = (task.processor.taskConfig.shell ?: 'bash') as List
+        this.script = task.script
+    }
+
+    protected void unstage() {
+        super.unstage()
+        // copy the 'exit' file and 'output' file
+        copyFromScratchToWorkDir(TaskRun.CMD_EXIT)
+        copyFromScratchToWorkDir(TaskRun.CMD_OUTFILE)
+    }
+
+
+    private copyFromScratchToWorkDir( String name ) {
+        try {
+            Files.copy(scratchDir.resolve(name), workDir.resolve(name))
+        }
+        catch( Exception e ) {
+            log.debug "Unable to copy file: '$name' from: '$scratchDir' to: '$workDir'"
+        }
     }
 
 
@@ -515,13 +548,20 @@ class GgBashTask extends GgBaseTask<Integer>  {
     protected Integer execute0() throws GridException {
         log.debug "Launching task > ${name}"
 
+        def wrapper = new BashWrapperBuilder(
+                shell: shell,
+                input: stdin,
+                script: script,
+                workDir: scratchDir,    // <-- most important: the scratch folder is used as the 'workDir'
+                targetDir: targetDir,
+                container: container,
+                environment: environment )
+        shell.add( wrapper.build().toString() )
+
         ProcessBuilder builder = new ProcessBuilder()
-                .directory(workDir.toFile())
+                .directory(scratchDir.toFile())
                 .command(shell)
                 .redirectErrorStream(true)
-
-        // set the 'scratch' dir
-        builder.environment().put('NF_SCRATCH', scratchDir.toString())
 
         // launch and wait
         process = builder.start()

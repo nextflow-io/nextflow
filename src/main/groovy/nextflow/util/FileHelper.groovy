@@ -24,7 +24,6 @@ import java.nio.file.FileSystem
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.nio.file.spi.FileSystemProvider
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
@@ -36,7 +35,6 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.extension.FilesExtensions
 import nextflow.extension.NextflowExtensions
-
 /**
  * Provides some helper method handling files
  *
@@ -235,14 +233,14 @@ class FileHelper {
 
         int p = str.indexOf('://')
         if( p == -1 ) {
-            return Paths.get(str)
+            return FileSystems.getDefault().getPath(str)
         }
 
         final uri = URI.create(str)
         if( uri.scheme == 'file' )
-            return Paths.get(uri.path)
+            return FileSystems.getDefault().getPath(uri.path)
 
-        FileSystems.getFileSystem(uri).provider().getPath(uri)
+        getOrCreateFileSystemFor(uri, getEnvMap()).provider().getPath(uri)
     }
 
     /**

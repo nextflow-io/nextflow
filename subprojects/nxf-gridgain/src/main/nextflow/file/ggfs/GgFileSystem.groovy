@@ -74,7 +74,7 @@ class GgFileSystem extends FileSystem {
      */
     @Override
     void close() throws IOException {
-        ggfs.stop()
+
     }
 
     /**

@@ -127,21 +127,18 @@ class TaskProcessorTest extends Specification {
     def testFetchInterpreter() {
 
         when:
-        def wrapper = new DummyScript()
-        def processor = new DummyProcessor(new Session(), wrapper, new TaskConfig(wrapper))
         def script =
             '''
             #!/bin/perl
             do this
             do that
             '''
-        def i = processor.fetchInterpreter(script.stripIndent().trim())
+        def i = TaskProcessor.fetchInterpreter(script.stripIndent().trim())
         then:
         i == '/bin/perl'
 
         when:
-        processor = new DummyProcessor(new Session(), wrapper, new TaskConfig(wrapper))
-        i = processor.fetchInterpreter('do this')
+        i = TaskProcessor.fetchInterpreter('do this')
         then:
         i == null
     }

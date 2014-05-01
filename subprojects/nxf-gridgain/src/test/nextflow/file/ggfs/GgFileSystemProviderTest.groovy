@@ -152,6 +152,28 @@ class GgFileSystemProviderTest extends Specification {
 
     }
 
+    def testFileCopy2() {
+
+        given:
+        def path1 = Files.createTempFile('testfile',null)
+        def path2 = new GgPath(fs, rndName('/x/y/z/file') )
+        path1.text = 'Hello'
+
+        when:
+        Files.copy(path1, path2)
+
+        then:
+        Files.exists(path1)
+        Files.exists(path2)
+        path2.text == 'Hello'
+        !provider.isSameFile(path1, path2)
+
+        cleanup:
+        path1?.delete()
+
+    }
+
+
     def testFileMove() {
         given:
         def path1 = new GgPath(fs, rndName('/x/y/z/file') )
@@ -337,6 +359,7 @@ class GgFileSystemProviderTest extends Specification {
         holder.sourceObj == 'Hello'
         holder.storePath.text == 'Hello'
     }
+
 
 
     // run after the last feature method
