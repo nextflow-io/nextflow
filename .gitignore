@@ -23,6 +23,5 @@ dx-project/
 *.txt
 cache/
 lib/commons-cli-1.2.jar
-misc/sample.fa
-logo/nextflow2014_CS5.ai
-logo/nextflow2014_no-bg.png
+misc/
+logo/
