@@ -737,7 +737,7 @@ abstract class TaskProcessor {
         }
         catch( Throwable e ) {
             // no recoverable error
-            log.error("Unexpected error -- Aborting. Look at log file for details", e )
+            log.error("Unexpected error -- Execution aborted. Check the log file '.nextflow.log' for more details", e )
         }
 
         session.abort()
