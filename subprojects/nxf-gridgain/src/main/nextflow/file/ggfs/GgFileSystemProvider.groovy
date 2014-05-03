@@ -19,7 +19,7 @@
  */
 
 package nextflow.file.ggfs
-import javax.transaction.NotSupportedException
+
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.AccessMode
 import java.nio.file.CopyOption
@@ -208,7 +208,7 @@ class GgFileSystemProvider extends FileSystemProvider {
     SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> opts, FileAttribute<?>... attrs) throws IOException {
 
         if( opts.size()!=2 || !opts.contains(StandardOpenOption.CREATE_NEW) || !opts.contains(StandardOpenOption.WRITE))
-            throw new NotSupportedException("Options not supported: ${opts.join(', ')}")
+            throw new UnsupportedOperationException("Options not supported: ${opts.join(', ')}")
 
         if( Files.exists(path) )
             throw new FileAlreadyExistsException("File ggfs://${path} already exists")

@@ -20,12 +20,10 @@
 
 package nextflow.util
 
-import javax.transaction.NotSupportedException
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
 
 import groovy.transform.CompileStatic
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -41,32 +39,32 @@ class OnlyCloseChannel implements SeekableByteChannel {
 
     @Override
     int read(ByteBuffer dst) throws IOException {
-        throw new NotSupportedException()
+        throw new UnsupportedOperationException()
     }
 
     @Override
     int write(ByteBuffer src) throws IOException {
-        throw new NotSupportedException()
+        throw new UnsupportedOperationException()
     }
 
     @Override
     long position() throws IOException {
-        throw new NotSupportedException()
+        throw new UnsupportedOperationException()
     }
 
     @Override
     SeekableByteChannel position(long newPosition) throws IOException {
-        throw new NotSupportedException()
+        throw new UnsupportedOperationException()
     }
 
     @Override
     long size() throws IOException {
-        throw new NotSupportedException()
+        throw new UnsupportedOperationException()
     }
 
     @Override
     SeekableByteChannel truncate(long size) throws IOException {
-        throw new NotSupportedException()
+        throw new UnsupportedOperationException()
     }
 
     @Override
