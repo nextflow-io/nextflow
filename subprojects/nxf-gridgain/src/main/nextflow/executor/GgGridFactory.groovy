@@ -34,7 +34,6 @@ import org.gridgain.grid.GridGain
 import org.gridgain.grid.cache.GridCacheAtomicityMode
 import org.gridgain.grid.cache.GridCacheConfiguration
 import org.gridgain.grid.cache.GridCacheDistributionMode
-import org.gridgain.grid.cache.GridCacheMemoryMode
 import org.gridgain.grid.cache.GridCacheMode
 import org.gridgain.grid.cache.GridCacheWriteSynchronizationMode
 import org.gridgain.grid.ggfs.GridGgfsConfiguration
@@ -182,7 +181,9 @@ class GgGridFactory {
             // configure Off-heap memory
             // http://atlassian.gridgain.com/wiki/display/GG60/Off-Heap+Memory
             offHeapMaxMemory = 0
-            memoryMode = GridCacheMemoryMode.OFFHEAP_TIERED
+            // When storing directly off-heap it throws an exception
+            // See http://stackoverflow.com/q/23399264/395921
+            //memoryMode = GridCacheMemoryMode.OFFHEAP_TIERED
         }
         cfg.setCacheConfiguration(dataCfg)
 
