@@ -388,5 +388,27 @@ class TaskConfigTest extends Specification {
 
     }
 
+    def testShell() {
+
+        when:
+        def config = new TaskConfig([:])
+        config.shell( value )
+        then:
+        config.shell == expect
+        config.getShell() == expect
+
+        where:
+        expect                      | value
+        ['/bin/bash','-ue']         | null
+        ['/bin/bash','-ue']         | []
+        ['/bin/bash','-ue']         | ''
+        ['bash']                    | 'bash'
+        ['bash']                    | ['bash']
+        ['bash', '-e']              | ['bash', '-e']
+        ['zsh','-x']                | ['zsh','-x']
+
+
+    }
+
 
 }

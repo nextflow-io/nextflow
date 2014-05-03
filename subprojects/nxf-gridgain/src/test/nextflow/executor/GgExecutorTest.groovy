@@ -19,15 +19,17 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.processor.FileHolder
+import nextflow.processor.TaskConfig
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.script.FileInParam
 import nextflow.script.FileOutParam
 import nextflow.script.TokenVar
+import org.gridgain.grid.logger.slf4j.GridSlf4jLogger
 import spock.lang.Specification
 /**
  *
@@ -77,8 +79,20 @@ class GgExecutorTest extends Specification {
         sourceFile1.text = 'Content for file1'
         sourceFile2.text = 'Content for file2'
 
+        def config = new TaskConfig([shell: '/bin/zsh' ])
+
+        def processor = Mock(TaskProcessor)
+        processor.getTaskConfig() >> config
+        processor.getProcessEnvironment() >> [ALPHA: 1, BETA:2 ]
+
         def binding = new Binding()
-        def task = new TaskRun(id: 123, name: 'TestRun', workDir: Paths.get('/some/path'), storeDir: targetPath)
+        def task = new TaskRun(
+                id: 123,
+                name: 'TestRun',
+                workDir: Paths.get('/some/path'),
+                storeDir: targetPath,
+                processor: processor,
+                script: 'echo Hello world!')
         def s1 = new FileInParam(binding, []).bind( new TokenVar('x') )
         task.setInput(s1, [ new FileHolder(sourceFile1), new FileHolder(sourceFile2) ])
 
@@ -87,7 +101,9 @@ class GgExecutorTest extends Specification {
         task.setOutput( new FileOutParam(binding, []).bind('z'), 'file3' )
 
         when:
-        def bash = new GgBashTask(task, ['echo', 'do this', 'do that'])
+        def bash = new GgBashTask(task)
+        bash.log = new GridSlf4jLogger()
+
         then:
         bash.taskId == 123
         bash.name == 'TestRun'
@@ -95,6 +111,11 @@ class GgExecutorTest extends Specification {
         bash.targetDir == targetPath
         bash.inputFiles == [ file1:sourceFile1, file2: sourceFile2 ]
         bash.outputFiles == task.getOutputFilesNames()
+
+        bash.environment == [ALPHA: 1, BETA:2 ]
+        bash.shell == ['/bin/zsh']
+        bash.script == 'echo Hello world!'
+
 
         when:
         bash.stage()

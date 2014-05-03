@@ -52,9 +52,11 @@ import nextflow.util.ReadOnlyMap
 @Slf4j
 class TaskConfig implements Map {
 
-    private static transient BOOL_YES = ['true','yes','on']
+    private static final transient BOOL_YES = ['true','yes','on']
 
-    private static transient BOOL_NO = ['false','no','off']
+    private static final transient BOOL_NO = ['false','no','off']
+
+    private static final transient DEFAULT_SHELL = ['/bin/bash','-ue']
 
     @Delegate
     protected final Map configProperties
@@ -77,7 +79,7 @@ class TaskConfig implements Map {
             echo = false
             undef = false
             cacheable = true
-            shell = ['/bin/bash','-ue']
+            shell = (TaskConfig.DEFAULT_SHELL)
             validExitStatus = [0]
             inputs = new InputsList()
             outputs = new OutputsList()
@@ -139,6 +141,9 @@ class TaskConfig implements Map {
 
             case 'errorStrategy':
                 return getErrorStrategy()
+
+            case 'shell':
+                return getShell()
 
             default:
                 return configProperties.get(name)
@@ -358,5 +363,18 @@ class TaskConfig implements Map {
         configProperties.maxErrors ? configProperties.maxErrors as int : 0
     }
 
+    List<String> getShell() {
+        final value = configProperties.shell
+        if( !value )
+            return DEFAULT_SHELL
+
+        if( value instanceof List )
+            return value
+
+        if( value instanceof CharSequence )
+            return [ value.toString() ]
+
+        throw new IllegalArgumentException("Not a valid 'shell' configuration value: ${value}")
+    }
 
 }

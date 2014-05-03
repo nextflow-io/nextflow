@@ -522,7 +522,7 @@ class GgBashTask extends GgBaseTask<Integer>  {
         this.stdin = task.stdin
         this.container = task.container
         this.environment = task.processor.getProcessEnvironment()
-        this.shell = (task.processor.taskConfig.shell ?: 'bash') as List
+        this.shell = task.processor.taskConfig.shell
         this.script = task.script
     }
 
