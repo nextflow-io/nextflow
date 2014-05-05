@@ -1088,4 +1088,27 @@ class FilesExtensions {
     static File resolveSymLink(File self) {
         self.toPath().resolveSymLink().toFile()
     }
+
+    /**
+     * Create a folder if not already exists
+     * @param target The folder to be created
+     */
+    static public void createDirIfNotExists( Path target ) {
+        assert target
+
+        try {
+            if( !Files.readAttributes(target, BasicFileAttributes).isDirectory() )
+                throw new IOException("Cannot create folder: $target -- A file with the same name already exists")
+        }
+        catch (IOException e) {
+            if( !Files.createDirectories(target) )
+                throw new IOException("Cannot create folder: $target -- Check file systeme access permission")
+
+        }
+    }
+
+    static public void createDirIfNotExists( File target ) {
+        createDirIfNotExists(target.toPath())
+    }
+
 }

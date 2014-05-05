@@ -21,6 +21,7 @@
 package nextflow.extension
 import static java.util.Arrays.asList
 
+import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.PackageScope
@@ -40,6 +41,8 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.operator.SeparationClosure
 import nextflow.Channel
 import nextflow.Session
+import nextflow.util.FileAppender
+import nextflow.util.FileHelper
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 /**
  * A set of operators inspired to RxJava extending the methods available on DataflowChannel
@@ -497,6 +500,75 @@ class DataflowExtensions {
         channel.chain(listeners: [listener], {true})
         return result
     }
+
+
+    static public final DataflowReadChannel appendFile( final DataflowReadChannel channel, final Closure closure = null ) {
+        appendFile(channel,null,closure)
+    }
+
+    static public final DataflowReadChannel appendFile( final DataflowReadChannel channel, Map params, final Closure closure = null ) {
+
+        def result = new DataflowQueue()
+        def acc = new FileAppender()
+
+        acc.newLine = params?.newLine as Boolean
+        acc.seed = params?.seed
+
+        /*
+         * check or create the target folder
+         */
+        def storeDir = params?.storeDir as Path
+        if( storeDir )
+            storeDir.createDirIfNotExists()
+        else
+            storeDir = FileHelper.createTempFolder(Session.currentInstance.workDir)
+
+        /*
+         * each time a value is received, invoke the closure and
+         * append its result value to a file
+         */
+        def processItem = { item ->
+            def value = closure ? mapClosureCall(item,closure) : item
+
+            if( value instanceof List && value.size()>1 ) {
+                for( int i=1; i<value.size(); i++ ) {
+                    acc.append(value[0] as String, value[i])
+                }
+            }
+
+            else if( value instanceof Object[] && value.size()>1 ) {
+                for( int i=1; i<value.size(); i++ ) {
+                    acc.append(value[0] as String, value[i])
+                }
+            }
+
+            else if( value instanceof File )
+                acc.append(value.getName(), value)
+
+            else if( value instanceof Path )
+                acc.append(value.getName(), value)
+
+            else if( value != null )
+                throw new IllegalArgumentException()
+        }
+
+        /*
+         * emits the files when all values have been collected
+         */
+        def emitItems = {
+            acc.moveFiles(storeDir).each {
+                result.bind(it)
+            }
+
+            result.bind Channel.STOP
+        }
+
+        // apply the above rules
+        channel.subscribe ( onNext: processItem, onComplete: emitItems )
+
+        return result
+    }
+
 
     /**
      * Iterates over the collection of items and returns each item that matches the given filter

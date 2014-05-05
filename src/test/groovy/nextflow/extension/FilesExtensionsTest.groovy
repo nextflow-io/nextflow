@@ -666,4 +666,32 @@ class FilesExtensionsTest extends Specification {
         link2?.delete()
     }
 
+    def testCheckFolder() {
+
+        when:
+        def folder1 = Paths.get('some/path')
+        folder1.createDirIfNotExists()
+        then:
+        folder1.exists()
+
+        when:
+        def folder2 = Files.createTempDirectory('some-temp-dir')
+        folder2.createDirIfNotExists( )
+        then:
+        folder2.exists()
+
+        when:
+        def file3 = Files.createTempFile('some-file',null)
+        file3.createDirIfNotExists()
+        then:
+        thrown(IOException)
+
+
+        cleanup:
+        folder1?.deleteDir()
+        folder2?.deleteDir()
+        file3.delete()
+    }
+
+
 }

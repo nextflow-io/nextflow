@@ -1771,7 +1771,7 @@ class NextflowExtensions {
             if( self.containsKey(key) )
                 return self.get(key)
 
-            def result = factory instanceof Closure ? factory.call() : factory
+            def result = factory instanceof Closure ? factory.call(key) : factory
             self.put(key,result)
             return result
         }
