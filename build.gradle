@@ -335,7 +335,7 @@ task packGg(type: OneJar, dependsOn: configurations.gridgain ) {
 /*
  * Compile and pack all packages
  */
-task packAll( dependsOn: [compile, pack, packHz, packDx, packGg]) {
+task packAll( dependsOn: [pack, packHz, packDx, packGg]) {
 
 }
 
@@ -353,7 +353,7 @@ task publish(type: Exec) {
 /*
  * Tag and upload the release
  */
-task release(type: Exec, dependsOn: [compile, test, packAll]) {
+task release(type: Exec, dependsOn: [ test, packAll ]) {
 
     def file0 = file('nextflow').absoluteFile
     def file1 = file("$buildDir/libs/nextflow-${version}-one.jar").absoluteFile
