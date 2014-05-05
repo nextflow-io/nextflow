@@ -2,7 +2,9 @@ NEXTFLOW CHANGE-LOG
 ===================
 
 0.7.2
-- Enhanced support for Docker containers
+- Enhanced support for Docker containers:
+  Now the current user id is added on the Docker command line
+  and /tmp folder in the container is mounted on a temporary path in the host disk
 
 0.7.1 - 14 Apr 2014
 - Fixed an issue with 'scratch' directive i.e. Fixed issue when copying a symlink
