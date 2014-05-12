@@ -156,7 +156,7 @@ abstract class Executor {
 
             // delete all previous files with the same name
             files.each {
-                delete << "rm -f ${it.stagePath.name}"
+                delete << "rm -f '${it.stagePath.name}'"
             }
 
             // link them
@@ -182,7 +182,7 @@ abstract class Executor {
      * @return The script which will apply the staging for this file in the main script
      */
     String stageInputFileScript( Path path, String targetName ) {
-        "ln -s ${path.toAbsolutePath()} $targetName"
+        "ln -s '${path.toAbsolutePath()}' '$targetName'"
     }
 
     /**
@@ -202,7 +202,7 @@ abstract class Executor {
         // create a bash script that will copy the out file to the working directory
         log.trace "Unstaging file names: $fileOutNames"
         if( fileOutNames ) {
-            result << "mkdir -p ${task.getTargetDir()}"
+            result << "mkdir -p '${task.getTargetDir()}'"
             result << "rsync -rRzl ${fileOutNames.unique().join(' ')} ${task.getTargetDir().toString()}"
         }
 
