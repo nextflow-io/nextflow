@@ -242,7 +242,7 @@ class LoggerHelper {
         def error = null
         for( String str : lines ) {
             if( (error=getErrorLine(str,scriptName))) {
-                return error
+                break
             }
         }
 
