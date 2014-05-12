@@ -53,7 +53,7 @@ class Const {
     /**
      * The application version
      */
-    static final String APP_VER = "0.7.2"
+    static final String APP_VER = "0.8.0"
 
     /**
      * The app build time as linux/unix timestamp
