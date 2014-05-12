@@ -224,7 +224,7 @@ class DataflowExtensions {
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
                 error = true
                 if( !events.onError ) {
-                    DataflowExtensions.log.error("Unknown 'subscribe' operator error -- see '.nextflow.log' for details", e)
+                    DataflowExtensions.log.error("Cannot execute operator. Cause: ${e} -- See '.nextflow.log' for details", e)
                     Session.currentInstance?.abort()
                 }
                 else {

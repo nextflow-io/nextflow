@@ -1356,6 +1356,28 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    def testCollectManyFiles() {
+
+
+        when:
+        def list = Channel
+                .from('Hola', 'Ciao', 'Hello', 'Bonjour', 'Halo')
+                .collectFile() { item -> [ "${item[0]}.txt", item + '\n' ] }
+                .toList()
+                .getVal()
+                .sort { it.name }
+
+        then:
+        list[0].name == 'B.txt'
+        list[0].text == 'Bonjour\n'
+        list[1].text == 'Ciao\n'
+        list[1].name == 'C.txt'
+        list[2].name == 'H.txt'
+        list[2].text == 'Hola\nHello\nHalo\n'
+
+
+    }
+
 
     def testCollectFileWithStrings() {
 
