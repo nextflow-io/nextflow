@@ -260,38 +260,7 @@ class Channel {
 
     }
 
-    static DataflowChannel readLines( Map options = [:], Object source ) {
-        assert source != null
-        assert options != null
 
-        options.into = new DataflowQueue()
-        return (DataflowQueue) source.chopLines(options)
-    }
-
-
-    static DataflowChannel readLines( Map options = [:], Object source, Closure closure ) {
-        assert source != null
-        assert options != null
-
-        options.into = new DataflowQueue()
-        return (DataflowQueue) source.chopLines(options,closure)
-    }
-
-    static DataflowChannel readFasta( Map options = [:], Object source ) {
-        assert source != null
-        assert options != null
-
-        options.into = new DataflowQueue()
-        return (DataflowQueue) source.chopFasta(options)
-    }
-
-    static DataflowChannel readFasta( Map options = [:], Object source, Closure closure ) {
-        assert source != null
-        assert options != null
-
-        options.into = new DataflowQueue()
-        return (DataflowQueue) source.chopFasta(options, closure)
-    }
 
     static private DataflowChannel<Path> watchImpl( String syntax, String folder, String pattern, boolean skipHidden, String events ) {
         assert syntax in ['regex','glob']

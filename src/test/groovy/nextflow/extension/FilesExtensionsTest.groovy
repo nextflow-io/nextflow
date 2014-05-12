@@ -693,5 +693,35 @@ class FilesExtensionsTest extends Specification {
         file3.delete()
     }
 
+    def testEmptyAndIsEmpty() {
+
+        when:
+        def file = File.createTempFile('hello','file')
+        then:
+        file.empty()
+        file.isEmpty()
+        when:
+        file.text = 'hello'
+        then:
+        !file.empty()
+        !file.isEmpty()
+
+        when:
+        def path = Files.createTempFile('hello','path')
+        then:
+        path.empty()
+        path.isEmpty()
+        when:
+        path.text = 'hello'
+        then:
+        !path.empty()
+        !path.isEmpty()
+
+        cleanup:
+        file?.delete()
+        path?.delete()
+    }
+
+
 
 }

@@ -2,7 +2,7 @@
 cheers = Channel.from 'Hello', 'Ciao', 'Hola'
 
 
-process sayHello  {
+process storeCache  {
     storeDir 'cache'
 
     input:

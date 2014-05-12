@@ -34,7 +34,7 @@ allprojects {
 
     dependencies {
         compile ("org.codehaus.groovy:groovy:${groovyVer}")
-        compile ("org.codehaus.groovy:groovy-nio:${groovyVer}")
+        //compile ("org.codehaus.groovy:groovy-nio:${groovyVer}")
         testCompile ("cglib:cglib-nodep:${cglibVer}")
         testCompile ("org.objenesis:objenesis:${objenesisVer}")
         testCompile ("org.spockframework:spock-core:${spockVer}") {
@@ -66,6 +66,7 @@ dependencies {
     compile "com.beust:jcommander:${jcommanderVer}"
     compile "com.google.code.findbugs:jsr305:${jsr305Ver}"
     compile "com.esotericsoftware.kryo:kryo:${kryoVer}"
+    compile "org.utgenome.thirdparty:picard:${picardVer}"
     compile files('lib/guava-cache-16.0.1.jar')
 
     oneJarLib files('one-jar/one-jar-boot-0.97.jar')

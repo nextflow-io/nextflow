@@ -4,7 +4,7 @@ params.query = "$HOME/sample.fa"
 params.db = "$HOME/tools/blast-db/pdb/pdb"
 
 db = file(params.db)
-fasta = Channel.path(params.query).chopFasta()
+fasta = Channel.path(params.query).splitFasta()
 
 process blast {
     input:
@@ -27,26 +27,18 @@ process extract {
     output:
     file 'sequences'
 
-    "blastdbcmd -db ${db} -entry_batch top_hits > sequences"
+    "blastdbcmd -db ${db} -entry_batch top_hits | head -n 10 > sequences"
 }
 
-process all {
-    merge true
 
-    input:
-    val sequences
-
-    output:
-    file 'all_seq'
-
-    "cat $sequences > all_seq"
-}
+all_seq = sequences.collectFile(name:'all_seq')
 
 process align {
     echo true
 
     input:
-    val all_seq
+    file all_seq
 
     "t_coffee $all_seq 2>&- | tee align_result"
 }
+

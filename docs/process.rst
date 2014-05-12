@@ -232,11 +232,6 @@ Will display::
     Hello Mr. c
 
 
-.. warning:: Native processes execution is an incubating feature and has the following limitations:
-    they can only be executed by using a `local` executor and they cannot be used when the `merge`
-    feature is specified.
-
-
 Inputs
 =======
 
@@ -894,8 +889,6 @@ Share parameters have some important differences compared to input or output par
 * It allows you to `share` the parameter's value across multiple process executions.
 * Whenever a share parameter is declared, the process is executed serially, instead of in a parallel manner.
 
-.. warning:: Share parameters cannot be used in a process that uses the `merge` feature.
-
 
 Share generic values
 ---------------------
@@ -1222,6 +1215,8 @@ See also: `errorStrategy`_ and `maxErrors`_.
 merge
 -------
 
+.. warning:: This feature has been deprecated and will be removed in 1.0 release.
+
 The ``merge`` directive allow you to write a task that `gather` the results of a upstream processes.
 
 The main differences with a normal process are:
@@ -1354,7 +1349,6 @@ for each specie specified by an input parameter::
 
   }
 
-.. warning:: The ``storeDir`` directive cannot be used with a `merge` process.
 
 validExitStatus
 -------------------

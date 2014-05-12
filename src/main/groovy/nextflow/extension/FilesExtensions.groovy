@@ -38,6 +38,7 @@ import java.nio.file.attribute.PosixFilePermissions
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.util.ByteBufferBackedInputStream
+import nextflow.util.CharsetHelper
 import nextflow.util.FileHelper
 /**
  * Add utility methods to standard classes {@code File} and {@code Path}
@@ -605,7 +606,7 @@ class FilesExtensions {
         final result = new StringBuilder()
         long count = 0
 
-        final charsetObj = NextflowExtensions.getCharset(charset)
+        final charsetObj = CharsetHelper.getCharset(charset)
 
         long pos = len
         while( pos>0 ) {
@@ -728,7 +729,7 @@ class FilesExtensions {
      * @return The read lines as a {@code CharSequence} object
      */
     static CharSequence head( InputStream stream, int n, charset ) {
-        def charsetObj = NextflowExtensions.getCharset(charset)
+        def charsetObj = CharsetHelper.getCharset(charset)
         head( new InputStreamReader(stream, charsetObj), n)
     }
 
@@ -762,7 +763,7 @@ class FilesExtensions {
         assert path != null
         assert n
 
-        def charsetObj = NextflowExtensions.getCharset(charset)
+        def charsetObj = CharsetHelper.getCharset(charset)
         def reader = Files.newBufferedReader(path,charsetObj)
         try {
             head(reader,n)
@@ -993,7 +994,7 @@ class FilesExtensions {
     }
 
     @PackageScope
-    static  digitToPerm( int value, StringBuilder sb = new StringBuilder() ) {
+    static digitToPerm( int value, StringBuilder sb = new StringBuilder() ) {
         assert value >= 0 && value < 8
 
         def x = (value & 1) == 1

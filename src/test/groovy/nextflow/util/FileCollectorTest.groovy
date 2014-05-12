@@ -26,13 +26,13 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FileAppenderTest extends Specification {
+class FileCollectorTest extends Specification {
 
 
     def testAppenderWithString() {
 
         when:
-        def appender = new FileAppender()
+        def appender = new FileCollector()
         appender.append('eng', 'Hello')
         appender.append('ita', 'Ciao')
         appender.append('eng', ' world!')
@@ -52,7 +52,7 @@ class FileAppenderTest extends Specification {
     def testAppenderNewLine() {
 
         when:
-        def appender = new FileAppender()
+        def appender = new FileCollector()
         appender.newLine = true
         appender.append('eng', 'Hello')
         appender.append('ita', 'Ciao')
@@ -77,7 +77,7 @@ class FileAppenderTest extends Specification {
         def file1 = Files.createTempFile('noname',null)
         file1.text = 'Inizio'
 
-        def appender1 = new FileAppender()
+        def appender1 = new FileCollector()
         appender1.newLine = true
         appender1.seed = [ENG: 'Begin', ITA: file1]
         appender1.append('ENG', 'Hello')
@@ -95,7 +95,7 @@ class FileAppenderTest extends Specification {
         def file2 = Files.createTempFile('noname',null)
         file2.text = 'same file'
 
-        def appender2 = new FileAppender()
+        def appender2 = new FileCollector()
         appender2.newLine = true
         appender2.seed = file2
         appender2.append('ENG', 'Hello')
@@ -131,7 +131,7 @@ class FileAppenderTest extends Specification {
         file3.text = 'xyz'
 
         when:
-        def appender = new FileAppender()
+        def appender = new FileCollector()
         appender.append('x', file1).append('x', '\n').append('x', file2)
         appender.append('y', file2).append('y', '\n').append('y', file3)
 
@@ -151,7 +151,7 @@ class FileAppenderTest extends Specification {
 
     def testMove() {
         when:
-        def appender = new FileAppender()
+        def appender = new FileCollector()
         appender.append('eng', 'Hello')
         appender.append('ita', 'Ciao')
         appender.append('eng', ' world!')

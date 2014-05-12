@@ -1,15 +1,13 @@
 #!/usr/bin/env nextflow
+import nextflow.Channel
 
 params.in = "${HOME}/sample.fa"
-
-fastaFile = file(params.in)
-seq = Channel.create()
 
 /*
  * Splits the input file in chunks containing a single sequences,
  * and send each of it over the 'seq' channel
  */
-fastaFile.chunkFasta { seq << it }
+seq = Channel.path(params.in).splitFasta()
 
 /*
  * For each sequence that is sent over the 'seq' channel
@@ -33,6 +31,4 @@ process ampaTask {
 /*
  * print out each 'result' produced by the above step
  */
-result.each {
-    println it.text
-}
+result.subscribe { println it.text }

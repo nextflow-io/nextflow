@@ -20,8 +20,13 @@
 
 package nextflow.extension
 
+import java.nio.file.Files
+import java.nio.file.Path
+
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Channel
+import nextflow.Session
+import spock.lang.Shared
 import spock.lang.Specification
 
 
@@ -56,25 +61,48 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
-    def testGrep() {
+    def testFilter() {
 
         when:
-        def channel = new DataflowQueue()
-        channel << 'Hello' << 'Halo' << 'Ciao' << 'Hola' << 'Bonjour'
-        def result = channel.grep( ~/^H.*/ )
+        def c1 = Channel.from(1,2,3,4,5).filter { it > 3 }
         then:
-        result.val == 'Hello'
-        result.val == 'Halo'
-        result.val == 'Hola'
-
+        c1.val == 4
+        c1.val == 5
+        c1.val == Channel.STOP
 
         when:
-        def channel2 = new DataflowQueue()
-        channel2 << 'Hello' << 1 << 'Ciao' << 2 << 'Bonjour'
-        def result2 = channel2.grep(Number)
+        def c2 = Channel.from('hola','hello','cioa','miao').filter { it =~ /^h.*/ }
         then:
-        result2.val == 1
-        result2.val == 2
+        c2.val == 'hola'
+        c2.val == 'hello'
+        c2.val == Channel.STOP
+
+        when:
+        def c3 = Channel.from('hola','hello','cioa','miao').filter { it ==~ /^h.*/ }
+        then:
+        c3.val == 'hola'
+        c3.val == 'hello'
+        c3.val == Channel.STOP
+
+        when:
+        def c4 = Channel.from('hola','hello','cioa','miao').filter( ~/^h.*/ )
+        then:
+        c4.val == 'hola'
+        c4.val == 'hello'
+        c4.val == Channel.STOP
+
+        when:
+        def c5 = Channel.from('hola',1,'cioa',2,3).filter( Number )
+        then:
+        c5.val == 1
+        c5.val == 2
+        c5.val == 3
+        c5.val == Channel.STOP
+
+        expect:
+        Channel.from(1,2,4,2,4,5,6,7,4).filter(1) .count().val == 1
+        Channel.from(1,2,4,2,4,5,6,7,4).filter(2) .count().val == 2
+        Channel.from(1,2,4,2,4,5,6,7,4).filter(4) .count().val == 3
 
     }
 
@@ -95,19 +123,6 @@ class DataflowExtensionsTest extends Specification {
         sleep(100)
         then:
         count == 4
-
-//
-//        when:
-//        int a=0
-//        int b=0
-//        def channel3 = Channel.from(1,2,3,4,5)
-//        channel3.subscribe { if(it%2 != 0) a++ }
-//        channel3.subscribe { if(it%2 == 0) b++; println ">> $it"  }
-//        //channel3 << 1 << 2 << 3 << 4 << 5
-//        sleep(100)
-//        then:
-//        a == 3
-//        b == 2
 
 
     }
@@ -160,17 +175,6 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
-
-    def testDoFinally() {
-
-        when:
-        def flag
-        Channel.from(1,2,3).doFinally { flag = 1 }
-        sleep 100
-        then:
-        flag == 1
-
-    }
 
     def testMap() {
         when:
@@ -348,10 +352,10 @@ class DataflowExtensionsTest extends Specification {
         Channel.just('x').last().val == 'x'
     }
 
-    def testSplit() {
+    def testInto() {
         when:
         def result = Channel.from(1,2,3,4)
-        def (ch1, ch2) = result.split(2)
+        def (ch1, ch2) = result.into(2)
 
         then:
         ch1.val == 1
@@ -365,7 +369,31 @@ class DataflowExtensionsTest extends Specification {
         ch2.val == 3
         ch2.val == 4
         ch2.val == Channel.STOP
+    }
 
+    def testInto2() {
+        when:
+        def result = Channel.from('a','b',[1,2])
+        def ch1 = Channel.create()
+        def ch2 = Channel.create()
+        def ch3 = Channel.create()
+        result.into(ch1, ch2, ch3)
+
+        then:
+        ch1.val == 'a'
+        ch1.val == 'b'
+        ch1.val == [1,2]
+        ch1.val == Channel.STOP
+
+        ch2.val == 'a'
+        ch2.val == 'b'
+        ch2.val == [1,2]
+        ch2.val == Channel.STOP
+
+        ch3.val == 'a'
+        ch3.val == 'b'
+        ch3.val == [1,2]
+        ch3.val == Channel.STOP
     }
 
 
@@ -518,17 +546,39 @@ class DataflowExtensionsTest extends Specification {
         ch2.val == 'c'
         ch2.val == 'd'
         ch2.val == Channel.STOP
+    }
+
+
+    def testSeparate2() {
+
+
+        when:
+        def str2 = 'abcdef'
+        def (ch3, ch4) = Channel.from(0..3).map { [it, it+1] } .separate(2)
+        then:
+        ch3.val == 0
+        ch3.val == 1
+        ch3.val == 2
+        ch3.val == 3
+        ch3.val == Channel.STOP
+
+        ch4.val == 1
+        ch4.val == 2
+        ch4.val == 3
+        ch4.val == 4
+        ch4.val == Channel.STOP
 
     }
 
-    def testSeparate2() {
+    def testSeparate3() {
 
         when:
         def s1 = Channel.create()
         def s2 = Channel.create()
+        def s3 = Channel.create()
+
         Channel.from(1,2,3,4)
-                .map { it }
-                .separate(s1,s2) { item -> [item+1, item*item] }
+                .separate([s1,s2,s3]) { item -> [item+1, item*item, item-1] }
 
         then:
         s1.val == 2
@@ -541,11 +591,45 @@ class DataflowExtensionsTest extends Specification {
         s2.val == 9
         s2.val == 16
         s2.val == Channel.STOP
+        s3.val == 0
+        s3.val == 1
+        s3.val == 2
+        s3.val == 3
+        s3.val == Channel.STOP
+
+    }
 
 
+    def testSeparate4() {
+        when:
+        def x = Channel.create()
+        def y = Channel.create()
+        def source = Channel.from([1,2], ['a','b'], ['p','q'])
+        source.separate(x,y)
+        then:
+        x.val == 1
+        x.val == 'a'
+        x.val == 'p'
+        x.val == Channel.STOP
+        y.val == 2
+        y.val == 'b'
+        y.val == 'q'
+        y.val == Channel.STOP
 
-
-
+        when:
+        def x2 = Channel.create()
+        def y2 = Channel.create()
+        def source2 = Channel.from([1,2], ['a','c','b'], 'z')
+        source2.separate(x2,y2)
+        then:
+        x2.val == 1
+        x2.val == 'a'
+        x2.val == 'z'
+        x2.val == Channel.STOP
+        y2.val == 2
+        y2.val == 'c'
+        y2.val == null
+        y2.val == Channel.STOP
     }
 
     def testSpread() {
@@ -1045,6 +1129,7 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    @Deprecated
     def testChopFasta() {
 
         setup:
@@ -1100,6 +1185,62 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+
+    def testSplitFasta() {
+
+        setup:
+        def fasta = """\
+                >1aboA
+                NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
+                NYITPVN
+                >1ycsB
+                KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
+                VPRNLLGLYP
+                ; comment
+                >1pht
+                GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
+                WLNGYNETTGERGDFPGTYVEYIGRKKISP
+                """.stripIndent()
+
+        when:
+        def records = Channel.from(fasta).splitFasta()
+        then:
+        records.val == '>1aboA\nNLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS\nNYITPVN\n'
+        records.val == '>1ycsB\nKGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY\nVPRNLLGLYP\n'
+        records.val == '>1pht\nGYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG\nWLNGYNETTGERGDFPGTYVEYIGRKKISP\n'
+        records.val == Channel.STOP
+
+        when:
+        def fasta2 = '''
+            >alpha123
+            WLNGYNETTGERGDFPGTYVEYIGRKKISP
+            VPRNLLGLYP
+            '''
+        records = Channel.from(fasta, fasta2).splitFasta(record:[id:true])
+        then:
+        records.val == [id:'1aboA']
+        records.val == [id:'1ycsB']
+        records.val == [id:'1pht']
+        records.val == [id:'alpha123']
+        records.val == Channel.STOP
+
+
+        when:
+        def ids = []
+        def list = []
+        Channel.from(fasta).splitFasta(record:[id:true]) { item, int index ->
+            ids << item.id
+            list << index
+            return item
+        }
+
+        sleep 100
+        then:
+        ids == ['1aboA','1ycsB','1pht']
+        list == [0,1,2]
+
+    }
+
     def testConcat() {
 
         when:
@@ -1137,37 +1278,164 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
-    def testInto() {
-        when:
-        def x = Channel.create()
-        def y = Channel.create()
-        def source = Channel.from([1,2], ['a','b'], ['p','q'])
-        source.into(x,y)
-        then:
-        x.val == 1
-        x.val == 'a'
-        x.val == 'p'
-        x.val == Channel.STOP
-        y.val == 2
-        y.val == 'b'
-        y.val == 'q'
-        y.val == Channel.STOP
+
+    @Shared
+    def Session session
+
+    def setupSpec() {
+        session = new Session()
+        session.workDir = Files.createTempDirectory('hello')
+    }
+
+    def cleanupSpec() {
+        session.workDir.deleteDir()
+    }
+
+    def testCollectFileString() {
 
         when:
-        def x2 = Channel.create()
-        def y2 = Channel.create()
-        def source2 = Channel.from([1,2], ['a','c','b'], 'z')
-        source2.into(x2,y2)
+        def result = Channel
+                .from('alpha','beta','gamma')
+                .collectFile { it == 'beta' ? ['file2', it.reverse() ] : ['file1',it] }
+                .toSortedList { it.name }
+
+        List<Path> list = result.val
+
         then:
-        x2.val == 1
-        x2.val == 'a'
-        x2.val == 'z'
-        x2.val == Channel.STOP
-        y2.val == 2
-        y2.val == 'c'
-        y2.val == null
-        y2.val == Channel.STOP
+        list[0].name == 'file1'
+        list[0].text == 'alphagamma'
+
+        list[1].name == 'file2'
+        list[1].text == 'ateb'
+
     }
+
+
+    def testCollectFileWithFiles() {
+
+
+        given:
+        def file1 = Files.createTempDirectory('temp').resolve('A')
+        file1.text = 'alpha\nbeta'
+
+        def file2 = Files.createTempDirectory('temp').resolve('B')
+        file2.text = 'Hello\nworld'
+
+        def file3 = Files.createTempDirectory('temp').resolve('A')
+        file3.text = 'xyz'
+
+        when:
+        def list = Channel
+                .from(file1,file2,file3)
+                .collectFile()
+                .toSortedList { it.name }
+                .getVal() as List<Path>
+
+        then:
+        list[0].name == 'A'
+        list[0].text == 'alpha\nbetaxyz'
+
+        list[1].name == 'B'
+        list[1].text == 'Hello\nworld'
+
+
+        when:
+        list = Channel
+                .from(file1,file2,file3)
+                .collectFile(newLine:true)
+                .toSortedList { it.name }
+                .getVal() as List<Path>
+
+
+        then:
+        list[0].name == 'A'
+        list[0].text == 'alpha\nbeta\nxyz\n'
+
+        list[1].name == 'B'
+        list[1].text == 'Hello\nworld\n'
+
+    }
+
+
+    def testCollectFileWithStrings() {
+
+        when:
+        def result = Channel
+                .from('alpha', 'beta', 'gamma')
+                .collectFile(name: 'hello.txt', newLine: true)
+
+        def file = result.val
+
+        then:
+        result.val == Channel.STOP
+        file.name == 'hello.txt'
+        file.text == 'alpha\nbeta\ngamma\n'
+    }
+
+    def testDataflowSeparateWithOpenArray() {
+
+        when:
+        def s1 = Channel.create()
+        def s2 = Channel.create()
+        def s3 = Channel.create()
+
+        Channel.from(1,2,3,4)
+                .separate(s1,s2,s3) { item -> [item+1, item*item, item-1] }
+
+        then:
+        s1.val == 2
+        s1.val == 3
+        s1.val == 4
+        s1.val == 5
+        s1.val == Channel.STOP
+        s2.val == 1
+        s2.val == 4
+        s2.val == 9
+        s2.val == 16
+        s2.val == Channel.STOP
+        s3.val == 0
+        s3.val == 1
+        s3.val == 2
+        s3.val == 3
+        s3.val == Channel.STOP
+
+    }
+
+    def testDataflowChoiceWithOpenArray() {
+
+        when:
+        def source = Channel.from 'Hello world', 'Hola', 'Hello John'
+        def queue1 = Channel.create()
+        def queue2 = Channel.create()
+
+        source.choice( queue1, queue2 ) { a -> a =~ /^Hello.*/ ? 0 : 1 }
+
+        then:
+        queue1.val == 'Hello world'
+        queue1.val == 'Hello John'
+        queue1.val == Channel.STOP
+        queue2.val == 'Hola'
+        queue2.val == Channel.STOP
+
+    }
+
+    def testDataflowMergeWithOpenArray() {
+
+        when:
+        def alpha = Channel.from(1, 3, 5);
+        def beta = Channel.from(2, 4, 6);
+        def delta = Channel.from(7,8,1);
+
+        def result = alpha.merge( beta, delta ) { a,b,c -> [a,b,c] }
+
+        then:
+        result.val == [1,2,7]
+        result.val == [3,4,8]
+        result.val == [5,6,1]
+        result.val == Channel.STOP
+    }
+
+
 
 
 }

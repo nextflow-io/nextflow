@@ -11,6 +11,7 @@ Operators can be separated in to five groups:
 
 * `Filtering operators`_
 * `Transforming operators`_
+* `Splitting operators`_
 * `Combining operators`_
 * `Forking operators`_
 * `Maths operators`_
@@ -27,7 +28,6 @@ The available filter operators are:
 * `distinct`_
 * `filter`_
 * `first`_
-* `grep`_
 * `last`_
 * `take`_
 * `unique`_
@@ -35,7 +35,43 @@ The available filter operators are:
 filter
 ---------
 
-The ``filter`` operator allows you to get only the items emitted by a channel, that satisfy a boolean `predicate`. For example::
+The ``filter`` operator allows you to get only the items emitted by a channel that satisfy a condition and discarding
+all the others. The filtering condition can be specified by using either a :ref:`regular expression <script-regexp>`,
+a literal value, a type `qualifier` (i.e. a Java class) or any boolean `predicate`.
+
+The following example shows how to filter a channel by using a regular expression that returns only string that
+begins with ``a``::
+
+    Channel
+        .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
+        .filter( ~/a+/ )
+        .subscribe { println it }
+
+::
+
+    a
+    aa
+
+
+The following example shows how to filter a channel by specifying the type qualifier ``Number`` so that only numbers
+are returned::
+
+    Channel
+        .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
+        .filter( Number )
+        .subscribe { println it }
+
+::
+
+    3
+    4.5
+
+
+
+
+Finally, a filtering condition can be defined by using any a boolean `predicate`. A predicate is expressed by
+a :ref:`closure <script-closure>` retuning a boolean value. For example the following fragment shows how filter
+a channel emitting numbers so that the `odd` values are returned::
 
     Channel
         .from( 1, 2, 3, 4, 5 )
@@ -48,57 +84,11 @@ The ``filter`` operator allows you to get only the items emitted by a channel, t
     3
     5
 
-.. note:: Using Nextflow a predicate is represented with a :ref:`closure <script-closure>` retuning a boolean value
 
-grep
--------
+.. tip:: In the above example the filter condition is wrapped in curly brackets,
+  instead of round brackets, since it specifies a :ref:`closure <script-closure>` as the operator's argument.
+  This just is a language syntax-sugar for ``filter({ it.toString().size() == 1 })``
 
-The ``grep`` operator allows you to `filter` a channel by discarding all the items that do not meet a specified condition.
-It works in a similar manner to the `filter`_ operator but conditions can be specified in a more flexible manner. A grep
-condition can be either a :ref:`regular expression <script-regexp>`, a Java `class`, a literal value or a boolean predicate.
-
-The following example shows how to filter a channel by using a regular expression::
-
-    Channel
-        .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
-        .grep( ~/a+/ )
-        .subscribe { println it }
-
-::
-
-    a
-    aa
-
-
-The following example shows how to filter a channel by specifying the class ``Number`` so that only numbers are returned::
-
-    Channel
-        .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
-        .grep( Number )
-        .subscribe { println it }
-
-::
-
-    3
-    4.5
-
-
-The following example shows how to filter a channel by using a `boolean` expression::
-
-     Channel
-         .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
-         .grep { it.toString().size() == 1 }
-         .subscribe { println it }
-
-::
-
-     a
-     aa
-     3
-
-.. tip:: In the above example the filtering expression is wrapped in curly brackets instead of normal
-  round brackets, since it specifies a :ref:`closure <script-closure>` as the operator's argument.
-  This just is an shorter syntax for ``grep({ it.toString().size() == 1 })``
 
 
 
@@ -230,6 +220,7 @@ The ``take`` operator allows you to filter only the first `n` items emitted by a
     3
     Done
 
+Note:: by specifying the value ``-1`` the operator ``takes`` all values.
 
 last
 -------
@@ -602,6 +593,224 @@ and emits the resulting collection as a single item. For example::
     Done
 
 
+Splitting operators
+====================
+
+These operators are used to split the items emitted by channel in chunks that can be processed by downstream
+operators or processes.
+
+The available splitting operators are:
+
+* `splitCsv`_
+* `splitFasta`_
+* `splitFastq`_
+* `splitText`_
+
+
+splitCsv
+---------
+
+The ``splitCsv`` operator allows you to parse items text items emitted by a channel that are formatted using the
+`CSV format <http://en.wikipedia.org/wiki/Comma-separated_values>`_ and split them in records or group them in
+list to record having a specified length.
+
+In the simplest case just apply the ``splitCsv`` operator to a channel emitting a text file or text entries CVS formatted.
+For example::
+
+    Channel
+        .from( 'alpha,beta,gamma\n10,20,30\n70,80,90' )
+        .splitCsv()
+        .subscribe { row ->
+           println "${row[0]} - ${row[1]} - ${row[2]}"
+        }
+
+The above example shows hows the CSV text is parsed, each line is parsed in a single row. Values can be accessed
+by its column index in the row object.
+
+When the CVS begins with a header line defining the columns names, you can specify the parameter ``header: true`` which
+allows you to reference each values by its name, as shown in the following example::
+
+    Channel
+        .from( 'alpha,beta,gamma\n10,20,30\n70,80,90' )
+        .splitCsv(header: true)
+        .subscribe { row ->
+           println "${row.alpha} - ${row.beta} - ${row.gamma}"
+        }
+
+It will print ::
+
+ 10 - 20 - 30
+ 70 - 80 - 90
+
+Alternatively you can provide a custom header names by specifying a the list of columns in the ``header`` parameter
+as shown below::
+
+
+    Channel
+        .from( 'alpha,beta,gamma\n10,20,30\n70,80,90' )
+        .splitCsv(header: ['col1', 'col2', 'col3'], skip: 1 )
+        .subscribe { row ->
+           println "${row.col1} - ${row.col2} - ${row.col3}"
+        }
+
+
+Available parameters:
+
+=========== ============================
+Field       Description
+=========== ============================
+by          The number of rows in each `chunk`
+sep         The character used to separate values (default: ``,``)
+quote       Values may be quoted by single or double quote character.
+header      When ``true`` the first line is used as the column names. Alternative it can be used to provide the list of column names
+charset     The charset to be used to read the text content e.g. ``UTF-8``
+strip       Whenever remove leading and trailing blanks from values (default: ``false``)
+skip        Number of lines to do not parse at the beginning of the file
+
+=========== ============================
+
+
+
+
+splitFasta
+------------
+
+The ``splitFasta`` operator allows you to split the entries emitted by a channel, formatted using the
+`FASTA format <http://en.wikipedia.org/wiki/FASTA_format>`_. It returns a channel which emits a text chunk
+for each sequence in the received item.
+
+The number of sequences in each text chunk produced by the ``splitFasta`` operator can be set by using
+the ``by`` parameter. The following example shows how read a FASTA file and split it in chunks containing 10 sequences
+each::
+
+   Channel
+        .path('misc/sample.fa')
+        .splitFasta( by: 10 )
+        .subscribe { print it }
+
+
+
+A second version of the ``splitFasta`` operator allows you to split a FASTA content in record objects, instead
+of text chunks. A record object contains a set of fields that let you access and manipulate the FASTA sequence
+information with ease.
+
+
+In order to split a FASTA content in record objects  simply use the ``record`` parameter specifying the map of
+required field as shown in the example below::
+
+   Channel
+        .path('misc/sample.fa')
+        .splitFasta( record: [id: true, seqString: true ])
+        .filter { record -> record.id =~ /^ENST0.*/ }
+        .subscribe { record -> println record.seqString }
+
+
+.. note:: In this example, the file ``misc/sample.fa`` is splitted in record containing the ``id`` and the ``seqString`` fields
+  (i.e. the sequence id and the sequence data). The following ``filter`` operator keep only the sequences which ID
+  starts with the ``ENST0`` prefix and finally the sequence content is printed by the ``subscribe`` operator.
+
+
+The following fields are available when using the ``record`` parameter:
+
+=========== ============================
+Field       Description
+=========== ============================
+id          The FASTA sequence identifier i.e. the string after the ``>``  in the FASTA header
+header      The first line in a FASTA sequence including the ``>`` character
+desc        The text in the FASTA header following the ID value
+text        The complete FASTA sequence including the header
+seqString   The sequence data as a single line string i.e. containing no newline characters
+sequence    The sequence data as a multi-line string (always ending with a newline character)
+width       Define the length of a single line when the ``sequence`` field is used, after that the sequence data continues on a new line.
+=========== ============================
+
+
+
+splitFastq
+-----------
+
+The ``splitFastq`` operator allows you to split the entries emitted by a channel, formatted using the
+`FASTQ format <http://en.wikipedia.org/wiki/FASTQ_format>`_. It returns a channel which emits a text chunk
+for each sequence in the received item.
+
+The number of sequences in each text chunk produced by the ``splitFastq`` operator is defined by the
+parameter ``by``. The following example shows how read a FASTQ file and split it in chunks containing 10 sequences
+each::
+
+   Channel
+        .path('misc/sample.fastq')
+        .splitFastq( by: 10 )
+        .subscribe { print it }
+
+
+
+A second version of the ``splitFastq`` operator allows you to split a FASTQ formatted content in record objects,
+instead of text chunks. A record object contains a set of fields that let you access and manipulate the FASTQ sequence
+data with ease.
+
+In order to split a FASTQ sequences in record objects simply use the ``record`` parameter specifying the map of
+required field, or simply specify ``record: true`` as in the example shown below ::
+
+   Channel
+        .path('misc/sample.fastq')
+        .splitFastq( record: true )
+        .subscribe { record -> println record.readHeader }
+
+
+The following fields are available when using the ``record`` parameter:
+
+=============== ============================
+Field           Description
+=============== ============================
+readHeader      The sequence header (without the ``@`` prefix)
+readString      The raw sequence data
+qualityHeader   Base quality header (optional)
+qualityString   The quality values for the sequence
+=============== ============================
+
+splitText
+----------
+
+The ``splitText`` operator allows you to split multi-line strings or text file items emitted by a source channel
+in chunks containing `n` lines, which are emitted by the resulting channel.
+
+For example::
+
+   Channel
+        .path('/some/path/*.txt')
+        .splitText()
+        .subscribe { print it }
+
+
+It splits the content of the files with suffix ``.txt`` in the specified folder and print it line by line.
+
+By default the ``splitText`` operator splits each item in chunks of one line. You can define the number of lines in each chunk by using
+the parameter ``by``, as shown in the following example::
+
+
+   Channel
+        .path('/some/path/*.txt')
+        .splitText( by: 10 )
+        .subscribe {
+            print it;
+            print "--- end of the chunk ---\n"
+        }
+
+
+An optional :ref:`closure <script-closure>` can be specified in order to transform the text chunks produced by the operator.
+The following example shows how splits text files in chunks of 10 lines and transform each of them to capital letters::
+
+     Channel
+        .path('/some/path/*.txt')
+        .splitText( by: 10 ) { it.toUpperCase() }
+        .subscribe { print it }
+
+
+.. note:: Text chunks returned by the operator ``splitText`` are always terminated by a ``newline`` character.
+
+
+
+
 Combining operators
 ===================
 
@@ -620,8 +829,8 @@ The combining operators are:
 into
 -------
 
-The ``into`` operator connects two channels in such a way the values emitted by the source channel
-are forwarded to the target channel. For example::
+The ``into`` operator connects a source channel to one or more target channels in such a way the values emitted by
+the source channel are copied to the target channel(s). For example::
 
     target = Channel.create()
     target.subscribe { println it }
@@ -637,29 +846,32 @@ are forwarded to the target channel. For example::
     c
     d
 
-When the items emitted by the source channel are tuples of values, the operator ``into`` allows you to specify a list of
-channels as parameters, so that the value `i-th` in a tuple will be assigned to the target channel with the corresponding
-position index. For example::
 
 
-     alpha = Channel.create()
-     delta = Channel.create()
 
-     Channel
-        .from([1,2], ['a','b'], ['p','q'])
-        .into( alpha, delta )
+A second version of the ``into`` operator takes an integer `n` as an argument and returns
+a list of `n` channels, each of which emits a copy of the items there were emitted by the
+source channel. For example::
 
-     alpha.subscribe { println "first : $it" }
-     delta.subscribe { println "second: $it" }
 
-It will output::
+    (ch1, ch2) = Channel.from( 'a','b','c').into(2)
+    ch1.subscribe { println "Channel 1 emit: " + it }
+    ch2.subscribe { println "Channel 2 emit: " + it }
 
-        first : 1
-        first : a
-        first : p
-        second: 2
-        second: b
-        second: q
+::
+
+    Channel 1 emit: a
+    Channel 1 emit: b
+    Channel 1 emit: c
+
+    Channel 2 emit: a
+    Channel 2 emit: b
+    Channel 2 emit: c
+
+
+.. note:: The above example takes advantage of the :ref:`multiple assignment <script-multiple-assignment>` syntax
+in order to assign two variables at once using the list of channels returned by the ``into`` operator.
+
 
 
 See also `tap`_, `separate`_ and `route`_ operators.
@@ -668,7 +880,7 @@ See also `tap`_, `separate`_ and `route`_ operators.
 tap
 ------
 
-The ``tap`` operator combines the functions of `into`_ and `split`_ operators in such a way that
+The ``tap`` operator combines the functions of `into`_ and `separate`_ operators in such a way that
 it connects two channels, copying the values from the source into the `tapped` channel. At the same
 time it splits the source channel into a newly created channel that is returned by the operator itself.
 
@@ -702,7 +914,7 @@ as in the following example::
 
 
 
-See also `into`_ and `split`_ operators
+See also `into`_ and `separate`_ operators
 
 
 merge
@@ -726,10 +938,6 @@ and the other which emits a series of even integers::
     [3, 4]
     [5, 6]
 
-If you want to merge more than to channels, they must be specified as a list i.e. by wrapping 
-them in square brackets, as shown in the following example::
-
-   channel1.merge( [channel2, channel3] ) {  item1, item2, item3 -> item1 + item2 + item3 }
 
 
 mix
@@ -917,59 +1125,7 @@ The forking operators are:
 
 * `choice`_
 * `separate`_
-* `split`_
 * `route`_
-
-
-split
---------
-
-The ``split`` operator copies the items emitted by a source channel into one or more channels specified as an argument.
-For example::
-
-    source = Channel.from( 'a', 'b', 'c' )
-    copy1 = Channel.create().subscribe { println "Channel 1 emit: " + it }
-    copy2 = Channel.create().subscribe { println "Channel 2 emit: " + it }
-
-    source.split( copy1, copy2 )
-
-::
-
-    Channel 1 emit: a
-    Channel 1 emit: b
-    Channel 1 emit: c
-
-    Channel 2 emit: a
-    Channel 2 emit: b
-    Channel 2 emit: c
-
-
-A second version of the ``split`` operator takes an integer `n` as an argument and returns 
-a list of `n` channels, each of which emits a copy of the items there were emitted by the 
-source channel. For example::
-
-
-    (split1,split2) = Channel.from( 'a','b','c').split(2)
-    split1.subscribe { println "Channel 1 emit: " + it }
-    split2.subscribe { println "Channel 2 emit: " + it }
-
-::
-
-    Channel 1 emit: a
-    Channel 1 emit: b
-    Channel 1 emit: c
-
-    Channel 2 emit: a
-    Channel 2 emit: b
-    Channel 2 emit: c
-
-
-.. note:: The above example takes advantage of the :ref:`multiple assignment <script-multiple-assignment>` syntax
-  in order to assign two variables at once using the list of channels returned by the ``split`` operator.
-
-
-
-See also `tap`_ operator.
 
 
 choice
@@ -996,19 +1152,13 @@ the others into ``queue2``
 
 
 
-If you want to use more than two channels in the ``choice`` operator, they must be specified as a list 
-i.e. by wrapping them in square brackets, as shown in the following example::
-
-    source.choice( [queue1, queue2, queue3] ) { a -> a % 3 }
-     
-
 separate
 ------------
 
 The ``separate`` operator lets you copy the items emitted by the source channel into multiple 
 channels, which each of these can receive a `separate` version of the same item. 
 
-The operator applies a function of your choosing to every item emitted by the source channel. 
+The operator applies a `mapping function` of your choosing to every item emitted by the source channel.
 This function must return a list of as many values as there are output channels. Each entry in the result 
 list will be assigned to the output channel with the corresponding position index. For example:: 
 
@@ -1031,21 +1181,64 @@ list will be assigned to the output channel with the corresponding position inde
 	Channel 2: 64
 	Channel 1: 9
 
-.. note:: If you want to use more than two channels in the ``separate`` operator, they must be specified 
-	as a list  i.e. by wrapping them in square brackets.
-	
 
-A second version of the ``separate`` operator takes an integer `n` as an argument and returns a list of `n` channels, 
+When the `mapping function` is omitted, the source channel must emit tuples of values. In this case the operator ``separate``
+splits the tuple in such a way that the value `i-th` in a tuple is assigned to the target channel with the corresponding position index.
+For example::
+
+
+     alpha = Channel.create()
+     delta = Channel.create()
+
+     Channel
+        .from([1,2], ['a','b'], ['p','q'])
+        .separate( alpha, delta )
+
+     alpha.subscribe { println "first : $it" }
+     delta.subscribe { println "second: $it" }
+
+It will output::
+
+        first : 1
+        first : a
+        first : p
+        second: 2
+        second: b
+        second: q
+
+A second version of the ``separate`` operator takes an integer `n` as an argument and returns a list of `n` channels,
 each of which gets a value from the corresponding element in the list returned by the closure as explained above.
 For example::	
 
-  source = Channel.from(1,2,3)
-  (queue1, queue2, queue3) = source.separate(3) { a -> [a, a+, a*a] }
+    source = Channel.from(1,2,3)
+    (queue1, queue2, queue3) = source.separate(3) { a -> [a, a+1, a*a] }
+
+    queue1.subscribe { println "Queue 1 > $it" }
+    queue2.subscribe { println "Queue 2 > $it" }
+    queue3.subscribe { println "Queue 3 > $it" }
+
+The output will look like the following fragment::
+
+    Queue 1 > 1
+    Queue 1 > 2
+    Queue 1 > 3
+    Queue 2 > 2
+    Queue 2 > 3
+    Queue 2 > 4
+    Queue 3 > 1
+    Queue 3 > 4
+    Queue 3 > 9
+
+
+.. warning:: In the above example, please note that since the ``subscribe`` operator is asynchronous,
+  the output of ``channel2`` and ``channel3`` can be printed before the content of ``channel1``.
 
 .. note:: The above example takes advantage of the :ref:`multiple assignment <script-multiple-assignment>` syntax
   in order to assign two variables at once using the list of channels returned by the ``separate`` operator.
 
-See also: `into`_, `choice`_, `split`_ and `map`_ operators.
+
+
+See also: `into`_, `choice`_ and `map`_ operators.
 
 
 route

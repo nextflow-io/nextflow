@@ -34,7 +34,7 @@ import groovy.util.logging.Slf4j
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class FileAppender {
+class FileCollector {
 
     static final APPEND = [StandardOpenOption.APPEND, StandardOpenOption.WRITE] as OpenOption[]
 
@@ -46,7 +46,7 @@ class FileAppender {
 
     protected ConcurrentMap<String,Path> cache = new ConcurrentHashMap<>()
 
-    FileAppender( Path store = null ) {
+    FileCollector( Path store = null ) {
         if( !store )
             store = Files.createTempDirectory('nxf-appender')
 
@@ -60,16 +60,16 @@ class FileAppender {
         cache.getOrCreate(name) {
             def result = Files.createFile(temp.resolve(name))
             if( seed instanceof Map && seed.containsKey(name)) {
-                append0(result, _stream(seed.get(name)))
+                append0(result, _value(seed.get(name)))
             }
             else if( seed ) {
-                append0(result, _stream(seed))
+                append0(result, _value(seed))
             }
             return result
         }
     }
 
-    protected InputStream _stream( value ) {
+    protected InputStream _value( value ) {
         if( value instanceof Path )
             return value.newInputStream()
 
@@ -79,12 +79,15 @@ class FileAppender {
         if( value instanceof CharSequence )
             return new ByteArrayInputStream(value.toString().getBytes())
 
-        throw new IllegalArgumentException("Not a valid file appender argument [${value.class.name}]: $value")
+        if( value instanceof byte[] )
+            return new ByteArrayInputStream(value)
+
+        throw new IllegalArgumentException("Not a valid file collector argument [${value.class.name}]: $value")
     }
 
 
-    FileAppender append( String key, value ) {
-        append0( _file(key), _stream(value))
+    FileCollector append( String key, value ) {
+        append0( _file(key), _value(value))
         return this
     }
 

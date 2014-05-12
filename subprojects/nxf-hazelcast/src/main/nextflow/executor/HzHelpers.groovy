@@ -130,7 +130,7 @@ class HzCmdCall implements Callable, Serializable {
      */
     private transient Closure codeObj
 
-    //private transient DelegateMap delegateMap
+    private transient DelegateMap delegateMap
 
 
     /** ONLY FOR de-serialization purposes -- required by kryo serializer */
@@ -154,14 +154,14 @@ class HzCmdCall implements Callable, Serializable {
         this.taskId = task.id
         this.workDir = task.workDirectory.toFile()
         this.codeObj = task.code.dehydrate()
-        //this.delegateMap = task.code.delegate as DelegateMap
+        this.delegateMap = task.code.delegate as DelegateMap
         this.type = ScriptType.GROOVY
         // serialize to byte arrays
-        //this.delegateBytes = this.delegateMap.dehydrate()
+        this.delegateBytes = this.delegateMap.dehydrate()
         this.codeBytes = SerializationUtils.serialize(this.codeObj)
     }
 
-    //DelegateMap getDelegateMap() { delegateMap }
+    DelegateMap getDelegateMap() { delegateMap }
 
     @Override
     Object call() throws Exception {

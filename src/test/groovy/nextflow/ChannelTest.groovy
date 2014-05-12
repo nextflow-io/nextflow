@@ -184,40 +184,7 @@ class ChannelTest extends Specification {
 
     }
 
-    def testChopLines() {
 
-        when:
-        def result = Channel.readLines('a\nbb\nccc') { it.reverse() }
-        then:
-        result.val == 'a'
-        result.val == 'bb'
-        result.val == 'ccc'
-        result.val == Channel.STOP
-
-    }
-
-    def testChopFasta() {
-
-        setup:
-        String fasta =
-            /
-            >1aboA
-            NLFVALYDFVASGD
-            NTLSITKGEKL
-            >1ycsB
-            RVLGYNHNGEWCEA
-            QTKNGQGWVPS
-            /.stripIndent()
-
-
-        when:
-        def result = Channel.readFasta(fasta, record:[id:true])
-        then:
-        result.val .id == '1aboA'
-        result.val .id == '1ycsB'
-        result.val == Channel.STOP
-
-    }
 
     def testStringEvents() {
 
