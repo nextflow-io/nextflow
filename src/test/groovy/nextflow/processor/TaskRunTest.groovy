@@ -190,6 +190,11 @@ class TaskRunTest extends Specification {
         task.dumpStdout(5) == ['e','f','g','h','i']
 
 
+        when:
+        task = new TaskRun()
+        task.stdout = Paths.get('/no/file')
+        then:
+        task.dumpStdout(5) == []
 
         cleanup:
         file?.delete()
