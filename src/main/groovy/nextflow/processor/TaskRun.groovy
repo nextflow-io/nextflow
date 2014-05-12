@@ -185,20 +185,27 @@ class TaskRun {
     /**
      * Dump the first {@code max} line of the task {@code #stdout}
      *
-     * @param message The message buffer that will hold teh first lines
+     * @param message The message buffer that will hold the first lines
      * @param n The maximum number of lines to dump (default: 20)
      * @return The actual number of dumped lines into {@code message} buffer
      */
     List dumpStdout(int n = 50) {
 
-        if( stdout instanceof Path )
-            return stdout.tail(n).readLines()
+        List result = null
+        try {
+            if( stdout instanceof Path )
+                result = stdout.tail(n).readLines()
 
-        def result = (stdout?.toString() ?: '(none)') .readLines()
-        if( result.size()>n )
-            return result[-n..-1]
-
-        return result
+            else if( stdout != null ) {
+                result = stdout.toString().readLines()
+                if( result.size()>n )
+                    result = result[-n..-1]
+            }
+        }
+        catch( Exception e ) {
+            log.debug "Unable to dump output of process '$name' -- Cause: ${e}"
+        }
+        return result ?: []
     }
 
     /**
