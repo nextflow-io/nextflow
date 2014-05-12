@@ -738,8 +738,7 @@ abstract class TaskProcessor {
             message << "Error executing process > '${task?.name ?: name}'"
             if( error instanceof ProcessException ) {
                 formatTaskError( message, error, task )
-                log.error message.join('\n')
-                log.trace "Process $name error trace:", error
+                log.error message.join('\n'), error
             }
             else {
                 message << formatErrorCause( error )
