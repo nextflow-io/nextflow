@@ -812,11 +812,12 @@ The following example shows how splits text files in chunks of 10 lines and tran
 
 
 Combining operators
-===================
+=====================
 
 The combining operators are:
 
 * `cross`_
+* `collectFile`_
 * `concat`_
 * `into`_
 * `merge`_
@@ -1056,7 +1057,7 @@ It will output::
 The above example shows how the items emitted by the source channels are associated to the ones
 emitted by the target channel (on the right) having the same key. 
 
-There are two important cavets when using the ``cross`` operator: 
+There are two important caveats when using the ``cross`` operator:
 
 	#. The operator is not `reflexive`, i.e. the result of ``a.cross(b)`` is different from ``b.cross(a)`` 
 	#. The source channel should emits items for which there's no key repetition i.e. the emitted 
@@ -1064,6 +1065,68 @@ There are two important cavets when using the ``cross`` operator:
 
 Optionally, a mapping function can be specified in order to provide a custom rule to associate an item to a key,
 in a similar manner as shown for the `phase`_ operator.
+
+collectFile
+------------
+
+The ``collectFile`` operators allows you to gather the items emitted by a channel to one ore more files. The operator
+returns a channel that emits the collected file(s).
+
+In the most simplest cast, just specify the name of a file where the entries will be stored. For example::
+
+    Channel
+        .from('alpha', 'beta', 'gamma')
+        .collectFile(name: 'sample.txt', newLine: true)
+        .subscribe {
+            println "Entries are saved to file: $it"
+            println "File content is: ${it.text}"
+        }
+
+
+
+A second version of the ``collectFile`` operator allows you to gather the items emitted by a channel and group them
+to files whose name can be defined by a dynamic criteria. The grouping criteria is specified by a
+:ref:`closure <script-closure>` that must return a pair in which the first element define the group file name and
+the second item the actual value to append to that file. For example::
+
+     Channel
+        .from('Hola', 'Ciao', 'Hello', 'Bonjour', 'Halo')
+        .collectFile() { item ->
+            [ "${item[0]}.txt", item + '\n' ]
+        }
+        .subscribe {
+            println "File ${it.name} contains:"
+            println it.text
+        }
+
+It will print::
+
+    File 'H.txt' contains:
+    Hola
+    Hello
+    Halo
+
+    File 'B.txt' contains:
+    Bonjour
+
+    File 'C.txt' contains:
+    Ciao
+
+
+.. tip:: When the emits emitted by the source channel are files, the grouping criteria can be omitted. In this case
+  the items content will be grouped in file(s) having the same name as the source items.
+
+
+The following parameters can be used with the ``collectFile`` operator:
+
+=============== ========================
+Name            Description
+=============== ========================
+name            Name of the file where store all received values
+seed            A value or a map of valued used to initialise the file content
+newLine         Append a ``newline`` character automatically after each entry (default: ``false``)
+storeDir        Folder where the resulting file(s) will be stored
+=============== ========================
 
 concat
 --------
