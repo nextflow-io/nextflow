@@ -45,7 +45,7 @@ class FileCollectorTest extends Specification {
         appender.getFiles() *. name == ['eng','ita']
 
         cleanup:
-        appender?.deleteAll()
+        appender?.close()
 
     }
 
@@ -67,7 +67,7 @@ class FileCollectorTest extends Specification {
         appender.getFiles() *. name == ['eng','ita']
 
         cleanup:
-        appender?.deleteAll()
+        appender?.close()
 
     }
 
@@ -112,8 +112,8 @@ class FileCollectorTest extends Specification {
         cleanup:
         file1?.delete()
         file2?.delete()
-        appender1?.deleteAll()
-        appender2?.deleteAll()
+        appender1?.close()
+        appender2?.close()
 
     }
 
@@ -142,7 +142,7 @@ class FileCollectorTest extends Specification {
         appender.get('y').text == 'Hello\nworld\nxyz'
 
         cleanup:
-        appender?.deleteAll()
+        appender?.close()
         file1?.delete()
         file2?.delete()
         file3?.delete()
@@ -170,7 +170,7 @@ class FileCollectorTest extends Specification {
         appender.size() == 0
 
         cleanup:
-        appender?.deleteAll()
+        appender?.close()
         target?.deleteDir()
     }
 

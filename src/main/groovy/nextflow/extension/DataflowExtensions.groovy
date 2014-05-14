@@ -514,6 +514,9 @@ class DataflowExtensions {
         def result = new DataflowQueue()
         def acc = new FileCollector()
 
+        if( Session.currentInstance )
+            Session.currentInstance.onShutdown { acc.closeQuietly() }
+
         acc.newLine = params?.newLine as Boolean
         acc.seed = params?.seed
 

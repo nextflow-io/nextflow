@@ -34,7 +34,7 @@ import groovy.util.logging.Slf4j
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class FileCollector {
+class FileCollector implements Closeable {
 
     static final APPEND = [StandardOpenOption.APPEND, StandardOpenOption.WRITE] as OpenOption[]
 
@@ -48,7 +48,7 @@ class FileCollector {
 
     FileCollector( Path store = null ) {
         if( !store )
-            store = Files.createTempDirectory('nxf-appender')
+            store = Files.createTempDirectory('nxf-clt')
 
         else {
             store.createDirIfNotExists()
@@ -166,8 +166,10 @@ class FileCollector {
 
     }
 
-    void deleteAll() {
-        temp.deleteDir()
+    @Override
+    void close() {
+        temp?.deleteDir()
     }
+
 
 }
