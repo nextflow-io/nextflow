@@ -78,7 +78,7 @@ In more detail:
 
 In order to make the above script able to handle any number of files simply replace `line 3` with the following line::
 
-  sequences = Channel.path(params.in)
+  sequences = Channel.fromPath(params.in)
 
 
 By doing this the ``sequences`` variable is assigned to the channel created by the :ref:`channel-path` method. This

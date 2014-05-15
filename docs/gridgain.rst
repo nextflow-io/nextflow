@@ -36,7 +36,7 @@ Multicast discovery
 By default, it tries to discover the cluster members by using the network *multicast* discovery. Note that NOT all
 networks support this feature.
 
-.. tip::  To check if multicast is available, `iperf <http://sourceforge.net/projects/iperf/>`_ is a useful tool which is available for Windows/*NIX/OSX.
+.. tip::  To check if multicast is available, `iperf <http://sourceforge.net/projects/iperf/>`_ is a useful tool which is available for Windows/\*NIX/OSX.
   To test multicast open a terminal one 2 machines within the network and run the following in the first terminal
   ``iperf -s -u -B 228.1.2.4 -i 1`` and ``iperf -c 228.1.2.4 -u -T 32 -t 3 -i 1`` in the other terminal.
   If data is being transferred then multicast is working.

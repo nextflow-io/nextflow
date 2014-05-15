@@ -24,114 +24,145 @@ factory methods.
 
 The available factory methods are:
 
-* `create( )`_
-* `from( )`_
-* `just( )`_
-* `path( )`_
-* `watch( )`_
+* `create`_
+* `from`_
+* `just`_
+* `fromPath`_
+* `watchPath`_
 
 
 .. _channel-create:
 
-create( )
+create
 ---------
 
-Creates a new `channel` by using the method ``create( )`` method, as showed below::
+Creates a new `channel` by using the method ``create`` method, as showed below::
 
-    myChannel = Channel.create()
+    channelObj = Channel.create()
 
 
 .. _channel-from:
 
-from( )
+from
 -------
 
-You can create transform any object that supports ``Collection`` into a channel by using the ``from( )`` method.
-Each iterable item is send over the newly created channel. For example::
+The method allows you to create a channel emitting any sequence of values that are specified as the method argument,
+For example::
 
-    // creating a channel by a generic iterable object
-    myChannel = Channel.from( myIterableObj )
+    ch = Channel.from( 1, 3, 5, 7 )
+    ch.subscribe { println "value: $it" }
 
-    // creating a channel by a list
-    myChannel = Channel.from( [1,2,3,4,5] )
+The first line in this example creates variable ``ch`` which holds a channel object. This channel emits the values
+specified as parameter in the ``from`` method. Thus the second line will print the following::
+
+    value: 1
+    value: 3
+    value: 5
+    value: 7
 
 
-Square brackets can be omitted when passing a list a parameter, thus the following example it is identical to the previous one::
+The following example shows how create channel from a `range` of numbers or strings::
 
-     // square brackets can be omitted
-     myChannel = Channel.from( 1,2,3,4,5 )
+    zeroToNine = Channel.from( 0..9 )
+    strings = Channel.from( 'A'..'Z' )
+
+
+
+.. note:: Note that when the ``from`` argument is an object implement the (Java)
+  `Collection <http://docs.oracle.com/javase/8/docs/api/java/util/Collection.html>`_ interface, the resulting channel
+  emits the collections entries as individual emissions.
+
+Thus, the following two declarations produce an identical result since in the second one the values are specified
+as a list object::
+
+    Channel.from( 1, 3, 5, 7, 9 )
+    Channel.from( [1, 3, 5, 7, 9] )
+
+
+But when more than an argument is provided, they are always managed as `single` emission. Thus, the the following example
+creates a channel emitting three, entries each of which is a list containing two elements::
+
+    Channel.from( [1, 2], [5,6], [7,9] )
 
 
 
 .. _channel-just:
 
-just( )
+just
 -------
 
-This method create a dataflow `variable`, that is a channel to which is possible to bind at most entry. An optional,
+This method create a dataflow `variable`, that is a channel to which is possible to bind at most one entry. An optional,
 not ``null`` value can be specified as parameters, which is bound to the newly created channel. For example::
 
-    // creates am 'empty' variable
-    myChannel = Channel.just()
 
-    // creates a channel and bind a string to it
-    myChannel = Channel.just( 'Hello there' )
-
-
-    // creates a channel and bind a list object to it
-    myChannel = Channel.just( [1,2,3,4,5] )
+    expl1 = Channel.just()
+    expl2 = Channel.just( 'Hello there' )
+    expl3 = Channel.just( [1,2,3,4,5] )
 
 
+The first example creates am 'empty' variable. The second, creates a channel and bind a string to it. Finally, the last one
+creates a channel and bind a list object to it.
 
 .. _channel-path:
 
-path( )
+fromPath
 --------
 
-You can create a channel emitting one or more file paths by using the ``path( )`` method and specifying a path matcher
+You can create a channel emitting one or more file paths by using the ``fromPath`` method and specifying a path string
 as argument. For example::
 
-    myFileChannel = Channel.path( '/data/some/bigfile.txt' )
+    myFileChannel = Channel.fromPath( '/data/some/bigfile.txt' )
 
-The above line creates a channel and bind to it an item of type ``Path`` referring the specified file.
+The above line creates a channel and bind to it an item of type
+`Path <http://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html>`_ referring the specified file.
 
 .. note:: It does not check the file existence.
 
-Whenever the ``path`` arguments contains a ``*`` or ``?`` wildcard characters it is interpreted as a `glob` path matcher.
+Whenever the ``fromPath`` arguments contains a ``*`` or ``?`` wildcard characters it is interpreted as a `glob` path matcher.
 For example::
 
-    myFileChannel = Channel.path( '/data/big/*.txt' )
+    myFileChannel = Channel.fromPath( '/data/big/*.txt' )
 
 
 Creates a channel and sends over it as many ``Path`` items as many are the files with ``txt`` extension in the ``/data/big`` folder.
+
+.. tip:: Two asterisks, i.e. ``**``, works like ``*`` but crosses directory boundaries.
+  This syntax is generally used for matching complete paths.
+
+For example::
+
+    files = Channel.fromPath( 'data/**.fa' )
+    moreFiles = Channel.fromPath( 'data/**/.fa' )
+
+The first returns a channel emitting the files ending with the suffix ``.fa`` in the ``data`` folder `and` recursively
+in all the  its sub-folders. While the second only the files with the same suffix in `any` sub-folder in the ``data`` path.
 
 .. note:: As in Linux BASH the ``*`` wildcard does not match against hidden files (i.e. files which name starts a ``.`` character).
 
 In order the include hidden files you need to start your pattern with a period character. For example::
 
-    // returns all hidden files in the path
-    myFileChannel = Channel.path( '/path/.*' )
+    expl1 = Channel.fromPath( '/path/.*' )
+    expl2 = Channel.fromPath( '/path/.*.fa' )
+    expl3 = Channel.fromPath( '/path/{.*,*}' )
 
-    // returns all hidden files ending with .fa
-    myFileChannel = Channel.path( '/path/.*.fa' )
 
-    // returns all files (hidden and non-hidden)
-    myFileChannel = Channel.path( '/path/{.*,*}' )
+The first example returns all hidden files in the path the specified path. The second one, returns all hidden files
+ending with ``.fa``. Finally, the last example returns all files (hidden and non-hidden) in that path
 
 
 Learn more about `glob` patterns at `this link <http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob>`_
 
 .. _channel-watch:
 
-watch( )
----------
+watchPath
+-----------
 
-The ``watch`` factory method watches a folder for one or more files matching a specified pattern. As soon as a
-there is a file that meets the specified condition, this file is emitted over the channel returned by the ``watch`` method.
+The ``watchPath`` factory method watches a folder for one or more files matching a specified pattern. As soon as a
+there is a file that meets the specified condition, this file is emitted over the channel returned by the ``watchPath`` method.
 For example::
 
      Channel
-        .watch( '/path/*.fa' )
+        .watchPath( '/path/*.fa' )
         .subscribe { println "Fasta file: $it" }
 
 
@@ -149,14 +180,14 @@ Name        Description
 You can specified one more of these events by using a comma separated string, as shown below::
 
      Channel
-        .watch( '/path/*.fa', 'create,modify' )
+        .watchPath( '/path/*.fa', 'create,modify' )
         .subscribe { println "File created or modified: $it" }
 
 
-.. warning:: The ``watch`` factory wait endlessly for files that matches the specified pattern and event(s).
+.. warning:: The ``watchPath`` factory wait endlessly for files that matches the specified pattern and event(s).
   Thus, whenever you use it in your script, the resulting pipeline will never finish.
 
-See also: `path( )`_ factory method
+See also: `fromPath`_ factory method
 
 Learn more about `glob` patterns at `this link <http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob>`_
 

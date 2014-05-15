@@ -684,7 +684,7 @@ the ``by`` parameter. The following example shows how read a FASTA file and spli
 each::
 
    Channel
-        .path('misc/sample.fa')
+        .fromPath('misc/sample.fa')
         .splitFasta( by: 10 )
         .subscribe { print it }
 
@@ -699,7 +699,7 @@ In order to split a FASTA content in record objects  simply use the ``record`` p
 required field as shown in the example below::
 
    Channel
-        .path('misc/sample.fa')
+        .fromPath('misc/sample.fa')
         .splitFasta( record: [id: true, seqString: true ])
         .filter { record -> record.id =~ /^ENST0.*/ }
         .subscribe { record -> println record.seqString }
@@ -715,12 +715,12 @@ The following fields are available when using the ``record`` parameter:
 =========== ============================
 Field       Description
 =========== ============================
-id          The FASTA sequence identifier i.e. the string after the ``>``  in the FASTA header
-header      The first line in a FASTA sequence including the ``>`` character
+id          The FASTA sequence identifier i.e. the word following the ``>`` symbol up to the first `blank` or `newline` character
+header      The first line in a FASTA sequence without the ``>`` character
 desc        The text in the FASTA header following the ID value
 text        The complete FASTA sequence including the header
-seqString   The sequence data as a single line string i.e. containing no newline characters
-sequence    The sequence data as a multi-line string (always ending with a newline character)
+seqString   The sequence data as a single line string i.e. containing no `newline` characters
+sequence    The sequence data as a multi-line string (always ending with a `newline` character)
 width       Define the length of a single line when the ``sequence`` field is used, after that the sequence data continues on a new line.
 =========== ============================
 
@@ -738,7 +738,7 @@ parameter ``by``. The following example shows how read a FASTQ file and split it
 each::
 
    Channel
-        .path('misc/sample.fastq')
+        .fromPath('misc/sample.fastq')
         .splitFastq( by: 10 )
         .subscribe { print it }
 
@@ -752,7 +752,7 @@ In order to split a FASTQ sequences in record objects simply use the ``record`` 
 required field, or simply specify ``record: true`` as in the example shown below ::
 
    Channel
-        .path('misc/sample.fastq')
+        .fromPath('misc/sample.fastq')
         .splitFastq( record: true )
         .subscribe { record -> println record.readHeader }
 
@@ -777,7 +777,7 @@ in chunks containing `n` lines, which are emitted by the resulting channel.
 For example::
 
    Channel
-        .path('/some/path/*.txt')
+        .fromPath('/some/path/*.txt')
         .splitText()
         .subscribe { print it }
 
@@ -789,7 +789,7 @@ the parameter ``by``, as shown in the following example::
 
 
    Channel
-        .path('/some/path/*.txt')
+        .fromPath('/some/path/*.txt')
         .splitText( by: 10 )
         .subscribe {
             print it;
@@ -801,7 +801,7 @@ An optional :ref:`closure <script-closure>` can be specified in order to transfo
 The following example shows how splits text files in chunks of 10 lines and transform each of them to capital letters::
 
      Channel
-        .path('/some/path/*.txt')
+        .fromPath('/some/path/*.txt')
         .splitText( by: 10 ) { it.toUpperCase() }
         .subscribe { print it }
 
@@ -871,7 +871,7 @@ source channel. For example::
 
 
 .. note:: The above example takes advantage of the :ref:`multiple assignment <script-multiple-assignment>` syntax
-in order to assign two variables at once using the list of channels returned by the ``into`` operator.
+  in order to assign two variables at once using the list of channels returned by the ``into`` operator.
 
 
 
