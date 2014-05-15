@@ -596,7 +596,7 @@ and emits the resulting collection as a single item. For example::
 Splitting operators
 ====================
 
-These operators are used to split the items emitted by channel in chunks that can be processed by downstream
+These operators are used to split items emitted by channels into chunks that can be processed by downstream
 operators or processes.
 
 The available splitting operators are:
@@ -610,12 +610,12 @@ The available splitting operators are:
 splitCsv
 ---------
 
-The ``splitCsv`` operator allows you to parse items text items emitted by a channel that are formatted using the
-`CSV format <http://en.wikipedia.org/wiki/Comma-separated_values>`_ and split them in records or group them in
-list to record having a specified length.
+The ``splitCsv`` operator allows you to parse text items emitted by a channel, that are formatted using the
+`CSV format <http://en.wikipedia.org/wiki/Comma-separated_values>`_, and split them into records or group them into
+list of records with a specified length.
 
-In the simplest case just apply the ``splitCsv`` operator to a channel emitting a text file or text entries CVS formatted.
-For example::
+In the simplest case just apply the ``splitCsv`` operator to a channel emitting a CSV formatted text files or
+text entries. For example::
 
     Channel
         .from( 'alpha,beta,gamma\n10,20,30\n70,80,90' )
@@ -624,11 +624,11 @@ For example::
            println "${row[0]} - ${row[1]} - ${row[2]}"
         }
 
-The above example shows hows the CSV text is parsed, each line is parsed in a single row. Values can be accessed
+The above example shows hows CSV text is parsed and is split into single rows. Values can be accessed
 by its column index in the row object.
 
 When the CVS begins with a header line defining the columns names, you can specify the parameter ``header: true`` which
-allows you to reference each values by its name, as shown in the following example::
+allows you to reference each value by its name, as shown in the following example::
 
     Channel
         .from( 'alpha,beta,gamma\n10,20,30\n70,80,90' )
@@ -642,7 +642,7 @@ It will print ::
  10 - 20 - 30
  70 - 80 - 90
 
-Alternatively you can provide a custom header names by specifying a the list of columns in the ``header`` parameter
+Alternatively you can provide custom header names by specifying a the list of strings in the ``header`` parameter
 as shown below::
 
 
@@ -660,27 +660,26 @@ Available parameters:
 Field       Description
 =========== ============================
 by          The number of rows in each `chunk`
-sep         The character used to separate values (default: ``,``)
-quote       Values may be quoted by single or double quote character.
-header      When ``true`` the first line is used as the column names. Alternative it can be used to provide the list of column names
-charset     The charset to be used to read the text content e.g. ``UTF-8``
-strip       Whenever remove leading and trailing blanks from values (default: ``false``)
-skip        Number of lines to do not parse at the beginning of the file
+sep         The character used to separate the values (default: ``,``)
+quote       Values may be quoted by single or double quote characters.
+header      When ``true``, the first line is used as columns names. Alternatively it can be used to provide the list of columns names.
+charset     Reads the CSV content by using the given charset e.g. ``UTF-8``
+strip       Removes leading and trailing blanks from values (default: ``false``)
+skip        Number of lines since the file beginning to ignore when parsing the CSV content.
 
 =========== ============================
-
 
 
 
 splitFasta
 ------------
 
-The ``splitFasta`` operator allows you to split the entries emitted by a channel, formatted using the
-`FASTA format <http://en.wikipedia.org/wiki/FASTA_format>`_. It returns a channel which emits a text chunk
-for each sequence in the received item.
+The ``splitFasta`` operator allows you to split the entries emitted by a channel, that are formatted using the
+`FASTA format <http://en.wikipedia.org/wiki/FASTA_format>`_. It returns a channel which emits text item
+for each sequence in the received FASTA content.
 
 The number of sequences in each text chunk produced by the ``splitFasta`` operator can be set by using
-the ``by`` parameter. The following example shows how read a FASTA file and split it in chunks containing 10 sequences
+the ``by`` parameter. The following example shows how to read a FASTA file and split it into chunks containing 10 sequences
 each::
 
    Channel
@@ -690,13 +689,13 @@ each::
 
 
 
-A second version of the ``splitFasta`` operator allows you to split a FASTA content in record objects, instead
+A second version of the ``splitFasta`` operator allows you to split a FASTA content into record objects, instead
 of text chunks. A record object contains a set of fields that let you access and manipulate the FASTA sequence
 information with ease.
 
 
-In order to split a FASTA content in record objects  simply use the ``record`` parameter specifying the map of
-required field as shown in the example below::
+In order to split a FASTA content into record objects, simply use the ``record`` parameter specifying the map of
+required the fields, as shown in the example below::
 
    Channel
         .fromPath('misc/sample.fa')
@@ -705,9 +704,9 @@ required field as shown in the example below::
         .subscribe { record -> println record.seqString }
 
 
-.. note:: In this example, the file ``misc/sample.fa`` is splitted in record containing the ``id`` and the ``seqString`` fields
-  (i.e. the sequence id and the sequence data). The following ``filter`` operator keep only the sequences which ID
-  starts with the ``ENST0`` prefix and finally the sequence content is printed by the ``subscribe`` operator.
+.. note:: In this example, the file ``misc/sample.fa`` is split into records containing the ``id`` and the ``seqString`` fields
+  (i.e. the sequence id and the sequence data). The following ``filter`` operator only keeps the sequences which ID
+  starts with the ``ENST0`` prefix, finally the sequence content is printed by using the ``subscribe`` operator.
 
 
 The following fields are available when using the ``record`` parameter:
@@ -729,13 +728,13 @@ width       Define the length of a single line when the ``sequence`` field is us
 splitFastq
 -----------
 
-The ``splitFastq`` operator allows you to split the entries emitted by a channel, formatted using the
+The ``splitFastq`` operator allows you to split the entries emitted by a channel, that are formatted using the
 `FASTQ format <http://en.wikipedia.org/wiki/FASTQ_format>`_. It returns a channel which emits a text chunk
 for each sequence in the received item.
 
 The number of sequences in each text chunk produced by the ``splitFastq`` operator is defined by the
-parameter ``by``. The following example shows how read a FASTQ file and split it in chunks containing 10 sequences
-each::
+parameter ``by``. The following example shows you how to read a FASTQ file and split it into chunks containing 10
+sequences each::
 
    Channel
         .fromPath('misc/sample.fastq')
@@ -744,7 +743,7 @@ each::
 
 
 
-A second version of the ``splitFastq`` operator allows you to split a FASTQ formatted content in record objects,
+A second version of the ``splitFastq`` operator allows you to split a FASTQ formatted content into record objects,
 instead of text chunks. A record object contains a set of fields that let you access and manipulate the FASTQ sequence
 data with ease.
 
