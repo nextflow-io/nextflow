@@ -7,7 +7,7 @@ params.in = "${HOME}/sample.fa"
  * Splits the input file in chunks containing a single sequences,
  * and send each of it over the 'seq' channel
  */
-seq = Channel.path(params.in).splitFasta()
+seq = Channel.fromPath(params.in).splitFasta()
 
 /*
  * For each sequence that is sent over the 'seq' channel

@@ -4,7 +4,7 @@ params.query = "$HOME/sample.fa"
 params.db = "$HOME/tools/blast-db/pdb/pdb"
 
 db = file(params.db)
-fasta = Channel.path(params.query).splitFasta()
+fasta = Channel.fromPath(params.query).splitFasta()
 
 process blast {
     input:

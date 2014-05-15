@@ -7,7 +7,7 @@ params.chunkSize = 1
 
 DB = file(params.db)
 
-seq = Channel .path(params.query) .splitFasta( by: params.chunkSize )
+seq = Channel .fromPath(params.query) .splitFasta( by: params.chunkSize )
 
 process blast {
     input:
