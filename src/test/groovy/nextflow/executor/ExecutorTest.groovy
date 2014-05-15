@@ -48,14 +48,14 @@ class ExecutorTest extends Specification {
         def lines = script.readLines()
 
         then:
-        lines[0] == 'rm -f file.txt'
-        lines[1] == 'rm -f seq_1.fa'
-        lines[2] == 'rm -f seq_2.fa'
-        lines[3] == 'rm -f seq_3.fa'
-        lines[4] == 'ln -s /home/data/sequences file.txt'
-        lines[5] == 'ln -s /home/data/file1 seq_1.fa'
-        lines[6] == 'ln -s /home/data/file2 seq_2.fa'
-        lines[7] == 'ln -s /home/data/file3 seq_3.fa'
+        lines[0] == "rm -f 'file.txt'"
+        lines[1] == "rm -f 'seq_1.fa'"
+        lines[2] == "rm -f 'seq_2.fa'"
+        lines[3] == "rm -f 'seq_3.fa'"
+        lines[4] == "ln -s '/home/data/sequences' 'file.txt'"
+        lines[5] == "ln -s '/home/data/file1' 'seq_1.fa'"
+        lines[6] == "ln -s '/home/data/file2' 'seq_2.fa'"
+        lines[7] == "ln -s '/home/data/file3' 'seq_3.fa'"
         lines.size() == 8
 
 
@@ -67,7 +67,7 @@ class ExecutorTest extends Specification {
         lines = script.readLines()
 
         then:
-        lines[0] == 'rm -f file.txt; rm -f seq_1.fa; ln -s /data/file file.txt; ln -s /data/seq seq_1.fa; '
+        lines[0] == "rm -f 'file.txt'; rm -f 'seq_1.fa'; ln -s '/data/file' 'file.txt'; ln -s '/data/seq' 'seq_1.fa'; "
         lines.size() == 1
 
     }
