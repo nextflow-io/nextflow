@@ -29,6 +29,9 @@ import nextflow.Channel
 import nextflow.extension.DataflowExtensions
 
 /**
+ * Factory class for splitter objects
+ *
+ * {@link groovy.runtime.metaclass.NextflowDelegatingMetaClass}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -38,9 +41,12 @@ class SplitterFactory {
 
 
     /**
+     * Creates a splitter object by specifying the strategy name
      *
      * @param strategy The splitting strategy e.g. {@code 'fasta'}, {@code 'fastq'}, etc
      * @param object
+     *      A map containing named parameters used to initialize the splitter object.
+     *      See {@link AbstractSplitter#options(java.util.Map)}
      */
     @Memoized
     static SplitterStrategy create( String strategy, Map options = [:] ) {
@@ -57,11 +63,32 @@ class SplitterFactory {
 
     }
 
+    /**
+     * Creates a splitter object by specifying the splitter class
+     *
+     * @param strategy A class implementing {@link SplitterStrategy}
+     * @param object
+     *      A map containing named parameters used to initialize the splitter object.
+     *      See {@link AbstractSplitter#options(java.util.Map)}
+     * @return The splitter instance
+     */
     @Memoized
     static SplitterStrategy create( Class<? extends SplitterStrategy> strategy, Map options = [:] ) {
         (SplitterStrategy) strategy.newInstance( [options] as Object[] )
     }
 
+    /**
+     * This method try to invoke a splitter or a counter method dynamically
+     *
+     * @param obj The target object
+     * @param methodName
+     *      The splitter or counter method to be invoked. It must start with splitXxx or countXxx
+     *      where Xxx represents the splitting format/strategy. For example {@code splitFasta} will invoke
+     *      the split method by using the {@link FastaSplitter} class
+     * @param args Splitter arguments. See {@link SplitterStrategy#options(java.util.Map)}
+     * @param e Exception object to raise if the method is not available
+     * @return the splitter result
+     */
     static tryFallbackWithSplitter( obj, String methodName, Object[] args, Exception e ) {
 
         // verifies that is a splitter method and get splitter qualifier
@@ -113,6 +140,14 @@ class SplitterFactory {
 
     }
 
+    /**
+     * Implements dynamic method extension for splitter operators
+     *
+     * @param source
+     * @param splitter
+     * @param opt
+     * @return
+     */
     static protected splitOverChannel( DataflowReadChannel source, SplitterStrategy splitter, Map opt )  {
 
         def strategy = splitter as AbstractSplitter
@@ -138,6 +173,14 @@ class SplitterFactory {
         return resultChannel
     }
 
+    /**
+     *  Implements dynamic method extension for counter operators
+     *
+     * @param source
+     * @param splitter
+     * @param opt
+     * @return
+     */
     static protected countOverChannel( DataflowReadChannel source, SplitterStrategy splitter, Map opt )  {
 
 

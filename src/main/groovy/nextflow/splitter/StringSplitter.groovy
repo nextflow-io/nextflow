@@ -7,6 +7,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.extension.FilesExtensions
 /**
+ * Simple slitter chunking a string in sub-strings having the specified length
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

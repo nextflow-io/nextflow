@@ -5,6 +5,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 /**
+ * Base class for splitter handling binary data
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

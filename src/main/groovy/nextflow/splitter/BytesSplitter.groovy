@@ -7,6 +7,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.extension.FilesExtensions
 /**
+ * Splits a generic byte array in chunks having the specified length
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

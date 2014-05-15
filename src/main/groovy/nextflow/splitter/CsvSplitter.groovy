@@ -10,6 +10,7 @@ import nextflow.extension.FilesExtensions
 import org.apache.commons.lang.StringUtils
 
 /**
+ * Split a CSV file in records
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -19,18 +20,48 @@ import org.apache.commons.lang.StringUtils
 @InheritConstructors
 class CsvSplitter extends AbstractTextSplitter {
 
+    /**
+     * The CVS separator
+     */
     protected String sep = ','
 
+    /**
+     * The character used to wrap values containing a separator char
+     */
     protected String quote
 
+    /**
+     * When {@code true} remove leading and trailing blanks from a value
+     */
     protected boolean stripBlanks
 
+    /**
+     * When {@code true} parse the first line as the columns names
+     */
     protected boolean firstLineAsHeader
 
+    /**
+     * Defines the columns names of the resulting records
+     */
     protected List<String> columnsHeader
 
+    /**
+     * The number of lines to skip
+     */
     protected int skipLines = 0
 
+    /**
+     * Set the splitter options by specifying a map of named parameters.
+     * Valid parameters are:
+     * <li>{@code sep}
+     * <li>{@code strip}
+     * <li>{@code header}
+     * <li>{@code quote}
+     * <li>{@code skip}
+     *
+     * @param options
+     * @return The splitter instance itself
+     */
     CsvSplitter options(Map options) {
         super.options(options)
 
@@ -61,6 +92,13 @@ class CsvSplitter extends AbstractTextSplitter {
         return this
     }
 
+    /**
+     * Implements the CSV parsing
+     *
+     * @param targetObject
+     * @param index
+     * @return
+     */
     @Override
     def apply( Reader targetObject, int index ) {
         BufferedReader reader0 = (BufferedReader)(targetObject instanceof BufferedReader ? targetObject : new BufferedReader(targetObject))
@@ -157,6 +195,12 @@ class CsvSplitter extends AbstractTextSplitter {
         return result
     }
 
+    /**
+     * Remove the quote characters and extra blanks
+     *
+     * @param str The string to be stripped
+     * @return The resulting string value
+     */
     @PackageScope
     final String strip( String str ) {
         def value = stripBlanks ? StringUtils.strip(str) : str

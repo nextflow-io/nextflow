@@ -9,6 +9,9 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.extension.FilesExtensions
 import nextflow.util.CacheHelper
 /**
+ * Split FASTA formatted text content or files
+ *
+ * @link http://en.wikipedia.org/wiki/FASTA_format
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

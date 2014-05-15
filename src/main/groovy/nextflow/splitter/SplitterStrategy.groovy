@@ -23,6 +23,7 @@ package nextflow.splitter
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowQueue
 /**
+ * Interface that splitters object must implements
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

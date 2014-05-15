@@ -9,6 +9,9 @@ import net.sf.picard.fastq.FastqReader
 import net.sf.picard.fastq.FastqRecord
 import nextflow.extension.FilesExtensions
 /**
+ * Split FASTQ formatted text content or files
+ *
+ * @link http://en.wikipedia.org/wiki/FASTQ_format
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
