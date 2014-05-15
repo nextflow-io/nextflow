@@ -30,7 +30,7 @@ class FastaSplitterTest extends Specification {
                 .sequence == 'NLFVALYDFVASGDNTLSIT\nKGEKLRVLGYNHNGEWCEAQ\nTKNGQGWVPSNYITPVN\n'
 
         FastaSplitter.parseFastaRecord(fasta, [header:true])
-                .header == '>gi|5524211|gb|AAD44166.1| cytochrome b'
+                .header == 'gi|5524211|gb|AAD44166.1| cytochrome b'
 
         FastaSplitter.parseFastaRecord(fasta, [seqString:true])
                 .seqString == 'NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPSNYITPVN'

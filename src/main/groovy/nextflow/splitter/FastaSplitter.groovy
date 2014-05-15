@@ -17,7 +17,7 @@ import nextflow.util.CacheHelper
 @InheritConstructors
 class FastaSplitter extends AbstractTextSplitter {
 
-    static private Pattern PATTERN_FASTA_DESC = ~/^>\S+\s+(.*)/
+    static private Pattern PATTERN_FASTA_DESC = ~/^\S+\s+(.*)/
 
     /**
      * Parse a {@code CharSequence} as a FASTA formatted text, retuning a {@code Map} object
@@ -45,7 +45,7 @@ class FastaSplitter extends AbstractTextSplitter {
      *      <li>{@code id} The fasta ID
      *      <li>{@code seq} The sequence string
      *      <li>{@code desc} The description in the fasta header
-     *      <li>{@code head} The fasta header (first line including the '>' character)
+     *      <li>{@code header} The fasta header (first line including the '>' character)
      *      <li>{@code text} The complete fasta text block
      *      <li>{@code width} The width of the fasta formatted block.
      *      <li>{@code string} The sequence is returned as single line string (w/o newline char)
@@ -68,7 +68,7 @@ class FastaSplitter extends AbstractTextSplitter {
             if( line.startsWith(';')) return
             if( !header ) {
                 if( line.startsWith('>') )
-                    header = line
+                    header = line.substring(1)
                 return
             }
 
@@ -77,9 +77,8 @@ class FastaSplitter extends AbstractTextSplitter {
 
         def result = [:]
         if( record.id && header ) {
-            def clean = header.substring(1) // 'remove the '>' char'
-            int p = clean.indexOf(' ')
-            result.id = p != -1 ? clean.substring(0,p) : clean
+            int p = header.indexOf(' ')
+            result.id = p != -1 ? header.substring(0,p) : header
         }
 
         if( record.desc && header ) {
