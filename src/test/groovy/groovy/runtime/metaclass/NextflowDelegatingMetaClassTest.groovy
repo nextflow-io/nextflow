@@ -21,6 +21,7 @@
 package groovy.runtime.metaclass
 import java.nio.file.Files
 
+import nextflow.Channel
 import spock.lang.Specification
 /**
  *
@@ -149,6 +150,93 @@ class NextflowDelegatingMetaClassTest extends Specification {
 
         cleanup:
         path?.delete()
+
+    }
+
+    def testCountText() {
+
+        when:
+        def str = '''
+            line 1
+            line 2
+            line 3
+            line 4
+            line 5
+            '''
+            .stripIndent().strip()
+
+        then:
+        str.countText() == 5
+        str.countText(by:2) == 3
+
+
+        when:
+        def str2 = '''
+            line 6
+            line 7
+            line 8
+            '''
+                .stripIndent().strip()
+
+        def str3 = '''
+            line 9
+            line 10
+            line 11
+            '''
+                .stripIndent().strip()
+
+        def result = Channel.from(str, str2, str3).countText()
+        then:
+        result.val == 11
+
+
+    }
+
+    def testCountFasta() {
+
+        when:
+        def str = '''
+            >1aboA
+            NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
+            NYITPVN
+            >1ycsB
+            KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
+            VPRNLLGLYP
+            >1pht
+            GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
+            WLNGYNETTGERGDFPGTYVEYIGRKKISP
+            >1vie
+            DRVRKKSGAAWQGQIVGWYCTNLTPEGYAVESEAHPGSVQIYPVAALERI
+            N
+            >1ihvA
+            NFRVYYRDSRDPVWKGPAKLLWKGEGAVVIQDNSDIKVVPRRKAKIIRD
+            '''
+            .stripIndent()
+
+        then:
+        str.countFasta() == 5
+        str.countFasta(by:4) == 2
+
+
+
+        when:
+        def str2 = '''
+            >1aboA
+            NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
+            NYITPVN
+            >1ycsB
+            KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
+            VPRNLLGLYP
+            >1pht
+            GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
+            WLNGYNETTGERGDFPGTYVEYIGRKKISP
+            '''
+            .stripIndent()
+
+        def result = Channel.from( str, str2 ).countFasta()
+        then:
+        result.val == 8
+
 
     }
 

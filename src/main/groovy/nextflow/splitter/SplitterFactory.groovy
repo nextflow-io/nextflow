@@ -24,6 +24,7 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.extension.DataflowExtensions
 
@@ -35,7 +36,6 @@ import nextflow.extension.DataflowExtensions
 @CompileStatic
 class SplitterFactory {
 
-    private static final String SPLIT_PREFIX = 'split'
 
     /**
      *
@@ -65,11 +65,15 @@ class SplitterFactory {
     static tryFallbackWithSplitter( obj, String methodName, Object[] args, Exception e ) {
 
         // verifies that is a splitter method and get splitter qualifier
-        if( !methodName.startsWith(SPLIT_PREFIX) || !(methodName.size()>SPLIT_PREFIX.length()) )
+        if( !methodName.startsWith('split') && !methodName.startsWith('count') )
+            throw e
+
+        if( methodName.size() == 5 )
             throw e
 
         // load the splitter class
-        def qualifier = methodName.substring(SPLIT_PREFIX.length())
+        def method = methodName.substring(0,5)
+        def qualifier = methodName.substring(5)
         def splitter = create(qualifier)
         if( !splitter )
             throw e
@@ -77,13 +81,34 @@ class SplitterFactory {
         // converts args array to options map
         def opt = argsToOpt(args)
 
-        // when the  target obj is a channel use call
-        if( obj instanceof DataflowReadChannel ) {
-            splitOverChannel( obj, splitter, opt )
-        }
-        else {
+
+        /*
+         * call the 'split'
+         */
+        if( method == 'split' ) {
+            // when the  target obj is a channel use call
+            if( obj instanceof DataflowReadChannel ) {
+                splitOverChannel( obj, splitter, opt )
+            }
             // invokes the splitter
-            splitter.options(opt) .target(obj) .split()
+            else {
+                splitter.options(opt) .target(obj) .split()
+            }
+        }
+
+        /*
+         * otherwise handle 'count'
+         */
+        else {
+            // when the  target obj is a channel use call
+            if( obj instanceof DataflowReadChannel ) {
+                countOverChannel( obj, splitter, opt )
+            }
+            // invokes the splitter
+            else {
+                splitter.options(opt) .target(obj) .count()
+            }
+
         }
 
     }
@@ -111,6 +136,31 @@ class SplitterFactory {
 
         // return the resulting channel
         return resultChannel
+    }
+
+    static protected countOverChannel( DataflowReadChannel source, SplitterStrategy splitter, Map opt )  {
+
+
+        // create a new DataflowChannel that will receive the splitter entries
+        DataflowVariable result = new DataflowVariable ()
+
+        def strategy = splitter as AbstractSplitter
+
+        // set the splitter strategy options
+        long count = 0
+        if( opt == null ) opt = [:]
+        opt.each = { count++ }
+        strategy.options(opt)
+
+        def splitEntry = { entry ->
+            def obj = strategy.normalizeType(entry)
+            strategy.apply(obj,0)
+        }
+
+        DataflowExtensions.subscribe ( source, [onNext: splitEntry, onComplete: { result.bind(count) }] )
+
+        // return the resulting channel
+        return result
     }
 
 
