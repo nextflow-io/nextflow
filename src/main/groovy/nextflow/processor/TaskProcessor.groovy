@@ -135,13 +135,13 @@ abstract class TaskProcessor {
     /**
      * Count the number of time an error occurred
      */
-    private final errorCount = new AtomicInteger()
+    private volatile int errorCount
 
 
     /**
      * Set to true the very first time the error is shown
      */
-    private final errorShown = new AtomicBoolean()
+    private volatile boolean errorShown
 
     /**
      * Used to show the override warning message only the very first time
@@ -698,15 +698,15 @@ abstract class TaskProcessor {
      * @param error The error object
      * @return The {@code ErrorStrategy} applied
      */
-    final protected ErrorStrategy resumeOrDie( TaskRun task, Throwable error ) {
+    final synchronized protected ErrorStrategy resumeOrDie( TaskRun task, Throwable error ) {
         log.debug "Handling unexpected condition for\n  task: $task\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
         try {
             // do not recoverable error, just trow it again
             if( error instanceof Error ) throw error
 
-            final taskErrCount = task ? task.failCount.getAndIncrement() : 0
-            final procErrCount = errorCount.getAndIncrement()
+            final taskErrCount = task ? task.failCount++ : 0
+            final procErrCount = errorCount++
             final taskStrategy = taskConfig.getErrorStrategy()
 
             // when is a task level error and the user has chosen to ignore error, just report and error message
@@ -730,9 +730,9 @@ abstract class TaskProcessor {
             }
 
             // MAKE sure the error is showed only the very first time
-            if( errorShown.getAndSet(true) ) {
+            if( errorShown )
                 return ErrorStrategy.TERMINATE
-            }
+            errorShown = true
 
             def message = []
             message << "Error executing process > '${task?.name ?: name}'"

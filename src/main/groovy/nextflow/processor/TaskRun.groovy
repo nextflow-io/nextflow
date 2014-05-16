@@ -20,7 +20,6 @@
 
 package nextflow.processor
 import java.nio.file.Path
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
 import embed.com.google.common.hash.HashCode
@@ -252,7 +251,7 @@ class TaskRun {
     /**
      * The number of times the execution of the task has failed
      */
-    def failCount = new AtomicInteger()
+    def volatile int failCount
 
 
     def String getScript() {
