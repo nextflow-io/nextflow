@@ -151,27 +151,40 @@ class FileCollectorTest extends Specification {
 
     def testMove() {
         when:
+        def file1 = Files.createTempFile('testFile',null)
+        file1.text = 'file-content'
+
         def appender = new FileCollector()
         appender.append('eng', 'Hello')
         appender.append('ita', 'Ciao')
         appender.append('eng', ' world!')
         appender.append('ita', '\nmondo\n!')
+        appender.append('xxx', file1)
         then:
-        appender.size() == 2
+        appender.size() == 3
         appender.get('eng').text == 'Hello world!'
         appender.get('ita').text == 'Ciao\nmondo\n!'
+        appender.get('xxx').text == 'file-content'
+        file1.exists()
 
         when:
         def target = Files.createTempDirectory('new-dir')
         def list = appender.moveFiles(target)
         then:
-        list.size() == 2
-        list *. name == ['eng','ita']
+        list.size() == 3
+        list *. name == ['eng','ita','xxx']
         appender.size() == 0
+        file1.exists()
+
+        when:
+        appender.close()
+        then:
+        file1.exists()
 
         cleanup:
         appender?.close()
         target?.deleteDir()
+        file1?.delete()
     }
 
 
