@@ -58,12 +58,12 @@ class Const {
     /**
      * The app build time as linux/unix timestamp
      */
-    static final long APP_TIMESTAMP = 1399895993095
+    static final long APP_TIMESTAMP = 1400235968763
 
     /**
      * The app build number
      */
-    static final int APP_BUILDNUM = 1802
+    static final int APP_BUILDNUM = 1805
 
     /**
      * The date time formatter string
