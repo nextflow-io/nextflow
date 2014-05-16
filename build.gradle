@@ -41,6 +41,9 @@ allprojects {
             exclude module: 'groovy-all'
         }
     }
+
+    sourceCompatibility = 7
+    targetCompatibility = 7
 }
 
 configurations {
