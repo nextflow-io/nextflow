@@ -202,8 +202,11 @@ abstract class Executor {
         // create a bash script that will copy the out file to the working directory
         log.trace "Unstaging file names: $fileOutNames"
         if( fileOutNames ) {
-            result << "mkdir -p '${task.getTargetDir()}'"
-            result << "rsync -rRzl ${fileOutNames.unique().join(' ')} ${task.getTargetDir().toString()}"
+            result << ""
+            result << "mkdir -p ${task.getTargetDir()}"
+            result << "for item in ${fileOutNames.unique().join(' ')}; do"
+            result << "rsync -rRzl \"\$item\" ${task.getTargetDir()}"
+            result << "done"
         }
 
         return result.join(separatorChar)
