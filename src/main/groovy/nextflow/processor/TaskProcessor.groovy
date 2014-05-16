@@ -738,13 +738,13 @@ abstract class TaskProcessor {
             message << "Error executing process > '${task?.name ?: name}'"
             if( error instanceof ProcessException ) {
                 formatTaskError( message, error, task )
-                log.error message.join('\n'), error
             }
             else {
                 message << formatErrorCause( error )
                 message << "Tip: check the log file '.nextflow.log' for more details"
-                log.error message.join('\n'), error
             }
+            log.error message.join('\n')
+            log.debug "Process $name raise the following exception:", error
         }
         catch( Throwable e ) {
             // no recoverable error
