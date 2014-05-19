@@ -139,9 +139,12 @@ abstract class TaskProcessor {
 
 
     /**
-     * Set to true the very first time the error is shown
+     * Set to true the very first time the error is shown.
+     *
+     * Note: it is declared static because the error must be shown only the
+     * very first time  for all processes
      */
-    private volatile boolean errorShown
+    private static final AtomicBoolean errorShown = new AtomicBoolean()
 
     /**
      * Used to show the override warning message only the very first time
@@ -729,10 +732,10 @@ abstract class TaskProcessor {
                 }
             }
 
-            // MAKE sure the error is showed only the very first time
-            if( errorShown )
+            // MAKE sure the error is showed only the very first time across all processes
+            if( errorShown.getAndSet(true) ) {
                 return ErrorStrategy.TERMINATE
-            errorShown = true
+            }
 
             def message = []
             message << "Error executing process > '${task?.name ?: name}'"
