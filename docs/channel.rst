@@ -69,7 +69,7 @@ The following example shows how create channel from a `range` of numbers or stri
 
 
 .. note:: Note that when the ``from`` argument is an object implement the (Java)
-  `Collection <http://docs.oracle.com/javase/8/docs/api/java/util/Collection.html>`_ interface, the resulting channel
+  `Collection <http://docs.oracle.com/javase/7/docs/api/java/util/Collection.html>`_ interface, the resulting channel
   emits the collections entries as individual emissions.
 
 Thus, the following two declarations produce an identical result since in the second one the values are specified
@@ -114,7 +114,7 @@ as argument. For example::
     myFileChannel = Channel.fromPath( '/data/some/bigfile.txt' )
 
 The above line creates a channel and bind to it an item of type
-`Path <http://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html>`_ referring the specified file.
+`Path <http://docs.oracle.com/javase/7/docs/api/java/nio/file/Path.html>`_ referring the specified file.
 
 .. note:: It does not check the file existence.
 
