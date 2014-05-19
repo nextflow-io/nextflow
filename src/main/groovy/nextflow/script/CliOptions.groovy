@@ -81,6 +81,9 @@ class CliOptions {
     @Parameter(names = ['-v','-version'], description = 'Show the program version')
     boolean version
 
+    @Parameter(names = ['-info'], description = 'The runtime info', hidden = true)
+    boolean info
+
     /**
      * Print out the 'help' and exit
      */
