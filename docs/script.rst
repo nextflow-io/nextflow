@@ -409,13 +409,408 @@ Remove first found numbers followed by a whitespace character::
 Files and I/O
 ==============
 
-::
+In order to access and work with files you need to use the ``file`` method which return a file system object
+given a file path string. For example::
 
-    def dir = file('somedir')
-    def cl = { Path f -> println f }
-    dir.eachDir cl
-    dir.eachFile cl
-    dir.eachDirRecurse cl
-    dir.eachFileRecurse cl
-    dir.eachDirMatch(~/.*/, cl)
-    dir.eachFileMatch(~/.*/, cl)
+  myFile = file('some/path/to/my_file.file')
+
+
+The ``file`` method can reference either `files` or `directory` depending by what the string path is locating in the
+file system.
+
+When using a wildcard characters i.e. ``*`` or ``?`` the ``file`` method return a list object holding the path of files
+which name matches the specified pattern or an empty list if no matches is found. For example::
+
+  listOfFiles = file('some/path/*.fa')
+
+
+.. See also: traverse directories and Channel.path
+
+
+.. note:: If you are a Java geek you will be interested to know the ``file`` method returns a
+  `Path <http://docs.oracle.com/javase/7/docs/api/java/nio/file/Path.html>`_ object, on which
+  you can apply the usual operation you would in a Java program.
+
+
+
+Basic read/write
+------------------
+
+Given a file variable declared by using the ``file`` method as showed in the previous example, reading a `text` file
+it's as easy as getting the value of the file's ``text`` property, which returns the file content
+as a string value. For example::
+
+  print myFile.text
+
+
+In the same way you can save a string to a text by simply assigning the string value to the file's ``text`` property,
+as shown below::
+
+  myFile.text = 'Hello world!'
+
+
+.. note:: The actual file content is overwritten by the assignment operation. If the file does not exist, is created
+  implicitly by the assignment operation.
+
+In order to append a string value to a file without erasing the actual content, you can use the ``append`` method::
+
+  myFile.append('Add this line\n')
+
+or by using the `left shift` operator, which is just a more idiomatic was to append a text content::
+
+  myFile << 'Add a line more\n'
+
+
+Binary data can managed in the same way, just using the file property ``bytes`` instead of ``text``. Thus, the following
+example read the file and returns its content as a byte array::
+
+  binaryContent = myFile.bytes
+
+Or you can save a byte array data buffer to a file, by simply writing::
+
+  myFile.bytes = binaryBuffer
+
+
+.. warning:: The above methods read or write ALL the file content at once, in a single variable or buffer. For this
+  reason they are not suggested when dealing with big files, which require more memory efficient operations, for example
+  reading a file line by line, or by using a fixed size buffer.
+
+
+Read a file line by line
+--------------------------
+
+In order to read a text file line by line you can use the file method ``readLines()`` provided by the file object, which
+returns the file content as a list of strings. For example::
+
+    myFile = file('some/my_file.txt')
+    allLines  = myFile.readLines()
+    for( line : allLines ) {
+        println line
+    }
+
+
+The same example can be written in a more more idiomatic syntax, as shown below::
+
+    file('some/my_file.txt')
+        .readLines()
+        .each { println it }
+
+
+.. note:: The method ``readLines()`` read the file content at once and returns a list containing all lines. For
+  this reason do not use it to read big files.
+
+
+When it is required to process a big file line by line, use the method ``eachLine`` which allows you to read a file
+processing each line at once, and so with loading all the file content in memory. For example::
+
+    count = 0
+    myFile.eachLine {  str ->
+            println "line $count: $str"
+        }
+
+
+
+Advanced file reading operations
+-----------------------------------
+
+The ``Reader`` and the ``InputStream`` classes allows you to get fine control on read operations for, respectively,
+text and binary files. 
+
+
+The file method ``newReader`` creates a `Reader <http://docs.oracle.com/javase/7/docs/api/java/io/Reader.html>`_ object
+for the given file and allows you to read the content by single characters, lines or array of characters. For example::
+
+    myReader = myFile.newReader()
+    String line
+    while( ( line = myReader.readLine() ) {
+        println line
+    }
+    myReader.close()
+
+
+The method ``withReader`` works in a similar manner, but save you from calling the method ``close`` when you have finished
+processing the file, since it is managed automatically by the method itself. The same example can rewritten as shown below::
+
+    myFile.withReader {
+        String line
+        while( ( line = myReader.readLine() ) {
+            println line
+        }
+    }
+
+The methods ``newInputStream`` and ``withInputStream`` works in similar manner. The main different is that they create an
+`InputStream <http://docs.oracle.com/javase/7/docs/api/java/io/InputStream.html>`_ object and that is useful to write binary
+data.
+
+Table of the most important methods to read a file content:
+
+=============== ==============
+Name            Description
+=============== ==============
+getText         Returns the file content as a string value
+getBytes        Returns the file content as byte array
+readLines       Read the file line by line and returns the content as list of strings
+eachLine        Iterate over the file line by line applying the specified :ref:`closure <script-closure>`
+eachByte        Iterate over the file by each single byte applying the specified :ref:`closure <script-closure>`
+withReader      Opens a file for reading a let to access it with a `Reader <http://docs.oracle.com/javase/7/docs/api/java/io/Reader.html>`_ object
+withInputStream Opens a file for reading a let you to access it with a `InputStream <http://docs.oracle.com/javase/7/docs/api/java/io/InputStream.html>`_ object
+newReader       Returns a `Reader <http://docs.oracle.com/javase/7/docs/api/java/io/Reader.html>`_ object to read a text file
+newInputStream  Returns a `InputStream <http://docs.oracle.com/javase/7/docs/api/java/io/InputStream.html>`_ object to read a binary file
+=============== ==============
+
+
+Read `Reader <http://docs.oracle.com/javase/7/docs/api/java/io/Reader.html>`_ and
+`InputStream <http://docs.oracle.com/javase/7/docs/api/java/io/InputStream.html>`_ Java documentation to learn more
+about the methods available on these classes.
+
+
+Advanced file writing operations
+----------------------------------
+
+When you need to access low-level write operations to handle single byte, character, or working with big files you will
+need to use the ``Writer`` and ``OutputStream`` classes, which provide a fine control on write operations.
+
+For example, given two file objects, ``sourceFile`` and ``targetFile``, the following code snippet shows how copy the
+file content from the fist file into the second one, replacing all the characters ``U`` with ``X``::
+
+    sourceFile.withReader { source ->
+        targetFile.withWriter { target ->
+            String line
+            while( (line=source.readLine()) {
+                target << line.replaceAll('U','X')
+            }
+        }
+    }
+
+
+Table of the most important methods to write data into a file:
+
+=================== ==============
+Name                Description
+=================== ==============
+setText             Save a string value to a file
+setBytes            Save a bytes array to a file
+write               Save a string to a file truncating the actual content
+append              Append a string value to a file without truncating the actual content
+newWriter           Creates a `Writer <http://docs.oracle.com/javase/7/docs/api/java/io/Writer.html>`_ object that allows you to save text data to a file
+newPrintWriter      Creates a `PrintWriter <http://docs.oracle.com/javase/7/docs/api/java/io/PrintWriter.html>`_ object that allows you to write formatted text to a file
+newOutputStream     Creates a `OutputStream <http://docs.oracle.com/javase/7/docs/api/java/io/OutputStream.html>`_ object that allows you to write binary data to a file
+withWriter          Apply the specified closure to a `Writer <http://docs.oracle.com/javase/7/docs/api/java/io/Writer.html>`_ object, closing it when finished.
+withPrintWriter     Apply the specified closure to a `PrintWriter <http://docs.oracle.com/javase/7/docs/api/java/io/PrintWriter.html>`_ object, closing it when finished.
+withOutputStream    Apply the specified closure to a `OutputStream <http://docs.oracle.com/javase/7/docs/api/java/io/OutputStream.html>`_ object, closing it when finished.
+=================== ==============
+
+Read the Java documentation for `Writer <http://docs.oracle.com/javase/7/docs/api/java/io/Writer.html>`_,
+`PrintWriter <http://docs.oracle.com/javase/7/docs/api/java/io/PrintWriter.html>`_ and
+`OutputStream <http://docs.oracle.com/javase/7/docs/api/java/io/OutputStream.html>`_ classes to learn more about
+options available writing data.
+
+
+List directory content
+----------------------
+
+Let's assume that you need to walk through a directory of your choice. You can define the ``myDir`` variable
+that points to it::
+
+    myDir = file('any/path')
+
+The simplest method to get the list of a directory is using the methods ``list`` or ``listFiles``,
+that return a collection of first-level elements (files and directories) in a directory. For example::
+
+    allFiles = myDir.list()
+    for( def file : allFiles ) {
+        println file
+    }
+
+.. note:: The only different between ``list`` and ``listFiles`` is that first returns a list of strings while the latter a
+   list of file objects, that allows you to access file dependent data e.g. size, last modified time, etc.
+
+
+The ``eachFile`` method allows you to iterate through the first-level elements only
+(just like ``listFiles``). As other `each-` methods, they take a closure as an input parameter. For example::
+
+    myDir.eachFile { item ->
+        if( item.isFile() ) {
+            println "${item.getName()} - size: ${item.size()}"
+        }
+        else if( item.isDirectory() ) {
+            println "${item.getName()} - DIR"
+        }
+    }
+
+
+Several variants of the above method are available. See the table below for a complete list.
+
+=================== ==================
+Name                Description
+=================== ==================
+eachFile            Iterate through first-level elements (files and directories). `Read more <http://groovy.codehaus.org/groovy-jdk/java/io/File.html#eachFile(groovy.io.FileType,%20groovy.lang.Closure)>`_
+eachDir             Iterate through first-level directories only. `Read more <http://groovy.codehaus.org/groovy-jdk/java/io/File.html#eachDir(groovy.lang.Closure)>`_
+eachFileMatch       Iterate through files and dirs whose name matches the given filter. `Read more <http://groovy.codehaus.org/groovy-jdk/java/io/File.html#eachFileMatch(java.lang.Object,%20groovy.lang.Closure)>`_
+eachDirMatch        Iterate through directories whose name matches the given filter. `Read more <http://groovy.codehaus.org/groovy-jdk/java/io/File.html#eachDirMatch(java.lang.Object,%20groovy.lang.Closure)>`_
+eachFileRecurse     Iterate through directory elements in a depth-first fashion. `Read more <http://groovy.codehaus.org/groovy-jdk/java/io/File.html#eachFileRecurse(groovy.lang.Closure)>`_
+eachDirRecurse      Iterate through directories in a depth-first fashion (regular files are ignored). `Read more <http://groovy.codehaus.org/groovy-jdk/java/io/File.html#eachDirRecurse(groovy.lang.Closure)>`_
+=================== ==================
+
+
+See also: Channel :ref:`channel-path` method.
+
+
+Create directories
+-------------------
+
+Given a file variable representing a nonexistent directory::
+
+  myDir = file('any/path')
+
+The method ``mkdir`` allows you to create a folder at the given path. It returns a ``true`` value if the folder is created
+successfully, of ``false`` otherwise. ::
+
+   result = myDir.mkdir()
+   println result ? "OK" : "Cannot create folder: $myDir"
+
+.. note:: If the parent directories do not exist, the above method will fail, returning a ``false`` value.
+
+The method ``mkdirs`` allows you to create the directory named by the file object, including any necessary but
+nonexistent parent directories. For example::
+
+    myDir.mkdirs()
+
+
+Copy files
+------------
+
+The method ``copyTo`` method allow you to copy a file into new file or into a directory, or copy a directory to a new
+directory. Having a file variables ``myFile``, the following example shows how copy a file into a new file
+with a different name::
+
+  myFile.copyTo('new_name.txt')
+
+
+.. note:: If a file with the target name already exists, it is replaced by the new one. Note also that if the target is
+  directory, the source file is copied in that specified folder with using the source name.
+
+
+When the source file is a directory, all the directory content is copied to the target folder. For example::
+
+
+  myDir = file('/some/path')
+  myDir.copyTo('/some/new/path')
+
+
+If the target path does not exists, it is created implicitly.
+
+.. tip:: The ``copyTo`` method mimics the semantic of Linux command ``cp -r <source> <target>``
+
+
+
+Move files
+------------
+
+You can move a file by using the method ``moveTo`` as shown in the example below::
+
+  myFile = file('/some/path/file.txt')
+  myFile.moveTo('/another/path/new_file.txt')
+
+
+.. note:: When a file with the same name as the target already exists, it is replaced by the new one. Note also when
+   the target specifies a folder name instead of a file, the source file is moved in that folder with the original name.
+
+When the source file is a directory, all the directory content is moved to the new the destination folder::
+
+  myDir = file('/any/dir_a')
+  myDir.moveTo('/any/dir_b')
+
+
+Please note that the result of the above example depends by the existence of the destination folder. If the destination
+folder exist, the source is moved into the destination folder, thus the resulting path will be::
+
+  /any/dir_b/dir_a
+
+While if the destination folder does not exist, the source is `moved` to that destination name, and so the resulting
+path of the above move operation, would be::
+
+    /any/dir_b
+
+
+.. tip:: The ``moveTo`` method has the same semantic of Linux command ``mv <source> <target>``
+
+
+Rename files
+--------------
+
+Having a file variable created by using the ``file`` method, you can rename a file or a directory by simply using
+the ``renameTo`` file method a showed below::
+
+  myFile.renameTo('new_file_name.txt')
+
+
+Delete files
+--------------
+
+The file method ``delete`` allows you to delete a file or a directory with the given path. It returns a value ``true``
+when the operation completed  successfully or ``false`` if it fails to delete it. For example::
+
+  myFile = file('some/file.txt')
+  result = myFile.delete
+  println result ? "OK" : "Can delete: $myFile"
+
+
+.. note:: The method ``delete`` a directory ONLY if it does not contain any file or sub-directory. In order to delete a
+  directory and ALL its content i.e. removing all the files and sub-directory it may contain use the method ``deleteDir``
+  instead.
+
+
+Check file attributes
+----------------------
+
+The following methods can be used on a file variable created by using the ``file`` method.
+
+==================  ================
+Method              Description
+==================  ================
+getName             Get file name e.g. ``/some/path/file.txt`` -> ``file.txt``
+getBaseName         Get file name e.g. ``/some/path/file.txt`` -> ``file``
+getExtension        Get the file extension e.g. ``/some/path/file.txt`` -> ``txt``
+getParent           Get the file parent path e.g. ``/some/path/file.txt`` -> ``/some/path``
+size                Get the file bytes size
+exists              Returns ``true`` if the file exists, or ``false`` otherwise
+isEmpty             Returns ``true`` if the file is zero length or does not exist, ``false`` otherwise
+isFile              Returns ``true`` if it is a regular file e.g. not a directory
+isDirectory         Returns ``true`` if the file is a directory
+isHidden            Returns ``true`` if the file is hidden
+lastModified        Returns the file last modified timestamp i.e. a long as Linux epoch time
+==================  ================
+
+
+For example, the following line prints a file name and size::
+
+  println "File ${myFile.getName() size: ${myFile.size()}"
+
+
+
+Get and modify file permissions
+---------------------------------
+
+Given a file variable representing any file or a directory, the method
+``getPermissions`` returns a string of nine characters representing the file permission using the
+`Linux symbolic notation <http://en.wikipedia.org/wiki/File_system_permissions#Symbolic_notation>`_
+e.g. ``rw-rw-r--``. For example::
+
+
+  permissions = myFile.getPermissions()
+
+
+In the same way, the method ``setPermissions`` allows you to set the file access permission using the same string
+notation. For example::
+
+    myFile.setPermissions('rwxr-xr-x')
+
+
+A second version of the ``setPermissions`` method allows you to set file permission specifying three digits, representing
+respectively the `owner`, `group` and `other` permission. For example::
+
+    myFile.setPermissions(7,5,5)
+
+
+Learn more about `File permissions numeric notation <http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation>`_.
