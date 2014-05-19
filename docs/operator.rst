@@ -747,8 +747,8 @@ A second version of the ``splitFastq`` operator allows you to split a FASTQ form
 instead of text chunks. A record object contains a set of fields that let you access and manipulate the FASTQ sequence
 data with ease.
 
-In order to split a FASTQ sequences in record objects simply use the ``record`` parameter specifying the map of
-required field, or simply specify ``record: true`` as in the example shown below ::
+In order to split FASTQ sequences into record objects simply use the ``record`` parameter specifying the map of
+the required fields, or just specify ``record: true`` as in the example shown below::
 
    Channel
         .fromPath('misc/sample.fastq')
@@ -761,17 +761,17 @@ The following fields are available when using the ``record`` parameter:
 =============== ============================
 Field           Description
 =============== ============================
-readHeader      The sequence header (without the ``@`` prefix)
+readHeader      Sequence header (without the ``@`` prefix)
 readString      The raw sequence data
-qualityHeader   Base quality header (optional)
-qualityString   The quality values for the sequence
+qualityHeader   Base quality header (it may be empty)
+qualityString   Quality values for the sequence
 =============== ============================
 
 splitText
 ----------
 
-The ``splitText`` operator allows you to split multi-line strings or text file items emitted by a source channel
-in chunks containing `n` lines, which are emitted by the resulting channel.
+The ``splitText`` operator allows you to split multi-line strings or text file items, emitted by a source channel
+into chunks containing `n` lines, which will be emitted by the resulting channel.
 
 For example::
 
@@ -781,9 +781,9 @@ For example::
         .subscribe { print it }
 
 
-It splits the content of the files with suffix ``.txt`` in the specified folder and print it line by line.
+It splits the content of the files with suffix ``.txt``, and prints it line by line.
 
-By default the ``splitText`` operator splits each item in chunks of one line. You can define the number of lines in each chunk by using
+By default the ``splitText`` operator splits each item into chunks of one line. You can define the number of lines in each chunk by using
 the parameter ``by``, as shown in the following example::
 
 
@@ -796,8 +796,8 @@ the parameter ``by``, as shown in the following example::
         }
 
 
-An optional :ref:`closure <script-closure>` can be specified in order to transform the text chunks produced by the operator.
-The following example shows how splits text files in chunks of 10 lines and transform each of them to capital letters::
+An optional :ref:`closure <script-closure>` can be specified in order to `transform` the text chunks produced by the operator.
+The following example shows how to split text files into chunks of 10 lines and transform them to capital letters::
 
      Channel
         .fromPath('/some/path/*.txt')
