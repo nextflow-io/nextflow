@@ -699,7 +699,7 @@ abstract class TaskProcessor {
      * @return The {@code ErrorStrategy} applied
      */
     final synchronized protected ErrorStrategy resumeOrDie( TaskRun task, Throwable error ) {
-        log.debug "Handling unexpected condition for\n  task: $task\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
+        log.trace "Handling unexpected condition for\n  task: $task\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
         try {
             // do not recoverable error, just trow it again
