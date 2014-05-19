@@ -135,23 +135,24 @@ class FilesExtensions {
     }
 
     /**
-     * Copy or a file or a directory. It mimics the semantic of the Linux *cp* command
+     * Copy or a file or a directory content.
+     * It mimics the semantic of Linux {@code cp -r <source> <target>} command.
      *
-     * @param source
-     * @param target
-     * @return
+     * @param source The source file or directory
+     * @param target The target file or directory
+     * @return The target {@link Path} file
      */
     def static File copyTo( File source, File target ) {
         copyTo(source.toPath(), target.toPath()).toFile()
     }
 
     /**
-     * Copy a file or a directory to the target path.
-     * It mimics the semantic of Linux *cp* command.
+     * Copy or a file or a directory content.
+     * It mimics the semantic of Linux {@code cp -r <source> <target>} command.
      *
-     * @param source
-     * @param target
-     * @return
+     * @param source The source file or directory
+     * @param target The target file or directory
+     * @return The target {@link Path} file
      */
     def static Path copyTo( Path source, Path target ) {
 
@@ -212,22 +213,24 @@ class FilesExtensions {
     }
 
     /**
-     * Copy a file  -or- a whole directory to a new file -or- a new directory
+     * Copy or a file or a directory content.
+     * It mimics the semantic of Linux {@code cp -r <source> <target>} command.
      *
-     * @param source
-     * @param target
-     * @return
+     * @param source The source file or directory
+     * @param target The target file or directory
+     * @return The target {@link Path} file
      */
     def static File copyTo( File source, String target ) {
         copyTo(source.toPath(), FileHelper.asPath(target)).toFile()
     }
 
     /**
-     * Copy or a file or a directory. It mimics the semantic of the Linux *cp* command
+     * Copy or a file or a directory content.
+     * It mimics the semantic of Linux {@code cp -r <source> <target>} command.
      *
-     * @param source
-     * @param target
-     * @return
+     * @param source The source file or directory
+     * @param target The target file or directory
+     * @return The target {@link Path} file
      */
     def static Path copyTo( Path source, String target ) {
         copyTo(source, FileHelper.asPath(target))
@@ -382,6 +385,15 @@ class FilesExtensions {
 
     }
 
+    /**
+     * Creates the directory named by this abstract pathname
+     *
+     * @param self The directory to be created
+     * @param attr
+     *          an optional list of file attributes to set atomically when
+     *          creating the directory
+     * @return {@code true} if the directory is created successfully, or {@code false} otherwise
+     */
     def static boolean mkdir(Path self, FileAttribute<?>... attr) {
 
         try {
@@ -394,6 +406,15 @@ class FilesExtensions {
 
     }
 
+    /**
+     * Creates the directory named by this abstract pathname, including any necessary but nonexistent parent directories
+     *
+     * @param self The path to be created
+     * @param attr
+     *          an optional list of file attributes to set atomically when
+     *          creating the directory
+     * @return {@code true} if the directory is created successfully, or {@code false} otherwise
+     */
     def static boolean mkdirs(Path self, FileAttribute<?>... attr) {
 
         try {
