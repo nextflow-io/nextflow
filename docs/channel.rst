@@ -119,6 +119,17 @@ In order the include hidden files you need to start your pattern with a period c
     myFileChannel = Channel.path( '/path/{.*,*}' )
 
 
+Note that the a glob pattern locates any files whose name matches the specified pattern whenever it is a regular file or a directory.
+
+You may use the parameter ``type`` specifying the value ``file`` or ``dir`` to filter regular files or directories respectively. For example::
+
+        myFileChannel = Channel.path( '/path/a*', type: 'file' )
+        myFileChannel = Channel.path( '/path/*b', type: 'dir' )
+
+.. warning:: Symbolic links all returned as regular files, whenever they locate files or directories.
+
+
+
 Learn more about `glob` patterns at `this link <http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob>`_
 
 .. _channel-watch:
