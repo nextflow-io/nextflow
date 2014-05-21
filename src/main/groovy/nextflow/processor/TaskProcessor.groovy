@@ -1356,7 +1356,7 @@ abstract class TaskProcessor {
             // save the context map for caching purpose
             // only the 'cache' is active and
             if( isCacheable() && task.hasCacheableValues() && task.code.delegate != null )
-                (task.code.delegate as DelegateMap).save(task.getCmdContextFile())
+                ((DelegateMap)task.code.delegate).save(task.getCmdContextFile())
 
         }
         catch ( Throwable error ) {
