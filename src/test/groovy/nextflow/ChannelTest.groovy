@@ -233,5 +233,73 @@ class ChannelTest extends Specification {
 
     }
 
+    def testFromPath() {
+
+        setup:
+        def folder = Files.createTempDirectory('testFiles')
+        def file1 = Files.createFile(folder.resolve('file1.txt'))
+        def file2 = Files.createFile(folder.resolve('file2.txt'))
+        def file3 = Files.createFile(folder.resolve('file3.txt'))
+        def sub1 = Files.createDirectories(folder.resolve('sub1'))
+        def file5 = Files.createFile(sub1.resolve('file5.log'))
+
+        when:
+        def result = Channel.path( folder.toAbsolutePath().toString() + '/*.txt' )
+        then:
+        result.val.name == 'file1.txt'
+        result.val.name == 'file2.txt'
+        result.val.name == 'file3.txt'
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.path( folder.toAbsolutePath().toString() + '/*' )
+        then:
+        result.val.name == 'file1.txt'
+        result.val.name == 'file2.txt'
+        result.val.name == 'file3.txt'
+        result.val.name == 'sub1'
+        result.val == Channel.STOP
+
+
+        when:
+        result = Channel.path( folder.toAbsolutePath().toString() + '/*', type: 'file' )
+        then:
+        result.val.name == 'file1.txt'
+        result.val.name == 'file2.txt'
+        result.val.name == 'file3.txt'
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.path( folder.toAbsolutePath().toString() + '/*', type: 'dir' )
+        then:
+        result.val.name == 'sub1'
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.path( folder.toAbsolutePath().toString() + '/*', type: 'any' )
+        then:
+        result.val.name == 'file1.txt'
+        result.val.name == 'file2.txt'
+        result.val.name == 'file3.txt'
+        result.val.name == 'sub1'
+        result.val == Channel.STOP
+
+        when:
+        Channel.path( folder.toAbsolutePath().toString() + '/*', xx: 'any' )
+        then:
+        thrown( IllegalArgumentException )
+
+        when:
+        Channel.path( folder.toAbsolutePath().toString() + '/*', type: 'ciao' )
+        then:
+        thrown( IllegalArgumentException )
+
+
+        cleanup:
+        folder?.deleteDir()
+
+
+    }
+
 
 }
