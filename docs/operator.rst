@@ -1068,10 +1068,10 @@ in a similar manner as shown for the `phase`_ operator.
 collectFile
 ------------
 
-The ``collectFile`` operators allows you to gather the items emitted by a channel to one ore more files. The operator
-returns a channel that emits the collected file(s).
+The ``collectFile`` operator allows you to gather the items emitted by a channel and save them to one or more files.
+The operator returns a new channel that emits the collected file(s).
 
-In the most simplest cast, just specify the name of a file where the entries will be stored. For example::
+In the simplest case, just specify the name of a file where the entries have to be stored. For example::
 
     Channel
         .from('alpha', 'beta', 'gamma')
@@ -1083,10 +1083,10 @@ In the most simplest cast, just specify the name of a file where the entries wil
 
 
 
-A second version of the ``collectFile`` operator allows you to gather the items emitted by a channel and group them
-to files whose name can be defined by a dynamic criteria. The grouping criteria is specified by a
-:ref:`closure <script-closure>` that must return a pair in which the first element define the group file name and
-the second item the actual value to append to that file. For example::
+A second version of the ``collectFile`` operator allows you to gather the items emitted by a channel and group them together
+into files whose name can be defined by a dynamic criteria. The grouping criteria is specified by a :ref:`closure <script-closure>`
+that must return a pair in which the first element defines the file name for the group and the second element the actual
+value to be appended to that file. For example::
 
      Channel
         .from('Hola', 'Ciao', 'Hello', 'Bonjour', 'Halo')
@@ -1112,7 +1112,7 @@ It will print::
     Ciao
 
 
-.. tip:: When the emits emitted by the source channel are files, the grouping criteria can be omitted. In this case
+.. tip:: When the items emitted by the source channel are files, the grouping criteria can be omitted. In this case
   the items content will be grouped in file(s) having the same name as the source items.
 
 
@@ -1121,9 +1121,9 @@ The following parameters can be used with the ``collectFile`` operator:
 =============== ========================
 Name            Description
 =============== ========================
-name            Name of the file where store all received values
-seed            A value or a map of valued used to initialise the file content
-newLine         Append a ``newline`` character automatically after each entry (default: ``false``)
+name            Name of the file where all received values are stored
+seed            A value or a map of values used to initialise the files content
+newLine         Appends a ``newline`` character automatically after each entry (default: ``false``)
 storeDir        Folder where the resulting file(s) will be stored
 =============== ========================
 
@@ -1131,9 +1131,9 @@ concat
 --------
 
 The ``concat`` operator allows you to `concatenate` the items emitted by two or more channels to a new channel, in such
-a way that the items emitted by the resulting channel are in same order as the channels were specified on operator invocation.
+a way that the items emitted by the resulting channel are in same order as they were when specified as operator arguments.
 
-In other words, it guarantees that given any `n` channels, the concatenation channel emits the items proceeding from the channel `i+1 th`
+In other words it guarantees that given any `n` channels, the concatenation channel emits the items proceeding from the channel `i+1 th`
 only after `all` the items proceeding from the channel `i th` were emitted.
 
 For example::
