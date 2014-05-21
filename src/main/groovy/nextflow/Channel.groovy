@@ -19,8 +19,13 @@
  */
 
 package nextflow
-import static java.nio.file.StandardWatchEventKinds.*
 
+import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
+import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
+import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
+import static java.nio.file.StandardWatchEventKinds.OVERFLOW
+
+import java.nio.file.FileVisitOption
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -38,6 +43,7 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.ControlMessage
 import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.util.CheckHelper
 import nextflow.util.Duration
 import org.codehaus.groovy.runtime.NullObject
 /**
@@ -132,25 +138,27 @@ class Channel {
         return channel
     }
 
-    static DataflowChannel<Path> fromPath( filePattern ) {
+    static DataflowChannel<Path> fromPath( Map options = null, filePattern ) {
+
         assert filePattern
 
         if( filePattern instanceof Pattern )
-            fromPath(filePattern)
+            fromPath(options, filePattern)
 
         else
-            fromPath(filePattern.toString())
+            fromPath(options, filePattern.toString())
     }
 
-    static DataflowChannel<Path> fromPath( Pattern filePattern ) {
+    static DataflowChannel<Path> fromPath( Map options = null, Pattern filePattern ) {
         assert filePattern
         // split the folder and the pattern
         def ( String folder, String pattern ) = getFolderAndPattern(filePattern.toString())
-        pathImpl( 'regex', folder, pattern, false )
+        pathImpl( 'regex', folder, pattern, options )
     }
 
 
-    static DataflowChannel<Path> fromPath( String filePattern ) {
+    static DataflowChannel<Path> fromPath( Map options = null, String filePattern ) {
+
         assert filePattern
 
         boolean glob  = false
@@ -165,7 +173,7 @@ class Channel {
         // split the folder and the pattern
         def ( String folder, String pattern ) = getFolderAndPattern(filePattern)
 
-        pathImpl('glob', folder, pattern, pattern.startsWith('*')  )
+        pathImpl('glob', folder, pattern, options )
     }
 
     static DataflowChannel<Path> path( filePattern ) {
@@ -183,6 +191,16 @@ class Channel {
         fromPath(filePattern)
     }
 
+    /*
+     * valid parameters for fromPath operator
+     */
+    static private Map VALID_PATH_PARAMS = [
+            type:['file','dir','any'],
+            followLinks: [false, true],
+            hidden: [false, true],
+            maxDepth: null
+            ]
+
     /**
      * Implement the logic for files matching
      *
@@ -192,22 +210,41 @@ class Channel {
      * @param skipHidden Whenever skip the hidden files
      * @return A dataflow channel instance emitting the file matching the specified criteria
      */
-    static private DataflowChannel<Path> pathImpl( String syntax, String folder, String pattern, boolean skipHidden )  {
+    static private DataflowChannel<Path> pathImpl( String syntax, String folder, String pattern, Map options )  {
         assert syntax in ['regex','glob']
-        log.debug "files for syntax: $syntax; folder: $folder; pattern: $pattern; skipHidden: $skipHidden"
+        log.debug "files for syntax: $syntax; folder: $folder; pattern: $pattern; options: ${options}"
+
+        // verify that the 'type' parameter has a valid value
+        CheckHelper.checkParamsMap( 'path', options, VALID_PATH_PARAMS )
+        final type = options?.type ?: 'file'
+        final walkOptions = options?.followLinks == false ? EnumSet.noneOf(FileVisitOption.class) : EnumSet.of(FileVisitOption.FOLLOW_LINKS)
+        final int maxDepth = options?.maxDepth ? options.maxDepth as int : Integer.MAX_VALUE
+        final includeHidden = options?.hidden as Boolean ?: pattern.startsWith('.')
 
         // now apply glob file search
         def path = folder as Path
         def rule = "$syntax:${folder}${pattern}"
         def matcher = path.getFileSystem().getPathMatcher(rule)
         def channel = new DataflowQueue<Path>()
+        boolean includeDir = type in ['dir','any']
+        boolean includeFile = type in ['file','any']
 
         Thread.start {
 
-            Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+            Files.walkFileTree(path, walkOptions, maxDepth, new SimpleFileVisitor<Path>() {
+
+                @Override
+                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException
+                {
+                    if (includeDir && matcher.matches(dir) && ( includeHidden || !Files.isHidden(dir) )) {
+                        channel.bind(dir.toAbsolutePath())
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attr) throws IOException {
-                    if (matcher.matches(file) && ( !skipHidden || !Files.isHidden(file) )) {
+                    if (includeFile && matcher.matches(file) && ( includeHidden || !Files.isHidden(file) ) && !Files.isDirectory(file)) {
                         channel.bind(file.toAbsolutePath())
                     }
                     return FileVisitResult.CONTINUE;

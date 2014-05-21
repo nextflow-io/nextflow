@@ -21,7 +21,7 @@ abstract class AbstractBinarySplitter extends AbstractSplitter<InputStream> {
             return (InputStream) obj
 
         if( obj instanceof byte[] )
-            return new ByteArrayInputStream(obj)
+            return new ByteArrayInputStream((byte[])obj)
 
         if( obj instanceof CharSequence )
             return new ByteArrayInputStream(obj.toString().bytes)

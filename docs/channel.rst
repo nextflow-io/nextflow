@@ -139,15 +139,35 @@ in all the  its sub-folders. While the second only the files with the same suffi
 
 .. note:: As in Linux BASH the ``*`` wildcard does not match against hidden files (i.e. files which name starts a ``.`` character).
 
-In order the include hidden files you need to start your pattern with a period character. For example::
+In order the include hidden files you need to start your pattern with a period character or specify the ``hidden: true`` option. For example::
 
     expl1 = Channel.fromPath( '/path/.*' )
     expl2 = Channel.fromPath( '/path/.*.fa' )
-    expl3 = Channel.fromPath( '/path/{.*,*}' )
+    expl3 = Channel.fromPath( '/path/*', hidden: true )
 
 
 The first example returns all hidden files in the path the specified path. The second one, returns all hidden files
 ending with ``.fa``. Finally, the last example returns all files (hidden and non-hidden) in that path
+
+By default, a glob pattern only look for `regular file` paths that match the specified criteria, i.e. it does not return directory paths.
+
+You may use the parameter ``type`` specifying the value ``file``, ``dir`` or ``any`` in order to define what kind of paths
+you need. For example::
+
+        myFileChannel = Channel.fromPath( '/path/*b', type: 'dir' )
+        myFileChannel = Channel.fromPath( '/path/a*', type: 'any' )
+
+The first example will returns all directory paths ending with ``b``, while the second any file or directory starting with a ``a``.
+
+
+=============== ===================
+Name            Description
+=============== ===================
+type            Type of paths returned, either ``file``, ``dir`` or ``any`` (default: ``file``)
+hidden          When ``true`` includes hidden files in the resulting paths (default: ``false``)
+maxDepth        Maximum number of directory levels to visit (default: `no limit`)
+followLinks     When ``true`` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: ``true``)
+=============== ===================
 
 
 Learn more about `glob` patterns at `this link <http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob>`_

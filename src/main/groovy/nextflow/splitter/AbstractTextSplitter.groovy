@@ -44,7 +44,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
             return new FileReader(obj)
 
         if( obj instanceof char[] )
-            return new StringReader(new String(obj))
+            return new StringReader(new String((char[])obj))
 
         throw new IllegalArgumentException("Object of class '${obj.class.name}' does not support 'chopString' method")
 

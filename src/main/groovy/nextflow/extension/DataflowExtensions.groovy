@@ -1195,9 +1195,9 @@ class DataflowExtensions {
     static final BUFFER_PARAMS = ['size','skip','remainder']
 
     static void checkParamsMap( String name, List<String> valid,  Map<String,?> params )  {
-        params.each {
+        params?.each {
             if( !valid.contains(it.key) )
-                throw new IllegalArgumentException("Unknown argument argument '${it.key}' for operator '$name' -- Possible arguments: ${valid.join(', ')}")
+                throw new IllegalArgumentException("Unknown argument '${it.key}' for operator '$name' -- Possible arguments: ${valid.join(', ')}")
         }
     }
 
