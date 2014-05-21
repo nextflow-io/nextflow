@@ -23,6 +23,8 @@ version = '0.8.0'
 
 allprojects {
     apply plugin: 'groovy'
+    sourceCompatibility = 1.7
+    targetCompatibility = 1.7
 
     repositories {
         flatDir(dirs: file('lib'))
@@ -42,8 +44,6 @@ allprojects {
         }
     }
 
-    sourceCompatibility = 7
-    targetCompatibility = 7
 }
 
 configurations {
