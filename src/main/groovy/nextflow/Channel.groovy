@@ -25,6 +25,7 @@ import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
 import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
 import static java.nio.file.StandardWatchEventKinds.OVERFLOW
 
+import java.nio.file.FileVisitOption
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -160,15 +161,15 @@ class Channel {
             path(filePattern.toString())
     }
 
-    static DataflowChannel<Path> path( Map params = null, Pattern filePattern ) {
+    static DataflowChannel<Path> path( Map options = null, Pattern filePattern ) {
         assert filePattern
         // split the folder and the pattern
         def ( String folder, String pattern ) = getFolderAndPattern(filePattern.toString())
-        filesImpl( 'regex', folder, pattern, false, params )
+        filesImpl( 'regex', folder, pattern, options )
     }
 
 
-    static DataflowChannel<Path> path( Map params = null, String filePattern ) {
+    static DataflowChannel<Path> path( Map options = null, String filePattern ) {
         assert filePattern
 
         boolean glob  = false
@@ -183,10 +184,18 @@ class Channel {
         // split the folder and the pattern
         def ( String folder, String pattern ) = getFolderAndPattern(filePattern)
 
-        filesImpl('glob', folder, pattern, pattern.startsWith('*'), params )
+        filesImpl('glob', folder, pattern, options )
     }
 
-    static private Map VALID_PATH_PARAMS = [ type:['file','dir','any']]
+    /*
+     * valid parameters for fromPath operator
+     */
+    static private Map VALID_PATH_PARAMS = [
+            type:['file','dir','any'],
+            followLinks: [false, true],
+            hidden: [false, true],
+            maxDepth: null
+            ]
 
     /**
      * Implement the logic for files matching
@@ -197,13 +206,16 @@ class Channel {
      * @param skipHidden Whenever skip the hidden files
      * @return A dataflow channel instance emitting the file matching the specified criteria
      */
-    static private DataflowChannel<Path> filesImpl( String syntax, String folder, String pattern, boolean skipHidden, Map params )  {
+    static private DataflowChannel<Path> filesImpl( String syntax, String folder, String pattern, Map options )  {
         assert syntax in ['regex','glob']
-        log.debug "files for syntax: $syntax; folder: $folder; pattern: $pattern; skipHidden: $skipHidden"
+        log.debug "files for syntax: $syntax; folder: $folder; pattern: $pattern; options: ${options}"
 
         // verify that the 'type' parameter has a valid value
-        CheckHelper.checkParamsMap( 'path', params, VALID_PATH_PARAMS )
-        def type = params?.type ?: 'any'
+        CheckHelper.checkParamsMap( 'path', options, VALID_PATH_PARAMS )
+        final type = options?.type ?: 'file'
+        final walkOptions = options?.followLinks == false ? EnumSet.noneOf(FileVisitOption.class) : EnumSet.of(FileVisitOption.FOLLOW_LINKS)
+        final int maxDepth = options?.maxDepth ? options.maxDepth as int : Integer.MAX_VALUE
+        final includeHidden = options?.hidden as Boolean ?: pattern.startsWith('.')
 
         // now apply glob file search
         def path = folder as Path
@@ -215,12 +227,12 @@ class Channel {
 
         Thread.start {
 
-            Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+            Files.walkFileTree(path, walkOptions, maxDepth, new SimpleFileVisitor<Path>() {
 
                 @Override
                 public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException
                 {
-                    if (includeDir && matcher.matches(dir) && ( !skipHidden || !Files.isHidden(dir) )) {
+                    if (includeDir && matcher.matches(dir) && ( includeHidden || !Files.isHidden(dir) )) {
                         channel.bind(dir.toAbsolutePath())
                     }
                     return FileVisitResult.CONTINUE;
@@ -228,7 +240,7 @@ class Channel {
 
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attr) throws IOException {
-                    if (includeFile && matcher.matches(file) && ( !skipHidden || !Files.isHidden(file) )) {
+                    if (includeFile && matcher.matches(file) && ( includeHidden || !Files.isHidden(file) ) && !Files.isDirectory(file)) {
                         channel.bind(file.toAbsolutePath())
                     }
                     return FileVisitResult.CONTINUE;

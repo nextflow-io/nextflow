@@ -107,7 +107,7 @@ Creates a channel and sends over it as many ``Path`` items as many are the files
 
 .. note:: As in Linux BASH the ``*`` wildcard does not match against hidden files (i.e. files which name starts a ``.`` character).
 
-In order the include hidden files you need to start your pattern with a period character. For example::
+In order the include hidden files you need to start your pattern with a period character or specify the ``hidden: true`` option. For example::
 
     // returns all hidden files in the path
     myFileChannel = Channel.path( '/path/.*' )
@@ -116,18 +116,28 @@ In order the include hidden files you need to start your pattern with a period c
     myFileChannel = Channel.path( '/path/.*.fa' )
 
     // returns all files (hidden and non-hidden)
-    myFileChannel = Channel.path( '/path/{.*,*}' )
+    myFileChannel = Channel.path( '/path/*', hidden: true )
 
 
-Note that the a glob pattern locates any files whose name matches the specified pattern whenever it is a regular file or a directory.
+By default, a glob pattern only look for `regular file` paths that match the specified criteria, i.e. it does not return directory paths.
 
-You may use the parameter ``type`` specifying the value ``file`` or ``dir`` to filter regular files or directories respectively. For example::
+You may use the parameter ``type`` specifying the value ``file``, ``dir`` or ``any`` in order to define what kind of paths
+you need. For example::
 
-        myFileChannel = Channel.path( '/path/a*', type: 'file' )
         myFileChannel = Channel.path( '/path/*b', type: 'dir' )
+        myFileChannel = Channel.path( '/path/a*', type: 'any' )
 
-.. warning:: Symbolic links all returned as regular files, whenever they locate files or directories.
+The first example will returns all directory paths ending with ``b``, while the second any file or directory starting with a ``a``.
 
+
+=============== ===================
+Name            Description
+=============== ===================
+type            Type of paths returned, either ``file``, ``dir`` or ``any`` (default: ``file``)
+hidden          When ``true`` includes hidden files in the resulting paths (default: ``false``)
+maxDepth        Maximum number of directory levels to visit (default: `no limit`)
+followLinks     When ``true`` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: ``true``)
+=============== ===================
 
 
 Learn more about `glob` patterns at `this link <http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob>`_
