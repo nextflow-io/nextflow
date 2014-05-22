@@ -114,7 +114,7 @@ class ParallelTaskProcessor extends TaskProcessor {
          * - when there is at least one shared variable it is executed in serial mode (maxForks==1) to guarantee thread safe access
          * - otherwise use the value defined by the user via 'taskConfig'
          */
-        def maxForks = session.config.poolSize
+        def maxForks = session.poolSize
         if( sharedCount ) {
             log.debug "Process declares shared inputs -- Using thread safe mode (maxForks=1)"
             maxForks = 1
