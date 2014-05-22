@@ -56,28 +56,35 @@ class DockerBuilderTest extends Specification {
 
         setup:
         def envFile = Paths.get('env-file')
-        def files =  [Paths.get('/home/db'), Paths.get('/home/db') ]
+        def db_file = Paths.get('/home/db')
 
         expect:
         new DockerBuilder('fedora').build().toString() == 'docker run --rm -u $(id -u) -v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp -v $PWD:$PWD -w $PWD fedora'
         new DockerBuilder('fedora').addEnv(envFile).build().toString() == 'docker run --rm -u $(id -u) -e "BASH_ENV=env-file" -v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp -v $PWD:$PWD -w $PWD fedora'
-        new DockerBuilder('fedora').addEnv(envFile).addMount(files).build().toString() == 'docker run --rm -u $(id -u) -e "BASH_ENV=env-file" -v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp -v /home/db:/home/db -v $PWD:$PWD -w $PWD fedora'
+        new DockerBuilder('fedora')
+                .addEnv(envFile)
+                .addMount(db_file)
+                .addMount(db_file) // <-- add twice the same to prove that the final string won't contain duplicates
+                .build()
+                .toString() == 'docker run --rm -u $(id -u) -e "BASH_ENV=env-file" -v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp -v /home/db:/home/db -v $PWD:$PWD -w $PWD fedora'
 
     }
 
+    def testAddMount() {
 
-//
-//    def testDockerRunCommandLineWithFiles() {
-//
-//        when:
-//        def fileHolders = new HashMap<?,List<FileHolder>>()
-//        fileHolders[ new FileInParam(null,[]) ] = [FileHolder.get('/home/data/sequences', 'file.txt')]
-//        fileHolders[ new FileInParam(null,[]) ] = [FileHolder.get('/home/data/file1','seq_1.fa'), FileHolder.get('/home/data/file2','seq_2.fa'), FileHolder.get('/home/data/file3','seq_3.fa') ]
-//
-//        then:
-//        DockerHelper.getRun('ubuntu', fileHolders, null ).toString() == 'docker run --rm -v /home/data:/home/data -v $PWD:$PWD -w $PWD ubuntu'
-//
-//    }
+        when:
+        def docker = new DockerBuilder('fedora')
+        docker.addMount(Paths.get('hello'))
+        then:
+        docker.mounts.size() == 1
+        docker.mounts.contains(Paths.get('hello'))
+
+        when:
+        docker.addMount(null)
+        then:
+        docker.mounts.size() == 1
+
+    }
 
 
 }
