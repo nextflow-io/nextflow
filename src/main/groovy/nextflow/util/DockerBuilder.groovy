@@ -52,12 +52,6 @@ class DockerBuilder {
         return this
     }
 
-    DockerBuilder addMount( Collection<Path> paths ) {
-        if( paths )
-            mounts.addAll( paths )
-        return this
-    }
-
     DockerBuilder addMountForInputs( Map<?,List<FileHolder>> inputFiles ) {
 
         mounts.addAll( inputFilesToPaths(inputFiles) )
