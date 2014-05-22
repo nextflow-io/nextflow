@@ -847,8 +847,7 @@ class DataflowExtensionsTest extends Specification {
 
         then:
         IllegalArgumentException e = thrown()
-        e.message == "Unknown argument argument 'xxx' for operator 'buffer' -- Possible arguments: size, skip, remainder"
-
+        e.message == "Unknown argument 'xxx' for operator 'buffer' -- Possible arguments: size, skip, remainder"
 
     }
 

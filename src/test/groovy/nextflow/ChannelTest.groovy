@@ -19,9 +19,12 @@
  */
 
 package nextflow
+import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
+import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
+import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
+
 import java.nio.file.Files
 import java.nio.file.Paths
-import static java.nio.file.StandardWatchEventKinds.*
 
 import spock.lang.Specification
 /**
@@ -130,7 +133,7 @@ class ChannelTest extends Specification {
 
 
         when:
-        channel = Channel.path("$folder/{.*,*}")
+        channel = Channel.path("$folder/{.*,*}", hidden: true)
         then:
         channel.val == folder.resolve('.alpha.txt')
         channel.val == folder.resolve('.beta.txt')
@@ -233,151 +236,7 @@ class ChannelTest extends Specification {
 
     }
 
-    def testFromPath() {
 
-        setup:
-        def folder = Files.createTempDirectory('testFiles')
-        def file1 = Files.createFile(folder.resolve('file1.txt'))
-        def file2 = Files.createFile(folder.resolve('file2.txt'))
-        def file3 = Files.createFile(folder.resolve('file3.txt'))
-        def sub1 = Files.createDirectories(folder.resolve('sub1'))
-        def file5 = Files.createFile(sub1.resolve('file5.log'))
-
-        when:
-        def result = Channel.path( folder.toAbsolutePath().toString() + '/*.txt' )
-        then:
-        result.val.name == 'file1.txt'
-        result.val.name == 'file2.txt'
-        result.val.name == 'file3.txt'
-        result.val == Channel.STOP
-
-        when:
-        result = Channel.path( folder.toAbsolutePath().toString() + '/*' )
-        then:
-        result.val.name == 'file1.txt'
-        result.val.name == 'file2.txt'
-        result.val.name == 'file3.txt'
-        result.val == Channel.STOP
-
-
-        when:
-        result = Channel.path( folder.toAbsolutePath().toString() + '/*', type: 'file' )
-        then:
-        result.val.name == 'file1.txt'
-        result.val.name == 'file2.txt'
-        result.val.name == 'file3.txt'
-        result.val == Channel.STOP
-
-        when:
-        result = Channel.path( folder.toAbsolutePath().toString() + '/*', type: 'dir' )
-        then:
-        result.val.name == 'sub1'
-        result.val == Channel.STOP
-
-        when:
-        result = Channel.path( folder.toAbsolutePath().toString() + '/*', type: 'any' )
-        then:
-        result.val.name == 'file1.txt'
-        result.val.name == 'file2.txt'
-        result.val.name == 'file3.txt'
-        result.val.name == 'sub1'
-        result.val == Channel.STOP
-
-
-        when:
-        result = Channel
-                    .path( folder.toAbsolutePath().toString() + '/**', type: 'file' )
-                    .toSortedList()
-                    .getVal()
-                     .collect { it.name }
-        then:
-        result == ['file1.txt', 'file2.txt', 'file3.txt', 'file5.log' ]
-
-        when:
-        def result2 = Channel
-                    .path( folder.toAbsolutePath().toString() + '/**', type: 'file', maxDepth: 1 )
-                    .toSortedList()
-                    .getVal()
-                    .collect { it.name }
-        then:
-        result2 == ['file1.txt', 'file2.txt', 'file3.txt' ]
-
-        when:
-        Channel.path( folder.toAbsolutePath().toString() + '/*', xx: 'any' )
-        then:
-        thrown( IllegalArgumentException )
-
-        when:
-        Channel.path( folder.toAbsolutePath().toString() + '/*', type: 'ciao' )
-        then:
-        thrown( IllegalArgumentException )
-
-        cleanup:
-        folder?.deleteDir()
-
-    }
-
-
-    def testFromPathWithLinks() {
-
-        setup:
-        def folder = Files.createTempDirectory('testFiles')
-        def file1 = Files.createFile(folder.resolve('file1.txt'))
-        def file2 = Files.createFile(folder.resolve('file2.txt'))
-        def sub1 = Files.createDirectories(folder.resolve('sub_1'))
-        def file3 = Files.createFile(sub1.resolve('file3.txt'))
-        def file4 = Files.createFile(sub1.resolve('file4.txt'))
-        Files.createSymbolicLink(folder.resolve('link_to_sub1'), sub1 )
-
-        // -- by default traverse symlinks
-        when:
-        def result = Channel.path( folder.toAbsolutePath().toString() + '/**/*.txt' ).toSortedList({it.name}).getVal().collect { it.getName() }
-        then:
-        result == ['file3.txt','file3.txt','file4.txt','file4.txt']
-
-        // -- switch off symlinks traversing
-        when:
-        def result2 = Channel.path( folder.toAbsolutePath().toString() + '/**/*.txt', followLinks: false ).toSortedList({it.name}).getVal().collect { it.getName() }
-        then:
-        result2 == ['file3.txt','file4.txt']
-
-        cleanup:
-        folder?.deleteDir()
-
-
-    }
-
-
-    def testFromPathHiddens() {
-
-        setup:
-        def folder = Files.createTempDirectory('testFiles')
-        Files.createFile(folder.resolve('file1.txt'))
-        Files.createFile(folder.resolve('file2.txt'))
-        Files.createFile(folder.resolve('.file_hidden.txt'))
-
-        // -- by default no hidden
-        when:
-        def result = Channel.path( folder.toAbsolutePath().toString() + '/*.txt' ).toSortedList({it.name}).getVal().collect { it.getName() }
-        then:
-        result == ['file1.txt','file2.txt']
-
-        when:
-        result = Channel.path( folder.toAbsolutePath().toString() + '/.*.txt' ).toSortedList({it.name}).getVal().collect { it.getName() }
-        then:
-        result == ['.file_hidden.txt']
-
-        when:
-        result = Channel.path( folder.toAbsolutePath().toString() + '/*.txt', hidden: true ).toSortedList({it.name}).getVal().collect { it.getName() }
-        then:
-        result == ['.file_hidden.txt', 'file1.txt','file2.txt']
-
-
-        cleanup:
-        folder?.deleteDir()
-
-
-    }
 
 
 }
