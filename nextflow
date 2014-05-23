@@ -110,7 +110,7 @@ NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
 
 if [ ! -f "$NXF_BIN" ]; then
     # Check Java version
-    java -version 2>&1 | awk '/version/ {print $3}' | grep '"1\.7\..*"' > /dev/null
+    java -version 2>&1 | awk '/version/ {print $3}' | grep '"1\.[7|8]\..*"' > /dev/null
     if [ $? -ne 0 ]; then
          echo "Error: cannot find Java or it's a wrong version --  please make sure that Java 7 it's installed"
          exit 1
