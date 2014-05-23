@@ -768,11 +768,11 @@ class CliRunner {
       Version: ${Const.APP_VER} build ${Const.APP_BUILDNUM}
       Last modified: ${Const.APP_TIMESTAMP_UTC} ${Const.deltaLocal()}
       Os: ${System.getProperty('os.name')} ${System.getProperty('os.version')}
-      Addr: ${getLocalNameAndAddress()}
       Groovy: ${GroovySystem.getVersion()}
       Jvm: ${System.getProperty('java.vendor')} ${System.getProperty('java.runtime.version')}
       Opts: ${ManagementFactory.getRuntimeMXBean().getInputArguments().join(' ')}
-      File encoding: ${System.getProperty('file.encoding')} - ${System.getProperty('sun.jnu.encoding')}"""
+      Encoding: ${System.getProperty('file.encoding')} (${System.getProperty('sun.jnu.encoding')})
+      Address: ${getLocalNameAndAddress()}"""
 
     }
 

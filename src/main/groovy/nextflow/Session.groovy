@@ -210,7 +210,6 @@ class Session {
 
     void destroy() {
         log.trace "Session destroying"
-        //if( pgroup ) pgroup.shutdown()
         if( execService ) execService.shutdown()
         shutdown()
         log.debug "Session destroyed"
