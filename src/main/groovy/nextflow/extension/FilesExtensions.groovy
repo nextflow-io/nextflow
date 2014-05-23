@@ -1133,4 +1133,55 @@ class FilesExtensions {
         createDirIfNotExists(target.toPath())
     }
 
+    static Path plus( Path path, String other ) {
+        if( !other )
+            return path
+
+        def parent = path.getParent()
+        if( parent ) {
+            parent.resolve( path.getName() + other )
+        }
+        else {
+            path.getFileSystem().getPath( path.toString() + other )
+        }
+    }
+
+    static Path plus( Path path, Path other ) {
+        plus(path, other?.toString())
+    }
+
+    static Path div( Path path, String other ) {
+        if( !other )
+            return path
+
+        path.resolve(other)
+    }
+
+    static Path div( Path path, Path other ) {
+        if( !other )
+            return path
+
+        path.resolve(other)
+    }
+
+    static Path minus(Path path, int i) {
+        def result = path
+        while( i-- > 0 && result != null )
+            result = result.getParent()
+
+        return result
+    }
+
+//    static Path or( Path path, String other ) {
+//        path.resolveSibling(other)
+//    }
+//
+//    static Path or( Path path, Path other ) {
+//        path.resolveSibling(other)
+//    }
+//
+//    static Path previous(Path path) {
+//        path.getParent()
+//    }
+
 }
