@@ -19,6 +19,8 @@
  */
 
 package nextflow
+
+import java.nio.file.Files
 import java.nio.file.Paths
 
 import groovyx.gpars.dataflow.DataflowVariable
@@ -107,24 +109,19 @@ class NextflowTest extends Specification {
     def testFileWithWildcards() {
 
         setup:
-        new File('hola1').text = 'abc'
-        new File('helo2').text = 'abc'
-        new File('hello3').text = 'abc'
-
-        def h1 = Paths.get('hola1').toAbsolutePath()
-        def h2 = Paths.get('helo2').toAbsolutePath()
-        def h3 = Paths.get('hello3').toAbsolutePath()
+        def folder = Files.createTempDirectory('nxftest') .toAbsolutePath()
+        folder.resolve('hola1').text = 'abc'
+        folder.resolve('helo2').text = 'abc'
+        folder.resolve('hello3').text = 'abc'
 
         expect:
-        Nextflow.file('ciao*') == []
-        Nextflow.file('hel*').sort() == [ h2, h3 ].sort()
-        Nextflow.file('hol??') == [ h1  ]
+        Nextflow.file(folder.toString() + '/ciao*') == []
+        Nextflow.file(folder.toString() + '/hel*').sort().collect { it.name } == [ 'helo2','hello3' ].sort()
+        Nextflow.file(folder.toString() + '/hol??').collect { it.name } == [ 'hola1' ]
 
 
         cleanup:
-        h1.delete()
-        h2.delete()
-        h3.delete()
+        folder?.delete()
 
     }
 
