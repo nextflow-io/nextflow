@@ -28,6 +28,7 @@ public class NextflowDelegatingMetaClass extends groovy.lang.DelegatingMetaClass
     @Override
     public Object invokeMethod(Object obj, String methodName, Object[] args)
     {
+        int len = args != null ? args.length : 0;
 
         /*
          * Implements the 'isEmpty' method for {@link Path} and {@link File} objects.
@@ -35,12 +36,13 @@ public class NextflowDelegatingMetaClass extends groovy.lang.DelegatingMetaClass
          *
          * See http://jira.codehaus.org/browse/GROOVY-6363
          */
-        if( "isEmpty".equals(methodName) && args != null && args.length==0 ) {
+        if( "isEmpty".equals(methodName) && len==0 ) {
             if( obj instanceof File)
                 return FileHelper.empty((File)obj);
             if( obj instanceof Path )
                 return FileHelper.empty((Path)obj);
         }
+
 
         /*
          * invoke the method
@@ -60,7 +62,7 @@ public class NextflowDelegatingMetaClass extends groovy.lang.DelegatingMetaClass
             // can be invoked as:
             // queue.separate( x, y, z ) { ... }
             if( checkOpenArrayDataflowMethod(NAMES, obj, methodName, args) ) {
-                Object[] newArgs = new Object[] { toListOfChannel(args), args[args.length - 1] };
+                Object[] newArgs = new Object[] { toListOfChannel(args), args[len - 1] };
                 return delegate.invokeMethod(obj, methodName, newArgs);
             }
 
