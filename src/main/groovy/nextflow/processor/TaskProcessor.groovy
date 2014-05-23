@@ -67,6 +67,15 @@ import nextflow.util.FileHelper
 @Slf4j
 abstract class TaskProcessor {
 
+    enum RunType {
+        SUBMIT('Submitted process'),
+        RETRY('Re-submitted process'),
+        MERGE('Running merge');
+
+        String message;
+
+        RunType(String str) { message=str };
+    }
 
     /**
      * Global count of all task instances
@@ -447,27 +456,6 @@ abstract class TaskProcessor {
         return task
     }
 
-    /**
-     * Given an {@code HashCode} instance renders only the first 8 characters using the format showed below:
-     *      <pre>
-     *          2f/0075a6
-     *     </pre>
-     *
-     *
-     * @param hash An {@code HashCode} object
-     * @return The short representation of the specified hash code as string
-     */
-    final protected getHashLog( HashCode hash ) {
-        def str = hash.toString()
-        def result = new StringBuilder()
-        result << str[0]
-        result << str[1]
-        result << '/'
-        for( int i=2; i<8 && i<str.size(); i++ ) {
-            result << str[i]
-        }
-        return result.toString()
-    }
 
     /**
      * Try to check if exists a previously executed process result in the a cached folder. If it exists
@@ -484,7 +472,7 @@ abstract class TaskProcessor {
      *      or {@code true} if the task has been submitted for execution
      *
      */
-    final protected boolean checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache, String script = null ) {
+    final protected boolean checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache, RunType runType, String script = null ) {
 
         int tries = 0
         while( true ) {
@@ -516,7 +504,7 @@ abstract class TaskProcessor {
             log.trace "[${task.name}] actual run folder: ${task.workDirectory}"
 
             // submit task for execution
-            submitTask( task )
+            submitTask( task, runType )
             return true
         }
 
@@ -628,9 +616,9 @@ abstract class TaskProcessor {
         try {
             // -- check if all output resources are available
             collectOutputs(task, folder, stdoutFile, ctxMap)
-            log.info "[${getHashLog(hash)}] Cached process > ${task.name}"
 
             // set the exit code in to the task object
+            task.hash = hash
             task.workDirectory = folder
             task.stdout = stdoutFile
             if( exitCode != null ) {
@@ -639,6 +627,8 @@ abstract class TaskProcessor {
             if( task.code && ctxMap ) {
                 task.code.delegate = ctxMap
             }
+
+            log.info "[${task.hashLog}] Cached process > ${task.name}"
 
             // -- now bind the results
             finalizeTask0(task)
@@ -724,10 +714,7 @@ abstract class TaskProcessor {
 
                 // RETRY strategy -- check that process do not exceed 'maxError' and the task do not exceed 'maxRetries'
                 if( taskStrategy == ErrorStrategy.RETRY && procErrCount < taskConfig.getMaxErrors() && taskErrCount < taskConfig.getMaxRetries() ) {
-                    session.execService.submit {
-                        checkCachedOrLaunchTask( task, task.hash, false )
-                        log.info "[${getHashLog(task.hash)}] Re-submitted process > ${task.name}"
-                    } as Runnable
+                    session.execService.submit({ checkCachedOrLaunchTask( task, task.hash, false, RunType.RETRY ) } as Runnable)
                     return ErrorStrategy.RETRY
                 }
             }
@@ -1310,7 +1297,7 @@ abstract class TaskProcessor {
      * @param script The script string to be execute, e.g. a BASH script
      * @return {@code TaskDef}
      */
-    final protected void submitTask( TaskRun task ) {
+    final protected void submitTask( TaskRun task, RunType runType ) {
 
         if( task.code?.delegate instanceof Map ) {
             if( ((Map)task.code.delegate).containsKey('workDir') && !overrideWarnShown.getAndSet(true)) {
@@ -1320,7 +1307,7 @@ abstract class TaskProcessor {
         }
 
         // add the task to the collection of running tasks
-        session.dispatcher.submit(task, blocking)
+        session.dispatcher.submit(task, blocking, runType.message)
     }
 
 

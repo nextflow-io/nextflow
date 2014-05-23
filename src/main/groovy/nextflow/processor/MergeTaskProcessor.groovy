@@ -132,9 +132,7 @@ class MergeTaskProcessor extends TaskProcessor {
         def hash = hasher.hash()
         log.trace "Merging process > $name -- hash: $hash"
 
-        def submitted = checkCachedOrLaunchTask( task, hash, resumable, mergeScript.toString() )
-        if( submitted )
-            log.info "[${getHashLog(task.hash)}] Running merge > ${name}"
+        checkCachedOrLaunchTask( task, hash, resumable, RunType.MERGE )
     }
 
     protected void mergeScriptCollector( List values ) {
