@@ -176,19 +176,22 @@ class Channel {
         pathImpl('glob', folder, pattern, options )
     }
 
-    static DataflowChannel<Path> path( filePattern ) {
+    @Deprecated
+    static DataflowChannel<Path> path(Map options = null, filePattern ) {
         log.warn "Operator 'path' has been deprecated -- Use operator 'fromPath' instead"
-        fromPath(filePattern)
+        fromPath(options,filePattern)
     }
 
-    static DataflowChannel<Path> path( Pattern filePattern ) {
+    @Deprecated
+    static DataflowChannel<Path> path(Map options = null, Pattern filePattern ) {
         log.warn "Operator 'path' has been deprecated -- Use operator 'fromPath' instead"
-        fromPath(filePattern)
+        fromPath(options,filePattern)
     }
 
-    static DataflowChannel<Path> path( String filePattern ) {
+    @Deprecated
+    static DataflowChannel<Path> path(Map options = null, String filePattern ) {
         log.warn "Operator 'path' has been deprecated -- Use operator 'fromPath' instead"
-        fromPath(filePattern)
+        fromPath(options,filePattern)
     }
 
     /*
