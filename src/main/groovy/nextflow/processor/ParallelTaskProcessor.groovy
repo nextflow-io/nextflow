@@ -114,7 +114,7 @@ class ParallelTaskProcessor extends TaskProcessor {
          * - when there is at least one shared variable it is executed in serial mode (maxForks==1) to guarantee thread safe access
          * - otherwise use the value defined by the user via 'taskConfig'
          */
-        def maxForks = session.config.poolSize
+        def maxForks = session.poolSize
         if( sharedCount ) {
             log.debug "Process declares shared inputs -- Using thread safe mode (maxForks=1)"
             maxForks = 1
@@ -122,6 +122,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         }
         else if( taskConfig.maxForks ) {
             maxForks = taskConfig.maxForks
+            blocking = true
         }
         log.debug "Creating operator > $name -- maxForks: $maxForks"
 
@@ -332,9 +333,8 @@ class ParallelTaskProcessor extends TaskProcessor {
         log.trace "[${task.name}] cache keys: ${keys} -- mode: $mode"
         final hash = CacheHelper.hasher(keys, mode).hash()
 
-        def submitted = checkCachedOrLaunchTask(task,hash,resumable)
-        if( submitted )
-            log.info "[${getHashLog(task.hash)}] Submitted process > ${task.name}"
+        checkCachedOrLaunchTask(task,hash,resumable,RunType.SUBMIT)
+
     }
 
     /**

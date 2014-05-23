@@ -319,18 +319,22 @@ public class NextflowDSLImpl implements ASTTransformation {
             def prop = expr.property as ConstantExpression
             def target = new VariableExpression(prop.text)
 
-            if( obj instanceof MethodCallExpression && 'stdout' == obj.getMethodAsString() ) {
-                def stdout = new MethodCallExpression( new VariableExpression('this'), 'stdout', new ArgumentListExpression()  )
-                def into = new MethodCallExpression(stdout, 'into', new ArgumentListExpression(target))
-                // remove replace the old one with the new one
-                stm.setExpression( into )
+            if( obj instanceof MethodCallExpression ) {
+                def methodCall = obj as MethodCallExpression
+                if( 'stdout' == methodCall.getMethodAsString() ) {
+                    def stdout = new MethodCallExpression( new VariableExpression('this'), 'stdout', new ArgumentListExpression()  )
+                    def into = new MethodCallExpression(stdout, 'into', new ArgumentListExpression(target))
+                    // remove replace the old one with the new one
+                    stm.setExpression( into )
+                }
+                else if( 'stdin' == methodCall.getMethodAsString() ) {
+                    def stdin = new MethodCallExpression( new VariableExpression('this'), 'stdin', new ArgumentListExpression()  )
+                    def from = new MethodCallExpression(stdin, 'from', new ArgumentListExpression(target))
+                    // remove replace the old one with the new one
+                    stm.setExpression( from )
+                }
             }
-            else if( obj instanceof MethodCallExpression && 'stdin' == obj.getMethodAsString() ) {
-                def stdin = new MethodCallExpression( new VariableExpression('this'), 'stdin', new ArgumentListExpression()  )
-                def from = new MethodCallExpression(stdin, 'from', new ArgumentListExpression(target))
-                // remove replace the old one with the new one
-                stm.setExpression( from )
-            }
+
         }
     }
 
@@ -484,10 +488,12 @@ public class NextflowDSLImpl implements ASTTransformation {
         }
 
         if( expr instanceof TupleExpression )  {
+            def i = 0
             def list = expr.getExpressions()
-            list.eachWithIndex { Expression item, int i ->
-                list[i] = varToStr(item)
+            for( Expression item : list ) {
+                list[i++] = varToStr(item)
             }
+
             return expr
         }
 
@@ -531,45 +537,53 @@ public class NextflowDSLImpl implements ASTTransformation {
         if( expr instanceof GStringExpression && ( withinFileMethod || withinSetMethod ) ) {
 
             def strings = (List<Expression>)expr.getStrings()
-            def varNames = (List<Expression>)expr.getValues().collect { VariableExpression it -> new ConstantExpression(it.name) }
+            def varNames = (List<Expression>)expr.getValues().collect { it -> new ConstantExpression((it as VariableExpression).name) }
 
             return newObj( TokenGString, new ConstantExpression(expr.text), new ListExpression(strings), new ListExpression(varNames) )
         }
 
-        /*
-         * replace 'file' method call in the set definition, for example:
-         *
-         * input:
-         *   set( file(fasta:'*.fa'), .. ) from q
-         */
-        if( expr instanceof MethodCallExpression && expr.methodAsString == 'file' && withinSetMethod ) {
-            def args = (TupleExpression) varToConst(expr.arguments)
-            return newObj( TokenFileCall, args )
+        if( expr instanceof MethodCallExpression ) {
+            def methodCall = expr as MethodCallExpression
+
+            /*
+             * replace 'file' method call in the set definition, for example:
+             *
+             * input:
+             *   set( file(fasta:'*.fa'), .. ) from q
+             */
+            if( methodCall.methodAsString == 'file' && withinSetMethod ) {
+                def args = (TupleExpression) varToConst(methodCall.arguments)
+                return newObj( TokenFileCall, args )
+            }
+
+            /*
+             * input:
+             *  set( env(VAR_NAME) ) from q
+             */
+            if( methodCall.methodAsString == 'env' && withinSetMethod ) {
+                def args = (TupleExpression) varToStr(methodCall.arguments)
+                return newObj( TokenEnvCall, args )
+            }
+
+            /*
+             * input:
+             *   set( val(x) ) from q
+             */
+            if( methodCall.methodAsString == 'val' && withinSetMethod ) {
+                def args = (TupleExpression) varToStr(methodCall.arguments)
+                return newObj( TokenValCall, args )
+            }
+
         }
 
-        /*
-         * input:
-         *  set( env(VAR_NAME) ) from q
-         */
-        if( expr instanceof MethodCallExpression && expr.methodAsString == 'env' && withinSetMethod ) {
-            def args = (TupleExpression) varToStr(expr.arguments)
-            return newObj( TokenEnvCall, args )
-        }
 
-        /*
-         * input:
-         *   set( val(x) ) from q
-         */
-        if( expr instanceof MethodCallExpression && expr.methodAsString == 'val' && withinSetMethod ) {
-            def args = (TupleExpression) varToStr(expr.arguments)
-            return newObj( TokenValCall, args )
-        }
 
         // -- TupleExpression or ArgumentListExpression
         if( expr instanceof TupleExpression )  {
+            def i = 0
             def list = expr.getExpressions()
-            list.eachWithIndex { Expression item, int i ->
-                list[i] = varToConst(item)
+            for( Expression item : list )  {
+                list[i++] = varToConst(item)
             }
             return expr
         }

@@ -232,11 +232,6 @@ Will display::
     Hello Mr. c
 
 
-.. warning:: Native processes execution is an incubating feature and has the following limitations:
-    they can only be executed by using a `local` executor and they cannot be used when the `merge`
-    feature is specified.
-
-
 Inputs
 =======
 
@@ -325,7 +320,7 @@ The ``file`` classifier allows you to receive a value as a file in the process e
 Nextflow will stage it in the process execution directory, and you can access it in the script by using the name
 specified in the input declaration. For example::
 
-    proteins = Channel.path( '/some/path/*.fa' )
+    proteins = Channel.fromPath( '/some/path/*.fa' )
 
     process blastThemAll {
       input:
@@ -341,7 +336,7 @@ Then, these files are received by the process which will execute a `BLAST` query
 When the file input name is the same as the channel name, the ``from`` part of the input declaration can be omitted.
 Thus, the above example could be written as shown below::
 
-    proteins = Channel.path( '/some/path/*.fa' )
+    proteins = Channel.fromPath( '/some/path/*.fa' )
 
     process blastThemAll {
       input:
@@ -372,7 +367,7 @@ Or alternatively using a shorter syntax::
 
 Using this, the previous example can be re-written as shown below::
 
-    proteins = Channel.path( '/some/path/*.fa' )
+    proteins = Channel.fromPath( '/some/path/*.fa' )
 
     process blastThemAll {
       input:
@@ -408,7 +403,7 @@ usual square brackets notation.
 When a target file name is defined in the input parameter and a collection of files is received by the process,
 the file name will be appended by a numerical suffix representing its ordinal position in the list. For example::
 
-    fasta = Channel.path( "/some/path/*.fa" ).buffer(count:3)
+    fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(count:3)
 
     process blastThemAll {
         input:
@@ -442,7 +437,7 @@ Cardinality   Name pattern     Staged file names
 The following fragment shows how a wildcard can be used in the input file declaration::
 
 
-    fasta = Channel.path( "/some/path/*.fa" ).buffer(count:3)
+    fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(count:3)
 
     process blastThemAll {
         input:
@@ -597,7 +592,7 @@ Input repeaters
 The ``each`` classifier allows you to repeat the execution of a process for each item in a collection,
 every time new data is received. For example::
 
-  sequences = Channel.path('*.fa')
+  sequences = Channel.fromPath('*.fa')
   methods = ['regular', 'expresso', 'psicoffee']
 
   process alignSequences {
@@ -825,7 +820,7 @@ The ``set`` classifier allows to send multiple values into a single channel. Thi
 when you need to `together` the result of multiple execution of the same process, as shown in the following
 example::
 
-    query = Channel.path '*.fa'
+    query = Channel.fromPath '*.fa'
     specie = Channel.from 'human', 'cow', 'horse'
 
     process blast {
@@ -893,8 +888,6 @@ Share parameters have some important differences compared to input or output par
 * If a share parameter declares an output channel it emits exactly one value, after the process last execution.
 * It allows you to `share` the parameter's value across multiple process executions.
 * Whenever a share parameter is declared, the process is executed serially, instead of in a parallel manner.
-
-.. warning:: Share parameters cannot be used in a process that uses the `merge` feature.
 
 
 Share generic values
@@ -1222,6 +1215,8 @@ See also: `errorStrategy`_ and `maxErrors`_.
 merge
 -------
 
+.. warning:: This feature has been deprecated and will be removed in 1.0 release.
+
 The ``merge`` directive allow you to write a task that `gather` the results of a upstream processes.
 
 The main differences with a normal process are:
@@ -1334,7 +1329,7 @@ In more detail, it affects the process execution in two main ways:
 The following example shows how use the ``storeDir`` directive to create a directory containing a BLAST database
 for each specie specified by an input parameter::
 
-  genomes = Channel.path(params.genomes)
+  genomes = Channel.fromPath(params.genomes)
 
   process formatBlastDatabases {
 
@@ -1354,7 +1349,6 @@ for each specie specified by an input parameter::
 
   }
 
-.. warning:: The ``storeDir`` directive cannot be used with a `merge` process.
 
 validExitStatus
 -------------------

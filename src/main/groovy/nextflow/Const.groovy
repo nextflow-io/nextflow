@@ -53,17 +53,17 @@ class Const {
     /**
      * The application version
      */
-    static final String APP_VER = "0.7.4"
+    static final String APP_VER = "0.8.0"
 
     /**
      * The app build time as linux/unix timestamp
      */
-    static final long APP_TIMESTAMP = 1400676502493
+    static final long APP_TIMESTAMP = 1400889600000
 
     /**
      * The app build number
      */
-    static final int APP_BUILDNUM = 1807
+    static final int APP_BUILDNUM = 1825
 
     /**
      * The date time formatter string
@@ -95,7 +95,7 @@ class Const {
 
     } ()
 
-    private static String deltaLocal() {
+    static String deltaLocal() {
         def utc = APP_TIMESTAMP_UTC.split(' ')
         def loc = APP_TIMESTAMP_LOCAL.split(' ')
 

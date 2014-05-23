@@ -21,6 +21,7 @@
 package nextflow.script
 import static nextflow.util.ConfigHelper.parseValue
 
+import java.lang.management.ManagementFactory
 import java.lang.reflect.Field
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
@@ -446,6 +447,10 @@ class CliRunner {
                 println getVersion(fullVersion)
                 System.exit(ExitCode.OK)
             }
+            else if( options.info ) {
+                println getInfo() + '\n'
+                System.exit(ExitCode.OK)
+            }
 
             // -- print the history of executed commands
             if( options.history ) {
@@ -460,7 +465,6 @@ class CliRunner {
                 System.exit(ExitCode.OK)
             }
 
-            log.debug "${getVersion()} ~ host: ${localNameAndAddress}"
             File scriptFile = null
             if( !options.isDaemon() ) {
                 // -- the script is the first item in the args
@@ -522,6 +526,7 @@ class CliRunner {
                 runner.test(scriptFile, options.test, scriptArgs )
             }
             else {
+                log.debug( '\n'+getInfo())
                 // -- add this run to the local history
                 HistoryFile.history.append( runner.session.uniqueId, args )
                 // -- run it!
@@ -738,7 +743,11 @@ class CliRunner {
         return configToMap( result )
     }
 
-
+    /**
+     * Print the application version number
+     * @param full When {@code true} prints full version number including build timestamp
+     * @return The version number string
+     */
     static String getVersion(boolean full = false) {
 
         if ( full ) {
@@ -747,6 +756,23 @@ class CliRunner {
         else {
             "${Const.getAPP_NAME()} version ${Const.APP_VER}.${Const.APP_BUILDNUM}"
         }
+
+    }
+
+    /**
+     * @return A string containing some system runtime information
+     */
+    static String getInfo() {
+
+"""\
+      Version: ${Const.APP_VER} build ${Const.APP_BUILDNUM}
+      Last modified: ${Const.APP_TIMESTAMP_UTC} ${Const.deltaLocal()}
+      Os: ${System.getProperty('os.name')} ${System.getProperty('os.version')}
+      Groovy: ${GroovySystem.getVersion()}
+      Jvm: ${System.getProperty('java.vendor')} ${System.getProperty('java.runtime.version')}
+      Opts: ${ManagementFactory.getRuntimeMXBean().getInputArguments().join(' ')}
+      Encoding: ${System.getProperty('file.encoding')} (${System.getProperty('sun.jnu.encoding')})
+      Address: ${getLocalNameAndAddress()}"""
 
     }
 

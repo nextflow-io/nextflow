@@ -38,6 +38,7 @@ import java.nio.file.attribute.PosixFilePermissions
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.util.ByteBufferBackedInputStream
+import nextflow.util.CharsetHelper
 import nextflow.util.FileHelper
 /**
  * Add utility methods to standard classes {@code File} and {@code Path}
@@ -134,23 +135,24 @@ class FilesExtensions {
     }
 
     /**
-     * Copy or a file or a directory. It mimics the semantic of the Linux *cp* command
+     * Copy or a file or a directory content.
+     * It mimics the semantic of Linux {@code cp -r <source> <target>} command.
      *
-     * @param source
-     * @param target
-     * @return
+     * @param source The source file or directory
+     * @param target The target file or directory
+     * @return The target {@link Path} file
      */
     def static File copyTo( File source, File target ) {
         copyTo(source.toPath(), target.toPath()).toFile()
     }
 
     /**
-     * Copy a file or a directory to the target path.
-     * It mimics the semantic of Linux *cp* command.
+     * Copy or a file or a directory content.
+     * It mimics the semantic of Linux {@code cp -r <source> <target>} command.
      *
-     * @param source
-     * @param target
-     * @return
+     * @param source The source file or directory
+     * @param target The target file or directory
+     * @return The target {@link Path} file
      */
     def static Path copyTo( Path source, Path target ) {
 
@@ -211,22 +213,24 @@ class FilesExtensions {
     }
 
     /**
-     * Copy a file  -or- a whole directory to a new file -or- a new directory
+     * Copy or a file or a directory content.
+     * It mimics the semantic of Linux {@code cp -r <source> <target>} command.
      *
-     * @param source
-     * @param target
-     * @return
+     * @param source The source file or directory
+     * @param target The target file or directory
+     * @return The target {@link Path} file
      */
     def static File copyTo( File source, String target ) {
         copyTo(source.toPath(), FileHelper.asPath(target)).toFile()
     }
 
     /**
-     * Copy or a file or a directory. It mimics the semantic of the Linux *cp* command
+     * Copy or a file or a directory content.
+     * It mimics the semantic of Linux {@code cp -r <source> <target>} command.
      *
-     * @param source
-     * @param target
-     * @return
+     * @param source The source file or directory
+     * @param target The target file or directory
+     * @return The target {@link Path} file
      */
     def static Path copyTo( Path source, String target ) {
         copyTo(source, FileHelper.asPath(target))
@@ -381,6 +385,15 @@ class FilesExtensions {
 
     }
 
+    /**
+     * Creates the directory named by this abstract pathname
+     *
+     * @param self The directory to be created
+     * @param attr
+     *          an optional list of file attributes to set atomically when
+     *          creating the directory
+     * @return {@code true} if the directory is created successfully, or {@code false} otherwise
+     */
     def static boolean mkdir(Path self, FileAttribute<?>... attr) {
 
         try {
@@ -393,6 +406,15 @@ class FilesExtensions {
 
     }
 
+    /**
+     * Creates the directory named by this abstract pathname, including any necessary but nonexistent parent directories
+     *
+     * @param self The path to be created
+     * @param attr
+     *          an optional list of file attributes to set atomically when
+     *          creating the directory
+     * @return {@code true} if the directory is created successfully, or {@code false} otherwise
+     */
     def static boolean mkdirs(Path self, FileAttribute<?>... attr) {
 
         try {
@@ -605,7 +627,7 @@ class FilesExtensions {
         final result = new StringBuilder()
         long count = 0
 
-        final charsetObj = NextflowExtensions.getCharset(charset)
+        final charsetObj = CharsetHelper.getCharset(charset)
 
         long pos = len
         while( pos>0 ) {
@@ -728,7 +750,7 @@ class FilesExtensions {
      * @return The read lines as a {@code CharSequence} object
      */
     static CharSequence head( InputStream stream, int n, charset ) {
-        def charsetObj = NextflowExtensions.getCharset(charset)
+        def charsetObj = CharsetHelper.getCharset(charset)
         head( new InputStreamReader(stream, charsetObj), n)
     }
 
@@ -762,7 +784,7 @@ class FilesExtensions {
         assert path != null
         assert n
 
-        def charsetObj = NextflowExtensions.getCharset(charset)
+        def charsetObj = CharsetHelper.getCharset(charset)
         def reader = Files.newBufferedReader(path,charsetObj)
         try {
             head(reader,n)
@@ -993,7 +1015,7 @@ class FilesExtensions {
     }
 
     @PackageScope
-    static  digitToPerm( int value, StringBuilder sb = new StringBuilder() ) {
+    static digitToPerm( int value, StringBuilder sb = new StringBuilder() ) {
         assert value >= 0 && value < 8
 
         def x = (value & 1) == 1
@@ -1088,4 +1110,78 @@ class FilesExtensions {
     static File resolveSymLink(File self) {
         self.toPath().resolveSymLink().toFile()
     }
+
+    /**
+     * Create a folder if not already exists
+     * @param target The folder to be created
+     */
+    static public void createDirIfNotExists( Path target ) {
+        assert target
+
+        try {
+            if( !Files.readAttributes(target, BasicFileAttributes).isDirectory() )
+                throw new IOException("Cannot create folder: $target -- A file with the same name already exists")
+        }
+        catch (IOException e) {
+            if( !Files.createDirectories(target) )
+                throw new IOException("Cannot create folder: $target -- Check file systeme access permission")
+
+        }
+    }
+
+    static public void createDirIfNotExists( File target ) {
+        createDirIfNotExists(target.toPath())
+    }
+
+    static Path plus( Path path, String other ) {
+        if( !other )
+            return path
+
+        def parent = path.getParent()
+        if( parent ) {
+            parent.resolve( path.getName() + other )
+        }
+        else {
+            path.getFileSystem().getPath( path.toString() + other )
+        }
+    }
+
+    static Path plus( Path path, Path other ) {
+        plus(path, other?.toString())
+    }
+
+    static Path div( Path path, String other ) {
+        if( !other )
+            return path
+
+        path.resolve(other)
+    }
+
+    static Path div( Path path, Path other ) {
+        if( !other )
+            return path
+
+        path.resolve(other)
+    }
+
+    static Path minus(Path path, int i) {
+        def result = path
+        while( i-- > 0 && result != null )
+            result = result.getParent()
+
+        return result
+    }
+
+//    static Path or( Path path, String other ) {
+//        path.resolveSibling(other)
+//    }
+//
+//    static Path or( Path path, Path other ) {
+//        path.resolveSibling(other)
+//    }
+//
+//    static Path previous(Path path) {
+//        path.getParent()
+//    }
+
 }

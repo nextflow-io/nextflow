@@ -28,8 +28,8 @@ import embed.com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.extension.FilesExtensions
-
 /**
+ * Provides some helper method handling files
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

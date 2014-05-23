@@ -20,13 +20,25 @@
 
 dependencies {
     compile project(':')
-    compile ("org.gridgain:gridgain-platform:6.0.2")  {
+    compile ("org.gridgain:gridgain-platform:6.1.1")  {
         exclude module: 'commons-logging'
         exclude module: 'slf4j-log4j12'
         exclude module: 'scala-compiler'
         exclude module: 'scala-library'
         exclude module: 'scala-reflect'
-        //exclude module: 'log4j'
+        // currently there's an explicit dep with Log4j - http://stackoverflow.com/a/22887656/395921
+        // cannot be excluded
+        exclude module: 'log4j'
+        exclude module: 'tika'
+        exclude module: 'miglayout-core'
+        exclude module: 'miglayout-swing'
+        exclude module: 'mongo-java-driver'
+        exclude module: 'tika-core'
+        exclude module: 'tika-parsers'
+        exclude module: 'xml-apis'
+        exclude module: 'hibernate-core'
+        exclude module: 'hibernate-jpa-2.0-api'
+        exclude module: 'hibernate-commons-annotations'
     }
 
     testCompile project(':')

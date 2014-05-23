@@ -666,4 +666,111 @@ class FilesExtensionsTest extends Specification {
         link2?.delete()
     }
 
+    def testCheckFolder() {
+
+        when:
+        def folder1 = Paths.get('some/path')
+        folder1.createDirIfNotExists()
+        then:
+        folder1.exists()
+
+        when:
+        def folder2 = Files.createTempDirectory('some-temp-dir')
+        folder2.createDirIfNotExists( )
+        then:
+        folder2.exists()
+
+        when:
+        def file3 = Files.createTempFile('some-file',null)
+        file3.createDirIfNotExists()
+        then:
+        thrown(IOException)
+
+
+        cleanup:
+        folder1?.deleteDir()
+        folder2?.deleteDir()
+        file3.delete()
+    }
+
+    def testEmptyAndIsEmpty() {
+
+        when:
+        def file = File.createTempFile('hello','file')
+        then:
+        file.empty()
+        file.isEmpty()
+        when:
+        file.text = 'hello'
+        then:
+        !file.empty()
+        !file.isEmpty()
+
+        when:
+        def path = Files.createTempFile('hello','path')
+        then:
+        path.empty()
+        path.isEmpty()
+        when:
+        path.text = 'hello'
+        then:
+        !path.empty()
+        !path.isEmpty()
+
+        cleanup:
+        file?.delete()
+        path?.delete()
+    }
+
+    def testPathAdd() {
+
+        expect:
+        Paths.get('file') + '.txt' == Paths.get('file.txt')
+        Paths.get('file') + '' == Paths.get('file')
+        Paths.get('/file') + '_name' == Paths.get('/file_name')
+        Paths.get('/') + 'file.txt' == Paths.get('/file.txt')
+        Paths.get('some/path/file') + '.txt' == Paths.get('some/path/file.txt')
+        Paths.get('some/path') + '/file.txt' == Paths.get('some/path/file.txt')
+        Paths.get('some/path/') + '/file.txt' == Paths.get('some/path/file.txt')
+        Paths.get('some/path/') + '//file.txt' == Paths.get('some/path/file.txt')
+        Paths.get('/some/path/') + '//file.txt' == Paths.get('/some/path/file.txt')
+    }
+
+    def testPathResolve() {
+
+        expect:
+        Paths.get('/') / 'file.txt' == Paths.get('/file.txt')
+        Paths.get('file') / 'txt' == Paths.get('file/txt')
+        Paths.get('/some/file') / '.txt' == Paths.get('/some/file/.txt')
+        Paths.get('/some/file/') / '.txt' == Paths.get('/some/file/.txt')
+    }
+
+    def testPathMinus() {
+
+        expect:
+        Paths.get('/') -1 == null
+        Paths.get('/some/path') -1 == Paths.get('/some')
+        Paths.get('/some/path/file.txt') -1 == Paths.get('/some/path')
+        Paths.get('/some/path/file.txt') -2 == Paths.get('/some')
+        Paths.get('/some/path/file.txt') -3 == Paths.get('/')
+        Paths.get('/some/path/file.txt') -4 == null
+
+    }
+
+//    def testPathPrevious() {
+//        expect:
+//        Paths.get('/some/path') -- == Paths.get('/some')
+//        Paths.get('/some/path/file.txt') -- == Paths.get('/some/path')
+//    }
+
+//    def testPathSibling() {
+//
+//        expect:
+//        Paths.get('/some/path') | 'hello' == Paths.get('/some/hello')
+//        Paths.get('/some/path/file.txt') -1 == Paths.get('/some/path')
+//        Paths.get('/some/path/file.txt') -2 == Paths.get('/some')
+//        Paths.get('/some/path/file.txt') -3 == Paths.get('/')
+//        Paths.get('/some/path/file.txt') -4 == null
+//    }
+
 }

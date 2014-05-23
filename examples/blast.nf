@@ -1,14 +1,13 @@
 #!/usr/bin/env nextflow
+import nextflow.Channel
 
 params.db = "$HOME/tools/blast-db/pdb/pdb"
 params.query = "$HOME/sample.fa"
 params.chunkSize = 1
 
-DB= file(params.db)
-seq = channel()
+DB = file(params.db)
 
-inputFile = file(params.query)
-inputFile.chunkFasta( params.chunkSize ) { seq << it }
+seq = Channel .fromPath(params.query) .splitFasta( by: params.chunkSize )
 
 process blast {
     input:
@@ -22,11 +21,9 @@ process blast {
     """
 }
 
-blast_all = blast_result.toSortedList()
-
 process sort {
     input:
-    file 'hits_*' from blast_all
+    file 'hits_*' from blast_result.toSortedList()
 
     output:
     stdout result

@@ -1,7 +1,29 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.7.2
+0.8.0 - 24 May 2014
+- Added support for Java 8
+- Upgraded to Groovy 2.3.0
+- Upgraded to Kryo 2.24.0
+- New splitter operators: 'splitText', 'splitFasta', 'splitFastq', 'splitCsv'
+- New operator 'collectFile' to gather file chunks
+- New operator Channel.fromPath which allows fine control on paths traversal
+- Operator Channel.from has been deprecated in favor of Channel.fromPath
+- Operator Channel.watch has been deprecated in favor of Channel.watchPath
+- Clean-up API for operators: 'into', 'choice', 'separate', 'filter'
+- Operator 'grep' has been removed and features included in 'filter' operator
+- Deprecated 'chopXxx' operators
+- Deprecated 'chunkXxx' operators
+- Deprecated 'each' operator in favor or 'subscribe'
+- Executor service now uses a fixed thread pool
+- Fixed issue on 'maxForks' process directive
+- Added 'info' cli parameter
+- Improved documentation
+
+0.7.3 - 16 May 2014
+- Enhanced stability and errors reporting
+
+0.7.2 - 5 May 2014
 - Enhanced support for Docker containers:
   Now the current user id is added on the Docker command line
   and /tmp folder in the container is mounted on a temporary path in the host disk

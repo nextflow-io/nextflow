@@ -23,6 +23,7 @@ import java.nio.file.Path
 import java.util.concurrent.Callable
 import java.util.concurrent.Future
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.processor.TaskConfig
@@ -40,6 +41,7 @@ import org.apache.commons.io.IOUtils
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 @SupportedScriptTypes( [ScriptType.SCRIPTLET, ScriptType.GROOVY] )
 class LocalExecutor extends Executor {
 
@@ -244,6 +246,7 @@ class LocalTaskHandler extends TaskHandler {
  * Executes a native piece of groovy code
  */
 @Slf4j
+@CompileStatic
 class NativeTaskHandler extends TaskHandler {
 
     def Future<Object> result
@@ -251,6 +254,26 @@ class NativeTaskHandler extends TaskHandler {
     private Session session
 
     private Executor executor
+
+    private class TaskSubmit implements Callable {
+
+        final TaskRun task
+
+        TaskSubmit( TaskRun obj ) { task = obj }
+
+        @Override
+        Object call() throws Exception {
+            try  {
+                return task.code.call()
+            }
+            catch( Throwable error ) {
+                return error
+            }
+            finally {
+                executor.getTaskMonitor().signalComplete()
+            }
+        }
+    }
 
     protected NativeTaskHandler(TaskRun task, TaskConfig taskConfig, Executor executor) {
         super(task, taskConfig)
@@ -264,18 +287,7 @@ class NativeTaskHandler extends TaskHandler {
         // submit for execution by using session executor service
         // it returns an error when everything is OK
         // of the exception throw in case of error
-        result = session.getExecService().submit({
-            try  {
-                return task.code.call()
-            }
-            catch( Throwable error ) {
-                return error
-            }
-            finally {
-                executor.getTaskMonitor().signalComplete()
-            }
-
-        } as Callable)
+        result = session.getExecService().submit(new TaskSubmit(task))
         status = Status.SUBMITTED
     }
 

@@ -401,5 +401,29 @@ class TaskRun {
 
     }
 
+
+    /**
+     * Given an {@code HashCode} instance renders only the first 8 characters using the format showed below:
+     *      <pre>
+     *          2f/0075a6
+     *     </pre>
+     *
+     *
+     * @param hash An {@code HashCode} object
+     * @return The short representation of the specified hash code as string
+     */
+    final getHashLog() {
+        if( !hash ) return null
+        def str = hash.toString()
+        def result = new StringBuilder()
+        result << str[0]
+        result << str[1]
+        result << '/'
+        for( int i=2; i<8 && i<str.size(); i++ ) {
+            result << str[i]
+        }
+        return result.toString()
+    }
+
 }
 

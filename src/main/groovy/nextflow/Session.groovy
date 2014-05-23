@@ -26,10 +26,7 @@ import java.util.concurrent.Executors
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.operator.DataflowProcessor
-import groovyx.gpars.group.NonDaemonPGroup
-import groovyx.gpars.group.PGroup
 import groovyx.gpars.util.PoolUtils
 import jsr166y.Phaser
 import nextflow.processor.TaskDispatcher
@@ -97,8 +94,6 @@ class Session {
 
     final private Phaser phaser = new Phaser()
 
-    final private PGroup pgroup
-
     private boolean aborted
 
     private volatile boolean terminated
@@ -108,6 +103,8 @@ class Session {
     final private List<Closure<Void>> shutdownHooks = []
 
     final private List<URL> classpath = []
+
+    final int poolSize
 
     /* Poor man singleton object */
     static Session currentInstance
@@ -139,21 +136,17 @@ class Session {
         // set unique session from the taskConfig object, or create a new one
         uniqueId = config.session?.uniqueId ? UUID.fromString( config.session.uniqueId.toString() ) : UUID.randomUUID()
 
-        if( !config.poolSize ) {
-            config.poolSize = PoolUtils.retrieveDefaultPoolSize()
+        if( config.poolSize ) {
+            this.poolSize = config.poolSize as int
+            System.setProperty('gpars.poolsize', config.poolSize as String)
         }
-
-        // todo this settings seems to be unused -- check it
-        if( !config.queueSize ) {
-            config.queueSize = PoolUtils.retrieveDefaultPoolSize()
+        else {
+            // otherwise use the default Gpars pool size
+            this.poolSize = PoolUtils.retrieveDefaultPoolSize()
         }
+        log.debug "Executor pool size: ${poolSize}"
 
-        log.debug "Executor pool size: ${config.poolSize}"
-
-        // configure the dataflow thread group
-        pgroup = new NonDaemonPGroup( config.poolSize as int )
-        Dataflow.activeParallelGroup.set(pgroup)
-
+        // create the task dispatcher instance
         dispatcher = new TaskDispatcher(this)
     }
 
@@ -162,7 +155,7 @@ class Session {
         log.debug "Session start > phaser register (session) "
 
         Runtime.getRuntime().addShutdownHook { shutdown() }
-
+        execService = Executors.newFixedThreadPool( poolSize )
         phaser.register()
         dispatcher.start()
         return this
@@ -217,7 +210,6 @@ class Session {
 
     void destroy() {
         log.trace "Session destroying"
-        if( pgroup ) pgroup.shutdown()
         if( execService ) execService.shutdown()
         shutdown()
         log.debug "Session destroyed"
@@ -259,9 +251,8 @@ class Session {
         phaser.arriveAndDeregister()
     }
 
-    @Memoized
     def ExecutorService getExecService() {
-        execService = Executors.newCachedThreadPool()
+        execService
     }
 
     /**

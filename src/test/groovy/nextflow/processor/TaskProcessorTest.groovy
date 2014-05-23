@@ -239,10 +239,10 @@ class TaskProcessorTest extends Specification {
     def testGetHashLog() {
 
         when:
-        def processor = [:] as TaskProcessor
         def h = CacheHelper.hasher('x').hash()
+        def task = new TaskRun(hash:h)
         then:
-        processor.getHashLog(h) == '76/9f897d'
+        task.getHashLog() == '76/9f897d'
 
     }
 

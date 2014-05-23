@@ -138,38 +138,27 @@ class Channel {
         return channel
     }
 
-    @Deprecated
-    static DataflowChannel<Path> files( Pattern filePattern ) {
-        log.warn("Channel.files() method has been deprecated -- use Channel.path() instead")
-        path(filePattern)
-    }
+    static DataflowChannel<Path> fromPath( Map options = null, filePattern ) {
 
-    @Deprecated
-    static DataflowChannel<Path> files( String filePattern ) {
-        log.warn("Channel.files() method has been deprecated -- use Channel.path() instead")
-        path(filePattern)
-    }
-
-
-    static DataflowChannel<Path> path( Map params = null, filePattern ) {
         assert filePattern
 
         if( filePattern instanceof Pattern )
-            path(filePattern)
+            fromPath(options, filePattern)
 
         else
-            path(filePattern.toString())
+            fromPath(options, filePattern.toString())
     }
 
-    static DataflowChannel<Path> path( Map options = null, Pattern filePattern ) {
+    static DataflowChannel<Path> fromPath( Map options = null, Pattern filePattern ) {
         assert filePattern
         // split the folder and the pattern
         def ( String folder, String pattern ) = getFolderAndPattern(filePattern.toString())
-        filesImpl( 'regex', folder, pattern, options )
+        pathImpl( 'regex', folder, pattern, options )
     }
 
 
-    static DataflowChannel<Path> path( Map options = null, String filePattern ) {
+    static DataflowChannel<Path> fromPath( Map options = null, String filePattern ) {
+
         assert filePattern
 
         boolean glob  = false
@@ -184,7 +173,25 @@ class Channel {
         // split the folder and the pattern
         def ( String folder, String pattern ) = getFolderAndPattern(filePattern)
 
-        filesImpl('glob', folder, pattern, options )
+        pathImpl('glob', folder, pattern, options )
+    }
+
+    @Deprecated
+    static DataflowChannel<Path> path(Map options = null, filePattern ) {
+        log.warn "Operator 'path' has been deprecated -- Use operator 'fromPath' instead"
+        fromPath(options,filePattern)
+    }
+
+    @Deprecated
+    static DataflowChannel<Path> path(Map options = null, Pattern filePattern ) {
+        log.warn "Operator 'path' has been deprecated -- Use operator 'fromPath' instead"
+        fromPath(options,filePattern)
+    }
+
+    @Deprecated
+    static DataflowChannel<Path> path(Map options = null, String filePattern ) {
+        log.warn "Operator 'path' has been deprecated -- Use operator 'fromPath' instead"
+        fromPath(options,filePattern)
     }
 
     /*
@@ -206,7 +213,7 @@ class Channel {
      * @param skipHidden Whenever skip the hidden files
      * @return A dataflow channel instance emitting the file matching the specified criteria
      */
-    static private DataflowChannel<Path> filesImpl( String syntax, String folder, String pattern, Map options )  {
+    static private DataflowChannel<Path> pathImpl( String syntax, String folder, String pattern, Map options )  {
         assert syntax in ['regex','glob']
         log.debug "files for syntax: $syntax; folder: $folder; pattern: $pattern; options: ${options}"
 
@@ -295,49 +302,24 @@ class Channel {
 
     }
 
-    static DataflowChannel readLines( Map options = [:], Object source ) {
-        assert source != null
-        assert options != null
 
-        options.into = new DataflowQueue()
-        return (DataflowQueue) source.chopLines(options)
-    }
-
-
-    static DataflowChannel readLines( Map options = [:], Object source, Closure closure ) {
-        assert source != null
-        assert options != null
-
-        options.into = new DataflowQueue()
-        return (DataflowQueue) source.chopLines(options,closure)
-    }
-
-    static DataflowChannel readFasta( Map options = [:], Object source ) {
-        assert source != null
-        assert options != null
-
-        options.into = new DataflowQueue()
-        return (DataflowQueue) source.chopFasta(options)
-    }
-
-    static DataflowChannel readFasta( Map options = [:], Object source, Closure closure ) {
-        assert source != null
-        assert options != null
-
-        options.into = new DataflowQueue()
-        return (DataflowQueue) source.chopFasta(options, closure)
-    }
 
     static private DataflowChannel<Path> watchImpl( String syntax, String folder, String pattern, boolean skipHidden, String events ) {
         assert syntax in ['regex','glob']
         log.debug "Watch service for path: $folder; syntax: $syntax; pattern: $pattern; skipHidden: $skipHidden; events: $events"
 
         // now apply glob file search
+        final result = create()
         final path = folder as Path
+        if( !path.isDirectory() ) {
+            log.warn "Cannot watch a not existing path: $path -- Make sure that path exists and it is a directory"
+            result.bind(STOP)
+            return result
+        }
+
         final rule = "$syntax:${folder}${pattern}"
         final matcher = path.getFileSystem().getPathMatcher(rule)
         final eventsToWatch = stringToWatchEvents(events)
-        final result = create()
 
         Thread.start {
             WatchService watcher = path.getFileSystem().newWatchService()
@@ -403,7 +385,7 @@ class Channel {
      * @return  A dataflow channel that will emit the matching files
      *
      */
-    static DataflowChannel<Path> watch( Pattern filePattern, String events = 'create' ) {
+    static DataflowChannel<Path> watchPath( Pattern filePattern, String events = 'create' ) {
         assert filePattern
         // split the folder and the pattern
         def ( String folder, String pattern ) = getFolderAndPattern(filePattern.toString())
@@ -426,7 +408,7 @@ class Channel {
      * @return  A dataflow channel that will emit the matching files
      *
      */
-    static DataflowChannel<Path> watch( String filePattern, String events = 'create' ) {
+    static DataflowChannel<Path> watchPath( String filePattern, String events = 'create' ) {
         def ( String folder, String pattern ) = getFolderAndPattern(filePattern)
         watchImpl('glob', folder, pattern, pattern.startsWith('*'), events)
     }

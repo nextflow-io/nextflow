@@ -21,6 +21,7 @@
 package nextflow.extension
 import static java.util.Arrays.asList
 
+import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.PackageScope
@@ -33,6 +34,7 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.ChainWithClosure
+import groovyx.gpars.dataflow.operator.CopyChannelsClosure
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowEventListener
 import groovyx.gpars.dataflow.operator.DataflowProcessor
@@ -40,7 +42,11 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.operator.SeparationClosure
 import nextflow.Channel
 import nextflow.Session
+import nextflow.util.FileCollector
+import nextflow.util.FileHelper
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
+import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
+
 /**
  * A set of operators inspired to RxJava extending the methods available on DataflowChannel
  * data structure
@@ -218,7 +224,7 @@ class DataflowExtensions {
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
                 error = true
                 if( !events.onError ) {
-                    DataflowExtensions.log.error("Unknown 'subscribe' operator error -- see '.nextflow.log' for details", e)
+                    DataflowExtensions.log.error("Cannot execute operator. Cause: ${e} -- See '.nextflow.log' for details", e)
                     Session.currentInstance?.abort()
                 }
                 else {
@@ -498,6 +504,107 @@ class DataflowExtensions {
         return result
     }
 
+
+    static public final DataflowReadChannel collectFile( final DataflowReadChannel channel, final Closure closure = null ) {
+        collectFile(channel,null,closure)
+    }
+
+    static public final DataflowReadChannel collectFile( final DataflowReadChannel channel, Map params, final Closure closure = null ) {
+
+        def result = new DataflowQueue()
+        def acc = new FileCollector()
+
+        if( Session.currentInstance )
+            Session.currentInstance.onShutdown { acc.closeQuietly() }
+
+        acc.newLine = params?.newLine as Boolean
+        acc.seed = params?.seed
+
+        /*
+         * A file name to be used, if provided
+         */
+        def storeDir
+        String fileName
+        if( params?.name ) {
+            if( params.name instanceof Path || params.name.toString().contains('/') ) {
+                def _path = params.name as Path
+                fileName = _path.name
+                storeDir = _path.parent
+            }
+            else
+                fileName = params.name
+        }
+
+        /*
+         * check or create the target folder
+         */
+        if( params?.storeDir )
+            storeDir = params?.storeDir as Path
+        if( storeDir )
+            storeDir.createDirIfNotExists()
+        else
+            storeDir = FileHelper.createTempFolder(Session.currentInstance.workDir)
+
+        /*
+         * each time a value is received, invoke the closure and
+         * append its result value to a file
+         */
+        def processItem = { item ->
+            def value = closure ? mapClosureCall(item,closure) : item
+
+            if( fileName && value != null ) {
+                acc.append( fileName, value )
+            }
+
+            else if( value instanceof List && value.size()>1 ) {
+                for( int i=1; i<value.size(); i++ ) {
+                    acc.append(value[0] as String, value[i])
+                }
+            }
+
+            else if( value instanceof Object[] && value.size()>1 ) {
+                for( int i=1; i<value.size(); i++ ) {
+                    acc.append(value[0] as String, value[i])
+                }
+            }
+
+            else if( value instanceof Path ) {
+                if( fileName )
+                    acc.append(fileName, value)
+                else
+                    acc.append(value.getName(), value)
+            }
+
+            else if( value instanceof File ) {
+                if( fileName )
+                    acc.append(fileName, value)
+                else
+                    acc.append(value.getName(), value)
+            }
+
+            else
+                throw new IllegalArgumentException("Operator 'collectFile' cannot be handled value: $value ")
+
+        }
+
+        /*
+         * emits the files when all values have been collected
+         */
+        def emitItems = {
+            acc.moveFiles(storeDir).each {
+                result.bind(it)
+            }
+
+            result.bind Channel.STOP
+        }
+
+        // apply the above rules
+        channel.subscribe ( onNext: processItem, onComplete: emitItems )
+
+        return result
+    }
+
+
     /**
      * Iterates over the collection of items and returns each item that matches the given filter
      * by calling the {@code Object#isCase}method used by switch statements.
@@ -505,18 +612,32 @@ class DataflowExtensions {
      * This method can be used with different kinds of filters like regular expressions, classes, ranges etc. Example:
      *
      * def list = ['a', 'b', 'aa', 'bc', 3, 4.5]
-     * assert list.grep( ~/a+/ )  == ['a', 'aa']
-     * assert list.grep( ~/../ )  == ['aa', 'bc']
-     * assert list.grep( Number ) == [ 3, 4.5 ]
-     * assert list.grep{ it.toString().size() == 1 } == [ 'a', 'b', 3 ]
+     * assert list.filter( ~/a+/ )  == ['a', 'aa']
+     * assert list.filter( ~/../ )  == ['aa', 'bc']
+     * assert list.filter( Number ) == [ 3, 4.5 ]
+     * assert list.filter{ it.toString().size() == 1 } == [ 'a', 'b', 3 ]
      *
      * @param channel
      * @param criteria
      * @return
      */
-    static public final <V> DataflowReadChannel<V> grep(final DataflowReadChannel<V> channel, final Object criteria) {
+    static public final <V> DataflowReadChannel<V> filter(final DataflowReadChannel<V> source, final Object criteria) {
         def discriminator = new BooleanReturningMethodInvoker("isCase");
-        return channel.filter { Object it -> discriminator.invoke(criteria, it) }
+        def target = newChannelBy(source)
+        newOperator(source, target, {
+            def result = discriminator.invoke(criteria, (Object)it)
+            if( result ) target.bind(it)
+        })
+        return target
+    }
+
+    static public <T> DataflowReadChannel<T> filter(DataflowReadChannel<T> source, final Closure<Boolean> closure) {
+        def target = newChannelBy(source)
+        newOperator(source, target, {
+            def result = DefaultTypeTransformation.castToBoolean(closure.call(it))
+            if( result ) target.bind(it)
+        })
+        return target
     }
 
     /**
@@ -651,7 +772,8 @@ class DataflowExtensions {
      * See https://github.com/Netflix/RxJava/wiki/Filtering-Observables#take
      *
      * @param source
-     * @return
+     * @param n The number of items to be taken. The value {@code -1} has a special semantic for all
+     * @return The resulting channel emitting the taken values
      */
     static public final <V> DataflowReadChannel<V> take( final DataflowReadChannel<V> source, int n ) {
         assert !(source instanceof DataflowExpression)
@@ -660,7 +782,7 @@ class DataflowExtensions {
         def target = new DataflowQueue<V>()
         newOperator([source],[]) {
 
-            if( count++ < n ) {
+            if( count++ < n || n == -1 ) {
                 target << it
                 return
             }
@@ -687,32 +809,6 @@ class DataflowExtensions {
 
     }
 
-
-    /**
-     * See https://github.com/Netflix/RxJava/wiki/Observable-Utility-Operators#parallel
-     *
-     * @param channel
-     * @param closure
-     * @return
-     */
-    static public final <V> DataflowReadChannel<V> parallel( final DataflowQueue<V> channel, Closure closure ) {
-
-        def nProcs = Math.max( 2, Runtime.getRuntime().availableProcessors()-1)
-
-        channel.filter( maxForks: nProcs ) { true }
-
-    }
-
-    /**
-     * See  https://github.com/Netflix/RxJava/wiki/Observable-Utility-Operators#finallydo
-     *
-     * @param channel
-     * @param closure
-     * @return
-     */
-    static public final <V> DataflowReadChannel<V> doFinally( final DataflowReadChannel<V> channel, Closure<V> closure ) {
-        channel.subscribe( onComplete: closure )
-    }
 
     /**
      * Convert a {@code DataflowQueue} alias *channel* to a Java {@code List}
@@ -986,18 +1082,6 @@ class DataflowExtensions {
         return target
     }
 
-
-    static public final List<DataflowReadChannel> separate( final DataflowReadChannel channel, int n, Closure mapper ) {
-
-        def outputs = []
-        n.times { outputs << new DataflowQueue() }
-        newOperator([channel], outputs, new SeparationClosure(mapper))
-        outputs
-    }
-
-    static public final void separate( final DataflowReadChannel channel, DataflowWriteChannel out1, DataflowWriteChannel out2, Closure<List<Object>> mapper ) {
-        channel.separate([out1,out2], mapper)
-    }
 
     static public final DataflowReadChannel spread( final DataflowReadChannel channel, Object other ) {
 
@@ -1519,53 +1603,45 @@ class DataflowExtensions {
      * @param source The source dataflow object
      * @param target One or more writable to which source is copied
      */
+    @Deprecated
     public static <T> void split( DataflowReadChannel<T> source, DataflowWriteChannel<T>... target ) {
         assert source != null
         assert target
+        log.warn "Operator 'split' has been deprecated and it will be removed in future release -- Use operator 'into' instead"
         source.split( target as List )
     }
 
+    @Deprecated
     public static <T> List split( DataflowReadChannel<T> source, int n ) {
+        log.warn "Operator 'split' has been deprecated and it will be removed in future release -- Use operator 'into' instead"
         def list = []
         n.times { list << newChannelBy(source) }
         source.split(list)
         return list
     }
 
-    public static void choice( DataflowReadChannel source, DataflowWriteChannel target1, DataflowWriteChannel target2, Closure<Integer> mapper ) {
-        source.choice([target1,target2], mapper)
-    }
-
+    @Deprecated
     public static DataflowReadChannel chopFasta( DataflowReadChannel source, Map options = [:] ) {
+        log.warn "Operator 'chopFasta' has been deprecated -- Use 'splitFasta' instead"
         chopImpl(source, NextflowExtensions.&chopFasta, options, null)
     }
 
+    @Deprecated
     public static DataflowReadChannel chopFasta( DataflowReadChannel source, Map options = [:], Closure closure ) {
+        log.warn "Operator 'chopFasta' has been deprecated -- Use 'splitFasta' instead"
         chopImpl(source, NextflowExtensions.&chopFasta, options, closure)
     }
 
+    @Deprecated
     public static DataflowReadChannel chopLines( DataflowReadChannel source, Map options = [:]) {
+        log.warn "Operator 'chopLines' has been deprecated -- Use 'splitText' instead"
         chopImpl(source, NextflowExtensions.&chopLines, options, null)
     }
 
+    @Deprecated
     public static DataflowReadChannel chopLines( DataflowReadChannel source, Map options = [:], Closure closure ) {
+        log.warn "Operator 'chopLines' has been deprecated -- Use 'splitText' instead"
         chopImpl(source, NextflowExtensions.&chopLines, options, closure)
-    }
-
-    public static DataflowReadChannel chopString( DataflowReadChannel source, Map options = [:] ) {
-        chopImpl(source, NextflowExtensions.&chopString, options, null)
-    }
-
-    public static DataflowReadChannel chopString( DataflowReadChannel source, Map options = [:], Closure closure ) {
-        chopImpl(source, NextflowExtensions.&chopString, options, closure)
-    }
-
-    public static DataflowReadChannel chopBytes( DataflowReadChannel source, Map options = [:] ) {
-        chopImpl(source, NextflowExtensions.&chopBytes, options, null)
-    }
-
-    public static DataflowReadChannel chopBytes( DataflowReadChannel source, Map options = [:], Closure closure ) {
-        chopImpl(source, NextflowExtensions.&chopBytes, options, closure)
     }
 
 
@@ -1629,20 +1705,23 @@ class DataflowExtensions {
         return result
     }
 
+
     /**
-     * When the items emitted by the source channel are tuples of values, the operator into allows you to specify a
+     * When the items emitted by the source channel are tuples of values, the operator separate allows you to specify a
      * list of channels as parameters, so that the value i-th in a tuple will be assigned to the target channel
      * with the corresponding position index.
      *
      * @param source The source channel
      * @param target An open array of target channels
      */
-    static final void into( DataflowReadChannel source, final DataflowWriteChannel... target ) {
+    static final void separate( DataflowReadChannel source, final DataflowWriteChannel... target ) {
+        assert source != null
+        assert target != null
 
         final size = target.size()
         int count = 0
-        Closure<List<Object>> result = { it ->
-            def tuple = it as List
+        Closure<List<Object>> mapper = { it ->
+            def tuple = it instanceof List ? it : [it]
             if( tuple.size() == size )
                 return tuple
 
@@ -1651,14 +1730,54 @@ class DataflowExtensions {
                     log.warn "The target channels number ($size) for the 'into' operator do not match the items number (${tuple.size()}) of the receveid tuple: $tuple"
 
                 def result = new ArrayList(size)
-                size.times { i ->
+                for( int i=0; i<size; i++ ) {
                     result[i] = i < tuple.size() ? tuple[i] : null
                 }
                 return result
             }
         }
 
-        source.separate( target as List<DataflowWriteChannel>, result )
+        source.separate( target as List<DataflowWriteChannel>, mapper )
+    }
+
+
+
+    static public final List<DataflowReadChannel> separate( final DataflowReadChannel channel, int n ) {
+        def outputs = new DataflowWriteChannel[n]
+        for( int i=0; i<n; i++ )
+            outputs[i] = new DataflowQueue()
+
+        separate(channel, outputs)
+
+        outputs
+    }
+
+    static public final List<DataflowReadChannel> separate( final DataflowReadChannel channel, int n, Closure mapper  ) {
+        def outputs = []
+        for( int i=0; i<n; i++ )
+            outputs.add(new DataflowQueue())
+
+        newOperator([channel], outputs, new SeparationClosure(mapper))
+
+        outputs
+    }
+
+
+    static final void into( DataflowReadChannel source, final DataflowWriteChannel... targets ) {
+        assert source != null
+        assert targets != null
+
+        newOperator([source], targets as List, new ChainWithClosure(new CopyChannelsClosure()))
+    }
+
+    static public final List<DataflowReadChannel> into( final DataflowReadChannel source, int n ) {
+        def targets = new ArrayList(n)
+        for( int i=0; i<n; i++ )
+            targets << new DataflowQueue()
+
+        newOperator([source], targets as List, new ChainWithClosure(new CopyChannelsClosure()))
+
+        targets
     }
 
 

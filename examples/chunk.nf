@@ -14,9 +14,7 @@
 params.chunkSize = 1
 sequences = Channel.create()
 
-stdin.chunkFasta( params.chunkSize ) { str ->
-    sequences << str
-}
+stdin.splitFasta( by: params.chunkSize, into: sequences )
 
 process foo {
     echo true

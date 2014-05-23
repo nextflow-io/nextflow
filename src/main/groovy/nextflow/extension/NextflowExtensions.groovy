@@ -19,6 +19,7 @@
  */
 
 package nextflow.extension
+
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
@@ -42,12 +43,17 @@ import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
 import groovyx.gpars.group.DefaultPGroup
 import groovyx.gpars.group.PGroup
 import groovyx.gpars.scheduler.Pool
-import nextflow.util.CacheHelper
+import nextflow.splitter.BytesSplitter
+import nextflow.splitter.FastaSplitter
+import nextflow.splitter.StringSplitter
+import nextflow.splitter.TextSplitter
 import nextflow.util.Duration
 import nextflow.util.FileHelper
+import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.codehaus.groovy.runtime.ResourceGroovyMethods
 import org.codehaus.groovy.runtime.StringGroovyMethods
+
 /**
  * Provides extension methods to chunk text and file
  *
@@ -63,7 +69,6 @@ class NextflowExtensions {
 
     static private Pattern PATTERN_LEFT_TRIM = ~/^\s+/
 
-    static private Pattern PATTERN_FASTA_DESC = ~/^>\S+\s+(.*)/
 
     /**
      * Remove blank chars at the end of the string
@@ -86,148 +91,131 @@ class NextflowExtensions {
         self.replaceAll(PATTERN_LEFT_TRIM,'')
     }
 
-
-    @groovy.transform.PackageScope
-    static chopInvoke( Closure closure, Object obj, int index ) {
-        if( !closure ) return obj
-        def types = closure.getParameterTypes()
-        if( types.size()>1 ) {
-            return closure.call(obj, index)
-        }
-        else {
-            return closure.call(obj)
-        }
+    /**
+     * <p>Strips any of a set of characters from the start and end of a String.
+     * This is similar to {@link String#trim()} but allows the characters
+     * to be stripped to be controlled.</p>
+     *
+     * <p>A <code>null</code> input String returns <code>null</code>.
+     * An empty string ("") input returns the empty string.</p>
+     *
+     * <p>If the stripChars String is <code>null</code>, whitespace is
+     * stripped as defined by {@link Character#isWhitespace(char)}.
+     * Alternatively use {@link #strip(String)}.</p>
+     *
+     * <pre>
+     * StringUtils.strip(null, *)          = null
+     * StringUtils.strip("", *)            = ""
+     * StringUtils.strip("abc", null)      = "abc"
+     * StringUtils.strip("  abc", null)    = "abc"
+     * StringUtils.strip("abc  ", null)    = "abc"
+     * StringUtils.strip(" abc ", null)    = "abc"
+     * StringUtils.strip("  abcyx", "xyz") = "  abc"
+     * </pre>
+     *
+     * @param str  the String to remove characters from, may be null
+     * @param stripChars  the characters to remove, null treated as whitespace
+     * @return the stripped String, <code>null</code> if null String input
+     */
+    static strip( String self, String stripChars = null ) {
+        StringUtils.strip(self, stripChars)
     }
 
     /**
-     * Parse a {@code CharSequence} as a FASTA formatted text, retuning a {@code Map} object
-     * containing the fields as specified by the @{code record} parameter.
-     * <p>
-     *  For example:
-     *  <pre>
-     *  def fasta = '''
-     *      >5524211 cytochrome b [Elephas maximus maximus]
-     *      LCLYTHIGRNIYYGSYLYSETWNTGIMLLLITMATAFMGYVLPWGQMSFWGATVITNLFSAIPYIGTNLV
-     *      IENY/
-     *      '''.stripIndent()
+     * <p>Strips any of a set of characters from the start of a String.</p>
      *
-     *   def record = fasta.parseFastaRecord( [ id: true, seq: true ]
-     *   assert record.id == '5524211'
-     *   assert record.seq = 'LCLYTHIGRNIYYGSYLYSETWNTGIMLLLITMATAFMGYVLPWGQMSFWGATVITNLFSAIPYIGTNLVIENY'
-     *  </pre>
+     * <p>A <code>null</code> input String returns <code>null</code>.
+     * An empty string ("") input returns the empty string.</p>
      *
+     * <p>If the stripChars String is <code>null</code>, whitespace is
+     * stripped as defined by {@link Character#isWhitespace(char)}.</p>
      *
-     * @param fasta
-     *      The fasta formatted text to be parsed
-     * @param record
-     *      The map object that is used to specify which fields are required to be returned in the result map.
-     *      The following field can be used:
-     *      <li>{@code id} The fasta ID
-     *      <li>{@code seq} The sequence string
-     *      <li>{@code desc} The description in the fasta header
-     *      <li>{@code head} The fasta header (first line including the '>' character)
-     *      <li>{@code text} The complete fasta text block
-     *      <li>{@code width} The width of the fasta formatted block. If 0 is specified the sequence is not broken into multiple lines
-     *      <li>{@code hash} The hashCode of the entered FASTA sequence
-     *      <li>{@code uuid} A random {@code UUID} id for this sequence
+     * <pre>
+     * StringUtils.stripStart(null, *)          = null
+     * StringUtils.stripStart("", *)            = ""
+     * StringUtils.stripStart("abc", "")        = "abc"
+     * StringUtils.stripStart("abc", null)      = "abc"
+     * StringUtils.stripStart("  abc", null)    = "abc"
+     * StringUtils.stripStart("abc  ", null)    = "abc  "
+     * StringUtils.stripStart(" abc ", null)    = "abc "
+     * StringUtils.stripStart("yxabc  ", "xyz") = "abc  "
+     * </pre>
      *
-     *
-     * @return
+     * @param str  the String to remove characters from, may be null
+     * @param stripChars  the characters to remove, null treated as whitespace
+     * @return the stripped String, <code>null</code> if null String input
      */
-    static parseFastaRecord( CharSequence fasta, Map record ) {
-        assert fasta != null
-        if( !record ) return
-
-        String head = null
-
-        def body = new StringBuilder()
-        fasta.eachLine { String line ->
-            line = line.trim()
-            if( !line ) return
-            if( line.startsWith(';')) return
-            if( !head ) {
-                if( line.startsWith('>') )
-                    head = line
-                return
-            }
-
-            if( body.size() )
-                body.append('\n')
-
-            body.append(line)
-        }
-
-        def result = [:]
-        if( record.id && head ) {
-            def clean = head.substring(1) // 'remove the '>' char'
-            int p = clean.indexOf(' ')
-            result.id = p != -1 ? clean.substring(0,p) : clean
-        }
-        if( record.desc && head ) {
-            def m = PATTERN_FASTA_DESC.matcher(head)
-            result.desc = m.matches() ? m.group(1) : null
-        }
-        if( record.head ) {
-            result.head = head
-        }
-        if( record.text ) {
-            result.text = fasta.toString()
-        }
-        if( record.seq ) {
-            if( record.width == null ) {
-                result.seq = body.toString()
-            }
-            else if( record.width.toString().isInteger()) {
-                def buff = new StringBuilder()
-                int len = record.width as int
-
-                if( len > 0 ) {
-                    body.chopString(count:len, ignoreNewLine: true) { str ->
-                        if( buff.size() ) buff.append('\n')
-                        buff.append(str)
-                    }
-                }
-                else {
-                    body.eachLine { buff.append(it) }
-                }
-
-                result.seq = buff.toString()
-            }
-            else {
-                throw new IllegalArgumentException("Invalid 'width' argument value: ${record.width}")
-            }
-        }
-        if( record.uuid ) {
-            result.uuid = UUID.randomUUID()
-        }
-        if( record.hash ) {
-            result.hash = CacheHelper.hasher(fasta).hash()
-        }
-
-        return result
+    static stripStart( String self, String stripChars = null ) {
+        StringUtils.stripStart(self, stripChars)
     }
 
-    @groovy.transform.PackageScope
-    static Charset getCharset( object ) {
-
-        if( object instanceof Map ) {
-            if( object.containsKey('charset') )
-                object = object.charset
-            else
-                return Charset.defaultCharset()
-        }
-
-        if( object instanceof Charset )
-            return object
-
-        if( object instanceof String && Charset.isSupported(object) )
-            return Charset.forName(object)
-
-        if( object != null )
-            log.warn "Invalid charset object: $object -- using defualt: ${Charset.defaultCharset()}"
-
-        Charset.defaultCharset()
+    /**
+     * <p>Strips any of a set of characters from the end of a String.</p>
+     *
+     * <p>A <code>null</code> input String returns <code>null</code>.
+     * An empty string ("") input returns the empty string.</p>
+     *
+     * <p>If the stripChars String is <code>null</code>, whitespace is
+     * stripped as defined by {@link Character#isWhitespace(char)}.</p>
+     *
+     * <pre>
+     * StringUtils.stripEnd(null, *)          = null
+     * StringUtils.stripEnd("", *)            = ""
+     * StringUtils.stripEnd("abc", "")        = "abc"
+     * StringUtils.stripEnd("abc", null)      = "abc"
+     * StringUtils.stripEnd("  abc", null)    = "  abc"
+     * StringUtils.stripEnd("abc  ", null)    = "abc"
+     * StringUtils.stripEnd(" abc ", null)    = " abc"
+     * StringUtils.stripEnd("  abcyx", "xyz") = "  abc"
+     * StringUtils.stripEnd("120.00", ".0")   = "12"
+     * </pre>
+     *
+     * @param str  the String to remove characters from, may be null
+     * @param stripChars  the set of characters to remove, null treated as whitespace
+     * @return the stripped String, <code>null</code> if null String input
+     */
+    static stripEnd( String self, String stripChars = null ) {
+        StringUtils.stripEnd(self, stripChars)
     }
+
+    /**
+     * <p>Capitalizes a String changing the first letter to title case as
+     * per {@link Character#toTitleCase(char)}. No other letters are changed.</p>
+     *
+     * <p>For a word based algorithm, see {@link org.apache.commons.lang.WordUtils#capitalize(String)}.
+     * A <code>null</code> input String returns <code>null</code>.</p>
+     *
+     * <pre>
+     * StringUtils.capitalize(null)  = null
+     * StringUtils.capitalize("")    = ""
+     * StringUtils.capitalize("cat") = "Cat"
+     * StringUtils.capitalize("cAt") = "CAt"
+     * </pre>
+     *
+     */
+    static String capitalize(String self) {
+        StringUtils.capitalize(self)
+    }
+
+    /**
+     * <p>Uncapitalizes a String changing the first letter to title case as
+     * per {@link Character#toLowerCase(char)}. No other letters are changed.</p>
+     *
+     * <p>For a word based algorithm, see {@link org.apache.commons.lang.WordUtils#uncapitalize(String)}.
+     * A <code>null</code> input String returns <code>null</code>.</p>
+     *
+     * <pre>
+     * StringUtils.uncapitalize(null)  = null
+     * StringUtils.uncapitalize("")    = ""
+     * StringUtils.uncapitalize("Cat") = "cat"
+     * StringUtils.uncapitalize("CAT") = "cAT"
+     * </pre>
+     *
+     */
+    static String uncapitalize(String self) {
+        StringUtils.uncapitalize(self)
+    }
+
 
     static private Pattern getPattern( obj ) {
 
@@ -289,6 +277,7 @@ class NextflowExtensions {
      *      chopped line(s) if container object has been specified.
      *
      */
+    @Deprecated
     static chopLines( Object obj, Map options = [:] ) {
         chopLines(obj,options,null)
     }
@@ -336,93 +325,13 @@ class NextflowExtensions {
      *      chopped line(s) if container object has been specified.
      *
      */
+    @Deprecated
     static chopLines( Object obj, Map options = [:], Closure closure ) {
+        log.warn "Method 'chopLines' has been deprecated and will be removed in a future release -- consider using 'splitText' instead"
+        def opt = options != null ? options : [:]
+        if( closure ) opt.each = closure
+        new TextSplitter().options(options).target(obj).split()
 
-        if( obj instanceof CharSequence )
-            return chopLinesImpl( new StringReader(obj.toString()), options, closure )
-
-        if( obj instanceof Reader )
-            return chopLinesImpl( obj, options, closure )
-
-        if( obj instanceof Path ) {
-            def charset = getCharset(options)
-            return chopLinesImpl( Files.newBufferedReader(obj, charset), options, closure )
-        }
-
-        if( obj instanceof InputStream ) {
-            def charset = getCharset(options)
-            return chopLinesImpl( new InputStreamReader(obj,charset), options, closure )
-        }
-
-        if( obj instanceof File ) {
-            return chopLinesImpl( new FileReader(obj), options, closure )
-        }
-
-        throw new IllegalAccessException("Object of class '${obj.class.name}' does not support 'chopText' method")
-    }
-
-    static private chopLinesImpl( Reader reader, Map options = null , Closure closure ) {
-        assert reader != null
-        assert options != null
-
-        log.trace "Chop options: ${options}"
-        final size = options.count ?: 1
-        final into = options.into
-        if( into && !(into instanceof Collection) && !(into instanceof DataflowQueue) )
-            throw new IllegalArgumentException("Argument 'into' can be a subclass of Collection or a DataflowQueue type -- Entered value type: ${into.class.name}")
-
-        BufferedReader reader0 = reader instanceof BufferedReader ? reader : new BufferedReader(reader)
-
-        def result = null
-        String line
-        int index = 0
-        StringBuilder buffer = new StringBuilder()
-        int c=0
-
-        try {
-
-            while( (line = reader0.readLine()) != null ) {
-                if ( c ) buffer << '\n'
-                buffer << line
-                if ( ++c == size ) {
-                    c = 0
-                    result = chopInvoke(closure, buffer.toString(), index++ )
-                    if( into != null )
-                        into << result
-
-                    buffer.setLength(0)
-                }
-            }
-
-        }
-        finally {
-            reader0.closeQuietly()
-        }
-
-        /*
-         * if there's something remaining in the buffer it's supposed
-         * to be the last entry
-         */
-        if ( buffer.size() ) {
-            result = chopInvoke(closure, buffer.toString(), index )
-            if( into != null )
-                into << result
-        }
-
-        /*
-         * now close and return the result
-         * - when the target it's a channel, send stop message
-         * - when it's a list return it
-         * - otherwise return the last value
-         */
-        if( into instanceof DataflowWriteChannel ) {
-            into << PoisonPill.instance
-            return into
-        }
-        if( into != null )
-            return into
-
-        return result
     }
 
     /// chopString
@@ -462,6 +371,7 @@ class NextflowExtensions {
      *      chopped sub-string if container object has been specified.
      *
      */
+    @Deprecated
     static chopString( Object object, Map options = [:] ) {
         chopString(object,options,null)
     }
@@ -507,92 +417,14 @@ class NextflowExtensions {
      *      chopped sub-string if container object has been specified.
      *
      */
+    @Deprecated
     static chopString( Object obj, Map options, Closure closure ) {
+        log.warn "Method 'chopString' has been deprecated and will be removed in a future release -- consider using 'splitString' instead"
 
-        if( obj instanceof CharSequence )
-            return chopStringImpl( new StringReader(obj.toString()), options, closure )
+        def opt = options != null ? options : [:]
+        if( closure ) opt.each = closure
+        new StringSplitter().options(options).target(obj).split()
 
-        if( obj instanceof Path ) {
-            def charset = getCharset(options.charset)
-            return chopStringImpl( Files.newBufferedReader(obj, charset), options, closure )
-        }
-
-        if( obj instanceof Reader )
-            return chopStringImpl( obj, options, closure )
-
-        if( obj instanceof InputStream ) {
-            def charset = getCharset(options)
-            return chopStringImpl( new InputStreamReader(obj,charset), options, closure )
-        }
-
-        if( obj instanceof File )
-            return chopStringImpl( new FileReader(obj), options, closure )
-
-        throw new IllegalAccessException("Object of class '${obj.class.name}' does not support 'chopString' method")
-    }
-
-    static private chopStringImpl( Reader reader, Map options = [:] , Closure closure  ) {
-        assert reader != null
-        assert options != null
-
-        log.trace "Chop options: ${options}"
-        final count = options.count ?: 1
-        final into = options.into
-        final ignoreNewLine = options.ignoreNewLine == true ?: false
-        if( into && !(into instanceof Collection) && !(into instanceof DataflowQueue) )
-            throw new IllegalArgumentException("Argument 'into' can be a subclass of Collection or a DataflowQueue type -- Entered value type: ${into.class.name}")
-
-        def result = null
-        def index = 0
-        def buffer = new StringBuilder()
-        int c = 0
-        def ch
-
-        try {
-
-            while( (ch=reader.read()) != -1 ) {
-                if( ignoreNewLine && ( ch == '\n' as char || ch == '\r' as char ))
-                    continue
-                buffer.append( (char)ch )
-                if ( ++c == count ) {
-                    c = 0
-                    result = chopInvoke(closure, buffer.toString(), index++ )
-                    if( into != null )
-                        into << result
-
-                    buffer.setLength(0)
-                }
-            }
-
-        }
-        finally {
-            reader.closeQuietly()
-        }
-
-        /*
-         * if there's something remaining in the buffer it's supposed
-         * to be the last entry
-         */
-        if ( buffer.size() ) {
-            result = chopInvoke(closure, buffer.toString(), index++ )
-            if( into != null )
-                into << result
-        }
-
-        /*
-         * now close and return the result
-         * - when the target it's a channel, send stop message
-         * - when it's a list return it
-         * - otherwise return the last value
-         */
-        if( into instanceof DataflowWriteChannel ) {
-            into << PoisonPill.instance
-            return into
-        }
-        if( into != null )
-            return into
-
-        return result
     }
 
 
@@ -632,6 +464,7 @@ class NextflowExtensions {
      *      byte array produced if container object has been specified.
      *
      */
+    @Deprecated
     static chopBytes( Object obj, Map options = [:]) {
         chopBytes(obj,options,null)
     }
@@ -676,97 +509,16 @@ class NextflowExtensions {
      *      byte array produced if container object has been specified.
      *
      */
+    @Deprecated
     static chopBytes( Object obj, Map options, Closure closure ) {
+        log.warn "Method 'chopBytes' has been deprecated and will be removed in a future release -- consider using 'splitBytes' instead"
 
-        if( obj instanceof CharSequence )
-            return chopBytesImpl( new ByteArrayInputStream(obj.toString().bytes), options, closure )
-
-        if( obj instanceof Path ) {
-            return chopBytesImpl( Files.newInputStream(obj), options, closure )
-        }
-
-        if( obj instanceof InputStream ) {
-            return chopBytesImpl( obj, options, closure )
-        }
-
-        if( obj instanceof File ) {
-            return chopBytesImpl( new FileInputStream(obj), options, closure )
-        }
-
-        throw new IllegalAccessException("Object of class '${obj.class.name}' does not support 'chopBytes' method")
+        def opt = options != null ? options : [:]
+        if( closure ) opt.each = closure
+        new BytesSplitter().options(options).target(obj).split()
 
     }
 
-    static private chopBytesImpl( InputStream stream, Map options = [:], Closure<byte[]> closure ) {
-        assert stream != null
-        assert options != null
-
-        log.trace "Chop options: ${options}"
-        final count = options.count ?: 1
-        final into = options.into
-        if( into && !(into instanceof Collection) && !(into instanceof DataflowQueue) )
-            throw new IllegalArgumentException("Argument 'into' can be a subclass of Collection or a DataflowQueue type -- Entered value type: ${into.class.name}")
-
-        def result = null
-
-        int c=0
-        int index = 0
-        byte[] buffer = new byte[count]
-        byte item
-
-        try {
-
-            while( (item=stream.read()) != -1 ) {
-                buffer[c] = (byte)item
-
-                if ( ++c == count ) {
-                    c = 0
-                    result = chopInvoke(closure, buffer, index++ )
-                    if( into != null )
-                        into << result
-
-                    buffer = new byte[count]
-                }
-            }
-
-        }
-        finally {
-            stream.closeQuietly()
-        }
-
-
-        /*
-         * if there's something remaining in the buffer it's supposed
-         * to be the last entry
-         */
-
-        if ( c ) {
-            if( c != count ) {
-                def copy = new byte[c]
-                System.arraycopy(buffer,0,copy,0,c)
-                buffer = copy
-            }
-
-            result = chopInvoke(closure, buffer, index++ )
-            if( into != null )
-                into << result
-        }
-
-        /*
-         * now close and return the result
-         * - when the target it's a channel, send stop message
-         * - when it's a list return it
-         * - otherwise return the last value
-         */
-        if( into instanceof DataflowWriteChannel ) {
-            into << PoisonPill.instance
-            return into
-        }
-        if( into != null )
-            return into
-
-        return result
-    }
 
 
     // FASTA
@@ -830,6 +582,7 @@ class NextflowExtensions {
      *
      */
 
+    @Deprecated
     static chopFasta( Object obj, Map options = [:] ) {
         chopFasta( obj, options, null )
     }
@@ -895,124 +648,16 @@ class NextflowExtensions {
      * @see DataflowExtensions#chopFasta(groovyx.gpars.dataflow.DataflowReadChannel)
      *
      */
+    @Deprecated
     static chopFasta( Object obj, Map options = [:], Closure closure ) {
+        log.warn "Method 'chopFasta' has been deprecated and will be removed in a future release -- consider using 'splitFasta' instead"
 
-        if( obj instanceof CharSequence )
-            return chopFastaImpl( new StringReader(obj.toString()), options, closure )
+        def opt = options != null ? options : [:]
+        if( closure ) opt.each = closure
+        new FastaSplitter().options(options).target(obj).split()
 
-        if( obj instanceof Path ) {
-            def charset = getCharset(options)
-            return chopFastaImpl( Files.newBufferedReader(obj, charset), options, closure )
-        }
-
-        if( obj instanceof Reader ) {
-            return chopFastaImpl( obj as Reader, options, closure)
-        }
-
-        if( obj instanceof File ) {
-            return chopFastaImpl( new FileReader(obj), options, closure )
-        }
-
-        if( obj instanceof InputStream ) {
-            def charset = getCharset(options)
-            return chopFastaImpl( new InputStreamReader(obj,charset), options, closure)
-        }
-
-        throw new IllegalAccessException("Object of class '${obj.class.name}' does not support 'chopFasta' method")
     }
 
-    static chopFastaImpl( Reader text, Map options = [:], Closure<String> closure ) {
-        assert text != null
-        assert options != null
-
-        log.trace "Chunk options: $options"
-        final count = options.count ?: 1
-        final into = options.into
-        final rec = options.record && options.record instanceof Map
-
-        if( into && !(into instanceof Collection) && !(into instanceof DataflowQueue) )
-            throw new IllegalArgumentException("Argument 'into' can be a subclass of Collection or a DataflowQueue type -- Entered value type: ${into.class.name}")
-
-        if( rec && count>1 )
-            throw new IllegalArgumentException("When using 'record' option 'count' cannot be greater than 1")
-
-        BufferedReader reader0 = text instanceof BufferedReader ? text : new BufferedReader(text)
-
-        def result = null
-        String line
-        StringBuilder buffer = new StringBuilder()
-        int index = 0
-        int blockCount=0
-        boolean openBlock = false
-
-        try {
-
-            while( (line = reader0.readLine()) != null ) {
-
-                if( line.startsWith(';')) continue
-
-                if ( line == '' ) {
-                    buffer << '\n'
-                }
-                else if ( !openBlock && line.charAt(0)=='>' ) {
-                    openBlock = true
-                    buffer << line << '\n'
-                }
-                else if ( openBlock && line.charAt(0)=='>') {
-                    // another block is started
-
-                    if ( ++blockCount == count ) {
-                        // invoke the closure, passing the read block as parameter
-                        def record = rec ? parseFastaRecord(buffer.toString(), (Map)options.record) : buffer.toString()
-                        result = chopInvoke(closure, record, index++ )
-                        if( into != null ) {
-                            into << result
-                        }
-
-                        buffer.setLength(0)
-                        blockCount=0
-                    }
-
-                    buffer << line << '\n'
-
-                }
-                else {
-                    buffer << line << '\n'
-                }
-            }
-
-        }
-        finally {
-            reader0.closeQuietly()
-        }
-
-
-        /*
-         * if there's something remaining in the buffer it's supposed
-         * to be the last entry
-         */
-        if ( buffer.size() ) {
-            def record = rec ? parseFastaRecord(buffer.toString(), (Map)options.record) : buffer.toString()
-            result = chopInvoke(closure, record, index )
-            if( into != null )
-                into << result
-        }
-
-        /*
-         * now close and return the result
-         * - when the target it's a channel, send stop message
-         * - when it's a list return it
-         * - otherwise return the last value
-         */
-        if( into instanceof DataflowWriteChannel ) {
-            into << PoisonPill.instance
-            return into
-        }
-        if( into != null )
-            return into
-
-        return result
-    }
 
 
     /**
@@ -1022,6 +667,7 @@ class NextflowExtensions {
      * @param n The number of lines in each 'chunk'
      * @param A closure invoked for each chunk of text, it takes a single (optional) string parameter which represents the current text chunk
      */
+    @Deprecated
     public static void chunkLines( CharSequence sequence, int n = 1, Closure block ) {
         assert sequence != null
         chunkLines( new StringReader(sequence.toString()), [size: n], block )
@@ -1067,6 +713,8 @@ class NextflowExtensions {
 
     @Deprecated
     static void chunkLines( Reader reader, Map options,  Closure block) {
+        log.warn "Method 'chunkLines' has been deprecated and will be removed in a future release -- consider using 'splitText' instead"
+
         assert reader != null
         assert options != null
         assert block != null
@@ -1323,6 +971,8 @@ class NextflowExtensions {
      */
     @Deprecated
     static void chunkFasta( Reader text, Map options, Closure block ) {
+        log.warn "Method 'chunkFasta' has been deprecated and will be removed in a future release -- consider using 'splitFasta' instead"
+
         assert text != null
         assert block != null
         assert options != null
@@ -1418,32 +1068,37 @@ class NextflowExtensions {
      * @param group
      * @param code
      */
+    @Deprecated
     static void each( DataflowStreamReadAdapter queue, Closure closure ) {
         each(queue, Dataflow.retrieveCurrentDFPGroup(), closure)
     }
 
+    @Deprecated
     static void each( DataflowStreamReadAdapter queue, final Pool pool, Closure closure ) {
         each( queue, new DefaultPGroup(pool), closure)
     }
 
+    @Deprecated
     static void each( DataflowStreamReadAdapter queue, final PGroup group, Closure code ) {
         each0( queue, group, code )
     }
 
-
+    @Deprecated
     static void each( DataflowQueue queue, Closure closure ) {
         each(queue, Dataflow.retrieveCurrentDFPGroup(), closure)
     }
 
+    @Deprecated
     static void each( DataflowQueue queue, final Pool pool, Closure closure ) {
         each( queue, new DefaultPGroup(pool), closure)
     }
 
+    @Deprecated
     static void each( DataflowQueue queue, final PGroup group, Closure code ) {
         each0( queue, group, code )
     }
 
-
+    @Deprecated
     static void each ( WriteChannelWrap channel, Closure code ) {
         each0( channel.target as DataflowReadChannel, Dataflow.retrieveCurrentDFPGroup(), code )
     }
@@ -1459,6 +1114,7 @@ class NextflowExtensions {
      * @param code The closure code block
      */
     private static void each0( DataflowReadChannel queue, final PGroup group, Closure code ) {
+        log.warn "The operator 'each' has been deprecated -- use 'subscribe' instead"
 
         // -- wrap the owner to intercept any reference to an external dataflow instance
         final interceptor = new WritableChannelInterceptor(code)
@@ -1487,38 +1143,44 @@ class NextflowExtensions {
      * @param channel
      * @param closure
      */
+    @Deprecated
     static void eachWithIndex( DataflowStreamReadAdapter channel, Closure closure ) {
         eachWithIndex(channel, Dataflow.retrieveCurrentDFPGroup(), closure)
     }
 
+    @Deprecated
     static void eachWithIndex( DataflowStreamReadAdapter channel, final Pool pool, Closure closure ) {
         eachWithIndex( channel, new DefaultPGroup(pool), closure)
     }
 
+    @Deprecated
     static void eachWithIndex( DataflowStreamReadAdapter channel, final PGroup group, Closure code ) {
         eachWithIndex0( channel, group, code )
     }
 
-
+    @Deprecated
     static void eachWithIndex( DataflowQueue queue, Closure closure ) {
         eachWithIndex(queue, Dataflow.retrieveCurrentDFPGroup(), closure)
     }
 
+    @Deprecated
     static void eachWithIndex( DataflowQueue channel, final Pool pool, Closure closure ) {
         eachWithIndex( channel, new DefaultPGroup(pool), closure)
     }
 
+    @Deprecated
     static void eachWithIndex( DataflowQueue channel, final PGroup group, Closure code ) {
         eachWithIndex0( channel, group, code )
     }
 
-
+    @Deprecated
     static void eachWithIndex( WriteChannelWrap channel, Closure code ) {
         eachWithIndex0( channel.target as DataflowReadChannel, Dataflow.retrieveCurrentDFPGroup(), code )
     }
 
-
+    @Deprecated
     private static void eachWithIndex0( DataflowReadChannel channel, final PGroup group, Closure code ) {
+        log.warn "The operator 'eachWithIndex' has been deprecated -- use 'subscribe' instead"
 
         // -- wrap the owner to intercept any reference to an external dataflow instance
         final interceptor = new WritableChannelInterceptor(code)
@@ -1771,7 +1433,7 @@ class NextflowExtensions {
             if( self.containsKey(key) )
                 return self.get(key)
 
-            def result = factory instanceof Closure ? factory.call() : factory
+            def result = factory instanceof Closure ? factory.call(key) : factory
             self.put(key,result)
             return result
         }

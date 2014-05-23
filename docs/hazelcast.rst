@@ -31,7 +31,7 @@ process ``PID`` is saved in the file ``.nextflow.pid`` in the same folder.
 
 If you don't see members joining, then it is likely because multicast is not available.
 
-.. tip::  To check if multicast is available, `iperf <http://sourceforge.net/projects/iperf/>`_ is a useful tool which is available for Windows/*NIX/OSX.
+.. tip::  To check if multicast is available, `iperf <http://sourceforge.net/projects/iperf/>`_ is a useful tool which is available for Windows/\*NIX/OSX.
   To test multicast open a terminal one 2 machines within the network and run the following in the first terminal
   ``iperf -s -u -B 224.2.2.3 -i 1`` and ``iperf -c 224.2.2.3 -u -T 32 -t 3 -i 1`` in the other terminal.
   If data is being transferred then multicast is working.

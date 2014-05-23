@@ -680,7 +680,7 @@ public class NioGroovyMethods extends DefaultGroovyMethodsSupport {
      * @since 1.7.1
      */
     public static void eachFile(final Path self, final FileType fileType, final Closure closure) throws IOException {
-            //throws FileNotFoundException, IllegalArgumentException {
+        //throws FileNotFoundException, IllegalArgumentException {
         checkDir(self);
 
         try ( DirectoryStream<Path> stream = Files.newDirectoryStream(self) ) {
@@ -740,7 +740,7 @@ public class NioGroovyMethods extends DefaultGroovyMethodsSupport {
      * @since 1.7.1
      */
     public static void eachFileRecurse(final Path self, final FileType fileType, final Closure closure) throws IOException { // throws FileNotFoundException, IllegalArgumentException {
-            // throws FileNotFoundException, IllegalArgumentException {
+        // throws FileNotFoundException, IllegalArgumentException {
         checkDir(self);
         try ( DirectoryStream<Path> stream = Files.newDirectoryStream(self)) {
             Iterator<Path> itr = stream.iterator();
@@ -816,7 +816,7 @@ public class NioGroovyMethods extends DefaultGroovyMethodsSupport {
      */
     public static void traverse(final Path self, final Map<String, Object> options, final Closure closure)
             throws IOException {
-            // throws FileNotFoundException, IllegalArgumentException {
+        // throws FileNotFoundException, IllegalArgumentException {
         Number maxDepthNumber = DefaultGroovyMethods.asType(options.remove("maxDepth"), Number.class);
         int maxDepth = maxDepthNumber == null ? -1 : maxDepthNumber.intValue();
         Boolean visitRoot = DefaultGroovyMethods.asType(get(options, "visitRoot", false), Boolean.class);
@@ -895,7 +895,7 @@ public class NioGroovyMethods extends DefaultGroovyMethodsSupport {
      */
     public static void traverse(final Path self, final Closure closure)
             throws IOException {
-            // throws FileNotFoundException, IllegalArgumentException {
+        // throws FileNotFoundException, IllegalArgumentException {
         traverse(self, new HashMap<String, Object>(), closure);
     }
 
@@ -914,14 +914,14 @@ public class NioGroovyMethods extends DefaultGroovyMethodsSupport {
      */
     public static void traverse(final Path self, final Map<String, Object> options)
             throws IOException {
-            // throws FileNotFoundException, IllegalArgumentException {
+        // throws FileNotFoundException, IllegalArgumentException {
         final Closure visit = (Closure) options.remove("visit");
         traverse(self, options, visit);
     }
 
     private static FileVisitResult traverse(final Path self, final Map<String, Object> options, final Closure closure, final int maxDepth)
             throws IOException {
-            //throws FileNotFoundException, IllegalArgumentException {
+        //throws FileNotFoundException, IllegalArgumentException {
         checkDir(self);
         final Closure pre = (Closure) options.get("preDir");
         final Closure post = (Closure) options.get("postDir");
@@ -1043,7 +1043,7 @@ public class NioGroovyMethods extends DefaultGroovyMethodsSupport {
      * @since 1.7.1
      */
     public static void eachFileMatch(final Path self, final FileType fileType, final Object nameFilter, final Closure closure) throws IOException {
-            // throws FileNotFoundException, IllegalArgumentException {
+        // throws FileNotFoundException, IllegalArgumentException {
         checkDir(self);
         try ( DirectoryStream<Path> stream = Files.newDirectoryStream(self) ) {
             Iterator<Path> itr = stream.iterator();
@@ -1076,7 +1076,7 @@ public class NioGroovyMethods extends DefaultGroovyMethodsSupport {
      * @since 1.5.0
      */
     public static void eachFileMatch(final Path self, final Object nameFilter, final Closure closure) throws IOException {
-            // throws FileNotFoundException, IllegalArgumentException {
+        // throws FileNotFoundException, IllegalArgumentException {
         eachFileMatch(self, FileType.ANY, nameFilter, closure);
     }
 
