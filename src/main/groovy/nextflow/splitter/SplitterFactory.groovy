@@ -20,14 +20,12 @@
 
 package nextflow.splitter
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.extension.DataflowExtensions
-
 /**
  * Factory class for splitter objects
  *
@@ -48,7 +46,6 @@ class SplitterFactory {
      *      A map containing named parameters used to initialize the splitter object.
      *      See {@link AbstractSplitter#options(java.util.Map)}
      */
-    @Memoized
     static SplitterStrategy create( String strategy, Map options = [:] ) {
         assert strategy
         String name = strategy.contains('.') ? strategy : "nextflow.splitter.${strategy.capitalize()}Splitter"
@@ -72,7 +69,6 @@ class SplitterFactory {
      *      See {@link AbstractSplitter#options(java.util.Map)}
      * @return The splitter instance
      */
-    @Memoized
     static SplitterStrategy create( Class<? extends SplitterStrategy> strategy, Map options = [:] ) {
         (SplitterStrategy) strategy.newInstance( [options] as Object[] )
     }
@@ -107,7 +103,6 @@ class SplitterFactory {
 
         // converts args array to options map
         def opt = argsToOpt(args)
-
 
         /*
          * call the 'split'
