@@ -1,6 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.8.1 - 26 May 2014
+- Fixed a ConcurrentModificationException issue on splitXxx method due to a misused @Memoized annotation
+
 0.8.0 - 24 May 2014
 - Added support for Java 8
 - Upgraded to Groovy 2.3.0
@@ -14,7 +17,8 @@ NEXTFLOW CHANGE-LOG
 - Operator 'grep' has been removed and features included in 'filter' operator
 - Deprecated 'chopXxx' operators
 - Deprecated 'chunkXxx' operators
-- Deprecated 'each' operator in favor or 'subscribe'
+- Deprecated 'each' operator in favor of 'subscribe'
+- Deprecated process 'merge' directive
 - Executor service now uses a fixed thread pool
 - Fixed issue on 'maxForks' process directive
 - Added 'info' cli parameter

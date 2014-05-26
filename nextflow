@@ -74,7 +74,7 @@ if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
 fi  
 
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
-NXF_VER=${NXF_VER:-'0.8.0'}
+NXF_VER=${NXF_VER:-'0.8.1'}
 
 # Check if it is required to run in background
 bg=''
