@@ -757,20 +757,13 @@ class FilesExtensionsTest extends Specification {
 
     }
 
-//    def testPathPrevious() {
-//        expect:
-//        Paths.get('/some/path') -- == Paths.get('/some')
-//        Paths.get('/some/path/file.txt') -- == Paths.get('/some/path')
-//    }
+    def testPathSibling() {
 
-//    def testPathSibling() {
-//
-//        expect:
-//        Paths.get('/some/path') | 'hello' == Paths.get('/some/hello')
-//        Paths.get('/some/path/file.txt') -1 == Paths.get('/some/path')
-//        Paths.get('/some/path/file.txt') -2 == Paths.get('/some')
-//        Paths.get('/some/path/file.txt') -3 == Paths.get('/')
-//        Paths.get('/some/path/file.txt') -4 == null
-//    }
+        expect:
+        (Paths.get('/some/path') | 'hello') == Paths.get('/some/hello')
+        (Paths.get('/some/path/') | 'hello') == Paths.get('/some/hello')
+        (Paths.get('/some/path/file.txt') | 'ciao.txt') == Paths.get('/some/path/ciao.txt')
+
+    }
 
 }

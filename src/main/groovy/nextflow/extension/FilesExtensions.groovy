@@ -1172,16 +1172,13 @@ class FilesExtensions {
         return result
     }
 
-//    static Path or( Path path, String other ) {
-//        path.resolveSibling(other)
-//    }
-//
-//    static Path or( Path path, Path other ) {
-//        path.resolveSibling(other)
-//    }
-//
-//    static Path previous(Path path) {
-//        path.getParent()
-//    }
+    static Path or( Path path, String other ) {
+        path.resolveSibling(other)
+    }
+
+    static Path or( Path path, Path other ) {
+        path.resolveSibling(other)
+    }
+
 
 }
