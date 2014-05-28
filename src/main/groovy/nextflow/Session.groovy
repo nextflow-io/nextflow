@@ -215,11 +215,12 @@ class Session {
         log.debug "Session destroyed"
     }
 
-    final protected void shutdown() {
+    final synchronized protected void shutdown() {
 
-        shutdownHooks.each {
+        def all = shutdownHooks.clone() as List<Closure>
+        for( Closure hook : all ) {
             try {
-                it.call()
+                hook.call()
             }
             catch( Exception e ) {
                 log.debug "Failed executing shutdown hook: $it", e
