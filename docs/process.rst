@@ -1215,7 +1215,7 @@ See also: `errorStrategy`_ and `maxErrors`_.
 merge
 -------
 
-.. warning:: This feature has been deprecated and will be removed in 1.0 release.
+.. warning:: This feature has been deprecated and will be removed in release 1.0.
 
 The ``merge`` directive allow you to write a task that `gather` the results of a upstream processes.
 
