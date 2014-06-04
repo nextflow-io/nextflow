@@ -34,6 +34,7 @@ import org.gridgain.grid.GridGain
 import org.gridgain.grid.cache.GridCacheAtomicityMode
 import org.gridgain.grid.cache.GridCacheConfiguration
 import org.gridgain.grid.cache.GridCacheDistributionMode
+import org.gridgain.grid.cache.GridCacheMemoryMode
 import org.gridgain.grid.cache.GridCacheMode
 import org.gridgain.grid.cache.GridCacheWriteSynchronizationMode
 import org.gridgain.grid.ggfs.GridGgfsConfiguration
@@ -174,16 +175,16 @@ class GgGridFactory {
             cacheMode = GridCacheMode.PARTITIONED
             atomicityMode  = GridCacheAtomicityMode.TRANSACTIONAL
             queryIndexEnabled = false
-            writeSynchronizationMode = GridCacheWriteSynchronizationMode.FULL_SYNC
+            writeSynchronizationMode = config.getAttribute('ggfs.data.writeSynchronizationMode', GridCacheWriteSynchronizationMode.PRIMARY_SYNC) as GridCacheWriteSynchronizationMode
             distributionMode = GridCacheDistributionMode.PARTITIONED_ONLY
             affinityMapper = new GridGgfsGroupDataBlocksKeyMapper(512)
-            backups = 0
+            backups = config.getAttribute('ggfs.data.backups', 0) as long
             // configure Off-heap memory
             // http://atlassian.gridgain.com/wiki/display/GG60/Off-Heap+Memory
-            offHeapMaxMemory = 0
+            offHeapMaxMemory = config.getAttribute('ggfs.data.offHeapMaxMemory', 0) as long
             // When storing directly off-heap it throws an exception
             // See http://stackoverflow.com/q/23399264/395921
-            //memoryMode = GridCacheMemoryMode.OFFHEAP_TIERED
+            memoryMode = config.getAttribute('ggfs.data.memoryMode', GridCacheMemoryMode.ONHEAP_TIERED) as GridCacheMemoryMode
         }
         cfg.setCacheConfiguration(dataCfg)
 
@@ -216,9 +217,9 @@ class GgGridFactory {
             defaultMode = GridGgfsMode.PRIMARY
             metaCacheName = 'ggfs-meta'
             dataCacheName = 'ggfs-data'
-            blockSize = 128 * 1024
-            perNodeBatchSize = 512
-            perNodeParallelBatchCount = 16
+            blockSize = config.getAttribute('ggfs.blockSize', 128 * 1024) as long
+            perNodeBatchSize = config.getAttribute('ggfs.perNodeBatchSize', 512) as long
+            perNodeParallelBatchCount = config.getAttribute('ggfs.perNodeParallelBatchCount', 16) as long
         }
         cfg.setGgfsConfiguration(ggfsCfg)
 
