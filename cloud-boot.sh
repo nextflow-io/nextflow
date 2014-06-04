@@ -21,7 +21,7 @@ AWS_S3BUCKET=${AWS_S3BUCKET:-'nxf-cluster'}
 #
 # Install NEXTFLOW and launch it
 #
-wget -q -O - http://get.nextflow.io > nextflow && chmod +x nextflow
+curl -fsSL http://get.nextflow.io > nextflow && chmod +x nextflow
 ./nextflow -bg \
   -daemon.name gridgain \
   -daemon.interface eth0 \
