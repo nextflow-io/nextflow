@@ -22,6 +22,7 @@ package nextflow.file.ggfs
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
+import java.nio.file.attribute.BasicFileAttributeView
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.spi.FileSystemProvider
 
@@ -210,6 +211,27 @@ class GgFileSystemProviderTest extends Specification {
 
     }
 
+    def testFileReadAttrsView() {
+
+        given:
+        def path1 = new GgPath(fs, rndName('/x/y/z/file') )
+        path1.text = 'Hello'
+
+        when:
+        def view = provider.getFileAttributeView(path1, BasicFileAttributeView)
+        def attrs = view.readAttributes()
+
+        then:
+        view instanceof GgFileAttributeView
+        attrs.creationTime() == null
+        attrs.lastModifiedTime().toMillis() > 0 && attrs.lastModifiedTime().toMillis() <= System.currentTimeMillis()
+        attrs.size() == 5
+        !attrs.directory
+        attrs.regularFile
+        !attrs.isSymbolicLink()
+
+    }
+
     def testFileReadAttrsDir() {
 
         given:
@@ -360,11 +382,22 @@ class GgFileSystemProviderTest extends Specification {
         holder.storePath.text == 'Hello'
     }
 
+    def testGetFileAttributeView() {
+
+        given:
+        def path = new GgPath(fs, rndName('/x/y/z/file') )
+
+        expect:
+        provider.getFileAttributeView(path,BasicFileAttributeView) instanceof GgFileAttributeView
+        provider.getFileAttributeView(path,GgFileAttributeView) instanceof GgFileAttributeView
+
+    }
 
 
     // run after the last feature method
     def cleanupSpec() {
         GridGain.stop(true)
     }
+
 
 }

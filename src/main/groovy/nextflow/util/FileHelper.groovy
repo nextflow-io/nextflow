@@ -275,12 +275,12 @@ class FileHelper {
      */
     synchronized static <T extends FileSystemProvider> T getOrInstallProvider( Class<T> clazz ) {
 
-        def result = FileSystemProvider.installedProviders().find { it.class == clazz }
+        FileSystemProvider result = FileSystemProvider.installedProviders().find { it.class == clazz }
         if( result )
             return (T)result
 
         // try to load DnaNexus file system provider dynamically
-        result = clazz.newInstance()
+        result = (T)clazz.newInstance()
 
         // add it manually
         Field field = FileSystemProvider.class.getDeclaredField('installedProviders')
@@ -289,7 +289,7 @@ class FileHelper {
         installedProviders.add( result )
         field.set(this, Collections.unmodifiableList(installedProviders))
         log.debug "> Added '${clazz.simpleName}' to list of installed providers [${result.scheme}]"
-        return result
+        return (T)result
     }
 
     private static Lock _fs_lock = new ReentrantLock()

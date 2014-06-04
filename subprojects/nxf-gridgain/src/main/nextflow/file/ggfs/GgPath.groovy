@@ -70,19 +70,16 @@ class GgPath implements Path {
     }
 
     @Override
-    @Memoized
     GgPath getRoot() {
         return new GgPath(fileSystem, PATH_SEPARATOR)
     }
 
     @Override
-    @Memoized
     GgPath getFileName() {
         return new GgPath(fileSystem, delegate.getFileName().toString())
     }
 
     @Override
-    @Memoized
     GgPath getParent() {
         return new GgPath(fileSystem, delegate.getParent().toString())
     }
@@ -159,7 +156,6 @@ class GgPath implements Path {
     }
 
     @Override
-    @Memoized
     GgPath toAbsolutePath() {
         def str = delegate.toString()
         if( str.startsWith(PATH_SEPARATOR) )
@@ -252,5 +248,10 @@ class GgPath implements Path {
     @PackageScope
     def nativeExists() {
         fileSystem.ggfs.exists( toGridGgfsPath() )
+    }
+
+    @PackageScope
+    def nativeSetTime(long accessTime, long modificationTime) {
+        fileSystem.ggfs.setTimes(toGridGgfsPath(), accessTime, modificationTime)
     }
 }

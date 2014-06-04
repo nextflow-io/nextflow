@@ -19,6 +19,7 @@
  */
 
 package nextflow.file.ggfs
+
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
 
@@ -139,6 +140,5 @@ class GgFileAttributes implements BasicFileAttributes {
     public Object fileKey() {
         key;
     }
-
 
 }

@@ -34,6 +34,7 @@ import java.nio.file.OpenOption
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
+import java.nio.file.attribute.BasicFileAttributeView
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileAttributeView
@@ -180,6 +181,12 @@ class GgFileSystemProvider extends FileSystemProvider {
         throw new IllegalStateException("Cannot access underlying GridGain file system instance -- not a valid fs idenitifier: [${ggfs?.class?.name}] $ggfs")
     }
 
+    /**
+     * @Inheritdoc
+     *
+     * @param uri
+     * @return
+     */
     @Override
     GgFileSystem getFileSystem(URI uri) {
         return currentFileSystem
@@ -490,6 +497,13 @@ class GgFileSystemProvider extends FileSystemProvider {
         return null
     }
 
+    /**
+     * @Inheritdoc
+     *
+     * @param path
+     * @param modes
+     * @throws IOException
+     */
     @Override
     void checkAccess(Path path, AccessMode... modes) throws IOException {
         def exists = (path as GgPath).nativeExists()
@@ -500,13 +514,22 @@ class GgFileSystemProvider extends FileSystemProvider {
             throw new UnsupportedOperationException("Execute access is not supported by GridGain file system")
     }
 
+    /**
+     * @Inheritdoc
+     *
+     * @param obj
+     * @param type
+     * @param options
+     * @return
+     * @throws IOException
+     */
     @Override
-    def <A extends BasicFileAttributes> A readAttributes(Path obj, Class<A> type, LinkOption... options) throws IOException {
+    def <V extends BasicFileAttributes> V readAttributes(Path obj, Class<V> type, LinkOption... options) throws IOException {
         new GgFileAttributes( (obj as GgPath).nativeReadAttributes() )
     }
 
     /**
-     * Not implemented
+     * @Inheritdoc
      *
      * @param path
      * @param type
@@ -514,15 +537,19 @@ class GgFileSystemProvider extends FileSystemProvider {
      * @return
      */
 
-    // TODO getFileAttributeView
     @Override
     def <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) {
-        throw new UnsupportedOperationException("Method 'getFileAttributeView' not supported");
+
+        if( BasicFileAttributeView.isAssignableFrom(type) && path instanceof GgPath )
+            return (V)new GgFileAttributeView((GgPath)path)
+
+        else
+            throw new IllegalArgumentException("FileAttributeView of type: ${type?.name} is not supported")
     }
 
 
     /**
-     * Not implemented
+     * @Inheritdoc
      *
      * @param path
      * @param attributes
@@ -537,7 +564,8 @@ class GgFileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     * Not implemented
+     * @Inheritdoc
+     *
      * @param path
      * @param attribute
      * @param value
@@ -545,7 +573,7 @@ class GgFileSystemProvider extends FileSystemProvider {
      * @throws IOException
      */
 
-    // TODO
+    // TODO  setAttribute
     @Override
     void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
         throw new UnsupportedOperationException();

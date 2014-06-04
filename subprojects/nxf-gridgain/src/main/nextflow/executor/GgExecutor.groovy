@@ -691,7 +691,7 @@ class GgResultData implements Serializable {
         this.fValueObj = KryoHelper.serialize(obj)
     }
 
-    def getContext() {
+    Map getContext() {
         if( context == null && fContextObj != null ) {
             context = (Map)KryoHelper.deserialize(fContextObj)
         }
