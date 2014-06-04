@@ -5,8 +5,8 @@ set -x
 #
 # verify Amazon auth codes are availables
 #
-[[ -z 'AWS_ACCESS_KEY' ]] && echo 'Missing $AWS_ACCESS_KEY variable'; exit 1
-[[ -z 'AWS_SECRET_KEY' ]] && echo 'Missing AWS_SECRET_KEY variable'; exit 1
+[[ -z 'AWS_ACCESS_KEY' ]] && { echo 'Missing $AWS_ACCESS_KEY variable'; exit 1; }
+[[ -z 'AWS_SECRET_KEY' ]] && { echo 'Missing AWS_SECRET_KEY variable'; exit 2; }
 
 #
 # Lauch docker and pull the container when DOCKER variable is defined
