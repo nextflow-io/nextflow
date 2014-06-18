@@ -808,6 +808,7 @@ class CliRunner {
      * @param config The nextflow configuration map
      */
     static launchDaemon( Map config ) {
+        log.debug( '\n'+getInfo())
 
         def daemonConfig = config.daemon instanceof Map ? config.daemon : [:]
         log.debug "Daemon config > $daemonConfig"
