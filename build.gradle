@@ -18,8 +18,8 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-version = '0.8.3'
 apply plugin: 'application'
+version = '0.8.4-b3'
 mainClassName = 'nextflow.script.CliRunner'
 
 allprojects {
