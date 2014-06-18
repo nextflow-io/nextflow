@@ -18,13 +18,30 @@
 #  You should have received a copy of the GNU General Public License
 #  along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
 
+NORMAL=$(tput sgr0)
+GREEN=$(tput setaf 2; tput bold)
+YELLOW=$(tput setaf 3)
+RED=$(tput setaf 1)
+
+function echo_red() {
+    echo -e "$RED$*$NORMAL"
+}
+
+function echo_green() {
+    echo -e "$GREEN$*$NORMAL"
+}
+
+function echo_yellow() {
+    echo -e "$YELLOW$*$NORMAL"
+}
+
 function get() {
     if command -v wget &>/dev/null; then
         GET="wget -q $1 -O $2"
     elif command -v curl &>/dev/null; then
         GET="curl -fsSL $1 -o $2"
     else
-        echo "Error: cannot find 'curl' nor 'wget' utility --  please install one of them"
+        echo_red "Error: cannot find 'curl' nor 'wget' utility --  please install one of them"
         exit 1
     fi
 
@@ -32,7 +49,7 @@ function get() {
     $GET; status=$?
     printf "\r\033[K"
     if [ $status -ne 0 ]; then
-        echo "Error: cannot download nextflow required file -- make sure you can connect the internet"
+        echo_red "Error: cannot download nextflow required file -- make sure you can connect the internet"
         echo ""
         echo "Alternatively you can download the file:"
         echo "    $1"
@@ -108,11 +125,16 @@ NXF_BASE=${NXF_BASE:-http://www.nextflow.io/releases}
 NXF_PATH=$(dirname $NXF_BIN)
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
 
+# Find out installed JDK
+JAVA=java
+[[ -n "$JAVA_HOME" ]] && JAVA="$JAVA_HOME/bin/java"
+
+# Verify installed Java version
 if [ ! -f "$NXF_BIN" ]; then
-    # Check Java version
-    java -version 2>&1 | awk '/version/ {print $3}' | grep '"1\.[7|8]\..*"' > /dev/null
+    $JAVA -version 2>&1 | awk '/version/ {print $3}' | grep '"1\.[7|8]\..*"' > /dev/null
     if [ $? -ne 0 ]; then
-         echo "Error: cannot find Java or it's a wrong version --  please make sure that Java 7 it's installed"
+         echo_red "Error: cannot find Java or it's a wrong version -- please make sure that Java 7 or higher it's installed"
+         [ "$JAVA_HOME" ] && echo_red "Note : nextflow is trying to use the Java VM whose installation path is defined by the variable JAVA_HOME = $JAVA_HOME\n"
          exit 1
     fi
 
@@ -120,14 +142,10 @@ if [ ! -f "$NXF_BIN" ]; then
     get "$NXF_URL" "$NXF_BIN"
 fi
 
-# Find out Java
-JAVA=java
-[[ -n "$JAVA_HOME" ]] && JAVA="$JAVA_HOME/bin/java"
-
 if [ -z "NXF_OPTIONS" ]; then
-    NXF_OPTIONS="-Djava.awt.headless=true -Xms512m"
+    NXF_OPTIONS="-Djava.awt.headless=true"
 else 
-    NXF_OPTIONS="-Djava.awt.headless=true -Xms512m $NXF_OPTIONS"
+    NXF_OPTIONS="-Djava.awt.headless=true $NXF_OPTIONS"
 fi
 
 # Set the class-path
