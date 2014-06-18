@@ -21,6 +21,7 @@
 package nextflow.util
 import java.lang.reflect.Field
 import java.nio.file.FileSystem
+import java.nio.file.FileSystemNotFoundException
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
@@ -240,7 +241,7 @@ class FileHelper {
         if( uri.scheme == 'file' )
             return FileSystems.getDefault().getPath(uri.path)
 
-        getOrCreateFileSystemFor(uri, getEnvMap()).provider().getPath(uri)
+        getOrCreateFileSystemFor(uri).provider().getPath(uri)
     }
 
     /**
@@ -248,9 +249,17 @@ class FileHelper {
      * @return A map holding the current session
      */
     @Memoized
-    static private Map getEnvMap() {
-        assert Session.currentInstance, "Session is not available -- make sure to call this after Session object has been created"
-        [session: Session.currentInstance]
+    static private Map getEnvMap(String scheme) {
+        def result = [:]
+        if( scheme?.toLowerCase() == 's3' ) {
+            def accessKey = System.getenv('ACCESS_KEY')
+            def secretKey = Syste
+        }
+        else {
+            assert Session.currentInstance, "Session is not available -- make sure to call this after Session object has been created"
+            result.session = Session.currentInstance
+        }
+        return result
     }
 
     @Memoized
@@ -303,20 +312,40 @@ class FileHelper {
      * @return The corresponding {@link FileSystem} object
      * @throws IllegalArgumentException if does not exist a valid provider for the given URI scheme
      */
-    static FileSystem getOrCreateFileSystemFor( URI uri, Map env = null ) {
+    static FileSystem getOrCreateFileSystemFor( URI uri ) {
         assert uri
 
+        /*
+         * get the provider for the specified URI
+         */
         def provider = getProviderFor(uri.scheme)
         if( !provider )
             throw new IllegalArgumentException("Cannot a find a file system provider for scheme: ${uri.scheme}")
 
-        def fs = provider.getFileSystem(uri)
-        if( fs ) return fs
+        /*
+         * check if already exists a file system for it
+         */
+        FileSystem fs
+        try { fs = provider.getFileSystem(uri) }
+        catch( FileSystemNotFoundException e ) { fs=null }
+        if( fs )
+            return fs
 
-        return (FileSystem)NextflowExtensions.withLock(_fs_lock) {
-            fs = provider.getFileSystem(uri)
-            fs ?: provider.newFileSystem(uri, env)
+        /*
+         * since the file system does not exist, create it a protected block
+         */
+        log.debug "Creating a file system instance for provider: ${provider.class.simpleName}"
+        NextflowExtensions.withLock(_fs_lock) {
+
+            try { fs = provider.getFileSystem(uri) }
+            catch( FileSystemNotFoundException e ) { fs=null }
+            if( !fs ) {
+                fs = provider.newFileSystem(uri, getEnvMap(uri.scheme))
+            }
+
         }
+
+        return fs
     }
 
 

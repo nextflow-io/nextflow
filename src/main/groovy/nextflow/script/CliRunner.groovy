@@ -22,8 +22,8 @@ package nextflow.script
 import static nextflow.util.ConfigHelper.parseValue
 
 import java.lang.management.ManagementFactory
-import java.lang.reflect.Field
 import java.nio.file.Path
+import java.nio.file.spi.FileSystemProvider
 
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.ParameterException
@@ -693,7 +693,8 @@ class CliRunner {
       Jvm: ${System.getProperty('java.vendor')} ${System.getProperty('java.runtime.version')}
       Opts: ${ManagementFactory.getRuntimeMXBean().getInputArguments().join(' ')}
       Encoding: ${System.getProperty('file.encoding')} (${System.getProperty('sun.jnu.encoding')})
-      Address: ${getLocalNameAndAddress()}"""
+      Address: ${getLocalNameAndAddress()}
+      File systems: ${FileSystemProvider.installedProviders().collect{ it.getScheme() }.join(',') }"""
 
     }
 
