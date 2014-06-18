@@ -114,10 +114,12 @@ class FileHelperTest extends Specification {
 
     def 'test empty path' () {
 
-        setup:
-        Path fileEmpty = Files.createFile(Paths.get('test.txt'))
-        Path folderEmpty = Files.createTempDirectory(null)
-        Path folderNotEmpty = Files.createTempDirectory(null)
+        given:
+        Path baseFolder = Files.createTempDirectory('empty')
+
+        Path fileEmpty = Files.createTempFile(baseFolder, 'test','txt')
+        Path folderEmpty = Files.createTempDirectory(baseFolder, null)
+        Path folderNotEmpty = Files.createTempDirectory(baseFolder, null)
         Path fileInFolder = folderNotEmpty.resolve( 'empty_file' )
         Files.createFile(fileInFolder)
 
@@ -134,10 +136,7 @@ class FileHelperTest extends Specification {
         !FileHelper.empty(folderNotEmpty)
 
         cleanup:
-        fileEmpty.delete()
-        fileNotEmpty.delete()
-        folderNotEmpty.deleteDir()
-        folderEmpty.deleteDir()
+        baseFolder?.deleteDir()
 
     }
 
