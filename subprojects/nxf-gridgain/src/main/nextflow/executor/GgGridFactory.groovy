@@ -169,6 +169,7 @@ class GgGridFactory {
         /*
          * set the data cache for this ggfs
          */
+        // TODO improve config setting by using a map holding default values and set all of them with an iteration
         def dataCfg = new GridCacheConfiguration()
         dataCfg.with {
             name = 'ggfs-data'
@@ -312,7 +313,7 @@ class GgGridFactory {
             if( bucket.startsWith('/'))
                 bucket = bucket.substring(1)
 
-            log.debug "GridGain config > discovery AWS bucket: $bucket; access: ${accessKey.substring(6)}..; ${secretKey.substring(6)}.."
+            log.debug "GridGain config > discovery AWS bucket: $bucket; access: ${accessKey.substring(0,6)}..; ${secretKey.substring(0,6)}.."
             final finder = new GridTcpDiscoveryS3IpFinder()
             finder.setAwsCredentials( new BasicAWSCredentials(accessKey, secretKey) )
             finder.setBucketName(bucket)
