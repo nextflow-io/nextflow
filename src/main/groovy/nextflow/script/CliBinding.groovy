@@ -20,6 +20,8 @@
 
 package nextflow.script
 
+import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.util.ReadOnlyMap
@@ -39,15 +41,19 @@ import org.apache.commons.lang.StringUtils
  *
  */
 @Slf4j
+@CompileStatic
 class CliBinding extends Binding {
 
     final private Session session
 
-    @Lazy Map<String,String> sysEnv = System.getenv()
-
     def CliBinding(Session session1) {
         super( new ReadOnlyMap( ['__$session':session1, args:[], params: new ParamsMap() ]) )
         this.session = session1
+    }
+
+    @Memoized
+    protected Map<String,String> getSysEnv() {
+        new HashMap(System.getenv())
     }
 
     /**
@@ -55,9 +61,9 @@ class CliBinding extends Binding {
      *
      * @param values
      */
-    def void setParams( Map values ) {
+    def void setParams( Map<String,Object> values ) {
 
-        def params = getVariable('params') as ParamsMap
+        def params = super.getVariable('params') as ParamsMap
         values ?. each { String name, Object value ->
             params.put(name, value)
         }
@@ -105,10 +111,13 @@ class CliBinding extends Binding {
     /**
      * Holds parameter immutable values
      */
-    static class ParamsMap extends LinkedHashMap<String,Object> {
+    @CompileStatic
+    static class ParamsMap implements Map<String,Object> {
 
-        Set<String> readOnlyNames = []
+        private Set<String> readOnlyNames = []
 
+        @Delegate
+        private Map<String,Object> target = new LinkedHashMap<>()
 
         def String put(String name, Object value) {
             assert name
@@ -122,8 +131,8 @@ class CliBinding extends Binding {
             if( !readOnly ) {
                 readOnlyNames << name
                 readOnlyNames << name2
-                result = super.put(name, value)
-                super.put(name2, value)
+                result = target.put(name, value)
+                target.put(name2, value)
             }
 
             return result

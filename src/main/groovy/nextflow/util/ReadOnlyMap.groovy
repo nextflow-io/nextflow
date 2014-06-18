@@ -19,44 +19,69 @@
  */
 
 package nextflow.util
-
-
+import groovy.transform.CompileStatic
 /**
  * A class for which the initial values cannot be changed
  *
  * @author Paolo Di Tommaso
  */
-class ReadOnlyMap extends LinkedHashMap {
+@CompileStatic
+class ReadOnlyMap implements Map {
 
-    List<String> readOnlyNames
+    /** The list of field names which value cannot change */
+    private List<String> readOnlyNames
+
+    /** The target map holding the values */
+    @Delegate
+    private Map target = new LinkedHashMap()
 
     /**
-     * When no values are specified it behave as a normal map
+     * Create a map with values cannot be modified
+     *
+     * @param map Initial map values
      */
-    ReadOnlyMap() {
-
+    ReadOnlyMap( Map map ) {
+        assert map != null
+        this.target.putAll(map)
+        this.readOnlyNames = new ArrayList(map.keySet())
     }
 
     /**
      * @param map Initial map values
-     * @param readOnlyNames1 The list of values that cannot be changed after obj construction,
-     *          when {@code null} all the value in the initial map cannot be changed
-     *
+     * @param readOnly The list of values that cannot be changed after obj construction,
      */
-    ReadOnlyMap( Map map, List<String> readOnlyNames = null  ) {
-        super(map)
-        this.readOnlyNames = new ArrayList( readOnlyNames != null ? readOnlyNames : map.keySet() )
+    ReadOnlyMap( Map map, List<String> readOnly  ) {
+        assert map != null
+        assert readOnly != null
+        this.target.putAll(map)
+        this.readOnlyNames = new ArrayList(readOnly)
     }
 
+    /**
+     * Set a map entry only if it's not declared as read-only
+     *
+     * @param name The entry key
+     * @param value The entry new value
+     * @return the previous value associated with <tt>key</tt>, or
+     *         <tt>null</tt> if there was no mapping for <tt>key</tt>.
+     */
     def put(Object name, Object value) {
         final read_only = readOnlyNames.contains(name)
         if ( !read_only ) {
-            super.put(name,value)
+            target.put(name,value)
         }
     }
 
+    /**
+     * Overrides a map value even if it's declared as read-only
+     *
+     * @param name The entry key
+     * @param value The entry new value
+     * @return the previous value associated with <tt>key</tt>, or
+     *         <tt>null</tt> if there was no mapping for <tt>key</tt>.
+     */
     def force( Object name, Object value ) {
-        super.put(name,value)
+        target.put(name,value)
     }
 
 }
