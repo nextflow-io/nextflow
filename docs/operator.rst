@@ -264,7 +264,7 @@ returns the items so obtained as a new channel. The function applied is called t
 and is expressed with a :ref:`closure <script-closure>` as shown in the example below::
 
     Channel
-        .from( 1, 2, 3, 4, ,5 )
+        .from( 1, 2, 3, 4, 5 )
         .map { it * it  }
         .subscribe onNext: { println it }, onComplete: { println 'Done' }
 

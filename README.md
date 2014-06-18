@@ -200,7 +200,7 @@ When complete, execute the program by using the `run.sh` launch script in the pr
 Required dependencies
 ---------------------
 
-Oracle Java 7 (Java 8 will be supported as soon as Groovy 2.3 will be released).
+Java 7 or higher
 
 
 Documentation
