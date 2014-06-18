@@ -18,9 +18,9 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-apply plugin: 'gradle-one-jar'
-version = '0.8.3'
-
+version = '0.9.0'
+apply plugin: 'application'
+mainClassName = 'nextflow.script.CliRunner'
 
 if (System.getenv('CI_GROOVY_VERSION')) {
     // Add ability to test with upcoming versions of Groovy
@@ -64,7 +64,7 @@ allprojects {
 }
 
 configurations {
-    oneJarLib
+    capsule
     dnanexus.extendsFrom runtime
     hazelcast.extendsFrom runtime
     gridgain.extendsFrom runtime
@@ -89,20 +89,26 @@ dependencies {
     compile "org.utgenome.thirdparty:picard:${picardVer}"
     compile files('lib/guava-cache-16.0.1.jar')
 
-    oneJarLib files('one-jar/one-jar-boot-0.97.jar')
 
+    // Capsule manages the fat jar building process
+    capsule "co.paralleluniverse:capsule:$capsuleVer"
+
+    // DnaNexus build dependencies
     dnanexus (project(':nxf-dnanexus')) {
         exclude module: 'nextflow'
     }
 
+    // Hazelcast build dependencies
     hazelcast (project(':nxf-hazelcast')) {
         exclude module: 'nextflow'
     }
 
+    // GridGain build dependencies
     gridgain (project(':nxf-gridgain')) {
         exclude module: 'nextflow'
     }
 
+    // Documentation required libraries
     gdocLibs 'org.fusesource.jansi:jansi:1.11'
     gdocLibs "org.codehaus.groovy:groovy-groovydoc:${groovyVer}"
     gdocLibs "org.codehaus.groovy:groovy-ant:${groovyVer}"
@@ -219,70 +225,37 @@ task stage( type: Copy ) {
 
 }
 
-/*
- * Creates the Zip distribution file
- */
-task distZip(type: Zip) {
-    dependsOn stage
-    from "$buildDir/stage/"
-}
-
-/*
- * creates the Tar distribution file
- */
-task distTar(type: Tar) {
-    dependsOn stage
-    compression = Compression.GZIP
-    from "$buildDir/stage/"
-}
-
-
-task dist() {
-    dependsOn distZip, distTar
-}
-
-/*
- * Print the distribution file name when distXxx task completes
- */
-gradle.taskGraph.afterTask { Task task, TaskState state ->
-    if (task == distTar && !state.failure) { println "\n** TAR: ${relativePath(distTar.archivePath)}\n\n"}
-    if (task == distZip && !state.failure) { println "\n** ZIP: ${relativePath(distZip.archivePath)}\n\n"}
-}
-
-
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.github.rholder:gradle-one-jar:1.0.3'
-    }
-}
 
 /*
  * Creates a self-contained *fat* jar shipping all required dependencies
  *
- * @link https://github.com/rholder/gradle-one-jar
- * @link http://one-jar.sourceforge.net/index.php?page=frameworks&file=frameworks
+ * @link https://github.com/puniverse/capsule
  */
 
 def homeDir = System.properties['user.home']
 def nextflowDir = "$homeDir/.nextflow/framework/$version"
 
-task pack(type: OneJar) {
-    mainClass = 'nextflow.script.CliRunner'
-    manifest {
-        attributes 'One-Jar-URL-Factory': 'com.simontuffs.onejar.JarClassLoader$OneJarURLFactory'
-        attributes 'Timestamp': String.valueOf(System.currentTimeMillis())
-    }
-    useStable = false
-    classifier = 'one'
-    oneJarConfiguration = configurations.oneJarLib
+task pack(type: Jar, dependsOn: jar) {
+    archiveName = "nextflow-${version}-one.jar"
 
-    doFirst { def path=new File("$buildDir/one-jar-build"); if(path.exists()) path.deleteDir() }
+    from jar // embed our application jar
+    from { configurations.runtime } // embed dependencies
+
+    from(configurations.capsule.collect { zipTree(it) }) { include 'Capsule.class' } // we just need the single Capsule class
+
+    manifest {
+        attributes(
+                'Main-Class'        : 'Capsule',
+                'Application-Class' : mainClassName,
+                'Application-Name'  : name,
+                'Application-Version': version,
+                'Min-Java-Version'  : '1.7.0'
+        )
+    }
+
     doLast {
         ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: nextflowDir, overwrite: true)
-        println "\n>Nextflow package copied to: $nextflowDir"
+        println "\n+ Nextflow package copied to: $nextflowDir"
     }
 }
 
@@ -290,21 +263,27 @@ task pack(type: OneJar) {
  * Creates a self-contained *fat* jar shipping all required dependencies
  * including DnaNexus stuff
  */
-task packDx(type: OneJar, dependsOn: configurations.dnanexus ) {
-    mainClass = 'nextflow.script.CliRunner'
-    manifest {
-        attributes 'One-Jar-URL-Factory': 'com.simontuffs.onejar.JarClassLoader$OneJarURLFactory'
-        attributes 'Timestamp': String.valueOf(System.currentTimeMillis())
-    }
-    useStable = false
-    classifier = 'dx'
-    oneJarConfiguration = configurations.oneJarLib
-    targetConfiguration = configurations.dnanexus
+task packDx(type: Jar, dependsOn: configurations.dnanexus ) {
+    archiveName = "nextflow-${version}-dx.jar"
 
-    doFirst { def path=new File("$buildDir/one-jar-build"); if(path.exists()) path.deleteDir() }
+    from jar // embed our application jar
+    from { configurations.dnanexus } // embed dependencies
+
+    from(configurations.capsule.collect { zipTree(it) }) { include 'Capsule.class' } // we just need the single Capsule class
+
+    manifest {
+        attributes(
+                'Main-Class'        : 'Capsule',
+                'Application-Class' : mainClassName,
+                'Application-Name'  : name,
+                'Application-Version': version,
+                'Min-Java-Version'  : '1.7.0'
+        )
+    }
+
     doLast {
         ant.copy(file: "$buildDir/libs/nextflow-${version}-dx.jar", todir: nextflowDir, overwrite: true)
-        println "\n>Nextflow DX package copied to: $nextflowDir"
+        println "\n+ Nextflow DX package copied to: $nextflowDir"
     }
 }
 
@@ -312,21 +291,27 @@ task packDx(type: OneJar, dependsOn: configurations.dnanexus ) {
  * Creates a self-contained *fat* jar shipping all required dependencies
  * including Hazelcast stuff
  */
-task packHz(type: OneJar, dependsOn: configurations.hazelcast ) {
-    mainClass = 'nextflow.script.CliRunner'
-    manifest {
-        attributes 'One-Jar-URL-Factory': 'com.simontuffs.onejar.JarClassLoader$OneJarURLFactory'
-        attributes 'Timestamp': String.valueOf(System.currentTimeMillis())
-    }
-    useStable = false
-    classifier = 'hz'
-    oneJarConfiguration = configurations.oneJarLib
-    targetConfiguration = configurations.hazelcast
+task packHz(type: Jar, dependsOn: configurations.hazelcast ) {
+    archiveName = "nextflow-${version}-hz.jar"
 
-    doFirst { def path=new File("$buildDir/one-jar-build"); if(path.exists()) path.deleteDir() }
+    from jar // embed our application jar
+    from { configurations.hazelcast } // embed dependencies
+
+    from(configurations.capsule.collect { zipTree(it) }) { include 'Capsule.class' } // we just need the single Capsule class
+
+    manifest {
+        attributes(
+                'Main-Class'        : 'Capsule',
+                'Application-Class' : mainClassName,
+                'Application-Name'  : name,
+                'Application-Version': version,
+                'Min-Java-Version'  : '1.7.0'
+        )
+    }
+
     doLast {
         ant.copy(file: "$buildDir/libs/nextflow-${version}-hz.jar", todir: nextflowDir, overwrite: true)
-        println "\n>Nextflow HZ package copied to: $nextflowDir"
+        println "\n+ Nextflow HZ package copied to: $nextflowDir"
     }
 }
 
@@ -335,21 +320,27 @@ task packHz(type: OneJar, dependsOn: configurations.hazelcast ) {
  * Creates a self-contained *fat* jar shipping all required dependencies
  * including Hazelcast stuff
  */
-task packGg(type: OneJar, dependsOn: configurations.gridgain ) {
-    mainClass = 'nextflow.script.CliRunner'
-    manifest {
-        attributes 'One-Jar-URL-Factory': 'com.simontuffs.onejar.JarClassLoader$OneJarURLFactory'
-        attributes 'Timestamp': String.valueOf(System.currentTimeMillis())
-    }
-    useStable = false
-    classifier = 'gg'
-    oneJarConfiguration = configurations.oneJarLib
-    targetConfiguration = configurations.gridgain
+task packGg(type: Jar, dependsOn: configurations.gridgain ) {
+    archiveName = "nextflow-${version}-gg.jar"
 
-    doFirst { def path=new File("$buildDir/one-jar-build"); if(path.exists()) path.deleteDir() }
+    from jar // embed our application jar
+    from { configurations.gridgain } // embed dependencies
+
+    from(configurations.capsule.collect { zipTree(it) }) { include 'Capsule.class' } // we just need the single Capsule class
+
+    manifest {
+        attributes(
+                'Main-Class'        : 'Capsule',
+                'Application-Class' : mainClassName,
+                'Application-Name'  : name,
+                'Application-Version': version,
+                'Min-Java-Version'  : '1.7.0'
+        )
+    }
+
     doLast {
         ant.copy(file: "$buildDir/libs/nextflow-${version}-gg.jar", todir: nextflowDir, overwrite: true)
-        println "\n>Nextflow GG package copied to: $nextflowDir"
+        println "\n+ Nextflow GG package copied to: $nextflowDir"
     }
 }
 
