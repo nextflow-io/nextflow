@@ -140,7 +140,7 @@ task buildInfo << {
     def buildNum = 0
     def src = file.text
     src.find(/APP_BUILDNUM *= *([0-9]*)/) { buildNum = it[1]?.toInteger()+1 }
-    src = src.replaceAll('APP_VER *= *"[0-9\\.]+"', "APP_VER = \"${version}\"" as String)
+    src = src.replaceAll('APP_VER *= *"[0-9a-z_\\-\\.]+"', "APP_VER = \"${version}\"" as String)
     src = src.replaceAll('APP_TIMESTAMP *= *[0-9]*', "APP_TIMESTAMP = ${System.currentTimeMillis()}" as String)
     if( buildNum ) {
         src = src.replaceAll('APP_BUILDNUM *= *[0-9]*', "APP_BUILDNUM = ${buildNum}" as String)
@@ -160,8 +160,8 @@ task buildInfo << {
     def major = version.split(/\./)[0..1].join('.')
     file = new File('docs/conf.py')
     src = file.text
-    src = src.replaceAll(/version *= *'[0-9\.]+'/, "version = '$major'" as String)
-    src = src.replaceAll(/release *= *'[0-9\.]+'/, "release = '$version'" as String)
+    src = src.replaceAll(/version *= *'[0-9a-z_\-\.]+'/, "version = '$major'" as String)
+    src = src.replaceAll(/release *= *'[0-9a-z_\-\.]+'/, "release = '$version'" as String)
     file.text = src
 }
 
