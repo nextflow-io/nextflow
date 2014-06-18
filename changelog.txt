@@ -1,6 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.8.2 - 18 Jun 2014 
+- Fixed issue #7 - NoClassDefFoundError HashMap$Entry exception with Java 8
+- Enhanced launch script: removed '-Xms' Java option; verify the Java version coherent with JAVA_HOME definition; improved error messages.
+
 0.8.1 - 26 May 2014
 - Fixed a ConcurrentModificationException issue on splitXxx method due to a misused @Memoized annotation
 
