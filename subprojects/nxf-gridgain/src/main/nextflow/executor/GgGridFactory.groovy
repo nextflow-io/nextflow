@@ -304,10 +304,10 @@ class GgGridFactory {
         }
 
         else if( join?.startsWith('s3:')) {
-            String accessKey = config.getAttribute('awsAccessKey')
-            String secretKey = config.getAttribute('awsSecretKey')
-            if( !accessKey ) accessKey = System.getenv('AWS_ACCESS_KEY')
-            if( !secretKey ) secretKey = System.getenv('AWS_SECRET_KEY')
+            String accessKey = config.getAttribute('awsAccessKey') ?: System.getenv('AWS_ACCESS_KEY')
+            String secretKey = config.getAttribute('awsSecretKey') ?: System.getenv('AWS_SECRET_KEY')
+            if( !accessKey ) throw new IllegalArgumentException("Missing AWS access key -- please add AWS access credentials to your environment by defining the variables AWS_ACCESS_KEY and AWS_SECRET_KEY")
+            if( !secretKey ) throw new IllegalArgumentException("Missing AWS secret key -- please add AWS access credentials to your environment by defining the variables AWS_ACCESS_KEY and AWS_SECRET_KEY")
 
             def bucket = join.substring(3).trim()
             if( bucket.startsWith('/'))
