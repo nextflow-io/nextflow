@@ -206,7 +206,7 @@ Java 7 or higher
 Documentation
 --------------
 
-Nextflow documentation is available at this link http://nextflow.readthedocs.org
+Nextflow documentation is available at this link http://docs.nextflow.io
 
 Community
 ----------
