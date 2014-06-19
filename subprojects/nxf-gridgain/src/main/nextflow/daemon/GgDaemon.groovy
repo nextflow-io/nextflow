@@ -28,6 +28,8 @@ import nextflow.util.FileHelper
 import nextflow.util.KryoHelper
 import nextflow.util.PathSerializer
 import org.gridgain.grid.Grid
+import org.weakref.s3fs.S3Path
+
 /**
  * Launch the GridGain daemon
  *
@@ -48,6 +50,7 @@ class GgDaemon implements DaemonLauncher {
          * register path serializer
          */
         KryoHelper.register(GgPath, PathSerializer)
+        KryoHelper.register(S3Path, PathSerializer)
 
         /*
          * Launch grid instance

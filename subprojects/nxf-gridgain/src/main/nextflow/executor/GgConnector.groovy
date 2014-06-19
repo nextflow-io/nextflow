@@ -19,6 +19,7 @@
  */
 
 package nextflow.executor
+
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -37,6 +38,8 @@ import org.gridgain.grid.cache.GridCache
 import org.gridgain.grid.events.GridEventType
 import org.gridgain.grid.spi.discovery.GridDiscoverySpiListener
 import org.jetbrains.annotations.Nullable
+import org.weakref.s3fs.S3Path
+
 /**
  * Creates an instance of the GridGain node
  *
@@ -74,12 +77,13 @@ class GgConnector implements GridDiscoverySpiListener {
          * Register the path serializer
          */
         KryoHelper.register(GgPath, PathSerializer)
+        KryoHelper.register(S3Path, PathSerializer)
 
         /*
          * access to the GridGain file system to force the instantiation of a GridGain instance
          * if it is not already available
          */
-        def fs = FileHelper.getOrCreateFileSystemFor(URI.create('ggfs:///'), [ session: session ])
+        def fs = FileHelper.getOrCreateFileSystemFor(URI.create('ggfs:///'))
         grid = (fs.provider() as GgFileSystemProvider).getGrid()
 
         // thread to watch for topology changes and update the scheduler queue accordingly

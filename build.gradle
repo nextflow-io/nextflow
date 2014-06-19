@@ -73,7 +73,6 @@ dependencies {
     compile "com.esotericsoftware.kryo:kryo:${kryoVer}"
     compile "org.utgenome.thirdparty:picard:${picardVer}"
     compile files('lib/guava-cache-16.0.1.jar')
-    runtime "nextflow:s3fs:1.0.0"
 
     // include Ivy at runtime in order to have Grape @Grab work correctly
     runtime "org.apache.ivy:ivy:$ivyVer"

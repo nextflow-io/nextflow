@@ -32,6 +32,7 @@ import java.util.concurrent.locks.ReentrantLock
 import embed.com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.extension.FilesExtensions
@@ -249,11 +250,21 @@ class FileHelper {
      * @return A map holding the current session
      */
     @Memoized
-    static private Map getEnvMap(String scheme) {
+    static protected Map getEnvMap(String scheme) {
+        getEnvMap0(scheme, System.getProperties(), System.getenv())
+    }
+
+    @PackageScope
+    static Map getEnvMap0(String scheme, Properties props, Map env) {
         def result = [:]
         if( scheme?.toLowerCase() == 's3' ) {
-            def accessKey = System.getenv('ACCESS_KEY')
-            def secretKey = Syste
+            def accessKey = props.getProperty('AWS_ACCESS_KEY') ?: env.get('AWS_ACCESS_KEY')
+            def secretKey = props.getProperty('AWS_SECRET_KEY') ?: env.get('AWS_SECRET_KEY')
+            if( accessKey && secretKey ) {
+                // S3FS expect the access - secret keys pair in lower notation
+                result.access_key = accessKey
+                result.secret_key = secretKey
+            }
         }
         else {
             assert Session.currentInstance, "Session is not available -- make sure to call this after Session object has been created"

@@ -173,5 +173,29 @@ class FileHelperTest extends Specification {
     }
 
 
+    def testGeEnvMap() {
+
+        given:
+        def props = new Properties()
+        props.put('AWS_ACCESS_KEY','a1')
+        props.put('AWS_SECRET_KEY','s1')
+
+        def env = [:]
+        env.put('AWS_ACCESS_KEY','a2')
+        env.put('AWS_SECRET_KEY','s2')
+
+        expect:
+        // properties have priority over the environment map
+        FileHelper.getEnvMap0('s3', props, env) == [access_key:'a1', secret_key:'s1']
+        // fallback to environment map
+        FileHelper.getEnvMap0('s3', new Properties(), env) == [access_key:'a2', secret_key:'s2']
+        // none of them
+        FileHelper.getEnvMap0('s3', new Properties(), [:]) == [:]
+        // any other return just the session
+        FileHelper.getEnvMap0('dxfs', props, env).containsKey('session')
+
+    }
+
+
 
 }
