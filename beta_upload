@@ -10,6 +10,7 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then exit 1; fi
 
 s3cmd put $HOME/.nextflow/framework/$1/* \
   s3://www.nextflow.io/releases/v$1/ \
+  --multipart-chunk-size-mb=75 \
   --access_key=${NXF_AWS_ACCESS} \
   --secret_key=${NXF_AWS_SECRET} \
   --no-mime-magic \
