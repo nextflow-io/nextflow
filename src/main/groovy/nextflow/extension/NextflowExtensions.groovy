@@ -53,6 +53,8 @@ import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.codehaus.groovy.runtime.ResourceGroovyMethods
 import org.codehaus.groovy.runtime.StringGroovyMethods
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * Provides extension methods to chunk text and file
@@ -62,8 +64,9 @@ import org.codehaus.groovy.runtime.StringGroovyMethods
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
 class NextflowExtensions {
+
+    static private final Logger log = LoggerFactory.getLogger(NextflowExtensions)
 
     static private Pattern PATTERN_RIGHT_TRIM = ~/\s+$/
 

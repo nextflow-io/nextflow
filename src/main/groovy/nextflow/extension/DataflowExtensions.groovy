@@ -25,7 +25,6 @@ import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.PackageScope
-import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowQueue
@@ -46,7 +45,8 @@ import nextflow.util.FileCollector
 import nextflow.util.FileHelper
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
-
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 /**
  * A set of operators inspired to RxJava extending the methods available on DataflowChannel
  * data structure
@@ -56,8 +56,9 @@ import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
-@Slf4j
 class DataflowExtensions {
+
+    private static final Logger log = LoggerFactory.getLogger(DataflowExtensions)
 
     /*
      * The default operators listener when no other else is specified

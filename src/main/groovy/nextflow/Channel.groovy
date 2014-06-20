@@ -19,7 +19,6 @@
  */
 
 package nextflow
-
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
 import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
@@ -37,7 +36,6 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util.regex.Pattern
 
 import groovy.transform.PackageScope
-import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
@@ -46,13 +44,16 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.util.CheckHelper
 import nextflow.util.Duration
 import org.codehaus.groovy.runtime.NullObject
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 /**
  * Channel factory object
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
 class Channel {
+
+    private static final Logger log = LoggerFactory.getLogger(Channel)
 
     static ControlMessage STOP = PoisonPill.getInstance()
 
