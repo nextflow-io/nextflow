@@ -23,6 +23,8 @@ import groovy.transform.InheritConstructors
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
+import groovyx.gpars.dataflow.DataflowChannel
+import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Nextflow
@@ -447,7 +449,9 @@ class EachInParam extends BaseInParam {
 
     @Override
     protected DataflowReadChannel inputValToChannel( value ) {
-        log.warn "Using queue channel on each parameter declaration should be avoided -- take in consideration to change declaration for each: '$name' parameter"
+
+        if( value instanceof DataflowChannel )
+            log.warn "Using queue channel on each parameter declaration should be avoided -- take in consideration to change declaration for each: '$name' parameter"
 
         // everything is mapped to a collection
         // the collection is wrapped to a "scalar" dataflow variable
@@ -510,10 +514,7 @@ class SetInParam extends BaseInParam {
         type.newInstance(binding, inner, index)
     }
 
-
 }
-
-
 
 
 /**
@@ -536,6 +537,13 @@ class InputsList implements List<InParam> {
         (List<T>) target.findAll { it.class == clazz }
     }
 
+    boolean allScalarInputs() {
+        for( InParam param : target ) {
+            if( param.inChannel instanceof DataflowQueue )
+                return false
+        }
+        return true
+    }
 
 }
 
