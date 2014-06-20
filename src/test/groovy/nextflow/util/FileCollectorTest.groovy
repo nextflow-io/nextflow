@@ -42,7 +42,7 @@ class FileCollectorTest extends Specification {
         appender.get('eng').text == 'Hello world!'
         appender.get('ita').text == 'Ciao\nmondo\n!'
         appender.getFiles().size() == 2
-        appender.getFiles() *. name == ['eng','ita']
+        appender.getFiles() *. name .sort() == ['eng','ita']
 
         cleanup:
         appender?.close()
@@ -64,7 +64,7 @@ class FileCollectorTest extends Specification {
         appender.get('eng').text == 'Hello\nworld!\n'
         appender.get('ita').text == 'Ciao\nmondo\n!\n'
         appender.getFiles().size() == 2
-        appender.getFiles() *. name == ['eng','ita']
+        appender.getFiles() *. name .sort() == ['eng','ita']
 
         cleanup:
         appender?.close()
@@ -172,7 +172,7 @@ class FileCollectorTest extends Specification {
         def list = appender.moveFiles(target)
         then:
         list.size() == 3
-        list *. name == ['eng','ita','xxx']
+        list *. name .sort() == ['eng','ita','xxx']
         appender.size() == 0
         file1.exists()
 

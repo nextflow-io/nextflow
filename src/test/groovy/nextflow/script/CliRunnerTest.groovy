@@ -19,7 +19,6 @@
  */
 
 package nextflow.script
-
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
@@ -27,7 +26,6 @@ import nextflow.Session
 import nextflow.exception.MissingLibraryException
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
-import nextflow.util.ConfigHelper
 import spock.lang.Specification
 import test.TestParser
 /**
@@ -428,7 +426,7 @@ class CliRunnerTest extends Specification {
         runner = new CliRunner()
         runner.addLibPaths( path2 )
         then:
-        runner.libraries == [ path2, jar1, jar2 ]
+        runner.libraries.sort() == [ path2, jar1, jar2 ].sort()
 
 
         cleanup:

@@ -411,21 +411,20 @@ class FilesExtensionsTest extends Specification {
 
         then:
         files.size() == 4
-        files[0] == new File(sourceFolder.toString(), 'file1')
-        files[1] == new File(sourceFolder.toString(), 'file2')
-        files[2] == new File(sourceFolder.toString(), 'file3')
-        files[3] == sub1.toFile()
+        files.contains new File(sourceFolder.toString(), 'file1')
+        files.contains new File(sourceFolder.toString(), 'file2')
+        files.contains new File(sourceFolder.toString(), 'file3')
+        files.contains sub1.toFile()
 
         paths.size() == 4
-        paths[0] == path1
-        paths[1] == path2
-        paths[2] == path3
-        paths[3] == sub1
+        paths.contains path1
+        paths.contains path2
+        paths.contains path3
+        paths.contains sub1
 
         expect:
         path1.toFile().listFiles() == null
         path1.listFiles() == null
-
 
         cleanup:
         sourceFolder.deleteDir()

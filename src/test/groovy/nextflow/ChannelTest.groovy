@@ -24,6 +24,7 @@ import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
 import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import spock.lang.Specification
@@ -81,26 +82,25 @@ class ChannelTest extends Specification {
         def file6 = Files.createFile(folder.resolve('file66.txt'))
 
         when:
-        def channel = Channel.fromPath("$folder/{alpha,gamma}.txt")
+        def result = Channel
+                        .fromPath("$folder/{alpha,gamma}.txt")
+                        .toSortedList().getVal().collect { it -> it.name }
         then:
-        channel.val == folder.resolve('alpha.txt')
-        channel.val == folder.resolve('gamma.txt')
-        channel.val == Channel.STOP
+        result == [ 'alpha.txt', 'gamma.txt' ]
 
         when:
-        channel = Channel.fromPath("$folder/file?.txt")
+        result = Channel
+                        .fromPath("$folder/file?.txt")
+                        .toSortedList().getVal().collect { it -> it.name }
         then:
-        channel.val == folder.resolve('file4.txt')
-        channel.val == folder.resolve('file5.txt')
-        channel.val == Channel.STOP
+        result == [ 'file4.txt', 'file5.txt' ]
 
         when:
-        channel = Channel.fromPath("$folder/file*.txt")
+        result = Channel
+                    .fromPath("$folder/file*.txt")
+                    .toSortedList().getVal().collect { it -> it.name }
         then:
-        channel.val == folder.resolve('file4.txt')
-        channel.val == folder.resolve('file5.txt')
-        channel.val == folder.resolve('file66.txt')
-        channel.val == Channel.STOP
+        result == [ 'file4.txt', 'file5.txt', 'file66.txt' ]
 
         cleanup:
         folder.deleteDir()
@@ -118,28 +118,19 @@ class ChannelTest extends Specification {
         def file4 = Files.createFile(folder.resolve('gamma.txt'))
 
         when:
-        def channel = Channel.fromPath("$folder/*")
+        def result = Channel.fromPath("$folder/*").toSortedList().getVal()
         then:
-        channel.val == folder.resolve('delta.txt')
-        channel.val == folder.resolve('gamma.txt')
-        channel.val == Channel.STOP
+        result == [file3, file4]
 
         when:
-        channel = Channel.fromPath("$folder/.*")
+        result = Channel.fromPath("$folder/.*").toSortedList().getVal()
         then:
-        channel.val == folder.resolve('.alpha.txt')
-        channel.val == folder.resolve('.beta.txt')
-        channel.val == Channel.STOP
-
+        result == [file1, file2]
 
         when:
-        channel = Channel.fromPath("$folder/{.*,*}", hidden: true)
+        result = Channel.fromPath("$folder/{.*,*}", hidden: true).toSortedList().getVal()
         then:
-        channel.val == folder.resolve('.alpha.txt')
-        channel.val == folder.resolve('.beta.txt')
-        channel.val == folder.resolve('delta.txt')
-        channel.val == folder.resolve('gamma.txt')
-        channel.val == Channel.STOP
+        result == [file1, file2, file3, file4]
 
         cleanup:
         folder.deleteDir()
@@ -159,28 +150,19 @@ class ChannelTest extends Specification {
         def file6 = Files.createFile(sub1.resolve('file6.txt'))
 
         when:
-        def channel = Channel.fromPath("$folder/*.txt")
+        def result = Channel.fromPath("$folder/*.txt").toSortedList().getVal()
         then:
-        channel.val == file1
-        channel.val == file2
-        channel.val == file3
-        channel.val == Channel.STOP
-
+        result == [file1, file2, file3]
 
         when:
-        def channel2 = Channel.fromPath("$folder/**.txt")
+        def result2 = Channel.fromPath("$folder/**.txt").toSortedList().getVal()
         then:
-        channel2.val.toString() == file1.toString()
-        channel2.val.toString() == file2.toString()
-        channel2.val.toString() == file3.toString()
-        channel2.val.toString() == file6.toString()
-        channel2.val == Channel.STOP
+        result2 == [file1, file2, file3, file6]
 
         when:
-        def channel3 = Channel.fromPath("$folder/sub1/**.log")
+        def result3 = Channel.fromPath("$folder/sub1/**.log").toSortedList().getVal()
         then:
-        channel3.val.toString() == file5.toString()
-        channel3.val == Channel.STOP
+        result3 == [file5]
 
         cleanup:
         folder.deleteDir()
@@ -209,68 +191,58 @@ class ChannelTest extends Specification {
         def folder = Files.createTempDirectory('testFiles')
         def file1 = Files.createFile(folder.resolve('file1.txt'))
         def file2 = Files.createFile(folder.resolve('file2.txt'))
-        def file3 = Files.createFile(folder.resolve('file3.txt'))
+        def file3 = Files.createFile(folder.resolve('file3.log'))
         def sub1 = Files.createDirectories(folder.resolve('sub1'))
         def file5 = Files.createFile(sub1.resolve('file5.log'))
 
         when:
-        def result = Channel.fromPath( folder.toAbsolutePath().toString() + '/*.txt' )
+        List<Path> result = Channel
+                                .fromPath( folder.toAbsolutePath().toString() + '/*.txt' )
+                                .toSortedList().getVal().collect { it.name }
         then:
-        result.val.name == 'file1.txt'
-        result.val.name == 'file2.txt'
-        result.val.name == 'file3.txt'
-        result.val == Channel.STOP
+        result == [ 'file1.txt', 'file2.txt' ]
 
         when:
-        result = Channel.fromPath( folder.toAbsolutePath().toString() + '/*' )
+        result = Channel
+                    .fromPath( folder.toAbsolutePath().toString() + '/*' )
+                    .toSortedList().getVal().collect { it.name }
         then:
-        result.val.name == 'file1.txt'
-        result.val.name == 'file2.txt'
-        result.val.name == 'file3.txt'
-        result.val == Channel.STOP
-
+        result == [ 'file1.txt', 'file2.txt', 'file3.log' ]
 
         when:
-        result = Channel.fromPath( folder.toAbsolutePath().toString() + '/*', type: 'file' )
+        result = Channel
+                    .fromPath( folder.toAbsolutePath().toString() + '/*', type: 'file' )
+                    .toSortedList().getVal().collect { it.name }
         then:
-        result.val.name == 'file1.txt'
-        result.val.name == 'file2.txt'
-        result.val.name == 'file3.txt'
-        result.val == Channel.STOP
+        result == [ 'file1.txt', 'file2.txt', 'file3.log' ]
 
         when:
-        result = Channel.fromPath( folder.toAbsolutePath().toString() + '/*', type: 'dir' )
+        result = Channel
+                    .fromPath( folder.toAbsolutePath().toString() + '/*', type: 'dir' )
+                    .toSortedList().getVal().collect { it.name }
         then:
-        result.val.name == 'sub1'
-        result.val == Channel.STOP
+        result == ['sub1']
 
         when:
-        result = Channel.fromPath( folder.toAbsolutePath().toString() + '/*', type: 'any' )
+        result = Channel
+                    .fromPath( folder.toAbsolutePath().toString() + '/*', type: 'any' )
+                    .toSortedList().getVal().collect { it.name }
         then:
-        result.val.name == 'file1.txt'
-        result.val.name == 'file2.txt'
-        result.val.name == 'file3.txt'
-        result.val.name == 'sub1'
-        result.val == Channel.STOP
-
+        result == [ 'file1.txt', 'file2.txt', 'file3.log', 'sub1' ]
 
         when:
         result = Channel
                     .fromPath( folder.toAbsolutePath().toString() + '/**', type: 'file' )
-                    .toSortedList()
-                    .getVal()
-                     .collect { it.name }
+                    .toSortedList() .getVal() .collect { it.name }
         then:
-        result == ['file1.txt', 'file2.txt', 'file3.txt', 'file5.log' ]
+        result == [ 'file1.txt', 'file2.txt', 'file3.log', 'file5.log' ]
 
         when:
         def result2 = Channel
                     .fromPath( folder.toAbsolutePath().toString() + '/**', type: 'file', maxDepth: 1 )
-                    .toSortedList()
-                    .getVal()
-                    .collect { it.name }
+                    .toSortedList() .getVal() .collect { it.name }
         then:
-        result2 == ['file1.txt', 'file2.txt', 'file3.txt' ]
+        result2 == ['file1.txt', 'file2.txt', 'file3.log' ]
 
         when:
         Channel.fromPath( folder.toAbsolutePath().toString() + '/*', xx: 'any' )
