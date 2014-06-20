@@ -21,6 +21,23 @@
 apply plugin: 'gradle-one-jar'
 version = '0.8.2'
 
+
+if (System.getenv('CI_GROOVY_VERSION')) {
+    // Add ability to test with upcoming versions of Groovy
+    groovyVer = System.getenv('CI_GROOVY_VERSION')
+    if (groovyVer.endsWith('-SNAPSHOT')) {
+        allprojects {
+            repositories {
+                maven {
+                    name 'JFrog OSS snapshot repo'
+                    url 'https://oss.jfrog.org/oss-snapshot-local/'
+                }
+            }
+        }
+    }
+    logger.lifecycle "Overriden Groovy dependency to use $groovyVer"
+}
+
 allprojects {
     apply plugin: 'groovy'
     sourceCompatibility = 1.7
