@@ -36,7 +36,7 @@ allprojects {
 
     dependencies {
         compile ("org.codehaus.groovy:groovy:${groovyVer}")
-        //compile ("org.codehaus.groovy:groovy-nio:${groovyVer}")
+        compile ("org.codehaus.groovy:groovy-nio:${groovyVer}")
         testCompile ("cglib:cglib-nodep:${cglibVer}")
         testCompile ("org.objenesis:objenesis:${objenesisVer}")
         testCompile ("org.spockframework:spock-core:${spockVer}") {
