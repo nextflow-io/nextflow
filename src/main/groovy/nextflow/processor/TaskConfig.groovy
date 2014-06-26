@@ -19,7 +19,6 @@
  */
 
 package nextflow.processor
-
 import groovy.util.logging.Slf4j
 import nextflow.script.BaseScript
 import nextflow.script.EachInParam
@@ -43,21 +42,20 @@ import nextflow.util.Duration
 import nextflow.util.HashMode
 import nextflow.util.MemoryUnit
 import nextflow.util.ReadOnlyMap
-
 /**
  * Holds the task configuration properties
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class TaskConfig implements Map {
+class TaskConfig implements Map<String,Object> {
 
     private static transient BOOL_YES = ['true','yes','on']
 
     private static transient BOOL_NO = ['false','no','off']
 
     @Delegate
-    protected final Map configProperties
+    protected final Map<String,Object> configProperties
 
     private final BaseScript ownerScript
 
@@ -71,6 +69,11 @@ class TaskConfig implements Map {
     TaskConfig( BaseScript script, Map important = null ) {
 
         ownerScript = script
+
+        // parse the attribute as List before adding it to the read-only list
+        if( important?.containsKey('module') ) {
+            important.module = parseModuleString(important.module)
+        }
 
         configProperties = important ? new ReadOnlyMap(important) : new LinkedHashMap()
         configProperties.with {
@@ -111,7 +114,8 @@ class TaskConfig implements Map {
         }
     }
 
-    def boolean containsKey(String name) {
+    @Override
+    def boolean containsKey(Object name) {
         return configProperties.containsKey(name)
     }
 
@@ -132,7 +136,8 @@ class TaskConfig implements Map {
         return this
     }
 
-    public getProperty( String name ) {
+    Object get( Object name ) {
+
         switch( name ) {
             case 'cacheable':
                 return isCacheable()
@@ -144,7 +149,6 @@ class TaskConfig implements Map {
                 return configProperties.get(name)
         }
     }
-
 
     @groovy.transform.PackageScope
     BaseScript getOwnerScript() { ownerScript }
@@ -171,6 +175,7 @@ class TaskConfig implements Map {
         configProperties.echo
     }
 
+    @Deprecated
     boolean getMerge() {
         configProperties.merge?.toString() in BOOL_YES
     }
@@ -257,8 +262,6 @@ class TaskConfig implements Map {
     SharedParam _share_file( def obj )  {
         new FileSharedParam(this).bind(obj) as SharedParam
     }
-
-
 
 
     /**
@@ -356,6 +359,47 @@ class TaskConfig implements Map {
 
     int getMaxErrors() {
         configProperties.maxErrors ? configProperties.maxErrors as int : 0
+    }
+
+    TaskConfig module( moduleName ) {
+        // when no name is provided, just exit
+        if( !moduleName )
+            return this
+
+        def list = parseModuleString(moduleName, configProperties.module)
+        configProperties.put('module', list)
+        return this
+    }
+
+    private List<String> parseModuleString( value, current = null) {
+
+        // if no modules list exist create it
+        List<String> copy
+
+        // normalize the current value to a list
+        // note: any value that is not a list is discarded
+        if( current instanceof List )
+            copy = new ArrayList<>(current)
+        else
+            copy = []
+
+        // parse the module list
+        if( value instanceof List )
+            copy.addAll(value)
+        else if( value instanceof String && value.contains(':'))
+            for( String it : value.split(':') ) { copy.add(it) }
+        else
+            copy.add( value.toString() )
+
+        return copy
+    }
+
+    List<String> getModule() {
+        def result = configProperties.module
+        if( result instanceof String ) {
+            result = configProperties.module = parseModuleString(result)
+        }
+        (List<String>) result
     }
 
 

@@ -48,6 +48,8 @@ class BashWrapperBuilder {
 
     String dockerContainerName
 
+    List<String> moduleNames
+
 
     BashWrapperBuilder( TaskRun task ) {
         this.task = task
@@ -61,6 +63,7 @@ class BashWrapperBuilder {
         this.environment = task.processor.getProcessEnvironment()
         this.environment.putAll( task.getInputEnvironment() )
 
+        this.moduleNames = task.processor.taskConfig.getModule()
     }
 
     /* this constructor is used only for testing purpose */
@@ -155,6 +158,11 @@ class BashWrapperBuilder {
         // source the environment
         if( !dockerContainerName ) {
             wrapper << '[ -f '<< environmentFile.toString() << ' ]' << ' && source ' << environmentFile.toString() << ENDL
+        }
+
+        // when a module is defined, load it
+        moduleNames?.each { String name ->
+            wrapper << 'module load ' << name << ENDL
         }
 
         // whenever it has to change to the scratch directory
