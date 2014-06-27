@@ -118,7 +118,7 @@ item referring the specified file.
 
 .. note:: It does not check the file existence.
 
-Whenever the ``fromPath`` argument contains a ``*`` or ``?`` wildcard character it is interpreted as a `glob` path matcher.
+Whenever the ``fromPath`` argument contains a ``*`` or ``?`` wildcard character it is interpreted as a `glob`_ path matcher.
 For example::
 
     myFileChannel = Channel.fromPath( '/data/big/*.txt' )
@@ -127,15 +127,17 @@ For example::
 This example creates a channel and emits as many ``Path`` items as there are files with ``txt`` extension in the ``/data/big`` folder.
 
 .. tip:: Two asterisks, i.e. ``**``, works like ``*`` but crosses directory boundaries.
-  This syntax is generally used for matching complete paths.
+  This syntax is generally used for matching complete paths. Curly brackets specify a collection of sub-patterns.
 
 For example::
 
     files = Channel.fromPath( 'data/**.fa' )
     moreFiles = Channel.fromPath( 'data/**/.fa' )
+    pairFiles = Channel.fromPath( 'data/file_{1,2}.fq' )
 
 The first line returns a channel emitting the files ending with the suffix ``.fa`` in the ``data`` folder `and` recursively
 in all its sub-folders. While the second one only emits the files which have the same suffix in `any` sub-folder in the ``data`` path.
+Finally the last example emits two files: ``data/file_1.fq`` and ``data/file_2.fq``.
 
 .. note:: As in Linux BASH the ``*`` wildcard does not match against hidden files (i.e. files whose name start with a ``.`` character).
 
@@ -149,7 +151,7 @@ In order to include hidden files, you need to start your pattern with a period c
 The first example returns all hidden files in the specified path. The second one returns all hidden files
 ending with the ``.fa`` suffix. Finally the last example returns all files (hidden and non-hidden) in that path.
 
-By default a glob pattern only looks for `regular file` paths that match the specified criteria, i.e.
+By default a `glob`_ pattern only looks for `regular file` paths that match the specified criteria, i.e.
 it won't return directory paths.
 
 You may use the parameter ``type`` specifying the value ``file``, ``dir`` or ``any`` in order to define what kind of paths
@@ -172,8 +174,6 @@ followLinks     When ``true`` it follows symbolic links during directories tree 
 =============== ===================
 
 
-Learn more about `glob` patterns at `this link <http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob>`_.
-
 .. _channel-watch:
 
 watchPath
@@ -181,7 +181,10 @@ watchPath
 
 The ``watchPath`` factory method watches a folder for one or more files matching a specified pattern. As soon as
 there is a file that meets the specified condition, it is emitted over the channel that is returned by the ``watchPath``
-method. For example::
+method. The condition on files to watch can be specified by using ``*`` or ``?`` wildcard characters i.e. by specifying
+a `glob`_ path matching criteria.
+
+For example::
 
      Channel
         .watchPath( '/path/*.fa' )
@@ -208,8 +211,6 @@ You can specified more than one of these events by using a comma separated strin
 
 .. warning:: The ``watchPath`` factory waits endlessly for files that match the specified pattern and event(s).
   Thus, whenever you use it in your script, the resulting pipeline will never finish.
-
-Learn more about `glob` patterns at `this link <http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob>`_
 
 See also: `fromPath`_ factory method.
 
@@ -325,3 +326,4 @@ For example::
 
 
 
+.. _glob: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob

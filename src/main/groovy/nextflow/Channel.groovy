@@ -55,6 +55,8 @@ class Channel {
 
     private static final Logger log = LoggerFactory.getLogger(Channel)
 
+    private static final Pattern GLOB_FILE_BRACKETS = Pattern.compile(/(.*)(\{.+,.+\})(.*)/)
+
     static ControlMessage STOP = PoisonPill.getInstance()
 
     static NullObject VOID = NullObject.getNullObject()
@@ -165,7 +167,7 @@ class Channel {
         boolean glob  = false
         glob |= filePattern.contains('*')
         glob |= filePattern.contains('?')
-        glob = glob || filePattern ==~ /.*\{.+,.+\}.*/
+        glob = glob || GLOB_FILE_BRACKETS.matcher(filePattern).matches()
 
         if( !glob ) {
             return from( filePattern as Path )
@@ -278,9 +280,19 @@ class Channel {
 
         def folder
         def pattern
+        def matcher
         int p = filePattern.indexOf('*')
         if( p != -1 ) {
             i = filePattern.substring(0,p).lastIndexOf('/')
+        }
+        else if( (matcher=GLOB_FILE_BRACKETS.matcher(filePattern)).matches() ) {
+            def prefix = matcher.group(1)
+            if( prefix ) {
+                i = prefix.contains('/') ? prefix.lastIndexOf('/') : -1
+            }
+            else {
+                i = matcher.start(2) -1
+            }
         }
         else {
             i = filePattern.lastIndexOf('/')
@@ -300,7 +312,6 @@ class Channel {
         }
 
         return [ folder, pattern ]
-
     }
 
 

@@ -38,7 +38,10 @@ class ChannelTest extends Specification {
 
         expect:
         Channel.getFolderAndPattern( '/some/file/name.txt' ) == ['/some/file/', 'name.txt']
+        Channel.getFolderAndPattern( '/some/file/na*.txt' ) == ['/some/file/', 'na*.txt']
+        Channel.getFolderAndPattern( '/some/file/na??.txt' ) == ['/some/file/', 'na??.txt']
         Channel.getFolderAndPattern( '/some/file/*.txt' ) == ['/some/file/', '*.txt']
+        Channel.getFolderAndPattern( '/some/file/?.txt' ) == ['/some/file/', '?.txt']
         Channel.getFolderAndPattern( '/some/file/*' ) == ['/some/file/', '*']
         Channel.getFolderAndPattern( '/some/file/' ) == ['/some/file/', '']
         Channel.getFolderAndPattern( 'path/filename.txt' ) == ['path/', 'filename.txt']
@@ -52,6 +55,13 @@ class ChannelTest extends Specification {
         Channel.getFolderAndPattern( 'dxfs://*.txt' ) == ['dxfs://./', '*.txt']
         Channel.getFolderAndPattern( 'dxfs:///*.txt' ) == ['dxfs:///', '*.txt']
         Channel.getFolderAndPattern( 'dxfs:///**/*.txt' ) == ['dxfs:///', '**/*.txt']
+
+        Channel.getFolderAndPattern( 'file{a,b}') == ['./', 'file{a,b}']
+        Channel.getFolderAndPattern( 'test/data/file{a,b}') == ['test/data/', 'file{a,b}']
+        Channel.getFolderAndPattern( 'test/{file1,file2}') == ['test/', '{file1,file2}']
+        Channel.getFolderAndPattern( '{file1,file2}') == ['./', '{file1,file2}']
+        Channel.getFolderAndPattern( '{test/file1,data/file2}') == ['./', '{test/file1,data/file2}']
+        Channel.getFolderAndPattern( 'data/{p/file1,q/file2}') == ['data/', '{p/file1,q/file2}']
     }
 
 
@@ -243,6 +253,13 @@ class ChannelTest extends Specification {
                     .toSortedList() .getVal() .collect { it.name }
         then:
         result2 == ['file1.txt', 'file2.txt', 'file3.log' ]
+
+        when:
+        def result3 = Channel
+                        .fromPath (folder.toAbsolutePath().toString() + '/{file1.txt,sub1/file5.log}')
+                        .toSortedList() .val .collect { it.name }
+        then:
+        result3 == ['file1.txt','file5.log']
 
         when:
         Channel.fromPath( folder.toAbsolutePath().toString() + '/*', xx: 'any' )
