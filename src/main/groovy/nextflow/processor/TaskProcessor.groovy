@@ -29,7 +29,6 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
 import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowQueue
-import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
@@ -44,6 +43,7 @@ import nextflow.exception.ProcessScriptException
 import nextflow.executor.Executor
 import nextflow.script.BaseScript
 import nextflow.script.BasicMode
+import nextflow.script.EachInParam
 import nextflow.script.FileOutParam
 import nextflow.script.FileSharedParam
 import nextflow.script.InParam
@@ -117,11 +117,6 @@ abstract class TaskProcessor {
      * manage accordingly the task inputs
      */
     protected DataflowProcessor processor
-
-    /**
-     * Whenever all inputs for this task are *scalar* value, i.e. simple data types and not collections of values
-     */
-    protected volatile boolean allScalarValues
 
     /**
      * The underlying executor which will run the task
@@ -275,9 +270,8 @@ abstract class TaskProcessor {
      */
     def run() {
 
-        if ( !code ) {
+        if ( !code )
             throw new IllegalArgumentException("Missing 'script' attribute")
-        }
 
 
         /*
@@ -290,7 +284,8 @@ abstract class TaskProcessor {
             taskConfig.fakeInput()
         }
 
-        allScalarValues = !taskConfig.inputs.channels.any { !(it instanceof DataflowVariable) }
+        final boolean hasEachParams = taskConfig.inputs.any { it instanceof EachInParam }
+        final boolean allScalarValues = taskConfig.inputs.allScalarInputs() && !hasEachParams
 
         /*
          * Normalize the output
@@ -884,7 +879,7 @@ abstract class TaskProcessor {
         }
 
         // -- bind out the collected values
-        def maps = taskConfig.getOutputs().each { param ->
+        taskConfig.getOutputs().each { param ->
             def list = tuples[param.index]
             if( list == null ) throw new IllegalStateException()
 
@@ -918,6 +913,7 @@ abstract class TaskProcessor {
     }
 
     protected void bindOutParam( OutParam param, def values ) {
+        log.trace "<$name> Binding param $param with $values"
         def x = values.size() == 1 ? values[0] : values
         processor.bindOutput( param.index, x )
     }

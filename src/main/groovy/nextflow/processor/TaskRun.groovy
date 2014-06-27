@@ -267,7 +267,16 @@ class TaskRun {
      * Check whenever there are values to be cached
      */
     def boolean hasCacheableValues() {
-        outputs.keySet().any { it.class == ValueOutParam } || inputs.keySet().any { it instanceof SharedParam }
+        for( OutParam it : outputs.keySet() ) {
+            if( it.class == ValueOutParam ) return true
+            if( it.class == FileOutParam && ((FileOutParam)it).isParametric() ) return true
+        }
+
+        for( InParam it : inputs.keySet() ) {
+            if( it instanceof SharedParam ) return true
+        }
+
+        return false
     }
 
     def Map<InParam,List<FileHolder>> getInputFiles() {

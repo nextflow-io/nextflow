@@ -29,6 +29,7 @@ import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.Channel
 import nextflow.script.EachInParam
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
@@ -63,6 +64,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         def opOutputs = new ArrayList(taskConfig.outputs.getChannels())
 
         // append the shared obj to the input list
+        def allScalar = taskConfig.getInputs().allScalarInputs()
         def sharedCount = taskConfig.getInputs().count { it instanceof SharedParam }
 
         /*
@@ -95,7 +97,7 @@ class ParallelTaskProcessor extends TaskProcessor {
             size.times { linkingChannels[it] = new DataflowQueue() }
 
             // instantiate the iteration process
-            def params = [inputs: opInputs, outputs: linkingChannels, maxForks: 1, listeners: [new IteratorProcessInterceptor()]]
+            def params = [inputs: opInputs, outputs: linkingChannels, maxForks: 1, listeners: [new IteratorProcessInterceptor(allScalarValues: allScalar)]]
             session.allProcessors << (processor = new DataflowOperator(group, params, forwarder).start())
 
             // set as next inputs the result channels of the iteration process
@@ -139,7 +141,7 @@ class ParallelTaskProcessor extends TaskProcessor {
      *
      * @param numOfInputs Number of in/out channel
      * @param indexes The list of indexes which identify the position of iterators in the input channels
-     * @return The clousre implementing the iteration/forwarding logic
+     * @return The closure implementing the iteration/forwarding logic
      */
     protected createForwardWrapper( int numOfInputs, List indexes ) {
 
@@ -431,29 +433,45 @@ class ParallelTaskProcessor extends TaskProcessor {
      */
     class IteratorProcessInterceptor extends DataflowEventAdapter {
 
+        boolean allScalarValues
+
         @Override
         public boolean onException(final DataflowProcessor processor, final Throwable e) {
-            log.error "process '$name' > error on internal iteration process", e
+            log.error "* process '$name' > error on internal iteration process", e
             return true;
         }
 
         @Override
         public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "process '$name' > message arrived for iterator '${taskConfig.inputs.names[index]}' with value: '$message'"
+            log.trace "* process '$name' > message arrived for iterator '${taskConfig.inputs.names[index]}' with value: '$message'"
             return message;
         }
 
         @Override
         public Object messageSentOut(final DataflowProcessor processor, final DataflowWriteChannel<Object> channel, final int index, final Object message) {
-            log.trace "process '$name' > message forwarded for iterator '${taskConfig.inputs.names[index]}' with value: '$message'"
+            log.trace "* process '$name' > message forwarded for iterator '${taskConfig.inputs.names[index]}' with value: '$message'"
             return message;
         }
 
 
         @Override
         public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "process '$name' > control message arrived for iterator '${taskConfig.inputs.names[index]}'"
+            log.trace "* process '$name' > control message arrived for iterator '${taskConfig.inputs.names[index]}'"
             return message;
+        }
+
+        @Override
+        public void afterRun(final DataflowProcessor processor, final List<Object> messages) {
+            log.trace "* process '$name' > after run on internal iteration process -- allScalarValues: $allScalarValues"
+            if( allScalarValues )
+                processor.terminate()
+        }
+
+        @Override
+        public void afterStop(final DataflowProcessor processor) {
+            log.trace "* process '$name' > after stop on internal iteration process -- allScalarValues: $allScalarValues"
+            if( allScalarValues )
+                processor.bindAllOutputs(Channel.STOP)
         }
     }
 

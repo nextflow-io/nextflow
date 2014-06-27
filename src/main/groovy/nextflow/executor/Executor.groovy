@@ -205,7 +205,7 @@ abstract class Executor {
             result << ""
             result << "mkdir -p ${task.getTargetDir()}"
             result << "for item in ${fileOutNames.unique().join(' ')}; do"
-            result << "rsync -rRzl \"\$item\" ${task.getTargetDir()}"
+            result << "rsync -rRzl \"\$item\" ${task.getTargetDir()} || true" // <-- add true to avoid it stops on errors
             result << "done"
         }
 

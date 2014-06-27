@@ -562,6 +562,92 @@ class CliRunnerTest extends Specification {
 
     }
 
+    def testModulesConfig() {
+
+        setup:
+        // -- this represent the configuration file
+        def config = '''
+            executor = 'nope'
+            process.module = 'a/1'
+            '''
+
+        def script = '''
+            process hola {
+              module 'b/2'
+              module 'c/3'
+
+              'echo 1'
+            }
+            '''
+
+        def session = new Session(new ConfigSlurper().parse(config))
+
+        when:
+        TaskProcessor process = new TestParser(session).parseScript(script).run()
+
+        then:
+        process.taskConfig instanceof TaskConfig
+        process.taskConfig.getModule() == ['b/2','c/3']
+    }
+
+    def testModulesConfig2() {
+
+        setup:
+        /*
+         * the module defined in the config file 'b/2' has priority and overrides the 'a/1' and 'c/3'
+         */
+        def config = '''
+            executor = 'nope'
+            process.module = 'a/1'
+            process.$hola.module = 'b/2:z/9'
+            '''
+
+        def script = '''
+            process hola {
+              module 'c/3'
+              module 'd/4'
+
+              'echo 1'
+            }
+            '''
+
+        def session = new Session(new ConfigSlurper().parse(config))
+
+        when:
+        TaskProcessor process = new TestParser(session).parseScript(script).run()
+
+        then:
+        process.taskConfig instanceof TaskConfig
+        process.taskConfig.getModule() == ['b/2','z/9']
+    }
+
+    def testModulesConfig3() {
+
+        setup:
+        /*
+         * the module defined in the config file 'b/2' has priority and overrides the 'a/1' and 'c/3'
+         */
+        def config = '''
+            executor = 'nope'
+            process.module = 'a/1'
+            '''
+
+        def script = '''
+            process hola {
+              'echo 1'
+            }
+            '''
+
+        def session = new Session(new ConfigSlurper().parse(config))
+
+        when:
+        TaskProcessor process = new TestParser(session).parseScript(script).run()
+
+        then:
+        process.taskConfig instanceof TaskConfig
+        process.taskConfig.getModule() == ['a/1']
+    }
+
 
     def testCommandLineOptions() {
 

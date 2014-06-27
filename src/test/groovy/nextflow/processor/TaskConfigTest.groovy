@@ -388,5 +388,36 @@ class TaskConfigTest extends Specification {
 
     }
 
+    def testModules() {
+
+        when:
+        def config = new TaskConfig([:])
+        config.module 't_coffee/10'
+        config.module( [ 'blast/2.2.1', 'clustalw/2'] )
+
+        then:
+        config.module == ['t_coffee/10','blast/2.2.1', 'clustalw/2']
+        config.getModule() == ['t_coffee/10','blast/2.2.1', 'clustalw/2']
+
+        when:
+        config = new TaskConfig([:])
+        config.module 'a/1'
+        config.module 'b/2:c/3'
+
+        then:
+        config.module == ['a/1','b/2','c/3']
+
+        when:
+        config = new TaskConfig([:])
+        config.module = 'b/2:c/3'
+
+        then:
+        // I don't like this because it's hot uniform with the above getter method
+        // TODO make it return a list as the getter
+        config.module == 'b/2:c/3'
+        config.getModule() == ['b/2','c/3']
+
+    }
+
 
 }

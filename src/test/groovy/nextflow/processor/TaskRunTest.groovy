@@ -32,6 +32,7 @@ import nextflow.script.StdOutParam
 import nextflow.script.TokenVar
 import nextflow.script.ValueInParam
 import nextflow.script.ValueOutParam
+import nextflow.script.ValueSharedParam
 import spock.lang.Specification
 /**
  *
@@ -141,6 +142,54 @@ class TaskRunTest extends Specification {
 
         then:
         task.getOutputFilesNames() == ['file_out.alpha', 'file_out.beta', 'file_shared.delta']
+    }
+
+    def testHasCacheableValues() {
+
+        given:
+        def binding = new Binding()
+        def list = []
+
+        /*
+         * just file as output => no cacheable values
+         */
+        when:
+        def o1 = new FileOutParam(binding,list).bind('file_out.beta')
+        def task1 = new TaskRun()
+        task1.setOutput(o1)
+        then:
+        !task1.hasCacheableValues()
+
+        /*
+         * when a 'val' is declared as output ==> true
+         */
+        when:
+        def o2 = new ValueOutParam(binding,list).bind( 'x' )
+        def task2 = new TaskRun()
+        task2.setOutput(o2)
+        then:
+        task2.hasCacheableValues()
+
+        /*
+         * file with parametric name => true
+         */
+        when:
+        def s3 = new FileOutParam(binding, list).bind( new TokenVar('y') )
+        def task3 = new TaskRun()
+        task3.setOutput(s3)
+        then:
+        task3.hasCacheableValues()
+
+        /*
+         * shared input => true
+         */
+        when:
+        def s4 = new ValueSharedParam(binding, list).bind( 'x' )
+        def task4 = new TaskRun()
+        task4.setInput(s4)
+        then:
+        task4.hasCacheableValues()
+
     }
 
 

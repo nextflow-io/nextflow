@@ -159,31 +159,37 @@ class ParamsOutTest extends Specification {
         out1.getFilePatterns(ctx) == ['hola_name']
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.channel1
+        out1.isParametric()
 
         out2.name == null
         out2.getFilePatterns(ctx) == ['hola_99.fa']
         out2.outChannel instanceof DataflowQueue
         out2.outChannel == binding.channel2
+        out2.isParametric()
 
         out3.name == 'simple.txt'
         out3.getFilePatterns(ctx) == ['simple.txt']
         out3.outChannel instanceof DataflowQueue
         out3.outChannel == binding.channel3
+        !out3.isParametric()
 
         out4.name == null
         out4.getFilePatterns(ctx) == ['script_file.txt','hola.fa']
         out4.outChannel instanceof DataflowQueue
         out4.outChannel == binding.channel4
+        out4.isParametric()
 
         out5.outChannel instanceof DataflowQueue
         out5.outChannel == binding.channel5
         out5.inner[0] instanceof FileOutParam
         (out5.inner[0] as FileOutParam) .getFilePatterns(ctx) == ['script_file.txt','hola.fa']
+        (out5.inner[0] as FileOutParam) .isParametric()
 
         out6.outChannel instanceof DataflowQueue
         out6.outChannel == binding.channel6
         out6.inner[0] instanceof FileOutParam
         (out6.inner[0] as FileOutParam) .getFilePatterns(ctx) == ['script_file.txt','hola.fa']
+        (out6.inner[0] as FileOutParam) .isParametric()
 
     }
 

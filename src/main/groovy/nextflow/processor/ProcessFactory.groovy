@@ -173,7 +173,7 @@ class ProcessFactory {
         if( config.process instanceof Map ) {
             config.process .each { String key, value ->
                 if( key.startsWith('$')) return
-                taskConfig.setProperty(key,value)
+                taskConfig.put(key,value)
             }
         }
 
