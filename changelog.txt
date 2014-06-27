@@ -5,6 +5,7 @@ NEXTFLOW CHANGE-LOG
 - Added support for Modules package maages
 - Fixed issue #1 - process hung when only a parameter of type 'each' is defined
 - Fixed issue #6 -- exception while resuming a process that declares a parametric file output name
+- Fixed support for curly brackets glob path matching in Channel.fromPath
 - Updated Groovy runtime to 2.3.3 
 - Updated to Groovy-nio module in place of 'native' implementation
 
