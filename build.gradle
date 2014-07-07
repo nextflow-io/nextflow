@@ -19,7 +19,7 @@
  */
 
 apply plugin: 'application'
-version = '0.8.4-b3'
+version = '0.8.4-b4'
 mainClassName = 'nextflow.script.CliRunner'
 
 allprojects {
