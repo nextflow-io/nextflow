@@ -546,18 +546,18 @@ class GgBashTask extends GgBaseTask<Integer>  {
 
     @Override
     protected Integer execute0() throws GridException {
-        log.debug "Launching task > ${name}"
 
         def wrapper = new BashWrapperBuilder(
                 shell: shell,
                 input: stdin,
                 script: script,
-                workDir: scratchDir,    // <-- most important: the scratch folder is used as the 'workDir'
+                workDir: scratchDir,    // <-- important: the scratch folder is used as the 'workDir'
                 targetDir: targetDir,
                 container: container,
                 environment: environment )
         shell.add( wrapper.build().toString() )
 
+        log.debug "Running task > ${name}\n shell: ${shell.join(' ')}\n workdir: ${scratchDir.toFile()}"
         ProcessBuilder builder = new ProcessBuilder()
                 .directory(scratchDir.toFile())
                 .command(shell)
