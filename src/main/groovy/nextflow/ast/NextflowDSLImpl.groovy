@@ -20,6 +20,7 @@
 
 package nextflow.ast
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.script.TaskBody
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
@@ -55,19 +56,16 @@ import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.syntax.SyntaxException
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 /**
  * Implement some syntax sugars of Nextflow DSL scripting.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
+@Slf4j
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
 public class NextflowDSLImpl implements ASTTransformation {
-
-    private static final Logger log = LoggerFactory.getLogger(NextflowDSLImpl)
 
     def String currentTaskName
 

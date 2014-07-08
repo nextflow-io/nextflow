@@ -64,9 +64,9 @@ import org.slf4j.LoggerFactory
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class NextflowExtensions {
 
-    static private final Logger log = LoggerFactory.getLogger(NextflowExtensions)
+@Slf4j
+class NextflowExtensions {
 
     static private Pattern PATTERN_RIGHT_TRIM = ~/\s+$/
 
