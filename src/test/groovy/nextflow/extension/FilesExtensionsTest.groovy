@@ -765,4 +765,50 @@ class FilesExtensionsTest extends Specification {
 
     }
 
+    def testRollFile() {
+
+        given:
+        def folder = Files.createTempDirectory('roll-test')
+        folder.resolve('A').text = 'a'
+        folder.resolve('B').text = 'b0'
+        folder.resolve('B.1').text = 'b1'
+        folder.resolve('B.2').text = 'b2'
+        folder.resolve('C1').text = 'c1'
+        folder.resolve('C.2').text = 'c1'
+
+        when:
+        def file1 = folder.resolve('A')
+        file1.rollFile()
+        file1.text = 'ciao'
+        then:
+        file1.exists()
+        file1.text == 'ciao'
+        folder.resolve('A.1').text == 'a'
+        !folder.resolve('A.2').exists()
+
+        when:
+        def file2 = folder.resolve("B")
+        file2.rollFile()
+        file2.text = 'hello'
+        then:
+        file2.text == 'hello'
+        folder.resolve('B.1').text == 'b0'
+        folder.resolve('B.2').text == 'b1'
+        folder.resolve('B.3').text == 'b2'
+        !folder.resolve('B.4').exists()
+
+        when:
+        def file3 = folder.resolve("C")
+        file3.rollFile()
+        file3.text = 'Ciao'
+        then:
+        file3.text == 'Ciao'
+        folder.resolve('C1').text == 'c1'
+        folder.resolve('C.2').text == 'c1'
+        !folder.resolve('C.1').exists()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 }

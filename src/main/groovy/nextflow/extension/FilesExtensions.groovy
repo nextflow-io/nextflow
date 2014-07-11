@@ -1183,4 +1183,38 @@ class FilesExtensions {
     }
 
 
+    /**
+     * Roll a file moving to a new path whose name ends with .1
+     *
+     * @param self
+     * @param target
+     */
+    static void rollFile( Path self ) {
+
+        if( FilesExtensions.exists(self) )
+            rollFile0(self, self.resolveSibling( self.getFileName().toString() +'.1' ))
+
+    }
+
+
+    @PackageScope
+    static void rollFile0( Path self, Path target ) {
+        assert self
+        assert target
+
+        if( target.exists() ) {
+            def name = target.getName()
+            def extension = target.getExtension()
+            if( !extension?.isInteger() ) {
+                throw new IllegalArgumentException("Unexpected rolling file extension: $extension")
+            }
+
+            name = "${target.getBaseName()}.${ extension.toInteger() +1 }"
+            rollFile0(target, target.resolveSibling(name))
+        }
+
+        FilesExtensions.renameTo(self, target)
+
+    }
+
 }
