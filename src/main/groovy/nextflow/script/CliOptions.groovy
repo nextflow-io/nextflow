@@ -120,6 +120,9 @@ class CliOptions {
     @Parameter(names = ['-bg'], description = 'Launch the pipeline as a background job', arity = 0)
     boolean background
 
+    @Parameter(names = ['-with-extrae'], description = 'Trace the pipeline by using BSC Extrae', arity = 0, hidden = true)
+    boolean withExtrae
+
     @Parameter(names = ['-trace-file'], description = 'Save the process execution time to the specified file')
     String traceFile
 

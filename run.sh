@@ -42,6 +42,11 @@ declare -a args=()
 DEBUG=''
 MAIN_CLASS='nextflow.script.CliRunner'
 JVM_ARGS+=" -Djava.net.preferIPv4Stack=true -Djava.awt.headless=true"
+NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
+EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
+SUBPROJECTS='nxf-dnanexus nxf-gridgain nxf-extrae'
+
+export EXTRAE_CONFIG_FILE
 
 #
 # classpath when the application is compiled with gradle
@@ -50,9 +55,12 @@ if [ -e "$base_dir/build/classes/main" ]; then
   CLASSPATH="$base_dir/build/classes/main"
   CLASSPATH+=":$base_dir/build/classes/test"
   CLASSPATH+=":$base_dir/build/resources/main"
-  CLASSPATH+=":$base_dir/subprojects/nxf-dnxnexus/src/resources"
-  CLASSPATH+=":$base_dir/subprojects/nxf-gridgain/src/resources"
-  CLASSPATH+=":$base_dir/subprojects/nxf-hazlecast/src/resources"
+  for x in $SUBPROJECTS; do
+    CLASSPATH+=":$base_dir:subprojects/$x/build/classes/main"
+    CLASSPATH+=":$base_dir:subprojects/$x/build/classes/test"
+    CLASSPATH+=":$base_dir/subprojects/$x/build/resources/main/"
+    CLASSPATH+=":$base_dir/subprojects/$x/build/resources/test/"
+  done
   for file in $base_dir/build/dependency-libs/*.jar; do
     CLASSPATH+=":$file";
   done

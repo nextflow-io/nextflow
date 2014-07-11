@@ -45,6 +45,8 @@ import nextflow.util.FileHelper
 @Slf4j
 class Session {
 
+    static final String EXTRAE_TRACE_CLASS = 'nextflow.extrae.ExtraeTraceObserver'
+
     /**
      * Keep a list of all processor created
      */
@@ -190,7 +192,7 @@ class Session {
                 allObservers << (TraceObserver)Class.forName(EXTRAE_TRACE_CLASS).newInstance()
             }
             catch( Exception e ) {
-                log.warn "Unable to load Extrae profiler -- See the .nextflow.log file for details"
+                log.warn("Unable to load Extrae profiler -- See the .nextflow.log file for details",e)
             }
         }
 

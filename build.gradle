@@ -65,6 +65,7 @@ allprojects {
 
 configurations {
     capsule
+    extrae
     dnanexus.extendsFrom runtime
     hazelcast.extendsFrom runtime
     gridgain.extendsFrom runtime
@@ -89,9 +90,13 @@ dependencies {
     compile "org.utgenome.thirdparty:picard:${picardVer}"
     compile files('lib/guava-cache-16.0.1.jar')
 
-
     // Capsule manages the fat jar building process
     capsule "co.paralleluniverse:capsule:$capsuleVer"
+
+    // Extrae tracing sub-module
+    extrae (project(':nxf-extrae')) {
+        transitive = false
+    }
 
     // DnaNexus build dependencies
     dnanexus (project(':nxf-dnanexus')) {
@@ -240,7 +245,7 @@ task pack(type: Jar, dependsOn: jar) {
 
     from jar // embed our application jar
     from { configurations.runtime } // embed dependencies
-
+    from { configurations.extrae  } // add the extrae module
     from(configurations.capsule.collect { zipTree(it) }) { include 'Capsule.class' } // we just need the single Capsule class
 
     manifest {
@@ -296,7 +301,7 @@ task packHz(type: Jar, dependsOn: configurations.hazelcast ) {
 
     from jar // embed our application jar
     from { configurations.hazelcast } // embed dependencies
-
+    from { configurations.extrae  } // add the extrae module
     from(configurations.capsule.collect { zipTree(it) }) { include 'Capsule.class' } // we just need the single Capsule class
 
     manifest {
@@ -325,7 +330,7 @@ task packGg(type: Jar, dependsOn: configurations.gridgain ) {
 
     from jar // embed our application jar
     from { configurations.gridgain } // embed dependencies
-
+    from { configurations.extrae  } // add the extrae module
     from(configurations.capsule.collect { zipTree(it) }) { include 'Capsule.class' } // we just need the single Capsule class
 
     manifest {

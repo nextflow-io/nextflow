@@ -1,0 +1,61 @@
+<?xml version='1.0'?>
+
+<trace enabled="yes"
+ home="/apps/CEPBATOOLS/extrae/2.5.0/impi/64"
+ initial-mode="detail"
+ type="paraver"
+ xml-parser-id="Id: xml-parse.c 2327 2013-11-22 11:47:07Z harald $"
+>
+
+  <mpi enabled="yes">
+    <counters enabled="yes" />
+  </mpi>
+
+  <openmp enabled="yes">
+    <locks enabled="no" />
+    <counters enabled="yes" />
+  </openmp>
+
+  <pthread enabled="yes">
+    <locks enabled="no" />
+    <counters enabled="yes" />
+  </pthread>
+
+  <callers enabled="yes">
+    <mpi enabled="yes">1-3</mpi>
+    <sampling enabled="yes">1-5</sampling>
+  </callers>
+
+  <counters enabled="yes">
+    <cpu enabled="yes" starting-set-distribution="1">
+      <set enabled="yes" domain="all">
+        PAPI_TOT_INS,PAPI_TOT_CYC,PAPI_L1_DCM,PAPI_L2_DCM,PAPI_L3_TCM
+      </set>
+    </cpu>
+
+    <network enabled="no" />
+
+    <resource-usage enabled="no" />
+
+    <memory-usage enabled="no" />
+  </counters>
+
+  <sampling enabled="no" type="default" period="50m" variability="10m" />
+
+  <dynamic-memory enabled="no" />
+
+  <input-output enabled="no" />
+
+  <merge enabled="no" 
+    synchronization="default"
+    tree-fan-out="16"
+    max-memory="512"
+    joint-states="yes"
+    keep-mpits="yes"
+    sort-addresses="yes"
+    overwrite="yes"
+>
+  $TRACE_NAME$
+  </merge>
+
+</trace>

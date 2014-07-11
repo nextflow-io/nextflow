@@ -114,6 +114,11 @@ for opt in "$@"; do
     -self-update|self-update)
       install $0;
       exit 0;;
+    -with-extrae)
+      export EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
+      rm -f TRACE.*
+      rm -rf set-0
+      ;;
     esac
 done
 
