@@ -19,13 +19,12 @@
  */
 
 package nextflow.processor
-
 import java.util.concurrent.CountDownLatch
 
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.executor.Executor
-
+import nextflow.trace.TraceObserver
 /**
  * Monitor tasks execution for completion notifying their results
  *
@@ -47,10 +46,10 @@ class TaskDispatcher {
 
     private volatile boolean started
 
-    private List<Closure> submitListeners = []
-    private List<Closure> startListeners = []
-    private List<Closure> completeListeners = []
-    private List<Closure> errorListeners = []
+    /*
+     * A list of {@link TraceObserver} instances to which notify process events
+     */
+    private List<TraceObserver> observers = []
 
     /**
      * Dispatcher constructor
@@ -58,9 +57,7 @@ class TaskDispatcher {
      * @param session
      */
     TaskDispatcher( Session session ) {
-
         this.session = session
-
     }
 
 
@@ -165,29 +162,13 @@ class TaskDispatcher {
         }
     }
 
-    public void addSubmitListener(Closure closure) {
-        submitListeners << closure
-    }
-
-    public void addStartListener(Closure closure) {
-        startListeners << closure
-    }
-
-    public void addCompleteListener(Closure closure) {
-        completeListeners << closure
-    }
-
-    public void addErrorListener(Closure closure) {
-        errorListeners << closure
-    }
-
     /**
      * Notifies that a task has been submitted
      */
     public void notifySubmit( TaskHandler handler ) {
-        for( Closure closure : submitListeners ) {
+        for( TraceObserver it : observers ) {
             try {
-                closure.call(handler)
+                it.onProcessSubmit(handler)
             }
             catch( Exception e ) {
                 log.error(e.getMessage(), e)
@@ -199,9 +180,9 @@ class TaskDispatcher {
      * Notifies task start event
      */
     public void notifyStart( TaskHandler handler ) {
-        for( Closure closure : startListeners ) {
+        for( TraceObserver it : observers ) {
             try {
-                closure.call(handler)
+                it.onProcessStart(handler)
             }
             catch( Exception e ) {
                 log.error(e.getMessage(), e)
@@ -215,9 +196,10 @@ class TaskDispatcher {
      * @param handler
      */
     public void notifyComplete( TaskHandler handler ) {
-        for( Closure closure : completeListeners ) {
+        // notify the event to the observers
+        for( TraceObserver it : observers ) {
             try {
-                closure.call(handler)
+                it.onProcessComplete(handler)
             }
             catch( Exception e ) {
                 log.error(e.getMessage(), e)
@@ -232,10 +214,9 @@ class TaskDispatcher {
      * @param e
      */
     public void notifyError( TaskHandler handler, Throwable error ) {
-        for( Closure closure : errorListeners ) {
+        for( TraceObserver it : observers ) {
             try {
-                int n = closure.getMaximumNumberOfParameters()
-                n == 1 ? closure.call(handler) : closure.call(handler,error)
+                it.onProcessError(handler,error)
             }
             catch( Exception e ) {
                 log.error(e.getMessage(), e)
@@ -243,7 +224,30 @@ class TaskDispatcher {
         }
     }
 
+    /**
+     * Register a {@link TraceObserver} instance to which process event will be notified
+     *
+     * @param obj An object implement {@link TraceObserver} trait
+     */
+    def void register( TraceObserver obj ) {
+        // just return if it's a null object
+        // or it is already contained in the list
+        if( !obj || observers.contains(obj))
+            return
 
+        // append this obj to the observer list
+        observers << obj
+    }
+
+    /**
+     * Un-register an observer object from the list of registered observers
+     *
+     * @param obj An object implement {@link TraceObserver} trait
+     */
+    def void unregister( TraceObserver obj ) {
+        if( !obj ) return
+        observers.remove(obj)
+    }
 
 
 }

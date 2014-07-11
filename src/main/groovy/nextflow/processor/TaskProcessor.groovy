@@ -178,6 +178,23 @@ abstract class TaskProcessor {
      */
     protected Agent<StateObj> state
 
+    /**
+     * Process ID number. The first is 1, the second 2 and so on ..
+     */
+    private final int id
+
+    private static int processCount
+
+    /*
+     * Initialise the process ID
+     *
+     * Note: processes are create in a sequential manner (by the main thread that parse the script)
+     * so it does not require a synchronized block
+     */
+    {
+        id = ++processCount
+    }
+
     /* for testing purpose - do not remove */
     protected TaskProcessor() { }
 
@@ -215,6 +232,11 @@ abstract class TaskProcessor {
         }
     }
 
+    /**
+     * @return The processor unique id
+     */
+    int getId() { id }
+  
     /**
      * @return The {@code TaskConfig} object holding the task configuration properties
      */
@@ -310,7 +332,7 @@ abstract class TaskProcessor {
         createOperator()
 
         // register the processor
-        session.taskRegister()
+        session.taskRegister(this)
 
         /*
          * When there is a single output channel, return let returns that item
@@ -1385,7 +1407,7 @@ abstract class TaskProcessor {
     protected void terminateProcess() {
         log.debug "<${name}> Sending poison pills and terminating process"
         sendPoisonPill()
-        session.taskDeregister()
+        session.taskDeregister(this)
         processor.terminate()
     }
 

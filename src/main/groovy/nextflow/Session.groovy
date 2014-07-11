@@ -30,6 +30,10 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.util.PoolUtils
 import jsr166y.Phaser
 import nextflow.processor.TaskDispatcher
+import nextflow.processor.TaskProcessor
+import nextflow.script.CliOptions
+import nextflow.trace.TraceFileObserver
+import nextflow.trace.TraceObserver
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.FileHelper
@@ -86,6 +90,7 @@ class Session {
      */
     def File baseDir
 
+    def CliOptions cliOptions
 
     /**
      * The unique identifier of this session
@@ -108,6 +113,9 @@ class Session {
 
     /* Poor man singleton object */
     static Session currentInstance
+
+    private List<TraceObserver> observers
+
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -150,14 +158,67 @@ class Session {
         dispatcher = new TaskDispatcher(this)
     }
 
+    /**
+     *  Initialize the session object by using the command line options provided by
+     *  {@link CliOptions} object
+     *
+     */
+    def void init( CliOptions options ) {
+
+
+        this.cliOptions = options
+        this.cacheable = options.cacheable
+        this.resumeMode = options.resume != null
+
+        // note -- make sure to use 'FileHelper.asPath' since it guarantee to handle correctly non-standard file system e.g. 'dxfs'
+        this.workDir = FileHelper.asPath(options.workDir).toAbsolutePath()
+
+        /*
+         * create the execution trace observer
+         */
+        def allObservers = []
+        if( options.traceFile ) {
+            def traceFile = options.traceFile ? FileHelper.asPath(options.traceFile) : null
+            allObservers << new TraceFileObserver(traceFile)
+        }
+
+        /*
+         * create the Extrae trace object
+         */
+        if( options.withExtrae ) {
+            try {
+                allObservers << (TraceObserver)Class.forName(EXTRAE_TRACE_CLASS).newInstance()
+            }
+            catch( Exception e ) {
+                log.warn "Unable to load Extrae profiler -- See the .nextflow.log file for details"
+            }
+        }
+
+        this.observers = Collections.unmodifiableList(allObservers)
+    }
+
 
     def Session start() {
-        log.debug "Session start > phaser register (session) "
+        log.debug "Session start > phaser register (session)"
+
+        /*
+         * - register all of them in the dispatcher class
+         * - register the onComplete event
+         */
+        for( TraceObserver trace : observers ) {
+            log.debug "Registering observer: ${trace.class.name}"
+            dispatcher.register(trace)
+            onShutdown { trace.onFlowComplete() }
+        }
 
         Runtime.getRuntime().addShutdownHook { shutdown() }
         execService = Executors.newFixedThreadPool( poolSize )
         phaser.register()
         dispatcher.start()
+
+        // signal start to trace observers
+        observers.each { trace -> trace.onFlowStart(this) }
+
         return this
     }
 
@@ -223,7 +284,7 @@ class Session {
                 hook.call()
             }
             catch( Exception e ) {
-                log.debug "Failed executing shutdown hook: $it", e
+                log.debug "Failed executing shutdown hook: $hook", e
             }
         }
 
@@ -242,13 +303,15 @@ class Session {
 
     boolean isAborted() { aborted }
 
-    def int taskRegister() {
+    def int taskRegister(TaskProcessor process) {
         log.debug ">>> phaser register (process)"
+        for( TraceObserver it : observers ) { it.onProcessCreate(process) }
         phaser.register()
     }
 
-    def int taskDeregister() {
+    def int taskDeregister(TaskProcessor process) {
         log.debug "<<< phaser deregister (process)"
+        for( TraceObserver it : observers ) { it.onProcessDestroy(process) }
         phaser.arriveAndDeregister()
     }
 

@@ -42,6 +42,7 @@ import nextflow.ast.NextflowDSL
 import nextflow.daemon.DaemonLauncher
 import nextflow.exception.ConfigParseException
 import nextflow.exception.InvalidArgumentException
+import nextflow.exception.InvalidScriptNameException
 import nextflow.exception.MissingLibraryException
 import nextflow.executor.ServiceName
 import nextflow.util.FileHelper
@@ -120,6 +121,11 @@ class CliRunner {
         this(configToMap(config))
     }
 
+    def void init( CliOptions options ) {
+        session.init(options)
+        this.libPath = options.libPath
+    }
+
 
     static private wrapValue( value ) {
         if( !value )
@@ -193,7 +199,12 @@ class CliRunner {
         assert scriptFile
 
         // set the script name attribute
+        session.baseDir = scriptFile?.canonicalFile?.parentFile
+        log.debug "Script bin dir: ${session.binDir}"
+
         session.scriptName = FilenameUtils.getBaseName(scriptFile.toString())
+        if( session.scriptName.contains('-') )
+            throw new InvalidScriptNameException("Script file name cannot contain hyphen characters: '${session.scriptName}' -- Please rename it to a different name e.g. '${session.scriptName.replace('-','_')}'")
 
         // set the file name attribute
         this.scriptFile = scriptFile
@@ -217,9 +228,9 @@ class CliRunner {
     def execute( String scriptText, List<String> args = null ) {
         assert scriptText
 
+        // start session
+        session.start()
         try {
-            // start session
-            session.start()
             // parse the script
             script = parseScript(scriptText, args)
             // run the code
@@ -292,6 +303,7 @@ class CliRunner {
         assert methodName
 
         // set the script name attribute
+        session.baseDir = scriptFile?.canonicalFile?.parentFile
         session.scriptName = FilenameUtils.getBaseName(scriptFile.toString())
         // set the file name attribute
         this.scriptFile = scriptFile
@@ -510,14 +522,7 @@ class CliRunner {
 
             // -- create a new runner instance
             def runner = new CliRunner(config)
-            runner.session.cacheable = options.cacheable
-            runner.session.resumeMode = options.resume != null
-            // note -- make sure to use 'FileHelper.asPath' since it guarantee to handle correctly non-standard file system e.g. 'dxfs'
-            runner.session.workDir = FileHelper.asPath(options.workDir).toAbsolutePath()
-            runner.session.baseDir = scriptFile?.canonicalFile?.parentFile
-            runner.libPath = options.libPath
-
-            log.debug "Script bin dir: ${runner.session.binDir}"
+            runner.init(options)
 
             // -- specify the arguments
             def scriptArgs = options.arguments?.size()>1 ? options.arguments[1..-1] : []

@@ -162,7 +162,8 @@ class HzConnector implements HzConst, MembershipListener {
         log.debug "Cluster members (${members.size()}): ${ members.size() <= 10 ? members.join(', ') : members.take(10).join(', ') + " ..." }"
 
         monitor.register( this.&pollingWatchdog )
-        monitor.dispatcher.addCompleteListener(this.&removeCompleteTask)
+        // TODO this has to be replaced
+        //monitor.dispatcher.addCompleteListener(this.&removeCompleteTask)
 
         // register for the shutdown
         session.onShutdown {

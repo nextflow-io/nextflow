@@ -220,8 +220,7 @@ class ProcessFactory {
 
         // create processor class
         def processorClass = taskConfig.merge ? MergeTaskProcessor : ParallelTaskProcessor
-        def result = processorClass.newInstance( execObj, session, owner, taskConfig, script )
-        return result
+        return processorClass.newInstance( execObj, session, owner, taskConfig, script )
 
     }
 

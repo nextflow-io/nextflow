@@ -120,6 +120,9 @@ class CliOptions {
     @Parameter(names = ['-bg'], description = 'Launch the pipeline as a background job', arity = 0)
     boolean background
 
+    @Parameter(names = ['-trace-file'], description = 'Save the process execution time to the specified file')
+    String traceFile
+
 
     /**
      * Extra parameters for the script execution
