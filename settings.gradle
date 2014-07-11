@@ -1,5 +1,4 @@
 include 'nxf-dnanexus'
-include 'nxf-hazelcast'
 include 'nxf-gridgain'
 include 'nxf-extrae'
 

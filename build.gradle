@@ -67,7 +67,6 @@ configurations {
     capsule
     extrae
     dnanexus.extendsFrom runtime
-    hazelcast.extendsFrom runtime
     gridgain.extendsFrom runtime
     gdocLibs.extendsFrom runtime
 }
@@ -100,11 +99,6 @@ dependencies {
 
     // DnaNexus build dependencies
     dnanexus (project(':nxf-dnanexus')) {
-        exclude module: 'nextflow'
-    }
-
-    // Hazelcast build dependencies
-    hazelcast (project(':nxf-hazelcast')) {
         exclude module: 'nextflow'
     }
 
@@ -191,43 +185,8 @@ task buildInfo << {
 task compile(type: Copy) {
     dependsOn buildInfo, compileJava, compileGroovy, processResources
 
-    from configurations.hazelcast
     from configurations.gridgain
     into "$buildDir/dependency-libs"
-}
-
-
-/*
- * Create the distribution stage folder i.e. creates a folder containing everything
- * have to be included in the distribution package
- */
-
-task stage( type: Copy ) {
-    dependsOn jar, javadoc, groovydoc
-
-    // clean the target directory before create
-    def target = file("$buildDir/stage/nextflow-$version")
-    target.parentFile.deleteDir()
-    target.mkdirs()
-
-    destinationDir target
-
-    // copy the launch script
-    into('.') {
-        from ('./nextflow.sh') // { exclude 'nextflow' }
-        //rename { String fileName -> fileName.replace('nextflow.sh', 'nextflow') }
-    }
-
-    // copy application - and - runtime dependencies jars
-    into('libs') {
-        from "$buildDir/libs/nextflow-${version}.jar"
-        from configurations.runtime
-    }
-
-    // still some stuff
-    into('src') { from './src/main' }
-    into('docs') { from '$buildDir/docs/groovydoc/'}
-
 }
 
 
@@ -251,8 +210,8 @@ task pack(type: Jar, dependsOn: jar) {
     manifest {
         attributes(
                 'Main-Class'        : 'Capsule',
+                'Application-Name'  : 'nextflow',
                 'Application-Class' : mainClassName,
-                'Application-Name'  : name,
                 'Application-Version': version,
                 'Min-Java-Version'  : '1.7.0'
         )
@@ -279,8 +238,8 @@ task packDx(type: Jar, dependsOn: configurations.dnanexus ) {
     manifest {
         attributes(
                 'Main-Class'        : 'Capsule',
+                'Application-Name'  : 'nextflow',
                 'Application-Class' : mainClassName,
-                'Application-Name'  : name,
                 'Application-Version': version,
                 'Min-Java-Version'  : '1.7.0'
         )
@@ -292,38 +251,10 @@ task packDx(type: Jar, dependsOn: configurations.dnanexus ) {
     }
 }
 
-/*
- * Creates a self-contained *fat* jar shipping all required dependencies
- * including Hazelcast stuff
- */
-task packHz(type: Jar, dependsOn: configurations.hazelcast ) {
-    archiveName = "nextflow-${version}-hz.jar"
-
-    from jar // embed our application jar
-    from { configurations.hazelcast } // embed dependencies
-    from { configurations.extrae  } // add the extrae module
-    from(configurations.capsule.collect { zipTree(it) }) { include 'Capsule.class' } // we just need the single Capsule class
-
-    manifest {
-        attributes(
-                'Main-Class'        : 'Capsule',
-                'Application-Class' : mainClassName,
-                'Application-Name'  : name,
-                'Application-Version': version,
-                'Min-Java-Version'  : '1.7.0'
-        )
-    }
-
-    doLast {
-        ant.copy(file: "$buildDir/libs/nextflow-${version}-hz.jar", todir: nextflowDir, overwrite: true)
-        println "\n+ Nextflow HZ package copied to: $nextflowDir"
-    }
-}
-
 
 /*
  * Creates a self-contained *fat* jar shipping all required dependencies
- * including Hazelcast stuff
+ * including GridGain stuff
  */
 task packGg(type: Jar, dependsOn: configurations.gridgain ) {
     archiveName = "nextflow-${version}-gg.jar"
@@ -336,8 +267,8 @@ task packGg(type: Jar, dependsOn: configurations.gridgain ) {
     manifest {
         attributes(
                 'Main-Class'        : 'Capsule',
+                'Application-Name'  : 'nextflow',
                 'Application-Class' : mainClassName,
-                'Application-Name'  : name,
                 'Application-Version': version,
                 'Min-Java-Version'  : '1.7.0'
         )
@@ -352,7 +283,7 @@ task packGg(type: Jar, dependsOn: configurations.gridgain ) {
 /*
  * Compile and pack all packages
  */
-task packAll( dependsOn: [pack, packHz, packDx, packGg]) {
+task packAll( dependsOn: [pack, packDx, packGg]) {
 
 }
 
@@ -375,8 +306,7 @@ task release(type: Exec, dependsOn: [ test, packAll ]) {
     def file0 = file('nextflow').absoluteFile
     def file1 = file("$buildDir/libs/nextflow-${version}-one.jar").absoluteFile
     def file2 = file("$buildDir/libs/nextflow-${version}-dx.jar").absoluteFile
-    def file3 = file("$buildDir/libs/nextflow-${version}-hz.jar").absoluteFile
-    def file4 = file("$buildDir/libs/nextflow-${version}-gg.jar").absoluteFile
+    def file3 = file("$buildDir/libs/nextflow-${version}-gg.jar").absoluteFile
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
@@ -392,7 +322,6 @@ task release(type: Exec, dependsOn: [ test, packAll ]) {
     s3cmd put ${file1} s3://www.nextflow.io/releases/v$version/${file1.name} $s3CmdOpts
     s3cmd put ${file2} s3://www.nextflow.io/releases/v$version/${file2.name} $s3CmdOpts
     s3cmd put ${file3} s3://www.nextflow.io/releases/v$version/${file3.name} $s3CmdOpts
-    s3cmd put ${file4} s3://www.nextflow.io/releases/v$version/${file4.name} $s3CmdOpts
 
     # publish the script as the latest
     s3cmd put ${file0} s3://www.nextflow.io/releases/latest/nextflow $s3CmdOpts
