@@ -2,6 +2,8 @@
 .gradle/**
 .nextflow.log*
 .nxf-*.log*
+.vagrant/*
+.nextflow.history
 build/**
 lib/commons-cli-1.2.jar
 subprojects/**/build/
@@ -10,8 +12,6 @@ out/**
 piper/**
 tmp/*
 work/*
-.vagrant/*
-.nextflow.history
 nextflow.eml
 nextflow.iml
 Vagrantfile
@@ -23,6 +23,7 @@ dx-project/
 *.txt
 cache/
 lib/commons-cli-1.2.jar
-misc/sample.fa
 logo/nextflow2014_CS5.ai
 logo/nextflow2014_no-bg.png
+extrae_juan_files/**
+misc/**
