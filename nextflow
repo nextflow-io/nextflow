@@ -130,6 +130,9 @@ NXF_BASE=${NXF_BASE:-http://www.nextflow.io/releases}
 NXF_PATH=$(dirname $NXF_BIN)
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
 
+# define the path when dependencies jars will be extracted
+export CAPSULE_CACHE_DIR=${CAPSULE_CACHE_DIR:=$NXF_HOME/capsule}
+
 # Find out installed JDK
 JAVA=java
 [[ -n "$JAVA_HOME" ]] && JAVA="$JAVA_HOME/bin/java"
