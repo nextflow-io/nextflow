@@ -20,11 +20,16 @@
 
 package nextflow.daemon
 import groovy.util.logging.Slf4j
-import nextflow.executor.GgConfigFactory
+import nextflow.executor.GgGridFactory
 import nextflow.executor.ServiceName
+import nextflow.file.ggfs.GgFileSystemProvider
+import nextflow.file.ggfs.GgPath
+import nextflow.util.FileHelper
+import nextflow.util.KryoHelper
+import nextflow.util.PathSerializer
 import org.gridgain.grid.Grid
-import org.gridgain.grid.GridConfiguration
-import org.gridgain.grid.GridGain
+import org.weakref.s3fs.S3Path
+
 /**
  * Launch the GridGain daemon
  *
@@ -37,17 +42,27 @@ class GgDaemon implements DaemonLauncher {
 
     Grid grid
 
-    GridConfiguration cfg
-
     @Override
     void launch(Map config) {
         log.info "Configuring GridGain cluster daemon"
-        cfg = new GgConfigFactory('worker', config).create()
-        run()
-    }
 
-    void run() {
-        grid = GridGain.start(cfg);
+        /*
+         * register path serializer
+         */
+        KryoHelper.register(GgPath, PathSerializer)
+        KryoHelper.register(S3Path, PathSerializer)
+
+        /*
+         * Launch grid instance
+         */
+        grid = new GgGridFactory('worker', config).start()
+
+        /*
+         * configure the file system
+         */
+        log.debug "Configuring GridGain file system"
+        GgFileSystemProvider provider = FileHelper.getOrInstallProvider( GgFileSystemProvider )
+        provider.newFileSystem( grid: grid )
     }
 
 

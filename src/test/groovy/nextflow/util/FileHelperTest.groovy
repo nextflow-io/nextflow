@@ -19,11 +19,12 @@
  */
 
 package nextflow.util
-
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import com.github.marschall.memoryfilesystem.MemoryFileSystemBuilder
+import nextflow.Session
 import spock.lang.Specification
 /**
  *
@@ -33,9 +34,14 @@ class FileHelperTest extends Specification {
 
     def 'test asPath' () {
 
+        given:
+        new Session()
+        MemoryFileSystemBuilder.newEmpty().build("test")
+
         expect:
         FileHelper.asPath('file.txt') == Paths.get('file.txt')
         FileHelper.asPath('file:///file.txt') == Paths.get( URI.create('file:///file.txt') )
+        FileHelper.asPath('memory:test/some/file') == Paths.get('memory:test/some/file')
 
     }
 
@@ -164,6 +170,30 @@ class FileHelperTest extends Specification {
         new File("/").parentFile == null
         new File("/").absoluteFile == new File("/")
         new File('.').absolutePath.startsWith('/')
+    }
+
+
+    def testGeEnvMap() {
+
+        given:
+        def props = new Properties()
+        props.put('AWS_ACCESS_KEY','a1')
+        props.put('AWS_SECRET_KEY','s1')
+
+        def env = [:]
+        env.put('AWS_ACCESS_KEY','a2')
+        env.put('AWS_SECRET_KEY','s2')
+
+        expect:
+        // properties have priority over the environment map
+        FileHelper.getEnvMap0('s3', props, env) == [access_key:'a1', secret_key:'s1']
+        // fallback to environment map
+        FileHelper.getEnvMap0('s3', new Properties(), env) == [access_key:'a2', secret_key:'s2']
+        // none of them
+        FileHelper.getEnvMap0('s3', new Properties(), [:]) == [:]
+        // any other return just the session
+        FileHelper.getEnvMap0('dxfs', props, env).containsKey('session')
+
     }
 
 

@@ -20,6 +20,7 @@
 
 dependencies {
     compile project(':')
+    compile 'nextflow:s3fs:1.0.0'
     compile ('nextflow:dxfs:0.5.2') {
         exclude module: 'commons-logging'
     }

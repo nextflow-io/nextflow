@@ -48,8 +48,12 @@ class ConfigHelper {
         return result
     }
 
-
-
+    /**
+     * Given a string value converts to its native object representation.
+     *
+     * @param str A string that may represent boolean, integer, {@link Duration} values
+     * @return A object representing the argument value of the string itself if it was not a boolean/number/duration value
+     */
     static parseValue( String str ) {
 
         if ( str == null ) return null
@@ -77,6 +81,34 @@ class ConfigHelper {
 
         return obj
     }
+
+    /**
+     * Given a list of paths looks for the files ending withe the extension '.jar' and return
+     * a list containing the original directories, plus the JARs paths
+     *
+     * @param dirs
+     * @return
+     */
+    static List<File> resolveClassPaths( List<File> dirs ) {
+
+        List<File> result = []
+        if( !dirs )
+            return result
+
+        for( File path : dirs ) {
+            if( path.isFile() && path.name.endsWith('.jar') ) {
+                result << path
+            }
+            else if( path.isDirectory() ) {
+                result << path
+                path.eachFileMatch( ~/.+\.jar$/ ) { if(it.isFile()) result << it }
+            }
+        }
+
+        return result
+    }
+
+
 
 }
 
@@ -191,7 +223,6 @@ class DaemonConfig {
         }
         return result
     }
-
 
 
 }

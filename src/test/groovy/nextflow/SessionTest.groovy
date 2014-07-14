@@ -22,7 +22,6 @@ package nextflow
 
 import nextflow.util.Duration
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -172,5 +171,48 @@ class SessionTest extends Specification {
         session.getExecConfigProp( 'hazelcast', 'z', 'alpha', [NXF_EXECUTOR_Z:'hola']) == 'hola'
         session.getExecConfigProp( 'hazelcast', 'p.q.z', null, [NXF_EXECUTOR_P_Q_Z:'hello']) == 'hello'
     }
+
+
+
+    def testAddLibPath() {
+
+        setup:
+        def path1 = File.createTempDir()
+        def path2 = File.createTempDir()
+
+        when:
+        def session = new Session()
+        session.setLibDir( path1.absolutePath )
+        then:
+        session.getLibDir() == [ path1 ]
+
+
+        when:
+        session = new Session()
+        session.setLibDir( "${path1.absolutePath}:${path2.absolutePath}" )
+        then:
+        session.getLibDir() == [ path1, path2 ]
+
+        when:
+        session = new Session()
+        session.setBaseDir(new File('/some/path'))
+        then:
+        session.getLibDir() == []
+
+        when:
+        def base = File.createTempDir()
+        new File(base,'lib').mkdir()
+        session = new Session()
+        session.setBaseDir(base)
+        then:
+        session.getLibDir() == [new File(base,'lib')]
+
+        cleanup:
+        base?.deleteDir()
+        path1.deleteDir()
+        path2.deleteDir()
+
+    }
+
 
 }

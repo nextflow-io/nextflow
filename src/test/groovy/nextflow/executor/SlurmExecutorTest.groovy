@@ -59,7 +59,7 @@ class SlurmExecutorTest extends Specification {
         def config = new TaskConfig(base)
         def script = Paths.get('/some/script.sh')
         def task = Mock(TaskRun)
-        task.workDirectory >> Paths.get('/work/path')
+        task.workDir >> Paths.get('/work/path')
         task.name >> 'task 555'
         def exec = [:] as SlurmExecutor
         exec.taskConfig = config

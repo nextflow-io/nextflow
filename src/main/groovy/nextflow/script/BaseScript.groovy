@@ -39,7 +39,7 @@ import nextflow.util.FileHelper
 abstract class BaseScript extends Script {
 
 
-    protected BaseScript(){ }
+    protected BaseScript() { }
 
     protected BaseScript(Binding binding) {
         super(binding)

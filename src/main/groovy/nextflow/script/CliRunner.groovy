@@ -22,7 +22,6 @@ package nextflow.script
 import static nextflow.util.ConfigHelper.parseValue
 
 import java.lang.management.ManagementFactory
-import java.lang.reflect.Field
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
 
@@ -43,8 +42,8 @@ import nextflow.daemon.DaemonLauncher
 import nextflow.exception.ConfigParseException
 import nextflow.exception.InvalidArgumentException
 import nextflow.exception.InvalidScriptNameException
-import nextflow.exception.MissingLibraryException
 import nextflow.executor.ServiceName
+import nextflow.util.ConfigHelper
 import nextflow.util.FileHelper
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
@@ -96,11 +95,6 @@ class CliRunner {
     private def result
 
     /**
-     * Class path extension, they may be JAR files or directories containing java/groovy classes
-     */
-    private List<File> libraries
-
-    /**
      * Instantiate the runner object creating a new session
      */
     def CliRunner( ) {
@@ -123,7 +117,6 @@ class CliRunner {
 
     def void init( CliOptions options ) {
         session.init(options)
-        this.libPath = options.libPath
     }
 
 
@@ -140,39 +133,6 @@ class CliRunner {
 
         return "'$value'"
     }
-
-    def void setLibPath( String str ) {
-        if( !str ) { return }
-
-        def files = str.split( File.pathSeparator ).collect { new File(it) }
-        files?.each { File file ->
-            if( !file.exists() ) { throw new MissingLibraryException("Cannot find specified library: ${file.absolutePath}")  }
-            addLibPaths(file)
-        }
-
-    }
-
-    /**
-     * Add a library to the list of classpath extension. When {@code path} refers to
-     * a 'directory', other than the directory, try to add all '.jar' files
-     * contained in the directory itself.
-     *
-     * @param path
-     */
-    protected void addLibPaths( File path ) {
-        assert path
-
-        if( libraries == null ) { libraries = [] }
-
-        if( path.isFile() && path.name.endsWith('.jar') ) {
-            libraries << path
-        }
-        else if( path.isDirectory() ) {
-            libraries << path
-            path.eachFileMatch( ~/.+\.jar$/ ) { if(it.isFile()) this.libraries << it }
-        }
-    }
-
 
     /**
      * @return The interpreted script object
@@ -340,7 +300,7 @@ class CliRunner {
     }
 
     protected BaseScript parseScript( String scriptText, List<String> args = null) {
-
+        log.debug "> Script parsing"
         bindings.setArgs( new ArgsList(args) )
         bindings.setParams( session.config.params as Map )
 
@@ -363,26 +323,19 @@ class CliRunner {
 
         // extend the class-loader if required
         def gcl = new GroovyClassLoader()
-        if( libraries == null ) {
-            // if no user defined libraries are provided
-            // try to add the 'lib' folder in the local path if exist
-            def localLib = session.baseDir ? new File(session.baseDir,'lib') : new File('lib')
-            if( localLib.exists() ) {
-                log.debug "Using default localLib path: $localLib"
-                addLibPaths(localLib)
-            }
-        }
+        def libraries = ConfigHelper.resolveClassPaths( session.getLibDir() )
 
         libraries?.each { File lib -> def path = lib.absolutePath
             log.debug "Adding to the classpath library: ${path}"
             gcl.addClasspath(path)
-            session.addClasspath(path)
         }
 
-        // set the bytecode target directory
-        def targetDir = FileHelper.createTempFolder(session.workDir).toFile()
+        // set the byte-code target directory
+        def targetDir = File.createTempDir('nxf',null)
         config.setTargetDirectory(targetDir)
-        session.addClasspath(targetDir)
+        // add the directory of generated classes to the lib path
+        // so that it can be propagated to remote note (when necessary)
+        session.getLibDir().add(targetDir)
 
         // run and wait for termination
         BaseScript result
@@ -395,6 +348,7 @@ class CliRunner {
         }
 
         session.scriptClassName = result.class.name
+        session.onShutdown { targetDir.deleteDir() }
         return result
     }
 
@@ -405,6 +359,7 @@ class CliRunner {
      * @return The value as returned by the user provided script
      */
     protected run() {
+        log.debug "> Launching execution"
         assert script, "Missing script instance to run"
 
         // -- launch the script execution
@@ -412,6 +367,7 @@ class CliRunner {
     }
 
     protected terminate() {
+        log.debug "> Await termination "
         session.await()
         normalizeOutput()
         session.destroy()
@@ -507,9 +463,6 @@ class CliRunner {
                 println "N E X T F L O W  ~  version ${Const.APP_VER}"
             }
 
-            // -- check file system providers
-            checkFileSystemProviders()
-
             // create the config object
             def config = makeConfig(options)
 
@@ -594,39 +547,6 @@ class CliRunner {
             throw new FileNotFoundException("File do not exist: $file")
         }
         return file
-    }
-
-    static private void checkFileSystemProviders() {
-
-        // check if this class has been loaded
-        boolean isInstalled = false
-        FileSystemProvider.installedProviders().each {
-            log.debug "Installed File System: '${it.scheme}' [${it.class.simpleName}]"
-            if( it.scheme == 'dxfs' ) {
-                isInstalled = true
-            }
-        }
-
-        if( !isInstalled ) {
-            // try to load DnaNexus file system provider dynamically
-            Class provider
-            try {
-                provider = Class.forName('nextflow.fs.dx.DxFileSystemProvider')
-            }
-            catch( ClassNotFoundException e ) {
-                log.debug "DxFileSystemProvider NOT available"
-                return
-            }
-
-            // add it manually
-            Field field = FileSystemProvider.class.getDeclaredField('installedProviders')
-            field.setAccessible(true)
-            List installedProviders = new ArrayList((List)field.get(null))
-            installedProviders.add( provider.newInstance() )
-            field.set(this, Collections.unmodifiableList(installedProviders))
-            log.debug "Added 'DxFileSystemProvider' to list of installed providers [dxfs]"
-        }
-
     }
 
 
@@ -777,7 +697,8 @@ class CliRunner {
       Jvm: ${System.getProperty('java.vendor')} ${System.getProperty('java.runtime.version')}
       Opts: ${ManagementFactory.getRuntimeMXBean().getInputArguments().join(' ')}
       Encoding: ${System.getProperty('file.encoding')} (${System.getProperty('sun.jnu.encoding')})
-      Address: ${getLocalNameAndAddress()}"""
+      Address: ${getLocalNameAndAddress()}
+      File systems: ${FileSystemProvider.installedProviders().collect{ it.getScheme() }.join(',') }"""
 
     }
 
@@ -892,6 +813,7 @@ class CliRunner {
      * @param config The nextflow configuration map
      */
     static launchDaemon( Map config ) {
+        log.debug( '\n'+getInfo())
 
         def daemonConfig = config.daemon instanceof Map ? config.daemon : [:]
         log.debug "Daemon config > $daemonConfig"

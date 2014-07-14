@@ -28,6 +28,7 @@ import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
 import nextflow.fs.dx.DxFileSystem
+import nextflow.fs.dx.DxFileSystemProvider
 import nextflow.fs.dx.DxFileSystemSerializer
 import nextflow.fs.dx.DxPath
 import nextflow.fs.dx.DxPathSerializer
@@ -39,7 +40,10 @@ import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
+import nextflow.util.FileHelper
 import nextflow.util.KryoHelper
+import nextflow.util.PathSerializer
+import org.weakref.s3fs.S3Path
 
 /**
  * Executes script.nf indicated in dxapp.sh in the DnaNexus environment
@@ -55,11 +59,17 @@ import nextflow.util.KryoHelper
 @ServiceName('dnanexus')
 class DnaNexusExecutor extends Executor {
 
+    static {
+        // call to force the installation of the DX file system provider
+        FileHelper.getOrInstallProvider(DxFileSystemProvider)
+    }
+
     def void init() {
         super.init()
         // -- register the serializer for the Dx file system objects
         KryoHelper.register(DxPath, DxPathSerializer)
         KryoHelper.register(DxFileSystem, DxFileSystemSerializer)
+        KryoHelper.register(S3Path, PathSerializer)
     }
 
     def TaskMonitor createTaskMonitor() {
@@ -77,7 +87,7 @@ class DnaNexusExecutor extends Executor {
         /*
          * Setting the work directory
          */
-        final scratch = task.workDirectory
+        final scratch = task.workDir
         log.debug "Lauching process > ${task.name} -- work folder: $scratch"
 
         /*
@@ -89,7 +99,7 @@ class DnaNexusExecutor extends Executor {
         final envBashText = TaskProcessor.bashEnvironmentScript(environment)
         // make sure to upload the file only there is an environment content
         if( envBashText ) {
-            taskEnvFile = task.getCmdEnvironmentFile()
+            taskEnvFile = scratch.resolve(TaskRun.CMD_ENV)
             taskEnvFile.text = envBashText
         }
 
@@ -98,15 +108,15 @@ class DnaNexusExecutor extends Executor {
          */
         Path taskInputFile = null
         if (task.stdin) {
-            taskInputFile = task.getCmdInputFile()
+            taskInputFile = scratch.resolve(TaskRun.CMD_INFILE)
             taskInputFile.text = task.stdin
         }
 
         /*
          * Saving the task script file in the appropriate task's working folder
          */
-        Path taskScriptFile = task.getCmdScriptFile()
-        taskScriptFile.text = task.processor.normalizeScript(task.script.toString())
+        Path taskScriptFile = scratch.resolve(TaskRun.CMD_SCRIPT)
+        taskScriptFile.text = TaskProcessor.normalizeScript(task.script.toString(), taskConfig.shell)
         log.debug "Creating script file for process > ${task.name}\n\n "
 
         /*
@@ -213,6 +223,7 @@ class DxTaskHandler extends TaskHandler {
 
     private Map lastStatusResult
 
+    private Path taskOutputFile
 
 
     protected DxTaskHandler(TaskRun task, TaskConfig config, DnaNexusExecutor executor, Map params, DxApi api = null ) {
@@ -220,6 +231,8 @@ class DxTaskHandler extends TaskHandler {
         this.inputParams = params
         this.executor = executor
         this.api = api ?: DxApi.instance
+        // the file that will receive the stdout
+        this.taskOutputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
     }
 
     @Override
@@ -293,8 +306,6 @@ class DxTaskHandler extends TaskHandler {
          * When the 'echo' property is set, it prints out the task stdout
          */
 
-        // the file that will receive the stdout
-        Path taskOutputFile = task.getCmdOutputFile()
         if( !taskOutputFile.exists()) {
             log.warn "Process ${task.name} > output file does not exist: $taskOutputFile"
             task.stdout = '(none)'

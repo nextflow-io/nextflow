@@ -210,7 +210,7 @@ class MergeTaskProcessor extends TaskProcessor {
 
         def hashMode = taskConfig.getHashMode()
         def script = getScriptlet(scriptClosure)
-        def commandToRun = normalizeScript(script)
+        def commandToRun = normalizeScript(script, taskConfig.shell)
         def interpreter = fetchInterpreter(commandToRun)
         String dockerContainer = taskConfig.container
 

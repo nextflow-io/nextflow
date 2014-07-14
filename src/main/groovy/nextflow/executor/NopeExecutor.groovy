@@ -60,7 +60,7 @@ class NopeTaskHandler extends TaskHandler {
     @Override
     void submit() {
         log.info ">> launching nope process: ${task}"
-        task.workDirectory = Paths.get('.').toAbsolutePath()
+        task.workDir = Paths.get('.').toAbsolutePath()
         status = Status.SUBMITTED
         task.stdout = task.script
         task.exitStatus = 0

@@ -19,12 +19,10 @@
  */
 
 package nextflow.util
-import java.nio.file.FileSystemNotFoundException
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.nio.file.spi.FileSystemProvider
 
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
@@ -215,13 +213,9 @@ class PathSerializer extends Serializer<Path> {
         }
 
         // try to find provider
-        for (FileSystemProvider provider: FileSystemProvider.installedProviders()) {
-            if (provider.getScheme().equalsIgnoreCase(scheme)) {
-                return provider.getPath(new URI(path))
-            }
-        }
-
-        throw new FileSystemNotFoundException("Provider \"$scheme\" not installed");
+        def uri = URI.create("$scheme://$path")
+        def fs = FileHelper.getOrCreateFileSystemFor(uri)
+        return fs.provider().getPath(uri)
 
     }
 }

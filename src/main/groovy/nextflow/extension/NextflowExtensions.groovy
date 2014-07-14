@@ -1432,6 +1432,9 @@ class NextflowExtensions {
 
     static def <T> T getOrCreate( Map self, key, factory ) {
 
+        if( self.containsKey(key) )
+            return (T)self.get(key)
+
         MAP_LOCK.withLock {
             if( self.containsKey(key) )
                 return self.get(key)

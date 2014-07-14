@@ -215,7 +215,7 @@ class TaskRun {
     /**
      * The directory used to run the task
      */
-    Path workDirectory
+    Path workDir
 
     /**
      * The type of the task code: native or external system command
@@ -350,63 +350,24 @@ class TaskRun {
 
 
     Path getTargetDir() {
-        storeDir ?: workDirectory
+        storeDir ?: workDir
     }
 
 
-    static final CMD_ENV = '.command.env'
-    static final CMD_SCRIPT = '.command.sh'
-    static final CMD_INFILE = '.command.in'
-    static final CMD_OUTFILE = '.command.out'
-    static final CMD_EXIT = '.exitcode'
-    static final CMD_START = '.command.begin'
-    static final CMD_RUN = '.command.run'
-    static final CMD_CONTEXT = '.command.val'
+    static final String CMD_ENV = '.command.env'
+    static final String CMD_SCRIPT = '.command.sh'
+    static final String CMD_INFILE = '.command.in'
+    static final String CMD_OUTFILE = '.command.out'
+    static final String CMD_EXIT = '.exitcode'
+    static final String CMD_START = '.command.begin'
+    static final String CMD_RUN = '.command.run'
+    static final String CMD_CONTEXT = '.command.val'
 
-    /**
-     * @return The location of the environment script used by this task
-     */
-    Path getCmdEnvironmentFile() { workDirectory.resolve(CMD_ENV) }
-
-    /**
-     * @return The location of the task script script to be executed
-     */
-    Path getCmdScriptFile() { workDirectory.resolve(CMD_SCRIPT) }
-
-    /**
-     * @return The location of the data file to be provided to this task
-     */
-    Path getCmdInputFile() { workDirectory.resolve(CMD_INFILE) }
-
-    /**
-     * @return The location of the data output by this task
-     */
-    Path getCmdOutputFile() { workDirectory.resolve(CMD_OUTFILE) }
-
-    /**
-     * @return The location of the file where the task exit status is saved
-     */
-    Path getCmdExitFile() { workDirectory.resolve(CMD_EXIT) }
-
-    /**
-     * @return The location of the created when the task starts
-     */
-    Path getCmdStartedFile() { workDirectory.resolve(CMD_START) }
-
-    /**
-     * @return The location of the wrapper BASH script user to launch the user target script
-     */
-    Path getCmdWrapperFile() { workDirectory.resolve(CMD_RUN)  }
-
-    /**
-     * @return The location of the file that holds the cached process context map
-     */
-    Path getCmdContextFile() { workDirectory.resolve(CMD_CONTEXT) }
 
 
     String toString( ) {
 
-        "id: $id; name: $name; type: $type; status: $exitStatus; error: $error; workDirectory: $workDirectory"
+        "id: $id; name: $name; type: $type; status: $exitStatus; error: $error; workDirectory: $workDir"
 
     }
 

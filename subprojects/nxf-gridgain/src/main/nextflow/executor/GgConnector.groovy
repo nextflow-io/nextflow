@@ -19,20 +19,27 @@
  */
 
 package nextflow.executor
+
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.file.ggfs.GgFileSystemProvider
+import nextflow.file.ggfs.GgPath
 import nextflow.processor.TaskPollingMonitor
 import nextflow.util.Duration
+import nextflow.util.FileHelper
+import nextflow.util.KryoHelper
+import nextflow.util.PathSerializer
+import nextflow.util.RemoteSession
 import org.gridgain.grid.Grid
-import org.gridgain.grid.GridConfiguration
-import org.gridgain.grid.GridGain
 import org.gridgain.grid.GridNode
 import org.gridgain.grid.GridProjection
 import org.gridgain.grid.cache.GridCache
 import org.gridgain.grid.events.GridEventType
 import org.gridgain.grid.spi.discovery.GridDiscoverySpiListener
 import org.jetbrains.annotations.Nullable
+import org.weakref.s3fs.S3Path
+
 /**
  * Creates an instance of the GridGain node
  *
@@ -50,11 +57,9 @@ class GgConnector implements GridDiscoverySpiListener {
 
     final private Session session
 
-    private GridConfiguration cfg
-
     private Grid grid
 
-    private GridCache<UUID, GgClient> allSessions
+    private GridCache<UUID, RemoteSession> allSessions
 
     private Thread watcher
 
@@ -67,22 +72,28 @@ class GgConnector implements GridDiscoverySpiListener {
     }
 
     private initialize() {
-        // get the configuration
-        Map executorConfig = session.config.executor ?: [:]
-        cfg = new GgConfigFactory('master', executorConfig).create()
 
         /*
-         * launch the node
+         * Register the path serializer
          */
-        grid = GridGain.start(cfg);
+        KryoHelper.register(GgPath, PathSerializer)
+        KryoHelper.register(S3Path, PathSerializer)
 
+        /*
+         * access to the GridGain file system to force the instantiation of a GridGain instance
+         * if it is not already available
+         */
+        def fs = FileHelper.getOrCreateFileSystemFor(URI.create('ggfs:///'))
+        grid = (fs.provider() as GgFileSystemProvider).getGrid()
+
+        // thread to watch for topology changes and update the scheduler queue accordingly
         watcher = topologyWatcher()
 
         /*
          * setup the session cache
          */
-        allSessions = grid.cache(GgConfigFactory.SESSIONS_CACHE)
-        allSessions.put( session.uniqueId, new GgClient(session) )
+        allSessions = grid.cache(GgGridFactory.SESSIONS_CACHE)
+        allSessions.put( session.uniqueId, new RemoteSession(session) )
 
         /*
          * shutdown the instance on session termination

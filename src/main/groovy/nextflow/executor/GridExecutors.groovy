@@ -72,9 +72,9 @@ abstract class AbstractGridExecutor extends Executor {
      */
     def GridTaskHandler createTaskHandler(TaskRun task) {
         assert task
-        assert task.workDirectory
+        assert task.workDir
 
-        final folder = task.workDirectory
+        final folder = task.workDir
         log.debug "Launching process > ${task.name} -- work folder: $folder"
 
         final bash = new BashWrapperBuilder(task)
@@ -274,10 +274,10 @@ class GridTaskHandler extends TaskHandler {
         super(task, config)
 
         this.executor = executor
-        this.startFile = task.getCmdStartedFile()
-        this.exitFile = task.getCmdExitFile()
-        this.outputFile = task.getCmdOutputFile()
-        this.wrapperFile = task.getCmdWrapperFile()
+        this.startFile = task.workDir.resolve(TaskRun.CMD_START)
+        this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
+        this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
+        this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
         final timeout = executor.session?.getExitReadTimeout(executor.name, READ_TIMEOUT) ?: READ_TIMEOUT
         this.exitStatusReadTimeoutMillis = timeout.toMillis()
     }
@@ -296,7 +296,7 @@ class GridTaskHandler extends TaskHandler {
          * launch 'sub' script wrapper
          */
         ProcessBuilder builder = new ProcessBuilder()
-                .directory(task.workDirectory.toFile())
+                .directory(task.workDir.toFile())
                 .command( cli as String[] )
                 .redirectErrorStream(true)
 
@@ -508,7 +508,7 @@ class SgeExecutor extends AbstractGridExecutor {
         final result = new ArrayList<String>()
 
         result << 'qsub'
-        result << '-wd' << task.workDirectory?.toString()
+        result << '-wd' << task.workDir?.toString()
         result << '-N' << "nf-${task.name.replace(' ','_')}"
         result << '-o' << '/dev/null'
         result << '-j' << 'y'
@@ -612,7 +612,7 @@ class LsfExecutor extends AbstractGridExecutor {
 
         final result = new ArrayList<String>()
         result << 'bsub'
-        result << '-cwd' << task.workDirectory?.toString()
+        result << '-cwd' << task.workDir?.toString()
         result << '-o' << '/dev/null'
 
         // add other parameters (if any)
@@ -732,7 +732,7 @@ class SlurmExecutor extends AbstractGridExecutor {
         final result = new ArrayList<String>()
 
         result << 'sbatch'
-        result << '-D' << task.workDirectory.toString()
+        result << '-D' << task.workDir.toString()
         result << '-J' << "nf-${task.name.replace(' ','_')}"
         result << '-o' << '/dev/null'
 

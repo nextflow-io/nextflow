@@ -47,11 +47,13 @@ class DnaNexusExecutorTest extends Specification {
     }
 
 
-    def testHadlerSubmit() {
+    def testHandlerSubmit() {
 
         given:
         def api = Mock(DxApi)
+        def folder = Files.createTempDirectory('tst-path')
         def task = Mock(TaskRun)
+        task.getWorkDir() >> folder
         def exec = Mock(DnaNexusExecutor)
         def script = Mock(BaseScript)
 
@@ -72,6 +74,8 @@ class DnaNexusExecutorTest extends Specification {
         then:
         handler.processJobId == "job-xyz"
 
+        cleanup:
+        folder?.deleteDir()
     }
 
 
@@ -79,7 +83,11 @@ class DnaNexusExecutorTest extends Specification {
 
         given:
         def api = Mock(DxApi)
+
+        def folder = Files.createTempDirectory('tst-path')
         def task = Mock(TaskRun)
+        task.getWorkDir() >> folder
+
         def exec = Mock(DnaNexusExecutor)
         def config = Mock(TaskConfig)
         def handler = new DxTaskHandler(task, config, exec, null, api);
@@ -93,6 +101,8 @@ class DnaNexusExecutorTest extends Specification {
         then:
         noExceptionThrown()
 
+        cleanup:
+        folder?.deleteDir()
     }
 
 
@@ -100,7 +110,11 @@ class DnaNexusExecutorTest extends Specification {
 
         given:
         def api = Mock(DxApi)
+
+        def folder = Files.createTempDirectory('tst-path')
         def task = Mock(TaskRun)
+        task.getWorkDir() >> folder
+
         def exec = Mock(DnaNexusExecutor)
         def config = Mock(TaskConfig)
         def handler = new DxTaskHandler(task, config, exec, null, api);
@@ -114,6 +128,8 @@ class DnaNexusExecutorTest extends Specification {
         then:
         noExceptionThrown()
 
+        cleanup:
+        folder?.deleteDir()
     }
 
 
@@ -121,7 +137,11 @@ class DnaNexusExecutorTest extends Specification {
 
         setup:
         def api = Mock(DxApi)
+
+        def folder = Files.createTempDirectory('tst-path')
         def task = Mock(TaskRun)
+        task.getWorkDir() >> folder
+
         def config = Mock(TaskConfig)
         def exec = Mock(DnaNexusExecutor)
         def handler = new DxTaskHandler(task, config, exec, [:], api);
@@ -132,15 +152,19 @@ class DnaNexusExecutorTest extends Specification {
         then:
         handler.checkIfRunning()
 
+        cleanup:
+        folder?.deleteDir()
     }
 
     def testTaskHandlerCheckIfTerminated() {
 
         setup:
         def api = Mock(DxApi)
-        def outFile = Files.createTempFile('testOutFile', null)
+
+        def work = Files.createTempDirectory('testWorkDir')
         def task = Mock(TaskRun)
-        task.getCmdOutputFile() >> outFile
+        task.getWorkDir() >> work
+
         def config = Mock(TaskConfig)
         def exec = Mock(DnaNexusExecutor)
 
@@ -155,8 +179,8 @@ class DnaNexusExecutorTest extends Specification {
 
         when:
         def task2 = new TaskRun()
-        task2.workDirectory = Files.createTempDirectory('testHandler')
-        task2.getCmdOutputFile().text = 'Task says Hola'
+        task2.workDir = Files.createTempDirectory('testHandler')
+        task2.workDir.resolve(TaskRun.CMD_OUTFILE).text = 'Task says Hola'
         handler = new DxTaskHandler(task2, config, exec, [:], api);
         handler.metaClass.checkStatus = { return [state:'done', output:[exit_code:33]] }
         handler.processJobId = '123'
@@ -169,7 +193,8 @@ class DnaNexusExecutorTest extends Specification {
 
 
         cleanup:
-        task2.workDirectory?.deleteDir()
+        work?.deleteDir()
+        task2?.workDir?.deleteDir()
     }
 
 

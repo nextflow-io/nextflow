@@ -95,7 +95,7 @@ abstract class TaskProcessor {
     /**
      * The script object which defines this task
      */
-    protected final BaseScript ownerScript
+    protected BaseScript ownerScript
 
     /**
      * Gpars thread pool
@@ -354,10 +354,9 @@ abstract class TaskProcessor {
      * @return A string 'she-bang' formatted to the added on top script to be executed.
      * The interpreter to be used define bu the *taskConfig* property {@code shell}
      */
-    def getShebangLine() {
-        assert taskConfig.shell, "Missing 'shell' property for process: $name"
+    static shebangLine(shell) {
+        assert shell, "Missing 'shell' property in process configuration"
 
-        def shell = taskConfig.shell
         String result = shell instanceof List ? shell.join(' ') : shell
         if( result.startsWith('/') ) {
             result = '#!' + result
@@ -375,7 +374,7 @@ abstract class TaskProcessor {
      * also if the script does not start with a {@code shebang} line,
      * add the default by using the current {@code #shell} attribute
      */
-    def String normalizeScript(String script) {
+    static String normalizeScript(String script, shell) {
         assert script != null
 
         def result = new StringBuilder()
@@ -383,7 +382,7 @@ abstract class TaskProcessor {
         result << '\n'
 
         if( result[0] != '#' || result[1] != '!') {
-            result.insert(0, shebangLine +'\n')
+            result.insert(0, shebangLine(shell) +'\n')
         }
 
         return result.toString()
@@ -395,7 +394,7 @@ abstract class TaskProcessor {
      *
      * @return The interpreter as defined in the she-bang declaration, for example {@code /usr/bin/env perl}
      */
-    def String fetchInterpreter( String script ) {
+    static String fetchInterpreter( String script ) {
         assert script != null
 
         if( script[0] == '#' && script[1] == '!') {
@@ -514,11 +513,11 @@ abstract class TaskProcessor {
 
             // set the working directory
             task.hash = hash
-            task.workDirectory = folder
+            task.workDir = folder
             if( script )
                 task.script = script
 
-            log.trace "[${task.name}] actual run folder: ${task.workDirectory}"
+            log.trace "[${task.name}] actual run folder: ${task.workDir}"
 
             // submit task for execution
             submitTask( task, runType )
@@ -579,7 +578,7 @@ abstract class TaskProcessor {
         catch( MissingFileException | MissingValueException e ) {
             log.trace "[$task.name] Missed store > ${e.getMessage()} -- folder: ${task.storeDir}"
             task.exitStatus = Integer.MAX_VALUE
-            task.workDirectory = null
+            task.workDir = null
             return false
         }
     }
@@ -636,7 +635,7 @@ abstract class TaskProcessor {
 
             // set the exit code in to the task object
             task.hash = hash
-            task.workDirectory = folder
+            task.workDir = folder
             task.stdout = stdoutFile
             if( exitCode != null ) {
                 task.exitStatus = exitCode
@@ -654,7 +653,7 @@ abstract class TaskProcessor {
         catch( MissingFileException | MissingValueException e ) {
             log.trace "[$task.name] Missed cache > ${e.getMessage()} -- folder: $folder"
             task.exitStatus = Integer.MAX_VALUE
-            task.workDirectory = null
+            task.workDir = null
             return false
         }
 
@@ -755,7 +754,7 @@ abstract class TaskProcessor {
         }
         catch( Throwable e ) {
             // no recoverable error
-            log.error("Unexpected error -- Aborting. Look at log file for details", e )
+            log.error("Unexpected error -- Execution aborted. Check the log file '.nextflow.log' for more details", e )
         }
 
         session.abort()
@@ -793,7 +792,7 @@ abstract class TaskProcessor {
                 message << "  (empty)"
             }
             lines.each {
-                message << "  ${task.workDirectory ? it.replace(task.workDirectory.toString()+'/','') : it }"
+                message << "  ${task.workDir ? it.replace(task.workDir.toString()+'/','') : it }"
             }
 
         }
@@ -807,8 +806,8 @@ abstract class TaskProcessor {
 
         }
 
-        if( task?.workDirectory )
-            message << "\nWork dir:\n  ${task.workDirectory.toString()}"
+        if( task?.workDir )
+            message << "\nWork dir:\n  ${task.workDir.toString()}"
 
         message << "\nTip: ${getRndTip()}"
 
@@ -1321,7 +1320,7 @@ abstract class TaskProcessor {
             if( ((Map)task.code.delegate).containsKey('workDir') && !overrideWarnShown.getAndSet(true)) {
                 log.warn "Process $name overrides value of reserved variable 'workDir' "
             }
-            task.code.delegate['workDir'] = task.workDirectory
+            task.code.delegate['workDir'] = task.workDir
         }
 
         // add the task to the collection of running tasks
@@ -1360,8 +1359,10 @@ abstract class TaskProcessor {
 
             // save the context map for caching purpose
             // only the 'cache' is active and
-            if( isCacheable() && task.hasCacheableValues() && task.code.delegate != null )
-                ((DelegateMap)task.code.delegate).save(task.getCmdContextFile())
+            if( isCacheable() && task.hasCacheableValues() && task.code.delegate != null ) {
+                def target = task.workDir.resolve(TaskRun.CMD_CONTEXT)
+                ((DelegateMap)task.code.delegate).save(target)
+            }
 
         }
         catch ( Throwable error ) {

@@ -19,9 +19,13 @@
  */
 
 package nextflow.fs.dx
+import java.nio.file.Paths
 
 import nextflow.fs.dx.api.DxApi
+import nextflow.util.FileHelper
 import nextflow.util.KryoHelper
+import nextflow.util.PathSerializer
+import org.weakref.s3fs.S3Path
 import spock.lang.Specification
 /**
  *
@@ -29,12 +33,15 @@ import spock.lang.Specification
  */
 class DxSerializersTest extends Specification {
 
+    def setupSpec() {
+        KryoHelper.register(DxPath, DxPathSerializer)
+        KryoHelper.register(DxFileSystem, DxFileSystemSerializer)
+        KryoHelper.register(S3Path, PathSerializer)
+    }
 
     def testSerialization() {
 
         setup:
-        KryoHelper.register(DxPath, DxPathSerializer)
-        KryoHelper.register(DxFileSystem, DxFileSystemSerializer)
 
         //provider.fileSystems =
         DxFileSystemProvider provider = new DxFileSystemProvider('123', Mock(DxApi))
@@ -61,6 +68,32 @@ class DxSerializersTest extends Specification {
 
 
     }
+
+    def testS3PathSerialization() {
+
+        setup:
+
+        def uri = URI.create('s3:///bucket-name/index.html')
+        FileHelper.getOrCreateFileSystemFor(uri)
+        def s3path = Paths.get(uri)
+
+        def store = File.createTempFile('s3obj',null)
+
+        when:
+        KryoHelper.serialize(s3path, store)
+        def copy = (S3Path)KryoHelper.deserialize(store)
+
+        then:
+        copy == s3path
+        s3path.getFileName().toString() == 'index.html'
+        s3path.toString() == '/bucket-name/index.html'
+        s3path.toUri() == uri
+
+        cleanup:
+        store?.delete()
+
+    }
+
 
 
 }

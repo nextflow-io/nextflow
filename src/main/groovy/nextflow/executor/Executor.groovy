@@ -110,7 +110,7 @@ abstract class Executor {
         assert workDirectory
 
         // replace any wildcards characters
-        // TODO use newDirectoryStream here and eventually glob
+        // TODO use newDirectoryStream here and eventually glob -- keep this aligned with "GgBaseTask#copyToTargetDir"
         String filePattern = fileName.replace("?", ".?").replace("*", ".*")
 
         // when there's not change in the pattern, try to find a single file

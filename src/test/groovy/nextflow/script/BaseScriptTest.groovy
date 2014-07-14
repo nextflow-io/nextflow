@@ -61,4 +61,8 @@ class BaseScriptTest extends Specification {
         process.taskBody.getValNames().sort() == ['x','y','z']
     }
 
+    def testTempDir() {
+
+    }
+
 }

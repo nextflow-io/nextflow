@@ -23,7 +23,6 @@ dx-project/
 *.txt
 cache/
 lib/commons-cli-1.2.jar
-logo/nextflow2014_CS5.ai
-logo/nextflow2014_no-bg.png
 extrae_juan_files/**
-misc/**
+misc/
+logo/

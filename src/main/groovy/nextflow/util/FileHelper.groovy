@@ -19,15 +19,24 @@
  */
 
 package nextflow.util
+import java.lang.reflect.Field
+import java.nio.file.FileSystem
+import java.nio.file.FileSystemNotFoundException
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.nio.file.spi.FileSystemProvider
+import java.util.concurrent.locks.Lock
+import java.util.concurrent.locks.ReentrantLock
 
 import embed.com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Session
 import nextflow.extension.FilesExtensions
+import nextflow.extension.NextflowExtensions
 /**
  * Provides some helper method handling files
  *
@@ -225,22 +234,47 @@ class FileHelper {
         assert str
 
         int p = str.indexOf('://')
-        if( p == -1  ) {
-            return Paths.get(str)
+        if( p == -1 ) {
+            return FileSystems.getDefault().getPath(str)
         }
 
-        String scheme = str.substring(0, p).trim()
-        def provider = getProviderByScheme(scheme)
-        if( !provider ) {
-            throw new IllegalArgumentException("Unknown file scheme: $scheme");
-        }
+        final uri = URI.create(str)
+        if( uri.scheme == 'file' )
+            return FileSystems.getDefault().getPath(uri.path)
 
-        return provider.getPath( URI.create(str) )
-
+        getOrCreateFileSystemFor(uri).provider().getPath(uri)
     }
 
+    /**
+     * Lazy create and memoize this object since it will never change
+     * @return A map holding the current session
+     */
+    @Memoized
+    static protected Map getEnvMap(String scheme) {
+        getEnvMap0(scheme, System.getProperties(), System.getenv())
+    }
 
-    private static FileSystemProvider getProviderByScheme( String scheme ) {
+    @PackageScope
+    static Map getEnvMap0(String scheme, Properties props, Map env) {
+        def result = [:]
+        if( scheme?.toLowerCase() == 's3' ) {
+            def accessKey = props.getProperty('AWS_ACCESS_KEY') ?: env.get('AWS_ACCESS_KEY')
+            def secretKey = props.getProperty('AWS_SECRET_KEY') ?: env.get('AWS_SECRET_KEY')
+            if( accessKey && secretKey ) {
+                // S3FS expect the access - secret keys pair in lower notation
+                result.access_key = accessKey
+                result.secret_key = secretKey
+            }
+        }
+        else {
+            assert Session.currentInstance, "Session is not available -- make sure to call this after Session object has been created"
+            result.session = Session.currentInstance
+        }
+        return result
+    }
+
+    @Memoized
+    static FileSystemProvider getProviderFor( String scheme ) {
 
         for (FileSystemProvider provider : FileSystemProvider.installedProviders()) {
             if ( scheme == provider.getScheme() ) {
@@ -249,4 +283,81 @@ class FileHelper {
         }
         return null;
     }
+
+    /**
+     * Get the instance of the specified {@code FileSystemProvider} class. If the provider is not
+     * in the list of installed provided, it creates a new instance and add it to the list
+     *
+     * @see {@code FileSystemProvider#installedProviders}
+     *
+     * @param clazz A class extending {@code FileSystemProvider}
+     * @return An instance of the specified class
+     */
+    synchronized static <T extends FileSystemProvider> T getOrInstallProvider( Class<T> clazz ) {
+
+        FileSystemProvider result = FileSystemProvider.installedProviders().find { it.class == clazz }
+        if( result )
+            return (T)result
+
+        // try to load DnaNexus file system provider dynamically
+        result = (T)clazz.newInstance()
+
+        // add it manually
+        Field field = FileSystemProvider.class.getDeclaredField('installedProviders')
+        field.setAccessible(true)
+        List installedProviders = new ArrayList((List)field.get(null))
+        installedProviders.add( result )
+        field.set(this, Collections.unmodifiableList(installedProviders))
+        log.debug "> Added '${clazz.simpleName}' to list of installed providers [${result.scheme}]"
+        return (T)result
+    }
+
+    private static Lock _fs_lock = new ReentrantLock()
+
+    /**
+     * Acquire or create the file system for the given {@link URI}
+     *
+     * @param uri A {@link URI} locating a file into a file system
+     * @param env An option environment specification that may be used to instantiate the underlying file system.
+     *          As defined by {@link FileSystemProvider#newFileSystem(java.net.URI, java.util.Map)}
+     * @return The corresponding {@link FileSystem} object
+     * @throws IllegalArgumentException if does not exist a valid provider for the given URI scheme
+     */
+    static FileSystem getOrCreateFileSystemFor( URI uri ) {
+        assert uri
+
+        /*
+         * get the provider for the specified URI
+         */
+        def provider = getProviderFor(uri.scheme)
+        if( !provider )
+            throw new IllegalArgumentException("Cannot a find a file system provider for scheme: ${uri.scheme}")
+
+        /*
+         * check if already exists a file system for it
+         */
+        FileSystem fs
+        try { fs = provider.getFileSystem(uri) }
+        catch( FileSystemNotFoundException e ) { fs=null }
+        if( fs )
+            return fs
+
+        /*
+         * since the file system does not exist, create it a protected block
+         */
+        log.debug "Creating a file system instance for provider: ${provider.class.simpleName}"
+        NextflowExtensions.withLock(_fs_lock) {
+
+            try { fs = provider.getFileSystem(uri) }
+            catch( FileSystemNotFoundException e ) { fs=null }
+            if( !fs ) {
+                fs = provider.newFileSystem(uri, getEnvMap(uri.scheme))
+            }
+
+        }
+
+        return fs
+    }
+
+
 }

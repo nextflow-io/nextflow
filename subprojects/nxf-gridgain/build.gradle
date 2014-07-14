@@ -20,7 +20,7 @@
 
 dependencies {
     compile project(':')
-    compile ("org.gridgain:gridgain-platform:6.1.1")  {
+    compile ("org.gridgain:gridgain-platform:6.1.5")  {
         exclude module: 'commons-logging'
         exclude module: 'slf4j-log4j12'
         exclude module: 'scala-compiler'
@@ -40,6 +40,9 @@ dependencies {
         exclude module: 'hibernate-jpa-2.0-api'
         exclude module: 'hibernate-commons-annotations'
     }
+
+    //compile 'org.apache.hadoop:hadoop-core:1.2.1'
+    compile "nextflow:s3fs:1.0.0"
 
     testCompile project(':')
 }

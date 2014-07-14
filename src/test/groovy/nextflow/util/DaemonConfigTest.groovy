@@ -95,6 +95,20 @@ class DaemonConfigTest extends Specification {
 
     }
 
+    enum FooEnum { ALPHA, BETA, DELTA }
+
+    def testEnumValues() {
+
+        when:
+        def cfg = new DaemonConfig('none', [x:1, ggfs:[data: [memoryMode: 'ALPHA']] ])
+        then:
+        cfg.getAttribute('ggfs.data.memoryMode') == 'ALPHA'
+        cfg.getAttribute('ggfs.data.memoryMode') as FooEnum == FooEnum.ALPHA
+        cfg.getAttribute('ggfs.meta.memoryMode', FooEnum.BETA) as FooEnum == FooEnum.BETA
+        cfg.getAttribute('ggfs.meta.xxx') as FooEnum == null
+
+    }
+
 
 
 }

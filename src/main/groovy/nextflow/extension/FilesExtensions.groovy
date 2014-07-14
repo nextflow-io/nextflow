@@ -19,6 +19,7 @@
  */
 
 package nextflow.extension
+
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.FileVisitResult
@@ -157,6 +158,8 @@ class FilesExtensions {
      * @return The target {@link Path} file
      */
     def static Path copyTo( Path source, Path target ) {
+        assert source
+        assert target
 
         if( source.isDirectory() ) {
             def parent = target.getParent()
@@ -690,13 +693,55 @@ class FilesExtensions {
      * @return The 'n' lines as {@code CharSequence} object
      */
     static CharSequence tail( Path path, int n, charset = null, int blockSize = DEFAULT_TAIL_BLOCK_SIZE) {
-        def channel = Files.newByteChannel(path)
+        def channel = null
         try {
-            return tail( channel, n, charset, blockSize )
+            try {
+                channel = Files.newByteChannel(path)
+                return tail( channel, n, charset, blockSize )
+            }
+            catch( UnsupportedOperationException e ) {
+                log.trace "Unable to open as a byte-channel file: $path -- trying as inputstream"
+                channel = Files.newInputStream(path)
+                return tail( new InputStreamReader(channel), n )
+            }
         }
         finally {
-            channel.closeQuietly()
+            channel?.closeQuietly()
         }
+    }
+
+    /**
+     * Read the last 'n' lines from a {@code Path} without reading all the file content
+     *
+     * @param channel The channel from where read the ending lines
+     * @param n The number of lines to be read
+     * @return The 'n' lines as {@code CharSequence} object
+     */
+    static CharSequence tail( Reader reader, int n ) {
+        String line
+        String[] buffer = new String[n]
+        int index = 0
+        while( (line = reader.readLine()) != null ) {
+            buffer[ (index++) % n ] = line
+        }
+
+        StringBuilder result = new StringBuilder()
+        int count = Math.min(n, index)
+        while( true ) {
+            result.insert( 0, buffer[ (--index) % n ] )
+            if( --count )
+                result.insert( 0, System.lineSeparator())
+            else
+                break
+        }
+
+        result
+    }
+
+
+    static CharSequence tail( InputStream stream, int n, charset ) {
+        final charsetObj = NextflowExtensions.getCharset(charset)
+        tail( new InputStreamReader(stream,charsetObj), n )
     }
 
     /**

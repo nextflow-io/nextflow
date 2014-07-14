@@ -360,6 +360,48 @@ class FilesExtensionsTest extends Specification {
 
     }
 
+    def testReaderTail() {
+
+        when:
+        def text = '''
+        1
+        22
+        333
+        4444
+        55555
+        666666
+        7777777
+        88888888
+        999999999
+        '''.stripIndent()
+
+        then:
+        new StringReader(text).tail(1).toString() == '999999999'
+        new StringReader(text).tail(2).toString() == '88888888\n999999999'
+        new StringReader(text).tail(3).toString() == '7777777\n88888888\n999999999'
+
+        when:
+        text = '''
+        1
+        22
+        333
+        4444
+        55555
+        666666
+        7777777
+
+
+        88888888
+
+        999999999'''.stripIndent()
+
+        then:
+        new StringReader(text).tail(1).toString() == '999999999'
+        new StringReader(text).tail(3).toString() == '88888888\n\n999999999'
+        new StringReader(text).tail(6).toString() == '7777777\n\n\n88888888\n\n999999999'
+
+    }
+
 
     def testFileHead() {
 

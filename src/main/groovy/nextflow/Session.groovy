@@ -20,6 +20,7 @@
 
 package nextflow
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -29,6 +30,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.util.PoolUtils
 import jsr166y.Phaser
+import nextflow.exception.MissingLibraryException
 import nextflow.processor.TaskDispatcher
 import nextflow.processor.TaskProcessor
 import nextflow.script.CliOptions
@@ -37,6 +39,7 @@ import nextflow.trace.TraceObserver
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.FileHelper
+
 /**
  * Holds the information on the current execution
  *
@@ -85,7 +88,7 @@ class Session {
     /**
      * The folder where tasks temporary files are stored
      */
-    def Path workDir = FileHelper.asPath('work').toAbsolutePath()
+    def Path workDir = Paths.get('work').toAbsolutePath()
 
     /**
      * The folder where the main script is contained
@@ -93,6 +96,11 @@ class Session {
     def File baseDir
 
     def CliOptions cliOptions
+
+    /**
+     * Folder(s) containing libs and classes to be added to the classpath
+     */
+    def List<File> libDir
 
     /**
      * The unique identifier of this session
@@ -174,6 +182,7 @@ class Session {
 
         // note -- make sure to use 'FileHelper.asPath' since it guarantee to handle correctly non-standard file system e.g. 'dxfs'
         this.workDir = FileHelper.asPath(options.workDir).toAbsolutePath()
+        this.setLibDir( options.libPath )
 
         /*
          * create the execution trace observer
@@ -247,23 +256,40 @@ class Session {
         return path
     }
 
-    def List<URL> getClasspath() {
-        return new ArrayList<URL>(classpath)
+
+    def void setLibDir( String str ) {
+
+        if( !str ) return
+
+        def files = str.split( File.pathSeparator ).collect { new File(it) }
+        if( !files ) return
+
+        libDir = []
+        for( File file : files ) {
+            if( !file.exists() )
+                throw new MissingLibraryException("Cannot find specified library: ${file.absolutePath}")
+
+            libDir << file
+        }
     }
 
-    def void addClasspath( File file ) {
-        classpath << ( file.toURI().toURL() )
-    }
+    def List<File> getLibDir() {
+        if( libDir )
+            return libDir
 
-    def void addClasspath( String file ) {
-        addClasspath(new File(file))
+        libDir = []
+        def localLib = baseDir ? new File(baseDir,'lib') : new File('lib')
+        if( localLib.exists() ) {
+            log.debug "Using default localLib path: $localLib"
+            libDir << localLib
+        }
+        return libDir
     }
 
     /**
      * Await the termination of all processors
      */
     void await() {
-        log.debug "Session await > processors completion"
         allProcessors *. join()
         terminated = true
         log.debug "<<< phaser deregister (session)"
