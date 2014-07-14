@@ -10,7 +10,7 @@ created by Extrae can be analysed later with `Paraver`_ a visual performance ana
 *Extrae* together with *Paraver* will allows you to analyse the execution performance of your
 pipeline.
 
-Both *Extrae* and *Paraver* tools are developed by the Barcelona Supercomputing Center (`BSC`_).
+.. note:: Both *Extrae* and *Paraver* are tools developed by the `Barcelona Supercomputing Center`_.
 
 How to use it
 ================
@@ -104,6 +104,6 @@ Please read the `Extrae`_ documentation for more information about it.
 
 
 
-.. _BSC: http://www.bsc.es
+.. _Barcelona Supercomputing Center: http://www.bsc.es
 .. _Paraver: http://www.bsc.es/computer-sciences/performance-tools/paraver
 .. _Extrae: http://www.bsc.es/computer-sciences/extrae
