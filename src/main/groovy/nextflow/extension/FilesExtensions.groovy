@@ -169,16 +169,16 @@ class FilesExtensions {
 
         if( target.isDirectory() ) {
             target = target.resolve(source.getName())
-            return Files.copy(source,target, StandardCopyOption.REPLACE_EXISTING)
+            return Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING)
         }
 
-        // create the parent directories if do not exist
-        def parent = source.getParent()
+        // create the target parent directories if do not exist
+        def parent = target.getParent()
         if( parent && !parent.exists() ) {
             parent.mkdirs()
         }
 
-        return Files.copy(source,target, StandardCopyOption.REPLACE_EXISTING)
+        return Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING)
     }
 
 
