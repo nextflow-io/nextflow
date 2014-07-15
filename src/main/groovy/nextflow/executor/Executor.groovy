@@ -139,6 +139,9 @@ abstract class Executor {
     }
 
 
+    def String stagingInputFilesScript( TaskRun task ) {
+        stagingFilesScript(task.getInputFiles())
+    }
 
     /**
      * Given a map of the input file parameters with respective values,

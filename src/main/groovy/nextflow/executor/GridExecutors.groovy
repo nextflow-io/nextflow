@@ -79,17 +79,9 @@ abstract class AbstractGridExecutor extends Executor {
 
         final bash = new BashWrapperBuilder(task)
 
-        // staging input files
-        bash.stagingScript = {
-            final files = task.getInputFiles()
-            final staging = stagingFilesScript(files)
-            return staging
-        }
-
-        // unstage script
-        bash.unstagingScript = {
-            return unstageOutputFilesScript(task)
-        }
+        // staging/unstage input/output files
+        bash.stagingScript = stagingInputFilesScript(task)
+        bash.unstagingScript = unstageOutputFilesScript(task)
 
         // create the wrapper script
         bash.build()

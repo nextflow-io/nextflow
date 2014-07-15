@@ -40,9 +40,9 @@ class BashWrapperBuilder {
 
     Map<String,String> environment
 
-    Closure<String> stagingScript
+    String stagingScript
 
-    Closure<String> unstagingScript
+    String unstagingScript
 
     String wrapperScript
 
@@ -201,9 +201,8 @@ class BashWrapperBuilder {
         }
 
         // staging input files when required
-        def staging
-        if( stagingScript && (staging=stagingScript.call()) ) {
-            wrapper << staging << ENDL
+        if( stagingScript ) {
+            wrapper << stagingScript << ENDL
         }
 
         // execute the command script
@@ -230,8 +229,7 @@ class BashWrapperBuilder {
         wrapper << ' ) &> ' << outputFile.toAbsolutePath() << ENDL
 
         if( (changeDir || workDir != targetDir) && unstagingScript  ) {
-            def unstaging = unstagingScript.call()
-            wrapper << unstaging << ENDL
+            wrapper << unstagingScript << ENDL
         }
 
         wrapper << 'onexit' << ENDL
