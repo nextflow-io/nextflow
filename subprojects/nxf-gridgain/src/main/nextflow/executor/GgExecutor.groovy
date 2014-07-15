@@ -38,6 +38,7 @@ import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.script.ScriptType
 import nextflow.util.Duration
+import nextflow.util.FileHelper
 import nextflow.util.InputStreamDeserializer
 import nextflow.util.KryoHelper
 import org.apache.commons.lang.SerializationUtils
@@ -199,10 +200,10 @@ class GgTaskHandler extends TaskHandler {
         // submit to an hazelcast node for execution
         final sessionId = task.processor.session.uniqueId
         if( type == ScriptType.SCRIPTLET ) {
-            future = executor.execute( new GgBashTask(task) )
+            future = executor.execute( new GgBashTask(task,sessionId) )
         }
         else {
-            future = executor.execute( new GgClosureTask( task, sessionId ) )
+            future = executor.execute( new GgClosureTask(task,sessionId) )
         }
 
         future.listenAsync( { executor.getTaskMonitor().signalComplete(); } as GridInClosure )
@@ -288,6 +289,12 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
     private transient GridLogger log;
 
     /**
+     * The client session identifier, it is required in order to access to
+     * remote class-path
+     */
+    UUID sessionId
+
+    /**
      * This field is used to transport the class attributes as a unique serialized byte array
      */
     private byte[] payload
@@ -307,10 +314,23 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
     protected transient Path scratchDir
 
     /**
-     * Create
-     * @param task
+     * A temporary where all files are cached. The folder is deleted during instance shut-down
      */
-    protected GgBaseTask( TaskRun task ) {
+    private static final Path localCacheDir = Files.createTempDirectory('nxf-cache')
+
+    static {
+        Runtime.getRuntime().addShutdownHook { localCacheDir.deleteDir() }
+    }
+
+    /**
+     * Initialize the grid gain task wrapper
+     *
+     * @param task The task instance to be executed
+     * @param The session unique identifier
+     */
+    protected GgBaseTask( TaskRun task, UUID sessionId ) {
+
+        this.sessionId = sessionId
 
         attrs.taskId = task.id
         attrs.name = task.name
@@ -385,11 +405,15 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
 
         // move the input files there
         for( Map.Entry<String,Path> entry : inputFiles.entrySet() ) {
-            def target = scratchDir.resolve(entry.key)
-            log?.debug "Task $name > staging path: '${entry.value}' to: '$target'"
-            FilesExtensions.copyTo(entry.value, target)
+            final name = entry.key
+            final source = entry.value
+            final cached = FileHelper.getLocalCachePath(source,localCacheDir, sessionId)
+            final staged = scratchDir.resolve(name)
+            log?.debug "Task $name > staging path: '${source}' to: '$staged'"
+            Files.createSymbolicLink(staged, cached)
         }
     }
+
 
     /**
      * Copy back the task output files from the execution directory in the local node storage
@@ -507,7 +531,7 @@ class GgBashTask extends GgBaseTask<Integer>  {
     /**
      * The command line to be executed
      */
-    List shell
+    List<String> shell
 
     String container
 
@@ -517,12 +541,12 @@ class GgBashTask extends GgBaseTask<Integer>  {
 
     String script
 
-    GgBashTask( TaskRun task ) {
-        super(task)
+    GgBashTask( TaskRun task, UUID sessionId ) {
+        super(task, sessionId)
         this.stdin = task.stdin
         this.container = task.container
         this.environment = task.processor.getProcessEnvironment()
-        this.shell = task.processor.taskConfig.shell
+        this.shell = task.processor.taskConfig.getShell()
         this.script = task.script
     }
 
@@ -610,12 +634,6 @@ class GgClosureTask extends GgBaseTask<GgResultData> {
     private transient GgClassLoaderProvider provider
 
     /**
-     * The client session identifier, it is required in order to access to
-     * remote class-path
-     */
-    final UUID sessionId
-
-    /**
      * The task closure serialized as a byte array
      */
     final byte[] codeObj
@@ -627,9 +645,7 @@ class GgClosureTask extends GgBaseTask<GgResultData> {
 
 
     GgClosureTask( TaskRun task, UUID sessionId ) {
-        super(task)
-        assert task
-        this.sessionId = sessionId
+        super(task,sessionId)
         this.codeObj = SerializationUtils.serialize(task.code.dehydrate())
         this.delegateObj = (task.code.delegate as DelegateMap).dehydrate()
     }

@@ -70,6 +70,7 @@ class GgExecutorTest extends Specification {
     def testGgBashTask() {
 
         given:
+        def sessionId = UUID.randomUUID()
         def sourcePath = Files.createTempDirectory('stage-test')
         def sourceFile1 = sourcePath.resolve('file1')
         def sourceFile2 = sourcePath.resolve('file2')
@@ -101,34 +102,36 @@ class GgExecutorTest extends Specification {
         task.setOutput( new FileOutParam(binding, []).bind('z'), 'file3' )
 
         when:
-        def bash = new GgBashTask(task)
-        bash.log = new GridSlf4jLogger()
+        def ggTask = new GgBashTask(task, sessionId)
+        ggTask.log = new GridSlf4jLogger()
 
         then:
-        bash.taskId == 123
-        bash.name == 'TestRun'
-        bash.workDir == Paths.get('/some/path')
-        bash.targetDir == targetPath
-        bash.inputFiles == [ file1:sourceFile1, file2: sourceFile2 ]
-        bash.outputFiles == task.getOutputFilesNames()
+        ggTask.taskId == 123
+        ggTask.name == 'TestRun'
+        ggTask.workDir == Paths.get('/some/path')
+        ggTask.targetDir == targetPath
+        ggTask.inputFiles == [ file1:sourceFile1, file2: sourceFile2 ]
+        ggTask.outputFiles == task.getOutputFilesNames()
 
-        bash.environment == [ALPHA: 1, BETA:2 ]
-        bash.shell == ['/bin/zsh']
-        bash.script == 'echo Hello world!'
-
+        ggTask.environment == [ALPHA: 1, BETA:2 ]
+        ggTask.shell == ['/bin/zsh']
+        ggTask.script == 'echo Hello world!'
+        ggTask.sessionId == sessionId
 
         when:
-        bash.stage()
+        ggTask.stage()
         then:
-        bash.scratchDir != null
-        bash.scratchDir.resolve('file1').text ==  sourceFile1.text
-        bash.scratchDir.resolve('file2').text ==  sourceFile2.text
+        ggTask.scratchDir != null
+        ggTask.scratchDir.resolve('file1').text == sourceFile1.text
+        ggTask.scratchDir.resolve('file2').text == sourceFile2.text
+        Files.isSymbolicLink(ggTask.scratchDir.resolve('file1'))
+        Files.isSymbolicLink(ggTask.scratchDir.resolve('file2'))
 
         when:
-        bash.scratchDir.resolve('x').text = 'File x'
-        bash.scratchDir.resolve('y').text = 'File y'
-        bash.scratchDir.resolve('z').text = 'File z'
-        bash.unstage()
+        ggTask.scratchDir.resolve('x').text = 'File x'
+        ggTask.scratchDir.resolve('y').text = 'File y'
+        ggTask.scratchDir.resolve('z').text = 'File z'
+        ggTask.unstage()
         then:
         targetPath.exists()
         targetPath.resolve('x').text == 'File x'
@@ -138,8 +141,10 @@ class GgExecutorTest extends Specification {
         cleanup:
         sourcePath?.deleteDir()
         targetPath?.deleteDir()
-        bash?.scratchDir?.deleteDir()
+        ggTask?.scratchDir?.deleteDir()
 
     }
+
+
 
 }

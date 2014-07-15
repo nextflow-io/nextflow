@@ -360,4 +360,34 @@ class FileHelper {
     }
 
 
+    /**
+     * Given a path look for an existing file with that name in the {@code cacheDir} folder.
+     * If exists will return the path to it, otherwise make a copy of it in the cache folder
+     * and returns to the path to it.
+     *
+     * @param sourcePath A {@link Path} object to an existing file or directory
+     * @param cacheDir A {@link Path} to the folder containing the cached objects
+     * @param sessionId An option {@link UUID} used to create the object invalidation key
+     * @return A {@link Path} to the cached version of the specified object
+     */
+    static Path getLocalCachePath( Path sourcePath, Path cacheDir, UUID sessionId = null ) {
+        assert sourcePath
+        assert cacheDir
+
+        final key = sessionId ? [sessionId, sourcePath] : sourcePath
+        final hash = CacheHelper.hasher(key).hash()
+
+        final cached = getWorkFolder(cacheDir, hash).resolve(sourcePath.getFileName())
+        if( Files.exists(cached) )
+            return cached
+
+        synchronized (cacheDir)  {
+            if( Files.exists(cached) )
+                return cached
+
+            return FilesExtensions.copyTo(sourcePath, cached)
+        }
+    }
+
+
 }

@@ -196,6 +196,63 @@ class FileHelperTest extends Specification {
 
     }
 
+    def testCachedPath() {
+
+        given:
+        final localCacheDir = Files.createTempDirectory('cache')
+        final testFolder = Files.createTempDirectory('test')
+        final file1 = testFolder.resolve('file1.txt')
+        final file2 = testFolder.resolve('file2.txt')
+        file1.text = 'File 1'
+        file2.text = 'File 2'
+
+        // create a sub-dir with two files
+        final dir1 = testFolder.resolve('dir1')
+        dir1.mkdir()
+        final file3 = dir1.resolve('file3')
+        final file4 = dir1.resolve('file4')
+        file3.text = 'File 3'
+        file4.text = 'File 4'
+
+        final id = UUID.randomUUID()
+
+        when:
+        def cache1 = FileHelper.getLocalCachePath(file1, localCacheDir, id)
+        then:
+        cache1 != file1
+        cache1.text == file1.text
+        cache1.getFileName() == file1.getFileName()
+        cache1.parent.parent.parent == localCacheDir
+
+        when:
+        def cache2 = FileHelper.getLocalCachePath(file2, localCacheDir, id)
+        then:
+        cache2 != cache1
+        cache2 != file2
+        cache2.text == file2.text
+        cache2.getFileName() == file2.getFileName()
+        cache2.parent.parent.parent == localCacheDir
+
+        when:
+        def cache3 = FileHelper.getLocalCachePath(file1, localCacheDir, id)
+        then:
+        cache3 == cache1
+        cache3 != file1
+        cache3.text == file1.text
+
+        when:
+        def cache4 = FileHelper.getLocalCachePath(dir1, localCacheDir, id)
+        then:
+        Files.isDirectory(cache4)
+        cache4 != dir1
+        cache4.getName() == dir1.getName()
+        cache4.resolve('file3').text == file3.text
+        cache4.resolve('file4').text == file4.text
+
+        cleanup:
+        testFolder?.deleteDir()
+        localCacheDir?.deleteDir()
+    }
 
 
 }
