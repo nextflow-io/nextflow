@@ -401,13 +401,15 @@ class FilesExtensionsTest extends Specification {
         def path5 = sub1.resolve('file5')
         path1.text = 'Hello1'
         path2.text = 'Hello2'
-        path3.text = 'Hello3'
+        Files.createSymbolicLink(path3, path2)
         path4.text = 'Hello4'
         path5.text = 'Hello5'
 
         when:
         def files = sourceFolder.toFile().listFiles()
         def paths = sourceFolder.listFiles()
+        def strings1 = sourceFolder.toFile().list()
+        def strings2 = sourceFolder.list()
 
         then:
         files.size() == 4
@@ -421,6 +423,9 @@ class FilesExtensionsTest extends Specification {
         paths.contains path2
         paths.contains path3
         paths.contains sub1
+
+        strings1.size() == 4
+        strings1.sort() == strings2.sort()
 
         expect:
         path1.toFile().listFiles() == null
