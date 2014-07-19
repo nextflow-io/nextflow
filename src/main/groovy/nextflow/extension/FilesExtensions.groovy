@@ -554,7 +554,7 @@ class FilesExtensions {
      * @return A list of strings or {@code null} if the path is not a folder
      */
     def static String[] list(Path self) {
-        listFiles(self).collect { self.toString() } as String[]
+        listFiles(self).collect { it.getName() } as String[]
     }
 
     /**
