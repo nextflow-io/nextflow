@@ -150,8 +150,8 @@ class BashWrapperBuilder {
         final ENDL = '\n'
         def wrapper = new StringBuilder()
         wrapper << '#!/bin/bash -Eeu' << ENDL
-        wrapper << 'trap onexit 1 2 3 15 ERR' << ENDL
-        wrapper << 'function onexit() { local exit_status=${1:-$?}; printf $exit_status > ' << exitedFile.toString()
+        wrapper << 'trap on_exit 1 2 3 15 ERR TERM USR1 USR2' << ENDL
+        wrapper << 'function on_exit() { local exit_status=${1:-$?}; printf $exit_status > ' << exitedFile.toString()
         wrapper << '; exit $exit_status; }' << ENDL
         wrapper << 'touch ' << startedFile.toString() << ENDL
 
@@ -206,7 +206,7 @@ class BashWrapperBuilder {
             wrapper << unstaging << ENDL
         }
 
-        wrapper << 'onexit' << ENDL
+        wrapper << 'on_exit' << ENDL
 
         wrapperFile.text = wrapperScript = wrapper.toString()
         return wrapperFile

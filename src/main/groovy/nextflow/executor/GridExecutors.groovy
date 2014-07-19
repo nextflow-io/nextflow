@@ -514,6 +514,11 @@ class SgeExecutor extends AbstractGridExecutor {
         result << '-j' << 'y'
         result << '-terse'
         result << '-V'
+        /*
+         * By using command line option -notify SIGUSR1 will be sent to your script prior to SIGSTOP
+         * and SIGUSR2 will be sent to your script prior to SIGKILL
+         */
+        result << '-notify'
 
         // the requested queue name
         if( taskConfig.queue ) {
