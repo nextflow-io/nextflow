@@ -1,6 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.8.4 - 20 Jul 2014
+- Upgrade to Groovy 2.3.4
+- Fixed method Path.list()
+- Added '-notify' option to SGE qsub command to handle killed jobs correctly
+
 0.8.3 - 27 Jun 2014 
 - Added support for Modules package maages
 - Fixed issue #1 - process hung when only a parameter of type 'each' is defined
