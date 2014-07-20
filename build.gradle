@@ -383,11 +383,13 @@ task publish(type: Exec) {
  */
 task release(type: Exec, dependsOn: [ test, packAll, makeSha1 ]) {
 
-    def file0 = file('nextflow').absoluteFile
-    def file1 = file("$buildDir/libs/nextflow-${version}-one.jar").absoluteFile
-    def file2 = file("$buildDir/libs/nextflow-${version}-dx.jar").absoluteFile
-    def file3 = file("$buildDir/libs/nextflow-${version}-hz.jar").absoluteFile
-    def file4 = file("$buildDir/libs/nextflow-${version}-gg.jar").absoluteFile
+    def files = []
+    files[0] = file('nextflow').absoluteFile
+    files[1] = file('nextflow.sha1').absoluteFile
+
+    ['one','dx','hz','gg'].each{
+        files << file("$buildDir/libs/nextflow-${version}-${it}.jar").absoluteFile
+    }
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
@@ -396,17 +398,14 @@ task release(type: Exec, dependsOn: [ test, packAll, makeSha1 ]) {
     git push || exit \$?
     (git tag -a v$version -m 'Tagging version $version [release]' -f && git push origin v$version -f) || exit \$?
     github-release release -u nextflow-io -r nextflow -t v$version --pre-release
-    github-release upload -u nextflow-io -r nextflow -t v$version --file ${file0} --name ${file0.name}
+    github-release upload -u nextflow-io -r nextflow -t v$version --file ${files[0]} --name ${files[0].name}
 
     # upload assets
-    s3cmd put ${file0} s3://www.nextflow.io/releases/v$version/${file0.name} $s3CmdOpts
-    s3cmd put ${file1} s3://www.nextflow.io/releases/v$version/${file1.name} $s3CmdOpts
-    s3cmd put ${file2} s3://www.nextflow.io/releases/v$version/${file2.name} $s3CmdOpts
-    s3cmd put ${file3} s3://www.nextflow.io/releases/v$version/${file3.name} $s3CmdOpts
-    s3cmd put ${file4} s3://www.nextflow.io/releases/v$version/${file4.name} $s3CmdOpts
+    ${ files.collect { "s3cmd put ${it} s3://www.nextflow.io/releases/v${version}/${it.name} ${s3CmdOpts}"}.join('\n') }
 
     # publish the script as the latest
-    s3cmd put ${file0} s3://www.nextflow.io/releases/latest/nextflow $s3CmdOpts
+    s3cmd put ${files[0]} s3://www.nextflow.io/releases/latest/nextflow $s3CmdOpts
+    s3cmd put ${files[1]} s3://www.nextflow.io/releases/latest/nextflow.sha1 $s3CmdOpts
 
     """.stripIndent()
 
