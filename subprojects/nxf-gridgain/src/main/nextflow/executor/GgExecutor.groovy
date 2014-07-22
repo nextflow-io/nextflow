@@ -19,10 +19,10 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Files
 import java.nio.file.Path
 
-import groovy.io.FileType
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
@@ -38,7 +38,7 @@ import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.script.ScriptType
 import nextflow.util.Duration
-import nextflow.util.FileHelper
+import nextflow.file.FileHelper
 import nextflow.util.InputStreamDeserializer
 import nextflow.util.KryoHelper
 import org.apache.commons.lang.SerializationUtils
@@ -199,12 +199,8 @@ class GgTaskHandler extends TaskHandler {
 
         // submit to an hazelcast node for execution
         final sessionId = task.processor.session.uniqueId
-        if( type == ScriptType.SCRIPTLET ) {
-            future = executor.execute( new GgBashTask(task,sessionId) )
-        }
-        else {
-            future = executor.execute( new GgClosureTask(task,sessionId) )
-        }
+        final remoteTask = ( type == ScriptType.SCRIPTLET ) ? new GgBashTask(task,sessionId) : new GgClosureTask(task,sessionId)
+        future = executor.execute( remoteTask )
 
         future.listenAsync( { executor.getTaskMonitor().signalComplete(); } as GridInClosure )
 
@@ -407,7 +403,7 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
         for( Map.Entry<String,Path> entry : inputFiles.entrySet() ) {
             final name = entry.key
             final source = entry.value
-            final cached = FileHelper.getLocalCachePath(source,localCacheDir, sessionId)
+            final cached = FileHelper.getLocalCachePath(source, localCacheDir, sessionId)
             final staged = scratchDir.resolve(name)
             log?.debug "Task $name > staging path: '${source}' to: '$staged'"
             Files.createSymbolicLink(staged, cached)
@@ -431,7 +427,7 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
 
         for( String name : outputFiles ) {
             try {
-                copyToTargetDir(name)
+                copyToTargetDir(name, scratchDir, targetDir)
             }
             catch( IOException e ) {
                 log.error("Unable to copy result file: $name to target dir", e)
@@ -444,25 +440,16 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
      * Copy the file with the specified name from the task execution folder
      * to the {@code targetDir}
      *
-     * @param fileName A file name relative to the {@code scratchDir}.
-     *        It can contain the {@code *} and {@code ?} wildcards
+     * @param filePattern A file name relative to the {@code scratchDir}.
+     *        It can contain globs wildcards
      */
-    protected void copyToTargetDir( String fileName ) {
-
-        // TODO keep this aligned with "Executor#collectResultFile"
-
-        String filePattern = fileName.replace("?", ".?").replace("*", ".*")
-
-        // when there's not change in the pattern, try to find a single file
-        if( filePattern == fileName ) {
-            FilesExtensions.copyTo( scratchDir.resolve(fileName), targetDir )
-        }
-        else {
-            scratchDir.eachFileMatch(FileType.ANY, ~/$filePattern/ ) { Path source ->
-                FilesExtensions.copyTo( source, targetDir )
-            }
+    protected void copyToTargetDir( String filePattern, Path from, Path to ) {
+        FileHelper.visitFiles( from, filePattern ) { Path it ->
+            final rel = from.relativize(it)
+            FilesExtensions.copyTo( it, to.resolve(rel) )
         }
     }
+
 
     /**
      * Invoke the task execution. It calls the following methods in this sequence: {@code stage}, {@code execute0} and {@code unstage}
@@ -492,7 +479,7 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
             return result
         }
         catch( Exception e ) {
-            log.error("Cannot execute closure for task > $name", e)
+            log.error("Cannot execute task > $name", e)
             throw new ProcessException(e)
         }
 
@@ -581,7 +568,7 @@ class GgBashTask extends GgBaseTask<Integer>  {
                 environment: environment )
         shell.add( wrapper.build().toString() )
 
-        log.debug "Running task > ${name}\n shell: ${shell.join(' ')}\n workdir: ${scratchDir.toFile()}"
+        log.debug "Running task >\n name: ${name}\n workdir: ${scratchDir.toFile()}"
         ProcessBuilder builder = new ProcessBuilder()
                 .directory(scratchDir.toFile())
                 .command(shell)

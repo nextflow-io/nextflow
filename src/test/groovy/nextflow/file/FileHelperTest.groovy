@@ -18,7 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.util
+package nextflow.file
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -253,6 +253,57 @@ class FileHelperTest extends Specification {
         testFolder?.deleteDir()
         localCacheDir?.deleteDir()
     }
+
+
+    def testVisitFiles() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        folder.resolve('file1.txt').text = 'file 1'
+        folder.resolve('file2.fa').text = 'file 2'
+        Files.createSymbolicLink(folder.resolve('link_file2.fa'), folder.resolve('file2.fa'))
+        folder.resolve('dir1').mkdir()
+        folder.resolve('dir1').resolve('file_3.txt').text = 'file 3'
+        folder.resolve('dir1').resolve('file_4.txt').text = 'file 4'
+        folder.resolve('dir1').resolve('dir2').mkdir()
+
+        when:
+        def result = []
+        FileHelper.visitFiles(folder, 'file1.txt', relative: true) { result << it.toString() }
+        then:
+        result == ['file1.txt']
+
+        when:
+        result = []
+        FileHelper.visitFiles(folder, 'file*', relative: true) { result << it.toString() }
+        then:
+        result.sort() == ['file1.txt', 'file2.fa']
+
+        when:
+        result = []
+        FileHelper.visitFiles(folder, 'dir1/dir2', relative: true) { result << it.toString() }
+        then:
+        result.sort() == ['dir1/dir2']
+
+        when:
+        result = []
+        FileHelper.visitFiles(folder, '**/file_*', relative: true) { result << it.toString() }
+        then:
+        result.sort() == ['dir1/file_3.txt', 'dir1/file_4.txt']
+
+        when:
+        result = []
+        FileHelper.visitFiles(folder, '*.fa', relative: true) { result << it.toString() }
+        then:
+        result.sort() == ['file2.fa', 'link_file2.fa']
+
+        cleanup:
+        folder?.deleteDir()
+
+
+    }
+
 
 
 }

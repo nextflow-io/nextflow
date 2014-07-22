@@ -59,7 +59,7 @@ import nextflow.script.ValueSharedParam
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
-import nextflow.util.FileHelper
+import nextflow.file.FileHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>

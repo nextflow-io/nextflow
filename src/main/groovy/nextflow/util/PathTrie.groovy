@@ -20,6 +20,9 @@
 
 package nextflow.util
 import java.nio.file.Path
+
+import nextflow.file.FileHelper
+
 /**
  * A trie data structure specialised to find the longest common paths
  * in a given list of paths

@@ -22,6 +22,8 @@ package nextflow.extension
 
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
+import java.nio.file.FileAlreadyExistsException
+import java.nio.file.FileVisitOption
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.LinkOption
@@ -39,7 +41,7 @@ import java.nio.file.attribute.PosixFilePermissions
 import groovy.transform.PackageScope
 import nextflow.util.ByteBufferBackedInputStream
 import nextflow.util.CharsetHelper
-import nextflow.util.FileHelper
+import nextflow.file.FileHelper
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -162,6 +164,26 @@ class FilesExtensions {
         assert target
 
         if( source.isDirectory() ) {
+            boolean targetExists
+            boolean targetIsDirectory
+            try {
+                targetIsDirectory = Files.readAttributes(target, BasicFileAttributes).isDirectory()
+                targetExists = true
+            }
+            catch( Exception e ) {
+                targetExists = false
+                targetIsDirectory = false
+            }
+
+            // when the target path is a directory
+            // copy the source path into the target folder
+            if( targetIsDirectory )
+                return copyDirectory(source, target.resolve(source.getFileName()))
+
+            // otherwise it is a file => we cannot write a directory with the same name
+            if( targetExists )
+                throw new FileAlreadyExistsException("Copy copy directory -- A file with the same name already exists: $target")
+
             def parent = target.getParent()
             if( parent && !parent.exists() ) parent.mkdirs()
             return copyDirectory(source,target)
@@ -190,7 +212,7 @@ class FilesExtensions {
             throws IOException
             {
                 // get the *delta* path against the source path
-                def delta = source.relativize(current)
+                def delta = source.relativize(current)?.toString()
                 def newFolder = delta ? target.resolve(delta) : target
                 FilesExtensions.log.trace "Copy DIR: $current -> $newFolder"
                 if( !newFolder.exists() ) {
@@ -204,7 +226,7 @@ class FilesExtensions {
             throws IOException
             {
                 // get the *delta* path against the source path
-                def delta = source.relativize(current)
+                def delta = source.relativize(current)?.toString()
                 def newFile = delta ? target.resolve(delta) : target
                 FilesExtensions.log.trace "Copy file: $current -> $newFile"
                 Files.copy(current, newFile, StandardCopyOption.REPLACE_EXISTING)
@@ -213,7 +235,7 @@ class FilesExtensions {
 
         }
 
-        Files.walkFileTree(source, visitor)
+        Files.walkFileTree(source, EnumSet.of(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE, visitor)
         return target
     }
 
@@ -536,6 +558,10 @@ class FilesExtensions {
 
     def static boolean isFile(Path self, LinkOption...options) {
         Files.isRegularFile(self,options)
+    }
+
+    def static boolean isSymlink(Path self) {
+        Files.isSymbolicLink(self)
     }
 
     def static boolean renameTo(Path self, Path target) {
@@ -1218,6 +1244,17 @@ class FilesExtensions {
 
         return result
     }
+//
+//    static Path minus( Path self, Path other ) {
+//        self.relativize(other)
+//    }
+//
+//    static Path minus( Path self, String other ) {
+//        def x = self.getFileSystem().getPath(other)
+//        println x.class
+//        println self.class
+//        self.relativize(x)
+//    }
 
     static Path or( Path path, String other ) {
         path.resolveSibling(other)
@@ -1262,4 +1299,27 @@ class FilesExtensions {
 
     }
 
+    static void symlinkTo( Path self, Path existing ) {
+        Files.createSymbolicLink(self, existing)
+    }
+
+    static void symlinkTo( Path self, File existing ) {
+        Files.createSymbolicLink(self, existing.toPath())
+    }
+
+    static void symlinkTo( Path self, String existing ) {
+        Files.createSymbolicLink(self, self.getFileSystem().getPath(existing))
+    }
+
+    static void linkTo( Path self, Path existing ) {
+        Files.createLink(self, existing)
+    }
+
+    static void linkTo( Path self, File existing ) {
+        Files.createLink(self, existing.toPath())
+    }
+
+    static void linkTo( Path self, String existing ) {
+        Files.createLink(self, self.getFileSystem().getPath(existing))
+    }
 }

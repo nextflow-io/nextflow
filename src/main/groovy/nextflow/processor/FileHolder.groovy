@@ -24,7 +24,7 @@ import java.nio.file.Path
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.transform.ToString
-import nextflow.util.FileHelper
+import nextflow.file.FileHelper
 /**
  * Implements a special {@code Path} used to stage files in the work area
  */

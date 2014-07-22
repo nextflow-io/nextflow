@@ -30,6 +30,7 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import groovy.util.logging.Slf4j
+import nextflow.file.FileHelper
 import org.codehaus.groovy.runtime.GStringImpl
 /**
  * Helper class to get a {@code Kryo} object ready to be used

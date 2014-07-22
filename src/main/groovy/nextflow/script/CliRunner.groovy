@@ -44,7 +44,6 @@ import nextflow.exception.InvalidArgumentException
 import nextflow.exception.InvalidScriptNameException
 import nextflow.executor.ServiceName
 import nextflow.util.ConfigHelper
-import nextflow.util.FileHelper
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import nextflow.util.ServiceDiscover

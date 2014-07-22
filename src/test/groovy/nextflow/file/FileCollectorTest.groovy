@@ -18,7 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.util
+package nextflow.file
 import java.nio.file.Files
 
 import spock.lang.Specification

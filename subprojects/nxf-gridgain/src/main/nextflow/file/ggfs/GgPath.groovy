@@ -59,6 +59,13 @@ class GgPath implements Path {
         delegate = Paths.get(name,more)
     }
 
+    private Path unwrap( Path other ) {
+        if( other )
+            return other instanceof GgPath ? other.delegate : delegate.getFileSystem().getPath(other.toString())
+        else
+            return null
+    }
+
     @Override
     GgFileSystem getFileSystem() {
         return fileSystem
@@ -101,7 +108,7 @@ class GgPath implements Path {
 
     @Override
     boolean startsWith(Path other) {
-        delegate.startsWith((other as GgPath).delegate)
+        delegate.startsWith(unwrap(other))
     }
 
     @Override
@@ -111,7 +118,7 @@ class GgPath implements Path {
 
     @Override
     boolean endsWith(Path other) {
-        delegate.endsWith((other as GgPath).delegate)
+        delegate.endsWith(unwrap(other))
     }
 
     @Override
@@ -126,7 +133,7 @@ class GgPath implements Path {
 
     @Override
     GgPath resolve(Path other) {
-        new GgPath(fileSystem, delegate.resolve((other as GgPath).delegate).toString())
+        new GgPath(fileSystem, delegate.resolve(unwrap(other)).toString())
     }
 
     @Override
@@ -136,7 +143,7 @@ class GgPath implements Path {
 
     @Override
     GgPath resolveSibling(Path other) {
-        new GgPath(fileSystem, delegate.resolveSibling((other as GgPath).delegate).toString())
+        new GgPath(fileSystem, delegate.resolveSibling(unwrap(other)).toString())
     }
 
     @Override
@@ -146,7 +153,7 @@ class GgPath implements Path {
 
     @Override
     GgPath relativize(Path other) {
-        new GgPath(fileSystem, delegate.relativize((other as GgPath).delegate).toString())
+        new GgPath(fileSystem, delegate.relativize(unwrap(other)).toString())
     }
 
     @Override
@@ -203,7 +210,7 @@ class GgPath implements Path {
 
     @Override
     int compareTo(Path other) {
-        return delegate.compareTo( (other as GgPath).delegate )
+        return delegate.compareTo(unwrap(other))
     }
 
     @Override

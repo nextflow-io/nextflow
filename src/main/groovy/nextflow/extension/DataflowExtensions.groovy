@@ -41,8 +41,8 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.operator.SeparationClosure
 import nextflow.Channel
 import nextflow.Session
-import nextflow.util.FileCollector
-import nextflow.util.FileHelper
+import nextflow.file.FileCollector
+import nextflow.file.FileHelper
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 import org.slf4j.Logger

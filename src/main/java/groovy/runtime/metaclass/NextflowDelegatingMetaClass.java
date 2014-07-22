@@ -12,7 +12,7 @@ import groovy.lang.MissingMethodException;
 import groovyx.gpars.dataflow.DataflowReadChannel;
 import groovyx.gpars.dataflow.DataflowWriteChannel;
 import nextflow.splitter.SplitterFactory;
-import nextflow.util.FileHelper;
+import nextflow.file.FileHelper;
 
 /**
  * Provides the "dynamic" splitter methods and {@code isEmpty} method for {@link File} and {@link Path} classes.

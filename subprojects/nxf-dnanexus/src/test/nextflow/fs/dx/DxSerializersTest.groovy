@@ -22,7 +22,7 @@ package nextflow.fs.dx
 import java.nio.file.Paths
 
 import nextflow.fs.dx.api.DxApi
-import nextflow.util.FileHelper
+import nextflow.file.FileHelper
 import nextflow.util.KryoHelper
 import nextflow.util.PathSerializer
 import org.weakref.s3fs.S3Path

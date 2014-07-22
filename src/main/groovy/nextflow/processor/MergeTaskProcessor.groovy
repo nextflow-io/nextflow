@@ -38,7 +38,7 @@ import nextflow.script.StdInParam
 import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
 import nextflow.util.DockerBuilder
-import nextflow.util.FileHelper
+import nextflow.file.FileHelper
 /**
  * Defines the 'merge' processing policy
  *

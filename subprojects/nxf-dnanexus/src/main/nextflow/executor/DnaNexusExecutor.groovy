@@ -40,7 +40,7 @@ import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
-import nextflow.util.FileHelper
+import nextflow.file.FileHelper
 import nextflow.util.KryoHelper
 import nextflow.util.PathSerializer
 import org.weakref.s3fs.S3Path

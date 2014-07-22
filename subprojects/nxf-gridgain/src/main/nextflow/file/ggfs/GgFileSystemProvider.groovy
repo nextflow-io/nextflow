@@ -525,7 +525,11 @@ class GgFileSystemProvider extends FileSystemProvider {
      */
     @Override
     def <V extends BasicFileAttributes> V readAttributes(Path obj, Class<V> type, LinkOption... options) throws IOException {
-        new GgFileAttributes( (obj as GgPath).nativeReadAttributes() )
+        def attrs = (obj as GgPath).nativeReadAttributes()
+        if( attrs )
+            return (V)new GgFileAttributes(attrs)
+        else
+            throw new NoSuchFileException("Cannot read attributes for file: $obj")
     }
 
     /**

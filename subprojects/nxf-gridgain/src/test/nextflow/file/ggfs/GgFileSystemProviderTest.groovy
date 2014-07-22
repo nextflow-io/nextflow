@@ -27,9 +27,10 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.spi.FileSystemProvider
 
 import nextflow.Session
+import nextflow.extension.FilesExtensions
 import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
-import nextflow.util.FileHelper
+import nextflow.file.FileHelper
 import org.apache.commons.io.IOUtils
 import org.gridgain.grid.GridGain
 import org.gridgain.grid.logger.slf4j.GridSlf4jLogger
@@ -101,7 +102,7 @@ class GgFileSystemProviderTest extends Specification {
     static rnd = new Random()
 
     def rndName( String prefix = 'file') {
-        prefix + rnd.nextInt(1000)
+        prefix + rnd.nextInt(10_000)
     }
 
     def testFileCreate() {
@@ -156,7 +157,7 @@ class GgFileSystemProviderTest extends Specification {
     def testFileCopy2() {
 
         given:
-        def path1 = Files.createTempFile('testfile',null)
+        def path1 = Files.createTempFile('test',null)
         def path2 = new GgPath(fs, rndName('/x/y/z/file') )
         path1.text = 'Hello'
 
@@ -171,6 +172,28 @@ class GgFileSystemProviderTest extends Specification {
 
         cleanup:
         path1?.delete()
+
+    }
+
+    def testFileCopy3() {
+        given:
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('file1').text = 'Ciao'
+        folder.resolve('file2').text = 'Hello'
+        folder.resolve('sub_dir').mkdir()
+        folder.resolve('sub_dir').resolve('file3').text = 'Hola'
+
+        def target =  new GgPath(fs, rndName('/test-folder') )
+
+        when:
+        def result = FilesExtensions.copyTo(folder, target)
+        then:
+        result.resolve('file1').text == 'Ciao'
+        result.resolve('file2').text == 'Hello'
+        result.resolve('sub_dir').resolve('file3').text == 'Hola'
+
+        cleanup:
+        folder?.deleteDir()
 
     }
 

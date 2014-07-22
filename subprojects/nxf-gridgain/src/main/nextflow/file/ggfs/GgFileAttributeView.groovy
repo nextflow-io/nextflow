@@ -20,6 +20,7 @@
 
 package nextflow.file.ggfs
 
+import java.nio.file.NoSuchFileException
 import java.nio.file.attribute.BasicFileAttributeView
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
@@ -58,7 +59,11 @@ class GgFileAttributeView implements BasicFileAttributeView {
      */
     @Override
     public BasicFileAttributes readAttributes() throws IOException {
-        new GgFileAttributes( path.nativeReadAttributes() )
+        def attrs = path.nativeReadAttributes()
+        if( attrs )
+            return new GgFileAttributes(attrs)
+        else
+            throw new NoSuchFileException("Cannot read attributes for file: $path")
     }
 
 

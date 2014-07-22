@@ -43,6 +43,7 @@ import groovyx.gpars.dataflow.operator.ControlMessage
 import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.util.CheckHelper
 import nextflow.util.Duration
+import nextflow.file.FileHelper
 import org.codehaus.groovy.runtime.NullObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -54,8 +55,6 @@ import org.slf4j.LoggerFactory
 class Channel {
 
     private static final Logger log = LoggerFactory.getLogger(Channel)
-
-    private static final Pattern GLOB_FILE_BRACKETS = Pattern.compile(/(.*)(\{.+,.+\})(.*)/)
 
     static ControlMessage STOP = PoisonPill.getInstance()
 
@@ -164,12 +163,7 @@ class Channel {
 
         assert filePattern
 
-        boolean glob  = false
-        glob |= filePattern.contains('*')
-        glob |= filePattern.contains('?')
-        glob = glob || GLOB_FILE_BRACKETS.matcher(filePattern).matches()
-
-        if( !glob ) {
+        if( !FileHelper.isGlobPattern(filePattern)) {
             return from( filePattern as Path )
         }
 
@@ -230,7 +224,7 @@ class Channel {
         // now apply glob file search
         def path = folder as Path
         def rule = "$syntax:${folder}${pattern}"
-        def matcher = path.getFileSystem().getPathMatcher(rule)
+        def matcher = FileHelper.getPathMatcherFor(rule, path.fileSystem)
         def channel = new DataflowQueue<Path>()
         boolean includeDir = type in ['dir','any']
         boolean includeFile = type in ['file','any']
@@ -285,7 +279,7 @@ class Channel {
         if( p != -1 ) {
             i = filePattern.substring(0,p).lastIndexOf('/')
         }
-        else if( (matcher=GLOB_FILE_BRACKETS.matcher(filePattern)).matches() ) {
+        else if( (matcher=FileHelper.GLOB_FILE_BRACKETS.matcher(filePattern)).matches() ) {
             def prefix = matcher.group(1)
             if( prefix ) {
                 i = prefix.contains('/') ? prefix.lastIndexOf('/') : -1
@@ -330,7 +324,7 @@ class Channel {
         }
 
         final rule = "$syntax:${folder}${pattern}"
-        final matcher = path.getFileSystem().getPathMatcher(rule)
+        final matcher = FileHelper.getPathMatcherFor(rule, path.fileSystem)
         final eventsToWatch = stringToWatchEvents(events)
 
         Thread.start {

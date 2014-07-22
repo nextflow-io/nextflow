@@ -41,29 +41,48 @@ class GgExecutorTest extends Specification {
     def testCopyToTarget() {
 
         given:
-        def targetDir = Files.createTempDirectory('store-dir')
+        def targetDir = Files.createTempDirectory('target')
+        def scratchDir = Files.createTempDirectory('source')
 
-        def task = [ getTargetDir:{ targetDir } ] as GgBaseTask
-        task.scratchDir = Files.createTempDirectory('just-a-dir')
-        task.scratchDir.resolve('file1').text = 'file 1'
-        task.scratchDir.resolve('file_x_1').text = 'x 1'
-        task.scratchDir.resolve('file_x_2').text = 'x 2'
-        task.scratchDir.resolve('file_z_3').text = 'z 3'
+        def task = [:] as GgBaseTask
+        scratchDir.resolve('file1').text = 'file 1'
+        scratchDir.resolve('file_x_1').text = 'x 1'
+        scratchDir.resolve('file_x_2').text = 'x 2'
+        scratchDir.resolve('file_z_3').text = 'z 3'
+        scratchDir.resolve('dir_a').resolve('dir_b').mkdirs()
+        scratchDir.resolve('dir_a').resolve('dir_b').resolve('alpha.txt').text = 'aaa'
+        scratchDir.resolve('dir_a').resolve('dir_b').resolve('beta.txt').text = 'bbb'
 
+        /*
+         * copy a single file
+         */
         when:
-        task.copyToTargetDir('file1')
+        task.copyToTargetDir('file1', scratchDir, targetDir)
         then:
         targetDir.resolve('file1').text == 'file 1'
 
+        /*
+         * copy multiple files with wildcards
+         */
         when:
-        task.copyToTargetDir('file_x*')
+        task.copyToTargetDir('file_x*', scratchDir, targetDir)
         then:
         targetDir.resolve('file_x_1').text == 'x 1'
         targetDir.resolve('file_x_2').text == 'x 2'
         !targetDir.resolve('file_z_3').exists()
 
+        /*
+         * copy a directory maintaining relative paths
+         */
+        when:
+        task.copyToTargetDir('dir_a/dir_b', scratchDir, targetDir)
+        then:
+        targetDir.resolve('dir_a/dir_b/alpha.txt').text == 'aaa'
+        targetDir.resolve('dir_a/dir_b/beta.txt').text == 'bbb'
+
         cleanup:
-        task?.scratchDir?.deleteDir()
+        targetDir?.deleteDir()
+        scratchDir?.deleteDir()
     }
 
 

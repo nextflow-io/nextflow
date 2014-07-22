@@ -27,7 +27,7 @@ import nextflow.file.ggfs.GgFileSystemProvider
 import nextflow.file.ggfs.GgPath
 import nextflow.processor.TaskPollingMonitor
 import nextflow.util.Duration
-import nextflow.util.FileHelper
+import nextflow.file.FileHelper
 import nextflow.util.KryoHelper
 import nextflow.util.PathSerializer
 import nextflow.util.RemoteSession

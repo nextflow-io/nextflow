@@ -31,7 +31,7 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
 import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import nextflow.util.ChannelListProxy
-import nextflow.util.FileHelper
+import nextflow.file.FileHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>

@@ -18,7 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.file.ggfs;
+package nextflow.file;
 
 /**
  * NOTE: This source has been included under the GPL "Fair Use" clause.

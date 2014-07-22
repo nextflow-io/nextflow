@@ -106,7 +106,7 @@ class FilesExtensionsTest extends Specification {
 
     }
 
-    def 'test copyTo' () {
+    def testCopyTo () {
 
         setup:
         def source = File.createTempFile('test','source')
@@ -119,7 +119,7 @@ class FilesExtensionsTest extends Specification {
         source.exists()
 
         when:
-        def folder = Files.createTempDirectory('testCopyTo').toFile()
+        def folder = Files.createTempDirectory('test').toFile()
         def copy2 = source.copyTo(folder)
         then:
         copy2.text == 'Hello'
@@ -130,32 +130,6 @@ class FilesExtensionsTest extends Specification {
         source?.delete()
         copy?.delete()
         folder?.deleteDir()
-    }
-
-    def 'test copy source directory (file) to target directory' () {
-
-        when:
-        def sourceFolder =  Files.createTempDirectory('folderToCopy').toFile()
-        def path1 = new File(sourceFolder, 'file1')
-        def path2 = new File(sourceFolder, 'file2')
-        def path3 = new File(sourceFolder, 'file3')
-        path1.text = 'Hello1'
-        path2.text = 'Hello2'
-        path3.text = 'Hello3'
-        def target = Files.createTempDirectory('targetFolder').resolve('xxx').toFile()
-        // try to copy the source folder to the target
-        sourceFolder.copyTo(target)
-
-        then:
-        new File(target, 'file1').text == 'Hello1'
-        new File(target, 'file2').text == 'Hello2'
-        new File(target, 'file3').text == 'Hello3'
-        !new File(target, 'file4').exists()
-
-        cleanup:
-        sourceFolder?.deleteDir()
-        target?.deleteDir()
-
     }
 
 
@@ -185,31 +159,91 @@ class FilesExtensionsTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'test copy source directory (path) to another directory' () {
+    def 'test copyTo directory with symlinks'  () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        Files.createDirectories(folder.resolve('myFiles'))
+        folder.resolve('myFiles').resolve('file1').text = 'Hello'
+        folder.resolve('myFiles').resolve('file2').text = 'Hola'
+
+        Files.createSymbolicLink( folder.resolve('linkDir'), folder.resolve('myFiles') )
 
         when:
-        def sourceFolder =  Files.createTempDirectory('folderToCopy')
-        def path1 = sourceFolder.resolve('file1')
-        def path2 = sourceFolder.resolve('file2')
-        def path3 = sourceFolder.resolve('file3')
-        def sub1 = Files.createTempDirectory(sourceFolder, 'sub1')
-        def path4 = sub1.resolve('file4')
-        path1.text = 'Hello1'
-        path2.text = 'Hello2'
-        path3.text = 'Hello3'
-        path4.text = 'Hello4'
-        def targetFolder = Files.createTempDirectory('targetFolder')
-        // try to copy the source folder to the target
-        sourceFolder.copyTo(targetFolder)
+        FilesExtensions.copyTo(folder.resolve('linkDir'), folder.resolve('target'))
+
         then:
-        targetFolder.resolve('file1').text == 'Hello1'
-        targetFolder.resolve('file2').text == 'Hello2'
-        targetFolder.resolve('file3').text == 'Hello3'
-        targetFolder.resolve(sub1.getName()).resolve('file4').text == 'Hello4'
+        Files.isDirectory(folder.resolve('target'))
+        folder.resolve('target').resolve('file1').text == 'Hello'
+        folder.resolve('target').resolve('file2').text == 'Hola'
 
         cleanup:
-        sourceFolder.deleteDir()
-        targetFolder.deleteDir()
+        folder?.deleteDir()
+
+    }
+
+    def 'test copy source dir to existing dir'  () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('alpha').mkdir()
+        folder.resolve('alpha/file_1.txt').text = 'file 1'
+        folder.resolve('alpha/file_2.txt').text = 'file 2'
+        folder.resolve('alpha/link_3.txt').symlinkTo(folder.resolve('alpha/file_2.txt'))
+
+        folder.resolve('alpha/dir2').mkdir()
+        folder.resolve('alpha/dir2/file_4').text = 'Hello'
+        folder.resolve('alpha/dir2/file_5').text = 'Hola'
+
+        /*
+         * copy the dir 'alpha' with all its content to 'beta' directory
+         * => beta will contain the 'alpha' dir
+         */
+        when:
+        folder.resolve('beta').mkdir()
+        FilesExtensions.copyTo(folder.resolve('alpha'), folder.resolve('beta'))
+        then:
+        folder.resolve('beta').isDirectory()
+        folder.resolve('beta/alpha').isDirectory()
+        folder.resolve('beta/alpha/file_1.txt').text == 'file 1'
+        folder.resolve('beta/alpha/file_2.txt').text == 'file 2'
+        folder.resolve('beta/alpha/link_3.txt').text == 'file 2'
+        // note: this is coherent with Linux 'cp -r' command i.e. the link target file is copied not the link itself
+        !folder.resolve('beta/alpha/link_3.txt').isSymlink()
+        folder.resolve('beta/alpha/dir2').isDirectory()
+        folder.resolve('beta/alpha/dir2/file_4').text == 'Hello'
+        folder.resolve('beta/alpha/dir2/file_5').text == 'Hola'
+
+        /*
+         * when the 'beta' directory does not exist the source dir content is
+         * copied to it
+         *
+         * note: this is coherent with the cp -r linux command
+         */
+        when:
+        folder.resolve('beta').deleteDir()
+        FilesExtensions.copyTo(folder.resolve('alpha'), folder.resolve('beta'))
+        then:
+        folder.resolve('beta').isDirectory()
+        folder.resolve('beta/file_1.txt').text == 'file 1'
+        folder.resolve('beta/file_2.txt').text == 'file 2'
+        folder.resolve('beta/link_3.txt').text == 'file 2'
+        // note: this is coherent with 'cp -r' linux command i.e. the link target file is copied not the link itself
+        !folder.resolve('beta/link_3.txt').isSymlink()
+        folder.resolve('beta/dir2').isDirectory()
+        folder.resolve('beta/dir2/file_4').text == 'Hello'
+        folder.resolve('beta/dir2/file_5').text == 'Hola'
+
+        when:
+        folder.resolve('beta').deleteDir()
+        FilesExtensions.copyTo(folder.resolve('alpha/dir2'), folder.resolve('beta/alpha/dir2'))
+        then:
+        folder.resolve('beta/alpha/dir2').isDirectory()
+        folder.resolve('beta/alpha/dir2/file_4').text == 'Hello'
+        folder.resolve('beta/alpha/dir2/file_5').text == 'Hola'
+
+        cleanup:
+        folder?.deleteDir()
 
     }
 
@@ -800,6 +834,7 @@ class FilesExtensionsTest extends Specification {
         Paths.get('/some/path/file.txt') -2 == Paths.get('/some')
         Paths.get('/some/path/file.txt') -3 == Paths.get('/')
         Paths.get('/some/path/file.txt') -4 == null
+//        Paths.get('/some/path/file.txt') - 'file.txt' == Paths.get('/some/path')
 
     }
 

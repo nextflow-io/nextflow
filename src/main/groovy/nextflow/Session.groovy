@@ -38,7 +38,7 @@ import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceObserver
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
-import nextflow.util.FileHelper
+import nextflow.file.FileHelper
 
 /**
  * Holds the information on the current execution

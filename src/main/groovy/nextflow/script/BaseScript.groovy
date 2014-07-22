@@ -29,7 +29,7 @@ import nextflow.exception.ProcessScriptException
 import nextflow.processor.ProcessFactory
 import nextflow.processor.TaskProcessor
 import nextflow.util.CacheHelper
-import nextflow.util.FileHelper
+import nextflow.file.FileHelper
 /**
  * Any user defined script will extends this class, it provides the base execution context
  *

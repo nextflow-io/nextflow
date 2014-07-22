@@ -25,7 +25,7 @@ import nextflow.Const
 import nextflow.Session
 import nextflow.util.DaemonConfig
 import nextflow.util.Duration
-import nextflow.util.FileHelper
+import nextflow.file.FileHelper
 import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.reflect.MethodUtils
 import org.gridgain.grid.Grid

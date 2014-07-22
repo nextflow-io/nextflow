@@ -29,7 +29,6 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.regex.Pattern
 
 import groovy.transform.TupleConstructor
-import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
 import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowBroadcast
@@ -48,7 +47,7 @@ import nextflow.splitter.FastaSplitter
 import nextflow.splitter.StringSplitter
 import nextflow.splitter.TextSplitter
 import nextflow.util.Duration
-import nextflow.util.FileHelper
+import nextflow.file.FileHelper
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.codehaus.groovy.runtime.ResourceGroovyMethods

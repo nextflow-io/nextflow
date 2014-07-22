@@ -18,16 +18,22 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.util
+package nextflow.file
 import java.lang.reflect.Field
 import java.nio.file.FileSystem
 import java.nio.file.FileSystemNotFoundException
 import java.nio.file.FileSystems
+import java.nio.file.FileVisitOption
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.PathMatcher
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.spi.FileSystemProvider
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
+import java.util.regex.Pattern
 
 import embed.com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
@@ -37,6 +43,8 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.extension.FilesExtensions
 import nextflow.extension.NextflowExtensions
+import nextflow.util.CacheHelper
+
 /**
  * Provides some helper method handling files
  *
@@ -45,6 +53,8 @@ import nextflow.extension.NextflowExtensions
 @Slf4j
 @CompileStatic
 class FileHelper {
+
+    static final Pattern GLOB_FILE_BRACKETS = Pattern.compile(/(.*)(\{.+,.+\})(.*)/)
 
     static private Random rndGen = new Random()
 
@@ -158,25 +168,20 @@ class FileHelper {
      */
     def static boolean empty( File file ) {
         assert file
-
-        if( !file.exists() ) {
-            return true
-        }
-
-        if ( file.isDirectory() ) {
-            file.list()?.size()==0
-        }
-        else {
-            file.size()==0
-        }
+        empty(file.toPath())
     }
 
     def static boolean empty( Path path ) {
-        if( !Files.exists(path) ) {
-            return true
+
+        def attrs
+        try {
+            attrs = Files.readAttributes(path, BasicFileAttributes.class)
+        }
+        catch (IOException e) {
+            return true;
         }
 
-        if ( Files.isDirectory(path) ) {
+        if ( attrs.isDirectory() ) {
             def stream = Files.newDirectoryStream(path)
             try {
                 Iterator<Path> itr = stream.iterator()
@@ -187,8 +192,9 @@ class FileHelper {
             }
         }
         else {
-            Files.size(path)==0
+            return attrs.size() == 0
         }
+
     }
 
     /**
@@ -377,7 +383,7 @@ class FileHelper {
         final key = sessionId ? [sessionId, sourcePath] : sourcePath
         final hash = CacheHelper.hasher(key).hash()
 
-        final cached = getWorkFolder(cacheDir, hash).resolve(sourcePath.getFileName())
+        final cached = getWorkFolder(cacheDir, hash).resolve(sourcePath.getFileName().toString())
         if( Files.exists(cached) )
             return cached
 
@@ -387,6 +393,134 @@ class FileHelper {
 
             return FilesExtensions.copyTo(sourcePath, cached)
         }
+    }
+
+    /**
+     * Whenever the specified string is a glob file pattern
+     *
+     * @link  http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
+     *
+     * @param filePattern
+     * @return
+     */
+    static isGlobPattern( String filePattern ) {
+        assert filePattern
+        boolean glob  = false
+        glob |= filePattern.contains('*')
+        glob |= filePattern.contains('?')
+        return glob || GLOB_FILE_BRACKETS.matcher(filePattern).matches()
+    }
+
+    /**
+     * Returns a {@code PathMatcher} that performs match operations on the
+     * {@code String} representation of {@link Path} objects by interpreting a
+     * given pattern.
+     *
+     * @see FileSystem#getPathMatcher(java.lang.String)
+     *
+     * @param syntaxAndInput
+     * @return
+     */
+    static PathMatcher getDefaultPathMatcher(String syntaxAndInput) {
+
+        int pos = syntaxAndInput.indexOf(':');
+        if (pos <= 0 || pos == syntaxAndInput.length())
+            throw new IllegalArgumentException();
+
+        String syntax = syntaxAndInput.substring(0, pos);
+        String input = syntaxAndInput.substring(pos+1);
+
+        String expr;
+        if (syntax == 'glob') {
+            expr = Globs.toUnixRegexPattern(input);
+        }
+        else if (syntax == 'regex' ) {
+            expr = input;
+        }
+        else {
+            throw new UnsupportedOperationException("Syntax '$syntax' not recognized");
+        }
+
+        // return matcher
+        final Pattern pattern = Pattern.compile(expr);
+        return new PathMatcher() {
+            @Override
+            public boolean matches(Path path) {
+                return pattern.matcher(path.toString()).matches();
+            }
+        };
+    }
+
+    /**
+     * Get a path matcher for the specified file system and file pattern.
+     *
+     * It tries to get the matcher returned by {@link FileSystem#getPathMatcher} and
+     * falling back to {@link #getDefaultPathMatcher(java.lang.String)} when it return a null or an {@link UnsupportedOperationException}
+     *
+     * @param fileSystem
+     * @param syntaxAndPattern
+     * @return A {@link PathMatcher} instance for the specified file pattern
+     */
+    static PathMatcher getPathMatcherFor(String syntaxAndPattern, FileSystem fileSystem ) {
+        assert fileSystem
+        assert syntaxAndPattern
+
+        PathMatcher matcher
+        try {
+            matcher = fileSystem.getPathMatcher(syntaxAndPattern)
+        }
+        catch( UnsupportedOperationException e ) {
+            matcher = null
+        }
+
+        if( !matcher ) {
+            log.debug "Path matcher not defined by '${fileSystem.class.simpleName}' file system -- using default default strategy"
+            matcher = getDefaultPathMatcher(syntaxAndPattern)
+        }
+
+        return matcher
+    }
+
+
+    /**
+     * Applies the specified action on one or more files and directories matching the specified glob pattern
+     * @param folder
+     * @param filePattern
+     * @param action
+     */
+    static void visitFiles( Map options = null, Path folder, String filePattern, Closure action ) {
+        assert folder
+        assert filePattern
+        assert action
+
+        def matcher = getPathMatcherFor("glob:${folder.resolve(filePattern)}", folder.fileSystem)
+        def singleParam = action.getMaximumNumberOfParameters() == 1
+        def relative = options?.relative == true
+
+        Files.walkFileTree(folder, EnumSet.of(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
+
+            @Override
+            public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
+                log.trace "visitFile: $path "
+                if( matcher.matches(path) ) {
+                    def result = relative ? folder.relativize(path) : path
+                    singleParam ? action.call(result) : action.call(result,attrs)
+                }
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) throws IOException {
+                log.trace "visitDir : $path"
+                if( matcher.matches(path) ) {
+                    def result = relative ? folder.relativize(path) : path
+                    singleParam ? action.call(result) : action.call(result,attrs)
+                }
+                return FileVisitResult.CONTINUE;
+            }
+
+        })
+
     }
 
 
