@@ -37,9 +37,9 @@ class DockerBuilderTest extends Specification {
         def real = [ Paths.get('/user/yo/nextflow/bin'), Paths.get('/user/yo/nextflow/work'), Paths.get('/db/pdb/local/data') ]
 
         expect:
-        DockerBuilder.makeVolumes([]).toString() == '-v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp -v $PWD:$PWD'
-        DockerBuilder.makeVolumes(files).toString() == '-v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp -v /folder:/folder -v $PWD:$PWD'
-        DockerBuilder.makeVolumes(real).toString()  == '-v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp -v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v $PWD:$PWD'
+        DockerBuilder.makeVolumes([]).toString() == '-v $PWD:$PWD'
+        DockerBuilder.makeVolumes(files).toString() == '-v /folder:/folder -v $PWD:$PWD'
+        DockerBuilder.makeVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v $PWD:$PWD'
     }
 
 
@@ -59,14 +59,19 @@ class DockerBuilderTest extends Specification {
         def db_file = Paths.get('/home/db')
 
         expect:
-        new DockerBuilder('fedora').build().toString() == 'docker run --rm -u $(id -u) -v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp -v $PWD:$PWD -w $PWD fedora'
-        new DockerBuilder('fedora').addEnv(envFile).build().toString() == 'docker run --rm -u $(id -u) -e "BASH_ENV=env-file" -v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp -v $PWD:$PWD -w $PWD fedora'
+        new DockerBuilder('fedora').build().toString() == 'docker run -v $PWD:$PWD -w $PWD fedora'
+        new DockerBuilder('fedora').addEnv(envFile).build().toString() == 'docker run -e "BASH_ENV=env-file" -v $PWD:$PWD -w $PWD fedora'
+        new DockerBuilder('ubuntu').params(temp:'/hola').build().toString() == 'docker run -v /hola:/tmp -v $PWD:$PWD -w $PWD ubuntu'
+        new DockerBuilder('ubuntu').params(remove:true).build().toString() == 'docker run --rm -v $PWD:$PWD -w $PWD ubuntu'
+        new DockerBuilder('busybox').params(sudo: true).build().toString() == 'sudo docker run -v $PWD:$PWD -w $PWD busybox'
+        new DockerBuilder('busybox').params(options: '-x --zeta').build().toString() == 'docker run -v $PWD:$PWD -w $PWD -x --zeta busybox'
+        new DockerBuilder('busybox').params(userEmulation:true).build().toString() == 'docker run -u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME -v $PWD:$PWD -w $PWD busybox'
         new DockerBuilder('fedora')
                 .addEnv(envFile)
                 .addMount(db_file)
                 .addMount(db_file) // <-- add twice the same to prove that the final string won't contain duplicates
                 .build()
-                .toString() == 'docker run --rm -u $(id -u) -e "BASH_ENV=env-file" -v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp -v /home/db:/home/db -v $PWD:$PWD -w $PWD fedora'
+                .toString() == 'docker run -e "BASH_ENV=env-file" -v /home/db:/home/db -v $PWD:$PWD -w $PWD fedora'
 
     }
 

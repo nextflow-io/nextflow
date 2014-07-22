@@ -37,6 +37,18 @@ class DockerBuilder {
 
     List<Path> mounts = []
 
+    private boolean sudo
+
+    private String options
+
+    private boolean remove
+
+    private String temp
+
+    private boolean userEmulation
+
+    private static final String USER_AND_HOME_EMULATION = '-u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME'
+
     DockerBuilder( String name ) {
         this.containerName = name
     }
@@ -58,20 +70,56 @@ class DockerBuilder {
         return this
     }
 
+    DockerBuilder params( Map params ) {
+        if( !params ) return this
+
+        if( params.containsKey('temp') )
+            this.temp = params.temp
+
+        if( params.containsKey('options') )
+            this.options = params.options
+
+        if ( params.containsKey('userEmulation') )
+            this.userEmulation = params.userEmulation?.toString() == 'true'
+
+        if ( params.containsKey('remove') )
+            this.remove = params.remove?.toString() == 'true'
+
+        if( params.containsKey('sudo') )
+            this.sudo = params.sudo?.toString() == 'true'
+
+        return this
+    }
+
 
     CharSequence build(StringBuilder result = new StringBuilder()) {
         assert containerName
 
-        result << 'docker run --rm -u $(id -u) '
+        if( sudo )
+            result << 'sudo '
+
+        result << 'docker run '
+
+        if( remove )
+            result << '--rm '
 
         // add the environment
         for( def entry : env ) {
             result << makeEnv(entry) << ' '
         }
 
+        if( temp )
+            result << "-v $temp:/tmp "
+
+        if( userEmulation )
+            result << USER_AND_HOME_EMULATION << ' '
+
         // mount the input folders
         result << makeVolumes(mounts)
         result << ' -w $PWD '
+
+        if( options )
+            result << options.trim() << ' '
 
         // finally the container name
         result << (containerName)
@@ -91,9 +139,6 @@ class DockerBuilder {
      */
     @PackageScope
     static CharSequence makeVolumes(List<Path> mountPaths, StringBuilder result = new StringBuilder() ) {
-
-        // always provide external /tmp
-        result << '-v ${NXF_SCRATCH:-$(mktemp -d)}:/tmp '
 
         // find the longest commons paths and mount only them
         def trie = new PathTrie()

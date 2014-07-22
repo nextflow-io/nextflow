@@ -20,6 +20,7 @@
 
 package nextflow.executor
 
+import java.nio.file.Files
 import java.nio.file.Paths
 
 import spock.lang.Specification
@@ -79,12 +80,97 @@ class BashWrapperBuilderTest extends Specification {
         wrapper.input == 'alpha'
         wrapper.workDir == Paths.get('a')
         wrapper.targetDir == Paths.get('b')
-        wrapper.dockerContainerName == 'docker_x'
+        wrapper.containerName == 'docker_x'
         wrapper.environment ==  [a:1, b:2]
         wrapper.script ==  'echo ciao'
         wrapper.shell == 'bash -e'
     }
 
 
+    def testBashWrapperTest () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        /*
+         * simple bash run
+         */
+        when:
+        def bash = new BashWrapperBuilder(workDir: folder, script: 'echo Hello world!')
+        bash.build()
+
+        then:
+        Files.exists(folder.resolve('.command.sh'))
+        Files.exists(folder.resolve('.command.run'))
+
+        folder.resolve('.command.sh').text ==
+                '''
+                #!/bin/bash -ue
+                echo Hello world!
+                '''
+                .stripIndent().leftTrim()
+
+
+        folder.resolve('.command.run').text ==
+                """
+                #!/bin/bash -Eeu
+                trap on_exit 1 2 3 15 ERR TERM USR1 USR2
+                function on_exit() { local exit_status=\${1:-\$?}; printf \$exit_status > ${folder}/.exitcode; exit \$exit_status; }
+                touch ${folder}/.command.begin
+                [ -f ${folder}/.command.env ] && source ${folder}/.command.env
+                ( /bin/bash -ue ${folder}/.command.sh ) &> ${folder}/.command.out
+                on_exit
+                """
+                .stripIndent().leftTrim()
+
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+
+
+    def testBashWithDockerTest () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        /*
+         * bash run through docker
+         */
+        when:
+        def bash = new BashWrapperBuilder(
+                workDir: folder,
+                script: 'echo Hello world!',
+                docker: [container: 'busybox', temp: true, sudo: true] )
+        bash.build()
+
+        then:
+        Files.exists(folder.resolve('.command.sh'))
+        Files.exists(folder.resolve('.command.run'))
+
+        folder.resolve('.command.sh').text ==
+                '''
+                #!/bin/bash -ue
+                echo Hello world!
+                '''
+                        .stripIndent().leftTrim()
+
+
+        folder.resolve('.command.run').text ==
+                """
+                #!/bin/bash -Eeu
+                trap on_exit 1 2 3 15 ERR TERM USR1 USR2
+                function on_exit() { local exit_status=\${1:-\$?}; printf \$exit_status > ${folder}/.exitcode; exit \$exit_status; }
+                touch ${folder}/.command.begin
+                ( sudo docker run -v \$(mktemp -d):/tmp -v \$PWD:\$PWD -w \$PWD busybox /bin/bash -ue ${folder}/.command.sh ) &> ${folder}/.command.out
+                on_exit
+                """
+                        .stripIndent().leftTrim()
+
+
+        cleanup:
+        folder?.deleteDir()
+    }
 
 }

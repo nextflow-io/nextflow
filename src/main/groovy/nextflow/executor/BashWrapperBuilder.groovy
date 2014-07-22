@@ -21,6 +21,7 @@
 package nextflow.executor
 import java.nio.file.Path
 
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.DockerBuilder
@@ -46,7 +47,7 @@ class BashWrapperBuilder {
 
     String wrapperScript
 
-    String dockerContainerName
+    String containerName
 
     List<String> moduleNames
 
@@ -58,6 +59,8 @@ class BashWrapperBuilder {
 
     def shell
 
+    Map dockerOptions
+
 
     BashWrapperBuilder( TaskRun task ) {
         this.task = task
@@ -67,7 +70,7 @@ class BashWrapperBuilder {
         this.scratch = task.scratch
         this.workDir = task.workDir
         this.targetDir = task.targetDir
-        this.dockerContainerName = task.container
+        this.containerName = task.container ?: task.processor?.session?.config?.docker?.container
 
         // set the environment
         this.environment = task.processor.getProcessEnvironment()
@@ -76,20 +79,21 @@ class BashWrapperBuilder {
         this.moduleNames = task.processor.taskConfig.getModule()
         this.shell = task.processor.taskConfig.shell
         this.script = task.script.toString()
+        this.dockerOptions = task.processor?.session?.config?.docker
 
     }
 
     BashWrapperBuilder( Map params ) {
         task = null
-        this.shell = params.shell
+        this.shell = params.shell ?: TaskConfig.DEFAULT_SHELL
         this.script = params.script?.toString()
         this.input = params.input
         this.scratch = params.scratch
         this.workDir = params.workDir
         this.targetDir = params.targetDir
-        this.dockerContainerName = params.container
         this.environment = params.environment
-
+        this.containerName = params.container ?: params.docker?.container
+        this.dockerOptions = params.docker
     }
 
     /**
@@ -185,7 +189,7 @@ class BashWrapperBuilder {
         wrapper << 'touch ' << startedFile.toString() << ENDL
 
         // source the environment
-        if( !dockerContainerName ) {
+        if( !containerName ) {
             wrapper << '[ -f '<< environmentFile.toString() << ' ]' << ' && source ' << environmentFile.toString() << ENDL
         }
 
@@ -209,8 +213,8 @@ class BashWrapperBuilder {
         wrapper << '( '
 
         // execute by invoking the command through a Docker container
-        if( dockerContainerName ) {
-            def docker = new DockerBuilder(dockerContainerName)
+        if( containerName ) {
+            def docker = new DockerBuilder(containerName)
             if( task ) {
                 docker.addMountForInputs( task.getInputFiles() )
                       .addMount( task.processor.session.workDir )
@@ -220,6 +224,11 @@ class BashWrapperBuilder {
             // set the environment
             if( !environmentFile.empty() )
                 docker.addEnv( environmentFile )
+
+            if( dockerOptions ) {
+                if( dockerOptions.temp?.toString() == 'true' ) dockerOptions.temp = changeDir ? '$NXF_SCRATCH' : '$(mktemp -d)'
+                docker.params(dockerOptions)
+            }
 
             wrapper << docker.build() << ' '
         }

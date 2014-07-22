@@ -50,11 +50,11 @@ import nextflow.util.ReadOnlyMap
 @Slf4j
 class TaskConfig implements Map<String,Object> {
 
-    private static final transient BOOL_YES = ['true','yes','on']
+    static final transient BOOL_YES = ['true','yes','on']
 
-    private static final transient BOOL_NO = ['false','no','off']
+    static final transient BOOL_NO = ['false','no','off']
 
-    private static final transient DEFAULT_SHELL = ['/bin/bash','-ue']
+    static final transient DEFAULT_SHELL = ['/bin/bash','-ue']
 
     @Delegate
     protected final Map<String,Object> configProperties
