@@ -71,6 +71,20 @@ class NextflowExtensions {
 
     static private Pattern PATTERN_LEFT_TRIM = ~/^\s+/
 
+    /**
+     * Remove the left side after a dot (including it) e.g.
+     * <pre>
+     *     0.10     => 0
+     *     10000.00 => 10000
+     * </pre>
+     *
+     * @param self
+     * @return
+     */
+    static String trimDotZero(String self) {
+        int p = self?.indexOf('.')
+        p!=-1 ? self.substring(0,p) : self
+    }
 
     /**
      * Remove blank chars at the end of the string

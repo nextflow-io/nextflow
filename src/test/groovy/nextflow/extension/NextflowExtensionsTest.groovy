@@ -35,6 +35,17 @@ import spock.lang.Specification
 class NextflowExtensionsTest extends Specification {
 
 
+    def testTrimDotZero() {
+
+        expect:
+        ''.trimDotZero() == ''
+        '.0'.trimDotZero() == ''
+        '1.0'.trimDotZero() == '1'
+        '123.000'.trimDotZero() == '123'
+
+    }
+
+
     def 'test leftTrim' () {
 
         expect:
