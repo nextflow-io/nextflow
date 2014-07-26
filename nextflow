@@ -150,27 +150,20 @@ if [ ! -f "$NXF_BIN" ]; then
     get "$NXF_URL" "$NXF_BIN"
 fi
 
-if [ -z "NXF_OPTIONS" ]; then
-    NXF_OPTIONS="-Djava.awt.headless=true"
-else 
-    NXF_OPTIONS="-Djava.awt.headless=true $NXF_OPTIONS"
-fi
-
-# Set the class-path
-if [ -n "$NXF_CLASSPATH" ]; then
-    NXF_OPTIONS="$NXF_OPTIONS -cp $NXF_CLASSPATH"
-fi
+JVM_OPTS='-noverify -Djava.awt.headless=true'
+[[ -n "$NXF_OPTIONS" ]] && JVM_OPTS+=" $NXF_OPTIONS"
+[[ -n "$NXF_CLASSPATH" ]] && JVM_OPTS+=" -cp '$NXF_CLASSPATH'"
 
 # Start in daemon mode
 if [ -n "$bg" ]; then
   NXF_PID_FILE=${NXF_PID_FILE:-'.nextflow.pid'}
-  "$JAVA" $NXF_OPTIONS -jar "$NXF_BIN" "$@" &
+  "$JAVA" $JVM_OPTS -jar "$NXF_BIN" "$@" &
   disown
   printf $! > $NXF_PID_FILE
   exit 0
 fi
 
-exec "$JAVA" $NXF_OPTIONS -jar "$NXF_BIN" "$@"
+exec "$JAVA" $JVM_OPTS -jar "$NXF_BIN" "$@"
 exit 1
 
 
