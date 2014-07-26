@@ -26,7 +26,6 @@
 # the application 'base' folder
 bin_dir=`dirname "$0"`
 bin_dir=`cd "$bin_dir"; pwd`
-#base_dir=`dirname $bin_dir`
 base_dir=$bin_dir
 
 # define the java env
@@ -41,7 +40,7 @@ fi
 declare -a args=()
 DEBUG=''
 MAIN_CLASS='nextflow.script.CliRunner'
-JVM_ARGS+=" -Djava.net.preferIPv4Stack=true -Djava.awt.headless=true"
+JVM_ARGS+=" -Djava.awt.headless=true"
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
 SUBPROJECTS='nxf-dnanexus nxf-gridgain nxf-extrae'
@@ -55,11 +54,10 @@ if [ -e "$base_dir/build/classes/main" ]; then
   CLASSPATH="$base_dir/build/classes/main"
   CLASSPATH+=":$base_dir/build/classes/test"
   CLASSPATH+=":$base_dir/build/resources/main"
-  for x in $SUBPROJECTS; do
+  for x in ${SUBPROJECTS}; do
     CLASSPATH+=":$base_dir:subprojects/$x/build/classes/main"
     CLASSPATH+=":$base_dir:subprojects/$x/build/classes/test"
     CLASSPATH+=":$base_dir/subprojects/$x/build/resources/main/"
-    CLASSPATH+=":$base_dir/subprojects/$x/build/resources/test/"
   done
   for file in $base_dir/build/dependency-libs/*.jar; do
     CLASSPATH+=":$file";
@@ -119,4 +117,4 @@ if [ "$DEBUG" != '' ]; then
 fi
 
 # Launch the APP
-exec java $JVM_ARGS $DEBUG -cp "$CLASSPATH" "$MAIN_CLASS" "${args[@]}"
+exec java $JVM_ARGS $DEBUG -noverify -cp "$CLASSPATH" "$MAIN_CLASS" "${args[@]}"
