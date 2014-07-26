@@ -41,13 +41,11 @@ import nextflow.ast.NextflowDSL
 import nextflow.daemon.DaemonLauncher
 import nextflow.exception.ConfigParseException
 import nextflow.exception.InvalidArgumentException
-import nextflow.exception.InvalidScriptNameException
 import nextflow.executor.ServiceName
 import nextflow.util.ConfigHelper
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import nextflow.util.ServiceDiscover
-import org.apache.commons.io.FilenameUtils
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -161,10 +159,6 @@ class CliRunner {
         session.baseDir = scriptFile?.canonicalFile?.parentFile
         log.debug "Script bin dir: ${session.binDir}"
 
-        session.scriptName = FilenameUtils.getBaseName(scriptFile.toString())
-        if( session.scriptName.contains('-') )
-            throw new InvalidScriptNameException("Script file name cannot contain hyphen characters: '${session.scriptName}' -- Please rename it to a different name e.g. '${session.scriptName.replace('-','_')}'")
-
         // set the file name attribute
         this.scriptFile = scriptFile
 
@@ -263,7 +257,6 @@ class CliRunner {
 
         // set the script name attribute
         session.baseDir = scriptFile?.canonicalFile?.parentFile
-        session.scriptName = FilenameUtils.getBaseName(scriptFile.toString())
         // set the file name attribute
         this.scriptFile = scriptFile
 

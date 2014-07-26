@@ -75,10 +75,6 @@ class Session {
      */
     def boolean resumeMode
 
-    /**
-     * The script name
-     */
-    def String scriptName = 'script1'
 
     /**
      * The script class name
