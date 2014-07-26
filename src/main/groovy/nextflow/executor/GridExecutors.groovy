@@ -35,6 +35,7 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
+import nextflow.trace.TraceRecord
 import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
 import org.apache.commons.io.IOUtils
@@ -477,6 +478,12 @@ class GridTaskHandler extends TaskHandler {
         return builder
     }
 
+    @Override
+    public TraceRecord getTraceRecord() {
+        def trace = super.getTraceRecord()
+        trace.nativeId = jobId
+        return trace
+    }
 }
 
 /**

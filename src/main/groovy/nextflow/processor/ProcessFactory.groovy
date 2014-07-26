@@ -21,6 +21,7 @@
 package nextflow.processor
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.executor.DrmaaExecutor
 import nextflow.executor.Executor
 import nextflow.executor.LocalExecutor
 import nextflow.executor.LsfExecutor
@@ -50,7 +51,8 @@ class ProcessFactory {
             'sge':  SgeExecutor,
             'oge':  SgeExecutor,
             'lsf': LsfExecutor,
-            'slurm': SlurmExecutor
+            'slurm': SlurmExecutor,
+            'drmaa': DrmaaExecutor
     ]
 
     private final Session session

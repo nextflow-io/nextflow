@@ -403,7 +403,7 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
         for( Map.Entry<String,Path> entry : inputFiles.entrySet() ) {
             final name = entry.key
             final source = entry.value
-            final cached = FileHelper.getLocalCachePath(source, localCacheDir, sessionId)
+            final cached = FileHelper.getLocalCachePath(source,localCacheDir, sessionId)
             final staged = scratchDir.resolve(name)
             log?.debug "Task $name > staging path: '${source}' to: '$staged'"
             Files.createSymbolicLink(staged, cached)

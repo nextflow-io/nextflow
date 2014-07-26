@@ -88,6 +88,7 @@ dependencies {
     compile "com.google.code.findbugs:jsr305:${jsr305Ver}"
     compile "com.esotericsoftware.kryo:kryo:${kryoVer}"
     compile "org.utgenome.thirdparty:picard:${picardVer}"
+    compile 'us.levk:drmaa-gridengine:6.2u5'
     compile files('lib/guava-cache-16.0.1.jar')
     // include Ivy at runtime in order to have Grape @Grab work correctly
     runtime "org.apache.ivy:ivy:$ivyVer"
@@ -189,6 +190,7 @@ task compile(type: Copy) {
     dependsOn buildInfo, compileJava, compileGroovy, processResources
 
     from configurations.gridgain
+    from configurations.dnanexus
     into "$buildDir/dependency-libs"
 }
 

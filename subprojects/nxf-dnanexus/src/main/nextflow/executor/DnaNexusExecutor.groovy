@@ -64,8 +64,8 @@ class DnaNexusExecutor extends Executor {
         FileHelper.getOrInstallProvider(DxFileSystemProvider)
     }
 
-    def void init() {
-        super.init()
+    @Override
+    void register() {
         // -- register the serializer for the Dx file system objects
         KryoHelper.register(DxPath, DxPathSerializer)
         KryoHelper.register(DxFileSystem, DxFileSystemSerializer)

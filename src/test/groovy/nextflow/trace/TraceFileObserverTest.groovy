@@ -22,9 +22,10 @@ package nextflow.trace
 import java.nio.file.Files
 
 import nextflow.executor.NopeTaskHandler
+import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
+import nextflow.util.CacheHelper
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -39,7 +40,7 @@ class TraceFileObserverTest extends Specification {
         def file = testFolder.resolve('trace')
 
         // the handler
-        def task = new TaskRun(id:111, name:'simple_task')
+        def task = new TaskRun(id:111, name:'simple_task', hash: CacheHelper.hasher(1).hash())
         def handler = new NopeTaskHandler(task)
         def now = System.currentTimeMillis()
 
@@ -52,11 +53,12 @@ class TraceFileObserverTest extends Specification {
         observer.current == [:]
 
         when:
+        handler.status = TaskHandler.Status.SUBMITTED
         observer.onProcessSubmit( handler )
         def record = observer.current.get(111)
         then:
         observer.delim == ','
-        record.id == 111
+        record.taskId == 111
         record.name == 'simple_task'
         record.submit >= now
         record.start == 0
@@ -65,7 +67,9 @@ class TraceFileObserverTest extends Specification {
 
         when:
         sleep 50
+        handler.status = TaskHandler.Status.RUNNING
         observer.onProcessStart( handler )
+        record = observer.current.get(111)
         then:
         record.start >= record.submit
         record.complete == 0
@@ -73,25 +77,30 @@ class TraceFileObserverTest extends Specification {
 
         when:
         sleep 50
+        handler.status = TaskHandler.Status.COMPLETED
+        handler.task.exitStatus = 127
         observer.onProcessComplete(handler)
         then:
-        record.start >= record.submit
-        record.complete >= record.start
         !(observer.current.containsKey(111))
 
         when:
+        record = handler.getTraceRecord()
         observer.onFlowComplete()
         def head = file.text.readLines()[0].trim()
         def parts = file.text.readLines()[1].split(',') as List
         then:
         head == observer.HEAD.join(',')
-        parts[0] == '111'
-        parts[1] == 'simple_task'
-        TraceFileObserver.FMT.parse(parts[2]).time == record.submit
-        TraceFileObserver.FMT.parse(parts[3]).time == record.start
-        TraceFileObserver.FMT.parse(parts[4]).time == record.complete
-        parts[5].toLong() == record.complete -record.submit
-        parts[6].toLong() == record.complete -record.start
+        parts[0] == '111'                           // task-id
+        parts[1] == 'fe/ca28af'                     // hash
+        parts[2] == '-'                             // native-id
+        parts[3] == 'simple_task'                   // process name
+        parts[4] == TaskHandler.Status.COMPLETED.toString()
+        parts[5] == '127'                           // exist-status
+        TraceFileObserver.FMT.parse(parts[6]).time == record.submit         // submit time
+        TraceFileObserver.FMT.parse(parts[7]).time == record.start          // start time
+        TraceFileObserver.FMT.parse(parts[8]).time == record.complete       // complete time
+        parts[9].toLong() == record.complete -record.submit                 // wall-time
+        parts[10].toLong() == record.complete -record.start                 // run-time
 
 
         cleanup:

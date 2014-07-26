@@ -64,19 +64,27 @@ abstract class Executor {
      */
     private TaskMonitor monitor
 
+    /**
+     * Template method executed once for executor class
+     */
+    void register() { }
 
     /**
-     * Let to post initialize the executor
+     * Allows to post-initialize the executor
      */
-    def void init() {
+    void init() {
         // -- skip if already assigned, this is only for testing purpose
-        if( monitor ) return
+        if( monitor )
+            return
 
         // -- get the reference to the monitor class for this executor
         monitor = session.dispatcher.getOrCreateMonitor(this.class) {
             log.info "[warm up] executor > $name"
             createTaskMonitor()
         }
+
+        // call the register template method
+        register()
     }
 
 

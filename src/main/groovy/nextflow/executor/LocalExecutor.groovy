@@ -32,6 +32,7 @@ import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.script.ScriptType
+import nextflow.trace.TraceRecord
 import nextflow.util.Duration
 import nextflow.util.PosixProcess
 import org.apache.commons.io.IOUtils
@@ -125,12 +126,11 @@ class LocalTaskHandler extends TaskHandler {
     }
 
 
-
     @Override
     def void submit() {
 
         // the cmd list to launch it
-        List cmd = new ArrayList(taskConfig.shell) << wrapperFile.getName()
+        List cmd = new ArrayList(taskConfig.getShell()) << wrapperFile.getName()
         log.trace "Launch cmd line: ${cmd.join(' ')}"
 
         session.getExecService().submit( {
@@ -230,6 +230,14 @@ class LocalTaskHandler extends TaskHandler {
         IOUtils.closeQuietly(process.getErrorStream())
         process.destroy()
         destroyed = true
+    }
+
+
+    @Override
+    TraceRecord getTraceRecord() {
+        def result = super.getTraceRecord()
+        result.nativeId = this.process?.pid
+        return result
     }
 
 }

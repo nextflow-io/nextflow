@@ -44,7 +44,22 @@ class TraceFileObserver implements TraceObserver {
     /**
      * The CSV header
      */
-    final static private List<String> HEAD = ['id','process name','submit','start','complete','wall-time','run-time']
+    final static public List<String> HEAD = [
+            'task-id',
+            'hash',
+            'native-id',
+            'name',
+            'status',
+            'exit-status',
+            'submit',
+            'start',
+            'complete',
+            'wall-time',
+            'run-time',
+            'mem',
+            'cpu',
+            'io'
+    ]
 
     /**
      * The path where the file is created. It is set by the object constructor
@@ -64,42 +79,9 @@ class TraceFileObserver implements TraceObserver {
     /**
      * Holds the the start time for tasks started/submitted but not yet completed
      */
-    private Map<Object,ProfileRecord> current = new ConcurrentHashMap<>()
+    private Map<Object,TraceRecord> current = new ConcurrentHashMap<>()
 
     private Agent<PrintWriter> writer
-
-    /*
-     * This object represent holds the information of a single process run,
-     * its content is saved to a trace file line
-     */
-    class ProfileRecord {
-        def id
-        String name
-        long submit
-        long start
-        long complete
-
-        String toString() {
-            def wallTime = complete && submit ? complete-submit : 0
-            def runTime = complete && start ? complete-start : 0
-
-            def builder = new StringBuilder()
-            builder << id << delim
-            builder << name << delim
-            builder << fmt(submit) << delim
-            builder << fmt(start) << delim
-            builder << fmt(complete) << delim
-            builder << wallTime << delim
-            builder << runTime
-
-            builder.toString()
-        }
-
-        static String fmt(long item) {
-            if( !item ) return '-'
-            FMT.format(new Date(item))
-        }
-    }
 
 
     /**
@@ -137,7 +119,7 @@ class TraceFileObserver implements TraceObserver {
         writer.await()
 
         // write the remaining records
-        current.each { record -> traceFile.println(record) }
+        current.values().each { record -> traceFile.println(render(record)) }
         traceFile.flush()
         traceFile.close()
     }
@@ -148,16 +130,8 @@ class TraceFileObserver implements TraceObserver {
      * @param handler
      */
     void onProcessSubmit(TaskHandler handler) {
-        def taskId = handler.task.id
-        def taskName = handler.task.name
-        def record = new ProfileRecord()
-        record.with {
-            id = taskId
-            name = taskName
-            submit = System.currentTimeMillis()
-        }
-
-        current[ taskId ] = record
+        def trace = handler.getTraceRecord()
+        current[ trace.taskId ] = trace
     }
 
     /**
@@ -165,13 +139,8 @@ class TraceFileObserver implements TraceObserver {
      * @param handler
      */
     void onProcessStart(TaskHandler handler) {
-        def record = current.get(handler.task.id)
-        if( record ) {
-            record.start = System.currentTimeMillis()
-        }
-        else {
-            log.debug "Profile warn: Unable to find record for task_run with id: ${handler.task.id}"
-        }
+        def trace = handler.getTraceRecord()
+        current[ trace.taskId ] = trace
     }
 
     /**
@@ -180,18 +149,58 @@ class TraceFileObserver implements TraceObserver {
      */
     void onProcessComplete(TaskHandler handler) {
         final taskId = handler.task.id
-        final record = current.get(taskId)
+        final record = handler.getTraceRecord()
         if( !record ) {
             log.debug "Profile warn: Unable to find record for task_run with id: ${taskId}"
             return
         }
 
-        // update the record and remove it from the current records
-        record.complete = System.currentTimeMillis()
+        // remove the record from the current records
         current.remove(taskId)
+
         // save to the file
-        writer.send { PrintWriter it -> it.println(record) }
+        writer.send { PrintWriter it -> it.println(render(record)) }
     }
 
+    /**
+     * Render a {@link TraceRecord} object to a string
+     *
+     * @param trace
+     * @return
+     */
+    String render(TraceRecord trace) {
+        assert trace
+        def all = new ArrayList(14)
+        trace.with{
+            def wallTime = complete && submit ? complete-submit : 0
+            def runTime = complete && start ? complete-start : 0
+
+            all << taskId
+            all << str(hash)
+            all << str(nativeId)
+            all << str(name)
+            all << str(status)
+            all << str(exit)
+            all << date(submit)
+            all << date(start)
+            all << date(complete)
+            all << wallTime
+            all << runTime
+            all << str(mem)
+            all << str(cpu)
+            all << str(io)
+        }
+
+        all.join(delim)
+    }
+
+    static String str(item) {
+        return item ? item.toString() : '-'
+    }
+
+    static String date(long item) {
+        if( !item ) return '-'
+        FMT.format(new Date(item))
+    }
 
 }

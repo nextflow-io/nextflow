@@ -20,6 +20,9 @@
 
 package nextflow.processor
 import java.util.concurrent.CountDownLatch
+
+import nextflow.trace.TraceRecord
+
 /**
  * Actions to handle the underlying job running the user task.
  *
@@ -60,10 +63,12 @@ public abstract class TaskHandler {
 
     CountDownLatch latch
 
-    /**
-     * The system timestamp the last time one of the status has changed
-     */
-    long lastUpdate
+    private long submitTimeMillis
+
+    private long startTimeMillis
+
+    private long completeTimeMillis
+
 
     /**
      * Model the start transition from {@code #SUBMITTED} to {@code STARTED}
@@ -96,7 +101,11 @@ public abstract class TaskHandler {
 
         // change the status
         this.status = status
-        this.lastUpdate = System.currentTimeMillis()
+        switch( status ) {
+            case Status.SUBMITTED: submitTimeMillis = System.currentTimeMillis(); break
+            case Status.RUNNING: startTimeMillis = System.currentTimeMillis(); break
+            case Status.COMPLETED: completeTimeMillis = System.currentTimeMillis(); break
+        }
 
     }
 
@@ -108,6 +117,12 @@ public abstract class TaskHandler {
 
     boolean isCompleted()  { return status == Status.COMPLETED  }
 
+    long getSubmitTimeMillis() { submitTimeMillis }
+
+    long getStartTimeMillis() { startTimeMillis }
+
+    long getCompleteTimeMillis() { completeTimeMillis }
+
     protected StringBuilder toStringBuilder(StringBuilder builder) {
         builder << "id: ${task.id}; name: ${task.name}; status: $status; exit: ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}; workDir: ${task.workDir}"
     }
@@ -115,6 +130,19 @@ public abstract class TaskHandler {
     String toString() {
         def builder = toStringBuilder( new StringBuilder() )
         return "TaskHandler[${builder.toString()}]"
+    }
+
+    TraceRecord getTraceRecord() {
+        new TraceRecord(
+                taskId: task.id,
+                status: this.status,
+                hash: task.hashLog,
+                name: task.name,
+                exit: task.exitStatus,
+                submit: this.submitTimeMillis,
+                start: this.startTimeMillis,
+                complete: this.completeTimeMillis,
+        )
     }
 
 }
