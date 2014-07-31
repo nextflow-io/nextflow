@@ -39,7 +39,7 @@ fi
 #
 declare -a args=()
 DEBUG=''
-MAIN_CLASS='nextflow.script.CliRunner'
+MAIN_CLASS='nextflow.script.Launcher'
 JVM_ARGS+=" -Djava.awt.headless=true"
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}

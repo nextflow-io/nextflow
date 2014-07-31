@@ -232,32 +232,4 @@ class LoggerHelper {
     }
 
 
-
-    /**
-     * Find out the script line where the error has thrown
-     */
-    static getErrorMessage( Throwable e, String scriptName ) {
-
-        def lines = ExceptionUtils.getStackTrace(e).split('\n')
-        def error = null
-        for( String str : lines ) {
-            if( (error=getErrorLine(str,scriptName))) {
-                break
-            }
-        }
-
-        return (e.message ?: e.toString()) + ( error ? " at $error" : '' )
-    }
-
-
-    @PackageScope
-    static String getErrorLine( String line, String scriptName = null) {
-        if( scriptName==null )
-            scriptName = '.+'
-
-        def pattern = ~/.*\(($scriptName\.nf:\d*)\).*/
-        def m = pattern.matcher(line)
-        return m.matches() ? m.group(1) : null
-    }
-
 }

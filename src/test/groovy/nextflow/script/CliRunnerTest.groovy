@@ -370,7 +370,7 @@ class CliRunnerTest extends Specification {
         def files = CliRunner.validateConfigFiles(['file1','file2'])
 
         then:
-        thrown(CliRunner.CliArgumentException)
+        thrown(CliArgumentException)
 
         when:
         def f1 = File.createTempFile('file1','x').absoluteFile

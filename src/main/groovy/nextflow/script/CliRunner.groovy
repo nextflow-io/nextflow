@@ -21,35 +21,22 @@
 package nextflow.script
 import static nextflow.util.ConfigHelper.parseValue
 
-import java.lang.management.ManagementFactory
-import java.lang.reflect.Field
 import java.nio.file.Path
-import java.nio.file.spi.FileSystemProvider
 
-import com.beust.jcommander.JCommander
-import com.beust.jcommander.ParameterException
-import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
-import nextflow.Const
-import nextflow.ExitCode
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.ast.NextflowDSL
-import nextflow.daemon.DaemonLauncher
-import nextflow.exception.ConfigParseException
 import nextflow.exception.InvalidArgumentException
 import nextflow.exception.MissingLibraryException
-import nextflow.executor.ServiceName
 import nextflow.util.FileHelper
-import nextflow.util.HistoryFile
-import nextflow.util.LoggerHelper
-import nextflow.util.ServiceDiscover
 import org.apache.commons.io.FilenameUtils
 import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang.exception.ExceptionUtils
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
@@ -60,9 +47,6 @@ import org.codehaus.groovy.control.customizers.ImportCustomizer
  */
 @Slf4j
 class CliRunner {
-
-    @InheritConstructors
-    static class CliArgumentException extends RuntimeException { }
 
     /**
      * The underlying execution session
@@ -83,6 +67,8 @@ class CliRunner {
      * The script file
      */
     private File scriptFile
+
+    private String scriptName
 
     /*
      * the script raw output
@@ -120,20 +106,6 @@ class CliRunner {
         this(configToMap(config))
     }
 
-
-    static private wrapValue( value ) {
-        if( !value )
-            return ''
-
-        value = value.toString().trim()
-        if( value == 'true' || value == 'false')
-            return value
-
-        if( value.isNumber() )
-            return value
-
-        return "'$value'"
-    }
 
     def void setLibPath( String str ) {
         if( !str ) { return }
@@ -193,7 +165,7 @@ class CliRunner {
         assert scriptFile
 
         // set the script name attribute
-        session.scriptName = FilenameUtils.getBaseName(scriptFile.toString())
+        this.scriptName = FilenameUtils.getBaseName(scriptFile.toString())
 
         // set the file name attribute
         this.scriptFile = scriptFile
@@ -224,6 +196,9 @@ class CliRunner {
             script = parseScript(scriptText, args)
             // run the code
             run()
+        }
+        catch( MissingPropertyException e ) {
+            throw new RuntimeException(getErrorMessage(e, scriptName), e)
         }
         finally {
             terminate()
@@ -292,7 +267,7 @@ class CliRunner {
         assert methodName
 
         // set the script name attribute
-        session.scriptName = FilenameUtils.getBaseName(scriptFile.toString())
+        this.scriptName = FilenameUtils.getBaseName(scriptFile.toString())
         // set the file name attribute
         this.scriptFile = scriptFile
 
@@ -407,399 +382,30 @@ class CliRunner {
 
 
     /**
-     * Create the application command line parser
-     *
-     * @return An instance of {@code CliBuilder}
+     * Find out the script line where the error has thrown
      */
+    static getErrorMessage( Throwable e, String scriptName ) {
 
-    static JCommander jcommander
+        def lines = ExceptionUtils.getStackTrace(e).split('\n')
+        def error = null
+        for( String str : lines ) {
+            if( (error=getErrorLine(str,scriptName))) {
+                break
+            }
+        }
 
-    static boolean fullVersion
+        return (e.message ?: e.toString()) + ( error ? " at $error" : '' )
+    }
+
 
     @PackageScope
-    static CliOptions parseMainArgs(String... args) {
-
-        def options = CliOptions.normalizeArgs(args)
-        def result = new CliOptions()
-        jcommander = new JCommander(result, options as String[] )
-        jcommander.setProgramName( Const.APP_NAME )
-        fullVersion = '-version' in options
-        return result
-    }
-
-
-    /**
-     * Program entry method
-     *
-     * @param args The program options as specified by the user on the CLI
-     */
-    public static void main(String... args)  {
-
-        def scriptBaseName = null
-        try {
-            // -- parse the program arguments - and - configure the logger
-            def options = parseMainArgs(args)
-            LoggerHelper.configureLogger(options)
-            log.debug "${Const.APP_NAME} ${args?.join(' ')}"
-
-            // -- print out the version number, then exit
-            if ( options.version ) {
-                println getVersion(fullVersion)
-                System.exit(ExitCode.OK)
-            }
-            else if( options.info ) {
-                println getInfo() + '\n'
-                System.exit(ExitCode.OK)
-            }
-
-            // -- print the history of executed commands
-            if( options.history ) {
-                HistoryFile.history.print()
-                System.exit(ExitCode.OK)
-            }
-
-            // -- print out the program help, then exit
-            if( options.help ) {
-                println Const.LOGO
-                jcommander.usage()
-                System.exit(ExitCode.OK)
-            }
-
-            File scriptFile = null
-            if( !options.isDaemon() ) {
-                // -- the script is the first item in the args
-                if( options.arguments ) {
-                    try {
-                        scriptFile = getScriptFile(options.arguments[0])
-                    }
-                    catch( IOException e ) {
-                        log.error "The specified script does not exist: '${options.arguments[0]}'\n", e
-                        System.exit( ExitCode.MISSING_SCRIPT_FILE )
-                    }
-
-                    scriptBaseName = scriptFile.getBaseName()
-                }
-                // -- try to get the script from the stdin
-                else {
-                    scriptFile = tryReadFromStdin()
-                    if( !scriptFile || scriptFile.empty() ) {
-                        println Const.LOGO
-                        jcommander.usage()
-                        System.exit(ExitCode.OK)
-                    }
-                }
-
-            }
-
-            if( !options.quiet ) {
-                println "N E X T F L O W  ~  version ${Const.APP_VER}"
-            }
-
-            // -- check file system providers
-            checkFileSystemProviders()
-
-            // create the config object
-            def config = makeConfig(options)
-
-            // -- launch daemon
-            if( options.isDaemon() ) {
-                log.debug "Launching cluster daemon"
-                launchDaemon(config)
-                return
-            }
-
-            // -- create a new runner instance
-            def runner = new CliRunner(config)
-            runner.session.cacheable = options.cacheable
-            runner.session.resumeMode = options.resume != null
-            // note -- make sure to use 'FileHelper.asPath' since it guarantee to handle correctly non-standard file system e.g. 'dxfs'
-            runner.session.workDir = FileHelper.asPath(options.workDir).toAbsolutePath()
-            runner.session.baseDir = scriptFile?.canonicalFile?.parentFile
-            runner.libPath = options.libPath
-
-            log.debug "Script bin dir: ${runner.session.binDir}"
-
-            // -- specify the arguments
-            def scriptArgs = options.arguments?.size()>1 ? options.arguments[1..-1] : []
-
-            if( options.test ) {
-                runner.test(scriptFile, options.test, scriptArgs )
-            }
-            else {
-                log.debug( '\n'+getInfo())
-                // -- add this run to the local history
-                HistoryFile.history.append( runner.session.uniqueId, args )
-                // -- run it!
-                runner.execute(scriptFile,scriptArgs)
-            }
-        }
-
-        catch( ParameterException e ) {
-            // print command line parsing errors
-            // note: use system.err.println since if an exception is raised
-            //       parsing the cli params the logging is not configured
-            System.err.println "${e.getMessage()} -- Check the available command line parameters and syntax using '-h'"
-            System.exit( ExitCode.INVALID_COMMAND_LINE_PARAMETER )
-        }
-
-        catch( ConfigParseException e )  {
-            log.error "${e.message}\n${e.cause}\n\n"
-            System.exit(ExitCode.INVALID_CONFIG)
-        }
-
-        catch ( MissingPropertyException e ) {
-            log.error LoggerHelper.getErrorMessage(e, scriptBaseName), e
-            System.exit( ExitCode.MISSING_PROPERTY )
-        }
-
-        catch( Throwable fail ) {
-            log.error("${fail.toString()} -- See the file '.nextflow.log' for more error details", fail)
-            System.exit( ExitCode.UNKNOWN_ERROR )
-        }
-
-    }
-
-    static protected File tryReadFromStdin() {
-        if( !System.in.available() )
-            return null
-
-        getScriptFromStream(System.in)
-    }
-
-    static protected File getScriptFromStream( InputStream input, String name = 'nextflow' ) {
-        input != null
-        File result = File.createTempFile(name, null)
-        result.deleteOnExit()
-        input.withReader { reader -> result << reader }
-        return result
-    }
-
-    static protected File getScriptFile( String urlOrPath ) {
-        def lower = urlOrPath.toLowerCase()
-        def isUrl = ['http','https','ftp'].any { lower.startsWith(it+'://') }
-
-        if( isUrl ) {
-            def url = new URL(urlOrPath)
-            def fileName = new File(url.getPath()).getBaseName()
-            return getScriptFromStream( url.newInputStream(), fileName )
-        }
-
-        def file = new File(urlOrPath)
-        if( !file.exists() ) {
-            throw new FileNotFoundException("File do not exist: $file")
-        }
-        return file
-    }
-
-    static private void checkFileSystemProviders() {
-
-        // check if this class has been loaded
-        boolean isInstalled = false
-        FileSystemProvider.installedProviders().each {
-            log.debug "Installed File System: '${it.scheme}' [${it.class.simpleName}]"
-            if( it.scheme == 'dxfs' ) {
-                isInstalled = true
-            }
-        }
-
-        if( !isInstalled ) {
-            // try to load DnaNexus file system provider dynamically
-            Class provider
-            try {
-                provider = Class.forName('nextflow.fs.dx.DxFileSystemProvider')
-            }
-            catch( ClassNotFoundException e ) {
-                log.debug "DxFileSystemProvider NOT available"
-                return
-            }
-
-            // add it manually
-            Field field = FileSystemProvider.class.getDeclaredField('installedProviders')
-            field.setAccessible(true)
-            List installedProviders = new ArrayList((List)field.get(null))
-            installedProviders.add( provider.newInstance() )
-            field.set(this, Collections.unmodifiableList(installedProviders))
-            log.debug "Added 'DxFileSystemProvider' to list of installed providers [dxfs]"
-        }
-
-    }
-
-
-    /**
-     * Transform the specified list of string to a list of files, verifying their existence.
-     * <p>
-     *     If a file in the list does not exist an exception of type {@code CliArgumentException} is thrown.
-     * <p>
-     *     If the specified list is empty it tries to return of default configuration files located at:
-     *     <li>$HOME/.nextflow/taskConfig
-     *     <li>$PWD/nextflow.taskConfig
-     *
-     * @param files
-     * @return
-     */
-    def static List<File> validateConfigFiles( List<String> files ) {
-
-        def result = []
-        if ( files ) {
-            files.each { String fileName ->
-                def thisFile = new File(fileName)
-                if(!thisFile.exists()) {
-                    throw new CliArgumentException("The specified configuration file does not exist: $thisFile -- check the name or choose another file")
-                }
-                result << thisFile
-            }
-            return result
-        }
-
-        def home = new File(Const.APP_HOME_DIR, 'config')
-        if( home.exists() ) result << home
-
-        def local = new File('nextflow.config')
-        if( local.exists() ) result << local
-
-        return result
-    }
-
-
-    def static Map buildConfig( List<File> files, CliOptions options ) {
-
-        final Map<String,String> vars = options.env
-        final boolean exportSysEnv = options.exportSysEnv
-
-        def texts = []
-        files?.each { File file ->
-            log.debug "Parsing config file: ${file.absoluteFile}"
-            if (!file.exists()) {
-                log.warn "The specified configuration file cannot be found: $file"
-            }
-            else {
-                texts << file.text
-            }
-        }
-
-        Map<String,String> env = [:]
-        if( exportSysEnv ) {
-            log.debug "Adding current system environment to session environment"
-            env.putAll(System.getenv())
-        }
-        if( vars ) {
-            log.debug "Adding following variables to session environment: $vars"
-            env.putAll(vars)
-        }
-
-        // -- add the daemon obj from the command line args
-        if( options.daemonOptions )  {
-            def str = new StringBuilder()
-            options.daemonOptions.each { k, v ->
-                str << "daemon." << k << '=' << wrapValue(v) << '\n'
-            }
-            texts << str.toString()
-        }
-
-        if( options.executorOptions )  {
-            def str = new StringBuilder()
-            options.executorOptions.each { k, v ->
-                str << "executor." << k << '=' << wrapValue(v) << '\n'
-            }
-            texts << str.toString()
-        }
-
-        buildConfig0( env, texts )
-    }
-
-
-    def static Map buildConfig0( Map env, List<String> confText )  {
-        assert env != null
-
-        ConfigObject result = new ConfigSlurper().parse('env{}; session{}; params{}; process{}; executor{} ')
-
-        // add the user specified environment to the session env
-        env.sort().each { name, value -> result.env.put(name,value) }
-
-        if( confText ) {
-            // the configuration object binds always the current environment
-            // so that in the configuration file may be referenced any variable
-            // in the current environment
-            final binding = new HashMap(System.getenv())
-            binding.putAll(env)
-
-            confText.each { String text ->
-                if ( text ) {
-                    def cfg = new ConfigSlurper()
-                    cfg.setBinding(binding)
-                    try {
-                        result.merge( cfg.parse(text) )
-                    }
-                    catch( Exception e ) {
-                        throw new ConfigParseException("Failed to parse config file",e)
-                    }
-                }
-            }
-
-        }
-
-        // convert the ConfigObject to plain map
-        // this because when accessing a non-existing entry in a ConfigObject it return and empty map as value
-        return configToMap( result )
-    }
-
-    /**
-     * Print the application version number
-     * @param full When {@code true} prints full version number including build timestamp
-     * @return The version number string
-     */
-    static String getVersion(boolean full = false) {
-
-        if ( full ) {
-            Const.LOGO
-        }
-        else {
-            "${Const.getAPP_NAME()} version ${Const.APP_VER}.${Const.APP_BUILDNUM}"
-        }
-
-    }
-
-    /**
-     * @return A string containing some system runtime information
-     */
-    static String getInfo() {
-
-"""\
-      Version: ${Const.APP_VER} build ${Const.APP_BUILDNUM}
-      Last modified: ${Const.APP_TIMESTAMP_UTC} ${Const.deltaLocal()}
-      Os: ${System.getProperty('os.name')} ${System.getProperty('os.version')}
-      Groovy: ${GroovySystem.getVersion()}
-      Jvm: ${System.getProperty('java.vendor')} ${System.getProperty('java.runtime.version')}
-      Opts: ${ManagementFactory.getRuntimeMXBean().getInputArguments().join(' ')}
-      Encoding: ${System.getProperty('file.encoding')} (${System.getProperty('sun.jnu.encoding')})
-      Address: ${getLocalNameAndAddress()}"""
-
-    }
-
-    /**
-     * Converts a {@code ConfigObject} to a plain {@code Map}
-     *
-     * @param config
-     * @return
-     */
-    static Map configToMap( ConfigObject config ) {
-        assert config != null
-
-        Map result = new LinkedHashMap(config.size())
-        config.keySet().each { name ->
-            def value = config.get(name)
-            if( value instanceof ConfigObject ) {
-                result.put( name, configToMap(value))
-            }
-            else if ( value != null ){
-                result.put( name, value )
-            }
-            else {
-                result.put( name, null )
-            }
-        }
-
-        return result
+    static String getErrorLine( String line, String scriptName = null) {
+        if( scriptName==null )
+            scriptName = '.+'
+
+        def pattern = ~/.*\(($scriptName\.nf:\d*)\).*/
+        def m = pattern.matcher(line)
+        return m.matches() ? m.group(1) : null
     }
 
     /**
@@ -830,151 +436,4 @@ class CliRunner {
 
     }
 
-    /**
-     * Given the command line options {@code CliOptions} object
-     * read the application configuration file and returns the
-     * config object
-     *
-     * @param options The {@code CliOptions} as specified by the user
-     * @return A the application options hold in a {@code Map} object
-     */
-    static Map makeConfig( CliOptions options ) {
-
-        // -- configuration file(s)
-        def configFiles = validateConfigFiles(options.config)
-        def config = buildConfig(configFiles, options)
-
-        // -- override 'process' parameters defined on the cmd line
-        options.process.each { name, value ->
-            config.process[name] = parseValue(value)
-        }
-
-        // -- check for the 'continue' flag
-        if( options.resume ) {
-            def uniqueId = options.resume
-            if( uniqueId == 'last' ) {
-                uniqueId = HistoryFile.history.retrieveLastUniqueId()
-                if( !uniqueId ) {
-                    log.error "It appears you have never executed it before -- Cannot use the '-resume' command line option"
-                    System.exit(ExitCode.MISSING_UNIQUE_ID)
-                }
-            }
-            config.session.uniqueId = uniqueId
-        }
-
-        // -- other configuration parameters
-        if( options.poolSize ) {
-            config.poolSize = options.poolSize
-        }
-        if( options.queueSize ) {
-            config.executor.queueSize = options.queueSize
-        }
-        if( options.pollInterval ) {
-            config.executor.pollInterval = options.pollInterval
-        }
-
-        // -- add the command line parameters to the 'taskConfig' object
-        options.params?.each { name, value ->
-            config.params.put(name, parseValue(value))
-        }
-
-        return config
-    }
-
-    /**
-     * Launch the daemon service
-     *
-     * @param config The nextflow configuration map
-     */
-    static launchDaemon( Map config ) {
-
-        def daemonConfig = config.daemon instanceof Map ? config.daemon : [:]
-        log.debug "Daemon config > $daemonConfig"
-
-
-        DaemonLauncher instance
-        def name = daemonConfig.name as String
-        if( name ) {
-            if( name.contains('.') ) {
-                instance = loadDaemonByClass(name)
-            }
-            else {
-                instance = loadDaemonByName(name)
-            }
-        }
-        else {
-            instance = loadDaemonFirst()
-        }
-
-
-        // launch it
-        instance.launch(daemonConfig)
-    }
-
-    /**
-     * @return A string holding the local host name and address used for logging
-     */
-    static private getLocalNameAndAddress() {
-        def host = InetAddress.getLocalHost()
-        "${host.getHostName()} [${host.getHostAddress()}]"
-    }
-
-    /**
-     * Load a {@code DaemonLauncher} instance of the its *friendly* name i.e. the name provided
-     * by using the {@code ServiceName} annotation on the daemon class definition
-     *
-     * @param name The executor name e.g. {@code gridgain}
-     * @return The daemon launcher instance
-     * @throws IllegalStateException if the class does not exist or it cannot be instantiated
-     */
-    static DaemonLauncher loadDaemonByName( String name ) {
-
-        Class<DaemonLauncher> clazz = null
-        for( Class item : ServiceDiscover.load(DaemonLauncher).iterator() ) {
-            log.debug "Discovered daemon class: ${item.name}"
-            ServiceName annotation = item.getAnnotation(ServiceName)
-            if( annotation && annotation.value() == name ) {
-                clazz = item
-                break
-            }
-        }
-
-        if( !clazz )
-            throw new IllegalStateException("Unknown daemon name: $name")
-
-        try {
-            clazz.newInstance()
-        }
-        catch( Exception e ) {
-            throw new IllegalStateException("Unable to launch executor: $name", e)
-        }
-    }
-
-    /**
-     * Load a class implementing the {@code DaemonLauncher} interface by the specified class name
-     *
-     * @param name The fully qualified class name e.g. {@code nextflow.executor.LocalExecutor}
-     * @return The daemon launcher instance
-     * @throws IllegalStateException if the class does not exist or it cannot be instantiated
-     */
-    static DaemonLauncher loadDaemonByClass( String name ) {
-        try {
-            return (DaemonLauncher)Class.forName(name).newInstance()
-        }
-        catch( Exception e ) {
-            throw new IllegalStateException("Cannot load daemon: ${name}")
-        }
-    }
-
-    /**
-     * @return The first available instance of a class implementing {@code DaemonLauncher}
-     * @throws IllegalStateException when no class implementing {@code DaemonLauncher} is available
-     */
-    static DaemonLauncher loadDaemonFirst() {
-        def loader = ServiceLoader.load(DaemonLauncher).iterator()
-        if( !loader.hasNext() )
-            throw new IllegalStateException("No daemon services are available -- Cannot launch Nextflow in damon mode")
-
-        return loader.next()
-    }
 }
