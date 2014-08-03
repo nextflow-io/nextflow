@@ -24,8 +24,8 @@ import com.beust.jcommander.IStringConverter
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.util.logging.Slf4j
-import nextflow.exception.MissingScriptException
-import nextflow.share.PipelineManager
+import nextflow.Const
+import nextflow.exception.AbortOperationException
 import nextflow.util.Duration
 import nextflow.util.FileHelper
 import nextflow.util.HistoryFile
@@ -99,15 +99,22 @@ class CmdRun implements CmdX {
     @Parameter(names=['-r','-revision'], description = 'Specify the pipeline revision to run')
     String revision
 
-    String pipeline
+    @Parameter(names=['-update'], description = 'Update to latest version before run')
+    boolean update
+
+    @Override
+    final String getName() { 'run' }
 
     @Override
     void run() {
-        pipeline = args[0]
+        if( !launcher.options.quiet )
+            println "N E X T F L O W  ~  version ${Const.APP_VER}"
+
+        String pipeline = args[0]
 
         // -- specify the arguments
         def scriptArgs = args?.size()>1 ? args[1..-1] : []
-        def scriptFile = getScriptFile()
+        def scriptFile = getScriptFile(pipeline)
 
         // -- check file system providers
         FileHelper.checkFileSystemProviders()
@@ -131,6 +138,7 @@ class CmdRun implements CmdX {
         }
         else {
             log.debug( '\n'+CmdInfo.getInfo() )
+
             // -- add this run to the local history
             HistoryFile.history.append( runner.session.uniqueId, args )
             // -- run it!
@@ -139,19 +147,19 @@ class CmdRun implements CmdX {
     }
 
 
-    protected File getScriptFile() {
-        assert pipeline
+    protected File getScriptFile(String pipelineName) {
+        assert pipelineName
 
         /*
          * read from the stdin
          */
-        if( pipeline == '-' ) {
+        if( pipelineName == '-' ) {
             def file = tryReadFromStdin()
             if( !file )
-                throw new MissingScriptException(scriptFile: 'stdin')
+                throw new AbortOperationException("Cannot pipeline script from stdin")
 
             if( revision )
-                throw new IllegalArgumentException("Revision option can be used running a local pipeline script")
+                throw new AbortOperationException("Revision option can be used running a local pipeline script")
 
             return file
         }
@@ -159,34 +167,41 @@ class CmdRun implements CmdX {
         /*
          * look for a file with the specified pipeline name
          */
-        def script = new File(pipeline)
+        def script = new File(pipelineName)
         if( script.isDirectory()  ) {
-            script = new File(pipeline, PipelineManager.MAIN_FILE_NAME)
+            script = new File(pipelineName, PipelineManager.SCRIPT_FILE_NAME)
         }
 
         if( script.exists() ) {
             if( revision )
-                throw new IllegalArgumentException("Revision option can be used running a local pipeline script")
+                throw new AbortOperationException("Revision option can be used running a local pipeline script")
             return script
         }
 
         /*
          * try to look for a pipeline in the repository
          */
-        def manager = new PipelineManager(pipeline)
-        script = manager.getMainFile()
+        def manager = new PipelineManager()
+        def repo = manager.resolveName(pipelineName)
 
-        if( !script.exists() ) {
-            log.info "Pull $pipeline ..."
-            manager.pull()
+        /*
+         * set the required name
+         */
+        manager.setPipeline(repo as String)
+
+        if( !manager.localPath.exists() ) {
+            log.info "Downloading $repo ..."
+            manager.download()
         }
-
-        if( script.exists() ) {
-            manager.checkout(revision)
-            return script
+        else if( update ) {
+            log.info "Updating $repo ..."
+            manager.download()
         }
+        // checkout requested revision
+        manager.checkout(revision)
 
-        throw new MissingScriptException(scriptFile: script)
+        // return the script file
+        return manager.getMainScriptFile()
     }
 
 
@@ -217,7 +232,7 @@ class CmdRun implements CmdX {
 
         def file = new File(urlOrPath)
         if( !file.exists() ) {
-            throw new FileNotFoundException("File do not exist: $file")
+            throw new AbortOperationException("File do not exist: $file")
         }
         return file
     }

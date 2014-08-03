@@ -31,7 +31,7 @@ import nextflow.Channel
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.ast.NextflowDSL
-import nextflow.exception.InvalidArgumentException
+import nextflow.exception.AbortOperationException
 import nextflow.exception.MissingLibraryException
 import nextflow.util.FileHelper
 import org.apache.commons.io.FilenameUtils
@@ -306,6 +306,8 @@ class CliRunner {
 
         bindings.setArgs( new ArgsList(args) )
         bindings.setParams( session.config.params as Map )
+        bindings.setVariable( 'workDir', session.workDir )
+        bindings.setVariable( 'scriptDir', session.baseDir.toPath() )
 
         // define the imports
         def importCustomizer = new ImportCustomizer()
@@ -420,11 +422,11 @@ class CliRunner {
 
         def String get( int pos ) {
             if( pos < 0 ) {
-                throw new InvalidArgumentException("Argument array index cannot be lower than zero")
+                throw new AbortOperationException("Argument array index cannot be lower than zero")
             }
 
             if( pos >= size() ) {
-                throw new InvalidArgumentException("Arguments index out of range: $pos -- You may have not entered all arguments required by the pipeline")
+                throw new AbortOperationException("Arguments index out of range: $pos -- You may have not entered all arguments required by the pipeline")
             }
 
             super.get(pos)

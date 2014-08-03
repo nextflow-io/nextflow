@@ -18,7 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.share
+package nextflow.script
 import java.nio.file.Files
 
 import spock.lang.Specification
@@ -43,6 +43,11 @@ class PipelineManagerTest extends Specification {
         then:
         list.sort() == ['cbcrg/pipe1','cbcrg/pipe2','ncbi/blast']
 
+        expect:
+        manager.find('blast') == 'ncbi/blast'
+        manager.find('pipe1') == 'cbcrg/pipe1'
+        manager.find('pipe') == ['cbcrg/pipe1', 'cbcrg/pipe2']
+
         cleanup:
         folder?.deleteDir()
 
@@ -56,12 +61,12 @@ class PipelineManagerTest extends Specification {
         def manager = new PipelineManager().setRoot(folder.toFile()).setPipeline('pditommaso/awesome-pipeline')
 
         when:
-        manager.pull()
+        manager.download()
         then:
         folder.resolve('pditommaso/awesome-pipeline/.git').isDirectory()
 
         when:
-        manager.pull()
+        manager.download()
         then:
         noExceptionThrown()
 
@@ -84,6 +89,23 @@ class PipelineManagerTest extends Specification {
         dir.resolve('.git').isDirectory()
 
         cleanup:
+        dir?.deleteDir()
+
+    }
+
+    def testScriptNameFor() {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+        dir.resolve('sub1').mkdir()
+        dir.resolve('sub1/.MANIFEST').text = 'main-script = pippo.nf'
+
+        expect:
+        PipelineManager.scriptNameFor( dir.resolve('sub1').toFile() ) == 'pippo.nf'
+        PipelineManager.scriptNameFor( dir.resolve('sub2').toFile() ) == 'main.nf'
+
+        cleanup:
+
         dir?.deleteDir()
 
     }

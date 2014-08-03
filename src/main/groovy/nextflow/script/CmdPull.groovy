@@ -22,22 +22,39 @@ package nextflow.script
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import nextflow.share.PipelineManager
+import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
+
 /**
- * CLI sub-command PULL
+ * CLI sub-command UPDATE
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Download a pipeline in the local repository")
+@Parameters(commandDescription = "Download or updated a pipeline in the local repository")
 class CmdPull implements CmdX {
 
     @Parameter(required=true, description = 'The name of the pipeline to pull', arity = 1)
     List<String> args
 
+    @Parameter(names='-all', description = 'Update all installed pipelines', arity = 0)
+    boolean all
+
+    @Override
+    final String getName() { 'pull' }
+
     @Override
     void run() {
-        new PipelineManager(args[0]) .pull()
+
+        if( !all && !args )
+            throw new AbortOperationException('Missing argument')
+
+        (all ? new PipelineManager().list() : args.toList()) .each {
+            log.info "Pulling $it ..."
+            new PipelineManager(it).download()
+        }
+
     }
 
 }

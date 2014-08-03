@@ -34,6 +34,9 @@ import nextflow.util.HistoryFile
 class CmdHistory implements CmdX {
 
     @Override
+    final String getName() { 'history' }
+
+    @Override
     void run() {
         HistoryFile.history.print()
     }

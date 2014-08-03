@@ -20,17 +20,16 @@
 
 package nextflow.script
 /**
+ * Implement command shared methods
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 trait CmdX implements Runnable {
 
-    protected CliOptions options
+    Launcher launcher
 
-    def void setOptions( CliOptions options ) {
-        this.options = options
-    }
+    abstract def String getName()
 
-    def CliOptions getOptions() { options }
+    def CliOptions getOptions() { launcher.options }
 
 }

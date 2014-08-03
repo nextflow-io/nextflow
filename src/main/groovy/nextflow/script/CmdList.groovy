@@ -22,7 +22,6 @@ package nextflow.script
 
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import nextflow.share.PipelineManager
 
 /**
  * CLI command LIST
@@ -32,6 +31,9 @@ import nextflow.share.PipelineManager
 @CompileStatic
 @Parameters(commandDescription = "List all pipelines download")
 class CmdList implements CmdX {
+
+    @Override
+    final String getName() { "ls" }
 
     @Override
     void run() {

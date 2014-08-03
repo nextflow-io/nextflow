@@ -25,7 +25,7 @@ import static nextflow.util.ConfigHelper.parseValue
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.ExitCode
-import nextflow.exception.CliArgumentException
+import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.util.HistoryFile
 
@@ -111,7 +111,7 @@ class ConfigBuilder {
             files.each { String fileName ->
                 def thisFile = new File(fileName)
                 if(!thisFile.exists()) {
-                    throw new CliArgumentException("The specified configuration file does not exist: $thisFile -- check the name or choose another file")
+                    throw new AbortOperationException("The specified configuration file does not exist: $thisFile -- check the name or choose another file")
                 }
                 result << thisFile
             }

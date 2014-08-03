@@ -23,8 +23,8 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesExtensions
-import nextflow.share.PipelineManager
 
 /**
  * CLI sub-command clone
@@ -43,6 +43,9 @@ class CmdClone implements CmdX {
     String revision
 
     @Override
+    final String getName() { "clone" }
+
+    @Override
     void run() {
         // the pipeline name
         String pipeline = args[0]
@@ -53,14 +56,15 @@ class CmdClone implements CmdX {
         def target = new File(args.size()> 1 ? args[1] : manager.getBaseName())
         if( target.exists() ) {
             if( target.isFile() )
-                throw new IllegalStateException("A file with the same name already exists: $target")
+                throw new AbortOperationException("A file with the same name already exists: $target")
             if( !FilesExtensions.empty(target) )
-                throw new IllegalStateException("Clone target directory must be empty: $target")
+                throw new AbortOperationException("Clone target directory must be empty: $target")
         }
         else if( !target.mkdirs() ) {
-            throw new IOException("Cannot create clone target directory: $target")
+            throw new AbortOperationException("Cannot create clone target directory: $target")
         }
 
+        println "Cloning ${pipeline}${revision ? ':'+revision:''} ..."
         manager.clone(target, revision)
     }
 }

@@ -19,21 +19,21 @@
  */
 
 package nextflow.script
-
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.ParameterException
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.ExitCode
 import nextflow.daemon.DaemonLauncher
-import nextflow.exception.MissingScriptException
+import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.executor.ServiceName
 import nextflow.util.FileHelper
 import nextflow.util.LoggerHelper
 import nextflow.util.ServiceDiscover
-
+import org.eclipse.jgit.api.errors.GitAPIException
 /**
  * Main application entry point. It parses the command line and
  * launch the pipeline execution.
@@ -41,6 +41,7 @@ import nextflow.util.ServiceDiscover
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class Launcher {
 
     /**
@@ -49,49 +50,51 @@ class Launcher {
      * @return An instance of {@code CliBuilder}
      */
 
-    static JCommander jcommander
+    JCommander jcommander
 
-    static boolean fullVersion
+    boolean fullVersion
 
-    static CliOptions options
+    CliOptions options
 
-    static CmdX command
+    CmdX command
+
+    String[] args
+
+    protected Launcher(String... args) {
+        this.args = args
+    }
+
 
     @PackageScope
-    static void parseMainArgs(String... args) {
+    void parseMainArgs(String... args) {
 
-        def commands = [
-                clone:   new CmdClone(),
-                history: new CmdHistory(),
-                info:    new CmdInfo(),
-                list:    new CmdList(),
-                pull:    new CmdPull(),
-                run:     new CmdRun(),
-                drop:    new CmdDrop(),
-                search:  new CmdSearch()
+        List commands = [ new CmdClone(),
+                new CmdHistory(),
+                new CmdInfo(),
+                new CmdList(),
+                new CmdPull(),
+                new CmdRun(),
+                new CmdDrop(),
+                new CmdHelp()
         ]
 
         def normalizedArgs = CliOptions.normalizeArgs(args)
         options = new CliOptions()
         jcommander = new JCommander(options)
-        commands.each { name, cmd -> jcommander.addCommand(name, cmd) }
+        commands.each { cmd -> jcommander.addCommand(cmd.name, cmd) }
         jcommander.setProgramName( Const.APP_NAME )
         jcommander.parse( normalizedArgs as String[] )
         fullVersion = '-version' in normalizedArgs
-        command = commands.get( jcommander.getParsedCommand() )
-        if( command )
-            command.setOptions(options)
+        command = commands.find { it.name == jcommander.getParsedCommand()  }
+        if( command ) {
+            command.setLauncher(this)
+        }
+
     }
 
 
-    /**
-     * Program entry method
-     *
-     * @param args The program options as specified by the user on the CLI
-     */
-    public static void main(String... args)  {
+    protected void run() {
 
-        def scriptBaseName = null
         try {
             // -- parse the program arguments - and - configure the logger
             parseMainArgs(args)
@@ -111,10 +114,6 @@ class Launcher {
                 System.exit(ExitCode.OK)
             }
 
-            if( !options.quiet && !(command instanceof CmdInfo) ) {
-                println "N E X T F L O W  ~  version ${Const.APP_VER}"
-            }
-
             // -- launch daemon
             if( options.isDaemon() ) {
                 log.debug "Launching cluster daemon"
@@ -131,13 +130,14 @@ class Launcher {
             // print command line parsing errors
             // note: use system.err.println since if an exception is raised
             //       parsing the cli params the logging is not configured
-            System.err.println "${e.getMessage()} -- Check the available command line parameters and syntax using '-h'"
+            System.err.println "${e.getMessage()} -- Check the available commands and options and syntax with 'help'"
             System.exit( ExitCode.INVALID_COMMAND_LINE_PARAMETER )
         }
 
-        catch (MissingScriptException e ) {
-            log.error "The specified script does not exist: '${e.scriptFile}'\n", e
-            System.exit( ExitCode.MISSING_SCRIPT_FILE )
+        catch ( GitAPIException | AbortOperationException e ) {
+            System.err.println e.getMessage()
+            log.debug "Command runtime error", e
+            System.exit( ExitCode.COMMAND_RUNTIME_ERROR )
         }
 
         catch( ConfigParseException e )  {
@@ -149,6 +149,17 @@ class Launcher {
             log.error("${fail.toString()} -- See the file '.nextflow.log' for more error details", fail)
             System.exit( ExitCode.UNKNOWN_ERROR )
         }
+
+    }
+
+    /**
+     * Program entry method
+     *
+     * @param args The program options as specified by the user on the CLI
+     */
+    public static void main(String... args)  {
+
+        new Launcher(args).run()
 
     }
 
@@ -174,7 +185,7 @@ class Launcher {
      *
      * @param config The nextflow configuration map
      */
-    static launchDaemon() {
+    protected launchDaemon() {
 
         // -- check file system providers
         FileHelper.checkFileSystemProviders()
@@ -182,7 +193,7 @@ class Launcher {
         // create the config object
         def config = new ConfigBuilder().setOptions(options).build()
 
-        def daemonConfig = config.daemon instanceof Map ? config.daemon : [:]
+        Map daemonConfig = config.daemon instanceof Map ? (Map)config.daemon : [:]
         log.debug "Daemon config > $daemonConfig"
 
 

@@ -23,8 +23,9 @@ package nextflow.exception
 import groovy.transform.InheritConstructors
 
 /**
+ * Stop the current operation execution
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class CliArgumentException extends RuntimeException { }
+class AbortOperationException extends RuntimeException { }

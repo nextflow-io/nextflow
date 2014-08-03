@@ -20,20 +20,30 @@
 
 package nextflow.script
 
-import com.beust.jcommander.Parameters
+import com.beust.jcommander.Parameter
 import groovy.transform.CompileStatic
 
 /**
- * CLI sub-command search
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Parameters(commandDescription = "Search a pipeline in the local cache and the remote Github repository")
-class CmdSearch implements CmdX {
+class CmdHelp implements CmdX {
+
+    @Override
+    final String getName() { "help" }
+
+    @Parameter(description = 'Optional command name', arity = 1)
+    List<String> args
 
     @Override
     void run() {
+        if( !args ) {
+            launcher.jcommander.usage()
+        }
+        else {
+            final cmd = args[0]
+            launcher.jcommander.usage(cmd)
+        }
     }
-
 }

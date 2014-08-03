@@ -22,9 +22,11 @@ package nextflow.script
 
 import java.lang.management.ManagementFactory
 
+import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.Const
+import nextflow.exception.AbortOperationException
 
 /**
  * CLI sub-command INFO
@@ -35,9 +37,37 @@ import nextflow.Const
 @Parameters(commandDescription = "Show the system runtime information")
 class CmdInfo implements CmdX {
 
+    @Parameter(description = 'Optional pipeline name')
+    List<String> args
+
+    @Override
+    final String getName() { 'info' }
+
     @Override
     void run() {
-        println getInfo() + '\n'
+        if( !args ) {
+            println getInfo() + '\n'
+            return
+        }
+
+        def repo = new PipelineManager().find(args[0])
+        if( !repo ) {
+            throw new AbortOperationException("Unknown pipeline: ${args[0]}")
+        }
+
+        if( repo instanceof List ) {
+            throw new AbortOperationException("Which one do you mean?\n${repo.join('\n')}")
+        }
+
+        def pipeline = new PipelineManager(repo as String)
+
+        println """
+                homepage: http://xxx
+                path    : ${pipeline.getLocalPath()}
+                main    : ${pipeline.getMainScriptFile().getName()}
+                revision: ${pipeline.getCurrentRevision()}
+                """
+                .stripIndent().toString().trim()
     }
 
     /**

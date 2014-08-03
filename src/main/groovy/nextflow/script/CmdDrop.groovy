@@ -24,7 +24,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.share.PipelineManager
+import nextflow.exception.AbortOperationException
 
 /**
  *
@@ -42,12 +42,14 @@ class CmdDrop implements CmdX {
     boolean force
 
     @Override
+    final String getName() { "rm" }
+
+    @Override
     void run() {
 
         def manager = new PipelineManager(args[0])
         if( !manager.localPath.exists() ) {
-            log.info "Pipeline does not exist"
-            return
+            throw new AbortOperationException("Pipeline does not exist")
         }
 
         if( this.force || manager.isClean() ) {
@@ -55,6 +57,6 @@ class CmdDrop implements CmdX {
             return
         }
 
-        log.info "Repository contains not committed changes -- wont drop it"
+        throw new AbortOperationException("Repository contains not committed changes -- wont drop it")
     }
 }

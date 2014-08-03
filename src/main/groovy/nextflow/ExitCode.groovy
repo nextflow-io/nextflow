@@ -43,6 +43,8 @@ interface ExitCode {
 
     static final short DAEMON_NOT_FOUND = 107
 
+    static final short COMMAND_RUNTIME_ERROR = 108
+
     static final short UNKNOWN_ERROR = 255
 
 
