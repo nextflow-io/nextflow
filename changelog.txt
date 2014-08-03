@@ -1,6 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.8.5 - 3 Aug 2014 
+- Upgraded to Groovy 2.3.6 
+- Added '-noverify' to JVM launcher options as workaround for Java bug JDK-8051012
+
 0.8.4 - 20 Jul 2014
 - Upgrade to Groovy 2.3.4
 - Fixed method Path.list()
