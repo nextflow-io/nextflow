@@ -46,7 +46,7 @@ import org.codehaus.groovy.control.customizers.ImportCustomizer
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class CliRunner {
+class ScriptRunner {
 
     /**
      * The underlying execution session
@@ -61,7 +61,7 @@ class CliRunner {
     /**
      * The extra binding variables specified by the user
      */
-    private CliBinding bindings
+    private ScriptBinding bindings
 
     /**
      * The script file
@@ -88,13 +88,13 @@ class CliRunner {
     /**
      * Instantiate the runner object creating a new session
      */
-    def CliRunner( ) {
+    def ScriptRunner( ) {
         this( [:] )
     }
 
-    def CliRunner( Map config ) {
+    def ScriptRunner( Map config ) {
         session = new Session(config)
-        bindings = new CliBinding(session)
+        bindings = new ScriptBinding(session)
     }
 
     /**
@@ -102,8 +102,8 @@ class CliRunner {
      *
      * @param config
      */
-    def CliRunner( ConfigObject config ) {
-        this(configToMap(config))
+    def ScriptRunner( ConfigObject config ) {
+        this(ConfigBuilder.configToMap(config))
     }
 
 
@@ -306,8 +306,8 @@ class CliRunner {
 
         bindings.setArgs( new ArgsList(args) )
         bindings.setParams( session.config.params as Map )
-        bindings.setVariable( 'workDir', session.workDir )
-        bindings.setVariable( 'scriptDir', session.baseDir.toPath() )
+        // TODO add test for this property
+        bindings.setVariable( 'scriptDir', session.baseDir?.toPath() )
 
         // define the imports
         def importCustomizer = new ImportCustomizer()
@@ -344,7 +344,7 @@ class CliRunner {
             session.addClasspath(path)
         }
 
-        // set the bytecode target directory
+        // set the byte-code target directory
         def targetDir = FileHelper.createTempFolder(session.workDir).toFile()
         config.setTargetDirectory(targetDir)
         session.addClasspath(targetDir)

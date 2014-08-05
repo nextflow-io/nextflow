@@ -18,10 +18,9 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.script
+package nextflow.cli
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
-import groovy.transform.PackageScope
 /**
  * Main application command line options
  *
@@ -76,58 +75,6 @@ class CliOptions {
 
     boolean isDaemon() {
         return daemon || daemonOptions.size() > 0
-    }
-
-
-    @PackageScope
-    static List<String> normalizeArgs( String ... args ) {
-
-        def normalized = []
-        int i=0
-        while( true ) {
-            if( i==args.size() ) { break }
-
-            def current = args[i++]
-            normalized << current
-
-            if( current == '-resume' ) {
-                if( i<args.size() && !args[i].startsWith('-') && (args[i]=='last' || args[i] =~~ /[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{8}/) ) {
-                    normalized << args[i++]
-                }
-                else {
-                    normalized << 'last'
-                }
-            }
-            else if( current == '-test' && (i==args.size() || args[i].startsWith('-'))) {
-                normalized << '%all'
-            }
-
-            else if( current ==~ /^\-\-[a-zA-Z\d].*/ && !current.contains('=')) {
-                current += '='
-                current += ( i<args.size() ? args[i++] : 'true' )
-                normalized[-1] = current
-            }
-
-            else if( current ==~ /^\-process\..+/ && !current.contains('=')) {
-                current += '='
-                current += ( i<args.size() ? args[i++] : 'true' )
-                normalized[-1] = current
-            }
-
-            else if( current ==~ /^\-daemon\..+/ && !current.contains('=')) {
-                current += '='
-                current += ( i<args.size() ? args[i++] : 'true' )
-                normalized[-1] = current
-            }
-
-            else if( current ==~ /^\-executor\..+/ && !current.contains('=')) {
-                current += '='
-                current += ( i<args.size() ? args[i++] : 'true' )
-                normalized[-1] = current
-            }
-        }
-
-        return normalized
     }
 
 

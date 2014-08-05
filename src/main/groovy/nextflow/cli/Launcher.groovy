@@ -18,7 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.script
+package nextflow.cli
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.ParameterException
 import groovy.transform.CompileStatic
@@ -30,6 +30,7 @@ import nextflow.daemon.DaemonLauncher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.executor.ServiceName
+import nextflow.script.ConfigBuilder
 import nextflow.util.FileHelper
 import nextflow.util.LoggerHelper
 import nextflow.util.ServiceDiscover
@@ -52,23 +53,37 @@ class Launcher {
 
     JCommander jcommander
 
-    boolean fullVersion
-
     CliOptions options
 
-    CmdX command
+    private boolean fullVersion
 
-    String[] args
+    private CmdX command
 
+    private String[] args
+
+    private String commandString
+
+    private List<CmdX> allCommands
+
+    /**
+     * Create a launcher object
+     *
+     * @param args The command line arguments provided by the user
+     */
     protected Launcher(String... args) {
         this.args = args
+        this.commandString = System.getenv('NXF_CLI')
     }
 
 
+    /**
+     * Create the Jcommander 'interpreter' and parse the command line arguments
+     */
     @PackageScope
-    void parseMainArgs(String... args) {
+    Launcher parseMainArgs() {
 
-        List commands = [ new CmdClone(),
+        allCommands = (List<CmdX>)[
+                new CmdClone(),
                 new CmdHistory(),
                 new CmdInfo(),
                 new CmdList(),
@@ -78,28 +93,102 @@ class Launcher {
                 new CmdHelp()
         ]
 
-        def normalizedArgs = CliOptions.normalizeArgs(args)
+        def cols = getColumns()
+        def normalizedArgs = normalizeArgs(args)
         options = new CliOptions()
         jcommander = new JCommander(options)
-        commands.each { cmd -> jcommander.addCommand(cmd.name, cmd) }
+        allCommands.each { cmd -> jcommander.addCommand(cmd.name, cmd) }
         jcommander.setProgramName( Const.APP_NAME )
+        if( cols )
+            jcommander.setColumnSize(cols)
         jcommander.parse( normalizedArgs as String[] )
         fullVersion = '-version' in normalizedArgs
-        command = commands.find { it.name == jcommander.getParsedCommand()  }
+        command = allCommands.find { it.name == jcommander.getParsedCommand()  }
         if( command ) {
             command.setLauncher(this)
         }
 
+        return this
     }
 
+    private int getColumns() {
+        try {
+            System.getenv('COLUMNS').toInteger()
+        }
+        catch( Exception e ) {
+            return 0
+        }
+    }
 
+    /**
+     * normalize the command line arguments to handle some corner cases
+     */
+    @PackageScope
+    static List<String> normalizeArgs( String ... args ) {
+
+        def normalized = []
+        int i=0
+        while( true ) {
+            if( i==args.size() ) { break }
+
+            def current = args[i++]
+            normalized << current
+
+            if( current == '-resume' ) {
+                if( i<args.size() && !args[i].startsWith('-') && (args[i]=='last' || args[i] =~~ /[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{8}/) ) {
+                    normalized << args[i++]
+                }
+                else {
+                    normalized << 'last'
+                }
+            }
+            else if( current == '-test' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '%all'
+            }
+
+            else if( current ==~ /^\-\-[a-zA-Z\d].*/ && !current.contains('=')) {
+                current += '='
+                current += ( i<args.size() ? args[i++] : 'true' )
+                normalized[-1] = current
+            }
+
+            else if( current ==~ /^\-process\..+/ && !current.contains('=')) {
+                current += '='
+                current += ( i<args.size() ? args[i++] : 'true' )
+                normalized[-1] = current
+            }
+
+            else if( current ==~ /^\-daemon\..+/ && !current.contains('=')) {
+                current += '='
+                current += ( i<args.size() ? args[i++] : 'true' )
+                normalized[-1] = current
+            }
+
+            else if( current ==~ /^\-executor\..+/ && !current.contains('=')) {
+                current += '='
+                current += ( i<args.size() ? args[i++] : 'true' )
+                normalized[-1] = current
+            }
+
+            else if( current == 'run' && i<args.size() && args[i] == '-' ) {
+                i++
+                normalized << '-stdin'
+            }
+        }
+
+        return normalized
+    }
+
+    /**
+     *
+     */
     protected void run() {
 
         try {
             // -- parse the program arguments - and - configure the logger
-            parseMainArgs(args)
+            parseMainArgs()
             LoggerHelper.configureLogger(options)
-            log.debug "${Const.APP_NAME} ${args?.join(' ')}"
+            log.debug '$> ' + commandString
 
             // -- print out the version number, then exit
             if ( options.version ) {
@@ -109,9 +198,8 @@ class Launcher {
 
             // -- print out the program help, then exit
             if( options.help || (!command && !options.isDaemon())) {
-                println Const.LOGO
-                jcommander.usage()
-                System.exit(ExitCode.OK)
+                command = allCommands.find { it.name == 'help' }
+                command.setLauncher(this    )
             }
 
             // -- launch daemon

@@ -18,21 +18,31 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.script
+package nextflow.cli
+import java.nio.file.Files
 
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CmdPullTest extends Specification {
+class CmdCloneTest extends Specification {
 
-    def testPullFromRemote() {
+    def testClone() {
 
         given:
-        def cmd = new CmdPull(args: ['pditommaso/awesome-pipeline'])
+        def dir = Files.createTempDirectory('test')
+        def cmd = new CmdClone()
+        cmd.args = ['nextflow-io/hello', dir.toFile().toString()]
 
+        when:
+        cmd.run()
+
+        then:
+        dir.resolve('README.md').exists()
+
+        cleanup:
+        dir?.deleteDir()
 
     }
 

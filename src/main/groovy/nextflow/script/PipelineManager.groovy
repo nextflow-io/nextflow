@@ -19,7 +19,6 @@
  */
 
 package nextflow.script
-import java.nio.file.Path
 
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
@@ -30,6 +29,8 @@ import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.CreateBranchCommand
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.errors.RefNotFoundException
+import org.eclipse.jgit.lib.Ref
+
 /**
  * Handles operation on remote and local installed pipelines
  *
@@ -40,29 +41,43 @@ import org.eclipse.jgit.api.errors.RefNotFoundException
 @CompileStatic
 class PipelineManager {
 
-    static final String MANIFEST_FILE_NAME = '.MANIFEST'
+    static final String MANIFEST_FILE_NAME = '.PIPELINE-INF'
 
-    static final String SCRIPT_FILE_NAME = 'main.nf'
+    static final String DEFAULT_MAIN_FILE_NAME = 'main.nf'
 
-    static final String defaultOrganization = 'nextflow-io'
+    static final String DEFAULT_MASTER_BRANCH = 'master'
+
+    static final String DEFAULT_ORGANIZATION = System.getenv('NXF_ORG') ?: 'nextflow-io'
 
     /**
      * The folder all pipelines scripts are installed
      */
-    private File root = new File(Const.APP_HOME_DIR, 'repos')
+    private File root = new File(Const.APP_HOME_DIR, 'assets')
 
     /**
-     * The current pipeline name. It must be in the form {@code username/repo} where 'username'
+     * The pipeline name. It must be in the form {@code username/repo} where 'username'
      * is a valid user name or organisation account, while 'repo' is the repository name
-     * containing the
+     * containing the pipeline code
      */
     private String pipeline
 
+    /**
+     * Directory where the pipeline is cloned (i.e downloaded)
+     */
     private File localPath
 
+    /**
+     * GitHub remote API entry point e.g. {@code https://api.github.com/repos/<pipeline>
+     *
+     * @link https://developer.github.com/v3/repos/
+     *
+     */
     private URL remoteUrl
 
-    private String masterRevision = 'master'
+    /**
+     * url of github repository where the project is hosted
+     */
+    private String githubPage
 
     private Git _git
 
@@ -88,7 +103,7 @@ class PipelineManager {
 
         def qualifiedName = find(name)
         if( !qualifiedName ) {
-            return "$defaultOrganization/$name".toString()
+            return "$DEFAULT_ORGANIZATION/$name".toString()
         }
 
         if( qualifiedName instanceof List ) {
@@ -104,7 +119,13 @@ class PipelineManager {
         this.pipeline = resolveName(name)
         this.localPath = new File(root, pipeline)
         this.remoteUrl = new URL("https://api.github.com/repos/${pipeline}")
+        this.githubPage = "http://github.com/$pipeline"
         this._git = null
+        return this
+    }
+
+    PipelineManager setLocalPath(File path) {
+        this.localPath = path
         return this
     }
 
@@ -115,7 +136,7 @@ class PipelineManager {
 
     void checkValidGithubRepo() {
 
-        def scriptName = scriptNameFor(remoteUrl)
+        def scriptName = getMainScriptName()
         def scriptUrl = new URL("${remoteUrl}/contents/$scriptName")
 
         try {
@@ -130,7 +151,7 @@ class PipelineManager {
                 throw new AbortOperationException("Cannot find $pipeline pipeline -- Make sure exists a Github repository at http://github.com/$pipeline")
             }
 
-            throw new AbortOperationException("Illegal pipeline repository http://github.com/$pipeline -- It must contain a script named '$SCRIPT_FILE_NAME' or a file '$MANIFEST_FILE_NAME' ")
+            throw new AbortOperationException("Illegal pipeline repository $githubPage -- It must contain a script named '$DEFAULT_MAIN_FILE_NAME' or a file '$MANIFEST_FILE_NAME' ")
         }
 
     }
@@ -165,7 +186,7 @@ class PipelineManager {
             throw new AbortOperationException("Unknown pipeline folder: $localPath")
         }
 
-        def mainScript = scriptNameFor(localPath)
+        def mainScript = getMainScriptName()
         def result = new File(localPath, mainScript).absoluteFile
         if( !result.exists() )
             throw new AbortOperationException("Missing pipeline script: $result")
@@ -173,26 +194,54 @@ class PipelineManager {
         return result
     }
 
-    static String scriptNameFor( repository ) {
-        def url
-        if( repository instanceof URL )
-            url = new URL("${repository}/contents/${MANIFEST_FILE_NAME}")
-        else if( repository instanceof File || repository instanceof Path )
-            url = new URL("file://${repository}/${MANIFEST_FILE_NAME}")
-        else
-            throw new IllegalArgumentException("Not a valid repository argument")
-
-        def manifest = readManifest(url)
-        return manifest?.get('main-script') ?: SCRIPT_FILE_NAME
+    String getMainScriptName() {
+        readManifest()?.get('main-script') ?: DEFAULT_MAIN_FILE_NAME
     }
 
+    String getHomePage() {
+        readManifest()?.get('home-url') ?: githubPage
+    }
 
-    static protected Map readManifest( URL url ) {
+    String getMasterBranch() {
+        readManifest()?.get('master-branch') ?: DEFAULT_MASTER_BRANCH
+    }
+
+    protected Map readManifest() {
+        try {
+            if( localPath.exists() ) {
+                def result = new Properties()
+                result.load( new FileReader(new File(localPath, MANIFEST_FILE_NAME)) )
+                return result
+            }
+            else {
+                readManifestFrom("${remoteUrl}/contents/${MANIFEST_FILE_NAME}")
+            }
+
+        }
+        catch( IOException e ) {
+            log.debug "Cannot read pipeline manifest -- Cause: ${e.message}"
+            return null
+        }
+    }
+
+    /**
+     * Given a Github content url: 1) get content object 2) decide from base64 3) read the content as {@link Properties} object
+     *
+     * @link https://developer.github.com/v3/repos/contents/#get-contents
+     *
+     * @param url
+     * @return
+     */
+    @Memoized
+    static protected Map readManifestFrom( String url ) {
         InputStream input = null
         try {
-            def manifest = new Properties()
-            manifest.load( (input=url.openStream()) )
-            return manifest
+            Map response = (Map)new JsonSlurper().parseText(new URL(url).text)
+            def bytes = response.get('content')?.toString()?.decodeBase64()
+
+            def result = new Properties()
+            result.load( new ByteArrayInputStream(bytes) )
+            return result
         }
         catch( IOException e ) {
             log.debug "Unable to read manifest file: $url"
@@ -203,9 +252,14 @@ class PipelineManager {
         }
     }
 
+    String getName() {
+        return pipeline
+    }
+
     String getBaseName() {
         pipeline.split('/')[1]
     }
+
 
     boolean isLocal() {
         localPath.exists()
@@ -226,11 +280,15 @@ class PipelineManager {
         log.debug "Listing pipelines in folders: $root"
 
         def result = []
+        if( !root.exists() )
+            return result
+
         root.eachDir { File org ->
             org.eachDir { File it ->
                 result << "${org.getName()}/${it.getName()}".toString()
             }
         }
+
         return result
     }
 
@@ -261,7 +319,8 @@ class PipelineManager {
     /**
      * Download a pipeline from a remote Github repository
      *
-     * @param options
+     * @param revision The revision to download
+     * @result A message representing the operation result
      */
     def download(String revision=null) {
         assert pipeline
@@ -270,6 +329,7 @@ class PipelineManager {
          * if the pipeline already exists locally pull it from the remote repo
          */
         if( !localPath.exists() ) {
+            localPath.parentFile.mkdirs()
             // make sure it contains a valid repository
             checkValidGithubRepo()
 
@@ -281,6 +341,7 @@ class PipelineManager {
                     .setDirectory(localPath)
                     .call()
 
+            return "downloaded from ${gitRepositoryUrl}"
         }
 
 
@@ -299,10 +360,11 @@ class PipelineManager {
             }
             /*
              * If the specified revision does not exist
-             * Try to checkout it from a remote branch
+             * Try to checkout it from a remote branch and return
              */
             catch ( RefNotFoundException e ) {
-                return checkoutRemoteBranch(revision)
+                def ref = checkoutRemoteBranch(revision)
+                return "checkout-out at ${ref.getObjectId()}"
             }
         }
 
@@ -311,7 +373,7 @@ class PipelineManager {
         if(!result.isSuccessful())
             throw new AbortOperationException("Cannot pull pipeline: '$pipeline' -- ${result.toString()}")
 
-        return result
+        return result?.mergeResult?.mergeStatus?.toString()
 
     }
 
@@ -347,7 +409,7 @@ class PipelineManager {
         assert localPath
 
         def current = getCurrentRevision()
-        if( current != masterRevision ) {
+        if( current != masterBranch ) {
             if( !revision ) {
                 throw new AbortOperationException("Pipeline '$pipeline' currently is sticked on revision: $current -- you need to specify explicitly a revision with the option '-r' to use it")
             }
@@ -371,7 +433,7 @@ class PipelineManager {
     }
 
 
-    protected checkoutRemoteBranch( String revision ) {
+    protected Ref checkoutRemoteBranch( String revision ) {
 
         git.fetch().call()
         git.checkout()

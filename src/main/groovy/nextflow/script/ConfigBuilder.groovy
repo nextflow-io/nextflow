@@ -25,6 +25,8 @@ import static nextflow.util.ConfigHelper.parseValue
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.ExitCode
+import nextflow.cli.CliOptions
+import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.util.HistoryFile

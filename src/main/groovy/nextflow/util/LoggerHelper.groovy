@@ -35,10 +35,8 @@ import ch.qos.logback.core.rolling.FixedWindowRollingPolicy
 import ch.qos.logback.core.rolling.RollingFileAppender
 import ch.qos.logback.core.rolling.TriggeringPolicyBase
 import ch.qos.logback.core.spi.FilterReply
-import groovy.transform.PackageScope
 import nextflow.Const
-import nextflow.script.CliOptions
-import org.apache.commons.lang.exception.ExceptionUtils
+import nextflow.cli.CliOptions
 import org.slf4j.LoggerFactory
 /**
  * Helper methods to setup the logging subsystem

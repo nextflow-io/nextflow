@@ -32,12 +32,12 @@ import test.TestParser
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CliRunnerTest extends Specification {
+class ScriptRunnerTest extends Specification {
 
     def testProcess () {
 
         setup:
-        def runner = new CliRunner([process:[executor:'nope']])
+        def runner = new ScriptRunner([process:[executor:'nope']])
 
         /*
          * Test a task with a very simple body.
@@ -67,7 +67,7 @@ class CliRunnerTest extends Specification {
          * test that the *instanceType* attribute is visible in the taskConfig object
          */
         when:
-        def runner = new CliRunner( process: [executor:'nope', instanceType:'alpha'] )
+        def runner = new ScriptRunner( process: [executor:'nope', instanceType:'alpha'] )
         def script =
             '''
             process simpleTask  {
@@ -91,7 +91,7 @@ class CliRunnerTest extends Specification {
          * override the one define in the main config (alpha)
          */
         when:
-        def runner2 = new CliRunner( process: [executor:'nope', instanceType:'alpha'] )
+        def runner2 = new ScriptRunner( process: [executor:'nope', instanceType:'alpha'] )
         def script2 =
             '''
             process otherTask  {
@@ -116,7 +116,7 @@ class CliRunnerTest extends Specification {
 
     def testProcessWithArgs () {
         setup:
-        def runner = new CliRunner( executor: 'nope' )
+        def runner = new ScriptRunner( executor: 'nope' )
 
         when:
         def script =
@@ -147,7 +147,7 @@ class CliRunnerTest extends Specification {
     def testProcessEcho () {
 
         setup:
-        def runner = new CliRunner( executor: 'nope' )
+        def runner = new ScriptRunner( executor: 'nope' )
 
         when:
         def script =
@@ -175,7 +175,7 @@ class CliRunnerTest extends Specification {
 
 
         setup:
-        def runner = new CliRunner( executor: 'nope' )
+        def runner = new ScriptRunner( executor: 'nope' )
 
         def script = '''
             X = 1
@@ -198,7 +198,7 @@ class CliRunnerTest extends Specification {
     def testProcessVariables2 () {
 
         setup:
-        def runner = new CliRunner( executor: 'nope' )
+        def runner = new ScriptRunner( executor: 'nope' )
 
         def script = '''
             X = 1
@@ -224,7 +224,7 @@ class CliRunnerTest extends Specification {
 
 
         setup:
-        def runner = new CliRunner( executor: 'nope' )
+        def runner = new ScriptRunner( executor: 'nope' )
 
         def script = '''
             X = file('filename')
@@ -242,169 +242,6 @@ class CliRunnerTest extends Specification {
 
     }
 
-    def testVersion () {
-
-        when:
-        def opt = CliRunner.parseMainArgs('-v')
-
-        then:
-        assert opt.version
-
-    }
-
-    def testHelp () {
-
-        when:
-        def opt = CliRunner.parseMainArgs('-h')
-
-        then:
-        assert opt.help
-
-    }
-
-
-    def testUsage () {
-
-        when:
-        CliRunner.parseMainArgs([] as String)
-        CliRunner.jcommander.usage()
-
-        then:
-        noExceptionThrown()
-
-    }
-
-
-
-    def buildConfigObject () {
-
-        setup:
-        def env = [PATH:'/local/bin', HOME:'/home/my']
-
-        when:
-        def config = CliRunner.buildConfig0(env,null)
-
-        then:
-        ('PATH' in config.env )
-        ('HOME' in config.env )
-        !('XXX' in config.env )
-
-        config.env.PATH == '/local/bin'
-        config.env.HOME == '/home/my'
-
-    }
-
-    def buildConfigObject2 () {
-
-        setup:
-        def env = [HOME:'/home/my', PATH:'/local/bin', 'dot.key.name':'any text']
-
-        def text1 = '''
-        task { field1 = 1; field2 = 'hola'; }
-        env { alpha = 'a1'; beta  = 'b1'; HOME="$HOME:/some/path"; }
-        '''
-
-        def text2 = '''
-        task { field2 = 'Hello' }
-        env { beta = 'b2'; delta = 'd2'; HOME="$HOME:/local/path"; XXX="$PATH:/xxx"; YYY = "$XXX:/yyy"; WWW = "${WWW?:''}:value"   }
-        '''
-
-        when:
-        def config1 = CliRunner.buildConfig0(env, [text1])
-        def config2 = CliRunner.buildConfig0(env, [text1, text2])
-
-        // note: configuration object can be modified like any map
-        config2.env ['ZZZ'] = '99'
-
-        then:
-        config1.task.field1 == 1
-        config1.task.field2 == 'hola'
-        config1.env.HOME == '/home/my:/some/path'
-        config1.env.PATH == '/local/bin'
-        config1.env.'dot.key.name' == 'any text'
-
-        config2.task.field1 == 1
-        config2.task.field2 == 'Hello'
-        config2.env.alpha == 'a1'
-        config2.env.beta == 'b2'
-        config2.env.delta == 'd2'
-        config2.env.HOME == '/home/my:/local/path'
-        config2.env.XXX == '/local/bin:/xxx'
-        config2.env.PATH == '/local/bin'
-        config2.env.YYY == '/local/bin:/xxx:/yyy'
-        config2.env.ZZZ == '99'
-        config2.env.WWW == ':value'
-
-    }
-
-    def buildConfigObject3 () {
-
-        setup:
-        def env = [HOME:'/home/my', PATH:'/local/bin', 'dot.key.name':'any text']
-
-        def text1 = '''
-        task { field1 = 1; field2 = 'hola'; }
-        env { alpha = 'a1'; beta  = 'b1'; HOME="$HOME:/some/path"; }
-        params { demo = 1   }
-        '''
-
-
-        when:
-        def config1 = CliRunner.buildConfig0(env, [text1])
-
-        then:
-        config1.task.field1 == 1
-        config1.task.field2 == 'hola'
-        config1.env.HOME == '/home/my:/some/path'
-        config1.env.PATH == '/local/bin'
-        config1.env.'dot.key.name' == 'any text'
-
-        config1.params.demo == 1
-
-
-    }
-
-
-    def testValidateConfigFiles () {
-        when:
-        def files = CliRunner.validateConfigFiles(['file1','file2'])
-
-        then:
-        thrown(CliArgumentException)
-
-        when:
-        def f1 = File.createTempFile('file1','x').absoluteFile
-        def f2 = File.createTempFile('file1','x').absoluteFile
-        files = CliRunner.validateConfigFiles([f1.toString(), f2.toString()])
-
-        then:
-        files == [f1, f2]
-
-        cleanup:
-        f1?.delete()
-        f2?.delete()
-
-    }
-
-
-    def testConfigToMap  () {
-
-        setup:
-        def config = new ConfigSlurper().parse( 'task {field1=1; field2="two"}; env { x = 99 } ' )
-
-        when:
-        def map = CliRunner.configToMap(config)
-        map.env.PATH = '/local/bin'
-
-        then:
-        map.task.field1 == 1
-        map.task.field2 == "two"
-        map.env.x == 99
-        map.env.y == null
-        map.env.PATH == '/local/bin'
-
-    }
-
 
 
     def testAddLibPath() {
@@ -416,14 +253,14 @@ class CliRunnerTest extends Specification {
         def jar2 = new File(path2, 'lib2.jar'); jar2.createNewFile()
 
         when:
-        def runner = new CliRunner()
+        def runner = new ScriptRunner()
         runner.addLibPaths( path1 )
         then:
         runner.libraries == [ path1 ]
 
 
         when:
-        runner = new CliRunner()
+        runner = new ScriptRunner()
         runner.addLibPaths( path2 )
         then:
         runner.libraries.sort() == [ path2, jar1, jar2 ].sort()
@@ -446,20 +283,20 @@ class CliRunnerTest extends Specification {
         def jar2 = new File(path2, 'lib2.jar'); jar2.createNewFile()
 
         when:
-        def runner = new CliRunner()
+        def runner = new ScriptRunner()
         runner.setLibPath(jar1.toString())
         then:
         runner.libraries == [ jar1 ]
 
         when:
-        runner = new CliRunner()
+        runner = new ScriptRunner()
         runner.libPath = "${jar1}:${jar2}"
         then:
         runner.libraries == [ jar1, jar2 ]
 
 
         when:
-        runner = new CliRunner()
+        runner = new ScriptRunner()
         runner.setLibPath('some/lib.jar')
 
         then:
@@ -649,67 +486,12 @@ class CliRunnerTest extends Specification {
     }
 
 
-    def testCommandLineOptions() {
+    def testErrorLine() {
 
-        when:
-        def opt = CliRunner.parseMainArgs('-daemon.x=1', '-daemon.y.z=2')
-
-
-        then:
-        opt.daemonOptions.x == '1'
-        opt.daemonOptions.'y.z'== '2'
-
+        expect:
+        ScriptRunner.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]') == 'pfam3d.nf:189'
+        ScriptRunner.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','pfam3d') == 'pfam3d.nf:189'
+        ScriptRunner.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','hola') == null
     }
-
-    def testCommandDaemonOptions() {
-
-        when:
-        def opt = new CliOptions(daemonOptions: [group:'pippo', join:'192.168.0.1', 'x.y.z': 123])
-        def result = CliRunner.buildConfig([], opt)
-        then:
-        result.daemon == [group:'pippo', join:'192.168.0.1', x:[y:[z:123]]]
-
-    }
-
-    def testCommandExecutorOptions() {
-
-        when:
-        def opt = new CliOptions(executorOptions: [ alpha: 1, 'beta.x': 'hola', 'beta.y': 'ciao' ])
-        def result = CliRunner.buildConfig([], opt)
-        then:
-        result.executor.alpha == 1
-        result.executor.beta.x == 'hola'
-        result.executor.beta.y == 'ciao'
-
-
-    }
-
-//
-//    def testParamsOverride() {
-//
-//        given:
-//        def config = '''
-//            params.cpus = 10
-//
-//            derived.value = "x ${params.cpus}"
-//            '''
-//
-//        when:
-//        def obj = new ConfigSlurper().parse(config)
-//        then:
-//        obj.params.cpus == 10
-//        obj.derived.value == 'x 10'
-//
-//
-//        when:
-//        def map = [params:[cpus:20] ]
-//        def parser = new ConfigSlurper()
-//        parser.setBinding(map)
-//        obj = parser.parse(config)
-//        then:
-//        obj.params.cpus == 20
-//        obj.derived.value == 'x 20'
-//    }
-
 
 }

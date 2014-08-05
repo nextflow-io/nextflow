@@ -18,18 +18,23 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.script
+package nextflow.cli
+
+import nextflow.cli.CmdPull
+import spock.lang.Specification
+
 /**
- * Implement command shared methods
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-trait CmdX implements Runnable {
+class CmdPullTest extends Specification {
 
-    Launcher launcher
+    def testPullFromRemote() {
 
-    abstract def String getName()
+        given:
+        def cmd = new CmdPull(args: ['pditommaso/awesome-pipeline'])
 
-    def CliOptions getOptions() { launcher.options }
+
+    }
 
 }

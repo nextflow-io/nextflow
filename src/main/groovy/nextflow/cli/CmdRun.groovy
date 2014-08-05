@@ -18,7 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.script
+package nextflow.cli
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.IStringConverter
 import com.beust.jcommander.Parameter
@@ -26,6 +26,9 @@ import com.beust.jcommander.Parameters
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
+import nextflow.script.ScriptRunner
+import nextflow.script.ConfigBuilder
+import nextflow.script.PipelineManager
 import nextflow.util.Duration
 import nextflow.util.FileHelper
 import nextflow.util.HistoryFile
@@ -57,16 +60,16 @@ class CmdRun implements CmdX {
     @Parameter(names=['-c','-config'], description = 'Use the specified configuration file(s)')
     List<String> config
 
-    @Parameter(names=['-ps','-pool-size'], description = 'The number of threads in the execution pool', hidden = true)
+    @Parameter(names=['-ps','-pool-size'], description = 'Number of threads in the execution pool', hidden = true)
     Integer poolSize
 
-    @Parameter(names=['-pi','-poll-interval'], description = 'The executor poll interval (duration string ending with ms|s|m)', converter = DurationConverter)
+    @Parameter(names=['-pi','-poll-interval'], description = 'Executor poll interval (duration string ending with ms|s|m)', converter = DurationConverter)
     long pollInterval
 
-    @Parameter(names=['-qs','-queue-size'], description = 'The max number of processes that can be executed in parallel by each executor')
+    @Parameter(names=['-qs','-queue-size'], description = 'Max number of processes that can be executed in parallel by each executor')
     Integer queueSize
 
-    @Parameter(names=['-test'], description = 'Test the function with the name specified')
+    @Parameter(names=['-test'], description = 'Test function with the specified name')
     String test
 
     @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate results are stored')
@@ -78,7 +81,7 @@ class CmdRun implements CmdX {
     @DynamicParameter(names = '--', description = 'Set a parameter used by the workflow' )
     Map<String,String> params = new LinkedHashMap<>()
 
-    @DynamicParameter(names = ['-process.'], description = 'Set default process options' )
+    @DynamicParameter(names = ['-process.'], description = 'Set process default options' )
     Map<String,String> process = [:]
 
     @DynamicParameter(names = ['-e.'], description = 'Add the specified variable to execution environment')
@@ -93,24 +96,28 @@ class CmdRun implements CmdX {
     @Parameter(names = ['-bg'], description = 'Launch the pipeline as a background job', arity = 0)
     boolean background
 
-    @Parameter(required=true, description = 'The name of the pipeline to run')
+    @Parameter(description = 'name of pipeline to run')
     List<String> args
 
-    @Parameter(names=['-r','-revision'], description = 'Specify the pipeline revision to run')
+    @Parameter(names=['-r','-revision'], description = 'Revision of pipeline to run (either a branch, tag or commit SHA number)')
     String revision
 
-    @Parameter(names=['-update'], description = 'Update to latest version before run')
-    boolean update
+    @Parameter(names=['-latest'], description = 'Pull latest changes before run')
+    boolean latest
+
+    @Parameter(names='-stdin', hidden = true)
+    boolean stdin
 
     @Override
     final String getName() { 'run' }
 
     @Override
     void run() {
-        if( !launcher.options.quiet )
-            println "N E X T F L O W  ~  version ${Const.APP_VER}"
+        String pipeline = stdin ? '-' : ( args ? args[0] : null )
+        if( !pipeline )
+            throw new AbortOperationException("No pipeline to run was specified")
 
-        String pipeline = args[0]
+        log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
 
         // -- specify the arguments
         def scriptArgs = args?.size()>1 ? args[1..-1] : []
@@ -120,16 +127,16 @@ class CmdRun implements CmdX {
         FileHelper.checkFileSystemProviders()
 
         // create the config object
-        def config = new ConfigBuilder().setOptions(options).setCmdRun(this).build()
+        def config = new ConfigBuilder().setOptions(launcher.options).setCmdRun(this).build()
 
         // -- create a new runner instance
-        def runner = new CliRunner(config)
+        def runner = new ScriptRunner(config)
         runner.session.cacheable = this.cacheable
         runner.session.resumeMode = this.resume != null
         // note -- make sure to use 'FileHelper.asPath' since it guarantee to handle correctly non-standard file system e.g. 'dxfs'
         runner.session.workDir = FileHelper.asPath(this.workDir).toAbsolutePath()
         runner.session.baseDir = scriptFile?.canonicalFile?.parentFile
-        runner.libPath = options.libPath
+        runner.libPath = launcher.options.libPath
 
         log.debug "Script bin dir: ${runner.session.binDir}"
 
@@ -140,7 +147,7 @@ class CmdRun implements CmdX {
             log.debug( '\n'+CmdInfo.getInfo() )
 
             // -- add this run to the local history
-            HistoryFile.history.append( runner.session.uniqueId, args )
+            HistoryFile.history.write( runner.session.uniqueId, launcher.commandString )
             // -- run it!
             runner.execute(scriptFile,scriptArgs)
         }
@@ -169,7 +176,7 @@ class CmdRun implements CmdX {
          */
         def script = new File(pipelineName)
         if( script.isDirectory()  ) {
-            script = new File(pipelineName, PipelineManager.SCRIPT_FILE_NAME)
+            script = new PipelineManager().setLocalPath(script).getMainScriptFile()
         }
 
         if( script.exists() ) {
@@ -189,13 +196,11 @@ class CmdRun implements CmdX {
          */
         manager.setPipeline(repo as String)
 
-        if( !manager.localPath.exists() ) {
-            log.info "Downloading $repo ..."
-            manager.download()
-        }
-        else if( update ) {
-            log.info "Updating $repo ..."
-            manager.download()
+        if( !manager.localPath.exists() || latest ) {
+            log.info "Pulling $repo ..."
+            def result = manager.download()
+            if( result )
+                log.info " $result"
         }
         // checkout requested revision
         manager.checkout(revision)

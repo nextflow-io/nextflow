@@ -18,45 +18,38 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.script
+package nextflow.cli
 
-import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.exception.AbortOperationException
+import nextflow.script.PipelineManager
 
 /**
+ * CLI sub-command LIST. Prints a list of locally installed pipelines
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Delete a locally installed pipeline")
-class CmdDrop implements CmdX {
-
-    @Parameter(required=true, description = 'The name of the pipeline to drop')
-    List<String> args
-
-    @Parameter(names='-f', description = 'Delete the repository without taking care local changes')
-    boolean force
+@Parameters(commandDescription = "List all downloaded pipelines")
+class CmdList implements CmdX {
 
     @Override
-    final String getName() { "rm" }
+    final String getName() { "ls" }
 
     @Override
     void run() {
 
-        def manager = new PipelineManager(args[0])
-        if( !manager.localPath.exists() ) {
-            throw new AbortOperationException("Pipeline does not exist")
-        }
-
-        if( this.force || manager.isClean() ) {
-            manager.localPath.deleteDir()
+        def all = new PipelineManager().list()
+        if( !all ) {
+            log.info '(none)'
             return
         }
 
-        throw new AbortOperationException("Repository contains not committed changes -- wont drop it")
+        all.each { println it }
     }
+
+
+
 }

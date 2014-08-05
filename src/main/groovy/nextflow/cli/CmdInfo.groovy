@@ -18,7 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.script
+package nextflow.cli
 
 import java.lang.management.ManagementFactory
 
@@ -27,6 +27,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.Const
 import nextflow.exception.AbortOperationException
+import nextflow.script.PipelineManager
 
 /**
  * CLI sub-command INFO
@@ -37,7 +38,7 @@ import nextflow.exception.AbortOperationException
 @Parameters(commandDescription = "Show the system runtime information")
 class CmdInfo implements CmdX {
 
-    @Parameter(description = 'Optional pipeline name')
+    @Parameter(description = 'pipeline name')
     List<String> args
 
     @Override
@@ -50,24 +51,19 @@ class CmdInfo implements CmdX {
             return
         }
 
-        def repo = new PipelineManager().find(args[0])
+        def repo = new PipelineManager().resolveName(args[0])
         if( !repo ) {
-            throw new AbortOperationException("Unknown pipeline: ${args[0]}")
-        }
-
-        if( repo instanceof List ) {
-            throw new AbortOperationException("Which one do you mean?\n${repo.join('\n')}")
+            throw new AbortOperationException("Unknown pipeline '${args[0]}'")
         }
 
         def pipeline = new PipelineManager(repo as String)
 
-        println """
-                homepage: http://xxx
-                path    : ${pipeline.getLocalPath()}
-                main    : ${pipeline.getMainScriptFile().getName()}
-                revision: ${pipeline.getCurrentRevision()}
-                """
-                .stripIndent().toString().trim()
+        println " repo name  : ${pipeline.name}"
+        println " home page  : ${pipeline.homePage}"
+        println " local path : ${pipeline.localPath}"
+        println " main script: ${pipeline.mainScriptName}"
+        println " default rev: ${pipeline.masterBranch}"
+        println " current rev: ${pipeline.currentRevision}"
     }
 
     /**

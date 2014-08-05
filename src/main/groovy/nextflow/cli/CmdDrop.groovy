@@ -18,43 +18,47 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.script
+package nextflow.cli
+
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+import nextflow.script.PipelineManager
 
 /**
- * CLI sub-command UPDATE
+ * CLI sub-command DROP
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Download or updated a pipeline in the local repository")
-class CmdPull implements CmdX {
+@Parameters(commandDescription = "Delete a locally installed pipeline")
+class CmdDrop implements CmdX {
 
-    @Parameter(required=true, description = 'The name of the pipeline to pull', arity = 1)
+    @Parameter(required=true, description = 'name of the pipeline to drop')
     List<String> args
 
-    @Parameter(names='-all', description = 'Update all installed pipelines', arity = 0)
-    boolean all
+    @Parameter(names='-f', description = 'Delete the repository without taking care of local changes')
+    boolean force
 
     @Override
-    final String getName() { 'pull' }
+    final String getName() { "drop" }
 
     @Override
     void run() {
 
-        if( !all && !args )
-            throw new AbortOperationException('Missing argument')
-
-        (all ? new PipelineManager().list() : args.toList()) .each {
-            log.info "Pulling $it ..."
-            new PipelineManager(it).download()
+        def manager = new PipelineManager(args[0])
+        if( !manager.localPath.exists() ) {
+            throw new AbortOperationException("Pipeline does not exist")
         }
 
-    }
+        if( this.force || manager.isClean() ) {
+            manager.localPath.deleteDir()
+            return
+        }
 
+        throw new AbortOperationException("Repository contains not committed changes -- wont drop it")
+    }
 }

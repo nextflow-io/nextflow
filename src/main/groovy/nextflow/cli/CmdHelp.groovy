@@ -18,21 +18,35 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.util
+package nextflow.cli
 
-import spock.lang.Specification
+import com.beust.jcommander.Parameter
+import groovy.transform.CompileStatic
+import nextflow.Const
 
 /**
+ * CLI sub-command HELP
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class LoggerHelperTest extends Specification {
+@CompileStatic
+class CmdHelp implements CmdX {
 
-    def testErrorLine() {
+    @Override
+    final String getName() { "help" }
 
-        expect:
-        LoggerHelper.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]') == 'pfam3d.nf:189'
-        LoggerHelper.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','pfam3d') == 'pfam3d.nf:189'
-        LoggerHelper.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','hola') == null
+    @Parameter(description = 'command name', arity = 1)
+    List<String> args
+
+    @Override
+    void run() {
+        if( !args ) {
+            println Const.LOGO
+            launcher.jcommander.usage()
+        }
+        else {
+            final cmd = args[0]
+            launcher.jcommander.usage(cmd)
+        }
     }
 }

@@ -18,32 +18,55 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.script
-
+package nextflow.cli
 import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
+import nextflow.script.PipelineManager
 
 /**
+ * CLI sub-command PULL
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
-class CmdHelp implements CmdX {
+@Parameters(commandDescription = "Download or updated a pipeline in the local repository")
+class CmdPull implements CmdX {
+
+    @Parameter(description = 'name of the pipeline to pull', arity = 1)
+    List<String> args
+
+    @Parameter(names='-all', description = 'Update all installed pipelines', arity = 0)
+    boolean all
 
     @Override
-    final String getName() { "help" }
-
-    @Parameter(description = 'Optional command name', arity = 1)
-    List<String> args
+    final String getName() { 'pull' }
 
     @Override
     void run() {
-        if( !args ) {
-            launcher.jcommander.usage()
+
+        if( !all && !args )
+            throw new AbortOperationException('Missing argument')
+
+        def list = all ? new PipelineManager().list() : args.toList()
+        if( !list ) {
+            log.info "(nothing to do)"
+            return
         }
-        else {
-            final cmd = args[0]
-            launcher.jcommander.usage(cmd)
+
+        list.each {
+            log.info "Checking $it ..."
+            def manager = new PipelineManager(it)
+            def result = manager.download()
+            if( !result )
+                log.info " done"
+            else
+                log.info " $result"
         }
+
     }
+
 }

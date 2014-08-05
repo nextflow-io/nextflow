@@ -21,6 +21,7 @@
 package nextflow.script
 import java.nio.file.Files
 
+import nextflow.exception.AbortOperationException
 import spock.lang.Specification
 /**
  *
@@ -54,16 +55,49 @@ class PipelineManagerTest extends Specification {
     }
 
 
+    def testResolveName() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('cbcrg/pipe1').mkdirs()
+        folder.resolve('cbcrg/pipe2').mkdirs()
+        folder.resolve('ncbi/blast').mkdirs()
+
+        def manager = new PipelineManager().setRoot(folder.toFile())
+
+        when:
+        def result = manager.resolveName('x/y')
+        then:
+        result == 'x/y'
+
+        when:
+        result = manager.resolveName('blast')
+        then:
+        result == 'ncbi/blast'
+
+        when:
+        manager.resolveName('pipe')
+        then:
+        thrown(AbortOperationException)
+
+
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
+
     def testPull() {
 
         given:
         def folder = Files.createTempDirectory('test')
-        def manager = new PipelineManager().setRoot(folder.toFile()).setPipeline('pditommaso/awesome-pipeline')
+        def manager = new PipelineManager().setRoot(folder.toFile()).setPipeline('nextflow-io/hello')
 
         when:
         manager.download()
         then:
-        folder.resolve('pditommaso/awesome-pipeline/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/.git').isDirectory()
 
         when:
         manager.download()
@@ -93,19 +127,62 @@ class PipelineManagerTest extends Specification {
 
     }
 
-    def testScriptNameFor() {
+    def testGetScriptName() {
 
         given:
         def dir = Files.createTempDirectory('test')
         dir.resolve('sub1').mkdir()
-        dir.resolve('sub1/.MANIFEST').text = 'main-script = pippo.nf'
+        dir.resolve('sub1/.PIPELINE-INF').text = 'main-script = pippo.nf'
+        dir.resolve('sub2').mkdir()
 
-        expect:
-        PipelineManager.scriptNameFor( dir.resolve('sub1').toFile() ) == 'pippo.nf'
-        PipelineManager.scriptNameFor( dir.resolve('sub2').toFile() ) == 'main.nf'
+
+        when:
+        def holder = new PipelineManager()
+        holder.localPath = dir.resolve('sub1').toFile()
+        then:
+        holder.getMainScriptName() == 'pippo.nf'
+
+        when:
+        holder = new PipelineManager()
+        holder.localPath = dir.resolve('sub2').toFile()
+        then:
+        holder.getMainScriptName() == 'main.nf'
 
         cleanup:
+        dir?.deleteDir()
 
+    }
+
+    def testReadManifestFrom() {
+
+        given:
+        def dir = Files.createTempDirectory('test').toFile()
+        new File(dir,'response').text = '''{
+              "name": ".PIPELINE-INF",
+              "path": ".PIPELINE-INF",
+              "sha": "318cb862eda4a1782cd1e1333d913a8e3c61f0a1",
+              "size": 21,
+              "url": "https://api.github.com/repos/cbcrg/piper-nf/contents/.PIPELINE-INF?ref=master",
+              "html_url": "https://github.com/cbcrg/piper-nf/blob/master/.PIPELINE-INF",
+              "git_url": "https://api.github.com/repos/cbcrg/piper-nf/git/blobs/318cb862eda4a1782cd1e1333d913a8e3c61f0a1",
+              "type": "file",
+              "content": "bWFpbi1zY3JpcHQ6IHBpcGVyLm5m\\n",
+              "encoding": "base64",
+              "_links": {
+                "self": "https://api.github.com/repos/cbcrg/piper-nf/contents/.PIPELINE-INF?ref=master",
+                "git": "https://api.github.com/repos/cbcrg/piper-nf/git/blobs/318cb862eda4a1782cd1e1333d913a8e3c61f0a1",
+                "html": "https://github.com/cbcrg/piper-nf/blob/master/.PIPELINE-INF"
+              }
+            }'''
+
+        when:
+        def manifest = PipelineManager.readManifestFrom("file://$dir/response")
+
+        then:
+        manifest.size()==1
+        manifest.get('main-script') == 'piper.nf'
+
+        cleanup:
         dir?.deleteDir()
 
     }

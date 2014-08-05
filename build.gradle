@@ -19,7 +19,7 @@
  */
 
 apply plugin: 'gradle-one-jar'
-version = '0.8.5'
+version = '0.9.0-beta1'
 
 
 if (System.getenv('CI_GROOVY_VERSION')) {
@@ -280,7 +280,7 @@ def homeDir = System.properties['user.home']
 def nextflowDir = "$homeDir/.nextflow/framework/$version"
 
 task pack(type: OneJar) {
-    mainClass = 'nextflow.script.CliRunner'
+    mainClass = 'nextflow.cli.Launcher'
     manifest {
         attributes 'One-Jar-URL-Factory': 'com.simontuffs.onejar.JarClassLoader$OneJarURLFactory'
         attributes 'Timestamp': String.valueOf(System.currentTimeMillis())

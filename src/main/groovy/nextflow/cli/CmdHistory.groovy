@@ -18,7 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.script
+package nextflow.cli
 
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic

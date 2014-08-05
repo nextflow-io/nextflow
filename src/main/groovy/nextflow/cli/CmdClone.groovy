@@ -18,13 +18,14 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.script
+package nextflow.cli
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesExtensions
+import nextflow.script.PipelineManager
 
 /**
  * CLI sub-command clone
@@ -36,10 +37,10 @@ import nextflow.extension.FilesExtensions
 @Parameters(commandDescription = "Clone a pipeline the specified folder")
 class CmdClone implements CmdX {
 
-    @Parameter(required=true, description = 'The name of the pipeline to clone')
+    @Parameter(required=true, description = 'name of the pipeline to clone')
     List<String> args
 
-    @Parameter(names='-r', description = 'Revision to clone. Can be a git branch, tag or revision number')
+    @Parameter(names='-r', description = 'Revision to clone - It can be a git branch, tag or revision number')
     String revision
 
     @Override

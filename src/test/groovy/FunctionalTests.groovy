@@ -19,7 +19,7 @@
  */
 
 import nextflow.processor.ParallelTaskProcessor
-import nextflow.script.CliRunner
+import nextflow.script.ScriptRunner
 import spock.lang.Shared
 import spock.lang.Specification
 /**
@@ -62,7 +62,7 @@ class FunctionalTests extends Specification {
             '''
 
         when:
-        def runner = new CliRunner( [env: environment] )
+        def runner = new ScriptRunner( [env: environment] )
 
         then:
         runner.execute( script ) == ['value1', -1]
@@ -84,7 +84,7 @@ class FunctionalTests extends Specification {
 
             return [ x, y, len ]
             """
-        def runner = new CliRunner()
+        def runner = new ScriptRunner()
         def result = runner.execute(script, ['hello', 'hola'] )
 
         then:
@@ -125,7 +125,7 @@ class FunctionalTests extends Specification {
 
             '''
 
-        def runner = new CliRunner(cfg)
+        def runner = new ScriptRunner(cfg)
         runner.execute( script )
         def processor = runner.script.taskProcessor
 

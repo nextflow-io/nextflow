@@ -18,35 +18,16 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.script
-
-import java.nio.file.Files
-
-import spock.lang.Specification
-
+package nextflow.cli
 /**
+ * Implement command shared methods
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CmdCloneTest extends Specification {
+trait CmdX implements Runnable {
 
-    def testClone() {
+    Launcher launcher
 
-        given:
-        def dir = Files.createTempDirectory('test')
-        def cmd = new CmdClone()
-        cmd.pipeline = 'pditommaso/awesome-pipeline'
-        cmd.directory = dir.toFile()
-
-        when:
-        cmd.run()
-
-        then:
-        dir.resolve('README.md').exists()
-
-        cleanup:
-        dir?.deleteDir()
-
-    }
+    abstract def String getName()
 
 }

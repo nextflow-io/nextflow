@@ -19,26 +19,13 @@
  */
 
 package nextflow
-
 import java.text.SimpleDateFormat
-
 /**
  * Application main constants
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class Const {
-
-    static final File APP_HOME_DIR
-
-    static {
-
-        APP_HOME_DIR = new File( System.getProperty("user.home"), ".${APP_NAME}" )
-        if( !APP_HOME_DIR.exists() && !APP_HOME_DIR.mkdir() ) {
-            throw new IllegalStateException("Cannot create path '${APP_HOME_DIR}' -- check file system access permission")
-        }
-
-    }
 
     /**
      * The application main package name
@@ -51,19 +38,24 @@ class Const {
     static final String APP_NAME = MAIN_PACKAGE
 
     /**
+     * The application home folder
+     */
+    static final File APP_HOME_DIR = getHomeDir(APP_NAME)
+
+    /**
      * The application version
      */
-    static final String APP_VER = "0.8.5"
+    static final String APP_VER = "0.9.0-beta1"
 
     /**
      * The app build time as linux/unix timestamp
      */
-    static final long APP_TIMESTAMP = 1406393321467
+    static final long APP_TIMESTAMP = 1407250178731
 
     /**
      * The app build number
      */
-    static final int APP_BUILDNUM = 1924
+    static final int APP_BUILDNUM = 1946
 
     /**
      * The date time formatter string
@@ -105,6 +97,18 @@ class Const {
 
         def result = utc[0] == loc[0] ? loc[1,-1].join(' ') : loc.join(' ')
         return "($result)"
+    }
+
+
+    private static getHomeDir(String appname) {
+        def home = System.getenv('NXF_HOME')
+        def result = home ? new File(home) : new File( System.getProperty("user.home"), ".$appname" )
+
+        if( !result.exists() && !result.mkdir() ) {
+            throw new IllegalStateException("Cannot create path '${result}' -- check file system access permission")
+        }
+
+        return result
     }
 
     /*
