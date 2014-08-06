@@ -196,7 +196,7 @@ class ScriptRunner {
             run()
         }
         catch( MissingPropertyException e ) {
-            throw new RuntimeException(getErrorMessage(e, scriptName), e)
+            throw new AbortOperationException(getErrorMessage(e, scriptName), e)
         }
         finally {
             terminate()

@@ -223,8 +223,8 @@ class Launcher {
         }
 
         catch ( GitAPIException | AbortOperationException e ) {
-            System.err.println e.getMessage()
-            log.debug "Command runtime error", e
+            System.err.println e.getMessage() ?: e.toString()
+            log.debug "Operation aborted", e.cause ?: e
             System.exit( ExitCode.COMMAND_RUNTIME_ERROR )
         }
 
