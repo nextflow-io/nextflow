@@ -28,7 +28,7 @@ import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.script.ScriptRunner
 import nextflow.script.ConfigBuilder
-import nextflow.script.PipelineManager
+import nextflow.script.AssetManager
 import nextflow.util.Duration
 import nextflow.util.FileHelper
 import nextflow.util.HistoryFile
@@ -176,7 +176,7 @@ class CmdRun implements CmdX {
          */
         def script = new File(pipelineName)
         if( script.isDirectory()  ) {
-            script = new PipelineManager().setLocalPath(script).getMainScriptFile()
+            script = new AssetManager().setLocalPath(script).getMainScriptFile()
         }
 
         if( script.exists() ) {
@@ -188,7 +188,7 @@ class CmdRun implements CmdX {
         /*
          * try to look for a pipeline in the repository
          */
-        def manager = new PipelineManager()
+        def manager = new AssetManager()
         def repo = manager.resolveName(pipelineName)
 
         /*

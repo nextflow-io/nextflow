@@ -27,7 +27,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.Const
 import nextflow.exception.AbortOperationException
-import nextflow.script.PipelineManager
+import nextflow.script.AssetManager
 
 /**
  * CLI sub-command INFO
@@ -51,12 +51,12 @@ class CmdInfo implements CmdX {
             return
         }
 
-        def repo = new PipelineManager().resolveName(args[0])
+        def repo = new AssetManager().resolveName(args[0])
         if( !repo ) {
             throw new AbortOperationException("Unknown pipeline '${args[0]}'")
         }
 
-        def pipeline = new PipelineManager(repo as String)
+        def pipeline = new AssetManager(repo as String)
 
         println " repo name  : ${pipeline.name}"
         println " home page  : ${pipeline.homePage}"

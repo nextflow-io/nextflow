@@ -25,7 +25,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesExtensions
-import nextflow.script.PipelineManager
+import nextflow.script.AssetManager
 
 /**
  * CLI sub-command clone
@@ -50,7 +50,7 @@ class CmdClone implements CmdX {
     void run() {
         // the pipeline name
         String pipeline = args[0]
-        final manager = new PipelineManager(pipeline)
+        final manager = new AssetManager(pipeline)
 
         // the target directory is the second parameter
         // otherwise default the current pipeline name

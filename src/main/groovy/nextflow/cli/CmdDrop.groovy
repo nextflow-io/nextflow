@@ -25,7 +25,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
-import nextflow.script.PipelineManager
+import nextflow.script.AssetManager
 
 /**
  * CLI sub-command DROP
@@ -49,7 +49,7 @@ class CmdDrop implements CmdX {
     @Override
     void run() {
 
-        def manager = new PipelineManager(args[0])
+        def manager = new AssetManager(args[0])
         if( !manager.localPath.exists() ) {
             throw new AbortOperationException("Pipeline does not exist")
         }

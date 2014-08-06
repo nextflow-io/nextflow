@@ -24,7 +24,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
-import nextflow.script.PipelineManager
+import nextflow.script.AssetManager
 
 /**
  * CLI sub-command PULL
@@ -51,7 +51,7 @@ class CmdPull implements CmdX {
         if( !all && !args )
             throw new AbortOperationException('Missing argument')
 
-        def list = all ? new PipelineManager().list() : args.toList()
+        def list = all ? new AssetManager().list() : args.toList()
         if( !list ) {
             log.info "(nothing to do)"
             return
@@ -59,7 +59,7 @@ class CmdPull implements CmdX {
 
         list.each {
             log.info "Checking $it ..."
-            def manager = new PipelineManager(it)
+            def manager = new AssetManager(it)
             def result = manager.download()
             if( !result )
                 log.info " done"

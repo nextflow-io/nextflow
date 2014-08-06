@@ -27,7 +27,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class PipelineManagerTest extends Specification {
+class AssetManagerTest extends Specification {
 
     def testList() {
 
@@ -37,7 +37,7 @@ class PipelineManagerTest extends Specification {
         folder.resolve('cbcrg/pipe2').mkdirs()
         folder.resolve('ncbi/blast').mkdirs()
 
-        def manager = new PipelineManager().setRoot(folder.toFile())
+        def manager = new AssetManager().setRoot(folder.toFile())
 
         when:
         def list = manager.list()
@@ -63,7 +63,7 @@ class PipelineManagerTest extends Specification {
         folder.resolve('cbcrg/pipe2').mkdirs()
         folder.resolve('ncbi/blast').mkdirs()
 
-        def manager = new PipelineManager().setRoot(folder.toFile())
+        def manager = new AssetManager().setRoot(folder.toFile())
 
         when:
         def result = manager.resolveName('x/y')
@@ -92,7 +92,7 @@ class PipelineManagerTest extends Specification {
 
         given:
         def folder = Files.createTempDirectory('test')
-        def manager = new PipelineManager().setRoot(folder.toFile()).setPipeline('nextflow-io/hello')
+        def manager = new AssetManager().setRoot(folder.toFile()).setPipeline('nextflow-io/hello')
 
         when:
         manager.download()
@@ -113,7 +113,7 @@ class PipelineManagerTest extends Specification {
 
         given:
         def dir = Files.createTempDirectory('test')
-        def manager = new PipelineManager('pditommaso/awesome-pipeline')
+        def manager = new AssetManager('pditommaso/awesome-pipeline')
 
         when:
         manager.clone(dir.toFile())
@@ -137,13 +137,13 @@ class PipelineManagerTest extends Specification {
 
 
         when:
-        def holder = new PipelineManager()
+        def holder = new AssetManager()
         holder.localPath = dir.resolve('sub1').toFile()
         then:
         holder.getMainScriptName() == 'pippo.nf'
 
         when:
-        holder = new PipelineManager()
+        holder = new AssetManager()
         holder.localPath = dir.resolve('sub2').toFile()
         then:
         holder.getMainScriptName() == 'main.nf'
@@ -176,7 +176,7 @@ class PipelineManagerTest extends Specification {
             }'''
 
         when:
-        def manifest = PipelineManager.readManifestFrom("file://$dir/response")
+        def manifest = AssetManager.readManifestFrom("file://$dir/response")
 
         then:
         manifest.size()==1

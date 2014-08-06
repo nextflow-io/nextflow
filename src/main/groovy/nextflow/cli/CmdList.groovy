@@ -23,7 +23,7 @@ package nextflow.cli
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.script.PipelineManager
+import nextflow.script.AssetManager
 
 /**
  * CLI sub-command LIST. Prints a list of locally installed pipelines
@@ -41,7 +41,7 @@ class CmdList implements CmdX {
     @Override
     void run() {
 
-        def all = new PipelineManager().list()
+        def all = new AssetManager().list()
         if( !all ) {
             log.info '(none)'
             return

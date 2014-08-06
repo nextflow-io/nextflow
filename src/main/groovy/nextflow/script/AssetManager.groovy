@@ -39,7 +39,7 @@ import org.eclipse.jgit.lib.Ref
 
 @Slf4j
 @CompileStatic
-class PipelineManager {
+class AssetManager {
 
     static final String MANIFEST_FILE_NAME = '.PIPELINE-INF'
 
@@ -81,14 +81,14 @@ class PipelineManager {
 
     private Git _git
 
-    PipelineManager() {
+    AssetManager() {
     }
 
-    PipelineManager(String name) {
+    AssetManager(String name) {
         setPipeline(name)
     }
 
-    PipelineManager setRoot( File root ) {
+    AssetManager setRoot( File root ) {
         assert root
         this.root = root
         return this
@@ -113,7 +113,7 @@ class PipelineManager {
         return qualifiedName
     }
 
-    PipelineManager setPipeline( String name ) {
+    AssetManager setPipeline( String name ) {
         assert name
 
         this.pipeline = resolveName(name)
@@ -124,12 +124,12 @@ class PipelineManager {
         return this
     }
 
-    PipelineManager setLocalPath(File path) {
+    AssetManager setLocalPath(File path) {
         this.localPath = path
         return this
     }
 
-    PipelineManager setForce( boolean value ) {
+    AssetManager setForce( boolean value ) {
         this.force = value
         return this
     }
