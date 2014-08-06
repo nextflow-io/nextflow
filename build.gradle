@@ -19,7 +19,7 @@
  */
 
 apply plugin: 'gradle-one-jar'
-version = '0.9.0-beta1'
+version = '0.9.0'
 
 
 if (System.getenv('CI_GROOVY_VERSION')) {
