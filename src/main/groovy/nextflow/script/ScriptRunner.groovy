@@ -25,8 +25,6 @@ import java.nio.file.Path
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowReadChannel
-import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.Nextflow
 import nextflow.Session
@@ -282,16 +280,6 @@ class ScriptRunner {
         }
         else {
             result = output
-        }
-    }
-
-    @Deprecated
-    def normalizeOutput(def value) {
-        if ( value instanceof DataflowReadChannel || value instanceof DataflowWriteChannel ) {
-            return session.isAborted() ? null : Nextflow.read(value)
-        }
-        else {
-            return value
         }
     }
 

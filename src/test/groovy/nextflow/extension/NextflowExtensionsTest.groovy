@@ -19,13 +19,11 @@
  */
 
 package nextflow.extension
-
 import java.nio.file.Path
 import java.nio.file.Paths
 
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.group.NonDaemonPGroup
-import nextflow.Nextflow
 import nextflow.util.Duration
 import spock.lang.Specification
 /**
@@ -151,8 +149,8 @@ class NextflowExtensionsTest extends Specification {
         fasta.chunkFasta { result << it }
 
         then:
-        Nextflow.read(result) == ">prot1\nLCLYTHIGRNIYYGS1\nEWIWGGFSVDKATLN\n"
-        Nextflow.read(result) == ">prot2\nLLILILLLLLLALLS\nGLMPFLHTSKHRSMM\nIENY\n"
+        result.val == ">prot1\nLCLYTHIGRNIYYGS1\nEWIWGGFSVDKATLN\n"
+        result.val == ">prot2\nLLILILLLLLLALLS\nGLMPFLHTSKHRSMM\nIENY\n"
 
     }
 
@@ -184,9 +182,9 @@ class NextflowExtensionsTest extends Specification {
         fasta.chunkFasta(2) { result << it }
 
         then:
-        Nextflow.read(result) == ">prot1\nAA\n>prot2\nBB\nCC\n"
-        Nextflow.read(result) == ">prot3\nDD\n>prot4\nEE\nFF\nGG\n"
-        Nextflow.read(result) == ">prot5\nLL\nNN\n"
+        result.val == ">prot1\nAA\n>prot2\nBB\nCC\n"
+        result.val == ">prot3\nDD\n>prot4\nEE\nFF\nGG\n"
+        result.val == ">prot5\nLL\nNN\n"
 
     }
 

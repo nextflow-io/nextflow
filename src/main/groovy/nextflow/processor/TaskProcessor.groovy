@@ -292,7 +292,7 @@ abstract class TaskProcessor {
          * - even though the output may be empty, let return the stdout as output by default
          */
         if ( taskConfig.outputs.size() == 0 ) {
-            def dummy =  allScalarValues ? Nextflow.val() : Nextflow.channel()
+            def dummy =  allScalarValues ? Nextflow.variable() : Nextflow.channel()
             taskConfig.fakeOutput(dummy)
         }
 

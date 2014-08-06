@@ -20,14 +20,17 @@
 
 package nextflow.script
 import groovy.transform.InheritConstructors
+import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
-import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Nextflow
+import nextflow.extension.DataflowExtensions
 import nextflow.processor.TaskConfig
 /**
  * Base class for input/output parameters
@@ -138,7 +141,7 @@ abstract class BaseParam {
         }
 
         // wrap a single value with a DataflowVariable
-        return Nextflow.val(value)
+        return Nextflow.variable(value)
 
     }
 
@@ -450,17 +453,44 @@ class EachInParam extends BaseInParam {
     @Override
     protected DataflowReadChannel inputValToChannel( value ) {
 
-        if( value instanceof DataflowChannel )
-            log.warn "Using queue channel on each parameter declaration should be avoided -- take in consideration to change declaration for each: '$name' parameter"
-
-        // everything is mapped to a collection
-        // the collection is wrapped to a "scalar" dataflow variable
-        def list = Nextflow.list(value)
-        value = Nextflow.val(list)
-
-        super.inputValToChannel(value)
+        def variable = normalizeToVariable( value, name )
+        super.inputValToChannel(variable)
     }
 
+    @PackageScope
+    static DataflowVariable normalizeToVariable( value, String name = null) {
+        if( value instanceof DataflowReadChannel ) {
+            log.warn "Using queue channel on each parameter declaration should be avoided -- take in consideration to change declaration for each: '$name' parameter"
+            // everything is mapped to a collection
+            value = readValue(value)
+        }
+
+        if( !(value instanceof Collection) ) {
+            value = [value]
+        }
+
+        // the collection is wrapped to a "scalar" dataflow variable
+        Nextflow.variable(value)
+    }
+
+
+    /**
+     * Converts the specified arguments to a {@code List} data type
+     *
+     * @param item
+     * @return
+     */
+    @PackageScope
+    static readValue( DataflowReadChannel channel ) {
+
+        if( channel instanceof DataflowExpression ) {
+            return channel.getVal()
+        }
+        else {
+            return DataflowExtensions.toList(channel).getVal()
+        }
+
+    }
 
 }
 
