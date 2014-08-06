@@ -18,34 +18,23 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow
+package nextflow.cli
+
+import nextflow.cli.CmdPull
+import spock.lang.Specification
 
 /**
- * Application exit status
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface ExitCode {
+class CmdPullTest extends Specification {
 
-    static final short OK = 0
+    def testPullFromRemote() {
 
-    static final short MISSING_SCRIPT_FILE = 101
+        given:
+        def cmd = new CmdPull(args: ['pditommaso/awesome-pipeline'])
 
-    static final short INVALID_COMMAND_LINE_PARAMETER = 102
 
-    static final short SESSION_ABORTED = 103
-
-    static final short MISSING_UNIQUE_ID = 104
-
-    static final short MISSING_PROPERTY = 105
-
-    static final short INVALID_CONFIG = 106
-
-    static final short DAEMON_NOT_FOUND = 107
-
-    static final short COMMAND_RUNTIME_ERROR = 108
-
-    static final short UNKNOWN_ERROR = 255
-
+    }
 
 }

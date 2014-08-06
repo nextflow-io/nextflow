@@ -33,6 +33,7 @@ import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import nextflow.util.ChannelListProxy
 import nextflow.util.FileHelper
 /**
+ * Defines the main methods imported by default in the script scope
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -45,8 +46,10 @@ class Nextflow {
      * @param channel
      * @return
      */
+    @Deprecated
     static def <T> T read( def channel ) {
         assert channel
+        log.warn "Function 'read' has been deprecated and will be removed in the next release -- Use method property 'val' instead"
 
         if ( channel instanceof DataflowBroadcast ) {
             log.debug 'Read DataflowBroadcast channel'
@@ -69,7 +72,7 @@ class Nextflow {
      * @param value
      * @return
      */
-    static <T> DataflowVariable<T> val( T value = null ) {
+    static <T> DataflowVariable<T> variable( T value = null ) {
         def result = new DataflowVariable<T>()
         if( value != null ) {
             result.bind(value)
@@ -116,10 +119,6 @@ class Nextflow {
     }
 
 
-    static <T> DataflowBroadcast<T> broadcast() {
-        return new DataflowBroadcast<T>()
-    }
-
     /**
      * Converts the specified arguments to a {@code List} data type
      *
@@ -127,19 +126,22 @@ class Nextflow {
      * @return
      */
     static List list( Object ... items ) {
+        log.warn "Function 'list' has been deprecated and will be removed in the next release -- Use operator 'toList' instead"
 
         List result = []
         for( Object entry : items ) {
             if( entry instanceof DataflowStreamWriteAdapter ) {
                 throw new IllegalArgumentException("Channel type not supported: ${entry?.class?.name}")
             }
-            result.addAll( list(entry) )
+            result.addAll( list(entry, false) )
         }
 
         return result
     }
 
-    static List list( Object item ) {
+    static List list( Object item, boolean warning = true ) {
+        if( warning )
+        log.warn "Function 'list' has been deprecated and will be removed in the next release -- Use operator 'toList' instead"
 
         switch( item ) {
 

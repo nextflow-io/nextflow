@@ -816,7 +816,7 @@ class DataflowExtensions {
      * @return A list holding all the items send over the channel
      */
     static public final <V> DataflowReadChannel<V> toList(final DataflowReadChannel<V> channel) {
-        return reduce(channel, []) { list, item -> list << item }
+        reduce(channel, []) { list, item -> list << item }
     }
 
     /**

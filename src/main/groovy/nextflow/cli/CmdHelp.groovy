@@ -18,17 +18,35 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.exception
+package nextflow.cli
 
-import groovy.transform.InheritConstructors;
+import com.beust.jcommander.Parameter
+import groovy.transform.CompileStatic
+import nextflow.Const
 
 /**
- * Thrown when user tries to use an invalid CLI argument
+ * CLI sub-command HELP
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@InheritConstructors
-class InvalidArgumentException extends Exception {
+@CompileStatic
+class CmdHelp implements CmdX {
 
+    @Override
+    final String getName() { "help" }
 
+    @Parameter(description = 'command name', arity = 1)
+    List<String> args
+
+    @Override
+    void run() {
+        if( !args ) {
+            println Const.LOGO
+            launcher.jcommander.usage()
+        }
+        else {
+            final cmd = args[0]
+            launcher.jcommander.usage(cmd)
+        }
+    }
 }

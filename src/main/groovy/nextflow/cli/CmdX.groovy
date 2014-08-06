@@ -18,34 +18,16 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow
-
+package nextflow.cli
 /**
- * Application exit status
+ * Implement command shared methods
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface ExitCode {
+trait CmdX implements Runnable {
 
-    static final short OK = 0
+    Launcher launcher
 
-    static final short MISSING_SCRIPT_FILE = 101
-
-    static final short INVALID_COMMAND_LINE_PARAMETER = 102
-
-    static final short SESSION_ABORTED = 103
-
-    static final short MISSING_UNIQUE_ID = 104
-
-    static final short MISSING_PROPERTY = 105
-
-    static final short INVALID_CONFIG = 106
-
-    static final short DAEMON_NOT_FOUND = 107
-
-    static final short COMMAND_RUNTIME_ERROR = 108
-
-    static final short UNKNOWN_ERROR = 255
-
+    abstract def String getName()
 
 }

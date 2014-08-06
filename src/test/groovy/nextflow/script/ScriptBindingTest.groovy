@@ -27,13 +27,13 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CliBindingTest extends Specification {
+class ScriptBindingTest extends Specification {
 
 
     def 'test params' () {
 
         setup:
-        def bindings = new CliBinding(new Session([env:[HOME:'/this/path']]))
+        def bindings = new ScriptBinding(new Session([env:[HOME:'/this/path']]))
         bindings.setParams( [field1: 1, field2: 'dos'] )
         bindings.setArgs(['a','b','c'])
 
@@ -93,33 +93,33 @@ class CliBindingTest extends Specification {
     def 'test hyphenToCamelCase' () {
 
         expect:
-        CliBinding.ParamsMap.hyphenToCamelCase('a') == 'a'
-        CliBinding.ParamsMap.hyphenToCamelCase('A') == 'A'
-        CliBinding.ParamsMap.hyphenToCamelCase('a-b-c-') == 'aBC'
-        CliBinding.ParamsMap.hyphenToCamelCase('aa-bb-cc') == 'aaBbCc'
-        CliBinding.ParamsMap.hyphenToCamelCase('alpha-beta-delta') == 'alphaBetaDelta'
-        CliBinding.ParamsMap.hyphenToCamelCase('Alpha-Beta-delta') == 'AlphaBetaDelta'
+        ScriptBinding.ParamsMap.hyphenToCamelCase('a') == 'a'
+        ScriptBinding.ParamsMap.hyphenToCamelCase('A') == 'A'
+        ScriptBinding.ParamsMap.hyphenToCamelCase('a-b-c-') == 'aBC'
+        ScriptBinding.ParamsMap.hyphenToCamelCase('aa-bb-cc') == 'aaBbCc'
+        ScriptBinding.ParamsMap.hyphenToCamelCase('alpha-beta-delta') == 'alphaBetaDelta'
+        ScriptBinding.ParamsMap.hyphenToCamelCase('Alpha-Beta-delta') == 'AlphaBetaDelta'
 
     }
 
     def 'test camelCaseToHyphen' () {
 
         expect:
-        CliBinding.ParamsMap.camelCaseToHyphen('alphaBetaDelta') == 'alpha-beta-delta'
-        CliBinding.ParamsMap.camelCaseToHyphen('AlphaBetaDelta') == 'Alpha-beta-delta'
-        CliBinding.ParamsMap.camelCaseToHyphen('Field1') == 'Field1'
-        CliBinding.ParamsMap.camelCaseToHyphen('FieldUno') == 'Field-uno'
-        CliBinding.ParamsMap.camelCaseToHyphen('FieldUNO') == 'Field-UNO'
-        CliBinding.ParamsMap.camelCaseToHyphen('FieldA') == 'Field-A'
-        CliBinding.ParamsMap.camelCaseToHyphen('FieldAB') == 'Field-AB'
-        CliBinding.ParamsMap.camelCaseToHyphen('FieldAb') == 'Field-ab'
+        ScriptBinding.ParamsMap.camelCaseToHyphen('alphaBetaDelta') == 'alpha-beta-delta'
+        ScriptBinding.ParamsMap.camelCaseToHyphen('AlphaBetaDelta') == 'Alpha-beta-delta'
+        ScriptBinding.ParamsMap.camelCaseToHyphen('Field1') == 'Field1'
+        ScriptBinding.ParamsMap.camelCaseToHyphen('FieldUno') == 'Field-uno'
+        ScriptBinding.ParamsMap.camelCaseToHyphen('FieldUNO') == 'Field-UNO'
+        ScriptBinding.ParamsMap.camelCaseToHyphen('FieldA') == 'Field-A'
+        ScriptBinding.ParamsMap.camelCaseToHyphen('FieldAB') == 'Field-AB'
+        ScriptBinding.ParamsMap.camelCaseToHyphen('FieldAb') == 'Field-ab'
 
     }
 
     def 'test put params map' () {
 
         when:
-        def map = new CliBinding.ParamsMap()
+        def map = new ScriptBinding.ParamsMap()
         map['alphaBeta'] = 1
         map['alphaBeta'] = 2
         map['alpha-beta'] = 3
@@ -130,7 +130,7 @@ class CliBindingTest extends Specification {
 
 
         when:
-        map = new CliBinding.ParamsMap()
+        map = new ScriptBinding.ParamsMap()
         map['aaa-bbb-ccc'] = 1
         map['aaaBbbCcc'] = 10
         map['AaaBbbCcc'] = 20
@@ -141,7 +141,7 @@ class CliBindingTest extends Specification {
 
 
         when:
-        map = new CliBinding.ParamsMap()
+        map = new ScriptBinding.ParamsMap()
         map['field1'] = 1
         map['field2'] = 2
         map['Field2'] = 3

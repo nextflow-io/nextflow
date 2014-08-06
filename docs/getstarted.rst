@@ -79,11 +79,11 @@ The resulting strings are emitted on the ``result`` channel and finally the outp
 
 Execute the script by entering the following command in your terminal::
 
-   nextflow tutorial.nf
+   nextflow run tutorial.nf
 
 It will output something similar to the text shown below::
 
-    N E X T F L O W  ~  version 0.7.0
+    N E X T F L O W  ~  version 0.9.0
     [warm up] executor > local
     [22/7548fa] Submitted process > splitLetters (1)
     [e2/008ee9] Submitted process > convertToUpper (1)
@@ -136,12 +136,12 @@ process script with the string ``rev $x``, so that the process will look like as
 
 Then save the file with the same name, and execute it by adding the ``-resume`` option to the command line::
 
-    nextflow tutorial.nf -resume
+    nextflow run tutorial.nf -resume
 
 
 It will print an output similar to the following one::
 
-    N E X T F L O W  ~  version 0.7.0
+    N E X T F L O W  ~  version 0.9.0
     [warm up] executor > local
     [22/7548fa] Cached process > splitLetters (1)
     [d0/7b79a3] Submitted process > convertToUpper (1)
@@ -166,7 +166,7 @@ Their value can be specified on the command line by prefixing the parameter name
 For the sake of this tutorial you can try to execute the previous example specifying a different input
 string parameter, as shown below::
 
-  nextflow splitLetters.nf --str 'Hola mundo'
+  nextflow run tutorial.nf --str 'Hola mundo'
 
 
 The string specified on the command line will override the default value of the parameter. The output

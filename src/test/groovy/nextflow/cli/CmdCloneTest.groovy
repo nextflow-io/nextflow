@@ -18,34 +18,32 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow
+package nextflow.cli
+import java.nio.file.Files
 
+import spock.lang.Specification
 /**
- * Application exit status
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface ExitCode {
+class CmdCloneTest extends Specification {
 
-    static final short OK = 0
+    def testClone() {
 
-    static final short MISSING_SCRIPT_FILE = 101
+        given:
+        def dir = Files.createTempDirectory('test')
+        def cmd = new CmdClone()
+        cmd.args = ['nextflow-io/hello', dir.toFile().toString()]
 
-    static final short INVALID_COMMAND_LINE_PARAMETER = 102
+        when:
+        cmd.run()
 
-    static final short SESSION_ABORTED = 103
+        then:
+        dir.resolve('README.md').exists()
 
-    static final short MISSING_UNIQUE_ID = 104
+        cleanup:
+        dir?.deleteDir()
 
-    static final short MISSING_PROPERTY = 105
-
-    static final short INVALID_CONFIG = 106
-
-    static final short DAEMON_NOT_FOUND = 107
-
-    static final short COMMAND_RUNTIME_ERROR = 108
-
-    static final short UNKNOWN_ERROR = 255
-
+    }
 
 }

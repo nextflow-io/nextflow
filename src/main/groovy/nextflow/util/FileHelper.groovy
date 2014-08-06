@@ -19,6 +19,8 @@
  */
 
 package nextflow.util
+
+import java.lang.reflect.Field
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -249,4 +251,39 @@ class FileHelper {
         }
         return null;
     }
+
+
+    static void checkFileSystemProviders() {
+
+        // check if this class has been loaded
+        boolean isInstalled = false
+        FileSystemProvider.installedProviders().each {
+            log.debug "Installed File System: '${it.scheme}' [${it.class.simpleName}]"
+            if( it.scheme == 'dxfs' ) {
+                isInstalled = true
+            }
+        }
+
+        if( !isInstalled ) {
+            // try to load DnaNexus file system provider dynamically
+            Class provider
+            try {
+                provider = Class.forName('nextflow.fs.dx.DxFileSystemProvider')
+            }
+            catch( ClassNotFoundException e ) {
+                log.debug "DxFileSystemProvider NOT available"
+                return
+            }
+
+            // add it manually
+            Field field = FileSystemProvider.class.getDeclaredField('installedProviders')
+            field.setAccessible(true)
+            List installedProviders = new ArrayList((List)field.get(null))
+            installedProviders.add( provider.newInstance() )
+            field.set(this, Collections.unmodifiableList(installedProviders))
+            log.debug "Added 'DxFileSystemProvider' to list of installed providers [dxfs]"
+        }
+
+    }
+
 }

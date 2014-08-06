@@ -42,11 +42,11 @@ import org.apache.commons.lang.StringUtils
  */
 @Slf4j
 @CompileStatic
-class CliBinding extends Binding {
+class ScriptBinding extends Binding {
 
     final private Session session
 
-    def CliBinding(Session session1) {
+    def ScriptBinding(Session session1) {
         super( new ReadOnlyMap( ['__$session':session1, args:[], params: new ParamsMap() ]) )
         this.session = session1
     }

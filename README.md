@@ -48,7 +48,7 @@ Create a file named `hello.nf` with the following content and copy it to the pat
 
 Launch the above example by typing the following command on your terminal console:
 
-    ./nextflow -process.echo true hello.nf
+    ./nextflow run -process.echo true hello.nf
 
 
 Congratulations! You have just run your first program with Nextflow.
@@ -100,7 +100,7 @@ Since the two variables `query` and `db` are prefixed by the `params` qualifier,
 when the script is launched, by simply adding them on the Nextflow command line and prefixing them with the `--` characters.
 For example:
 
-    $ ./nextflow pipeline.nf --db=/path/to/blast/db --query=/path/to/query.fasta
+    $ ./nextflow run pipeline.nf --db=/path/to/blast/db --query=/path/to/query.fasta
 
 
 Mixing scripting languages
@@ -144,7 +144,7 @@ Currently the following clusters are supported:
   + SLURM (beta)
 
 
-By default processes are parallelized by spanning multiple threads in the machine where the pipeline is launched. 
+By default processes are parallelized by spanning multiple threads in the machine where the pipeline is launched.
 
 To submit the execution to a SGE cluster create a file named `nextflow.config`, in the directory
 where the pipeline is going to be launched, with the following content: 
@@ -194,7 +194,7 @@ You can compile *Nextflow* by typing the following command in the project home d
 The very first time you run it, it will automatically download all the libraries required by the build process. 
 It may take some minutes to complete.
 
-When complete, execute the program by using the `run.sh` launch script in the project directory.
+When complete, execute the program by using the `launch.sh` launch script in the project directory.
 
 
 Required dependencies

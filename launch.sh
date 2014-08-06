@@ -39,9 +39,14 @@ fi
 #
 declare -a args=()
 DEBUG=''
-MAIN_CLASS='nextflow.script.CliRunner'
-JVM_ARGS+=" -Djava.awt.headless=true"
+COLUMNS=${COLUMNS:-`tput cols 2> /dev/tty`}
+MAIN_CLASS='nextflow.cli.Launcher'
+JVM_ARGS+=" -Djava.awt.headless=true -noverify"
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
+NXF_CLI="$0 $@"
+export NXF_CLI
+export COLUMNS
+
 EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
 SUBPROJECTS='nxf-dnanexus nxf-gridgain nxf-hazelcast'
 
@@ -115,4 +120,4 @@ if [ "$DEBUG" != '' ]; then
 fi
 
 # Launch the APP
-exec java $JVM_ARGS $DEBUG -noverify -cp "$CLASSPATH" "$MAIN_CLASS" "${args[@]}"
+exec java $JVM_ARGS $DEBUG -cp "$CLASSPATH" "$MAIN_CLASS" "${args[@]}"
