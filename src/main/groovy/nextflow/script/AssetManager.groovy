@@ -95,7 +95,9 @@ class AssetManager {
     }
 
     String resolveName( String name ) {
-        assert name
+
+        if( !(name ==~ '([^/]+/)?[^/]+') )
+            throw new AbortOperationException("No pipeline found at path: $name -- Make sure that path exists and it contains a script named '$DEFAULT_MAIN_FILE_NAME' or a file '$MANIFEST_FILE_NAME'")
 
         if( name.contains('/') ) {
             return name
@@ -151,7 +153,7 @@ class AssetManager {
                 throw new AbortOperationException("Cannot find $pipeline pipeline -- Make sure exists a Github repository at http://github.com/$pipeline")
             }
 
-            throw new AbortOperationException("Illegal pipeline repository $githubPage -- It must contain a script named '$DEFAULT_MAIN_FILE_NAME' or a file '$MANIFEST_FILE_NAME' ")
+            throw new AbortOperationException("Illegal pipeline repository $githubPage -- It must contain a script named '$DEFAULT_MAIN_FILE_NAME' or a file '$MANIFEST_FILE_NAME'")
         }
 
     }

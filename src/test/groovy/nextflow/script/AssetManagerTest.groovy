@@ -80,7 +80,10 @@ class AssetManagerTest extends Specification {
         then:
         thrown(AbortOperationException)
 
-
+        when:
+        manager.resolveName('pipe/alpha/beta')
+        then:
+        thrown(AbortOperationException)
 
         cleanup:
         folder?.deleteDir()
