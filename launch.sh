@@ -39,11 +39,13 @@ fi
 #
 declare -a args=()
 DEBUG=''
+COLUMNS=${COLUMNS:-`tput cols 2> /dev/tty`}
 MAIN_CLASS='nextflow.cli.Launcher'
 JVM_ARGS+=" -Djava.awt.headless=true -noverify"
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_CLI="$0 $@"
 export NXF_CLI
+export COLUMNS
 
 EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
 SUBPROJECTS='nxf-dnanexus nxf-gridgain nxf-hazelcast'
