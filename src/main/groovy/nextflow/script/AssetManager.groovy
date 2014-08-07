@@ -453,7 +453,7 @@ class AssetManager {
                 .call()
                 .findAll  { it.name.startsWith('refs/tags/') }
                 .collect { Repository.shortenRefName(it.name) }
-                .collect { (it == current ? '* ' : '  ') + it + ' (t)'}
+                .collect { (it == current ? '* ' : '  ') + it + ' [t]'}
 
         def result = new ArrayList<String>(branches.size() + tags.size())
         result.addAll(branches)
