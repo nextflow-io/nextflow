@@ -295,7 +295,8 @@ class ScriptRunner {
         bindings.setArgs( new ArgsList(args) )
         bindings.setParams( session.config.params as Map )
         // TODO add test for this property
-        bindings.setVariable( 'scriptDir', session.baseDir?.toPath() )
+        bindings.setVariable( 'baseDir', session.baseDir?.toPath() )
+        bindings.setVariable( 'workDir', session.workDir )
 
         // define the imports
         def importCustomizer = new ImportCustomizer()
