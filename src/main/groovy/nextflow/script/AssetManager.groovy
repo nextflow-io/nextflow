@@ -84,6 +84,8 @@ class AssetManager {
 
     private Git _git
 
+    private String _mainScript
+
     AssetManager() {
     }
 
@@ -98,12 +100,32 @@ class AssetManager {
     }
 
     String resolveName( String name ) {
+        assert name
 
-        if( !(name ==~ '([^/]+/)?[^/]+') )
-            throw new AbortOperationException("No pipeline found at path: $name -- Make sure that path exists and it contains a script named '$DEFAULT_MAIN_FILE_NAME' or a file '$MANIFEST_FILE_NAME'")
+        String[] parts = name.split('/')
+        def last = parts[-1]
+        if( last.endsWith('.nf') || last.endsWith('.nxf') ) {
+            if( parts.size()==1 )
+                throw new AbortOperationException("Not a valid pipeline name: $name")
 
-        if( name.contains('/') ) {
-            return name
+            if( parts.size()==2 ) {
+                _mainScript = last
+                parts = [ parts.first() ]
+            }
+            else {
+                _mainScript = parts[2..-1].join('/')
+                parts = parts[0..1]
+            }
+        }
+
+        if( parts.size() == 2 ) {
+            return parts.join('/')
+        }
+        else if( parts.size()>2 ) {
+            throw new AbortOperationException("Not a valid pipeline name: $name")
+        }
+        else {
+            name = parts[0]
         }
 
         def qualifiedName = find(name)
@@ -200,6 +222,9 @@ class AssetManager {
     }
 
     String getMainScriptName() {
+        if( _mainScript )
+            return _mainScript
+
         readManifest()?.get('main-script') ?: DEFAULT_MAIN_FILE_NAME
     }
 

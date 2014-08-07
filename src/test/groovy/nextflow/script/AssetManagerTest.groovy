@@ -76,6 +76,16 @@ class AssetManagerTest extends Specification {
         result == 'ncbi/blast'
 
         when:
+        result = manager.resolveName('ncbi/blast/script.nf')
+        then:
+        result == 'ncbi/blast'
+
+        when:
+        result = manager.resolveName('blast/script.nf')
+        then:
+        result == 'ncbi/blast'
+
+        when:
         manager.resolveName('pipe')
         then:
         thrown(AbortOperationException)
@@ -150,6 +160,41 @@ class AssetManagerTest extends Specification {
         holder.localPath = dir.resolve('sub2').toFile()
         then:
         holder.getMainScriptName() == 'main.nf'
+
+        when:
+        holder = new AssetManager()
+        holder.localPath = dir.resolve('sub1').toFile()
+        holder.resolveName('nextflow/hello')
+        then:
+        holder.getMainScriptName() == 'pippo.nf'
+
+        when:
+        holder = new AssetManager()
+        holder.localPath = dir.resolve('sub1').toFile()
+        holder.resolveName('nextflow/hello/my-script.nf')
+        then:
+        holder.getMainScriptName() == 'my-script.nf'
+
+        when:
+        holder = new AssetManager()
+        holder.localPath = dir.resolve('sub1').toFile()
+        then:
+        holder.resolveName('nextflow-io/hello/x/y/z/my-script.nf') == 'nextflow-io/hello'
+        holder.getMainScriptName() == 'x/y/z/my-script.nf'
+
+        when:
+        holder = new AssetManager()
+        holder.localPath = dir.resolve('sub1').toFile()
+        then:
+        holder.resolveName('nextflow-io/hello/my-script.nf') == 'nextflow-io/hello'
+        holder.getMainScriptName() == 'my-script.nf'
+
+        when:
+        holder = new AssetManager()
+        holder.localPath = dir.resolve('sub1').toFile()
+        then:
+        holder.resolveName('hello/my-script.nf') == 'nextflow-io/hello'
+        holder.getMainScriptName() == 'my-script.nf'
 
         cleanup:
         dir?.deleteDir()
