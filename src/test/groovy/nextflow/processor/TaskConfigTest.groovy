@@ -54,26 +54,6 @@ class TaskConfigTest extends Specification {
         config.errorStrategy == ErrorStrategy.TERMINATE
         config.inputs instanceof InputsList
         config.outputs instanceof OutputsList
-
-    }
-
-
-    def 'test merge' ()  {
-
-        setup:
-        def script = Mock(BaseScript)
-        def config = new TaskConfig(script)
-
-        expect:
-        !config.merge
-
-        when:
-        config.setProperty('merge',true)
-        then:
-        config.merge
-
-
-
     }
 
     def 'test setting properties' () {
