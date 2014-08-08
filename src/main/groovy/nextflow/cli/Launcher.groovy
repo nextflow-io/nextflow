@@ -51,9 +51,9 @@ class Launcher {
      * @return An instance of {@code CliBuilder}
      */
 
-    JCommander jcommander
+    private JCommander jcommander
 
-    CliOptions options
+    private CliOptions options
 
     private boolean fullVersion
 
@@ -61,18 +61,38 @@ class Launcher {
 
     private String[] args
 
-    private String commandString
+    private String cliString
 
     private List<CmdX> allCommands
 
+    private List<String> normalizedArgs
+
     /**
-     * Create a launcher object
+     * Create a launcher object and parse the command line parameters
      *
      * @param args The command line arguments provided by the user
      */
     protected Launcher(String... args) {
         this.args = args
-        this.commandString = System.getenv('NXF_CLI')
+        this.cliString = System.getenv('NXF_CLI')
+
+        try {
+            // -- parse the program arguments - and - configure the logger
+            parseMainArgs()
+            LoggerHelper.configureLogger(options)
+        }
+        catch( ParameterException e ) {
+            // print command line parsing errors
+            // note: use system.err.println since if an exception is raised
+            //       parsing the cli params the logging is not configured
+            System.err.println "${e.getMessage()} -- Check the available commands and options and syntax with 'help'"
+            System.exit( ExitCode.INVALID_COMMAND_LINE_PARAMETER )
+
+        }
+        catch( Throwable e ) {
+            e.printStackTrace(System.err)
+            System.exit( ExitCode.UNKNOWN_ERROR )
+        }
     }
 
 
@@ -94,19 +114,19 @@ class Launcher {
         ]
 
         def cols = getColumns()
-        def normalizedArgs = normalizeArgs(args)
+        normalizedArgs = normalizeArgs(args)
         options = new CliOptions()
         jcommander = new JCommander(options)
-        allCommands.each { cmd -> jcommander.addCommand(cmd.name, cmd) }
+        allCommands.each { cmd ->
+            cmd.launcher = this;
+            jcommander.addCommand(cmd.name, cmd)
+        }
         jcommander.setProgramName( Const.APP_NAME )
         if( cols )
             jcommander.setColumnSize(cols)
         jcommander.parse( normalizedArgs as String[] )
         fullVersion = '-version' in normalizedArgs
         command = allCommands.find { it.name == jcommander.getParsedCommand()  }
-        if( command ) {
-            command.setLauncher(this)
-        }
 
         return this
     }
@@ -119,6 +139,12 @@ class Launcher {
             return 0
         }
     }
+
+    JCommander getJcommander() { jcommander }
+
+    CliOptions getOptions() { options }
+
+    List<String> getNormalizedArgs() { normalizedArgs }
 
     /**
      * normalize the command line arguments to handle some corner cases
@@ -180,15 +206,12 @@ class Launcher {
     }
 
     /**
-     *
+     * Launch the pipeline execution
      */
     protected void run() {
 
         try {
-            // -- parse the program arguments - and - configure the logger
-            parseMainArgs()
-            LoggerHelper.configureLogger(options)
-            log.debug '$> ' + commandString
+            log.debug '$> ' + cliString
 
             // -- print out the version number, then exit
             if ( options.version ) {
@@ -199,7 +222,6 @@ class Launcher {
             // -- print out the program help, then exit
             if( options.help || (!command && !options.isDaemon())) {
                 command = allCommands.find { it.name == 'help' }
-                command.setLauncher(this    )
             }
 
             // -- launch daemon
@@ -212,14 +234,6 @@ class Launcher {
             // launch the command
             command.run()
 
-        }
-
-        catch( ParameterException e ) {
-            // print command line parsing errors
-            // note: use system.err.println since if an exception is raised
-            //       parsing the cli params the logging is not configured
-            System.err.println "${e.getMessage()} -- Check the available commands and options and syntax with 'help'"
-            System.exit( ExitCode.INVALID_COMMAND_LINE_PARAMETER )
         }
 
         catch ( GitAPIException | AbortOperationException e ) {

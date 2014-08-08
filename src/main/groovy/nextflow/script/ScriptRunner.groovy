@@ -137,6 +137,7 @@ class ScriptRunner {
         }
     }
 
+    Session getSession() { session }
 
     /**
      * @return The interpreted script object

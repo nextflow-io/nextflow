@@ -35,6 +35,7 @@ import ch.qos.logback.core.rolling.FixedWindowRollingPolicy
 import ch.qos.logback.core.rolling.RollingFileAppender
 import ch.qos.logback.core.rolling.TriggeringPolicyBase
 import ch.qos.logback.core.spi.FilterReply
+import groovy.transform.CompileStatic
 import nextflow.Const
 import nextflow.cli.CliOptions
 import org.slf4j.LoggerFactory
@@ -43,6 +44,7 @@ import org.slf4j.LoggerFactory
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class LoggerHelper {
 
     /**
@@ -81,7 +83,7 @@ class LoggerHelper {
         filter.setContext(loggerContext)
         filter.start()
 
-        final consoleAppender = options.isDaemon() && options.isBackground() ? null : new ConsoleAppender()
+        final ConsoleAppender consoleAppender = options.isDaemon() && options.isBackground() ? null : new ConsoleAppender()
         if( consoleAppender )  {
             consoleAppender.setContext(loggerContext)
             consoleAppender.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
@@ -174,8 +176,8 @@ class LoggerHelper {
 
             def logger = event.getLoggerName()
             def level = event.getLevel()
-            for( def entry : packages ) {
-                if ( logger.startsWith( entry.key ) && level.isGreaterOrEqual(entry.value) ) {
+            packages.each { String key, Level value->
+                if ( logger.startsWith( key ) && level.isGreaterOrEqual(value) ) {
                     return FilterReply.NEUTRAL
                 }
             }
@@ -221,7 +223,7 @@ class LoggerHelper {
                 return false;
             }
 
-            if (firstTime.getAndSet(false) && !activeFile.empty() ) {
+            if (firstTime.getAndSet(false) && !FileHelper.empty(activeFile) ) {
                 return true;
             }
             return false;

@@ -93,9 +93,6 @@ class CmdRun implements CmdX {
     @DynamicParameter(names = ['-executor.'], description = 'Executor(s) options', hidden = true )
     Map<String,String> executorOptions = [:]
 
-    @Parameter(names = ['-bg'], description = 'Launch the pipeline as a background job', arity = 0)
-    boolean background
-
     @Parameter(description = 'name of pipeline to run')
     List<String> args
 
@@ -107,6 +104,11 @@ class CmdRun implements CmdX {
 
     @Parameter(names='-stdin', hidden = true)
     boolean stdin
+
+    @Parameter(names = ['-bg'], arity = 0, hidden = true)
+    void setBackground(boolean value) {
+         launcher.options.background = value
+    }
 
     @Override
     final String getName() { 'run' }
@@ -147,7 +149,9 @@ class CmdRun implements CmdX {
             log.debug( '\n'+CmdInfo.getInfo() )
 
             // -- add this run to the local history
-            HistoryFile.history.write( runner.session.uniqueId, launcher.commandString )
+            def cli = [ Const.APP_NAME ]; cli.addAll(launcher.normalizedArgs)
+            HistoryFile.history.write( runner.session.uniqueId, *cli )
+
             // -- run it!
             runner.execute(scriptFile,scriptArgs)
         }

@@ -34,7 +34,7 @@ class CliOptions {
     @Parameter(hidden = true, names='-debug')
     List<String> debug
 
-    @Parameter(names=['-log'], description = 'Define the application log file')
+    @Parameter(names=['-log'], description = 'Set nextflow log file')
     String logFile
 
     @Parameter(names=['-lib'], description = 'Library extension path')
@@ -53,14 +53,10 @@ class CliOptions {
     @Parameter(names = ['-v','-version'], description = 'Show the program version')
     boolean version
 
-    @Deprecated
-    @Parameter(names = ['-info'], description = 'The runtime info', hidden = true)
-    boolean info
-
     /**
      * Print out the 'help' and exit
      */
-    @Parameter(names = ['-h','-help'], description = 'Show this help', help = true)
+    @Parameter(names = ['-h'], description = 'Show this help', help = true)
     boolean help
 
     @Parameter(names = ['-q','-quiet'], description = 'Do not print information messages' )
@@ -69,9 +65,11 @@ class CliOptions {
     @Parameter(names = ['-d'], description = 'Start in cluster daemon mode', arity = 0)
     boolean daemon
 
-    @DynamicParameter(names = ['-daemon.'], description = 'Starts in daemon mode and provides extra options', hidden = true )
+    @DynamicParameter(names = ['-daemon.'], description = 'Set daemon configuration options', hidden = true )
     Map<String,String> daemonOptions = [:]
 
+    @Parameter(names = ['-bg'], description = 'Execute nextflow in background', arity = 0)
+    boolean background
 
     boolean isDaemon() {
         return daemon || daemonOptions.size() > 0
