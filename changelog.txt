@@ -1,6 +1,23 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.9.0 - 11 Aug 2014 
+- Added GitHub/Git support. It allows one to pull and run pipelines published on a 
+  remote GitHub repository 
+- Changed command line structure. Since this version it is organised in sub-commands. 
+  The following sub-commands are available:
+      ls: list all downloaded pipelines; 
+      run: launch a pipeline execution;
+      pull: download or update a pipeline hosted on GitHub;
+      info: show pipeline information; 
+      drop: remote a locally stored pipeline; 
+      clone: copy a pipeline to a directory specified;  
+      history: list all pipeline runs;  
+      help: show program help.
+- Added 'baseDir' and 'workDir' script variables
+- Removed Merge processor
+
+
 0.8.5 - 3 Aug 2014 
 - Upgraded to Groovy 2.3.6 
 - Added '-noverify' to JVM launcher options as workaround for Java bug JDK-8051012
