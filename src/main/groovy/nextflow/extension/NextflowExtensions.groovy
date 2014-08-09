@@ -29,6 +29,7 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.regex.Pattern
 
 import groovy.transform.TupleConstructor
+import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
 import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowBroadcast
@@ -42,18 +43,16 @@ import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
 import groovyx.gpars.group.DefaultPGroup
 import groovyx.gpars.group.PGroup
 import groovyx.gpars.scheduler.Pool
+import nextflow.file.FileHelper
 import nextflow.splitter.BytesSplitter
 import nextflow.splitter.FastaSplitter
 import nextflow.splitter.StringSplitter
 import nextflow.splitter.TextSplitter
 import nextflow.util.Duration
-import nextflow.file.FileHelper
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.codehaus.groovy.runtime.ResourceGroovyMethods
 import org.codehaus.groovy.runtime.StringGroovyMethods
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 /**
  * Provides extension methods to chunk text and file
@@ -63,9 +62,9 @@ import org.slf4j.LoggerFactory
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class NextflowExtensions {
 
-    static private final Logger log = LoggerFactory.getLogger(NextflowExtensions)
+@Slf4j
+class NextflowExtensions {
 
     static private Pattern PATTERN_RIGHT_TRIM = ~/\s+$/
 

@@ -19,6 +19,7 @@
  */
 
 package nextflow
+
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ExecutorService
@@ -30,15 +31,16 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.util.PoolUtils
 import jsr166y.Phaser
+import nextflow.cli.CliOptions
+import nextflow.cli.CmdRun
 import nextflow.exception.MissingLibraryException
+import nextflow.file.FileHelper
 import nextflow.processor.TaskDispatcher
 import nextflow.processor.TaskProcessor
-import nextflow.script.CliOptions
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceObserver
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
-import nextflow.file.FileHelper
 
 /**
  * Holds the information on the current execution
@@ -75,7 +77,6 @@ class Session {
      */
     def boolean resumeMode
 
-
     /**
      * The script class name
      */
@@ -90,8 +91,6 @@ class Session {
      * The folder where the main script is contained
      */
     def File baseDir
-
-    def CliOptions cliOptions
 
     /**
      * Folder(s) containing libs and classes to be added to the classpath
@@ -112,8 +111,6 @@ class Session {
     private volatile ExecutorService execService
 
     final private List<Closure<Void>> shutdownHooks = []
-
-    final private List<URL> classpath = []
 
     final int poolSize
 
@@ -169,30 +166,28 @@ class Session {
      *  {@link CliOptions} object
      *
      */
-    def void init( CliOptions options ) {
+    def void init( CmdRun runOpts ) {
 
-
-        this.cliOptions = options
-        this.cacheable = options.cacheable
-        this.resumeMode = options.resume != null
+        this.cacheable = runOpts.cacheable
+        this.resumeMode = runOpts.resume != null
 
         // note -- make sure to use 'FileHelper.asPath' since it guarantee to handle correctly non-standard file system e.g. 'dxfs'
-        this.workDir = FileHelper.asPath(options.workDir).toAbsolutePath()
-        this.setLibDir( options.libPath )
+        this.workDir = FileHelper.asPath(runOpts.workDir).toAbsolutePath()
+        this.setLibDir( runOpts.libPath )
 
         /*
          * create the execution trace observer
          */
         def allObservers = []
-        if( options.traceFile ) {
-            def traceFile = options.traceFile ? FileHelper.asPath(options.traceFile) : null
+        if( runOpts.traceFile ) {
+            def traceFile = runOpts.traceFile ? FileHelper.asPath(runOpts.traceFile) : null
             allObservers << new TraceFileObserver(traceFile)
         }
 
         /*
          * create the Extrae trace object
          */
-        if( options.withExtrae ) {
+        if( runOpts.withExtrae ) {
             try {
                 allObservers << (TraceObserver)Class.forName(EXTRAE_TRACE_CLASS).newInstance()
             }

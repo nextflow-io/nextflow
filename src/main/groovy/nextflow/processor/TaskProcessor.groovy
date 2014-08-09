@@ -314,7 +314,7 @@ abstract class TaskProcessor {
          * - even though the output may be empty, let return the stdout as output by default
          */
         if ( taskConfig.outputs.size() == 0 ) {
-            def dummy =  allScalarValues ? Nextflow.val() : Nextflow.channel()
+            def dummy =  allScalarValues ? Nextflow.variable() : Nextflow.channel()
             taskConfig.fakeOutput(dummy)
         }
 
@@ -773,8 +773,7 @@ abstract class TaskProcessor {
         if( task?.script ) {
             // - print the executed command
             message << "Command executed:\n"
-            def dumpScript = this instanceof MergeTaskProcessor ? this.getSource() : task.script
-            dumpScript?.stripIndent()?.trim()?.eachLine {
+            task.script?.stripIndent()?.trim()?.eachLine {
                 message << "  ${it}"
             }
 

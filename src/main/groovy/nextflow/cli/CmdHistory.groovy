@@ -18,21 +18,26 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.util
+package nextflow.cli
 
-import spock.lang.Specification
+import com.beust.jcommander.Parameters
+import groovy.transform.CompileStatic
+import nextflow.util.HistoryFile
 
 /**
+ * CLI sub-command HISTORY
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class LoggerHelperTest extends Specification {
+@CompileStatic
+@Parameters(commandDescription = "List the history of executed commands")
+class CmdHistory implements CmdX {
 
-    def testErrorLine() {
+    @Override
+    final String getName() { 'history' }
 
-        expect:
-        LoggerHelper.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]') == 'pfam3d.nf:189'
-        LoggerHelper.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','pfam3d') == 'pfam3d.nf:189'
-        LoggerHelper.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','hola') == null
+    @Override
+    void run() {
+        HistoryFile.history.print()
     }
 }

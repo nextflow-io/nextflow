@@ -91,7 +91,15 @@ if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
 fi  
 
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
-NXF_VER=${NXF_VER:-'0.8.3'}
+NXF_VER=${NXF_VER:-'0.10.0'}
+NXF_ORG=${NXF_ORG:-'nextflow-io'}
+NXF_CLI="$0 $@"
+COLUMNS=${COLUMNS:-`tput cols 2> /dev/tty`}
+
+export NXF_CLI
+export NXF_ORG
+export NXF_HOME
+export COLUMNS
 
 # Check if it is required to run in background
 bg=''

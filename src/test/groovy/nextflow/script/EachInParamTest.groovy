@@ -18,34 +18,35 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow
+package nextflow.script
+
+import nextflow.Channel
+import spock.lang.Specification
 
 /**
- * Application exit status
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface ExitCode {
+class EachInParamTest extends Specification {
 
-    static final short OK = 0
+    def testNormalize() {
 
-    static final short MISSING_SCRIPT_FILE = 101
+        given:
+        def channel = Channel.from(1,2,3,5)
+        def value = Channel.just('a')
+        def list = Channel.just([4,5,6])
 
-    static final short INVALID_COMMAND_LINE_PARAMETER = 102
+        expect:
+        EachInParam.normalizeToVariable(1).getVal() == [1]
+        EachInParam.normalizeToVariable([3,4,5]).getVal() == [3,4,5]
+        EachInParam.normalizeToVariable(channel).get() == [1,2,3,5]
+        EachInParam.normalizeToVariable(value).get() == ['a']
+        EachInParam.normalizeToVariable(list).get() == [4,5,6]
 
-    static final short SESSION_ABORTED = 103
 
-    static final short MISSING_UNIQUE_ID = 104
 
-    static final short MISSING_PROPERTY = 105
 
-    static final short INVALID_CONFIG = 106
 
-    static final short DAEMON_NOT_FOUND = 107
-
-    static final short COMMAND_RUNTIME_ERROR = 108
-
-    static final short UNKNOWN_ERROR = 255
-
+    }
 
 }

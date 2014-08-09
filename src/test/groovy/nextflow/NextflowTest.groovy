@@ -23,6 +23,7 @@ package nextflow
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.PoisonPill
 import spock.lang.Specification
@@ -32,17 +33,6 @@ import spock.lang.Specification
  */
 class NextflowTest extends Specification {
 
-
-    def testList() {
-
-        expect:
-        Nextflow.list('a') == ['a']
-        Nextflow.list(1,2,3) == [1,2,3]
-        Nextflow.list(1..9, 'a'..'z') == (1..9) + ('a'..'z')
-
-        Nextflow.list('hola') == ['hola']
-        Nextflow.list('alpha','beta') == ['alpha','beta']
-    }
 
     def testListFromChannel() {
 
@@ -58,7 +48,7 @@ class NextflowTest extends Specification {
         Nextflow.list(ch) == [1,2,9]
 
         when:
-        def val = Nextflow.val('x')
+        def val = Nextflow.variable('x')
         then:
         Nextflow.list(val, val) == ['x','x']
 
@@ -69,7 +59,7 @@ class NextflowTest extends Specification {
         Nextflow.list(ch1,ch2) == [1,2,3,'x','y','z']
 
         when:
-        def b = Nextflow.broadcast()
+        def b = new DataflowBroadcast()
         def ch3 = b.createReadChannel()
         b << 4 << 5 << 6 << PoisonPill.instance
         then:

@@ -18,17 +18,23 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.exception
+package nextflow.cli
 
-import groovy.transform.InheritConstructors;
+import nextflow.cli.CmdPull
+import spock.lang.Specification
 
 /**
- * Thrown when user tries to use an invalid CLI argument
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@InheritConstructors
-class InvalidArgumentException extends Exception {
+class CmdPullTest extends Specification {
 
+    def testPullFromRemote() {
+
+        given:
+        def cmd = new CmdPull(args: ['pditommaso/awesome-pipeline'])
+
+
+    }
 
 }

@@ -39,6 +39,7 @@ import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermissions
 
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 import nextflow.util.ByteBufferBackedInputStream
 import nextflow.util.CharsetHelper
 import nextflow.file.FileHelper
@@ -49,9 +50,9 @@ import org.slf4j.LoggerFactory
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FilesExtensions {
 
-    private static final Logger log = LoggerFactory.getLogger(FilesExtensions)
+@Slf4j
+class FilesExtensions {
 
     private static CR = 0x0D
 

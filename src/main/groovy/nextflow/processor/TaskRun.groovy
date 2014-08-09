@@ -81,25 +81,6 @@ class TaskRun {
      */
     Map<OutParam,Object> outputs = [:]
 
-    /**
-     * Return the list of all input files staged as inputs by this task execution
-     */
-    @Lazy
-    List<Path> stagedInputs = {
-        stagedProvider.call().values().flatten() *. stagePath
-    } ()
-
-    /**
-     * The *strategy* used to retrieve the list of staged input files for this task.
-     * This sort of *hack* is required since tasks processed by the {@code MergeTaskProcessor} maintain
-     * their own input files list, and so the task will need to access that list, and not the one
-     * hold by the task itself
-     *
-     * See MergeTaskProcessor
-     */
-    Closure<Map<InParam,List<FileHolder>>> stagedProvider = {
-           (Map<InParam,List<FileHolder>>) getInputFiles()
-    }
 
 
     def void setInput( InParam param, Object value = null ) {
@@ -284,6 +265,13 @@ class TaskRun {
     }
 
     /**
+     * Return the list of all input files staged as inputs by this task execution
+     */
+    List<Path> getStagedInputs()  {
+        getInputFiles().values().flatten() *. stagePath
+    }
+
+    /**
      * It is made of two parts:
      *
      * 1) Look at the {@code nextflow.script.FileOutParam} which name is the expected
@@ -291,7 +279,7 @@ class TaskRun {
      *
      * 2) It looks shared file parameters, that being so are also output parameters
      *  The problem here is that we need the real file name as it has been staged in
-     *  process execution folder. For this reason it uses the {@code #stagedProvider}
+     *  process execution folder.
      */
     @Memoized
     def List<String> getOutputFilesNames() {
@@ -301,7 +289,7 @@ class TaskRun {
             result.addAll( param.getFilePatterns((Map)code?.delegate) )
         }
 
-        stagedProvider.call()?.each { InParam param, List<FileHolder> files ->
+        getInputFiles()?.each { InParam param, List<FileHolder> files ->
             if( param instanceof FileSharedParam ) {
                 files.each { holder ->
                     result.add( holder.stagePath.getName() )

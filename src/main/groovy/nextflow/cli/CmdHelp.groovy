@@ -18,34 +18,31 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow
-
+package nextflow.cli
+import com.beust.jcommander.Parameter
+import groovy.transform.CompileStatic
 /**
- * Application exit status
+ * CLI sub-command HELP
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface ExitCode {
+@CompileStatic
+class CmdHelp implements CmdX {
 
-    static final short OK = 0
+    @Override
+    final String getName() { "help" }
 
-    static final short MISSING_SCRIPT_FILE = 101
+    @Parameter(description = 'command name', arity = 1)
+    List<String> args
 
-    static final short INVALID_COMMAND_LINE_PARAMETER = 102
-
-    static final short SESSION_ABORTED = 103
-
-    static final short MISSING_UNIQUE_ID = 104
-
-    static final short MISSING_PROPERTY = 105
-
-    static final short INVALID_CONFIG = 106
-
-    static final short DAEMON_NOT_FOUND = 107
-
-    static final short COMMAND_RUNTIME_ERROR = 108
-
-    static final short UNKNOWN_ERROR = 255
-
-
+    @Override
+    void run() {
+        if( !args ) {
+            launcher.jcommander.usage()
+        }
+        else {
+            final cmd = args[0]
+            launcher.jcommander.usage(cmd)
+        }
+    }
 }

@@ -39,9 +39,9 @@ class HistoryFileTest extends Specification {
         HistoryFile.history.retrieveLastUniqueId() == null
 
         when:
-        HistoryFile.history.append( 'xxx', [1,2,3] )
-        HistoryFile.history.append( 'yyy', [1,2,3] )
-        HistoryFile.history.append( 'zzz', [1,2,3] )
+        HistoryFile.history.write( 'xxx', [1,2,3] )
+        HistoryFile.history.write( 'yyy', [1,2,3] )
+        HistoryFile.history.write( 'zzz', [1,2,3] )
 
         then:
         HistoryFile.history.retrieveLastUniqueId() == 'zzz'

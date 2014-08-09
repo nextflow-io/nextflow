@@ -17,8 +17,8 @@ EOF
 #
 # Lauch docker and pull the container when DOCKER variable is defined
 #
-if [ -z "DOCKER" ]; then
-    docker pull $DOCKER
+if [ -n "$CONTAINER" ]; then
+    docker pull $CONTAINER
 fi
 
 # the bucket name

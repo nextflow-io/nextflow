@@ -35,16 +35,22 @@ import ch.qos.logback.core.rolling.FixedWindowRollingPolicy
 import ch.qos.logback.core.rolling.RollingFileAppender
 import ch.qos.logback.core.rolling.TriggeringPolicyBase
 import ch.qos.logback.core.spi.FilterReply
-import groovy.transform.PackageScope
+import groovy.transform.CompileStatic
 import nextflow.Const
-import nextflow.script.CliOptions
-import org.apache.commons.lang.exception.ExceptionUtils
+import nextflow.cli.CliOptions
+import nextflow.file.FileHelper
 import org.slf4j.LoggerFactory
+
+import static Const.MAIN_PACKAGE
+import static Const.APP_NAME
+
+
 /**
  * Helper methods to setup the logging subsystem
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class LoggerHelper {
 
     /**
@@ -61,7 +67,7 @@ class LoggerHelper {
      */
     static void configureLogger( CliOptions options ) {
 
-        final String logFileName = options.logFile ? options.logFile : (options.daemon ? ".nxf-daemon.log" : ".${Const.APP_NAME}.log")
+        final String logFileName = options.logFile ? options.logFile : (options.daemon ? ".nxf-daemon.log" : ".${APP_NAME}.log")
 
         final boolean quiet = options.quiet
         final List<String> debugConf = options.debug
@@ -74,17 +80,18 @@ class LoggerHelper {
         root.detachAndStopAllAppenders()
 
         // -- define the console appender
-        Map<String,Level> packages = [ 'com.hazelcast': Level.WARN, 'com.hazelcast.client.connection.nio.ClientConnection': Level.ERROR ]
-        packages[Const.MAIN_PACKAGE] = quiet ? Level.WARN : Level.INFO
+        Map<String,Level> packages = [:]
+        packages[MAIN_PACKAGE] = quiet ? Level.WARN : Level.INFO
         debugConf?.each { packages[it] = Level.DEBUG }
         traceConf?.each { packages[it] = Level.TRACE }
 
-        final filter = new LoggerPackageFilter( packages )
-        filter.setContext(loggerContext)
-        filter.start()
-
-        final consoleAppender = options.isDaemon() && options.isBackground() ? null : new ConsoleAppender()
+        final ConsoleAppender consoleAppender = options.isDaemon() && options.isBackground() ? null : new ConsoleAppender()
         if( consoleAppender )  {
+
+            final filter = new LoggerPackageFilter( packages )
+            filter.setContext(loggerContext)
+            filter.start()
+
             consoleAppender.setContext(loggerContext)
             consoleAppender.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
             consoleAppender.addFilter(filter)
@@ -121,8 +128,8 @@ class LoggerHelper {
             root.addAppender(consoleAppender)
 
         // -- main package logger
-        def mainLevel = packages[Const.MAIN_PACKAGE]
-        def logger = loggerContext.getLogger(Const.MAIN_PACKAGE)
+        def mainLevel = packages[MAIN_PACKAGE]
+        def logger = loggerContext.getLogger(MAIN_PACKAGE)
         logger.setLevel( mainLevel == Level.TRACE ? Level.TRACE : Level.DEBUG )
         logger.setAdditive(false)
         logger.addAppender(fileAppender)
@@ -176,7 +183,7 @@ class LoggerHelper {
 
             def logger = event.getLoggerName()
             def level = event.getLevel()
-            for( def entry : packages ) {
+            for( Map.Entry<String,Level> entry : packages.entrySet() ) {
                 if ( logger.startsWith( entry.key ) && level.isGreaterOrEqual(entry.value) ) {
                     return FilterReply.NEUTRAL
                 }
@@ -223,7 +230,7 @@ class LoggerHelper {
                 return false;
             }
 
-            if (firstTime.getAndSet(false) && !activeFile.empty() ) {
+            if (firstTime.getAndSet(false) && !FileHelper.empty(activeFile) ) {
                 return true;
             }
             return false;
@@ -231,33 +238,5 @@ class LoggerHelper {
 
     }
 
-
-
-    /**
-     * Find out the script line where the error has thrown
-     */
-    static getErrorMessage( Throwable e, String scriptName ) {
-
-        def lines = ExceptionUtils.getStackTrace(e).split('\n')
-        def error = null
-        for( String str : lines ) {
-            if( (error=getErrorLine(str,scriptName))) {
-                break
-            }
-        }
-
-        return (e.message ?: e.toString()) + ( error ? " at $error" : '' )
-    }
-
-
-    @PackageScope
-    static String getErrorLine( String line, String scriptName = null) {
-        if( scriptName==null )
-            scriptName = '.+'
-
-        def pattern = ~/.*\(($scriptName\.nf:\d*)\).*/
-        def m = pattern.matcher(line)
-        return m.matches() ? m.group(1) : null
-    }
 
 }

@@ -18,38 +18,16 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
-import nextflow.script.FileInParam
-import spock.lang.Specification
+package nextflow.cli
 /**
+ * Implement command shared methods
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class MergeTaskProcessorTest extends Specification {
+trait CmdX implements Runnable {
 
-    def testProvider () {
+    Launcher launcher
 
-        setup:
-        def binding = new Binding()
-        def files = [:]
-        def key1 = new FileInParam(binding, []).bind('file1')
-        def key2 = new FileInParam(binding, []).bind('file_')
-        def val1 = [ FileHolder.get('xxx', 'file1') ]
-        def val2 =  [ FileHolder.get('yyy', 'file2'), FileHolder.get('zzz', 'file3') ]
-        def val3 =  'just a value'
-        files[key1] = val1
-        files[key2] = val2
-
-
-        def proc = [:] as MergeTaskProcessor
-        proc.filesCollector = files
-
-        expect:
-        proc.stagedProvider().size() == 2
-        proc.stagedProvider().get(key1) == val1
-        proc.stagedProvider().get(key2) == val2
-
-
-    }
+    abstract def String getName()
 
 }

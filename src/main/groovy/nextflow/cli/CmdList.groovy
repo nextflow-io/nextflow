@@ -18,34 +18,38 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow
+package nextflow.cli
+
+import com.beust.jcommander.Parameters
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.script.AssetManager
 
 /**
- * Application exit status
+ * CLI sub-command LIST. Prints a list of locally installed pipelines
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface ExitCode {
+@Slf4j
+@CompileStatic
+@Parameters(commandDescription = "List all downloaded pipelines")
+class CmdList implements CmdX {
 
-    static final short OK = 0
+    @Override
+    final String getName() { "ls" }
 
-    static final short MISSING_SCRIPT_FILE = 101
+    @Override
+    void run() {
 
-    static final short INVALID_COMMAND_LINE_PARAMETER = 102
+        def all = new AssetManager().list()
+        if( !all ) {
+            log.info '(none)'
+            return
+        }
 
-    static final short SESSION_ABORTED = 103
+        all.each { println it }
+    }
 
-    static final short MISSING_UNIQUE_ID = 104
-
-    static final short MISSING_PROPERTY = 105
-
-    static final short INVALID_CONFIG = 106
-
-    static final short DAEMON_NOT_FOUND = 107
-
-    static final short COMMAND_RUNTIME_ERROR = 108
-
-    static final short UNKNOWN_ERROR = 255
 
 
 }
