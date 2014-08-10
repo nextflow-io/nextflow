@@ -176,8 +176,8 @@ class LoggerHelper {
 
             def logger = event.getLoggerName()
             def level = event.getLevel()
-            packages.each { String key, Level value->
-                if ( logger.startsWith( key ) && level.isGreaterOrEqual(value) ) {
+            for( Map.Entry<String,Level> entry : packages.entrySet() ) {
+                if ( logger.startsWith( entry.key ) && level.isGreaterOrEqual(entry.value) ) {
                     return FilterReply.NEUTRAL
                 }
             }
