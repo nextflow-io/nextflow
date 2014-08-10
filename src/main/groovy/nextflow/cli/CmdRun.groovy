@@ -50,8 +50,10 @@ class CmdRun implements CmdX {
         }
     }
 
+    @Parameter(names=['-lib'], description = 'Library extension path')
+    String libPath
 
-    @Parameter(names=['-cache'], description = 'Enable/disable processes caching', arity = 1)
+    @Parameter(names=['-cache'], description = 'enable/disable processes caching', arity = 1)
     boolean cacheable = true
 
     @Parameter(names=['-resume'], description = 'Execute the script using the cached results, useful to continue executions that stopped by an error')
@@ -138,7 +140,7 @@ class CmdRun implements CmdX {
         // note -- make sure to use 'FileHelper.asPath' since it guarantee to handle correctly non-standard file system e.g. 'dxfs'
         runner.session.workDir = FileHelper.asPath(this.workDir).toAbsolutePath()
         runner.session.baseDir = scriptFile?.canonicalFile?.parentFile
-        runner.libPath = launcher.options.libPath
+        runner.libPath = this.libPath
 
         log.debug "Script bin dir: ${runner.session.binDir}"
 

@@ -37,11 +37,8 @@ class CliOptions {
     @Parameter(names=['-log'], description = 'Set nextflow log file')
     String logFile
 
-    @Parameter(names=['-lib'], description = 'Library extension path')
-    String libPath
-
     /**
-     * The packages to trace
+     * the packages to trace
      */
     @Parameter(names='-trace', hidden = true)
     List<String> trace
