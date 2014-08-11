@@ -23,6 +23,7 @@ import java.nio.file.Files
 
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -47,7 +48,7 @@ class AssetManagerTest extends Specification {
         expect:
         manager.find('blast') == 'ncbi/blast'
         manager.find('pipe1') == 'cbcrg/pipe1'
-        manager.find('pipe') == ['cbcrg/pipe1', 'cbcrg/pipe2']
+        manager.find('pipe') as Set == ['cbcrg/pipe1', 'cbcrg/pipe2'] as Set
 
         cleanup:
         folder?.deleteDir()

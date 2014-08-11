@@ -52,7 +52,7 @@ class CmdRun implements CmdX {
     @Parameter(names=['-lib'], description = 'Library extension path')
     String libPath
 
-    @Parameter(names=['-cache'], description = 'Enable/disable processes caching', arity = 1)
+    @Parameter(names=['-cache'], description = 'enable/disable processes caching', arity = 1)
     boolean cacheable = true
 
     @Parameter(names=['-resume'], description = 'Execute the script using the cached results, useful to continue executions that stopped by an error')

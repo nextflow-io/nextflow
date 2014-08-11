@@ -38,7 +38,7 @@ class CliOptions {
     String logFile
 
     /**
-     * The packages to trace
+     * the packages to trace
      */
     @Parameter(names='-trace', hidden = true)
     List<String> trace
