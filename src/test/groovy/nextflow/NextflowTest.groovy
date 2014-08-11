@@ -34,40 +34,6 @@ import spock.lang.Specification
 class NextflowTest extends Specification {
 
 
-    def testListFromChannel() {
-
-        when:
-        def var = new DataflowVariable()
-        var << 1
-        then:
-        Nextflow.list(var) == [1]
-
-        when:
-        def ch = Nextflow.channel(1,2,9)
-        then:
-        Nextflow.list(ch) == [1,2,9]
-
-        when:
-        def val = Nextflow.variable('x')
-        then:
-        Nextflow.list(val, val) == ['x','x']
-
-        when:
-        def ch1 = Nextflow.channel(1,2,3)
-        def ch2 = Nextflow.channel('x','y','z')
-        then:
-        Nextflow.list(ch1,ch2) == [1,2,3,'x','y','z']
-
-        when:
-        def b = new DataflowBroadcast()
-        def ch3 = b.createReadChannel()
-        b << 4 << 5 << 6 << PoisonPill.instance
-        then:
-        Nextflow.list(ch3) == [4,5,6]
-
-
-    }
-
     def testFile() {
 
         expect:

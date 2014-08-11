@@ -41,32 +41,6 @@ import nextflow.file.FileHelper
 class Nextflow {
 
     /**
-     * Read a value from the specified channel
-     *
-     * @param channel
-     * @return
-     */
-    @Deprecated
-    static def <T> T read( def channel ) {
-        assert channel
-        log.warn "Function 'read' has been deprecated and will be removed in the next release -- Use method property 'val' instead"
-
-        if ( channel instanceof DataflowBroadcast ) {
-            log.debug 'Read DataflowBroadcast channel'
-            channel.createReadChannel().getVal()
-        }
-        else if ( channel instanceof DataflowReadChannel ) {
-            log.debug 'Read DataflowReadChannel channel'
-            channel.getVal()
-        }
-        else {
-            log.warn "The value is not channel '$channel' (${channel?.class?.simpleName})"
-            return channel
-        }
-    }
-
-
-    /**
      * Create a {@code DataflowVariable} binding it to the specified value
      *
      * @param value
@@ -118,64 +92,6 @@ class Nextflow {
         return channel(items as List)
     }
 
-
-    /**
-     * Converts the specified arguments to a {@code List} data type
-     *
-     * @param item
-     * @return
-     */
-    static List list( Object ... items ) {
-        log.warn "Function 'list' has been deprecated and will be removed in the next release -- Use operator 'toList' instead"
-
-        List result = []
-        for( Object entry : items ) {
-            if( entry instanceof DataflowStreamWriteAdapter ) {
-                throw new IllegalArgumentException("Channel type not supported: ${entry?.class?.name}")
-            }
-            result.addAll( list(entry, false) )
-        }
-
-        return result
-    }
-
-    static List list( Object item, boolean warning = true ) {
-        if( warning )
-        log.warn "Function 'list' has been deprecated and will be removed in the next release -- Use operator 'toList' instead"
-
-        switch( item ) {
-
-            case Collection:
-                return new ArrayList( (Collection)item )
-
-            case (Object[]):
-                return new ArrayList( Arrays.asList( (Object[])item ) )
-
-            case Map:
-                return new ArrayList( ((Map)item ).entrySet()  )
-
-            case DataflowBroadcast:
-                return new ChannelListProxy( ((DataflowBroadcast) item).createReadChannel() )
-
-            case DataflowVariable:
-                def ch = (DataflowReadChannel)item
-                return [ ch.getVal() ]
-
-            case DataflowQueue:
-            case DataflowStreamReadAdapter:
-                def ch = (DataflowReadChannel)item
-                def result = []
-                while( true ) {
-                    def val = ch.getVal()
-                    if( val instanceof PoisonPill ) { break }
-                    result << val
-                }
-                return result
-
-            default:
-                return [ item ]
-        }
-    }
 
 
     /**
