@@ -41,7 +41,7 @@ class DockerBuilder {
 
     private String options
 
-    private boolean remove
+    private boolean remove = true
 
     private String temp
 
@@ -82,8 +82,8 @@ class DockerBuilder {
         if ( params.containsKey('userEmulation') )
             this.userEmulation = params.userEmulation?.toString() == 'true'
 
-        if ( params.containsKey('remove') )
-            this.remove = params.remove?.toString() == 'true'
+        if ( params.containsKey('rm') )
+            this.remove = params.rm?.toString() == 'true'
 
         if( params.containsKey('sudo') )
             this.sudo = params.sudo?.toString() == 'true'
