@@ -37,6 +37,9 @@ class CliOptions {
     @Parameter(names=['-log'], description = 'Set nextflow log file')
     String logFile
 
+    @Parameter(names=['-c','-config'], description = 'Use the specified configuration file(s)')
+    List<String> config
+
     /**
      * the packages to trace
      */

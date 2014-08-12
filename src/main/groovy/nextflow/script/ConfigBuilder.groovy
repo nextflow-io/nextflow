@@ -260,7 +260,7 @@ class ConfigBuilder {
     Map build() {
 
         // -- configuration file(s)
-        def configFiles = validateConfigFiles(runOptions.config)
+        def configFiles = validateConfigFiles(options?.config)
         def config = buildConfig(configFiles)
 
         if( runOptions )

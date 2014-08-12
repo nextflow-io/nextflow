@@ -58,9 +58,6 @@ class CmdRun implements CmdX {
     @Parameter(names=['-resume'], description = 'Execute the script using the cached results, useful to continue executions that stopped by an error')
     String resume
 
-    @Parameter(names=['-c','-config'], description = 'Use the specified configuration file(s)')
-    List<String> config
-
     @Parameter(names=['-ps','-pool-size'], description = 'Number of threads in the execution pool', hidden = true)
     Integer poolSize
 
@@ -106,16 +103,21 @@ class CmdRun implements CmdX {
     @Parameter(names='-stdin', hidden = true)
     boolean stdin
 
-    @Parameter(names = ['-bg'], arity = 0, hidden = true)
-    void setBackground(boolean value) {
-         launcher.options.background = value
-    }
-
     @Parameter(names = ['-with-extrae'], description = 'Trace execution by using BSC Extrae', arity = 0, hidden = true)
     boolean withExtrae
 
     @Parameter(names = ['-trace-file'], description = 'Trace execution to the specified file')
     String traceFile
+
+    @Parameter(names = ['-bg'], arity = 0, hidden = true)
+    void setBackground(boolean value) {
+        launcher.options.background = value
+    }
+
+    @Parameter(names=['-c','-config'], hidden = true )
+    void setConfig( List<String> value ) {
+        launcher.options.config = value
+    }
 
     @Override
     final String getName() { 'run' }
