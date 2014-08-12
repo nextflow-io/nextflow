@@ -23,15 +23,11 @@ import java.nio.file.Path
 
 import groovy.io.FileType
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
-import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.PoisonPill
-import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
-import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
-import nextflow.util.ChannelListProxy
 import nextflow.file.FileHelper
+import nextflow.util.TupleList
 /**
  * Defines the main methods imported by default in the script scope
  *
@@ -165,6 +161,15 @@ class Nextflow {
         return result instanceof List ? result : [result]
     }
 
+    static  TupleList tuple( def value ) {
+        if( !value )
+            return new TupleList()
 
+        new TupleList( value instanceof Collection ? value : [value] )
+    }
+
+    static TupleList tuple( Object ... args ) {
+        tuple( args as List )
+    }
 
 }

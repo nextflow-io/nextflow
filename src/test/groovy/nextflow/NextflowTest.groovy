@@ -19,13 +19,10 @@
  */
 
 package nextflow
-
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import groovyx.gpars.dataflow.DataflowBroadcast
-import groovyx.gpars.dataflow.DataflowVariable
-import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.util.TupleList
 import spock.lang.Specification
 /**
  *
@@ -81,18 +78,15 @@ class NextflowTest extends Specification {
 
     }
 
-//    def testStringAsPath() {
-//
-//        when:
-//        Nextflow.registerTypes()
-//        def x = 'hola'
-//        then:
-//        // Java String
-//        'hola' as Path == Paths.get('hola')
-//        // Groovy GString
-//        "$x" as Path == Paths.get('hola')
-//
-//    }
+
+    def testTuple() {
+
+        expect:
+        Nextflow.tuple(1) == new TupleList([1])
+        Nextflow.tuple(1,2,3) == new TupleList([1,2,3])
+        Nextflow.tuple([4,5,6]) == new TupleList([4,5,6])
+        Nextflow.tuple([4,5,6], [1,2]) == new TupleList([[4,5,6], [1,2]])
+    }
 
 
 }
