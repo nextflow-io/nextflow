@@ -69,8 +69,7 @@ abstract class TaskProcessor {
 
     enum RunType {
         SUBMIT('Submitted process'),
-        RETRY('Re-submitted process'),
-        MERGE('Running merge');
+        RETRY('Re-submitted process')
 
         String message;
 
@@ -488,7 +487,7 @@ abstract class TaskProcessor {
      *      or {@code true} if the task has been submitted for execution
      *
      */
-    final protected boolean checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache, RunType runType, String script = null ) {
+    final protected boolean checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache, RunType runType ) {
 
         int tries = 0
         while( true ) {
@@ -514,9 +513,6 @@ abstract class TaskProcessor {
             // set the working directory
             task.hash = hash
             task.workDir = folder
-            if( script )
-                task.script = script
-
             log.trace "[${task.name}] actual run folder: ${task.workDir}"
 
             // submit task for execution
