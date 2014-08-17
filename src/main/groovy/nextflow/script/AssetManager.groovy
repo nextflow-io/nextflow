@@ -151,6 +151,8 @@ class AssetManager {
         return this
     }
 
+    String getPipeline() { this.pipeline }
+
     AssetManager setLocalPath(File path) {
         this.localPath = path
         return this

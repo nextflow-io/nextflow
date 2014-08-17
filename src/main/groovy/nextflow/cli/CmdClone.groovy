@@ -65,7 +65,9 @@ class CmdClone implements CmdX {
             throw new AbortOperationException("Cannot create clone target directory: $target")
         }
 
-        println "Cloning ${pipeline}${revision ? ':'+revision:''} ..."
+        print "Cloning ${manager.pipeline}${revision ? ':'+revision:''} ..."
         manager.clone(target, revision)
+        print "\r"
+        println "${manager.pipeline} cloned to: $target"
     }
 }
