@@ -18,7 +18,10 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.script
+package nextflow.scm
+
+import nextflow.scm.AssetManager
+
 import java.nio.file.Files
 
 import nextflow.exception.AbortOperationException
@@ -202,38 +205,69 @@ class AssetManagerTest extends Specification {
 
     }
 
-    def testReadManifestFrom() {
-
-        given:
-        def dir = Files.createTempDirectory('test').toFile()
-        new File(dir,'response').text = '''{
-              "name": ".PIPELINE-INF",
-              "path": ".PIPELINE-INF",
-              "sha": "318cb862eda4a1782cd1e1333d913a8e3c61f0a1",
-              "size": 21,
-              "url": "https://api.github.com/repos/cbcrg/piper-nf/contents/.PIPELINE-INF?ref=master",
-              "html_url": "https://github.com/cbcrg/piper-nf/blob/master/.PIPELINE-INF",
-              "git_url": "https://api.github.com/repos/cbcrg/piper-nf/git/blobs/318cb862eda4a1782cd1e1333d913a8e3c61f0a1",
-              "type": "file",
-              "content": "bWFpbi1zY3JpcHQ6IHBpcGVyLm5m\\n",
-              "encoding": "base64",
-              "_links": {
-                "self": "https://api.github.com/repos/cbcrg/piper-nf/contents/.PIPELINE-INF?ref=master",
-                "git": "https://api.github.com/repos/cbcrg/piper-nf/git/blobs/318cb862eda4a1782cd1e1333d913a8e3c61f0a1",
-                "html": "https://github.com/cbcrg/piper-nf/blob/master/.PIPELINE-INF"
-              }
-            }'''
+    def testCreateProviderFor(){
 
         when:
-        def manifest = AssetManager.readManifestFrom("file://$dir/response")
+        def manager= [ pipeline:'x/y', user:'maria', password: 'whatever' ] as AssetManager
+        def repo=manager.createProviderFor('github')
 
         then:
-        manifest.size()==1
-        manifest.get('main-script') == 'piper.nf'
+        repo instanceof GithubRepositoryProvider
+        repo.user=="maria"
+        repo.password=="whatever"
+        repo.pipeline=="x/y"
 
-        cleanup:
-        dir?.deleteDir()
+        when:
+        manager= [ pipeline:'x/y', user:'maria', password: 'whatever' ] as AssetManager
+        repo=manager.createProviderFor('bitbucket')
+
+        then:
+        repo instanceof BitbucketRepositoryProvider
+        repo.user=="maria"
+        repo.password=="whatever"
+        repo.pipeline=="x/y"
+
+        when:
+        manager= [ ] as AssetManager
+        repo=manager.createProviderFor('xxx')
+        then:
+        thrown(AbortOperationException)
+
 
     }
+
+//    def testReadManifestFrom() {
+//
+//        given:
+//        def dir = Files.createTempDirectory('test').toFile()
+//        new File(dir,'response').text = '''{
+//              "name": ".PIPELINE-INF",
+//              "path": ".PIPELINE-INF",
+//              "sha": "318cb862eda4a1782cd1e1333d913a8e3c61f0a1",
+//              "size": 21,
+//              "url": "https://api.github.com/repos/cbcrg/piper-nf/contents/.PIPELINE-INF?ref=master",
+//              "html_url": "https://github.com/cbcrg/piper-nf/blob/master/.PIPELINE-INF",
+//              "git_url": "https://api.github.com/repos/cbcrg/piper-nf/git/blobs/318cb862eda4a1782cd1e1333d913a8e3c61f0a1",
+//              "type": "file",
+//              "content": "bWFpbi1zY3JpcHQ6IHBpcGVyLm5m\\n",
+//              "encoding": "base64",
+//              "_links": {
+//                "self": "https://api.github.com/repos/cbcrg/piper-nf/contents/.PIPELINE-INF?ref=master",
+//                "git": "https://api.github.com/repos/cbcrg/piper-nf/git/blobs/318cb862eda4a1782cd1e1333d913a8e3c61f0a1",
+//                "html": "https://github.com/cbcrg/piper-nf/blob/master/.PIPELINE-INF"
+//              }
+//            }'''
+//
+//        when:
+//        def manifest = AssetManager.readManifestFrom("file://$dir/response")
+//
+//        then:
+//        manifest.size()==1
+//        manifest.get('main-script') == 'piper.nf'
+//
+//        cleanup:
+//        dir?.deleteDir()
+//
+//    }
 
 }
