@@ -18,9 +18,8 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.script
+package nextflow.scm
 
-import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -33,6 +32,7 @@ import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.lib.Repository
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 
 /**
  * Handles operation on remote and local installed pipelines
@@ -69,22 +69,17 @@ class AssetManager {
      */
     private File localPath
 
-    /**
-     * GitHub remote API entry point e.g. {@code https://api.github.com/repos/<pipeline>
-     *
-     * @link https://developer.github.com/v3/repos/
-     *
-     */
-    private URL remoteUrl
-
-    /**
-     * url of github repository where the project is hosted
-     */
-    private String githubPage
-
     private Git _git
 
     private String _mainScript
+
+    private RepositoryProvider provider
+
+    String repository = "github"
+
+    String user
+
+    String password
 
     AssetManager() {
     }
@@ -92,6 +87,19 @@ class AssetManager {
     AssetManager(String name) {
         setPipeline(name)
     }
+
+    AssetManager(Map args) {
+        this.repository = args?.repository ?: 'github'
+        this.user = args?.user
+        this.password = args?.password
+
+        if( args.pipeline ) {
+            setPipeline(args.pipeline as String)
+        }
+
+    }
+
+
 
     AssetManager setRoot( File root ) {
         assert root
@@ -144,12 +152,22 @@ class AssetManager {
         assert name
 
         this.pipeline = resolveName(name)
+        this.provider = createProviderFor(repository)
         this.localPath = new File(root, pipeline)
-        this.remoteUrl = new URL("https://api.github.com/repos/${pipeline}")
-        this.githubPage = "http://github.com/$pipeline"
         this._git = null
         return this
     }
+
+    private RepositoryProvider createProviderFor(String name) {
+        if( name == 'github')
+            return new GithubRepositoryProvider(pipeline: pipeline, user: user, password: password)
+
+        if( name == 'bitbucket')
+            return new BitbucketRepositoryProvider(pipeline: pipeline, user: user, password: password)
+
+        throw new AbortOperationException("Unkwnon pipeline repository provider: $name")
+    }
+
 
     AssetManager setLocalPath(File path) {
         this.localPath = path
@@ -161,25 +179,10 @@ class AssetManager {
         return this
     }
 
-    void checkValidGithubRepo() {
+    void checkValidRemoteRepo() {
 
         def scriptName = getMainScriptName()
-        def scriptUrl = new URL("${remoteUrl}/contents/$scriptName")
-
-        try {
-            new JsonSlurper().parseText(scriptUrl.text)
-        }
-        catch( IOException e1 ) {
-
-            try {
-                new JsonSlurper().parseText(remoteUrl.text)
-            }
-            catch( IOException e2 ) {
-                throw new AbortOperationException("Cannot find $pipeline pipeline -- Make sure exists a Github repository at http://github.com/$pipeline")
-            }
-
-            throw new AbortOperationException("Illegal pipeline repository $githubPage -- It must contain a script named '$DEFAULT_MAIN_FILE_NAME' or a file '$MANIFEST_FILE_NAME'")
-        }
+        provider.validateFor(scriptName)
 
     }
 
@@ -191,19 +194,7 @@ class AssetManager {
             return localPath.toURI().toString()
         }
 
-        Map response
-        try {
-            response = new JsonSlurper().parseText(remoteUrl.text) as Map
-        }
-        catch( IOException e ) {
-            throw new AbortOperationException("Cannot find a pipeline $pipeline -- Make sure exists a Github repository at http://github.com/$pipeline")
-        }
-
-        def result = response.get('clone_url')
-        if( !result )
-            throw new IllegalStateException("Missing clone URL for: $pipeline -- Github request: $remoteUrl")
-
-        return result
+        provider.getCloneURL()
     }
 
     File getLocalPath() { localPath }
@@ -229,7 +220,7 @@ class AssetManager {
     }
 
     String getHomePage() {
-        readManifest()?.get('home-url') ?: githubPage
+        readManifest()?.get('home-url') ?: provider.getHomePage()
     }
 
     String getMasterBranch() {
@@ -244,7 +235,7 @@ class AssetManager {
                 return result
             }
             else {
-                readManifestFrom("${remoteUrl}/contents/${MANIFEST_FILE_NAME}")
+                provider.readManifest(MANIFEST_FILE_NAME)
             }
 
         }
@@ -262,25 +253,25 @@ class AssetManager {
      * @param url
      * @return
      */
-    @Memoized
-    static protected Map readManifestFrom( String url ) {
-        InputStream input = null
-        try {
-            Map response = (Map)new JsonSlurper().parseText(new URL(url).text)
-            def bytes = response.get('content')?.toString()?.decodeBase64()
-
-            def result = new Properties()
-            result.load( new ByteArrayInputStream(bytes) )
-            return result
-        }
-        catch( IOException e ) {
-            log.debug "Unable to read manifest file: $url"
-            return null
-        }
-        finally {
-            input?.close()
-        }
-    }
+//    @Memoized
+//    static protected Map readManifestFrom( String url ) {
+//        InputStream input = null
+//        try {
+//            Map response = (Map)new JsonSlurper().parseText(new URL(url).text)
+//            def bytes = response.get('content')?.toString()?.decodeBase64()
+//
+//            def result = new Properties()
+//            result.load( new ByteArrayInputStream(bytes) )
+//            return result
+//        }
+//        catch( IOException e ) {
+//            log.debug "Unable to read manifest file: $url"
+//            return null
+//        }
+//        finally {
+//            input?.close()
+//        }
+//    }
 
     String getName() {
         return pipeline
@@ -361,12 +352,13 @@ class AssetManager {
         if( !localPath.exists() ) {
             localPath.parentFile.mkdirs()
             // make sure it contains a valid repository
-            checkValidGithubRepo()
+            checkValidRemoteRepo()
 
             log.debug "Pulling $pipeline -- Using remote clone url: ${getGitRepositoryUrl()}"
 
             // clone it
             Git.cloneRepository()
+                    .setCredentialsProvider( new UsernamePasswordCredentialsProvider(user, password) )
                     .setURI(getGitRepositoryUrl())
                     .setDirectory(localPath)
                     .call()
@@ -399,7 +391,11 @@ class AssetManager {
         }
 
         // now pull to update it
-        def result = git.pull().call()
+        def pull = git.pull()
+        if( user && password )
+            pull.setCredentialsProvider( new UsernamePasswordCredentialsProvider(user, password))
+
+        def result = pull.call()
         if(!result.isSuccessful())
             throw new AbortOperationException("Cannot pull pipeline: '$pipeline' -- ${result.toString()}")
 
@@ -424,6 +420,8 @@ class AssetManager {
 
         clone.setURI(uri)
         clone.setDirectory(directory)
+        if( user && password )
+            clone.setCredentialsProvider( new UsernamePasswordCredentialsProvider(user, password))
         if( revision ) {
             clone.setBranch(revision)
         }

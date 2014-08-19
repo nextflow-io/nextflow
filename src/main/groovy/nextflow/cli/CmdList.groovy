@@ -23,7 +23,7 @@ package nextflow.cli
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.script.AssetManager
+import nextflow.scm.AssetManager
 
 /**
  * CLI sub-command LIST. Prints a list of locally installed pipelines
