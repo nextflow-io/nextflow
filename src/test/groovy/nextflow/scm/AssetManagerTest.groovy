@@ -19,14 +19,10 @@
  */
 
 package nextflow.scm
-
-import nextflow.scm.AssetManager
-
 import java.nio.file.Files
 
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -208,28 +204,28 @@ class AssetManagerTest extends Specification {
     def testCreateProviderFor(){
 
         when:
-        def manager= [ pipeline:'x/y', user:'maria', password: 'whatever' ] as AssetManager
-        def repo=manager.createProviderFor('github')
+        def manager= [ pipeline:'x/y', user:'maria', pwd: 'whatever' ] as AssetManager
+        def repo=manager.createHubProviderFor('github')
 
         then:
         repo instanceof GithubRepositoryProvider
         repo.user=="maria"
-        repo.password=="whatever"
+        repo.pwd=="whatever"
         repo.pipeline=="x/y"
 
         when:
-        manager= [ pipeline:'x/y', user:'maria', password: 'whatever' ] as AssetManager
-        repo=manager.createProviderFor('bitbucket')
+        manager= [ pipeline:'x/y', user:'maria', pwd: 'whatever' ] as AssetManager
+        repo=manager.createHubProviderFor('bitbucket')
 
         then:
         repo instanceof BitbucketRepositoryProvider
         repo.user=="maria"
-        repo.password=="whatever"
+        repo.pwd=="whatever"
         repo.pipeline=="x/y"
 
         when:
-        manager= [ ] as AssetManager
-        repo=manager.createProviderFor('xxx')
+        manager = [ ] as AssetManager
+        manager.createHubProviderFor('xxx')
         then:
         thrown(AbortOperationException)
 

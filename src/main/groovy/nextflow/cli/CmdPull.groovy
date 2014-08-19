@@ -34,7 +34,7 @@ import nextflow.scm.AssetManager
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Download or updated a pipeline in the local repository")
-class CmdPull implements CmdX, RepoParams {
+class CmdPull implements CmdX, HubParams {
 
     @Parameter(description = 'name of the pipeline to pull', arity = 1)
     List<String> args
@@ -57,11 +57,9 @@ class CmdPull implements CmdX, RepoParams {
             return
         }
 
-        final pwd = getPassword()
-
         list.each {
             log.info "Checking $it ..."
-            def manager = new AssetManager( pipeline: it, repository: repository,  password: pwd, user: repID)
+            def manager = new AssetManager( pipeline: it, hub: hub_provider,  user: hub_user, pwd: getHubPassword())
             def result = manager.download()
             if( !result )
                 log.info " done"

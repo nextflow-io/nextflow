@@ -1,4 +1,4 @@
-src/main/groovy/nextflow/scm/AssetManager.groovy/*
+/*
  * Copyright (c) 2013-2014, Centre for Genomic Regulation (CRG).
  * Copyright (c) 2013-2014, Paolo Di Tommaso and the respective authors.
  *
@@ -22,6 +22,7 @@ package nextflow.scm
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
@@ -48,9 +49,12 @@ class AssetManager {
 
     static final String DEFAULT_MAIN_FILE_NAME = 'main.nf'
 
-    static final String DEFAULT_MASTER_BRANCH = 'master'
+    static final String DEFAULT_BRANCH = 'master'
 
     static final String DEFAULT_ORGANIZATION = System.getenv('NXF_ORG') ?: 'nextflow-io'
+
+    static final String DEFAULT_HUB = System.getenv('NXF_HUB') ?: 'github'
+
 
     /**
      * The folder all pipelines scripts are installed
@@ -75,23 +79,39 @@ class AssetManager {
 
     private RepositoryProvider provider
 
-    String repository = "github"
+    String hub = DEFAULT_HUB
 
     String user
 
-    String password
+    String pwd
 
+    /**
+     * Create a new asset manager object with default parameters
+     */
     AssetManager() {
     }
 
-    AssetManager(String name) {
-        setPipeline(name)
+    /**
+     * Create a new asset manager with the specified pipeline name
+     *
+     * @param pipeline The pipeline to be managed by this manager e.g. {@code nextflow-io/hello}
+     */
+    AssetManager(String pipeline) {
+        setPipeline(pipeline)
     }
 
+    /**
+     * Create a new asset managed with the specified parameters. Accepted parameters are:
+     * <li>hub
+     * <li>user
+     * <li>pas
+     *
+     * @param args
+     */
     AssetManager(Map args) {
-        this.repository = args?.repository ?: 'github'
+        this.hub = args?.hub ?: DEFAULT_HUB
         this.user = args?.user
-        this.password = args?.password
+        this.pwd = args?.pwd
 
         if( args.pipeline ) {
             setPipeline(args.pipeline as String)
@@ -152,20 +172,21 @@ class AssetManager {
         assert name
 
         this.pipeline = resolveName(name)
-        this.provider = createProviderFor(repository)
+        this.provider = createHubProviderFor(hub)
         this.localPath = new File(root, pipeline)
         this._git = null
         return this
     }
 
-    String getPipeline() { this.pipeline }
+    String getPipeline() { pipeline }
 
-    private RepositoryProvider createProviderFor(String name) {
+    @PackageScope
+    RepositoryProvider createHubProviderFor(String name) {
         if( name == 'github')
-            return new GithubRepositoryProvider(pipeline: pipeline, user: user, password: password)
+            return new GithubRepositoryProvider(pipeline: pipeline, user: user, pwd: pwd)
 
         if( name == 'bitbucket')
-            return new BitbucketRepositoryProvider(pipeline: pipeline, user: user, password: password)
+            return new BitbucketRepositoryProvider(pipeline: pipeline, user: user, pwd: pwd)
 
         throw new AbortOperationException("Unkwnon pipeline repository provider: $name")
     }
@@ -195,7 +216,7 @@ class AssetManager {
             return localPath.toURI().toString()
         }
 
-        provider.getCloneURL()
+        provider.getCloneUrl()
     }
 
     File getLocalPath() { localPath }
@@ -225,7 +246,7 @@ class AssetManager {
     }
 
     String getMasterBranch() {
-        readManifest()?.get('master-branch') ?: DEFAULT_MASTER_BRANCH
+        readManifest()?.get('master-branch') ?: DEFAULT_BRANCH
     }
 
     protected Map readManifest() {
@@ -246,42 +267,9 @@ class AssetManager {
         }
     }
 
-    /**
-     * Given a Github content url: 1) get content object 2) decide from base64 3) read the content as {@link Properties} object
-     *
-     * @link https://developer.github.com/v3/repos/contents/#get-contents
-     *
-     * @param url
-     * @return
-     */
-//    @Memoized
-//    static protected Map readManifestFrom( String url ) {
-//        InputStream input = null
-//        try {
-//            Map response = (Map)new JsonSlurper().parseText(new URL(url).text)
-//            def bytes = response.get('content')?.toString()?.decodeBase64()
-//
-//            def result = new Properties()
-//            result.load( new ByteArrayInputStream(bytes) )
-//            return result
-//        }
-//        catch( IOException e ) {
-//            log.debug "Unable to read manifest file: $url"
-//            return null
-//        }
-//        finally {
-//            input?.close()
-//        }
-//    }
-
-    String getName() {
-        return pipeline
-    }
-
     String getBaseName() {
         pipeline.split('/')[1]
     }
-
 
     boolean isLocal() {
         localPath.exists()
@@ -355,24 +343,27 @@ class AssetManager {
             // make sure it contains a valid repository
             checkValidRemoteRepo()
 
-            log.debug "Pulling $pipeline -- Using remote clone url: ${getGitRepositoryUrl()}"
+            log.debug "Pulling $pipeline  -- Using remote clone url: ${getGitRepositoryUrl()}"
 
             // clone it
-            Git.cloneRepository()
-                    .setCredentialsProvider( new UsernamePasswordCredentialsProvider(user, password) )
-                    .setURI(getGitRepositoryUrl())
-                    .setDirectory(localPath)
-                    .call()
+            def clone = Git.cloneRepository()
+            if( user && pwd )
+                clone.setCredentialsProvider( new UsernamePasswordCredentialsProvider(user, pwd) )
+
+            clone
+                .setURI(getGitRepositoryUrl())
+                .setDirectory(localPath)
+                .call()
 
             return "downloaded from ${gitRepositoryUrl}"
         }
 
 
-        log.debug "Pull pipeline $pipeline -- Using local path: $localPath"
+        log.debug "Pull pipeline $pipeline  -- Using local path: $localPath"
 
         // verify that is clean
         if( !isClean() )
-            throw new AbortOperationException("$pipeline contains uncommitted changes -- cannot pull from repository")
+            throw new AbortOperationException("$pipeline  contains uncommitted changes -- cannot pull from repository")
 
         if( revision && revision != getCurrentRevision() ) {
             /*
@@ -393,12 +384,12 @@ class AssetManager {
 
         // now pull to update it
         def pull = git.pull()
-        if( user && password )
-            pull.setCredentialsProvider( new UsernamePasswordCredentialsProvider(user, password))
+        if( user && pwd )
+            pull.setCredentialsProvider( new UsernamePasswordCredentialsProvider(user, pwd))
 
         def result = pull.call()
         if(!result.isSuccessful())
-            throw new AbortOperationException("Cannot pull pipeline: '$pipeline' -- ${result.toString()}")
+            throw new AbortOperationException("Cannot pull pipeline: '$pipeline ' -- ${result.toString()}")
 
         return result?.mergeResult?.mergeStatus?.toString()
 
@@ -414,18 +405,18 @@ class AssetManager {
 
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
-        log.debug "Clone pipeline $pipeline -- Using remote URI: ${uri} into: $directory"
+        log.debug "Clone pipeline $pipeline  -- Using remote URI: ${uri} into: $directory"
 
         if( !uri )
-            throw new AbortOperationException("Cannot find the specified pipeline: $pipeline")
+            throw new AbortOperationException("Cannot find the specified pipeline: $pipeline ")
 
         clone.setURI(uri)
         clone.setDirectory(directory)
-        if( user && password )
-            clone.setCredentialsProvider( new UsernamePasswordCredentialsProvider(user, password))
-        if( revision ) {
+        if( user && pwd )
+            clone.setCredentialsProvider( new UsernamePasswordCredentialsProvider(user, pwd))
+
+        if( revision )
             clone.setBranch(revision)
-        }
 
         clone.call()
     }
@@ -495,7 +486,7 @@ class AssetManager {
         def current = getCurrentRevision()
         if( current != masterBranch ) {
             if( !revision ) {
-                throw new AbortOperationException("Pipeline '$pipeline' currently is sticked on revision: $current -- you need to specify explicitly a revision with the option '-r' to use it")
+                throw new AbortOperationException("Pipeline '$pipeline ' currently is sticked on revision: $current -- you need to specify explicitly a revision with the option '-r' to use it")
             }
         }
         else if( !revision || revision == current ) {
@@ -505,7 +496,7 @@ class AssetManager {
 
         // verify that is clean
         if( !isClean() )
-            throw new AbortOperationException("Pipeline '$pipeline' contains uncommitted changes -- Cannot switch to revision: $revision")
+            throw new AbortOperationException("Pipeline '$pipeline ' contains uncommitted changes -- Cannot switch to revision: $revision")
 
         try {
             git.checkout().setName(revision) .call()

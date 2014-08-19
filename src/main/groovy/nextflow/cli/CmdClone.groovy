@@ -35,7 +35,7 @@ import nextflow.scm.AssetManager
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Clone a pipeline the specified folder")
-class CmdClone implements CmdX, RepoParams {
+class CmdClone implements CmdX, HubParams {
 
     @Parameter(required=true, description = 'name of the pipeline to clone')
     List<String> args
@@ -50,7 +50,7 @@ class CmdClone implements CmdX, RepoParams {
     void run() {
         // the pipeline name
         String pipeline = args[0]
-        final manager = new AssetManager(pipeline: pipeline, repository: repository, user: repID, password: repPWD)
+        final manager = new AssetManager(pipeline: pipeline, hub: hub_provider, user: hub_user, pwd: getHubPassword())
 
         // the target directory is the second parameter
         // otherwise default the current pipeline name

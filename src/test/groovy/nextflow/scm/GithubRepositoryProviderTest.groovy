@@ -1,3 +1,23 @@
+/*
+ * Copyright (c) 2013-2014, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2014, Paolo Di Tommaso and the respective authors.
+ *
+ *   This file is part of 'Nextflow'.
+ *
+ *   Nextflow is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   Nextflow is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package nextflow.scm
 
 import spock.lang.Specification
@@ -10,7 +30,7 @@ class GithubRepositoryProviderTest extends Specification {
     def testGitCloneUrl() {
 
         when:
-        def url = new GithubRepositoryProvider(pipeline: 'nextflow-io/hello').getCloneURL()
+        def url = new GithubRepositoryProvider(pipeline: 'nextflow-io/hello').getCloneUrl()
         then:
         url == 'https://github.com/nextflow-io/hello.git'
 
@@ -26,7 +46,7 @@ class GithubRepositoryProviderTest extends Specification {
 
         when:
         def repo = new GithubRepositoryProvider(pipeline: 'nextflow-io/hello')
-        def result = repo.readContent('main.nf')
+        def result = new String(repo.readContent('main.nf'))
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')
 

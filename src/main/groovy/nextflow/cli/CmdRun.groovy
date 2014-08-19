@@ -39,7 +39,7 @@ import nextflow.util.HistoryFile
  */
 @Slf4j
 @Parameters(commandDescription = "Run a pipeline")
-class CmdRun implements CmdX, RepoParams {
+class CmdRun implements CmdX, HubParams {
 
     static class DurationConverter implements IStringConverter<Long> {
         @Override
@@ -194,7 +194,7 @@ class CmdRun implements CmdX, RepoParams {
         /*
          * try to look for a pipeline in the repository
          */
-        def manager = new AssetManager()
+        def manager = new AssetManager(hub: this.hub_provider, user: this.hub_user, pwd: getHubPassword())
         def repo = manager.resolveName(pipelineName)
 
         /*

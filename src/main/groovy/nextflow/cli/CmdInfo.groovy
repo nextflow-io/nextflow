@@ -56,14 +56,14 @@ class CmdInfo implements CmdX {
             throw new AbortOperationException("Unknown pipeline '${args[0]}'")
         }
 
-        def pipeline = new AssetManager(repo as String)
+        def manager = new AssetManager(repo as String)
 
-        println " repo name  : ${pipeline.name}"
-        println " home page  : ${pipeline.homePage}"
-        println " local path : ${pipeline.localPath}"
-        println " main script: ${pipeline.mainScriptName}"
+        println " repo name  : ${manager.pipeline}"
+        println " home page  : ${manager.homePage}"
+        println " local path : ${manager.localPath}"
+        println " main script: ${manager.mainScriptName}"
 
-        def revs = pipeline.getRevisions()
+        def revs = manager.getRevisions()
         if( revs.size() == 1 )
             println " revision   : ${revs[0]}"
         else {
