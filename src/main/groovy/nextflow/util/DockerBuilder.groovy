@@ -92,7 +92,7 @@ class DockerBuilder {
     }
 
 
-    CharSequence build(StringBuilder result = new StringBuilder()) {
+    String build(StringBuilder result = new StringBuilder()) {
         assert containerName
 
         if( sudo )

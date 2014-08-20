@@ -163,7 +163,7 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_exit 1 2 3 15 ERR TERM USR1 USR2
                 function on_exit() { local exit_status=\${1:-\$?}; printf \$exit_status > ${folder}/.exitcode; exit \$exit_status; }
                 touch ${folder}/.command.begin
-                ( sudo docker run -v \$(mktemp -d):/tmp -v \$PWD:\$PWD -w \$PWD busybox /bin/bash -ue ${folder}/.command.sh ) &> ${folder}/.command.out
+                ( sudo docker run --rm -v \$(mktemp -d):/tmp -v \$PWD:\$PWD -w \$PWD busybox /bin/bash -ue ${folder}/.command.sh ) &> ${folder}/.command.out
                 on_exit
                 """
                         .stripIndent().leftTrim()

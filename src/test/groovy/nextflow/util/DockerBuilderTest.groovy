@@ -59,19 +59,18 @@ class DockerBuilderTest extends Specification {
         def db_file = Paths.get('/home/db')
 
         expect:
-        new DockerBuilder('fedora').build().toString() == 'docker run --rm -v $PWD:$PWD -w $PWD fedora'
-        new DockerBuilder('fedora').addEnv(envFile).build().toString() == 'docker run --rm -e "BASH_ENV=env-file" -v $PWD:$PWD -w $PWD fedora'
-        new DockerBuilder('ubuntu').params(temp:'/hola').build().toString() == 'docker run --rm -v /hola:/tmp -v $PWD:$PWD -w $PWD ubuntu'
-        new DockerBuilder('ubuntu').params(rm:false).build().toString() == 'docker run -v $PWD:$PWD -w $PWD ubuntu'
-        new DockerBuilder('busybox').params(sudo: true).build().toString() == 'sudo docker run --rm -v $PWD:$PWD -w $PWD busybox'
-        new DockerBuilder('busybox').params(options: '-x --zeta').build().toString() == 'docker run --rm -v $PWD:$PWD -w $PWD -x --zeta busybox'
-        new DockerBuilder('busybox').params(userEmulation:true).build().toString() == 'docker run --rm -u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME -v $PWD:$PWD -w $PWD busybox'
+        new DockerBuilder('fedora').build() == 'docker run --rm -v $PWD:$PWD -w $PWD fedora'
+        new DockerBuilder('fedora').addEnv(envFile).build() == 'docker run --rm -e "BASH_ENV=env-file" -v $PWD:$PWD -w $PWD fedora'
+        new DockerBuilder('ubuntu').params(temp:'/hola').build() == 'docker run --rm -v /hola:/tmp -v $PWD:$PWD -w $PWD ubuntu'
+        new DockerBuilder('ubuntu').params(rm:false).build() == 'docker run -v $PWD:$PWD -w $PWD ubuntu'
+        new DockerBuilder('busybox').params(sudo: true).build() == 'sudo docker run --rm -v $PWD:$PWD -w $PWD busybox'
+        new DockerBuilder('busybox').params(options: '-x --zeta').build() == 'docker run --rm -v $PWD:$PWD -w $PWD -x --zeta busybox'
+        new DockerBuilder('busybox').params(userEmulation:true).build() == 'docker run --rm -u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME -v $PWD:$PWD -w $PWD busybox'
         new DockerBuilder('fedora')
                 .addEnv(envFile)
                 .addMount(db_file)
                 .addMount(db_file) // <-- add twice the same to prove that the final string won't contain duplicates
-                .build()
-                .toString() == 'docker run --rm -e "BASH_ENV=env-file" -v /home/db:/home/db -v $PWD:$PWD -w $PWD fedora'
+                .build() == 'docker run --rm -e "BASH_ENV=env-file" -v /home/db:/home/db -v $PWD:$PWD -w $PWD fedora'
 
     }
 

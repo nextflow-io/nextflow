@@ -226,7 +226,8 @@ class BashWrapperBuilder {
                 docker.addEnv( environmentFile )
 
             if( dockerOptions ) {
-                if( dockerOptions.temp?.toString() == 'true' ) dockerOptions.temp = changeDir ? '$NXF_SCRATCH' : '$(mktemp -d)'
+                if( dockerOptions.temp?.toString() == 'true' )
+                    dockerOptions.temp = changeDir ? '$NXF_SCRATCH' : '$(mktemp -d)'
                 docker.params(dockerOptions)
             }
 
