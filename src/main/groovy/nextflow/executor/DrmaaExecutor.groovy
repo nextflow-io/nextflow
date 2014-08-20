@@ -57,6 +57,7 @@ class DrmaaExecutor extends Executor {
     /**
      * Create a DRMAA session object the very first time an executor is created
      */
+    @Override
     void register() {
         drmaa = SessionFactory.getFactory().getSession()
         drmaa.init('')

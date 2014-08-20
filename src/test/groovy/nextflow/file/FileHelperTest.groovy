@@ -23,7 +23,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import com.github.marschall.memoryfilesystem.MemoryFileSystemBuilder
+import com.google.common.jimfs.Configuration
+import com.google.common.jimfs.Jimfs
 import nextflow.Session
 import spock.lang.Specification
 /**
@@ -36,12 +37,12 @@ class FileHelperTest extends Specification {
 
         given:
         new Session()
-        MemoryFileSystemBuilder.newEmpty().build("test")
+        Jimfs.newFileSystem(Configuration.unix());
 
         expect:
         FileHelper.asPath('file.txt') == Paths.get('file.txt')
         FileHelper.asPath('file:///file.txt') == Paths.get( URI.create('file:///file.txt') )
-        FileHelper.asPath('memory:test/some/file') == Paths.get('memory:test/some/file')
+        FileHelper.asPath('jimfs:test/some/file') == Paths.get('jimfs:test/some/file')
 
     }
 

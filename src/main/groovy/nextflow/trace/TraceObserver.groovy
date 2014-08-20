@@ -43,7 +43,8 @@ trait TraceObserver {
     void onFlowComplete() { }
 
     /**
-     * This method is invoked when an error is raised
+     * TODO This method is invoked when an error is raised
+     *
      * @param error
      */
     void onFlowError(Throwable error) { }
