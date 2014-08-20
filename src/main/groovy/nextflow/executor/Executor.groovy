@@ -64,6 +64,8 @@ abstract class Executor {
      */
     private TaskMonitor monitor
 
+    private static final Map<Class,Boolean> registerFlag = [:]
+
     /**
      * Template method executed once for executor class
      */
@@ -73,6 +75,8 @@ abstract class Executor {
      * Allows to post-initialize the executor
      */
     void init() {
+        log.debug "Initializing executor: $name"
+
         // -- skip if already assigned, this is only for testing purpose
         if( monitor )
             return
@@ -84,7 +88,11 @@ abstract class Executor {
         }
 
         // call the register template method
-        register()
+        if( !registerFlag[this.class] ) {
+            log.debug "Invoke register for executor: ${name}"
+            register()
+            registerFlag[this.class] = true
+        }
     }
 
 
