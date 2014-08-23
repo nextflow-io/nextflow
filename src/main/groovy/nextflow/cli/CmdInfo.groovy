@@ -19,8 +19,8 @@
  */
 
 package nextflow.cli
-
 import java.lang.management.ManagementFactory
+import java.nio.file.spi.FileSystemProvider
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
@@ -28,7 +28,6 @@ import groovy.transform.CompileStatic
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.script.AssetManager
-
 /**
  * CLI sub-command INFO
  *
@@ -41,13 +40,16 @@ class CmdInfo implements CmdX {
     @Parameter(description = 'pipeline name')
     List<String> args
 
+    @Parameter(names='-d',description = 'Show detailed information', arity = 0)
+    boolean detailed
+
     @Override
     final String getName() { 'info' }
 
     @Override
     void run() {
         if( !args ) {
-            println getInfo() + '\n'
+            println getInfo(detailed) + '\n'
             return
         }
 
@@ -75,18 +77,68 @@ class CmdInfo implements CmdX {
     /**
      * @return A string containing some system runtime information
      */
-    static String getInfo() {
+    static String getInfo(boolean detailed = false) {
 
-"""\
-      Version: ${Const.APP_VER} build ${Const.APP_BUILDNUM}
-      Last modified: ${Const.APP_TIMESTAMP_UTC} ${Const.deltaLocal()}
-      Os: ${System.getProperty('os.name')} ${System.getProperty('os.version')}
-      Groovy: ${GroovySystem.getVersion()}
-      Jvm: ${System.getProperty('java.vendor')} ${System.getProperty('java.runtime.version')}
-      Opts: ${ManagementFactory.getRuntimeMXBean().getInputArguments().join(' ')}
-      Encoding: ${System.getProperty('file.encoding')} (${System.getProperty('sun.jnu.encoding')})
-      Address: ${getLocalNameAndAddress()}"""
+        final BLANK = '  '
+        final NEWLINE = '\n'
+        def result = new StringBuilder()
+        result << BLANK << "Version: ${Const.APP_VER} build ${Const.APP_BUILDNUM}" << NEWLINE
+        result << BLANK << "Last modified: ${Const.APP_TIMESTAMP_UTC} ${Const.deltaLocal()}" << NEWLINE
+        result << BLANK << "Os: ${System.getProperty('os.name')} ${System.getProperty('os.version')}" << NEWLINE
+        result << BLANK << "Groovy: ${GroovySystem.getVersion()}" << NEWLINE
+        result << BLANK << "Jvm: ${System.getProperty('java.vendor')} ${System.getProperty('java.runtime.version')}" << NEWLINE
+        result << BLANK << "Encoding: ${System.getProperty('file.encoding')} (${System.getProperty('sun.jnu.encoding')})" << NEWLINE
+        result << BLANK << "Address: ${getLocalNameAndAddress()}" << NEWLINE
 
+        if( !detailed )
+            return result.toString()
+
+        List<String> capsule = []
+        List<String> args = []
+        ManagementFactory
+                .getRuntimeMXBean()
+                .getInputArguments()
+                .each { String it ->
+                        if( it.startsWith('-Dcapsule.'))
+                            capsule << it.substring(2)
+                        else
+                            args << it
+                    }
+
+        String[] classPath = System.getProperty('java.class.path').split(':')
+
+        // file system
+        result << BLANK << "File systems: "
+        result << FileSystemProvider.installedProviders().collect { it.scheme }.join(', ')
+        result << NEWLINE
+
+        // JVM options
+        result << BLANK << "Opts:" << NEWLINE
+        for( String x : args ) {
+            result << BLANK << BLANK << x << NEWLINE
+        }
+
+        // Capsule options
+        result << BLANK << "Capsule:" << NEWLINE
+        for( String x : capsule ) {
+            result << BLANK << BLANK << x << NEWLINE
+        }
+
+        // Env
+        result << BLANK << "Environment:" << NEWLINE
+        for( Map.Entry<String,String> entry : System.getenv().entrySet() ) {
+            if( entry.key.startsWith('NXF_') ) {
+                result << BLANK << BLANK << entry.key << '=' << entry.value << NEWLINE
+            }
+        }
+
+        // Class path
+        result << BLANK << "Class-path:" << NEWLINE
+        for( String x : classPath ) {
+            result << BLANK << BLANK << x << NEWLINE
+        }
+
+        return result.toString()
     }
 
     /**

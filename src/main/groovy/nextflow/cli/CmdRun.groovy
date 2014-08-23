@@ -145,7 +145,7 @@ class CmdRun implements CmdX {
             runner.test(scriptFile, this.test, scriptArgs )
         }
         else {
-            log.debug( '\n'+CmdInfo.getInfo() )
+            log.debug( '\n'+CmdInfo.getInfo( log.isTraceEnabled() ) )
 
             // -- add this run to the local history
             def cli = [ Const.APP_NAME ]; cli.addAll(launcher.normalizedArgs)
