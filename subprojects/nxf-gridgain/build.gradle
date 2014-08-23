@@ -17,6 +17,13 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
+apply plugin: 'groovy'
+
+sourceSets {
+    main.groovy { srcDirs = ['src/main'] }
+    main.resources { srcDirs = ['src/resources'] }
+    test.groovy { srcDirs = ['src/test'] }
+}
 
 dependencies {
     compile project(':')
@@ -44,7 +51,7 @@ dependencies {
     //compile 'org.apache.hadoop:hadoop-core:1.2.1'
     compile "nextflow:s3fs:1.0.0"
 
-    testCompile project(':')
+    testCompile project(path:':', configuration: 'testCompile')
 }
 
 

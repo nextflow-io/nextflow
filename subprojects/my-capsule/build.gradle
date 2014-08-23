@@ -17,20 +17,22 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
-apply plugin: 'groovy'
-
-sourceSets {
-    main.groovy { srcDirs = ['src/main'] }
-    main.resources { srcDirs = ['src/resources'] }
-    test.groovy { srcDirs = ['src/test'] }
-}
+apply plugin: 'java'
+apply plugin: 'application'
 
 dependencies {
-    compile project(':')
-    testCompile project(path:':', configuration: 'testCompile')
+    // Capsule manages the fat jar building process
+    compile "co.paralleluniverse:capsule:0.8.0-SNAPSHOT"
+    testCompile "junit:junit-dep:4.10"
 }
 
+sourceSets {
+    main {
+        java { srcDirs = ['src/main'] }
+        resources { srcDirs = ['src/resources'] }
+    }
 
-task compile(type: Copy) {
-    dependsOn compileJava, compileGroovy, processResources
+    test {
+        java { srcDirs = ['src/test'] }
+    }
 }

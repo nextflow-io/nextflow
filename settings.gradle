@@ -1,3 +1,4 @@
+include 'my-capsule'
 include 'nxf-dnanexus'
 include 'nxf-gridgain'
 include 'nxf-extrae'

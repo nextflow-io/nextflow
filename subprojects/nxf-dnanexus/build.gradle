@@ -17,6 +17,13 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
+apply plugin: 'groovy'
+
+sourceSets {
+    main.groovy { srcDirs = ['src/main'] }
+    main.resources { srcDirs = ['src/resources'] }
+    test.groovy { srcDirs = ['src/test'] }
+}
 
 dependencies {
     compile project(':')
@@ -25,7 +32,7 @@ dependencies {
         exclude module: 'commons-logging'
     }
 
-    testCompile project(':')
+    testCompile project(path:':', configuration: 'testCompile')
     testCompile "org.codehaus.groovy:groovy-json:${groovyVersion}"
 }
 
