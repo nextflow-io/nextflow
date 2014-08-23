@@ -1,6 +1,6 @@
 #!/bin/bash -eE
 
-[[ $# -ne 1 ]] && echo 'usage: uploadVersion <version>' && exit 1
+[[ $# -ne 1 ]] && echo 'usage: beta_upload <version>' && exit 1
 
 # Confirmation
 read -p "Are you sure to upload version '$1'? " -n 1 -r
