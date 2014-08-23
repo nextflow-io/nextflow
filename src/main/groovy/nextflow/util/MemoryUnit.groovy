@@ -21,17 +21,20 @@
 package nextflow.util
 
 import java.text.DecimalFormat
+import java.util.regex.Pattern
 
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 @EqualsAndHashCode(includes = 'size')
 class MemoryUnit implements Comparable<MemoryUnit> {
 
-    static private final FORMAT = /([0-9\.]+)\s*(\S)?B?/
+    static private final Pattern FORMAT = ~/([0-9\.]+)\s*(\S)?B?/
 
     static private final List UNITS = [ "B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB" ]
 
@@ -43,13 +46,13 @@ class MemoryUnit implements Comparable<MemoryUnit> {
 
     MemoryUnit( String str ) {
 
-        def matcher = (str =~~ FORMAT)
+        def matcher = FORMAT.matcher(str)
         if( !matcher.matches() ) {
             throw new IllegalArgumentException("Not a valid FileSize value: '$str'")
         }
 
-        final value = matcher[0][1]?.toString()
-        final unit = matcher[0][2]?.toString()?.toUpperCase()
+        final value = matcher.group(1)
+        final unit = matcher.group(2)?.toUpperCase()
 
         if ( !unit || unit == "B" ) {
             size = Long.parseLong(value)
@@ -65,9 +68,7 @@ class MemoryUnit implements Comparable<MemoryUnit> {
                 }
             }
 
-            Math.with {
-                size = round( Double.parseDouble(value) * pow(1024, p) )
-            }
+            size = Math.round( Double.parseDouble(value) * Math.pow(1024, p) )
         }
 
     }
