@@ -78,11 +78,6 @@ class Session {
     def boolean resumeMode
 
     /**
-     * The script class name
-     */
-    def String scriptClassName
-
-    /**
      * The folder where tasks temporary files are stored
      */
     def Path workDir = Paths.get('work').toAbsolutePath()
@@ -179,8 +174,8 @@ class Session {
          * create the execution trace observer
          */
         def allObservers = []
-        if( runOpts.traceFile ) {
-            def traceFile = runOpts.traceFile ? FileHelper.asPath(runOpts.traceFile) : null
+        if( runOpts.withTrace ) {
+            def traceFile = FileHelper.asPath(runOpts.withTrace)
             allObservers << new TraceFileObserver(traceFile)
         }
 

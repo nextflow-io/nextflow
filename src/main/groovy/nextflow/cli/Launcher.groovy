@@ -175,6 +175,10 @@ class Launcher {
                 normalized << '-'
             }
 
+            else if( current == '-with-trace' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << 'trace.csv'
+            }
+
             else if( current ==~ /^\-\-[a-zA-Z\d].*/ && !current.contains('=')) {
                 current += '='
                 current += ( i<args.size() ? args[i++] : 'true' )

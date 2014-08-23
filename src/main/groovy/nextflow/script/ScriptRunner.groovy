@@ -316,7 +316,6 @@ class ScriptRunner {
             result = groovy.parse( scriptText ) as BaseScript
         }
 
-        session.scriptClassName = result.class.name
         session.onShutdown { targetDir.deleteDir() }
         return result
     }

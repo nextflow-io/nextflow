@@ -140,6 +140,9 @@ class LauncherTest extends Specification {
         Launcher.normalizeArgs('run','-with-drmaa', '-x') == ['run', '-with-drmaa','-', '-x']
         Launcher.normalizeArgs('run','-with-drmaa', 'X') == ['run', '-with-drmaa','X']
 
+        Launcher.normalizeArgs('run','-with-trace') == ['run', '-with-trace','trace.csv']
+        Launcher.normalizeArgs('run','-with-trace', '-x') == ['run', '-with-trace','trace.csv', '-x']
+        Launcher.normalizeArgs('run','-with-trace', 'file.x') == ['run', '-with-trace','file.x']
     }
 
 
