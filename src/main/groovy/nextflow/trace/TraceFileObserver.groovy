@@ -23,11 +23,15 @@ import java.nio.file.Path
 import java.text.SimpleDateFormat
 import java.util.concurrent.ConcurrentHashMap
 
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
 import nextflow.Session
 import nextflow.extension.FilesExtensions
 import nextflow.processor.TaskHandler
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
+
 /**
  * Create a CSV file containing the processes execution information
  *
@@ -56,9 +60,8 @@ class TraceFileObserver implements TraceObserver {
             'complete',
             'wall-time',
             'run-time',
-            'mem',
             'cpu',
-            'io'
+            'mem'
     ]
 
     /**
@@ -69,7 +72,7 @@ class TraceFileObserver implements TraceObserver {
     /**
      * The delimiter character used to separate column in the CSV file
      */
-    private String delim = ','
+    private String delim = '\t'
 
     /**
      * The actual file object
@@ -92,6 +95,9 @@ class TraceFileObserver implements TraceObserver {
     TraceFileObserver( Path traceFile ) {
         this.tracePath = traceFile
     }
+
+    /** ONLY FOR TESTING PURPOSE */
+    protected TraceFileObserver( ) {}
 
     /**
      * Create the trace file, in file already existing with the same name it is
@@ -172,35 +178,54 @@ class TraceFileObserver implements TraceObserver {
         assert trace
         def all = new ArrayList(14)
         trace.with{
-            def wallTime = complete && submit ? complete-submit : 0
-            def runTime = complete && start ? complete-start : 0
+            long wallTime = complete && submit ? complete-submit : 0
+            long runTime = complete && start ? complete-start : 0
 
             all << taskId
             all << str(hash)
             all << str(nativeId)
             all << str(name)
             all << str(status)
-            all << str(exit)
+            all << val(exit)
             all << date(submit)
             all << date(start)
             all << date(complete)
-            all << wallTime
-            all << runTime
-            all << str(mem)
+            all << time(wallTime)
+            all << time(runTime)
             all << str(cpu)
-            all << str(io)
+            all << bytes(mem)
         }
 
         all.join(delim)
     }
 
+    @PackageScope
     static String str(item) {
         return item ? item.toString() : '-'
     }
 
+    @PackageScope
+    static String val(item) {
+        return item == Integer.MAX_VALUE ? '-' :item.toString()
+    }
+
+    @PackageScope
     static String date(long item) {
         if( !item ) return '-'
         FMT.format(new Date(item))
+    }
+
+    @PackageScope
+    static String bytes( value ) {
+        if( !value ) return '-'
+
+        String str = value.toString().trimDotZero()
+        return str.isLong() ? new MemoryUnit(str.toLong()).toString() : str
+    }
+
+    @PackageScope
+    static String time( long value ) {
+         new Duration(value).toString()
     }
 
 }

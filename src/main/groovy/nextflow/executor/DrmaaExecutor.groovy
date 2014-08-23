@@ -265,42 +265,49 @@ class DrmaaTaskHandler extends TaskHandler {
     /*
 
      Example content of the {@link JobInfo#getResourceUsage()} map
+     (T-Coffee job expresso mode)
 
-     mem = 0.0000
-     io = 0.0000
-     iow = 0.0000
-     maxvmem = 0.0000
-     signal = 0.0000
-     vmem = 0.0000
-     cpu = 0.0040
-     priority = 0.0000
-     exit_status = 0.0000
-     start_time = 1406265009.0000
-     submission_time = 1406264935.0000
-     end_time = 1406265009.0000
-     ru_utime = 0.0020
-     ru_maxrss = 5392.0000
-     ru_idrss = 0.0000
-     ru_inblock = 8.0000
-     ru_nivcsw = 0.0000
-     ru_isrss = 0.0000
-     ru_oublock = 8.0000
-     ru_majflt = 0.0000
-     ru_minflt = 647.0000
-     ru_msgrcv = 0.0000
-     ru_nswap = 0.0000
-     ru_ixrss = 0.0000
-     ru_msgsnd = 0.0000
-     ru_wallclock = 0.0000
-     ru_nsignals = 0.0000
-     ru_stime = 0.0020
-     ru_nvcsw = 18.0000
-     ru_ismrss = 0.0000
-     acct_mem = 0.0000
-     acct_iow = 0.0000
-     acct_io = 0.0000
-     acct_maxvmem = 0.0000
-     acct_cpu = 0.0040
+        Resource exit_status = 0.0000
+        Resource start_time = 1408714875.0000
+        Resource submission_time = 1408714874.0000
+        Resource end_time = 1408714912.0000
+        Resource io = 0.6621
+        Resource vmem = 0.0000
+        Resource cpu = 17.5033
+        Resource priority = 0.0000
+        Resource acct_mem = 0.9228
+        Resource acct_iow = 0.0000
+        Resource acct_io = 0.6621
+        Resource acct_cpu = 17.5033
+        Resource acct_maxvmem = 3720851456.0000
+        Resource iow = 0.0000
+        Resource private_mem = 0.0000
+        Resource pss = 0.0000
+        Resource shared_mem = 0.0000
+        Resource rss = 0.0000
+        Resource mem = 0.9228
+        Resource maxvmem = 3720851456.0000
+        Resource signal = 0.0000
+        Resource maxrss = 558452736.0000
+        Resource maxpss = 283936768.0000
+        Resource ru_wallclock = 37.0000
+        Resource ru_ismrss = 0.0000
+        Resource ru_utime = 13.3800           // user time used
+        Resource ru_nivcsw = 10511.0000       // involuntary context switches
+        Resource ru_majflt = 4.0000           // page faults
+        Resource ru_maxrss = 40456.0000       // maximum resident set size
+        Resource ru_idrss = 0.0000            // integral unshared data size
+        Resource ru_inblock = 98816.0000      // block input operations
+        Resource ru_minflt = 925141.0000      // page reclaims
+        Resource ru_msgrcv = 0.0000           // messages received
+        Resource ru_nswap = 0.0000            // swaps
+        Resource ru_ixrss = 0.0000            // integral shared memory size
+        Resource ru_msgsnd = 0.0000           // messages sent
+        Resource ru_nsignals = 0.0000         // signals received
+        Resource ru_stime = 4.1234            // system time used
+        Resource ru_nvcsw = 69169.0000        // voluntary context switches
+        Resource ru_isrss = 0.0000            // integral unshared stack size
+        Resource ru_oublock = 77152.0000      // block output operations
 
      */
     @Override
@@ -312,14 +319,15 @@ class DrmaaTaskHandler extends TaskHandler {
         trace.exit = task.exitStatus
 
         if( resources ) {
+            // all time are returns as Linux system
             if( resources.containsKey('submission_time'))
-                trace.submit = resources['submission_time']?.trimDotZero()?.toLong()
+                trace.submit = millis(resources['submission_time'])
 
             if( resources.containsKey('start_time'))
-                trace.start = resources['start_time']?.trimDotZero()?.toLong()
+                trace.start = millis(resources['start_time'])
 
             if( resources.containsKey('end_time'))
-                trace.complete = resources['end_time']?.trimDotZero()?.toLong()
+                trace.complete = millis(resources['end_time'])
 
             if( resources.containsKey('maxvmem') )
                 trace.mem = resources['maxvmem']
@@ -327,12 +335,25 @@ class DrmaaTaskHandler extends TaskHandler {
             if( resources.containsKey('cpu'))
                 trace.cpu = resources['cpu']
 
-            if( resources.containsKey('io'))
-                trace.io = resources['io']
         }
 
         return trace
     }
 
+    /**
+     * Converts a DRMAA time string to a millis long
+     * @param str
+     * @return
+     */
+    static long millis( str ) {
+        if( !str ) return 0
+        try {
+            return Math.round(str.toString().toDouble() * 1000)
+        }
+        catch( Exception e ) {
+            log.debug "Unexpected DRMAA timestamp: $str -- cause: ${e.message}"
+            return 0
+        }
+    }
 
 }

@@ -103,43 +103,58 @@ export COLUMNS
 
 # Check if it is required to run in background
 bg=''
-for opt in "$@"; do
-    case $opt in
+declare -a args=("$@")
+action=''
+while [[ $# != 0 ]]; do
+    case $1 in
     -bg)
-      bg=1;;
-    gridgain)
-      NXF_PACK='gg';;
-    hazelcast)
-      NXF_PACK='hz';;
+      bg=1
+      ;;
     -d|-daemon.*)
-      [[ $NXF_DAEMON_NAME = 'gridgain' || $NXF_EXECUTOR_NAME = 'gridgain' ]] && NXF_PACK='gg'
-      [[ $NXF_DAEMON_NAME = 'hazelcast' || $NXF_EXECUTOR_NAME = 'hazelcast' ]] && NXF_PACK='hz'
-      [ -z "$NXF_PACK" ] && NXF_PACK='gg';;
+      [[ ! "$action" && ! "$NXF_PACKAGE" ]] && NXF_PACKAGE='gg'
+      ;;
     -download)
+      if [[ ! "$action" ]]; then
       rm -rf $NXF_HOME/framework/$NXF_VER || exit $?
-      $0 -version || exit $? 
-      exit 0;;
+      $0 -version || exit $?
+      exit 0
+      fi
+      ;;
     -self-update|self-update)
+      if [[ ! "$action" ]]; then
       install $0;
-      exit 0;;
+      exit 0
+      fi
+      ;;
     -with-extrae)
       export EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
       rm -f TRACE.*
       rm -rf set-0
       ;;
+    -with-drmaa)
+      if [[ $2 && $2 != -* ]];
+      then NXF_DRMAA=$2; shift;
+      else NXF_DRMAA='us.levk:drmaa-gridengine:6.2u5'; fi
+      ;;
+    *)
+      [[ $1 && $1 != -* && ! "$action" ]] && action=$1
+      ;;
     esac
+    shift
 done
 
-
-NXF_PACK=${NXF_PACK:-one}
-NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACK.jar}
+NXF_PACKAGE=${NXF_PACKAGE:-one}
+NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACKAGE.jar}
 NXF_BIN=${NXF_BIN:-$NXF_HOME/framework/$NXF_VER/$NXF_JAR}
 NXF_BASE=${NXF_BASE:-http://www.nextflow.io/releases}
 NXF_PATH=$(dirname $NXF_BIN)
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
+NXF_DEPS=${NXF_DEPS:-''}
+NXF_CLASSPATH=${NXF_CLASSPATH:-''}
 
 # define the path when dependencies jars will be extracted
 export CAPSULE_CACHE_DIR=${CAPSULE_CACHE_DIR:=$NXF_HOME/capsule}
+CAPSULE_LOG=${CAPSULE_LOG:-'none'}
 
 # Find out installed JDK
 JAVA=java
@@ -158,20 +173,33 @@ if [ ! -f "$NXF_BIN" ]; then
     get "$NXF_URL" "$NXF_BIN"
 fi
 
-JVM_OPTS='-noverify -Djava.awt.headless=true'
+check=".+:.+:.+"
+if [[ "$NXF_DRMAA" =~ $check ]]; then
+  # add drmaa library downloadable from maven to dependencies list
+  NXF_DEPS+=" $NXF_DRMAA"
+elif [[ "$NXF_DRMAA" && -f "$NXF_DRMAA" ]]; then
+  # add drmaa jar file to custom classpath
+  NXF_CLASSPATH+=":$NXF_DRMAA"
+elif [[ "$NXF_DRMAA" ]]; then
+  echo_red "Cannot find specified DRMAA library file: $NXF_DRMAA"
+  exit 1
+fi
+
+JVM_OPTS="-noverify -Djava.awt.headless=true -Dcapsule.log=$CAPSULE_LOG"
 [[ -n "$NXF_OPTIONS" ]] && JVM_OPTS+=" $NXF_OPTIONS"
-[[ -n "$NXF_CLASSPATH" ]] && JVM_OPTS+=" -cp '$NXF_CLASSPATH'"
+[[ -n "$NXF_CLASSPATH" ]] && export NXF_CLASSPATH
+[[ -n "$NXF_DEPS" ]] && export NXF_DEPS
 
 # Start in daemon mode
 if [ -n "$bg" ]; then
   NXF_PID_FILE=${NXF_PID_FILE:-'.nextflow.pid'}
-  "$JAVA" $JVM_OPTS -jar "$NXF_BIN" "$@" &
+  "$JAVA" $JVM_OPTS -jar "$NXF_BIN" "$args" &
   disown
   printf $! > $NXF_PID_FILE
   exit 0
 fi
 
-exec "$JAVA" $JVM_OPTS -jar "$NXF_BIN" "$@"
+exec "$JAVA" $JVM_OPTS -jar "$NXF_BIN" "${args[@]}"
 exit 1
 
 

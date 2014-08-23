@@ -106,6 +106,9 @@ class CmdRun implements CmdX {
     @Parameter(names = ['-with-extrae'], description = 'Trace execution by using BSC Extrae', arity = 0, hidden = true)
     boolean withExtrae
 
+    @Parameter(names = ['-with-drmaa'], description = 'Specify the DRMAA library to use')
+    String withDrmaa
+
     @Parameter(names = ['-trace-file'], description = 'Trace execution to the specified file')
     String traceFile
 

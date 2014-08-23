@@ -147,11 +147,10 @@ class DrmaaExecutorTest extends Specification {
                 name: 'hello',
                 status: TaskHandler.Status.SUBMITTED,
                 exit: 99,
-                start: 1406265009,
-                submit: 1406264935,
-                complete:1406265009,
+                start: 1406265009000,
+                submit: 1406264935000,
+                complete: 1406265009000,
                 cpu: '0.0040',
-                io: '200.000',
                 mem: '100.0000')
 
 
@@ -159,5 +158,13 @@ class DrmaaExecutorTest extends Specification {
         workDir?.deleteDir()
     }
 
+    def testToMillis() {
+
+        expect:
+        DrmaaTaskHandler.millis('1408691877.1200') == 1408691877120
+        DrmaaTaskHandler.millis('xx') == 0
+        DrmaaTaskHandler.millis(null) == 0
+
+    }
 
 }

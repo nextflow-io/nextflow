@@ -25,6 +25,7 @@ import nextflow.executor.NopeTaskHandler
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.util.CacheHelper
+import nextflow.util.Duration
 import spock.lang.Specification
 /**
  *
@@ -57,7 +58,7 @@ class TraceFileObserverTest extends Specification {
         observer.onProcessSubmit( handler )
         def record = observer.current.get(111)
         then:
-        observer.delim == ','
+        observer.delim == '\t'
         record.taskId == 111
         record.name == 'simple_task'
         record.submit >= now
@@ -87,9 +88,9 @@ class TraceFileObserverTest extends Specification {
         record = handler.getTraceRecord()
         observer.onFlowComplete()
         def head = file.text.readLines()[0].trim()
-        def parts = file.text.readLines()[1].split(',') as List
+        def parts = file.text.readLines()[1].split('\t') as List
         then:
-        head == observer.HEAD.join(',')
+        head == observer.HEAD.join('\t')
         parts[0] == '111'                           // task-id
         parts[1] == 'fe/ca28af'                     // hash
         parts[2] == '-'                             // native-id
@@ -99,12 +100,67 @@ class TraceFileObserverTest extends Specification {
         TraceFileObserver.FMT.parse(parts[6]).time == record.submit         // submit time
         TraceFileObserver.FMT.parse(parts[7]).time == record.start          // start time
         TraceFileObserver.FMT.parse(parts[8]).time == record.complete       // complete time
-        parts[9].toLong() == record.complete -record.submit                 // wall-time
-        parts[10].toLong() == record.complete -record.start                 // run-time
+        new Duration(parts[9]).toMillis() == record.complete -record.submit                 // wall-time
+        new Duration(parts[10]).toMillis() == record.complete -record.start                 // run-time
 
 
         cleanup:
         testFolder.deleteDir()
+
+    }
+
+    def testBytes() {
+        expect:
+        TraceFileObserver.bytes(null) == '-'
+        TraceFileObserver.bytes('0') == '0'
+        TraceFileObserver.bytes('100') == '100 B'
+        TraceFileObserver.bytes('1024') == '1 KB'
+        TraceFileObserver.bytes(' 2048 ') == '2 KB'
+        TraceFileObserver.bytes('abc') == 'abc'
+    }
+
+    def testTime() {
+        expect:
+        TraceFileObserver.time(0) == '0ms'
+        TraceFileObserver.time(100) == '100ms'
+        TraceFileObserver.time(2000) == '2sec'
+        TraceFileObserver.time(3600 * 1000 * 3) == '3hour'
+        TraceFileObserver.time(3600 * 1000 * 3 + 5000) == '3hour 5sec'
+    }
+
+
+    def testRender() {
+
+        given:
+        def record = new TraceRecord(
+                taskId: 30,
+                hash: '43d7ef',
+                nativeId: '2000',
+                name: 'hello',
+                status: TaskHandler.Status.SUBMITTED,
+                exit: 99,
+                start: 1408714875000,
+                submit: 1408714874000,
+                complete: 1408714912000,
+                cpu: '17.5033',
+                mem: '3720851456.0000')
+        when:
+        def trace = [:] as TraceFileObserver
+        def result = trace.render(record).split('\t')
+        then:
+        result[0] == '30'                       // task id
+        result[1] == '43d7ef'                   // hash
+        result[2] == '2000'                     // native id
+        result[3] == 'hello'                    // name
+        result[4] == 'SUBMITTED'                // status
+        result[5] == '99'                       // exit status
+        result[6] == '2014-08-22 15:41:14.000'  // submit
+        result[7] == '2014-08-22 15:41:15.000'  // start
+        result[8] == '2014-08-22 15:41:52.000'  // completed
+        result[9] == '38sec'                    // wall-time
+        result[10] == '37sec'                   // run-time
+        result[11] == '17.5033'                 // cpu
+        result[12] == '3.5 GB'                  // mem
 
     }
 

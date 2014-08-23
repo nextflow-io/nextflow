@@ -171,6 +171,10 @@ class Launcher {
                 normalized << '%all'
             }
 
+            else if( current == '-with-drmaa' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
             else if( current ==~ /^\-\-[a-zA-Z\d].*/ && !current.contains('=')) {
                 current += '='
                 current += ( i<args.size() ? args[i++] : 'true' )

@@ -21,12 +21,15 @@
 package nextflow.trace
 
 import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
+
 /**
   * This object represent holds the information of a single process run,
   * its content is saved to a trace file line
   *
   * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
   */
+@ToString
 @EqualsAndHashCode
 class TraceRecord {
 
@@ -41,6 +44,5 @@ class TraceRecord {
     long complete
     def mem
     def cpu
-    def io
 
 }

@@ -31,7 +31,7 @@ import nextflow.processor.FileHolder
  */
 class DockerBuilder {
 
-    final String containerName
+    final String image
 
     final List env = []
 
@@ -50,7 +50,7 @@ class DockerBuilder {
     private static final String USER_AND_HOME_EMULATION = '-u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME'
 
     DockerBuilder( String name ) {
-        this.containerName = name
+        this.image = name
     }
 
     DockerBuilder addEnv( entry ) {
@@ -93,7 +93,7 @@ class DockerBuilder {
 
 
     String build(StringBuilder result = new StringBuilder()) {
-        assert containerName
+        assert image
 
         if( sudo )
             result << 'sudo '
@@ -122,7 +122,7 @@ class DockerBuilder {
             result << options.trim() << ' '
 
         // finally the container name
-        result << (containerName)
+        result << image
 
         return result
 
