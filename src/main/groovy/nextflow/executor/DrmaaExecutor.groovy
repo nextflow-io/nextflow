@@ -161,12 +161,6 @@ class DrmaaTaskHandler extends TaskHandler {
             result << '-q'  << taskConfig.queue
         }
 
-        // max task duration
-        if( taskConfig.maxDuration ) {
-            final duration = taskConfig.maxDuration as Duration
-            result << "-l" << "h_rt=${duration.format('HH:mm:ss')}"
-        }
-
         // task max memory
         if( taskConfig.maxMemory ) {
             result << "-l" << "virtual_free=${taskConfig.maxMemory.toString().replaceAll(/[\sB]/,'')}"
@@ -192,6 +186,12 @@ class DrmaaTaskHandler extends TaskHandler {
         template.setJoinFiles(true)
         template.setOutputPath( ':/dev/null' )
         template.setNativeSpecification( getOptions() )
+
+        // max task duration
+        if( taskConfig.maxDuration ) {
+            final duration = taskConfig.maxDuration as Duration
+            template.setHardRunDurationLimit( duration.toSeconds() )
+        }
 
         try {
             jobId = drmaa.runJob(template)
