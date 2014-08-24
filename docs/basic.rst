@@ -7,7 +7,7 @@ Basic concepts
 that eases the writing of computational pipelines with complex data.
 
 It is designed around the idea that the Linux platform is the lingua franca of data science. Linux provides many
-simple command lines and scripting tools, which by themselves are powerful, but when chained together facilitate complex
+simple command line and scripting tools, which by themselves are powerful, but when chained together facilitate complex
 data manipulations.
 
 `Nextflow` extends this approach adding to it the ability to define complex program interactions and an high-level
