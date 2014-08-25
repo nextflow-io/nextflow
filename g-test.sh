@@ -7,8 +7,10 @@
 # http://stackoverflow.com/questions/18061774/run-single-integration-test-with-gradle
 #
 
+MODULE=${2:-''}
+
 if [[ $# -ne 1 ]]; then
-  echo 'usage: g-test <ClassToTest>'
+  echo 'usage: g-test <ClassToTest> [sub-project]'
   echo ''
   echo 'examples:'
   echo '  //select specific test method'
@@ -30,4 +32,4 @@ if [[ $# -ne 1 ]]; then
 fi 
 
 set -x
-gradle -q test --tests $1
+gradle -q $MODULE:test --tests $1
