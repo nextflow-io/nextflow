@@ -145,6 +145,7 @@ class TraceFileObserverTest extends Specification {
                 cpu: '17.5033',
                 mem: '3720851456.0000')
         when:
+        TraceFileObserver.FMT.setTimeZone(TimeZone.getTimeZone('UTC')) // note: set the timezone to be sure the time string does not change on CI test servers
         def trace = [:] as TraceFileObserver
         def result = trace.render(record).split('\t')
         then:
@@ -154,11 +155,11 @@ class TraceFileObserverTest extends Specification {
         result[3] == 'hello'                    // name
         result[4] == 'SUBMITTED'                // status
         result[5] == '99'                       // exit status
-        result[6] == '2014-08-22 15:41:14.000'  // submit
-        result[7] == '2014-08-22 15:41:15.000'  // start
-        result[8] == '2014-08-22 15:41:52.000'  // completed
-        result[9] == '38sec'                    // wall-time
-        result[10] == '37sec'                   // run-time
+        result[6] == '2014-08-22 13:41:14.000'  // submit
+        result[7] == '2014-08-22 13:41:15.000'  // start
+        result[8] == '2014-08-22 13:41:52.000'  // completed
+        result[9] == '38s'                    // wall-time
+        result[10] == '37s'                   // run-time
         result[11] == '17.5033'                 // cpu
         result[12] == '3.5 GB'                  // mem
 

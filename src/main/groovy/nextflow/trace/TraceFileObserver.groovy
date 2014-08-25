@@ -43,7 +43,8 @@ class TraceFileObserver implements TraceObserver {
     /**
      * The used date format to convert {@link Date} to strings
      */
-    final static private SimpleDateFormat FMT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
+    @PackageScope
+    final static SimpleDateFormat FMT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
 
     /**
      * The CSV header
