@@ -133,7 +133,7 @@ class GgFileSystemProviderTest extends Specification {
         then:
         Files.exists(path1)
         !Files.exists(path2)
-        Files.readAllBytes(path1) == 'Hello'.bytes
+        path1.text == 'Hello'
 
     }
 

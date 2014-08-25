@@ -214,9 +214,10 @@ class GgFileSystemProvider extends FileSystemProvider {
     @Override
     SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> opts, FileAttribute<?>... attrs) throws IOException {
 
-        if( opts.size()!=2 || !opts.contains(StandardOpenOption.CREATE_NEW) || !opts.contains(StandardOpenOption.WRITE))
-            throw new UnsupportedOperationException("Options not supported: ${opts.join(', ')}")
-
+// TODO it should implement options validation
+//        if( opts.size()!=2 || !opts.contains(StandardOpenOption.CREATE_NEW) || !opts.contains(StandardOpenOption.WRITE))
+//            throw new UnsupportedOperationException("Options not supported: ${opts.join(', ')}")
+//
         if( Files.exists(path) )
             throw new FileAlreadyExistsException("File ggfs://${path} already exists")
 

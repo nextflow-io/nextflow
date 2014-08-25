@@ -9,7 +9,7 @@
 
 MODULE=${2:-''}
 
-if [[ $# -ne 1 ]]; then
+if [[ $# -eq 0 ]]; then
   echo 'usage: g-test <ClassToTest> [sub-project]'
   echo ''
   echo 'examples:'

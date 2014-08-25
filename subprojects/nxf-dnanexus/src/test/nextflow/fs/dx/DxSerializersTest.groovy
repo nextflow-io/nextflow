@@ -19,12 +19,13 @@
  */
 
 package nextflow.fs.dx
-import java.nio.file.Paths
-
-import nextflow.fs.dx.api.DxApi
 import nextflow.file.FileHelper
+import nextflow.fs.dx.api.DxApi
 import nextflow.util.KryoHelper
 import nextflow.util.PathSerializer
+import org.weakref.s3fs.AmazonS3Client
+import org.weakref.s3fs.S3FileSystem
+import org.weakref.s3fs.S3FileSystemProvider
 import org.weakref.s3fs.S3Path
 import spock.lang.Specification
 /**
@@ -42,8 +43,6 @@ class DxSerializersTest extends Specification {
     def testSerialization() {
 
         setup:
-
-        //provider.fileSystems =
         DxFileSystemProvider provider = new DxFileSystemProvider('123', Mock(DxApi))
         DxFileSystemProvider.instance = provider
 
@@ -72,10 +71,21 @@ class DxSerializersTest extends Specification {
     def testS3PathSerialization() {
 
         setup:
+        System.setProperty('AWS_ACCESS_KEY', 'xxx')
+        System.setProperty('AWS_SECRET_KEY', 'xxx')
 
         def uri = URI.create('s3:///bucket-name/index.html')
-        FileHelper.getOrCreateFileSystemFor(uri)
-        def s3path = Paths.get(uri)
+
+        def client = Mock(AmazonS3Client)
+        def provider = Mock(S3FileSystemProvider)
+        def fs = new S3FileSystem(provider,client,'')
+        provider.newFileSystem(_,_) >> { fs }
+        provider.getPath(_) >> { fs.getPath(uri.getPath()) }
+        provider.getScheme() >> 's3'
+        FileHelper.providersMap['s3'] = provider
+
+
+        def s3path = provider.getPath(uri)
 
         def store = File.createTempFile('s3obj',null)
 

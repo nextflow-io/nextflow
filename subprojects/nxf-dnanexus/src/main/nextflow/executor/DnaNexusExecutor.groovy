@@ -28,7 +28,6 @@ import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
 import nextflow.fs.dx.DxFileSystem
-import nextflow.fs.dx.DxFileSystemProvider
 import nextflow.fs.dx.DxFileSystemSerializer
 import nextflow.fs.dx.DxPath
 import nextflow.fs.dx.DxPathSerializer
@@ -40,11 +39,9 @@ import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
-import nextflow.file.FileHelper
 import nextflow.util.KryoHelper
 import nextflow.util.PathSerializer
 import org.weakref.s3fs.S3Path
-
 /**
  * Executes script.nf indicated in dxapp.sh in the DnaNexus environment
  *
@@ -59,10 +56,10 @@ import org.weakref.s3fs.S3Path
 @ServiceName('dnanexus')
 class DnaNexusExecutor extends Executor {
 
-    static {
-        // call to force the installation of the DX file system provider
-        FileHelper.getOrInstallProvider(DxFileSystemProvider)
-    }
+//    static {
+//        // call to force the installation of the DX file system provider
+//        FileHelper.getOrInstallProvider(DxFileSystemProvider)
+//    }
 
     @Override
     void register() {

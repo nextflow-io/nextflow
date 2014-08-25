@@ -279,15 +279,36 @@ class FileHelper {
         return result
     }
 
-    @Memoized
+
+    /**
+     *  Caches File system providers
+     */
+    @PackageScope
+    static final Map<String, FileSystemProvider> providersMap = [:]
+
+    /**
+     * Returns a {@link FileSystemProvider} for a file scheme
+     * @param scheme A file system scheme e.g. {@code file}, {@code s3}, {@code dxfs}, etc.
+     * @return A {@link FileSystemProvider} instance for the specified scheme
+     */
     static FileSystemProvider getProviderFor( String scheme ) {
 
-        for (FileSystemProvider provider : FileSystemProvider.installedProviders()) {
-            if ( scheme == provider.getScheme() ) {
-                return provider;
+        if( providersMap.containsKey(scheme) )
+            return providersMap[scheme]
+
+        synchronized (providersMap) {
+            if( providersMap.containsKey(scheme) )
+                return providersMap[scheme]
+
+            for (FileSystemProvider provider : FileSystemProvider.installedProviders()) {
+                if ( scheme == provider.getScheme() ) {
+                    return providersMap[scheme] = provider;
+                }
             }
+
+            return null;
         }
-        return null;
+
     }
 
     /**
@@ -299,6 +320,7 @@ class FileHelper {
      * @param clazz A class extending {@code FileSystemProvider}
      * @return An instance of the specified class
      */
+    @Deprecated
     synchronized static <T extends FileSystemProvider> T getOrInstallProvider( Class<T> clazz ) {
 
         FileSystemProvider result = FileSystemProvider.installedProviders().find { it.class == clazz }
