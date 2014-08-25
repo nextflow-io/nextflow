@@ -32,8 +32,7 @@ dependencies {
         exclude module: 'commons-logging'
     }
 
-    testCompile project(path:':', configuration: 'testCompile')
-    testCompile "org.codehaus.groovy:groovy-json:${groovyVersion}"
+    /* testCompile inherited from top gradle build file */
 }
 
 

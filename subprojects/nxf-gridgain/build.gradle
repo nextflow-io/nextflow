@@ -51,7 +51,7 @@ dependencies {
     //compile 'org.apache.hadoop:hadoop-core:1.2.1'
     compile "nextflow:s3fs:1.0.0"
 
-    testCompile project(path:':', configuration: 'testCompile')
+    /* testCompile inherited from top gradle build file */
 }
 
 

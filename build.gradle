@@ -47,6 +47,8 @@ ext {
 }
 
 allprojects {
+    apply plugin: 'java'
+
     sourceCompatibility = 1.7
     targetCompatibility = 1.7
 
@@ -58,6 +60,16 @@ allprojects {
         maven { url 'https://repo.eclipse.org/content/groups/releases' }
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
         mavenLocal()
+    }
+
+    dependencies {
+        // test configuration
+        testCompile ("cglib:cglib-nodep:2.2")
+        testCompile ("org.objenesis:objenesis:1.4")
+        testCompile ("org.spockframework:spock-core:0.7-groovy-2.0") {
+            exclude module: 'groovy-all'
+        }
+        testCompile 'com.google.jimfs:jimfs:1.0'
     }
 
 }
@@ -111,14 +123,6 @@ dependencies {
     gridgain(project(':nxf-gridgain')) {
         exclude module: 'nextflow'
     }
-
-    // test configuration
-    testCompile ("cglib:cglib-nodep:2.2")
-    testCompile ("org.objenesis:objenesis:1.4")
-    testCompile ("org.spockframework:spock-core:0.7-groovy-2.0") {
-        exclude module: 'groovy-all'
-    }
-    testCompile 'com.google.jimfs:jimfs:1.0'
 
     // Documentation required libraries
     gdocLibs 'org.fusesource.jansi:jansi:1.11'

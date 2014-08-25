@@ -27,7 +27,7 @@ sourceSets {
 
 dependencies {
     compile project(':')
-    testCompile project(path:':', configuration: 'testCompile')
+    /* testCompile inherited from top gradle build file */
 }
 
 
