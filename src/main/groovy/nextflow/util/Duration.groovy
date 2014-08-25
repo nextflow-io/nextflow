@@ -170,36 +170,30 @@ class Duration implements Comparable<Duration> {
     String toString() {
 
         if( durationInMillis < 1000 ) {
-            return durationInMillis + 'ms'
+            return durationInMillis + MILLIS[0]
         }
 
         def value = format("d:H:m:s").split(':').collect { Integer.parseInt(it) }
         def result = []
 
         // -- day / days
-        if( value[0] == 1 ) {
-            result << value[0] + 'day'
-        }
-        else if( value[0] > 1 ) {
-            result << value[0] + 'days'
+        if( value[0] >= 1 ) {
+            result << value[0] + DAYS[0]
         }
 
         // hour / hours
-        if( value[1] == 1 ) {
-            result << value[1] + 'hour'
-        }
-        else if( value[1] > 1 ) {
-            result << value[1] + 'hour'
+        if( value[1] >= 1 ) {
+            result << value[1] + HOURS[0]
         }
 
         // -- minute / minutes
         if( value[2] > 0 ) {
-            result << value[2] + 'min'
+            result << value[2] + MINUTES[0]
         }
 
         // -- second / seconds
         if( value[3] > 0 ) {
-            result << value[3] + 'sec'
+            result << value[3] + SECONDS[0]
         }
 
         result.join(' ')

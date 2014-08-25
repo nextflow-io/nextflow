@@ -123,9 +123,9 @@ class TraceFileObserverTest extends Specification {
         expect:
         TraceFileObserver.time(0) == '0ms'
         TraceFileObserver.time(100) == '100ms'
-        TraceFileObserver.time(2000) == '2sec'
-        TraceFileObserver.time(3600 * 1000 * 3) == '3hour'
-        TraceFileObserver.time(3600 * 1000 * 3 + 5000) == '3hour 5sec'
+        TraceFileObserver.time(2000) == '2s'
+        TraceFileObserver.time(3600 * 1000 * 3) == '3h'
+        TraceFileObserver.time(3600 * 1000 * 3 + 5000) == '3h 5s'
     }
 
 
