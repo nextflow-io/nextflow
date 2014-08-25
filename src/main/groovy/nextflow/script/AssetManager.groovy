@@ -214,7 +214,7 @@ class AssetManager {
         }
 
         def mainScript = getMainScriptName()
-        def result = new File(localPath, mainScript).absoluteFile
+        def result = new File(localPath, mainScript)
         if( !result.exists() )
             throw new AbortOperationException("Missing pipeline script: $result")
 

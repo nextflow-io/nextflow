@@ -41,6 +41,7 @@ import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceObserver
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
+import org.apache.commons.io.FilenameUtils
 
 /**
  * Holds the information on the current execution
@@ -86,6 +87,11 @@ class Session {
      * The folder where the main script is contained
      */
     def File baseDir
+
+    /**
+     * The pipeline script name (without parent path)
+     */
+    def String scriptName
 
     /**
      * Folder(s) containing libs and classes to be added to the classpath
@@ -161,7 +167,7 @@ class Session {
      *  {@link CliOptions} object
      *
      */
-    def void init( CmdRun runOpts ) {
+    def void init( CmdRun runOpts, File scriptFile ) {
 
         this.cacheable = runOpts.cacheable
         this.resumeMode = runOpts.resume != null
@@ -169,6 +175,13 @@ class Session {
         // note -- make sure to use 'FileHelper.asPath' since it guarantee to handle correctly non-standard file system e.g. 'dxfs'
         this.workDir = FileHelper.asPath(runOpts.workDir).toAbsolutePath()
         this.setLibDir( runOpts.libPath )
+
+        if( scriptFile ) {
+            // the folder that contains the main script
+            this.baseDir = scriptFile.parentFile
+            // set the script name attribute
+            this.scriptName = FilenameUtils.getBaseName(scriptFile.toString())
+        }
 
         /*
          * create the execution trace observer

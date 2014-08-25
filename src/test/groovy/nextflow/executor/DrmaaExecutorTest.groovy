@@ -110,7 +110,7 @@ class DrmaaExecutorTest extends Specification {
         when:
         def handler = new DrmaaTaskHandler(task, config, executor)
         then:
-        handler.getOptions() == '-notify -q short -l h_rt=01:00:00 -l virtual_free=2G -xyz 1 -b y'
+        handler.getOptions() == '-notify -q short -l virtual_free=2G -xyz 1 -b y'
 
         cleanup:
         workDir?.deleteDir()

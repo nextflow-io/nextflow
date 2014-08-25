@@ -65,7 +65,7 @@ class FunctionalTests extends Specification {
         def runner = new ScriptRunner( [env: environment] )
 
         then:
-        runner.execute( script ) == ['value1', -1]
+        runner.setScript(script).execute() == ['value1', -1]
 
 
     }
@@ -85,7 +85,7 @@ class FunctionalTests extends Specification {
             return [ x, y, len ]
             """
         def runner = new ScriptRunner()
-        def result = runner.execute(script, ['hello', 'hola'] )
+        def result = runner.setScript(script).execute(['hello', 'hola'] )
 
         then:
         result[0] == 'hello'
@@ -126,8 +126,8 @@ class FunctionalTests extends Specification {
             '''
 
         def runner = new ScriptRunner(cfg)
-        runner.execute( script )
-        def processor = runner.script.taskProcessor
+        runner.setScript(script).execute()
+        def processor = runner.scriptObj.taskProcessor
 
         then:
         processor instanceof ParallelTaskProcessor

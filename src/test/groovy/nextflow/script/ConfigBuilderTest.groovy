@@ -180,9 +180,6 @@ class ConfigBuilderTest extends Specification {
         result.executor.beta.x == 'hola'
         result.executor.beta.y == 'ciao'
 
-
     }
-
-
 
 }

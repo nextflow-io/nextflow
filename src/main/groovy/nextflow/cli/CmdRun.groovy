@@ -135,17 +135,22 @@ class CmdRun implements CmdX {
 
         // -- specify the arguments
         def scriptArgs = args?.size()>1 ? args[1..-1] : []
-        def scriptFile = getScriptFile(pipeline)
+        def scriptFile = getScriptFile(pipeline).canonicalFile
 
         // create the config object
-        def config = new ConfigBuilder().setOptions(launcher.options).setCmdRun(this).build()
+        def config = new ConfigBuilder()
+                        .setOptions(launcher.options)
+                        .setCmdRun(this)
+                        .setBaseDir(scriptFile.parentFile)
+                        .build()
 
         // -- create a new runner instance
         def runner = new ScriptRunner(config)
-        runner.init(this)
+                            .setScript(scriptFile)
+                            .setRunOptions(this)
 
         if( this.test ) {
-            runner.test(scriptFile, this.test, scriptArgs )
+            runner.test(this.test, scriptArgs )
         }
         else {
             log.debug( '\n'+CmdInfo.getInfo( log.isTraceEnabled() ) )
@@ -155,7 +160,7 @@ class CmdRun implements CmdX {
             HistoryFile.history.write( runner.session.uniqueId, *cli )
 
             // -- run it!
-            runner.execute(scriptFile,scriptArgs)
+            runner.execute(scriptArgs)
         }
     }
 

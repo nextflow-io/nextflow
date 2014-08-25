@@ -19,11 +19,9 @@
  */
 
 package nextflow.script
-
 import static nextflow.util.ConfigHelper.parseValue
 
 import groovy.util.logging.Slf4j
-import nextflow.Const
 import nextflow.ExitCode
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdRun
@@ -31,7 +29,10 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.util.HistoryFile
 
+import static nextflow.Const.APP_HOME_DIR
+
 /**
+ * Builds up the Nextflow configuration object
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -42,6 +43,7 @@ class ConfigBuilder {
 
     CmdRun runOptions
 
+    File baseDir
 
     ConfigBuilder setOptions( CliOptions options ) {
         this.options = options
@@ -50,6 +52,11 @@ class ConfigBuilder {
 
     ConfigBuilder setCmdRun( CmdRun cmdRun ) {
         this.runOptions = cmdRun
+        return this
+    }
+
+    ConfigBuilder setBaseDir( File file ) {
+        this.baseDir = file
         return this
     }
 
@@ -120,11 +127,26 @@ class ConfigBuilder {
             return result
         }
 
-        def home = new File(Const.APP_HOME_DIR, 'config')
-        if( home.exists() ) result << home
+        def home = new File(APP_HOME_DIR, 'config')
+        if( home.exists() ) {
+            log.debug "Found config home: $home"
+            result << home
+        }
+
+        def base = null
+        if( baseDir ) {
+            base = new File(baseDir, 'nextflow.config')
+            if( base.exists() ) {
+                log.debug "Found config base: $base"
+                result << base
+            }
+        }
 
         def local = new File('nextflow.config')
-        if( local.exists() ) result << local
+        if( local.exists() && local != base ) {
+            log.debug "Found config local: $local"
+            result << local
+        }
 
         return result
     }

@@ -50,7 +50,7 @@ class ScriptRunnerTest extends Specification {
             }
             """
 
-        runner.execute(script)
+        runner.setScript(script).execute()
 
         // when no outputs are specified, the 'stdout' is the default output
         then:
@@ -79,10 +79,10 @@ class ScriptRunnerTest extends Specification {
             }
 
             '''
-        runner.execute(script)
+        runner.setScript(script).execute()
         then:
-        runner.getScript().getTaskProcessor().taskConfig.name == 'simpleTask'
-        runner.getScript().getTaskProcessor().taskConfig.instanceType == 'alpha'
+        runner.getScriptObj().getTaskProcessor().taskConfig.name == 'simpleTask'
+        runner.getScriptObj().getTaskProcessor().taskConfig.instanceType == 'alpha'
 
 
         /*
@@ -104,11 +104,11 @@ class ScriptRunnerTest extends Specification {
             }
 
             '''
-        runner2.execute(script2)
+        runner2.setScript(script2).execute()
 
         then:
-        runner2.getScript().getTaskProcessor().taskConfig.name == 'otherTask'
-        runner2.getScript().getTaskProcessor().taskConfig.instanceType == 'beta'
+        runner2.getScriptObj().getTaskProcessor().taskConfig.name == 'otherTask'
+        runner2.getScriptObj().getTaskProcessor().taskConfig.instanceType == 'beta'
 
     }
 
@@ -131,15 +131,15 @@ class ScriptRunnerTest extends Specification {
             }
 
             '''
-        runner.execute(script)
+        runner.setScript(script).execute()
 
         then:
         runner.getResult().val == 'echo 1 - 3'
-        runner.getScript().getTaskProcessor().getName() == 'task2'
-        runner.getScript().getTaskProcessor().taskConfig.name == 'task2'
-        runner.getScript().getTaskProcessor().taskConfig.inputs[0].inChannel.getVal() == 1
-        runner.getScript().getTaskProcessor().taskConfig.inputs[1].inChannel instanceof DataflowQueue
-        runner.getScript().getTaskProcessor().taskConfig.outputs[0].outChannel instanceof DataflowWriteChannel
+        runner.getScriptObj().getTaskProcessor().getName() == 'task2'
+        runner.getScriptObj().getTaskProcessor().taskConfig.name == 'task2'
+        runner.getScriptObj().getTaskProcessor().taskConfig.inputs[0].inChannel.getVal() == 1
+        runner.getScriptObj().getTaskProcessor().taskConfig.inputs[1].inChannel instanceof DataflowQueue
+        runner.getScriptObj().getTaskProcessor().taskConfig.outputs[0].outChannel instanceof DataflowWriteChannel
     }
 
 
@@ -160,11 +160,11 @@ class ScriptRunnerTest extends Specification {
                 "echo $x"
             }
             '''
-        runner.execute(script)
+        runner.setScript(script).execute()
 
         then:
         runner.getResult().val == 'echo 1'
-        runner.script.taskProcessor.taskConfig.name == 'test'
+        runner.scriptObj.taskProcessor.taskConfig.name == 'test'
 
     }
 
@@ -190,7 +190,7 @@ class ScriptRunnerTest extends Specification {
 
 
         expect:
-        runner.execute(script).val == '1-2-3'
+        runner.setScript(script).execute().val == '1-2-3'
 
     }
 
@@ -214,7 +214,7 @@ class ScriptRunnerTest extends Specification {
             '''
 
         expect:
-        runner.execute(script).val == '1-2-3'
+        runner.setScript(script).execute().val == '1-2-3'
 
     }
 
@@ -237,7 +237,7 @@ class ScriptRunnerTest extends Specification {
             '''
 
         expect:
-        runner.execute(script).val == 'cat filename'
+        runner.setScript(script).execute().val == 'cat filename'
 
     }
 

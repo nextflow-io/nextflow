@@ -19,7 +19,6 @@
  */
 
 package nextflow.script
-
 import static nextflow.util.ConfigHelper.parseValue
 
 import java.nio.file.Path
@@ -33,13 +32,11 @@ import nextflow.ast.NextflowDSL
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.util.ConfigHelper
-import org.apache.commons.io.FilenameUtils
 import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.exception.ExceptionUtils
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
-
 /**
  * Application main class
  *
@@ -64,14 +61,19 @@ class ScriptRunner {
     private ScriptBinding bindings
 
     /**
-     * The pipeline script file
+     * The pipeline file (it may be null when it's provided as string)
      */
     private File scriptFile
 
     /**
-     * The pipeline script name (without parent path)
+     * The pipeline as a text content
      */
-    private String scriptName
+    private String setScript
+
+    /**
+     * The command line options
+     */
+    private CmdRun runOptions
 
     /*
      * the script raw output
@@ -104,8 +106,20 @@ class ScriptRunner {
         this(ConfigBuilder.configToMap(config))
     }
 
-    def void init( CmdRun options ) {
-        session.init(options)
+    def ScriptRunner setScript( File file ) {
+        this.scriptFile = file
+        this.setScript = file.text
+        return this
+    }
+
+    def ScriptRunner setScript( String text ) {
+        this.setScript = text
+        return this
+    }
+
+    def ScriptRunner setRunOptions( CmdRun options ) {
+        this.runOptions = options
+        return this
     }
 
     Session getSession() { session }
@@ -113,38 +127,13 @@ class ScriptRunner {
     /**
      * @return The interpreted script object
      */
-    BaseScript getScript() { script }
+    BaseScript getScriptObj() { script }
 
     /**
      * @return The result produced by the script execution
      */
     def getResult() { result }
 
-    /**
-     * Execute a Nextflow script, it does the following:
-     * <li>parse the script
-     * <li>launch script execution
-     * <li>await for all tasks completion
-     *
-     * @param scriptFile The file containing the script to be executed
-     * @param args The arguments to be passed to the script
-     * @return The result as returned by the {@code #run} method
-     */
-
-    def execute( File scriptFile, List<String> args = null ) {
-        assert scriptFile
-
-        // the folder that contains the main script
-        session.baseDir = scriptFile.canonicalFile.parentFile
-        // set the script name attribute
-        this.scriptName = FilenameUtils.getBaseName(scriptFile.toString())
-        // set the file name attribute
-        this.scriptFile = scriptFile
-
-        // get the script text and execute it
-        execute( scriptFile.text, args )
-    }
-
 
     /**
      * Execute a Nextflow script, it does the following:
@@ -157,19 +146,23 @@ class ScriptRunner {
      * @return The result as returned by the {@code #run} method
      */
 
-    def execute( String scriptText, List<String> args = null ) {
-        assert scriptText
+    def execute( List<String> args = null ) {
+        assert setScript
+
+        // init session
+        if( runOptions )
+            session.init(runOptions, scriptFile)
 
         // start session
         session.start()
         try {
             // parse the script
-            script = parseScript(scriptText, args)
+            script = parseScript(setScript, args)
             // run the code
             run()
         }
         catch( MissingPropertyException e ) {
-            throw new AbortOperationException(getErrorMessage(e, scriptName), e)
+            throw new AbortOperationException(getErrorMessage(e, session.scriptName), e)
         }
         finally {
             terminate()
@@ -185,11 +178,14 @@ class ScriptRunner {
      * @param methodName
      * @param args
      */
-    def test ( String scriptText, String methodName, List<String> args = null ) {
-        assert scriptText
+    def test ( String methodName, List<String> args = null ) {
+        assert setScript
         assert methodName
 
-        script = parseScript(scriptText, args)
+        // init session
+        session.init(runOptions, scriptFile)
+
+        script = parseScript(setScript, args)
         def values = args ? args.collect { parseValue(it) } : null
 
         def methodsToTest
@@ -233,21 +229,6 @@ class ScriptRunner {
         }
     }
 
-    def test( File scriptFile, String methodName, List<String> args = null ) {
-        assert scriptFile
-        assert methodName
-
-        // the folder that contains the main script
-        session.baseDir = scriptFile.canonicalFile.parentFile
-        // set the script name attribute
-        this.scriptName = FilenameUtils.getBaseName(scriptFile.toString())
-        // set the file name attribute
-        this.scriptFile = scriptFile
-
-        test( scriptFile.text, methodName, args )
-
-    }
-
 
     def normalizeOutput() {
         if( output instanceof Collection || output.getClass().isArray()) {
@@ -260,8 +241,6 @@ class ScriptRunner {
 
     protected BaseScript parseScript( File file, List<String> args = null ) {
         assert file
-
-        this.scriptFile = file
         parseScript( file.text, args )
     }
 
@@ -309,12 +288,7 @@ class ScriptRunner {
         // run and wait for termination
         BaseScript result
         def groovy = new GroovyShell(gcl, bindings, config)
-        if ( scriptFile ) {
-            result = groovy.parse( scriptText, scriptFile?.toString() ) as BaseScript
-        }
-        else {
-            result = groovy.parse( scriptText ) as BaseScript
-        }
+        result = groovy.parse( scriptText ) as BaseScript
 
         session.onShutdown { targetDir.deleteDir() }
         return result

@@ -262,7 +262,7 @@ class Launcher {
     }
 
     /**
-     * Program entry method
+     * Hey .. Nextflow starts here!
      *
      * @param args The program options as specified by the user on the CLI
      */
@@ -296,7 +296,7 @@ class Launcher {
      */
     protected launchDaemon() {
         // create the config object
-        def config = new ConfigBuilder().setOptions(options).build()
+        def config = new ConfigBuilder(options: options).build()
 
         Map daemonConfig = config.daemon instanceof Map ? (Map)config.daemon : [:]
         log.debug "Daemon config > $daemonConfig"
