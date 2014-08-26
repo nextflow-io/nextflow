@@ -314,6 +314,8 @@ class FileHelper {
     /**
      * Get the instance of the specified {@code FileSystemProvider} class. If the provider is not
      * in the list of installed provided, it creates a new instance and add it to the list
+     * <p>
+     * This method has been deprecated use {@link #getOrCreateFileSystemFor(java.lang.String)} instead
      *
      * @see {@code FileSystemProvider#installedProviders}
      *
@@ -351,7 +353,7 @@ class FileHelper {
      * @return The corresponding {@link FileSystem} object
      * @throws IllegalArgumentException if does not exist a valid provider for the given URI scheme
      */
-    static FileSystem getOrCreateFileSystemFor( URI uri ) {
+    static FileSystem getOrCreateFileSystemFor( URI uri, Map env = null ) {
         assert uri
 
         /*
@@ -379,14 +381,17 @@ class FileHelper {
             try { fs = provider.getFileSystem(uri) }
             catch( FileSystemNotFoundException e ) { fs=null }
             if( !fs ) {
-                fs = provider.newFileSystem(uri, getEnvMap(uri.scheme))
+                fs = provider.newFileSystem(uri, env ?: getEnvMap(uri.scheme))
             }
-
+            fs
         }
 
         return fs
     }
 
+    static FileSystem getOrCreateFileSystemFor( String scheme, Map env = null ) {
+        getOrCreateFileSystemFor(URI.create("$scheme:///"), env)
+    }
 
     /**
      * Given a path look for an existing file with that name in the {@code cacheDir} folder.

@@ -61,8 +61,7 @@ class GgDaemon implements DaemonLauncher {
          * configure the file system
          */
         log.debug "Configuring GridGain file system"
-        GgFileSystemProvider provider = FileHelper.getOrInstallProvider( GgFileSystemProvider )
-        provider.newFileSystem( grid: grid )
+        FileHelper.getOrCreateFileSystemFor(GgFileSystemProvider.SCHEME, [grid: grid])
     }
 
 
