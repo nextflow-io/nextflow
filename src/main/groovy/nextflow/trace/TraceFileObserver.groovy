@@ -193,7 +193,7 @@ class TraceFileObserver implements TraceObserver {
             all << date(complete)
             all << time(wallTime)
             all << time(runTime)
-            all << str(cpu)
+            all << percent(cpu)
             all << bytes(mem)
         }
 
@@ -227,6 +227,19 @@ class TraceFileObserver implements TraceObserver {
     @PackageScope
     static String time( long value ) {
          new Duration(value).toString()
+    }
+
+    static String percent( value ) {
+
+        try {
+            def num = value instanceof Number ? value.toFloat() : value.toString().toFloat()
+            return String.format('%.2f', num)
+        }
+        catch( Exception e ) {
+            log.debug "Not a valid cpu resource value: '$value'"
+            return '-'
+        }
+
     }
 
 }

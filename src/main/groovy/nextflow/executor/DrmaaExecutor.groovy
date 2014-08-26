@@ -25,6 +25,7 @@ import static nextflow.processor.TaskHandler.Status.SUBMITTED
 
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessFailedException
@@ -40,7 +41,6 @@ import org.ggf.drmaa.JobInfo
 import org.ggf.drmaa.JobTemplate
 import org.ggf.drmaa.Session as DrmaaSession
 import org.ggf.drmaa.SessionFactory
-
 /**
  * A job executor based on DRMAA interface
  *
@@ -320,6 +320,7 @@ class DrmaaTaskHandler extends TaskHandler {
         trace.exit = task.exitStatus
 
         if( resources ) {
+            log.trace "Job $jobId DRMAA resources > $resources"
             // all time are returns as Linux system
             if( resources.containsKey('submission_time'))
                 trace.submit = millis(resources['submission_time'])
@@ -343,16 +344,25 @@ class DrmaaTaskHandler extends TaskHandler {
 
     /**
      * Converts a DRMAA time string to a millis long
-     * @param str
+     * @param value
      * @return
      */
-    static long millis( str ) {
-        if( !str ) return 0
+    @CompileStatic
+    static long millis( value ) {
+        if( !value ) return 0
         try {
-            return Math.round(str.toString().toDouble() * 1000)
+            def str = value.toString()
+            def p = str.indexOf('.')
+            // it looks depending the configuration DRMAA can return timestamps as seconds or millis from Unix epoch
+            if( p>= 13 ) {
+                return str.substring(0,p).toLong()
+            }
+            else {
+                Math.round(str.toDouble() * 1000)
+            }
         }
         catch( Exception e ) {
-            log.debug "Unexpected DRMAA timestamp: $str -- cause: ${e.message}"
+            log.debug "Unexpected DRMAA timestamp: $value -- cause: ${e.message}"
             return 0
         }
     }

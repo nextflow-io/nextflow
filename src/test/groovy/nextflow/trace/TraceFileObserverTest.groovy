@@ -128,6 +128,15 @@ class TraceFileObserverTest extends Specification {
         TraceFileObserver.time(3600 * 1000 * 3 + 5000) == '3h 5s'
     }
 
+    def testPercent() {
+        expect:
+        TraceFileObserver.percent(0) == '0.00'
+        TraceFileObserver.percent(1) == '1.00'
+        TraceFileObserver.percent('0.123') == '0.12'
+        TraceFileObserver.percent('100.991') == '100.99'
+        TraceFileObserver.percent('abc') == '-'
+    }
+
 
     def testRender() {
 
@@ -160,7 +169,7 @@ class TraceFileObserverTest extends Specification {
         result[8] == '2014-08-22 13:41:52.000'  // completed
         result[9] == '38s'                    // wall-time
         result[10] == '37s'                   // run-time
-        result[11] == '17.5033'                 // cpu
+        result[11] == '17.50'                    // cpu
         result[12] == '3.5 GB'                  // mem
 
     }

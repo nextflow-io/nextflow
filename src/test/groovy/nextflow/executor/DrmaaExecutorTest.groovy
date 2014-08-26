@@ -161,10 +161,15 @@ class DrmaaExecutorTest extends Specification {
     def testToMillis() {
 
         expect:
-        DrmaaTaskHandler.millis('1408691877.1200') == 1408691877120
         DrmaaTaskHandler.millis('xx') == 0
         DrmaaTaskHandler.millis(null) == 0
+
+        //
+        DrmaaTaskHandler.millis('1408691877.1200')    == 1408691877120
+        DrmaaTaskHandler.millis('1409064132425.0000') == 1409064132425
+
 
     }
 
 }
+
