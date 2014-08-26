@@ -10,11 +10,12 @@ main() {
     set +e
     java -jar /usr/bin/nextflow.jar \
          -log $PWD/$LOG \
+         run $script \
          -process.executor dnanexus \
          -cache false \
          -qs $queue \
          -w dxfs://${DX_WORKSPACE_ID}:/workspace/ \
-         $script $params
+         $params
     exit_status=$?
     set -e
 
