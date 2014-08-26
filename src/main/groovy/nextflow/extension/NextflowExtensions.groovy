@@ -43,6 +43,7 @@ import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
 import groovyx.gpars.group.DefaultPGroup
 import groovyx.gpars.group.PGroup
 import groovyx.gpars.scheduler.Pool
+import nextflow.Const
 import nextflow.file.FileHelper
 import nextflow.splitter.BytesSplitter
 import nextflow.splitter.FastaSplitter
@@ -1144,7 +1145,7 @@ class NextflowExtensions {
             }
 
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                NextflowExtensions.log.error("${e.getMessage()} -- See the file '.nextflow.log' for more error details", e)
+                NextflowExtensions.log.error("${e.getMessage()} ${Const.SEE_LOG_FOR_DETAILS}", e)
                 return true
             }
         }

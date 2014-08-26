@@ -41,6 +41,7 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.operator.SeparationClosure
 import nextflow.Channel
+import nextflow.Const
 import nextflow.Session
 import nextflow.file.FileCollector
 import nextflow.file.FileHelper
@@ -64,7 +65,7 @@ class DataflowExtensions {
     static private DEF_ERROR_LISTENER = new DataflowEventAdapter() {
         @Override
         public boolean onException(final DataflowProcessor processor, final Throwable e) {
-            DataflowExtensions.log.error("Unknown operator error -- see '.nextflow.log' for details", e)
+            DataflowExtensions.log.error("Unknown operator error ${Const.SEE_LOG_FOR_DETAILS}", e)
             Session.currentInstance?.abort()
             return true;
         }
@@ -358,7 +359,7 @@ class DataflowExtensions {
 
             @Override
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                DataflowExtensions.log.error("Unknown 'flatMap' operator error -- see '.nextflow.log' for details", e)
+                DataflowExtensions.log.error("Unknown 'flatMap' operator error ${Const.SEE_LOG_FOR_DETAILS}", e)
                 Session.currentInstance?.abort()
                 return true;
             }
@@ -1120,7 +1121,7 @@ class DataflowExtensions {
                 }
 
                 public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                    DataflowExtensions.log.error("Unknown 'spread' operator error -- see '.nextflow.log' for details", e)
+                    DataflowExtensions.log.error("Unknown 'spread' operator error ${Const.SEE_LOG_FOR_DETAILS}", e)
                     Session.currentInstance?.abort()
                     return true;
                 }
@@ -1321,7 +1322,7 @@ class DataflowExtensions {
 
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
-                DataflowExtensions.log.error("Unknown 'collate' operator error -- see '.nextflow.log' for details", e)
+                DataflowExtensions.log.error("Unknown 'collate' operator error ${Const.SEE_LOG_FOR_DETAILS}", e)
                 Session.currentInstance?.abort()
                 return true
             }

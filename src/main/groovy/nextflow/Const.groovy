@@ -115,7 +115,7 @@ class Const {
      * The application 'logo'
      */
 
-    static final String LOGO =
+    static final String SPLASH =
 
 """
       N E X T F L O W
@@ -123,5 +123,7 @@ class Const {
       last modified ${APP_TIMESTAMP_UTC} ${deltaLocal()}
       http://nextflow.io
 """
+
+    final static String SEE_LOG_FOR_DETAILS = '-- See the .nextflow.log file for details'
 
 }

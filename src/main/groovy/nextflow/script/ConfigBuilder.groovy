@@ -19,6 +19,7 @@
  */
 
 package nextflow.script
+import static nextflow.Const.APP_HOME_DIR
 import static nextflow.util.ConfigHelper.parseValue
 
 import groovy.util.logging.Slf4j
@@ -28,9 +29,6 @@ import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.util.HistoryFile
-
-import static nextflow.Const.APP_HOME_DIR
-
 /**
  * Builds up the Nextflow configuration object
  *

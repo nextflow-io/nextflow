@@ -33,6 +33,7 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
+import nextflow.Const
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.exception.MissingFileException
@@ -743,7 +744,7 @@ abstract class TaskProcessor {
             }
             else {
                 message << formatErrorCause( error )
-                message << "Tip: check the log file '.nextflow.log' for more details"
+                message << "Tip: ${${Const.SEE_LOG_FOR_DETAILS}}"
             }
             log.error message.join('\n')
             log.debug "Process $name raise the following exception:", error

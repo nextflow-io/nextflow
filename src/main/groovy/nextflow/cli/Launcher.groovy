@@ -19,6 +19,12 @@
  */
 
 package nextflow.cli
+import static Const.APP_BUILDNUM
+import static Const.APP_NAME
+import static Const.APP_VER
+import static Const.SEE_LOG_FOR_DETAILS
+import static Const.SPLASH
+
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.ParameterException
 import groovy.transform.CompileStatic
@@ -42,7 +48,7 @@ import org.eclipse.jgit.api.errors.GitAPIException
  */
 @Slf4j
 @CompileStatic
-class Launcher {
+class Launcher implements ExitCode {
 
     /**
      * Create the application command line parser
@@ -85,12 +91,12 @@ class Launcher {
             // note: use system.err.println since if an exception is raised
             //       parsing the cli params the logging is not configured
             System.err.println "${e.getMessage()} -- Check the available commands and options and syntax with 'help'"
-            System.exit( ExitCode.INVALID_COMMAND_LINE_PARAMETER )
+            System.exit( INVALID_COMMAND_LINE_PARAMETER )
 
         }
         catch( Throwable e ) {
             e.printStackTrace(System.err)
-            System.exit( ExitCode.UNKNOWN_ERROR )
+            System.exit( UNKNOWN_ERROR )
         }
     }
 
@@ -120,7 +126,7 @@ class Launcher {
             cmd.launcher = this;
             jcommander.addCommand(cmd.name, cmd)
         }
-        jcommander.setProgramName( Const.APP_NAME )
+        jcommander.setProgramName( APP_NAME )
         if( cols )
             jcommander.setColumnSize(cols)
         jcommander.parse( normalizedArgs as String[] )
@@ -223,7 +229,7 @@ class Launcher {
             // -- print out the version number, then exit
             if ( options.version ) {
                 println getVersion(fullVersion)
-                System.exit(ExitCode.OK)
+                System.exit(OK)
             }
 
             // -- print out the program help, then exit
@@ -245,8 +251,8 @@ class Launcher {
 
         catch ( GitAPIException | AbortOperationException e ) {
             System.err.println e.getMessage() ?: e.toString()
-            log.debug "Operation aborted", e.cause ?: e
-            System.exit( ExitCode.COMMAND_RUNTIME_ERROR )
+            log.debug ("Operation aborted", e.cause ?: e)
+            System.exit(COMMAND_RUNTIME_ERROR)
         }
 
         catch( ConfigParseException e )  {
@@ -255,8 +261,8 @@ class Launcher {
         }
 
         catch( Throwable fail ) {
-            log.error("${fail.toString()} -- See the file '.nextflow.log' for more error details", fail)
-            System.exit( ExitCode.UNKNOWN_ERROR )
+            log.error("${fail.toString()} ${SEE_LOG_FOR_DETAILS}", fail)
+            System.exit(UNKNOWN_ERROR)
         }
 
     }
@@ -281,10 +287,10 @@ class Launcher {
     static String getVersion(boolean full = false) {
 
         if ( full ) {
-            Const.LOGO
+            SPLASH
         }
         else {
-            "${Const.getAPP_NAME()} version ${Const.APP_VER}.${Const.APP_BUILDNUM}"
+            "${APP_NAME} version ${APP_VER}.${APP_BUILDNUM}"
         }
 
     }
