@@ -256,8 +256,8 @@ class Launcher implements ExitCode {
         }
 
         catch( ConfigParseException e )  {
-            log.error "${e.message}\n${e.cause}\n\n"
-            System.exit(ExitCode.INVALID_CONFIG)
+            log.error("${e.message}\n\n${indent(e.cause?.message?.toString(), '  ')}\n  ${SEE_LOG_FOR_DETAILS}\n", e.cause ?: e)
+            System.exit(INVALID_CONFIG)
         }
 
         catch( Throwable fail ) {
@@ -278,6 +278,12 @@ class Launcher implements ExitCode {
 
     }
 
+
+    public static String indent( String str, String separator = ' ') {
+        def result = new StringBuilder()
+        str?.eachLine { result << separator << it << '\n' }
+        return result.toString()
+    }
 
     /**
      * Print the application version number

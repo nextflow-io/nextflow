@@ -149,20 +149,19 @@ class ConfigBuilder {
         return result
     }
 
-
     def Map buildConfig( List<File> files ) {
 
         final Map<String,String> vars = runOptions?.env
         final boolean exportSysEnv = runOptions?.exportSysEnv
 
-        def texts = []
+        def items = []
         files?.each { File file ->
             log.debug "Parsing config file: ${file.absoluteFile}"
             if (!file.exists()) {
                 log.warn "The specified configuration file cannot be found: $file"
             }
             else {
-                texts << file.text
+                items << file
             }
         }
 
@@ -182,7 +181,7 @@ class ConfigBuilder {
             options.daemonOptions.each { k, v ->
                 str << "daemon." << k << '=' << wrapValue(v) << '\n'
             }
-            texts << str.toString()
+            items << str
         }
 
         if( runOptions?.executorOptions )  {
@@ -190,14 +189,14 @@ class ConfigBuilder {
             runOptions.executorOptions.each { k, v ->
                 str << "executor." << k << '=' << wrapValue(v) << '\n'
             }
-            texts << str.toString()
+            items << str
         }
 
-        buildConfig0( env, texts )
+        buildConfig0( env, items )
     }
 
 
-    def static Map buildConfig0( Map env, List<String> confText )  {
+    def static Map buildConfig0( Map env, List configEntries )  {
         assert env != null
 
         ConfigObject result = new ConfigSlurper().parse('env{}; session{}; params{}; process{}; executor{} ')
@@ -205,14 +204,17 @@ class ConfigBuilder {
         // add the user specified environment to the session env
         env.sort().each { name, value -> result.env.put(name,value) }
 
-        if( confText ) {
+        if( configEntries ) {
             // the configuration object binds always the current environment
             // so that in the configuration file may be referenced any variable
             // in the current environment
             final binding = new HashMap(System.getenv())
             binding.putAll(env)
 
-            confText.each { String text ->
+            configEntries.each { entry ->
+
+                def text = entry instanceof File ? entry.text : entry.toString()
+
                 if ( text ) {
                     def cfg = new ConfigSlurper()
                     cfg.setBinding(binding)
@@ -220,7 +222,8 @@ class ConfigBuilder {
                         result.merge( cfg.parse(text) )
                     }
                     catch( Exception e ) {
-                        throw new ConfigParseException("Failed to parse config file",e)
+                        def message = (entry instanceof File ? "Unable to parse config file: '$entry' " : "Unable to parse configuration ")
+                        throw new ConfigParseException(message,e)
                     }
                 }
             }
