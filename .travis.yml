@@ -1,5 +1,6 @@
 language: groovy
-script: ./gradlew check --debug
 jdk:
   - oraclejdk7
   - oraclejdk8
+
+#script: ./gradlew check --debug
