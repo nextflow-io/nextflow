@@ -193,7 +193,7 @@ JVM_OPTS="-noverify -Djava.awt.headless=true -Dcapsule.log=$CAPSULE_LOG"
 # Start in daemon mode
 if [ -n "$bg" ]; then
   NXF_PID_FILE=${NXF_PID_FILE:-'.nextflow.pid'}
-  "$JAVA" $JVM_OPTS -jar "$NXF_BIN" "$args" &
+  "$JAVA" $JVM_OPTS -jar "$NXF_BIN" "${args[@]}" &
   disown
   printf $! > $NXF_PID_FILE
   exit 0
