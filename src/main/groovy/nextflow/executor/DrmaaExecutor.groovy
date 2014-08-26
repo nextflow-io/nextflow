@@ -180,6 +180,7 @@ class DrmaaTaskHandler extends TaskHandler {
     void submit() {
 
         JobTemplate template = drmaa.createJobTemplate()
+        template.setJobName(taskName)
         template.setWorkingDirectory(workDir.toString())
         template.setRemoteCommand('/bin/bash')
         template.setArgs( [wrapperFile.toString()] )
