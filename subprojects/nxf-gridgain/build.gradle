@@ -27,7 +27,7 @@ sourceSets {
 
 dependencies {
     compile project(':')
-    compile ("org.gridgain:gridgain-platform:6.1.5")  {
+    compile ("org.gridgain:gridgain-platform:6.1.6")  {
         exclude module: 'commons-logging'
         exclude module: 'slf4j-log4j12'
         exclude module: 'scala-compiler'
