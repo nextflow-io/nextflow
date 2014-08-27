@@ -744,7 +744,7 @@ abstract class TaskProcessor {
             }
             else {
                 message << formatErrorCause( error )
-                message << "Tip: ${${Const.SEE_LOG_FOR_DETAILS}}"
+                message << "Tip: ${Const.SEE_LOG_FOR_DETAILS}"
             }
             log.error message.join('\n')
             log.debug "Process $name raise the following exception:", error
