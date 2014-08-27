@@ -72,16 +72,18 @@ class DelegateMapTest extends Specification {
         map.file = Paths.get('Hola.txt')
         map.list = new BlankSeparatedList( Paths.get('A'), Paths.get('B'), Paths.get('C') )
         map.holder = 'just a string'
+        map.context = [uno: 1, due: 'str', tre: "$str"]
 
         when:
         map.save(file)
         def result = DelegateMap.read(processor, file)
 
         then:
-        result.size() == 5
+        result.size() == 6
         result.alpha == 1
         result.beta == "${str}.txt"
         result.file.equals( Paths.get('Hola.txt') )
+        result.context == [uno: 1, due: 'str', tre: "$str"]
         result.list == new BlankSeparatedList( Paths.get('A'), Paths.get('B'), Paths.get('C') )
         result.holder == 'just a string'
         result.get('holder') == 'just a string'

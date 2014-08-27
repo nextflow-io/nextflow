@@ -29,6 +29,7 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.file.FileHelper
 import org.codehaus.groovy.runtime.GStringImpl
@@ -47,7 +48,6 @@ class KryoHelper {
         serializers = [:]
         serializers.put( PATH_CLASS, PathSerializer )
         serializers.put( URL, URLSerializer )
-        serializers.put( GStringImpl, GStringSerializer)
         serializers.put( UUID, UUIDSerializer )
         serializers.put( File, FileSerializer )
 
@@ -96,6 +96,12 @@ class KryoHelper {
             else
                 kryo.register(k)
         }
+
+        // Register default serializers
+        // - there are multiple GString implementation so it
+        //   has to be registered the base class as default serializer
+        //   See Nextflow issues #12
+        kryo.addDefaultSerializer(GString, GStringSerializer)
 
         return kryo
     }
@@ -192,6 +198,7 @@ class KryoHelper {
  */
 
 @Slf4j
+@CompileStatic
 class PathSerializer extends Serializer<Path> {
 
     @Override
@@ -225,25 +232,32 @@ class PathSerializer extends Serializer<Path> {
  * Serializer / de-serializer for Groovy GString
  */
 @Slf4j
-class GStringSerializer extends Serializer<GStringImpl> {
+@CompileStatic
+class GStringSerializer extends Serializer<GString> {
+
+    static final private Class<Object[]> OBJ_ARRAY_CLASS = (Class<Object[]>)(new Object[0]).getClass()
+    static final private Class<String[]> STR_ARRAY_CLASS = (Class<String[]>)(new String[0]).getClass()
 
     @Override
-    void write(Kryo kryo, Output stream, GStringImpl object) {
+    void write(Kryo kryo, Output stream, GString object) {
+        log.trace "GString serialization: values: ${object?.getValues()} - strings: ${object?.getStrings()}"
         kryo.writeObject( stream, object.getValues() )
         kryo.writeObject( stream, object.getStrings() )
     }
 
     @Override
-    GStringImpl read(Kryo kryo, Input stream, Class<GStringImpl> type) {
-        Object[] values = kryo.readObject(stream, Object[].class)
-        String[] strings = kryo.readObject(stream, String[].class)
-        return new GStringImpl(values, strings)
+    GString read(Kryo kryo, Input stream, Class<GString> type) {
+        Object[] values = kryo.readObject(stream, OBJ_ARRAY_CLASS)
+        String[] strings = kryo.readObject(stream, STR_ARRAY_CLASS)
+        log.trace "GString de-serialize: values: ${values} - strings: ${strings}"
+        new GStringImpl(values, strings)
     }
 }
 
 
 
 @Slf4j
+@CompileStatic
 class URLSerializer extends Serializer<URL> {
 
     @Override
@@ -260,6 +274,7 @@ class URLSerializer extends Serializer<URL> {
 }
 
 @Slf4j
+@CompileStatic
 class UUIDSerializer extends Serializer<UUID> {
 
     @Override
@@ -280,6 +295,7 @@ class UUIDSerializer extends Serializer<UUID> {
 
 
 @Slf4j
+@CompileStatic
 class FileSerializer extends Serializer<File> {
 
     @Override

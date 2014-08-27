@@ -72,6 +72,19 @@ class KryoHelperTest extends  Specification {
 
     }
 
+    def testGString() {
+        setup:
+        def w = "world!"
+        def x = "Hello $w"
+
+        when:
+        def buffer = KryoHelper.serialize(x)
+        def copy = KryoHelper.deserialize(buffer)
+
+        then:
+        copy == x
+    }
+
     @Ignore
     def testClosureSerialization() {
 
