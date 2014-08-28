@@ -2,3 +2,6 @@ language: groovy
 jdk:
   - oraclejdk7
   - oraclejdk8
+env:
+   global:
+   - _JAVA_OPTIONS='-Xverify:none'
