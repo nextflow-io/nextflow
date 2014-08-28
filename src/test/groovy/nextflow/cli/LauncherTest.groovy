@@ -108,44 +108,44 @@ class LauncherTest extends Specification {
         launcher.command.args == ['alpha']
 
         when:
-        launcher = createLauncher('pull','xxx', '-hub', 'bitbucket', '-user','xx', '-pwd', 'yy').parseMainArgs()
+        launcher = createLauncher('pull','xxx', '-hub', 'bitbucket', '-user','xx:11').parseMainArgs()
         then:
         launcher.command instanceof CmdPull
         launcher.command.args == ['xxx']
-        launcher.command.hub_provider == 'bitbucket'
-        launcher.command.hub_user == 'xx'
-        launcher.command.hub_pwd == 'yy'
+        launcher.command.hubProvider == 'bitbucket'
+        launcher.command.hubUser == 'xx'
+        launcher.command.hubPassword == '11'
 
     }
 
     def testClone() {
         when:
-        def launcher = createLauncher('clone','xxx', '-hub', 'bitbucket', '-user','xx', '-pwd', 'yy').parseMainArgs()
+        def launcher = createLauncher('clone','xxx', '-hub', 'bitbucket', '-user','xx:yy').parseMainArgs()
         then:
         launcher.command instanceof CmdClone
         launcher.command.args == ['xxx']
-        launcher.command.hub_provider == 'bitbucket'
-        launcher.command.hub_user == 'xx'
-        launcher.command.hub_pwd == 'yy'
+        launcher.command.hubProvider == 'bitbucket'
+        launcher.command.hubUser == 'xx'
+        launcher.command.hubPassword == 'yy'
     }
 
 
     def testRun() {
         when:
-        def launcher = createLauncher('run','xxx', '-hub', 'bitbucket', '-user','xx', '-pwd', 'yy').parseMainArgs()
+        def launcher = createLauncher('run','xxx', '-hub', 'bitbucket', '-user','xx:yy').parseMainArgs()
         then:
         launcher.command instanceof CmdRun
         launcher.command.args == ['xxx']
-        launcher.command.hub_provider == 'bitbucket'
-        launcher.command.hub_user == 'xx'
-        launcher.command.hub_pwd == 'yy'
+        launcher.command.hubProvider == 'bitbucket'
+        launcher.command.hubUser == 'xx'
+        launcher.command.hubPassword == 'yy'
 
         when:
         launcher = createLauncher('run','alpha', '-hub', 'github').parseMainArgs()
         then:
         launcher.command instanceof CmdRun
         launcher.command.args == ['alpha']
-        launcher.command.hub_provider == 'github'
+        launcher.command.hubProvider == 'github'
 
         when:
         createLauncher('run','alpha', '-hub', 'xyz').parseMainArgs()
