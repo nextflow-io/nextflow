@@ -23,6 +23,6 @@ dx-project/
 *.txt
 cache/
 lib/commons-cli-1.2.jar
-extrae_juan_files/**
+extrae_files/**
 misc/
 logo/
