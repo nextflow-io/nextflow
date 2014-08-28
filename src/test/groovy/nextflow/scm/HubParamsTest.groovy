@@ -18,38 +18,33 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.cli
+package nextflow.scm
 
-import com.beust.jcommander.Parameters
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.scm.AssetManager
+import nextflow.cli.HubParams
+import spock.lang.Specification
 
 /**
- * CLI sub-command LIST. Prints a list of locally installed pipelines
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@CompileStatic
-@Parameters(commandDescription = "List all downloaded pipelines")
-class CmdList implements CmdX {
+class HubParamsTest extends Specification {
 
-    @Override
-    final String getName() { "ls" }
+    def testUser() {
 
-    @Override
-    void run() {
+        when:
+        def cmd = [:] as HubParams
+        cmd.hubUser = credential
+        then:
+        cmd.getHubUser() == user
+        cmd.getHubPassword() == password
 
-        def all = new AssetManager().list()
-        if( !all ) {
-            log.info '(none)'
-            return
-        }
+        where:
+        credential      | user  | password
+        null            | null  | null
+        'paolo'         | 'paolo'   | null
+        'paolo:secret'  | 'paolo'   | 'secret'
 
-        all.each { println it }
+
+
     }
-
-
-
 }

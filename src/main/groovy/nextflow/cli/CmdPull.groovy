@@ -24,7 +24,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
-import nextflow.script.AssetManager
+import nextflow.scm.AssetManager
 
 /**
  * CLI sub-command PULL
@@ -34,7 +34,7 @@ import nextflow.script.AssetManager
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Download or updated a pipeline in the local repository")
-class CmdPull implements CmdX {
+class CmdPull implements CmdX, HubParams {
 
     @Parameter(description = 'name of the pipeline to pull', arity = 1)
     List<String> args
@@ -59,7 +59,7 @@ class CmdPull implements CmdX {
 
         list.each {
             log.info "Checking $it ..."
-            def manager = new AssetManager(it)
+            def manager = new AssetManager( pipeline: it, hub: getHubProvider(),  user: getHubUser(), pwd: getHubPassword())
             def result = manager.download()
             if( !result )
                 log.info " done"

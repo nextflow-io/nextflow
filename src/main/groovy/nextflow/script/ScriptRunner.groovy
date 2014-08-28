@@ -23,6 +23,7 @@ import static nextflow.util.ConfigHelper.parseValue
 
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Channel
@@ -31,6 +32,7 @@ import nextflow.Session
 import nextflow.ast.NextflowDSL
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
+import nextflow.exception.MissingLibraryException
 import nextflow.util.ConfigHelper
 import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.exception.ExceptionUtils
@@ -43,6 +45,7 @@ import org.codehaus.groovy.control.customizers.ImportCustomizer
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class ScriptRunner {
 
     /**
@@ -231,8 +234,8 @@ class ScriptRunner {
 
 
     def normalizeOutput() {
-        if( output instanceof Collection || output.getClass().isArray()) {
-            result = (output as Collection)
+        if( output instanceof Object[] ) {
+            result = output as Collection
         }
         else {
             result = output
@@ -319,7 +322,7 @@ class ScriptRunner {
     /**
      * Find out the script line where the error has thrown
      */
-    static getErrorMessage( Throwable e, String scriptName ) {
+    static String getErrorMessage( Throwable e, String scriptName ) {
 
         def lines = ExceptionUtils.getStackTrace(e).split('\n')
         def error = null

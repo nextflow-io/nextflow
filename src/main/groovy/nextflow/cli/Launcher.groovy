@@ -101,6 +101,10 @@ class Launcher implements ExitCode {
     }
 
 
+    /** ONLY FOR TEST */
+    protected Launcher () { }
+
+
     /**
      * Create the Jcommander 'interpreter' and parse the command line arguments
      */
@@ -150,6 +154,8 @@ class Launcher implements ExitCode {
     CliOptions getOptions() { options }
 
     List<String> getNormalizedArgs() { normalizedArgs }
+
+    String getCliString() { cliString }
 
     /**
      * normalize the command line arguments to handle some corner cases

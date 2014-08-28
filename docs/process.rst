@@ -726,7 +726,7 @@ For example::
        file 'result.txt' into numbers
 
        '''
-       echo $RANDOM > result
+       echo $RANDOM > result.txt
        '''
 
     }

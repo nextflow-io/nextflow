@@ -20,6 +20,7 @@
 
 package nextflow.cli
 
+import com.beust.jcommander.ParameterException
 import spock.lang.Specification
 /**
  *
@@ -28,10 +29,14 @@ import spock.lang.Specification
 class LauncherTest extends Specification {
 
 
+    def static createLauncher(String... args) {
+        [args: args] as Launcher
+    }
+
     def testCommandLineOptions() {
 
         when:
-        def opt = new Launcher('-daemon.x=1', '-daemon.y.z=2').parseMainArgs().options
+        def opt = createLauncher( '-daemon.x=1', '-daemon.y.z=2' ).parseMainArgs().options
 
         then:
         opt.daemonOptions.x == '1'
@@ -43,12 +48,12 @@ class LauncherTest extends Specification {
     def testVersion () {
 
         when:
-        def launcher = new Launcher('-v').parseMainArgs()
+        def launcher = createLauncher('-v').parseMainArgs()
         then:
         assert launcher.options.version
 
         when:
-        launcher = new Launcher('-version').parseMainArgs()
+        launcher = createLauncher('-version').parseMainArgs()
         then:
         assert launcher.options.version
         assert launcher.fullVersion
@@ -59,19 +64,19 @@ class LauncherTest extends Specification {
     def testHelp () {
 
         when:
-        def launcher = new Launcher('-h').parseMainArgs()
+        def launcher = createLauncher('-h').parseMainArgs()
 
         then:
         assert launcher.options.help
 
         when:
-        launcher = new Launcher('help').parseMainArgs()
+        launcher = createLauncher('help').parseMainArgs()
         then:
         launcher.command instanceof CmdHelp
         launcher.command.args == null
 
         when:
-        launcher = new Launcher('help','xxx').parseMainArgs()
+        launcher = createLauncher('help','xxx').parseMainArgs()
         then:
         launcher.command instanceof CmdHelp
         launcher.command.args == ['xxx']
@@ -81,13 +86,13 @@ class LauncherTest extends Specification {
     def testInfo() {
 
         when:
-        def launcher = new Launcher('info').parseMainArgs()
+        def launcher = createLauncher('info').parseMainArgs()
         then:
         launcher.command instanceof CmdInfo
         launcher.command.args == null
 
         when:
-        launcher = new Launcher('info','xxx').parseMainArgs()
+        launcher = createLauncher('info','xxx').parseMainArgs()
         then:
         launcher.command instanceof CmdInfo
         launcher.command.args == ['xxx']
@@ -97,11 +102,55 @@ class LauncherTest extends Specification {
     def testPull() {
 
         when:
-        def launcher = new Launcher('pull','xxx').parseMainArgs()
+        def launcher = createLauncher('pull','alpha').parseMainArgs()
+        then:
+        launcher.command instanceof CmdPull
+        launcher.command.args == ['alpha']
+
+        when:
+        launcher = createLauncher('pull','xxx', '-hub', 'bitbucket', '-user','xx:11').parseMainArgs()
         then:
         launcher.command instanceof CmdPull
         launcher.command.args == ['xxx']
+        launcher.command.hubProvider == 'bitbucket'
+        launcher.command.hubUser == 'xx'
+        launcher.command.hubPassword == '11'
 
+    }
+
+    def testClone() {
+        when:
+        def launcher = createLauncher('clone','xxx', '-hub', 'bitbucket', '-user','xx:yy').parseMainArgs()
+        then:
+        launcher.command instanceof CmdClone
+        launcher.command.args == ['xxx']
+        launcher.command.hubProvider == 'bitbucket'
+        launcher.command.hubUser == 'xx'
+        launcher.command.hubPassword == 'yy'
+    }
+
+
+    def testRun() {
+        when:
+        def launcher = createLauncher('run','xxx', '-hub', 'bitbucket', '-user','xx:yy').parseMainArgs()
+        then:
+        launcher.command instanceof CmdRun
+        launcher.command.args == ['xxx']
+        launcher.command.hubProvider == 'bitbucket'
+        launcher.command.hubUser == 'xx'
+        launcher.command.hubPassword == 'yy'
+
+        when:
+        launcher = createLauncher('run','alpha', '-hub', 'github').parseMainArgs()
+        then:
+        launcher.command instanceof CmdRun
+        launcher.command.args == ['alpha']
+        launcher.command.hubProvider == 'github'
+
+        when:
+        createLauncher('run','alpha', '-hub', 'xyz').parseMainArgs()
+        then:
+        thrown(ParameterException)
     }
 
 

@@ -24,7 +24,7 @@ import java.nio.file.Path
 import nextflow.Channel
 import nextflow.Nextflow
 import nextflow.Session
-import nextflow.ast.CustomLexer
+
 import nextflow.ast.NextflowDSL
 import nextflow.script.BaseScript
 import org.apache.commons.lang.StringUtils
@@ -40,7 +40,6 @@ class TestParser {
 
     def session
 
-    def Closure<CustomLexer> lexerFactory
 
     TestParser( Map session = null ) {
         this.session = session ? new Session(session) : new Session()

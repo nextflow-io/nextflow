@@ -20,6 +20,8 @@
 
 package nextflow.processor
 
+import groovy.transform.CompileStatic
+
 /**
  * Wrap a {@code TaskConfig} object in order to modify the behaviour of
  * {@code #getProperty} so that it raises a {@code MissingPropertyException}
@@ -28,6 +30,7 @@ package nextflow.processor
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
+@CompileStatic
 class TaskConfigWrapper extends TaskConfig {
 
     TaskConfigWrapper( TaskConfig source ) {

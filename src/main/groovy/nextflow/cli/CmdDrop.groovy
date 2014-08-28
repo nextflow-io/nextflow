@@ -25,7 +25,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
-import nextflow.script.AssetManager
+import nextflow.scm.AssetManager
 
 /**
  * CLI sub-command DROP

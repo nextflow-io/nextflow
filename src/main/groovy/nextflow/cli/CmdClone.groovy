@@ -25,7 +25,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesExtensions
-import nextflow.script.AssetManager
+import nextflow.scm.AssetManager
 
 /**
  * CLI sub-command clone
@@ -35,7 +35,7 @@ import nextflow.script.AssetManager
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Clone a pipeline the specified folder")
-class CmdClone implements CmdX {
+class CmdClone implements CmdX, HubParams {
 
     @Parameter(required=true, description = 'name of the pipeline to clone')
     List<String> args
@@ -50,7 +50,7 @@ class CmdClone implements CmdX {
     void run() {
         // the pipeline name
         String pipeline = args[0]
-        final manager = new AssetManager(pipeline)
+        final manager = new AssetManager(pipeline: pipeline, hub: getHubProvider(), user: getHubUser(), pwd: getHubPassword())
 
         // the target directory is the second parameter
         // otherwise default the current pipeline name
@@ -65,7 +65,10 @@ class CmdClone implements CmdX {
             throw new AbortOperationException("Cannot create clone target directory: $target")
         }
 
-        println "Cloning ${pipeline}${revision ? ':'+revision:''} ..."
+        manager.checkValidRemoteRepo()
+        print "Cloning ${manager.pipeline}${revision ? ':'+revision:''} ..."
         manager.clone(target, revision)
+        print "\r"
+        println "${manager.pipeline} cloned to: $target"
     }
 }

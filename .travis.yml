@@ -2,5 +2,6 @@ language: groovy
 jdk:
   - oraclejdk7
   - oraclejdk8
-
-#script: ./gradlew check --debug
+env:
+   global:
+   - _JAVA_OPTIONS='-Xverify:none'

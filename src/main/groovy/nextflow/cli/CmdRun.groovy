@@ -23,12 +23,13 @@ import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.IStringConverter
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
-import nextflow.script.AssetManager
-import nextflow.script.ConfigBuilder
 import nextflow.script.ScriptRunner
+import nextflow.script.ConfigBuilder
+import nextflow.scm.AssetManager
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 /**
@@ -37,8 +38,9 @@ import nextflow.util.HistoryFile
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 @Parameters(commandDescription = "Run a pipeline")
-class CmdRun implements CmdX {
+class CmdRun implements CmdX, HubParams {
 
     static class DurationConverter implements IStringConverter<Long> {
         @Override
@@ -61,7 +63,7 @@ class CmdRun implements CmdX {
     @Parameter(names=['-ps','-pool-size'], description = 'Number of threads in the execution pool', hidden = true)
     Integer poolSize
 
-    @Parameter(names=['-pi','-poll-interval'], description = 'Executor poll interval (duration string ending with ms|s|m)', converter = DurationConverter)
+    @Parameter(names=['-pi','-poll-interval'], description = 'Executor poll interval (duration string ending with ms|s|m)', converter = DurationConverter, hidden = true)
     long pollInterval
 
     @Parameter(names=['-qs','-queue-size'], description = 'Max number of processes that can be executed in parallel by each executor')
@@ -76,7 +78,7 @@ class CmdRun implements CmdX {
     /**
      * Defines the parameters to be passed to the pipeline script
      */
-    @DynamicParameter(names = '--', description = 'Set a parameter used by the workflow' )
+    @DynamicParameter(names = '--', description = 'Set a parameter used by the pipeline' )
     Map<String,String> params = new LinkedHashMap<>()
 
     @DynamicParameter(names = ['-process.'], description = 'Set process default options' )
@@ -134,7 +136,7 @@ class CmdRun implements CmdX {
         log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
 
         // -- specify the arguments
-        def scriptArgs = args?.size()>1 ? args[1..-1] : []
+        def scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
         def scriptFile = getScriptFile(pipeline).canonicalFile
 
         // create the config object
@@ -156,8 +158,8 @@ class CmdRun implements CmdX {
             log.debug( '\n'+CmdInfo.getInfo( log.isTraceEnabled() ) )
 
             // -- add this run to the local history
-            def cli = [ Const.APP_NAME ]; cli.addAll(launcher.normalizedArgs)
-            HistoryFile.history.write( runner.session.uniqueId, *cli )
+            def cli = [ Const.APP_NAME ]; cli << launcher.cliString
+            HistoryFile.history.write( runner.session.uniqueId, cli )
 
             // -- run it!
             runner.execute(scriptArgs)
@@ -199,7 +201,7 @@ class CmdRun implements CmdX {
         /*
          * try to look for a pipeline in the repository
          */
-        def manager = new AssetManager()
+        def manager = new AssetManager(hub: getHubProvider(), user: getHubUser(), pwd: getHubPassword())
         def repo = manager.resolveName(pipelineName)
 
         /*
@@ -232,25 +234,8 @@ class CmdRun implements CmdX {
         input != null
         File result = File.createTempFile(name, null)
         result.deleteOnExit()
-        input.withReader { reader -> result << reader }
+        input.withReader { Reader reader -> result << reader }
         return result
-    }
-
-    static protected File getScriptFromUrl( String urlOrPath ) {
-        def lower = urlOrPath.toLowerCase()
-        def isUrl = ['http','https','ftp'].any { lower.startsWith(it+'://') }
-
-        if( isUrl ) {
-            def url = new URL(urlOrPath)
-            def fileName = new File(url.getPath()).getBaseName()
-            return getScriptFromStream( url.newInputStream(), fileName )
-        }
-
-        def file = new File(urlOrPath)
-        if( !file.exists() ) {
-            throw new AbortOperationException("File do not exist: $file")
-        }
-        return file
     }
 
 
