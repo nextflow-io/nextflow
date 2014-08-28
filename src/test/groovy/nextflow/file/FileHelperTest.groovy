@@ -177,23 +177,20 @@ class FileHelperTest extends Specification {
     def testGeEnvMap() {
 
         given:
-        def props = new Properties()
-        props.put('AWS_ACCESS_KEY','a1')
-        props.put('AWS_SECRET_KEY','s1')
+        def session = new Session()
 
         def env = [:]
-        env.put('AWS_ACCESS_KEY','a2')
-        env.put('AWS_SECRET_KEY','s2')
+        env.put('AWS_ACCESS_KEY','a1')
+        env.put('AWS_SECRET_KEY','s1')
 
         expect:
         // properties have priority over the environment map
-        FileHelper.getEnvMap0('s3', props, env) == [access_key:'a1', secret_key:'s1']
-        // fallback to environment map
-        FileHelper.getEnvMap0('s3', new Properties(), env) == [access_key:'a2', secret_key:'s2']
+        FileHelper.getEnvMap0('s3', env) == [access_key:'a1', secret_key:'s1']
         // none of them
-        FileHelper.getEnvMap0('s3', new Properties(), [:]) == [:]
+        FileHelper.getEnvMap0('s3', [:]) == [:]
+
         // any other return just the session
-        FileHelper.getEnvMap0('dxfs', props, env).containsKey('session')
+        FileHelper.getEnvMap0('dxfs', env).session == session
 
     }
 
@@ -305,6 +302,19 @@ class FileHelperTest extends Specification {
 
     }
 
+    def testAwsCredentials() {
+
+        expect:
+        FileHelper.getAwsCredentials(null, null) == null
+        FileHelper.getAwsCredentials([AWS_ACCESS_KEY: 'x', AWS_SECRET_KEY: '222'], null) == ['x','222']
+        FileHelper.getAwsCredentials([AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999'], null) == ['q','999']
+        FileHelper.getAwsCredentials([AWS_ACCESS_KEY: 'x', AWS_SECRET_KEY: '222',  AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999'], null) == ['x','222']
+
+        FileHelper.getAwsCredentials([AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999'], [aws:[accessKey: 'b', secretKey: '333']]) == ['b','333']
+        FileHelper.getAwsCredentials(null, [aws:[accessKey: 'b', secretKey: '333']]) == ['b','333']
+        FileHelper.getAwsCredentials(null, [aws:[accessKey: 'b']]) == null
+
+    }
 
 
 }

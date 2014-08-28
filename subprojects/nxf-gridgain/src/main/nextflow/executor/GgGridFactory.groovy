@@ -304,11 +304,12 @@ class GgGridFactory {
         }
 
         else if( join?.startsWith('s3:')) {
-            String accessKey = config.getAttribute('awsAccessKey') ?: System.getenv('AWS_ACCESS_KEY')
-            String secretKey = config.getAttribute('awsSecretKey') ?: System.getenv('AWS_SECRET_KEY')
-            if( !accessKey ) throw new IllegalArgumentException("Missing AWS access key -- please add AWS access credentials to your environment by defining the variables AWS_ACCESS_KEY and AWS_SECRET_KEY")
-            if( !secretKey ) throw new IllegalArgumentException("Missing AWS secret key -- please add AWS access credentials to your environment by defining the variables AWS_ACCESS_KEY and AWS_SECRET_KEY")
+            def credentials = FileHelper.getAwsCredentials(System.getenv(), config)
+            if( !credentials )
+                throw new IllegalArgumentException("Missing AWS credentials -- please add AWS access credentials to your environment by defining the variables AWS_ACCESS_KEY and AWS_SECRET_KEY or in your nextflow config file")
 
+            def accessKey = credentials[0]
+            def secretKey = credentials[1]
             def bucket = join.substring(3).trim()
             if( bucket.startsWith('/'))
                 bucket = bucket.substring(1)
