@@ -23,12 +23,14 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoSerializable
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 /**
  * A list of staged paths, which renders its content just separating
  * the items by a blank space
  */
 
+@CompileStatic
 @EqualsAndHashCode
 public class BlankSeparatedList implements KryoSerializable {
 

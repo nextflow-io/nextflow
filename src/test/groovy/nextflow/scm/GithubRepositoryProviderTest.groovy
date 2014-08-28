@@ -18,38 +18,38 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.cli
+package nextflow.scm
 
-import com.beust.jcommander.Parameters
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.scm.AssetManager
+import spock.lang.Specification
 
 /**
- * CLI sub-command LIST. Prints a list of locally installed pipelines
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * Created by mchatzou on 8/14/14.
  */
-@Slf4j
-@CompileStatic
-@Parameters(commandDescription = "List all downloaded pipelines")
-class CmdList implements CmdX {
+class GithubRepositoryProviderTest extends Specification {
 
-    @Override
-    final String getName() { "ls" }
+    def testGitCloneUrl() {
 
-    @Override
-    void run() {
+        when:
+        def url = new GithubRepositoryProvider(pipeline: 'nextflow-io/hello').getCloneUrl()
+        then:
+        url == 'https://github.com/nextflow-io/hello.git'
 
-        def all = new AssetManager().list()
-        if( !all ) {
-            log.info '(none)'
-            return
-        }
+    }
 
-        all.each { println it }
+    def testGetHomePage() {
+        expect:
+        new GithubRepositoryProvider(pipeline: 'nextflow-io/hello').getHomePage() == "https://github.com/nextflow-io/hello"
     }
 
 
+    def testReadContent() {
 
+        when:
+        def repo = new GithubRepositoryProvider(pipeline: 'nextflow-io/hello')
+        def result = new String(repo.readContent('main.nf'))
+        then:
+        result.trim().startsWith('#!/usr/bin/env nextflow')
+
+    }
 }
+

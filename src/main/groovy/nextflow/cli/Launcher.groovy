@@ -96,6 +96,10 @@ class Launcher {
     }
 
 
+    /** ONLY FOR TEST */
+    protected Launcher () { }
+
+
     /**
      * Create the Jcommander 'interpreter' and parse the command line arguments
      */
