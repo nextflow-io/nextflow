@@ -202,10 +202,8 @@ class AssetManager {
     }
 
     void checkValidRemoteRepo() {
-
         def scriptName = getMainScriptName()
         provider.validateFor(scriptName)
-
     }
 
 

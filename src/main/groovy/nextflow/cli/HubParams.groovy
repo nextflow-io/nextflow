@@ -34,14 +34,13 @@ import nextflow.scm.AssetManager
 @CompileStatic
 trait HubParams {
 
-    @Parameter(names=['-hub'], description = "Pipeline service hub where the code is hosted - It can be either 'github' or 'bitbucket'", validateValueWith = HubValidator)
-    String hub_provider = AssetManager.DEFAULT_HUB
+    private disableInlinePassword
+
+    @Parameter(names=['-hub'], description = "Service hub where pipeline is hosted - It can be either 'github' or 'bitbucket'", validateValueWith = HubValidator)
+    String hubProvider = AssetManager.DEFAULT_HUB
 
     @Parameter(names='-user', description = 'Private repository user name')
-    String hub_user
-
-    @Parameter(names='-pwd', description = 'Private repository password')
-    String hub_pwd
+    String hubUser
 
     /**
      * Return the password provided on the command line or stop allowing the user to enter it on the console
@@ -50,17 +49,29 @@ trait HubParams {
      */
     String getHubPassword() {
 
-        if( !hub_user ) {
+        if( !hubUser )
             return null
-        }
 
-        if( hub_pwd ) {
-            return hub_pwd
-        }
+        def p = hubUser.indexOf(':')
+        if( p != -1 )
+            return hubUser.substring(p+1)
 
-        print "Enter your $hub_provider password: "
-        char[] pwd = System.console().readPassword()
+        def console = System.console()
+        if( !console )
+            return null
+
+        print "Enter your $hubProvider password: "
+        char[] pwd = console.readPassword()
         new String(pwd)
+    }
+
+    String getHubUser() {
+        if(!hubUser) {
+            return hubUser
+        }
+
+        def p = hubUser.indexOf(':')
+        return p != -1 ? hubUser.substring(0,p) : hubUser
     }
 
 

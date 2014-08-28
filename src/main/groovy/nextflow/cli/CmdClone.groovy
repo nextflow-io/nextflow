@@ -50,7 +50,7 @@ class CmdClone implements CmdX, HubParams {
     void run() {
         // the pipeline name
         String pipeline = args[0]
-        final manager = new AssetManager(pipeline: pipeline, hub: hub_provider, user: hub_user, pwd: getHubPassword())
+        final manager = new AssetManager(pipeline: pipeline, hub: getHubProvider(), user: getHubUser(), pwd: getHubPassword())
 
         // the target directory is the second parameter
         // otherwise default the current pipeline name
@@ -65,6 +65,7 @@ class CmdClone implements CmdX, HubParams {
             throw new AbortOperationException("Cannot create clone target directory: $target")
         }
 
+        manager.checkValidRemoteRepo()
         print "Cloning ${manager.pipeline}${revision ? ':'+revision:''} ..."
         manager.clone(target, revision)
         print "\r"

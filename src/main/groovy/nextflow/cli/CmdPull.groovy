@@ -59,7 +59,7 @@ class CmdPull implements CmdX, HubParams {
 
         list.each {
             log.info "Checking $it ..."
-            def manager = new AssetManager( pipeline: it, hub: hub_provider,  user: hub_user, pwd: getHubPassword())
+            def manager = new AssetManager( pipeline: it, hub: getHubProvider(),  user: getHubUser(), pwd: getHubPassword())
             def result = manager.download()
             if( !result )
                 log.info " done"

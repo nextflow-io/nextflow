@@ -194,7 +194,7 @@ class CmdRun implements CmdX, HubParams {
         /*
          * try to look for a pipeline in the repository
          */
-        def manager = new AssetManager(hub: this.hub_provider, user: this.hub_user, pwd: getHubPassword())
+        def manager = new AssetManager(hub: getHubProvider(), user: getHubUser(), pwd: getHubPassword())
         def repo = manager.resolveName(pipelineName)
 
         /*
