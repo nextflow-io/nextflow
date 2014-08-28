@@ -23,6 +23,7 @@ import static nextflow.util.ConfigHelper.parseValue
 
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Channel
@@ -44,6 +45,7 @@ import org.codehaus.groovy.control.customizers.ImportCustomizer
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class ScriptRunner {
 
     /**
@@ -108,7 +110,7 @@ class ScriptRunner {
     def void setLibPath( String str ) {
         if( !str ) { return }
 
-        def files = str.split( File.pathSeparator ).collect { new File(it) }
+        def files = str.split( File.pathSeparator ).collect { String it -> new File(it) }
         files?.each { File file ->
             if( !file.exists() ) { throw new MissingLibraryException("Cannot find specified library: ${file.absolutePath}")  }
             addLibPaths(file)
@@ -133,7 +135,9 @@ class ScriptRunner {
         }
         else if( path.isDirectory() ) {
             libraries << path
-            path.eachFileMatch( ~/.+\.jar$/ ) { if(it.isFile()) this.libraries << it }
+            path.eachFileMatch( ~/.+\.jar$/ ) { File it ->
+                if(it.isFile()) this.libraries << it
+            }
         }
     }
 
@@ -276,8 +280,8 @@ class ScriptRunner {
 
 
     def normalizeOutput() {
-        if( output instanceof Collection || output.getClass().isArray()) {
-            result = (output as Collection)
+        if( output instanceof Object[] ) {
+            result = output as Collection
         }
         else {
             result = output
@@ -376,7 +380,7 @@ class ScriptRunner {
     /**
      * Find out the script line where the error has thrown
      */
-    static getErrorMessage( Throwable e, String scriptName ) {
+    static String getErrorMessage( Throwable e, String scriptName ) {
 
         def lines = ExceptionUtils.getStackTrace(e).split('\n')
         def error = null

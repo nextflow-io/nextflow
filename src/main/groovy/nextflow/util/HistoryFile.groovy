@@ -21,7 +21,6 @@
 package nextflow.util
 
 import groovy.util.logging.Slf4j
-
 /**
  * Manages the history file containing the last 1000 executed commands
  *
@@ -36,14 +35,14 @@ class HistoryFile extends File {
         super('.nextflow.history')
     }
 
-    def write( UUID key, Object... args ) {
+    def write( UUID key, List args ) {
         assert key
         assert args != null
 
         write(key.toString(), args)
     }
 
-    def write( String key, Object...  args ) {
+    def write( String key, List args ) {
         def writer = new FileWriter(this,true)
         writer << "${key.toString()}\t${args.join(' ')}\n"
         writer.close()

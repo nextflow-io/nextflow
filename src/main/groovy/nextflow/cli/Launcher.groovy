@@ -150,6 +150,8 @@ class Launcher {
 
     List<String> getNormalizedArgs() { normalizedArgs }
 
+    String getCliString() { cliString }
+
     /**
      * normalize the command line arguments to handle some corner cases
      */

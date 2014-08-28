@@ -20,6 +20,7 @@
 
 package nextflow.exception
 
+import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 
 /**
@@ -28,4 +29,5 @@ import groovy.transform.InheritConstructors
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
+@CompileStatic
 class AbortOperationException extends RuntimeException { }
