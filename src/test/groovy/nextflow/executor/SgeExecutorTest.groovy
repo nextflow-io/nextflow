@@ -106,6 +106,30 @@ class SgeExecutorTest extends Specification {
 
     }
 
+    def testParseQueueStatusFromUniva() {
+        setup:
+        def executor = [:] as SgeExecutor
+        def text =
+        """
+        job-ID     prior   name       user         state submit/start at     queue                          jclass                         slots ja-task-ID
+        ------------------------------------------------------------------------------------------------------------------------------------------------
+              1220 1.00000 oliver-tes abria        r     08/29/2014 10:17:21 long@node-hp0115.linux.crg.es                                     8
+              1258 0.17254 mouse.4689 epalumbo     r     08/29/2014 11:13:55 long@node-hp0515.linux.crg.es                                    16
+              1261 0.17254 run_mappin epalumbo     qw    08/29/2014 11:28:11 short@node-ib0208bi.linux.crg.                                    4
+              1262 0.17254 run_mappin epalumbo     Eqw   08/29/2014 11:28:31 short@node-ib0209bi.linux.crg.                                    4
+        """.stripIndent().trim()
+
+
+        when:
+        def result = executor.parseQueueStatus(text)
+        then:
+        result.size() == 4
+        result['1220'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['1258'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['1261'] == AbstractGridExecutor.QueueStatus.PENDING
+        result['1262'] == AbstractGridExecutor.QueueStatus.ERROR
+    }
+
     def testParseQueueDump() {
 
         setup:

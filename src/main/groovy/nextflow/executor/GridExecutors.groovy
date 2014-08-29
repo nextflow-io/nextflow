@@ -585,7 +585,7 @@ class SgeExecutor extends AbstractGridExecutor {
         def result = [:]
         text?.eachLine{ String row, int index ->
             if( index< 2 ) return
-            def cols = row.split(/\s+/)
+            def cols = row.trim().split(/\s+/)
             if( cols.size()>5 ) {
                 result.put( cols[0], DECODE_STATUS[cols[4]] )
             }
