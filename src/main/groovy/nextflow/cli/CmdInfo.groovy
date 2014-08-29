@@ -50,7 +50,7 @@ class CmdInfo implements CmdX {
     @Override
     void run() {
         if( !args ) {
-            println getInfo(detailed) + '\n'
+            println getInfo(detailed)
             return
         }
 
