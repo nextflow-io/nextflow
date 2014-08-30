@@ -30,7 +30,7 @@ import nextflow.util.HistoryFile
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Parameters(commandDescription = "List the history of executed commands")
+@Parameters(commandDescription = "Print the history of executed pipelines")
 class CmdHistory implements CmdX {
 
     @Override

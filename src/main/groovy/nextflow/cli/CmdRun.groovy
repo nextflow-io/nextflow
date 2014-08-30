@@ -40,7 +40,7 @@ import nextflow.util.HistoryFile
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Run a pipeline")
-class CmdRun implements CmdX, HubParams {
+class CmdRun implements CmdX, HubOptions {
 
     static class DurationConverter implements IStringConverter<Long> {
         @Override
@@ -78,7 +78,7 @@ class CmdRun implements CmdX, HubParams {
     /**
      * Defines the parameters to be passed to the pipeline script
      */
-    @DynamicParameter(names = '--', description = 'Set a parameter used by the pipeline' )
+    @DynamicParameter(names = '--', description = 'Set a parameter used by the pipeline', hidden = true)
     Map<String,String> params = new LinkedHashMap<>()
 
     @DynamicParameter(names = ['-process.'], description = 'Set process default options' )

@@ -32,7 +32,7 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "List all downloaded pipelines")
+@Parameters(commandDescription = "List all installed pipelines")
 class CmdList implements CmdX {
 
     @Override

@@ -20,19 +20,19 @@
 
 package nextflow.scm
 
-import nextflow.cli.HubParams
+import nextflow.cli.HubOptions
 import spock.lang.Specification
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class HubParamsTest extends Specification {
+class HubOptionsTest extends Specification {
 
     def testUser() {
 
         when:
-        def cmd = [:] as HubParams
+        def cmd = [:] as HubOptions
         cmd.hubUser = credential
         then:
         cmd.getHubUser() == user

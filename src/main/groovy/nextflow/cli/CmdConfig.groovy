@@ -20,23 +20,54 @@
 
 package nextflow.cli
 import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.scm.AssetManager
+import nextflow.script.ConfigBuilder
 /**
- * CLI sub-command HELP
+ *  Prints the pipeline configuration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
-class CmdHelp implements CmdX {
+@Parameters(commandDescription = "Print a pipeline configuration")
+class CmdConfig implements CmdX {
+
+    @Parameter(description = 'pipeline name')
+    List<String> args = []
 
     @Override
-    final String getName() { "help" }
-
-    @Parameter(description = 'command name', arity = 1)
-    List<String> args
+    String getName() {
+        return 'conf'
+    }
 
     @Override
     void run() {
-        launcher.usage(args ? args[0] : null)
+        File base = args ? getBaseDir(args[0]) : null
+        def config = new ConfigBuilder()
+                .setOptions(launcher.options)
+                .setBaseDir(base)
+                .assemble()
+
+        PrintWriter stdout = new PrintWriter(System.out,true);
+        config.writeTo( stdout )
+    }
+
+
+    File getBaseDir(String path) {
+
+        def file = new File(path)
+        if( file.isDirectory() )
+            return file
+
+        if( file.exists() ) {
+            file.canonicalFile.parentFile ?: new File('/')
+        }
+
+        def manager = new AssetManager(path)
+        manager.isLocal() ? manager.localPath : null
+
     }
 }

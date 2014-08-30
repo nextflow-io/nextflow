@@ -27,6 +27,7 @@ import static Const.SPLASH
 
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.ParameterException
+import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -119,6 +120,7 @@ class Launcher implements ExitCode {
                 new CmdPull(),
                 new CmdRun(),
                 new CmdDrop(),
+                new CmdConfig(),
                 new CmdHelp()
         ]
 
@@ -222,6 +224,47 @@ class Launcher implements ExitCode {
         }
 
         return normalized
+    }
+
+    /**
+     * Print the usage string for the given command - or -
+     * the main program usage string if not command is specified
+     *
+     * @param command The command for which get help or {@code null}
+     * @return The usage string
+     */
+    void usage(String command = null ) {
+
+        if( command ) {
+            def exists = allCommands.find { it.name == command } != null
+            if( !exists ) {
+                println "Asking help for unknown command: $command"
+                return
+            }
+
+            jcommander.usage(command)
+            return
+        }
+
+        def list = new ArrayList<CmdX>(allCommands).findAll { it.name != 'help' }
+        println "Usage: nextflow [options] COMMAND [arg...]\n"
+        println "Commands: "
+
+        int len = 0
+        def all = new TreeMap<String,String>()
+        list.each {
+            def description = it.getClass().getAnnotation(Parameters)?.commandDescription()
+            all[it.name] = description ?: '-'
+            if( it.name.size()>len ) len = it.name.size()
+        }
+
+        all.each { String name, String desc ->
+            print '  '
+            print name.padRight(len)
+            print '   '
+            println desc
+        }
+        println ''
     }
 
     /**

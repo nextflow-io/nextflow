@@ -32,7 +32,7 @@ import nextflow.scm.AssetManager
   * Author Paolo Di Tommaso
   */
 @CompileStatic
-trait HubParams {
+trait HubOptions {
 
     private disableInlinePassword
 
