@@ -89,7 +89,7 @@ Name                        Description
 =========================== ================
 join                        IP address(es) of one more more cluster nodes to which the daemon make part. By using the value ``multicast``
 group                       Cluster name of which this node makes part. It allows to create separate clusters. Default: ``nextflow``
-slots                       TNumber of slots this damon node provides i.e. of process that can execute in parallel. By it is equal to the number of CPU cores.
+slots                       Number of slots this damon node provides i.e. of process that can execute in parallel. By it is equal to the number of CPU cores.
 interface                   Network interfaces that GridGain has to use. It can be the interface IP address or name.
 config.file                 The file path of the GridGain configuration file (optional)
 config.url                  the url of the GridGain configuration file (optional)
