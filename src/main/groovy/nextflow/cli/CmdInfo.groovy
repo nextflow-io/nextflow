@@ -36,7 +36,7 @@ import nextflow.scm.AssetManager
  */
 @CompileStatic
 @Parameters(commandDescription = "Show the system runtime information")
-class CmdInfo implements CmdX {
+class CmdInfo extends CmdX {
 
     @Parameter(description = 'pipeline name')
     List<String> args

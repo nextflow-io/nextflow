@@ -33,7 +33,7 @@ import nextflow.scm.AssetManager
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "List all installed pipelines")
-class CmdList implements CmdX {
+class CmdList extends CmdX {
 
     @Override
     final String getName() { "ls" }

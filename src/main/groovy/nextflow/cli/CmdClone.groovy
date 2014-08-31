@@ -35,7 +35,7 @@ import nextflow.scm.AssetManager
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Clone a pipeline the specified folder")
-class CmdClone implements CmdX, HubOptions {
+class CmdClone extends HubOptions {
 
     @Parameter(required=true, description = 'name of the pipeline to clone')
     List<String> args

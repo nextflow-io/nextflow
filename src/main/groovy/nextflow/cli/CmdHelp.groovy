@@ -27,7 +27,7 @@ import groovy.transform.CompileStatic
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class CmdHelp implements CmdX {
+class CmdHelp extends CmdX {
 
     @Override
     final String getName() { "help" }

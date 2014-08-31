@@ -29,6 +29,7 @@ import groovyx.gpars.agent.Agent
 import nextflow.Session
 import nextflow.extension.FilesExtensions
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskProcessor
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 
@@ -131,6 +132,20 @@ class TraceFileObserver implements TraceObserver {
         traceFile.close()
     }
 
+    @Override
+    void onFlowError(Throwable error) {
+
+    }
+
+    @Override
+    void onProcessCreate(TaskProcessor process) {
+
+    }
+
+    @Override
+    void onProcessDestroy(TaskProcessor process) {
+
+    }
 
     /**
      * This method is invoked before a process run is going to be submitted
@@ -167,6 +182,11 @@ class TraceFileObserver implements TraceObserver {
 
         // save to the file
         writer.send { PrintWriter it -> it.println(render(record)) }
+    }
+
+    @Override
+    void onProcessError(TaskHandler handler, Throwable error) {
+
     }
 
     /**

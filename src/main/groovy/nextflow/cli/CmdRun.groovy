@@ -39,8 +39,8 @@ import nextflow.util.HistoryFile
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Run a pipeline")
-class CmdRun implements CmdX, HubOptions {
+@Parameters(commandDescription = "Launch a pipeline execution")
+class CmdRun extends HubOptions {
 
     static class DurationConverter implements IStringConverter<Long> {
         @Override

@@ -30,61 +30,60 @@ import nextflow.processor.TaskProcessor
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-trait TraceObserver {
+interface TraceObserver {
 
     /**
      * The is method is invoked when the flow is going to start
      */
-    void onFlowStart(Session session) { }
+    void onFlowStart(Session session)
 
     /**
      * This method is invoked when the flow is going to complete
      */
-    void onFlowComplete() { }
+    void onFlowComplete()
 
     /**
      * TODO This method is invoked when an error is raised
      *
      * @param error
      */
-    void onFlowError(Throwable error) { }
+    void onFlowError(Throwable error)
 
     /*
      * Invoked when the process is created.
      */
-    void onProcessCreate( TaskProcessor process ) { }
+    void onProcessCreate( TaskProcessor process )
 
     /**
      * Invoked when the process has terminated and is going to be destroy
      * @param process
      */
-    void onProcessDestroy( TaskProcessor process ) { }
-
+    void onProcessDestroy( TaskProcessor process )
 
     /**
      * This method is invoked before a process run is going to be submitted
      * @param handler
      */
-    void onProcessSubmit(TaskHandler handler) { }
+    void onProcessSubmit(TaskHandler handler)
 
     /**
      * This method is invoked when a process run is going to start
      * @param handler
      */
-    void onProcessStart(TaskHandler handler) { }
+    void onProcessStart(TaskHandler handler)
 
     /**
      * This method is invoked when a process run completes
      * @param handler
      */
-    void onProcessComplete(TaskHandler handler) { }
+    void onProcessComplete(TaskHandler handler)
 
     /**
      * This method is when a process run raises an error
      * @param handler
      * @param error
      */
-    void onProcessError(TaskHandler handler, Throwable error) { }
+    void onProcessError(TaskHandler handler, Throwable error)
 
 
 }

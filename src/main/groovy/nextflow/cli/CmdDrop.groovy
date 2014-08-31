@@ -35,7 +35,7 @@ import nextflow.scm.AssetManager
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Delete a locally installed pipeline")
-class CmdDrop implements CmdX {
+class CmdDrop extends CmdX {
 
     @Parameter(required=true, description = 'name of the pipeline to drop')
     List<String> args

@@ -24,10 +24,13 @@ package nextflow.cli
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-trait CmdX implements Runnable {
+abstract class CmdX implements Runnable {
 
-    Launcher launcher
+    private Launcher launcher
 
     abstract def String getName()
 
+    Launcher getLauncher() { launcher }
+
+    void setLauncher( Launcher value ) { this.launcher = value }
 }

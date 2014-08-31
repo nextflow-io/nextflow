@@ -33,7 +33,7 @@ import nextflow.script.ConfigBuilder
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Print a pipeline configuration")
-class CmdConfig implements CmdX {
+class CmdConfig extends CmdX {
 
     @Parameter(description = 'pipeline name')
     List<String> args = []
