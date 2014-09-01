@@ -35,8 +35,10 @@ import nextflow.scm.AssetManager
 @Parameters(commandDescription = "List all installed pipelines")
 class CmdList extends CmdX {
 
+    static final NAME = 'ls'
+
     @Override
-    final String getName() { "ls" }
+    final String getName() { NAME }
 
     @Override
     void run() {

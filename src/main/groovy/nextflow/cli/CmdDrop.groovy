@@ -37,6 +37,8 @@ import nextflow.scm.AssetManager
 @Parameters(commandDescription = "Delete a locally installed pipeline")
 class CmdDrop extends CmdX {
 
+    static final NAME = 'drop'
+
     @Parameter(required=true, description = 'name of the pipeline to drop')
     List<String> args
 
@@ -44,7 +46,7 @@ class CmdDrop extends CmdX {
     boolean force
 
     @Override
-    final String getName() { "drop" }
+    final String getName() { NAME }
 
     @Override
     void run() {

@@ -36,6 +36,8 @@ import nextflow.scm.AssetManager
 @Parameters(commandDescription = "Download or update a pipeline in the local repository")
 class CmdPull extends HubOptions {
 
+    static final NAME = 'pull'
+
     @Parameter(description = 'name of the pipeline to pull', arity = 1)
     List<String> args
 
@@ -43,7 +45,7 @@ class CmdPull extends HubOptions {
     boolean all
 
     @Override
-    final String getName() { 'pull' }
+    final String getName() { NAME }
 
     @Override
     void run() {

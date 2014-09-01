@@ -20,6 +20,7 @@
 
 package nextflow.cli
 import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 /**
  * CLI sub-command HELP
@@ -27,10 +28,13 @@ import groovy.transform.CompileStatic
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
+@Parameters(commandDescription = "Print usage help for a command")
 class CmdHelp extends CmdX {
 
+    static final NAME = 'help'
+
     @Override
-    final String getName() { "help" }
+    final String getName() { NAME }
 
     @Parameter(description = 'command name', arity = 1)
     List<String> args

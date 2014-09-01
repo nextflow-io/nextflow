@@ -121,6 +121,7 @@ class Launcher implements ExitCode {
                 new CmdRun(),
                 new CmdDrop(),
                 new CmdConfig(),
+                new CmdNode(),
                 new CmdHelp()
         ]
 
@@ -246,7 +247,7 @@ class Launcher implements ExitCode {
             return
         }
 
-        def list = new ArrayList<CmdX>(allCommands).findAll { it.name != 'help' }
+        def list = new ArrayList<CmdX>(allCommands).findAll { it.name != CmdNode.NAME }
         println "Usage: nextflow [options] COMMAND [arg...]\n"
         println "Commands: "
 
@@ -282,15 +283,11 @@ class Launcher implements ExitCode {
             }
 
             // -- print out the program help, then exit
-            if( options.help || (!command && !options.isDaemon())) {
-                command = allCommands.find { it.name == 'help' }
-            }
-
-            // -- launch daemon
-            if( options.isDaemon() ) {
-                log.debug "Launching cluster daemon"
-                launchDaemon()
-                return
+            if( options.help || !command || command.help ) {
+                def target = command?.name
+                command = allCommands.find { it instanceof CmdHelp }
+                if( target )
+                    (command as CmdHelp).args = [target]
             }
 
             // launch the command
@@ -350,95 +347,5 @@ class Launcher implements ExitCode {
 
     }
 
-    /**
-     * Launch the daemon service
-     *
-     * @param config The nextflow configuration map
-     */
-    protected launchDaemon() {
-        // create the config object
-        def config = new ConfigBuilder(options: options).build()
-
-        Map daemonConfig = config.daemon instanceof Map ? (Map)config.daemon : [:]
-        log.debug "Daemon config > $daemonConfig"
-
-
-        DaemonLauncher instance
-        def name = daemonConfig.name as String
-        if( name ) {
-            if( name.contains('.') ) {
-                instance = loadDaemonByClass(name)
-            }
-            else {
-                instance = loadDaemonByName(name)
-            }
-        }
-        else {
-            instance = loadDaemonFirst()
-        }
-
-
-        // launch it
-        instance.launch(daemonConfig)
-    }
-
-    /**
-     * Load a {@code DaemonLauncher} instance of the its *friendly* name i.e. the name provided
-     * by using the {@code ServiceName} annotation on the daemon class definition
-     *
-     * @param name The executor name e.g. {@code gridgain}
-     * @return The daemon launcher instance
-     * @throws IllegalStateException if the class does not exist or it cannot be instantiated
-     */
-    static DaemonLauncher loadDaemonByName( String name ) {
-
-        Class<DaemonLauncher> clazz = null
-        for( Class item : ServiceDiscover.load(DaemonLauncher).iterator() ) {
-            log.debug "Discovered daemon class: ${item.name}"
-            ServiceName annotation = item.getAnnotation(ServiceName)
-            if( annotation && annotation.value() == name ) {
-                clazz = item
-                break
-            }
-        }
-
-        if( !clazz )
-            throw new IllegalStateException("Unknown daemon name: $name")
-
-        try {
-            clazz.newInstance()
-        }
-        catch( Exception e ) {
-            throw new IllegalStateException("Unable to launch executor: $name", e)
-        }
-    }
-
-    /**
-     * Load a class implementing the {@code DaemonLauncher} interface by the specified class name
-     *
-     * @param name The fully qualified class name e.g. {@code nextflow.executor.LocalExecutor}
-     * @return The daemon launcher instance
-     * @throws IllegalStateException if the class does not exist or it cannot be instantiated
-     */
-    static DaemonLauncher loadDaemonByClass( String name ) {
-        try {
-            return (DaemonLauncher)Class.forName(name).newInstance()
-        }
-        catch( Exception e ) {
-            throw new IllegalStateException("Cannot load daemon: ${name}")
-        }
-    }
-
-    /**
-     * @return The first available instance of a class implementing {@code DaemonLauncher}
-     * @throws IllegalStateException when no class implementing {@code DaemonLauncher} is available
-     */
-    static DaemonLauncher loadDaemonFirst() {
-        def loader = ServiceLoader.load(DaemonLauncher).iterator()
-        if( !loader.hasNext() )
-            throw new IllegalStateException("No daemon services are available -- Cannot launch Nextflow in damon mode")
-
-        return loader.next()
-    }
 
 }

@@ -38,6 +38,8 @@ import nextflow.scm.AssetManager
 @Parameters(commandDescription = "Show the system runtime information")
 class CmdInfo extends CmdX {
 
+    static final NAME = 'info'
+
     @Parameter(description = 'pipeline name')
     List<String> args
 
@@ -45,7 +47,7 @@ class CmdInfo extends CmdX {
     boolean detailed
 
     @Override
-    final String getName() { 'info' }
+    final String getName() { NAME }
 
     @Override
     void run() {

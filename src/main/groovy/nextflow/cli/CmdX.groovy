@@ -19,6 +19,9 @@
  */
 
 package nextflow.cli
+
+import com.beust.jcommander.Parameter
+
 /**
  * Implement command shared methods
  *
@@ -33,4 +36,7 @@ abstract class CmdX implements Runnable {
     Launcher getLauncher() { launcher }
 
     void setLauncher( Launcher value ) { this.launcher = value }
+
+    @Parameter(names='-h', description = 'Print command usage', arity = 0, help = true)
+    boolean help
 }

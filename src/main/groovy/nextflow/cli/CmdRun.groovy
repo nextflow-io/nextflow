@@ -51,6 +51,8 @@ class CmdRun extends HubOptions {
         }
     }
 
+    static final NAME = 'run'
+
     @Parameter(names=['-lib'], description = 'Library extension path')
     String libPath
 
@@ -125,7 +127,7 @@ class CmdRun extends HubOptions {
     }
 
     @Override
-    final String getName() { 'run' }
+    final String getName() { NAME }
 
     @Override
     void run() {

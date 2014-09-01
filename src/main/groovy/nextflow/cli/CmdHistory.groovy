@@ -33,8 +33,10 @@ import nextflow.util.HistoryFile
 @Parameters(commandDescription = "Print the history of executed pipelines")
 class CmdHistory extends CmdX {
 
+    static final NAME = 'history'
+
     @Override
-    final String getName() { 'history' }
+    final String getName() { NAME }
 
     @Override
     void run() {

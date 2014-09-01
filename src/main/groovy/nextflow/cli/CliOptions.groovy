@@ -19,7 +19,7 @@
  */
 
 package nextflow.cli
-import com.beust.jcommander.DynamicParameter
+
 import com.beust.jcommander.Parameter
 /**
  * Main application command line options
@@ -61,18 +61,8 @@ class CliOptions {
     @Parameter(names = ['-q','-quiet'], description = 'Do not print information messages' )
     boolean quiet
 
-    @Parameter(names = ['-d'], description = 'Start in cluster daemon mode', arity = 0)
-    boolean daemon
-
-    @DynamicParameter(names = ['-daemon.'], description = 'Set daemon configuration options', hidden = true )
-    Map<String,String> daemonOptions = [:]
-
     @Parameter(names = ['-bg'], description = 'Execute nextflow in background', arity = 0)
     boolean background
-
-    boolean isDaemon() {
-        return daemon || daemonOptions.size() > 0
-    }
 
 
 }

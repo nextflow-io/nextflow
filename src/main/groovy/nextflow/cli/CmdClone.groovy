@@ -37,6 +37,8 @@ import nextflow.scm.AssetManager
 @Parameters(commandDescription = "Clone a pipeline the specified folder")
 class CmdClone extends HubOptions {
 
+    static final NAME = 'clone'
+
     @Parameter(required=true, description = 'name of the pipeline to clone')
     List<String> args
 
@@ -44,7 +46,7 @@ class CmdClone extends HubOptions {
     String revision
 
     @Override
-    final String getName() { "clone" }
+    final String getName() { NAME }
 
     @Override
     void run() {

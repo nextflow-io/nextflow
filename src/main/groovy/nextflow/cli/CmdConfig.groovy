@@ -35,13 +35,13 @@ import nextflow.script.ConfigBuilder
 @Parameters(commandDescription = "Print a pipeline configuration")
 class CmdConfig extends CmdX {
 
+    static final NAME = 'conf'
+
     @Parameter(description = 'pipeline name')
     List<String> args = []
 
     @Override
-    String getName() {
-        return 'conf'
-    }
+    String getName() { NAME }
 
     @Override
     void run() {
@@ -49,7 +49,7 @@ class CmdConfig extends CmdX {
         def config = new ConfigBuilder()
                 .setOptions(launcher.options)
                 .setBaseDir(base)
-                .assemble()
+                .build()
 
         PrintWriter stdout = new PrintWriter(System.out,true);
         config.writeTo( stdout )
