@@ -19,6 +19,7 @@ Contents:
    operator
    executor
    config
+   docker
    dnanexus
    gridgain
    tracing
