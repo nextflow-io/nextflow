@@ -35,7 +35,7 @@ import nextflow.script.ConfigBuilder
 @Parameters(commandDescription = "Print a pipeline configuration")
 class CmdConfig extends CmdX {
 
-    static final NAME = 'conf'
+    static final NAME = 'config'
 
     @Parameter(description = 'pipeline name')
     List<String> args = []
