@@ -1049,7 +1049,7 @@ For example::
     }
 
 
-Simply replace in the above script ``dockerbox:tag`` with the Docker container name you want to use.
+Simply replace in the above script ``dockerbox:tag`` with the Docker image name you want to use.
 
 .. tip:: This can be very useful to execute your scripts into a replicable self-contained environment or to deploy your pipeline in the cloud.
 

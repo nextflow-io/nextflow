@@ -113,6 +113,7 @@ parameter names with the ``params`` scope or surround them by curly brackets, as
 
 
 
+.. _config-process:
 
 Scope 'process'
 ----------------
@@ -204,9 +205,36 @@ The above configuration example can be rewritten using the dot notation as shown
 
 
 
+.. _config-docker:
+
+Scope 'docker'
+---------------
+
+The ``docker`` configuration scope controls how `Docker <http://www.docker.io>`_ containers are executed by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             Enable Docker execution by turning this flag to ``true`` (default: ``false``)
+sudo                Launch Docker by using the ``sudo`` command (default: ``false``)
+temp                Mounts a path of your choice as the ``/tmp`` directory in the container. Use the special value ``auto`` to create a temporary directory each time a container is created
+remove              Clean-up the container after the execution (default: ``true``). For details see: http://docs.docker.com/reference/run/#clean-up-rm
+runOptions          This attribute can be used to provide any extra command line options supported by the ``docker run`` command. For details see: http://docs.docker.com/reference/run
+registry            The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``
+================== ================
+
+The above options can be used by prefixing them with the ``docker`` scope or surrounding them by curly
+brackets, as shown below::
+
+    process.container = 'nextflow/examples'
+
+    docker {
+        enabled = true
+        temp = 'auto'
+    }
 
 
 
-
-
-
+Read :ref:`docker-page` page to lean more how use Docker containers with Nextflow.

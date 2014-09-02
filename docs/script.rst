@@ -331,6 +331,8 @@ while the ``=~`` creates a Java ``Matcher`` object.
 Regular expression support is imported from Java. Java's regular expression language and API is documented in the
 `Pattern Java documentation <http://download.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html>`_.
 
+You may also be interested in this post `Groovy: Don't Fear the RegExp <http://naleid.com/blog/2008/05/19/dont-fear-the-regexp>`_.
+
 
 String replacements
 --------------------
