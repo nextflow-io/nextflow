@@ -10,16 +10,14 @@ set -x
 
 mkdir -p $HOME/bin
 cat <<EOF >> $HOME/.bash_profile
-export $AWS_ACCESS_KEY=$AWS_ACCESS_KEY
-export $AWS_SECRET_KEY=$AWS_SECRET_KEY
+export AWS_ACCESS_KEY=$AWS_ACCESS_KEY
+export AWS_SECRET_KEY=$AWS_SECRET_KEY
 EOF
 
 #
 # Lauch docker and pull the container when DOCKER variable is defined
 #
-if [ -n "$CONTAINER" ]; then
-    docker pull $CONTAINER
-fi
+[[ "$CONTAINER" ]] && docker pull $CONTAINER
 
 # the bucket name
 AWS_S3BUCKET=${AWS_S3BUCKET:-'nxf-cluster'}
@@ -27,12 +25,17 @@ AWS_S3BUCKET=${AWS_S3BUCKET:-'nxf-cluster'}
 #
 # Install NEXTFLOW and launch it
 #
-curl -fsSL http://get.nextflow.io > $HOME/bin/nextflow 
+if [[ "$NXF_VERSION" ]]; then
+  version="v$NXF_VERSION"
+else
+  version='latest'
+fi
+
+curl -fsSL http://www.nextflow.io/releases/${version}/nextflow  > $HOME/bin/nextflow
 chmod +x $HOME/bin/nextflow
-$HOME/bin/nextflow -bg \
-  -daemon.name gridgain \
-  -daemon.interface eth0 \
-  -daemon.join s3:$AWS_S3BUCKET
+bash -x $HOME/bin/nextflow node -bg \
+  -cluster.join "s3:$AWS_S3BUCKET" \
+  -cluster.interface eth0
 
 # save the environment for debugging 
 env | sort > .boot.env
