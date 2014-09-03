@@ -94,12 +94,10 @@ NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_VER=${NXF_VER:-'0.10.0'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_CLI="$0 $@"
-COLUMNS=${COLUMNS:-`tput cols 2> /dev/tty`}
 
 export NXF_CLI
 export NXF_ORG
 export NXF_HOME
-export COLUMNS
 
 # Check if it is required to run in background
 bg=''
@@ -109,9 +107,6 @@ while [[ $# != 0 ]]; do
     case $1 in
     -bg)
       bg=1
-      ;;
-    -d|-daemon.*)
-      [[ ! "$action" && ! "$NXF_PACKAGE" ]] && NXF_PACKAGE='gg'
       ;;
     -download)
       if [[ ! "$action" ]]; then
@@ -124,6 +119,11 @@ while [[ $# != 0 ]]; do
       if [[ ! "$action" ]]; then
       install $0;
       exit 0
+      fi
+      ;;
+    -process.executor|-executor.name)
+      if [[ $2 && $2 == 'gridgain' ]]; then
+      NXF_PACKAGE='gg'; shift;
       fi
       ;;
     -with-extrae)
@@ -142,6 +142,8 @@ while [[ $# != 0 ]]; do
     esac
     shift
 done
+
+[[ "$action" == "node" && ! "$NXF_PACKAGE" ]] && NXF_PACKAGE='gg'
 
 NXF_PACKAGE=${NXF_PACKAGE:-one}
 NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACKAGE.jar}
@@ -185,13 +187,15 @@ elif [[ "$NXF_DRMAA" ]]; then
   exit 1
 fi
 
+COLUMNS=${COLUMNS:-`tput cols 2> /dev/tty || true`}
 JVM_OPTS="-noverify -Djava.awt.headless=true -Dcapsule.log=$CAPSULE_LOG"
-[[ -n "$NXF_OPTIONS" ]] && JVM_OPTS+=" $NXF_OPTIONS"
-[[ -n "$NXF_CLASSPATH" ]] && export NXF_CLASSPATH
-[[ -n "$NXF_DEPS" ]] && export NXF_DEPS
+[[ "$NXF_OPTIONS" ]] && JVM_OPTS+=" $NXF_OPTIONS"
+[[ "$NXF_CLASSPATH" ]] && export NXF_CLASSPATH
+[[ "$NXF_DEPS" ]] && export NXF_DEPS
+[[ "$COLUMNS" ]] && export COLUMNS
 
 # Start in daemon mode
-if [ -n "$bg" ]; then
+if [[ "$bg" ]]; then
   NXF_PID_FILE=${NXF_PID_FILE:-'.nextflow.pid'}
   "$JAVA" $JVM_OPTS -jar "$NXF_BIN" "${args[@]}" &
   disown
