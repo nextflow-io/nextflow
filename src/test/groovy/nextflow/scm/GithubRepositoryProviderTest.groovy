@@ -46,7 +46,7 @@ class GithubRepositoryProviderTest extends Specification {
 
         when:
         def repo = new GithubRepositoryProvider(pipeline: 'nextflow-io/hello')
-        def result = new String(repo.readContent('main.nf'))
+        def result = repo.readText('main.nf')
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')
 

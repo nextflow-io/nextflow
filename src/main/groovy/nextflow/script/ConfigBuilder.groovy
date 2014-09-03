@@ -125,14 +125,20 @@ class ConfigBuilder {
             return result
         }
 
+        /*
+         * config file in the nextflow home
+         */
         def home = new File(APP_HOME_DIR, 'config')
         if( home.exists() ) {
             log.debug "Found config home: $home"
             result << home
         }
 
+        /**
+         * Config file in the pipeline base dir
+         */
         def base = null
-        if( baseDir ) {
+        if( baseDir && baseDir.canonicalPath != new File('.').canonicalPath ) {
             base = new File(baseDir, 'nextflow.config')
             if( base.exists() ) {
                 log.debug "Found config base: $base"

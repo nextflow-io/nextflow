@@ -45,7 +45,7 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 @CompileStatic
 class AssetManager {
 
-    static final String MANIFEST_FILE_NAME = '.PIPELINE-INF'
+    static final String MANIFEST_FILE_NAME = 'nextflow.config'
 
     static final String DEFAULT_MAIN_FILE_NAME = 'main.nf'
 
@@ -236,33 +236,38 @@ class AssetManager {
         if( _mainScript )
             return _mainScript
 
-        readManifest()?.get('main-script') ?: DEFAULT_MAIN_FILE_NAME
+        readManifest().mainScript ?: DEFAULT_MAIN_FILE_NAME
     }
 
     String getHomePage() {
-        readManifest()?.get('home-url') ?: provider.getHomePage()
+        def manifest = readManifest()
+        manifest.homePage ?: provider.getHomePage()
     }
 
-    String getMasterBranch() {
-        readManifest()?.get('master-branch') ?: DEFAULT_BRANCH
+    String getDefaultBranch() {
+        readManifest().defaultBranch ?: DEFAULT_BRANCH
+    }
+
+    String getDescription() {
+        // note: if description is not set it will return an empty ConfigObject
+        // thus use the elvis operator to return null
+        readManifest().description ?: null
     }
 
     protected Map readManifest() {
+        ConfigObject result = null
         try {
-            if( localPath.exists() ) {
-                def result = new Properties()
-                result.load( new FileReader(new File(localPath, MANIFEST_FILE_NAME)) )
-                return result
+            def text = localPath.exists() ? new File(localPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
+            if( text ) {
+                def config = new ConfigSlurper().parse(text)
+                result = (ConfigObject)config.manifest
             }
-            else {
-                provider.readManifest(MANIFEST_FILE_NAME)
-            }
-
         }
-        catch( IOException e ) {
+        catch( Exception e ) {
             log.debug "Cannot read pipeline manifest -- Cause: ${e.message}"
-            return null
         }
+        // by default return an empty object
+        return result ?: new ConfigObject()
     }
 
     String getBaseName() {
@@ -454,7 +459,7 @@ class AssetManager {
     List<String> getRevisions() {
 
         def current = getCurrentRevision()
-        def master = getMasterBranch()
+        def master = getDefaultBranch()
 
         List<String> branches = git.branchList()
                     .call()
@@ -482,7 +487,7 @@ class AssetManager {
         assert localPath
 
         def current = getCurrentRevision()
-        if( current != masterBranch ) {
+        if( current != defaultBranch ) {
             if( !revision ) {
                 throw new AbortOperationException("Pipeline '$pipeline ' currently is sticked on revision: $current -- you need to specify explicitly a revision with the option '-r' to use it")
             }

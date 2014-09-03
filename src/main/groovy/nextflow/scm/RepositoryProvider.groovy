@@ -130,30 +130,13 @@ abstract class RepositoryProvider {
      * @param path The relative path of a file stored in the repository
      * @return The file content a
      */
-    abstract protected byte[] readContent( String path )
+    abstract protected byte[] readBytes( String path )
 
-    /**
-     * Read the content of a manifest file stored in the remote repository
-     *
-     * @param manifestPath Path of the manifest file in the remote repository to be read
-     * @return The manifest parsed as key-value map object
-     */
-    Map readManifest( String manifestPath ) {
-        InputStream input = null
-        try {
-            def bytes = readContent(manifestPath)
-            def result = new Properties()
-            result.load( new ByteArrayInputStream(bytes) )
-            return result
-        }
-        catch( IOException e ) {
-            log.debug "Unable to read manifest file: $manifestPath"
-            return null
-        }
-        finally {
-            input?.close()
-        }
+    String readText( String path ) {
+        def bytes = readBytes(path)
+        return bytes ? new String(bytes) : null
     }
+
 
     /**
      * Validate the repository for the specified file.
@@ -164,7 +147,7 @@ abstract class RepositoryProvider {
     void validateFor( String scriptName ) {
 
         try {
-            readContent(scriptName)
+            readBytes(scriptName)
         }
         catch( IOException e1 ) {
 
@@ -232,7 +215,7 @@ final class GithubRepositoryProvider extends RepositoryProvider{
 
     /** {@inheritDoc} */
     @Override
-    byte[] readContent(String path) {
+    byte[] readBytes(String path) {
 
         def url = getContentUrl(path)
         Map response  = invokeAndParseResponse(url)
@@ -295,7 +278,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     }
 
     @Override
-    byte[] readContent(String path) {
+    byte[] readBytes(String path) {
 
         def url = getContentUrl(path)
         Map response  = invokeAndParseResponse(url)

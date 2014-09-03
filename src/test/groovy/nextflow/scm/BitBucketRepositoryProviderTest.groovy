@@ -45,7 +45,7 @@ class BitBucketRepositoryProviderTest extends Specification {
 
         when:
         def repo = new BitbucketRepositoryProvider(pipeline: 'pditommaso/tutorial')
-        def result = new String(repo.readContent('main.nf'))
+        def result = repo.readText('main.nf')
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')
 

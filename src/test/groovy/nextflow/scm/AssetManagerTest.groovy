@@ -145,7 +145,7 @@ class AssetManagerTest extends Specification {
         given:
         def dir = Files.createTempDirectory('test')
         dir.resolve('sub1').mkdir()
-        dir.resolve('sub1/.PIPELINE-INF').text = 'main-script = pippo.nf'
+        dir.resolve('sub1/nextflow.config').text = "manifest.mainScript = 'pippo.nf'"
         dir.resolve('sub2').mkdir()
 
 
@@ -232,38 +232,59 @@ class AssetManagerTest extends Specification {
 
     }
 
-//    def testReadManifestFrom() {
-//
-//        given:
-//        def dir = Files.createTempDirectory('test').toFile()
-//        new File(dir,'response').text = '''{
-//              "name": ".PIPELINE-INF",
-//              "path": ".PIPELINE-INF",
-//              "sha": "318cb862eda4a1782cd1e1333d913a8e3c61f0a1",
-//              "size": 21,
-//              "url": "https://api.github.com/repos/cbcrg/piper-nf/contents/.PIPELINE-INF?ref=master",
-//              "html_url": "https://github.com/cbcrg/piper-nf/blob/master/.PIPELINE-INF",
-//              "git_url": "https://api.github.com/repos/cbcrg/piper-nf/git/blobs/318cb862eda4a1782cd1e1333d913a8e3c61f0a1",
-//              "type": "file",
-//              "content": "bWFpbi1zY3JpcHQ6IHBpcGVyLm5m\\n",
-//              "encoding": "base64",
-//              "_links": {
-//                "self": "https://api.github.com/repos/cbcrg/piper-nf/contents/.PIPELINE-INF?ref=master",
-//                "git": "https://api.github.com/repos/cbcrg/piper-nf/git/blobs/318cb862eda4a1782cd1e1333d913a8e3c61f0a1",
-//                "html": "https://github.com/cbcrg/piper-nf/blob/master/.PIPELINE-INF"
-//              }
-//            }'''
-//
-//        when:
-//        def manifest = AssetManager.readManifestFrom("file://$dir/response")
-//
-//        then:
-//        manifest.size()==1
-//        manifest.get('main-script') == 'piper.nf'
-//
-//        cleanup:
-//        dir?.deleteDir()
-//
-//    }
 
+    def testReadManifest () {
+
+        given:
+        def config =
+                '''
+                manifest {
+                    homePage = 'http://foo.com'
+                    mainScript = 'hello.nf'
+                    defaultBranch = 'super-stuff'
+                    description = 'This pipeline do this and that'
+                }
+                '''
+        def dir = Files.createTempDirectory('test')
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+
+        when:
+        def holder = new AssetManager()
+        holder.root = dir.toFile()
+        holder.setPipeline('foo/bar')
+        then:
+        holder.getMainScriptName() == 'hello.nf'
+        holder.getDefaultBranch() == 'super-stuff'
+        holder.getHomePage() == 'http://foo.com'
+        holder.getDescription() == 'This pipeline do this and that'
+
+
+        cleanup:
+        dir.deleteDir()
+
+    }
+
+    def testReadManifest2 () {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = 'empty: 1'
+
+        when:
+        def holder = new AssetManager()
+        holder.root = dir.toFile()
+        holder.setPipeline('foo/bar')
+
+        then:
+        holder.getMainScriptName() == 'main.nf'
+        holder.getDefaultBranch() == 'master'
+        holder.getHomePage() == 'https://github.com/foo/bar'
+        holder.getDescription() == null
+
+        cleanup:
+        dir.deleteDir()
+
+    }
 }
