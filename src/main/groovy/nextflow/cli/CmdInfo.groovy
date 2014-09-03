@@ -61,12 +61,16 @@ class CmdInfo extends CmdBase {
             throw new AbortOperationException("Unknown pipeline '${args[0]}'")
         }
 
-        def manager = new AssetManager(repo as String)
+        def manager = new AssetManager(repo)
+        if( !manager.isLocal() )
+            throw new AbortOperationException("Unknown pipeline '${args[0]}'")
 
         println " repo name  : ${manager.pipeline}"
         println " home page  : ${manager.homePage}"
         println " local path : ${manager.localPath}"
         println " main script: ${manager.mainScriptName}"
+        if( manager.description )
+        println " description: ${manager.description}"
 
         def revs = manager.getRevisions()
         if( revs.size() == 1 )
