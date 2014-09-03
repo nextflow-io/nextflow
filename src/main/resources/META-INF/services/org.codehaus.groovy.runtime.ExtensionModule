@@ -19,6 +19,6 @@
 #   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-moduleName=chunk-module
+moduleName=nextflow
 moduleVersion=1.0
 extensionClasses=nextflow.extension.NextflowExtensions,nextflow.extension.DataflowExtensions,nextflow.extension.FilesExtensions

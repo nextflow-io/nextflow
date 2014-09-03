@@ -26,7 +26,7 @@ class TextSplitterTest extends Specification {
         new TextSplitter().options(by:2).target('Hello\nworld\n!').list() == ['Hello\nworld\n','!\n']
     }
 
-    def 'test chop file by line' () {
+    def testSplitFileByLine () {
 
         setup:
         def file = File.createTempFile('chunk','test')

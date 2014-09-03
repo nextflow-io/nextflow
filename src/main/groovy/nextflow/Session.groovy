@@ -19,7 +19,6 @@
  */
 
 package nextflow
-
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ExecutorService
@@ -41,8 +40,6 @@ import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceObserver
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
-import org.apache.commons.io.FilenameUtils
-
 /**
  * Holds the information on the current execution
  *
@@ -136,7 +133,7 @@ class Session {
      */
     def Session( Map config ) {
         assert config != null
-        this.config = config
+        this.config = config instanceof ConfigObject ? config.toMap() : config
 
         // poor man singleton
         currentInstance = this
