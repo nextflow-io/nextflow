@@ -63,13 +63,13 @@ class Launcher implements ExitCode {
 
     private boolean fullVersion
 
-    private CmdX command
+    private CmdBase command
 
     private String[] args
 
     private String cliString
 
-    private List<CmdX> allCommands
+    private List<CmdBase> allCommands
 
     private List<String> normalizedArgs
 
@@ -112,7 +112,7 @@ class Launcher implements ExitCode {
     @PackageScope
     Launcher parseMainArgs() {
 
-        allCommands = (List<CmdX>)[
+        allCommands = (List<CmdBase>)[
                 new CmdClone(),
                 new CmdHistory(),
                 new CmdInfo(),
@@ -247,7 +247,7 @@ class Launcher implements ExitCode {
             return
         }
 
-        def list = new ArrayList<CmdX>(allCommands).findAll { it.name != CmdNode.NAME }
+        def list = new ArrayList<CmdBase>(allCommands).findAll { it.name != CmdNode.NAME }
         println "Usage: nextflow [options] COMMAND [arg...]\n"
         println "Commands: "
 

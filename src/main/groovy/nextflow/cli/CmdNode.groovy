@@ -35,7 +35,7 @@ import nextflow.util.ServiceDiscover
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Launch a Nextflow cluster node")
-class CmdNode extends CmdX {
+class CmdNode extends CmdBase {
 
     static final NAME = 'node'
 

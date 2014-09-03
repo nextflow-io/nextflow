@@ -36,7 +36,7 @@ import nextflow.scm.AssetManager
  */
 @CompileStatic
 @Parameters(commandDescription = "Show the system runtime information")
-class CmdInfo extends CmdX {
+class CmdInfo extends CmdBase {
 
     static final NAME = 'info'
 

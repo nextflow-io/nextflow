@@ -27,7 +27,7 @@ import com.beust.jcommander.Parameter
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-abstract class CmdX implements Runnable {
+abstract class CmdBase implements Runnable {
 
     private Launcher launcher
 

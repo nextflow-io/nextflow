@@ -31,7 +31,7 @@ import nextflow.util.HistoryFile
  */
 @CompileStatic
 @Parameters(commandDescription = "Print the history of executed pipelines")
-class CmdHistory extends CmdX {
+class CmdHistory extends CmdBase {
 
     static final NAME = 'history'
 

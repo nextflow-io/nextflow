@@ -33,7 +33,7 @@ import nextflow.script.ConfigBuilder
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Print a pipeline configuration")
-class CmdConfig extends CmdX {
+class CmdConfig extends CmdBase {
 
     static final NAME = 'config'
 

@@ -35,7 +35,7 @@ import nextflow.scm.AssetManager
 // TODO refactor to a trait
 
 @CompileStatic
-abstract class HubOptions extends CmdX {
+abstract class HubOptions extends CmdBase {
 
     private disableInlinePassword
 
