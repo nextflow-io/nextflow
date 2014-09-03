@@ -32,7 +32,6 @@ import nextflow.Session
 import nextflow.ast.NextflowDSL
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
-import nextflow.exception.MissingLibraryException
 import nextflow.util.ConfigHelper
 import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.exception.ExceptionUtils
@@ -98,15 +97,6 @@ class ScriptRunner {
     def ScriptRunner( Map config ) {
         session = new Session(config)
         bindings = new ScriptBinding(session)
-    }
-
-    /**
-     * Only for testing purposes
-     *
-     * @param config
-     */
-    def ScriptRunner( ConfigObject config ) {
-        this(ConfigBuilder.configToMap(config))
     }
 
     def ScriptRunner setScript( File file ) {
@@ -291,7 +281,10 @@ class ScriptRunner {
         // run and wait for termination
         BaseScript result
         def groovy = new GroovyShell(gcl, bindings, config)
-        result = groovy.parse( scriptText ) as BaseScript
+        if( session.scriptName )
+            result = groovy.parse(scriptText, session.scriptName) as BaseScript
+        else
+            result = groovy.parse(scriptText) as BaseScript
 
         session.onShutdown { targetDir.deleteDir() }
         return result
@@ -325,25 +318,39 @@ class ScriptRunner {
     static String getErrorMessage( Throwable e, String scriptName ) {
 
         def lines = ExceptionUtils.getStackTrace(e).split('\n')
-        def error = null
+        List error = null
         for( String str : lines ) {
             if( (error=getErrorLine(str,scriptName))) {
                 break
             }
         }
 
-        return (e.message ?: e.toString()) + ( error ? " at $error" : '' )
+        if( e instanceof MissingPropertyException ) {
+            def result = "Not such variable: '${e.getProperty()}'"
+            if( error )
+                result += " -- check script '${error[0]}' at line: ${error[1]}"
+            else if( scriptName )
+                result += " -- check that you don't mispelled it in scipt '$scriptName'"
+
+            return result
+        }
+        else if( error ) {
+            (e.message ?: e.toString()) + " at $error"
+        }
+        else {
+            e.message ?: e.toString()
+        }
     }
 
 
     @PackageScope
-    static String getErrorLine( String line, String scriptName = null) {
+    static List<String> getErrorLine( String line, String scriptName = null) {
         if( scriptName==null )
             scriptName = '.+'
 
-        def pattern = ~/.*\(($scriptName\.nf:\d*)\).*/
+        def pattern = ~/.*\(($scriptName):(\d*)\).*/
         def m = pattern.matcher(line)
-        return m.matches() ? m.group(1) : null
+        return m.matches() ? [m.group(1), m.group(2)] : null
     }
 
     /**

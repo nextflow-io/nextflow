@@ -32,7 +32,7 @@ abstract class AbstractBinarySplitter extends AbstractSplitter<InputStream> {
         if( obj instanceof File )
             return new FileInputStream(obj)
 
-        throw new IllegalAccessException("Object of class '${obj.class.name}' does not support 'chopBytes' method")
+        throw new IllegalAccessException("Object of class '${obj.class.name}' does not support 'splitter' methods")
 
     }
 

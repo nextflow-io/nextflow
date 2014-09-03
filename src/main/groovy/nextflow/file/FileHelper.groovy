@@ -375,12 +375,12 @@ class FileHelper {
         /*
          * since the file system does not exist, create it a protected block
          */
-        log.debug "Creating a file system instance for provider: ${provider.class.simpleName}"
         NextflowExtensions.withLock(_fs_lock) {
 
             try { fs = provider.getFileSystem(uri) }
             catch( FileSystemNotFoundException e ) { fs=null }
             if( !fs ) {
+                log.debug "Creating a file system instance for provider: ${provider.class.simpleName}"
                 fs = provider.newFileSystem(uri, env ?: getEnvMap(uri.scheme))
             }
             fs

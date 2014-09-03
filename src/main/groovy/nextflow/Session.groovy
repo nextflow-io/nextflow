@@ -180,7 +180,7 @@ class Session {
             // the folder that contains the main script
             this.baseDir = scriptFile.parentFile
             // set the script name attribute
-            this.scriptName = FilenameUtils.getBaseName(scriptFile.toString())
+            this.scriptName = scriptFile.name
         }
 
         /*
