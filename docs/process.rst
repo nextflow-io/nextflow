@@ -989,7 +989,6 @@ The directives are:
 * `maxErrors`_
 * `maxForks`_
 * `maxRetries`_
-* `merge`_
 * `module`_
 * `scratch`_
 * `storeDir`_
@@ -1131,6 +1130,7 @@ Name            Executor
 ``sge``        The process is executed using a Sun Grid Engine / `Open Grid Engine <http://gridscheduler.sourceforge.net/>`_.
 ``lsf``        The process is executed via the `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ job scheduler.
 ``slurm``      The process is executed via the SLURM job scheduler.
+``pbs``        The process is executed via the `PBS/Torque <http://en.wikipedia.org/wiki/Portable_Batch_System>`_ job scheduler.
 ``dnanexus``   The process is executed into the `DNAnexus <http://www.dnanexus.com/>`_ cloud.
 ============== ==================
 
@@ -1211,46 +1211,6 @@ only one retry is allowed, you can increase this value as shown below::
     execution can be retried in case of an error.
 
 See also: `errorStrategy`_ and `maxErrors`_.
-
-
-merge
--------
-
-.. warning:: This feature has been deprecated and will be removed in release 1.0.
-
-The ``merge`` directive allow you to write a task that `gather` the results of a upstream processes.
-
-The main differences with a normal process are:
-
-    * A merge process is executed in a sequential manner.
-    * A merge process is executed always in the same (unique to it) working directory.
-    * Outputs of a merge process are bound only once, at the end of the process execution.
-
-For example::
-
-  process collectData {
-
-    merge true
-
-    input:
-    val x from 'alpha','beta','delta'
-
-    output:
-    file result_file
-
-    """
-    echo $x >> result_file
-    """
-  }
-
-  result_file.subscribe  { println it.text  }
-
-
-It will print the content of the result file::
-
-    alpha
-    beta
-    delta
 
 
 module

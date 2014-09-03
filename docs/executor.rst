@@ -18,7 +18,7 @@ Local executor
 ===============
 
 The `local` executor is used by default. It runs the pipeline processes in the computer where Nextflow
-is launched. The processes are parallelised by spanning multiple `threads` and by taking advantage of multi-cores
+is launched. The processes are parallelised by spawning multiple `threads` and by taking advantage of multi-cores
 architecture provided by the CPU.
 
 In a common usage scenario, the `local` executor can be useful to develop and test your pipeline script in your computer,
@@ -222,6 +222,26 @@ The ``clusterOptions`` configuration property allows to set any `native` cluster
 
     process.executor = 'slurm'
     process.clusterOptions = " -t 01:00:00 "
+
+
+
+PBS/Torque executor
+====================
+
+
+The `PBS` executor allows you to run your pipeline script by using a resource manager belonging to the `PBS/Torque <http://en.wikipedia.org/wiki/Portable_Batch_System>`_ family of batch schedulers.
+
+Nextflow manages each process as a separate job that is submitted to the cluster by using the ``qsub`` command.
+
+Being so, the pipeline must be launched from a node where the ``qsub`` command is available, that is, in a common usage
+scenario, the cluster `login` node.
+
+To enable the PBS executor simply set to ``process.executor`` property to ``pbs`` value in the ``nextflow.config`` file.
+
+The ``clusterOptions`` configuration property allows to set any `native` cluster option accepted by the ``qsub`` command. For example::
+
+    process.executor = 'pbs'
+    process.clusterOptions = '-l walltime=1:00:00'
 
 
 .. _dnanexus-executor:

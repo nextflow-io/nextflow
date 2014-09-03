@@ -29,6 +29,7 @@ import nextflow.executor.ServiceName
 import nextflow.executor.SgeExecutor
 import nextflow.executor.SlurmExecutor
 import nextflow.executor.SupportedScriptTypes
+import nextflow.executor.PbsExecutor
 import nextflow.script.BaseScript
 import nextflow.script.ScriptType
 import nextflow.script.TaskBody
@@ -50,6 +51,7 @@ class ProcessFactory {
             'sge':  SgeExecutor,
             'oge':  SgeExecutor,
             'lsf': LsfExecutor,
+            'pbs': PbsExecutor,
             'slurm': SlurmExecutor
     ]
 
