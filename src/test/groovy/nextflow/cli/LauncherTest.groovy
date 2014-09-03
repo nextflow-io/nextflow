@@ -33,17 +33,6 @@ class LauncherTest extends Specification {
         [args: args] as Launcher
     }
 
-    def testCommandLineOptions() {
-
-        when:
-        def opt = createLauncher( '-daemon.x=1', '-daemon.y.z=2' ).parseMainArgs().options
-
-        then:
-        opt.daemonOptions.x == '1'
-        opt.daemonOptions.'y.z'== '2'
-
-    }
-
 
     def testVersion () {
 

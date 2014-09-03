@@ -1134,62 +1134,6 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
-    @Deprecated
-    def testChopFasta() {
-
-        setup:
-        def fasta = """\
-                >1aboA
-                NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
-                NYITPVN
-                >1ycsB
-                KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
-                VPRNLLGLYP
-                ; comment
-                >1pht
-                GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
-                WLNGYNETTGERGDFPGTYVEYIGRKKISP
-                """.stripIndent()
-
-        when:
-        def records = Channel.from(fasta).chopFasta()
-        then:
-        records.val == '>1aboA\nNLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS\nNYITPVN\n'
-        records.val == '>1ycsB\nKGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY\nVPRNLLGLYP\n'
-        records.val == '>1pht\nGYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG\nWLNGYNETTGERGDFPGTYVEYIGRKKISP\n'
-        records.val == Channel.STOP
-
-        when:
-        def fasta2 = '''
-            >alpha123
-            WLNGYNETTGERGDFPGTYVEYIGRKKISP
-            VPRNLLGLYP
-            '''
-        records = Channel.from(fasta, fasta2).chopFasta(record:[id:true])
-        then:
-        records.val == [id:'1aboA']
-        records.val == [id:'1ycsB']
-        records.val == [id:'1pht']
-        records.val == [id:'alpha123']
-        records.val == Channel.STOP
-
-
-        when:
-        def ids = []
-        def list = []
-        Channel.from(fasta).chopFasta(record:[id:true]) { item, int index ->
-            ids << item.id
-            list << index
-            return item
-        }
-
-        sleep 100
-        then:
-        ids == ['1aboA','1ycsB','1pht']
-        list == [0,1,2]
-
-    }
-
 
     def testSplitFasta() {
 

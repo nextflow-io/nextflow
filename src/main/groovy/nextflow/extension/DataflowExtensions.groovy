@@ -1620,58 +1620,6 @@ class DataflowExtensions {
         return list
     }
 
-    @Deprecated
-    public static DataflowReadChannel chopFasta( DataflowReadChannel source, Map options = [:] ) {
-        log.warn "Operator 'chopFasta' has been deprecated -- Use 'splitFasta' instead"
-        chopImpl(source, NextflowExtensions.&chopFasta, options, null)
-    }
-
-    @Deprecated
-    public static DataflowReadChannel chopFasta( DataflowReadChannel source, Map options = [:], Closure closure ) {
-        log.warn "Operator 'chopFasta' has been deprecated -- Use 'splitFasta' instead"
-        chopImpl(source, NextflowExtensions.&chopFasta, options, closure)
-    }
-
-    @Deprecated
-    public static DataflowReadChannel chopLines( DataflowReadChannel source, Map options = [:]) {
-        log.warn "Operator 'chopLines' has been deprecated -- Use 'splitText' instead"
-        chopImpl(source, NextflowExtensions.&chopLines, options, null)
-    }
-
-    @Deprecated
-    public static DataflowReadChannel chopLines( DataflowReadChannel source, Map options = [:], Closure closure ) {
-        log.warn "Operator 'chopLines' has been deprecated -- Use 'splitText' instead"
-        chopImpl(source, NextflowExtensions.&chopLines, options, closure)
-    }
-
-
-    private static chopImpl(DataflowReadChannel source, Closure chopper, Map options = [:], Closure closure) {
-
-        assert source instanceof DataflowQueue
-
-        int index = 0
-        def target = new DataflowQueue()
-
-        Closure proxy
-        if( closure == null )
-            proxy = { target.bind(it) }
-        else if( closure.maximumNumberOfParameters == 1 ) {
-            proxy = { target.bind( closure.call(it) ) }
-        }
-        else {
-            proxy = { target.bind( closure.call(it, index++) ) }
-        }
-
-        source.subscribe (
-                onNext: { entry -> chopper(entry,options, proxy) },
-                onComplete: { target << Channel.STOP }
-        )
-
-        return target
-
-    }
-
-
     private static append( DataflowWriteChannel result, List<DataflowReadChannel> channels, int index ) {
         def current = channels[index++]
         def next = index < channels.size() ? channels[index] : null
