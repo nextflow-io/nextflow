@@ -31,7 +31,7 @@ class GgGridFactoryTest extends Specification {
 
     def test() {
         when:
-        def cfg = new GgGridFactory('master', [tcp:[
+        def cfg = new GgGridFactory('master', [cluster: [tcp:[
                 localAddress:'127.1.2.3',
                 localPort:8888,
                 ackTimeout: '11s',
@@ -41,9 +41,9 @@ class GgGridFactoryTest extends Specification {
                 maxMissedHeartbeats: 3,
                 reconnectCount: 20,
                 networkTimeout: '10s',
-                joinTimeout: 100,
+                joinTimeout: 100
 
-            ], ]).config()
+        ]]]).config()
         def tcp = cfg.getDiscoverySpi() as GridTcpDiscoverySpi
         then:
         tcp.getLocalAddress() == '127.1.2.3'

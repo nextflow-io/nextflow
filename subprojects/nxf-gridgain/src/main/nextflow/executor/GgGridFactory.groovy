@@ -20,9 +20,11 @@
 
 package nextflow.executor
 import com.amazonaws.auth.BasicAWSCredentials
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.Session
+import nextflow.exception.AbortOperationException
 import nextflow.util.DaemonConfig
 import nextflow.util.Duration
 import nextflow.file.FileHelper
@@ -54,6 +56,7 @@ import org.gridgain.grid.spi.loadbalancing.adaptive.GridAdaptiveLoadBalancingSpi
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class GgGridFactory {
 
     static final SESSIONS_CACHE = 'allSessions'
@@ -62,7 +65,11 @@ class GgGridFactory {
 
     private final String role
 
-    private final DaemonConfig config
+    // cluster related config
+    private final DaemonConfig daemonConfig
+
+    // application config
+    private final Map config
 
     /**
      * Create a grid factory object for the given role and configuration params
@@ -72,9 +79,12 @@ class GgGridFactory {
      */
     GgGridFactory( String role, Map config ) {
         assert role in ['master','worker'], "Parameter 'role' can be either 'master' or 'worker'"
-        log.debug "Configuration properties for role: '$role' -- ${config}"
+
+        final clusterConfig = (Map)config.cluster ?: [:]
+        log.debug "Configuration properties for role: '$role' -- ${clusterConfig}"
+
         this.role = role
-        this.config = new DaemonConfig('gridgain', config, role == 'worker' ? System.getenv() : null )
+        this.daemonConfig = new DaemonConfig('gridgain', clusterConfig, role == 'worker' ? System.getenv() : null )
     }
 
     /**
@@ -82,7 +92,7 @@ class GgGridFactory {
      * @param session
      */
     GgGridFactory( Session session ) {
-        this('master', session.config.executor ?: [:])
+        this('master', session.config ?: [:])
     }
 
     /**
@@ -104,7 +114,7 @@ class GgGridFactory {
 
         System.setProperty('GRIDGAIN_UPDATE_NOTIFIER','false')
 
-        if( config.getAttribute('debug') as Boolean ) {
+        if( daemonConfig.getAttribute('debug') as Boolean ) {
             log.debug "Debugging ENABLED"
             System.setProperty('GRIDGAIN_DEBUG_ENABLED','true')
         }
@@ -114,8 +124,8 @@ class GgGridFactory {
         GridConfiguration cfg
 
         // -- try loading a config file
-        String url = config.getAttribute('config.url')
-        String file = config.getAttribute('config.file')
+        String url = daemonConfig.getAttribute('config.url')
+        String file = daemonConfig.getAttribute('config.file')
         if( file ) {
             log.debug "GridGain config > using config file: $file"
             cfg = GridGain.loadConfiguration(file).get1()
@@ -137,7 +147,7 @@ class GgGridFactory {
             ggfsConfig(cfg)
         }
 
-        final groupName = config.getAttribute( 'group', GRID_NAME ) as String
+        final groupName = daemonConfig.getAttribute( 'group', GRID_NAME ) as String
         log.debug "GridGain config > group name: $groupName"
         cfg.setGridName(groupName)
         cfg.setUserAttributes( ROLE: role )
@@ -176,16 +186,16 @@ class GgGridFactory {
             cacheMode = GridCacheMode.PARTITIONED
             atomicityMode  = GridCacheAtomicityMode.TRANSACTIONAL
             queryIndexEnabled = false
-            writeSynchronizationMode = config.getAttribute('ggfs.data.writeSynchronizationMode', GridCacheWriteSynchronizationMode.PRIMARY_SYNC) as GridCacheWriteSynchronizationMode
+            writeSynchronizationMode = daemonConfig.getAttribute('ggfs.data.writeSynchronizationMode', GridCacheWriteSynchronizationMode.PRIMARY_SYNC) as GridCacheWriteSynchronizationMode
             distributionMode = GridCacheDistributionMode.PARTITIONED_ONLY
             affinityMapper = new GridGgfsGroupDataBlocksKeyMapper(512)
-            backups = config.getAttribute('ggfs.data.backups', 0) as long
+            backups = daemonConfig.getAttribute('ggfs.data.backups', 0) as int
             // configure Off-heap memory
             // http://atlassian.gridgain.com/wiki/display/GG60/Off-Heap+Memory
-            offHeapMaxMemory = config.getAttribute('ggfs.data.offHeapMaxMemory', 0) as long
+            offHeapMaxMemory = daemonConfig.getAttribute('ggfs.data.offHeapMaxMemory', 0) as long
             // When storing directly off-heap it throws an exception
             // See http://stackoverflow.com/q/23399264/395921
-            memoryMode = config.getAttribute('ggfs.data.memoryMode', GridCacheMemoryMode.ONHEAP_TIERED) as GridCacheMemoryMode
+            memoryMode = daemonConfig.getAttribute('ggfs.data.memoryMode', GridCacheMemoryMode.ONHEAP_TIERED) as GridCacheMemoryMode
         }
         cfg.setCacheConfiguration(dataCfg)
 
@@ -218,9 +228,9 @@ class GgGridFactory {
             defaultMode = GridGgfsMode.PRIMARY
             metaCacheName = 'ggfs-meta'
             dataCacheName = 'ggfs-data'
-            blockSize = config.getAttribute('ggfs.blockSize', 128 * 1024) as long
-            perNodeBatchSize = config.getAttribute('ggfs.perNodeBatchSize', 512) as long
-            perNodeParallelBatchCount = config.getAttribute('ggfs.perNodeParallelBatchCount', 16) as long
+            blockSize = daemonConfig.getAttribute('ggfs.blockSize', 128 * 1024) as int
+            perNodeBatchSize = daemonConfig.getAttribute('ggfs.perNodeBatchSize', 512) as int
+            perNodeParallelBatchCount = daemonConfig.getAttribute('ggfs.perNodeParallelBatchCount', 16) as int
         }
         cfg.setGgfsConfiguration(ggfsCfg)
 
@@ -233,7 +243,7 @@ class GgGridFactory {
      */
     protected collisionConfig( GridConfiguration cfg ) {
 
-        def slots = config.getAttribute('slots', Runtime.getRuntime().availableProcessors() ) as int
+        def slots = daemonConfig.getAttribute('slots', Runtime.getRuntime().availableProcessors() ) as int
         def maxActivesJobs = slots * 3
         log.debug "GridGain config > setting slots: $slots -- maxActivesJobs: $maxActivesJobs"
 
@@ -265,7 +275,7 @@ class GgGridFactory {
         def discoverCfg = new GridTcpDiscoverySpi()
 
         // -- try to set the local address by using the interface configuration
-        final addresses = config.getNetworkInterfaceAddresses()
+        final addresses = daemonConfig.getNetworkInterfaceAddresses()
         if( addresses ) {
             final addr = addresses.get(0)
             final indx = addr.indexOf(':')
@@ -283,7 +293,7 @@ class GgGridFactory {
         }
 
         // -- try to set the join/discovery mechanism
-        def join = config.getAttribute('join') as String
+        def join = daemonConfig.getAttribute('join') as String
         if( join == 'multicast' ) {
             log.debug "GridGain config > default discovery multicast"
             discoverCfg.setIpFinder( new GridTcpDiscoveryMulticastIpFinder())
@@ -306,7 +316,7 @@ class GgGridFactory {
         else if( join?.startsWith('s3:')) {
             def credentials = FileHelper.getAwsCredentials(System.getenv(), config)
             if( !credentials )
-                throw new IllegalArgumentException("Missing AWS credentials -- please add AWS access credentials to your environment by defining the variables AWS_ACCESS_KEY and AWS_SECRET_KEY or in your nextflow config file")
+                throw new AbortOperationException("Missing AWS credentials -- Please add AWS access credentials to your environment by defining the variables AWS_ACCESS_KEY and AWS_SECRET_KEY or in your nextflow config file")
 
             def accessKey = credentials[0]
             def secretKey = credentials[1]
@@ -348,7 +358,7 @@ class GgGridFactory {
         }
 
         // check some optional params
-        config.getAttributesNames('tcp').each {
+        daemonConfig.getAttributesNames('tcp').each {
             checkAndSet(discoverCfg,'tcp.' + it )
         }
         cfg.setDiscoverySpi( discoverCfg )
@@ -356,7 +366,7 @@ class GgGridFactory {
     }
 
     protected void checkAndSet( def discoverCfg, String name, defValue = null ) {
-        def value = config.getAttribute(name, defValue)
+        def value = daemonConfig.getAttribute(name, defValue)
         if( value != null ) {
             def p = name.split(/\./)[-1]
             def x = value instanceof Duration ? value.toMillis() : value

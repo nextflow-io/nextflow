@@ -39,7 +39,7 @@ class DaemonConfigTest extends Specification {
         cfg.getAttribute('z', 'alpha') == 'alpha'
 
         when:
-        def env = [NXF_DAEMON_Z:'hola', NXF_DAEMON_P_Q_Z:'hello']
+        def env = [NXF_CLUSTER_Z:'hola', NXF_CLUSTER_P_Q_Z:'hello']
         cfg = new DaemonConfig('myDaemon', [x:123, y:222, '$myDaemon': [y:333] ], env )
         then:
         cfg.getAttribute('z', 'alpha') == 'hola'

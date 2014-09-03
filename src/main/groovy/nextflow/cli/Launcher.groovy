@@ -207,7 +207,7 @@ class Launcher implements ExitCode {
                 normalized[-1] = current
             }
 
-            else if( current ==~ /^\-daemon\..+/ && !current.contains('=')) {
+            else if( current ==~ /^\-cluster\..+/ && !current.contains('=')) {
                 current += '='
                 current += ( i<args.size() ? args[i++] : 'true' )
                 normalized[-1] = current

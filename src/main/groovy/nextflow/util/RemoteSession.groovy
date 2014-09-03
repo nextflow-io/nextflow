@@ -27,7 +27,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import org.apache.commons.io.IOUtils
-
 /**
  * Make a script executable in a remote session, embedding the script classes and external libraries.
  * <p>
@@ -49,6 +48,8 @@ class RemoteSession implements Serializable, Closeable {
 
     final List<byte[]> libs = []
 
+    final Map config
+
     transient boolean isLibInitialized
 
     @Lazy
@@ -66,6 +67,7 @@ class RemoteSession implements Serializable, Closeable {
      */
     RemoteSession(Session session) {
         sessionId = session.getUniqueId()
+        config = session.config
         for( File entry : session.getLibDir() ) {
             libs.add( zip(entry) )
         }

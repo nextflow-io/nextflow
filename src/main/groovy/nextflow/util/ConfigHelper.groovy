@@ -148,7 +148,7 @@ class DaemonConfig {
 
         // -- try to fallback on env
         if( fallbackEnvironment ) {
-            def key = "NXF_DAEMON_${name.toUpperCase().replaceAll(/\./,'_')}".toString()
+            def key = "NXF_CLUSTER_${name.toUpperCase().replaceAll(/\./,'_')}".toString()
             result = fallbackEnvironment.get(key)
         }
 

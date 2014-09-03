@@ -25,6 +25,7 @@ import static nextflow.util.ConfigHelper.parseValue
 import groovy.util.logging.Slf4j
 import nextflow.ExitCode
 import nextflow.cli.CliOptions
+import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
@@ -39,7 +40,9 @@ class ConfigBuilder {
 
     CliOptions options
 
-    CmdRun runOptions
+    CmdRun cmdRun
+
+    CmdNode cmdNode
 
     File baseDir
 
@@ -49,7 +52,7 @@ class ConfigBuilder {
     }
 
     ConfigBuilder setCmdRun( CmdRun cmdRun ) {
-        this.runOptions = cmdRun
+        this.cmdRun = cmdRun
         return this
     }
 
@@ -58,32 +61,11 @@ class ConfigBuilder {
         return this
     }
 
-
-    /**
-     * Converts a {@code ConfigObject} to a plain {@code Map}
-     *
-     * @param config
-     * @return
-     */
-    static Map configToMap( ConfigObject config ) {
-        assert config != null
-
-        Map result = new LinkedHashMap(config.size())
-        config.keySet().each { name ->
-            def value = config.get(name)
-            if( value instanceof ConfigObject ) {
-                result.put( name, configToMap(value))
-            }
-            else if ( value != null ){
-                result.put( name, value )
-            }
-            else {
-                result.put( name, null )
-            }
-        }
-
-        return result
+    ConfigBuilder setCmdNode( CmdNode node ) {
+        this.cmdNode = node
+        return this
     }
+
 
     static private wrapValue( value ) {
         if( !value )
@@ -146,6 +128,9 @@ class ConfigBuilder {
             }
         }
 
+        /**
+         * Local or user provided file
+         */
         def local = new File('nextflow.config')
         if( local.exists() && local != base ) {
             log.debug "Found config local: $local"
@@ -157,8 +142,8 @@ class ConfigBuilder {
 
     def Map buildConfig( List<File> files ) {
 
-        final Map<String,String> vars = runOptions?.env
-        final boolean exportSysEnv = runOptions?.exportSysEnv
+        final Map<String,String> vars = cmdRun?.env
+        final boolean exportSysEnv = cmdRun?.exportSysEnv
 
         def items = []
         files?.each { File file ->
@@ -181,18 +166,27 @@ class ConfigBuilder {
             env.putAll(vars)
         }
 
-        // -- add the daemon obj from the command line args
-        if( options.daemonOptions )  {
+        // set the cluster options for the node command
+        if( cmdNode?.clusterOptions )  {
             def str = new StringBuilder()
-            options.daemonOptions.each { k, v ->
-                str << "daemon." << k << '=' << wrapValue(v) << '\n'
+            cmdNode.clusterOptions.each { k, v ->
+                str << "cluster." << k << '=' << wrapValue(v) << '\n'
             }
             items << str
         }
 
-        if( runOptions?.executorOptions )  {
+        // -- add the executor obj from the command line args
+        if( cmdRun?.clusterOptions )  {
             def str = new StringBuilder()
-            runOptions.executorOptions.each { k, v ->
+            cmdRun.clusterOptions.each { k, v ->
+                str << "cluster." << k << '=' << wrapValue(v) << '\n'
+            }
+            items << str
+        }
+
+        if( cmdRun?.executorOptions )  {
+            def str = new StringBuilder()
+            cmdRun.executorOptions.each { k, v ->
                 str << "executor." << k << '=' << wrapValue(v) << '\n'
             }
             items << str
@@ -236,21 +230,19 @@ class ConfigBuilder {
 
         }
 
-        // convert the ConfigObject to plain map
-        // this because when accessing a non-existing entry in a ConfigObject it return and empty map as value
-        return configToMap( result )
+        return result
     }
 
     private configRunOptions(Map config) {
 
         // -- override 'process' parameters defined on the cmd line
-        runOptions.process.each { name, value ->
+        cmdRun.process.each { name, value ->
             config.process[name] = parseValue(value)
         }
 
         // -- check for the 'continue' flag
-        if( runOptions.resume ) {
-            def uniqueId = runOptions.resume
+        if( cmdRun.resume ) {
+            def uniqueId = cmdRun.resume
             if( uniqueId == 'last' ) {
                 uniqueId = HistoryFile.history.retrieveLastUniqueId()
                 if( !uniqueId ) {
@@ -262,18 +254,18 @@ class ConfigBuilder {
         }
 
         // -- other configuration parameters
-        if( runOptions.poolSize ) {
-            config.poolSize = runOptions.poolSize
+        if( cmdRun.poolSize ) {
+            config.poolSize = cmdRun.poolSize
         }
-        if( runOptions.queueSize ) {
-            config.executor.queueSize = runOptions.queueSize
+        if( cmdRun.queueSize ) {
+            config.executor.queueSize = cmdRun.queueSize
         }
-        if( runOptions.pollInterval ) {
-            config.executor.pollInterval = runOptions.pollInterval
+        if( cmdRun.pollInterval ) {
+            config.executor.pollInterval = cmdRun.pollInterval
         }
 
         // -- add the command line parameters to the 'taskConfig' object
-        runOptions.params?.each { name, value ->
+        cmdRun.params?.each { name, value ->
             config.params.put(name, parseValue(value))
         }
 
@@ -298,6 +290,8 @@ class ConfigBuilder {
         }
     }
 
+
+
     /**
      * Given the command line options {@code CliOptions} object
      * read the application configuration file and returns the
@@ -306,15 +300,17 @@ class ConfigBuilder {
      * @param options The {@code CliOptions} as specified by the user
      * @return A the application options hold in a {@code Map} object
      */
-    Map build() {
+    ConfigObject build() {
 
         // -- configuration file(s)
         def configFiles = validateConfigFiles(options?.config)
         def config = buildConfig(configFiles)
 
-        if( runOptions )
+        if( cmdRun )
             configRunOptions(config)
 
+        // convert the ConfigObject to plain map
+        // this because when accessing a non-existing entry in a ConfigObject it return and empty map as value
         return config
     }
 

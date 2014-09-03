@@ -162,8 +162,8 @@ class LauncherTest extends Specification {
         Launcher.normalizeArgs('-x', '1', '-process.alpha','2', '3') == ['-x', '1', '-process.alpha=2', '3']
         Launcher.normalizeArgs('-x', '1', '-process.echo') == ['-x', '1', '-process.echo=true']
 
-        Launcher.normalizeArgs('-x', '1', '-daemon.alpha','2', '3') == ['-x', '1', '-daemon.alpha=2', '3']
-        Launcher.normalizeArgs('-x', '1', '-daemon.echo') == ['-x', '1', '-daemon.echo=true']
+        Launcher.normalizeArgs('-x', '1', '-cluster.alpha','2', '3') == ['-x', '1', '-cluster.alpha=2', '3']
+        Launcher.normalizeArgs('-x', '1', '-cluster.echo') == ['-x', '1', '-cluster.echo=true']
 
         Launcher.normalizeArgs('-x', '1', '-executor.alpha','2', '3') == ['-x', '1', '-executor.alpha=2', '3']
         Launcher.normalizeArgs('-x', '1', '-executor.echo') == ['-x', '1', '-executor.echo=true']

@@ -314,6 +314,8 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
      */
     private static final Path localCacheDir = Files.createTempDirectory('nxf-cache')
 
+    protected static getLocalCacheDir() { localCacheDir }
+
     static {
         Runtime.getRuntime().addShutdownHook { localCacheDir.deleteDir() }
     }
@@ -401,11 +403,11 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
 
         // move the input files there
         for( Map.Entry<String,Path> entry : inputFiles.entrySet() ) {
-            final name = entry.key
+            final fileName = entry.key
             final source = entry.value
             final cached = FileHelper.getLocalCachePath(source,localCacheDir, sessionId)
-            final staged = scratchDir.resolve(name)
-            log?.debug "Task $name > staging path: '${source}' to: '$staged'"
+            final staged = scratchDir.resolve(fileName)
+            log?.debug "Task ${getName()} > staging path: '${source}' to: '$staged'"
             Files.createSymbolicLink(staged, cached)
         }
     }
@@ -513,6 +515,9 @@ class GgBashTask extends GgBaseTask<Integer>  {
     @GridLoggerResource
     private transient GridLogger log;
 
+    @GridUserResource
+    private transient GgClassLoaderProvider provider
+
     private transient Process process
 
     /**
@@ -558,6 +563,10 @@ class GgBashTask extends GgBaseTask<Integer>  {
     @Override
     protected Integer execute0() throws GridException {
 
+        def config = provider.getConfigFor(sessionId)
+        if( log.isTraceEnabled() )
+            log.trace "Session config: $config"
+
         def wrapper = new BashWrapperBuilder(
                 shell: shell,
                 input: stdin,
@@ -565,10 +574,13 @@ class GgBashTask extends GgBaseTask<Integer>  {
                 workDir: scratchDir,    // <-- important: the scratch folder is used as the 'workDir'
                 targetDir: targetDir,
                 container: container,
-                environment: environment )
+                environment: environment,
+                dockerMount: localCacheDir,
+                dockerConfig: config?.docker
+        )
         shell.add( wrapper.build().toString() )
 
-        log.debug "Running task >\n name: ${name}\n workdir: ${scratchDir.toFile()}"
+        log.debug "Running task > name: ${name} - workdir: ${scratchDir.toFile()}"
         ProcessBuilder builder = new ProcessBuilder()
                 .directory(scratchDir.toFile())
                 .command(shell)

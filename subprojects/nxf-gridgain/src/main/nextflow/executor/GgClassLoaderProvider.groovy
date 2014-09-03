@@ -50,7 +50,7 @@ class GgClassLoaderProvider {
         GridCache<UUID, RemoteSession> allSessions = grid.cache( GgGridFactory.SESSIONS_CACHE )
 
         if( !allSessions )
-            throw new IllegalStateException('Missing session cache object ')
+            throw new IllegalStateException('Missing session cache object')
 
         def session = allSessions.get(sessionId)
         if( !session )
@@ -63,6 +63,21 @@ class GgClassLoaderProvider {
         }
 
         return loader
+    }
+
+    @Memoized
+    Map getConfigFor( UUID sessionId ) {
+        assert sessionId
+        GridCache<UUID, RemoteSession> allSessions = grid.cache( GgGridFactory.SESSIONS_CACHE )
+
+        if( !allSessions )
+            throw new IllegalStateException('Missing session cache object')
+
+        def session = allSessions.get(sessionId)
+        if( !session )
+            throw new IllegalStateException("Missing session object for id: $sessionId")
+
+        return session.getConfig()
     }
 
 }
