@@ -83,6 +83,7 @@ configurations {
 }
 
 dependencies {
+    compile(project(':nxf-commons'))
     compile "org.codehaus.groovy:groovy:${groovyVersion}"
     compile "org.codehaus.groovy:groovy-nio:${groovyVersion}"
     compile "org.codehaus.groovy:groovy-json:${groovyVersion}"
