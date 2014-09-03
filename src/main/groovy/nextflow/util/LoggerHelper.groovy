@@ -19,6 +19,9 @@
  */
 
 package nextflow.util
+
+import static nextflow.Const.*
+
 import java.util.concurrent.atomic.AtomicBoolean
 
 import ch.qos.logback.classic.Level
@@ -36,14 +39,9 @@ import ch.qos.logback.core.rolling.RollingFileAppender
 import ch.qos.logback.core.rolling.TriggeringPolicyBase
 import ch.qos.logback.core.spi.FilterReply
 import groovy.transform.CompileStatic
-import nextflow.Const
-import nextflow.cli.CliOptions
+import nextflow.cli.Launcher
 import nextflow.file.FileHelper
 import org.slf4j.LoggerFactory
-
-import static Const.MAIN_PACKAGE
-import static Const.APP_NAME
-
 
 /**
  * Helper methods to setup the logging subsystem
@@ -65,13 +63,14 @@ class LoggerHelper {
      * @param debugConf The list of packages for which use a Debug logging level
      * @param traceConf The list of packages for which use a Trace logging level
      */
-    static void configureLogger( CliOptions options ) {
+    static void configureLogger( Launcher launcher ) {
 
-        final String logFileName = options.logFile ? options.logFile : (options.daemon ? ".nxf-daemon.log" : ".${APP_NAME}.log")
+        final opts = launcher.options
+        final String logFileName = opts.logFile
 
-        final boolean quiet = options.quiet
-        final List<String> debugConf = options.debug
-        final List<String> traceConf = options.trace
+        final boolean quiet = opts.quiet
+        final List<String> debugConf = opts.debug
+        final List<String> traceConf = opts.trace
 
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory()
 
@@ -85,7 +84,7 @@ class LoggerHelper {
         debugConf?.each { packages[it] = Level.DEBUG }
         traceConf?.each { packages[it] = Level.TRACE }
 
-        final ConsoleAppender consoleAppender = options.isDaemon() && options.isBackground() ? null : new ConsoleAppender()
+        final ConsoleAppender consoleAppender = launcher.isDaemon() && opts.isBackground() ? null : new ConsoleAppender()
         if( consoleAppender )  {
 
             final filter = new LoggerPackageFilter( packages )

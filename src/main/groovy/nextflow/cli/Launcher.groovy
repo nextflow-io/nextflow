@@ -19,11 +19,11 @@
  */
 
 package nextflow.cli
-import static Const.APP_BUILDNUM
-import static Const.APP_NAME
-import static Const.APP_VER
-import static Const.SEE_LOG_FOR_DETAILS
-import static Const.SPLASH
+import static nextflow.Const.APP_BUILDNUM
+import static nextflow.Const.APP_NAME
+import static nextflow.Const.APP_VER
+import static nextflow.Const.SEE_LOG_FOR_DETAILS
+import static nextflow.Const.SPLASH
 
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.ParameterException
@@ -31,15 +31,10 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.Const
 import nextflow.ExitCode
-import nextflow.daemon.DaemonLauncher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
-import nextflow.executor.ServiceName
-import nextflow.script.ConfigBuilder
 import nextflow.util.LoggerHelper
-import nextflow.util.ServiceDiscover
 import org.eclipse.jgit.api.errors.GitAPIException
 /**
  * Main application entry point. It parses the command line and
@@ -73,6 +68,10 @@ class Launcher implements ExitCode {
 
     private List<String> normalizedArgs
 
+    private boolean daemonMode
+
+    private String colsString
+
     /**
      * Create a launcher object and parse the command line parameters
      *
@@ -81,11 +80,12 @@ class Launcher implements ExitCode {
     protected Launcher(String... args) {
         this.args = args
         this.cliString = System.getenv('NXF_CLI')
+        this.colsString = System.getenv('COLUMNS')
 
         try {
             // -- parse the program arguments - and - configure the logger
             parseMainArgs()
-            LoggerHelper.configureLogger(options)
+            LoggerHelper.configureLogger(this)
         }
         catch( ParameterException e ) {
             // print command line parsing errors
@@ -140,26 +140,37 @@ class Launcher implements ExitCode {
         jcommander.parse( normalizedArgs as String[] )
         fullVersion = '-version' in normalizedArgs
         command = allCommands.find { it.name == jcommander.getParsedCommand()  }
+        // whether is running a daemon
+        daemonMode = command instanceof CmdNode
+        // set the log file name
+        if( !options.logFile )
+            options.logFile = isDaemon() ? ".node-nextflow.log" : ".nextflow.log"
 
         return this
     }
 
-    private int getColumns() {
+    private short getColumns() {
+        if( !colsString ) {
+            log.debug 'Bash environment $COLUMNS is not defined -- It looks TTY is not available'
+            return 0
+        }
+
         try {
-            System.getenv('COLUMNS').toInteger()
+            colsString.toShort()
         }
         catch( Exception e ) {
+            log.debug "Oops .. not a valid \$COLUMNS value: $colsString"
             return 0
         }
     }
-
-    JCommander getJcommander() { jcommander }
 
     CliOptions getOptions() { options }
 
     List<String> getNormalizedArgs() { normalizedArgs }
 
     String getCliString() { cliString }
+
+    boolean isDaemon() { daemonMode }
 
     /**
      * normalize the command line arguments to handle some corner cases
@@ -193,6 +204,10 @@ class Launcher implements ExitCode {
 
             else if( current == '-with-trace' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << 'trace.csv'
+            }
+
+            else if( current == '-with-docker' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
             }
 
             else if( current ==~ /^\-\-[a-zA-Z\d].*/ && !current.contains('=')) {
