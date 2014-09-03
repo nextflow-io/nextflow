@@ -21,6 +21,7 @@
 package nextflow.executor
 import java.nio.file.Path
 
+import groovy.util.logging.Slf4j
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -31,6 +32,7 @@ import nextflow.util.DockerBuilder
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 class BashWrapperBuilder {
 
     final private TaskRun task
@@ -47,7 +49,7 @@ class BashWrapperBuilder {
 
     String wrapperScript
 
-    String containerName
+    String dockerImage
 
     List<String> moduleNames
 
@@ -59,8 +61,11 @@ class BashWrapperBuilder {
 
     def shell
 
-    Map dockerOptions
+    Map dockerConfig
 
+    Path dockerMount
+
+    private runWithDocker
 
     BashWrapperBuilder( TaskRun task ) {
         this.task = task
@@ -70,7 +75,6 @@ class BashWrapperBuilder {
         this.scratch = task.scratch
         this.workDir = task.workDir
         this.targetDir = task.targetDir
-        this.containerName = task.container ?: task.processor?.session?.config?.docker?.container
 
         // set the environment
         this.environment = task.processor.getProcessEnvironment()
@@ -79,11 +83,15 @@ class BashWrapperBuilder {
         this.moduleNames = task.processor.taskConfig.getModule()
         this.shell = task.processor.taskConfig.shell
         this.script = task.script.toString()
-        this.dockerOptions = task.processor?.session?.config?.docker
 
+        // docker config
+        this.dockerConfig = task.processor?.session?.config?.docker
+        this.dockerImage = task.container ?: dockerConfig?.image
     }
 
     BashWrapperBuilder( Map params ) {
+        log.trace "Wrapper params: $params"
+
         task = null
         this.shell = params.shell ?: TaskConfig.DEFAULT_SHELL
         this.script = params.script?.toString()
@@ -92,8 +100,11 @@ class BashWrapperBuilder {
         this.workDir = params.workDir
         this.targetDir = params.targetDir
         this.environment = params.environment
-        this.containerName = params.container ?: params.docker?.container
-        this.dockerOptions = params.docker
+
+        // docker config
+        this.dockerConfig = params.dockerConfig
+        this.dockerImage = params.container ?: dockerConfig?.image
+        this.dockerMount = params.dockerMount
     }
 
     /**
@@ -147,6 +158,9 @@ class BashWrapperBuilder {
         final exitedFile = workDir.resolve(TaskRun.CMD_EXIT)
         final wrapperFile = workDir.resolve(TaskRun.CMD_RUN)
 
+        // set true when running with docker
+        runWithDocker = dockerImage && dockerConfig.enabled?.toString() == 'true'
+
         /*
          * the script file
          */
@@ -189,7 +203,7 @@ class BashWrapperBuilder {
         wrapper << 'touch ' << startedFile.toString() << ENDL
 
         // source the environment
-        if( !containerName ) {
+        if( !runWithDocker ) {
             wrapper << '[ -f '<< environmentFile.toString() << ' ]' << ' && source ' << environmentFile.toString() << ENDL
         }
 
@@ -213,22 +227,26 @@ class BashWrapperBuilder {
         wrapper << '( '
 
         // execute by invoking the command through a Docker container
-        if( containerName ) {
-            def docker = new DockerBuilder(containerName)
+        if( runWithDocker ) {
+            def docker = new DockerBuilder(dockerImage)
             if( task ) {
                 docker.addMountForInputs( task.getInputFiles() )
                       .addMount( task.processor.session.workDir )
                       .addMount( task.processor.session.binDir )
             }
+            if( dockerMount )
+                docker.addMount(dockerMount)
 
             // set the environment
             if( !environmentFile.empty() )
                 docker.addEnv( environmentFile )
 
-            if( dockerOptions ) {
-                if( dockerOptions.temp?.toString() == 'true' )
-                    dockerOptions.temp = changeDir ? '$NXF_SCRATCH' : '$(mktemp -d)'
-                docker.params(dockerOptions)
+            docker.params(dockerConfig)
+
+            // extra rule for the 'auto' temp dir temp dir
+            def temp = dockerConfig.temp?.toString()
+            if( temp == 'auto' || temp == 'true' ) {
+                docker.setTemp( changeDir ? '$NXF_SCRATCH' : '$(mktemp -d)' )
             }
 
             wrapper << docker.build() << ' '

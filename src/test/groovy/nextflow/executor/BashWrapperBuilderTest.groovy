@@ -80,7 +80,7 @@ class BashWrapperBuilderTest extends Specification {
         wrapper.input == 'alpha'
         wrapper.workDir == Paths.get('a')
         wrapper.targetDir == Paths.get('b')
-        wrapper.containerName == 'docker_x'
+        wrapper.dockerImage == 'docker_x'
         wrapper.environment ==  [a:1, b:2]
         wrapper.script ==  'echo ciao'
         wrapper.shell == 'bash -e'
@@ -142,7 +142,8 @@ class BashWrapperBuilderTest extends Specification {
         def bash = new BashWrapperBuilder(
                 workDir: folder,
                 script: 'echo Hello world!',
-                docker: [container: 'busybox', temp: true, sudo: true] )
+                dockerMount: Paths.get('/some/path'),
+                dockerConfig: [image: 'busybox', temp: 'auto', sudo: true, enabled: true] )
         bash.build()
 
         then:
@@ -163,7 +164,7 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_exit 1 2 3 15 ERR TERM USR1 USR2
                 function on_exit() { local exit_status=\${1:-\$?}; printf \$exit_status > ${folder}/.exitcode; exit \$exit_status; }
                 touch ${folder}/.command.begin
-                ( sudo docker run --rm -v \$(mktemp -d):/tmp -v \$PWD:\$PWD -w \$PWD busybox /bin/bash -ue ${folder}/.command.sh ) &> ${folder}/.command.out
+                ( sudo docker run --rm -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD busybox /bin/bash -ue ${folder}/.command.sh ) &> ${folder}/.command.out
                 on_exit
                 """
                         .stripIndent().leftTrim()

@@ -27,9 +27,9 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
-import nextflow.script.ScriptRunner
-import nextflow.script.ConfigBuilder
 import nextflow.scm.AssetManager
+import nextflow.script.ConfigBuilder
+import nextflow.script.ScriptRunner
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 /**
@@ -116,6 +116,12 @@ class CmdRun extends HubOptions {
     @Parameter(names = ['-with-trace'], description = 'Trace execution to the specified file')
     String withTrace
 
+    @Parameter(names = '-with-docker', description = 'Enable process execution in a Docker container')
+    def withDocker
+
+    @Parameter(names = '-without-docker', description = 'Disable process execution with Docker', arity = 0)
+    boolean withoutDocker
+
     @Parameter(names = ['-bg'], arity = 0, hidden = true)
     void setBackground(boolean value) {
         launcher.options.background = value
@@ -126,6 +132,9 @@ class CmdRun extends HubOptions {
         launcher.options.config = value
     }
 
+    @DynamicParameter(names = ['-cluster.'], description = 'Define cluster options', hidden = true )
+    Map<String,String> clusterOptions = [:]
+
     @Override
     final String getName() { NAME }
 
@@ -134,6 +143,10 @@ class CmdRun extends HubOptions {
         String pipeline = stdin ? '-' : ( args ? args[0] : null )
         if( !pipeline )
             throw new AbortOperationException("No pipeline to run was specified")
+
+        if( withDocker && withoutDocker )
+            throw new AbortOperationException("Command line options `-with-docker` and `-without-docker` cannot be specified at the same time")
+
 
         log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
 
@@ -147,6 +160,7 @@ class CmdRun extends HubOptions {
                         .setCmdRun(this)
                         .setBaseDir(scriptFile.parentFile)
                         .build()
+                        .toMap()
 
         // -- create a new runner instance
         def runner = new ScriptRunner(config)
@@ -211,7 +225,7 @@ class CmdRun extends HubOptions {
          */
         manager.setPipeline(repo as String)
 
-        if( !manager.localPath.exists() || latest ) {
+        if( !manager.isLocal() || latest ) {
             log.info "Pulling $repo ..."
             def result = manager.download()
             if( result )

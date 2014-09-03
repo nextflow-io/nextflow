@@ -270,6 +270,26 @@ class ConfigBuilder {
         runOptions.params?.each { name, value ->
             config.params.put(name, parseValue(value))
         }
+
+        if( cmdRun.withoutDocker && config.docker instanceof Map ) {
+            // disable docker execution
+            log.debug "Disabling execution in Docker contained as request by cli option `-without-docker`"
+            config.docker.enabled = false
+        }
+
+        if( cmdRun.withDocker ) {
+            log.debug "Enabling execution in Docker container as request by cli option `-with-docker ${cmdRun.withDocker}`"
+            if( !config.containsKey('docker') )
+                config.docker = [:]
+            if( !(config.docker instanceof Map) )
+                throw new AbortOperationException("Invalid `docker` definition in the config file")
+
+            config.docker.enabled = true
+            if( cmdRun.withDocker != '-' ) {
+                // this is supposed to be a docker image name
+                config.docker.image = cmdRun.withDocker
+            }
+        }
     }
 
     /**

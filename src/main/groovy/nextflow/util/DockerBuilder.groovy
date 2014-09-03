@@ -47,6 +47,8 @@ class DockerBuilder {
 
     private boolean userEmulation
 
+    private String registry
+
     private static final String USER_AND_HOME_EMULATION = '-u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME'
 
     DockerBuilder( String name ) {
@@ -76,18 +78,29 @@ class DockerBuilder {
         if( params.containsKey('temp') )
             this.temp = params.temp
 
-        if( params.containsKey('options') )
-            this.options = params.options
+        if( params.containsKey('runOptions') )
+            this.options = params.runOptions
 
         if ( params.containsKey('userEmulation') )
             this.userEmulation = params.userEmulation?.toString() == 'true'
 
-        if ( params.containsKey('rm') )
-            this.remove = params.rm?.toString() == 'true'
+        if ( params.containsKey('remove') )
+            this.remove = params.remove?.toString() == 'true'
 
         if( params.containsKey('sudo') )
             this.sudo = params.sudo?.toString() == 'true'
 
+        if( params.containsKey('registry') ) {
+            this.registry = params.registry
+            if( !registry.endsWith('/') ) registry += '/'
+        }
+
+
+        return this
+    }
+
+    DockerBuilder setTemp( String value ) {
+        this.temp = value
         return this
     }
 
@@ -120,6 +133,9 @@ class DockerBuilder {
 
         if( options )
             result << options.trim() << ' '
+
+        if( registry )
+            result << registry
 
         // finally the container name
         result << image

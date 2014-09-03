@@ -192,6 +192,10 @@ class LauncherTest extends Specification {
         Launcher.normalizeArgs('run','-with-trace') == ['run', '-with-trace','trace.csv']
         Launcher.normalizeArgs('run','-with-trace', '-x') == ['run', '-with-trace','trace.csv', '-x']
         Launcher.normalizeArgs('run','-with-trace', 'file.x') == ['run', '-with-trace','file.x']
+
+        Launcher.normalizeArgs('run','-with-docker') == ['run', '-with-docker','-']
+        Launcher.normalizeArgs('run','-with-docker', '-x') == ['run', '-with-docker','-', '-x']
+        Launcher.normalizeArgs('run','-with-docker', 'busybox') == ['run', '-with-docker','busybox']
     }
 
 

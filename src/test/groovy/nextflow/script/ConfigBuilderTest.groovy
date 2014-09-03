@@ -20,7 +20,10 @@
 
 package nextflow.script
 
+import java.nio.file.Files
+
 import nextflow.cli.CliOptions
+import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
@@ -140,35 +143,6 @@ class ConfigBuilderTest extends Specification {
 
     }
 
-
-    def testConfigToMap  () {
-
-        setup:
-        def config = new ConfigSlurper().parse( 'task {field1=1; field2="two"}; env { x = 99 } ' )
-
-        when:
-        def map = ConfigBuilder.configToMap(config)
-        map.env.PATH = '/local/bin'
-
-        then:
-        map.task.field1 == 1
-        map.task.field2 == "two"
-        map.env.x == 99
-        map.env.y == null
-        map.env.PATH == '/local/bin'
-
-    }
-
-    def testCommandDaemonOptions() {
-
-        when:
-        def opt = new CliOptions(daemonOptions: [group:'pippo', join:'192.168.0.1', 'x.y.z': 123])
-        def result = new ConfigBuilder().setOptions(opt).buildConfig([])
-        then:
-        result.daemon == [group:'pippo', join:'192.168.0.1', x:[y:[z:123]]]
-
-    }
-
     def testCommandExecutorOptions() {
 
         when:
@@ -179,6 +153,107 @@ class ConfigBuilderTest extends Specification {
         result.executor.alpha == 1
         result.executor.beta.x == 'hola'
         result.executor.beta.y == 'ciao'
+
+    }
+
+    def testRunCommandClusterOptions() {
+
+        when:
+        def opt = new CliOptions()
+        def run = new CmdRun(clusterOptions: [ alpha: 1, 'beta.x': 'hola', 'beta.y': 'ciao' ])
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([])
+        then:
+        result.cluster.alpha == 1
+        result.cluster.beta.x == 'hola'
+        result.cluster.beta.y == 'ciao'
+
+    }
+
+    def testRunWithDocker() {
+
+        when:
+        def opt = new CliOptions()
+        def run = new CmdRun(withDocker: 'cbcrg/piper')
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+
+        then:
+        config.docker.enabled
+        config.docker.image == 'cbcrg/piper'
+
+    }
+
+    def testRunWithDocker2() {
+
+        given:
+        def file = Files.createTempFile('test','config')
+        file.deleteOnExit()
+        file.text =
+                '''
+                docker {
+                    image = 'busybox'
+                    enabled = false
+                }
+                '''
+
+        when:
+        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        def run = new CmdRun(withDocker: '-')
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        then:
+        config.docker.enabled
+        config.docker.image == 'busybox'
+
+        when:
+        opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        run = new CmdRun(withDocker: 'cbcrg/mybox')
+        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        then:
+        config.docker.enabled
+        config.docker.image == 'cbcrg/mybox'
+
+    }
+
+    def testRunWithDocker3() {
+
+        given:
+        def file = Files.createTempFile('test','config')
+        file.deleteOnExit()
+        file.text =
+                '''
+                docker {
+                    image = 'busybox'
+                    enabled = true
+                }
+                '''
+
+        when:
+        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        def run = new CmdRun(withoutDocker: true)
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        then:
+        !config.docker.enabled
+        config.docker.image == 'busybox'
+
+    }
+
+    def testConfigWithClusterOptions() {
+
+        when:
+        def opt = new CliOptions()
+        def cmd = new CmdNode(clusterOptions: [join: 'x', group: 'y', interface: 'abc', slots: 10, 'tcp.alpha':'uno', 'tcp.beta': 'due'])
+
+        def config = new ConfigBuilder()
+                .setOptions(opt)
+                .setCmdNode(cmd)
+                .build()
+
+        then:
+        config.cluster.join == 'x'
+        config.cluster.group == 'y'
+        config.cluster.interface == 'abc'
+        config.cluster.slots == 10
+        config.cluster.tcp.alpha == 'uno'
+        config.cluster.tcp.beta == 'due'
 
     }
 
