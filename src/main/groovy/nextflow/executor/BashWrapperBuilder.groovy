@@ -159,7 +159,7 @@ class BashWrapperBuilder {
         final wrapperFile = workDir.resolve(TaskRun.CMD_RUN)
 
         // set true when running with docker
-        runWithDocker = dockerImage && dockerConfig.enabled?.toString() == 'true'
+        runWithDocker = dockerImage && dockerConfig?.enabled?.toString() == 'true'
 
         /*
          * the script file
