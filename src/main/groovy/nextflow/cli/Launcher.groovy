@@ -122,6 +122,7 @@ class Launcher implements ExitCode {
                 new CmdDrop(),
                 new CmdConfig(),
                 new CmdNode(),
+                new CmdView(),
                 new CmdHelp()
         ]
 
