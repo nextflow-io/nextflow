@@ -154,7 +154,7 @@ abstract class AbstractGridExecutor extends Executor {
     /**
      * Status as returned by the grid engine
      */
-    static protected enum QueueStatus { PENDING, RUNNING, HOLD, ERROR, DONE }
+    static protected enum QueueStatus { PENDING, RUNNING, HOLD, ERROR, DONE, UNKNWON }
 
     /**
      * @return The status for all the scheduled and running jobs
@@ -807,4 +807,98 @@ class SlurmExecutor extends AbstractGridExecutor {
 
         return result
     }
+}
+
+
+@Slf4j
+@InheritConstructors
+class PbsExecutor extends AbstractGridExecutor {
+
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
+
+        final result = new ArrayList<String>()
+
+        result << 'qsub'
+        result << '-d' << task.workDirectory?.toString()
+        result << '-N' << "nf-${task.name.replace(' ','_')}"
+        result << '-o' << '/dev/null'
+        result << '-e' << '/dev/null'
+        result << '-V'
+
+        // the requested queue name
+        if( taskConfig.queue ) {
+            result << '-q'  << (String)taskConfig.queue
+        }
+
+//        // max task duration
+//        if( taskConfig.maxDuration ) {
+//            final duration = taskConfig.maxDuration as Duration
+//            result << "-l" << "h_rt=${duration.format('HH:mm:ss')}"
+//        }
+//
+        // task max memory
+        if( taskConfig.maxMemory ) {
+            result << "-l" << "mem=${taskConfig.maxMemory.toString().replaceAll(/[\s]/,'')}"
+        }
+
+        // -- at the end append the command script wrapped file name
+        if( taskConfig.clusterOptions ) {
+            result.addAll( getClusterOptionsAsList() )
+        }
+
+        // -- last entry to 'script' file name
+        result << scriptFile.getName()
+
+        return result
+    }
+
+    @Override
+    def parseJobId( String text ) {
+        // return always the last line
+        def result = text?.trim()
+        if( result )
+            return result
+
+        throw new IllegalStateException("Invalid PBS/Torque submit response:\n$text\n\n")
+    }
+
+
+    @PackageScope
+    List<String> killTaskCommand(jobId) {
+        ['qdel', jobId?.toString()]
+    }
+
+    @Override
+    protected List<String> queueStatusCommand(Object queue) {
+        def result = ['qstat']
+        if( queue )
+            result << queue.toString()
+
+        return result
+    }
+
+    static private Map DECODE_STATUS = [
+            'C': QueueStatus.DONE,
+            'R': QueueStatus.RUNNING,
+            'Q': QueueStatus.PENDING,
+            'H': QueueStatus.HOLD,
+            'S': QueueStatus.HOLD
+    ]
+
+    @Override
+    protected Map<?, QueueStatus> parseQueueStatus(String text) {
+
+        def result = [:]
+        text?.eachLine{ String row, int index ->
+            if( index< 2 ) return
+            def cols = row.split(/\s+/)
+            if( cols.size()>5 ) {
+                result.put( cols[0], DECODE_STATUS[cols[4]] ?: AbstractGridExecutor.QueueStatus.UNKNWON )
+            }
+        }
+
+        return result
+    }
+
+
 }
