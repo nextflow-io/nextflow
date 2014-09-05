@@ -52,7 +52,7 @@ public class CapsuleLoader extends Capsule {
         }
 
         String javaCmd = System.getenv().get("JAVA_CMD");
-        if( javaCmd != null || !"".equals(javaCmd) ) {
+        if( javaCmd != null && !"".equals(javaCmd) ) {
             // use the Java command provided by the env variable
             pb.command().set(0, javaCmd);
         }
