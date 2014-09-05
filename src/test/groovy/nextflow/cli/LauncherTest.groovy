@@ -29,20 +29,15 @@ import spock.lang.Specification
 class LauncherTest extends Specification {
 
 
-    def static createLauncher(String... args) {
-        [args: args] as Launcher
-    }
-
-
     def testVersion () {
 
         when:
-        def launcher = createLauncher('-v').parseMainArgs()
+        def launcher = new Launcher().parseMainArgs('-v')
         then:
         assert launcher.options.version
 
         when:
-        launcher = createLauncher('-version').parseMainArgs()
+        launcher = new Launcher().parseMainArgs('-version')
         then:
         assert launcher.options.version
         assert launcher.fullVersion
@@ -53,19 +48,19 @@ class LauncherTest extends Specification {
     def testHelp () {
 
         when:
-        def launcher = createLauncher('-h').parseMainArgs()
+        def launcher = new Launcher().parseMainArgs('-h')
 
         then:
         assert launcher.options.help
 
         when:
-        launcher = createLauncher('help').parseMainArgs()
+        launcher = new Launcher().parseMainArgs('help')
         then:
         launcher.command instanceof CmdHelp
         launcher.command.args == null
 
         when:
-        launcher = createLauncher('help','xxx').parseMainArgs()
+        launcher = new Launcher().parseMainArgs('help','xxx')
         then:
         launcher.command instanceof CmdHelp
         launcher.command.args == ['xxx']
@@ -75,13 +70,13 @@ class LauncherTest extends Specification {
     def testInfo() {
 
         when:
-        def launcher = createLauncher('info').parseMainArgs()
+        def launcher = new Launcher().parseMainArgs('info')
         then:
         launcher.command instanceof CmdInfo
         launcher.command.args == null
 
         when:
-        launcher = createLauncher('info','xxx').parseMainArgs()
+        launcher = new Launcher().parseMainArgs('info','xxx')
         then:
         launcher.command instanceof CmdInfo
         launcher.command.args == ['xxx']
@@ -91,13 +86,13 @@ class LauncherTest extends Specification {
     def testPull() {
 
         when:
-        def launcher = createLauncher('pull','alpha').parseMainArgs()
+        def launcher = new Launcher().parseMainArgs('pull','alpha')
         then:
         launcher.command instanceof CmdPull
         launcher.command.args == ['alpha']
 
         when:
-        launcher = createLauncher('pull','xxx', '-hub', 'bitbucket', '-user','xx:11').parseMainArgs()
+        launcher = new Launcher().parseMainArgs('pull','xxx', '-hub', 'bitbucket', '-user','xx:11')
         then:
         launcher.command instanceof CmdPull
         launcher.command.args == ['xxx']
@@ -109,7 +104,7 @@ class LauncherTest extends Specification {
 
     def testClone() {
         when:
-        def launcher = createLauncher('clone','xxx', '-hub', 'bitbucket', '-user','xx:yy').parseMainArgs()
+        def launcher = new Launcher().parseMainArgs('clone','xxx', '-hub', 'bitbucket', '-user','xx:yy')
         then:
         launcher.command instanceof CmdClone
         launcher.command.args == ['xxx']
@@ -121,7 +116,7 @@ class LauncherTest extends Specification {
 
     def testRun() {
         when:
-        def launcher = createLauncher('run','xxx', '-hub', 'bitbucket', '-user','xx:yy').parseMainArgs()
+        def launcher = new Launcher().parseMainArgs('run','xxx', '-hub', 'bitbucket', '-user','xx:yy')
         then:
         launcher.command instanceof CmdRun
         launcher.command.args == ['xxx']
@@ -130,14 +125,14 @@ class LauncherTest extends Specification {
         launcher.command.hubPassword == 'yy'
 
         when:
-        launcher = createLauncher('run','alpha', '-hub', 'github').parseMainArgs()
+        launcher = new Launcher().parseMainArgs('run','alpha', '-hub', 'github')
         then:
         launcher.command instanceof CmdRun
         launcher.command.args == ['alpha']
         launcher.command.hubProvider == 'github'
 
         when:
-        createLauncher('run','alpha', '-hub', 'xyz').parseMainArgs()
+        new Launcher().parseMainArgs('run','alpha', '-hub', 'xyz')
         then:
         thrown(ParameterException)
     }

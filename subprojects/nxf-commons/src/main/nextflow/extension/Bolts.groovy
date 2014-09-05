@@ -66,4 +66,17 @@ class Bolts {
         }
     }
 
+    /**
+     * Indent each line in the given test by a specified prefix
+     *
+     * @param text
+     * @param prefix
+     * @return The string indented
+     */
+    public static String indent( String text, String prefix = ' ') {
+        def result = new StringBuilder()
+        text?.eachLine { result << prefix << it << '\n' }
+        return result.toString()
+    }
+
 }

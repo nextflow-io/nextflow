@@ -60,8 +60,6 @@ class Launcher implements ExitCode {
 
     private CmdBase command
 
-    private String[] args
-
     private String cliString
 
     private List<CmdBase> allCommands
@@ -77,41 +75,11 @@ class Launcher implements ExitCode {
      *
      * @param args The command line arguments provided by the user
      */
-    protected Launcher(String... args) {
-        this.args = args
-        this.cliString = System.getenv('NXF_CLI')
-        this.colsString = System.getenv('COLUMNS')
-
-        try {
-            // -- parse the program arguments - and - configure the logger
-            parseMainArgs()
-            LoggerHelper.configureLogger(this)
-        }
-        catch( ParameterException e ) {
-            // print command line parsing errors
-            // note: use system.err.println since if an exception is raised
-            //       parsing the cli params the logging is not configured
-            System.err.println "${e.getMessage()} -- Check the available commands and options and syntax with 'help'"
-            System.exit( INVALID_COMMAND_LINE_PARAMETER )
-
-        }
-        catch( Throwable e ) {
-            e.printStackTrace(System.err)
-            System.exit( UNKNOWN_ERROR )
-        }
+    Launcher() {
+        init()
     }
 
-
-    /** ONLY FOR TEST */
-    protected Launcher () { }
-
-
-    /**
-     * Create the Jcommander 'interpreter' and parse the command line arguments
-     */
-    @PackageScope
-    Launcher parseMainArgs() {
-
+    protected void init() {
         allCommands = (List<CmdBase>)[
                 new CmdClone(),
                 new CmdHistory(),
@@ -126,8 +94,6 @@ class Launcher implements ExitCode {
                 new CmdHelp()
         ]
 
-        def cols = getColumns()
-        normalizedArgs = normalizeArgs(args)
         options = new CliOptions()
         jcommander = new JCommander(options)
         allCommands.each { cmd ->
@@ -135,8 +101,21 @@ class Launcher implements ExitCode {
             jcommander.addCommand(cmd.name, cmd)
         }
         jcommander.setProgramName( APP_NAME )
+    }
+
+    /**
+     * Create the Jcommander 'interpreter' and parse the command line arguments
+     */
+    @PackageScope
+    Launcher parseMainArgs(String... args) {
+        this.cliString = System.getenv('NXF_CLI')
+        this.colsString = System.getenv('COLUMNS')
+
+        def cols = getColumns()
         if( cols )
             jcommander.setColumnSize(cols)
+
+        normalizedArgs = normalizeArgs(args)
         jcommander.parse( normalizedArgs as String[] )
         fullVersion = '-version' in normalizedArgs
         command = allCommands.find { it.name == jcommander.getParsedCommand()  }
@@ -288,11 +267,37 @@ class Launcher implements ExitCode {
         println ''
     }
 
+    protected Launcher command( String[] args ) {
+        /*
+         * CLI argument parsing
+         */
+        try {
+            parseMainArgs(args)
+            LoggerHelper.configureLogger(this)
+        }
+        catch( ParameterException e ) {
+            // print command line parsing errors
+            // note: use system.err.println since if an exception is raised
+            //       parsing the cli params the logging is not configured
+            System.err.println "${e.getMessage()} -- Check the available commands and options and syntax with 'help'"
+            System.exit( INVALID_COMMAND_LINE_PARAMETER )
+
+        }
+        catch( Throwable e ) {
+            e.printStackTrace(System.err)
+            System.exit( UNKNOWN_ERROR )
+        }
+        return this
+    }
+
     /**
      * Launch the pipeline execution
      */
     protected void run() {
 
+        /*
+         * Real execution starts here
+         */
         try {
             log.debug '$> ' + cliString
 
@@ -322,7 +327,7 @@ class Launcher implements ExitCode {
         }
 
         catch( ConfigParseException e )  {
-            log.error("${e.message}\n\n${indent(e.cause?.message?.toString(), '  ')}\n  ${SEE_LOG_FOR_DETAILS}\n", e.cause ?: e)
+            log.error("${e.message}\n\n${e.cause?.message?.toString()?.indent('  ')}\n  ${SEE_LOG_FOR_DETAILS}\n", e.cause ?: e)
             System.exit(INVALID_CONFIG)
         }
 
@@ -340,16 +345,10 @@ class Launcher implements ExitCode {
      */
     public static void main(String... args)  {
 
-        new Launcher(args).run()
-
+        def launcher = DripMain.LAUNCHER ?: new Launcher()
+        launcher .command(args) .run()
     }
 
-
-    public static String indent( String str, String separator = ' ') {
-        def result = new StringBuilder()
-        str?.eachLine { result << separator << it << '\n' }
-        return result.toString()
-    }
 
     /**
      * Print the application version number
