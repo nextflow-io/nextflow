@@ -49,6 +49,9 @@ export NXF_CLI
 export COLUMNS
 export EXTRAE_CONFIG_FILE
 
+DRIP_INIT_CLASS=nextflow.cli.DripMain
+DRIP_INIT=''
+
 EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
 SUBPROJECTS='nxf-commons nxf-dnanexus nxf-gridgain nxf-extrae'
 
