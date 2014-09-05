@@ -65,7 +65,7 @@ class DataflowExtensions {
     static private DEF_ERROR_LISTENER = new DataflowEventAdapter() {
         @Override
         public boolean onException(final DataflowProcessor processor, final Throwable e) {
-            DataflowExtensions.log.error("Unknown operator error ${Const.SEE_LOG_FOR_DETAILS}", e)
+            DataflowExtensions.log.error("Unknown operator error ${Const.log_detail_tip_message}", e)
             Session.currentInstance?.abort()
             return true;
         }
@@ -224,7 +224,7 @@ class DataflowExtensions {
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
                 error = true
                 if( !events.onError ) {
-                    DataflowExtensions.log.error("Cannot execute operator. Cause: ${e} -- See '.nextflow.log' for details", e)
+                    DataflowExtensions.log.error("Cannot execute operator. Cause: ${e} ${Const.log_detail_tip_message}", e)
                     Session.currentInstance?.abort()
                 }
                 else {
@@ -359,7 +359,7 @@ class DataflowExtensions {
 
             @Override
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                DataflowExtensions.log.error("Unknown 'flatMap' operator error ${Const.SEE_LOG_FOR_DETAILS}", e)
+                DataflowExtensions.log.error("Unknown 'flatMap' operator error ${Const.log_detail_tip_message}", e)
                 Session.currentInstance?.abort()
                 return true;
             }
@@ -493,7 +493,7 @@ class DataflowExtensions {
             }
 
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                DataflowExtensions.log.error("Unknown 'reduce' operator error -- see '.nextflow.log' for details", e)
+                DataflowExtensions.log.error("Unknown 'reduce' operator error ${Const.log_detail_tip_message}", e)
                 Session.currentInstance?.abort()
                 return true;
             }
@@ -1121,7 +1121,7 @@ class DataflowExtensions {
                 }
 
                 public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                    DataflowExtensions.log.error("Unknown 'spread' operator error ${Const.SEE_LOG_FOR_DETAILS}", e)
+                    DataflowExtensions.log.error("Unknown 'spread' operator error ${Const.log_detail_tip_message}", e)
                     Session.currentInstance?.abort()
                     return true;
                 }
@@ -1252,7 +1252,7 @@ class DataflowExtensions {
 
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
-                DataflowExtensions.log.error("Unknown 'buffer' operator error -- see '.nextflow.log' for details", e)
+                DataflowExtensions.log.error("Unknown 'buffer' operator error ${Const.log_detail_tip_message}", e)
                 Session.currentInstance?.abort()
                 return true
             }
@@ -1322,7 +1322,7 @@ class DataflowExtensions {
 
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
-                DataflowExtensions.log.error("Unknown 'collate' operator error ${Const.SEE_LOG_FOR_DETAILS}", e)
+                DataflowExtensions.log.error("Unknown 'collate' operator error ${Const.log_detail_tip_message}", e)
                 Session.currentInstance?.abort()
                 return true
             }

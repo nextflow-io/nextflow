@@ -124,6 +124,9 @@ class Const {
       http://nextflow.io
 """
 
-    final static String SEE_LOG_FOR_DETAILS = '-- See the .nextflow.log file for details'
+    /*
+     * Generic error message using the log file name
+     */
+    static String log_detail_tip_message
 
 }

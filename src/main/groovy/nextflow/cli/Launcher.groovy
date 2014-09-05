@@ -22,7 +22,6 @@ package nextflow.cli
 import static nextflow.Const.APP_BUILDNUM
 import static nextflow.Const.APP_NAME
 import static nextflow.Const.APP_VER
-import static nextflow.Const.SEE_LOG_FOR_DETAILS
 import static nextflow.Const.SPLASH
 
 import com.beust.jcommander.JCommander
@@ -31,6 +30,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Const
 import nextflow.ExitCode
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
@@ -122,6 +122,12 @@ class Launcher implements ExitCode {
         // whether is running a daemon
         daemonMode = command instanceof CmdNode
         // set the log file name
+        checkLogFileName()
+
+        return this
+    }
+
+    private void checkLogFileName() {
         if( !options.logFile ) {
             if( isDaemon() )
                 options.logFile = '.node-nextflow.log'
@@ -129,7 +135,8 @@ class Launcher implements ExitCode {
                 options.logFile = ".nextflow.log"
         }
 
-        return this
+        // define the generic error message using the log file name
+        Const.log_detail_tip_message =  options.logFile ? "-- See the ${options.logFile} file for details" : ''
     }
 
     private short getColumns() {
@@ -327,12 +334,12 @@ class Launcher implements ExitCode {
         }
 
         catch( ConfigParseException e )  {
-            log.error("${e.message}\n\n${e.cause?.message?.toString()?.indent('  ')}\n  ${SEE_LOG_FOR_DETAILS}\n", e.cause ?: e)
+            log.error("${e.message}\n\n${e.cause?.message?.toString()?.indent('  ')}\n  ${Const.log_detail_tip_message}\n", e.cause ?: e)
             System.exit(INVALID_CONFIG)
         }
 
         catch( Throwable fail ) {
-            log.error("${fail.toString()} ${SEE_LOG_FOR_DETAILS}", fail)
+            log.error("${fail.toString()} ${Const.log_detail_tip_message}", fail)
             System.exit(UNKNOWN_ERROR)
         }
 

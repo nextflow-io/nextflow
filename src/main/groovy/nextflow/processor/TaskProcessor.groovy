@@ -744,14 +744,14 @@ abstract class TaskProcessor {
             }
             else {
                 message << formatErrorCause( error )
-                message << "Tip: ${Const.SEE_LOG_FOR_DETAILS}"
+                message << Const.log_detail_tip_message
             }
             log.error message.join('\n')
             log.debug "Process $name raise the following exception:", error
         }
         catch( Throwable e ) {
             // no recoverable error
-            log.error("Unexpected error -- Execution aborted. Check the log file '.nextflow.log' for more details", e )
+            log.error("Execution aborted due to an unxpected error ${Const.log_detail_tip_message}", e )
         }
 
         session.abort()
