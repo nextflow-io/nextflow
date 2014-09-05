@@ -46,13 +46,17 @@ class CmdInfo extends CmdBase {
     @Parameter(names='-d',description = 'Show detailed information', arity = 0)
     boolean detailed
 
+    @Parameter(names='-dd', hidden = true, arity = 0)
+    boolean moreDetailed
+
     @Override
     final String getName() { NAME }
 
     @Override
     void run() {
         if( !args ) {
-            println getInfo(detailed)
+            int level = moreDetailed ? 2 : ( detailed ? 1 : 0 )
+            println getInfo(level)
             return
         }
 
@@ -81,23 +85,29 @@ class CmdInfo extends CmdBase {
         }
     }
 
+    final static private BLANK = '  '
+    final static private NEWLINE = '\n'
+
+    static String getInfo(boolean detailed = false) {
+        getInfo( detailed ? 1 : 0 )
+    }
+
     /**
      * @return A string containing some system runtime information
      */
-    static String getInfo(boolean detailed = false) {
+    static String getInfo(int level) {
 
-        final BLANK = '  '
-        final NEWLINE = '\n'
+        def props = System.getProperties()
+
         def result = new StringBuilder()
         result << BLANK << "Version: ${Const.APP_VER} build ${Const.APP_BUILDNUM}" << NEWLINE
-        result << BLANK << "Last modified: ${Const.APP_TIMESTAMP_UTC} ${Const.deltaLocal()}" << NEWLINE
-        result << BLANK << "Os: ${System.getProperty('os.name')} ${System.getProperty('os.version')}" << NEWLINE
-        result << BLANK << "Groovy: ${GroovySystem.getVersion()}" << NEWLINE
-        result << BLANK << "Jvm: ${System.getProperty('java.vendor')} ${System.getProperty('java.runtime.version')}" << NEWLINE
+        result << BLANK << "Modified: ${Const.APP_TIMESTAMP_UTC} ${Const.deltaLocal()}" << NEWLINE
+        result << BLANK << "System: ${props['os.name']} ${props['os.version']}" << NEWLINE
+        result << BLANK << "Runtime: Groovy ${GroovySystem.getVersion()} on ${System.getProperty('java.vm.name')} ${props['java.runtime.version']}" << NEWLINE
         result << BLANK << "Encoding: ${System.getProperty('file.encoding')} (${System.getProperty('sun.jnu.encoding')})" << NEWLINE
         result << BLANK << "Address: ${getLocalNameAndAddress()}" << NEWLINE
 
-        if( !detailed )
+        if( level == 0  )
             return result.toString()
 
         List<String> capsule = []
@@ -112,40 +122,102 @@ class CmdInfo extends CmdBase {
                             args << it
                     }
 
-        String[] classPath = System.getProperty('java.class.path').split(':')
-
         // file system
         result << BLANK << "File systems: "
         result << FileSystemProvider.installedProviders().collect { it.scheme }.join(', ')
         result << NEWLINE
 
         // JVM options
-        result << BLANK << "Opts:" << NEWLINE
-        for( String x : args ) {
-            result << BLANK << BLANK << x << NEWLINE
+        result << BLANK << "JVM opts:" << NEWLINE
+        for( String entry : args ) {
+            int p = entry.indexOf('=')
+            if( p!=-1 ) {
+                def key = entry.substring(0,p)
+                def value = entry.substring(p+1)
+                dump(key,value,2, result)
+            }
+            else {
+                dump(entry,null,2, result)
+            }
         }
 
         // Capsule options
-        result << BLANK << "Capsule:" << NEWLINE
-        for( String x : capsule ) {
-            result << BLANK << BLANK << x << NEWLINE
-        }
+        dump("Capsule", capsule, 1, result)
 
         // Env
         result << BLANK << "Environment:" << NEWLINE
-        for( Map.Entry<String,String> entry : System.getenv().entrySet() ) {
-            if( entry.key.startsWith('NXF_') ) {
-                result << BLANK << BLANK << entry.key << '=' << entry.value << NEWLINE
+        def entries = System.getenv().keySet().sort()
+        for( def key : entries ) {
+            if( key.startsWith('NXF_') || level>1 ) {
+                dump(  key, System.getenv().get(key), 2, result )
+            }
+        }
+
+        // java properties
+        if( level>1 ) {
+            result << BLANK << "Properties:" << NEWLINE
+            entries = System.getProperties().keySet().sort()
+            for( String key : entries ) {
+                if( key == 'java.class.path' ) continue
+                dump( key, System.getProperties().get(key), 2, result )
             }
         }
 
         // Class path
-        result << BLANK << "Class-path:" << NEWLINE
-        for( String x : classPath ) {
-            result << BLANK << BLANK << x << NEWLINE
+        dump("Class-path" , System.getProperty('java.class.path'), 1, result)
+
+        // final string
+        return result.toString()
+    }
+
+    static private void dump(String key, def value, int indent, StringBuilder result) {
+
+        if( value instanceof String && value.count(':') && (key=~/.*PATH$/ || key=='PERL5LIB' || key.contains('.path') || key.contains('-path') || key.contains('.dir')) ) {
+            value = value.split(":") as Collection
+        }
+        else if( value?.class?.isArray() ) {
+            value = value as Collection
         }
 
-        return result.toString()
+        if ( value instanceof Collection ) {
+            blanks(indent, result)
+            result << key << (indent==1 ? ':' : '=')
+            for( String item : value ) {
+                result << NEWLINE
+                blanks(indent+1, result)
+                result << item
+            }
+        }
+        else if( value ) {
+            blanks(indent, result)
+            result << key << (indent==1 ? ':' : '=')
+            if( value == '\n' ) {
+                result << '\\n'
+            }
+            else if( value == '\r' ) {
+                result << '\\r'
+            }
+            else if( value == '\n\r' ) {
+                result << '\\n\\r'
+            }
+            else if( value == '\r\n' ) {
+                result << '\\r\\n'
+            }
+            else {
+                result << value
+            }
+        }
+        else if( key ) {
+            blanks(indent, result)
+            result << key
+        }
+        result << NEWLINE
+    }
+
+    static private blanks( int n, StringBuilder result ) {
+        for( int i=0; i<n; i++ ) {
+            result << BLANK
+        }
     }
 
     /**
