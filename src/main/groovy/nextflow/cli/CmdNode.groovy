@@ -42,7 +42,7 @@ class CmdNode extends CmdBase {
     @Override
     final String getName() { NAME }
 
-    @DynamicParameter(names ='-cluster.', hidden = true, description='Define cluster config options')
+    @DynamicParameter(names ='-cluster.', description='Define cluster config options')
     Map<String,String> clusterOptions = [:]
 
     @Parameter(names = ['-bg'], arity = 0, description = 'Start the cluster node daemon in background')
