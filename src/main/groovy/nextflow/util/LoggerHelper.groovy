@@ -19,8 +19,7 @@
  */
 
 package nextflow.util
-
-import static nextflow.Const.*
+import static nextflow.Const.MAIN_PACKAGE
 
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -42,7 +41,6 @@ import groovy.transform.CompileStatic
 import nextflow.cli.Launcher
 import nextflow.file.FileHelper
 import org.slf4j.LoggerFactory
-
 /**
  * Helper methods to setup the logging subsystem
  *
@@ -98,31 +96,35 @@ class LoggerHelper {
         }
 
         // -- the file appender
-        def fileAppender = new RollingFileAppender()
-        fileAppender.file = logFileName
+        RollingFileAppender fileAppender = logFileName ? new RollingFileAppender() : null
+        if( fileAppender ) {
+            fileAppender.file = logFileName
 
-        def rollingPolicy = new  FixedWindowRollingPolicy( )
-        rollingPolicy.fileNamePattern = "${logFileName}.%i"
-        rollingPolicy.setContext(loggerContext)
-        rollingPolicy.setParent(fileAppender)
-        rollingPolicy.setMinIndex(1)
-        rollingPolicy.setMaxIndex(5)
-        rollingPolicy.start()
+            def rollingPolicy = new  FixedWindowRollingPolicy( )
+            rollingPolicy.fileNamePattern = "${logFileName}.%i"
+            rollingPolicy.setContext(loggerContext)
+            rollingPolicy.setParent(fileAppender)
+            rollingPolicy.setMinIndex(1)
+            rollingPolicy.setMaxIndex(5)
+            rollingPolicy.start()
 
-        def encoder = new PatternLayoutEncoder()
-        encoder.setPattern('%d{MMM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n')
-        encoder.setContext(loggerContext)
-        encoder.start()
+            def encoder = new PatternLayoutEncoder()
+            encoder.setPattern('%d{MMM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n')
+            encoder.setContext(loggerContext)
+            encoder.start()
 
-        fileAppender.rollingPolicy = rollingPolicy
-        fileAppender.encoder = encoder
-        fileAppender.setContext(loggerContext)
-        fileAppender.setTriggeringPolicy(new RollOnStartupPolicy())
-        fileAppender.start()
+            fileAppender.rollingPolicy = rollingPolicy
+            fileAppender.encoder = encoder
+            fileAppender.setContext(loggerContext)
+            fileAppender.setTriggeringPolicy(new RollOnStartupPolicy())
+            fileAppender.start()
+        }
+
 
         // -- configure the ROOT logger
         root.setLevel(Level.INFO)
-        root.addAppender(fileAppender)
+        if( fileAppender )
+            root.addAppender(fileAppender)
         if( consoleAppender )
             root.addAppender(consoleAppender)
 
@@ -131,17 +133,18 @@ class LoggerHelper {
         def logger = loggerContext.getLogger(MAIN_PACKAGE)
         logger.setLevel( mainLevel == Level.TRACE ? Level.TRACE : Level.DEBUG )
         logger.setAdditive(false)
-        logger.addAppender(fileAppender)
+        if( fileAppender )
+            logger.addAppender(fileAppender)
         if( consoleAppender )
             logger.addAppender(consoleAppender)
-
 
         // -- debug packages specified by the user
         debugConf?.each { String clazz ->
             logger = loggerContext.getLogger( clazz )
             logger.setLevel(Level.DEBUG)
             logger.setAdditive(false)
-            logger.addAppender(fileAppender)
+            if( fileAppender )
+                logger.addAppender(fileAppender)
             if( consoleAppender )
                 logger.addAppender(consoleAppender)
         }
@@ -151,7 +154,8 @@ class LoggerHelper {
             logger = loggerContext.getLogger( clazz )
             logger.setLevel(Level.TRACE)
             logger.setAdditive(false)
-            logger.addAppender(fileAppender)
+            if( fileAppender )
+                logger.addAppender(fileAppender)
             if( consoleAppender )
                 logger.addAppender(consoleAppender)
         }

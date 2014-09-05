@@ -143,8 +143,12 @@ class Launcher implements ExitCode {
         // whether is running a daemon
         daemonMode = command instanceof CmdNode
         // set the log file name
-        if( !options.logFile )
-            options.logFile = isDaemon() ? ".node-nextflow.log" : ".nextflow.log"
+        if( !options.logFile ) {
+            if( isDaemon() )
+                options.logFile = '.node-nextflow.log'
+            else if( command instanceof CmdRun )
+                options.logFile = ".nextflow.log"
+        }
 
         return this
     }
