@@ -29,7 +29,7 @@ import java.util.List;
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public class Loader extends Capsule {
+public class CapsuleLoader extends Capsule {
 
     /**
      * Constructs a capsule from the given JAR file
@@ -37,14 +37,33 @@ public class Loader extends Capsule {
      * @param jarFile  the path to the JAR file
      * @param cacheDir the path to the (shared) Capsule cache directory
      */
-    protected Loader(Path jarFile, Path cacheDir) {
+    protected CapsuleLoader(Path jarFile, Path cacheDir) {
         super(jarFile, cacheDir);
+    }
+
+
+    protected ProcessBuilder prelaunch(List<String> jvmArgs, List<String> args) {
+        ProcessBuilder pb = super.prelaunch(jvmArgs,args);
+
+        String drip = System.getenv().get("NXF_DRIP");
+        if( drip != null && !"".equals(drip) ) {
+            pb.command().set(0, drip);
+            return pb;
+        }
+
+        String javaCmd = System.getenv().get("JAVA_CMD");
+        if( javaCmd != null || !"".equals(javaCmd) ) {
+            // use the Java command provided by the env variable
+            pb.command().set(0, javaCmd);
+        }
+
+        return pb;
     }
 
     @Override
     protected List<String> getDependencies() {
         List<String> parent = super.getDependencies();
-        return extendDepsWith(System.getenv("NXF_DEPS"), parent);
+        return extendDepsWith(System.getenv("NXF_GRAB"), parent);
     }
 
     protected List<Path> buildClassPath() {

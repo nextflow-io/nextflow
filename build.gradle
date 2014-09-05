@@ -225,7 +225,7 @@ task pack(type: Jar) {
 
     manifest {
         attributes(
-                'Main-Class'        : 'Loader',
+                'Main-Class'        : 'CapsuleLoader',
                 'Application-Name'  : 'nextflow-one',
                 'Application-Class' : mainClassName,
                 'Application-Version': version,
@@ -253,7 +253,7 @@ task packDx(type: Jar) {
 
     manifest {
         attributes(
-                'Main-Class'        : 'Loader',
+                'Main-Class'        : 'CapsuleLoader',
                 'Application-Name'  : 'nextflow-dx',
                 'Application-Class' : mainClassName,
                 'Application-Version': version,
@@ -283,7 +283,7 @@ task packGg(type: Jar) {
 
     manifest {
         attributes(
-                'Main-Class'        : 'Loader',
+                'Main-Class'        : 'CapsuleLoader',
                 'Application-Name'  : 'nextflow-gg',
                 'Application-Class' : mainClassName,
                 'Application-Version': version,
