@@ -174,14 +174,19 @@ class CmdRun extends HubOptions {
             log.debug( '\n'+CmdInfo.getInfo( log.isTraceEnabled() ) )
 
             // -- add this run to the local history
-            def cli = [ Const.APP_NAME ]; cli << launcher.cliString
-            HistoryFile.history.write( runner.session.uniqueId, cli )
+            trackHistory(runner.session.uniqueId)
 
             // -- run it!
             runner.execute(scriptArgs)
         }
     }
 
+    protected void trackHistory(UUID uuid) {
+        def cli = launcher.cliString
+        def p = cli.indexOf('nextflow ')
+        if( p != -1 ) cli = 'nextflow ' + cli.substring(p+9)
+        HistoryFile.history.write( uuid, cli )
+    }
 
     protected File getScriptFile(String pipelineName) {
         assert pipelineName

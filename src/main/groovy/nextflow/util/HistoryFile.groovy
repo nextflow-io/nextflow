@@ -35,17 +35,12 @@ class HistoryFile extends File {
         super('.nextflow.history')
     }
 
-    def write( UUID key, List args ) {
+    def void write( UUID key, args ) {
         assert key
         assert args != null
 
-        write(key.toString(), args)
-    }
-
-    def write( String key, List args ) {
-        def writer = new FileWriter(this,true)
-        writer << "${key.toString()}\t${args.join(' ')}\n"
-        writer.close()
+        def value = args instanceof Collection ? args.join(' ') : args
+        this << "${key.toString()}\t${value}\n"
     }
 
     def retrieveLastUniqueId() {
@@ -57,7 +52,6 @@ class HistoryFile extends File {
         def lastLine = lines.get(lines.size()-1)
         def splits = lastLine.split(/\t/)
         return splits.size()>0 ? splits[0] : null
-
     }
 
     def print() {

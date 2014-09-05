@@ -39,12 +39,15 @@ class HistoryFileTest extends Specification {
         HistoryFile.history.retrieveLastUniqueId() == null
 
         when:
-        HistoryFile.history.write( 'xxx', [1,2,3] )
-        HistoryFile.history.write( 'yyy', [1,2,3] )
-        HistoryFile.history.write( 'zzz', [1,2,3] )
+        def id1 = UUID.randomUUID()
+        def id2 = UUID.randomUUID()
+        def id3 = UUID.randomUUID()
+        HistoryFile.history.write( id1, [1,2,3] )
+        HistoryFile.history.write( id2, [1,2,3] )
+        HistoryFile.history.write( id3, [1,2,3] )
 
         then:
-        HistoryFile.history.retrieveLastUniqueId() == 'zzz'
+        HistoryFile.history.retrieveLastUniqueId() == id3.toString()
 
 
         cleanup:
