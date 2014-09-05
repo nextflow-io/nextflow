@@ -137,6 +137,16 @@ class ConfigBuilder {
             result << local
         }
 
+        if( options.userConfig ) {
+            def configFile = new File(options.userConfig)
+            if(!configFile.exists()) {
+                throw new AbortOperationException("The specified configuration file does not exist: $configFile -- check the name or choose another file")
+            }
+
+            log.debug "User config file: $configFile"
+            result << configFile
+        }
+
         return result
     }
 
