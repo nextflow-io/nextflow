@@ -6,7 +6,6 @@ import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.PoisonPill
-import nextflow.extension.FilesExtensions
 import nextflow.util.CacheHelper
 /**
  * Split FASTA formatted text content or files
@@ -187,7 +186,7 @@ class FastaSplitter extends AbstractTextSplitter {
 
         }
         finally {
-            FilesExtensions.closeQuietly(reader0)
+            reader0.closeQuietly()
         }
 
 

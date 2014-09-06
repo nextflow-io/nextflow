@@ -1,11 +1,9 @@
 package nextflow.splitter
-
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.PoisonPill
-import nextflow.extension.FilesExtensions
 /**
  * Splits a generic byte array in chunks having the specified length
  *
@@ -42,7 +40,7 @@ class BytesSplitter extends AbstractBinarySplitter {
 
         }
         finally {
-            FilesExtensions.closeQuietly(targetObject)
+            targetObject.closeQuietly()
         }
 
 

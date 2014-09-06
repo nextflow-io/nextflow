@@ -26,6 +26,7 @@ import java.nio.file.StandardOpenOption
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 /**
  *  Helper class used to aggregate values having the same key
@@ -34,9 +35,10 @@ import groovy.util.logging.Slf4j
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class FileCollector implements Closeable {
 
-    static final APPEND = [StandardOpenOption.APPEND, StandardOpenOption.WRITE] as OpenOption[]
+    static final OpenOption[] APPEND = [StandardOpenOption.APPEND, StandardOpenOption.WRITE] as OpenOption[]
 
     public Boolean newLine
 
@@ -57,7 +59,7 @@ class FileCollector implements Closeable {
     }
 
     protected Path _file( String name ) {
-        cache.getOrCreate(name) {
+        (Path)cache.getOrCreate(name) {
             def result = Files.createFile(temp.resolve(name))
             if( seed instanceof Map && seed.containsKey(name)) {
                 append0(result, _value(seed.get(name)))
@@ -80,7 +82,7 @@ class FileCollector implements Closeable {
             return new ByteArrayInputStream(value.toString().getBytes())
 
         if( value instanceof byte[] )
-            return new ByteArrayInputStream(value)
+            return new ByteArrayInputStream((byte[])value)
 
         throw new IllegalArgumentException("Not a valid file collector argument [${value.class.name}]: $value")
     }

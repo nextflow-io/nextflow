@@ -38,7 +38,6 @@ import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
 import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
-import org.apache.commons.io.IOUtils
 import org.apache.commons.lang.StringUtils
 /**
  * Generic task processor executing a task through a grid facility
@@ -324,9 +323,9 @@ class GridTaskHandler extends TaskHandler {
         }
         finally {
             // make sure to release all resources
-            IOUtils.closeQuietly(process.in)
-            IOUtils.closeQuietly(process.out)
-            IOUtils.closeQuietly(process.err)
+            process.in.closeQuietly()
+            process.out.closeQuietly()
+            process.err.closeQuietly()
             process.destroy()
         }
 

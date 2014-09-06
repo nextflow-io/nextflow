@@ -21,17 +21,18 @@
 package nextflow.util
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import nextflow.file.FileHelper
-
 /**
  * A trie data structure specialised to find the longest common paths
  * in a given list of paths
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class PathTrie {
 
-    private static PATH_SEP = File.separator
+    private static String PATH_SEP = File.separator
 
     List<Trie<String>> paths = []
 
@@ -60,7 +61,7 @@ class PathTrie {
     void add( Path path )  {
         assert path
 
-        List<String> tokens = path.collect { it.name }
+        List<String> tokens = path.collect { Path it -> it.name }
         if( !tokens )
             return
 
@@ -109,10 +110,10 @@ class PathTrie {
      */
     List<String> longest() {
 
-        def result = new LinkedList<String>()
+        List<String> result = new LinkedList<String>()
         paths.each {
 
-            def tokens = it.longest()
+            List<String> tokens = it.longest()
             if( !tokens )
                 return
 
@@ -121,7 +122,5 @@ class PathTrie {
 
         return result
     }
-
-
 
 }

@@ -42,6 +42,7 @@ import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessScriptException
 import nextflow.executor.Executor
+import nextflow.file.FileHolder
 import nextflow.script.BaseScript
 import nextflow.script.BasicMode
 import nextflow.script.EachInParam

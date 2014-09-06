@@ -21,7 +21,7 @@
 package nextflow.executor
 
 import nextflow.script.FileInParam
-import nextflow.processor.FileHolder
+import nextflow.file.FileHolder
 import spock.lang.Specification
 /**
  *

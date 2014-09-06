@@ -21,4 +21,4 @@
 
 moduleName=nextflow
 moduleVersion=1.0
-extensionClasses=nextflow.extension.NextflowExtensions,nextflow.extension.DataflowExtensions,nextflow.extension.FilesExtensions
+extensionClasses=nextflow.extension.DataflowExtensions

@@ -26,7 +26,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.MissingFileException
-import nextflow.processor.FileHolder
+import nextflow.file.FileHolder
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor

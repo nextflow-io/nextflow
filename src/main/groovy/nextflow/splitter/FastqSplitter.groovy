@@ -1,5 +1,4 @@
 package nextflow.splitter
-
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
@@ -7,7 +6,6 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.PoisonPill
 import net.sf.picard.fastq.FastqReader
 import net.sf.picard.fastq.FastqRecord
-import nextflow.extension.FilesExtensions
 /**
  * Split FASTQ formatted text content or files
  *
@@ -86,7 +84,7 @@ class FastqSplitter extends AbstractTextSplitter {
             }
         }
         finally {
-            FilesExtensions.closeQuietly(fastq)
+            fastq.closeQuietly()
         }
 
         /*

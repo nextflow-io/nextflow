@@ -19,7 +19,6 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -28,9 +27,9 @@ import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessException
-import nextflow.extension.FilesExtensions
+import nextflow.file.FileHelper
+import nextflow.file.FileHolder
 import nextflow.processor.DelegateMap
-import nextflow.processor.FileHolder
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -38,7 +37,6 @@ import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.script.ScriptType
 import nextflow.util.Duration
-import nextflow.file.FileHelper
 import nextflow.util.InputStreamDeserializer
 import nextflow.util.KryoHelper
 import org.apache.commons.lang.SerializationUtils
@@ -448,7 +446,7 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
     protected void copyToTargetDir( String filePattern, Path from, Path to ) {
         FileHelper.visitFiles( from, filePattern ) { Path it ->
             final rel = from.relativize(it)
-            FilesExtensions.copyTo( it, to.resolve(rel) )
+            it.copyTo(to.resolve(rel))
         }
     }
 

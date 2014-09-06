@@ -25,6 +25,7 @@ import java.util.concurrent.locks.ReentrantLock
 import embed.com.google.common.hash.HashCode
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.file.FileHolder
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
 import nextflow.script.FileOutParam

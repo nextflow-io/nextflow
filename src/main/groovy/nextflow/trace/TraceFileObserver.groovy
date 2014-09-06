@@ -27,12 +27,10 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
 import nextflow.Session
-import nextflow.extension.FilesExtensions
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-
 /**
  * Create a CSV file containing the processes execution information
  *
@@ -108,7 +106,7 @@ class TraceFileObserver implements TraceObserver {
     void onFlowStart(Session session) {
         log.debug "Flow starting -- trace file: $tracePath"
         // roll the any trace files that may exist
-        FilesExtensions.rollFile(tracePath)
+        tracePath.rollFile()
 
         // create a new trace file
         traceFile = new PrintWriter(new BufferedWriter( new FileWriter(tracePath.toFile())))

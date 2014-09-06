@@ -20,6 +20,8 @@
 
 package nextflow.util
 
+import groovy.transform.CompileStatic
+
 
 /**
  * Implements a basic Trie data structure
@@ -28,6 +30,7 @@ package nextflow.util
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class Trie<T> {
 
     private T vertex

@@ -1,14 +1,11 @@
 package nextflow.splitter
-
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.PoisonPill
-import nextflow.extension.FilesExtensions
 import org.apache.commons.lang.StringUtils
-
 /**
  * Split a CSV file in records
  *
@@ -166,7 +163,7 @@ class CsvSplitter extends AbstractTextSplitter {
 
         }
         finally {
-            FilesExtensions.closeQuietly(reader0)
+            reader0.closeQuietly()
         }
 
         /*

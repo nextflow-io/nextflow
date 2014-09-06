@@ -31,6 +31,10 @@ sourceSets {
 dependencies {
     compile "org.codehaus.groovy:groovy:${groovyVersion}"
     compile "org.codehaus.groovy:groovy-nio:${groovyVersion}"
+    compile "ch.qos.logback:logback-classic:${logbackVersion}"
+    compile "ch.qos.logback:logback-core:${logbackVersion}"
+    compile "commons-lang:commons-lang:2.6"
+    compile files('../../lib/guava-cache-16.0.1.jar')
 
     /* testCompile inherited from top gradle build file */
 }

@@ -20,38 +20,48 @@
 
 package nextflow.util
 
+import java.lang.reflect.Field
+
+import groovy.transform.CompileStatic
+
 /**
+ * Hack the Java process to be able to access the Unix process id
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CollectionHelper {
+@CompileStatic
+class PosixProcess {
 
+    @Delegate
+    Process target
 
-    static List flatten( Collection collection ) {
-        def result = []
-        flatten(collection, { result << it })
-        return result
+    PosixProcess( Process process ) {
+        assert process
+        assert process.class.name == 'java.lang.UNIXProcess'
+
+        target = process
     }
 
-    static void flatten( Collection list, Closure row ) {
+    /**
+     * Access the *target* Unix process pid, via a reflection trick
+     */
+    @Lazy Integer pid = {
 
-        def maxLen = 1
-        list.each { if( it instanceof Collection ) { maxLen = Math.max(maxLen,it.size()) } }
+        Field field = target.class.getDeclaredField("pid");
+        field.setAccessible(true);
+        return field.getInt(target);
 
-        for( int i=0; i<maxLen; i++ ) {
-            def set = new ArrayList(list.size())
+    } ()
 
-            for( int j=0; j<list.size(); j++ ) {
-                def val = list[j]
-                if( val instanceof Collection )
-                    set[j] = i < val.size() ? val[i] : null
-                else
-                    set[j] = val
-            }
 
-            row.call(set)
-        }
+    /**
+     * Check if the submitted job has terminated its execution
+     */
+    boolean hasExited() {
 
+        Field field = target.class.getDeclaredField("hasExited");
+        field.setAccessible(true);
+        return field.getBoolean(target);
 
     }
 

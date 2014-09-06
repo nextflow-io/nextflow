@@ -23,6 +23,7 @@ package nextflow.processor
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.file.FileHolder
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
 import nextflow.script.FileOutParam

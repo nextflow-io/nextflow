@@ -27,7 +27,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FilesExtensionsTest extends Specification {
+class NutsTest extends Specification {
 
 
 
@@ -170,7 +170,7 @@ class FilesExtensionsTest extends Specification {
         Files.createSymbolicLink( folder.resolve('linkDir'), folder.resolve('myFiles') )
 
         when:
-        FilesExtensions.copyTo(folder.resolve('linkDir'), folder.resolve('target'))
+        Nuts.copyTo(folder.resolve('linkDir'), folder.resolve('target'))
 
         then:
         Files.isDirectory(folder.resolve('target'))
@@ -201,7 +201,7 @@ class FilesExtensionsTest extends Specification {
          */
         when:
         folder.resolve('beta').mkdir()
-        FilesExtensions.copyTo(folder.resolve('alpha'), folder.resolve('beta'))
+        Nuts.copyTo(folder.resolve('alpha'), folder.resolve('beta'))
         then:
         folder.resolve('beta').isDirectory()
         folder.resolve('beta/alpha').isDirectory()
@@ -222,7 +222,7 @@ class FilesExtensionsTest extends Specification {
          */
         when:
         folder.resolve('beta').deleteDir()
-        FilesExtensions.copyTo(folder.resolve('alpha'), folder.resolve('beta'))
+        Nuts.copyTo(folder.resolve('alpha'), folder.resolve('beta'))
         then:
         folder.resolve('beta').isDirectory()
         folder.resolve('beta/file_1.txt').text == 'file 1'
@@ -236,7 +236,7 @@ class FilesExtensionsTest extends Specification {
 
         when:
         folder.resolve('beta').deleteDir()
-        FilesExtensions.copyTo(folder.resolve('alpha/dir2'), folder.resolve('beta/alpha/dir2'))
+        Nuts.copyTo(folder.resolve('alpha/dir2'), folder.resolve('beta/alpha/dir2'))
         then:
         folder.resolve('beta/alpha/dir2').isDirectory()
         folder.resolve('beta/alpha/dir2/file_4').text == 'Hello'
@@ -672,13 +672,13 @@ class FilesExtensionsTest extends Specification {
     def testDigitToPerm() {
 
         expect:
-        FilesExtensions.digitToPerm(1).toString() == '--x'
-        FilesExtensions.digitToPerm(2).toString() == '-w-'
-        FilesExtensions.digitToPerm(3).toString() == '-wx'
-        FilesExtensions.digitToPerm(4).toString() == 'r--'
-        FilesExtensions.digitToPerm(5).toString() == 'r-x'
-        FilesExtensions.digitToPerm(6).toString() == 'rw-'
-        FilesExtensions.digitToPerm(7).toString() == 'rwx'
+        Nuts.digitToPerm(1).toString() == '--x'
+        Nuts.digitToPerm(2).toString() == '-w-'
+        Nuts.digitToPerm(3).toString() == '-wx'
+        Nuts.digitToPerm(4).toString() == 'r--'
+        Nuts.digitToPerm(5).toString() == 'r-x'
+        Nuts.digitToPerm(6).toString() == 'rw-'
+        Nuts.digitToPerm(7).toString() == 'rwx'
 
     }
 
@@ -779,23 +779,23 @@ class FilesExtensionsTest extends Specification {
         def file = File.createTempFile('hello','file')
         then:
         file.empty()
-        file.isEmpty()
+        //file.isEmpty() == this is tested in NextflowDelegatingMetaClassTest
         when:
         file.text = 'hello'
         then:
         !file.empty()
-        !file.isEmpty()
+        //!file.isEmpty() == == this is tested in NextflowDelegatingMetaClassTest
 
         when:
         def path = Files.createTempFile('hello','path')
         then:
         path.empty()
-        path.isEmpty()
+        // path.isEmpty() == this is tested in NextflowDelegatingMetaClassTest
         when:
         path.text = 'hello'
         then:
         !path.empty()
-        !path.isEmpty()
+        // !path.isEmpty() == this is tested in NextflowDelegatingMetaClassTest
 
         cleanup:
         file?.delete()

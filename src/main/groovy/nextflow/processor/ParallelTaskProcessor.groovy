@@ -30,6 +30,7 @@ import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.Channel
+import nextflow.file.FileHolder
 import nextflow.script.EachInParam
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam

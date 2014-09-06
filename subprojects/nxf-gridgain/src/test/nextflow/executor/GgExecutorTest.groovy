@@ -22,7 +22,7 @@ package nextflow.executor
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import nextflow.processor.FileHolder
+import nextflow.file.FileHolder
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun

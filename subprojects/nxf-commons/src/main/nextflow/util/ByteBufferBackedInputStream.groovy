@@ -17,49 +17,42 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package nextflow.util
 
-import java.lang.reflect.Field
+import java.nio.ByteBuffer
+
+import groovy.transform.CompileStatic
 
 /**
- * Hack the Java process to be able to access the Unix process id
+ * An {@code InputStream} adaptor which reads data from a {@code ByteBuffer}
+ *
+ * See http://stackoverflow.com/a/6603018/395921
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class PosixProcess {
+@CompileStatic
+class ByteBufferBackedInputStream extends InputStream {
 
-    @Delegate
-    Process target
+    ByteBuffer buf;
 
-    PosixProcess( Process process ) {
-        assert process
-        assert process.class.name == 'java.lang.UNIXProcess'
-
-        target = process
+    public ByteBufferBackedInputStream(ByteBuffer buf) {
+        this.buf = buf;
     }
 
-    /**
-     * Access the *target* Unix process pid, via a reflection trick
-     */
-    @Lazy Integer pid = {
-
-        Field field = target.class.getDeclaredField("pid");
-        field.setAccessible(true);
-        return field.getInt(target);
-
-    } ()
-
-
-    /**
-     * Check if the submitted job has terminated its execution
-     */
-    boolean hasExited() {
-
-        Field field = target.class.getDeclaredField("hasExited");
-        field.setAccessible(true);
-        return field.getBoolean(target);
-
+    public int read() throws IOException {
+        if (!buf.hasRemaining()) {
+            return -1;
+        }
+        return buf.get() & 0xFF;
     }
 
+    public int read(byte[] bytes, int off, int len) throws IOException {
+        if (!buf.hasRemaining()) {
+            return -1;
+        }
+
+        len = Math.min(len, buf.remaining());
+        buf.get(bytes, off, len);
+        return len;
+    }
 }

@@ -27,11 +27,10 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.spi.FileSystemProvider
 
 import nextflow.Session
-import nextflow.extension.FilesExtensions
+import nextflow.extension.Nuts
+import nextflow.file.FileHelper
 import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
-import nextflow.file.FileHelper
-import org.apache.commons.io.IOUtils
 import org.gridgain.grid.GridGain
 import org.gridgain.grid.logger.slf4j.GridSlf4jLogger
 import spock.lang.Shared
@@ -186,7 +185,7 @@ class GgFileSystemProviderTest extends Specification {
         def target =  new GgPath(fs, rndName('/test-folder') )
 
         when:
-        def result = FilesExtensions.copyTo(folder, target)
+        def result = Nuts.copyTo(folder, target)
         then:
         result.resolve('file1').text == 'Ciao'
         result.resolve('file2').text == 'Hello'
@@ -314,7 +313,7 @@ class GgFileSystemProviderTest extends Specification {
         file1.text = 'Hello\nworld!'
 
         expect:
-        IOUtils.readLines(provider.newInputStream(file1)) == ['Hello','world!']
+        provider.newInputStream(file1).readLines() == ['Hello','world!']
 
         when:
         provider.newInputStream(file1, StandardOpenOption.WRITE)

@@ -19,6 +19,8 @@
  */
 
 package nextflow.util
+
+import java.nio.file.Files
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -26,7 +28,6 @@ import java.util.zip.ZipOutputStream
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import org.apache.commons.io.IOUtils
 /**
  * Make a script executable in a remote session, embedding the script classes and external libraries.
  * <p>
@@ -116,9 +117,7 @@ class RemoteSession implements Serializable, Closeable {
             if( file.isFile() ) {
                 count++
                 // append the file content
-                FileInputStream inFile = new FileInputStream(file);
-                IOUtils.copy(inFile, zip)
-                inFile.close()
+                Files.copy(file.toPath(), zip)
             }
             // Complete the entry
             zip.closeEntry();
@@ -157,10 +156,7 @@ class RemoteSession implements Serializable, Closeable {
                 throw new IllegalStateException("Unable to create target directory: ${file.parentFile} -- check file permissions")
 
             count++
-            BufferedOutputStream stream = new BufferedOutputStream(new FileOutputStream(file));
-            IOUtils.copy(zip, stream);
-            stream.close();
-
+            Files.copy(zip, file.toPath())
         }
         zip.close();
         log.debug "Staged library ($count files) to path: $target"

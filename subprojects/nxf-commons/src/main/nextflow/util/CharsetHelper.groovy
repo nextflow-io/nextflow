@@ -21,12 +21,14 @@
 package nextflow.util
 import java.nio.charset.Charset
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class CharsetHelper {
 
     static Charset getCharset( object ) {

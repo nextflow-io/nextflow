@@ -1,10 +1,13 @@
 package nextflow.util
 
+import groovy.transform.CompileStatic
+
 /**
  * Validation helper
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class CheckHelper {
 
 

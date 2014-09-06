@@ -35,7 +35,7 @@ import nextflow.script.ScriptType
 import nextflow.trace.TraceRecord
 import nextflow.util.Duration
 import nextflow.util.PosixProcess
-import org.apache.commons.io.IOUtils
+
 /**
  * Executes the specified task on the locally exploiting the underlying Java thread pool
  *
@@ -225,9 +225,9 @@ class LocalTaskHandler extends TaskHandler {
 
         if( destroyed ) { return }
 
-        IOUtils.closeQuietly(process.getInputStream())
-        IOUtils.closeQuietly(process.getOutputStream())
-        IOUtils.closeQuietly(process.getErrorStream())
+        process.getInputStream()?.closeQuietly()
+        process.getOutputStream()?.closeQuietly()
+        process.getErrorStream()?.closeQuietly()
         process.destroy()
         destroyed = true
     }

@@ -20,6 +20,7 @@
 
 package nextflow.util
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
 /**
@@ -29,6 +30,7 @@ import groovy.util.logging.Slf4j
  */
 
 @Slf4j
+@CompileStatic
 class InputStreamDeserializer extends ObjectInputStream {
 
     ClassLoader loader

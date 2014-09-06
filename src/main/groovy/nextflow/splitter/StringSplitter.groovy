@@ -1,11 +1,9 @@
 package nextflow.splitter
-
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.PoisonPill
-import nextflow.extension.FilesExtensions
 /**
  * Simple slitter chunking a string in sub-strings having the specified length
  *
@@ -50,7 +48,7 @@ class StringSplitter extends AbstractTextSplitter {
 
         }
         finally {
-            FilesExtensions.closeQuietly(targetObject)
+            targetObject.closeQuietly()
         }
 
         /*

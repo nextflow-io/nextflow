@@ -17,39 +17,17 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
-package nextflow.util
 
-import java.nio.ByteBuffer
+package nextflow
+
+import groovy.transform.CompileStatic
 
 /**
- * An {@code InputStream} adaptor which reads data from a {@code ByteBuffer}
- *
- * See http://stackoverflow.com/a/6603018/395921
+ * Hold global variables
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ByteBufferBackedInputStream extends InputStream {
-
-    ByteBuffer buf;
-
-    public ByteBufferBackedInputStream(ByteBuffer buf) {
-        this.buf = buf;
-    }
-
-    public int read() throws IOException {
-        if (!buf.hasRemaining()) {
-            return -1;
-        }
-        return buf.get() & 0xFF;
-    }
-
-    public int read(byte[] bytes, int off, int len) throws IOException {
-        if (!buf.hasRemaining()) {
-            return -1;
-        }
-
-        len = Math.min(len, buf.remaining());
-        buf.get(bytes, off, len);
-        return len;
-    }
+@CompileStatic
+class Global {
+    static final Map<String,Object> STATUS = [:]
 }

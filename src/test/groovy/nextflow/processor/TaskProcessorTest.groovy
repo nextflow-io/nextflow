@@ -24,6 +24,7 @@ import java.nio.file.Paths
 
 import groovyx.gpars.agent.Agent
 import nextflow.Session
+import nextflow.file.FileHolder
 import nextflow.script.FileInParam
 import nextflow.script.TokenVar
 import nextflow.script.ValueInParam

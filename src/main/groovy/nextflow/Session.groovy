@@ -137,6 +137,8 @@ class Session {
 
         // poor man singleton
         currentInstance = this
+        Global.STATUS.session = this
+        Global.STATUS.config = config
 
         // normalize taskConfig object
         if( config.process == null ) config.process = [:]

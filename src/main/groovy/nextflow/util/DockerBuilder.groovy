@@ -22,7 +22,7 @@ package nextflow.util
 import java.nio.file.Path
 
 import groovy.transform.PackageScope
-import nextflow.processor.FileHolder
+import nextflow.file.FileHolder
 
 /**
  * Helper methods to handle Docker containers

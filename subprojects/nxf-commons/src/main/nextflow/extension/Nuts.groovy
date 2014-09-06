@@ -19,7 +19,6 @@
  */
 
 package nextflow.extension
-
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.FileAlreadyExistsException
@@ -40,11 +39,9 @@ import java.nio.file.attribute.PosixFilePermissions
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.file.FileHelper
 import nextflow.util.ByteBufferBackedInputStream
 import nextflow.util.CharsetHelper
-import nextflow.file.FileHelper
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 /**
  * Add utility methods to standard classes {@code File} and {@code Path}
  *
@@ -52,7 +49,7 @@ import org.slf4j.LoggerFactory
  */
 
 @Slf4j
-class FilesExtensions {
+class Nuts {
 
     private static CR = 0x0D
 
@@ -215,7 +212,7 @@ class FilesExtensions {
                 // get the *delta* path against the source path
                 def delta = source.relativize(current)?.toString()
                 def newFolder = delta ? target.resolve(delta) : target
-                FilesExtensions.log.trace "Copy DIR: $current -> $newFolder"
+                Nuts.log.trace "Copy DIR: $current -> $newFolder"
                 if( !newFolder.exists() ) {
                     Files.copy(current, newFolder, StandardCopyOption.REPLACE_EXISTING)
                 }
@@ -229,7 +226,7 @@ class FilesExtensions {
                 // get the *delta* path against the source path
                 def delta = source.relativize(current)?.toString()
                 def newFile = delta ? target.resolve(delta) : target
-                FilesExtensions.log.trace "Copy file: $current -> $newFile"
+                Nuts.log.trace "Copy file: $current -> $newFile"
                 Files.copy(current, newFile, StandardCopyOption.REPLACE_EXISTING)
                 return FileVisitResult.CONTINUE;
             }
@@ -581,7 +578,7 @@ class FilesExtensions {
      * @return A list of strings or {@code null} if the path is not a folder
      */
     def static String[] list(Path self) {
-        listFiles(self).collect { it.getName() } as String[]
+        listFiles(self).collect { getName(it) } as String[]
     }
 
     /**
@@ -767,7 +764,7 @@ class FilesExtensions {
 
 
     static CharSequence tail( InputStream stream, int n, charset ) {
-        final charsetObj = NextflowExtensions.getCharset(charset)
+        final charsetObj = CharsetHelper.getCharset(charset)
         tail( new InputStreamReader(stream,charsetObj), n )
     }
 
@@ -1274,7 +1271,7 @@ class FilesExtensions {
      */
     static void rollFile( Path self ) {
 
-        if( FilesExtensions.exists(self) )
+        if( Nuts.exists(self) )
             rollFile0(self, self.resolveSibling( self.getFileName().toString() +'.1' ))
 
     }
@@ -1296,7 +1293,7 @@ class FilesExtensions {
             rollFile0(target, target.resolveSibling(name))
         }
 
-        FilesExtensions.renameTo(self, target)
+        Nuts.renameTo(self, target)
 
     }
 

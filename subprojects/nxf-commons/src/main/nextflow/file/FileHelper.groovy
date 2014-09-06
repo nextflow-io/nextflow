@@ -40,9 +40,9 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.Session
-import nextflow.extension.FilesExtensions
-import nextflow.extension.NextflowExtensions
+import nextflow.Global
+import nextflow.extension.Bolts
+import nextflow.extension.Nuts
 import nextflow.util.CacheHelper
 
 /**
@@ -223,11 +223,11 @@ class FileHelper {
             def bucket = hash.substring(0,2)
             def result = basePath.resolve( "tmp/$bucket/${hash.substring(2)}" )
 
-            if( FilesExtensions.exists(result) ) {
+            if( Nuts.exists(result) ) {
                 if( ++count > 100 ) { throw new IOException("Unable to create a unique temporary path: $result") }
                 continue
             }
-            if( !FilesExtensions.mkdirs(result) ) {
+            if( !Nuts.mkdirs(result) ) {
                 throw new IOException("Unable to create temporary parth: $result -- Verify file system access permission")
             }
 
@@ -265,7 +265,7 @@ class FileHelper {
         def result = [:]
         if( scheme?.toLowerCase() == 's3' ) {
 
-            List credentials = getAwsCredentials( env, Session.currentInstance?.config )
+            List credentials = getAwsCredentials( env, (Map)Global.STATUS.config )
             if( credentials ) {
                 // S3FS expect the access - secret keys pair in lower notation
                 result.access_key = credentials[0]
@@ -273,8 +273,8 @@ class FileHelper {
             }
         }
         else {
-            assert Session.currentInstance, "Session is not available -- make sure to call this after Session object has been created"
-            result.session = Session.currentInstance
+            assert Global.STATUS.session, "Session is not available -- make sure to call this after Session object has been created"
+            result.session = Global.STATUS.session
         }
         return result
     }
@@ -375,7 +375,7 @@ class FileHelper {
         /*
          * since the file system does not exist, create it a protected block
          */
-        NextflowExtensions.withLock(_fs_lock) {
+        Bolts.withLock(_fs_lock) {
 
             try { fs = provider.getFileSystem(uri) }
             catch( FileSystemNotFoundException e ) { fs=null }
@@ -418,7 +418,7 @@ class FileHelper {
             if( Files.exists(cached) )
                 return cached
 
-            return FilesExtensions.copyTo(sourcePath, cached)
+            return Nuts.copyTo(sourcePath, cached)
         }
     }
 

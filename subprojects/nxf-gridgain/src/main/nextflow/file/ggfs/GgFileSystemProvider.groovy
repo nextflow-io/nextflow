@@ -19,7 +19,6 @@
  */
 
 package nextflow.file.ggfs
-
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.AccessMode
 import java.nio.file.CopyOption
@@ -44,7 +43,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.executor.GgGridFactory
-import nextflow.extension.FilesExtensions
 import nextflow.util.OnlyCloseChannel
 import org.gridgain.grid.Grid
 import org.gridgain.grid.GridGain
@@ -403,7 +401,7 @@ class GgFileSystemProvider extends FileSystemProvider {
                 Files.copy(input, target);
             }
             finally {
-                FilesExtensions.closeQuietly(input)
+                input.closeQuietly()
             }
         }
 
