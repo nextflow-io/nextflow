@@ -27,7 +27,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class NutsTest extends Specification {
+class FileExTest extends Specification {
 
 
 
@@ -170,7 +170,7 @@ class NutsTest extends Specification {
         Files.createSymbolicLink( folder.resolve('linkDir'), folder.resolve('myFiles') )
 
         when:
-        Nuts.copyTo(folder.resolve('linkDir'), folder.resolve('target'))
+        FileEx.copyTo(folder.resolve('linkDir'), folder.resolve('target'))
 
         then:
         Files.isDirectory(folder.resolve('target'))
@@ -201,7 +201,7 @@ class NutsTest extends Specification {
          */
         when:
         folder.resolve('beta').mkdir()
-        Nuts.copyTo(folder.resolve('alpha'), folder.resolve('beta'))
+        FileEx.copyTo(folder.resolve('alpha'), folder.resolve('beta'))
         then:
         folder.resolve('beta').isDirectory()
         folder.resolve('beta/alpha').isDirectory()
@@ -222,7 +222,7 @@ class NutsTest extends Specification {
          */
         when:
         folder.resolve('beta').deleteDir()
-        Nuts.copyTo(folder.resolve('alpha'), folder.resolve('beta'))
+        FileEx.copyTo(folder.resolve('alpha'), folder.resolve('beta'))
         then:
         folder.resolve('beta').isDirectory()
         folder.resolve('beta/file_1.txt').text == 'file 1'
@@ -236,7 +236,7 @@ class NutsTest extends Specification {
 
         when:
         folder.resolve('beta').deleteDir()
-        Nuts.copyTo(folder.resolve('alpha/dir2'), folder.resolve('beta/alpha/dir2'))
+        FileEx.copyTo(folder.resolve('alpha/dir2'), folder.resolve('beta/alpha/dir2'))
         then:
         folder.resolve('beta/alpha/dir2').isDirectory()
         folder.resolve('beta/alpha/dir2/file_4').text == 'Hello'
@@ -672,13 +672,13 @@ class NutsTest extends Specification {
     def testDigitToPerm() {
 
         expect:
-        Nuts.digitToPerm(1).toString() == '--x'
-        Nuts.digitToPerm(2).toString() == '-w-'
-        Nuts.digitToPerm(3).toString() == '-wx'
-        Nuts.digitToPerm(4).toString() == 'r--'
-        Nuts.digitToPerm(5).toString() == 'r-x'
-        Nuts.digitToPerm(6).toString() == 'rw-'
-        Nuts.digitToPerm(7).toString() == 'rwx'
+        FileEx.digitToPerm(1).toString() == '--x'
+        FileEx.digitToPerm(2).toString() == '-w-'
+        FileEx.digitToPerm(3).toString() == '-wx'
+        FileEx.digitToPerm(4).toString() == 'r--'
+        FileEx.digitToPerm(5).toString() == 'r-x'
+        FileEx.digitToPerm(6).toString() == 'rw-'
+        FileEx.digitToPerm(7).toString() == 'rwx'
 
     }
 

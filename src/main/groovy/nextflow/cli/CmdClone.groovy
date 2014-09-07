@@ -24,9 +24,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
-import nextflow.extension.Nuts
 import nextflow.scm.AssetManager
-
 /**
  * CLI sub-command clone
  *
@@ -60,7 +58,7 @@ class CmdClone extends HubOptions {
         if( target.exists() ) {
             if( target.isFile() )
                 throw new AbortOperationException("A file with the same name already exists: $target")
-            if( !Nuts.empty(target) )
+            if( !target.empty() )
                 throw new AbortOperationException("Clone target directory must be empty: $target")
         }
         else if( !target.mkdirs() ) {

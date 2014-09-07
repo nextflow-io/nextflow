@@ -21,4 +21,4 @@
 
 moduleName=nxf-commons
 moduleVersion=1.0
-extensionClasses=nextflow.extension.Bolts,nextflow.extension.Nuts
+extensionClasses=nextflow.extension.Bolts,nextflow.extension.FileEx

@@ -49,7 +49,7 @@ import nextflow.util.CharsetHelper
  */
 
 @Slf4j
-class Nuts {
+class FileEx {
 
     private static CR = 0x0D
 
@@ -212,7 +212,7 @@ class Nuts {
                 // get the *delta* path against the source path
                 def delta = source.relativize(current)?.toString()
                 def newFolder = delta ? target.resolve(delta) : target
-                Nuts.log.trace "Copy DIR: $current -> $newFolder"
+                FileEx.log.trace "Copy DIR: $current -> $newFolder"
                 if( !newFolder.exists() ) {
                     Files.copy(current, newFolder, StandardCopyOption.REPLACE_EXISTING)
                 }
@@ -226,7 +226,7 @@ class Nuts {
                 // get the *delta* path against the source path
                 def delta = source.relativize(current)?.toString()
                 def newFile = delta ? target.resolve(delta) : target
-                Nuts.log.trace "Copy file: $current -> $newFile"
+                FileEx.log.trace "Copy file: $current -> $newFile"
                 Files.copy(current, newFile, StandardCopyOption.REPLACE_EXISTING)
                 return FileVisitResult.CONTINUE;
             }
@@ -1271,7 +1271,7 @@ class Nuts {
      */
     static void rollFile( Path self ) {
 
-        if( Nuts.exists(self) )
+        if( FileEx.exists(self) )
             rollFile0(self, self.resolveSibling( self.getFileName().toString() +'.1' ))
 
     }
@@ -1293,7 +1293,7 @@ class Nuts {
             rollFile0(target, target.resolveSibling(name))
         }
 
-        Nuts.renameTo(self, target)
+        FileEx.renameTo(self, target)
 
     }
 
