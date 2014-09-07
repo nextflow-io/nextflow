@@ -42,8 +42,8 @@ public class CapsuleLoader extends Capsule {
     }
 
 
-    protected ProcessBuilder prelaunch(List<String> jvmArgs, List<String> args) {
-        ProcessBuilder pb = super.prelaunch(jvmArgs,args);
+    protected ProcessBuilder prelaunch(List<String> args) {
+        ProcessBuilder pb = super.prelaunch(args);
 
         String drip = System.getenv().get("NXF_DRIP");
         if( drip != null && !"".equals(drip) ) {
