@@ -23,6 +23,7 @@ Contents:
    dnanexus
    gridgain
    tracing
+   sharing
    example
 
    

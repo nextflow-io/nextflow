@@ -5,36 +5,36 @@ GridGain cluster
 *******************
 
 
-Nextflow can be be deployed in a *cluster* mode by using `GridGain <http://www.gridgain.com>`_, an In-Memory data-grid
+Nextflow can be be deployed in a *cluster* mode by using `GridGain <http://www.gridgain.com>`_, an in-memory data-grid
 and clustering platform.
 
 GridGain is packaged with Nextflow itself, so you won't need to install it separately or configure other third party
 software.
 
-.. warning:: GridGain cluster integration is an incubating feature.
+.. warning:: This is an incubating feature. It may change in future Nextflow releases.
 
 .. _gridgain-daemon:
 
 Cluster daemon
 ---------------------
 
-In order to setup a cluster you will need to run a cluster daemon on each mode that made up your cluster. It only
-requires Java 7 to be installed.
+In order to setup a cluster you will need to run a cluster daemon on each node that made up your cluster.
+If you want to support the :ref:`Docker integration <docker-page>` feature provided by Nextflow, the Docker engine has
+to be installed and must run in each node.
 
 In its simplest form just launch the Nextflow daemon in each cluster node as shown below::
 
-    nextflow -d -bg
+    nextflow node -bg
 
-The process will run in the background. The daemon output is stored in the log file ``.nxf-daemon.log``. The daemon
+The command line options ``-bg`` launches the node daemon in the background. The output is stored in the log file ``.node-nextflow.log``. The daemon
 process ``PID`` is saved in the file ``.nextflow.pid`` in the same folder.
 
-If you don't see members joining, then it is likely because multicast is not available.
 
 Multicast discovery
 ====================
 
-By default, it tries to discover the cluster members by using the network *multicast* discovery. Note that NOT all
-networks support this feature.
+By default, the GridGain daemon tries to discover the members in the cluster by using the network *multicast* discovery.
+Note that NOT all networks support this feature (Amazon EC2 does not).
 
 .. tip::  To check if multicast is available, `iperf <http://sourceforge.net/projects/iperf/>`_ is a useful tool which is available for Windows/\*NIX/OSX.
   To test multicast open a terminal one 2 machines within the network and run the following in the first terminal
@@ -43,9 +43,9 @@ networks support this feature.
 
 
 GridGain uses the multicast group ``228.1.2.4`` and port ``47400`` by default. You can change these values, by using the
-``daemon.join`` command line option, as shown below::
+``cluster.join`` command line option, as shown below::
 
-    nextflow -bg -daemon.join multicast:224.2.2.3:55701
+    nextflow node -bg -cluster.join multicast:224.2.2.3:55701
 
 
 
@@ -56,7 +56,7 @@ Shared file system
 
 Simply provide a path shared across the cluster by a network file system, as shown below::
 
-    nextflow -bg -daemon.join path:/net/shared/cluster
+    nextflow node -bg -cluster.join path:/net/shared/cluster
 
 
 The cluster members will use that path to discover each other.
@@ -67,14 +67,14 @@ IP address
 
 Provide the list of pre-configured IP addresses on the daemon launch command line, for example::
 
-    nextflow -bg -daemon.join ip:10.0.2.1,10.0.2.2,10.0.2.4
+    nextflow node -bg -cluster.join ip:10.0.2.1,10.0.2.2,10.0.2.4
 
 AWS S3 bucket
 ===============
 
 Creates an Amazon AWS S3 bucket that will hold the cluster members IP addresses. For example::
 
-   nextflow -bg -daemon.join s3:cluster_bucket
+   nextflow node -bg -cluster.join s3:cluster_bucket
 
 
 
@@ -82,7 +82,7 @@ Creates an Amazon AWS S3 bucket that will hold the cluster members IP addresses.
 Advanced options
 =====================
 
-The following daemon configuration options can be used.
+The following cluster node configuration options can be used.
 
 =========================== ================
 Name                        Description
@@ -106,46 +106,39 @@ tcp.maxAckTimeout           Sets maximum timeout for receiving acknowledgement f
 tcp.joinTimeout             Sets join timeout.
 =========================== ================
 
-These options can be specified as command line parameters by pre-pending them the prefix ``-daemon.``, as shown below::
+These options can be specified as command line parameters by pre-pending them the prefix ``-cluster.``, as shown below::
 
-    nextflow -bg -daemon.slots 4 -daemon.interface eth0
+    nextflow node -bg -cluster.slots 4 -cluster.interface eth0
 
 The same options can be entered in the nextflow configuration file named ``nextflow.config``, as shown below::
 
 
-  daemon {
+  cluster {
     join = 'ip:192.168.1.104'
     interface = 'eth0'
   }
 
 Finally daemon options can be provided also as environment variables having the name in upper-case and by pre-pending
-them the prefix ``NXF_DAEMON_``, for example::
+them with the prefix ``NXF_CLUSTER_``, for example::
 
-    export NXF_DAEMON_JOIN='ip:192.168.1.104'
-    export NXF_DAEMON_INTERFACE='eth0'
+    export NXF_CLUSTER_JOIN='ip:192.168.1.104'
+    export NXF_CLUSTER_INTERFACE='eth0'
 
 
 Pipeline execution
 -----------------------
 
-The pipeline should be launched in a `head` node i.e. a cluster node where the Nextflow daemon is not running.
-In order to execute your pipeline in the GridGain cluster you will need to specify the GridGain executor,
+The pipeline should be launched in a `head` node i.e. a cluster node where the Nextflow node daemon is **not** running.
+In order to execute your pipeline in the GridGain cluster you will need to specify to use the GridGain executor,
 as shown below::
 
-   nextflow -executor.name gridgain <your pipeline script>
+   nextflow run <your pipeline> -process.executor gridgain
 
 
 If your network do no support multicast discovery, you will need to specify the `joining` strategy as you did for the
 cluster daemons. For example, using a shared path::
 
-    nextflow -executor.name gridgain -executor.join path:/net/shared/cluster <your pipeline script>
-
-
-In place of the command line parameters, the following environment variables can be used in a
-semantically equivalent manner::
-
-    export NXF_EXECUTOR_NAME='gridgain'
-    export NXF_EXECUTOR_JOIN='path:/net/shared/cluster'
+    nextflow run <your pipeline> -process.executor gridgain -cluster.join path:/net/shared/cluster
 
 
 

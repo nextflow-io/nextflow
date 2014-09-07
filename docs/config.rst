@@ -1,18 +1,30 @@
 .. _config-page:
 
 *******************
-Configuration file
+Configuration
 *******************
 
-When Nextflow is launched it looks for a file named ``nextflow.config`` in the current working directory and for the
-file ``~/.nextflow/config`` (in the user home directory).
+Configuration file
+===================
 
-When both exist they are merged, so that the settings in the first override the same ones that may appear in the
-second one.
+When a pipeline script is launched Nextflow looks for a file named ``nextflow.config`` in the current directory and
+in the script base directory (if it is not the same as the current directory). Finally it checks for the file
+``$HOME/.nextflow/config``.
 
-Alternatively, a custom configuration file can be specified by using the command line option ``-c <config file name>``.
+When more than one on the above files exist they are merged, so that the settings in the first override the same ones
+that may appear in the second one.
 
-.. note:: It's worth noting that by doing this, both files ``nextflow.config`` and ``~/.nextflow/config`` are ignored.
+The default config file search mechanism can be extended proving an extra configuration file by using the command line
+option ``-c <config file>``.
+
+.. note:: It's worth noting that by doing this, the files ``nextflow.config`` and ``$HOME/.nextflow/config`` are not
+  ignored and they are merged as explained above.
+
+.. tip:: If you want to ignore any default configuration files and use only the custom one use the command line option
+  ``-C <config file>``.
+
+Config syntax
+--------------
 
 A Nextflow configuration file is a simple text file containing a set of properties defined using the syntax::
 
@@ -217,8 +229,8 @@ The following settings are available:
 ================== ================
 Name                Description
 ================== ================
-enabled             Enable Docker execution by turning this flag to ``true`` (default: ``false``)
-sudo                Launch Docker by using the ``sudo`` command (default: ``false``)
+enabled             Turn this flag to ``true`` to enable Docker execution (default: ``false``)
+sudo                Executes Docker run command as ``sudo`` (default: ``false``)
 temp                Mounts a path of your choice as the ``/tmp`` directory in the container. Use the special value ``auto`` to create a temporary directory each time a container is created
 remove              Clean-up the container after the execution (default: ``true``). For details see: http://docs.docker.com/reference/run/#clean-up-rm
 runOptions          This attribute can be used to provide any extra command line options supported by the ``docker run`` command. For details see: http://docs.docker.com/reference/run
@@ -238,3 +250,57 @@ brackets, as shown below::
 
 
 Read :ref:`docker-page` page to lean more how use Docker containers with Nextflow.
+
+
+.. _config-manifest:
+
+Scope `manifest`
+-----------------
+
+The ``manifest`` configuration scope allows you to define some meta-data information needed if you want to publish your
+pipeline on GitHub or BitBucket.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+homePage            Project home page URL
+description         Free text describing the pipeline project
+mainScript          Pipeline main script (default: ``main.nf``)
+defaultBranch       Git repository default branch (default: ``master``)
+================== ================
+
+
+The above options can be used by prefixing them with the ``manifest`` scope or surrounding them by curly
+brackets. For example::
+
+    manifest {
+        homePage = 'http://foo.com'
+        description = 'Pipeline does this and that'
+        mainScript = 'foo.nf'
+    }
+
+
+To learn how publish your pipeline with GitHub or BitBucket code repositories read the :ref:`sharing-page` page.
+
+Environment variables
+======================
+
+The following environment variables control the configuration of the Nextflow runtime and
+the Java virtual machine used by it.
+
+================== ================
+Name                Description
+================== ================
+NXF_HOME            Nextflow home directory (default: ``$HOME/.nextflow``).
+NXF_VER             Defines what version of Nextflow to use.
+NXF_ORG             Default `organization` prefix when looking for a hosted repository (default: ``nextflow-io``).
+NXF_GRAB            Provides extra runtime dependencies downloaded from a Maven repository service.
+NXF_OPTS            Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of ``-Dkey[=value]`` properties.
+NXF_CLASSPATH       Allows to extend the Java runtime classpath with extra jar files or class folders.
+NXF_DRMAA           Defines the Java DRMAA binding library to be used. It can be specified as a jar file location or a Maven dependency.
+NXF_PID_FILE        Name of the file where the process PID is saved when Nextflow is launched in background.
+JAVA_HOME           Path location of the Java VM installation used to run Nextflow.
+JAVA_CMD            Path location of the Java binary command used to launch  Nextflow.
+================== ================

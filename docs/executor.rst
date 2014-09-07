@@ -236,12 +236,54 @@ Nextflow manages each process as a separate job that is submitted to the cluster
 Being so, the pipeline must be launched from a node where the ``qsub`` command is available, that is, in a common usage
 scenario, the cluster `login` node.
 
-To enable the PBS executor simply set to ``process.executor`` property to ``pbs`` value in the ``nextflow.config`` file.
+To enable the PBS executor simply set the property ``process.executor = 'pbs'`` in the ``nextflow.config`` file.
 
-The ``clusterOptions`` configuration property allows to set any `native` cluster option accepted by the ``qsub`` command. For example::
+The configuration property ``clusterOptions`` allows you to set any `native` cluster option accepted by the ``qsub`` command. For example::
 
     process.executor = 'pbs'
     process.clusterOptions = '-l walltime=1:00:00'
+
+
+
+.. _drmaa-executor:
+
+DRMAA executor
+====================
+
+The `DRMAA` executor allows you to execute a Nextflow pipeline by using a grid engine that implements the
+Java binding for the `DRMAA <http://www.drmaa.org>`_ interface api (version 1).
+
+.. warning:: This is an incubating feature. It may change in future Nextflow releases.
+
+In order to be able to use this executor you will need to access the DRMAA libraries provided by your cluster vendor.
+Commonly these files are called ``drmaa.jar`` and ``libdrmaa.so`` and they located in the cluster installation lib folder.
+Ask to your IT administrator how to find these files.
+
+To enable the PBS executor you will need to set the property ``process.executor='drmaa'`` in the ``nextflow.config`` file,
+moreover you will need to specify the ``drmaa.jar`` file path on the Nextflow command line by using the ``-with-drmaa``
+option. For example::
+
+  nextflow run <your pipeline> -with-drmaa /some/path/drmaa.jar
+
+
+Alternatively, instead of specifying the DRMAA library on the command line, you may want to use the environment variable
+``NXF_DRMAA`` to define it.
+
+The ``clusterOptions`` configuration property allows you to set any `native` cluster option accepted by your
+grid engine platform.
+For example::
+
+    process.executor = 'drmaa'
+    process.clusterOptions = '-l walltime=1:00:00'
+
+
+
+.. tip:: If you get the following error message::
+
+      ERROR: java.lang.UnsatisfiedLinkError: no drmaa in java.library.path
+
+    Nextflow is unable to find ``libdrmaa.so`` file. The most common solution is
+    to include the path where this file is located in the ``LD_LIBRARY_PATH`` environment variable.
 
 
 .. _dnanexus-executor:
@@ -274,28 +316,6 @@ The list of instance types, that can be used for this property, is available in 
 <https://wiki.dnanexus.com/API-Specification-v1.0.0/IO-and-Run-Specifications#Run-Specification>`_ page.
 
 
-.. _hazelcast-executor:
-
-Hazelcast executor
-===================
-
-The ``hazelcast`` executor allows you to run your pipeline in a `Hazelcast <http://hazelcast.org>`_ cluster,
-a light-weight data-grid technology, integrated natively with Nextflow.
-
-The executor configuration properties are listed below:
-
-=============== ================
-Property         Description
-=============== ================
-name :sup:`*`   The name of the executor to use: ``hazelcast``
-join :sup:`*`   The IP address of one more more cluster nodes to which connect. Multiple addresses has to separated by a comma or a blank character.
-group           The name of the cluster to which connect. Default: ``nextflow``
-=============== ================
-
-:sup:`(*) mandatory`
-
-
-Read about the cluster set-up and configuration in the :ref:`hazelcast-page` page.
 
 
 
