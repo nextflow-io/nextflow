@@ -1,6 +1,23 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.10.0 - 8 Sept 2014
+- Added DRMAA executor 
+- Added PBS/Torque executor
+- Added processes execution report 
+- Added Extrae tracing support
+- Added support for GitHub private repositories
+- Added integration for BitBucket hosted repositories (Git vcs only)
+- Added native integration AWS S3 file system
+- Improved Docker support and configuration 
+- Improved GridGain cluster integration  
+- Removed Hazelcast integration 
+- Added Capsule based application packaging 
+- Added commands 
+        view: that prints the content a pipeline repository
+        config: shows pipeline configuration
+- Fixed issue #12 - Error resuming process with command defined on multiple lines
+        
 0.9.0 - 11 Aug 2014 
 - Added GitHub/Git support. It allows one to pull and run pipelines published on a 
   remote GitHub repository 
