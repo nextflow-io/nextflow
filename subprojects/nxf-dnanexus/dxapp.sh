@@ -5,10 +5,12 @@ set -e
 main() {
     # log file name
     LOG=${name}.log
+    export NXF_HOME='/opt/nextflow'
+    export NXF_PACKAGE='dx'
 
     # Launch it !
     set +e
-    java -jar /usr/bin/nextflow.jar \
+    bash /usr/bin/nextflow \
          -log $PWD/$LOG \
          run $script \
          -process.executor dnanexus \
