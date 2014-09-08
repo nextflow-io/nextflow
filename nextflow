@@ -206,7 +206,7 @@ elif [[ "$NXF_DRMAA" ]]; then
   exit 1
 fi
 
-COLUMNS=${COLUMNS:-`tput cols 2> /dev/tty || true`}
+COLUMNS=${COLUMNS:-`tty -s && tput cols 2> /dev/tty || true`}
 JAVA_OPTS="-noverify -Djava.awt.headless=true -Dcapsule.log=$CAPSULE_LOG -Dcapsule.trampoline"
 [[ "$JAVA_HOME" ]] && JAVA_OPTS+=" -Dcapsule.java.home=$JAVA_HOME"
 [[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=" -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
