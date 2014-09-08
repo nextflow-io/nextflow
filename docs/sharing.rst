@@ -12,9 +12,10 @@ How it works
 =============
 
 When you launch a script execution with Nextflow, it will look for a file with the pipeline name you've specified.
-If that file does not exist, it will look for a public repository with the same name on GitHub (default choice).
+If that file does not exist, it will look for a public repository with the same name on GitHub (unless otherwise specified).
 If it is found, the repository is automatically downloaded to your computer and the code executed. This repository is
-stored in the Nextflow home directory, by default ``$HOME/.nextflow``, thus it will be reused for any further execution.
+stored in the Nextflow home directory, by default the ``$HOME/.nextflow`` path, thus it will be reused for any further
+execution.
 
 Run a pipeline
 ================
@@ -31,8 +32,8 @@ In other words if a Nextflow project is hosted, for example, into a GitHub repos
 .. note:: For projects hosted on BitBucket you will need to specify this hosting service in the command line by adding the
   ``-hub bitbucket`` option.
 
-.. tip:: Private repositories can be accessed by specifying the access credentials with the ``-user`` command line option,
-  then the program will ask to enter the password interactively.
+.. tip:: Private repositories can be accessed by specifying the access credentials by using the ``-user`` command
+  line option, then the program will ask to enter the password interactively.
 
 
 You can try this feature out, by simply entering the following command in your shell terminal::
@@ -43,7 +44,7 @@ It will download a trivial `Hello` example from the repository published at the 
 http://github.com/nextflow-io/hello and execute it in your computer.
 
 If `owner` part in the pipeline name is omitted, Nextflow will look for a pipeline between the ones you have
-already executed having a name that matches the name specified. It none it's found it will try to download
+already executed having a name that matches the name specified. If none it's found it will try to download
 it using the `organisation` name defined by the environment variable ``NXF_ORG`` (which by default is ``nextflow-io``).
 
 
@@ -60,12 +61,15 @@ or ::
     nextflow run nextflow-io-/hello -r v1.1
 
 
+It will execute two different code revisions as specified.
+
 Commands to manage pipelines
 ============================
 
-The following commands allows you to perform some basic operations that can be used to manage your pipelines. Anyway
-Nextflow is not meant to replace functionalities provided by the `Git` tool, you may still need it to create new
-repositories or commit changes, etc.
+The following commands allows you to perform some basic operations that can be used to manage your pipelines.
+
+.. note:: Anyway Nextflow is not meant to replace functionalities provided by the `Git` tool, you may still need it to create new
+  repositories or commit changes, etc.
 
 List available pipelines
 -------------------------
@@ -156,13 +160,13 @@ included to your project. For example::
   manifest.mainScript = 'my_pipeline_very_long_name.nf'
 
 Learn more about this and other pipeline meta-data information that can be defined in the Nextflow configuration file
-reading the :ref:`Manifest <config-manifest>` section in the Nextflow configuration page.
+read the :ref:`Manifest <config-manifest>` section in the Nextflow configuration page.
 
 Once you have uploaded your pipeline project into GitHub (or BitBucket) other people can use it by specifying the
 pipeline `qualified` name on the Nextflow run command line. The qualified name is simply the GitHub user name
 (or organisation) plus the repository name.
 
-For the sake of the example if your GitHub is ``foo`` and you have uploaded it to a repository named ``bar`` the
+For the sake of the example if your GitHub account name is ``foo`` and you have uploaded it to a repository named ``bar`` the
 repository home page will be ``http://github.com/boo/bar`` and people will able to run it by entering the command::
 
   nextflow run foo/bar
@@ -172,12 +176,12 @@ repository home page will be ``http://github.com/boo/bar`` and people will able 
 Manage dependencies
 =====================
 
-Rarely a computational pipeline is composed by a single script file. In real world applications they depends on a
-other pieces of software. These can be other scripts, tools and applications compiled to a platform native binary format.
+Rarely a computational pipeline is composed by a single script. In real world applications they depends on other
+pieces of software. These can be other scripts, tools and applications compiled to a platform native binary format.
 
 External dependencies are the most common source of problems when sharing a piece of software, because the
-users need to have the identical set of tools to be able to use it. In many cases this is proven to be a painful
-and error prone process, that can severely limit the ability to reproduce computational results on a system other
+users need to have the identical set of tools and configuration to be able to use it. In many cases this is proven to be
+a painful and error prone process, that can severely limit the ability to reproduce computational results on a system other
 the one where it has been originally developed.
 
 Nextflow tackle this problem integrating the support for GitHub/BitBucket sharing platforms and `Docker <http://www.docker.com>`_ containers technology.
@@ -186,7 +190,7 @@ The use of a code management system is important to keep together all the depend
 pipeline and allows you to track the changes of the source code in a consistent manner.
 
 Moreover to guarantee that a pipeline is reproducible it should be self-contained i.e. it should not have any
-dependencies with hosting environment. By using Nextflow you can achieve this goal following these practices:
+dependencies with the hosting environment. By using Nextflow you can achieve this goal following these practices:
 
 Third party scripts
 --------------------
@@ -216,8 +220,8 @@ Resource manager
 --------------------
 
 When using Nextflow you don't need to write the code to parallelize your pipeline for a specific grid engine/resource
-manager because the parallelization is defined implicitly. The target execution environment is parametrized and
-defined in the configuration file, thus your code it's free from this kind of dependency.
+manager because the parallelization is defined implicitly and managed by the Nextflow runtime. The target execution
+environment is parametrized and defined in the configuration file, thus your code it's free from this kind of dependency.
 
 Bootstrap data
 --------------------
@@ -235,6 +239,25 @@ required files you may need. Then in your script you can access it writing::
    sequences.splitFasta {
         println it
     }
+
+User inputs
+-------------
+
+Nextflow scripts can be easily parametrised to allows users to provide their own input data. Simply declare on the
+top of your script all the parameters it may require as shown below::
+
+  params.my_input = 'default input file'
+  params.my_output = 'default output path'
+  params.my_flag = false
+  ..
+
+The actual parameter values can be provided when launching the script execution on the command line
+by prefixed the parameter name with a double ``--`` character. For example::
+
+  nextflow run <your pipeline> --my_input /path/to/input/file --my_output /other/path --my_flag true
+
+
+
 
 Binary applications
 --------------------

@@ -231,7 +231,8 @@ PBS/Torque executor
 
 The `PBS` executor allows you to run your pipeline script by using a resource manager belonging to the `PBS/Torque <http://en.wikipedia.org/wiki/Portable_Batch_System>`_ family of batch schedulers.
 
-Nextflow manages each process as a separate job that is submitted to the cluster by using the ``qsub`` command.
+Nextflow manages each process as a separate job that is submitted to the cluster by using the ``qsub`` command provided
+by the scheduler.
 
 Being so, the pipeline must be launched from a node where the ``qsub`` command is available, that is, in a common usage
 scenario, the cluster `login` node.
@@ -256,11 +257,11 @@ Java binding for the `DRMAA <http://www.drmaa.org>`_ interface api (version 1).
 .. warning:: This is an incubating feature. It may change in future Nextflow releases.
 
 In order to be able to use this executor you will need to access the DRMAA libraries provided by your cluster vendor.
-Commonly these files are called ``drmaa.jar`` and ``libdrmaa.so`` and they located in the cluster installation lib folder.
+Commonly these files are named ``drmaa.jar`` and ``libdrmaa.so`` and they are located in the cluster installation lib folder.
 Ask to your IT administrator how to find these files.
 
 To enable the PBS executor you will need to set the property ``process.executor='drmaa'`` in the ``nextflow.config`` file,
-moreover you will need to specify the ``drmaa.jar`` file path on the Nextflow command line by using the ``-with-drmaa``
+moreover you will need to specify the ``drmaa.jar`` library path on the Nextflow command line by using the ``-with-drmaa``
 option. For example::
 
   nextflow run <your pipeline> -with-drmaa /some/path/drmaa.jar
@@ -269,7 +270,7 @@ option. For example::
 Alternatively, instead of specifying the DRMAA library on the command line, you may want to use the environment variable
 ``NXF_DRMAA`` to define it.
 
-The ``clusterOptions`` configuration property allows you to set any `native` cluster option accepted by your
+The ``clusterOptions`` configuration property allows you to set any `native` cluster options accepted by your
 grid engine platform.
 For example::
 
@@ -282,7 +283,7 @@ For example::
 
       ERROR: java.lang.UnsatisfiedLinkError: no drmaa in java.library.path
 
-    Nextflow is unable to find ``libdrmaa.so`` file. The most common solution is
+    It means that Nextflow is unable to find ``libdrmaa.so`` file. The most common solution is
     to include the path where this file is located in the ``LD_LIBRARY_PATH`` environment variable.
 
 

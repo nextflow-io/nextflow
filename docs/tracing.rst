@@ -5,13 +5,13 @@ Performance Analysis
 *********************
 
 Nextflow can produce an execution tracing report that provides some information for a basic performance analysis
-of a pipeline execution. A more advanced analysis is possible by using the Extrae and Paraver tools integrated with Nextflow.
+of a pipeline execution. A more advanced analysis is possible by using the `Extrae` and `Paraver` tools integrated with Nextflow.
 
 
 Execution report
 ===================
 
-Nextflow creates a execution tracing file that contain some useful information about each process executed in your pipeline
+Nextflow creates a execution tracing file that contains some useful information about each process executed in your pipeline
 script, including: submission time, start time, completion time, cpu and memory used.
 
 .. warning:: This is an incubating feature. It may change in future Nextflow releases.

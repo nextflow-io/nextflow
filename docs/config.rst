@@ -12,7 +12,7 @@ in the script base directory (if it is not the same as the current directory). F
 ``$HOME/.nextflow/config``.
 
 When more than one on the above files exist they are merged, so that the settings in the first override the same ones
-that may appear in the second one.
+that may appear in the second one, and so on.
 
 The default config file search mechanism can be extended proving an extra configuration file by using the command line
 option ``-c <config file>``.
@@ -257,7 +257,7 @@ Read :ref:`docker-page` page to lean more how use Docker containers with Nextflo
 Scope `manifest`
 -----------------
 
-The ``manifest`` configuration scope allows you to define some meta-data information needed if you want to publish your
+The ``manifest`` configuration scope allows you to define some meta-data information needed when publishing your
 pipeline on GitHub or BitBucket.
 
 The following settings are available:
@@ -282,7 +282,8 @@ brackets. For example::
     }
 
 
-To learn how publish your pipeline with GitHub or BitBucket code repositories read the :ref:`sharing-page` page.
+To learn how to publish your pipeline on GitHub or BitBucket code repositories read :ref:`sharing-page`
+documentation page.
 
 Environment variables
 ======================
