@@ -25,15 +25,15 @@ AWS_S3BUCKET=${AWS_S3BUCKET:-'nxf-cluster'}
 #
 # Install NEXTFLOW and launch it
 #
-if [[ "$NXF_VERSION" ]]; then
-  version="v$NXF_VERSION"
+if [[ "$NXF_VER" ]]; then
+  version="v$NXF_VER"
 else
   version='latest'
 fi
 
-curl -fsSL http://www.nextflow.io/releases/${version}/nextflow  > $HOME/bin/nextflow
-chmod +x $HOME/bin/nextflow
-bash -x $HOME/bin/nextflow node -bg \
+curl -fsSL http://www.nextflow.io/releases/${version}/nextflow  > $HOME/nextflow
+chmod +x $HOME/nextflow
+bash -x $HOME/nextflow node -bg \
   -cluster.join "s3:$AWS_S3BUCKET" \
   -cluster.interface eth0
 
