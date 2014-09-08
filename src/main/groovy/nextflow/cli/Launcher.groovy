@@ -24,7 +24,10 @@ import static nextflow.Const.APP_NAME
 import static nextflow.Const.APP_VER
 import static nextflow.Const.SPLASH
 
+import java.lang.reflect.Field
+
 import com.beust.jcommander.JCommander
+import com.beust.jcommander.Parameter
 import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -255,7 +258,20 @@ class Launcher implements ExitCode {
 
         def list = new ArrayList<CmdBase>(allCommands).findAll { it.name != CmdNode.NAME }
         println "Usage: nextflow [options] COMMAND [arg...]\n"
-        println "Commands: "
+
+        List<Parameter> params = CliOptions.class.getDeclaredFields()
+                    .findAll { Field f -> def p=f.getAnnotation(Parameter); p && !p.hidden() && p.description() && p.names() }
+                    .collect { Field f -> f.getAnnotation(Parameter) }
+
+        params.sort(true) { Parameter it -> it.names()[0] }
+
+        println "Options:"
+        for( def p : params ) {
+            println "  ${p.names().join(', ')}"
+            println "     ${p.description()}"
+        }
+
+        println "\nCommands: "
 
         int len = 0
         def all = new TreeMap<String,String>()

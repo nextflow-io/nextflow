@@ -128,9 +128,7 @@ class CmdRun extends HubOptions {
     }
 
     @Parameter(names=['-c','-config'], hidden = true )
-    void setConfig( List<String> value ) {
-        launcher.options.userConfig = value
-    }
+    List<String> runConfig
 
     @DynamicParameter(names = ['-cluster.'], description = 'Define cluster options', hidden = true )
     Map<String,String> clusterOptions = [:]
