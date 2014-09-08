@@ -183,6 +183,8 @@ class CmdRun extends HubOptions {
 
     protected void trackHistory(UUID uuid) {
         def cli = launcher.cliString
+        if( !cli )
+            return
         def p = cli.indexOf('nextflow ')
         if( p != -1 ) cli = 'nextflow ' + cli.substring(p+9)
         HistoryFile.history.write( uuid, cli )

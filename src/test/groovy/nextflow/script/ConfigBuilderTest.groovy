@@ -125,21 +125,25 @@ class ConfigBuilderTest extends Specification {
 
 
     def testValidateConfigFiles () {
+
+        given:
+        def path = Files.createTempDirectory('test').toFile()
+
         when:
-        def files = new ConfigBuilder().validateConfigFiles(['file1','file2'])
+        def f1 = new File(path, 'file1')
+        def f2 = new File(path, 'file2')
+        def files = new ConfigBuilder().validateConfigFiles([f1.toString(), f2.toString()])
         then:
         thrown(AbortOperationException)
 
         when:
-        def f1 = File.createTempFile('file1','x').absoluteFile
-        def f2 = File.createTempFile('file1','x').absoluteFile
+        f1.text = '1'; f2.text = '2'
         files = new ConfigBuilder().validateConfigFiles([f1.toString(), f2.toString()])
         then:
         files == [f1, f2]
 
         cleanup:
-        f1?.delete()
-        f2?.delete()
+        path.deleteDir()
 
     }
 
