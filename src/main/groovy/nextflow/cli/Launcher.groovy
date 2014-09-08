@@ -144,7 +144,6 @@ class Launcher implements ExitCode {
 
     private short getColumns() {
         if( !colsString ) {
-            log.debug 'Bash environment $COLUMNS is not defined -- It looks TTY is not available'
             return 0
         }
 
