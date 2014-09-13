@@ -94,12 +94,14 @@ abstract class RepositoryProvider {
         assert api
 
         log.debug "Request [credentials ${user?:'-'}:${pwd ? pwd.replaceAll('.','*') : '-'}] -> $api"
-        def connection = new URL(api).openConnection()
+        def connection = new URL(api).openConnection() as HttpURLConnection
 
         if( user && pwd ){
             String authString=("$user:$pwd").bytes.encodeBase64().toString()
             connection.setRequestProperty("Authorization","Basic " + authString)
         }
+
+        checkResponse(connection)
 
         InputStream content = connection.getInputStream()
         try {
@@ -108,6 +110,35 @@ abstract class RepositoryProvider {
         finally{
             content?.close()
         }
+    }
+
+    /**
+     * Check for response error status. Throws a {@link AbortOperationException} exception
+     * when a 401 or 403 error status is returned.
+     *
+     * @param connection A {@link HttpURLConnection} connection instance
+     */
+    protected checkResponse( HttpURLConnection connection ) {
+        def code = connection.getResponseCode()
+
+        switch( code ) {
+            case 401:
+                log.debug "Response status: $code -- ${connection.getErrorStream().text}"
+                throw new AbortOperationException("Not authorized -- Check that the ${name.capitalize()} user name and password provided are correct")
+
+            case 403:
+                log.debug "Response status: $code -- ${connection.getErrorStream().text}"
+                def limit = connection.getHeaderField('X-RateLimit-Remaining')
+                if( limit == '0' ) {
+                    def message = user ? "Check ${name.capitalize()}'s API rate limits for more details" : "Provide your ${name.capitalize()} user name and password to get a higher rate limit"
+                    throw new AbortOperationException("API rate limit exceeded -- $message")
+                }
+                else {
+                    def message = user ? "Check that the ${name.capitalize()} user name and password provided are correct" : "Provide your ${name.capitalize()} user name and password to access this repository"
+                    throw new AbortOperationException("Forbidden -- $message")
+                }
+        }
+
     }
 
 
@@ -151,14 +182,11 @@ abstract class RepositoryProvider {
         }
         catch( IOException e1 ) {
 
-            if( e1.message?.startsWith('Server returned HTTP response code: 401'))
-                throw new AbortOperationException("Not authorized -- Check that user name and password are correct")
-
             try {
                 invokeAndParseResponse( getRepoUrl() )
             }
             catch( IOException e2 ) {
-                throw new AbortOperationException("Cannot find $pipeline pipeline -- Make sure exists a ${getName()} repository at ${getHomePage()}")
+                throw new AbortOperationException("Cannot find '$pipeline' -- Make sure exists a ${name.capitalize()} repository at this address ${getHomePage()}")
             }
 
             throw new AbortOperationException("Illegal pipeline repository ${getHomePage()} -- It must contain a script named '${AssetManager.DEFAULT_MAIN_FILE_NAME}' or a file '${AssetManager.MANIFEST_FILE_NAME}'")
