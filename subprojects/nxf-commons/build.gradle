@@ -39,7 +39,3 @@ dependencies {
     /* testCompile inherited from top gradle build file */
 }
 
-
-task compile(type: Copy) {
-    dependsOn compileJava, compileGroovy, processResources
-}

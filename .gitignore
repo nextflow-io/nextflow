@@ -27,3 +27,5 @@ extrae_files/**
 examples
 misc/
 logo/
+cloud/examples-launch
+cloud/launch.sh

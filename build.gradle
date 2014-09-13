@@ -20,7 +20,7 @@
 
 version = '0.10.0'
 apply plugin: 'groovy'
-apply plugin: 'application'
+apply plugin: 'idea'
 
 if (System.getenv('CI_GROOVY_VERSION')) {
     // Add ability to test with upcoming versions of Groovy
@@ -77,6 +77,7 @@ allprojects {
 configurations {
     capsule
     extrae
+    provided
     dnanexus.extendsFrom runtime
     gridgain.extendsFrom runtime
     gdocLibs.extendsFrom runtime
@@ -102,7 +103,7 @@ dependencies {
         exclude module: 'commons-logging'
     }
     // library used to compile but not included in the final jar
-    compile  'us.levk:drmaa-common:1.0'
+    provided 'us.levk:drmaa-common:1.0'
 
     // include Ivy at runtime in order to have Grape @Grab work correctly
     runtime "org.apache.ivy:ivy:2.3.0"
@@ -136,12 +137,24 @@ groovydoc {
     groovyClasspath = project.configurations.gdocLibs
 }
 
+sourceSets.main.compileClasspath += configurations.provided
 sourceSets.main.java.srcDirs = []
 sourceSets.main.groovy.srcDirs = ['src/main/java', 'src/main/groovy']
 sourceSets.main.resources.srcDirs = ['src/main/resources']
 
 compileGroovy {
     options.compilerArgs = ['-XDignore.symbol.file']
+}
+
+/*
+ * http://www.gradle.org/docs/current/dsl/org.gradle.plugins.ide.idea.model.IdeaModule.html
+ * http://stackoverflow.com/questions/20421681/provided-dependencies-using-gradle-jetgradle-and-intellij-idea-13
+ * http://forums.gradle.org/gradle/topics/gradle_2_0_idea_plugin_adding_a_custom_configuration_to_scope_throws_classcastexception
+ */
+idea {
+    module {
+        scopes.PROVIDED.plus += [configurations.provided]
+    }
 }
 
 /*
@@ -194,12 +207,9 @@ task makeSha1 << {
 /*
  * Compile sources and copies all libs to target directory
  */
-task compile(type: Copy) {
-    dependsOn buildInfo, compileJava, compileGroovy, processResources
-
-    from configurations.gridgain
-    from configurations.dnanexus
-    into "$buildDir/dependency-libs"
+task compile {
+    dependsOn buildInfo
+    dependsOn allprojects.jar
 }
 
 
@@ -217,7 +227,7 @@ task pack(type: Jar) {
     archiveName = "nextflow-${version}-one.jar"
 
     from jar // embed our application jar
-    from (configurations.runtime) { exclude 'drmaa-common-*' } // embed dependencies but 'drmaa'
+    from (configurations.runtime)
     from (configurations.extrae) // add the extrae module
     from (configurations.capsule.collect { zipTree(it) })
 
@@ -246,7 +256,7 @@ task packDx(type: Jar) {
     archiveName = "nextflow-${version}-dx.jar"
 
     from jar // embed our application jar
-    from (configurations.dnanexus) { exclude 'drmaa-common-*' } // embed dependencies but 'drmaa'
+    from (configurations.dnanexus)
     from (configurations.capsule.collect { zipTree(it) })
 
     manifest {
@@ -275,7 +285,7 @@ task packGg(type: Jar) {
     archiveName = "nextflow-${version}-gg.jar"
 
     from jar // embed our application jar
-    from (configurations.gridgain) { exclude 'drmaa-common-*' } // embed dependencies but 'drmaa'
+    from (configurations.gridgain)
     from (configurations.extrae) // add the extrae module
     from (configurations.capsule.collect { zipTree(it) })
 
@@ -397,3 +407,15 @@ task dnanexus(dependsOn: packDx) << {
 
 }
 
+
+/*
+ * Save the runtime classpath
+ */
+task exportClasspath {
+    dependsOn configurations.gridgain, configurations.extrae
+
+    def home = System.getProperty('user.home')
+    def all = configurations.gridgain + configurations.extrae
+    def libs = all.collect { File file -> /* println file.canonicalPath.replace(home, '$HOME'); */ file.canonicalPath;  }
+    new File('.launch.classpath').text = libs.join(':')
+}

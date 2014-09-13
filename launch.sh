@@ -53,33 +53,17 @@ DRIP_INIT_CLASS=nextflow.cli.DripMain
 DRIP_INIT=''
 
 EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
-SUBPROJECTS='nxf-commons nxf-dnanexus nxf-gridgain nxf-extrae'
 
 #
 # classpath when the application is compiled with gradle
 #
-if [ -e "$base_dir/build/classes/main" ]; then
-  CLASSPATH="$base_dir/build/classes/main"
-  CLASSPATH+=":$base_dir/build/classes/test"
-  CLASSPATH+=":$base_dir/build/resources/main"
-  for x in ${SUBPROJECTS}; do
-    CLASSPATH+=":$base_dir/subprojects/$x/build/classes/main"
-    CLASSPATH+=":$base_dir/subprojects/$x/build/classes/test"
-    CLASSPATH+=":$base_dir/subprojects/$x/build/resources/main/"
-  done
-  for file in $base_dir/build/dependency-libs/*.jar; do
-    CLASSPATH+=":$file";
-  done
+if [ -e "$base_dir/build/libs" ]; then
+  CLASSPATH=`ls $base_dir/build/libs/nextflow-*.jar`
 
-#
-# deployed application class -- only jar in the libs folder
-#
-elif [ -e $base_dir/libs ]; then
-  CLASSPATH="$base_dir/conf"
-  for file in $base_dir/libs/*.jar; do
-    CLASSPATH+=":$file";
-  done
-
+  # -- append runtime libraries
+  [[ ! -f '.launch.classpath' ]] && echo "Missing '.launch.classpath' file -- create it by running: ./gradlew exportClasspath" && exit 1
+  CLASSPATH+=":`cat .launch.classpath`"
+  
 else
   echo "Missing application libraries -- Nextflow cannot start"
   exit 1
