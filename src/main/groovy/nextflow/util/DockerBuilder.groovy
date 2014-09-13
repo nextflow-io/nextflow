@@ -158,7 +158,7 @@ class DockerBuilder {
         // return the run command as result
         runCommand = result.toString()
 
-        // use an explict 'docker rm' command since the --rm flag may fail. See https://groups.google.com/d/msg/docker-user/0Ayim0wv2Ls/tDC-tlAK03YJ
+        // use an explicit 'docker rm' command since the --rm flag may fail. See https://groups.google.com/d/msg/docker-user/0Ayim0wv2Ls/tDC-tlAK03YJ
         if( remove ) {
             removeCommand = 'docker rm ' + name
             if( sudo ) removeCommand = 'sudo ' + removeCommand
