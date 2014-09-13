@@ -65,10 +65,13 @@ class BashWrapperBuilder {
 
     Path dockerMount
 
+    String name
+
     private runWithDocker
 
     BashWrapperBuilder( TaskRun task ) {
         this.task = task
+        this.name = "nxf-" + task.hash?.toString()?.substring(0,8)
 
         // set the input (when available)
         this.input = task.stdin
@@ -93,6 +96,7 @@ class BashWrapperBuilder {
         log.trace "Wrapper params: $params"
 
         task = null
+        this.name = params.name
         this.shell = params.shell ?: TaskConfig.DEFAULT_SHELL
         this.script = params.script?.toString()
         this.input = params.input
@@ -227,13 +231,18 @@ class BashWrapperBuilder {
         wrapper << '( '
 
         // execute by invoking the command through a Docker container
+        DockerBuilder docker = null
         if( runWithDocker ) {
-            def docker = new DockerBuilder(dockerImage)
+            docker = new DockerBuilder(dockerImage)
             if( task ) {
                 docker.addMountForInputs( task.getInputFiles() )
                       .addMount( task.processor.session.workDir )
                       .addMount( task.processor.session.binDir )
             }
+
+            // set the name
+            docker.setName(this.name)
+
             if( dockerMount )
                 docker.addMount(dockerMount)
 
@@ -241,6 +250,11 @@ class BashWrapperBuilder {
             if( !environmentFile.empty() )
                 docker.addEnv( environmentFile )
 
+            // turn on container remove by default
+            if( !dockerConfig.containsKey('remove') )
+                dockerConfig.remove = true
+
+            // set up run docker params
             docker.params(dockerConfig)
 
             // extra rule for the 'auto' temp dir temp dir
@@ -255,6 +269,11 @@ class BashWrapperBuilder {
         wrapper << interpreter << ' ' << scriptFile.toString()
         if( input != null ) wrapper << ' < ' << inputFile.toString()
         wrapper << ' ) &> ' << outputFile.toAbsolutePath() << ENDL
+
+        if( docker?.removeCommand ) {
+            // remove the container in this way because 'docker run --rm'  fail in some cases -- see https://groups.google.com/d/msg/docker-user/0Ayim0wv2Ls/-mZ-ymGwg8EJ
+            wrapper << docker.removeCommand << ' &>/dev/null || true &' << ENDL
+        }
 
         if( (changeDir || workDir != targetDir) && unstagingScript  ) {
             wrapper << unstagingScript << ENDL

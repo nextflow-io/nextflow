@@ -21,6 +21,7 @@
 package nextflow.util
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.file.FileHolder
 
@@ -29,6 +30,7 @@ import nextflow.file.FileHolder
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class DockerBuilder {
 
     final String image
@@ -41,7 +43,7 @@ class DockerBuilder {
 
     private String options
 
-    private boolean remove = true
+    private boolean remove
 
     private String temp
 
@@ -49,7 +51,13 @@ class DockerBuilder {
 
     private String registry
 
+    private String name
+
     private static final String USER_AND_HOME_EMULATION = '-u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME'
+
+    private String runCommand
+
+    private String removeCommand
 
     DockerBuilder( String name ) {
         this.image = name
@@ -95,7 +103,6 @@ class DockerBuilder {
             if( !registry.endsWith('/') ) registry += '/'
         }
 
-
         return this
     }
 
@@ -104,17 +111,21 @@ class DockerBuilder {
         return this
     }
 
+    DockerBuilder setName( String name ) {
+        this.name = name
+        return this
+    }
 
     String build(StringBuilder result = new StringBuilder()) {
         assert image
+
+        if( remove && !name )
+            name = UUID.randomUUID().toString()
 
         if( sudo )
             result << 'sudo '
 
         result << 'docker run '
-
-        if( remove )
-            result << '--rm '
 
         // add the environment
         for( def entry : env ) {
@@ -134,14 +145,26 @@ class DockerBuilder {
         if( options )
             result << options.trim() << ' '
 
+        // the name is after the user option so it has precedence over any options provided by the user
+        if( name )
+            result << '--name ' << name << ' '
+
         if( registry )
             result << registry
 
         // finally the container name
         result << image
 
-        return result
+        // return the run command as result
+        runCommand = result.toString()
 
+        // use an explict 'docker rm' command since the --rm flag may fail. See https://groups.google.com/d/msg/docker-user/0Ayim0wv2Ls/tDC-tlAK03YJ
+        if( remove ) {
+            removeCommand = 'docker rm ' + name
+            if( sudo ) removeCommand = 'sudo ' + removeCommand
+        }
+
+        return runCommand
     }
 
 
@@ -186,9 +209,10 @@ class DockerBuilder {
             result << '-e "BASH_ENV=' << env.getName() << '"'
         }
         else if( env instanceof Map ) {
-            env.eachWithIndex { key, value, index ->
-                if( index ) result << ' '
-                result << ("-e \"$key=$value\"")
+            short index = 0
+            for( Map.Entry entry : env.entrySet() ) {
+                if( index++ ) result << ' '
+                result << ("-e \"${entry.key}=${entry.value}\"")
             }
         }
         else if( env instanceof String && env.contains('=') ) {
@@ -217,5 +241,9 @@ class DockerBuilder {
         return files
 
     }
+
+    String getRunCommand() { runCommand }
+
+    String getRemoveCommand() { removeCommand }
 
 }

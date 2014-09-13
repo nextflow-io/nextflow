@@ -565,7 +565,11 @@ class GgBashTask extends GgBaseTask<Integer>  {
         if( log.isTraceEnabled() )
             log.trace "Session config: $config"
 
+        // TODO the task name should be create in the BashWrapperBuilder
+        String taskName = 'nxf-' + workDir.parent.name + workDir.name.substring(0,6)
+
         def wrapper = new BashWrapperBuilder(
+                name: taskName,
                 shell: shell,
                 input: stdin,
                 script: script,

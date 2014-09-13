@@ -59,21 +59,21 @@ class DockerBuilderTest extends Specification {
         def db_file = Paths.get('/home/db')
 
         expect:
-        new DockerBuilder('fedora').build() == 'docker run --rm -v $PWD:$PWD -w $PWD fedora'
-        new DockerBuilder('fedora').addEnv(envFile).build() == 'docker run --rm -e "BASH_ENV=env-file" -v $PWD:$PWD -w $PWD fedora'
-        new DockerBuilder('ubuntu').params(temp:'/hola').build() == 'docker run --rm -v /hola:/tmp -v $PWD:$PWD -w $PWD ubuntu'
-        new DockerBuilder('ubuntu').params(remove:false).build() == 'docker run -v $PWD:$PWD -w $PWD ubuntu'
-        new DockerBuilder('busybox').params(sudo: true).build() == 'sudo docker run --rm -v $PWD:$PWD -w $PWD busybox'
-        new DockerBuilder('busybox').params(runOptions: '-x --zeta').build() == 'docker run --rm -v $PWD:$PWD -w $PWD -x --zeta busybox'
-        new DockerBuilder('busybox').params(userEmulation:true).build() == 'docker run --rm -u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME -v $PWD:$PWD -w $PWD busybox'
-        new DockerBuilder('busybox').params(registry:'local:5000').build() == 'docker run --rm -v $PWD:$PWD -w $PWD local:5000/busybox'
-        new DockerBuilder('busybox').params(registry:'local:5000/').build() == 'docker run --rm -v $PWD:$PWD -w $PWD local:5000/busybox'
+        new DockerBuilder('fedora').build() == 'docker run -v $PWD:$PWD -w $PWD fedora'
+        new DockerBuilder('fedora').addEnv(envFile).build() == 'docker run -e "BASH_ENV=env-file" -v $PWD:$PWD -w $PWD fedora'
+        new DockerBuilder('ubuntu').params(temp:'/hola').build() == 'docker run -v /hola:/tmp -v $PWD:$PWD -w $PWD ubuntu'
+        new DockerBuilder('busybox').params(sudo: true).build() == 'sudo docker run -v $PWD:$PWD -w $PWD busybox'
+        new DockerBuilder('busybox').params(runOptions: '-x --zeta').build() == 'docker run -v $PWD:$PWD -w $PWD -x --zeta busybox'
+        new DockerBuilder('busybox').params(userEmulation:true).build() == 'docker run -u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME -v $PWD:$PWD -w $PWD busybox'
+        new DockerBuilder('busybox').params(registry:'local:5000').build() == 'docker run -v $PWD:$PWD -w $PWD local:5000/busybox'
+        new DockerBuilder('busybox').params(registry:'local:5000/').build() == 'docker run -v $PWD:$PWD -w $PWD local:5000/busybox'
+        new DockerBuilder('busybox').setName('hola').build() == 'docker run -v $PWD:$PWD -w $PWD --name hola busybox'
 
         new DockerBuilder('fedora')
                 .addEnv(envFile)
                 .addMount(db_file)
                 .addMount(db_file) // <-- add twice the same to prove that the final string won't contain duplicates
-                .build() == 'docker run --rm -e "BASH_ENV=env-file" -v /home/db:/home/db -v $PWD:$PWD -w $PWD fedora'
+                .build() == 'docker run -e "BASH_ENV=env-file" -v /home/db:/home/db -v $PWD:$PWD -w $PWD fedora'
 
     }
 
@@ -90,6 +90,31 @@ class DockerBuilderTest extends Specification {
         docker.addMount(null)
         then:
         docker.mounts.size() == 1
+
+    }
+
+    def testGetCommands() {
+
+        when:
+        def docker =  new DockerBuilder('busybox').setName('c1')
+        then:
+        docker.build() == 'docker run -v $PWD:$PWD -w $PWD --name c1 busybox'
+        docker.runCommand == 'docker run -v $PWD:$PWD -w $PWD --name c1 busybox'
+        docker.removeCommand == null
+
+        when:
+        docker =  new DockerBuilder('busybox').setName('c2').params(sudo: true, remove: true)
+        then:
+        docker.build() == 'sudo docker run -v $PWD:$PWD -w $PWD --name c2 busybox'
+        docker.runCommand == 'sudo docker run -v $PWD:$PWD -w $PWD --name c2 busybox'
+        docker.removeCommand == 'sudo docker rm c2'
+
+        when:
+        docker =  new DockerBuilder('busybox').setName('c3').params(remove: true)
+        then:
+        docker.build() == 'docker run -v $PWD:$PWD -w $PWD --name c3 busybox'
+        docker.runCommand == 'docker run -v $PWD:$PWD -w $PWD --name c3 busybox'
+        docker.removeCommand == 'docker rm c3'
 
     }
 

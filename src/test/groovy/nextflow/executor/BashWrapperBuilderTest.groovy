@@ -140,6 +140,7 @@ class BashWrapperBuilderTest extends Specification {
          */
         when:
         def bash = new BashWrapperBuilder(
+                name: 'xyz',
                 workDir: folder,
                 script: 'echo Hello world!',
                 dockerMount: Paths.get('/some/path'),
@@ -164,7 +165,99 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_exit 1 2 3 15 ERR TERM USR1 USR2
                 function on_exit() { local exit_status=\${1:-\$?}; printf \$exit_status > ${folder}/.exitcode; exit \$exit_status; }
                 touch ${folder}/.command.begin
-                ( sudo docker run --rm -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD busybox /bin/bash -ue ${folder}/.command.sh ) &> ${folder}/.command.out
+                ( sudo docker run -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name xyz busybox /bin/bash -ue ${folder}/.command.sh ) &> ${folder}/.command.out
+                sudo docker rm xyz &>/dev/null || true &
+                on_exit
+                """
+                        .stripIndent().leftTrim()
+
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def testBashWithDockerTest2() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        /*
+         * bash run through docker
+         */
+        when:
+        def bash = new BashWrapperBuilder(
+                name: 'xyz',
+                workDir: folder,
+                script: 'echo Hello world!',
+                dockerMount: Paths.get('/some/path'),
+                dockerConfig: [image: 'busybox', temp: 'auto', enabled: true] )
+        bash.build()
+
+        then:
+        Files.exists(folder.resolve('.command.sh'))
+        Files.exists(folder.resolve('.command.run'))
+
+        folder.resolve('.command.sh').text ==
+                '''
+                #!/bin/bash -ue
+                echo Hello world!
+                '''
+                        .stripIndent().leftTrim()
+
+
+        folder.resolve('.command.run').text ==
+                """
+                #!/bin/bash -Eeu
+                trap on_exit 1 2 3 15 ERR TERM USR1 USR2
+                function on_exit() { local exit_status=\${1:-\$?}; printf \$exit_status > ${folder}/.exitcode; exit \$exit_status; }
+                touch ${folder}/.command.begin
+                ( docker run -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name xyz busybox /bin/bash -ue ${folder}/.command.sh ) &> ${folder}/.command.out
+                docker rm xyz &>/dev/null || true &
+                on_exit
+                """
+                        .stripIndent().leftTrim()
+
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def testBashWithDockerTest3() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        /*
+         * bash run through docker
+         */
+        when:
+        def bash = new BashWrapperBuilder(
+                name: 'c1',
+                workDir: folder,
+                script: 'echo Hello world!',
+                dockerMount: Paths.get('/some/path'),
+                dockerConfig: [image: 'ubuntu', temp: 'auto', enabled: true, remove:false] )
+        bash.build()
+
+        then:
+        Files.exists(folder.resolve('.command.sh'))
+        Files.exists(folder.resolve('.command.run'))
+
+        folder.resolve('.command.sh').text ==
+                '''
+                #!/bin/bash -ue
+                echo Hello world!
+                '''
+                        .stripIndent().leftTrim()
+
+
+        folder.resolve('.command.run').text ==
+                """
+                #!/bin/bash -Eeu
+                trap on_exit 1 2 3 15 ERR TERM USR1 USR2
+                function on_exit() { local exit_status=\${1:-\$?}; printf \$exit_status > ${folder}/.exitcode; exit \$exit_status; }
+                touch ${folder}/.command.begin
+                ( docker run -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name c1 ubuntu /bin/bash -ue ${folder}/.command.sh ) &> ${folder}/.command.out
                 on_exit
                 """
                         .stripIndent().leftTrim()
