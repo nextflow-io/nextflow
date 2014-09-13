@@ -61,8 +61,8 @@ if [ -e "$base_dir/build/libs" ]; then
   CLASSPATH=`ls $base_dir/build/libs/nextflow-*.jar`
 
   # -- append runtime libraries
-  [[ ! -f '.launch.classpath' ]] && echo "Missing '.launch.classpath' file -- create it by running: ./gradlew exportClasspath" && exit 1
-  CLASSPATH+=":`cat .launch.classpath`"
+  [[ ! -f "$base_dir/.launch.classpath" ]] && echo "Missing '.launch.classpath' file -- create it by running: ./gradlew exportClasspath" && exit 1
+  CLASSPATH+=":`cat $base_dir/.launch.classpath`"
   
 else
   echo "Missing application libraries -- Nextflow cannot start"

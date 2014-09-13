@@ -102,11 +102,11 @@ dependencies {
     compile("org.eclipse.jgit:org.eclipse.jgit:3.4.1.201406201815-r") {
         exclude module: 'commons-logging'
     }
-    // library used to compile but not included in the final jar
-    provided 'us.levk:drmaa-common:1.0'
-
     // include Ivy at runtime in order to have Grape @Grab work correctly
     runtime "org.apache.ivy:ivy:2.3.0"
+    // library used to compile but not included in the final jar
+    provided 'us.levk:drmaa-common:1.0'
+    testCompile 'us.levk:drmaa-common:1.0'
 
     // Capsule manages the fat jar building process
     capsule(project(':my-capsule'))
