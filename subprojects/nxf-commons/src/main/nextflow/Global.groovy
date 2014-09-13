@@ -29,5 +29,46 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class Global {
-    static final Map<String,Object> STATUS = [:]
+
+    /**
+     * The pipeline session instance
+     */
+    static private session
+
+    /**
+     * The main configuration object
+     */
+    static private Map config
+
+    /**
+     * @return The object instance representing the current session
+     */
+    static <T> T getSession() {
+        (T)session
+    }
+
+    /**
+     * Set the application session object
+     *
+     * @param value An object instance representing the current session
+     */
+    static <T> void setSession( value ) {
+        session = value
+    }
+
+    /**
+     * @return A {@link Map} instance representing the application configuration
+     */
+    static Map getConfig() {
+        config
+    }
+
+    /**
+     * Define the application wide-configuration object
+     *
+     * @param value An instance of {@link Map} holding the configuration properties
+     */
+    static void setConfig( Map value ) {
+        config = value
+    }
 }

@@ -112,11 +112,7 @@ class Session {
 
     final int poolSize
 
-    /* Poor man singleton object */
-    static Session currentInstance
-
     private List<TraceObserver> observers
-
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -136,9 +132,8 @@ class Session {
         this.config = config instanceof ConfigObject ? config.toMap() : config
 
         // poor man singleton
-        currentInstance = this
-        Global.STATUS.session = this
-        Global.STATUS.config = config
+        Global.setSession(this)
+        Global.setConfig(config)
 
         // normalize taskConfig object
         if( config.process == null ) config.process = [:]

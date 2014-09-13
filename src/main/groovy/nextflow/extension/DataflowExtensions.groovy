@@ -43,6 +43,7 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.operator.SeparationClosure
 import nextflow.Channel
 import nextflow.Const
+import nextflow.Global
 import nextflow.Session
 import nextflow.file.FileCollector
 import nextflow.file.FileHelper
@@ -59,6 +60,8 @@ import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 
 @Slf4j
 class DataflowExtensions {
+
+    private static Session session = Global.getSession()
 
     /**
      * INTERNAL ONLY API
@@ -84,7 +87,7 @@ class DataflowExtensions {
         @Override
         public boolean onException(final DataflowProcessor processor, final Throwable e) {
             DataflowExtensions.log.error("Unknown operator error ${Const.log_detail_tip_message}", e)
-            Session.currentInstance?.abort()
+            session?.abort()
             return true;
         }
     }
@@ -104,8 +107,8 @@ class DataflowExtensions {
             channels.listeners = [ DEF_ERROR_LISTENER ]
 
         final op = Dataflow.operator(channels, code)
-        if( Session.currentInstance?.allProcessors != null ) {
-            Session.currentInstance.allProcessors << op
+        if( session?.allProcessors != null ) {
+            session.allProcessors << op
         }
     }
 
@@ -156,8 +159,8 @@ class DataflowExtensions {
         params.listeners = [listener]
 
         final op = Dataflow.operator(params, code)
-        if( Session.currentInstance?.allProcessors != null ) {
-            Session.currentInstance.allProcessors << op
+        if( session?.allProcessors != null ) {
+            session.allProcessors << op
         }
     }
 
@@ -243,7 +246,7 @@ class DataflowExtensions {
                 error = true
                 if( !events.onError ) {
                     DataflowExtensions.log.error("Cannot execute operator. Cause: ${e} ${Const.log_detail_tip_message}", e)
-                    Session.currentInstance?.abort()
+                    session?.abort()
                 }
                 else {
                     events.onError.call(e)
@@ -378,7 +381,7 @@ class DataflowExtensions {
             @Override
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
                 DataflowExtensions.log.error("Unknown 'flatMap' operator error ${Const.log_detail_tip_message}", e)
-                Session.currentInstance?.abort()
+                session?.abort()
                 return true;
             }
         }
@@ -512,7 +515,7 @@ class DataflowExtensions {
 
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
                 DataflowExtensions.log.error("Unknown 'reduce' operator error ${Const.log_detail_tip_message}", e)
-                Session.currentInstance?.abort()
+                session?.abort()
                 return true;
             }
         }
@@ -532,8 +535,8 @@ class DataflowExtensions {
         def result = new DataflowQueue()
         def acc = new FileCollector()
 
-        if( Session.currentInstance )
-            Session.currentInstance.onShutdown { acc.closeQuietly() }
+        if( session )
+            session.onShutdown { acc.closeQuietly() }
 
         acc.newLine = params?.newLine as Boolean
         acc.seed = params?.seed
@@ -561,7 +564,7 @@ class DataflowExtensions {
         if( storeDir )
             storeDir.createDirIfNotExists()
         else
-            storeDir = FileHelper.createTempFolder(Session.currentInstance.workDir)
+            storeDir = FileHelper.createTempFolder(session.workDir)
 
         /*
          * each time a value is received, invoke the closure and
@@ -1140,7 +1143,7 @@ class DataflowExtensions {
 
                 public boolean onException(final DataflowProcessor processor, final Throwable e) {
                     DataflowExtensions.log.error("Unknown 'spread' operator error ${Const.log_detail_tip_message}", e)
-                    Session.currentInstance?.abort()
+                    session?.abort()
                     return true;
                 }
             }
@@ -1271,7 +1274,7 @@ class DataflowExtensions {
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
                 DataflowExtensions.log.error("Unknown 'buffer' operator error ${Const.log_detail_tip_message}", e)
-                Session.currentInstance?.abort()
+                session?.abort()
                 return true
             }
         }
@@ -1341,7 +1344,7 @@ class DataflowExtensions {
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
                 DataflowExtensions.log.error("Unknown 'collate' operator error ${Const.log_detail_tip_message}", e)
-                Session.currentInstance?.abort()
+                session?.abort()
                 return true
             }
         }

@@ -265,7 +265,7 @@ class FileHelper {
         def result = [:]
         if( scheme?.toLowerCase() == 's3' ) {
 
-            List credentials = getAwsCredentials( env, (Map)Global.STATUS.config )
+            List credentials = getAwsCredentials( env, (Map)Global.config )
             if( credentials ) {
                 // S3FS expect the access - secret keys pair in lower notation
                 result.access_key = credentials[0]
@@ -273,8 +273,8 @@ class FileHelper {
             }
         }
         else {
-            assert Global.STATUS.session, "Session is not available -- make sure to call this after Session object has been created"
-            result.session = Global.STATUS.session
+            assert Global.session, "Session is not available -- make sure to call this after Session object has been created"
+            result.session = Global.session
         }
         return result
     }

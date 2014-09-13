@@ -177,7 +177,7 @@ class FileHelperTest extends Specification {
 
         given:
         def rnd = UUID.randomUUID()
-        Global.STATUS.session = rnd
+        Global.session = rnd
         def env = [:]
         env.put('AWS_ACCESS_KEY','a1')
         env.put('AWS_SECRET_KEY','s1')
