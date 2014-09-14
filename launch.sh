@@ -65,7 +65,7 @@ if [ -e "$base_dir/build/libs" ]; then
   CLASSPATH+=":`cat $base_dir/.launch.classpath`"
   
 else
-  echo "Missing application libraries -- Nextflow cannot start"
+  echo "Missing application libraries -- Compile Nextflow by using the 'compile.sh' script"
   exit 1
 fi
 
