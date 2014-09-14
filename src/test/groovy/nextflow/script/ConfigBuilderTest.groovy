@@ -39,9 +39,10 @@ class ConfigBuilderTest extends Specification {
 
         setup:
         def env = [PATH:'/local/bin', HOME:'/home/my']
+        def builder = [:] as ConfigBuilder
 
         when:
-        def config = ConfigBuilder.buildConfig0(env,null)
+        def config = builder.buildConfig0(env,null)
 
         then:
         ('PATH' in config.env )
@@ -56,6 +57,7 @@ class ConfigBuilderTest extends Specification {
     def buildConfigObject2 () {
 
         setup:
+        def builder = [:] as ConfigBuilder
         def env = [HOME:'/home/my', PATH:'/local/bin', 'dot.key.name':'any text']
 
         def text1 = '''
@@ -69,8 +71,8 @@ class ConfigBuilderTest extends Specification {
         '''
 
         when:
-        def config1 = ConfigBuilder.buildConfig0(env, [text1])
-        def config2 = ConfigBuilder.buildConfig0(env, [text1, text2])
+        def config1 = builder.buildConfig0(env, [text1])
+        def config2 = builder.buildConfig0(env, [text1, text2])
 
         // note: configuration object can be modified like any map
         config2.env ['ZZZ'] = '99'
@@ -99,6 +101,7 @@ class ConfigBuilderTest extends Specification {
     def buildConfigObject3 () {
 
         setup:
+        def builder = [:] as ConfigBuilder
         def env = [HOME:'/home/my', PATH:'/local/bin', 'dot.key.name':'any text']
 
         def text1 = '''
@@ -109,7 +112,7 @@ class ConfigBuilderTest extends Specification {
 
 
         when:
-        def config1 = ConfigBuilder.buildConfig0(env, [text1])
+        def config1 = builder.buildConfig0(env, [text1])
 
         then:
         config1.task.field1 == 1
@@ -120,6 +123,27 @@ class ConfigBuilderTest extends Specification {
 
         config1.params.demo == 1
 
+    }
+
+    def buildConfigObject4 () {
+
+        setup:
+        def builder = [:] as ConfigBuilder
+        builder.workDir = new File('/some/path')
+        builder.baseDir = new File('/base/path')
+
+        def text = '''
+        params {
+            p = "$workDir/1"
+            q = "$baseDir/2"
+        }
+        '''
+
+        when:
+        def cfg = builder.buildConfig0([:], [text])
+        then:
+        cfg.params.p == '/some/path/1'
+        cfg.params.q == '/base/path/2'
 
     }
 

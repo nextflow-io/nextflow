@@ -45,10 +45,13 @@ class CmdConfig extends CmdBase {
 
     @Override
     void run() {
-        File base = args ? getBaseDir(args[0]) : null
+        File base = null
+        if( args ) base = getBaseDir(args[0])
+        if( !base ) base = new File('.')
+
         def config = new ConfigBuilder()
                 .setOptions(launcher.options)
-                .setBaseDir(base)
+                .setBaseDir(base.canonicalFile)
                 .build()
 
         PrintWriter stdout = new PrintWriter(System.out,true);

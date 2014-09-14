@@ -46,6 +46,8 @@ class ConfigBuilder {
 
     File baseDir
 
+    File workDir = new File('.').canonicalFile
+
     ConfigBuilder setOptions( CliOptions options ) {
         this.options = options
         return this
@@ -171,7 +173,7 @@ class ConfigBuilder {
             }
         }
 
-        Map<String,String> env = [:]
+        Map env = [:]
         if( exportSysEnv ) {
             log.debug "Adding current system environment to session environment"
             env.putAll(System.getenv())
@@ -211,7 +213,7 @@ class ConfigBuilder {
     }
 
 
-    def static Map buildConfig0( Map env, List configEntries )  {
+    def Map buildConfig0( Map env, List configEntries )  {
         assert env != null
 
         ConfigObject result = new ConfigSlurper().parse('env{}; session{}; params{}; process{}; executor{} ')
@@ -225,6 +227,8 @@ class ConfigBuilder {
             // in the current environment
             final binding = new HashMap(System.getenv())
             binding.putAll(env)
+            binding.put('workDir', workDir)
+            binding.put('baseDir', baseDir)
 
             configEntries.each { entry ->
 
