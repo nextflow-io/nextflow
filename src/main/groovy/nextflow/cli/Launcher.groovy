@@ -168,7 +168,7 @@ class Launcher implements ExitCode {
      * normalize the command line arguments to handle some corner cases
      */
     @PackageScope
-    static List<String> normalizeArgs( String ... args ) {
+    List<String> normalizeArgs( String ... args ) {
 
         def normalized = []
         int i=0
@@ -178,7 +178,12 @@ class Launcher implements ExitCode {
             def current = args[i++]
             normalized << current
 
-            if( current == '-resume' ) {
+            // when the first argument is a file, it's supposed to be a script to be executed
+            if( i==1 && !allCommands.find { it.name == current } && new File(current).isFile()  ) {
+                normalized.add(0,CmdRun.NAME)
+            }
+
+            else if( current == '-resume' ) {
                 if( i<args.size() && !args[i].startsWith('-') && (args[i]=='last' || args[i] =~~ /[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{8}/) ) {
                     normalized << args[i++]
                 }

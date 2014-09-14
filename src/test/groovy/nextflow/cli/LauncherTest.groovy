@@ -20,6 +20,8 @@
 
 package nextflow.cli
 
+import java.nio.file.Files
+
 import com.beust.jcommander.ParameterException
 import spock.lang.Specification
 /**
@@ -140,46 +142,57 @@ class LauncherTest extends Specification {
 
     def testNormalizeCmdline () {
 
+        given:
+        def script = Files.createTempFile('file',null)
+        def launcher = [:] as Launcher
+        launcher.allCommands = [ new CmdRun(), new CmdInfo() ]
+
         expect:
-        Launcher.normalizeArgs('a','-bb','-ccc','dddd') == ['a','-bb','-ccc','dddd']
-        Launcher.normalizeArgs('a','-bb','-ccc','-resume', 'last') == ['a','-bb','-ccc','-resume','last']
-        Launcher.normalizeArgs('a','-bb','-ccc','-resume') == ['a','-bb','-ccc','-resume','last']
-        Launcher.normalizeArgs('a','-bb','-ccc','-resume','1d2c942a-345d-420b-b7c7-18d90afc6c33', 'zzz') == ['a','-bb','-ccc','-resume','1d2c942a-345d-420b-b7c7-18d90afc6c33', 'zzz']
+        launcher.normalizeArgs('a','-bb','-ccc','dddd') == ['a','-bb','-ccc','dddd']
+        launcher.normalizeArgs('a','-bb','-ccc','-resume', 'last') == ['a','-bb','-ccc','-resume','last']
+        launcher.normalizeArgs('a','-bb','-ccc','-resume') == ['a','-bb','-ccc','-resume','last']
+        launcher.normalizeArgs('a','-bb','-ccc','-resume','1d2c942a-345d-420b-b7c7-18d90afc6c33', 'zzz') == ['a','-bb','-ccc','-resume','1d2c942a-345d-420b-b7c7-18d90afc6c33', 'zzz']
 
-        Launcher.normalizeArgs('x','-test') == ['x','-test','%all']
-        Launcher.normalizeArgs('x','-test','alpha') == ['x','-test','alpha']
-        Launcher.normalizeArgs('x','-test','-other') == ['x','-test','%all','-other']
+        launcher.normalizeArgs('x','-test') == ['x','-test','%all']
+        launcher.normalizeArgs('x','-test','alpha') == ['x','-test','alpha']
+        launcher.normalizeArgs('x','-test','-other') == ['x','-test','%all','-other']
 
-        Launcher.normalizeArgs('--alpha=1') == ['--alpha=1']
-        Launcher.normalizeArgs('--alpha','1') == ['--alpha=1']
-        Launcher.normalizeArgs('-x', '1', 'script.nf', '--long', 'v1', '--more', 'v2', '--flag') == ['-x','1','script.nf','--long=v1','--more=v2','--flag=true']
+        launcher.normalizeArgs('--alpha=1') == ['--alpha=1']
+        launcher.normalizeArgs('--alpha','1') == ['--alpha=1']
+        launcher.normalizeArgs('-x', '1', 'script.nf', '--long', 'v1', '--more', 'v2', '--flag') == ['-x','1','script.nf','--long=v1','--more=v2','--flag=true']
 
-        Launcher.normalizeArgs('-x', '1', '-process.alpha','2', '3') == ['-x', '1', '-process.alpha=2', '3']
-        Launcher.normalizeArgs('-x', '1', '-process.echo') == ['-x', '1', '-process.echo=true']
+        launcher.normalizeArgs('-x', '1', '-process.alpha','2', '3') == ['-x', '1', '-process.alpha=2', '3']
+        launcher.normalizeArgs('-x', '1', '-process.echo') == ['-x', '1', '-process.echo=true']
 
-        Launcher.normalizeArgs('-x', '1', '-cluster.alpha','2', '3') == ['-x', '1', '-cluster.alpha=2', '3']
-        Launcher.normalizeArgs('-x', '1', '-cluster.echo') == ['-x', '1', '-cluster.echo=true']
+        launcher.normalizeArgs('-x', '1', '-cluster.alpha','2', '3') == ['-x', '1', '-cluster.alpha=2', '3']
+        launcher.normalizeArgs('-x', '1', '-cluster.echo') == ['-x', '1', '-cluster.echo=true']
 
-        Launcher.normalizeArgs('-x', '1', '-executor.alpha','2', '3') == ['-x', '1', '-executor.alpha=2', '3']
-        Launcher.normalizeArgs('-x', '1', '-executor.echo') == ['-x', '1', '-executor.echo=true']
+        launcher.normalizeArgs('-x', '1', '-executor.alpha','2', '3') == ['-x', '1', '-executor.alpha=2', '3']
+        launcher.normalizeArgs('-x', '1', '-executor.echo') == ['-x', '1', '-executor.echo=true']
 
-        Launcher.normalizeArgs('-x', '1', '-that.alpha','2', '3') == ['-x', '1', '-that.alpha','2', '3']
+        launcher.normalizeArgs('-x', '1', '-that.alpha','2', '3') == ['-x', '1', '-that.alpha','2', '3']
 
-        Launcher.normalizeArgs('run', 'file-name', '-a', '-b') == ['run','file-name', '-a', '-b']
-        Launcher.normalizeArgs('run', '-', '-a', '-b') == ['run','-stdin', '-a', '-b']
-        Launcher.normalizeArgs('run') == ['run']
+        launcher.normalizeArgs('run', 'file-name', '-a', '-b') == ['run','file-name', '-a', '-b']
+        launcher.normalizeArgs('run', '-', '-a', '-b') == ['run','-stdin', '-a', '-b']
+        launcher.normalizeArgs('run') == ['run']
 
-        Launcher.normalizeArgs('run','-with-drmaa') == ['run', '-with-drmaa','-']
-        Launcher.normalizeArgs('run','-with-drmaa', '-x') == ['run', '-with-drmaa','-', '-x']
-        Launcher.normalizeArgs('run','-with-drmaa', 'X') == ['run', '-with-drmaa','X']
+        launcher.normalizeArgs('run','-with-drmaa') == ['run', '-with-drmaa','-']
+        launcher.normalizeArgs('run','-with-drmaa', '-x') == ['run', '-with-drmaa','-', '-x']
+        launcher.normalizeArgs('run','-with-drmaa', 'X') == ['run', '-with-drmaa','X']
 
-        Launcher.normalizeArgs('run','-with-trace') == ['run', '-with-trace','trace.csv']
-        Launcher.normalizeArgs('run','-with-trace', '-x') == ['run', '-with-trace','trace.csv', '-x']
-        Launcher.normalizeArgs('run','-with-trace', 'file.x') == ['run', '-with-trace','file.x']
+        launcher.normalizeArgs('run','-with-trace') == ['run', '-with-trace','trace.csv']
+        launcher.normalizeArgs('run','-with-trace', '-x') == ['run', '-with-trace','trace.csv', '-x']
+        launcher.normalizeArgs('run','-with-trace', 'file.x') == ['run', '-with-trace','file.x']
 
-        Launcher.normalizeArgs('run','-with-docker') == ['run', '-with-docker','-']
-        Launcher.normalizeArgs('run','-with-docker', '-x') == ['run', '-with-docker','-', '-x']
-        Launcher.normalizeArgs('run','-with-docker', 'busybox') == ['run', '-with-docker','busybox']
+        launcher.normalizeArgs('run','-with-docker') == ['run', '-with-docker','-']
+        launcher.normalizeArgs('run','-with-docker', '-x') == ['run', '-with-docker','-', '-x']
+        launcher.normalizeArgs('run','-with-docker', 'busybox') == ['run', '-with-docker','busybox']
+
+        launcher.normalizeArgs( script.toAbsolutePath().toString(), '--x=1' ) == ['run', script.toAbsolutePath().toString(), '--x=1']
+
+
+        cleanup:
+        script?.delete()
     }
 
 
