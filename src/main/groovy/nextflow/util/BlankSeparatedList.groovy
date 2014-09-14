@@ -39,27 +39,27 @@ public class BlankSeparatedList implements KryoSerializable {
     @Delegate(interfaces = false)
     List target
 
-    public BlankSeparatedList() { }
+    BlankSeparatedList() { }
 
-    public BlankSeparatedList( Collection items ) {
+    BlankSeparatedList( Collection items ) {
         target = items != null ? new ArrayList(items) : []
     }
 
-    public BlankSeparatedList( Object ... items ) {
+    BlankSeparatedList( Object ... items ) {
         this(items as List)
     }
 
     @Override
-    public String toString() {
+    String toString() {
         target.join(' ')
     }
 
 
-    public void read (Kryo kryo, Input input) {
+    void read (Kryo kryo, Input input) {
         target = kryo.readObject(input,ArrayList)
     }
 
-    public void write (Kryo kryo, Output output) {
+    void write (Kryo kryo, Output output) {
         kryo.writeObject(output, target)
     }
 
