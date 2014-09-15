@@ -1,6 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.10.1 - 15 Sept 2014
+- Added ability to 'run' implicitly a script when it's specified as the very first parameter (for backward compatibility)
+- Added 'workDir' and 'baseDir' implicit variables in configuration files
+- Fixed docker remove issue by executing as an external command
+- Fixed issue #13 - Show a detailed error message when hitting GitHub rate limits
+
 0.10.0 - 8 Sept 2014
 - Added DRMAA executor 
 - Added PBS/Torque executor
