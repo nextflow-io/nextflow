@@ -96,14 +96,6 @@ class Trie<T> {
 
 
 
-//    def depthFirstSearch( Closure<Boolean> closure ) {
-//
-//    }
-//
-//    def breadthFirstSearch( Closure<Boolean> closure ) {
-//
-//    }
-
 }
 
 

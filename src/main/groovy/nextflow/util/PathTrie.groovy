@@ -34,6 +34,9 @@ class PathTrie {
 
     private static String PATH_SEP = File.separator
 
+    // and empty string used to mark the end of a path
+    private static final String END_PATH = ''
+
     List<Trie<String>> paths = []
 
     PathTrie() {}
@@ -68,7 +71,12 @@ class PathTrie {
         def head = tokens.head()
         if( path.isAbsolute() )
             head = PATH_SEP + head
-        getOrCreate(head).append( tokens.tail() )
+
+        def tail = tokens.tail()
+        // add an extra entry to mark the end of a path
+        if( tail ) tail.add(END_PATH)
+        else tail = [END_PATH]
+        getOrCreate(head).append(tail)
     }
 
     /**
@@ -117,6 +125,10 @@ class PathTrie {
             if( !tokens )
                 return
 
+            // remove the entry marking the end of the path
+            def last = tokens.size()-1
+            if( tokens[last] == END_PATH )
+                tokens.remove(last)
             result.add(tokens.join(PATH_SEP))
         }
 

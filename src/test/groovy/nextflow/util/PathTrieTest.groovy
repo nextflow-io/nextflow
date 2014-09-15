@@ -84,6 +84,34 @@ class PathTrieTest extends Specification {
         tree.longest().get(0) == 'a/b'
         tree.longest().get(1) == 'p/q/z'
 
+    }
+
+    def testLongest2 () {
+
+        when:
+        def tree = new PathTrie()
+        tree.add('/home/data/')
+        tree.add('/home/data/some/other/path')
+        then:
+        tree.longest().size() ==1
+        tree.longest().get(0) == '/home/data'
+
+        when:
+        tree = new PathTrie()
+        tree.add('/home/data/some/other/path')
+        tree.add('/home/data')
+        then:
+        tree.longest().size() ==1
+        tree.longest().get(0) == '/home/data'
+
+        when:
+        tree = new PathTrie()
+        tree.add('/home/data/')
+        tree.add('/home/data/some')
+        tree.add('/home/data/some/other/path')
+        then:
+        tree.longest().size() ==1
+        tree.longest().get(0) == '/home/data'
 
     }
 
