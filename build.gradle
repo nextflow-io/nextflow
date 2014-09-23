@@ -21,6 +21,7 @@
 version = '0.10.1'
 apply plugin: 'groovy'
 apply plugin: 'idea'
+apply plugin: 'codenarc'
 
 if (System.getenv('CI_GROOVY_VERSION')) {
     // Add ability to test with upcoming versions of Groovy
@@ -48,6 +49,7 @@ ext {
 
 allprojects {
     apply plugin: 'java'
+    apply plugin: 'codenarc'
 
     sourceCompatibility = 1.7
     targetCompatibility = 1.7
@@ -419,4 +421,22 @@ task exportClasspath {
     def all = configurations.gridgain + configurations.extrae
     def libs = all.collect { File file -> /* println file.canonicalPath.replace(home, '$HOME'); */ file.canonicalPath;  }
     new File('.launch.classpath').text = libs.join(':')
+}
+
+task supernarc(type: CodeNarc) {
+    def allGroovySourceDirs = subprojects
+            .findAll { p -> p.sourceSets.main.hasProperty('allGroovy') }
+            .collect { p -> p.sourceSets.main.allGroovy.getSrcDirs() }
+            .flatten()
+
+    allGroovySourceDirs.each {
+        source(it)
+    }
+
+    // BTW, if you know you have some violations and don't want the builds to fail because of too many violations, you can increase the threshold as follows
+    maxPriority1Violations = 5
+    maxPriority2Violations = Integer.MAX_VALUE
+    maxPriority3Violations = Integer.MAX_VALUE
+
+    println 'Look for the report full report at this path: build/reports/codenarc/supernarc.html'
 }
