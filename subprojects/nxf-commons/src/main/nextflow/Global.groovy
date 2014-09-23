@@ -38,7 +38,7 @@ class Global {
     /**
      * The main configuration object
      */
-    static private Map config
+    static Map config
 
     /**
      * @return The object instance representing the current session
@@ -56,19 +56,5 @@ class Global {
         session = value
     }
 
-    /**
-     * @return A {@link Map} instance representing the application configuration
-     */
-    static Map getConfig() {
-        config
-    }
 
-    /**
-     * Define the application wide-configuration object
-     *
-     * @param value An instance of {@link Map} holding the configuration properties
-     */
-    static void setConfig( Map value ) {
-        config = value
-    }
 }
