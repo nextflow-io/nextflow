@@ -31,27 +31,34 @@ class FileCollectorTest extends Specification {
 
     def testAppenderWithString() {
 
-        when:
+        given:
+        def target = Files.createTempDirectory('test')
+
         def appender = new FileCollector()
         appender.append('eng', 'Hello')
         appender.append('ita', 'Ciao')
         appender.append('eng', ' world!')
         appender.append('ita', '\nmondo\n!')
+
+        when:
+        def files = appender.moveFiles(target)
+
         then:
-        appender.size() == 2
-        appender.get('eng').text == 'Hello world!'
-        appender.get('ita').text == 'Ciao\nmondo\n!'
-        appender.getFiles().size() == 2
-        appender.getFiles() *. name .sort() == ['eng','ita']
+        files.size() == 2
+        files *. name .sort() == ['eng','ita']
+        target.resolve('eng').text == 'Hello world!'
+        target.resolve('ita').text == 'Ciao\nmondo\n!'
 
         cleanup:
         appender?.close()
+        target?.deleteDir()
 
     }
 
     def testAppenderNewLine() {
 
-        when:
+        given:
+        def target = Files.createTempDirectory('test')
         def appender = new FileCollector()
         appender.newLine = true
         appender.append('eng', 'Hello')
@@ -59,19 +66,25 @@ class FileCollectorTest extends Specification {
         appender.append('eng', 'world!')
         appender.append('ita', 'mondo')
         appender.append('ita', '!')
+
+        when:
+        def files = appender.moveFiles(target)
+
         then:
-        appender.size() == 2
-        appender.get('eng').text == 'Hello\nworld!\n'
-        appender.get('ita').text == 'Ciao\nmondo\n!\n'
-        appender.getFiles().size() == 2
-        appender.getFiles() *. name .sort() == ['eng','ita']
+        files *. name .sort() == ['eng','ita']
+        target.resolve('eng').text == 'Hello\nworld!\n'
+        target.resolve('ita').text == 'Ciao\nmondo\n!\n'
 
         cleanup:
         appender?.close()
+        target?.deleteDir()
 
     }
 
     def testAppenderWithSeed() {
+
+        given:
+        def target = Files.createTempDirectory('test')
 
         when:
         def file1 = Files.createTempFile('noname',null)
@@ -86,12 +99,17 @@ class FileCollectorTest extends Specification {
         appender1.append('ITA', 'mondo')
         appender1.append('ITA', '!')
 
+        // move files
+        def files = appender1.moveFiles(target)
+
         then:
-        appender1.get('ENG').text == 'Begin\nHello\nworld!\n'
-        appender1.get('ITA').text == 'Inizio\nCiao\nmondo\n!\n'
-        appender1.size() == 2
+        files.size()==2
+        target.resolve('ENG').text == 'Begin\nHello\nworld!\n'
+        target.resolve('ITA').text == 'Inizio\nCiao\nmondo\n!\n'
+
 
         when:
+        target.deleteDir()
         def file2 = Files.createTempFile('noname',null)
         file2.text = 'same file'
 
@@ -104,14 +122,18 @@ class FileCollectorTest extends Specification {
         appender2.append('ITA', 'mondo')
         appender2.append('ITA', '!')
 
+        files = appender2.moveFiles(target)
+
         then:
-        appender2.get('ENG').text == 'same file\nHello\nworld!\n'
-        appender2.get('ITA').text == 'same file\nCiao\nmondo\n!\n'
-        appender2.size() == 2
+        files.size() == 2
+        target.resolve('ENG').text == 'same file\nHello\nworld!\n'
+        target.resolve('ITA').text == 'same file\nCiao\nmondo\n!\n'
 
         cleanup:
         file1?.delete()
         file2?.delete()
+        target?.deleteDir()
+
         appender1?.close()
         appender2?.close()
 
@@ -121,6 +143,8 @@ class FileCollectorTest extends Specification {
     def testAppenderWithFile() {
 
         given:
+        def target = Files.createTempDirectory('test')
+
         def file1 = Files.createTempFile('file1',null)
         file1.text = 'alpha\nbeta'
 
@@ -134,59 +158,52 @@ class FileCollectorTest extends Specification {
         def appender = new FileCollector()
         appender.append('x', file1).append('x', '\n').append('x', file2)
         appender.append('y', file2).append('y', '\n').append('y', file3)
-
+        def files = appender.moveFiles(target)
 
         then:
-        appender.size() == 2
-        appender.get('x').text == 'alpha\nbeta\nHello\nworld'
-        appender.get('y').text == 'Hello\nworld\nxyz'
+        files.size() == 2
+        target.resolve('x').text == 'alpha\nbeta\nHello\nworld'
+        target.resolve('y').text == 'Hello\nworld\nxyz'
 
         cleanup:
         appender?.close()
         file1?.delete()
         file2?.delete()
         file3?.delete()
+        target?.deleteDir()
 
     }
 
-    def testMove() {
-        when:
-        def file1 = Files.createTempFile('testFile',null)
-        file1.text = 'file-content'
+
+    def testAppenderWithSort() {
+
+        given:
+        def target = Files.createTempDirectory('test')
 
         def appender = new FileCollector()
-        appender.append('eng', 'Hello')
-        appender.append('ita', 'Ciao')
-        appender.append('eng', ' world!')
-        appender.append('ita', '\nmondo\n!')
-        appender.append('xxx', file1)
-        then:
-        appender.size() == 3
-        appender.get('eng').text == 'Hello world!'
-        appender.get('ita').text == 'Ciao\nmondo\n!'
-        appender.get('xxx').text == 'file-content'
-        file1.exists()
+        appender.sort = { String it -> it.length() }
+        appender.newLine = true
+
+        appender.append('file2', 'bbbbbbb')
+        appender.append('file1', 'cccccc')
+        appender.append('file2', 'aaaaa')
+        appender.append('file1', 'zzzz')
+        appender.append('file2', 'pp')
+        appender.append('file1', 'q')
 
         when:
-        def target = Files.createTempDirectory('new-dir')
-        def list = appender.moveFiles(target)
-        then:
-        list.size() == 3
-        list *. name .sort() == ['eng','ita','xxx']
-        appender.size() == 0
-        file1.exists()
+        def files = appender.moveFiles(target)
 
-        when:
-        appender.close()
         then:
-        file1.exists()
+        files.size() == 2
+        files *. name .sort() == ['file1','file2']
+        target.resolve('file1').text == 'q\nzzzz\ncccccc\n'
+        target.resolve('file2').text == 'pp\naaaaa\nbbbbbbb\n'
 
         cleanup:
         appender?.close()
         target?.deleteDir()
-        file1?.delete()
+
     }
-
-
 
 }

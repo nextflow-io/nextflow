@@ -18,32 +18,23 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.util
+package nextflow.io
 
-import java.nio.ByteBuffer
-
-import spock.lang.Specification
+import groovy.transform.CompileStatic
 
 /**
+ * Implements a  {@link OutputStream} object backed on a {@link DataOutput} instance
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ByteBufferBackedInputStreamTest extends Specification {
 
-    def testAdaptor () {
+@CompileStatic
+class DataOutputStreamAdapter extends OutputStream {
 
-        setup:
-        def buffer = ByteBuffer.wrap( "Hello\nworld!".getBytes() )
+    final private DataOutput target
 
-        when:
-        def stream = new BufferedInputStream(new ByteBufferBackedInputStream(buffer))
-        def lines = stream.readLines()
+    DataOutputStreamAdapter( DataOutput out ) { target = out }
 
-        then:
-        lines[0] == 'Hello'
-        lines[1] == 'world!'
-        lines.size() == 2
-
-    }
-
+    @Override
+    void write(int b) throws IOException { target.write((byte)b) }
 }

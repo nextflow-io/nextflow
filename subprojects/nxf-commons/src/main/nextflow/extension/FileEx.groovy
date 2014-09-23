@@ -40,7 +40,7 @@ import java.nio.file.attribute.PosixFilePermissions
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.file.FileHelper
-import nextflow.util.ByteBufferBackedInputStream
+import nextflow.io.ByteBufferBackedInputStream
 import nextflow.util.CharsetHelper
 /**
  * Add utility methods to standard classes {@code File} and {@code Path}

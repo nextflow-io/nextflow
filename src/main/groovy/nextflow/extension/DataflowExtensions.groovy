@@ -47,6 +47,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.file.FileCollector
 import nextflow.file.FileHelper
+import nextflow.util.CacheHelper
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 /**
@@ -533,18 +534,19 @@ class DataflowExtensions {
     static public final DataflowReadChannel collectFile( final DataflowReadChannel channel, Map params, final Closure closure = null ) {
 
         def result = new DataflowQueue()
-        def acc = new FileCollector()
+        def collector = new FileCollector()
 
         if( session )
-            session.onShutdown { acc.closeQuietly() }
+            session.onShutdown { collector.closeQuietly() }
 
-        acc.newLine = params?.newLine as Boolean
-        acc.seed = params?.seed
+        collector.newLine = params?.newLine as Boolean
+        collector.seed = params?.seed
+        collector.sort = params?.sort ?: { CacheHelper.hasher(it).hash().asLong() }
 
         /*
          * A file name to be used, if provided
          */
-        def storeDir
+        Path storeDir
         String fileName
         if( params?.name ) {
             if( params.name instanceof Path || params.name.toString().contains('/') ) {
@@ -574,33 +576,38 @@ class DataflowExtensions {
             def value = closure ? mapClosureCall(item,closure) : item
 
             if( fileName && value != null ) {
-                acc.append( fileName, value )
+                collector.append( fileName, value )
             }
 
+            // when the value is a list, the first item hold the grouping key
+            // all the others values are appended
             else if( value instanceof List && value.size()>1 ) {
                 for( int i=1; i<value.size(); i++ ) {
-                    acc.append(value[0] as String, value[i])
+                    collector.append(value[0] as String, value[i])
                 }
             }
 
+            // same as above
             else if( value instanceof Object[] && value.size()>1 ) {
                 for( int i=1; i<value.size(); i++ ) {
-                    acc.append(value[0] as String, value[i])
+                    collector.append(value[0] as String, value[i])
                 }
             }
 
+            // Path object
             else if( value instanceof Path ) {
                 if( fileName )
-                    acc.append(fileName, value)
+                    collector.append(fileName, value)
                 else
-                    acc.append(value.getName(), value)
+                    collector.append(value.getName(), value)
             }
 
+            // as above
             else if( value instanceof File ) {
                 if( fileName )
-                    acc.append(fileName, value)
+                    collector.append(fileName, value)
                 else
-                    acc.append(value.getName(), value)
+                    collector.append(value.getName(), value)
             }
 
             else
@@ -612,7 +619,7 @@ class DataflowExtensions {
          * emits the files when all values have been collected
          */
         def emitItems = {
-            acc.moveFiles(storeDir).each {
+            collector.moveFiles(storeDir).each {
                 result.bind(it)
             }
 

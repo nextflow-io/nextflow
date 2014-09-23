@@ -28,7 +28,9 @@ import embed.com.google.common.hash.HashCode
 import embed.com.google.common.hash.HashFunction
 import embed.com.google.common.hash.Hasher
 import embed.com.google.common.hash.Hashing
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.extension.FileEx
 import nextflow.file.FileHolder
 
 enum HashMode { STANDARD, DEEP }
@@ -39,6 +41,7 @@ enum HashMode { STANDARD, DEEP }
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class CacheHelper {
 
     static HashFunction defaultHasher() {
@@ -185,8 +188,8 @@ class CacheHelper {
 
         hasher = hasher.putUnencodedChars( file.toAbsolutePath().normalize().toString() )
 
-        if( file.exists() ) {
-            return hasher.putLong( file.size() ) .putLong(file.lastModified())
+        if( FileEx.exists(file) ) {
+            return hasher.putLong(file.size()) .putLong(FileEx.lastModified(file))
         }
         else {
             return hasher
@@ -208,7 +211,7 @@ class CacheHelper {
         path.withInputStream { input ->
             output << input
         }
-        output.closeQuietly()
+        FileEx.closeQuietly(output)
         hasher
     }
 

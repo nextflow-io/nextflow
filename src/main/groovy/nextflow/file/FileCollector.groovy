@@ -23,11 +23,18 @@ import java.nio.file.Files
 import java.nio.file.OpenOption
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentMap
+import java.nio.file.attribute.BasicFileAttributes
 
-import groovy.transform.CompileStatic
+import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
 import groovy.util.logging.Slf4j
+import nextflow.io.DataInputStreamAdapter
+import nextflow.io.DataOutputStreamAdapter
+import nextflow.util.KryoHelper
+import org.mapdb.BTreeKeySerializer
+import org.mapdb.DB
+import org.mapdb.DBMaker
+import org.mapdb.Serializer
 /**
  *  Helper class used to aggregate values having the same key
  *  to files
@@ -35,43 +42,139 @@ import groovy.util.logging.Slf4j
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@CompileStatic
 class FileCollector implements Closeable {
 
-    static final OpenOption[] APPEND = [StandardOpenOption.APPEND, StandardOpenOption.WRITE] as OpenOption[]
+    /**
+     * Hold a single entry in the tree-set
+     */
+    static class Entry implements Serializable {
+
+        Comparable name
+        Comparable value
+        long index
+
+        Entry( Comparable a, Comparable b, long n ) {
+            this.name = a
+            this.value = b
+            this.index = n
+        }
+
+    }
+
+    /**
+     * Compare entries using the {@link Entry#name} as primary index and
+     * the value itself and secondary key
+     */
+    static class EntryComp implements Comparator<Entry>, Serializable {
+
+        transient Closure<Comparable> sort
+
+        @Override
+        int compare(Entry e1, Entry e2) {
+
+            def k = e1.name <=> e2.name
+            if( k != 0 )
+                return k
+
+            if( sort )
+                return sort.call(e1.value) <=> sort.call(e2.value)
+
+            return e1.index <=> e2.index
+        }
+    }
+
+    /**
+     * Serialize an entry as required by MapDB
+     */
+    static class EntrySerializer implements Serializer<Entry>, Serializable {
+
+        @Override
+        void serialize(DataOutput out, Entry value) throws IOException {
+            def output = new Output(new DataOutputStreamAdapter(out))
+            KryoHelper.kryo().writeObject(output, value)
+            output.flush()
+        }
+
+        @Override
+        Entry deserialize(DataInput dataInput, int available) throws IOException {
+            def input = new Input(new DataInputStreamAdapter(dataInput))
+            return KryoHelper.kryo().readObject(input,Entry)
+        }
+
+        @Override
+        int fixedSize() { -1 }
+    }
+
+    static final OpenOption[] APPEND = [StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE] as OpenOption[]
 
     public Boolean newLine
 
     public seed
 
-    protected Path temp
+    public Closure sort
 
-    protected ConcurrentMap<String,Path> cache = new ConcurrentHashMap<>()
+    private DB db
 
-    FileCollector( Path store = null ) {
-        if( !store )
-            store = Files.createTempDirectory('nxf-clt')
+    private SortedSet<Entry> cache
 
+    private long count
+
+    private File tempDbFile
+
+    /**
+     * Creates a file collector
+     *
+     * @param path The path the temporary files will be stored
+     */
+    FileCollector( Path path = null ) {
+        if( !path ) {
+            tempDbFile = Files.createTempFile('nxf', 'collect').toFile()
+        }
         else {
-            store.createDirIfNotExists()
+            // read the path attributes
+            def attr = Files.readAttributes(path, BasicFileAttributes)
+            // when it is a dir => create a temp file there
+            if ( attr.isDirectory() ) {
+                tempDbFile = Files.createTempFile(path,'nxf','collect').toFile()
+            }
+            // if its a file use it
+            else if( attr.isRegularFile()) {
+                tempDbFile = path.toFile()
+            }
+            else {
+                def dir = Files.createDirectories(path)
+                tempDbFile = Files.createTempFile(dir,'nxf','collect').toFile()
+            }
+
         }
-        this.temp = store
     }
 
-    protected Path _file( String name ) {
-        (Path)cache.getOrCreate(name) {
-            def result = Files.createFile(temp.resolve(name))
-            if( seed instanceof Map && seed.containsKey(name)) {
-                append0(result, _value(seed.get(name)))
-            }
-            else if( seed ) {
-                append0(result, _value(seed))
-            }
-            return result
-        }
+
+    private SortedSet<Entry> getOrCreateCache() {
+
+        if( cache )
+            return cache
+
+        this.db = DBMaker.newFileDB(tempDbFile)
+                .transactionDisable()
+                .asyncWriteEnable()
+                .mmapFileEnable()
+                .compressionEnable()
+                .closeOnJvmShutdown()
+                .deleteFilesAfterClose()
+                .make()
+
+        def rndName = "set-${new BigInteger(130, new Random()).toString(32)}"
+        cache = db
+                .createTreeSet(rndName)
+                .comparator(new EntryComp(sort: sort))
+                .serializer(new BTreeKeySerializer.BasicKeySerializer(new EntrySerializer()))
+                .makeOrGet()
+
+        return cache
     }
 
-    protected InputStream _value( value ) {
+    protected InputStream source( value ) {
         if( value instanceof Path )
             return value.newInputStream()
 
@@ -88,8 +191,8 @@ class FileCollector implements Closeable {
     }
 
 
-    FileCollector append( String key, value ) {
-        append0( _file(key), _value(value))
+    FileCollector append( String key, Comparable value ) {
+        getOrCreateCache().add( new Entry(key,value,count++) )
         return this
     }
 
@@ -100,47 +203,21 @@ class FileCollector implements Closeable {
      * @param key
      * @param fileToAppend
      */
-    protected void append0( Path source, InputStream stream ) {
+    protected void append( InputStream source, OutputStream target ) {
         int n
         byte[] buffer = new byte[10 * 1024]
-        def output = Files.newOutputStream(source, APPEND)
 
         try {
-            while( (n=stream.read(buffer)) > 0 ) {
-                output.write(buffer,0,n)
+            while( (n=source.read(buffer)) > 0 ) {
+                target.write(buffer,0,n)
             }
             // append the new line separator
             if( newLine )
-                output.write( System.lineSeparator().bytes )
+                target.write( System.lineSeparator().bytes )
         }
         finally {
-            stream.closeQuietly()
-            output.closeQuietly()
+            source.closeQuietly()
         }
-    }
-
-    /**
-     *
-     * @return The number of files in the appender accumulator
-     */
-    int size() {
-        cache.size()
-    }
-
-    boolean isEmpty() {
-        cache.isEmpty()
-    }
-
-    boolean containsKey(String key) {
-        return cache.containsKey(key)
-    }
-
-    Path get(String name) {
-        cache.get(name)
-    }
-
-    List<Path> getFiles() {
-        new ArrayList<Path>(cache.values())
     }
 
     List<Path> moveFiles(Path target) {
@@ -157,20 +234,56 @@ class FileCollector implements Closeable {
 
     void moveFiles( Closure<Path> closure ) {
 
-        def result = []
-        Iterator<Path> itr = cache.values().iterator()
-        while( itr.hasNext() ) {
-            def item = itr.next()
-            def target = closure.call(item.getName())
-            result << Files.move(item, target)
-            itr.remove()
+        if( !cache ) {
+            // nothing  to do
+            return
         }
 
+        def last = null
+        OutputStream output = null
+
+        Iterator<Entry> itr = cache.iterator()
+        while( itr.hasNext() ) {
+            def entry = itr.next()
+            def name = entry.name
+            if( last != name ) {
+                // close current output stream
+                output?.closeQuietly()
+                // set the current as the 'next' last
+                last = name
+
+                /*
+                 * given a 'group' name returns the target file where to save
+                 */
+                def target = closure.call(name)
+                output = Files.newOutputStream(target, APPEND)
+
+                /*
+                 * write the 'seed' value
+                 */
+                if( seed instanceof Map && seed.containsKey(name)) {
+                    append(source(seed.get(name)), output)
+                }
+                else if( seed ) {
+                    append(source(seed), output)
+                }
+
+            }
+
+            /*
+             * add the current value
+             */
+            append(source(entry.value), output)
+
+        }
+
+        // close last output stream
+        output?.closeQuietly()
     }
 
     @Override
     void close() {
-        temp?.deleteDir()
+        db?.close()
     }
 
 
