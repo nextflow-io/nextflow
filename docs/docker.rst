@@ -74,7 +74,7 @@ in Nextflow script as shown below::
 
 Alternatively, the same containers definition can be provided by using the ``nextflow.config`` as shown below::
 
-    process.$boo.container = 'image_name_1'
+    process.$foo.container = 'image_name_1'
     process.$bar.container = 'image_name_2'
     docker.enabled = true
 

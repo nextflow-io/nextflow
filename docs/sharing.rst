@@ -167,7 +167,7 @@ pipeline `qualified` name on the Nextflow run command line. The qualified name i
 (or organisation) plus the repository name.
 
 For the sake of the example if your GitHub account name is ``foo`` and you have uploaded it to a repository named ``bar`` the
-repository home page will be ``http://github.com/boo/bar`` and people will able to run it by entering the command::
+repository home page will be ``http://github.com/foo/bar`` and people will able to run it by entering the command::
 
   nextflow run foo/bar
 
