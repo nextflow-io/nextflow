@@ -19,15 +19,14 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Paths
 
 import nextflow.processor.TaskConfig
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.script.BaseScript
 import nextflow.util.Duration
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -55,12 +54,12 @@ class SlurmExecutorTest extends Specification {
     def testGetSubmitCmdLine() {
 
         given:
+        def proc = Mock(TaskProcessor)
+        proc.getName() >> { 'myJob' }
         def base = Mock(BaseScript)
         def config = new TaskConfig(base)
         def script = Paths.get('/some/script.sh')
-        def task = Mock(TaskRun)
-        task.workDir >> Paths.get('/work/path')
-        task.name >> 'task 555'
+        def task = new TaskRun(workDir: Paths.get('/work/path'), index: 33, processor: proc)
         def exec = [:] as SlurmExecutor
         exec.taskConfig = config
 
@@ -68,7 +67,7 @@ class SlurmExecutorTest extends Specification {
         config.maxDuration( Duration.of('1h') )
         config.clusterOptions = '-x -y -z'
         then:
-        exec.getSubmitCommandLine(task,script).join(' ') == 'sbatch -D /work/path -J nf-task_555 -o /dev/null -t 01:00:00 -x -y -z script.sh'
+        exec.getSubmitCommandLine(task,script).join(' ') == 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -t 01:00:00 -x -y -z script.sh'
     }
 
     def testQstatCommand() {

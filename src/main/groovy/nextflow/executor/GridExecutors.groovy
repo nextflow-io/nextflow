@@ -305,7 +305,7 @@ class GridTaskHandler extends TaskHandler {
                 log.trace "submit ${task.name} > exit: $exitStatus\n$result\n"
 
                 if( exitStatus ) {
-                    throw new ProcessSubmitException("Failed to submit job to the grid engine job for execution")
+                    throw new ProcessSubmitException("Failed to submit job to grid scheduler for execution")
                 }
 
                 // save the JobId in the
@@ -736,7 +736,7 @@ class SlurmExecutor extends AbstractGridExecutor {
 
         result << 'sbatch'
         result << '-D' << task.workDir.toString()
-        result << '-J' << "nf-${task.name.replace(' ','_')}"
+        result << '-J' << "nf-${task.processor.getName()}_${task.index}"
         result << '-o' << '/dev/null'
 
         if( taskConfig.maxDuration ) {
