@@ -29,10 +29,10 @@ sourceSets {
 }
 
 dependencies {
-    compile "org.codehaus.groovy:groovy:${groovyVersion}"
-    compile "org.codehaus.groovy:groovy-nio:${groovyVersion}"
-    compile "ch.qos.logback:logback-classic:${logbackVersion}"
-    compile "ch.qos.logback:logback-core:${logbackVersion}"
+    compile "org.codehaus.groovy:groovy:2.3.6"
+    compile "org.codehaus.groovy:groovy-nio:2.3.6"
+    compile "ch.qos.logback:logback-classic:1.1.2"
+    compile "ch.qos.logback:logback-core:1.1.2"
     compile "commons-lang:commons-lang:2.6"
     compile files('../../lib/guava-cache-16.0.1.jar')
 

@@ -40,10 +40,6 @@ if (System.getenv('CI_GROOVY_VERSION')) {
 
 ext {
     mainClassName = 'nextflow.cli.Launcher'
-
-    groovyVersion = '2.3.6'
-    slf4jVersion = '1.7.7'
-    logbackVersion = '1.1.2'
 }
 
 allprojects {
@@ -85,14 +81,14 @@ configurations {
 
 dependencies {
     compile(project(':nxf-commons'))
-    compile "org.codehaus.groovy:groovy:${groovyVersion}"
-    compile "org.codehaus.groovy:groovy-nio:${groovyVersion}"
-    compile "org.codehaus.groovy:groovy-json:${groovyVersion}"
-    compile "org.slf4j:jcl-over-slf4j:${slf4jVersion}"
-    compile "org.slf4j:jul-to-slf4j:${slf4jVersion}"
-    compile "org.slf4j:log4j-over-slf4j:${slf4jVersion}"
-    compile "ch.qos.logback:logback-classic:${logbackVersion}"
-    compile "ch.qos.logback:logback-core:${logbackVersion}"
+    compile "org.codehaus.groovy:groovy:2.3.6"
+    compile "org.codehaus.groovy:groovy-nio:2.3.6"
+    compile "org.codehaus.groovy:groovy-json:2.3.6"
+    compile "org.slf4j:jcl-over-slf4j:1.7.7"
+    compile "org.slf4j:jul-to-slf4j:1.7.7"
+    compile "org.slf4j:log4j-over-slf4j:1.7.7"
+    compile "ch.qos.logback:logback-classic:1.1.2"
+    compile "ch.qos.logback:logback-core:1.1.2"
     compile "org.codehaus.gpars:gpars:1.2.1"
     compile "commons-lang:commons-lang:2.6"
     compile "com.beust:jcommander:1.35"
@@ -126,8 +122,8 @@ dependencies {
 
     // Documentation required libraries
     gdocLibs 'org.fusesource.jansi:jansi:1.11'
-    gdocLibs "org.codehaus.groovy:groovy-groovydoc:${groovyVersion}"
-    gdocLibs "org.codehaus.groovy:groovy-ant:${groovyVersion}"
+    gdocLibs "org.codehaus.groovy:groovy-groovydoc:2.3.6"
+    gdocLibs "org.codehaus.groovy:groovy-ant:2.3.6"
 
 }
 
