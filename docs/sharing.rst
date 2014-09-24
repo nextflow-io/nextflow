@@ -54,11 +54,11 @@ Handle revisions
 Any Git branch, tag or commit ID in the GitHub repository can be used to specify a revision, that you want to execute,
 when running your pipeline by adding the ``-r`` option to the run command line. So for example you could enter::
 
-    nextflow run nextflow-io-/hello -r mybranch
+    nextflow run nextflow-io/hello -r mybranch
 
 or ::
 
-    nextflow run nextflow-io-/hello -r v1.1
+    nextflow run nextflow-io/hello -r v1.1
 
 
 It will execute two different code revisions as specified.
