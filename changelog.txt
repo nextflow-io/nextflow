@@ -1,6 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.10.2 - 29 Sep 2014
+- Fixed  error while submitting job to SLURM scheduler
+- Fixed bug in TaskConfig#toBool() method 
+- Removed TaskConfig#getMerge() method
+- Updated method Channel.fromPath(String) so that it returns normalised absolute paths  
+- Updated Capsule to version 0.9.0 stable
+- Fixed typos in documentation
+
 0.10.1 - 15 Sept 2014
 - Added ability to 'run' implicitly a script when it's specified as the very first parameter (for backward compatibility)
 - Added 'workDir' and 'baseDir' implicit variables in configuration files
@@ -8,7 +16,7 @@ NEXTFLOW CHANGE-LOG
 - Fixed an issue when finding the longest common path used by docker mounts
 - Fixed issue #13 - Show a detailed error message when hitting GitHub rate limits
 
-0.10.0 - 8 Sept 2014
+0.10.0 - 8 Sep 2014
 - Added DRMAA executor 
 - Added PBS/Torque executor
 - Added processes execution report 
