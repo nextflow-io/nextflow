@@ -115,6 +115,10 @@ abstract class BaseScript extends Script {
         exit(0, message)
     }
 
+    /**
+     * Throws a script runtime error
+     * @param message An optional error message
+     */
     def void error( String message = null ) {
         throw message ? new ProcessScriptException(message) : new ProcessScriptException()
     }
