@@ -36,5 +36,5 @@ class DataOutputStreamAdapter extends OutputStream {
     DataOutputStreamAdapter( DataOutput out ) { target = out }
 
     @Override
-    void write(int b) throws IOException { target.write((byte)b) }
+    void write(int b) throws IOException { target.write(b) }
 }

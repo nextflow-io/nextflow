@@ -37,10 +37,14 @@ class DataInputStreamAdapter extends InputStream {
     @Override
     int read() throws IOException {
         try {
-            return target.readByte()
+            return target.readUnsignedByte()
         }
-        catch( EOFException e ) {
+        catch( EOFException | IndexOutOfBoundsException e ) {
             return -1
         }
+    }
+
+    public long skip(long n) {
+        target.skipBytes(n as int)
     }
 }

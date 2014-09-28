@@ -21,12 +21,69 @@
 package nextflow.file
 import java.nio.file.Files
 
+import org.mapdb.DataInput2
+import org.mapdb.DataOutput2
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class FileCollectorTest extends Specification {
+
+
+    def testSerializer () {
+
+        given:
+        final HELLO_WORLD = 'Hello world!'
+        def buffer = new ByteArrayOutputStream()
+        def dataOut = new DataOutputStream(buffer)
+        new FileCollector.ObjectSerializer().serialize(dataOut, HELLO_WORLD)
+        dataOut.close()
+
+        when:
+        def bytes = buffer.toByteArray()
+        def dataIn = new DataInputStream(new ByteArrayInputStream(bytes))
+        then:
+        new FileCollector.ObjectSerializer().deserialize(dataIn, HELLO_WORLD.size()) == HELLO_WORLD
+
+    }
+
+
+    def testSerializer2() {
+
+        given:
+        def dataOut = new DataOutput2(new byte[1024])
+        new FileCollector.ObjectSerializer().serialize(dataOut, 'Hello world!')
+        dataOut.close()
+
+        when:
+        def buffer = dataOut.copyBytes()
+        def dataIn = new DataInput2(buffer)
+        then:
+        new FileCollector.ObjectSerializer().deserialize(dataIn, buffer.length) == 'Hello world!'
+
+    }
+
+    def testAppenderWithString0() {
+
+        given:
+        def target = Files.createTempDirectory('test')
+
+        def appender = new FileCollector()
+        appender.append('eng', 'Hello')
+
+        when:
+        def files = appender.moveFiles(target)
+
+        then:
+        files.size() == 1
+        target.resolve('eng').text == 'Hello'
+
+        cleanup:
+        appender?.close()
+        target?.deleteDir()
+
+    }
 
 
     def testAppenderWithString() {

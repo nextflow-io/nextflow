@@ -27,13 +27,12 @@ import java.nio.file.attribute.BasicFileAttributes
 
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.io.DataInputStreamAdapter
-import nextflow.io.DataOutputStreamAdapter
 import nextflow.util.KryoHelper
-import org.mapdb.BTreeKeySerializer
 import org.mapdb.DB
 import org.mapdb.DBMaker
+import org.mapdb.DataInput2
 import org.mapdb.Serializer
 /**
  *  Helper class used to aggregate values having the same key
@@ -42,42 +41,52 @@ import org.mapdb.Serializer
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class FileCollector implements Closeable {
 
     /**
      * Hold a single entry in the tree-set
      */
-    static class Entry implements Serializable {
+    static class IndexEntry implements Serializable {
 
-        Comparable name
-        Comparable value
+        /*
+         * User provided grouping key used to sort entries in the (secondary) index
+         */
+        Comparable groupKey
+
+        /*
+         * The entry index i.e. its key in the store map
+         */
         long index
 
-        Entry( Comparable a, Comparable b, long n ) {
-            this.name = a
-            this.value = b
+        // required by kryo de-serialization
+        protected IndexEntry () {}
+
+        IndexEntry( Comparable a, long n ) {
+            this.groupKey = a
             this.index = n
         }
 
     }
 
     /**
-     * Compare entries using the {@link Entry#name} as primary index and
+     * Compare entries using the {@link IndexEntry#groupKey} as primary index and
      * the value itself and secondary key
      */
-    static class EntryComp implements Comparator<Entry>, Serializable {
+    static class EntryComp implements Comparator<IndexEntry>, Serializable {
 
         transient Closure<Comparable> sort
+        transient Map<Long,Comparable> store
 
         @Override
-        int compare(Entry e1, Entry e2) {
+        int compare(IndexEntry e1, IndexEntry e2) {
 
-            def k = e1.name <=> e2.name
+            def k = e1.groupKey <=> e2.groupKey
             if( k != 0 )
                 return k
 
             if( sort )
-                return sort.call(e1.value) <=> sort.call(e2.value)
+                return sort.call(store[e1.index]) <=> sort.call(store[e2.index])
 
             return e1.index <=> e2.index
         }
@@ -86,23 +95,45 @@ class FileCollector implements Closeable {
     /**
      * Serialize an entry as required by MapDB
      */
-    static class EntrySerializer implements Serializer<Entry>, Serializable {
+    static class EntrySerializer implements Serializer<IndexEntry>, Serializable {
 
         @Override
-        void serialize(DataOutput out, Entry value) throws IOException {
-            def output = new Output(new DataOutputStreamAdapter(out))
+        void serialize(DataOutput dataOutput, IndexEntry value) throws IOException {
+            def output = new Output(dataOutput as OutputStream)
             KryoHelper.kryo().writeObject(output, value)
             output.flush()
         }
 
         @Override
-        Entry deserialize(DataInput dataInput, int available) throws IOException {
-            def input = new Input(new DataInputStreamAdapter(dataInput))
-            return KryoHelper.kryo().readObject(input,Entry)
+        IndexEntry deserialize(DataInput dataInput, int available) throws IOException {
+            def input = new Input(dataInput as InputStream)
+            return KryoHelper.kryo().readObject(input,IndexEntry)
         }
 
         @Override
         int fixedSize() { -1 }
+    }
+
+    /**
+     * Serialize an entry as required by MapDB
+     */
+    static class ObjectSerializer implements Serializer<Object>, Serializable {
+
+        @Override
+        void serialize(DataOutput dataOutput, Object value) throws IOException {
+            def output = new Output(dataOutput as OutputStream)
+            KryoHelper.kryo().writeClassAndObject(output, value)
+            output.flush()
+        }
+
+        @Override
+        Object deserialize(DataInput dataInput, int available) throws IOException {
+            def input = new Input(new DataInputPatch(dataInput as DataInput2))
+            return KryoHelper.kryo().readClassAndObject(input)
+        }
+
+        @Override
+        int fixedSize() { return -1 }
     }
 
     static final OpenOption[] APPEND = [StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE] as OpenOption[]
@@ -115,7 +146,9 @@ class FileCollector implements Closeable {
 
     private DB db
 
-    private SortedSet<Entry> cache
+    private Map<Long,Comparable> store
+
+    private NavigableSet<IndexEntry> index
 
     private long count
 
@@ -149,32 +182,52 @@ class FileCollector implements Closeable {
         }
     }
 
+    /**
+     * Creates the MapDB data structures
+     */
+    private void createStoreAndIndex() {
 
-    private SortedSet<Entry> getOrCreateCache() {
-
-        if( cache )
-            return cache
-
-        this.db = DBMaker.newFileDB(tempDbFile)
+        /*
+         * Creates the MapDB object
+         */
+        db = DBMaker.newFileDB(tempDbFile)
                 .transactionDisable()
-                .asyncWriteEnable()
+                //.cacheDisable()
                 .mmapFileEnable()
                 .compressionEnable()
                 .closeOnJvmShutdown()
                 .deleteFilesAfterClose()
                 .make()
 
-        def rndName = "set-${new BigInteger(130, new Random()).toString(32)}"
-        cache = db
-                .createTreeSet(rndName)
-                .comparator(new EntryComp(sort: sort))
-                .serializer(new BTreeKeySerializer.BasicKeySerializer(new EntrySerializer()))
+        def unique = new BigInteger(130, new Random()).toString(32)
+
+        /*
+         * The map that holds the objects
+         */
+        store = db
+                .createHashMap("map-${unique}")
+                .keySerializer( Serializer.LONG )
+                .valueSerializer( new ObjectSerializer() )
                 .makeOrGet()
 
-        return cache
+        /*
+         * a "sorted set" used as index to access the values in
+         */
+        index = db
+                .createTreeSet("ndx-${unique}")
+                .comparator(new EntryComp(sort: sort, store: store))
+                //.serializer(BTreeKeySerializer.TUPLE2)
+                .makeOrGet()
+
     }
 
-    protected InputStream source( value ) {
+    /**
+     * Normalize values to a {@link InputStream}
+     *
+     * @param value The user provided value
+     * @return An {@link InputStream} referring the value
+     */
+    protected InputStream normalizeToStream( value ) {
         if( value instanceof Path )
             return value.newInputStream()
 
@@ -190,9 +243,21 @@ class FileCollector implements Closeable {
         throw new IllegalArgumentException("Not a valid file collector argument [${value.class.name}]: $value")
     }
 
-
+    /**
+     * Append a user value to the file collection
+     *
+     * @param key The grouping key
+     * @param value The value to append
+     * @return The {@link FileCollector} self object
+     */
     FileCollector append( String key, Comparable value ) {
-        getOrCreateCache().add( new Entry(key,value,count++) )
+        if( !store )
+            createStoreAndIndex()
+
+        store.put( count, value )
+        index.add( new IndexEntry(key,count) )
+        count++
+
         return this
     }
 
@@ -203,7 +268,7 @@ class FileCollector implements Closeable {
      * @param key
      * @param fileToAppend
      */
-    protected void append( InputStream source, OutputStream target ) {
+    protected void appendStream( InputStream source, OutputStream target ) {
         int n
         byte[] buffer = new byte[10 * 1024]
 
@@ -234,7 +299,7 @@ class FileCollector implements Closeable {
 
     void moveFiles( Closure<Path> closure ) {
 
-        if( !cache ) {
+        if( !store ) {
             // nothing  to do
             return
         }
@@ -242,10 +307,10 @@ class FileCollector implements Closeable {
         def last = null
         OutputStream output = null
 
-        Iterator<Entry> itr = cache.iterator()
+        Iterator<IndexEntry> itr = index.iterator()
         while( itr.hasNext() ) {
             def entry = itr.next()
-            def name = entry.name
+            def name = entry.groupKey
             if( last != name ) {
                 // close current output stream
                 output?.closeQuietly()
@@ -262,10 +327,10 @@ class FileCollector implements Closeable {
                  * write the 'seed' value
                  */
                 if( seed instanceof Map && seed.containsKey(name)) {
-                    append(source(seed.get(name)), output)
+                    appendStream(normalizeToStream(seed.get(name)), output)
                 }
                 else if( seed ) {
-                    append(source(seed), output)
+                    appendStream(normalizeToStream(seed), output)
                 }
 
             }
@@ -273,7 +338,8 @@ class FileCollector implements Closeable {
             /*
              * add the current value
              */
-            append(source(entry.value), output)
+            def val = store.get(entry.index)
+            appendStream(normalizeToStream(val), output)
 
         }
 
