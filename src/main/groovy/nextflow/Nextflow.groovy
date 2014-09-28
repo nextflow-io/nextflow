@@ -141,18 +141,14 @@ class Nextflow {
     static file( def fileName ) {
         assert fileName
 
-        switch (fileName) {
-            case Path:
-                return ((Path) fileName).normalize().toAbsolutePath()
-                break;
+        if( fileName instanceof Path )
+            return ((Path) fileName).normalize().toAbsolutePath()
 
-            case File:
-                return ((File) fileName).toPath().normalize().toAbsolutePath()
-                break;
+        if( fileName instanceof File )
+            return ((File) fileName).toPath().normalize().toAbsolutePath()
 
-            default:
-                return fileNamePattern(fileName?.toString())
-        }
+        // default case
+        return fileNamePattern(fileName?.toString())
 
     }
 
