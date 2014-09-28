@@ -106,14 +106,10 @@ class TaskConfig implements Map<String,Object> {
 
     private boolean toBool( value )  {
         if( value instanceof Boolean ) {
-            configProperties.echo = value.booleanValue()
+            return value.booleanValue()
         }
-        else if( value != null && value.toString().toLowerCase() in BOOL_YES ) {
-            configProperties.echo = true
-        }
-        else {
-            configProperties.echo = false
-        }
+
+        return value != null && value.toString().toLowerCase() in BOOL_YES
     }
 
     @Override
@@ -178,11 +174,6 @@ class TaskConfig implements Map<String,Object> {
 
     boolean getEcho() {
         configProperties.echo
-    }
-
-    @Deprecated
-    boolean getMerge() {
-        configProperties.merge?.toString() in BOOL_YES
     }
 
     void setEcho( Object value ) {
