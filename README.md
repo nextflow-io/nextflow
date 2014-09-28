@@ -194,7 +194,7 @@ You can compile *Nextflow* by typing the following command in the project home d
 The very first time you run it, it will automatically download all the libraries required by the build process. 
 It may take some minutes to complete.
 
-When complete, execute the program by using the `launch.sh` launch script in the project directory.
+When complete, execute the program by using the `launch.sh` script in the project directory.
 
 
 Required dependencies
