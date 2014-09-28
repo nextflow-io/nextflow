@@ -162,7 +162,7 @@ class Channel {
         assert filePattern
 
         if( !FileHelper.isGlobPattern(filePattern)) {
-            return from( filePattern as Path )
+            return from( Nextflow.file(filePattern) )
         }
 
         // split the folder and the pattern
