@@ -101,6 +101,8 @@ dependencies {
     compile "com.google.code.findbugs:jsr305:1.3.9"
     compile "com.esotericsoftware.kryo:kryo:2.24.0"
     compile 'org.mapdb:mapdb:1.0.6'
+    compile 'org.iq80.leveldb:leveldb:0.7'
+    compile 'net.sf.trove4j:trove4j:3.0.3'
     compile("org.utgenome.thirdparty:picard:1.102.0") { transitive = false }
     compile("org.eclipse.jgit:org.eclipse.jgit:3.4.1.201406201815-r") {
         exclude module: 'commons-logging'
