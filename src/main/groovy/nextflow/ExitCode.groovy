@@ -45,6 +45,8 @@ interface ExitCode {
 
     static final short COMMAND_RUNTIME_ERROR = 108
 
+    static final short COMPILATION_ERROR = 109
+
     static final short UNKNOWN_ERROR = 255
 
 

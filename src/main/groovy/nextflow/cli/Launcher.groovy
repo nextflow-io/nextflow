@@ -38,6 +38,7 @@ import nextflow.ExitCode
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.util.LoggerHelper
+import org.codehaus.groovy.control.CompilationFailedException
 import org.eclipse.jgit.api.errors.GitAPIException
 /**
  * Main application entry point. It parses the command line and
@@ -356,6 +357,11 @@ class Launcher implements ExitCode {
         catch( ConfigParseException e )  {
             log.error("${e.message}\n\n${e.cause?.message?.toString()?.indent('  ')}\n  ${Const.log_detail_tip_message}\n", e.cause ?: e)
             System.exit(INVALID_CONFIG)
+        }
+
+        catch( CompilationFailedException e ) {
+            log.error e.message
+            System.exit(COMPILATION_ERROR)
         }
 
         catch( Throwable fail ) {

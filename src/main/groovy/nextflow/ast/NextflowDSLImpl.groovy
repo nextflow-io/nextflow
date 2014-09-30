@@ -672,8 +672,12 @@ public class NextflowDSLImpl implements ASTTransformation {
 
         // extract the first argument which has to be a method-call expression
         // the name of this method represent the *process* name
-        assert list.size() == 1
-        assert list[0] instanceof MethodCallExpression
+        if( list.size() != 1 || !list[0].class.isAssignableFrom(MethodCallExpression) ) {
+            log.debug "Missing name in process definition at line: ${methodCall.lineNumber}"
+            unit.addError( new SyntaxException("Process definition syntax error -- You must provide a string identifier after the `process` keyword", methodCall.lineNumber, methodCall.columnNumber+7))
+            return
+        }
+
         def nested = list[0] as MethodCallExpression
         def name = nested.getMethodAsString()
 
