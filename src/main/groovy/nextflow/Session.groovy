@@ -83,7 +83,7 @@ class Session {
     /**
      * The folder where the main script is contained
      */
-    def File baseDir
+    def Path baseDir
 
     /**
      * The pipeline script name (without parent path)
@@ -93,7 +93,7 @@ class Session {
     /**
      * Folder(s) containing libs and classes to be added to the classpath
      */
-    def List<File> libDir
+    def List<Path> libDir
 
     /**
      * The unique identifier of this session
@@ -112,7 +112,7 @@ class Session {
 
     final int poolSize
 
-    private List<TraceObserver> observers
+    private List<TraceObserver> observers = []
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -140,7 +140,7 @@ class Session {
         if( config.env == null ) config.env = [:]
 
         // set unique session from the taskConfig object, or create a new one
-        uniqueId = config.session?.uniqueId ? UUID.fromString( config.session.uniqueId.toString() ) : UUID.randomUUID()
+        uniqueId = (config.session as Map)?.uniqueId ? UUID.fromString( (config.session as Map).uniqueId as String) : UUID.randomUUID()
 
         if( config.poolSize ) {
             this.poolSize = config.poolSize as int
@@ -161,7 +161,7 @@ class Session {
      *  {@link CliOptions} object
      *
      */
-    def void init( CmdRun runOpts, File scriptFile ) {
+    def void init( CmdRun runOpts, Path scriptFile ) {
 
         this.cacheable = runOpts.cacheable
         this.resumeMode = runOpts.resume != null
@@ -172,7 +172,7 @@ class Session {
 
         if( scriptFile ) {
             // the folder that contains the main script
-            this.baseDir = scriptFile.parentFile
+            this.baseDir = scriptFile.parent
             // set the script name attribute
             this.scriptName = scriptFile.name
         }
@@ -240,7 +240,7 @@ class Session {
             return null
         }
 
-        def path = new File(baseDir, 'bin').toPath()
+        def path = baseDir.resolve('bin')
         if( !path.exists() || !path.isDirectory() ) {
             log.debug "Script base path does not exist or is not a directory: ${path}"
             return null
@@ -254,24 +254,24 @@ class Session {
 
         if( !str ) return
 
-        def files = str.split( File.pathSeparator ).collect { new File(it) }
+        def files = str.split( File.pathSeparator ).collect { String it -> Paths.get(it) }
         if( !files ) return
 
         libDir = []
-        for( File file : files ) {
+        for( Path file : files ) {
             if( !file.exists() )
-                throw new MissingLibraryException("Cannot find specified library: ${file.absolutePath}")
+                throw new MissingLibraryException("Cannot find specified library: ${file.fixed()}")
 
             libDir << file
         }
     }
 
-    def List<File> getLibDir() {
+    def List<Path> getLibDir() {
         if( libDir )
             return libDir
 
         libDir = []
-        def localLib = baseDir ? new File(baseDir,'lib') : new File('lib')
+        def localLib = baseDir ? baseDir.resolve('lib') : Paths.get('lib')
         if( localLib.exists() ) {
             log.debug "Using default localLib path: $localLib"
             libDir << localLib

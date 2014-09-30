@@ -65,13 +65,13 @@ class ConfigHelperTest extends Specification {
         def path3 = Paths.get('/some/file')
 
         when:
-        def list = ConfigHelper.resolveClassPaths([path1?.toFile(), path2?.toFile(), path3?.toFile()])
+        def list = ConfigHelper.resolveClassPaths([path1, path2, path3])
         then:
         list.size() == 4
-        list.contains( path1.toFile() )
-        list.contains( path1.resolve('file2.jar').toFile() )
-        list.contains( path2.toFile() )
-        list.contains( path2.resolve('file6.jar').toFile() )
+        list.contains( path1 )
+        list.contains( path1.resolve('file2.jar') )
+        list.contains( path2 )
+        list.contains( path2.resolve('file6.jar') )
 
         cleanup:
         path1?.deleteDir()

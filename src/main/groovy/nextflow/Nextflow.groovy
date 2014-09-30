@@ -114,7 +114,7 @@ class Nextflow {
         /*
          * split the parent path from the file name
          */
-        final path = FileHelper.asPath(sName).normalize().toAbsolutePath()
+        final path = FileHelper.asPath(sName).fixed()
         def base = path.getParent()
         def filePattern = path.getFileName().toString()
 
@@ -142,10 +142,10 @@ class Nextflow {
         assert fileName
 
         if( fileName instanceof Path )
-            return ((Path) fileName).normalize().toAbsolutePath()
+            return ((Path) fileName).fixed()
 
         if( fileName instanceof File )
-            return ((File) fileName).toPath().normalize().toAbsolutePath()
+            return ((File) fileName).toPath().fixed()
 
         // default case
         return fileNamePattern(fileName?.toString())

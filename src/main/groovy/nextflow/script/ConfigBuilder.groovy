@@ -22,6 +22,9 @@ package nextflow.script
 import static nextflow.Const.APP_HOME_DIR
 import static nextflow.util.ConfigHelper.parseValue
 
+import java.nio.file.Path
+import java.nio.file.Paths
+
 import groovy.util.logging.Slf4j
 import nextflow.ExitCode
 import nextflow.cli.CliOptions
@@ -30,6 +33,7 @@ import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.util.HistoryFile
+
 /**
  * Builds up the Nextflow configuration object
  *
@@ -44,9 +48,9 @@ class ConfigBuilder {
 
     CmdNode cmdNode
 
-    File baseDir
+    Path baseDir
 
-    File workDir = new File('.').canonicalFile
+    Path workDir = Paths.get('.').fixed()
 
     ConfigBuilder setOptions( CliOptions options ) {
         this.options = options
@@ -58,7 +62,7 @@ class ConfigBuilder {
         return this
     }
 
-    ConfigBuilder setBaseDir( File file ) {
+    ConfigBuilder setBaseDir( Path file ) {
         this.baseDir = file
         return this
     }
@@ -95,12 +99,12 @@ class ConfigBuilder {
      * @param files
      * @return
      */
-    def List<File> validateConfigFiles( List<String> files ) {
+    def List<Path> validateConfigFiles( List<String> files ) {
 
         def result = []
         if ( files ) {
             files.each { String fileName ->
-                def thisFile = new File(fileName)
+                def thisFile = Paths.get(fileName)
                 if(!thisFile.exists()) {
                     throw new AbortOperationException("The specified configuration file does not exist: $thisFile -- check the name or choose another file")
                 }
@@ -112,7 +116,7 @@ class ConfigBuilder {
         /*
          * config file in the nextflow home
          */
-        def home = new File(APP_HOME_DIR, 'config')
+        def home = APP_HOME_DIR.resolve('config')
         if( home.exists() ) {
             log.debug "Found config home: $home"
             result << home
@@ -122,8 +126,8 @@ class ConfigBuilder {
          * Config file in the pipeline base dir
          */
         def base = null
-        if( baseDir && baseDir.canonicalPath != new File('.').canonicalPath ) {
-            base = new File(baseDir, 'nextflow.config')
+        if( baseDir && baseDir.fixed() != Paths.get('.').fixed() ) {
+            base = baseDir.resolve('nextflow.config')
             if( base.exists() ) {
                 log.debug "Found config base: $base"
                 result << base
@@ -133,7 +137,7 @@ class ConfigBuilder {
         /**
          * Local or user provided file
          */
-        def local = new File('nextflow.config')
+        def local = Paths.get('nextflow.config')
         if( local.exists() && local != base ) {
             log.debug "Found config local: $local"
             result << local
@@ -144,7 +148,7 @@ class ConfigBuilder {
         if( cmdRun?.runConfig ) customConfigs.addAll(cmdRun.runConfig)
         if( customConfigs ) {
             for( String item : customConfigs ) {
-                def configFile = new File(item)
+                def configFile = Paths.get(item)
                 if(!configFile.exists()) {
                     throw new AbortOperationException("The specified configuration file does not exist: $configFile -- check the name or choose another file")
                 }
@@ -157,14 +161,14 @@ class ConfigBuilder {
         return result
     }
 
-    def Map buildConfig( List<File> files ) {
+    def Map buildConfig( List<Path> files ) {
 
         final Map<String,String> vars = cmdRun?.env
         final boolean exportSysEnv = cmdRun?.exportSysEnv
 
         def items = []
-        files?.each { File file ->
-            log.debug "Parsing config file: ${file.absoluteFile}"
+        files?.each { Path file ->
+            log.debug "Parsing config file: ${file.fixed()}"
             if (!file.exists()) {
                 log.warn "The specified configuration file cannot be found: $file"
             }
@@ -232,7 +236,7 @@ class ConfigBuilder {
 
             configEntries.each { entry ->
 
-                def text = entry instanceof File ? entry.text : entry.toString()
+                def text = entry instanceof Path ? entry.text : entry.toString()
 
                 if ( text ) {
                     def cfg = new ConfigSlurper()
@@ -241,7 +245,7 @@ class ConfigBuilder {
                         result.merge( cfg.parse(text) )
                     }
                     catch( Exception e ) {
-                        def message = (entry instanceof File ? "Unable to parse config file: '$entry' " : "Unable to parse configuration ")
+                        def message = (entry instanceof Path ? "Unable to parse config file: '$entry' " : "Unable to parse configuration ")
                         throw new ConfigParseException(message,e)
                     }
                 }

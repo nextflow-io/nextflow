@@ -21,6 +21,7 @@
 package nextflow.script
 import static nextflow.util.ConfigHelper.parseValue
 
+import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -65,7 +66,7 @@ class ScriptRunner {
     /**
      * The pipeline file (it may be null when it's provided as string)
      */
-    private File scriptFile
+    private Path scriptFile
 
     /**
      * The pipeline as a text content
@@ -99,7 +100,7 @@ class ScriptRunner {
         bindings = new ScriptBinding(session)
     }
 
-    def ScriptRunner setScript( File file ) {
+    def ScriptRunner setScript( Path file ) {
         this.scriptFile = file
         this.setScript = file.text
         return this
@@ -242,7 +243,7 @@ class ScriptRunner {
         bindings.setArgs( new ArgsList(args) )
         bindings.setParams( session.config.params as Map )
         // TODO add test for this property
-        bindings.setVariable( 'baseDir', session.baseDir?.toPath() )
+        bindings.setVariable( 'baseDir', session.baseDir )
         bindings.setVariable( 'workDir', session.workDir )
 
         // define the imports
@@ -266,14 +267,14 @@ class ScriptRunner {
         def gcl = new GroovyClassLoader()
         def libraries = ConfigHelper.resolveClassPaths( session.getLibDir() )
 
-        libraries?.each { File lib -> def path = lib.absolutePath
+        libraries?.each { Path lib -> def path = lib.fixed()
             log.debug "Adding to the classpath library: ${path}"
-            gcl.addClasspath(path)
+            gcl.addClasspath(path.toString())
         }
 
         // set the byte-code target directory
-        def targetDir = File.createTempDir('nxf',null)
-        config.setTargetDirectory(targetDir)
+        def targetDir = Files.createTempDirectory('nxf')
+        config.setTargetDirectory(targetDir.toFile())
         // add the directory of generated classes to the lib path
         // so that it can be propagated to remote note (when necessary)
         session.getLibDir().add(targetDir)

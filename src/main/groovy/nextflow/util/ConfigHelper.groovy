@@ -20,6 +20,8 @@
 
 package nextflow.util
 
+import java.nio.file.Path
+
 import groovy.util.logging.Slf4j
 import org.apache.commons.lang.StringUtils
 
@@ -89,13 +91,13 @@ class ConfigHelper {
      * @param dirs
      * @return
      */
-    static List<File> resolveClassPaths( List<File> dirs ) {
+    static List<Path> resolveClassPaths( List<Path> dirs ) {
 
-        List<File> result = []
+        List<Path> result = []
         if( !dirs )
             return result
 
-        for( File path : dirs ) {
+        for( Path path : dirs ) {
             if( path.isFile() && path.name.endsWith('.jar') ) {
                 result << path
             }

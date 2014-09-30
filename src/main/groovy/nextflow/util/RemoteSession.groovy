@@ -21,6 +21,7 @@
 package nextflow.util
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -54,10 +55,10 @@ class RemoteSession implements Serializable, Closeable {
     transient boolean isLibInitialized
 
     @Lazy
-    transient List<File> libDir = lazyLibDir()
+    transient List<Path> libDir = lazyLibDir()
 
     @Lazy
-    transient List<File> classpath = { ConfigHelper.resolveClassPaths(libDir) }()
+    transient List<Path> classpath = { ConfigHelper.resolveClassPaths(libDir) }()
 
     protected RemoteSession() { }
 
@@ -69,7 +70,7 @@ class RemoteSession implements Serializable, Closeable {
     RemoteSession(Session session) {
         sessionId = session.getUniqueId()
         config = session.config
-        for( File entry : session.getLibDir() ) {
+        for( Path entry : session.getLibDir() ) {
             libs.add( zip(entry) )
         }
     }
@@ -78,8 +79,8 @@ class RemoteSession implements Serializable, Closeable {
      * @param path A {@link File} representing either a regular file or a directory
      * @return The source path as a string. It guarantees that a directory path ends with a slash character
      */
-    private String pathEndWithSeparator( File path ) {
-        def result = path.absolutePath
+    private String pathEndWithSeparator( Path path ) {
+        def result = path.fixed().toString()
 
         if( !path.isDirectory() )
             return result
@@ -96,7 +97,7 @@ class RemoteSession implements Serializable, Closeable {
      * @param dir The {@link File} folder to zip
      * @return A byte array holding the folder content as a compressed binary array
      */
-    protected byte[] zip( File dir ) {
+    protected byte[] zip( Path dir ) {
         assert dir
         assert dir.isDirectory()
 
@@ -105,7 +106,7 @@ class RemoteSession implements Serializable, Closeable {
         def buffer = new ByteArrayOutputStream()
         ZipOutputStream zip = new ZipOutputStream(buffer);
 
-        dir.eachFileRecurse { File file ->
+        dir.eachFileRecurse { Path file ->
 
             String name = pathEndWithSeparator(file)
             if( name.startsWith(base)) {
@@ -117,7 +118,7 @@ class RemoteSession implements Serializable, Closeable {
             if( file.isFile() ) {
                 count++
                 // append the file content
-                Files.copy(file.toPath(), zip)
+                Files.copy(file, zip)
             }
             // Complete the entry
             zip.closeEntry();
@@ -136,27 +137,27 @@ class RemoteSession implements Serializable, Closeable {
      * @param target
      * @return
      */
-    protected File unzip( byte[] bytes, File target = null ) {
+    protected Path unzip( byte[] bytes, Path target = null ) {
         assert bytes
 
         if( !target )
-            target = File.createTempDir('nxf','classpath')
+            target = Files.createTempDirectory('nxf')
 
         int count=0
         ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(bytes))
         ZipEntry entry
         while( (entry=zip.getNextEntry()) != null ) {
 
-            File file = new File( target, entry.getName() );
+            def file = target.resolve(entry.getName());
             if(entry.isDirectory()) {
                 continue
             }
 
-            if( !file.parentFile.exists() && !file.parentFile.mkdirs() )
-                throw new IllegalStateException("Unable to create target directory: ${file.parentFile} -- check file permissions")
+            if( !file.parent.exists() && !file.parent.mkdirs() )
+                throw new IllegalStateException("Unable to create target directory: ${file.parent} -- check file permissions")
 
             count++
-            Files.copy(zip, file.toPath())
+            Files.copy(zip, file)
         }
         zip.close();
         log.debug "Staged library ($count files) to path: $target"
@@ -167,8 +168,8 @@ class RemoteSession implements Serializable, Closeable {
     /**
      * @return The list of folder containing the unzip libraries
      */
-    protected List<File> lazyLibDir() {
-        def result = (List<File>)libs.collect { byte[] it -> unzip(it) }
+    protected List<Path> lazyLibDir() {
+        def result = (List<Path>)libs.collect { byte[] it -> unzip(it) }
         isLibInitialized = true
         return result
     }
@@ -181,6 +182,6 @@ class RemoteSession implements Serializable, Closeable {
     @Override
     void close() throws IOException {
         if(!isLibInitialized) return
-        libDir.each { File it -> it.deleteDir() }
+        libDir.each { Path it -> it.deleteDir() }
     }
 }

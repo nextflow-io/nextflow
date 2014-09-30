@@ -59,7 +59,7 @@ class AssetManager {
     /**
      * The folder all pipelines scripts are installed
      */
-    private File root = new File(Const.APP_HOME_DIR, 'assets')
+    private File root = Const.APP_HOME_DIR.resolve('assets').toFile()
 
     /**
      * The pipeline name. It must be in the form {@code username/repo} where 'username'

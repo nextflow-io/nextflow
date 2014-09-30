@@ -20,6 +20,7 @@
 
 package nextflow.processor
 
+import java.nio.file.Files
 import java.nio.file.Paths
 
 import groovyx.gpars.agent.Agent
@@ -88,8 +89,8 @@ class TaskProcessorTest extends Specification {
     def testEnvironment() {
 
         setup:
-        def home = File.createTempDir()
-        def binFolder = new File(home,'bin')
+        def home = Files.createTempDirectory('test')
+        def binFolder = home.resolve('bin')
         binFolder.mkdirs()
 
         when:

@@ -21,6 +21,7 @@
 package nextflow.script
 
 import java.nio.file.Files
+import java.nio.file.Paths
 
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdNode
@@ -129,8 +130,8 @@ class ConfigBuilderTest extends Specification {
 
         setup:
         def builder = [:] as ConfigBuilder
-        builder.workDir = new File('/some/path')
-        builder.baseDir = new File('/base/path')
+        builder.workDir = Paths.get('/some/path')
+        builder.baseDir = Paths.get('/base/path')
 
         def text = '''
         params {
@@ -151,11 +152,11 @@ class ConfigBuilderTest extends Specification {
     def testValidateConfigFiles () {
 
         given:
-        def path = Files.createTempDirectory('test').toFile()
+        def path = Files.createTempDirectory('test')
 
         when:
-        def f1 = new File(path, 'file1')
-        def f2 = new File(path, 'file2')
+        def f1 = path.resolve('file1')
+        def f2 = path.resolve('file2')
         def files = new ConfigBuilder().validateConfigFiles([f1.toString(), f2.toString()])
         then:
         thrown(AbortOperationException)

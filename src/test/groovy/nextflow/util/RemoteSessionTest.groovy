@@ -41,7 +41,7 @@ class RemoteSessionTest extends Specification {
 
         when:
         def remote = [:]  as RemoteSession
-        def bytes = remote.zip(path.toFile())
+        def bytes = remote.zip(path)
         then:
         bytes.size()>0
 
@@ -50,11 +50,11 @@ class RemoteSessionTest extends Specification {
         then:
         target.isDirectory()
         target.list().sort() == ['file1','file2','dir'].sort()
-        new File(target, 'dir').list().sort() == ['file3','file4'].sort()
-        new File(target,'file1').text == 'File 1'
-        new File(target,'file2').text == 'File 2'
-        new File(target,'dir/file3').text == 'File 3'
-        new File(target,'dir/file4').text == 'File 4'
+        target.resolve('dir').list().sort() == ['file3','file4'].sort()
+        target.resolve('file1').text == 'File 1'
+        target.resolve('file2').text == 'File 2'
+        target.resolve('dir/file3').text == 'File 3'
+        target.resolve('dir/file4').text == 'File 4'
 
         cleanup:
         path?.deleteDir()
@@ -78,7 +78,7 @@ class RemoteSessionTest extends Specification {
         path2.resolve('file6.jar').text = 'File 6'
 
         def session = new Session()
-        session.@libDir = [ path1.toFile(), path2.toFile() ]
+        session.@libDir = [ path1, path2 ]
 
         when:
         def remote = new RemoteSession(session)
@@ -88,7 +88,7 @@ class RemoteSessionTest extends Specification {
         remote.isLibInitialized
 
         cleanup:
-        remote.close()
+        remote?.close()
         path1?.deleteDir()
         path2?.deleteDir()
     }

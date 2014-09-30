@@ -19,6 +19,10 @@
  */
 
 package nextflow.cli
+
+import java.nio.file.Path
+import java.nio.file.Paths
+
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -45,13 +49,13 @@ class CmdConfig extends CmdBase {
 
     @Override
     void run() {
-        File base = null
+        Path base = null
         if( args ) base = getBaseDir(args[0])
-        if( !base ) base = new File('.')
+        if( !base ) base = Paths.get('.')
 
         def config = new ConfigBuilder()
                 .setOptions(launcher.options)
-                .setBaseDir(base.canonicalFile)
+                .setBaseDir(base.fixed())
                 .build()
 
         PrintWriter stdout = new PrintWriter(System.out,true);
@@ -59,18 +63,18 @@ class CmdConfig extends CmdBase {
     }
 
 
-    File getBaseDir(String path) {
+    Path getBaseDir(String path) {
 
-        def file = new File(path)
+        def file = Paths.get(path)
         if( file.isDirectory() )
             return file
 
         if( file.exists() ) {
-            file.canonicalFile.parentFile ?: new File('/')
+            return file.parent ?: Paths.get('/')
         }
 
         def manager = new AssetManager(path)
-        manager.isLocal() ? manager.localPath : null
+        manager.isLocal() ? manager.localPath.toPath() : null
 
     }
 }

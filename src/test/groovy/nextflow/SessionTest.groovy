@@ -20,6 +20,9 @@
 
 package nextflow
 
+import java.nio.file.Files
+import java.nio.file.Paths
+
 import nextflow.util.Duration
 import spock.lang.Specification
 /**
@@ -32,8 +35,8 @@ class SessionTest extends Specification {
     def testBaseDirAndBinDir() {
 
         setup:
-        def base = File.createTempDir()
-        def bin = new File(base,'bin'); bin.mkdir()
+        def base = Files.createTempDirectory('test')
+        def bin = base.resolve('bin'); bin.mkdir()
 
         when:
         def session = new Session()
@@ -43,9 +46,9 @@ class SessionTest extends Specification {
 
         when:
         session = new Session()
-        session.baseDir = new File('some/folder')
+        session.baseDir = Paths.get('some/folder')
         then:
-        session.baseDir == new File('some/folder')
+        session.baseDir == Paths.get('some/folder')
         session.binDir == null
 
         when:
@@ -177,35 +180,35 @@ class SessionTest extends Specification {
     def testAddLibPath() {
 
         setup:
-        def path1 = File.createTempDir()
-        def path2 = File.createTempDir()
+        def path1 = Files.createTempDirectory('test')
+        def path2 = Files.createTempDirectory('test')
 
         when:
         def session = new Session()
-        session.setLibDir( path1.absolutePath )
+        session.setLibDir( path1.toString() )
         then:
         session.getLibDir() == [ path1 ]
 
 
         when:
         session = new Session()
-        session.setLibDir( "${path1.absolutePath}:${path2.absolutePath}" )
+        session.setLibDir( "${path1}:${path2}" )
         then:
         session.getLibDir() == [ path1, path2 ]
 
         when:
         session = new Session()
-        session.setBaseDir(new File('/some/path'))
+        session.setBaseDir(Paths.get('/some/path'))
         then:
         session.getLibDir() == []
 
         when:
-        def base = File.createTempDir()
-        new File(base,'lib').mkdir()
+        def base = Files.createTempDirectory('test')
+        base.resolve('lib').mkdir()
         session = new Session()
         session.setBaseDir(base)
         then:
-        session.getLibDir() == [new File(base,'lib')]
+        session.getLibDir() == [base.resolve('lib')]
 
         cleanup:
         base?.deleteDir()

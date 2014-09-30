@@ -19,6 +19,9 @@
  */
 
 package nextflow
+
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.text.SimpleDateFormat
 /**
  * Application main constants
@@ -40,7 +43,7 @@ class Const {
     /**
      * The application home folder
      */
-    static final File APP_HOME_DIR = getHomeDir(APP_NAME)
+    static final Path APP_HOME_DIR = getHomeDir(APP_NAME)
 
     /**
      * The application version
@@ -100,9 +103,9 @@ class Const {
     }
 
 
-    private static getHomeDir(String appname) {
+    private static Path getHomeDir(String appname) {
         def home = System.getenv('NXF_HOME')
-        def result = home ? new File(home) : new File( System.getProperty("user.home"), ".$appname" )
+        def result = home ? Paths.get(home) : Paths.get(System.getProperty("user.home")).resolve(".$appname")
 
         if( !result.exists() && !result.mkdir() ) {
             throw new IllegalStateException("Cannot create path '${result}' -- check file system access permission")

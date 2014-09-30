@@ -1320,4 +1320,15 @@ class FileEx {
     static void linkTo( Path self, String existing ) {
         Files.createLink(self, self.getFileSystem().getPath(existing))
     }
+
+    /**
+     * A shortcut for {@link Path#toAbsolutePath()} and {@link Path#normalize()}
+     *
+     * @param self
+     * @return An absolute and normalized path
+     */
+    static Path fixed( Path self ) {
+        self.toAbsolutePath().normalize()
+    }
+
 }
