@@ -89,6 +89,16 @@ abstract class AbstractGridExecutor extends Executor {
         return new GridTaskHandler(task, taskConfig, this)
     }
 
+    /**
+     * Given a task returns a *clean* name used to submit the job to the grid engine.
+     * That string must not contain blank or special shell characters e.g. parenthesis, etc
+     *
+     * @param task A {@code TaskRun} instance
+     * @return A string that represent to submit job name
+     */
+    protected String getJobNameFor(TaskRun task) {
+        "nf-${task.processor.getName()}_${task.index}"
+    }
 
     /**
      * Build up the platform native command line used to submit the job wrapper
@@ -97,7 +107,7 @@ abstract class AbstractGridExecutor extends Executor {
      * @param task The task instance descriptor
      * @return A list holding the command line
      */
-    abstract List<String> getSubmitCommandLine(TaskRun task, Path scriptFile )
+    abstract List<String> getSubmitCommandLine(TaskRun task, Path scriptFile)
 
     /**
      * Given the string returned the by grid submit command, extract the process handle i.e. the grid jobId
@@ -507,7 +517,7 @@ class SgeExecutor extends AbstractGridExecutor {
 
         result << 'qsub'
         result << '-wd' << task.workDir?.toString()
-        result << '-N' << "nf-${task.name.replace(' ','_')}"
+        result << '-N' << getJobNameFor(task)
         result << '-o' << '/dev/null'
         result << '-j' << 'y'
         result << '-terse'
@@ -624,7 +634,7 @@ class LsfExecutor extends AbstractGridExecutor {
         }
 
         // -- the job name
-        result << '-J' << "nf-${task.name.replace(' ','_')}"
+        result << '-J' << getJobNameFor(task)
 
         // -- at the end append the command script wrapped file name
         if( taskConfig.clusterOptions ) {
@@ -736,7 +746,7 @@ class SlurmExecutor extends AbstractGridExecutor {
 
         result << 'sbatch'
         result << '-D' << task.workDir.toString()
-        result << '-J' << "nf-${task.processor.getName()}_${task.index}"
+        result << '-J' << getJobNameFor(task)
         result << '-o' << '/dev/null'
 
         if( taskConfig.maxDuration ) {
@@ -818,8 +828,8 @@ class PbsExecutor extends AbstractGridExecutor {
         final result = new ArrayList<String>()
 
         result << 'qsub'
-        result << '-N' << "nf-${task.name.replace(' ','_')}"
         result << '-d' << task.workDir?.toString()
+        result << '-N' << getJobNameFor(task)
         result << '-o' << '/dev/null'
         result << '-e' << '/dev/null'
         result << '-V'

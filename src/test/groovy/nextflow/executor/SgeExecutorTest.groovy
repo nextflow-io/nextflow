@@ -19,10 +19,13 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Paths
 
 import nextflow.processor.TaskConfig
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.script.BaseScript
 import spock.lang.Specification
 /**
  *
@@ -32,25 +35,34 @@ class SgeExecutorTest extends Specification {
 
     def 'test qsub cmd line' () {
 
-        setup:
-        def map = [:]
-        map.queue = 'my-queue'
-        map.maxMemory = '2GB'
-        map.maxDuration = '3h'
-        map.clusterOptions = '-extra opt'
-        map.name = 'task'
-
-        def config = new TaskConfig(map)
+        given:
+        // mock process
+        def proc = Mock(TaskProcessor)
+        def base = Mock(BaseScript)
+        def config = new TaskConfig(base)
+        // LSF executor
         def executor = [:] as SgeExecutor
         executor.taskConfig = config
 
         when:
-        def wrapper = Paths.get('.job.sh')
-        def task = new TaskRun(name: 'task x')
+        // process name
+        proc.getName() >> 'task_x'
+        // the script
+        def script = Paths.get('.job.sh')
+        // config
+        config.queue = 'my-queue'
+        config.maxMemory = '2GB'
+        config.maxDuration = '3h'
+        config.clusterOptions = '-extra opt'
+        config.name = 'task'
+
+        def task = new TaskRun()
+        task.processor = proc
         task.workDir = Paths.get('/abc')
+        task.index = 2
 
         then:
-        executor.getSubmitCommandLine(task,wrapper) == 'qsub -wd /abc -N nf-task_x -o /dev/null -j y -terse -V -notify -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'.split(' ') as List
+        executor.getSubmitCommandLine(task,script) == 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'.split(' ') as List
 
     }
 

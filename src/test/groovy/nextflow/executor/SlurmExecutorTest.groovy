@@ -54,12 +54,17 @@ class SlurmExecutorTest extends Specification {
     def testGetSubmitCmdLine() {
 
         given:
+        // mock process
         def proc = Mock(TaskProcessor)
         proc.getName() >> { 'myJob' }
+        // mock script
         def base = Mock(BaseScript)
+        // config object
         def config = new TaskConfig(base)
         def script = Paths.get('/some/script.sh')
+        // task object
         def task = new TaskRun(workDir: Paths.get('/work/path'), index: 33, processor: proc)
+        // SLURM executor
         def exec = [:] as SlurmExecutor
         exec.taskConfig = config
 

@@ -19,10 +19,13 @@
  */
 
 package nextflow.executor
+import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.processor.TaskConfig
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.script.BaseScript
 import spock.lang.Specification
 /**
  *
@@ -34,32 +37,37 @@ class LsfExecutorTest extends Specification {
     def 'test bsub cmd line' () {
 
         setup:
-        def map = [:]
-        map.queue = 'hpc-queue1'
-        map.maxMemory = '2GB'
-        map.maxDuration = '3h'
-        map.clusterOptions = " -M 4000  -R 'rusage[mem=4000] select[mem>4000]' --X \"abc\" "
-        map.name = 'task'
-        def config = new TaskConfig(map)
-
-        // dummy script
-        def wrapper = Paths.get('.job.sh')
-        wrapper.text = 'test script'
-
-        // executor stub object
+        def folder = Files.createTempDirectory('test')
+        // mock process
+        def proc = Mock(TaskProcessor)
+        def base = Mock(BaseScript)
+        def config = new TaskConfig(base)
+        // LSF executor
         def executor = [:] as LsfExecutor
         executor.taskConfig = config
 
         when:
-        def task = new TaskRun(name: 'task 1')
+        // process name
+        proc.getName() >> 'task'
+        // the script
+        def script = folder.resolve('job.sh'); script.text = 'some content'
+        // config
+        config.queue = 'hpc-queue1'
+        config.maxMemory = '2GB'
+        config.maxDuration = '3h'
+        config.clusterOptions = " -M 4000  -R 'rusage[mem=4000] select[mem>4000]' --X \"abc\" "
+        // task object
+        def task = new TaskRun()
+        task.processor = proc
         task.workDir = Paths.get('/xxx')
+        task.index = 1
 
         then:
-        executor.getSubmitCommandLine(task, wrapper) == ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './.job.sh']
-        wrapper.canExecute()
+        executor.getSubmitCommandLine(task, script) == ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
+        script.canExecute()
 
         cleanup:
-        wrapper?.delete()
+        folder?.deleteDir()
     }
 
 
