@@ -818,8 +818,8 @@ class PbsExecutor extends AbstractGridExecutor {
         final result = new ArrayList<String>()
 
         result << 'qsub'
-        result << '-d' << task.workDirectory?.toString()
         result << '-N' << "nf-${task.name.replace(' ','_')}"
+        result << '-d' << task.workDir?.toString()
         result << '-o' << '/dev/null'
         result << '-e' << '/dev/null'
         result << '-V'
