@@ -24,6 +24,7 @@ import java.nio.file.Paths
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
+import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -46,6 +47,7 @@ import nextflow.util.Duration
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class Session {
 
     static final String EXTRAE_TRACE_CLASS = 'nextflow.extrae.ExtraeTraceObserver'
@@ -299,8 +301,8 @@ class Session {
 
     final synchronized protected void shutdown() {
 
-        def all = shutdownHooks.clone() as List<Closure>
-        for( Closure hook : all ) {
+        List<Closure<Void>> all = new ArrayList<>(shutdownHooks)
+        for( def hook : all ) {
             try {
                 hook.call()
             }

@@ -22,6 +22,7 @@ package nextflow.util
 
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.apache.commons.lang.StringUtils
 
@@ -31,6 +32,7 @@ import org.apache.commons.lang.StringUtils
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class ConfigHelper {
 
 
