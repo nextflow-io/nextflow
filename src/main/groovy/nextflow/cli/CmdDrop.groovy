@@ -61,6 +61,6 @@ class CmdDrop extends CmdBase {
             return
         }
 
-        throw new AbortOperationException("Repository contains not committed changes -- wont drop it")
+        throw new AbortOperationException("Repository contains changes not committed -- wont drop it")
     }
 }
