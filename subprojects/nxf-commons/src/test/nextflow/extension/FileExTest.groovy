@@ -893,4 +893,27 @@ class FileExTest extends Specification {
         folder?.deleteDir()
     }
 
+    def testPathComplete() {
+
+        when:
+        def here = Paths.get('.').toAbsolutePath().normalize().toString()
+        then:
+        FileEx.complete(Paths.get('./xxx/../hola')).isAbsolute()
+        FileEx.complete(Paths.get('./xxx/../hola')).toString() == "$here/hola"
+
+        when:
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('file1').text = 'hello'
+        Files.createSymbolicLink(folder.resolve('link1'), folder.resolve('file1'))
+
+        then:
+        // should NOT resolve symbolic link
+        folder.resolve('link1').exists()
+        folder.resolve('link1').isSymlink()
+        FileEx.complete( folder.resolve('./xxx/../link1') ) == folder.resolve('link1')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 }

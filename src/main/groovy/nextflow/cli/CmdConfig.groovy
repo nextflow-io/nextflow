@@ -55,7 +55,7 @@ class CmdConfig extends CmdBase {
 
         def config = new ConfigBuilder()
                 .setOptions(launcher.options)
-                .setBaseDir(base.fixed())
+                .setBaseDir(base.complete())
                 .build()
 
         PrintWriter stdout = new PrintWriter(System.out,true);

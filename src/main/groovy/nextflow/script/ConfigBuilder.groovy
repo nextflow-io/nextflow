@@ -50,7 +50,7 @@ class ConfigBuilder {
 
     Path baseDir
 
-    Path workDir = Paths.get('.').fixed()
+    Path workDir = Paths.get('.').complete()
 
     ConfigBuilder setOptions( CliOptions options ) {
         this.options = options
@@ -126,7 +126,7 @@ class ConfigBuilder {
          * Config file in the pipeline base dir
          */
         def base = null
-        if( baseDir && baseDir.fixed() != Paths.get('.').fixed() ) {
+        if( baseDir && baseDir.complete() != Paths.get('.').complete() ) {
             base = baseDir.resolve('nextflow.config')
             if( base.exists() ) {
                 log.debug "Found config base: $base"
@@ -168,7 +168,7 @@ class ConfigBuilder {
 
         def items = []
         files?.each { Path file ->
-            log.debug "Parsing config file: ${file.fixed()}"
+            log.debug "Parsing config file: ${file.complete()}"
             if (!file.exists()) {
                 log.warn "The specified configuration file cannot be found: $file"
             }

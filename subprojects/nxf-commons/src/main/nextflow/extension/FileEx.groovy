@@ -1327,7 +1327,7 @@ class FileEx {
      * @param self
      * @return An absolute and normalized path
      */
-    static Path fixed( Path self ) {
+    static Path complete( Path self ) {
         self.toAbsolutePath().normalize()
     }
 

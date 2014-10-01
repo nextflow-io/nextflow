@@ -267,7 +267,7 @@ class ScriptRunner {
         def gcl = new GroovyClassLoader()
         def libraries = ConfigHelper.resolveClassPaths( session.getLibDir() )
 
-        libraries?.each { Path lib -> def path = lib.fixed()
+        libraries?.each { Path lib -> def path = lib.complete()
             log.debug "Adding to the classpath library: ${path}"
             gcl.addClasspath(path.toString())
         }

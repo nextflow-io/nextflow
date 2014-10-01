@@ -80,7 +80,7 @@ class RemoteSession implements Serializable, Closeable {
      * @return The source path as a string. It guarantees that a directory path ends with a slash character
      */
     private String pathEndWithSeparator( Path path ) {
-        def result = path.fixed().toString()
+        def result = path.complete().toString()
 
         if( !path.isDirectory() )
             return result

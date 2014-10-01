@@ -262,7 +262,7 @@ class Session {
         libDir = []
         for( Path file : files ) {
             if( !file.exists() )
-                throw new MissingLibraryException("Cannot find specified library: ${file.fixed()}")
+                throw new MissingLibraryException("Cannot find specified library: ${file.complete()}")
 
             libDir << file
         }

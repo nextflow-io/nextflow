@@ -150,7 +150,7 @@ class CmdRun extends HubOptions {
 
         // -- specify the arguments
         def scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
-        def scriptFile = getScriptFile(pipeline).toPath().fixed()
+        def scriptFile = getScriptFile(pipeline).toPath().complete()
 
         // create the config object
         def config = new ConfigBuilder()
