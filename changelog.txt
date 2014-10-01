@@ -1,9 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.10.2 - 29 Sep 2014
-- Fixed  error while submitting job to SLURM scheduler
+0.10.2 - 1 Oct 2014
+- Fixed bug while submitting a job to SLURM scheduler due to special characters in job name
 - Fixed bug in TaskConfig#toBool() method 
+- Fixed bug resolving configuration file when pipeline script is a symlink
+- Fixed bug while setting 'workDir' attribute on PBS job executor
+- Improved error message when the name of a process is missing
 - Removed TaskConfig#getMerge() method
 - Updated method Channel.fromPath(String) so that it returns normalised absolute paths  
 - Updated Capsule to version 0.9.0 stable
