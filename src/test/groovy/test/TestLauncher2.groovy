@@ -23,14 +23,14 @@ package test
 def dbFolder = new File("/Users/pditommaso/Downloads/db/");
 dbFolder.deleteDir()
 
-final collector = new LevelDbSort<String>()
+final collector = new ChronicleSort<String>()
             .tempDir(dbFolder)
             .deleteTempFilesOnClose(false)
             .create()
 
 println("Begin");
 final Long now = System.currentTimeMillis();
-File text = new File("/Users/pditommaso/Downloads/hs_ref_GRCh38_chr1.fa");// hs_ref_GRCh38_chr1.fa
+File text = new File("/Users/pditommaso/Downloads/mini");// hs_ref_GRCh38_chr1.fa
 text.eachLine { String it ->
     collector.add(it)
 }

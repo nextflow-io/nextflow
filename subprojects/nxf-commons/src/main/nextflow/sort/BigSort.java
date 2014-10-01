@@ -68,7 +68,7 @@ abstract public class BigSort<V> implements Closeable {
     private boolean deleteTempFilesOnClose = true;
 
     public BigSort deleteTempFilesOnClose(boolean value) {
-        this.deleteTempFilesOnClose = true;
+        this.deleteTempFilesOnClose = value;
         return this;
     }
 

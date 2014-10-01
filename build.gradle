@@ -18,7 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-version = '0.10.1'
+version = '0.11.0'
 apply plugin: 'groovy'
 apply plugin: 'idea'
 apply plugin: 'codenarc'
@@ -42,7 +42,7 @@ if (System.getenv('CI_GROOVY_VERSION')) {
 ext {
     mainClassName = 'nextflow.cli.Launcher'
 
-    groovyVersion = '2.3.6'
+    groovyVersion = '2.3.7'
     slf4jVersion = '1.7.7'
     logbackVersion = '1.1.2'
 }
@@ -100,9 +100,8 @@ dependencies {
     compile "com.beust:jcommander:1.35"
     compile "com.google.code.findbugs:jsr305:1.3.9"
     compile "com.esotericsoftware.kryo:kryo:2.24.0"
-    compile 'org.mapdb:mapdb:1.0.6'
     compile 'org.iq80.leveldb:leveldb:0.7'
-    compile 'net.sf.trove4j:trove4j:3.0.3'
+    compile 'net.openhft:chronicle-map:1.0.2'
     compile("org.utgenome.thirdparty:picard:1.102.0") { transitive = false }
     compile("org.eclipse.jgit:org.eclipse.jgit:3.4.1.201406201815-r") {
         exclude module: 'commons-logging'

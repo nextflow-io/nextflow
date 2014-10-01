@@ -25,15 +25,13 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 
-import com.esotericsoftware.kryo.io.Input
-import com.esotericsoftware.kryo.io.Output
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.util.KryoHelper
-import org.mapdb.DB
-import org.mapdb.DBMaker
-import org.mapdb.DataInput2
-import org.mapdb.Serializer
+//import org.mapdb.DB
+//import org.mapdb.DBMaker
+//import org.mapdb.DataInput2
+//import org.mapdb.Serializer
+
 /**
  *  Helper class used to aggregate values having the same key
  *  to files
@@ -95,46 +93,46 @@ class FileCollector implements Closeable {
     /**
      * Serialize an entry as required by MapDB
      */
-    static class EntrySerializer implements Serializer<IndexEntry>, Serializable {
-
-        @Override
-        void serialize(DataOutput dataOutput, IndexEntry value) throws IOException {
-            def output = new Output(dataOutput as OutputStream)
-            KryoHelper.kryo().writeObject(output, value)
-            output.flush()
-        }
-
-        @Override
-        IndexEntry deserialize(DataInput dataInput, int available) throws IOException {
-            def input = new Input(dataInput as InputStream)
-            return KryoHelper.kryo().readObject(input,IndexEntry)
-        }
-
-        @Override
-        int fixedSize() { -1 }
-    }
+//    static class EntrySerializer implements Serializer<IndexEntry>, Serializable {
+//
+//        @Override
+//        void serialize(DataOutput dataOutput, IndexEntry value) throws IOException {
+//            def output = new Output(dataOutput as OutputStream)
+//            KryoHelper.kryo().writeObject(output, value)
+//            output.flush()
+//        }
+//
+//        @Override
+//        IndexEntry deserialize(DataInput dataInput, int available) throws IOException {
+//            def input = new Input(dataInput as InputStream)
+//            return KryoHelper.kryo().readObject(input,IndexEntry)
+//        }
+//
+//        @Override
+//        int fixedSize() { -1 }
+//    }
 
     /**
      * Serialize an entry as required by MapDB
      */
-    static class ObjectSerializer implements Serializer<Object>, Serializable {
-
-        @Override
-        void serialize(DataOutput dataOutput, Object value) throws IOException {
-            def output = new Output(dataOutput as OutputStream)
-            KryoHelper.kryo().writeClassAndObject(output, value)
-            output.flush()
-        }
-
-        @Override
-        Object deserialize(DataInput dataInput, int available) throws IOException {
-            def input = new Input(new DataInputPatch(dataInput as DataInput2))
-            return KryoHelper.kryo().readClassAndObject(input)
-        }
-
-        @Override
-        int fixedSize() { return -1 }
-    }
+//    static class ObjectSerializer implements Serializer<Object>, Serializable {
+//
+//        @Override
+//        void serialize(DataOutput dataOutput, Object value) throws IOException {
+//            def output = new Output(dataOutput as OutputStream)
+//            KryoHelper.kryo().writeClassAndObject(output, value)
+//            output.flush()
+//        }
+//
+//        @Override
+//        Object deserialize(DataInput dataInput, int available) throws IOException {
+//            def input = new Input(new DataInputPatch(dataInput as DataInput2))
+//            return KryoHelper.kryo().readClassAndObject(input)
+//        }
+//
+//        @Override
+//        int fixedSize() { return -1 }
+//    }
 
     static final OpenOption[] APPEND = [StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE] as OpenOption[]
 
@@ -144,7 +142,7 @@ class FileCollector implements Closeable {
 
     public Closure sort
 
-    private DB db
+    //private DB db
 
     private Map<Long,Comparable> store
 
@@ -190,34 +188,34 @@ class FileCollector implements Closeable {
         /*
          * Creates the MapDB object
          */
-        db = DBMaker.newFileDB(tempDbFile)
-                .transactionDisable()
-                //.cacheDisable()
-                .mmapFileEnable()
-                .compressionEnable()
-                .closeOnJvmShutdown()
-                .deleteFilesAfterClose()
-                .make()
+//        db = DBMaker.newFileDB(tempDbFile)
+//                .transactionDisable()
+//                //.cacheDisable()
+//                .mmapFileEnable()
+//                .compressionEnable()
+//                .closeOnJvmShutdown()
+//                .deleteFilesAfterClose()
+//                .make()
 
         def unique = new BigInteger(130, new Random()).toString(32)
 
         /*
          * The map that holds the objects
          */
-        store = db
-                .createHashMap("map-${unique}")
-                .keySerializer( Serializer.LONG )
-                .valueSerializer( new ObjectSerializer() )
-                .makeOrGet()
+//        store = db
+//                .createHashMap("map-${unique}")
+//                .keySerializer( Serializer.LONG )
+//                .valueSerializer( new ObjectSerializer() )
+//                .makeOrGet()
 
         /*
          * a "sorted set" used as index to access the values in
          */
-        index = db
-                .createTreeSet("ndx-${unique}")
-                .comparator(new EntryComp(sort: sort, store: store))
-                //.serializer(BTreeKeySerializer.TUPLE2)
-                .makeOrGet()
+//        index = db
+//                .createTreeSet("ndx-${unique}")
+//                .comparator(new EntryComp(sort: sort, store: store))
+//                //.serializer(BTreeKeySerializer.TUPLE2)
+//                .makeOrGet()
 
     }
 
@@ -349,7 +347,7 @@ class FileCollector implements Closeable {
 
     @Override
     void close() {
-        db?.close()
+        //db?.close()
     }
 
 

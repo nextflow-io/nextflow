@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import nextflow.extension.FileEx;
 import nextflow.sort.BigSort;
 import nextflow.util.KryoHelper;
 import org.iq80.leveldb.DB;
@@ -16,12 +17,12 @@ import org.iq80.leveldb.Options;
  */
 public class LevelDbSort<V> extends BigSort<V> {
 
-    private DB data;
+    private DB db;
 
     public LevelDbSort<V> create() throws IOException {
         super.create();
         Options options = new Options().createIfMissing(true);
-        data = factory.open(new File(getTempDir(), "data"), options);
+        db = factory.open(new File(getTempDir(), "data"), options);
         return this;
     }
 
@@ -33,14 +34,19 @@ public class LevelDbSort<V> extends BigSort<V> {
     protected int put(long key, V value) {
         byte[] dbKey = bytes(key);
         byte[] dbValue= KryoHelper.serialize(value);
-        data.put(dbKey, dbValue);
+        db.put(dbKey, dbValue);
         return 8 + dbValue.length;
     }
 
     @Override
     protected V get(long key) {
         byte[] dbKey = bytes(key);
-        byte[] dbValue = data.get(dbKey);
+        byte[] dbValue = db.get(dbKey);
         return (V)KryoHelper.deserialize(dbValue);
+    }
+
+    public void close() {
+        FileEx.closeQuietly(db);
+        super.close();
     }
 }
