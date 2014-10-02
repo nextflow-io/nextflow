@@ -142,6 +142,7 @@ Currently the following clusters are supported:
   + Oracle Grid Engine (SGE)
   + Platform LSF
   + SLURM (beta)
+  + PBS/Torque (beta)
 
 
 By default processes are parallelized by spanning multiple threads in the machine where the pipeline is launched.
