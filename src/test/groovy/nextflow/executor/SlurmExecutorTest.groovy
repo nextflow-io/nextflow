@@ -107,8 +107,8 @@ class SlurmExecutorTest extends Specification {
         when:
         def exec = [:] as SlurmExecutor
         then:
-        exec.queueStatusCommand(null) == ['squeue','-h','-o \'%i %t\'']
-        exec.queueStatusCommand('xxx') == ['squeue','-h','-o \'%i %t\'']
+        exec.queueStatusCommand(null) == ['squeue','-h','-o','%i %t']
+        exec.queueStatusCommand('xxx') == ['squeue','-h','-o','%i %t']
 
 
     }
