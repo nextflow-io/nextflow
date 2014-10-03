@@ -1,6 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.10.3 - 3 Oct 2014
+- Fixed bug when composing SLURM 'squeue' command line which was containing 
+  unnecessary quote characters thus invalidating the jobs status check mechanism  
+
 0.10.2 - 1 Oct 2014
 - Fixed bug while submitting a job to SLURM scheduler due to special characters in job name
 - Fixed bug in TaskConfig#toBool() method 
