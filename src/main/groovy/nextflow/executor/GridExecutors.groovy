@@ -533,6 +533,15 @@ class SgeExecutor extends AbstractGridExecutor {
             result << '-q'  << taskConfig.queue
         }
 
+        //number of cpus for multiprocessing/multithreading
+        if( taskConfig.cpu ) {
+             if ( taskConfig.penv ) {
+                 result << "-pe" << taskConfig.penv << taskConfig.cpu
+             } else {
+                 result << "-l" << "slots=${taskConfig.cpu}"
+             }
+        }
+
         // max task duration
         if( taskConfig.maxDuration ) {
             final duration = taskConfig.maxDuration as Duration

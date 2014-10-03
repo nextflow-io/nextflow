@@ -56,13 +56,22 @@ class SgeExecutorTest extends Specification {
         config.clusterOptions = '-extra opt'
         config.name = 'task'
 
+        config.cpu = test_cpu
+        config.penv =  test_penv
+
         def task = new TaskRun()
         task.processor = proc
         task.workDir = Paths.get('/abc')
         task.index = 2
 
         then:
-        executor.getSubmitCommandLine(task,script) == 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'.split(' ') as List
+        executor.getSubmitCommandLine(task,script) == expected.split(' ') as List
+
+        where:
+        test_cpu | test_penv | expected 
+        null | null | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
+        '8' | null | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l slots=8 -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
+        '8' | 'smp' | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe smp 8 -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
 
     }
 
