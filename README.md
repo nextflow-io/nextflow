@@ -215,6 +215,11 @@ Community
 You can post questions, or report problems by using the Nextflow Google group available
 at this link https://groups.google.com/forum/#!forum/nextflow
 
+Build servers 
+--------------
+
+  * [Travis-CI](https://travis-ci.org/nextflow-io/nextflow) 
+  * [Groovy Joint build](http://ci.groovy-lang.org/project.html?projectId=JointBuilds_Nextflow) 
 
 License
 -------
