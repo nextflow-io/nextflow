@@ -525,7 +525,7 @@ for the given file and allows you to read the content in single characters, line
 
     myReader = myFile.newReader()
     String line
-    while( ( line = myReader.readLine() ) {
+    while( line = myReader.readLine() ) {
         println line
     }
     myReader.close()
@@ -536,7 +536,7 @@ processing the file since it is managed automatically by the method itself. The 
 
     myFile.withReader {
         String line
-        while( ( line = myReader.readLine() ) {
+        while( line = myReader.readLine() ) {
             println line
         }
     }
@@ -579,7 +579,7 @@ file content from the first file into the second one replacing all the ``U`` cha
     sourceFile.withReader { source ->
         targetFile.withWriter { target ->
             String line
-            while( (line=source.readLine()) {
+            while( line=source.readLine() ) {
                 target << line.replaceAll('U','X')
             }
         }
