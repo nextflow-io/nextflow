@@ -219,7 +219,7 @@ Build servers
 --------------
 
   * [Travis-CI](https://travis-ci.org/nextflow-io/nextflow) 
-  * [Groovy Joint build](http://ci.groovy-lang.org/project.html?projectId=JointBuilds_Nextflow) 
+  * [Groovy Joint build](http://ci.groovy-lang.org/project.html?projectId=JointBuilds_Nextflow&guest=1) 
 
 License
 -------
