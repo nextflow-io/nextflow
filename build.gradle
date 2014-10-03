@@ -18,7 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-version = '0.10.2'
+version = '0.10.3'
 apply plugin: 'groovy'
 apply plugin: 'idea'
 
