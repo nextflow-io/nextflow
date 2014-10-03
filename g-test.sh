@@ -32,4 +32,4 @@ if [[ $# -eq 0 ]]; then
 fi 
 
 set -x
-gradle -q $MODULE:test --tests $1
+./gradlew -q $MODULE:test --tests $1
