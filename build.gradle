@@ -24,7 +24,7 @@ apply plugin: 'idea'
 
 if (System.getenv('CI_GROOVY_VERSION')) {
     // Add ability to test with upcoming versions of Groovy
-    groovyVer = System.getenv('CI_GROOVY_VERSION')
+    def groovyVer = System.getenv('CI_GROOVY_VERSION')
     if (groovyVer.endsWith('-SNAPSHOT')) {
         allprojects {
             repositories {
