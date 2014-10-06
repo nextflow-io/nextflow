@@ -51,8 +51,8 @@ class SgeExecutorTest extends Specification {
         def script = Paths.get('.job.sh')
         // config
         config.queue = 'my-queue'
-        config.maxMemory = '2GB'
-        config.maxDuration = '3h'
+        config[test_mem] = '2GB'
+        config[test_time] = '3h'
         config.clusterOptions = '-extra opt'
         config.name = 'task'
 
@@ -68,11 +68,15 @@ class SgeExecutorTest extends Specification {
         executor.getSubmitCommandLine(task,script) == expected.split(' ') as List
 
         where:
-        test_cpu | test_penv | expected 
-        null | null | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
-        'eight' | 'smp' | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
-        '8' | null | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l slots=8 -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
-        '8' | 'smp' | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe smp 8 -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
+        test_mem | test_time | test_cpu | test_penv | expected
+        'maxMemory' | 'maxDuration' | null | null | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
+        'maxMemory' | 'maxDuration' |'eight' | 'smp' | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
+        'maxMemory' | 'maxDuration' |'8' | null | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l slots=8 -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
+        'maxMemory' | 'maxDuration' |'8' | 'smp' | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe smp 8 -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
+        'mem' | 'time' | null | null | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
+        'mem' | 'time' | 'eight' | 'smp' | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
+        'mem' | 'time' | '8' | null | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l slots=8 -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
+        'mem' | 'time' | '8' | 'smp' | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe smp 8 -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
 
     }
 
