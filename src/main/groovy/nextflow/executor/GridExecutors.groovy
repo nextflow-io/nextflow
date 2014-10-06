@@ -642,6 +642,20 @@ class LsfExecutor extends AbstractGridExecutor {
             result << '-q'  << taskConfig.queue
         }
 
+        //number of cpus for multiprocessing/multithreading
+        if( taskConfig.cpu ) {
+            def hosts
+            if( taskConfig?.penv in ['smp', null]) {
+                hosts = 1
+                result << "-n" << taskConfig.cpu
+            }
+            if( taskConfig?.penv == 'mpi' ) {
+                hosts = taskConfig.cpu
+            }
+
+            result << "-R" << "\"span[hosts=${hosts}]\""
+        }
+
         // -- the job name
         result << '-J' << getJobNameFor(task)
 
@@ -758,6 +772,15 @@ class SlurmExecutor extends AbstractGridExecutor {
         result << '-J' << getJobNameFor(task)
         result << '-o' << '/dev/null'
 
+        if( taskConfig.cpu ) {
+            if( taskConfig?.penv in ['smp', null] ){
+                result << '-c' << taskConfig.cpu
+            }
+            if( taskConfig?.penv == 'mpi' ){
+                result << '-N' << taskConfig.cpu
+            }
+        }
+
         if( taskConfig.maxDuration ) {
             result << '-t' << taskConfig.maxDuration.format('HH:mm:ss')
         }
@@ -846,6 +869,20 @@ class PbsExecutor extends AbstractGridExecutor {
         // the requested queue name
         if( taskConfig.queue ) {
             result << '-q'  << (String)taskConfig.queue
+        }
+
+        if( taskConfig.cpu ) {
+            def nodes
+            def ppn
+            if( taskConfig.penv in ['smp', null] ) {
+                nodes = 1
+                ppn = taskConfig.cpu
+            }
+            if( taskConfig.penv == 'mpi' ) {
+                nodes = taskConfig.cpu
+                ppn = 1
+            }
+            result << '-l' << "nodes=$nodes:ppn=$ppn"
         }
 
 //        // max task duration

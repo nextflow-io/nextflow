@@ -55,6 +55,8 @@ class PbsExecutorTest extends Specification {
         config.queue = 'my-queue'
         config.maxMemory = new MemoryUnit('2 GB')
         config.maxDuration = '3h'
+        config.cpu = test_cpu
+        config.penv = test_penv
         config.clusterOptions = '-extra opt'
 
         def task = new TaskRun()
@@ -63,7 +65,14 @@ class PbsExecutorTest extends Specification {
         task.index = 2
 
         then:
-        executor.getSubmitCommandLine(task,script) == 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q my-queue -l mem=2GB -extra opt job.sh'.split(' ') as List
+        executor.getSubmitCommandLine(task,script) == expected.split(' ') as List
+
+        where:
+        test_cpu | test_penv | expected
+        null | null | 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q my-queue -l mem=2GB -extra opt job.sh'
+        '8' | null | 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q my-queue -l nodes=1:ppn=8 -l mem=2GB -extra opt job.sh'
+        '8' | 'smp' | 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q my-queue -l nodes=1:ppn=8 -l mem=2GB -extra opt job.sh'
+        '8' | 'mpi' | 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q my-queue -l nodes=8:ppn=1 -l mem=2GB -extra opt job.sh'
 
     }
 

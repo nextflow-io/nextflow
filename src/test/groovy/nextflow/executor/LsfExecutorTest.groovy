@@ -56,6 +56,8 @@ class LsfExecutorTest extends Specification {
         config.maxMemory = '2GB'
         config.maxDuration = '3h'
         config.clusterOptions = " -M 4000  -R 'rusage[mem=4000] select[mem>4000]' --X \"abc\" "
+        config.cpu = test_cpu
+        config.penv = test_penv
         // task object
         def task = new TaskRun()
         task.processor = proc
@@ -63,11 +65,18 @@ class LsfExecutorTest extends Specification {
         task.index = 1
 
         then:
-        executor.getSubmitCommandLine(task, script) == ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
+        executor.getSubmitCommandLine(task, script) == expected
         script.canExecute()
 
         cleanup:
         folder?.deleteDir()
+
+        where:
+        test_cpu | test_penv | expected
+        null | null | ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
+        '8' | null | ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-n', '8', '-R', '"span[hosts=1]"', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
+        '8' | 'smp' | ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-n', '8', '-R', '"span[hosts=1]"', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
+        '8' | 'mpi' | ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1',  '-R', '"span[hosts=8]"', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
     }
 
 

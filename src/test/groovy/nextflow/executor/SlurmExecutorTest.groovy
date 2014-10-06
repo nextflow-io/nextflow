@@ -61,6 +61,8 @@ class SlurmExecutorTest extends Specification {
         def base = Mock(BaseScript)
         // config object
         def config = new TaskConfig(base)
+        config.cpu = test_cpu
+        config.penv = test_penv
         def script = Paths.get('/some/script.sh')
         // task object
         def task = new TaskRun(workDir: Paths.get('/work/path'), index: 33, processor: proc)
@@ -72,7 +74,14 @@ class SlurmExecutorTest extends Specification {
         config.maxDuration( Duration.of('1h') )
         config.clusterOptions = '-x -y -z'
         then:
-        exec.getSubmitCommandLine(task,script).join(' ') == 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -t 01:00:00 -x -y -z script.sh'
+        exec.getSubmitCommandLine(task,script).join(' ') == expected
+
+        where:
+        test_cpu | test_penv | expected
+        null | null | 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -t 01:00:00 -x -y -z script.sh'
+        '8' | null | 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 8 -t 01:00:00 -x -y -z script.sh'
+        '8' | 'smp' | 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 8 -t 01:00:00 -x -y -z script.sh'
+        '8' | 'mpi' | 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -N 8 -t 01:00:00 -x -y -z script.sh'
     }
 
     def testQstatCommand() {

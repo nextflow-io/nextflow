@@ -70,6 +70,7 @@ class SgeExecutorTest extends Specification {
         where:
         test_cpu | test_penv | expected 
         null | null | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
+        'eight' | 'smp' | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
         '8' | null | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l slots=8 -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
         '8' | 'smp' | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe smp 8 -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
 
