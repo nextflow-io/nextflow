@@ -151,6 +151,34 @@ class TaskConfig implements Map<String,Object> {
         }
     }
 
+    void set ( Object name, Object value) {
+        def aliases = [:]
+        aliases.maxMemory = 'mem'
+        aliases.maxDuration = 'time'
+
+        if( name in aliases) {
+            log.warn("'$name' has been deprecated. Use '${aliases[name]}' instead.")
+        }
+
+        if( name == 'mem') {
+            name = 'maxMemory'
+        }
+
+        if( name == 'time') {
+            name = 'maxDuration'
+        }
+
+        if( name == 'cpu' && value != null) {
+            try {
+                Integer.parseInt(value.toString())
+            } catch(NumberFormatException) {
+                value = null
+            }
+        }
+
+        configProperties[name] = value
+    }
+
     @groovy.transform.PackageScope
     BaseScript getOwnerScript() { ownerScript }
 
