@@ -13,4 +13,4 @@ if [[ $1 == 'help' || $1 == '-h' ]]; then
 fi
 
 set -x
-gradle -q $MODULE:dependencies --configuration $CONFIG
+./gradlew -q $MODULE:dependencies --configuration $CONFIG
