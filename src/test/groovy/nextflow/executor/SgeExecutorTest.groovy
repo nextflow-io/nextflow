@@ -27,12 +27,15 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.script.BaseScript
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class SgeExecutorTest extends Specification {
 
+    @Unroll
     def 'test qsub cmd line' () {
 
         given:
@@ -51,13 +54,12 @@ class SgeExecutorTest extends Specification {
         def script = Paths.get('.job.sh')
         // config
         config.queue = 'my-queue'
-        config[test_mem] = '2GB'
-        config[test_time] = '3h'
         config.clusterOptions = '-extra opt'
         config.name = 'task'
-
-        config.cpu = test_cpu
-        config.penv =  test_penv
+        config.penv = test_penv
+        config.memory(test_mem)
+        config.time(test_time)
+        config.cpus(test_cpu)
 
         def task = new TaskRun()
         task.processor = proc
@@ -65,18 +67,14 @@ class SgeExecutorTest extends Specification {
         task.index = 2
 
         then:
-        executor.getSubmitCommandLine(task,script) == expected.split(' ') as List
+        executor.getSubmitCommandLine(task,script).join(' ') == expected
 
         where:
         test_mem | test_time | test_cpu | test_penv | expected
-        'maxMemory' | 'maxDuration' | null | null | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
-        'maxMemory' | 'maxDuration' |'eight' | 'smp' | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
-        'maxMemory' | 'maxDuration' |'8' | null | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l slots=8 -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
-        'maxMemory' | 'maxDuration' |'8' | 'smp' | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe smp 8 -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
-        'mem' | 'time' | null | null | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
-        'mem' | 'time' | 'eight' | 'smp' | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
-        'mem' | 'time' | '8' | null | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l slots=8 -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
-        'mem' | 'time' | '8' | 'smp' | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe smp 8 -l h_rt=03:00:00 -l virtual_free=2G -extra opt .job.sh'
+        '1M'    | '10s '     |  1       | null      | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l slots=1 -l h_rt=00:00:10 -l virtual_free=1M -extra opt .job.sh'
+        '2 M'   | '2 m'      | '1'      | 'smp'     | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe smp 1 -l h_rt=00:02:00 -l virtual_free=2M -extra opt .job.sh'
+        '3 g'   | '3 d'      | '2'      | 'mpi'     | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe mpi 2 -l h_rt=72:00:00 -l virtual_free=3G -extra opt .job.sh'
+        '4 GB ' | '1d3h'     | '4'      | 'orte'    | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe orte 4 -l h_rt=27:00:00 -l virtual_free=4G -extra opt .job.sh'
 
     }
 

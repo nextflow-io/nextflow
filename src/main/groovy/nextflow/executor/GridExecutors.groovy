@@ -534,23 +534,23 @@ class SgeExecutor extends AbstractGridExecutor {
         }
 
         //number of cpus for multiprocessing/multithreading
-        if( taskConfig.cpu ) {
+        if( taskConfig.cpus ) {
              if ( taskConfig.penv ) {
-                 result << "-pe" << taskConfig.penv << taskConfig.cpu
+                 result << "-pe" << taskConfig.penv << taskConfig.cpus.toString()
              } else {
-                 result << "-l" << "slots=${taskConfig.cpu}"
+                 result << "-l" << "slots=${taskConfig.cpus}"
              }
         }
 
         // max task duration
-        if( taskConfig.maxDuration ) {
-            final duration = taskConfig.maxDuration as Duration
-            result << "-l" << "h_rt=${duration.format('HH:mm:ss')}"
+        if( taskConfig.time ) {
+            final time = taskConfig.time as Duration
+            result << "-l" << "h_rt=${time.format('HH:mm:ss')}"
         }
 
         // task max memory
-        if( taskConfig.maxMemory ) {
-            result << "-l" << "virtual_free=${taskConfig.maxMemory.toString().replaceAll(/[\sB]/,'')}"
+        if( taskConfig.memory ) {
+            result << "-l" << "virtual_free=${taskConfig.memory.toString().replaceAll(/[\sB]/,'')}"
         }
 
         // -- at the end append the command script wrapped file name
@@ -643,17 +643,11 @@ class LsfExecutor extends AbstractGridExecutor {
         }
 
         //number of cpus for multiprocessing/multithreading
-        if( taskConfig.cpu ) {
-            def hosts
-            if( taskConfig?.penv in ['smp', null]) {
-                hosts = 1
-                result << "-n" << taskConfig.cpu
+        if( taskConfig.cpus || taskConfig.nodes ) {
+            if( taskConfig.cpus ) {
+                result << "-n" << taskConfig.cpus.toString()
             }
-            if( taskConfig?.penv == 'mpi' ) {
-                hosts = taskConfig.cpu
-            }
-
-            result << "-R" << "\"span[hosts=${hosts}]\""
+            result << "-R" << "span[hosts=${taskConfig.nodes ?:1 }]"
         }
 
         // -- the job name
@@ -772,17 +766,16 @@ class SlurmExecutor extends AbstractGridExecutor {
         result << '-J' << getJobNameFor(task)
         result << '-o' << '/dev/null'
 
-        if( taskConfig.cpu ) {
-            if( taskConfig?.penv in ['smp', null] ){
-                result << '-c' << taskConfig.cpu
-            }
-            if( taskConfig?.penv == 'mpi' ){
-                result << '-N' << taskConfig.cpu
-            }
+        if( taskConfig.cpus ) {
+            result << '-c' << taskConfig.cpus.toString()
         }
 
-        if( taskConfig.maxDuration ) {
-            result << '-t' << taskConfig.maxDuration.format('HH:mm:ss')
+        if( taskConfig.nodes ){
+            result << '-N' << taskConfig.nodes.toString()
+        }
+
+        if( taskConfig.time ) {
+            result << '-t' << (taskConfig.time as Duration).format('HH:mm:ss')
         }
 
         // -- at the end append the command script wrapped file name
@@ -871,29 +864,19 @@ class PbsExecutor extends AbstractGridExecutor {
             result << '-q'  << (String)taskConfig.queue
         }
 
-        if( taskConfig.cpu ) {
-            def nodes
-            def ppn
-            if( taskConfig.penv in ['smp', null] ) {
-                nodes = 1
-                ppn = taskConfig.cpu
-            }
-            if( taskConfig.penv == 'mpi' ) {
-                nodes = taskConfig.cpu
-                ppn = 1
-            }
-            result << '-l' << "nodes=$nodes:ppn=$ppn"
+        if( taskConfig.cpus || taskConfig.nodes ) {
+            result << '-l' << "nodes=${taskConfig.nodes?:1}:ppn=${taskConfig.cpus?:1}"
         }
 
-//        // max task duration
-//        if( taskConfig.maxDuration ) {
-//            final duration = taskConfig.maxDuration as Duration
-//            result << "-l" << "h_rt=${duration.format('HH:mm:ss')}"
-//        }
-//
+        // max task duration
+        if( taskConfig.time ) {
+            final duration = taskConfig.time as Duration
+            result << "-l" << "walltime=${duration.format('HH:mm:ss')}"
+        }
+
         // task max memory
-        if( taskConfig.maxMemory ) {
-            result << "-l" << "mem=${taskConfig.maxMemory.toString().replaceAll(/[\s]/,'')}"
+        if( taskConfig.memory ) {
+            result << "-l" << "mem=${taskConfig.memory.toString().replaceAll(/[\s]/,'').toLowerCase()}"
         }
 
         // -- at the end append the command script wrapped file name

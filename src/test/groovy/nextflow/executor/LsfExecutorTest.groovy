@@ -53,11 +53,9 @@ class LsfExecutorTest extends Specification {
         def script = folder.resolve('job.sh'); script.text = 'some content'
         // config
         config.queue = 'hpc-queue1'
-        config.maxMemory = '2GB'
-        config.maxDuration = '3h'
         config.clusterOptions = " -M 4000  -R 'rusage[mem=4000] select[mem>4000]' --X \"abc\" "
-        config.cpu = test_cpu
-        config.penv = test_penv
+        config.cpus(test_cpu)
+        config.nodes(test_nodes)
         // task object
         def task = new TaskRun()
         task.processor = proc
@@ -65,18 +63,22 @@ class LsfExecutorTest extends Specification {
         task.index = 1
 
         then:
-        executor.getSubmitCommandLine(task, script) == expected
+        executor.getSubmitCommandLine(task, script) as Set == expected as Set
         script.canExecute()
 
         cleanup:
         folder?.deleteDir()
 
         where:
-        test_cpu | test_penv | expected
-        null | null | ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
-        '8' | null | ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-n', '8', '-R', '"span[hosts=1]"', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
-        '8' | 'smp' | ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-n', '8', '-R', '"span[hosts=1]"', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
-        '8' | 'mpi' | ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1',  '-R', '"span[hosts=8]"', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
+        test_cpu    | test_nodes    | expected
+        1           | null          | ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-n', '1', '-R', 'span[hosts=1]', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
+        1           | 1             | ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-n', '1', '-R', 'span[hosts=1]', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
+        1           | 4             | ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-n', '1', '-R', 'span[hosts=4]', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
+        4           | null          | ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-n', '4', '-R', 'span[hosts=1]', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
+        4           | 1             | ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-n', '4', '-R', 'span[hosts=1]', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
+        8           | 3             | ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-n', '8', '-R', 'span[hosts=3]', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
+        null        | 4             | ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-R', 'span[hosts=4]', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
+
     }
 
 

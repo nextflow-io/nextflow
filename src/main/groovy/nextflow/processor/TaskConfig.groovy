@@ -19,7 +19,10 @@
  */
 
 package nextflow.processor
+
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
 import nextflow.script.BaseScript
 import nextflow.script.EachInParam
 import nextflow.script.EnvInParam
@@ -151,35 +154,8 @@ class TaskConfig implements Map<String,Object> {
         }
     }
 
-    void set ( Object name, Object value) {
-        def aliases = [:]
-        aliases.maxMemory = 'mem'
-        aliases.maxDuration = 'time'
 
-        if( name in aliases) {
-            log.warn("'$name' has been deprecated. Use '${aliases[name]}' instead.")
-        }
-
-        if( name == 'mem') {
-            name = 'maxMemory'
-        }
-
-        if( name == 'time') {
-            name = 'maxDuration'
-        }
-
-        if( name == 'cpu' && value != null) {
-            try {
-                Integer.parseInt(value.toString())
-            } catch(NumberFormatException) {
-                value = null
-            }
-        }
-
-        configProperties[name] = value
-    }
-
-    @groovy.transform.PackageScope
+    @PackageScope
     BaseScript getOwnerScript() { ownerScript }
 
     /**
@@ -323,12 +299,31 @@ class TaskConfig implements Map<String,Object> {
      *              {@code maxMemory '100M'}, {@code maxMemory '2G'}, etc.
      */
     TaskConfig maxMemory( Object mem0 ) {
-        assert mem0
+        log.warn("'maxMemory' has been deprecated. Use 'memory' instead.")
+        memory(mem0)
+    }
 
-        configProperties.maxMemory = (mem0 instanceof MemoryUnit) ? mem0 : new MemoryUnit(mem0.toString())
-
+    TaskConfig memory( Object value ) {
+        try {
+            configProperties.memory = (value instanceof MemoryUnit) ? value : new MemoryUnit(value.toString().trim())
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Not a valid `memory` value in process definition: $value")
+        }
         return this
     }
+
+    TaskConfig time( def value ) {
+        try {
+            configProperties.time = (value instanceof Duration) ? value : new Duration(value.toString().trim())
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Not a valid `time` value in process definition: $value")
+        }
+        return this
+    }
+
+
 
     /**
      * The max duration time allowed for the job to be executed.
@@ -337,13 +332,9 @@ class TaskConfig implements Map<String,Object> {
      *                  For example {@code maxDuration '30 min'}, {@code maxDuration '10 hour'}, {@code maxDuration '2 day'}
      */
     TaskConfig maxDuration( Object duration0 ) {
-        assert duration0
-
-        configProperties.maxDuration = (duration0 instanceof Duration) ? duration0 : new Duration(duration0.toString())
-
-        return this
+        log.warn("'maxDuration' has been deprecated. Use 'time' instead.")
+        time(duration0)
     }
-
 
     TaskConfig validExitStatus( Object values ) {
 
