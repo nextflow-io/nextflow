@@ -20,6 +20,12 @@
 
 package test
 
+import java.nio.file.Files
+import java.nio.file.Path
+
+import com.google.common.jimfs.Configuration
+import com.google.common.jimfs.Jimfs
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -47,6 +53,14 @@ class TestHelper {
         }
 
         return proxy
+    }
+
+    static private fs = Jimfs.newFileSystem(Configuration.unix());
+
+    static Path createInMemTempDir() {
+        Path tmp = fs.getPath("/tmp");
+        tmp.mkdir()
+        Files.createTempDirectory(tmp, 'test')
     }
 
 }

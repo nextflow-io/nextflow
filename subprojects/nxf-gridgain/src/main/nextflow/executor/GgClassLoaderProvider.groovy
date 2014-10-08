@@ -66,7 +66,7 @@ class GgClassLoaderProvider {
     }
 
     @Memoized
-    Map getConfigFor( UUID sessionId ) {
+    RemoteSession getSessionFor( UUID sessionId ) {
         assert sessionId
         GridCache<UUID, RemoteSession> allSessions = grid.cache( GgGridFactory.SESSIONS_CACHE )
 
@@ -77,7 +77,12 @@ class GgClassLoaderProvider {
         if( !session )
             throw new IllegalStateException("Missing session object for id: $sessionId")
 
-        return session.getConfig()
+        return session
+    }
+
+    @Memoized
+    Map getConfigFor( UUID sessionId ) {
+        getSessionFor(sessionId).getConfig()
     }
 
 }

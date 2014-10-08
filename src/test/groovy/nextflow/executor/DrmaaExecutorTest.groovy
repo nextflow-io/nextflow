@@ -26,7 +26,6 @@ import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
-import org.ggf.drmaa.JobInfo
 import org.ggf.drmaa.JobTemplate
 import org.ggf.drmaa.Session
 import spock.lang.Specification
@@ -120,38 +119,36 @@ class DrmaaExecutorTest extends Specification {
     def testHandlerGetTrace() {
 
         given:
+        def expected = new TraceRecord()
+        expected.task_id = 30
+        expected.native_id = '2000'
+        expected.hash = '123abc'
+        expected.name = 'hello'
+        expected.status = TaskHandler.Status.SUBMITTED
+        expected.exit_status = 99
+        expected.submit = 1406264935000
+        expected.start = 1406265009000
+        expected.complete = 1406265009000
+
         def workDir = Files.createTempDirectory('test')
-        def usage = [
-                start_time: '1406265009.0000',
-                submission_time: '1406264935.0000',
-                end_time: '1406265009.0000',
-                maxvmem: '100.0000',
-                cpu: '0.0040',
-                io: '200.000'
-        ]
-        def jobInfo = [getResourceUsage:{ usage }] as JobInfo
-        Session drmaa = Stub()
-        drmaa.wait(_,0) >> jobInfo
-        def executor = [ getDrmaaSession: { drmaa } ] as DrmaaExecutor
-        def task = new TaskRun(id:30, name: 'hello', workDir: workDir, exitStatus: 99)
+
+        def task = [:] as TaskRun
+        task.id = 30
+        task.name = 'hello'
+        task.workDir = workDir
+        task.exitStatus = 99
+        task.metaClass.getHashLog =  {'123abc'}
         def config = new TaskConfig([:])
 
         when:
-        def handler = new DrmaaTaskHandler(task, config, executor)
+        def handler = new DrmaaTaskHandler(task, config, Mock(DrmaaExecutor))
         handler.jobId = '2000'
         handler.status = TaskHandler.Status.SUBMITTED
+        handler.submitTimeMillis = 1406264935000
+        handler.startTimeMillis = 1406265009000
+        handler.completeTimeMillis = 1406265009000
         then:
-        handler.getTraceRecord() == new TraceRecord(
-                taskId: 30,
-                nativeId: '2000',
-                name: 'hello',
-                status: TaskHandler.Status.SUBMITTED,
-                exit: 99,
-                start: 1406265009000,
-                submit: 1406264935000,
-                complete: 1406265009000,
-                cpu: '0.0040',
-                mem: '100.0000')
+        handler.getTraceRecord() == expected
 
 
         cleanup:

@@ -490,7 +490,7 @@ class GridTaskHandler extends TaskHandler {
     @Override
     public TraceRecord getTraceRecord() {
         def trace = super.getTraceRecord()
-        trace.nativeId = jobId
+        trace.native_id = jobId
         return trace
     }
 }

@@ -23,6 +23,8 @@ package nextflow
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.cli.CmdRun
+import nextflow.trace.TraceFileObserver
 import nextflow.util.Duration
 import spock.lang.Specification
 /**
@@ -214,6 +216,59 @@ class SessionTest extends Specification {
         base?.deleteDir()
         path1.deleteDir()
         path2.deleteDir()
+
+    }
+
+    def testCreateObservers() {
+
+        def session
+        def result
+        def observer
+
+        when:
+        session = [:] as Session
+        result = session.createObservers(new CmdRun())
+        then:
+        !result
+
+        when:
+        session = [:] as Session
+        result = session.createObservers(new CmdRun(withTrace: 'file.txt'))
+        observer = result[0] as TraceFileObserver
+        then:
+        result.size() == 1
+        observer.tracePath == Paths.get('file.txt').complete()
+        observer.delim == '\t'
+
+        when:
+        session = [:] as Session
+        session.config = [trace: [delim: 'x', fields: 'task_id,name,exit_status']]
+        result = session.createObservers(new CmdRun(withTrace: 'alpha.txt'))
+        observer = result[0] as TraceFileObserver
+        then:
+        result.size() == 1
+        observer.tracePath == Paths.get('alpha.txt').complete()
+        observer.delim == 'x'
+        observer.fields == ['task_id','name','exit_status']
+
+        when:
+        session = [:] as Session
+        session.config = [trace: [delim: 'x', fields: 'task_id,name,exit_status']]
+        result = session.createObservers(new CmdRun())
+        then:
+        !result
+
+        when:
+        session = [:] as Session
+        session.config = [trace: [enabled: true, fields: 'task_id,name,exit_status,vmem']]
+        result = session.createObservers(new CmdRun())
+        observer = result[0] as TraceFileObserver
+        then:
+        result.size() == 1
+        observer.tracePath == Paths.get('trace.csv').complete()
+        observer.delim == '\t'
+        observer.fields == ['task_id','name','exit_status','vmem']
+
 
     }
 

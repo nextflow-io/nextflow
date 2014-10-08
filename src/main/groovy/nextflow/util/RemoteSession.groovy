@@ -52,6 +52,8 @@ class RemoteSession implements Serializable, Closeable {
 
     final Map config
 
+    final boolean statsEnabled
+
     transient boolean isLibInitialized
 
     @Lazy
@@ -70,6 +72,7 @@ class RemoteSession implements Serializable, Closeable {
     RemoteSession(Session session) {
         sessionId = session.getUniqueId()
         config = session.config
+        statsEnabled = session.statsEnabled
         for( Path entry : session.getLibDir() ) {
             libs.add( zip(entry) )
         }

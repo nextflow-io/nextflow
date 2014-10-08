@@ -116,6 +116,10 @@ class Session {
 
     private List<TraceObserver> observers = []
 
+    private boolean statsEnabled
+
+    boolean getStatsEnabled() { statsEnabled }
+
     /**
      * Creates a new session with an 'empty' (default) configuration
      */
@@ -179,13 +183,25 @@ class Session {
             this.scriptName = scriptFile.name
         }
 
+
+        this.observers = createObservers( runOpts )
+        this.statsEnabled = observers.size()>0
+    }
+
+    @PackageScope
+    List createObservers( CmdRun runOpts ) {
         /*
          * create the execution trace observer
          */
-        def allObservers = []
-        if( runOpts.withTrace ) {
-            def traceFile = FileHelper.asPath(runOpts.withTrace)
-            allObservers << new TraceFileObserver(traceFile)
+        def result = []
+        Boolean isEnabled = config.navigate('trace.enabled') as Boolean
+        if( isEnabled || runOpts.withTrace ) {
+            def fileName = runOpts.withTrace ?: TraceFileObserver.DEF_FILE_NAME
+            def traceFile = Paths.get(fileName).complete()
+            def observer = new TraceFileObserver(traceFile)
+            config.navigate('trace.delim') { observer.delim = it }
+            config.navigate('trace.fields') { observer.setFieldsAndFormats(it) }
+            result << observer
         }
 
         /*
@@ -193,16 +209,15 @@ class Session {
          */
         if( runOpts.withExtrae ) {
             try {
-                allObservers << (TraceObserver)Class.forName(EXTRAE_TRACE_CLASS).newInstance()
+                result << (TraceObserver)Class.forName(EXTRAE_TRACE_CLASS).newInstance()
             }
             catch( Exception e ) {
                 log.warn("Unable to load Extrae profiler ${Const.log_detail_tip_message}",e)
             }
         }
 
-        this.observers = Collections.unmodifiableList(allObservers)
+        return result
     }
-
 
     def Session start() {
         log.debug "Session start > phaser register (session)"

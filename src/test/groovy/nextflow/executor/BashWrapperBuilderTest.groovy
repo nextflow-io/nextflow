@@ -113,13 +113,30 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash -Eeu
-                trap on_exit 1 2 3 15 ERR TERM USR1 USR2
-                function on_exit() { local exit_status=\${1:-\$?}; printf \$exit_status > ${folder}/.exitcode; exit \$exit_status; }
+                #!/bin/bash
+                set -e
+                function on_exit() {
+                  set +e
+                  local exit_status
+                  local err; err=\${1:-1} && [[ \$err == 0 ]] && err=1
+                  local exit_file=\${2:-.exitfile}
+                  if [[ \$ret ]];
+                  then exit_status=\$ret;
+                  else exit_status=\$err; fi
+                  [[ \$pid ]] && kill -0 \$pid &>/dev/null && kill \$pid
+                  printf \$exit_status > \$exit_file; exit \$exit_status;
+                }
+
+                trap 'on_exit \$? ${folder}/.exitcode' EXIT
                 touch ${folder}/.command.begin
                 [ -f ${folder}/.command.env ] && source ${folder}/.command.env
-                ( /bin/bash -ue ${folder}/.command.sh ) &> ${folder}/.command.out
-                on_exit
+
+                # Launch job execution -- null
+                ( /bin/bash -ue ${folder}/.command.sh &> ${folder}/.command.out ) &
+                pid=\$!
+
+                # Finalization
+                if [[ \$pid ]]; then wait \$pid; ret=\$?; fi
                 """
                 .stripIndent().leftTrim()
 
@@ -128,8 +145,90 @@ class BashWrapperBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
+    def testBashWrapperWithStats() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        /*
+         * simple bash run
+         */
+        when:
+        def bash = new BashWrapperBuilder(workDir: folder, script: 'echo Hello world!', statsEnabled: true)
+        bash.build()
+
+        then:
+        Files.exists(folder.resolve('.command.sh'))
+        Files.exists(folder.resolve('.command.run'))
+
+        folder.resolve('.command.sh').text ==
+                '''
+                #!/bin/bash -ue
+                echo Hello world!
+                '''
+                        .stripIndent().leftTrim()
 
 
+        folder.resolve('.command.run').text ==
+                """
+                #!/bin/bash
+                set -e
+                function on_exit() {
+                  set +e
+                  local exit_status
+                  local err; err=\${1:-1} && [[ \$err == 0 ]] && err=1
+                  local exit_file=\${2:-.exitfile}
+                  if [[ \$ret ]];
+                  then exit_status=\$ret;
+                  else exit_status=\$err; fi
+                  [[ \$pid ]] && kill -0 \$pid &>/dev/null && kill \$pid
+                  printf \$exit_status > \$exit_file; exit \$exit_status;
+                }
+
+                trap 'on_exit \$? ${folder}/.exitcode' EXIT
+                touch ${folder}/.command.begin
+                [ -f ${folder}/.command.env ] && source ${folder}/.command.env
+
+                # Launch job execution -- null
+                ( /bin/bash -ue ${folder}/.command.sh &> ${folder}/.command.out ) &
+                pid=\$!
+
+                # Collect proc stats
+                function on_trace() {
+                  local pid=\$1; local trg=\$2; local xio; local xst; local temp;
+                  declare -a max=(0 0 0 0)
+                  while [[ \$pid ]]; do
+                    local xps; xps="\$(ps -o pcpu=,pmem=,rss=,vsz=,state= \$pid)"
+                    [ \$? -ne 0 ] && break
+                    IFS=' ' read -a val <<< "\$xps"; unset IFS
+                    for i in {0..3}; do [ \$(echo "\${val[i]} > \${max[i]}" |bc) -eq 1 ] && max[i]=\${val[i]}; done
+                    temp="\$(cat /proc/\$pid/io 2> /dev/null)" && xio=\$temp
+                    temp="\$(cat /proc/\$pid/status 2> /dev/null)" && xst=\$temp
+                    echo -e "%cpu %mem rss vmem state" > \$trg
+                    echo -e "\${val[@]}" >> \$trg
+                    echo -e "\${max[@]}" >> \$trg
+                    [[ \$xio ]] && echo -e "\$xio" >> \$trg
+                    [[ \$xst ]] && echo -e "\$xst" >> \$trg
+                    sleep 2
+                  done
+                }
+
+                ( on_trace \$pid .command.trace &> /dev/null ) &
+                disown
+
+                # Finalization
+                if [[ \$pid ]]; then wait \$pid; ret=\$?; fi
+                """
+                        .stripIndent().leftTrim()
+
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    /**
+     * test running with Docker executed as 'sudo'
+     */
     def testBashWithDockerTest () {
 
         given:
@@ -161,13 +260,30 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash -Eeu
-                trap on_exit 1 2 3 15 ERR TERM USR1 USR2
-                function on_exit() { local exit_status=\${1:-\$?}; printf \$exit_status > ${folder}/.exitcode; exit \$exit_status; }
+                #!/bin/bash
+                set -e
+                function on_exit() {
+                  set +e
+                  local exit_status
+                  local err; err=\${1:-1} && [[ \$err == 0 ]] && err=1
+                  local exit_file=\${2:-.exitfile}
+                  if [[ \$ret ]];
+                  then exit_status=\$ret;
+                  else exit_status=\$err; fi
+                  [[ \$pid ]] && kill -0 \$pid &>/dev/null && kill \$pid
+                  printf \$exit_status > \$exit_file; exit \$exit_status;
+                }
+
+                trap 'on_exit \$? ${folder}/.exitcode' EXIT
                 touch ${folder}/.command.begin
-                ( sudo docker run -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name xyz busybox /bin/bash -ue ${folder}/.command.sh ) &> ${folder}/.command.out
+
+                # Launch job execution -- xyz
+                ( sudo docker run -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name xyz busybox /bin/bash -ue ${folder}/.command.sh &> ${folder}/.command.out ) &
+                pid=\$!
+
+                # Finalization
+                if [[ \$pid ]]; then wait \$pid; ret=\$?; fi
                 sudo docker rm xyz &>/dev/null || true &
-                on_exit
                 """
                         .stripIndent().leftTrim()
 
@@ -207,13 +323,30 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash -Eeu
-                trap on_exit 1 2 3 15 ERR TERM USR1 USR2
-                function on_exit() { local exit_status=\${1:-\$?}; printf \$exit_status > ${folder}/.exitcode; exit \$exit_status; }
+                #!/bin/bash
+                set -e
+                function on_exit() {
+                  set +e
+                  local exit_status
+                  local err; err=\${1:-1} && [[ \$err == 0 ]] && err=1
+                  local exit_file=\${2:-.exitfile}
+                  if [[ \$ret ]];
+                  then exit_status=\$ret;
+                  else exit_status=\$err; fi
+                  [[ \$pid ]] && kill -0 \$pid &>/dev/null && kill \$pid
+                  printf \$exit_status > \$exit_file; exit \$exit_status;
+                }
+
+                trap 'on_exit \$? ${folder}/.exitcode' EXIT
                 touch ${folder}/.command.begin
-                ( docker run -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name xyz busybox /bin/bash -ue ${folder}/.command.sh ) &> ${folder}/.command.out
+
+                # Launch job execution -- xyz
+                ( docker run -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name xyz busybox /bin/bash -ue ${folder}/.command.sh &> ${folder}/.command.out ) &
+                pid=\$!
+
+                # Finalization
+                if [[ \$pid ]]; then wait \$pid; ret=\$?; fi
                 docker rm xyz &>/dev/null || true &
-                on_exit
                 """
                         .stripIndent().leftTrim()
 
@@ -222,6 +355,9 @@ class BashWrapperBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
+    /**
+     * Test run in a docker container, without removing it
+     */
     def testBashWithDockerTest3() {
 
         given:
@@ -253,12 +389,29 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash -Eeu
-                trap on_exit 1 2 3 15 ERR TERM USR1 USR2
-                function on_exit() { local exit_status=\${1:-\$?}; printf \$exit_status > ${folder}/.exitcode; exit \$exit_status; }
+                #!/bin/bash
+                set -e
+                function on_exit() {
+                  set +e
+                  local exit_status
+                  local err; err=\${1:-1} && [[ \$err == 0 ]] && err=1
+                  local exit_file=\${2:-.exitfile}
+                  if [[ \$ret ]];
+                  then exit_status=\$ret;
+                  else exit_status=\$err; fi
+                  [[ \$pid ]] && kill -0 \$pid &>/dev/null && kill \$pid
+                  printf \$exit_status > \$exit_file; exit \$exit_status;
+                }
+
+                trap 'on_exit \$? ${folder}/.exitcode' EXIT
                 touch ${folder}/.command.begin
-                ( docker run -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name c1 ubuntu /bin/bash -ue ${folder}/.command.sh ) &> ${folder}/.command.out
-                on_exit
+
+                # Launch job execution -- c1
+                ( docker run -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name c1 ubuntu /bin/bash -ue ${folder}/.command.sh &> ${folder}/.command.out ) &
+                pid=\$!
+
+                # Finalization
+                if [[ \$pid ]]; then wait \$pid; ret=\$?; fi
                 """
                         .stripIndent().leftTrim()
 

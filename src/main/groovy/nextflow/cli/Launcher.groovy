@@ -37,6 +37,7 @@ import nextflow.Const
 import nextflow.ExitCode
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
+import nextflow.trace.TraceFileObserver
 import nextflow.util.LoggerHelper
 import org.codehaus.groovy.control.CompilationFailedException
 import org.eclipse.jgit.api.errors.GitAPIException
@@ -201,7 +202,7 @@ class Launcher implements ExitCode {
             }
 
             else if( current == '-with-trace' && (i==args.size() || args[i].startsWith('-'))) {
-                normalized << 'trace.csv'
+                normalized << TraceFileObserver.DEF_FILE_NAME
             }
 
             else if( current == '-with-docker' && (i==args.size() || args[i].startsWith('-'))) {

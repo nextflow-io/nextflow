@@ -35,6 +35,50 @@ import nextflow.util.DockerBuilder
 @Slf4j
 class BashWrapperBuilder {
 
+    /*
+     * Read more linux process handling and signal trap
+     *
+     * http://mywiki.wooledge.org/SignalTrap
+     * http://mywiki.wooledge.org/ProcessManagement
+     */
+    static final String FUNCTION_ON_EXIT = '''
+        function on_exit() {
+          set +e
+          local exit_status
+          local err; err=${1:-1} && [[ $err == 0 ]] && err=1
+          local exit_file=${2:-.exitfile}
+          if [[ $ret ]];
+          then exit_status=$ret;
+          else exit_status=$err; fi
+          [[ $mon ]] && kill -0 $mon &>/dev/null && kill $mon
+          [[ $pid ]] && kill -0 $pid &>/dev/null && kill $pid
+          printf $exit_status > $exit_file; exit $exit_status;
+        }
+        '''.stripIndent().leftTrim()
+
+    // note: keep local 'xps' declaration separated by the variable assignment
+    // see http://stackoverflow.com/a/4421282/395921
+    static final String FUNCTION_ON_TRACE = '''
+        function on_trace() {
+          local pid=$1; local trg=$2; local xio; local xst; local temp;
+          declare -a max=(0 0 0 0)
+          while [[ $pid ]]; do
+            local xps; xps="$(ps -o pcpu=,pmem=,rss=,vsz=,state= $pid)"
+            [ $? -ne 0 ] && break
+            IFS=' ' read -a val <<< "$xps"; unset IFS
+            for i in {0..3}; do [ $(echo "${val[i]} > ${max[i]}" |bc) -eq 1 ] && max[i]=${val[i]}; done
+            temp="$(cat /proc/$pid/io 2> /dev/null)" && xio=$temp
+            temp="$(cat /proc/$pid/status 2> /dev/null)" && xst=$temp
+            echo -e "%cpu %mem rss vmem state" > $trg
+            echo -e "${val[@]}" >> $trg
+            echo -e "${max[@]}" >> $trg
+            [[ $xio ]] && echo -e "$xio" >> $trg
+            [[ $xst ]] && echo -e "$xst" >> $trg
+            sleep 2
+          done
+        }
+        '''.stripIndent().leftTrim()
+
     final private TaskRun task
 
     def scratch
@@ -69,6 +113,8 @@ class BashWrapperBuilder {
 
     private runWithDocker
 
+    boolean statsEnabled
+
     BashWrapperBuilder( TaskRun task ) {
         this.task = task
         this.name = "nxf-" + task.hash?.toString()?.substring(0,8)
@@ -90,6 +136,9 @@ class BashWrapperBuilder {
         // docker config
         this.dockerConfig = task.processor?.session?.config?.docker
         this.dockerImage = task.container ?: dockerConfig?.image
+
+        // stats
+        this.statsEnabled = task.processor?.session?.statsEnabled
     }
 
     BashWrapperBuilder( Map params ) {
@@ -109,6 +158,7 @@ class BashWrapperBuilder {
         this.dockerConfig = params.dockerConfig
         this.dockerImage = params.container ?: dockerConfig?.image
         this.dockerMount = params.dockerMount
+        this.statsEnabled = params.statsEnabled
     }
 
     /**
@@ -198,12 +248,17 @@ class BashWrapperBuilder {
          * 4 - un-stage e.g. copy back the result files to the working folder
          */
 
+        /*
+         * Note: The signals SIGKILL and SIGSTOP cannot be caught, blocked, or ignored.
+         * Read more: http://man7.org/linux/man-pages/man7/signal.7.html
+         */
+
         final ENDL = '\n'
         def wrapper = new StringBuilder()
-        wrapper << '#!/bin/bash -Eeu' << ENDL
-        wrapper << 'trap on_exit 1 2 3 15 ERR TERM USR1 USR2' << ENDL
-        wrapper << 'function on_exit() { local exit_status=${1:-$?}; printf $exit_status > ' << exitedFile.toString()
-        wrapper << '; exit $exit_status; }' << ENDL
+        wrapper << '#!/bin/bash' << ENDL
+        wrapper << 'set -e' << ENDL
+        wrapper << FUNCTION_ON_EXIT << ENDL
+        wrapper << 'trap \'on_exit $? ' << exitedFile.toString() << '\' EXIT' << ENDL
         wrapper << 'touch ' << startedFile.toString() << ENDL
 
         // source the environment
@@ -228,6 +283,8 @@ class BashWrapperBuilder {
         }
 
         // execute the command script
+        wrapper << '' << ENDL
+        wrapper << "# Launch job execution -- $name" << ENDL
         wrapper << '( '
 
         // execute by invoking the command through a Docker container
@@ -268,18 +325,45 @@ class BashWrapperBuilder {
 
         wrapper << interpreter << ' ' << scriptFile.toString()
         if( input != null ) wrapper << ' < ' << inputFile.toString()
-        wrapper << ' ) &> ' << outputFile.toAbsolutePath() << ENDL
+        wrapper << ' &> ' << outputFile.toAbsolutePath() << ' ) &' << ENDL
+        wrapper << 'pid=$!' << ENDL
 
+        /*
+         * process stats
+         */
+        if( statsEnabled ) {
+            wrapper << '' << ENDL
+            wrapper << '# Collect proc stats' << ENDL
+            wrapper << FUNCTION_ON_TRACE << ENDL
+            wrapper << '( on_trace $pid '<< TaskRun.CMD_TRACE <<' &> /dev/null ) &' << ENDL
+            wrapper << 'mon=$!'
+            wrapper << 'disown' << ENDL
+        }
+
+        /*
+         * wait for main process termination
+         */
+        wrapper << '' << ENDL
+        wrapper << '# Finalization' << ENDL
+        wrapper << 'if [[ $pid ]]; then wait $pid; ret=$?; fi' << ENDL
+
+        /*
+         * docker clean-up
+         */
         if( docker?.removeCommand ) {
             // remove the container in this way because 'docker run --rm'  fail in some cases -- see https://groups.google.com/d/msg/docker-user/0Ayim0wv2Ls/-mZ-ymGwg8EJ
             wrapper << docker.removeCommand << ' &>/dev/null || true &' << ENDL
         }
 
+        /*
+         * un-stage output files
+         */
         if( (changeDir || workDir != targetDir) && unstagingScript  ) {
             wrapper << unstagingScript << ENDL
         }
-
-        wrapper << 'on_exit' << ENDL
+        if( changeDir && statsEnabled ) {
+            wrapper << 'cp ' << TaskRun.CMD_TRACE << ' ' << task.workDir << ' || true '<< ENDL
+        }
 
         wrapperFile.text = wrapperScript = wrapper.toString()
         return wrapperFile
