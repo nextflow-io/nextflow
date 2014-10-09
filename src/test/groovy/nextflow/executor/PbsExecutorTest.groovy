@@ -121,7 +121,7 @@ class PbsExecutorTest extends Specification {
         result['13.localhost'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['14.localhost'] == AbstractGridExecutor.QueueStatus.PENDING
         result['15.localhost'] == AbstractGridExecutor.QueueStatus.HOLD
-        result['16.localhost'] == AbstractGridExecutor.QueueStatus.UNKNWON
+        result['16.localhost'] == AbstractGridExecutor.QueueStatus.UNKNOWN
         result['17.localhost'] == AbstractGridExecutor.QueueStatus.HOLD
 
     }

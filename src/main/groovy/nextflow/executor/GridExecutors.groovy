@@ -163,7 +163,7 @@ abstract class AbstractGridExecutor extends Executor {
     /**
      * Status as returned by the grid engine
      */
-    static protected enum QueueStatus { PENDING, RUNNING, HOLD, ERROR, DONE, UNKNWON }
+    static protected enum QueueStatus { PENDING, RUNNING, HOLD, ERROR, DONE, UNKNOWN }
 
     /**
      * @return The status for all the scheduled and running jobs
@@ -931,7 +931,7 @@ class PbsExecutor extends AbstractGridExecutor {
             if( index< 2 ) return
             def cols = row.split(/\s+/)
             if( cols.size()>5 ) {
-                result.put( cols[0], DECODE_STATUS[cols[4]] ?: AbstractGridExecutor.QueueStatus.UNKNWON )
+                result.put( cols[0], DECODE_STATUS[cols[4]] ?: AbstractGridExecutor.QueueStatus.UNKNOWN )
             }
         }
 
