@@ -25,6 +25,7 @@ import nextflow.processor.ParallelTaskProcessor
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
+import nextflow.script.BaseScript
 import nextflow.trace.TraceRecord
 import org.ggf.drmaa.JobInfo
 import org.ggf.drmaa.JobTemplate
@@ -100,20 +101,33 @@ class DrmaaExecutorTest extends Specification {
         def workDir = Files.createTempDirectory('test')
         def executor = [:] as DrmaaExecutor
         def task = new TaskRun(id:1, name: 'hello', workDir: workDir)
-        def config = new TaskConfig([
-                queue: 'short',
-                clusterOptions:'-xyz 1',
-                maxDuration: '1h',
-                maxMemory: '2G'
-        ])
+        def base = Mock(BaseScript)
+        def config = new TaskConfig(base)
+        def handler = new DrmaaTaskHandler(task, config, executor)
 
         when:
-        def handler = new DrmaaTaskHandler(task, config, executor)
+        config.queue = test_queue
+        config.clusterOptions = test_opts
+        config.time = test_time
+        config.memory = test_mem
+        config.cpus = test_cpus
+        config.penv = test_penv
+
         then:
-        handler.getOptions() == '-notify -q short -l virtual_free=2G -xyz 1 -b y'
+        handler.getOptions() == expected
 
         cleanup:
         workDir?.deleteDir()
+
+        where:
+        test_queue  | test_opts | test_mem  | test_time | test_cpus | test_penv || expected
+        null        | null      | null      | null      | null      | null      || '-notify -b y'
+        'short1'    | null      | null      | null      | null      | null      || '-notify -q short1 -b y'
+        'long2'     | '-z abc'  | null      | null      | null      | null      || '-notify -q long2 -z abc -b y'
+        'long2'     | '-z abc'  | '1M'      | null      | null      | null      || '-notify -q long2 -l virtual_free=1M -z abc -b y'
+        'long2'     | '-z abc'  | '1G'      | '2h'      | null      | null      || '-notify -q long2 -l h_rt=02:00:00 -l virtual_free=1G -z abc -b y'
+        'alpha'     | '-z abc'  | '2G'      | '3h'      | 2         | null      || '-notify -q alpha -l slots=2 -l h_rt=03:00:00 -l virtual_free=2G -z abc -b y'
+        'delta'     | '-z abc'  | '2G'      | '3h'      | 2         | 'mpi'     || '-notify -q delta -pe mpi 2 -l h_rt=03:00:00 -l virtual_free=2G -z abc -b y'
 
     }
 

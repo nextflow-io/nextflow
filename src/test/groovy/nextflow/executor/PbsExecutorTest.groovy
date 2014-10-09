@@ -50,8 +50,8 @@ class PbsExecutorTest extends Specification {
         def script = Paths.get('job.sh')
         // config
         config.queue = 'my-queue'
-        config.memory( test_mem )
-        config.time( test_time )
+        config.memory = test_mem
+        config.time = test_time
         config.cpus = test_cpus
         config.nodes = test_nodes
         config.clusterOptions = '-extra opt'
@@ -65,11 +65,13 @@ class PbsExecutorTest extends Specification {
         executor.getSubmitCommandLine(task,script) == expected.split(' ') as List
 
         where:
-        test_cpus| test_nodes | test_mem | test_time| expected
-        null     | null       | '1m'     | '1m'     | 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q my-queue -l walltime=00:01:00 -l mem=1mb -extra opt job.sh'
-        2        | null       | '5m'     | '10m'    | 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q my-queue -l nodes=1:ppn=2 -l walltime=00:10:00 -l mem=5mb -extra opt job.sh'
-        8        | 2          | '1g'     | '1d'     | 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q my-queue -l nodes=2:ppn=8 -l walltime=24:00:00 -l mem=1gb -extra opt job.sh'
-        null     | 4          | '2g'     | '1d'     | 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q my-queue -l nodes=4:ppn=1    -l walltime=24:00:00 -l mem=2gb -extra opt job.sh'
+        test_cpus| test_nodes | test_mem | test_time|| expected
+        null     | null       | null     | null     || 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q my-queue -extra opt job.sh'
+        null     | null       | null     | '1m'     || 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q my-queue -l walltime=00:01:00 -extra opt job.sh'
+        null     | null       | '1m'     | '1m'     || 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q my-queue -l walltime=00:01:00 -l mem=1mb -extra opt job.sh'
+        2        | null       | '5m'     | '10m'    || 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q my-queue -l nodes=1:ppn=2 -l walltime=00:10:00 -l mem=5mb -extra opt job.sh'
+        8        | 2          | '1g'     | '1d'     || 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q my-queue -l nodes=2:ppn=8 -l walltime=24:00:00 -l mem=1gb -extra opt job.sh'
+        null     | 4          | '2g'     | '1d'     || 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q my-queue -l nodes=4:ppn=1 -l walltime=24:00:00 -l mem=2gb -extra opt job.sh'
 
 
     }

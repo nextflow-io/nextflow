@@ -57,9 +57,9 @@ class SgeExecutorTest extends Specification {
         config.clusterOptions = '-extra opt'
         config.name = 'task'
         config.penv = test_penv
-        config.memory(test_mem)
-        config.time(test_time)
-        config.cpus(test_cpu)
+        config.memory = test_mem
+        config.time = test_time
+        config.cpus = test_cpu
 
         def task = new TaskRun()
         task.processor = proc
@@ -70,11 +70,14 @@ class SgeExecutorTest extends Specification {
         executor.getSubmitCommandLine(task,script).join(' ') == expected
 
         where:
-        test_mem | test_time | test_cpu | test_penv | expected
-        '1M'    | '10s '     |  1       | null      | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l slots=1 -l h_rt=00:00:10 -l virtual_free=1M -extra opt .job.sh'
-        '2 M'   | '2 m'      | '1'      | 'smp'     | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe smp 1 -l h_rt=00:02:00 -l virtual_free=2M -extra opt .job.sh'
-        '3 g'   | '3 d'      | '2'      | 'mpi'     | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe mpi 2 -l h_rt=72:00:00 -l virtual_free=3G -extra opt .job.sh'
-        '4 GB ' | '1d3h'     | '4'      | 'orte'    | 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe orte 4 -l h_rt=27:00:00 -l virtual_free=4G -extra opt .job.sh'
+        test_mem | test_time | test_cpu | test_penv || expected
+        null    | null       |  null    | null      || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -extra opt .job.sh'
+        null    | null       |  1       | null      || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l slots=1 -extra opt .job.sh'
+        null    | '10s '     |  1       | null      || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l slots=1 -l h_rt=00:00:10 -extra opt .job.sh'
+        '1M'    | '10s '     |  1       | null      || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -l slots=1 -l h_rt=00:00:10 -l virtual_free=1M -extra opt .job.sh'
+        '2 M'   | '2 m'      | '1'      | 'smp'     || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe smp 1 -l h_rt=00:02:00 -l virtual_free=2M -extra opt .job.sh'
+        '3 g'   | '3 d'      | '2'      | 'mpi'     || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe mpi 2 -l h_rt=72:00:00 -l virtual_free=3G -extra opt .job.sh'
+        '4 GB ' | '1d3h'     | '4'      | 'orte'    || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe orte 4 -l h_rt=27:00:00 -l virtual_free=4G -extra opt .job.sh'
 
     }
 

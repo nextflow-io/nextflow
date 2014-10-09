@@ -19,11 +19,11 @@
  */
 
 package nextflow.util
-
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 import groovy.transform.Canonical
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
 import org.apache.commons.lang.time.DurationFormatUtils
@@ -33,20 +33,23 @@ import org.apache.commons.lang.time.DurationFormatUtils
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 @EqualsAndHashCode(includes = 'durationInMillis')
 class Duration implements Comparable<Duration> {
 
-    static private final FORMAT = /(\d+)\s*(\S+)/
+    static private final FORMAT = ~/(\d+)\s*([a-zA-Z]+)/
 
-    static private final MILLIS = ['ms','milli','millis']
+    static private final LEGACY = ~/(\d{1,2}):(\d{1,2}):(\d{1,2})/
 
-    static private final SECONDS = ['s','sec','second','seconds']
+    static private final List<String> MILLIS = ['ms','milli','millis']
 
-    static private final MINUTES = ['m','min','minute','minutes']
+    static private final List<String> SECONDS = ['s','sec','second','seconds']
 
-    static private final HOURS = ['h','hour','hours']
+    static private final List<String> MINUTES = ['m','min','minute','minutes']
 
-    static private final DAYS = ['d','day','days']
+    static private final List<String> HOURS = ['h','hour','hours']
+
+    static private final List<String> DAYS = ['d','day','days']
 
     /**
      * Duration in millis
@@ -76,33 +79,99 @@ class Duration implements Comparable<Duration> {
      * @param str
      */
     Duration(String str) {
-        def matcher = (str =~~ FORMAT)
-        if( !matcher.matches() ) {
-            throw new IllegalArgumentException("Not a valid duration value: '$str'")
+
+        try {
+            try {
+                durationInMillis = parseSimple(str)
+            }
+            catch( IllegalArgumentException e ) {
+                durationInMillis = parseLegacy(str)
+            }
+        }
+        catch( IllegalArgumentException e ) {
+            throw e
+        }
+        catch( Exception e ) {
+            throw new IllegalArgumentException("Not a valid duration value: ${str}", e)
+        }
+    }
+
+    /**
+     * Parse a duration string in legacy format i.e. hh:mm:ss
+     *
+     * @param str The string to be parsed e.g. {@code 05:10:30} (5 hours, 10 mins, 30 seconds)
+     * @return The duration in millisecond
+     */
+    private long parseLegacy( String str ) {
+        def matcher = (str =~ LEGACY)
+        if( !matcher.matches() )
+            new IllegalArgumentException("Not a valid duration value: ${str}")
+
+        def groups = (List<String>)matcher[0]
+        def hh = groups[1].toInteger()
+        def mm = groups[2].toInteger()
+        def ss = groups[3].toInteger()
+
+        return TimeUnit.HOURS.toMillis(hh) + TimeUnit.MINUTES.toMillis(mm) + TimeUnit.SECONDS.toMillis(ss)
+    }
+
+    /**
+     * Parse a duration string
+     *
+     * @param str A duration string containing one or more component e.g. {@code 1d 3h 10mins}
+     * @return  The duration in millisecond
+     */
+    private long parseSimple( String str ) {
+
+        long result=0
+        for( int i=0; true; i++ ) {
+            def matcher = (str =~ FORMAT)
+            if( matcher.find() ) {
+                def groups = (List<String>)matcher[0]
+                def all = groups[0]
+                def digit = groups[1]
+                def unit = groups[2]
+
+                result += convert( digit.toInteger(), unit )
+                str = str.substring(all.length()).trim()
+                continue
+            }
+
+
+            if( i == 0 )
+                throw new IllegalArgumentException("Not a valid duration value: ${str}")
+            break
         }
 
-        final val = Long.parseLong(matcher[0][1]?.toString())
-        final unit = matcher[0][2]
+        return result
+    }
+
+    /**
+     * Parse a single duration component
+     *
+     * @param digit
+     * @param unit A valid duration unit e.g. {@code d}, {@code d}, {@code h}, {@code hour}, etc
+     * @return The duration in millisecond
+     */
+    private long convert( int digit, String unit ) {
 
         if( unit in MILLIS ) {
-            this.durationInMillis = val
+            return digit
         }
-        else if ( unit in SECONDS ) {
-            this.durationInMillis = TimeUnit.SECONDS.toMillis(val)
+        if ( unit in SECONDS ) {
+            return TimeUnit.SECONDS.toMillis(digit)
         }
-        else if ( unit in MINUTES ) {
-            this.durationInMillis = TimeUnit.MINUTES.toMillis(val)
+        if ( unit in MINUTES ) {
+            return TimeUnit.MINUTES.toMillis(digit)
         }
-        else if ( unit in HOURS ) {
-            this.durationInMillis = TimeUnit.HOURS.toMillis(val)
+        if ( unit in HOURS ) {
+            return TimeUnit.HOURS.toMillis(digit)
         }
-        else if ( unit in DAYS ) {
-            this.durationInMillis = TimeUnit.DAYS.toMillis(val)
-        }
-        else {
-            throw new IllegalArgumentException("Not a valid duration value: ${str}")
+        if ( unit in DAYS ) {
+            return TimeUnit.DAYS.toMillis(digit)
         }
 
+        throw new IllegalStateException()
     }
 
     Duration(long value0, TimeUnit unit) {
@@ -173,7 +242,7 @@ class Duration implements Comparable<Duration> {
             return durationInMillis + MILLIS[0]
         }
 
-        def value = format("d:H:m:s").split(':').collect { Integer.parseInt(it) }
+        def value = format("d:H:m:s").split(':').collect { String it -> Integer.parseInt(it) }
         def result = []
 
         // -- day / days

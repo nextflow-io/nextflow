@@ -28,6 +28,11 @@ import spock.lang.Specification
  */
 class DurationTest extends Specification {
 
+    final long SEC = 1000
+    final long MIN = 60 * SEC
+    final long HOUR = 60 * MIN
+    final long DAY = 24 * HOUR
+
     def 'test create by string' () {
 
         expect:
@@ -60,6 +65,24 @@ class DurationTest extends Specification {
         Duration.of('1d').toHours() == 24
 
     }
+
+    def testMulti() {
+        expect:
+        Duration.of('1d 2h').toMillis() ==  DAY + 2 * HOUR
+        Duration.of('1 d 2 h').toMillis() ==  DAY + 2 * HOUR
+        Duration.of('2d3h4m').toMillis() ==  2 * DAY + 3 * HOUR + 4 * MIN
+        Duration.of('2d 3h 4m').toMillis() ==  2 * DAY + 3 * HOUR + 4 * MIN
+    }
+
+    def testParseLegacy () {
+
+        expect:
+        Duration.of('1:0:0').toString() == '1h'
+        Duration.of('01:00:00').toString() == '1h'
+        Duration.of('10:00:00').toString() == '10h'
+        Duration.of('01:02:03').toString() == '1h 2m 3s'
+    }
+
 
     def 'test format' () {
 

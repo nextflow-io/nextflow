@@ -19,7 +19,6 @@
  */
 
 package nextflow.processor
-
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
@@ -149,6 +148,12 @@ class TaskConfig implements Map<String,Object> {
             case 'shell':
                 return getShell()
 
+            case 'time':
+                return getTime()
+
+            case 'memory':
+                return getMemory()
+
             default:
                 return configProperties.get(name)
         }
@@ -162,14 +167,14 @@ class TaskConfig implements Map<String,Object> {
      * Type shortcut to {@code #configProperties.inputs}
      */
     InputsList getInputs() {
-        return configProperties.inputs
+        configProperties.inputs
     }
 
     /**
      * Type shortcut to {@code #configProperties.outputs}
      */
     OutputsList getOutputs() {
-        return configProperties.outputs
+        configProperties.outputs
     }
 
     List getSharedDefs () {
@@ -294,47 +299,65 @@ class TaskConfig implements Map<String,Object> {
     /**
      * The max memory allow to be used to the job
      *
-     * @param mem0 The maximum amount of memory expressed as string value,
+     * @param value The maximum amount of memory expressed as string value,
      *              accepted units are 'B', 'K', 'M', 'G', 'T', 'P'. So for example
      *              {@code maxMemory '100M'}, {@code maxMemory '2G'}, etc.
      */
-    TaskConfig maxMemory( Object mem0 ) {
-        log.warn("'maxMemory' has been deprecated. Use 'memory' instead.")
-        memory(mem0)
-    }
-
-    TaskConfig memory( Object value ) {
-        try {
-            configProperties.memory = (value instanceof MemoryUnit) ? value : new MemoryUnit(value.toString().trim())
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Not a valid `memory` value in process definition: $value")
-        }
+    @Deprecated
+    TaskConfig maxMemory( Object value ) {
+        log.warn("Directive 'maxMemory' has been deprecated. Use 'memory' instead.")
+        configProperties.memory = value
         return this
     }
-
-    TaskConfig time( def value ) {
-        try {
-            configProperties.time = (value instanceof Duration) ? value : new Duration(value.toString().trim())
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Not a valid `time` value in process definition: $value")
-        }
-        return this
-    }
-
-
 
     /**
      * The max duration time allowed for the job to be executed.
      *
-     * @param duration0 The max allowed time expressed as duration string, Accepted units are 'min', 'hour', 'day'.
+     * @param value The max allowed time expressed as duration string, Accepted units are 'min', 'hour', 'day'.
      *                  For example {@code maxDuration '30 min'}, {@code maxDuration '10 hour'}, {@code maxDuration '2 day'}
      */
-    TaskConfig maxDuration( Object duration0 ) {
-        log.warn("'maxDuration' has been deprecated. Use 'time' instead.")
-        time(duration0)
+    @Deprecated
+    TaskConfig maxDuration( Object value ) {
+        log.warn("Directive 'maxDuration' has been deprecated. Use 'time' instead.")
+        configProperties.time = value
+        return this
     }
+
+
+    MemoryUnit getMemory() {
+        def value = configProperties.memory
+
+        if( !value )
+            return null
+
+        if( value instanceof MemoryUnit )
+            return value
+
+        try {
+            new MemoryUnit(value.toString().trim())
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Not a valid 'memory' value in process definition: $value")
+        }
+    }
+
+    Duration getTime() {
+        def value = configProperties.time
+
+        if( !value )
+            return null
+
+        if( value instanceof Duration )
+            return value
+
+        try {
+            new Duration(value.toString().trim())
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Not a valid `time` value in process definition: $value")
+        }
+    }
+
 
     TaskConfig validExitStatus( Object values ) {
 
@@ -348,7 +371,9 @@ class TaskConfig implements Map<String,Object> {
         return this
     }
 
-    List<Integer> getValidExitStatus() { configProperties.validExitStatus }
+    List<Integer> getValidExitStatus() {
+        (List<Integer>)configProperties.validExitStatus
+    }
 
     boolean isCacheable() {
         def value = configProperties.cache

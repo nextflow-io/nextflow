@@ -70,17 +70,18 @@ class SlurmExecutorTest extends Specification {
         when:
         config.cpus = test_cpus
         config.nodes = test_nodes
-        config.time( test_time )
+        config.time = test_time
         config.clusterOptions = '-x -y -z'
         then:
         exec.getSubmitCommandLine(task,script).join(' ') == expected
 
         where:
-        test_cpus   | test_nodes| test_time | expected
-        null        | null      | '1m'      | 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -t 00:01:00 -x -y -z script.sh'
-        1           | 1         | '1h'      | 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 1 -N 1 -t 01:00:00 -x -y -z script.sh'
-        2           | 1         | '2h'      | 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 2 -N 1 -t 02:00:00 -x -y -z script.sh'
-        8           | 4         | '2d'      | 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 8 -N 4 -t 48:00:00 -x -y -z script.sh'
+        test_cpus   | test_nodes| test_time || expected
+        null        | null      | null      || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -x -y -z script.sh'
+        null        | null      | '1m'      || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -t 00:01:00 -x -y -z script.sh'
+        1           | 1         | '1h'      || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 1 -N 1 -t 01:00:00 -x -y -z script.sh'
+        2           | 1         | '2h'      || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 2 -N 1 -t 02:00:00 -x -y -z script.sh'
+        8           | 4         | '2d'      || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 8 -N 4 -t 48:00:00 -x -y -z script.sh'
     }
 
     def testQstatCommand() {
