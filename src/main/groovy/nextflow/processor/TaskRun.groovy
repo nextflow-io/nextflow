@@ -235,6 +235,7 @@ class TaskRun {
      */
     def volatile int failCount
 
+    def LocalConfig localConfig
 
     def String getScript() {
         if( script instanceof Path ) {

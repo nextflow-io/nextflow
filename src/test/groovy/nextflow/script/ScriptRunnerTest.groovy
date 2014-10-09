@@ -25,6 +25,8 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Session
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import test.TestParser
 /**
@@ -425,6 +427,70 @@ class ScriptRunnerTest extends Specification {
         ScriptRunner.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]') == ['pfam3d.nf','189']
         ScriptRunner.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','pfam3d.nf') == ['pfam3d.nf','189']
         ScriptRunner.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','hola') == null
+    }
+
+    def testResources() {
+
+        setup:
+        // -- this represent the configuration file
+        def configText = '''
+            executor = 'nope'
+            process {
+              queue = 'short'
+              cpus  = 2
+              time  = '6 hour'
+              penv  = 'mpi'
+              nodes = 10
+              memory = '10G'
+            }
+            '''
+
+        def script = '''
+            process hola {
+              """
+              queue: ${task.queue}
+              cpus: ${task.cpus}
+              time: ${task.time}
+              penv: ${task.penv}
+              nodes: ${task.nodes}
+              memory: ${task.memory}
+              """
+            }
+            '''
+
+        def config = new ConfigSlurper().parse(configText)
+
+
+        when:
+        def session = new Session(config)
+        TaskProcessor process = new TestParser(session).parseScript(script).run()
+        then:
+        process.taskConfig instanceof TaskConfig
+        process.taskConfig.queue == 'short'
+        process.taskConfig.cpus == 2
+        process.taskConfig.penv == 'mpi'
+        process.taskConfig.nodes == 10
+        process.taskConfig.memory == new MemoryUnit('10G')
+        process.taskConfig.time == new Duration('6h')
+
+        when:
+        def result = new ScriptRunner(config)
+                    .setScript(script)
+                    .execute()
+                    .getVal()
+                    .toString()
+                    .stripIndent()
+                    .trim()
+                    .readLines()
+
+        then:
+        result[0] == 'queue: short'
+        result[1] == 'cpus: 2'
+        result[2] == 'time: 6h'
+        result[3] == 'penv: mpi'
+        result[4] == 'nodes: 10'
+        result[5] == 'memory: 10 GB'
+
     }
 
 }
