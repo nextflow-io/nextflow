@@ -365,6 +365,38 @@ class Bolts {
 
     }
 
+    /**
+     * Navigate a map of maps traversing multiple attribute using dot notation. For example:
+     * {@code x.y.z }
+     *
+     * @param self The root map object
+     * @param key A dot separated list of keys
+     * @param closure An optional closure to be applied. Only if all keys exists
+     * @return The value associated to the specified key(s) or null on first missing entry
+     */
+    static def navigate( Map self, String key, Closure closure = null ) {
+        assert key
+        def items = key.split(/\./)
+        def current = self.get(items[0])
+
+        for( int i=1; i<items.length; i++ ) {
+            if( current instanceof Map ) {
+                if( current.containsKey(items[i]))
+                    current = current.get(items[i])
+                else
+                    return null
+            }
+            else if( !current ) {
+                return null
+            }
+            else {
+                throw new IllegalArgumentException("Cannot navigate map attribute: '$key' -- Content: $self")
+            }
+        }
+
+        return closure ? closure(current) : current
+    }
+
 
     /**
      * Converts {@code ConfigObject}s to a plain {@code Map}
@@ -413,6 +445,43 @@ class Bolts {
         def result = new StringBuilder()
         text?.eachLine { result << prefix << it << '\n' }
         return result.toString()
+    }
+
+    /**
+     * Find all the best matches for the given example string in a list of values
+     *
+     * @param options A list of string
+     * @param sample The example string -- cannot be empty
+     * @return The list of options that best matches to the specified example -- return an empty list if none match
+     */
+    static List<String> bestMatches( Collection<String> options, String sample ) {
+        assert sample
+        assert options
+
+        // Otherwise look for the most similar
+        Map<String,Integer> diffs = [:]
+        options.each {
+            diffs[it] = StringUtils.getLevenshteinDistance(sample, it)
+        }
+
+        // sort the Levenshtein Distance and get the fist entry
+        def sorted = diffs.sort { Map.Entry<String,Integer> it -> it.value }
+        def nearest = (Map.Entry<String,Integer>)sorted.find()
+        def min = nearest.value
+        def len = sample.length()
+
+        def threshold = len<=3 ? 1 : ( len > 10 ? 5 : Math.floor(len/2))
+
+        List<String> result
+        if( min <= threshold ) {
+            result = (List<String>)sorted.findAll { it.value==min } .collect { it.key }
+        }
+        else {
+            result = []
+        }
+
+        return result
+
     }
 
 }
