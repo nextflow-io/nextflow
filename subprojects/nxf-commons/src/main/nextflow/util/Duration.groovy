@@ -22,7 +22,6 @@ package nextflow.util
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
-import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
@@ -274,10 +273,17 @@ class Duration implements Comparable<Duration> {
         return this.durationInMillis <=> that.durationInMillis
     }
 
-    @Canonical
+    @EqualsAndHashCode
     static class ThrottleObj {
         Object result
         long timestamp
+
+        ThrottleObj() {}
+
+        ThrottleObj( value, long timestamp ) {
+            this.result = value
+            this.timestamp = timestamp
+        }
     }
 
     def throttle( Closure closure ) {
