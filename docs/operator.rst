@@ -4,7 +4,7 @@
 Operators
 *******************
 
-Dataflow `operators` are methods that allow you to connect channels to each other or to transform values
+Nextflow `operators` are methods that allow you to connect channels to each other or to transform values
 emitted by a channel applying some user provided rules.
 
 Operators can be separated in to five groups:
