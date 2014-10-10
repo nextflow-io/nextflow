@@ -63,6 +63,8 @@ class TaskConfig implements Map<String,Object> {
 
     private final BaseScript ownerScript
 
+    private boolean throwExceptionOnMissingProperty
+
     /**
      * Initialize the taskConfig object with the defaults values
      *
@@ -114,10 +116,12 @@ class TaskConfig implements Map<String,Object> {
         return value != null && value.toString().toLowerCase() in BOOL_YES
     }
 
-    @Override
-    def boolean containsKey(Object name) {
-        return configProperties.containsKey(name)
+    @PackageScope
+    TaskConfig throwExceptionOnMissingProperty( boolean value ) {
+        this.throwExceptionOnMissingProperty = value
+        return this
     }
+
 
     def methodMissing( String name, def args ) {
 
@@ -136,7 +140,7 @@ class TaskConfig implements Map<String,Object> {
         return this
     }
 
-    Object get( Object name ) {
+    def getProperty( String name ) {
 
         switch( name ) {
             case 'cacheable':
@@ -155,8 +159,14 @@ class TaskConfig implements Map<String,Object> {
                 return getMemory()
 
             default:
-                return configProperties.get(name)
+                if( configProperties.containsKey(name) )
+                    return configProperties.get(name)
+                else if( throwExceptionOnMissingProperty )
+                    throw new MissingPropertyException("Unknown variable '$name'", name, null)
+                else
+                    return null
         }
+
     }
 
 

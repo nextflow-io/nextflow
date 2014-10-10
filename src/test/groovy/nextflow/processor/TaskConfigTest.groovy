@@ -126,7 +126,7 @@ class TaskConfigTest extends Specification {
     def 'test MissingPropertyException' () {
         when:
         def script = Mock(BaseScript)
-        def config = new TaskConfigWrapper(new TaskConfig(script))
+        def config = new TaskConfig(script).throwExceptionOnMissingProperty(true)
         def x = config.hola
 
         then:
