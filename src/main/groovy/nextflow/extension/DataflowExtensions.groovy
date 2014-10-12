@@ -47,6 +47,8 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.file.FileCollector
 import nextflow.file.FileHelper
+import nextflow.file.SimpleFileCollector
+import nextflow.file.SortFileCollector
 import nextflow.util.CacheHelper
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
@@ -534,14 +536,47 @@ class DataflowExtensions {
     static public final DataflowReadChannel collectFile( final DataflowReadChannel channel, Map params, final Closure closure = null ) {
 
         def result = new DataflowQueue()
-        def collector = new FileCollector()
+        FileCollector collector
 
-        if( session )
+        // folder where temporary files are stores
+        Path tempDir = params?.tempDir as Path
+
+        // when sorting is not required 'none' use unsorted collector
+        if( params?.sort == 'none' ) {
+            collector = new SimpleFileCollector(tempDir)
+        }
+        else {
+            collector = new SortFileCollector(tempDir)
+            switch(params?.sort) {
+                case 'natural':
+                    collector.sort = { it -> it }
+                    break
+
+                case 'index':
+                    collector.sort = null
+                    break
+
+                case Closure:
+                    collector.sort = params.sort;
+                    break
+
+                case 'hash':
+                case null:
+                    collector.sort = { CacheHelper.hasher(it).hash().asLong() }
+                    break
+
+                default:
+                    throw new IllegalArgumentException("Not a valid collectFile `sort` parameter: ${params.sort}")
+            }
+        }
+
+        if( session ) {
             session.onShutdown { collector.closeQuietly() }
+        }
 
+        // set other params
         collector.newLine = params?.newLine as Boolean
         collector.seed = params?.seed
-        collector.sort = params?.sort ?: { CacheHelper.hasher(it).hash().asLong() }
 
         /*
          * A file name to be used, if provided

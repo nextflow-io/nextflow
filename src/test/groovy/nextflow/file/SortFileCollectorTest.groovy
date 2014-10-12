@@ -19,170 +19,96 @@
  */
 
 package nextflow.file
+import java.nio.file.Files
 
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class SortFileCollectorTest extends Specification {
 
-    def testPut() {
+    def testAppendString() {
 
         given:
-        def collector = new SortFileCollector<Integer,String>()
+        def folder = Files.createTempDirectory('test')
 
         when:
-        collector.put( 10, 'Hello' )
+        def collector = new SortFileCollector()
+        collector.append('alpha', 'BBB')
+        collector.append('delta', '222')
+        collector.append('alpha', 'AAA')
+        collector.append('delta', '111')
+        collector.moveFiles(folder)
+        /*
+         * No sorting has been specified
+         * Entries are appended in the order they have been added
+         */
         then:
-        collector.getStore().get(0) == 'Hello'
-        collector.getIndex().get(0).key == 10
-        collector.getIndex().get(0).pos == 0
-        collector.getIndex().get(0).left == -1
-        collector.getIndex().get(0).right == -1
-        collector.getCount() == 1
+        folder.list().size() == 2
+        folder.resolve('alpha').text == 'BBBAAA'
+        folder.resolve('delta').text == '222111'
 
-        when:
-        collector.put( 2, 'Hola' )
-        then:
-        collector.getStore().get(0) == 'Hello'
-        collector.getIndex().get(0).key == 10
-        collector.getIndex().get(0).pos == 0
-        collector.getIndex().get(0).left == 1
-        collector.getIndex().get(0).right == -1
-
-        collector.getStore().get(1) == 'Hola'
-        collector.getIndex().get(1).key == 2
-        collector.getIndex().get(1).pos == 1
-        collector.getIndex().get(1).left == -1
-        collector.getIndex().get(1).right == -1
-
-        collector.getCount() == 2
-
-        when:
-        collector.put( 5, 'Ciao' )
-        then:
-        collector.getStore().get(0) == 'Hello'
-        collector.getIndex().get(0).key == 10
-        collector.getIndex().get(0).pos == 0
-        collector.getIndex().get(0).left == 1
-        collector.getIndex().get(0).right == -1
-
-        collector.getStore().get(1) == 'Hola'
-        collector.getIndex().get(1).key == 2
-        collector.getIndex().get(1).pos == 1
-        collector.getIndex().get(1).left == -1
-        collector.getIndex().get(1).right == 2
-
-        collector.getStore().get(2) == 'Ciao'
-        collector.getIndex().get(2).key == 5
-        collector.getIndex().get(2).pos == 2
-        collector.getIndex().get(2).left == -1
-        collector.getIndex().get(2).right == -1
-
-        collector.getCount() == 3
-
-        // overwrite value for '2'
-        when:
-        collector.put( 2, 'Bye' )
-        then:
-        collector.getStore().get(0) == 'Hello'
-        collector.getIndex().get(0).key == 10
-        collector.getIndex().get(0).pos == 0
-        collector.getIndex().get(0).left == 1
-        collector.getIndex().get(0).right == -1
-
-        collector.getStore().get(1) == 'Bye'
-        collector.getIndex().get(1).key == 2
-        collector.getIndex().get(1).pos == 1
-        collector.getIndex().get(1).left == -1
-        collector.getIndex().get(1).right == 2
-
-        collector.getStore().get(2) == 'Ciao'
-        collector.getIndex().get(2).key == 5
-        collector.getIndex().get(2).pos == 2
-        collector.getIndex().get(2).left == -1
-        collector.getIndex().get(2).right == -1
-
-        collector.getCount() == 3
+        cleanup:
+        collector?.close()
+        folder?.deleteDir()
 
     }
 
-    def testGet() {
+    def testAppendStringWithSort() {
 
         given:
-        def collector = new SortFileCollector<Integer,String>()
+        def folder = Files.createTempDirectory('test')
 
         when:
-        collector.put( 9, 'Hello' )
-        collector.put( 3, 'Ciao' )
-        collector.put( 5, 'Hola' )
-        collector.put( 1, 'Bye' )
-        collector.put( 7, 'Bonjour' )
-
+        def collector = new SortFileCollector()
+        collector.sort = { it -> it }
+        collector.append('alpha', 'BBB')
+        collector.append('delta', '222')
+        collector.append('alpha', 'AAA')
+        collector.append('delta', '111')
+        collector.moveFiles(folder)
         then:
-        collector.get( 1 ) == 'Bye'
-        collector.get( 3 ) == 'Ciao'
-        collector.get( 5 ) == 'Hola'
-        collector.get( 7 ) == 'Bonjour'
-        collector.get( 9 ) == 'Hello'
-        collector.get( 2 ) == null
+        folder.list().size() == 2
+        folder.resolve('alpha').text == 'AAABBB'
+        folder.resolve('delta').text == '111222'
 
-    }
-
-    def testContainsKey() {
-
-        given:
-        def collector = new SortFileCollector<Integer,String>()
-
-        when:
-        collector.put( 9, 'Hello' )
-        collector.put( 3, 'Ciao' )
-        collector.put( 5, 'Hola' )
-        collector.put( 1, 'Bye' )
-        collector.put( 7, 'Bonjour' )
-
-        then:
-        collector.containsKey(1)
-        collector.containsKey(3)
-        collector.containsKey(5)
-        collector.containsKey(7)
-        !collector.containsKey(99)
+        cleanup:
+        collector?.close()
+        folder?.deleteDir()
 
     }
 
 
-    def testIterator() {
+    def testAppendStringWithSortSeedAndNewLine() {
 
         given:
-        def collector = new SortFileCollector<Integer,String>()
-        collector.put( 9, 'Hello' )
-        collector.put( 3, 'Ciao' )
-        collector.put( 5, 'Hola' )
-        collector.put( 1, 'Bye' )
-        collector.put( 7, 'Bonjour' )
+        def folder = Files.createTempDirectory('test')
 
         when:
-        def itr = collector.iterator()
-
+        def collector = new SortFileCollector()
+        collector.sort = { it -> it }
+        collector.newLine = true
+        collector.seed = [alpha: '000', delta: '111', gamma: '222']
+        collector.append('alpha', 'BBB')
+        collector.append('delta', 'qqq')
+        collector.append('alpha', 'ZZZ')
+        collector.append('delta', 'ttt')
+        collector.append('gamma', 'yyy')
+        collector.append('gamma', 'zzz')
+        collector.append('gamma', 'xxx')
+        collector.append('delta', 'ppp')
+        collector.append('alpha', 'AAA')
+        collector.moveFiles(folder)
         then:
-        itr.hasNext()
-        itr.next() ==  1
-        itr.hasNext()
-        itr.next() ==  3
-        itr.hasNext()
-        itr.next() ==  5
-        itr.hasNext()
-        itr.next() ==  7
-        itr.hasNext()
-        itr.next() ==  9
-        !itr.hasNext()
-        !itr.hasNext()
-        itr.next() == null
-        itr.next() == null
+        folder.list().size() == 3
+        folder.resolve('alpha').text == '000\nAAA\nBBB\nZZZ\n'
+        folder.resolve('delta').text == '111\nppp\nqqq\nttt\n'
+        folder.resolve('gamma').text == '222\nxxx\nyyy\nzzz\n'
 
+        cleanup:
+        collector?.close()
+        folder?.deleteDir()
 
     }
-
 }

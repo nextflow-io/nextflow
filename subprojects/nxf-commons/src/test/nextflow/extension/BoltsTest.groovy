@@ -78,6 +78,7 @@ class BoltsTest extends Specification {
         def x = 'Hello'
 
         expect:
+        null as Path == null
         'file.txt' as Path == Paths.get('file.txt')
         '/some/path/file.txt' as Path == Paths.get('/some/path/file.txt')
         "name.fa" as Path == Paths.get('name.fa')

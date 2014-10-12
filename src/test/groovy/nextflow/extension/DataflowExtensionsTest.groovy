@@ -1276,7 +1276,7 @@ class DataflowExtensionsTest extends Specification {
         when:
         def list = Channel
                 .from(file1,file2,file3)
-                .collectFile()
+                .collectFile(sort:'index')
                 .toSortedList { it.name }
                 .getVal() as List<Path>
 
@@ -1311,7 +1311,7 @@ class DataflowExtensionsTest extends Specification {
         when:
         def list = Channel
                 .from('Hola', 'Ciao', 'Hello', 'Bonjour', 'Halo')
-                .collectFile() { item -> [ "${item[0]}.txt", item + '\n' ] }
+                .collectFile(sort:'index') { item -> [ "${item[0]}.txt", item + '\n' ] }
                 .toList()
                 .getVal()
                 .sort { it.name }
@@ -1333,7 +1333,7 @@ class DataflowExtensionsTest extends Specification {
         when:
         def result = Channel
                 .from('alpha', 'beta', 'gamma')
-                .collectFile(name: 'hello.txt', newLine: true)
+                .collectFile(name: 'hello.txt', newLine: true, sort:'index')
 
         def file = result.val
 

@@ -19,264 +19,291 @@
  */
 
 package nextflow.file
+import java.nio.file.FileAlreadyExistsException
+import java.nio.file.Files
+import java.nio.file.OpenOption
+import java.nio.file.Path
+import java.nio.file.StandardOpenOption
+import java.nio.file.attribute.BasicFileAttributes
+
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
-import groovy.transform.ToString
+import groovy.util.logging.Slf4j
+import net.openhft.chronicle.map.ChronicleMap
+import net.openhft.chronicle.map.ChronicleMapBuilder
+import nextflow.sort.ChronicleSort
+import nextflow.util.KryoHelper
+
 /**
+ *  Helper class used to aggregate values having the same key
+ *  to files
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
-class SortFileCollector<K, V> implements Map<K,V>, Iterable<K> {
+class SortFileCollector extends FileCollector implements Closeable {
 
-    private int count
+    /**
+     * Hold a single entry in the tree-set
+     */
+    static class IndexEntry implements Serializable {
 
-    private Closure<Comparable> comparator
+        /*
+         * User provided grouping key used to sort entries in the (secondary) index
+         */
+        Comparable group
 
-    private Map<Integer,V> store = new HashMap<>()
+        /*
+         * The entry index i.e. its key in the store map
+         */
+        long index
 
-    private Map<Integer,BTree<K>> index = new HashMap<>()
+        // required by kryo de-serialization
+        protected IndexEntry () {}
 
-    @PackageScope
-    Map<Integer,V> getStore() { store }
+        IndexEntry( Comparable a, long n ) {
+            this.group = a
+            this.index = n
+        }
 
-    @PackageScope
-    Map<Integer,BTree<K>> getIndex() { index }
+    }
 
-    @PackageScope
-    int getCount() { count }
+    static class IndexSort implements Comparator<IndexEntry> {
 
-    protected int compare( K k1, K k2 ) {
-        if( comparator ) {
-            return comparator(k1) <=> comparator(k2)
+        final SortFileCollector collector;
+
+        final Closure<Comparable> sort
+
+        IndexSort( SortFileCollector obj ) {
+            this.collector = obj
+            this.sort = obj.sort
+        }
+
+        @Override
+        int compare(IndexEntry e1, IndexEntry e2) {
+
+            def k = e1.group <=> e2.group
+            if( k != 0 )
+                return k
+
+            if( sort ) {
+                def v1 = collector.getDataAt(e1.index)
+                def v2 = collector.getDataAt(e2.index)
+                return sort.call(v1) <=> sort.call(v2)
+            }
+
+            return e1.index <=> e2.index
+        }
+    }
+
+
+    static final OpenOption[] APPEND = [StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE] as OpenOption[]
+
+    public Closure sort
+
+    public long entries
+
+    private long count
+
+    private File tempDir;
+
+    private ChronicleMap<Long,Object> store;
+
+    private ChronicleSort<IndexEntry> index;
+
+    /**
+     * Creates a file collector
+     *
+     * @param path The path the temporary files will be stored
+     */
+    SortFileCollector( Path path = null ) {
+        if( !path ) {
+            tempDir = Files.createTempDirectory('nxf-collect').toFile()
         }
         else {
-            return (k1 as Comparable) <=> (k2 as Comparable)
-        }
-    }
-
-    protected void visit(int current, Closure closure) {
-        assert current >= 0
-        assert closure != null
-
-        BTree<K> node = index[current]
-        while( node ) {
-
-            if( node.left != -1 )
-                visit(node.left, closure)
-
-            closure.call(node.key)
-
-            if( node.right != -1 )
-                visit(node.right , closure)
-        }
-    }
-
-    protected Match<K> nearest(K key) {
-        int current = 0
-        BTree<K> node = index[current]
-        while( node ) {
-            int delta = compare(key, node.key)
-
-            if( delta == 0 )
-                return new Match<K>(delta:0, node:node, index:current)
-
-            if( delta < 0 && node.left!=-1 ) {
-                current = node.left
-                node = index[current]
+            // read the path attributes
+            def attr = Files.readAttributes(path, BasicFileAttributes)
+            // when it is a dir => create a temp file there
+            if ( attr.isDirectory() ) {
+                tempDir = path.toFile()
             }
-            else if( delta > 0 && node.right!=-1 ) {
-                current = node.right
-                node = index[current]
+            // if its a file use it
+            else if( attr.isRegularFile()) {
+                throw new FileAlreadyExistsException("Cannot create sort path: $path -- A path with the same name already exists")
             }
             else {
-                return new Match<K>(delta:delta, node:node, index:current)
+                tempDir = Files.createDirectories(path).toFile()
             }
-
         }
-        return null
     }
 
-    protected BTree<K> find(K key) {
-        final result = nearest(key)
-        result?.delta == 0 ? result.node : null
-    }
+    /**
+     * Creates the MapDB data structures
+     */
+    private void createStoreAndIndex() {
 
-    @Override
-    int size() { store.size() }
-
-    @Override
-    boolean isEmpty() { store.isEmpty() }
-
-    @Override
-    boolean containsKey(Object key) {
-        return index.containsKey(key)
-    }
-
-    @Override
-    boolean containsValue(Object value) {
-        throw new UnsupportedOperationException()
-    }
-
-    @Override
-    V get(Object key) {
-        def node = find((K)key)
-        return node ? store[node.pos] : null
-    }
-
-    @Override
-    V put(K key, V value) {
-        assert key
-
-        def result = nearest(key)
-        if( result && result.delta == 0 ) {
-            final node = result.node
-            final old = store[node.pos]
-            store[node.pos] = value
-            return old
+        /*
+        * Note: on Mac OSX memory mapped files are allocated eagerly, thus using a number of
+        * expected entries too big will result in a very big file to be created in the file system
+        *
+        * See:
+        * https://github.com/OpenHFT/Chronicle-Map/blob/master/README.md#size-of-space-reserved-on-disk
+        * https://groups.google.com/d/msg/java-chronicle/6UurY1qscS8/GZd28kjSLCsJ
+        */
+        if( !entries ) {
+            entries = "Mac OS X".equals(System.getProperty("os.name")) ? 1_000_000L : 5_000_000_000L;
         }
 
-        // save the value
-        store[count] = value
-        // save a tree node for this value
-        index[count] = new BTree<K>( key: key, pos: count )
+        File data = new File(tempDir, "store.dat")
+        store = ChronicleMapBuilder.of(Long,Object).entries(entries).create(data)
 
-        if( result ) {
-            // update the parent node
-            final parent = result.node
-            final p = result.index
-            if( result.delta < 0 )
-                parent.left = count
-            else
-                parent.right = count
-            index[p] = parent
-        }
+        index = new ChronicleSort<>()
+                    .entries(entries)
+                    .tempDir(tempDir)
+                    .comparator( new IndexSort(this) )
+                    .create() as ChronicleSort
 
-        // increment the count
+    }
+
+    /**
+     * Normalize values to a {@link InputStream}
+     *
+     * @param value The user provided value
+     * @return An {@link InputStream} referring the value
+     */
+    protected InputStream normalizeToStream( value ) {
+        if( value instanceof Path )
+            return value.newInputStream()
+
+        if( value instanceof File )
+            return value.newInputStream()
+
+        if( value instanceof CharSequence )
+            return new ByteArrayInputStream(value.toString().getBytes())
+
+        if( value instanceof byte[] )
+            return new ByteArrayInputStream((byte[])value)
+
+        throw new IllegalArgumentException("Not a valid file collector argument [${value.class.name}]: $value")
+    }
+
+    /**
+     * Append a user value to the file collection
+     *
+     * @param key The grouping key
+     * @param value The value to append
+     * @return The {@link SortFileCollector} self object
+     */
+    @Override
+    SortFileCollector append( String key, value ) {
+        if( !store )
+            createStoreAndIndex()
+
+        def bytes = KryoHelper.serialize(value);
+        store.put( count, bytes )
+        index.add( new IndexEntry(group: key, index: count) )
         count++
-        return null
+
+        return this
     }
 
-    @Override
-    V remove(Object key) {
-        throw new UnsupportedOperationException()
+
+    Object getDataAt( long index ) {
+        def bytes = (byte[])store.get(index);
+        KryoHelper.deserialize(bytes)
     }
 
-    @Override
-    void putAll(Map<? extends K, ? extends V> map) {
-        for( K key : map.keySet()) {
-            put(key, map.get(key))
-        }
-    }
 
-    @Override
-    void clear() {
-        store.clear()
-        index.clear()
-        count=0
-    }
-
-    @Override
-    Set<K> keySet() {
-        return null
-    }
-
-    @Override
-    Collection<V> values() {
-        return null
-    }
-
-    @Override
-    Set<Map.Entry<K, V>> entrySet() {
-        return null
-    }
-
-    @Override
-    Iterator<K> iterator() { new KeysIterator<K>(this) }
-}
-
-@CompileStatic
-@ToString(includeNames = true, includePackage = false)
-class BTree<T> implements Serializable {
-    /*
-     * the 'key' of this node
+    /**
+     * Append the content of a file to the target file having {@code key} as name
+     *
+     * @param key
+     * @param fileToAppend
      */
-    T key
+    protected void appendStream( InputStream source, OutputStream target ) {
+        int n
+        byte[] buffer = new byte[10 * 1024]
 
-    /*
-     * position where the value is stored
-     */
-    int pos
-
-    /*
-     * position of the left child containing a key less than the one in this node
-     */
-    int left = -1
-
-    /*
-     * position of the right child containing a key greater than the one in this node
-     */
-    int right = -1
-}
-
-@CompileStatic
-@ToString(includeNames = true, includePackage = false)
-class Match<T> {
-    BTree<T> node
-    int delta
-    int index
-}
-
-@CompileStatic
-class KeysIterator<T> implements Iterator<T> {
-
-    private SortFileCollector<T,?> collector
-
-    private LinkedList<Integer> stack = new LinkedList<>()
-
-    KeysIterator(SortFileCollector<T,?> owner) {
-        this.collector = owner
-        deepFirstSearch(0)
-    }
-
-    private void deepFirstSearch(int index) {
-        def node = getNode(index)
-        while( node ) {
-            stack.push(index)
-            index = node.left
-            node = getNode(index)
-        }
-    }
-
-    private BTree getNode(int index) {
-        collector.getIndex().get(index)
-    }
-
-    @Override
-    boolean hasNext() {
-        !stack.isEmpty()
-    }
-
-    @Override
-    T next() {
-        def result = null
         try {
-            def index = stack.pop()
-            def node = getNode(index)
-            if( node ) {
-                result = node.key
-                deepFirstSearch(node.right)
+            while( (n=source.read(buffer)) > 0 ) {
+                target.write(buffer,0,n)
             }
+            // append the new line separator
+            if( newLine )
+                target.write( System.lineSeparator().bytes )
         }
-        catch( NoSuchElementException e ) {
-            // ignore and return null
+        finally {
+            source.closeQuietly()
         }
+    }
 
+    List<Path> moveFiles(Path target) {
+        target.createDirIfNotExists()
+
+        def result = []
+        moveFiles { String name ->
+            Path newFile = target.resolve(name)
+            result << newFile
+            return newFile
+        }
         return result
     }
 
-    @Override
-    void remove() {
-        throw new UnsupportedOperationException()
+    void moveFiles( Closure<Path> closure ) {
+
+        if( !store ) {
+            // nothing  to do
+            return
+        }
+
+        def last = null
+        OutputStream output = null
+
+        index.sort { IndexEntry entry ->
+            def name = entry.group
+            if( last != name ) {
+                // close current output stream
+                output?.closeQuietly()
+                // set the current as the 'next' last
+                last = name
+
+                /*
+                 * given a 'group' name returns the target file where to save
+                 */
+                def target = closure.call(name)
+                output = Files.newOutputStream(target, APPEND)
+
+                /*
+                 * write the 'seed' value
+                 */
+                if( seed instanceof Map ) {
+                    if( seed.containsKey(name) ) appendStream(normalizeToStream(seed.get(name)), output)
+                }
+                else if( seed ) {
+                    appendStream(normalizeToStream(seed), output)
+                }
+
+            }
+
+            /*
+             * add the current value
+             */
+            def bytes = (byte[])store.get(entry.index)
+            def val = KryoHelper.deserialize(bytes)
+            appendStream(normalizeToStream(val), output)
+
+        }
+
+        // close last output stream
+        output?.closeQuietly()
     }
+
+    @Override
+    void close() {
+        log.debug "Closing collector - begin"
+        store?.closeQuietly()
+        index?.closeQuietly()
+        log.debug "Closing collector - complete"
+    }
+
 }

@@ -20,26 +20,33 @@
 
 package test
 
+import nextflow.sort.ChronicleSort
+
 def dbFolder = new File("/Users/pditommaso/Downloads/db/");
 dbFolder.deleteDir()
 
 final collector = new ChronicleSort<String>()
+            .entries(4_000_000L)
             .tempDir(dbFolder)
             .deleteTempFilesOnClose(false)
             .create()
 
 println("Begin");
 final Long now = System.currentTimeMillis();
-File text = new File("/Users/pditommaso/Downloads/mini");// hs_ref_GRCh38_chr1.fa
+File text = new File("/Users/pditommaso/Downloads/hs_ref_GRCh38_chr1.fa");// hs_ref_GRCh38_chr1.fa
 text.eachLine { String it ->
     collector.add(it)
 }
 println("End adding - time: ${(System.currentTimeMillis() - now) / 1000} secs -- Stats: ${collector.stats()}" );
 
 final PrintWriter sortFile = new PrintWriter(new FileWriter(new File(dbFolder, "sort.txt")));
-collector.sort { sortFile.println(it) }
+int count=0;
+collector.sort {
+    count++
+    sortFile.println(it)
+}
 sortFile.close();
-println("End sort - time: ${(System.currentTimeMillis() - now) / 1000} secs" );
+println("End sort - time: ${(System.currentTimeMillis() - now) / 1000} secs -- processed: $count items" );
 
 collector.close();
 
