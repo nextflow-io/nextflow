@@ -110,7 +110,7 @@ class Session {
 
     private volatile ExecutorService execService
 
-    final private List<Closure<Void>> shutdownHooks = []
+    final private List<Closure<Void>> shutdownCallbacks = []
 
     final int poolSize
 
@@ -217,7 +217,7 @@ class Session {
             onShutdown { trace.onFlowComplete() }
         }
 
-        Runtime.getRuntime().addShutdownHook { shutdown() }
+        Global.onShutdown { cleanUp() }
         execService = Executors.newFixedThreadPool( poolSize )
         phaser.register()
         dispatcher.start()
@@ -295,13 +295,13 @@ class Session {
     void destroy() {
         log.trace "Session destroying"
         if( execService ) execService.shutdown()
-        shutdown()
+        cleanUp()
         log.debug "Session destroyed"
     }
 
-    final synchronized protected void shutdown() {
+    final synchronized protected void cleanUp() {
 
-        List<Closure<Void>> all = new ArrayList<>(shutdownHooks)
+        List<Closure<Void>> all = new ArrayList<>(shutdownCallbacks)
         for( def hook : all ) {
             try {
                 hook.call()
@@ -312,7 +312,7 @@ class Session {
         }
 
         // -- after the first time remove all of them to avoid it's called twice
-        shutdownHooks.clear()
+        shutdownCallbacks.clear()
     }
 
     void abort() {
@@ -350,7 +350,7 @@ class Session {
         if( !shutdown )
             return
 
-        shutdownHooks << shutdown
+        shutdownCallbacks << shutdown
     }
 
 

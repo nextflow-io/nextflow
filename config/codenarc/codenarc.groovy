@@ -50,10 +50,10 @@ ruleset {
     ThrowExceptionFromFinallyBlock 
     
     // rulesets/braces.xml
-    ElseBlockBraces 
+    //ElseBlockBraces
     ForStatementBraces 
-    IfStatementBraces 
-    WhileStatementBraces 
+    //IfStatementBraces
+    //WhileStatementBraces
     
     // rulesets/concurrency.xml
     BusyWait 
@@ -250,7 +250,7 @@ ruleset {
     PackageName 
     ParameterName 
     PropertyName 
-    VariableName 
+    //VariableName
     
     // rulesets/security.xml
     FileCreateTempFile 

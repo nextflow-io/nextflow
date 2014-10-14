@@ -19,59 +19,110 @@
  */
 
 package nextflow.file
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.OpenOption
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentMap
+import java.nio.file.attribute.BasicFileAttributes
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.extension.FileEx
 /**
- *  Helper class used to aggregate values having the same key
- *  to files
+ * File collector base class
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class FileCollector implements Closeable {
+abstract class FileCollector implements Closeable {
 
-    static final OpenOption[] APPEND = [StandardOpenOption.APPEND, StandardOpenOption.WRITE] as OpenOption[]
+    static final public OpenOption[] APPEND = [StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE] as OpenOption[]
 
     public Boolean newLine
 
     public seed
 
-    protected Path temp
+    public boolean deleteTempFilesOnClose = true;
 
-    protected ConcurrentMap<String,Path> cache = new ConcurrentHashMap<>()
+    private Path tempDir
 
-    FileCollector( Path store = null ) {
-        if( !store )
-            store = Files.createTempDirectory('nxf-clt')
+    private boolean created
 
-        else {
-            store.createDirIfNotExists()
+    private boolean closed;
+
+    protected FileCollector() { }
+
+    /**
+     * Create the temporary directory
+     * @return A {@code Path} instance to the directory location
+     */
+    protected Path createTempDir() {
+
+        if( !tempDir ) {
+            return tempDir = Files.createTempDirectory('nxf-collect')
         }
-        this.temp = store
+
+        // read the path attributes
+        def attr = Files.readAttributes(tempDir, BasicFileAttributes)
+        // when it is a dir => create a temp file there
+        if ( attr.isDirectory() ) {
+            return tempDir
+        }
+
+        // if its a file use it
+        if( attr.isRegularFile()) {
+            throw new FileAlreadyExistsException("Cannot create sort path: $tempDir -- A file with the same name already exists")
+        }
+
+        return Files.createDirectories(tempDir)
     }
 
-    protected Path _file( String name ) {
-        (Path)cache.getOrCreate(name) {
-            def result = Files.createFile(temp.resolve(name))
-            if( seed instanceof Map && seed.containsKey(name)) {
-                append0(result, _value(seed.get(name)))
-            }
-            else if( seed ) {
-                append0(result, _value(seed))
-            }
-            return result
-        }
+    /**
+     * @param path the temporary directory to be used
+     */
+    public void setTempDir( Path path ) {
+        this.tempDir = path
+        created = false
     }
 
-    protected InputStream _value( value ) {
+    /**
+     * Retrieve the collector temporary folder i.e. working directory. The first time, it invokes {@link #createTempDir()} method
+     * to create the directory path
+     *
+     * @return Collector temporary directory
+     */
+    Path getTempDir() {
+        if( !created ) {
+            tempDir = createTempDir()
+            created = true
+        }
+        return tempDir
+    }
+
+    /**
+     * Add and entry to the collector set
+     *
+     * @param key A grouping key. All entries with the same key will belong in the same grouping set.
+     * @param value A value to be added
+     * @return The collector {@code FileCollector} object itself
+     */
+    abstract FileCollector add( String key, value );
+
+    /**
+     * Save an collect entry to the respective grouping file
+     * @param closure Closure mapping a group name to the respective groupping file e.g. { name -> Paths.get(name) }
+     */
+    abstract void saveFile( Closure<Path> closure );
+
+    /**
+     * Normalize values to a {@link InputStream}
+     *
+     * @param value The user provided value
+     * @return An {@link InputStream} referring the value
+     */
+    protected InputStream normalizeToStream( value ) {
         if( value instanceof Path )
             return value.newInputStream()
 
@@ -87,67 +138,19 @@ class FileCollector implements Closeable {
         throw new IllegalArgumentException("Not a valid file collector argument [${value.class.name}]: $value")
     }
 
-
-    FileCollector append( String key, value ) {
-        append0( _file(key), _value(value))
-        return this
-    }
-
-
     /**
-     * Append the content of a file to the target file having {@code key} as name
+     * Save the entries collected grouping them into files whose name is given by the
+     * correspondent group key
      *
-     * @param key
-     * @param fileToAppend
+     * @param target A {@link Path} to the folder where files will be saved. If the folder does not exists, is created
+     *              automatically
+     * @return The list of files where entries have been saved.
      */
-    protected void append0( Path source, InputStream stream ) {
-        int n
-        byte[] buffer = new byte[10 * 1024]
-        def output = Files.newOutputStream(source, APPEND)
-
-        try {
-            while( (n=stream.read(buffer)) > 0 ) {
-                output.write(buffer,0,n)
-            }
-            // append the new line separator
-            if( newLine )
-                output.write( System.lineSeparator().bytes )
-        }
-        finally {
-            stream.closeQuietly()
-            output.closeQuietly()
-        }
-    }
-
-    /**
-     *
-     * @return The number of files in the appender accumulator
-     */
-    int size() {
-        cache.size()
-    }
-
-    boolean isEmpty() {
-        cache.isEmpty()
-    }
-
-    boolean containsKey(String key) {
-        return cache.containsKey(key)
-    }
-
-    Path get(String name) {
-        cache.get(name)
-    }
-
-    List<Path> getFiles() {
-        new ArrayList<Path>(cache.values())
-    }
-
-    List<Path> moveFiles(Path target) {
+    List<Path> saveTo(Path target) {
         target.createDirIfNotExists()
 
         def result = []
-        moveFiles { String name ->
+        saveFile { String name ->
             Path newFile = target.resolve(name)
             result << newFile
             return newFile
@@ -155,22 +158,30 @@ class FileCollector implements Closeable {
         return result
     }
 
-    void moveFiles( Closure<Path> closure ) {
-
-        def result = []
-        Iterator<Path> itr = cache.values().iterator()
-        while( itr.hasNext() ) {
-            def item = itr.next()
-            def target = closure.call(item.getName())
-            result << Files.move(item, target)
-            itr.remove()
+    /**
+     * Close the collector deleting temporary files
+     *
+     * See {@link #deleteTempFilesOnClose} {@link #safeClose()}
+     */
+    void close() {
+        if( deleteTempFilesOnClose ) {
+            log.trace "Deleting file collector temp dir: ${tempDir}"
+            FileEx.deleteDir(tempDir);
         }
-
     }
 
-    @Override
-    void close() {
-        temp?.deleteDir()
+    /**
+     * A synchronised version of {@code #close} operation
+     */
+    synchronized void safeClose() {
+        if( closed ) return
+        try {
+            close()
+            closed = true
+        }
+        catch( Exception e ) {
+            log.debug("Unable to close file collector",e)
+        }
     }
 
 
