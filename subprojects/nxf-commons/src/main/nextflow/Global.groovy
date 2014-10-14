@@ -21,12 +21,14 @@
 package nextflow
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 /**
  * Hold global variables
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class Global {
 
@@ -54,6 +56,37 @@ class Global {
      */
     static <T> void setSession( value ) {
         session = value
+    }
+
+    /**
+     * Run the specified closure on application termination
+     *
+     * @param callback A closure to be executed on application shutdown
+     */
+    static void onShutdown(Closure callback) {
+        hooks.add(callback)
+    }
+
+    static final List<Closure> hooks = []
+
+    static private synchronized cleanUp() {
+        for( Closure c : hooks ) {
+            try {
+                c.call()
+            }
+            catch( Exception e ) {
+                log.debug("Error during on cleanup", e )
+            }
+        }
+    }
+
+    /*
+     * Global shutdown hook
+     */
+    static {
+        Runtime.getRuntime().addShutdownHook {
+            cleanUp()
+        }
     }
 
 

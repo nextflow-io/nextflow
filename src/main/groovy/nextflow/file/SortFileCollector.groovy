@@ -19,20 +19,18 @@
  */
 
 package nextflow.file
-import java.nio.file.FileAlreadyExistsException
+import static org.iq80.leveldb.impl.Iq80DBFactory.factory
+
+import java.nio.ByteBuffer
 import java.nio.file.Files
-import java.nio.file.OpenOption
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
-import java.nio.file.attribute.BasicFileAttributes
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import net.openhft.chronicle.map.ChronicleMap
-import net.openhft.chronicle.map.ChronicleMapBuilder
-import nextflow.sort.ChronicleSort
+import nextflow.sort.LevelDbSort
 import nextflow.util.KryoHelper
-
+import org.iq80.leveldb.DB
+import org.iq80.leveldb.Options
 /**
  *  Helper class used to aggregate values having the same key
  *  to files
@@ -70,13 +68,13 @@ class SortFileCollector extends FileCollector implements Closeable {
 
     static class IndexSort implements Comparator<IndexEntry> {
 
-        final SortFileCollector collector;
+        final DB store;
 
         final Closure<Comparable> sort
 
-        IndexSort( SortFileCollector obj ) {
-            this.collector = obj
-            this.sort = obj.sort
+        IndexSort( DB store, Closure<Comparable> sort ) {
+            this.store = store
+            this.sort = sort
         }
 
         @Override
@@ -86,84 +84,62 @@ class SortFileCollector extends FileCollector implements Closeable {
             if( k != 0 )
                 return k
 
-            if( sort ) {
-                def v1 = collector.getDataAt(e1.index)
-                def v2 = collector.getDataAt(e2.index)
+            if( this.sort ) {
+                def v1 = getValue(e1.index)
+                def v2 = getValue(e2.index)
                 return sort.call(v1) <=> sort.call(v2)
             }
 
             return e1.index <=> e2.index
         }
+
+        Object getValue( long index ) {
+            def raw = (byte[])store.get(bytes(index));
+            KryoHelper.deserialize(raw)
+        }
+
     }
 
 
-    static final OpenOption[] APPEND = [StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE] as OpenOption[]
+    Closure sort
 
-    public Closure sort
+    Long sliceMaxSize
 
-    public long entries
+    Integer sliceMaxItems
 
     private long count
 
-    private File tempDir;
+    private DB store;
 
-    private ChronicleMap<Long,Object> store;
+    private LevelDbSort<IndexEntry> index;
 
-    private ChronicleSort<IndexEntry> index;
-
-    /**
-     * Creates a file collector
-     *
-     * @param path The path the temporary files will be stored
-     */
-    SortFileCollector( Path path = null ) {
-        if( !path ) {
-            tempDir = Files.createTempDirectory('nxf-collect').toFile()
-        }
-        else {
-            // read the path attributes
-            def attr = Files.readAttributes(path, BasicFileAttributes)
-            // when it is a dir => create a temp file there
-            if ( attr.isDirectory() ) {
-                tempDir = path.toFile()
-            }
-            // if its a file use it
-            else if( attr.isRegularFile()) {
-                throw new FileAlreadyExistsException("Cannot create sort path: $path -- A path with the same name already exists")
-            }
-            else {
-                tempDir = Files.createDirectories(path).toFile()
-            }
-        }
-    }
+    private Path fTempDir
 
     /**
-     * Creates the MapDB data structures
+     * Creates the underlying map data structures
      */
     private void createStoreAndIndex() {
+        log.trace "Creating sort file collector -- temp dir: $tempDir"
 
-        /*
-        * Note: on Mac OSX memory mapped files are allocated eagerly, thus using a number of
-        * expected entries too big will result in a very big file to be created in the file system
-        *
-        * See:
-        * https://github.com/OpenHFT/Chronicle-Map/blob/master/README.md#size-of-space-reserved-on-disk
-        * https://groups.google.com/d/msg/java-chronicle/6UurY1qscS8/GZd28kjSLCsJ
-        */
-        if( !entries ) {
-            entries = "Mac OS X".equals(System.getProperty("os.name")) ? 1_000_000L : 5_000_000_000L;
-        }
+        def storeDir = getTempDir().resolve("data").toFile()
+        Options options = new Options().createIfMissing(true);
+        store = factory.open(storeDir, options);
 
-        File data = new File(tempDir, "store.dat")
-        store = ChronicleMapBuilder.of(Long,Object).entries(entries).create(data)
+        def indexDir = getTempDir().resolve('index')
+        def result = new LevelDbSort<IndexEntry>()
+        result.comparator( new IndexSort(store, this.sort) )
+        result.tempDir(indexDir)
+        result.deleteTempFilesOnClose(this.deleteTempFilesOnClose)
 
-        index = new ChronicleSort<>()
-                    .entries(entries)
-                    .tempDir(tempDir)
-                    .comparator( new IndexSort(this) )
-                    .create() as ChronicleSort
+        if( sliceMaxSize ) result.sliceMaxSize(sliceMaxSize)
+        if( sliceMaxItems ) result.sliceMaxItems(sliceMaxItems)
 
+        index = result.create()
+
+        fTempDir = getTempDir()
     }
+
+
 
     /**
      * Normalize values to a {@link InputStream}
@@ -195,22 +171,24 @@ class SortFileCollector extends FileCollector implements Closeable {
      * @return The {@link SortFileCollector} self object
      */
     @Override
-    SortFileCollector append( String key, value ) {
-        if( !store )
-            createStoreAndIndex()
+    SortFileCollector add( String key, value ) {
 
-        def bytes = KryoHelper.serialize(value);
-        store.put( count, bytes )
+        // allocate data structures
+        if( store == null ) { createStoreAndIndex() }
+
+        // serialise the main value
+        def payload = KryoHelper.serialize(value);
+
+        store.put( bytes(count), payload )
         index.add( new IndexEntry(group: key, index: count) )
+
         count++
 
         return this
     }
 
-
-    Object getDataAt( long index ) {
-        def bytes = (byte[])store.get(index);
-        KryoHelper.deserialize(bytes)
+    private static byte[] bytes(long value) {
+        return ByteBuffer.allocate(8).putLong(value).array();
     }
 
 
@@ -237,11 +215,14 @@ class SortFileCollector extends FileCollector implements Closeable {
         }
     }
 
-    List<Path> moveFiles(Path target) {
+    /**
+     * {@inheritDoc}
+     */
+    List<Path> saveTo(Path target) {
         target.createDirIfNotExists()
 
         def result = []
-        moveFiles { String name ->
+        saveFile { String name ->
             Path newFile = target.resolve(name)
             result << newFile
             return newFile
@@ -249,12 +230,10 @@ class SortFileCollector extends FileCollector implements Closeable {
         return result
     }
 
-    void moveFiles( Closure<Path> closure ) {
-
-        if( !store ) {
-            // nothing  to do
-            return
-        }
+    /**
+     * {@inheritDoc}
+     */
+    void saveFile( Closure<Path> closure ) {
 
         def last = null
         OutputStream output = null
@@ -282,28 +261,38 @@ class SortFileCollector extends FileCollector implements Closeable {
                 else if( seed ) {
                     appendStream(normalizeToStream(seed), output)
                 }
-
             }
 
             /*
              * add the current value
              */
-            def bytes = (byte[])store.get(entry.index)
+            def bytes = (byte[])store.get(bytes(entry.index))
             def val = KryoHelper.deserialize(bytes)
             appendStream(normalizeToStream(val), output)
-
         }
 
         // close last output stream
         output?.closeQuietly()
     }
 
+    /**
+     * Close sorting structures instance and cleanup temporary files
+     */
     @Override
     void close() {
-        log.debug "Closing collector - begin"
+        log.trace "Closing sorting dbs"
         store?.closeQuietly()
         index?.closeQuietly()
-        log.debug "Closing collector - complete"
+
+        // finally invoke the the parent close
+        super.close()
+
+        if( deleteTempFilesOnClose && fTempDir ) {
+            fTempDir.deleteOnExit()
+        }
+        else {
+            log.debug "FileCollector temp dir not removed: $tempDir"
+        }
     }
 
 }

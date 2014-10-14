@@ -100,7 +100,7 @@ dependencies {
     compile "com.beust:jcommander:1.35"
     compile "com.google.code.findbugs:jsr305:1.3.9"
     compile "com.esotericsoftware.kryo:kryo:2.24.0"
-    compile 'net.openhft:chronicle-map:2.0.1.a'
+    compile 'org.iq80.leveldb:leveldb:0.7'
     compile("org.utgenome.thirdparty:picard:1.102.0") { transitive = false }
     compile("org.eclipse.jgit:org.eclipse.jgit:3.4.1.201406201815-r") {
         exclude module: 'commons-logging'

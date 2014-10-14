@@ -20,13 +20,14 @@
 
 package test
 
-import nextflow.sort.ChronicleSort
+import java.nio.file.Paths
 
-def dbFolder = new File("/Users/pditommaso/Downloads/db/");
+import nextflow.sort.LevelDbSort
+
+def dbFolder = Paths.get("/Users/pditommaso/Downloads/db/")
 dbFolder.deleteDir()
 
-final collector = new ChronicleSort<String>()
-            .entries(4_000_000L)
+final collector = new LevelDbSort<String>()
             .tempDir(dbFolder)
             .deleteTempFilesOnClose(false)
             .create()
@@ -39,7 +40,7 @@ text.eachLine { String it ->
 }
 println("End adding - time: ${(System.currentTimeMillis() - now) / 1000} secs -- Stats: ${collector.stats()}" );
 
-final PrintWriter sortFile = new PrintWriter(new FileWriter(new File(dbFolder, "sort.txt")));
+final PrintWriter sortFile = new PrintWriter(new FileWriter(dbFolder.resolve("sort.txt").toFile()));
 int count=0;
 collector.sort {
     count++

@@ -1291,10 +1291,9 @@ class DataflowExtensionsTest extends Specification {
         when:
         list = Channel
                 .from(file1,file2,file3)
-                .collectFile(newLine:true)
+                .collectFile(sort:'index', newLine:true)
                 .toSortedList { it.name }
                 .getVal() as List<Path>
-
 
         then:
         list[0].name == 'A'

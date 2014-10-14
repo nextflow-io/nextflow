@@ -24,11 +24,9 @@ import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -69,26 +67,21 @@ abstract public class BigSort<V> implements Closeable {
     /**
      * Folder where temporary data is stored
      */
-    private File tempDir;
-
-    /**
-     * Folder where index files are stored
-     */
-    private File indexFolder;
+    private Path tempDir;
 
     /**
      * List of index files
      */
-    private final List<File> indexFiles = new LinkedList<>();
+    private final List<Path> indexFiles = new LinkedList<>();
 
     /**
      * List containing the beginning offset of slices after the first
      */
     private final List<Long> slices = new LinkedList<>();
 
-    private long sliceMaxSize = new MemoryUnit("100 MB").toBytes();
+    private long sliceMaxSize = new MemoryUnit("200 MB").toBytes();
 
-    private int sliceMaxItems = 150_000;
+    private int sliceMaxItems = 250_000;
 
     private long sliceSize = 0;
 
@@ -129,7 +122,7 @@ abstract public class BigSort<V> implements Closeable {
      *               does not exist, it is created automatically.
      * @return The {@link BigSort} instance itself
      */
-    public BigSort tempDir( File folder ) {
+    public BigSort tempDir( Path folder ) {
         tempDir = folder;
         return this;
     }
@@ -137,7 +130,7 @@ abstract public class BigSort<V> implements Closeable {
     /**
      * @return Folder where temporary files will be stored
      */
-    public File getTempDir() {
+    public Path getTempDir() {
         return tempDir;
     }
 
@@ -168,19 +161,16 @@ abstract public class BigSort<V> implements Closeable {
      */
     public BigSort create() throws IOException {
         if( tempDir == null ) {
-            tempDir = Files.createTempDirectory("bigsort").toFile();
+            tempDir = Files.createTempDirectory("bigsort");
         }
-        else if ( !tempDir.exists() && !tempDir.mkdirs() )  {
-            throw new IOException("Unable to create sort temporary folder: " + tempDir);
+        else if ( !Files.exists(tempDir) )  {
+            Files.createDirectories(tempDir);
         }
 
-        indexFolder = new File(tempDir, "index");
-        indexFolder.mkdir();
-        log.debug("BigSort temp dir: {}", tempDir);
+        log.trace("BigSort sliceMaxSize: {}; sliceMaxItems: {}; temp dir: {}",sliceMaxSize, sliceMaxItems, tempDir);
 
         if( comparator == null ) {
             comparator = DefaultComparator.INSTANCE;
-            log.debug("BigSort using default comparator");
         }
 
         return this;
@@ -293,11 +283,11 @@ abstract public class BigSort<V> implements Closeable {
         Arrays.sort(buffer, new SliceComparator(this, start));
 
         // add to the list of all index files
-        File file = new File(indexFolder, "slice-" + String.valueOf(sliceIndex));
+        Path file = tempDir.resolve("slice-" + String.valueOf(sliceIndex));
         indexFiles.add(file);
 
         // save the sorted buffer to a file
-        DataOutputStream out = new DataOutputStream(new FileOutputStream(file));
+        DataOutputStream out = new DataOutputStream(Files.newOutputStream(file));
 
         // 1. write the offset
         out.writeLong(start);
@@ -326,8 +316,8 @@ abstract public class BigSort<V> implements Closeable {
         /*
          * 1. initialize all lanes
          */
-        for (File file : indexFiles) {
-            lanes.add( new Lane(this, new DataInputStream(new FileInputStream(file))) );
+        for (Path file : indexFiles) {
+            lanes.add( new Lane(this, new DataInputStream(Files.newInputStream(file))) );
         }
 
         /*
@@ -395,7 +385,7 @@ abstract public class BigSort<V> implements Closeable {
      */
     public void close() {
         if( deleteTempFilesOnClose ) {
-            FileEx.deleteDir(tempDir.toPath());
+            FileEx.deleteDir(tempDir);
         }
     }
 

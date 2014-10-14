@@ -28,18 +28,18 @@ import spock.lang.Specification
  */
 class SortFileCollectorTest extends Specification {
 
-    def testAppendString() {
+    def 'test append strings and save files'() {
 
         given:
         def folder = Files.createTempDirectory('test')
 
         when:
         def collector = new SortFileCollector()
-        collector.append('alpha', 'BBB')
-        collector.append('delta', '222')
-        collector.append('alpha', 'AAA')
-        collector.append('delta', '111')
-        collector.moveFiles(folder)
+        collector.add('alpha', 'BBB')
+        collector.add('delta', '222')
+        collector.add('alpha', 'AAA')
+        collector.add('delta', '111')
+        collector.saveTo(folder)
         /*
          * No sorting has been specified
          * Entries are appended in the order they have been added
@@ -55,7 +55,7 @@ class SortFileCollectorTest extends Specification {
 
     }
 
-    def testAppendStringWithSort() {
+    def 'test append strings and save sorted files'() {
 
         given:
         def folder = Files.createTempDirectory('test')
@@ -63,11 +63,11 @@ class SortFileCollectorTest extends Specification {
         when:
         def collector = new SortFileCollector()
         collector.sort = { it -> it }
-        collector.append('alpha', 'BBB')
-        collector.append('delta', '222')
-        collector.append('alpha', 'AAA')
-        collector.append('delta', '111')
-        collector.moveFiles(folder)
+        collector.add('alpha', 'BBB')
+        collector.add('delta', '222')
+        collector.add('alpha', 'AAA')
+        collector.add('delta', '111')
+        collector.saveTo(folder)
         then:
         folder.list().size() == 2
         folder.resolve('alpha').text == 'AAABBB'
@@ -80,7 +80,7 @@ class SortFileCollectorTest extends Specification {
     }
 
 
-    def testAppendStringWithSortSeedAndNewLine() {
+    def 'test append strings with new-line separator and seed values'() {
 
         given:
         def folder = Files.createTempDirectory('test')
@@ -90,16 +90,16 @@ class SortFileCollectorTest extends Specification {
         collector.sort = { it -> it }
         collector.newLine = true
         collector.seed = [alpha: '000', delta: '111', gamma: '222']
-        collector.append('alpha', 'BBB')
-        collector.append('delta', 'qqq')
-        collector.append('alpha', 'ZZZ')
-        collector.append('delta', 'ttt')
-        collector.append('gamma', 'yyy')
-        collector.append('gamma', 'zzz')
-        collector.append('gamma', 'xxx')
-        collector.append('delta', 'ppp')
-        collector.append('alpha', 'AAA')
-        collector.moveFiles(folder)
+        collector.add('alpha', 'BBB')
+        collector.add('delta', 'qqq')
+        collector.add('alpha', 'ZZZ')
+        collector.add('delta', 'ttt')
+        collector.add('gamma', 'yyy')
+        collector.add('gamma', 'zzz')
+        collector.add('gamma', 'xxx')
+        collector.add('delta', 'ppp')
+        collector.add('alpha', 'AAA')
+        collector.saveTo(folder)
         then:
         folder.list().size() == 3
         folder.resolve('alpha').text == '000\nAAA\nBBB\nZZZ\n'
@@ -111,4 +111,50 @@ class SortFileCollectorTest extends Specification {
         folder?.deleteDir()
 
     }
+
+
+    def 'test sort file collect properties'() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def identity = { it -> it }
+
+        when:
+        def collector = new SortFileCollector()
+        collector.sort = identity
+        collector.newLine = true
+        collector.seed = [alpha: '000', delta: '111', gamma: '222']
+        collector.sliceMaxItems = 100
+        collector.sliceMaxSize = 20_000
+        collector.deleteTempFilesOnClose = false
+
+        collector.add('alpha', 'BBB')
+        collector.add('delta', 'qqq')
+        collector.add('alpha', 'ZZZ')
+        collector.add('delta', 'ttt')
+        collector.add('gamma', 'yyy')
+        collector.add('gamma', 'zzz')
+        collector.add('gamma', 'xxx')
+        collector.add('delta', 'ppp')
+        collector.add('alpha', 'AAA')
+        collector.saveTo(folder)
+        then:
+        folder.list().size() == 3
+        folder.resolve('alpha').text == '000\nAAA\nBBB\nZZZ\n'
+        folder.resolve('delta').text == '111\nppp\nqqq\nttt\n'
+        folder.resolve('gamma').text == '222\nxxx\nyyy\nzzz\n'
+        collector.index.sliceMaxItems == 100
+        collector.index.sliceMaxSize == 20_000
+        collector.index.getTempDir() == collector.getTempDir().resolve("index")
+        collector.index.deleteTempFilesOnClose == collector.deleteTempFilesOnClose
+        (collector.index.comparator as SortFileCollector.IndexSort).sort == identity
+
+        cleanup:
+        collector?.close()
+        folder?.deleteDir()
+        collector?.getTempDir()?.deleteDir()
+
+    }
+
+
 }

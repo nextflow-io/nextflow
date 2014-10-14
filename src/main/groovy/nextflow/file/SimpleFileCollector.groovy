@@ -19,17 +19,13 @@
  */
 
 package nextflow.file
-
 import java.nio.file.Files
-import java.nio.file.OpenOption
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-
 /**
  *  Helper class used to aggregate values having the same key
  *  to files
@@ -40,29 +36,15 @@ import groovy.util.logging.Slf4j
 @CompileStatic
 class SimpleFileCollector extends FileCollector {
 
-    static final OpenOption[] APPEND = [StandardOpenOption.APPEND, StandardOpenOption.WRITE] as OpenOption[]
-
-    public Boolean newLine
-
-    public seed
-
-    protected Path temp
-
     protected ConcurrentMap<String,Path> cache = new ConcurrentHashMap<>()
 
-    SimpleFileCollector( Path store = null ) {
-        if( !store )
-            store = Files.createTempDirectory('nxf-clt')
+    SimpleFileCollector( ) {
 
-        else {
-            store.createDirIfNotExists()
-        }
-        this.temp = store
     }
 
     protected Path _file( String name ) {
         (Path)cache.getOrCreate(name) {
-            def result = Files.createFile(temp.resolve(name))
+            def result = Files.createFile(getTempDir().resolve(name))
             if( seed instanceof Map && seed.containsKey(name)) {
                 append0(result, normalizeToStream(seed.get(name)))
             }
@@ -74,7 +56,7 @@ class SimpleFileCollector extends FileCollector {
     }
 
     @Override
-    SimpleFileCollector append( String key, value ) {
+    SimpleFileCollector add( String key, value ) {
         append0( _file(key), normalizeToStream(value))
         return this
     }
@@ -129,8 +111,11 @@ class SimpleFileCollector extends FileCollector {
         new ArrayList<Path>(cache.values())
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    void moveFiles( Closure<Path> closure ) {
+    void saveFile( Closure<Path> closure ) {
 
         def result = []
         Iterator<Path> itr = cache.values().iterator()
@@ -141,11 +126,6 @@ class SimpleFileCollector extends FileCollector {
             itr.remove()
         }
 
-    }
-
-    @Override
-    void close() {
-        temp?.deleteDir()
     }
 
 
