@@ -23,11 +23,11 @@ package nextflow.util
 import java.nio.file.Files
 import java.nio.file.Path
 
-import embed.com.google.common.hash.Funnels
-import embed.com.google.common.hash.HashCode
-import embed.com.google.common.hash.HashFunction
-import embed.com.google.common.hash.Hasher
-import embed.com.google.common.hash.Hashing
+import com.google.common.hash.Funnels
+import com.google.common.hash.HashCode
+import com.google.common.hash.HashFunction
+import com.google.common.hash.Hasher
+import com.google.common.hash.Hashing
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.extension.FileEx

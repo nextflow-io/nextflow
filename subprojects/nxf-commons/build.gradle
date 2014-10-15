@@ -34,7 +34,7 @@ dependencies {
     compile "ch.qos.logback:logback-classic:1.1.2"
     compile "ch.qos.logback:logback-core:1.1.2"
     compile "commons-lang:commons-lang:2.6"
-    compile files('../../lib/guava-cache-16.0.1.jar')
+    compile 'com.google.guava:guava:16.0.1'
 
     /* testCompile inherited from top gradle build file */
 }

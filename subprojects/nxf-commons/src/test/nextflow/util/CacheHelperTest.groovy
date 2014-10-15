@@ -22,7 +22,7 @@ package nextflow.util
 
 import java.nio.file.Files
 
-import embed.com.google.common.hash.Hashing
+import com.google.common.hash.Hashing
 import spock.lang.Specification
 
 /**
