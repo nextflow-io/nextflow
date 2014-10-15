@@ -223,8 +223,6 @@ abstract public class BigSort<V> implements Closeable {
         long start = 0;
         try {
             long begin = System.currentTimeMillis();
-            if (log.isTraceEnabled())
-                log.trace("Starting sorting -- " + String.valueOf(slices.size()) + " slices");
 
             /*
              * Sort each slice
@@ -242,16 +240,17 @@ abstract public class BigSort<V> implements Closeable {
             /*
              * Sort all the partial sorted slices
              */
-
-            if (log.isTraceEnabled()) {
-                log.trace("Ending sorting -- time " + String.valueOf((double) (System.currentTimeMillis() - begin) / 1000) + " secs");
-                begin = System.currentTimeMillis();
-            }
+            long end2 = System.currentTimeMillis();
+            double delta1 = (double)(end2 - begin) /1000;        // time required for slices sorting
 
             externalSort(closure);
 
-            if( log.isTraceEnabled() )
-                log.trace("Ending external sort -- time " + String.valueOf((double) (System.currentTimeMillis() - begin) / 1000) + " secs");
+            long end3 = System.currentTimeMillis();
+            double delta2 = (double)(end3 - end2) /1000;         // time required for external sort
+            double delta3 = (double)(end3 - begin) /1000;       // total time
+
+            log.debug("Sort completed -- entries: {}; slices: {}; internal sort time: {} s; external sort time: {} s; total time: {} s", count, slices.size()+1, delta1, delta2, delta3);
+
         }
         catch (IOException e) {
             throw new RuntimeException(e);
