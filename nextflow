@@ -190,6 +190,7 @@ if [ ! -f "$NXF_BIN" ]; then # <-- only the first time
          exit 1
     fi
 
+    [ -f "$NXF_PATH" ] && rm "$NXF_PATH"
     mkdir -p $NXF_PATH || exit $?
     get "$NXF_URL" "$NXF_BIN"
 fi
