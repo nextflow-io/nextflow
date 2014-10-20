@@ -29,7 +29,6 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.operator.DataflowProcessor
-import groovyx.gpars.util.PoolUtils
 import jsr166y.Phaser
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdRun
@@ -148,14 +147,13 @@ class Session {
         // set unique session from the taskConfig object, or create a new one
         uniqueId = (config.session as Map)?.uniqueId ? UUID.fromString( (config.session as Map).uniqueId as String) : UUID.randomUUID()
 
-        if( config.poolSize ) {
-            this.poolSize = config.poolSize as int
-            System.setProperty('gpars.poolsize', config.poolSize as String)
+        if( !config.poolSize ) {
+            def cpus = Runtime.getRuntime().availableProcessors()
+            config.poolSize = cpus >= 3 ? cpus-1 : 2
         }
-        else {
-            // otherwise use the default Gpars pool size
-            this.poolSize = PoolUtils.retrieveDefaultPoolSize()
-        }
+
+        this.poolSize = config.poolSize as int
+        System.setProperty('gpars.poolsize', config.poolSize as String)
         log.debug "Executor pool size: ${poolSize}"
 
         // create the task dispatcher instance
