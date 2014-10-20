@@ -48,48 +48,33 @@ class TraceRecord {
             native_id:  'str',
             name:       'str',
             status:     'str',
-            exit_status: 'num',
+            exit_status:'num',
             submit:     'date',
             start:      'date',
             complete:   'date',
             wall_time:  'time',
             run_time:   'time',
-            state:      'str',
-            '%cpu':     'num',
-            '%mem':     'num',
-            rss:        'mem',
-            vmem:       'mem',
-            'max_%cpu': 'num',
-            'max_%mem': 'num',
-            max_rss:    'mem',
-            max_vmem:   'mem',
-            rchar:      'mem',
-            wchar:      'mem',
-            syscr:      'mem',
-            syscw:      'mem',
-            read_bytes: 'mem',
-            write_bytes: 'mem',
-            vmpeak:     'mem',
-            vmsize:     'mem',
-            vmlck:      'mem',
-            vmpin:      'mem',
-            vmhwm:      'mem',
-            vmrss:      'mem',
-            vmdata:     'mem',
-            vmstk:      'mem',
-            vmexe:      'mem',
-            vmlib:      'mem',
-            vmpte:      'mem',
-            vmswap:     'mem',
-            threads:    'num'
+            '%cpu':     'perc',     // -- ps field '%cpu'
+            '%mem':     'perc',     // -- ps field '%mem'
+            rss:        'mem',      // -- ps field 'rss'
+            vmem:       'mem',      // -- ps field 'vsize'
+            peak_rss:   'mem',      // -- /proc/$pid/status field 'VmHWM'  (Peak resident set size i.e. high water mark)
+            peak_vmem:  'mem',      // -- /proc/$pid/status field 'VmPeak' (Peak virtual memory size)
+            rchar:      'mem',      // -- /proc/$pid/io
+            wchar:      'mem',      // -- /proc/$pid/io
+            syscr:      'mem',      // -- /proc/$pid/io
+            syscw:      'mem',      // -- /proc/$pid/io
+            read_bytes: 'mem',      // -- /proc/$pid/io
+            write_bytes:'mem'       // -- /proc/$pid/io
     ]
 
-    static Map<String,Closure> FORMATTER = [
-            str: this.&fmtToString,
-            num: this.&fmtToNumber,
-            date: this.&fmtToDate,
-            time: this.&fmtToTime,
-            mem: this.&fmtToMem
+    static Map<String,Closure<String>> FORMATTER = [
+            str: this.&fmtString,
+            num: this.&fmtNumber,
+            date: this.&fmtDate,
+            time: this.&fmtTime,
+            mem: this.&fmtMemory,
+            perc: this.&fmtPercent
     ]
 
     @Memoized
@@ -111,29 +96,34 @@ class TraceRecord {
     }
 
     @PackageScope
-    static def fmtToString(def value, String fmt) {
+    static String fmtString(def value, String fmt) {
         value ? value.toString() : NA
     }
 
     @PackageScope
-    static def fmtToNumber(def value, String fmt) {
-        value == Integer.MAX_VALUE ? NA :value.toString()
+    static String fmtNumber(def value, String fmt) {
+        if( value == null ) return NA
+        if( value instanceof Integer )
+            return value != Integer.MAX_VALUE ? value.toString() : NA
+        else {
+            return value
+        }
     }
 
     @PackageScope
-    static def fmtToDate(def value, String fmt) {
+    static String fmtDate(def value, String fmt) {
         if( !value ) return NA
         getDateFormat(fmt).format(new Date(value as long))
     }
 
     @PackageScope
-    static def fmtToTime(def value, String fmt) {
+    static String fmtTime(def value, String fmt) {
         if( value == null ) return NA
         new Duration(value as long).toString()
     }
 
     @PackageScope
-    static def fmtToMem( def value, String fmt) {
+    static String fmtMemory( def value, String fmt) {
         if( value == null ) return NA
 
         String str = value.toString()
@@ -145,17 +135,23 @@ class TraceRecord {
         return str
     }
 
-//    @PackageScope
-//    static def fmtToPerc( def value, String fmt ) {
-//        try {
-//            def num = value instanceof Number ? value.toFloat() : value.toString().toFloat()
-//            return String.format('%.2f', num)
-//        }
-//        catch( Exception e ) {
-//            log.debug "Not a valid percentual value: '$value'"
-//            return '-'
-//        }
-//    }
+    @PackageScope
+    static def fmtPercent( def value, String fmt ) {
+        if( value == null ) return NA
+        try {
+            if( value instanceof Number )
+                return String.format('%.1f%%', value.toFloat())
+            else {
+                def x = value.toString().toFloat()
+                return String.format('%.1f%%', x)
+            }
+
+        }
+        catch( Exception e ) {
+            log.debug "Not a valid percentual value: '$value'"
+            return NA
+        }
+    }
 
 
     @PackageScope
@@ -227,7 +223,7 @@ class TraceRecord {
      * @param converter A converter string
      * @return A string value formatted according the specified converter
      */
-    def get( String name, String converter ) {
+    String get( String name, String converter ) {
         assert name
         def val = store.get(name)
 
@@ -251,9 +247,15 @@ class TraceRecord {
 
         def formatter = FORMATTER.get(type)
         if( !formatter )
-            throw  new IllegalArgumentException("Not a valid trace formatter for field: '$name' with type: '$type'")
+            throw new IllegalArgumentException("Not a valid trace formatter for field: '$name' with type: '$type'")
 
-        formatter.call(val,sFormat)
+        try {
+            return formatter.call(val,sFormat)
+        }
+        catch( Throwable e ) {
+            log.debug "Not a valid trace value -- field: '$name'; value: '$val'; format: '$sFormat'"
+            return null
+        }
     }
 
     def getTaskId() { get('task_id') }
@@ -281,7 +283,7 @@ class TraceRecord {
                 format = item.substring(p+1)
             }
 
-            result << ( get(name, format) ?: NA )
+            result << (get(name, format) ?: NA)
         }
 
         return result.join(delim)
@@ -306,4 +308,53 @@ class TraceRecord {
     int hashCode() {
         return store.hashCode()
     }
+
+
+    /**
+     * Parse the trace file
+     * <p>
+     * Trace example:
+     * <pre>
+     * pid state %cpu %mem vmem rss max_vmem max_rss rchar wchar syscr syscw read_bytes write_bytes
+     *  1 0 0 0 11084 1220 11084 1220 4790 12 11 1 0 0 0
+     * </pre>
+     *
+     */
+
+    TraceRecord parseTraceFile( String text ) {
+
+        String[] header = null
+        final lines = text.readLines()
+        for( int line=0; line<lines.size(); line++ ) {
+            String row = lines[line]
+
+            /*
+             * 1st line -- parse the header
+             */
+            if( line == 0 ) {
+                header = row.trim().split(/\s+/)
+            }
+
+            /*
+             * 2nd line -- parse values produced by 'ps'
+             */
+            else if( line == 1 ) {
+                String[] values = row.trim().split(/\s+/)
+                for( int i=0; i<values.length; i++ ) {
+
+                    final name = header[i]
+                    if( i==2 || i==3 ) {
+                        this.put(name, values[i].toInteger() / 10F)
+                    }
+                    else if( i>3 ) {
+                        this.put(name, values[i].toLong() * 1024)
+                    }
+                }
+            }
+
+        }
+
+        return this
+    }
+
 }

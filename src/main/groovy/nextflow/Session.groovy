@@ -194,7 +194,9 @@ class Session {
         def result = []
         Boolean isEnabled = config.navigate('trace.enabled') as Boolean
         if( isEnabled || runOpts.withTrace ) {
-            def fileName = runOpts.withTrace ?: TraceFileObserver.DEF_FILE_NAME
+            String fileName = runOpts.withTrace
+            if( !fileName ) fileName = config.navigate('trace.file')
+            if( !fileName ) fileName = TraceFileObserver.DEF_FILE_NAME
             def traceFile = Paths.get(fileName).complete()
             def observer = new TraceFileObserver(traceFile)
             config.navigate('trace.delim') { observer.delim = it }
@@ -313,7 +315,7 @@ class Session {
     }
 
     final synchronized protected void shutdown() {
-
+        log.trace "Shutdown: $shutdownHooks"
         List<Closure<Void>> all = new ArrayList<>(shutdownHooks)
         for( def hook : all ) {
             try {

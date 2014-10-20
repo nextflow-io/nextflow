@@ -53,11 +53,13 @@ class TraceFileObserver implements TraceObserver {
             'wall_time',
             'run_time',
             '%cpu',
-            '%mem'
+            'rss',
+            'vmem',
+            'rchar',
+            'wchar'
     ]
 
     List<String> formats
-
 
     /**
      * The delimiter character used to separate column in the CSV file

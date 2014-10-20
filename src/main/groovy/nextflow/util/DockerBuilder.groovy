@@ -59,6 +59,8 @@ class DockerBuilder {
 
     private String removeCommand
 
+    private String killCommand
+
     DockerBuilder( String name ) {
         this.image = name
     }
@@ -164,6 +166,9 @@ class DockerBuilder {
             if( sudo ) removeCommand = 'sudo ' + removeCommand
         }
 
+        killCommand = 'docker kill ' + name
+        if( sudo ) killCommand = 'sudo ' + killCommand
+
         return runCommand
     }
 
@@ -242,8 +247,19 @@ class DockerBuilder {
 
     }
 
+    /**
+     * @return The command string to run a container from Docker image
+     */
     String getRunCommand() { runCommand }
 
+    /**
+     * @return The command string to remove a container
+     */
     String getRemoveCommand() { removeCommand }
+
+    /**
+     * @return The command string to kill a running container
+     */
+    String getKillCommand() { killCommand }
 
 }

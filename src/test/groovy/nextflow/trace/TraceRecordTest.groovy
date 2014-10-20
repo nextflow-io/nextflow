@@ -19,10 +19,7 @@
  */
 
 package nextflow.trace
-
 import spock.lang.Specification
-import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -59,10 +56,9 @@ class TraceRecordTest extends Specification {
 
     }
 
-    @Unroll
-    def testBytes() {
+    def 'test fmt memory'() {
         expect:
-        TraceRecord.fmtToMem(str, fmt) == expect
+        TraceRecord.fmtMemory(str, fmt) == expect
 
         where:
         str     | fmt   | expect
@@ -74,9 +70,9 @@ class TraceRecordTest extends Specification {
         'abc'   | null  | 'abc'
     }
 
-    def testDate() {
+    def 'test fmt date'() {
         expect:
-        TraceRecord.fmtToDate(str, fmt) == expect
+        TraceRecord.fmtDate(str, fmt) == expect
 
         where:
         str                     | fmt   | expect
@@ -84,29 +80,80 @@ class TraceRecordTest extends Specification {
         1408714875000           | null  | '2014-08-22 13:41:15.000'
     }
 
-    def testTime() {
+    def 'test fmt time'() {
         expect:
-        TraceRecord.fmtToTime(str, fmt) == expect
+        TraceRecord.fmtTime(str, fmt) == expect
 
         where:
         str                     | fmt   | expect
         0                       | null  | '0ms'
         100                     | null  | '100ms'
-        2000                    | null  |  '2s'
+        2000                    | null  | '2s'
         3600 * 1000 * 3         | null  | '3h'
         3600 * 1000 * 3 + 5000  | null  | '3h 5s'
 
     }
 
 
+    def 'test fmt number'() {
+        expect:
+        TraceRecord.fmtNumber(str, fmt) == expect
 
-//    def testPercent() {
-//        expect:
-//        TraceFileObserver.percent(0) == '0.00'
-//        TraceFileObserver.percent(1) == '1.00'
-//        TraceFileObserver.percent('0.123') == '0.12'
-//        TraceFileObserver.percent('100.991') == '100.99'
-//        TraceFileObserver.percent('abc') == '-'
-//    }
+        where:
+        str                     | fmt   | expect
+        0                       | null  | '0'
+        100                     | null  | '100'
+        '333'                   | null  | '333'
+        Integer.MAX_VALUE       | null  | '-'
+
+    }
+
+
+    def 'test fmt percent'() {
+        expect:
+        TraceRecord.fmtPercent(str, fmt) == expect
+
+        where:
+        str                     | fmt   | expect
+        0                       | null  | '0.0%'
+        1                       | null  | '1.0%'
+        '0.199'                 | null  | '0.2%'
+        '100.991'               | null  | '101.0%'
+        'abc'                   | null  | '-'
+    }
+
+
+    def static final long KB = 1024
+
+    def 'test parse trace record'() {
+
+        given:
+        def traceText =  '''
+        pid state %cpu %mem vmem rss peak_vmem peak_rss rchar wchar syscr syscw read_bytes write_bytes
+        1 0 10 20 11084 1220 21084 2220 4790 12 11 1 20 30
+        '''
+                .leftTrim()
+
+        when:
+        def handler = [:] as TraceRecord
+        def trace = handler.parseTraceFile(traceText)
+        then:
+        trace.'%cpu' == 10
+        trace.'%mem' == 20
+        trace.rss == 1220 * KB
+        trace.vmem == 11084 * KB
+        trace.peak_rss == 2220 * KB
+        trace.peak_vmem == 21084 * KB
+        trace.rchar == 4790 * KB
+        trace.wchar == 12 * KB
+        trace.syscr == 11 * KB
+        trace.syscw ==  1 * KB
+        trace.read_bytes == 20 * KB
+        trace.write_bytes == 30 * KB
+
+    }
+
+
+
 
 }

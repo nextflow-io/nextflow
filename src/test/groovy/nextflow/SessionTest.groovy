@@ -34,7 +34,7 @@ import spock.lang.Specification
 class SessionTest extends Specification {
 
 
-    def testBaseDirAndBinDir() {
+    def 'test baseDir and binDir'() {
 
         setup:
         def base = Files.createTempDirectory('test')
@@ -66,7 +66,7 @@ class SessionTest extends Specification {
     }
 
 
-    def testGetQueueSize() {
+    def 'test get queue size'() {
 
         when:
         def session = [:] as Session
@@ -96,7 +96,7 @@ class SessionTest extends Specification {
 
     }
 
-    def testGetPollInterval() {
+    def 'test get poll interval'() {
 
         when:
         def session1 = [:] as Session
@@ -125,7 +125,7 @@ class SessionTest extends Specification {
 
     }
 
-    def testGetExitReadTimeout() {
+    def 'test get exit read timeout'() {
 
         setup:
         def session1 = [:] as Session
@@ -137,7 +137,7 @@ class SessionTest extends Specification {
 
     }
 
-    def testGetQueueStatInterval() {
+    def 'test get queue stat interval'() {
 
         setup:
         def session1 = [:] as Session
@@ -149,7 +149,7 @@ class SessionTest extends Specification {
 
     }
 
-    def testMonitorDumpInterval() {
+    def 'test monitor dump interval'() {
 
         setup:
         def session1 = [:] as Session
@@ -161,7 +161,7 @@ class SessionTest extends Specification {
 
     }
 
-    def testGetExecConfigProp() {
+    def 'test get exec config prop'() {
 
         when:
         def session = [:] as Session
@@ -179,7 +179,7 @@ class SessionTest extends Specification {
 
 
 
-    def testAddLibPath() {
+    def 'test add lib path'() {
 
         setup:
         def path1 = Files.createTempDirectory('test')
@@ -219,7 +219,7 @@ class SessionTest extends Specification {
 
     }
 
-    def testCreateObservers() {
+    def 'test create observers'() {
 
         def session
         def result

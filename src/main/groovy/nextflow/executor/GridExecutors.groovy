@@ -487,6 +487,9 @@ class GridTaskHandler extends TaskHandler {
         return builder
     }
 
+    /**
+     * @return An {@link TraceRecord} instance holding task runtime information
+     */
     @Override
     public TraceRecord getTraceRecord() {
         def trace = super.getTraceRecord()
@@ -530,7 +533,7 @@ class SgeExecutor extends AbstractGridExecutor {
 
         // the requested queue name
         if( taskConfig.queue ) {
-            result << '-q'  << taskConfig.queue
+            result << '-q' << (taskConfig.queue as String)
         }
 
         // max task duration

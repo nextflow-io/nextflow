@@ -224,7 +224,6 @@ class TaskRun {
      */
     def scratch
 
-
     /**
      * The name of a docker container where the task is supposed to run when provided
      */
@@ -235,6 +234,10 @@ class TaskRun {
      */
     def volatile int failCount
 
+    /**
+     * Mark the task as failed
+     */
+    def volatile boolean failed
 
     def String getScript() {
         if( script instanceof Path ) {
@@ -350,6 +353,7 @@ class TaskRun {
     static final String CMD_EXIT = '.exitcode'
     static final String CMD_START = '.command.begin'
     static final String CMD_RUN = '.command.run'
+    static final String CMD_WRAPPER = '.command.run.1'
     static final String CMD_CONTEXT = '.command.val'
     static final String CMD_TRACE = '.command.trace'
 
