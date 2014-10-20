@@ -103,7 +103,7 @@ class Session {
 
     final private Phaser phaser = new Phaser()
 
-    private boolean aborted
+    private volatile boolean aborted
 
     private volatile boolean terminated
 
@@ -332,7 +332,6 @@ class Session {
         log.debug "Session abort -- terminating all processors"
         aborted = true
         allProcessors *. terminate()
-        System.exit( ExitCode.SESSION_ABORTED )
     }
 
     boolean isTerminated() { terminated }

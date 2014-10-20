@@ -26,6 +26,7 @@ import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
 import groovy.util.logging.Slf4j
+import nextflow.ExitCode
 import nextflow.Session
 import nextflow.util.Duration
 /**
@@ -326,7 +327,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
             processListeners()
 
-            if( session.isTerminated() && pollingQueue.size() == 0 ) {
+            if( (session.isTerminated() && pollingQueue.size() == 0) || session.isAborted() ) {
                 break
             }
 
@@ -337,6 +338,9 @@ class TaskPollingMonitor implements TaskMonitor {
                 log.debug "!! executor $name > tasks to be completed: ${pollingQueue.size()} -- first: ${pollingQueue.peek()}"
             }
         }
+
+        if( session.isAborted() )
+            System.exit( ExitCode.SESSION_ABORTED )
     }
 
     /**
