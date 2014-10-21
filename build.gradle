@@ -21,7 +21,6 @@
 version = '0.11.0-SNAPSHOT'
 apply plugin: 'groovy'
 apply plugin: 'idea'
-apply plugin: 'codenarc'
 
 if (System.getenv('CI_GROOVY_VERSION')) {
     // Add ability to test with upcoming versions of Groovy
@@ -45,7 +44,7 @@ ext {
 
 allprojects {
     apply plugin: 'java'
-    apply plugin: 'codenarc'
+    //apply plugin: 'codenarc'
 
     sourceCompatibility = 1.7
     targetCompatibility = 1.7
@@ -443,3 +442,4 @@ task supernarc(type: CodeNarc) {
 
     println 'Look for the report full report at this path: build/reports/codenarc/supernarc.html'
 }
+
