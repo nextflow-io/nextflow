@@ -235,6 +235,9 @@ class SortFileCollector extends FileCollector implements Closeable {
      */
     void saveFile( Closure<Path> closure ) {
 
+        if( !index )
+            return
+
         def last = null
         OutputStream output = null
 
