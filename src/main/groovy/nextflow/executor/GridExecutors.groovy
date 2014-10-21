@@ -536,7 +536,7 @@ class SgeExecutor extends AbstractGridExecutor {
             result << '-q' << (taskConfig.queue as String)
         }
 
-        //number of cpus for multiprocessing/multithreading
+        //number of cpus for multiprocessing/multi-threading
         if( taskConfig.cpus ) {
              if ( taskConfig.penv ) {
                  result << "-pe" << taskConfig.penv << taskConfig.cpus.toString()
