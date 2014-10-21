@@ -487,10 +487,13 @@ class GridTaskHandler extends TaskHandler {
         return builder
     }
 
+    /**
+     * @return An {@link TraceRecord} instance holding task runtime information
+     */
     @Override
     public TraceRecord getTraceRecord() {
         def trace = super.getTraceRecord()
-        trace.nativeId = jobId
+        trace.native_id = jobId
         return trace
     }
 }
@@ -530,7 +533,7 @@ class SgeExecutor extends AbstractGridExecutor {
 
         // the requested queue name
         if( taskConfig.queue ) {
-            result << '-q'  << taskConfig.queue
+            result << '-q' << (taskConfig.queue as String)
         }
 
         //number of cpus for multiprocessing/multithreading

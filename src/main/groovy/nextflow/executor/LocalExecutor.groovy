@@ -128,9 +128,8 @@ class LocalTaskHandler extends TaskHandler {
 
     @Override
     def void submit() {
-
         // the cmd list to launch it
-        List cmd = new ArrayList(taskConfig.getShell()) << wrapperFile.getName()
+        List cmd = new ArrayList(BashWrapperBuilder.BASH) << wrapperFile.getName()
         log.trace "Launch cmd line: ${cmd.join(' ')}"
 
         session.getExecService().submit( {
@@ -146,6 +145,7 @@ class LocalTaskHandler extends TaskHandler {
                 result = process.waitFor()
             }
             catch( Throwable ex ) {
+                log.trace("Failed to execute command: ${cmd.join(' ')}", ex)
                 result = ex
             }
             finally {
@@ -216,7 +216,10 @@ class LocalTaskHandler extends TaskHandler {
      * Force the submitted job to quit
      */
     @Override
-    void kill() { destroy() }
+    void kill() {
+        log.trace("Killing process with pid: ${process.pid}")
+        new ProcessBuilder('kill', process.pid.toString()).redirectErrorStream(true).start()
+    }
 
     /**
      * Destroy the process handler, closing all associated streams
@@ -233,10 +236,13 @@ class LocalTaskHandler extends TaskHandler {
     }
 
 
+    /**
+     * @return An {@link TraceRecord} instance holding task runtime information
+     */
     @Override
     TraceRecord getTraceRecord() {
         def result = super.getTraceRecord()
-        result.nativeId = this.process?.pid
+        result.native_id = this.process?.pid
         return result
     }
 

@@ -366,7 +366,7 @@ abstract class TaskProcessor {
     }
 
     /**
-     * Remove extra leading and trailing whitespace and newlines chars,
+     * Remove extra leading, trailing whitespace and newlines chars,
      * also if the script does not start with a {@code shebang} line,
      * add the default by using the current {@code #shell} attribute
      */
@@ -713,6 +713,7 @@ abstract class TaskProcessor {
                 // IGNORE strategy -- just continue
                 if( taskStrategy == ErrorStrategy.IGNORE ) {
                     log.warn "Error running process > ${error.getMessage()} -- error is ignored"
+                    task.failed = true
                     return ErrorStrategy.IGNORE
                 }
 
@@ -722,6 +723,9 @@ abstract class TaskProcessor {
                     return ErrorStrategy.RETRY
                 }
             }
+
+            // mark the task as failed
+            task.failed = true
 
             // MAKE sure the error is showed only the very first time across all processes
             if( errorShown.getAndSet(true) ) {
@@ -747,7 +751,6 @@ abstract class TaskProcessor {
 
         session.abort()
         return ErrorStrategy.TERMINATE
-
     }
 
     final protected formatTaskError( List message, Throwable error, TaskRun task ) {
@@ -1390,15 +1393,12 @@ abstract class TaskProcessor {
         state.update { StateObj it -> it.incCompleted() }
     }
 
-
     protected void terminateProcess() {
         log.debug "<${name}> Sending poison pills and terminating process"
         sendPoisonPill()
         session.taskDeregister(this)
         processor.terminate()
     }
-
-
 
 }
 

@@ -101,6 +101,8 @@ class DockerBuilderTest extends Specification {
         docker.build() == 'docker run -v $PWD:$PWD -w $PWD --name c1 busybox'
         docker.runCommand == 'docker run -v $PWD:$PWD -w $PWD --name c1 busybox'
         docker.removeCommand == null
+        docker.killCommand == 'docker kill c1'
+
 
         when:
         docker =  new DockerBuilder('busybox').setName('c2').params(sudo: true, remove: true)
@@ -108,6 +110,8 @@ class DockerBuilderTest extends Specification {
         docker.build() == 'sudo docker run -v $PWD:$PWD -w $PWD --name c2 busybox'
         docker.runCommand == 'sudo docker run -v $PWD:$PWD -w $PWD --name c2 busybox'
         docker.removeCommand == 'sudo docker rm c2'
+        docker.killCommand == 'sudo docker kill c2'
+
 
         when:
         docker =  new DockerBuilder('busybox').setName('c3').params(remove: true)
@@ -115,6 +119,7 @@ class DockerBuilderTest extends Specification {
         docker.build() == 'docker run -v $PWD:$PWD -w $PWD --name c3 busybox'
         docker.runCommand == 'docker run -v $PWD:$PWD -w $PWD --name c3 busybox'
         docker.removeCommand == 'docker rm c3'
+        docker.killCommand == 'docker kill c3'
 
     }
 

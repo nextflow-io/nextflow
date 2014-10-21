@@ -21,8 +21,8 @@
 package nextflow.processor
 import java.util.concurrent.CountDownLatch
 
+import groovy.util.logging.Slf4j
 import nextflow.trace.TraceRecord
-
 /**
  * Actions to handle the underlying job running the user task.
  *
@@ -32,6 +32,7 @@ import nextflow.trace.TraceRecord
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 public abstract class TaskHandler {
 
     enum Status { NEW, SUBMITTED, RUNNING, COMPLETED }
@@ -41,20 +42,26 @@ public abstract class TaskHandler {
         this.taskConfig = taskConfig
     }
 
+
+    /** Only for testing purpose */
+    protected TaskHandler() {
+
+    }
+
     /**
      * The task managed by this handler
      */
-    final TaskRun task
+    TaskRun task
 
     /**
      * The configuration object defined by this task
      */
-    final TaskConfig taskConfig
+    TaskConfig taskConfig
 
     /**
      * The task managed by this handler
      */
-    final TaskRun getTask() { task }
+    TaskRun getTask() { task }
 
     /**
      * Task current status
@@ -63,11 +70,11 @@ public abstract class TaskHandler {
 
     CountDownLatch latch
 
-    private long submitTimeMillis
+    long submitTimeMillis
 
-    private long startTimeMillis
+    long startTimeMillis
 
-    private long completeTimeMillis
+    long completeTimeMillis
 
 
     /**
@@ -92,7 +99,11 @@ public abstract class TaskHandler {
      */
     abstract void submit()
 
-
+    /**
+     * Task status attribute setter.
+     *
+     * @param status The sask status as defined by {@link Status}
+     */
     def void setStatus( Status status ) {
 
         // skip if the status is the same aam
@@ -117,12 +128,6 @@ public abstract class TaskHandler {
 
     boolean isCompleted()  { return status == Status.COMPLETED  }
 
-    long getSubmitTimeMillis() { submitTimeMillis }
-
-    long getStartTimeMillis() { startTimeMillis }
-
-    long getCompleteTimeMillis() { completeTimeMillis }
-
     protected StringBuilder toStringBuilder(StringBuilder builder) {
         builder << "id: ${task.id}; name: ${task.name}; status: $status; exit: ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}; workDir: ${task.workDir}"
     }
@@ -132,17 +137,29 @@ public abstract class TaskHandler {
         return "TaskHandler[${builder.toString()}]"
     }
 
+    /**
+     * @return An {@link TraceRecord} instance holding task runtime information
+     */
     TraceRecord getTraceRecord() {
-        new TraceRecord(
-                taskId: task.id,
-                status: this.status,
-                hash: task.hashLog,
-                name: task.name,
-                exit: task.exitStatus,
-                submit: this.submitTimeMillis,
-                start: this.startTimeMillis,
-                complete: this.completeTimeMillis,
-        )
+        def record = new TraceRecord()
+        record.task_id = task.id
+        record.status = task.failed ? 'FAILED' : this.status
+        record.hash = task.hashLog
+        record.name = task.name
+        record.exit_status = task.exitStatus
+        record.submit = this.submitTimeMillis
+        record.start = this.startTimeMillis
+        record.complete = this.completeTimeMillis
+
+        if( isCompleted() ) {
+            def file = task.workDir?.resolve(TaskRun.CMD_TRACE)
+            if( file?.exists() ) {
+                record.parseTraceFile(file.text)
+            }
+        }
+
+        return record
     }
+
 
 }

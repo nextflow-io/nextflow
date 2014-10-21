@@ -30,7 +30,7 @@ import spock.lang.Specification
  */
 class BashWrapperBuilderTest extends Specification {
 
-    def 'test changeToScratchDir' () {
+    def 'test change to scratchDir' () {
 
         setup:
         def builder = [:] as BashWrapperBuilder
@@ -61,7 +61,7 @@ class BashWrapperBuilderTest extends Specification {
     }
 
 
-    def testMapConstructor() {
+    def 'test map constructor'() {
 
         when:
         def wrapper = new BashWrapperBuilder(
@@ -87,7 +87,7 @@ class BashWrapperBuilderTest extends Specification {
     }
 
 
-    def testBashWrapperTest () {
+    def 'test bash wrapper' () {
 
         given:
         def folder = Files.createTempDirectory('test')
@@ -113,13 +113,45 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash -Eeu
-                trap on_exit 1 2 3 15 ERR TERM USR1 USR2
-                function on_exit() { local exit_status=\${1:-\$?}; printf \$exit_status > ${folder}/.exitcode; exit \$exit_status; }
+                #!/bin/bash -ue
+                nxf_kill() {
+                    declare -a ALL_CHILD
+                    while read P PP;do
+                        ALL_CHILD[\$PP]+=" \$P"
+                    done < <(ps -e -o pid= -o ppid=)
+
+                    walk() {
+                        [[ \$1 != \$\$ ]] && kill \$1 2>/dev/null || true
+                        for i in \${ALL_CHILD[\$1]:=}; do walk \$i; done
+                    }
+
+                    walk \$1
+                }
+
+                on_exit() {
+                  set +e
+                  local exit_status=\${ret:=\$?}
+                  printf \$exit_status > ${folder}/.exitcode
+                  exit \$exit_status
+                }
+
+                on_term() {
+                    set +e
+                    [[ "\$pid" ]] && nxf_kill \$pid
+                }
+
+                trap on_exit EXIT
+                trap on_term TERM INT USR1 USR2
+
                 touch ${folder}/.command.begin
                 [ -f ${folder}/.command.env ] && source ${folder}/.command.env
-                ( /bin/bash -ue ${folder}/.command.sh ) &> ${folder}/.command.out
-                on_exit
+
+                set +e
+                (
+                /bin/bash -ue ${folder}/.command.sh &> ${folder}/.command.out
+                ) &
+                pid=\$!
+                wait \$pid || ret=\$?
                 """
                 .stripIndent().leftTrim()
 
@@ -128,9 +160,83 @@ class BashWrapperBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'test bash wrapper with trace'() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        /*
+         * simple bash run
+         */
+        when:
+        def bash = new BashWrapperBuilder(workDir: folder, script: 'echo Hello world!', statsEnabled: true)
+        bash.build()
+
+        then:
+        Files.exists(folder.resolve('.command.sh'))
+        Files.exists(folder.resolve('.command.run'))
+
+        folder.resolve('.command.sh').text ==
+                '''
+                #!/bin/bash -ue
+                echo Hello world!
+                '''
+                        .stripIndent().leftTrim()
 
 
-    def testBashWithDockerTest () {
+        folder.resolve('.command.run').text ==
+                """
+                 #!/bin/bash -ue
+                nxf_kill() {
+                    declare -a ALL_CHILD
+                    while read P PP;do
+                        ALL_CHILD[\$PP]+=" \$P"
+                    done < <(ps -e -o pid= -o ppid=)
+
+                    walk() {
+                        [[ \$1 != \$\$ ]] && kill \$1 2>/dev/null || true
+                        for i in \${ALL_CHILD[\$1]:=}; do walk \$i; done
+                    }
+
+                    walk \$1
+                }
+
+                on_exit() {
+                  set +e
+                  local exit_status=\${ret:=\$?}
+                  printf \$exit_status > ${folder}/.exitcode
+                  exit \$exit_status
+                }
+
+                on_term() {
+                    set +e
+                    [[ "\$pid" ]] && nxf_kill \$pid
+                }
+
+                trap on_exit EXIT
+                trap on_term TERM INT USR1 USR2
+
+                touch ${folder}/.command.begin
+                [ -f ${folder}/.command.env ] && source ${folder}/.command.env
+
+                set +e
+                (
+                /bin/bash -ue ${folder}/.command.run.1
+                ) &
+                pid=\$!
+                wait \$pid || ret=\$?
+                """
+                        .stripIndent().leftTrim()
+
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    /**
+     * test running with Docker executed as 'sudo'
+     */
+    def 'test bash wrapper with docker' () {
 
         given:
         def folder = Files.createTempDirectory('test')
@@ -161,13 +267,45 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash -Eeu
-                trap on_exit 1 2 3 15 ERR TERM USR1 USR2
-                function on_exit() { local exit_status=\${1:-\$?}; printf \$exit_status > ${folder}/.exitcode; exit \$exit_status; }
+                #!/bin/bash -ue
+                nxf_kill() {
+                    declare -a ALL_CHILD
+                    while read P PP;do
+                        ALL_CHILD[\$PP]+=" \$P"
+                    done < <(ps -e -o pid= -o ppid=)
+
+                    walk() {
+                        [[ \$1 != \$\$ ]] && kill \$1 2>/dev/null || true
+                        for i in \${ALL_CHILD[\$1]:=}; do walk \$i; done
+                    }
+
+                    walk \$1
+                }
+
+                on_exit() {
+                  set +e
+                  local exit_status=\${ret:=\$?}
+                  printf \$exit_status > ${folder}/.exitcode
+                  exit \$exit_status
+                }
+
+                on_term() {
+                    set +e
+                    sudo docker kill xyz
+                }
+
+                trap on_exit EXIT
+                trap on_term TERM INT USR1 USR2
+
                 touch ${folder}/.command.begin
-                ( sudo docker run -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name xyz busybox /bin/bash -ue ${folder}/.command.sh ) &> ${folder}/.command.out
-                sudo docker rm xyz &>/dev/null || true &
-                on_exit
+
+                set +e
+                (
+                sudo docker run -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name xyz busybox /bin/bash -ue ${folder}/.command.sh &> ${folder}/.command.out
+                ) &
+                pid=\$!
+                wait \$pid || ret=\$?
+                sudo docker rm xyz &>/dev/null &
                 """
                         .stripIndent().leftTrim()
 
@@ -176,7 +314,7 @@ class BashWrapperBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
-    def testBashWithDockerTest2() {
+    def 'test bash wrapper with docker 2'() {
 
         given:
         def folder = Files.createTempDirectory('test')
@@ -207,13 +345,45 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash -Eeu
-                trap on_exit 1 2 3 15 ERR TERM USR1 USR2
-                function on_exit() { local exit_status=\${1:-\$?}; printf \$exit_status > ${folder}/.exitcode; exit \$exit_status; }
+                #!/bin/bash -ue
+                nxf_kill() {
+                    declare -a ALL_CHILD
+                    while read P PP;do
+                        ALL_CHILD[\$PP]+=" \$P"
+                    done < <(ps -e -o pid= -o ppid=)
+
+                    walk() {
+                        [[ \$1 != \$\$ ]] && kill \$1 2>/dev/null || true
+                        for i in \${ALL_CHILD[\$1]:=}; do walk \$i; done
+                    }
+
+                    walk \$1
+                }
+
+                on_exit() {
+                  set +e
+                  local exit_status=\${ret:=\$?}
+                  printf \$exit_status > ${folder}/.exitcode
+                  exit \$exit_status
+                }
+
+                on_term() {
+                    set +e
+                    docker kill xyz
+                }
+
+                trap on_exit EXIT
+                trap on_term TERM INT USR1 USR2
+
                 touch ${folder}/.command.begin
-                ( docker run -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name xyz busybox /bin/bash -ue ${folder}/.command.sh ) &> ${folder}/.command.out
-                docker rm xyz &>/dev/null || true &
-                on_exit
+
+                set +e
+                (
+                docker run -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name xyz busybox /bin/bash -ue ${folder}/.command.sh &> ${folder}/.command.out
+                ) &
+                pid=\$!
+                wait \$pid || ret=\$?
+                docker rm xyz &>/dev/null &
                 """
                         .stripIndent().leftTrim()
 
@@ -222,7 +392,10 @@ class BashWrapperBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
-    def testBashWithDockerTest3() {
+    /**
+     * Test run in a docker container, without removing it
+     */
+    def 'test bash wrapper with docker 3'() {
 
         given:
         def folder = Files.createTempDirectory('test')
@@ -253,18 +426,129 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash -Eeu
-                trap on_exit 1 2 3 15 ERR TERM USR1 USR2
-                function on_exit() { local exit_status=\${1:-\$?}; printf \$exit_status > ${folder}/.exitcode; exit \$exit_status; }
+                #!/bin/bash -ue
+                nxf_kill() {
+                    declare -a ALL_CHILD
+                    while read P PP;do
+                        ALL_CHILD[\$PP]+=" \$P"
+                    done < <(ps -e -o pid= -o ppid=)
+
+                    walk() {
+                        [[ \$1 != \$\$ ]] && kill \$1 2>/dev/null || true
+                        for i in \${ALL_CHILD[\$1]:=}; do walk \$i; done
+                    }
+
+                    walk \$1
+                }
+
+                on_exit() {
+                  set +e
+                  local exit_status=\${ret:=\$?}
+                  printf \$exit_status > ${folder}/.exitcode
+                  exit \$exit_status
+                }
+
+                on_term() {
+                    set +e
+                    docker kill c1
+                }
+
+                trap on_exit EXIT
+                trap on_term TERM INT USR1 USR2
+
                 touch ${folder}/.command.begin
-                ( docker run -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name c1 ubuntu /bin/bash -ue ${folder}/.command.sh ) &> ${folder}/.command.out
-                on_exit
+
+                set +e
+                (
+                docker run -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name c1 ubuntu /bin/bash -ue ${folder}/.command.sh &> ${folder}/.command.out
+                ) &
+                pid=\$!
+                wait \$pid || ret=\$?
                 """
                         .stripIndent().leftTrim()
 
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'test shell exit function' () {
+
+        def bash
+
+        when:
+        bash = [:] as BashWrapperBuilder
+        then:
+        bash.scriptCleanUp( Paths.get('/my/exit/file'), null ) ==
+                    '''
+                    nxf_kill() {
+                        declare -a ALL_CHILD
+                        while read P PP;do
+                            ALL_CHILD[$PP]+=" $P"
+                        done < <(ps -e -o pid= -o ppid=)
+
+                        walk() {
+                            [[ $1 != $$ ]] && kill $1 2>/dev/null || true
+                            for i in ${ALL_CHILD[$1]:=}; do walk $i; done
+                        }
+
+                        walk $1
+                    }
+
+                    on_exit() {
+                      set +e
+                      local exit_status=${ret:=$?}
+                      printf $exit_status > /my/exit/file
+                      exit $exit_status
+                    }
+
+                    on_term() {
+                        set +e
+                        [[ "$pid" ]] && nxf_kill $pid
+                    }
+
+                    trap on_exit EXIT
+                    trap on_term TERM INT USR1 USR2
+                    '''
+                    .stripIndent().leftTrim()
+
+
+        when:
+        bash = [:] as BashWrapperBuilder
+        then:
+        bash.scriptCleanUp( Paths.get('/my/exit/xxx'), 'docker stop x' ) ==
+                '''
+                    nxf_kill() {
+                        declare -a ALL_CHILD
+                        while read P PP;do
+                            ALL_CHILD[$PP]+=" $P"
+                        done < <(ps -e -o pid= -o ppid=)
+
+                        walk() {
+                            [[ $1 != $$ ]] && kill $1 2>/dev/null || true
+                            for i in ${ALL_CHILD[$1]:=}; do walk $i; done
+                        }
+
+                        walk $1
+                    }
+
+                    on_exit() {
+                      set +e
+                      local exit_status=${ret:=$?}
+                      printf $exit_status > /my/exit/xxx
+                      exit $exit_status
+                    }
+
+                    on_term() {
+                        set +e
+                        docker stop x
+                    }
+
+                    trap on_exit EXIT
+                    trap on_term TERM INT USR1 USR2
+                    '''
+                        .stripIndent().leftTrim()
+
     }
 
 }

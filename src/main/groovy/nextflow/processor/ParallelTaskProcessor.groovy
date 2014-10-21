@@ -295,9 +295,9 @@ class ParallelTaskProcessor extends TaskProcessor {
         // local config provide a set of attributes injected by default in the
         // in the script evaluation context (scope: 'task')
         task.localConfig = new LocalConfig()
-        if( taskConfig.cpus ) task.localConfig.cpus = taskConfig.cpus
+        task.localConfig.cpus = taskConfig.cpus ?: 1
+        task.localConfig.nodes = taskConfig.nodes ?: 1
         if( taskConfig.penv ) task.localConfig.penv = taskConfig.penv
-        if( taskConfig.nodes ) task.localConfig.nodes = taskConfig.nodes
         if( taskConfig.time ) task.localConfig.time = taskConfig.time
         if( taskConfig.memory ) task.localConfig.memory = taskConfig.memory
         if( taskConfig.queue ) task.localConfig.queue = taskConfig.queue
@@ -360,7 +360,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         log.trace "[${task.name}] cache keys: ${keys} -- mode: $mode"
         final hash = CacheHelper.hasher(keys, mode).hash()
 
-        checkCachedOrLaunchTask(task,hash,resumable,RunType.SUBMIT)
+        checkCachedOrLaunchTask(task,hash,resumable,TaskProcessor.RunType.SUBMIT)
 
     }
 

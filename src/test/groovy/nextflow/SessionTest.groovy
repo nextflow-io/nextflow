@@ -23,6 +23,8 @@ package nextflow
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.cli.CmdRun
+import nextflow.trace.TraceFileObserver
 import nextflow.util.Duration
 import spock.lang.Specification
 /**
@@ -32,7 +34,7 @@ import spock.lang.Specification
 class SessionTest extends Specification {
 
 
-    def testBaseDirAndBinDir() {
+    def 'test baseDir and binDir'() {
 
         setup:
         def base = Files.createTempDirectory('test')
@@ -64,7 +66,7 @@ class SessionTest extends Specification {
     }
 
 
-    def testGetQueueSize() {
+    def 'test get queue size'() {
 
         when:
         def session = [:] as Session
@@ -94,7 +96,7 @@ class SessionTest extends Specification {
 
     }
 
-    def testGetPollInterval() {
+    def 'test get poll interval'() {
 
         when:
         def session1 = [:] as Session
@@ -123,7 +125,7 @@ class SessionTest extends Specification {
 
     }
 
-    def testGetExitReadTimeout() {
+    def 'test get exit read timeout'() {
 
         setup:
         def session1 = [:] as Session
@@ -135,7 +137,7 @@ class SessionTest extends Specification {
 
     }
 
-    def testGetQueueStatInterval() {
+    def 'test get queue stat interval'() {
 
         setup:
         def session1 = [:] as Session
@@ -147,7 +149,7 @@ class SessionTest extends Specification {
 
     }
 
-    def testMonitorDumpInterval() {
+    def 'test monitor dump interval'() {
 
         setup:
         def session1 = [:] as Session
@@ -159,7 +161,7 @@ class SessionTest extends Specification {
 
     }
 
-    def testGetExecConfigProp() {
+    def 'test get exec config prop'() {
 
         when:
         def session = [:] as Session
@@ -177,7 +179,7 @@ class SessionTest extends Specification {
 
 
 
-    def testAddLibPath() {
+    def 'test add lib path'() {
 
         setup:
         def path1 = Files.createTempDirectory('test')
@@ -214,6 +216,59 @@ class SessionTest extends Specification {
         base?.deleteDir()
         path1.deleteDir()
         path2.deleteDir()
+
+    }
+
+    def 'test create observers'() {
+
+        def session
+        def result
+        def observer
+
+        when:
+        session = [:] as Session
+        result = session.createObservers(new CmdRun())
+        then:
+        !result
+
+        when:
+        session = [:] as Session
+        result = session.createObservers(new CmdRun(withTrace: 'file.txt'))
+        observer = result[0] as TraceFileObserver
+        then:
+        result.size() == 1
+        observer.tracePath == Paths.get('file.txt').complete()
+        observer.delim == '\t'
+
+        when:
+        session = [:] as Session
+        session.config = [trace: [delim: 'x', fields: 'task_id,name,exit_status']]
+        result = session.createObservers(new CmdRun(withTrace: 'alpha.txt'))
+        observer = result[0] as TraceFileObserver
+        then:
+        result.size() == 1
+        observer.tracePath == Paths.get('alpha.txt').complete()
+        observer.delim == 'x'
+        observer.fields == ['task_id','name','exit_status']
+
+        when:
+        session = [:] as Session
+        session.config = [trace: [delim: 'x', fields: 'task_id,name,exit_status']]
+        result = session.createObservers(new CmdRun())
+        then:
+        !result
+
+        when:
+        session = [:] as Session
+        session.config = [trace: [enabled: true, fields: 'task_id,name,exit_status,vmem']]
+        result = session.createObservers(new CmdRun())
+        observer = result[0] as TraceFileObserver
+        then:
+        result.size() == 1
+        observer.tracePath == Paths.get('trace.csv').complete()
+        observer.delim == '\t'
+        observer.fields == ['task_id','name','exit_status','vmem']
+
 
     }
 

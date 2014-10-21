@@ -22,6 +22,7 @@ package nextflow.processor
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+import nextflow.executor.BashWrapperBuilder
 import nextflow.script.BaseScript
 import nextflow.script.EachInParam
 import nextflow.script.EnvInParam
@@ -56,8 +57,6 @@ class TaskConfig implements Map<String,Object> {
 
     static final transient BOOL_NO = ['false','no','off']
 
-    static final transient DEFAULT_SHELL = ['/bin/bash','-ue']
-
     @Delegate
     protected final Map<String,Object> configProperties
 
@@ -86,7 +85,7 @@ class TaskConfig implements Map<String,Object> {
             echo = false
             undef = false
             cacheable = true
-            shell = (TaskConfig.DEFAULT_SHELL)
+            shell = (BashWrapperBuilder.BASH)
             validExitStatus = [0]
             inputs = new InputsList()
             outputs = new OutputsList()
@@ -168,7 +167,6 @@ class TaskConfig implements Map<String,Object> {
         }
 
     }
-
 
     @PackageScope
     BaseScript getOwnerScript() { ownerScript }
@@ -455,7 +453,7 @@ class TaskConfig implements Map<String,Object> {
     List<String> getShell() {
         final value = configProperties.shell
         if( !value )
-            return DEFAULT_SHELL
+            return BashWrapperBuilder.BASH
 
         if( value instanceof List )
             return value

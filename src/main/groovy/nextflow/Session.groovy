@@ -29,7 +29,6 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.operator.DataflowProcessor
-import groovyx.gpars.util.PoolUtils
 import jsr166y.Phaser
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdRun
@@ -104,7 +103,7 @@ class Session {
 
     final private Phaser phaser = new Phaser()
 
-    private boolean aborted
+    private volatile boolean aborted
 
     private volatile boolean terminated
 
@@ -115,6 +114,10 @@ class Session {
     final int poolSize
 
     private List<TraceObserver> observers = []
+
+    private boolean statsEnabled
+
+    boolean getStatsEnabled() { statsEnabled }
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -144,14 +147,13 @@ class Session {
         // set unique session from the taskConfig object, or create a new one
         uniqueId = (config.session as Map)?.uniqueId ? UUID.fromString( (config.session as Map).uniqueId as String) : UUID.randomUUID()
 
-        if( config.poolSize ) {
-            this.poolSize = config.poolSize as int
-            System.setProperty('gpars.poolsize', config.poolSize as String)
+        if( !config.poolSize ) {
+            def cpus = Runtime.getRuntime().availableProcessors()
+            config.poolSize = cpus >= 3 ? cpus-1 : 2
         }
-        else {
-            // otherwise use the default Gpars pool size
-            this.poolSize = PoolUtils.retrieveDefaultPoolSize()
-        }
+
+        this.poolSize = config.poolSize as int
+        System.setProperty('gpars.poolsize', config.poolSize as String)
         log.debug "Executor pool size: ${poolSize}"
 
         // create the task dispatcher instance
@@ -179,13 +181,27 @@ class Session {
             this.scriptName = scriptFile.name
         }
 
+
+        this.observers = createObservers( runOpts )
+        this.statsEnabled = observers.size()>0
+    }
+
+    @PackageScope
+    List createObservers( CmdRun runOpts ) {
         /*
          * create the execution trace observer
          */
-        def allObservers = []
-        if( runOpts.withTrace ) {
-            def traceFile = FileHelper.asPath(runOpts.withTrace)
-            allObservers << new TraceFileObserver(traceFile)
+        def result = []
+        Boolean isEnabled = config.navigate('trace.enabled') as Boolean
+        if( isEnabled || runOpts.withTrace ) {
+            String fileName = runOpts.withTrace
+            if( !fileName ) fileName = config.navigate('trace.file')
+            if( !fileName ) fileName = TraceFileObserver.DEF_FILE_NAME
+            def traceFile = Paths.get(fileName).complete()
+            def observer = new TraceFileObserver(traceFile)
+            config.navigate('trace.delim') { observer.delim = it }
+            config.navigate('trace.fields') { observer.setFieldsAndFormats(it) }
+            result << observer
         }
 
         /*
@@ -193,16 +209,15 @@ class Session {
          */
         if( runOpts.withExtrae ) {
             try {
-                allObservers << (TraceObserver)Class.forName(EXTRAE_TRACE_CLASS).newInstance()
+                result << (TraceObserver)Class.forName(EXTRAE_TRACE_CLASS).newInstance()
             }
             catch( Exception e ) {
                 log.warn("Unable to load Extrae profiler ${Const.log_detail_tip_message}",e)
             }
         }
 
-        this.observers = Collections.unmodifiableList(allObservers)
+        return result
     }
-
 
     def Session start() {
         log.debug "Session start > phaser register (session)"
@@ -300,7 +315,7 @@ class Session {
     }
 
     final synchronized protected void cleanUp() {
-
+        log.trace "Shutdown: $shutdownCallbacks"
         List<Closure<Void>> all = new ArrayList<>(shutdownCallbacks)
         for( def hook : all ) {
             try {
@@ -319,7 +334,6 @@ class Session {
         log.debug "Session abort -- terminating all processors"
         aborted = true
         allProcessors *. terminate()
-        System.exit( ExitCode.SESSION_ABORTED )
     }
 
     boolean isTerminated() { terminated }

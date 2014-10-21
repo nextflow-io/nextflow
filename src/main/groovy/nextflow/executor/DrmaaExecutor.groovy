@@ -238,7 +238,7 @@ class DrmaaTaskHandler extends TaskHandler {
         return false
     }
 
-
+    @Deprecated
     private getJobInfo() {
         if( fJobInfo )
             return fJobInfo
@@ -328,31 +328,10 @@ class DrmaaTaskHandler extends TaskHandler {
      */
     @Override
     public TraceRecord getTraceRecord() {
-        Map<String,String> resources = getJobInfo()?.getResourceUsage() ?: [:]
 
         def trace = super.getTraceRecord()
-        trace.nativeId = jobId
-        trace.exit = task.exitStatus
-
-        if( resources ) {
-            log.trace "Job $jobId DRMAA resources > $resources"
-            // all time are returns as Linux system
-            if( resources.containsKey('submission_time'))
-                trace.submit = millis(resources['submission_time'])
-
-            if( resources.containsKey('start_time'))
-                trace.start = millis(resources['start_time'])
-
-            if( resources.containsKey('end_time'))
-                trace.complete = millis(resources['end_time'])
-
-            if( resources.containsKey('maxvmem') )
-                trace.mem = resources['maxvmem']
-
-            if( resources.containsKey('cpu'))
-                trace.cpu = resources['cpu']
-
-        }
+        trace.native_id = jobId
+        trace.exit_status = task.exitStatus
 
         return trace
     }
