@@ -69,6 +69,14 @@ allprojects {
         testCompile 'com.google.jimfs:jimfs:1.0'
     }
 
+    // this is required due to this IDEA bug
+    // https://youtrack.jetbrains.com/issue/IDEA-129282
+    sourceSets {
+        main {
+            output.resourcesDir = 'build/classes/main'
+        }
+    }
+
 }
 
 configurations {
