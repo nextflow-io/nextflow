@@ -21,6 +21,7 @@
 package nextflow.processor
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.executor.CrgExecutor
 import nextflow.executor.DrmaaExecutor
 import nextflow.executor.Executor
 import nextflow.executor.LocalExecutor
@@ -37,6 +38,7 @@ import nextflow.script.TaskBody
 import nextflow.util.ServiceDiscover
 
 /**
+ *  Factory class for {@TaskProcessor} instances
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -54,7 +56,8 @@ class ProcessFactory {
             'lsf': LsfExecutor,
             'pbs': PbsExecutor,
             'drmaa': DrmaaExecutor,
-            'slurm': SlurmExecutor
+            'slurm': SlurmExecutor,
+            'crg': CrgExecutor
     ]
 
     private final Session session

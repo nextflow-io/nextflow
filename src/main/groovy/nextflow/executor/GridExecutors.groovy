@@ -505,6 +505,7 @@ class GridTaskHandler extends TaskHandler {
  */
 class SgeExecutor extends AbstractGridExecutor {
 
+    protected List<String> extraOptions
 
     /*
      * Prepare the 'qsub' cmdline. The following options are used
@@ -556,6 +557,10 @@ class SgeExecutor extends AbstractGridExecutor {
             result << "-l" << "virtual_free=${taskConfig.memory.toString().replaceAll(/[\sB]/,'')}"
         }
 
+        if( extraOptions ) {
+            result.addAll(extraOptions)
+        }
+
         // -- at the end append the command script wrapped file name
         if( taskConfig.clusterOptions ) {
             result.addAll( getClusterOptionsAsList() )
@@ -593,7 +598,7 @@ class SgeExecutor extends AbstractGridExecutor {
         return result
     }
 
-    static private Map DECODE_STATUS = [
+    static protected Map DECODE_STATUS = [
             'r': QueueStatus.RUNNING,
             'qw': QueueStatus.PENDING,
             'hqw': QueueStatus.HOLD,
@@ -941,5 +946,23 @@ class PbsExecutor extends AbstractGridExecutor {
         return result
     }
 
+
+}
+
+/**
+ * An executor specialised for CRG cluster
+ */
+class CrgExecutor extends SgeExecutor {
+
+    @Override
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
+
+        if( task.container ) {
+            if( extraOptions == null ) extraOptions = []
+            extraOptions << '-soft' << '-l' << "docker_images=${task.container}"
+        }
+
+        return super.getSubmitCommandLine(task, scriptFile)
+    }
 
 }
