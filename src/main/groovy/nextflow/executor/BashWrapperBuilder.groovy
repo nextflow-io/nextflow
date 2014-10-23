@@ -108,15 +108,30 @@ class BashWrapperBuilder {
             local tot=\'\'
             if [[ "$data" ]]; then
               tot=$(awk '{ t3+=($3*10); t4+=($4*10); t5+=$5; t6+=$6; t7+=$7; t8+=$8; t9+=$9; t10+=$10; t11+=$11; t12+=$12; t13+=$13; t14+=$14 } END { print NR,"0",t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14 }' <<< "$data")
-              echo -e "$data" > .stats
-              echo -e "$tot" >> .stats
               printf "$tot\\n"
             fi
         }
 
-        function nxf_trace() {
+        nxf_sleep() {
+          if [[ $1 < 0 ]]; then sleep 5;
+          elif [[ $1 < 10 ]]; then sleep 0.1;
+          elif [[ $1 < 130 ]]; then sleep 1;
+          else sleep 5; fi
+        }
+
+        nxf_date() {
+            case `uname` in
+                Darwin) if hash gdate 2>/dev/null; then echo 'gdate +%s%3N'; else echo 'date +%s000'; fi;;
+                *) echo 'date +%s%3N';;
+            esac
+        }
+
+        NXF_DATE=$(nxf_date)
+
+        nxf_trace() {
           local pid=$1; local trg=$2;
           local tot;
+          local count=0;
           declare -a max=(); for i in {0..13}; do max[i]=0; done
           while [[ true ]]; do
             tot=$(nxf_pstat $pid)
@@ -127,7 +142,8 @@ class BashWrapperBuilder {
             done
             echo "pid state %cpu %mem vmem rss peak_vmem peak_rss rchar wchar syscr syscw read_bytes write_bytes" > $trg
             echo "${max[@]}" >> $trg
-            sleep 2
+            nxf_sleep $count
+            count=$((count+1))
           done
         }
 
@@ -189,6 +205,7 @@ class BashWrapperBuilder {
 
         // docker config
         this.dockerConfig = task.processor?.session?.config?.docker
+        // TODO deprecate docker.image property
         this.dockerImage = task.container ?: dockerConfig?.image
 
         // stats
@@ -210,6 +227,7 @@ class BashWrapperBuilder {
 
         // docker config
         this.dockerConfig = params.dockerConfig
+        // TODO deprecate docker.image property
         this.dockerImage = params.container ?: dockerConfig?.image
         this.dockerMount = params.dockerMount
         this.statsEnabled = params.statsEnabled
@@ -355,14 +373,21 @@ class BashWrapperBuilder {
             final wrapper = new StringBuilder()
             wrapper << '#!' << BASH.join(' ') << ENDL
             wrapper << SCRIPT_TRACE << ENDL
+            wrapper << 'trap \'exit ${ret:=$?}\' EXIT' << ENDL
+            wrapper << 'start_millis=$($NXF_DATE)'  << ENDL
             wrapper << '(' << ENDL
             wrapper << interpreter << ' ' << scriptFile.toString()
             if( input != null ) wrapper << ' < ' << inputFile.toString()
-            wrapper << ' &> ' << outputFile.toAbsolutePath() << ENDL
+            wrapper << ' &> ' << outputFile.getName() << ENDL
             wrapper << ') &' << ENDL
-            wrapper << 'pid=$!' << ENDL
-            wrapper << '( nxf_trace "$pid" ' << TaskRun.CMD_TRACE <<' ) &' << ENDL
-            wrapper << 'wait $pid' << ENDL
+            wrapper << 'pid=$!' << ENDL                     // get the PID of the main job
+            wrapper << 'nxf_trace "$pid" ' << TaskRun.CMD_TRACE << ' &' << ENDL
+            wrapper << 'mon=$!' << ENDL                     // get the pid of the monitor process
+            wrapper << 'wait $pid' << ENDL                  // wait for main job completion
+            wrapper << 'ret=$?' << ENDL                     // get the main job error code
+            wrapper << 'end_millis=$($NXF_DATE)' << ENDL    // get the ending time
+            wrapper << 'kill $mon || wait $mon ' << ENDL    // kill the monitor and wait for its ending
+            wrapper << '[ -f ' << TaskRun.CMD_TRACE << ' ] && echo $((end_millis-start_millis)) >> ' << TaskRun.CMD_TRACE << ENDL
             // save to file
             wrapperFile.text = wrapper.toString()
 
@@ -372,7 +397,7 @@ class BashWrapperBuilder {
         else {
             runner << interpreter << ' ' << scriptFile.toString()
             if( input != null ) runner << ' < ' << inputFile.toString()
-            runner << ' &> ' << outputFile.toAbsolutePath()  << ENDL
+            runner << ' &> ' << outputFile.getName() << ENDL
         }
         runner << ') &' << ENDL
         runner << 'pid=$!' << ENDL
@@ -389,12 +414,14 @@ class BashWrapperBuilder {
         /*
          * un-stage output files
          */
-        if( (changeDir || workDir != targetDir) && unstagingScript  ) {
+        if( changeDir )
+            runner << 'cp ' << outputFile.name << ' ' << task.workDir << ' || true' << ENDL
+
+        if( (changeDir || workDir != targetDir) && unstagingScript  )
             runner << unstagingScript << ENDL
-        }
-        if( changeDir && statsEnabled ) {
-            runner << 'cp ' << TaskRun.CMD_TRACE << ' ' << task.workDir << ENDL
-        }
+
+        if( changeDir && statsEnabled )
+            runner << 'cp ' << TaskRun.CMD_TRACE << ' ' << task.workDir << ' || true' << ENDL
 
         runnerFile.text = wrapperScript = runner.toString()
         return runnerFile

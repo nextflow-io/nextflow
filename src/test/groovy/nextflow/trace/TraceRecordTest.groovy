@@ -131,6 +131,7 @@ class TraceRecordTest extends Specification {
         def traceText =  '''
         pid state %cpu %mem vmem rss peak_vmem peak_rss rchar wchar syscr syscw read_bytes write_bytes
         1 0 10 20 11084 1220 21084 2220 4790 12 11 1 20 30
+        153
         '''
                 .leftTrim()
 
@@ -150,6 +151,7 @@ class TraceRecordTest extends Specification {
         trace.syscw ==  1 * KB
         trace.read_bytes == 20 * KB
         trace.write_bytes == 30 * KB
+        trace.run_time == 153
 
     }
 

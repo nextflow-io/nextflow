@@ -325,20 +325,20 @@ class TraceRecord {
 
         String[] header = null
         final lines = text.readLines()
-        for( int line=0; line<lines.size(); line++ ) {
-            String row = lines[line]
+        for( int count=0; count<lines.size(); count++ ) {
+            String row = lines[count]
 
             /*
              * 1st line -- parse the header
              */
-            if( line == 0 ) {
+            if( count == 0 ) {
                 header = row.trim().split(/\s+/)
             }
 
             /*
              * 2nd line -- parse values produced by 'ps'
              */
-            else if( line == 1 ) {
+            else if( count == 1 ) {
                 String[] values = row.trim().split(/\s+/)
                 for( int i=0; i<values.length; i++ ) {
 
@@ -349,6 +349,17 @@ class TraceRecord {
                     else if( i>3 ) {
                         this.put(name, values[i].toLong() * 1024)
                     }
+                }
+            }
+
+            // third line is supposed to be
+            else if( count == 2 ) {
+                try {
+                    def elapsed = row.toString().trim().toLong()
+                    this.put('run_time', elapsed)
+                }
+                catch( Exception e ) {
+                    log.debug "Not a valid trace `run_time` value: '$count'"
                 }
             }
 
