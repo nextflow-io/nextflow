@@ -386,7 +386,7 @@ class BashWrapperBuilder {
             wrapper << 'wait $pid' << ENDL                  // wait for main job completion
             wrapper << 'ret=$?' << ENDL                     // get the main job error code
             wrapper << 'end_millis=$($NXF_DATE)' << ENDL    // get the ending time
-            wrapper << 'kill $mon || wait $mon ' << ENDL    // kill the monitor and wait for its ending
+            wrapper << 'kill $mon || wait $mon' << ENDL     // kill the monitor and wait for its ending
             wrapper << '[ -f ' << TaskRun.CMD_TRACE << ' ] && echo $((end_millis-start_millis)) >> ' << TaskRun.CMD_TRACE << ENDL
             // save to file
             wrapperFile.text = wrapper.toString()
@@ -415,13 +415,13 @@ class BashWrapperBuilder {
          * un-stage output files
          */
         if( changeDir )
-            runner << 'cp ' << outputFile.name << ' ' << task.workDir << ' || true' << ENDL
+            runner << 'cp ' << outputFile.name << ' ' << workDir << ' || true' << ENDL
 
         if( (changeDir || workDir != targetDir) && unstagingScript  )
             runner << unstagingScript << ENDL
 
         if( changeDir && statsEnabled )
-            runner << 'cp ' << TaskRun.CMD_TRACE << ' ' << task.workDir << ' || true' << ENDL
+            runner << 'cp ' << TaskRun.CMD_TRACE << ' ' << workDir << ' || true' << ENDL
 
         runnerFile.text = wrapperScript = runner.toString()
         return runnerFile

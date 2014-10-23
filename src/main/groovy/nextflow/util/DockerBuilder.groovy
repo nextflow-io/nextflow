@@ -158,7 +158,7 @@ class DockerBuilder {
         result << ' -w $PWD '
 
         if( entryPoint )
-            result << '--entrypoint' << entryPoint
+            result << '--entrypoint ' << entryPoint << ' '
 
         if( options )
             result << options.trim() << ' '

@@ -23,6 +23,7 @@ import java.text.DateFormat
 import java.text.SimpleDateFormat
 
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -36,6 +37,7 @@ import nextflow.util.MemoryUnit
   */
 @Slf4j
 @CompileStatic
+@EqualsAndHashCode(includes = 'store')
 class TraceRecord {
 
     final private static String DEFAULT_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS"
@@ -287,22 +289,6 @@ class TraceRecord {
     String toString() {
         "${this.class.simpleName}${store}"
     }
-
-    boolean equals(o) {
-        if (this.is(o)) return true
-        if (getClass() != o.class) return false
-
-        TraceRecord that = (TraceRecord) o
-
-        if (store != that.store) return false
-
-        return true
-    }
-
-    int hashCode() {
-        return store.hashCode()
-    }
-
 
     /**
      * Parse the trace file

@@ -89,7 +89,7 @@ class TraceFileObserver implements TraceObserver {
     private boolean useRawNumber
 
 
-    TraceFileObserver setFields( List<String> entries ) {
+    void setFields( List<String> entries ) {
 
         def names = TraceRecord.FIELDS.keySet()
         def result = new ArrayList<String>(entries.size())
@@ -111,7 +111,6 @@ class TraceFileObserver implements TraceObserver {
         }
 
         this.fields = result
-        return this
     }
 
     TraceFileObserver setFieldsAndFormats( value ) {

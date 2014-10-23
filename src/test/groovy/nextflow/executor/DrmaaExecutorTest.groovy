@@ -160,7 +160,6 @@ class DrmaaExecutorTest extends Specification {
         handler.status = TaskHandler.Status.SUBMITTED
         handler.submitTimeMillis = 1406264935000
         handler.startTimeMillis = 1406265009000
-        handler.completeTimeMillis = 1406265009000
         then:
         handler.getTraceRecord() == expected
 

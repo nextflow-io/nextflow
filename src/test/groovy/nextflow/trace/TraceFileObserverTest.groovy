@@ -111,7 +111,6 @@ class TraceFileObserverTest extends Specification {
         record.name == 'simple_task'
         record.submit >= now
         record.start == 0
-        record.complete == 0
         observer.current.containsKey(111)
 
         when:
@@ -121,7 +120,6 @@ class TraceFileObserverTest extends Specification {
         record = observer.current.get(111)
         then:
         record.start >= record.submit
-        record.complete == 0
         observer.current.containsKey(111)
 
         when:
@@ -145,11 +143,11 @@ class TraceFileObserverTest extends Specification {
         parts[3] == 'simple_task'                   // process name
         parts[4] == TaskHandler.Status.COMPLETED.toString()
         parts[5] == '127'                           // exist-status
-        TraceRecord.getDateFormat().parse(parts[6]).time == record.submit         // submit time
-        TraceRecord.getDateFormat().parse(parts[7]).time == record.start          // start time
-        TraceRecord.getDateFormat().parse(parts[8]).time == record.complete       // complete time
-        new Duration(parts[9]).toMillis() == record.complete -record.submit                 // wall-time
-        new Duration(parts[10]).toMillis() == record.complete -record.start                 // run-time
+        TraceRecord.getDateFormat().parse(parts[6]).time == record.submit           // submit time
+        TraceRecord.getDateFormat().parse(parts[7]).time == record.start            // start time
+        TraceRecord.getDateFormat().parse(parts[8]).time == record.complete         // complete time
+        new Duration(parts[9]).toMillis() == record.complete -record.submit         // wall-time
+        new Duration(parts[10]).toMillis() == record.complete -record.start         // run-time
 
         cleanup:
         testFolder.deleteDir()
@@ -165,11 +163,13 @@ class TraceFileObserverTest extends Specification {
         record.hash = '43d7ef'
         record.native_id = '2000'
         record.name = 'hello'
-        record.status = TaskHandler.Status.SUBMITTED
+        record.status = TaskHandler.Status.COMPLETED
         record.exit_status = 99
         record.start = 1408714875000
         record.submit = 1408714874000
         record.complete = 1408714912000
+        record.wall_time = 1408714912000 - 1408714874000
+        record.run_time = 1408714912000 - 1408714875000
         record.'%cpu' = 17.50f
         record.rss = 10_000 * 1024
         record.vmem = 20_000 * 1024
@@ -185,7 +185,7 @@ class TraceFileObserverTest extends Specification {
         result[1] == '43d7ef'                   // hash
         result[2] == '2000'                     // native id
         result[3] == 'hello'                    // name
-        result[4] == 'SUBMITTED'                // status
+        result[4] == 'COMPLETED'                // status
         result[5] == '99'                       // exit status
         result[6] == '2014-08-22 13:41:14.000'  // submit
         result[7] == '2014-08-22 13:41:15.000'  // start

@@ -243,7 +243,7 @@ class ConfigBuilderTest extends Specification {
 
     }
 
-    def 'run with docker 3'() {
+    def 'run without docker'() {
 
         given:
         def file = Files.createTempFile('test','config')
@@ -263,7 +263,7 @@ class ConfigBuilderTest extends Specification {
         then:
         !config.docker.enabled
         config.docker.image == 'busybox'
-        config.process.container == 'busybox'
+        !config.process.container
 
     }
 
