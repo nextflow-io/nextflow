@@ -42,6 +42,8 @@ class TraceRecord {
 
     final static NA = '-'
 
+    final static List<String> NON_PRIMITIVE_TYPES = ['date','time','perc','mem']
+
     static final Map<String,String> FIELDS = [
             task_id:    'str',
             hash:       'str',
@@ -103,10 +105,19 @@ class TraceRecord {
     @PackageScope
     static String fmtNumber(def value, String fmt) {
         if( value == null ) return NA
-        if( value instanceof Integer )
+        if( value instanceof Number )
             return value != Integer.MAX_VALUE ? value.toString() : NA
+        else if( value instanceof Duration ) {
+            return value.toMillis().toString()
+        }
+        else if( value instanceof MemoryUnit ) {
+            return String.valueOf(value.toBytes())
+        }
+        else if( value instanceof Date ) {
+            return String.valueOf( value.getTime() )
+        }
         else {
-            return value
+            return value.toString()
         }
     }
 
@@ -182,21 +193,10 @@ class TraceRecord {
 
     def void put( String name, def value ) {
         assert keySet().contains(name), "Not a valid TraceRecord field: '$name'"
-        store.put(name, value)
-
-        // when then 'complete' timestamp is set, calculates
-        // the ''wall_time' and 'run_time' fields
-        if( name == 'complete' && value instanceof Long ) {
-            if( store.submit )
-                store.wall_time = (value as long) - (store.submit as long)
-
-            if( store.start )
-                store.run_time = (value as long) - (store.start as long)
-        }
 
         // vmpeak: Peak virtual memory size
         // this is a synonym of 'max_vmem' field
-        else if( name == 'vmpeak' ) {
+        if( name == 'vmpeak' ) {
             store.put('max_vmem', value)
         }
 
@@ -204,6 +204,10 @@ class TraceRecord {
         // This is a synonym of 'max_rss' field
         else if( name == 'vmhwm' ) {
             store.put('max_rss', value)
+        }
+
+        else {
+            store.put(name, value)
         }
     }
 
@@ -268,21 +272,11 @@ class TraceRecord {
      * @param delim A delimiter that separates fields entries in the final string
      * @return The final string containing all field values
      */
-    String render( List<String> fields, String delim ) {
+    String render( List<String> fields, List<String> formats, String delim ) {
         def result = new ArrayList(fields.size())
-        for( def item : fields ) {
-            String name
-            String format
-            int p = item.indexOf(':')
-            if( p == -1 ) {
-                name = item
-                format = null
-            }
-            else {
-                name = item.substring(0,p)
-                format = item.substring(p+1)
-            }
-
+        for( int i=0; i<fields.size(); i++ ) {
+            String name = fields[i]
+            String format = i<formats?.size() ? formats[i] : null
             result << (get(name, format) ?: NA)
         }
 

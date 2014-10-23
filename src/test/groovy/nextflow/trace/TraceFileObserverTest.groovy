@@ -62,12 +62,24 @@ class TraceFileObserverTest extends Specification {
     }
 
     def 'test set fields and formats'() {
+
+        def trace
+
         when:
-        def trace = [:] as TraceFileObserver
-        trace.setFieldsAndFormats(['task_id:str','name:str','status:num', 'start:date', 'wall_time:time'])
+        trace = [:] as TraceFileObserver
+        trace.setFieldsAndFormats(['task_id:str','name:str','status:num', 'start', 'wall_time'])
         then:
         trace.fields ==  ['task_id','name','status', 'start', 'wall_time']
         trace.formats == ['str','str','num', 'date', 'time']
+
+        when:
+        trace = [:] as TraceFileObserver
+        trace.useRawNumbers(true)
+        trace.setFieldsAndFormats(['task_id:str','name:str','status:num', 'start:date', 'wall_time:time', 'run_time'])
+        then:
+        trace.fields ==  ['task_id','name','status', 'start', 'wall_time', 'run_time']
+        trace.formats == ['str','str','num', 'num', 'num', 'num']
+
     }
 
     def 'test file trace'() {

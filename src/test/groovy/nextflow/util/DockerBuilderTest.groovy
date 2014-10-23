@@ -63,6 +63,7 @@ class DockerBuilderTest extends Specification {
         new DockerBuilder('fedora').addEnv(envFile).build() == 'docker run -e "BASH_ENV=env-file" -v $PWD:$PWD -w $PWD fedora'
         new DockerBuilder('ubuntu').params(temp:'/hola').build() == 'docker run -v /hola:/tmp -v $PWD:$PWD -w $PWD ubuntu'
         new DockerBuilder('busybox').params(sudo: true).build() == 'sudo docker run -v $PWD:$PWD -w $PWD busybox'
+        new DockerBuilder('busybox').params(entry: '/bin/bash').build() == 'sudo docker run -v $PWD:$PWD -w $PWD --entrypoiny /bin/bash busybox'
         new DockerBuilder('busybox').params(runOptions: '-x --zeta').build() == 'docker run -v $PWD:$PWD -w $PWD -x --zeta busybox'
         new DockerBuilder('busybox').params(userEmulation:true).build() == 'docker run -u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME -v $PWD:$PWD -w $PWD busybox'
         new DockerBuilder('busybox').params(registry:'local:5000').build() == 'docker run -v $PWD:$PWD -w $PWD local:5000/busybox'

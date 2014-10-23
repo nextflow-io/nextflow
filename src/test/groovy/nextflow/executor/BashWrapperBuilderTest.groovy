@@ -148,8 +148,8 @@ class BashWrapperBuilderTest extends Specification {
 
                 set +e
                 (
-                /bin/bash -ue ${folder}/.command.sh &> ${folder}/.command.out
-                ) &
+                /bin/bash -ue ${folder}/.command.sh
+                ) &> ${folder}/.command.out &
                 pid=\$!
                 wait \$pid || ret=\$?
                 """
@@ -222,7 +222,7 @@ class BashWrapperBuilderTest extends Specification {
                 set +e
                 (
                 /bin/bash -ue ${folder}/.command.run.1
-                ) &
+                ) &> ${folder}/.command.out &
                 pid=\$!
                 wait \$pid || ret=\$?
                 """
@@ -301,8 +301,8 @@ class BashWrapperBuilderTest extends Specification {
 
                 set +e
                 (
-                sudo docker run -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name xyz busybox /bin/bash -ue ${folder}/.command.sh &> ${folder}/.command.out
-                ) &
+                sudo docker run -i -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name xyz busybox /bin/bash -ue ${folder}/.command.sh
+                ) &> ${folder}/.command.out &
                 pid=\$!
                 wait \$pid || ret=\$?
                 sudo docker rm xyz &>/dev/null &
@@ -379,8 +379,8 @@ class BashWrapperBuilderTest extends Specification {
 
                 set +e
                 (
-                docker run -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name xyz busybox /bin/bash -ue ${folder}/.command.sh &> ${folder}/.command.out
-                ) &
+                docker run -i -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name xyz busybox /bin/bash -ue ${folder}/.command.sh
+                ) &> ${folder}/.command.out &
                 pid=\$!
                 wait \$pid || ret=\$?
                 docker rm xyz &>/dev/null &
@@ -460,8 +460,8 @@ class BashWrapperBuilderTest extends Specification {
 
                 set +e
                 (
-                docker run -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name c1 ubuntu /bin/bash -ue ${folder}/.command.sh &> ${folder}/.command.out
-                ) &
+                docker run -i -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name c1 ubuntu /bin/bash -ue ${folder}/.command.sh
+                ) &> ${folder}/.command.out &
                 pid=\$!
                 wait \$pid || ret=\$?
                 """

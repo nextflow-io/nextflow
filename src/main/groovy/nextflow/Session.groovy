@@ -199,6 +199,7 @@ class Session {
             if( !fileName ) fileName = TraceFileObserver.DEF_FILE_NAME
             def traceFile = Paths.get(fileName).complete()
             def observer = new TraceFileObserver(traceFile)
+            config.navigate('trace.raw') { it -> observer.useRawNumbers(it == true) }
             config.navigate('trace.delim') { observer.delim = it }
             config.navigate('trace.fields') { observer.setFieldsAndFormats(it) }
             result << observer

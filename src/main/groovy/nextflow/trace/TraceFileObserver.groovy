@@ -22,6 +22,7 @@ package nextflow.trace
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
 import nextflow.Session
@@ -33,6 +34,7 @@ import nextflow.processor.TaskProcessor
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class TraceFileObserver implements TraceObserver {
 
     static final String DEF_FILE_NAME = 'trace.csv'
@@ -61,6 +63,7 @@ class TraceFileObserver implements TraceObserver {
 
     List<String> formats
 
+
     /**
      * The delimiter character used to separate column in the CSV file
      */
@@ -82,6 +85,8 @@ class TraceFileObserver implements TraceObserver {
     private Map<Object,TraceRecord> current = new ConcurrentHashMap<>()
 
     private Agent<PrintWriter> writer
+
+    private boolean useRawNumber
 
 
     TraceFileObserver setFields( List<String> entries ) {
@@ -115,7 +120,7 @@ class TraceFileObserver implements TraceObserver {
             entries = value.split(/,/) as List<String>
         }
         else if( value instanceof List ) {
-            entries = value
+            entries = (List)value
         }
         else {
             throw new IllegalArgumentException("Not a valid trace fields value: $value")
@@ -130,20 +135,39 @@ class TraceFileObserver implements TraceObserver {
             int p = x.indexOf(':')
             if( p == -1 ) {
                 name = x
-                fmt = null
+                fmt = TraceRecord.FIELDS.get(name)      // get the default type
             }
             else {
                 name = x.substring(0,p)
                 fmt = x.substring(p+1)
             }
 
+            if( useRawNumber && fmt in TraceRecord.NON_PRIMITIVE_TYPES ) {
+                fmt = 'num'
+            }
+
             fields << name.trim()
-            formats << fmt?.trim()
+            formats << fmt.trim()
         }
 
         setFields(fields)
         setFormats(formats)
 
+        return this
+    }
+
+    TraceFileObserver useRawNumbers( boolean value ) {
+        this.useRawNumber = value
+
+        List<String> local = []
+        for( String name : fields ) {
+            def type = TraceRecord.FIELDS.get(name)
+            if( useRawNumber && type in TraceRecord.NON_PRIMITIVE_TYPES ) {
+                type = 'num'
+            }
+            local << type
+        }
+        this.formats = local
         return this
     }
 
@@ -256,7 +280,7 @@ class TraceFileObserver implements TraceObserver {
      */
     String render(TraceRecord trace) {
         assert trace
-        trace.render(fields, delim)
+        trace.render(fields, formats, delim)
     }
 
 }

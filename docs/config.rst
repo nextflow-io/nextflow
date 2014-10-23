@@ -231,6 +231,7 @@ Name                Description
 ================== ================
 enabled             Turn this flag to ``true`` to enable Docker execution (default: ``false``)
 sudo                Executes Docker run command as ``sudo`` (default: ``false``)
+tty                 Allocate a pseudo-tty (default: ``false``)
 temp                Mounts a path of your choice as the ``/tmp`` directory in the container. Use the special value ``auto`` to create a temporary directory each time a container is created
 remove              Clean-up the container after the execution (default: ``true``). For details see: http://docs.docker.com/reference/run/#clean-up-rm
 runOptions          This attribute can be used to provide any extra command line options supported by the ``docker run`` command. For details see: http://docs.docker.com/reference/run

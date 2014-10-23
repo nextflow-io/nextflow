@@ -36,7 +36,7 @@ import spock.lang.Specification
 class ConfigBuilderTest extends Specification {
 
 
-    def buildConfigObject () {
+    def 'build config object' () {
 
         setup:
         def env = [PATH:'/local/bin', HOME:'/home/my']
@@ -55,7 +55,7 @@ class ConfigBuilderTest extends Specification {
 
     }
 
-    def buildConfigObject2 () {
+    def 'build config object 2' () {
 
         setup:
         def builder = [:] as ConfigBuilder
@@ -99,7 +99,7 @@ class ConfigBuilderTest extends Specification {
 
     }
 
-    def buildConfigObject3 () {
+    def 'build config object 3' () {
 
         setup:
         def builder = [:] as ConfigBuilder
@@ -126,7 +126,7 @@ class ConfigBuilderTest extends Specification {
 
     }
 
-    def buildConfigObject4 () {
+    def 'build config object 4' () {
 
         setup:
         def builder = [:] as ConfigBuilder
@@ -149,7 +149,7 @@ class ConfigBuilderTest extends Specification {
     }
 
 
-    def testValidateConfigFiles () {
+    def 'valid config files' () {
 
         given:
         def path = Files.createTempDirectory('test')
@@ -172,7 +172,7 @@ class ConfigBuilderTest extends Specification {
 
     }
 
-    def testCommandExecutorOptions() {
+    def 'command executor options'() {
 
         when:
         def opt = new CliOptions()
@@ -185,7 +185,7 @@ class ConfigBuilderTest extends Specification {
 
     }
 
-    def testRunCommandClusterOptions() {
+    def 'run command cluster options'() {
 
         when:
         def opt = new CliOptions()
@@ -198,7 +198,7 @@ class ConfigBuilderTest extends Specification {
 
     }
 
-    def testRunWithDocker() {
+    def 'run with docker'() {
 
         when:
         def opt = new CliOptions()
@@ -207,11 +207,11 @@ class ConfigBuilderTest extends Specification {
 
         then:
         config.docker.enabled
-        config.docker.image == 'cbcrg/piper'
+        config.process.container == 'cbcrg/piper'
 
     }
 
-    def testRunWithDocker2() {
+    def 'run with docker 2'() {
 
         given:
         def file = Files.createTempFile('test','config')
@@ -231,6 +231,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.docker.enabled
         config.docker.image == 'busybox'
+        config.process.container == 'busybox'
 
         when:
         opt = new CliOptions(config: [file.toFile().canonicalPath] )
@@ -238,11 +239,11 @@ class ConfigBuilderTest extends Specification {
         config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         config.docker.enabled
-        config.docker.image == 'cbcrg/mybox'
+        config.process.container == 'cbcrg/mybox'
 
     }
 
-    def testRunWithDocker3() {
+    def 'run with docker 3'() {
 
         given:
         def file = Files.createTempFile('test','config')
@@ -262,10 +263,11 @@ class ConfigBuilderTest extends Specification {
         then:
         !config.docker.enabled
         config.docker.image == 'busybox'
+        config.process.container == 'busybox'
 
     }
 
-    def testConfigWithClusterOptions() {
+    def 'config with cluster options'() {
 
         when:
         def opt = new CliOptions()

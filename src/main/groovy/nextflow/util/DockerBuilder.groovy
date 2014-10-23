@@ -53,6 +53,10 @@ class DockerBuilder {
 
     private String name
 
+    private boolean tty
+
+    private String entryPoint
+
     private static final String USER_AND_HOME_EMULATION = '-u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME'
 
     private String runCommand
@@ -105,6 +109,12 @@ class DockerBuilder {
             if( !registry.endsWith('/') ) registry += '/'
         }
 
+        if( params.containsKey('tty') )
+            this.tty = params.tty?.toString() == 'true'
+
+        if( params.containsKey('entry') )
+            this.entryPoint = params.entry
+
         return this
     }
 
@@ -127,7 +137,10 @@ class DockerBuilder {
         if( sudo )
             result << 'sudo '
 
-        result << 'docker run '
+        result << 'docker run -i '
+
+        if( tty )
+            result << '-t '
 
         // add the environment
         for( def entry : env ) {
@@ -143,6 +156,9 @@ class DockerBuilder {
         // mount the input folders
         result << makeVolumes(mounts)
         result << ' -w $PWD '
+
+        if( entryPoint )
+            result << '--entrypoint' << entryPoint
 
         if( options )
             result << options.trim() << ' '

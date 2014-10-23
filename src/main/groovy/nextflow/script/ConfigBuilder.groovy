@@ -308,7 +308,14 @@ class ConfigBuilder {
             config.docker.enabled = true
             if( cmdRun.withDocker != '-' ) {
                 // this is supposed to be a docker image name
-                config.docker.image = cmdRun.withDocker
+                config.process.container = cmdRun.withDocker
+            }
+            else if( config.docker.image ) {
+                config.process.container = config.docker.image
+            }
+
+            if( ! config.process.container ) {
+                throw new AbortOperationException("You request to run with Docker but no image has been specified")
             }
         }
     }
