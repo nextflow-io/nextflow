@@ -22,26 +22,63 @@ For example::
 
   nextflow run <pipeline name> -with-trace
 
-It will create a file named ``trace.csv`` in the current directory. The content looks like the above example::
+It will create a file named ``trace.csv`` in the current directory. The content looks like the above example:
 
-    task-id	hash	native-id	name	status	exit-status	submit	start	complete	wall-time	run-time	cpu	mem
-    14	15/93fcd5	952	blast (2)	COMPLETED	0	8/26/2014 18:11:45	8/26/2014 18:11:45	8/26/2014 18:11:53	8s	7s	2.74	422.1 MB
-    15	1d/5c2e2b	953	blast (3)	COMPLETED	0	8/26/2014 18:11:45	8/26/2014 18:11:45	8/26/2014 18:11:49	3s	3s	3.15	585.1 MB
-    13	b4/e029e3	954	blast (1)	COMPLETED	0	8/26/2014 18:11:45	8/26/2014 18:11:45	8/26/2014 18:12:00	14s	14s	4.93	778.7 MB
-    22	3b/c3932b	956	blast (4)	COMPLETED	0	8/26/2014 18:11:45	8/26/2014 18:11:45	8/26/2014 18:11:52	7s	7s	5.72	405.7 MB
-    24	9f/290cc2	957	blast (6)	COMPLETED	0	8/26/2014 18:11:45	8/26/2014 18:11:45	8/26/2014 18:11:54	8s	8s	2.44	423 MB
-    31	9e/d06eb2	964	exonerate (4)	COMPLETED	0	8/26/2014 18:12:16	8/26/2014 18:12:17	8/26/2014 18:12:22	6s	5s	5.07	126.4 MB
-    34	94/b3d5f5	967	exonerate (7)	COMPLETED	0	8/26/2014 18:12:16	8/26/2014 18:12:17	8/26/2014 18:12:26	9s	8s	8.72	566.4 MB
-    29	57/a9e2fd	962	exonerate (2)	COMPLETED	0	8/26/2014 18:12:16	8/26/2014 18:12:17	8/26/2014 18:12:32	15s	14s	13.88	92.5 MB
-    30	18/3355ae	963	exonerate (3)	COMPLETED	0	8/26/2014 18:12:16	8/26/2014 18:12:17	8/26/2014 18:12:27	11s	9s	9.78	772.6 MB
-    80	1d/9655d1	986	similarity (3)	COMPLETED	0	8/26/2014 18:14:31	8/26/2014 18:14:31	8/26/2014 18:14:31	541ms	415ms	0.18	0
-    78	ac/3067fe	987	similarity (1)	COMPLETED	0	8/26/2014 18:14:31	8/26/2014 18:14:33	8/26/2014 18:14:34	2s	671ms	0.53	0
-    79	c9/b2fc2a	988	similarity (2)	COMPLETED	0	8/26/2014 18:14:31	8/26/2014 18:14:33	8/26/2014 18:14:34	3s	1s	1.08	0
-    81	b6/d5cc53	989	similarity (4)	COMPLETED	0	8/26/2014 18:14:31	8/26/2014 18:14:33	8/26/2014 18:14:34	2s	479ms	0.31	0
-    124	02/18b20d	1032	matrix (1)	COMPLETED	0	8/26/2014 18:15:04	8/26/2014 18:15:05	8/26/2014 18:15:05	988ms	326ms	0.06	0
+======= ========= ========= =============== =========== =========== ======================= ======================= ======================= =========== =========== ======= =========== =========== =========== ===========
+task_id hash      native_id   name          status      exit_status submit                  start                   complete                wall_time   run_time    %cpu    rss         vmem        rchar       wchar
+======= ========= ========= =============== =========== =========== ======================= ======================= ======================= =========== =========== ======= =========== =========== =========== ===========
+19      45/ab752a 2032      blast (1)       COMPLETED   0           2014-10-23 16:33:16.288 2014-10-23 16:33:46.745 2014-10-23 16:34:17.168 1m          5s          0.0%    29.8 MB     354 MB      33.3 MB     0
+20      72/db873d 2033      blast (2)       COMPLETED   0           2014-10-23 16:34:17.211 2014-10-23 16:34:47.346 2014-10-23 16:34:47.349 30s         10s         35.7%   152.8 MB    428.1 MB    192.7 MB    1 MB
+21      53/d13188 2034      blast (3)       COMPLETED   0           2014-10-23 16:34:17.518 2014-10-23 16:34:47.370 2014-10-23 16:34:47.374 29s         20s         4.5%    289.5 MB    381.6 MB    33.3 MB     0
+22      26/f65116 2035      blast (4)       COMPLETED   0           2014-10-23 16:34:18.459 2014-10-23 16:34:49.399 2014-10-23 16:34:49.414 30s         9s          6.0%    122.8 MB    353.4 MB    33.3 MB     0
+23      88/bc00e4 2036      blast (5)       COMPLETED   0           2014-10-23 16:34:18.507 2014-10-23 16:34:49.432 2014-10-23 16:34:49.438 30s         19s         5.0%    195 MB      395.8 MB    65.3 MB     121 KB
+24      74/2556e9 2037      blast (6)       COMPLETED   0           2014-10-23 16:34:18.553 2014-10-23 16:34:49.456 2014-10-23 16:34:49.459 30s         12s         43.6%   140.7 MB    432.2 MB    192.7 MB    182.7 MB
+28      b4/0f9613 2041      exonerate (1)   COMPLETED   0           2014-10-23 16:38:19.657 2014-10-23 16:38:20.397 2014-10-23 16:39:50.420 1m 30s      1m 11s      94.3%   611.6 MB    693.8 MB    961.2 GB    6.1 GB
+32      af/7f2f57 2044      exonerate (4)   COMPLETED   0           2014-10-23 16:46:50.902 2014-10-23 16:47:21.549 2014-10-23 16:47:52.503 1m 1s       38s         36.6%   115.8 MB    167.8 MB    364 GB      5.1 GB
+33      37/ab1fcc 2045      exonerate (5)   COMPLETED   0           2014-10-23 16:47:51.625 2014-10-23 16:48:21.835 2014-10-23 16:48:21.838 30s         12s         59.6%   696 MB      734.6 MB    354.3 GB    420.4 MB
+31      d7/eabe51 2042      exonerate (3)   COMPLETED   0           2014-10-23 16:45:50.846 2014-10-23 16:46:21.486 2014-10-23 16:48:52.513 3m 1s       2m 6s       130.1%  703.3 MB    760.9 MB    1.1 TB      28.6 GB
+36      c4/d6cc15 2048      exonerate (6)   COMPLETED   0           2014-10-23 16:48:48.718 2014-10-23 16:49:19.594 2014-10-23 16:51:50.535 3m 1s       2m 43s      116.6%  682.1 MB    743.6 MB    868.5 GB    42 GB
+30      4f/1ad1f0 2043      exonerate (2)   COMPLETED   0           2014-10-23 16:45:50.961 2014-10-23 16:46:21.533 2014-10-23 16:55:53.589 10m 2s      9m 16s      95.5%   706.2 MB    764 MB      1.6 TB      172.4 GB
+52      72/41d0c6 2055      similarity (1)  COMPLETED   0           2014-10-23 17:13:23.543 2014-10-23 17:13:54.097 2014-10-23 17:13:54.100 30s         352ms       0.0%    35.6 MB     58.3 MB     199.3 MB    7.9 MB
+57      9b/111b5e 2058      similarity (6)  COMPLETED   0           2014-10-23 17:13:23.655 2014-10-23 17:13:54.129 2014-10-23 17:13:54.133 30s         488ms       0.0%    108.2 MB    158 MB      317.1 MB    9.8 MB
+53      3e/bca30f 2061      similarity (2)  COMPLETED   0           2014-10-23 17:13:23.770 2014-10-23 17:13:54.166 2014-10-23 17:13:54.169 30s         238ms       0.0%    6.7 MB      29.6 MB     190 MB      91.2 MB
+54      8b/d45b47 2062      similarity (3)  COMPLETED   0           2014-10-23 17:13:23.808 2014-10-23 17:13:54.176 2014-10-23 17:13:54.179 30s         442ms       0.0%    108.1 MB    158 MB      832 MB      565.6 MB
+55      51/ac19c6 2064      similarity (4)  COMPLETED   0           2014-10-23 17:13:23.873 2014-10-23 17:13:54.197 2014-10-23 17:13:54.200 30s         6s          0.0%    112.7 MB    162.8 MB    4.9 GB      3.9 GB
+56      c3/ec5f4a 2066      similarity (5)  COMPLETED   0           2014-10-23 17:13:23.948 2014-10-23 17:13:54.219 2014-10-23 17:13:54.222 30s         616ms       0.0%    10.4 MB     34.6 MB     238 MB      8.4 MB
+98      de/d6c0a6 2099      matrix (1)      COMPLETED   0           2014-10-23 17:14:27.139 2014-10-23 17:14:58.084 2014-10-23 17:14:58.091 30s         1s          0.0%    4.8 MB      42 MB       240.6 MB    79 KB
+======= ========= ========= =============== =========== =========== ======================= ======================= ======================= =========== =========== ======= =========== =========== =========== ===========
 
 
-.. note:: Currently memory and cpu utilization are included only by using the :ref:`DRMAA executor <drmaa-executor>`.
+The following columns are available:
+
+=============== ===============
+Name            Description
+=============== ===============
+``task_id``     Task ID
+``hash``        Task unique hash code
+``native_id``
+``name``        Task name
+``status``      Task status
+``exit_status`` POSIX exit status of the executed task
+``submit``      Task submission timestamp
+``start``
+``complete``
+``wall_time``
+``run_time``
+``%cpu``        Percentage of CPU used by the process
+``%mem``        Percentage of memory used by the process
+``rss``         Real memory (resident set) size of the process. (Equivalent to ``ps -o rss``)
+``vmem``        Virtual memory size of the process (Equivalent to ``ps -o vsize``)
+``peak_rss``    Peak of real memory. This data is read from field ``VmHWM`` in ``/proc/$pid/status`` file. Not available on Mac OSX.
+``peak_vmem``   Peak of virtual memory. This data is read from field ``VmPeak`` in ``/proc/$pid/status`` file. Not available on Mac OSX.
+``rchar``       Number of bytes the process read, using any read-like system call (from files, pipes, tty, etc). This data is read from file ``/proc/$pid/io``. Not available on Mac OSX.
+``wchar``       Number of bytes the process wrote, using any write-like system call. This data is read from file ``/proc/$pid/io``. Not available on Mac OSX.
+``syscr``       Number of read-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io``. Not available on Mac OSX.
+``syscw``       Number of write-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io``. Not available on Mac OSX.
+``read_bytes``  Number of bytes the process directly read from disk. This data is read from file ``/proc/$pid/io``. Not available on Mac OSX.
+``write_bytes`` Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file ``/proc/$pid/io``. Not available on Mac OSX.
+=============== ===============
+
 
 
 
