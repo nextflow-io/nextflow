@@ -146,6 +146,7 @@ class Session {
 
         // set unique session from the taskConfig object, or create a new one
         uniqueId = (config.session as Map)?.uniqueId ? UUID.fromString( (config.session as Map).uniqueId as String) : UUID.randomUUID()
+        log.debug "Session uuid: $uniqueId"
 
         if( !config.poolSize ) {
             def cpus = Runtime.getRuntime().availableProcessors()
