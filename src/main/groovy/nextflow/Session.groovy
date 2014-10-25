@@ -107,6 +107,8 @@ class Session {
 
     private volatile boolean terminated
 
+    private volatile boolean delegateAbortToTaskMonitor
+
     private volatile ExecutorService execService
 
     final private List<Closure<Void>> shutdownCallbacks = []
@@ -118,6 +120,10 @@ class Session {
     private boolean statsEnabled
 
     boolean getStatsEnabled() { statsEnabled }
+
+    void delegateAbortToTaskMonitor( boolean value ) {
+        this.delegateAbortToTaskMonitor = value
+    }
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -336,6 +342,8 @@ class Session {
         log.debug "Session abort -- terminating all processors"
         aborted = true
         allProcessors *. terminate()
+        if( !delegateAbortToTaskMonitor )
+            System.exit(ExitCode.SESSION_ABORTED)
     }
 
     boolean isTerminated() { terminated }

@@ -314,6 +314,8 @@ class TaskPollingMonitor implements TaskMonitor {
      * Implements the polling strategy
      */
     protected void pollLoop() {
+        // task monitor get control on exit when session is aborted
+        session.delegateAbortToTaskMonitor(true)
 
         while( true ) {
             long time = System.currentTimeMillis()
