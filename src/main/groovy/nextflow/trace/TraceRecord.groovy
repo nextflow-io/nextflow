@@ -91,7 +91,6 @@ class TraceRecord {
         }
     }
 
-
     @PackageScope
     static DateFormat getDateFormat(String fmt = null) {
         if( !fmt )
@@ -99,42 +98,84 @@ class TraceRecord {
         getLocalDateFormat(fmt).get()
     }
 
+
+    /**
+     * Convert the given value to a string
+     *
+     * @param fmt
+     * @return The value as a string
+     */
     @PackageScope
-    static String fmtString(def value, String fmt) {
+    static String fmtString(value, String fmt) {
         value ? value.toString() : NA
     }
 
+
+    /**
+     * Convert the given value to a number.
+     * <p>Objects of type {@link Duration} (time) are  converted to milliseconds
+     * <p>Objects of type {@link MemoryUnit) are converted to number of bytes
+     * <p>Objects of type {@link Date) are converted to milliseconds since Unix epoch
+     *
+     * @param fmt
+     * @return The value as a string
+     */
     @PackageScope
     static String fmtNumber(def value, String fmt) {
-        if( value == null ) return NA
+        if( value == null )
+            return NA
+
         if( value instanceof Number )
             return value != Integer.MAX_VALUE ? value.toString() : NA
-        else if( value instanceof Duration ) {
+
+        if( value instanceof Duration )
             return value.toMillis().toString()
-        }
-        else if( value instanceof MemoryUnit ) {
+
+        if( value instanceof MemoryUnit )
             return String.valueOf(value.toBytes())
-        }
-        else if( value instanceof Date ) {
-            return String.valueOf( value.getTime() )
-        }
-        else {
-            return value.toString()
-        }
+
+        if( value instanceof Date )
+            return String.valueOf(value.getTime())
+
+        return value.toString()
     }
 
+    /**
+     * Converts the value to a date string
+     *
+     * @param value The value is supposed to be the number of milliseconds since Unix epoch
+     * @param fmt
+     * @return The formatted date string
+     */
     @PackageScope
     static String fmtDate(def value, String fmt) {
         if( !value ) return NA
         getDateFormat(fmt).format(new Date(value as long))
     }
 
+    /**
+     * Coverts the value to a duration string.
+     *
+     * See {@link Duration}
+     * @param value
+     * @param fmt
+     * @return
+     */
     @PackageScope
     static String fmtTime(def value, String fmt) {
         if( value == null ) return NA
         new Duration(value as long).toString()
     }
 
+    /**
+     * Converts the value to a memory unit string
+     * <p>
+     * See {@link MemoryUnit}
+     *
+     * @param value
+     * @param fmt
+     * @return
+     */
     @PackageScope
     static String fmtMemory( def value, String fmt) {
         if( value == null ) return NA
@@ -148,6 +189,12 @@ class TraceRecord {
         return str
     }
 
+    /**
+     * Converts the value to a percent value string
+     * @param value
+     * @param fmt
+     * @return
+     */
     @PackageScope
     static def fmtPercent( def value, String fmt ) {
         if( value == null ) return NA
@@ -290,6 +337,7 @@ class TraceRecord {
         "${this.class.simpleName}${store}"
     }
 
+
     /**
      * Parse the trace file
      * <p>
@@ -324,11 +372,16 @@ class TraceRecord {
 
                     final name = header[i]
                     if( i==2 || i==3 ) {
+                        // fields '%cpu' and '%mem' are expressed as percent value
                         this.put(name, values[i].toInteger() / 10F)
                     }
                     else if( i>3 ) {
-                        this.put(name, values[i].toLong() * 1024)
+                        def val = values[i].toLong()
+                        // fields from index 4 to 7 (vmem,rss,peak_vmem, peak_rss) are provided in KB, so they are normalized to bytes
+                        if( i<8 ) val *= 1024
+                        this.put(name, val)
                     }
+
                 }
             }
 

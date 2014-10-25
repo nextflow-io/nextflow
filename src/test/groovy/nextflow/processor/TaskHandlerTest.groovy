@@ -57,12 +57,12 @@ class TaskHandlerTest extends Specification {
         trace.vmem == 11084 * KB
         trace.peak_rss == 2220 * KB
         trace.peak_vmem == 21084 * KB
-        trace.rchar == 4790 * KB
-        trace.wchar == 12 * KB
-        trace.syscr == 11 * KB
-        trace.syscw ==  1 * KB
-        trace.read_bytes == 20 * KB
-        trace.write_bytes == 30 * KB
+        trace.rchar == 4790
+        trace.wchar == 12
+        trace.syscr == 11
+        trace.syscw ==  1
+        trace.read_bytes == 20
+        trace.write_bytes == 30
 
         // check get method
         trace.get('%cpu', null) == '1.0%'
