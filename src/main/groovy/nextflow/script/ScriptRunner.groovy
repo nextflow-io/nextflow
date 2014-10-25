@@ -331,12 +331,12 @@ class ScriptRunner {
             if( error )
                 result += " -- check script '${error[0]}' at line: ${error[1]}"
             else if( scriptName )
-                result += " -- check that you don't mispelled it in scipt '$scriptName'"
+                result += " -- check that you don't mispelled it in script '$scriptName'"
 
             return result
         }
         else if( error ) {
-            (e.message ?: e.toString()) + " at $error"
+            (e.message ?: e.toString()) + " -- check script '${error[0]}' at line: ${error[1]}"
         }
         else {
             e.message ?: e.toString()
