@@ -238,7 +238,7 @@ class SessionTest extends Specification {
         then:
         result.size() == 1
         observer.tracePath == Paths.get('file.txt').complete()
-        observer.delim == '\t'
+        observer.separator == '\t'
 
         when:
         session = [:] as Session
@@ -248,7 +248,7 @@ class SessionTest extends Specification {
         then:
         result.size() == 1
         observer.tracePath == Paths.get('alpha.txt').complete()
-        observer.delim == 'x'
+        observer.separator == 'x'
         observer.fields == ['task_id','name','exit_status']
 
         when:
@@ -266,7 +266,7 @@ class SessionTest extends Specification {
         then:
         result.size() == 1
         observer.tracePath == Paths.get('trace.csv').complete()
-        observer.delim == '\t'
+        observer.separator == '\t'
         observer.fields == ['task_id','name','exit_status','vmem']
 
 

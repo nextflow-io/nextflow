@@ -271,10 +271,10 @@ class TraceRecord {
      *
      * @param fields The list of fields to be rendered, each entry can optionally specify a
      *      a format string separating it from the name by a colon character e.g. name:format
-     * @param delim A delimiter that separates fields entries in the final string
+     * @param separator A delimiter that separates fields entries in the final string
      * @return The final string containing all field values
      */
-    String render( List<String> fields, List<String> formats, String delim ) {
+    String render( List<String> fields, List<String> formats, String separator ) {
         def result = new ArrayList(fields.size())
         for( int i=0; i<fields.size(); i++ ) {
             String name = fields[i]
@@ -282,7 +282,7 @@ class TraceRecord {
             result << (get(name, format) ?: NA)
         }
 
-        return result.join(delim)
+        return result.join(separator)
     }
 
 

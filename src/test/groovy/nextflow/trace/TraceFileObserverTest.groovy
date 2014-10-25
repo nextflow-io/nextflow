@@ -106,7 +106,7 @@ class TraceFileObserverTest extends Specification {
         observer.onProcessSubmit( handler )
         def record = observer.current.get(111)
         then:
-        observer.delim == '\t'
+        observer.separator == '\t'
         record.taskId == 111
         record.name == 'simple_task'
         record.submit >= now

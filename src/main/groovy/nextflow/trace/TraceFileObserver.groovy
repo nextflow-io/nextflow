@@ -67,7 +67,7 @@ class TraceFileObserver implements TraceObserver {
     /**
      * The delimiter character used to separate column in the CSV file
      */
-    String delim = '\t'
+    String separator = '\t'
 
     /**
      * The path where the file is created. It is set by the object constructor
@@ -194,7 +194,7 @@ class TraceFileObserver implements TraceObserver {
 
         // create a new trace file
         traceFile = new PrintWriter(new BufferedWriter( new FileWriter(tracePath.toFile())))
-        traceFile.println( fields.join(delim) )
+        traceFile.println( fields.join(separator) )
 
         // launch the agent
         writer = new Agent<PrintWriter>(traceFile)
@@ -279,7 +279,7 @@ class TraceFileObserver implements TraceObserver {
      */
     String render(TraceRecord trace) {
         assert trace
-        trace.render(fields, formats, delim)
+        trace.render(fields, formats, separator)
     }
 
 }
