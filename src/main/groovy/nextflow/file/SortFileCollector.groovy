@@ -291,7 +291,7 @@ class SortFileCollector extends FileCollector implements Closeable {
         super.close()
 
         if( deleteTempFilesOnClose && fTempDir ) {
-            fTempDir.deleteOnExit()
+            fTempDir.deleteDir()
         }
         else {
             log.debug "FileCollector temp dir not removed: $tempDir"
