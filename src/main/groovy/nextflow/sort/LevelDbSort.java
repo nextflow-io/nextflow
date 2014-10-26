@@ -5,7 +5,7 @@ import static org.iq80.leveldb.impl.Iq80DBFactory.factory;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import nextflow.extension.FileEx;
+import nextflow.extension.FilesEx;
 import nextflow.util.KryoHelper;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.Options;
@@ -69,7 +69,7 @@ public class LevelDbSort<V> extends BigSort<V> {
      * Shutdown the DB and remove temporary files
      */
     public void close() {
-        FileEx.closeQuietly(db);
+        FilesEx.closeQuietly(db);
         super.close();
     }
 }

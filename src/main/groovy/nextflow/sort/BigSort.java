@@ -37,7 +37,7 @@ import java.util.List;
 import java.util.Map;
 
 import groovy.lang.Closure;
-import nextflow.extension.FileEx;
+import nextflow.extension.FilesEx;
 import nextflow.util.MemoryUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -384,7 +384,7 @@ abstract public class BigSort<V> implements Closeable {
      */
     public void close() {
         if( deleteTempFilesOnClose ) {
-            FileEx.deleteDir(tempDir);
+            FilesEx.deleteDir(tempDir);
         }
     }
 

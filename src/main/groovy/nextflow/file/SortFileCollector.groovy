@@ -27,6 +27,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
 import nextflow.sort.LevelDbSort
 import nextflow.util.KryoHelper
 import org.iq80.leveldb.DB
@@ -72,9 +73,24 @@ class SortFileCollector extends FileCollector implements Closeable {
 
         final Closure<Comparable> sort
 
-        IndexSort( DB store, Closure<Comparable> sort ) {
+        final Comparator comparator
+
+        IndexSort( DB store ) {
             this.store = store
-            this.sort = sort
+            this.sort = null
+            this.comparator = null
+        }
+
+        IndexSort( DB store, Closure<Comparable> criteria ) {
+            this.store = store
+            this.sort = criteria
+            this.comparator = null
+        }
+
+        IndexSort( DB store, Comparator criteria ) {
+            this.store = store
+            this.comparator = criteria
+            this.sort = null
         }
 
         @Override
@@ -90,6 +106,12 @@ class SortFileCollector extends FileCollector implements Closeable {
                 return sort.call(v1) <=> sort.call(v2)
             }
 
+            if( this.comparator ) {
+                def v1 = getValue(e1.index)
+                def v2 = getValue(e2.index)
+                return comparator.compare(v1,v2)
+            }
+
             return e1.index <=> e2.index
         }
 
@@ -101,7 +123,7 @@ class SortFileCollector extends FileCollector implements Closeable {
     }
 
 
-    Closure sort
+    def sort
 
     Long sliceMaxSize
 
@@ -115,6 +137,13 @@ class SortFileCollector extends FileCollector implements Closeable {
 
     private Path fTempDir
 
+    void setSort( def value ) {
+        if( value == null || value instanceof Closure || value instanceof Comparator )
+            this.sort = value
+        else
+            throw new AbortOperationException("Not a valid `sort` criteria: $sort -- It can be a Closure or a Comparator object")
+    }
+
     /**
      * Creates the underlying map data structures
      */
@@ -127,7 +156,7 @@ class SortFileCollector extends FileCollector implements Closeable {
 
         def indexDir = getTempDir().resolve('index')
         def result = new LevelDbSort<IndexEntry>()
-        result.comparator( new IndexSort(store, this.sort) )
+        result.comparator(createSortComparator())
         result.tempDir(indexDir)
         result.deleteTempFilesOnClose(this.deleteTempFilesOnClose)
 
@@ -139,6 +168,18 @@ class SortFileCollector extends FileCollector implements Closeable {
         fTempDir = getTempDir()
     }
 
+    private IndexSort createSortComparator() {
+        if( !sort )
+            return new IndexSort(store)
+
+        if( sort instanceof Closure )
+            return new IndexSort(store, this.sort as Closure)
+
+        if( sort instanceof Comparator )
+            return new IndexSort(store, this.sort as Comparator)
+
+        throw new IllegalStateException("Not a valid `sort` criteria object: $sort")
+    }
 
 
     /**

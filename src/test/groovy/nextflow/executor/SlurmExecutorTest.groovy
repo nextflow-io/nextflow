@@ -69,19 +69,19 @@ class SlurmExecutorTest extends Specification {
 
         when:
         config.cpus = test_cpus
-        config.nodes = test_nodes
         config.time = test_time
-        config.clusterOptions = '-x -y -z'
+        config.memory = test_mem
+        config.clusterOptions = test_opts
         then:
         exec.getSubmitCommandLine(task,script).join(' ') == expected
 
         where:
-        test_cpus   | test_nodes| test_time || expected
-        null        | null      | null      || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -x -y -z script.sh'
-        null        | null      | '1m'      || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -t 00:01:00 -x -y -z script.sh'
-        1           | 1         | '1h'      || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 1 -N 1 -t 01:00:00 -x -y -z script.sh'
-        2           | 1         | '2h'      || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 2 -N 1 -t 02:00:00 -x -y -z script.sh'
-        8           | 4         | '2d'      || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 8 -N 4 -t 48:00:00 -x -y -z script.sh'
+        test_cpus   | test_mem  | test_time | test_opts || expected
+        null        | null      | null      | null      || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null script.sh'
+        null        | null      | '1m'      | null      || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -t 00:01:00 script.sh'
+        1           | '50 M'    | '1h'      | '-a 1'    || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 1 -t 01:00:00 --mem 50 -a 1 script.sh'
+        2           | '200 M'   | '2h'      | '-b 2'    || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 2 -t 02:00:00 --mem 200 -b 2 script.sh'
+        8           | '3 G'     | '2d'      | '-x 3'    || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 8 -t 48:00:00 --mem 3072 -x 3 script.sh'
     }
 
     def testQstatCommand() {

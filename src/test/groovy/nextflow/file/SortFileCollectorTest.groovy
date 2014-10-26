@@ -21,6 +21,8 @@
 package nextflow.file
 import java.nio.file.Files
 
+import nextflow.exception.AbortOperationException
+import org.iq80.leveldb.DB
 import spock.lang.Specification
 /**
  *
@@ -153,6 +155,106 @@ class SortFileCollectorTest extends Specification {
         collector?.close()
         folder?.deleteDir()
         collector?.getTempDir()?.deleteDir()
+
+    }
+
+
+    def 'test sort file collector with closure'() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        when:
+        def collector = new SortFileCollector()
+        collector.sort = { it.size() }
+        collector.newLine = true
+        collector.add('x', 'AAAA')
+        collector.add('x', 'AAAAAA')
+        collector.add('x', 'A')
+        collector.add('x', 'AA')
+        collector.saveTo(folder)
+        /*
+         * No sorting has been specified
+         * Entries are appended in the order they have been added
+         */
+        then:
+        folder.list().size() == 1
+        folder.resolve('x').text == 'A\nAA\nAAAA\nAAAAAA\n'
+
+        cleanup:
+        collector?.close()
+        folder?.deleteDir()
+
+    }
+
+    def 'test sort file collector with comparator'() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        when:
+        def collector = new SortFileCollector()
+        collector.sort = { o1, o2 -> o2 <=> o1 } as Comparator
+        collector.newLine = true
+        collector.add('x', 'A')
+        collector.add('x', 'B')
+        collector.add('x', 'C')
+        collector.add('x', 'D')
+        collector.saveTo(folder)
+        /*
+         * No sorting has been specified
+         * Entries are appended in the order they have been added
+         */
+        then:
+        folder.list().size() == 1
+        folder.resolve('x').text == 'D\nC\nB\nA\n'
+
+        cleanup:
+        collector?.close()
+        folder?.deleteDir()
+
+    }
+
+    def 'test create sort comparator' () {
+
+        def collector
+        SortFileCollector.IndexSort criteria
+
+        when:
+        collector = new SortFileCollector()
+        collector.store = Mock(DB)
+        criteria = collector.createSortComparator()
+        then:
+        criteria.sort == null
+        criteria.comparator == null
+
+        when:
+        def closure = { -> }
+        collector = new SortFileCollector()
+        collector.store = Mock(DB)
+        collector.sort = closure
+        criteria = collector.createSortComparator()
+        then:
+        criteria.sort == closure
+        criteria.comparator == null
+
+
+        when:
+        def comp = { a, b -> a <=> b } as Comparator
+        collector = new SortFileCollector()
+        collector.store = Mock(DB)
+        collector.sort = comp
+        criteria = collector.createSortComparator()
+        then:
+        criteria.sort == null
+        criteria.comparator == comp
+
+        when:
+        collector = new SortFileCollector()
+        collector.store = Mock(DB)
+        collector.sort = 'any'
+        then:
+        thrown(AbortOperationException)
 
     }
 

@@ -242,32 +242,32 @@ class SessionTest extends Specification {
 
         when:
         session = [:] as Session
-        session.config = [trace: [delim: 'x', fields: 'task_id,name,exit_status']]
+        session.config = [trace: [sep: 'x', fields: 'task_id,name,exit']]
         result = session.createObservers(new CmdRun(withTrace: 'alpha.txt'))
         observer = result[0] as TraceFileObserver
         then:
         result.size() == 1
         observer.tracePath == Paths.get('alpha.txt').complete()
         observer.separator == 'x'
-        observer.fields == ['task_id','name','exit_status']
+        observer.fields == ['task_id','name','exit']
 
         when:
         session = [:] as Session
-        session.config = [trace: [delim: 'x', fields: 'task_id,name,exit_status']]
+        session.config = [trace: [sep: 'x', fields: 'task_id,name,exit']]
         result = session.createObservers(new CmdRun())
         then:
         !result
 
         when:
         session = [:] as Session
-        session.config = [trace: [enabled: true, fields: 'task_id,name,exit_status,vmem']]
+        session.config = [trace: [enabled: true, fields: 'task_id,name,exit,vmem']]
         result = session.createObservers(new CmdRun())
         observer = result[0] as TraceFileObserver
         then:
         result.size() == 1
         observer.tracePath == Paths.get('trace.csv').complete()
         observer.separator == '\t'
-        observer.fields == ['task_id','name','exit_status','vmem']
+        observer.fields == ['task_id','name','exit','vmem']
 
 
     }

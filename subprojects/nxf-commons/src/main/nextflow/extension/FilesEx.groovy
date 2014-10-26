@@ -49,7 +49,7 @@ import nextflow.util.CharsetHelper
  */
 
 @Slf4j
-class FileEx {
+class FilesEx {
 
     private static CR = 0x0D
 
@@ -212,7 +212,7 @@ class FileEx {
                 // get the *delta* path against the source path
                 def delta = source.relativize(current)?.toString()
                 def newFolder = delta ? target.resolve(delta) : target
-                FileEx.log.trace "Copy DIR: $current -> $newFolder"
+                FilesEx.log.trace "Copy DIR: $current -> $newFolder"
                 if( !newFolder.exists() ) {
                     Files.copy(current, newFolder, StandardCopyOption.REPLACE_EXISTING)
                 }
@@ -226,7 +226,7 @@ class FileEx {
                 // get the *delta* path against the source path
                 def delta = source.relativize(current)?.toString()
                 def newFile = delta ? target.resolve(delta) : target
-                FileEx.log.trace "Copy file: $current -> $newFile"
+                FilesEx.log.trace "Copy file: $current -> $newFile"
                 Files.copy(current, newFile, StandardCopyOption.REPLACE_EXISTING)
                 return FileVisitResult.CONTINUE;
             }
@@ -1266,34 +1266,41 @@ class FileEx {
     /**
      * Roll a file moving to a new path whose name ends with .1
      *
-     * @param self
-     * @param target
+     * @param self The file itself
+     * @param maxRolls Max number of time to apply the file rolling (i.e. rename to a new name)
+     *
      */
-    static void rollFile( Path self ) {
+    static void rollFile( Path self, int maxRolls=5 ) {
 
-        if( FileEx.exists(self) )
-            rollFile0(self, self.resolveSibling( self.getFileName().toString() +'.1' ))
+        if( FilesEx.exists(self) ) {
+            def newName = self.getFileName().toString() +'.1'
+            rollFile0(self, self.resolveSibling(newName), maxRolls)
+        }
 
     }
 
 
     @PackageScope
-    static void rollFile0( Path self, Path target ) {
+    static void rollFile0( Path self, Path newFile, int max, int depth=0 ) {
         assert self
-        assert target
+        assert newFile
 
-        if( target.exists() ) {
-            def name = target.getName()
-            def extension = target.getExtension()
+        if( newFile.exists() ) {
+            def extension = newFile.getExtension()
             if( !extension?.isInteger() ) {
                 throw new IllegalArgumentException("Unexpected rolling file extension: $extension")
             }
 
-            name = "${target.getBaseName()}.${ extension.toInteger() +1 }"
-            rollFile0(target, target.resolveSibling(name))
+            if( ++depth < max ) {
+                def nextName = "${newFile.getBaseName()}.${ extension.toInteger() +1 }"
+                rollFile0(newFile, newFile.resolveSibling(nextName), max, depth)
+            }
+            else{
+                Files.delete(newFile)
+            }
         }
 
-        FileEx.renameTo(self, target)
+        FilesEx.renameTo(self, newFile)
 
     }
 

@@ -546,6 +546,8 @@ class DataflowExtensions {
         else {
             collector = new SortFileCollector()
             switch(params?.sort) {
+                case true:
+                case 'true':
                 case 'natural':
                     collector.sort = { it -> it }
                     break
@@ -554,8 +556,8 @@ class DataflowExtensions {
                     collector.sort = null
                     break
 
-                case 'hash':
                 case null:
+                case 'hash':
                     collector.sort = { CacheHelper.hasher(it).hash().asLong() }
                     break
 
@@ -586,7 +588,8 @@ class DataflowExtensions {
             collector.deleteTempFilesOnClose = params.deleteTempFilesOnClose as boolean
 
         /*
-         * A file name to be used, if provided
+         * If a file of an absolute path is specified, the parent
+         * path is used as 'storeDir'
          */
         Path storeDir
         String fileName
@@ -601,10 +604,12 @@ class DataflowExtensions {
         }
 
         /*
-         * check or create the target folder
+         * check if a 'storeDir' is provided otherwise fallback to a temp
+         * folder in the session working directory
          */
         if( params?.storeDir )
             storeDir = params?.storeDir as Path
+
         if( storeDir )
             storeDir.createDirIfNotExists()
         else

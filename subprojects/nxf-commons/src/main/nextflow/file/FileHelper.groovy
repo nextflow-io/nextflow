@@ -42,7 +42,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.extension.Bolts
-import nextflow.extension.FileEx
+import nextflow.extension.FilesEx
 import nextflow.util.CacheHelper
 
 /**
@@ -223,11 +223,11 @@ class FileHelper {
             def bucket = hash.substring(0,2)
             def result = basePath.resolve( "tmp/$bucket/${hash.substring(2)}" )
 
-            if( FileEx.exists(result) ) {
+            if( FilesEx.exists(result) ) {
                 if( ++count > 100 ) { throw new IOException("Unable to create a unique temporary path: $result") }
                 continue
             }
-            if( !FileEx.mkdirs(result) ) {
+            if( !FilesEx.mkdirs(result) ) {
                 throw new IOException("Unable to create temporary parth: $result -- Verify file system access permission")
             }
 
@@ -418,7 +418,7 @@ class FileHelper {
             if( Files.exists(cached) )
                 return cached
 
-            return FileEx.copyTo(sourcePath, cached)
+            return FilesEx.copyTo(sourcePath, cached)
         }
     }
 

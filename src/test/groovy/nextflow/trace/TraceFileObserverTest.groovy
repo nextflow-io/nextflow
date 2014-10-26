@@ -67,17 +67,17 @@ class TraceFileObserverTest extends Specification {
 
         when:
         trace = [:] as TraceFileObserver
-        trace.setFieldsAndFormats(['task_id:str','name:str','status:num', 'start', 'wall_time'])
+        trace.setFieldsAndFormats(['task_id:str','name:str','status:num', 'start', 'duration'])
         then:
-        trace.fields ==  ['task_id','name','status', 'start', 'wall_time']
+        trace.fields ==  ['task_id','name','status', 'start', 'duration']
         trace.formats == ['str','str','num', 'date', 'time']
 
         when:
         trace = [:] as TraceFileObserver
         trace.useRawNumbers(true)
-        trace.setFieldsAndFormats(['task_id:str','name:str','status:num', 'start:date', 'wall_time:time', 'run_time'])
+        trace.setFieldsAndFormats(['task_id:str','name:str','status:num', 'start:date', 'duration:time', 'walltime'])
         then:
-        trace.fields ==  ['task_id','name','status', 'start', 'wall_time', 'run_time']
+        trace.fields ==  ['task_id','name','status', 'start', 'duration', 'walltime']
         trace.formats == ['str','str','num', 'num', 'num', 'num']
 
     }
@@ -164,12 +164,12 @@ class TraceFileObserverTest extends Specification {
         record.native_id = '2000'
         record.name = 'hello'
         record.status = TaskHandler.Status.COMPLETED
-        record.exit_status = 99
+        record.exit = 99
         record.start = 1408714875000
         record.submit = 1408714874000
         record.complete = 1408714912000
-        record.wall_time = 1408714912000 - 1408714874000
-        record.run_time = 1408714912000 - 1408714875000
+        record.duration = 1408714912000 - 1408714874000
+        record.walltime = 1408714912000 - 1408714875000
         record.'%cpu' = 17.50f
         record.rss = 10_000 * 1024
         record.vmem = 20_000 * 1024

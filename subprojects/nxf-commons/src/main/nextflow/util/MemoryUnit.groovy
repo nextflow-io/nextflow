@@ -38,7 +38,9 @@ class MemoryUnit implements Comparable<MemoryUnit> {
 
     static private final List UNITS = [ "B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB" ]
 
-    long size
+    final static int KB = 1024
+
+    final long size
 
     MemoryUnit( long value ) {
         this.size = value
@@ -77,6 +79,17 @@ class MemoryUnit implements Comparable<MemoryUnit> {
         size
     }
 
+    long toKilo() {
+        size >> 10
+    }
+
+    long toMega() {
+        size >> 20
+    }
+
+    long toGiga() {
+        size >> 30
+    }
 
     def String toString() {
         if(size <= 0) {

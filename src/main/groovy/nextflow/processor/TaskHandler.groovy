@@ -146,7 +146,7 @@ public abstract class TaskHandler {
         record.status = task.failed ? 'FAILED' : this.status
         record.hash = task.hashLog
         record.name = task.name
-        record.exit_status = task.exitStatus
+        record.exit = task.exitStatus
         record.submit = this.submitTimeMillis
         record.start = this.startTimeMillis
 
@@ -156,11 +156,11 @@ public abstract class TaskHandler {
                 record.complete = completeTimeMillis
                 // elapsed time since submit until completion
                 if( submitTimeMillis )
-                    record.wall_time = completeTimeMillis - submitTimeMillis
+                    record.duration = completeTimeMillis - submitTimeMillis
                 // elapsed time since start of the job until completion
                 // note: this may be override run time provided by the trace file (3rd line)
                 if( startTimeMillis )
-                    record.run_time = completeTimeMillis - startTimeMillis
+                    record.walltime = completeTimeMillis - startTimeMillis
             }
 
             def file = task.workDir?.resolve(TaskRun.CMD_TRACE)

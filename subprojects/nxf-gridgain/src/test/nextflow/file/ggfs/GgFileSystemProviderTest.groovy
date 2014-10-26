@@ -27,7 +27,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.spi.FileSystemProvider
 
 import nextflow.Session
-import nextflow.extension.FileEx
+import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
@@ -185,7 +185,7 @@ class GgFileSystemProviderTest extends Specification {
         def target =  new GgPath(fs, rndName('/test-folder') )
 
         when:
-        def result = FileEx.copyTo(folder, target)
+        def result = FilesEx.copyTo(folder, target)
         then:
         result.resolve('file1').text == 'Ciao'
         result.resolve('file2').text == 'Hello'

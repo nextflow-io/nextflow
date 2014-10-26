@@ -52,10 +52,11 @@ class LsfExecutorTest extends Specification {
         // the script
         def script = folder.resolve('job.sh'); script.text = 'some content'
         // config
-        config.queue = 'hpc-queue1'
-        config.clusterOptions = " -M 4000  -R 'rusage[mem=4000] select[mem>4000]' --X \"abc\" "
+        config.queue = test_queue
+        config.clusterOptions = "-x 1"
         config.cpus = test_cpu
-        config.nodes = test_nodes
+        config.time = test_time
+        config.memory = test_mem
         // task object
         def task = new TaskRun()
         task.processor = proc
@@ -63,22 +64,22 @@ class LsfExecutorTest extends Specification {
         task.index = 1
 
         then:
-        executor.getSubmitCommandLine(task, script) as Set == expected as Set
+        executor.getSubmitCommandLine(task, script) == expected
         script.canExecute()
 
         cleanup:
         folder?.deleteDir()
 
         where:
-        test_cpu    | test_nodes   || expected
-        null        | null         || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
-        1           | null         || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-n', '1', '-R', 'span[hosts=1]', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
-        1           | 1            || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-n', '1', '-R', 'span[hosts=1]', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
-        1           | 4            || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-n', '1', '-R', 'span[hosts=4]', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
-        4           | null         || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-n', '4', '-R', 'span[hosts=1]', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
-        4           | 1            || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-n', '4', '-R', 'span[hosts=1]', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
-        8           | 3            || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-n', '8', '-R', 'span[hosts=3]', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
-        null        | 4            || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'hpc-queue1', '-R', 'span[hosts=4]', '-J', 'nf-task_1', '-M', '4000' ,'-R' ,'rusage[mem=4000] select[mem>4000]', '--X', 'abc', './job.sh']
+        test_cpu    | test_time    | test_mem   | test_queue || expected
+        null        | null         | null       | 'alpha'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'alpha', '-J', 'nf-task_1', '-x', '1', './job.sh']
+        1           | null         | null       | 'alpha'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'alpha', '-n', '1', '-R', 'span[hosts=1]', '-J', 'nf-task_1', '-x', '1', './job.sh']
+        1           | '1min'       | '10 MB'    | 'alpha'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'alpha', '-n', '1', '-R', 'span[hosts=1]', '-W', '00:01', '-M', '10', '-J', 'nf-task_1', '-x', '1', './job.sh']
+        1           | '4h'         | '200 MB'   | 'gamma'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'gamma', '-n', '1', '-R', 'span[hosts=1]', '-W', '04:00', '-M', '200', '-J', 'nf-task_1', '-x', '1', './job.sh']
+        4           | null         | '2 GB'     | 'gamma'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'gamma', '-n', '4', '-R', 'span[hosts=1]', '-M', '512', '-J', 'nf-task_1', '-x', '1', './job.sh']
+        4           | '1d'         | '2 GB'     | 'gamma'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'gamma', '-n', '4', '-R', 'span[hosts=1]', '-W', '24:00', '-M', '512', '-J', 'nf-task_1', '-x', '1', './job.sh']
+        8           | '2d'         | '2 GB'     | 'delta'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'delta', '-n', '8', '-R', 'span[hosts=1]', '-W', '48:00', '-M', '256', '-J', 'nf-task_1', '-x', '1', './job.sh']
+        null        | '2d 12h 5m'  | '2 GB'     | 'delta'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'delta', '-W', '60:05', '-M', '2048', '-J', 'nf-task_1', '-x', '1', './job.sh']
 
     }
 

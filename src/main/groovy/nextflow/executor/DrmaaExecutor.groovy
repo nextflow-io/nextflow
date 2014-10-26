@@ -161,7 +161,7 @@ class DrmaaTaskHandler extends TaskHandler {
             result << '-q'  << taskConfig.queue
         }
 
-        //number of cpus for multiprocessing/multithreading
+        //number of cpus for multiprocessing/multi-threading
         if( taskConfig.cpus ) {
             if ( taskConfig.penv ) {
                 result << "-pe" << taskConfig.penv << taskConfig.cpus.toString()

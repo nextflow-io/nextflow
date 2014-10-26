@@ -52,12 +52,12 @@ class TraceRecord {
             native_id:  'str',
             name:       'str',
             status:     'str',
-            exit_status:'num',
+            exit:       'num',
             submit:     'date',
             start:      'date',
             complete:   'date',
-            wall_time:  'time',
-            run_time:   'time',
+            duration:   'time',
+            walltime:   'time',
             '%cpu':     'perc',     // -- ps field '%cpu'
             '%mem':     'perc',     // -- ps field '%mem'
             rss:        'mem',      // -- ps field 'rss'
@@ -389,10 +389,10 @@ class TraceRecord {
             else if( count == 2 ) {
                 try {
                     def elapsed = row.toString().trim().toLong()
-                    this.put('run_time', elapsed)
+                    this.put('walltime', elapsed)
                 }
                 catch( Exception e ) {
-                    log.debug "Not a valid trace `run_time` value: '$count'"
+                    log.debug "Not a valid trace `walltime` value: '$count'"
                 }
             }
 

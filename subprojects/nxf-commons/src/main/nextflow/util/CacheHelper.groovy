@@ -30,7 +30,7 @@ import com.google.common.hash.Hasher
 import com.google.common.hash.Hashing
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.extension.FileEx
+import nextflow.extension.FilesEx
 import nextflow.file.FileHolder
 
 enum HashMode { STANDARD, DEEP }
@@ -176,8 +176,8 @@ class CacheHelper {
 
         hasher = hasher.putUnencodedChars( file.toAbsolutePath().normalize().toString() )
 
-        if( FileEx.exists(file) ) {
-            return hasher.putLong(file.size()) .putLong(FileEx.lastModified(file))
+        if( FilesEx.exists(file) ) {
+            return hasher.putLong(file.size()) .putLong(FilesEx.lastModified(file))
         }
         else {
             return hasher
@@ -199,7 +199,7 @@ class CacheHelper {
         path.withInputStream { input ->
             output << input
         }
-        FileEx.closeQuietly(output)
+        FilesEx.closeQuietly(output)
         hasher
     }
 

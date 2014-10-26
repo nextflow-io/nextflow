@@ -37,7 +37,7 @@ class TraceRecordTest extends Specification {
         record.task_id = 'hola'
         record.native_id = null
         record.submit = timestamp
-        record.wall_time = '2000'
+        record.duration = '2000'
         record.'%cpu' = '5.00'
         record.rss = '1024'
 
@@ -50,7 +50,7 @@ class TraceRecordTest extends Specification {
         'native_id' | null      | '-'
         'submit'    | null      | '2014-10-06 12:03:02.622'
         'submit'    | 'num'     | timestamp.toString()
-        'wall_time' | null      | '2s'
+        'duration'  | null      | '2s'
         '%cpu'      | null      | '5.0%'
         'rss'       | null      | '1 KB'
 
@@ -151,7 +151,7 @@ class TraceRecordTest extends Specification {
         trace.syscw ==  1
         trace.read_bytes == 20
         trace.write_bytes == 30
-        trace.run_time == 153
+        trace.walltime == 153
 
     }
 

@@ -28,7 +28,8 @@ import java.nio.file.attribute.BasicFileAttributes
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.extension.FileEx
+import nextflow.extension.FilesEx
+
 /**
  * File collector base class
  *
@@ -164,9 +165,9 @@ abstract class FileCollector implements Closeable {
      * See {@link #deleteTempFilesOnClose} {@link #safeClose()}
      */
     void close() {
-        if( deleteTempFilesOnClose ) {
-            log.trace "Deleting file collector temp dir: ${tempDir}"
-            FileEx.deleteDir(tempDir);
+        if( tempDir && deleteTempFilesOnClose ) {
+            log.debug "Deleting file collector temp dir: ${tempDir}"
+            FilesEx.deleteDir(tempDir);
         }
     }
 

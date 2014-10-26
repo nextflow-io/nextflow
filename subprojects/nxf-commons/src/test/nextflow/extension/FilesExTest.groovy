@@ -27,7 +27,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FileExTest extends Specification {
+class FilesExTest extends Specification {
 
 
 
@@ -170,7 +170,7 @@ class FileExTest extends Specification {
         Files.createSymbolicLink( folder.resolve('linkDir'), folder.resolve('myFiles') )
 
         when:
-        FileEx.copyTo(folder.resolve('linkDir'), folder.resolve('target'))
+        FilesEx.copyTo(folder.resolve('linkDir'), folder.resolve('target'))
 
         then:
         Files.isDirectory(folder.resolve('target'))
@@ -201,7 +201,7 @@ class FileExTest extends Specification {
          */
         when:
         folder.resolve('beta').mkdir()
-        FileEx.copyTo(folder.resolve('alpha'), folder.resolve('beta'))
+        FilesEx.copyTo(folder.resolve('alpha'), folder.resolve('beta'))
         then:
         folder.resolve('beta').isDirectory()
         folder.resolve('beta/alpha').isDirectory()
@@ -222,7 +222,7 @@ class FileExTest extends Specification {
          */
         when:
         folder.resolve('beta').deleteDir()
-        FileEx.copyTo(folder.resolve('alpha'), folder.resolve('beta'))
+        FilesEx.copyTo(folder.resolve('alpha'), folder.resolve('beta'))
         then:
         folder.resolve('beta').isDirectory()
         folder.resolve('beta/file_1.txt').text == 'file 1'
@@ -236,7 +236,7 @@ class FileExTest extends Specification {
 
         when:
         folder.resolve('beta').deleteDir()
-        FileEx.copyTo(folder.resolve('alpha/dir2'), folder.resolve('beta/alpha/dir2'))
+        FilesEx.copyTo(folder.resolve('alpha/dir2'), folder.resolve('beta/alpha/dir2'))
         then:
         folder.resolve('beta/alpha/dir2').isDirectory()
         folder.resolve('beta/alpha/dir2/file_4').text == 'Hello'
@@ -672,13 +672,13 @@ class FileExTest extends Specification {
     def testDigitToPerm() {
 
         expect:
-        FileEx.digitToPerm(1).toString() == '--x'
-        FileEx.digitToPerm(2).toString() == '-w-'
-        FileEx.digitToPerm(3).toString() == '-wx'
-        FileEx.digitToPerm(4).toString() == 'r--'
-        FileEx.digitToPerm(5).toString() == 'r-x'
-        FileEx.digitToPerm(6).toString() == 'rw-'
-        FileEx.digitToPerm(7).toString() == 'rwx'
+        FilesEx.digitToPerm(1).toString() == '--x'
+        FilesEx.digitToPerm(2).toString() == '-w-'
+        FilesEx.digitToPerm(3).toString() == '-wx'
+        FilesEx.digitToPerm(4).toString() == 'r--'
+        FilesEx.digitToPerm(5).toString() == 'r-x'
+        FilesEx.digitToPerm(6).toString() == 'rw-'
+        FilesEx.digitToPerm(7).toString() == 'rwx'
 
     }
 
@@ -898,8 +898,8 @@ class FileExTest extends Specification {
         when:
         def here = Paths.get('.').toAbsolutePath().normalize().toString()
         then:
-        FileEx.complete(Paths.get('./xxx/../hola')).isAbsolute()
-        FileEx.complete(Paths.get('./xxx/../hola')).toString() == "$here/hola"
+        FilesEx.complete(Paths.get('./xxx/../hola')).isAbsolute()
+        FilesEx.complete(Paths.get('./xxx/../hola')).toString() == "$here/hola"
 
         when:
         def folder = Files.createTempDirectory('test')
@@ -910,7 +910,7 @@ class FileExTest extends Specification {
         // should NOT resolve symbolic link
         folder.resolve('link1').exists()
         folder.resolve('link1').isSymlink()
-        FileEx.complete( folder.resolve('./xxx/../link1') ) == folder.resolve('link1')
+        FilesEx.complete( folder.resolve('./xxx/../link1') ) == folder.resolve('link1')
 
         cleanup:
         folder?.deleteDir()
