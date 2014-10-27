@@ -59,7 +59,7 @@ import org.gridgain.grid.spi.loadbalancing.adaptive.GridAdaptiveLoadBalancingSpi
 @CompileStatic
 class GgGridFactory {
 
-    static final SESSIONS_CACHE = 'allSessions'
+    static final String SESSIONS_CACHE = 'allSessions'
 
     static final GRID_NAME = Const.APP_NAME
 
