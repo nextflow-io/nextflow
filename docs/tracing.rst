@@ -8,6 +8,8 @@ Nextflow can produce an execution tracing report that provides some information 
 of a pipeline execution. A more advanced analysis is possible by using the `Extrae` and `Paraver` tools integrated with Nextflow.
 
 
+.. _trace-report:
+
 Execution report
 ===================
 
@@ -25,7 +27,7 @@ For example::
 It will create a file named ``trace.csv`` in the current directory. The content looks like the above example:
 
 ======= ========= ========= =============== =========== =========== ======================= ======================= ======================= =========== =========== ======= =========== =========== =========== ===========
-task_id hash      native_id   name          status      exit_status submit                  start                   complete                wall_time   run_time    %cpu    rss         vmem        rchar       wchar
+task_id hash      native_id   name          status      exit_status submit                  start                   complete                duration    walltime    %cpu    rss         vmem        rchar       wchar
 ======= ========= ========= =============== =========== =========== ======================= ======================= ======================= =========== =========== ======= =========== =========== =========== ===========
 19      45/ab752a 2032      blast (1)       COMPLETED   0           2014-10-23 16:33:16.288 2014-10-23 16:33:46.745 2014-10-23 16:34:17.168 1m          5s          0.0%    29.8 MB     354 MB      33.3 MB     0
 20      72/db873d 2033      blast (2)       COMPLETED   0           2014-10-23 16:34:17.211 2014-10-23 16:34:47.346 2014-10-23 16:34:47.349 30s         10s         35.7%   152.8 MB    428.1 MB    192.7 MB    1 MB
@@ -49,36 +51,42 @@ task_id hash      native_id   name          status      exit_status submit      
 ======= ========= ========= =============== =========== =========== ======================= ======================= ======================= =========== =========== ======= =========== =========== =========== ===========
 
 
-The following columns are available:
+.. _trace-fields:
+
+The following table shows the fields that can be included in the execution report:
 
 =============== ===============
 Name            Description
 =============== ===============
 ``task_id``     Task ID
-``hash``        Task unique hash code
-``native_id``
+``hash``        Task hash code
+``native_id``   Task ID given by the underlying execution system e.g. POSIX process PID when executed locally, job ID when executed by a grid engine, etc.
 ``name``        Task name
 ``status``      Task status
-``exit_status`` POSIX exit status of the executed task
-``submit``      Task submission timestamp
-``start``
-``complete``
-``wall_time``
-``run_time``
+``exit``        POSIX process exit status
+``submit``      Timestamp when the task has been submitted
+``start``       Timestamp when the task execution has started
+``complete``    Timestamp when task execution has completed
+``duration``    Time elapsed to complete since the submission
+``walltime``    Task execution time i.e. delta between completion and start timestamp
 ``%cpu``        Percentage of CPU used by the process
 ``%mem``        Percentage of memory used by the process
 ``rss``         Real memory (resident set) size of the process. (Equivalent to ``ps -o rss``)
 ``vmem``        Virtual memory size of the process (Equivalent to ``ps -o vsize``)
 ``peak_rss``    Peak of real memory. This data is read from field ``VmHWM`` in ``/proc/$pid/status`` file. Not available on Mac OSX.
 ``peak_vmem``   Peak of virtual memory. This data is read from field ``VmPeak`` in ``/proc/$pid/status`` file. Not available on Mac OSX.
-``rchar``       Number of bytes the process read, using any read-like system call (from files, pipes, tty, etc). This data is read from file ``/proc/$pid/io``. Not available on Mac OSX.
-``wchar``       Number of bytes the process wrote, using any write-like system call. This data is read from file ``/proc/$pid/io``. Not available on Mac OSX.
-``syscr``       Number of read-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io``. Not available on Mac OSX.
-``syscw``       Number of write-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io``. Not available on Mac OSX.
-``read_bytes``  Number of bytes the process directly read from disk. This data is read from file ``/proc/$pid/io``. Not available on Mac OSX.
-``write_bytes`` Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file ``/proc/$pid/io``. Not available on Mac OSX.
+``rchar``       Number of bytes the process read, using any read-like system call (from files, pipes, tty, etc). This data is read from file ``/proc/$pid/io`` (not available on Mac OSX).
+``wchar``       Number of bytes the process wrote, using any write-like system call. This data is read from file ``/proc/$pid/io`` (not available on Mac OSX).
+``syscr``       Number of read-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io`` (not available on Mac OSX).
+``syscw``       Number of write-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io`` (not available on Mac OSX).
+``read_bytes``  Number of bytes the process directly read from disk. This data is read from file ``/proc/$pid/io`` (not available on Mac OSX).
+``write_bytes`` Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file ``/proc/$pid/io`` (not available on Mac OSX).
 =============== ===============
 
+
+Trace report layout and other configuration settings can be specified by using the ``nextflow.config`` configuration file.
+
+Please read :ref:`Trace scope <config-trace>` section to learn more about it.
 
 
 
