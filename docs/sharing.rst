@@ -176,37 +176,38 @@ repository home page will be ``http://github.com/foo/bar`` and people will able 
 Manage dependencies
 =====================
 
-Rarely a computational pipeline is composed by a single script. In real world applications they depends on other
-pieces of software. These can be other scripts, tools and applications compiled to a platform native binary format.
+Computational pipelines are rarely composed by a single script. In real world applications they depend on other
+pieces of software. These can be other scripts, tools or applications compiled to a platform native binary format.
 
 External dependencies are the most common source of problems when sharing a piece of software, because the
-users need to have the identical set of tools and configuration to be able to use it. In many cases this is proven to be
-a painful and error prone process, that can severely limit the ability to reproduce computational results on a system other
-the one where it has been originally developed.
+users need to have an identical set of tools and the same configuration to be able to use it. On many cases this has proven to be
+a painful and error prone process, that can severely limit the ability to reproduce computational results on a system other than
+the one on which it was originally developed.
 
-Nextflow tackle this problem integrating the support for GitHub/BitBucket sharing platforms and `Docker <http://www.docker.com>`_ containers technology.
+Nextflow tackles this problem by integrating GitHub and BitBucket sharing platforms and 
+`Docker <http://www.docker.com>`_ containers technology.
 
 The use of a code management system is important to keep together all the dependencies of your
 pipeline and allows you to track the changes of the source code in a consistent manner.
 
 Moreover to guarantee that a pipeline is reproducible it should be self-contained i.e. it should not have any
-dependencies with the hosting environment. By using Nextflow you can achieve this goal following these practices:
+dependencies with the hosting environment. By using Nextflow you can achieve this goal following these methods:
 
 Third party scripts
 --------------------
 
-Any third part script that does not need to be compiled (BASH, Python, Perl, etc) can be included in the pipeline
+Any third party script that does not need to be compiled (BASH, Python, Perl, etc) can be included in the pipeline
 project repository, so that they are distributed with it.
 
 Grant the execute permission to these files and copy them into a folder named ``bin/`` in the root directory of your
-project repository. Nextflow will automatically add this folder to the ``PATH`` environment variable, and that scripts
-will be automatically accessible in your pipeline without the need to specify an absolute path to invoke them.
+project repository. Nextflow will automatically add this folder to the ``PATH`` environment variable, and the scripts
+will automatically be accessible in your pipeline without the need to specify an absolute path to invoke them.
 
 System environment
 --------------------
 
 Any environment variable that may be required by the tools in your pipeline can be defined in the ``nextflow.config`` file
-by using the ``env`` scope and including it in the root folder of your project. For example::
+by using the ``env`` scope and including it in the root directory of your project. For example::
 
   env {
     DELTA = 'foo'
@@ -221,19 +222,19 @@ Resource manager
 
 When using Nextflow you don't need to write the code to parallelize your pipeline for a specific grid engine/resource
 manager because the parallelization is defined implicitly and managed by the Nextflow runtime. The target execution
-environment is parametrized and defined in the configuration file, thus your code it's free from this kind of dependency.
+environment is parametrized and defined in the configuration file, thus your code is free from this kind of dependency.
 
 Bootstrap data
 --------------------
 
 Whenever your pipeline requires some files or dataset to carry out any initialization step, you
-can include these data in the pipeline repository itself and distribute along with it.
+can include this data in the pipeline repository itself and distribute them together.
 
 To reference this data in your pipeline script in a portable manner (i.e. without the need to use a static absolute path)
 use the implicit variable ``baseDir`` which locates the base directory of your pipeline project.
 
-For example, you can create a folder named ``dataset/`` in your repository root folder and copy there the
-required files you may need. Then in your script you can access it writing::
+For example, you can create a folder named ``dataset/`` in your repository root directory and copy there the
+required data file(s) you may need, then you can access this data in your script by writing::
 
    sequences = file("$baseDir/dataset/sequences.fa")
    sequences.splitFasta {
@@ -243,7 +244,7 @@ required files you may need. Then in your script you can access it writing::
 User inputs
 -------------
 
-Nextflow scripts can be easily parametrised to allows users to provide their own input data. Simply declare on the
+Nextflow scripts can be easily parametrised to allow users to provide their own input data. Simply declare on the
 top of your script all the parameters it may require as shown below::
 
   params.my_input = 'default input file'
@@ -252,7 +253,7 @@ top of your script all the parameters it may require as shown below::
   ..
 
 The actual parameter values can be provided when launching the script execution on the command line
-by prefixed the parameter name with a double ``--`` character. For example::
+by prefixed the parameter name with a double minus character i.e. ``--``, for example::
 
   nextflow run <your pipeline> --my_input /path/to/input/file --my_output /other/path --my_flag true
 
@@ -262,7 +263,7 @@ by prefixed the parameter name with a double ``--`` character. For example::
 Binary applications
 --------------------
 
-Docker allows you to ship any binary dependencies that you may have in your pipeline in a portable image
+Docker allows you to ship any binary dependencies that you may have in your pipeline to a portable image
 that is downloaded on-demand and can be executed on any platform where a Docker engine is installed.
 
 In order to use it with Nextflow, create a Docker image containing the tools needed by your pipeline and make it available
@@ -274,15 +275,14 @@ have created. For example::
   process.container = 'my-docker-image'
   docker.enabled = true
 
-In this way when the pipeline execution is started, it will automatically download the required Docker image and execute
-with it.
+In this way when you launch the pipeline execution, the Docker image will be automatically downloaded and used to run 
+your tasks.
+
+Read the :ref:`docker-page` page to lean more on how to use Docker containers with Nextflow.
 
 
-Read :ref:`docker-page` page to lean more how use Docker containers with Nextflow.
-
-
-This mix of technologies make it possible to write self-contained and truly reproducible pipeline which requires
-zero configuration and be reproduced in any system having a Java VM and Docker engine installed.
+This mix of technologies makes it possible to write self-contained and truly reproducible pipelines which require
+zero configuration and can be reproduced in any system having a Java VM and a Docker engine installed.
 
 
 .. [#] BitBucket provides two types of version control system: `Git` and `Mercurial`. Nextflow it supports only the `Git` one.
