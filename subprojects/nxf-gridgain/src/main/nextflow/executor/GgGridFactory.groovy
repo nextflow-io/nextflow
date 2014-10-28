@@ -19,15 +19,16 @@
  */
 
 package nextflow.executor
+
 import com.amazonaws.auth.BasicAWSCredentials
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import nextflow.util.DaemonConfig
 import nextflow.util.Duration
-import nextflow.file.FileHelper
 import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.reflect.MethodUtils
 import org.gridgain.grid.Grid
@@ -39,6 +40,7 @@ import org.gridgain.grid.cache.GridCacheDistributionMode
 import org.gridgain.grid.cache.GridCacheMemoryMode
 import org.gridgain.grid.cache.GridCacheMode
 import org.gridgain.grid.cache.GridCacheWriteSynchronizationMode
+import org.gridgain.grid.cache.eviction.lru.GridCacheLruEvictionPolicy
 import org.gridgain.grid.ggfs.GridGgfsConfiguration
 import org.gridgain.grid.ggfs.GridGgfsGroupDataBlocksKeyMapper
 import org.gridgain.grid.ggfs.GridGgfsMode
@@ -50,6 +52,7 @@ import org.gridgain.grid.spi.discovery.tcp.ipfinder.s3.GridTcpDiscoveryS3IpFinde
 import org.gridgain.grid.spi.discovery.tcp.ipfinder.sharedfs.GridTcpDiscoverySharedFsIpFinder
 import org.gridgain.grid.spi.discovery.tcp.ipfinder.vm.GridTcpDiscoveryVmIpFinder
 import org.gridgain.grid.spi.loadbalancing.adaptive.GridAdaptiveLoadBalancingSpi
+
 /**
  * Grid factory class. It can be used to create a {@link GridConfiguration} or the {@link Grid} instance directly
  *
@@ -184,7 +187,8 @@ class GgGridFactory {
         dataCfg.with {
             name = 'ggfs-data'
             cacheMode = GridCacheMode.PARTITIONED
-            atomicityMode  = GridCacheAtomicityMode.TRANSACTIONAL
+            evictionPolicy = new GridCacheLruEvictionPolicy()
+            atomicityMode  = GridCacheAtomicityMode.ATOMIC
             queryIndexEnabled = false
             writeSynchronizationMode = daemonConfig.getAttribute('ggfs.data.writeSynchronizationMode', GridCacheWriteSynchronizationMode.PRIMARY_SYNC) as GridCacheWriteSynchronizationMode
             distributionMode = GridCacheDistributionMode.PARTITIONED_ONLY
@@ -206,9 +210,9 @@ class GgGridFactory {
         metaCfg.with {
             name = 'ggfs-meta'
             cacheMode = GridCacheMode.REPLICATED
-            atomicityMode  = GridCacheAtomicityMode.TRANSACTIONAL
+            atomicityMode  = GridCacheAtomicityMode.ATOMIC
             queryIndexEnabled = false
-            writeSynchronizationMode = GridCacheWriteSynchronizationMode.FULL_SYNC
+            writeSynchronizationMode = GridCacheWriteSynchronizationMode.PRIMARY_SYNC
         }
 
 
