@@ -33,7 +33,7 @@ fi
 
 curl -fsSL http://www.nextflow.io/releases/${version}/nextflow  > $HOME/nextflow
 chmod +x $HOME/nextflow
-bash -x $HOME/nextflow node -bg \
+bash -x $HOME/nextflow node -bg -in-container $CONTAINER \
   -cluster.join "s3:$AWS_S3BUCKET" \
   -cluster.interface eth0
 
