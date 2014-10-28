@@ -104,9 +104,9 @@ dependencies {
     compile "com.esotericsoftware.kryo:kryo:2.24.0"
     compile 'org.iq80.leveldb:leveldb:0.7'
     compile("org.utgenome.thirdparty:picard:1.102.0") { transitive = false }
-    compile("org.eclipse.jgit:org.eclipse.jgit:3.5.1.201410131835-r") {
-        exclude module: 'commons-logging'
-    }
+    compile("org.eclipse.jgit:org.eclipse.jgit:3.5.1.201410131835-r") { exclude module: 'commons-logging' }
+    compile('org.eclipse.jgit:org.eclipse.jgit.java7:3.5.1.201410131835-r') { exclude module: 'commons-logging' }
+
     // include Ivy at runtime in order to have Grape @Grab work correctly
     runtime "org.apache.ivy:ivy:2.3.0"
     // library used to compile but not included in the final jar
