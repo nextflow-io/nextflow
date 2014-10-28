@@ -139,7 +139,7 @@ class DrmaaExecutorTest extends Specification {
         expected.hash = '123abc'
         expected.name = 'hello'
         expected.status = TaskHandler.Status.SUBMITTED
-        expected.exit_status = 99
+        expected.exit = 99
         expected.submit = 1406264935000
         expected.start = 1406265009000
         expected.complete = 1406265009000

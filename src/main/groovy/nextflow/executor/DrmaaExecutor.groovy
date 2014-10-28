@@ -331,7 +331,7 @@ class DrmaaTaskHandler extends TaskHandler {
 
         def trace = super.getTraceRecord()
         trace.native_id = jobId
-        trace.exit_status = task.exitStatus
+        trace.exit = task.exitStatus
 
         return trace
     }
