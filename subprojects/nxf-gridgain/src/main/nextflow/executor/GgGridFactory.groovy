@@ -186,7 +186,7 @@ class GgGridFactory {
             name = 'ggfs-data'
             cacheMode = GridCacheMode.PARTITIONED
             evictionPolicy = new GridCacheLruEvictionPolicy()
-            atomicityMode  = GridCacheAtomicityMode.ATOMIC
+            atomicityMode  = GridCacheAtomicityMode.TRANSACTIONAL   // note: transactional is mandatory
             queryIndexEnabled = false
             writeSynchronizationMode = daemonConfig.getAttribute('ggfs.data.writeSynchronizationMode', GridCacheWriteSynchronizationMode.PRIMARY_SYNC) as GridCacheWriteSynchronizationMode
             distributionMode = GridCacheDistributionMode.PARTITIONED_ONLY
@@ -208,7 +208,7 @@ class GgGridFactory {
         metaCfg.with {
             name = 'ggfs-meta'
             cacheMode = GridCacheMode.REPLICATED
-            atomicityMode  = GridCacheAtomicityMode.ATOMIC
+            atomicityMode  = GridCacheAtomicityMode.TRANSACTIONAL   // note: transactional is mandatory
             queryIndexEnabled = false
             writeSynchronizationMode = GridCacheWriteSynchronizationMode.PRIMARY_SYNC
         }
