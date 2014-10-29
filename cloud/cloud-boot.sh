@@ -31,6 +31,8 @@ else
   version='latest'
 fi
 
+export NXF_HOST_IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
+
 curl -fsSL http://www.nextflow.io/releases/${version}/nextflow  > $HOME/nextflow
 chmod +x $HOME/nextflow
 bash -x $HOME/nextflow node -bg -in-container $CONTAINER \
