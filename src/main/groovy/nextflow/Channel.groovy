@@ -24,6 +24,8 @@ import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
 import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
 import static java.nio.file.StandardWatchEventKinds.OVERFLOW
 
+import java.nio.file.FileSystem
+import java.nio.file.FileSystems
 import java.nio.file.FileVisitOption
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
@@ -138,37 +140,49 @@ class Channel {
         return channel
     }
 
-    static DataflowChannel<Path> fromPath( Map options = null, filePattern ) {
+    static private FileSystem fileSystemForScheme(String scheme) {
+        if( !scheme )
+            return FileSystems.getDefault()
 
+        FileHelper.getOrCreateFileSystemFor(scheme)
+    }
+
+    static DataflowChannel<Path> fromPath( Map options = null, filePattern ) {
         assert filePattern
 
         if( filePattern instanceof Pattern )
             fromPath(options, filePattern)
 
+        else if( filePattern instanceof Path )
+            fromPath(options, filePattern)
+
         else
-            fromPath(options, filePattern.toString())
+            fromPath(options, filePattern.toString() as Path)
     }
 
     static DataflowChannel<Path> fromPath( Map options = null, Pattern filePattern ) {
         assert filePattern
         // split the folder and the pattern
-        def ( String folder, String pattern ) = getFolderAndPattern(filePattern.toString())
-        pathImpl( 'regex', folder, pattern, options )
+        def ( String folder, String pattern, String scheme ) = getFolderAndPattern(filePattern.toString())
+        def fs = fileSystemForScheme(scheme)
+        pathImpl( 'regex', folder, pattern, options, fs )
     }
 
 
-    static DataflowChannel<Path> fromPath( Map options = null, String filePattern ) {
+    static DataflowChannel<Path> fromPath( Map options = null, Path path ) {
+        assert path
 
-        assert filePattern
+        final fs = path.getFileSystem()
+        def filePattern = path.toString()
 
         if( !FileHelper.isGlobPattern(filePattern)) {
-            return from( Nextflow.file(filePattern) )
+            return from( path.complete() )
         }
 
         // split the folder and the pattern
         def ( String folder, String pattern ) = getFolderAndPattern(filePattern)
 
-        pathImpl('glob', folder, pattern, options )
+        pathImpl('glob', folder, pattern, options, fs)
     }
 
     @Deprecated
@@ -208,7 +222,7 @@ class Channel {
      * @param skipHidden Whenever skip the hidden files
      * @return A dataflow channel instance emitting the file matching the specified criteria
      */
-    static private DataflowChannel<Path> pathImpl( String syntax, String folder, String pattern, Map options )  {
+    static private DataflowChannel<Path> pathImpl( String syntax, String folder, String pattern, Map options, FileSystem fs )  {
         assert syntax in ['regex','glob']
         log.debug "files for syntax: $syntax; folder: $folder; pattern: $pattern; options: ${options}"
 
@@ -220,7 +234,7 @@ class Channel {
         final includeHidden = options?.hidden as Boolean ?: pattern.startsWith('.')
 
         // now apply glob file search
-        def path = folder as Path
+        def path = fs.getPath(folder)
         def rule = "$syntax:${folder}${pattern}"
         def matcher = FileHelper.getPathMatcherFor(rule, path.fileSystem)
         def channel = new DataflowQueue<Path>()
@@ -266,7 +280,7 @@ class Channel {
         def scheme = null;
         int i = filePattern.indexOf('://')
         if( i != -1 ) {
-            scheme = filePattern.substring(0, i+3)
+            scheme = filePattern.substring(0, i)
             filePattern = filePattern.substring(i+3)
         }
 
@@ -299,22 +313,17 @@ class Channel {
             pattern = filePattern
         }
 
-        if( scheme ) {
-            folder = scheme + folder
-        }
-
-        return [ folder, pattern ]
+        return [ folder, pattern, scheme ]
     }
 
 
-
-    static private DataflowChannel<Path> watchImpl( String syntax, String folder, String pattern, boolean skipHidden, String events ) {
+    static private DataflowChannel<Path> watchImpl( String syntax, String folder, String pattern, boolean skipHidden, String events, FileSystem fs ) {
         assert syntax in ['regex','glob']
         log.debug "Watch service for path: $folder; syntax: $syntax; pattern: $pattern; skipHidden: $skipHidden; events: $events"
 
         // now apply glob file search
         final result = create()
-        final path = folder as Path
+        final path = fs.getPath(folder)
         if( !path.isDirectory() ) {
             log.warn "Cannot watch a not existing path: $path -- Make sure that path exists and it is a directory"
             result.bind(STOP)
@@ -392,8 +401,9 @@ class Channel {
     static DataflowChannel<Path> watchPath( Pattern filePattern, String events = 'create' ) {
         assert filePattern
         // split the folder and the pattern
-        def ( String folder, String pattern ) = getFolderAndPattern(filePattern.toString())
-        watchImpl( 'regex', folder, pattern, false, events )
+        def ( String folder, String pattern, String scheme ) = getFolderAndPattern(filePattern.toString())
+        def fs = fileSystemForScheme(scheme)
+        watchImpl( 'regex', folder, pattern, false, events, fs )
     }
 
     /**
@@ -413,10 +423,16 @@ class Channel {
      *
      */
     static DataflowChannel<Path> watchPath( String filePattern, String events = 'create' ) {
-        def ( String folder, String pattern ) = getFolderAndPattern(filePattern)
-        watchImpl('glob', folder, pattern, pattern.startsWith('*'), events)
+        def ( String folder, String pattern, String scheme ) = getFolderAndPattern(filePattern)
+        def fs = fileSystemForScheme(scheme)
+        watchImpl('glob', folder, pattern, pattern.startsWith('*'), events, fs)
     }
 
+    static DataflowChannel<Path> watchPath( Path path, String events = 'create' ) {
+        def fs = path.getFileSystem()
+        def ( String folder, String pattern ) = getFolderAndPattern(path.toString())
+        watchImpl('glob', folder, pattern, pattern.startsWith('*'), events, fs)
+    }
 
 
     static private EVENT_MAP = [
