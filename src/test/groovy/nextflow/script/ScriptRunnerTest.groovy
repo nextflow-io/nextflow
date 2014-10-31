@@ -439,7 +439,6 @@ class ScriptRunnerTest extends Specification {
               cpus  = 2
               time  = '6 hour'
               penv  = 'mpi'
-              nodes = 10
               memory = '10G'
             }
             '''
@@ -468,7 +467,6 @@ class ScriptRunnerTest extends Specification {
         process.taskConfig.queue == 'short'
         process.taskConfig.cpus == 2
         process.taskConfig.penv == 'mpi'
-        process.taskConfig.nodes == 10
         process.taskConfig.memory == new MemoryUnit('10G')
         process.taskConfig.time == new Duration('6h')
 
@@ -487,7 +485,6 @@ class ScriptRunnerTest extends Specification {
         result[1] == 'cpus: 2'
         result[2] == 'time: 6h'
         result[3] == 'penv: mpi'
-        result[4] == 'nodes: 10'
         result[5] == 'memory: 10 GB'
 
     }
