@@ -104,7 +104,6 @@ dependencies {
     compile "com.esotericsoftware.kryo:kryo:2.24.0"
     compile 'org.iq80.leveldb:leveldb:0.7'
     compile("org.utgenome.thirdparty:picard:1.102.0") { transitive = false }
-    compile("org.eclipse.jgit:org.eclipse.jgit:3.5.1.201410131835-r") { exclude module: 'commons-logging' }
     compile('org.eclipse.jgit:org.eclipse.jgit.java7:3.5.1.201410131835-r') { exclude module: 'commons-logging' }
 
     // include Ivy at runtime in order to have Grape @Grab work correctly
@@ -171,7 +170,7 @@ task buildInfo << {
     def buildNum = 0
     def src = file.text
     src.find(/APP_BUILDNUM *= *([0-9]*)/) { buildNum = it[1]?.toInteger()+1 }
-    src = src.replaceAll('APP_VER *= *"[0-9a-z_\\-\\.]+"', "APP_VER = \"${version}\"" as String)
+    src = src.replaceAll('APP_VER *= *"[0-9a-zA-Z_\\-\\.]+"', "APP_VER = \"${version}\"" as String)
     src = src.replaceAll('APP_TIMESTAMP *= *[0-9]*', "APP_TIMESTAMP = ${System.currentTimeMillis()}" as String)
     if( buildNum ) {
         src = src.replaceAll('APP_BUILDNUM *= *[0-9]*', "APP_BUILDNUM = ${buildNum}" as String)
