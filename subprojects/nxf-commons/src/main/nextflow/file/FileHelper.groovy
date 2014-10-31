@@ -28,6 +28,7 @@ import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.PathMatcher
+import java.nio.file.Paths
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.spi.FileSystemProvider
@@ -44,7 +45,6 @@ import nextflow.Global
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
 import nextflow.util.CacheHelper
-
 /**
  * Provides some helper method handling files
  *
@@ -54,16 +54,24 @@ import nextflow.util.CacheHelper
 @CompileStatic
 class FileHelper {
 
+    static final Path localTempBasePath
+
     static final Pattern GLOB_FILE_BRACKETS = Pattern.compile(/(.*)(\{.+,.+\})(.*)/)
 
     static private Random rndGen = new Random()
 
     static final char[] ALPHA = ('a'..'z') as char[]
 
-    static final char[] NUMERIC = ('0'..'9') as char[]
-
-    static final char[] ALPHANUM = (('a'..'z')+('0'..'9')) as char[]
-
+    static {
+        def temp = System.getenv('NXF_TEMP')
+        if( temp ) {
+            localTempBasePath = Paths.get(temp)
+            log.debug "Using NXF_TEMP=${localTempBasePath}"
+            // make sure the path exists
+            if( !Files.exists(localTempBasePath) )
+                Files.createDirectories(localTempBasePath)
+        }
+    }
 
     static String normalizePath( String path ) {
 
@@ -103,42 +111,6 @@ class FileHelper {
 
     static String randomString( int len ) {
         randomString(len, ALPHA)
-    }
-
-
-    /**
-     * The process scratch folder
-     * @param seed
-     * @return
-     */
-    @Deprecated
-    static File createTempDir( final File baseDir = null ) {
-
-        long timestamp = System.currentTimeMillis()
-        while( true ) {
-
-            String rnd1 = randomString(2, NUMERIC)
-            String rnd2 = randomString(4, ALPHANUM)
-            String rnd3 = randomString(4, ALPHANUM)
-            String path = "$rnd1/$rnd2-$rnd3"
-
-            File tempDir = baseDir ? new File(baseDir,path) : new File(path)
-
-            if (tempDir.mkdirs()) {
-                return tempDir.absoluteFile;
-            }
-            else if ( !tempDir.exists() ) {
-                // when 'mkdirs' failed because it was unable to create the folder
-                // (since it does not exist) throw an exception
-                throw new IllegalStateException("Cannot create scratch folder: '${tempDir}' -- verify access permissions" )
-            }
-
-            if( System.currentTimeMillis() - timestamp > 1_000 ) {
-                throw new IllegalStateException("Unable to create scratch folder: '${tempDir}' after multiple attempts -- verify access permissions" )
-            }
-
-            Thread.sleep(50)
-        }
     }
 
 
@@ -234,6 +206,14 @@ class FileHelper {
             return result.toAbsolutePath()
         }
 
+    }
+
+
+    final static Path createLocalDir(String prefix = 'nxf') {
+        if( localTempBasePath )
+            Files.createTempDirectory(localTempBasePath, prefix)
+        else
+            Files.createTempDirectory(prefix)
     }
 
     static Path asPath( String str ) {

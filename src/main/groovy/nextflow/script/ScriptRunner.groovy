@@ -21,7 +21,6 @@
 package nextflow.script
 import static nextflow.util.ConfigHelper.parseValue
 
-import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -33,6 +32,7 @@ import nextflow.Session
 import nextflow.ast.NextflowDSL
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import nextflow.util.ConfigHelper
 import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.exception.ExceptionUtils
@@ -273,7 +273,7 @@ class ScriptRunner {
         }
 
         // set the byte-code target directory
-        def targetDir = Files.createTempDirectory('nxf')
+        def targetDir = FileHelper.createLocalDir()
         config.setTargetDirectory(targetDir.toFile())
         // add the directory of generated classes to the lib path
         // so that it can be propagated to remote note (when necessary)

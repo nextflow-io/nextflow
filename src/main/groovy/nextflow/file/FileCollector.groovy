@@ -62,7 +62,7 @@ abstract class FileCollector implements Closeable {
     protected Path createTempDir() {
 
         if( !tempDir ) {
-            return tempDir = Files.createTempDirectory('nxf-collect')
+            return tempDir = FileHelper.createLocalDir()
         }
 
         // read the path attributes

@@ -310,7 +310,7 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
     /**
      * A temporary where all files are cached. The folder is deleted during instance shut-down
      */
-    private static final Path localCacheDir = Files.createTempDirectory('nxf-cache')
+    private static final Path localCacheDir = FileHelper.createLocalDir()
 
     protected static getLocalCacheDir() { localCacheDir }
 
@@ -394,7 +394,7 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
             attrs = (Map<String,Object>)KryoHelper.deserialize(payload)
 
         // create a local scratch dir
-        scratchDir = Files.createTempDirectory('nxf-task')
+        scratchDir = FileHelper.createLocalDir()
 
         if( !inputFiles )
             return

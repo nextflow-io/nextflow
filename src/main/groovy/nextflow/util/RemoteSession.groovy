@@ -29,6 +29,8 @@ import java.util.zip.ZipOutputStream
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.file.FileHelper
+
 /**
  * Make a script executable in a remote session, embedding the script classes and external libraries.
  * <p>
@@ -144,7 +146,7 @@ class RemoteSession implements Serializable, Closeable {
         assert bytes
 
         if( !target )
-            target = Files.createTempDirectory('nxf')
+            target = FileHelper.createLocalDir()
 
         int count=0
         ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(bytes))

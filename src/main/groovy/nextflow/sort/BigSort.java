@@ -38,6 +38,7 @@ import java.util.Map;
 
 import groovy.lang.Closure;
 import nextflow.extension.FilesEx;
+import nextflow.file.FileHelper;
 import nextflow.util.MemoryUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -161,7 +162,7 @@ abstract public class BigSort<V> implements Closeable {
      */
     public BigSort create() throws IOException {
         if( tempDir == null ) {
-            tempDir = Files.createTempDirectory("bigsort");
+            tempDir = FileHelper.createLocalDir("bigsort");
         }
         else if ( !Files.exists(tempDir) )  {
             Files.createDirectories(tempDir);
