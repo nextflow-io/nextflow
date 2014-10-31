@@ -14,21 +14,27 @@ import org.gridgain.grid.spi.discovery.tcp.ipfinder.s3.GridTcpDiscoveryS3IpFinde
 @InheritConstructors
 class GgCustomS3IpFinder extends GridTcpDiscoveryS3IpFinder {
 
+    private String hostIp
+
+    {
+        hostIp = System.getenv('NXF_HOST_IP')
+    }
+
     @Override
     public void registerAddresses(Collection<InetSocketAddress> address) throws GridSpiException {
 
-        def str = System.getenv('NXF_ADDRESS')
-        Collection<InetSocketAddress> newAddress = getInetAddress(str, address)
-        log.debug "registerAddresses $newAddress (it was: $address)"
+        Collection<InetSocketAddress> newAddress = getInetAddress(hostIp, address)
+        if( newAddress != address )
+            log.debug "registerAddresses $newAddress (it was: $address)"
 
         super.registerAddresses(newAddress)
     }
 
     @Override public void unregisterAddresses(Collection<InetSocketAddress> address) throws GridSpiException {
 
-        def str = System.getenv('NXF_ADDRESS')
-        Collection<InetSocketAddress> newAddress = getInetAddress(str, address)
-        log.debug "unregisterAddresses $newAddress (it was: $address)"
+        Collection<InetSocketAddress> newAddress = getInetAddress(hostIp, address)
+        if( newAddress != address )
+            log.debug "registerAddresses $newAddress (it was: $address)"
 
         super.unregisterAddresses(address)
     }
