@@ -59,8 +59,7 @@ class BashWrapperBuilder {
         }
 
         on_exit() {
-          set +e
-          local exit_status=${ret:=$?}
+          exit_status=${ret:=$?}
           printf $exit_status > __EXIT_FILE__
           exit $exit_status
         }

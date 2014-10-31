@@ -129,8 +129,7 @@ class BashWrapperBuilderTest extends Specification {
                 }
 
                 on_exit() {
-                  set +e
-                  local exit_status=\${ret:=\$?}
+                  exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   exit \$exit_status
                 }
@@ -202,8 +201,7 @@ class BashWrapperBuilderTest extends Specification {
                 }
 
                 on_exit() {
-                  set +e
-                  local exit_status=\${ret:=\$?}
+                  exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   exit \$exit_status
                 }
@@ -278,8 +276,7 @@ class BashWrapperBuilderTest extends Specification {
                 }
 
                 on_exit() {
-                  set +e
-                  local exit_status=\${ret:=\$?}
+                  exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   exit \$exit_status
                 }
@@ -372,8 +369,7 @@ class BashWrapperBuilderTest extends Specification {
                 }
 
                 on_exit() {
-                  set +e
-                  local exit_status=\${ret:=\$?}
+                  exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   exit \$exit_status
                 }
@@ -545,8 +541,7 @@ class BashWrapperBuilderTest extends Specification {
                 }
 
                 on_exit() {
-                  set +e
-                  local exit_status=\${ret:=\$?}
+                  exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   exit \$exit_status
                 }
@@ -623,8 +618,7 @@ class BashWrapperBuilderTest extends Specification {
                 }
 
                 on_exit() {
-                  set +e
-                  local exit_status=\${ret:=\$?}
+                  exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   exit \$exit_status
                 }
@@ -704,8 +698,7 @@ class BashWrapperBuilderTest extends Specification {
                 }
 
                 on_exit() {
-                  set +e
-                  local exit_status=\${ret:=\$?}
+                  exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   exit \$exit_status
                 }
@@ -758,8 +751,7 @@ class BashWrapperBuilderTest extends Specification {
                     }
 
                     on_exit() {
-                      set +e
-                      local exit_status=${ret:=$?}
+                      exit_status=${ret:=$?}
                       printf $exit_status > /my/exit/file
                       exit $exit_status
                     }
@@ -795,8 +787,7 @@ class BashWrapperBuilderTest extends Specification {
                     }
 
                     on_exit() {
-                      set +e
-                      local exit_status=${ret:=$?}
+                      exit_status=${ret:=$?}
                       printf $exit_status > /my/exit/xxx
                       exit $exit_status
                     }
