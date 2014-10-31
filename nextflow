@@ -40,6 +40,10 @@ function die() {
   exit 1
 }
 
+get_abs_filename() {
+  echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+}
+
 function get() {
     if command -v wget &>/dev/null; then
         GET="wget -q $1 -O $2"
@@ -98,6 +102,7 @@ fi
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_VER=${NXF_VER:-'0.11.0-SNAPSHOT'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
+NXF_ASSETS=${NXF_ASSETS:-$NXF_HOME/assets}
 NXF_CLI="$0 $@"
 
 export NXF_CLI
