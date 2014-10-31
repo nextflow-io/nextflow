@@ -24,7 +24,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.Session
-import nextflow.daemon.GgCustomS3IpFinder
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.util.DaemonConfig
@@ -48,6 +47,7 @@ import org.gridgain.grid.logger.slf4j.GridSlf4jLogger
 import org.gridgain.grid.spi.collision.jobstealing.GridJobStealingCollisionSpi
 import org.gridgain.grid.spi.discovery.tcp.GridTcpDiscoverySpi
 import org.gridgain.grid.spi.discovery.tcp.ipfinder.multicast.GridTcpDiscoveryMulticastIpFinder
+import org.gridgain.grid.spi.discovery.tcp.ipfinder.s3.GridTcpDiscoveryS3IpFinder
 import org.gridgain.grid.spi.discovery.tcp.ipfinder.sharedfs.GridTcpDiscoverySharedFsIpFinder
 import org.gridgain.grid.spi.discovery.tcp.ipfinder.vm.GridTcpDiscoveryVmIpFinder
 import org.gridgain.grid.spi.loadbalancing.adaptive.GridAdaptiveLoadBalancingSpi
@@ -327,7 +327,7 @@ class GgGridFactory {
                 bucket = bucket.substring(1)
 
             log.debug "GridGain config > discovery AWS bucket: $bucket; access: ${accessKey.substring(0,6)}..; ${secretKey.substring(0,6)}.."
-            final finder = new GgCustomS3IpFinder()
+            final finder = new GridTcpDiscoveryS3IpFinder()
             finder.setAwsCredentials( new BasicAWSCredentials(accessKey, secretKey) )
             finder.setBucketName(bucket)
 
