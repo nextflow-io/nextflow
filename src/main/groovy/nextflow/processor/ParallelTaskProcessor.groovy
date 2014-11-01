@@ -296,7 +296,6 @@ class ParallelTaskProcessor extends TaskProcessor {
         // in the script evaluation context (scope: 'task')
         task.localConfig = new LocalConfig()
         task.localConfig.cpus = taskConfig.cpus ?: 1
-        task.localConfig.nodes = taskConfig.nodes ?: 1
         if( taskConfig.penv ) task.localConfig.penv = taskConfig.penv
         if( taskConfig.time ) task.localConfig.time = taskConfig.time
         if( taskConfig.memory ) task.localConfig.memory = taskConfig.memory

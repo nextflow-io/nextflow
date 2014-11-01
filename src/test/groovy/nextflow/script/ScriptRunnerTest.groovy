@@ -508,7 +508,6 @@ class ScriptRunnerTest extends Specification {
         then:
         process.taskConfig instanceof TaskConfig
         process.taskConfig.cpus == null
-        process.taskConfig.nodes == null
 
         when:
         def result = new ScriptRunner(process: [executor:'nope'])
@@ -522,7 +521,6 @@ class ScriptRunnerTest extends Specification {
 
         then:
         result[0] == 'cpus: 1'
-        result[1] == 'nodes: 1'
 
     }
 
