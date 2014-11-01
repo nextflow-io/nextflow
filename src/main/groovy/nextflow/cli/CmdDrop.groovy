@@ -53,7 +53,7 @@ class CmdDrop extends CmdBase {
 
         def manager = new AssetManager(args[0])
         if( !manager.localPath.exists() ) {
-            throw new AbortOperationException("Pipeline does not exist")
+            throw new AbortOperationException("No match found for: ${args[0]}")
         }
 
         if( this.force || manager.isClean() ) {
