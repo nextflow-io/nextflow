@@ -88,7 +88,7 @@ abstract class AbstractGridExecutor extends Executor {
      * @return A string that represent to submit job name
      */
     protected String getJobNameFor(TaskRun task) {
-        "nf-${task.processor.getName()}_${task.index}"
+        "nf-${task.processor.getName().replace(' ','_')}_${task.index}"
     }
 
     /**
