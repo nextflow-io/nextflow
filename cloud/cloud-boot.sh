@@ -17,7 +17,7 @@ EOF
 #
 # Lauch docker and pull the container when DOCKER variable is defined
 #
-[[ "$CONTAINER" ]] && docker pull $CONTAINER
+[[ "$DOCKER_IMAGE" ]] && docker pull $DOCKER_IMAGE
 
 # the bucket name
 AWS_S3BUCKET=${AWS_S3BUCKET:-'nxf-cluster'}
@@ -31,11 +31,9 @@ else
   version='latest'
 fi
 
-export NXF_HOST_IP=$(curl -fsSL http://169.254.169.254/latest/meta-data/local-ipv4)
-
 curl -fsSL http://www.nextflow.io/releases/${version}/nextflow  > $HOME/nextflow
 chmod +x $HOME/nextflow
-bash -x $HOME/nextflow node -bg -in-container $CONTAINER \
+bash -x $HOME/nextflow node -bg \
   -cluster.join "s3:$AWS_S3BUCKET" \
   -cluster.interface eth0
 
