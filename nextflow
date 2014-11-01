@@ -18,10 +18,12 @@
 #  You should have received a copy of the GNU General Public License
 #  along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
 
+if [[ $TERM && $TERM != 'dumb' ]]; then
 NORMAL=$(tput sgr0)
 GREEN=$(tput setaf 2; tput bold)
 YELLOW=$(tput setaf 3)
 RED=$(tput setaf 1)
+fi
 
 function echo_red() {
     echo -e "$RED$*$NORMAL"
@@ -212,7 +214,7 @@ elif [[ "$NXF_DRMAA" ]]; then
   exit 1
 fi
 
-COLUMNS=${COLUMNS:-`tty -s && tput cols 2> /dev/tty || true`}
+COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}
 JAVA_OPTS="-noverify -Djava.awt.headless=true -Dcapsule.log=$CAPSULE_LOG -Dcapsule.trampoline"
 [[ "$JAVA_HOME" ]] && JAVA_OPTS+=" -Dcapsule.java.home=$JAVA_HOME"
 [[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=" -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
