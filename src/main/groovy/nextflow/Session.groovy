@@ -220,7 +220,7 @@ class Session {
                 result << (TraceObserver)Class.forName(EXTRAE_TRACE_CLASS).newInstance()
             }
             catch( Exception e ) {
-                log.warn("Unable to load Extrae profiler ${Const.log_detail_tip_message}",e)
+                log.warn("Unable to load Extrae profiler",e)
             }
         }
 

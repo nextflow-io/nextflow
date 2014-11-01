@@ -27,6 +27,7 @@ import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder
 import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.classic.spi.ThrowableProxy
 import ch.qos.logback.core.ConsoleAppender
 import ch.qos.logback.core.CoreConstants
 import ch.qos.logback.core.LayoutBase
@@ -38,8 +39,14 @@ import ch.qos.logback.core.rolling.RollingFileAppender
 import ch.qos.logback.core.rolling.TriggeringPolicyBase
 import ch.qos.logback.core.spi.FilterReply
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import nextflow.Global
+import nextflow.Session
 import nextflow.cli.Launcher
+import nextflow.exception.AbortOperationException
+import nextflow.exception.ProcessException
 import nextflow.file.FileHelper
+import org.apache.commons.lang.exception.ExceptionUtils
 import org.slf4j.LoggerFactory
 /**
  * Helper methods to setup the logging subsystem
@@ -48,6 +55,8 @@ import org.slf4j.LoggerFactory
  */
 @CompileStatic
 class LoggerHelper {
+
+    static private String logFileName
 
     /**
      * Configure the underlying logging subsystem. The logging information are saved
@@ -64,7 +73,7 @@ class LoggerHelper {
     static void configureLogger( Launcher launcher ) {
 
         final opts = launcher.options
-        final String logFileName = opts.logFile
+        logFileName = opts.logFile
 
         final boolean quiet = opts.quiet
         final List<String> debugConf = opts.debug
@@ -204,17 +213,92 @@ class LoggerHelper {
 
         public String doLayout(ILoggingEvent event) {
             StringBuilder buffer = new StringBuilder(128);
-            if( event.getLevel() != Level.INFO ) {
-                buffer.append( event.getLevel().toString() ) .append(": ")
+            if( event.level == Level.INFO ) {
+                buffer .append(event.getFormattedMessage()) .append(CoreConstants.LINE_SEPARATOR)
             }
 
-            return buffer
-                    .append(event.getFormattedMessage())
-                    .append(CoreConstants.LINE_SEPARATOR)
-                    .toString()
+            else if( event.level == Level.ERROR ) {
+                def error = ( event.getThrowableProxy() instanceof ThrowableProxy
+                            ? (event.getThrowableProxy() as ThrowableProxy).throwable
+                            : null) as Throwable
+
+                def script = ((Session)Global.session).scriptName
+                appendFormattedMessage(event, error, script, buffer)
+            }
+            else {
+                buffer
+                        .append( event.getLevel().toString() ) .append(": ")
+                        .append(event.getFormattedMessage())
+                        .append(CoreConstants.LINE_SEPARATOR)
+            }
+
+            return buffer.toString()
         }
     }
 
+
+    /**
+     * Find out the script line where the error has thrown
+     */
+    static void appendFormattedMessage( ILoggingEvent event, Throwable fail, String scriptName, StringBuilder buffer ) {
+
+        final message = event.getFormattedMessage()
+        final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException
+        List error = fail ? findErrorLine(fail, scriptName) : null
+
+        // error string is not shown for abort operation
+        if( !quiet ) {
+            buffer.append("ERROR: ")
+        }
+
+        // add the log message
+        if( fail instanceof MissingPropertyException ) {
+            buffer.append("Not such variable: '${fail.getProperty()}'")
+        }
+        else if( message && !message.startsWith('@') ) {
+            buffer.append(message)
+        }
+        else if( fail ) {
+            buffer.append( fail.message )
+        }
+        else {
+            buffer.append("Unknown error")
+        }
+        buffer.append(CoreConstants.LINE_SEPARATOR)
+        buffer.append(CoreConstants.LINE_SEPARATOR)
+
+        // extra formatting
+        if( error ) {
+            buffer.append("  -- Check script '${error[0]}' at line: ${error[1]}")
+            buffer.append(CoreConstants.LINE_SEPARATOR)
+        }
+        else if( logFileName && !quiet ) {
+            buffer.append("  -- Check '${logFileName}' file for details")
+            buffer.append(CoreConstants.LINE_SEPARATOR)
+        }
+
+    }
+
+    static @PackageScope List<String> findErrorLine( Throwable e, String scriptName ) {
+        def lines = ExceptionUtils.getStackTrace(e).split('\n')
+        List error = null
+        for( String str : lines ) {
+            if( (error=getErrorLine(str,scriptName))) {
+                break
+            }
+        }
+        return error
+    }
+
+    @PackageScope
+    static List<String> getErrorLine( String line, String scriptName = null) {
+        if( scriptName==null )
+            scriptName = '.+'
+
+        def pattern = ~/.*\(($scriptName):(\d*)\).*/
+        def m = pattern.matcher(line)
+        return m.matches() ? [m.group(1), m.group(2)] : null
+    }
 
     /**
      * Trigger a new log file on application start-up

@@ -33,7 +33,6 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
-import nextflow.Const
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.exception.MissingFileException
@@ -42,6 +41,7 @@ import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessScriptException
 import nextflow.executor.Executor
+import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.script.BaseScript
 import nextflow.script.BasicMode
@@ -61,7 +61,6 @@ import nextflow.script.ValueSharedParam
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
-import nextflow.file.FileHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -738,15 +737,13 @@ abstract class TaskProcessor {
                 formatTaskError( message, error, task )
             }
             else {
-                message << formatErrorCause( error )
-                message << Const.log_detail_tip_message
+                message << formatErrorCause(error)
             }
-            log.error message.join('\n')
-            log.debug "Process $name raise the following exception:", error
+            log.error message.join('\n'), error
         }
         catch( Throwable e ) {
             // no recoverable error
-            log.error("Execution aborted due to an unxpected error ${Const.log_detail_tip_message}", e )
+            log.error("Execution aborted due to an unexpected error", e )
         }
 
         session.abort()

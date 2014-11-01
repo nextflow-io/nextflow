@@ -420,14 +420,6 @@ class ScriptRunnerTest extends Specification {
     }
 
 
-    def 'test error line'() {
-
-        expect:
-        ScriptRunner.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]') == ['pfam3d.nf','189']
-        ScriptRunner.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','pfam3d.nf') == ['pfam3d.nf','189']
-        ScriptRunner.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','hola') == null
-    }
-
     def 'test resource'() {
 
         setup:
