@@ -65,6 +65,9 @@ class HistoryFile extends File {
 
     }
 
+    boolean findUniqueId( String uuid ) {
+        readLines().find { String line -> line.startsWith(uuid) }
+    }
 
 
 }

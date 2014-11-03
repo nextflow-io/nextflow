@@ -20,6 +20,8 @@
 
 package nextflow.processor
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
@@ -52,6 +54,10 @@ import nextflow.util.CacheHelper
 @InheritConstructors
 class ParallelTaskProcessor extends TaskProcessor {
 
+    /**
+     * Used to show the override warning message only the very first time
+     */
+    private final overrideWarnShown = new AtomicBoolean()
 
     /**
      * Keeps track of the task instance executed by the current thread
@@ -286,12 +292,29 @@ class ParallelTaskProcessor extends TaskProcessor {
             task.setInput(param, val)
         }
 
+        // local config provide a set of attributes injected by default in the
+        // in the script evaluation context (scope: 'task')
+        task.localConfig = new LocalConfig()
+        task.localConfig.cpus = taskConfig.cpus ?: 1
+        if( taskConfig.penv ) task.localConfig.penv = taskConfig.penv
+        if( taskConfig.time ) task.localConfig.time = taskConfig.time
+        if( taskConfig.memory ) task.localConfig.memory = taskConfig.memory
+        if( taskConfig.queue ) task.localConfig.queue = taskConfig.queue
+
         /*
          * initialize the task code to be executed
          */
+        final delegate = new DelegateMap(this, contextMap)
         task.code = this.code.clone() as Closure
-        task.code.delegate = new DelegateMap(this, contextMap)
+        task.code.delegate = delegate
         task.code.setResolveStrategy(Closure.DELEGATE_FIRST)
+
+        if( !delegate.containsKey('task') ) {
+            delegate.task = task.localConfig
+        }
+        else if( !overrideWarnShown.getAndSet(true) ) {
+            log.warn "Process $name overrides value of reserved variable 'task' "
+        }
 
         // set the docker container to be used
         task.container = taskConfig.container
@@ -336,7 +359,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         log.trace "[${task.name}] cache keys: ${keys} -- mode: $mode"
         final hash = CacheHelper.hasher(keys, mode).hash()
 
-        checkCachedOrLaunchTask(task,hash,resumable,RunType.SUBMIT)
+        checkCachedOrLaunchTask(task,hash,resumable,TaskProcessor.RunType.SUBMIT)
 
     }
 

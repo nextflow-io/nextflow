@@ -22,7 +22,7 @@ import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
-import embed.com.google.common.hash.HashCode
+import com.google.common.hash.HashCode
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -33,7 +33,6 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
-import nextflow.Const
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.exception.MissingFileException
@@ -42,6 +41,7 @@ import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessScriptException
 import nextflow.executor.Executor
+import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.script.BaseScript
 import nextflow.script.BasicMode
@@ -61,7 +61,6 @@ import nextflow.script.ValueSharedParam
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
-import nextflow.file.FileHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -69,7 +68,7 @@ import nextflow.file.FileHelper
 @Slf4j
 abstract class TaskProcessor {
 
-    enum RunType {
+    static enum RunType {
         SUBMIT('Submitted process'),
         RETRY('Re-submitted process')
 
@@ -150,11 +149,6 @@ abstract class TaskProcessor {
      * very first time  for all processes
      */
     private static final AtomicBoolean errorShown = new AtomicBoolean()
-
-    /**
-     * Used to show the override warning message only the very first time
-     */
-    private final overrideWarnShown = new AtomicBoolean()
 
     /**
      * Flag set {@code true} when the processor termination has been invoked
@@ -371,7 +365,7 @@ abstract class TaskProcessor {
     }
 
     /**
-     * Remove extra leading and trailing whitespace and newlines chars,
+     * Remove extra leading, trailing whitespace and newlines chars,
      * also if the script does not start with a {@code shebang} line,
      * add the default by using the current {@code #shell} attribute
      */
@@ -512,13 +506,8 @@ abstract class TaskProcessor {
                 throw new IOException("Unable to create folder: $folder -- check file system permission")
             }
 
-            // set the working directory
-            task.hash = hash
-            task.workDir = folder
-            log.trace "[${task.name}] actual run folder: ${task.workDir}"
-
             // submit task for execution
-            submitTask( task, runType )
+            submitTask( task, runType, hash, folder )
             return true
         }
 
@@ -723,6 +712,7 @@ abstract class TaskProcessor {
                 // IGNORE strategy -- just continue
                 if( taskStrategy == ErrorStrategy.IGNORE ) {
                     log.warn "Error running process > ${error.getMessage()} -- error is ignored"
+                    task.failed = true
                     return ErrorStrategy.IGNORE
                 }
 
@@ -732,6 +722,9 @@ abstract class TaskProcessor {
                     return ErrorStrategy.RETRY
                 }
             }
+
+            // mark the task as failed
+            task.failed = true
 
             // MAKE sure the error is showed only the very first time across all processes
             if( errorShown.getAndSet(true) ) {
@@ -744,20 +737,17 @@ abstract class TaskProcessor {
                 formatTaskError( message, error, task )
             }
             else {
-                message << formatErrorCause( error )
-                message << Const.log_detail_tip_message
+                message << formatErrorCause(error)
             }
-            log.error message.join('\n')
-            log.debug "Process $name raise the following exception:", error
+            log.error message.join('\n'), error
         }
         catch( Throwable e ) {
             // no recoverable error
-            log.error("Execution aborted due to an unxpected error ${Const.log_detail_tip_message}", e )
+            log.error("Execution aborted due to an unexpected error", e )
         }
 
         session.abort()
         return ErrorStrategy.TERMINATE
-
     }
 
     final protected formatTaskError( List message, Throwable error, TaskRun task ) {
@@ -1311,14 +1301,13 @@ abstract class TaskProcessor {
      * @param script The script string to be execute, e.g. a BASH script
      * @return {@code TaskDef}
      */
-    final protected void submitTask( TaskRun task, RunType runType ) {
+    final protected void submitTask( TaskRun task, RunType runType, HashCode hash, Path folder ) {
+        log.trace "[${task.name}] actual run folder: ${task.workDir}"
 
-        if( task.code?.delegate instanceof Map ) {
-            if( ((Map)task.code.delegate).containsKey('workDir') && !overrideWarnShown.getAndSet(true)) {
-                log.warn "Process $name overrides value of reserved variable 'workDir' "
-            }
-            task.code.delegate['workDir'] = task.workDir
-        }
+        // set hash-code & working directory
+        task.hash = hash
+        task.workDir = folder
+        task.localConfig.workDir = folder
 
         // add the task to the collection of running tasks
         session.dispatcher.submit(task, blocking, runType.message)
@@ -1401,15 +1390,12 @@ abstract class TaskProcessor {
         state.update { StateObj it -> it.incCompleted() }
     }
 
-
     protected void terminateProcess() {
         log.debug "<${name}> Sending poison pills and terminating process"
         sendPoisonPill()
         session.taskDeregister(this)
         processor.terminate()
     }
-
-
 
 }
 

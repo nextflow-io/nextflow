@@ -18,7 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.util
+package nextflow.io
 
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit

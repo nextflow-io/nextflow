@@ -25,7 +25,6 @@ import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.script.BaseScript
-import nextflow.util.Duration
 import spock.lang.Specification
 /**
  *
@@ -69,10 +68,20 @@ class SlurmExecutorTest extends Specification {
         exec.taskConfig = config
 
         when:
-        config.maxDuration( Duration.of('1h') )
-        config.clusterOptions = '-x -y -z'
+        config.cpus = test_cpus
+        config.time = test_time
+        config.memory = test_mem
+        config.clusterOptions = test_opts
         then:
-        exec.getSubmitCommandLine(task,script).join(' ') == 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -t 01:00:00 -x -y -z script.sh'
+        exec.getSubmitCommandLine(task,script).join(' ') == expected
+
+        where:
+        test_cpus   | test_mem  | test_time | test_opts || expected
+        null        | null      | null      | null      || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null script.sh'
+        null        | null      | '1m'      | null      || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -t 00:01:00 script.sh'
+        1           | '50 M'    | '1h'      | '-a 1'    || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 1 -t 01:00:00 --mem 50 -a 1 script.sh'
+        2           | '200 M'   | '2h'      | '-b 2'    || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 2 -t 02:00:00 --mem 200 -b 2 script.sh'
+        8           | '3 G'     | '2d'      | '-x 3'    || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 8 -t 48:00:00 --mem 3072 -x 3 script.sh'
     }
 
     def testQstatCommand() {

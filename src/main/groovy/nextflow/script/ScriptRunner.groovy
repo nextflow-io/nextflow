@@ -21,11 +21,9 @@
 package nextflow.script
 import static nextflow.util.ConfigHelper.parseValue
 
-import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Channel
 import nextflow.Nextflow
@@ -33,9 +31,9 @@ import nextflow.Session
 import nextflow.ast.NextflowDSL
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import nextflow.util.ConfigHelper
 import org.apache.commons.lang.StringUtils
-import org.apache.commons.lang.exception.ExceptionUtils
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
@@ -155,9 +153,6 @@ class ScriptRunner {
             // run the code
             run()
         }
-        catch( MissingPropertyException e ) {
-            throw new AbortOperationException(getErrorMessage(e, session.scriptName), e)
-        }
         finally {
             terminate()
         }
@@ -273,7 +268,7 @@ class ScriptRunner {
         }
 
         // set the byte-code target directory
-        def targetDir = Files.createTempDirectory('nxf')
+        def targetDir = FileHelper.createLocalDir()
         config.setTargetDirectory(targetDir.toFile())
         // add the directory of generated classes to the lib path
         // so that it can be propagated to remote note (when necessary)
@@ -312,47 +307,6 @@ class ScriptRunner {
         session.destroy()
     }
 
-
-    /**
-     * Find out the script line where the error has thrown
-     */
-    static String getErrorMessage( Throwable e, String scriptName ) {
-
-        def lines = ExceptionUtils.getStackTrace(e).split('\n')
-        List error = null
-        for( String str : lines ) {
-            if( (error=getErrorLine(str,scriptName))) {
-                break
-            }
-        }
-
-        if( e instanceof MissingPropertyException ) {
-            def result = "Not such variable: '${e.getProperty()}'"
-            if( error )
-                result += " -- check script '${error[0]}' at line: ${error[1]}"
-            else if( scriptName )
-                result += " -- check that you don't mispelled it in scipt '$scriptName'"
-
-            return result
-        }
-        else if( error ) {
-            (e.message ?: e.toString()) + " at $error"
-        }
-        else {
-            e.message ?: e.toString()
-        }
-    }
-
-
-    @PackageScope
-    static List<String> getErrorLine( String line, String scriptName = null) {
-        if( scriptName==null )
-            scriptName = '.+'
-
-        def pattern = ~/.*\(($scriptName):(\d*)\).*/
-        def m = pattern.matcher(line)
-        return m.matches() ? [m.group(1), m.group(2)] : null
-    }
 
     /**
      * Extends an {@code ArrayList} class adding a nicer index-out-of-range error message

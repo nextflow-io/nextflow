@@ -78,6 +78,7 @@ class BoltsTest extends Specification {
         def x = 'Hello'
 
         expect:
+        null as Path == null
         'file.txt' as Path == Paths.get('file.txt')
         '/some/path/file.txt' as Path == Paths.get('/some/path/file.txt')
         "name.fa" as Path == Paths.get('name.fa')
@@ -109,5 +110,48 @@ class BoltsTest extends Specification {
 
     }
 
+
+    def testBestMatches() {
+
+        expect:
+        ['hello','hola','ciao'].bestMatches('ciao') == ['ciao']
+        ['hello','hola','ciao'].bestMatches('halo') == ['hello','hola']
+        ['hello','hola','ciao'].bestMatches('none') == []
+
+    }
+
+
+    def testNavigate() {
+
+        when:
+        def map = [ a: 1, b:2 ]
+        then:
+        map.navigate('a') == 1
+        map.navigate('b') == 2
+        map.navigate('b') { it == 2 ? 4 : 0 }  == 4
+        map.navigate('c') == null
+        map.navigate('x.y.z') == null
+
+
+        when:
+        map = [ a: 1, b:2, c: [x:1, y: [delta: 'd', gamma: 'g']] ]
+        then:
+        map.navigate('a') == 1
+        map.navigate('b') == 2
+        map.navigate('c.x') == 1
+        map.navigate('c.y.delta') == 'd'
+        map.navigate('c.y.gamma') == 'g'
+        map.navigate('c.y.zeta') == null
+        map.navigate('c.p.q') == null
+        map.navigate('c.y.gamma') { it == 'g' ? 'omega' : null }== 'omega'
+
+        when:
+        map = [trace: [:]]
+        then:
+        map.navigate('trace.x') == null
+        map.navigate('trace.x') { return 1 } == null
+
+
+    }
 
 }

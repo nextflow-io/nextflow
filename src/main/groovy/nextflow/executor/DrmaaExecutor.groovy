@@ -161,9 +161,24 @@ class DrmaaTaskHandler extends TaskHandler {
             result << '-q'  << taskConfig.queue
         }
 
+        //number of cpus for multiprocessing/multi-threading
+        if( taskConfig.cpus ) {
+            if ( taskConfig.penv ) {
+                result << "-pe" << taskConfig.penv << taskConfig.cpus.toString()
+            } else {
+                result << "-l" << "slots=${taskConfig.cpus}"
+            }
+        }
+
+        // max task duration
+        if( taskConfig.getTime() ) {
+            final time = taskConfig.getTime()
+            result << "-l" << "h_rt=${time.format('HH:mm:ss')}"
+        }
+
         // task max memory
-        if( taskConfig.maxMemory ) {
-            result << "-l" << "virtual_free=${taskConfig.maxMemory.toString().replaceAll(/[\sB]/,'')}"
+        if( taskConfig.getMemory() ) {
+            result << "-l" << "virtual_free=${taskConfig.getMemory().toString().replaceAll(/[\sB]/,'')}"
         }
 
         // -- at the end append the command script wrapped file name
@@ -189,8 +204,8 @@ class DrmaaTaskHandler extends TaskHandler {
         template.setNativeSpecification( getOptions() )
 
         // max task duration
-        if( taskConfig.maxDuration ) {
-            final duration = taskConfig.maxDuration as Duration
+        if( taskConfig.getTime() ) {
+            final duration = taskConfig.getTime()
             template.setHardRunDurationLimit( duration.toSeconds() )
         }
 
@@ -223,7 +238,7 @@ class DrmaaTaskHandler extends TaskHandler {
         return false
     }
 
-
+    @Deprecated
     private getJobInfo() {
         if( fJobInfo )
             return fJobInfo
@@ -313,31 +328,10 @@ class DrmaaTaskHandler extends TaskHandler {
      */
     @Override
     public TraceRecord getTraceRecord() {
-        Map<String,String> resources = getJobInfo()?.getResourceUsage() ?: [:]
 
         def trace = super.getTraceRecord()
-        trace.nativeId = jobId
+        trace.native_id = jobId
         trace.exit = task.exitStatus
-
-        if( resources ) {
-            log.trace "Job $jobId DRMAA resources > $resources"
-            // all time are returns as Linux system
-            if( resources.containsKey('submission_time'))
-                trace.submit = millis(resources['submission_time'])
-
-            if( resources.containsKey('start_time'))
-                trace.start = millis(resources['start_time'])
-
-            if( resources.containsKey('end_time'))
-                trace.complete = millis(resources['end_time'])
-
-            if( resources.containsKey('maxvmem') )
-                trace.mem = resources['maxvmem']
-
-            if( resources.containsKey('cpu'))
-                trace.cpu = resources['cpu']
-
-        }
 
         return trace
     }

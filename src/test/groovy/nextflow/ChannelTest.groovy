@@ -37,31 +37,31 @@ class ChannelTest extends Specification {
     def testGetPathAndPattern () {
 
         expect:
-        Channel.getFolderAndPattern( '/some/file/name.txt' ) == ['/some/file/', 'name.txt']
-        Channel.getFolderAndPattern( '/some/file/na*.txt' ) == ['/some/file/', 'na*.txt']
-        Channel.getFolderAndPattern( '/some/file/na??.txt' ) == ['/some/file/', 'na??.txt']
-        Channel.getFolderAndPattern( '/some/file/*.txt' ) == ['/some/file/', '*.txt']
-        Channel.getFolderAndPattern( '/some/file/?.txt' ) == ['/some/file/', '?.txt']
-        Channel.getFolderAndPattern( '/some/file/*' ) == ['/some/file/', '*']
-        Channel.getFolderAndPattern( '/some/file/' ) == ['/some/file/', '']
-        Channel.getFolderAndPattern( 'path/filename.txt' ) == ['path/', 'filename.txt']
-        Channel.getFolderAndPattern( 'filename.txt' ) == ['./', 'filename.txt']
-        Channel.getFolderAndPattern( './file.txt' ) == ['./', 'file.txt']
+        Channel.getFolderAndPattern( '/some/file/name.txt' ) == ['/some/file/', 'name.txt', null]
+        Channel.getFolderAndPattern( '/some/file/na*.txt' ) == ['/some/file/', 'na*.txt', null]
+        Channel.getFolderAndPattern( '/some/file/na??.txt' ) == ['/some/file/', 'na??.txt', null]
+        Channel.getFolderAndPattern( '/some/file/*.txt' ) == ['/some/file/', '*.txt', null]
+        Channel.getFolderAndPattern( '/some/file/?.txt' ) == ['/some/file/', '?.txt', null]
+        Channel.getFolderAndPattern( '/some/file/*' ) == ['/some/file/', '*', null]
+        Channel.getFolderAndPattern( '/some/file/' ) == ['/some/file/', '', null]
+        Channel.getFolderAndPattern( 'path/filename.txt' ) == ['path/', 'filename.txt', null]
+        Channel.getFolderAndPattern( 'filename.txt' ) == ['./', 'filename.txt', null]
+        Channel.getFolderAndPattern( './file.txt' ) == ['./', 'file.txt', null]
 
-        Channel.getFolderAndPattern( '/some/file/**/*.txt' ) == ['/some/file/', '**/*.txt']
+        Channel.getFolderAndPattern( '/some/file/**/*.txt' ) == ['/some/file/', '**/*.txt', null]
 
-        Channel.getFolderAndPattern( 'dxfs:///some/file/**/*.txt' ) == ['dxfs:///some/file/', '**/*.txt']
-        Channel.getFolderAndPattern( 'dxfs://some/file/**/*.txt' ) == ['dxfs://some/file/', '**/*.txt']
-        Channel.getFolderAndPattern( 'dxfs://*.txt' ) == ['dxfs://./', '*.txt']
-        Channel.getFolderAndPattern( 'dxfs:///*.txt' ) == ['dxfs:///', '*.txt']
-        Channel.getFolderAndPattern( 'dxfs:///**/*.txt' ) == ['dxfs:///', '**/*.txt']
+        Channel.getFolderAndPattern( 'dxfs:///some/file/**/*.txt' ) == ['/some/file/', '**/*.txt', 'dxfs']
+        Channel.getFolderAndPattern( 'dxfs://some/file/**/*.txt' ) == ['some/file/', '**/*.txt', 'dxfs']
+        Channel.getFolderAndPattern( 'dxfs://*.txt' ) == ['./', '*.txt', 'dxfs']
+        Channel.getFolderAndPattern( 'dxfs:///*.txt' ) == ['/', '*.txt', 'dxfs']
+        Channel.getFolderAndPattern( 'dxfs:///**/*.txt' ) == ['/', '**/*.txt', 'dxfs']
 
-        Channel.getFolderAndPattern( 'file{a,b}') == ['./', 'file{a,b}']
-        Channel.getFolderAndPattern( 'test/data/file{a,b}') == ['test/data/', 'file{a,b}']
-        Channel.getFolderAndPattern( 'test/{file1,file2}') == ['test/', '{file1,file2}']
-        Channel.getFolderAndPattern( '{file1,file2}') == ['./', '{file1,file2}']
-        Channel.getFolderAndPattern( '{test/file1,data/file2}') == ['./', '{test/file1,data/file2}']
-        Channel.getFolderAndPattern( 'data/{p/file1,q/file2}') == ['data/', '{p/file1,q/file2}']
+        Channel.getFolderAndPattern( 'file{a,b}') == ['./', 'file{a,b}', null]
+        Channel.getFolderAndPattern( 'test/data/file{a,b}') == ['test/data/', 'file{a,b}', null]
+        Channel.getFolderAndPattern( 'test/{file1,file2}') == ['test/', '{file1,file2}', null]
+        Channel.getFolderAndPattern( '{file1,file2}') == ['./', '{file1,file2}', null]
+        Channel.getFolderAndPattern( '{test/file1,data/file2}') == ['./', '{test/file1,data/file2}', null]
+        Channel.getFolderAndPattern( 'data/{p/file1,q/file2}') == ['data/', '{p/file1,q/file2}', null]
     }
 
 

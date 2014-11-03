@@ -42,11 +42,14 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.operator.SeparationClosure
 import nextflow.Channel
-import nextflow.Const
 import nextflow.Global
 import nextflow.Session
 import nextflow.file.FileCollector
 import nextflow.file.FileHelper
+import nextflow.file.SimpleFileCollector
+import nextflow.file.SortFileCollector
+import nextflow.util.CacheHelper
+import nextflow.util.HashMode
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 /**
@@ -86,7 +89,7 @@ class DataflowExtensions {
     static private DEF_ERROR_LISTENER = new DataflowEventAdapter() {
         @Override
         public boolean onException(final DataflowProcessor processor, final Throwable e) {
-            DataflowExtensions.log.error("Unknown operator error ${Const.log_detail_tip_message}", e)
+            DataflowExtensions.log.error("@unknown", e)
             session?.abort()
             return true;
         }
@@ -245,7 +248,7 @@ class DataflowExtensions {
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
                 error = true
                 if( !events.onError ) {
-                    DataflowExtensions.log.error("Cannot execute operator. Cause: ${e} ${Const.log_detail_tip_message}", e)
+                    DataflowExtensions.log.error("@unknown", e)
                     session?.abort()
                 }
                 else {
@@ -380,7 +383,7 @@ class DataflowExtensions {
 
             @Override
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                DataflowExtensions.log.error("Unknown 'flatMap' operator error ${Const.log_detail_tip_message}", e)
+                DataflowExtensions.log.error("@unknown", e)
                 session?.abort()
                 return true;
             }
@@ -514,7 +517,7 @@ class DataflowExtensions {
             }
 
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                DataflowExtensions.log.error("Unknown 'reduce' operator error ${Const.log_detail_tip_message}", e)
+                DataflowExtensions.log.error("@unknown", e)
                 session?.abort()
                 return true;
             }
@@ -531,20 +534,63 @@ class DataflowExtensions {
     }
 
     static public final DataflowReadChannel collectFile( final DataflowReadChannel channel, Map params, final Closure closure = null ) {
-
+        log.debug "CollectFile params: $params"
         def result = new DataflowQueue()
-        def acc = new FileCollector()
+        FileCollector collector
 
-        if( session )
-            session.onShutdown { acc.closeQuietly() }
+        // when sorting is not required 'none' use unsorted collector
+        if( params?.sort == 'none' ) {
+            collector = new SimpleFileCollector()
+        }
+        else {
+            collector = new SortFileCollector()
+            switch(params?.sort) {
+                case true:
+                case 'true':
+                case 'natural':
+                    collector.sort = { it -> it }
+                    break
 
-        acc.newLine = params?.newLine as Boolean
-        acc.seed = params?.seed
+                case 'index':
+                    collector.sort = null
+                    break
+
+                case null:
+                case 'hash':
+                    collector.sort = { CacheHelper.hasher(it).hash().asLong() }
+                    break
+
+                case 'deep':
+                    collector.sort = { CacheHelper.hasher(it, HashMode.DEEP).hash().asLong() }
+                    break
+
+                case Closure:
+                    collector.sort = params.sort;
+                    break
+
+                default:
+                    throw new IllegalArgumentException("Not a valid collectFile `sort` parameter: ${params.sort}")
+            }
+
+            if( params?.sliceMaxSize )
+                collector.sliceMaxSize = params.sliceMaxSize
+
+            if( params?.sliceMaxItems )
+                collector.sliceMaxItems = params.sliceMaxItems
+        }
+
+        // set other params
+        collector.tempDir = params?.tempDir as Path
+        collector.newLine = params?.newLine as Boolean
+        collector.seed = params?.seed
+        if( params?.deleteTempFilesOnClose != null )
+            collector.deleteTempFilesOnClose = params.deleteTempFilesOnClose as boolean
 
         /*
-         * A file name to be used, if provided
+         * If a file of an absolute path is specified, the parent
+         * path is used as 'storeDir'
          */
-        def storeDir
+        Path storeDir
         String fileName
         if( params?.name ) {
             if( params.name instanceof Path || params.name.toString().contains('/') ) {
@@ -557,10 +603,12 @@ class DataflowExtensions {
         }
 
         /*
-         * check or create the target folder
+         * check if a 'storeDir' is provided otherwise fallback to a temp
+         * folder in the session working directory
          */
         if( params?.storeDir )
             storeDir = params?.storeDir as Path
+
         if( storeDir )
             storeDir.createDirIfNotExists()
         else
@@ -574,33 +622,38 @@ class DataflowExtensions {
             def value = closure ? mapClosureCall(item,closure) : item
 
             if( fileName && value != null ) {
-                acc.append( fileName, value )
+                collector.add( fileName, value )
             }
 
+            // when the value is a list, the first item hold the grouping key
+            // all the others values are appended
             else if( value instanceof List && value.size()>1 ) {
                 for( int i=1; i<value.size(); i++ ) {
-                    acc.append(value[0] as String, value[i])
+                    collector.add(value[0] as String, value[i])
                 }
             }
 
+            // same as above
             else if( value instanceof Object[] && value.size()>1 ) {
                 for( int i=1; i<value.size(); i++ ) {
-                    acc.append(value[0] as String, value[i])
+                    collector.add(value[0] as String, value[i])
                 }
             }
 
+            // Path object
             else if( value instanceof Path ) {
                 if( fileName )
-                    acc.append(fileName, value)
+                    collector.add(fileName, value)
                 else
-                    acc.append(value.getName(), value)
+                    collector.add(value.getName(), value)
             }
 
+            // as above
             else if( value instanceof File ) {
                 if( fileName )
-                    acc.append(fileName, value)
+                    collector.add(fileName, value)
                 else
-                    acc.append(value.getName(), value)
+                    collector.add(value.getName(), value)
             }
 
             else
@@ -608,15 +661,23 @@ class DataflowExtensions {
 
         }
 
+        Global.onShutdown {
+            // make sure to delete the collector on termination
+            collector.safeClose()
+        }
+
         /*
          * emits the files when all values have been collected
          */
         def emitItems = {
-            acc.moveFiles(storeDir).each {
+            // emit the resulting files to target channel
+            collector.saveTo(storeDir).each {
                 result.bind(it)
             }
-
-            result.bind Channel.STOP
+            // close the channel
+            result.bind(Channel.STOP)
+            // close the collector
+            collector.safeClose()
         }
 
         // apply the above rules
@@ -1142,7 +1203,7 @@ class DataflowExtensions {
                 }
 
                 public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                    DataflowExtensions.log.error("Unknown 'spread' operator error ${Const.log_detail_tip_message}", e)
+                    DataflowExtensions.log.error("@unknown", e)
                     session?.abort()
                     return true;
                 }
@@ -1273,7 +1334,7 @@ class DataflowExtensions {
 
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
-                DataflowExtensions.log.error("Unknown 'buffer' operator error ${Const.log_detail_tip_message}", e)
+                DataflowExtensions.log.error("@unknown", e)
                 session?.abort()
                 return true
             }
@@ -1343,7 +1404,7 @@ class DataflowExtensions {
 
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
-                DataflowExtensions.log.error("Unknown 'collate' operator error ${Const.log_detail_tip_message}", e)
+                DataflowExtensions.log.error("@unknown", e)
                 session?.abort()
                 return true
             }

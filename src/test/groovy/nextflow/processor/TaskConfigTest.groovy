@@ -84,14 +84,14 @@ class TaskConfigTest extends Specification {
         when:
         config.maxDuration '1h'
         then:
-        config.maxDuration == new Duration('1h')
-        config.maxDuration as Duration == new Duration('1h')
+        config.time == new Duration('1h')
+        config.time as Duration == new Duration('1h')
 
         // maxMemory property
         when:
         config.maxMemory '2GB'
         then:
-        config.maxMemory == new MemoryUnit('2GB')
+        config.memory == new MemoryUnit('2GB')
 
         // generic value assigned like a 'plain' property
         when:
@@ -126,7 +126,7 @@ class TaskConfigTest extends Specification {
     def 'test MissingPropertyException' () {
         when:
         def script = Mock(BaseScript)
-        def config = new TaskConfigWrapper(new TaskConfig(script))
+        def config = new TaskConfig(script).throwExceptionOnMissingProperty(true)
         def x = config.hola
 
         then:

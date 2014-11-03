@@ -84,4 +84,34 @@ class MemoryUnitTest extends Specification {
 
     }
 
+    def 'test conversion' () {
+
+        def mem
+
+        when:
+        mem = new MemoryUnit('100 M')
+        then:
+        mem.toGiga() == 0
+        mem.toMega() == 100
+        mem.toKilo() == 100 * 1024L
+        mem.toBytes() == 100 * 1024L * 1024L
+
+        when:
+        mem = new MemoryUnit('5G')
+        then:
+        mem.toGiga() == 5
+        mem.toMega() == 5 * 1024L
+        mem.toKilo() == 5 * 1024L * 1024L
+        mem.toBytes() == 5 * 1024L * 1024L * 1024L
+
+
+        when:
+        mem = new MemoryUnit(100_000)
+        then:
+        mem.toBytes() == 100_000
+        mem.toKilo() == 97  // note: this is floor rounded  (97,65625)
+        mem.toMega() == 0
+        mem.toGiga() == 0
+    }
+
 }

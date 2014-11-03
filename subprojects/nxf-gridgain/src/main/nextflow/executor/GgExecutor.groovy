@@ -310,7 +310,7 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
     /**
      * A temporary where all files are cached. The folder is deleted during instance shut-down
      */
-    private static final Path localCacheDir = Files.createTempDirectory('nxf-cache')
+    private static final Path localCacheDir = FileHelper.createLocalDir()
 
     protected static getLocalCacheDir() { localCacheDir }
 
@@ -394,7 +394,7 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
             attrs = (Map<String,Object>)KryoHelper.deserialize(payload)
 
         // create a local scratch dir
-        scratchDir = Files.createTempDirectory('nxf-task')
+        scratchDir = FileHelper.createLocalDir()
 
         if( !inputFiles )
             return
@@ -545,15 +545,17 @@ class GgBashTask extends GgBaseTask<Integer>  {
         // copy the 'exit' file and 'output' file
         copyFromScratchToWorkDir(TaskRun.CMD_EXIT)
         copyFromScratchToWorkDir(TaskRun.CMD_OUTFILE)
+        copyFromScratchToWorkDir(TaskRun.CMD_TRACE, true)
     }
 
 
-    private copyFromScratchToWorkDir( String name ) {
+    private void copyFromScratchToWorkDir( String name, boolean ignoreError = false ) {
         try {
             Files.copy(scratchDir.resolve(name), workDir.resolve(name))
         }
         catch( Exception e ) {
-            log.debug "Unable to copy file: '$name' from: '$scratchDir' to: '$workDir'"
+            if( !ignoreError )
+                log.debug "Unable to copy file: '$name' from: '$scratchDir' to: '$workDir'"
         }
     }
 
@@ -561,9 +563,9 @@ class GgBashTask extends GgBaseTask<Integer>  {
     @Override
     protected Integer execute0() throws GridException {
 
-        def config = provider.getConfigFor(sessionId)
+        def session = provider.getSessionFor(sessionId)
         if( log.isTraceEnabled() )
-            log.trace "Session config: $config"
+            log.trace "Session config: ${session.config}"
 
         // TODO the task name should be create in the BashWrapperBuilder
         String taskName = 'nxf-' + workDir.parent.name + workDir.name.substring(0,6)
@@ -578,7 +580,8 @@ class GgBashTask extends GgBaseTask<Integer>  {
                 container: container,
                 environment: environment,
                 dockerMount: localCacheDir,
-                dockerConfig: config?.docker
+                dockerConfig: session?.config?.docker,
+                statsEnabled: session.statsEnabled
         )
         shell.add( wrapper.build().toString() )
 

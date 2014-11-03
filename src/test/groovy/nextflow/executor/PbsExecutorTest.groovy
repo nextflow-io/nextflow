@@ -19,16 +19,13 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Paths
 
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.script.BaseScript
-import nextflow.util.MemoryUnit
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -52,9 +49,10 @@ class PbsExecutorTest extends Specification {
         // the script
         def script = Paths.get('job.sh')
         // config
-        config.queue = 'my-queue'
-        config.maxMemory = new MemoryUnit('2 GB')
-        config.maxDuration = '3h'
+        config.queue = test_queue
+        config.memory = test_mem
+        config.time = test_time
+        config.cpus = test_cpus
         config.clusterOptions = '-extra opt'
 
         def task = new TaskRun()
@@ -63,7 +61,17 @@ class PbsExecutorTest extends Specification {
         task.index = 2
 
         then:
-        executor.getSubmitCommandLine(task,script) == 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q my-queue -l mem=2GB -extra opt job.sh'.split(' ') as List
+        executor.getSubmitCommandLine(task,script) == expected.split(' ') as List
+
+        where:
+        test_cpus| test_queue | test_mem | test_time|| expected
+        null     | null       | null     | null     || 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -extra opt job.sh'
+        null     | 'alpha'    | null     | '1m'     || 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q alpha -l walltime=00:01:00 -extra opt job.sh'
+        null     | 'alpha'    | '1m'     | '1m'     || 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q alpha -l walltime=00:01:00 -l mem=1mb -extra opt job.sh'
+        2        | 'delta'    | '5m'     | '10m'    || 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q delta -l nodes=1:ppn=2 -l walltime=00:10:00 -l mem=5mb -extra opt job.sh'
+        8        | 'delta'    | '1g'     | '1d'     || 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q delta -l nodes=1:ppn=8 -l walltime=24:00:00 -l mem=1gb -extra opt job.sh'
+        null     | 'gamma'    | '2g'     | '1d'     || 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q gamma -l walltime=24:00:00 -l mem=2gb -extra opt job.sh'
+
 
     }
 
@@ -112,7 +120,7 @@ class PbsExecutorTest extends Specification {
         result['13.localhost'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['14.localhost'] == AbstractGridExecutor.QueueStatus.PENDING
         result['15.localhost'] == AbstractGridExecutor.QueueStatus.HOLD
-        result['16.localhost'] == AbstractGridExecutor.QueueStatus.UNKNWON
+        result['16.localhost'] == AbstractGridExecutor.QueueStatus.UNKNOWN
         result['17.localhost'] == AbstractGridExecutor.QueueStatus.HOLD
 
     }

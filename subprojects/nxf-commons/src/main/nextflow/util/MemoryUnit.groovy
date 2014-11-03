@@ -38,7 +38,9 @@ class MemoryUnit implements Comparable<MemoryUnit> {
 
     static private final List UNITS = [ "B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB" ]
 
-    long size
+    final static int KB = 1024
+
+    final long size
 
     MemoryUnit( long value ) {
         this.size = value
@@ -77,14 +79,26 @@ class MemoryUnit implements Comparable<MemoryUnit> {
         size
     }
 
+    long toKilo() {
+        size >> 10
+    }
+
+    long toMega() {
+        size >> 20
+    }
+
+    long toGiga() {
+        size >> 30
+    }
 
     def String toString() {
         if(size <= 0) {
             return "0"
         }
 
+        // see http://stackoverflow.com/questions/2510434/format-bytes-to-kilobytes-megabytes-gigabytes
         int digitGroups = (int) (Math.log10(size) / Math.log10(1024))
-        new DecimalFormat("#,##0.#").format(size/Math.pow(1024, digitGroups)) + " " + UNITS[digitGroups]
+        new DecimalFormat("#,##0.#").format(size / Math.pow(1024, digitGroups)) + " " + UNITS[digitGroups]
     }
 
     @Override

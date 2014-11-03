@@ -20,59 +20,59 @@
 
 package nextflow.trace
 import java.nio.file.Path
-import java.text.SimpleDateFormat
 import java.util.concurrent.ConcurrentHashMap
 
-import groovy.transform.PackageScope
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
 import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
-import nextflow.util.Duration
-import nextflow.util.MemoryUnit
 /**
  * Create a CSV file containing the processes execution information
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class TraceFileObserver implements TraceObserver {
 
-    /**
-     * The used date format to convert {@link Date} to strings
-     */
-    @PackageScope
-    final static SimpleDateFormat FMT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
+    static final String DEF_FILE_NAME = 'trace.csv'
 
     /**
-     * The CSV header
+     * The list of fields included in the trace report
      */
-    final static public List<String> HEAD = [
-            'task-id',
+    List<String> fields = [
+            'task_id',
             'hash',
-            'native-id',
+            'native_id',
             'name',
             'status',
-            'exit-status',
+            'exit',
             'submit',
             'start',
             'complete',
-            'wall-time',
-            'run-time',
-            'cpu',
-            'mem'
+            'duration',
+            'walltime',
+            '%cpu',
+            'rss',
+            'vmem',
+            'rchar',
+            'wchar'
     ]
+
+    List<String> formats
+
+
+    /**
+     * The delimiter character used to separate column in the CSV file
+     */
+    String separator = '\t'
 
     /**
      * The path where the file is created. It is set by the object constructor
      */
     private Path tracePath
-
-    /**
-     * The delimiter character used to separate column in the CSV file
-     */
-    private String delim = '\t'
 
     /**
      * The actual file object
@@ -85,6 +85,90 @@ class TraceFileObserver implements TraceObserver {
     private Map<Object,TraceRecord> current = new ConcurrentHashMap<>()
 
     private Agent<PrintWriter> writer
+
+    private boolean useRawNumber
+
+
+    void setFields( List<String> entries ) {
+
+        def names = TraceRecord.FIELDS.keySet()
+        def result = new ArrayList<String>(entries.size())
+        for( def item : entries ) {
+            def thisName = item.trim()
+
+            if( thisName ) {
+                if( thisName in names )
+                    result << thisName
+                else {
+                    String message = "Not a valid trace field name: '$thisName'"
+                    def alternatives = names.bestMatches(thisName)
+                    if( alternatives )
+                        message += " -- Possible solutions: ${alternatives.join(', ')}"
+                    throw new IllegalArgumentException(message)
+                }
+            }
+
+        }
+
+        this.fields = result
+    }
+
+    TraceFileObserver setFieldsAndFormats( value ) {
+        List<String> entries
+        if( value instanceof String ) {
+            entries = value.split(/,/) as List<String>
+        }
+        else if( value instanceof List ) {
+            entries = (List)value
+        }
+        else {
+            throw new IllegalArgumentException("Not a valid trace fields value: $value")
+        }
+
+        List<String> fields = new ArrayList<>(entries.size())
+        List<String> formats = new ArrayList<>(entries.size())
+
+        for( String x : entries ) {
+            String name
+            String fmt
+            int p = x.indexOf(':')
+            if( p == -1 ) {
+                name = x
+                fmt = TraceRecord.FIELDS.get(name)      // get the default type
+            }
+            else {
+                name = x.substring(0,p)
+                fmt = x.substring(p+1)
+            }
+
+            if( useRawNumber && fmt in TraceRecord.NON_PRIMITIVE_TYPES ) {
+                fmt = 'num'
+            }
+
+            fields << name.trim()
+            formats << fmt.trim()
+        }
+
+        setFields(fields)
+        setFormats(formats)
+
+        return this
+    }
+
+    TraceFileObserver useRawNumbers( boolean value ) {
+        this.useRawNumber = value
+
+        List<String> local = []
+        for( String name : fields ) {
+            def type = TraceRecord.FIELDS.get(name)
+            if( useRawNumber && type in TraceRecord.NON_PRIMITIVE_TYPES ) {
+                type = 'num'
+            }
+            local << type
+        }
+        this.formats = local
+        return this
+    }
 
 
     /**
@@ -110,7 +194,7 @@ class TraceFileObserver implements TraceObserver {
 
         // create a new trace file
         traceFile = new PrintWriter(new BufferedWriter( new FileWriter(tracePath.toFile())))
-        traceFile.println( HEAD.join(delim) )
+        traceFile.println( fields.join(separator) )
 
         // launch the agent
         writer = new Agent<PrintWriter>(traceFile)
@@ -195,69 +279,7 @@ class TraceFileObserver implements TraceObserver {
      */
     String render(TraceRecord trace) {
         assert trace
-        def all = new ArrayList(14)
-        trace.with{
-            long wallTime = complete && submit ? complete-submit : 0
-            long runTime = complete && start ? complete-start : 0
-
-            all << taskId
-            all << str(hash)
-            all << str(nativeId)
-            all << str(name)
-            all << str(status)
-            all << val(exit)
-            all << date(submit)
-            all << date(start)
-            all << date(complete)
-            all << time(wallTime)
-            all << time(runTime)
-            all << percent(cpu)
-            all << bytes(mem)
-        }
-
-        all.join(delim)
-    }
-
-    @PackageScope
-    static String str(item) {
-        return item ? item.toString() : '-'
-    }
-
-    @PackageScope
-    static String val(item) {
-        return item == Integer.MAX_VALUE ? '-' :item.toString()
-    }
-
-    @PackageScope
-    static String date(long item) {
-        if( !item ) return '-'
-        FMT.format(new Date(item))
-    }
-
-    @PackageScope
-    static String bytes( value ) {
-        if( !value ) return '-'
-
-        String str = value.toString().trimDotZero()
-        return str.isLong() ? new MemoryUnit(str.toLong()).toString() : str
-    }
-
-    @PackageScope
-    static String time( long value ) {
-         new Duration(value).toString()
-    }
-
-    static String percent( value ) {
-
-        try {
-            def num = value instanceof Number ? value.toFloat() : value.toString().toFloat()
-            return String.format('%.2f', num)
-        }
-        catch( Exception e ) {
-            log.debug "Not a valid cpu resource value: '$value'"
-            return '-'
-        }
-
+        trace.render(fields, formats, separator)
     }
 
 }

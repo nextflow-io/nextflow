@@ -19,6 +19,10 @@
  */
 
 package nextflow.executor
+
+import java.nio.file.Path
+
+import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import nextflow.util.RemoteSession
 import org.gridgain.grid.Grid
@@ -34,6 +38,7 @@ import org.gridgain.grid.resources.GridLoggerResource
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class GgClassLoaderProvider {
 
     @GridLoggerResource
@@ -43,11 +48,10 @@ class GgClassLoaderProvider {
     @GridInstanceResource
     private Grid grid;
 
-
     @Memoized
     ClassLoader getClassLoaderFor( UUID sessionId ) {
         assert sessionId
-        GridCache<UUID, RemoteSession> allSessions = grid.cache( GgGridFactory.SESSIONS_CACHE )
+        def allSessions = (GridCache<UUID, RemoteSession>)grid.cache( GgGridFactory.SESSIONS_CACHE )
 
         if( !allSessions )
             throw new IllegalStateException('Missing session cache object')
@@ -57,16 +61,16 @@ class GgClassLoaderProvider {
             throw new IllegalStateException("Missing session object for id: $sessionId")
 
         def loader = new GroovyClassLoader()
-        session.classpath.each { File file ->
+        session.classpath.each { Path file ->
             log.debug "Adding to classpath: $file"
-            loader.addClasspath(file.absolutePath)
+            loader.addClasspath(file.toAbsolutePath().toString())
         }
 
         return loader
     }
 
     @Memoized
-    Map getConfigFor( UUID sessionId ) {
+    RemoteSession getSessionFor( UUID sessionId ) {
         assert sessionId
         GridCache<UUID, RemoteSession> allSessions = grid.cache( GgGridFactory.SESSIONS_CACHE )
 
@@ -77,7 +81,12 @@ class GgClassLoaderProvider {
         if( !session )
             throw new IllegalStateException("Missing session object for id: $sessionId")
 
-        return session.getConfig()
+        return session
+    }
+
+    @Memoized
+    Map getConfigFor( UUID sessionId ) {
+        getSessionFor(sessionId).getConfig()
     }
 
 }

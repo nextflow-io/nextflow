@@ -25,6 +25,8 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Session
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import test.TestParser
 /**
@@ -33,7 +35,7 @@ import test.TestParser
  */
 class ScriptRunnerTest extends Specification {
 
-    def testProcess () {
+    def 'test process' () {
 
         setup:
         def runner = new ScriptRunner([process:[executor:'nope']])
@@ -60,7 +62,7 @@ class ScriptRunnerTest extends Specification {
     }
 
 
-    def testProcessorConfig() {
+    def 'test processor config'() {
 
         /*
          * test that the *instanceType* attribute is visible in the taskConfig object
@@ -113,7 +115,7 @@ class ScriptRunnerTest extends Specification {
     }
 
 
-    def testProcessWithArgs () {
+    def 'test process with args' () {
         setup:
         def runner = new ScriptRunner( executor: 'nope' )
 
@@ -143,7 +145,7 @@ class ScriptRunnerTest extends Specification {
     }
 
 
-    def testProcessEcho () {
+    def 'test process echo' () {
 
         setup:
         def runner = new ScriptRunner( executor: 'nope' )
@@ -170,8 +172,7 @@ class ScriptRunnerTest extends Specification {
 
 
 
-    def testProcessVariables () {
-
+    def 'test process variables' () {
 
         setup:
         def runner = new ScriptRunner( executor: 'nope' )
@@ -194,7 +195,7 @@ class ScriptRunnerTest extends Specification {
 
     }
 
-    def testProcessVariables2 () {
+    def 'test process variables 2' () {
 
         setup:
         def runner = new ScriptRunner( executor: 'nope' )
@@ -219,7 +220,7 @@ class ScriptRunnerTest extends Specification {
     }
 
 
-    def testProcessOutFile () {
+    def 'test process output file' () {
 
 
         setup:
@@ -242,7 +243,7 @@ class ScriptRunnerTest extends Specification {
     }
 
 
-    def testProcessNameOptions ( ) {
+    def 'test process name options' ( ) {
 
         setup:
         // -- this represent the configuration file
@@ -283,7 +284,7 @@ class ScriptRunnerTest extends Specification {
 
     }
 
-    def testProcessNameOptions2( ) {
+    def 'test process name options 2'( ) {
 
         setup:
         // -- this represent the configuration file
@@ -332,7 +333,7 @@ class ScriptRunnerTest extends Specification {
 
     }
 
-    def testModulesConfig() {
+    def 'test module config'() {
 
         setup:
         // -- this represent the configuration file
@@ -360,7 +361,7 @@ class ScriptRunnerTest extends Specification {
         process.taskConfig.getModule() == ['b/2','c/3']
     }
 
-    def testModulesConfig2() {
+    def 'test module config 2'() {
 
         setup:
         /*
@@ -391,7 +392,7 @@ class ScriptRunnerTest extends Specification {
         process.taskConfig.getModule() == ['b/2','z/9']
     }
 
-    def testModulesConfig3() {
+    def 'test module config 3'() {
 
         setup:
         /*
@@ -419,12 +420,100 @@ class ScriptRunnerTest extends Specification {
     }
 
 
-    def testErrorLine() {
+    def 'test resource'() {
 
-        expect:
-        ScriptRunner.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]') == ['pfam3d.nf','189']
-        ScriptRunner.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','pfam3d.nf') == ['pfam3d.nf','189']
-        ScriptRunner.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','hola') == null
+        setup:
+        // -- this represent the configuration file
+        def configText = '''
+            executor = 'nope'
+            process {
+              queue = 'short'
+              cpus  = 2
+              time  = '6 hour'
+              penv  = 'mpi'
+              memory = '10G'
+            }
+            '''
+
+        def script = '''
+            process hola {
+              """
+              queue: ${task.queue}
+              cpus: ${task.cpus}
+              time: ${task.time}
+              penv: ${task.penv}
+              nodes: ${task.nodes}
+              memory: ${task.memory}
+              """
+            }
+            '''
+
+        def config = new ConfigSlurper().parse(configText)
+
+
+        when:
+        def session = new Session(config)
+        TaskProcessor process = new TestParser(session).parseScript(script).run()
+        then:
+        process.taskConfig instanceof TaskConfig
+        process.taskConfig.queue == 'short'
+        process.taskConfig.cpus == 2
+        process.taskConfig.penv == 'mpi'
+        process.taskConfig.memory == new MemoryUnit('10G')
+        process.taskConfig.time == new Duration('6h')
+
+        when:
+        def result = new ScriptRunner(config)
+                    .setScript(script)
+                    .execute()
+                    .getVal()
+                    .toString()
+                    .stripIndent()
+                    .trim()
+                    .readLines()
+
+        then:
+        result[0] == 'queue: short'
+        result[1] == 'cpus: 2'
+        result[2] == 'time: 6h'
+        result[3] == 'penv: mpi'
+        result[5] == 'memory: 10 GB'
+
+    }
+
+
+    def 'test resource with default'() {
+
+        setup:
+        def script = '''
+            process hola {
+              """
+              cpus: ${task.cpus}
+              nodes: ${task.nodes}
+              """
+            }
+            '''
+
+        when:
+        def session = new Session()
+        TaskProcessor process = new TestParser(session).parseScript(script).run()
+        then:
+        process.taskConfig instanceof TaskConfig
+        process.taskConfig.cpus == null
+
+        when:
+        def result = new ScriptRunner(process: [executor:'nope'])
+                .setScript(script)
+                .execute()
+                .getVal()
+                .toString()
+                .stripIndent()
+                .trim()
+                .readLines()
+
+        then:
+        result[0] == 'cpus: 1'
+
     }
 
 }

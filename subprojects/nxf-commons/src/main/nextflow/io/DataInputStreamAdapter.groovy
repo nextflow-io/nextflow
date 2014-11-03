@@ -18,31 +18,33 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
+package nextflow.io
 
 import groovy.transform.CompileStatic
 
 /**
- * Wrap a {@code TaskConfig} object in order to modify the behaviour of
- * {@code #getProperty} so that it raises a {@code MissingPropertyException}
- * when a property is not defined in the delegate map
+ * Implements a  {@link InputStream} object backed on a {@link DataInput} instance
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-
 @CompileStatic
-class TaskConfigWrapper extends TaskConfig {
+class DataInputStreamAdapter extends InputStream {
 
-    TaskConfigWrapper( TaskConfig source ) {
-        super(source)
-    }
+    final private DataInput target
 
-    def getProperty( String name ) {
-        if( containsKey(name) ) {
-            return super.getProperty(name)
+    DataInputStreamAdapter( DataInput input ) { this.target = input }
+
+    @Override
+    int read() throws IOException {
+        try {
+            return target.readUnsignedByte()
         }
-
-        throw new MissingPropertyException("Unknown variable '$name'")
+        catch( EOFException | IndexOutOfBoundsException e ) {
+            return -1
+        }
     }
 
+    public long skip(long n) {
+        target.skipBytes(n as int)
+    }
 }

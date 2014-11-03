@@ -23,12 +23,14 @@ package nextflow.util
 import java.nio.file.Files
 import java.nio.file.Path
 
-import embed.com.google.common.hash.Funnels
-import embed.com.google.common.hash.HashCode
-import embed.com.google.common.hash.HashFunction
-import embed.com.google.common.hash.Hasher
-import embed.com.google.common.hash.Hashing
+import com.google.common.hash.Funnels
+import com.google.common.hash.HashCode
+import com.google.common.hash.HashFunction
+import com.google.common.hash.Hasher
+import com.google.common.hash.Hashing
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.extension.FilesEx
 import nextflow.file.FileHolder
 
 enum HashMode { STANDARD, DEEP }
@@ -39,6 +41,7 @@ enum HashMode { STANDARD, DEEP }
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class CacheHelper {
 
     static HashFunction defaultHasher() {
@@ -53,93 +56,81 @@ class CacheHelper {
         hasher( function.newHasher(), value, mode )
     }
 
+
     static Hasher hasher( Hasher hasher, value, HashMode mode = null ) {
         assert hasher
 
-        if( value == null ) return hasher
+        /*
+         * Used huge IF instead of Switch because the groovy switch implementation is very slow
+         */
 
-        switch (value.getClass()) {
-            case Boolean:
-                hasher = hasher.putBoolean( value as Boolean );
-                break
+        if( value == null )
+            return hasher
 
-            case Short:
-                hasher = hasher.putShort( value as Short );
-                break
+        if( value instanceof Boolean )
+            return hasher.putBoolean( (Boolean)value )
 
-            case Integer:
-                hasher = hasher.putInt( value as Integer );
-                break
+        if( value instanceof Short )
+            return hasher.putShort( (Short)value )
 
-            case Long:
-                hasher = hasher.putLong( value as Long );
-                break
+         if( value instanceof Integer)
+            return hasher.putInt( (Integer)value );
 
-            case Float:
-                hasher = hasher.putFloat( value as Float );
-                break
+         if( value instanceof Long )
+            return hasher.putLong( (Long)value )
 
-            case Double:
-                hasher = hasher.putDouble( value as Double );
-                break
+        if( value instanceof Float )
+            return hasher.putFloat( (Float)value );
 
-            case Character:
-                hasher = hasher.putChar( value as Character );
-                break
+        if( value instanceof Double )
+            return hasher.putDouble( (Double)value );
 
-            case CharSequence:
-                hasher = hasher.putUnencodedChars( value as CharSequence );
-                break
+        if( value instanceof Character )
+            return hasher.putChar( (Character)value );
 
-            case Byte:
-                hasher = hasher.putByte( value as Byte );
-                break
+        if( value instanceof CharSequence )
+            return hasher.putUnencodedChars( (CharSequence)value );
 
-            case (byte[]):
-                hasher = hasher.putBytes( value as byte[] );
-                break
+        if( value instanceof Byte )
+            return hasher.putByte( (Byte)value );
 
-            case (Object[]):
-                for( def item: (value as Object[]) ) {
-                    hasher = CacheHelper.hasher( hasher, item as Object, mode )
-                }
-                break
+        if( value instanceof byte[] )
+            return hasher.putBytes( (byte[])value );
 
-            case Collection:
-                value.each { hasher = CacheHelper.hasher( hasher, it, mode )  }
-                break
-
-            case Map:
-                value.each { name, item ->
-                    hasher = CacheHelper.hasher( hasher, item, mode )
-                }
-                break
-
-
-            case FileHolder:
-                hasher = CacheHelper.hasher(hasher, ((FileHolder) value).sourceObj, mode )
-                break
-
-            case Path:
-                hasher = hashFile(hasher, (Path)value, mode)
-                break;
-
-            case File:
-                hasher = hashFile(hasher, (File)value, mode)
-                break
-
-            case UUID:
-                def uuid = value as UUID
-                hasher = hasher.putLong(uuid.mostSignificantBits).putLong(uuid.leastSignificantBits)
-                break
-
-            default:
-                log.debug "Unknown hashing type: ${value.getClass()} -- ${value}"
-                hasher = hasher.putInt( value.hashCode() )
+        if( value instanceof Object[]) {
+            for( Object item: ((Object[])value) )
+                hasher = CacheHelper.hasher( hasher, item as Object, mode )
+            return hasher
         }
 
+        if( value instanceof Collection ) {
+            for( Object item: ((Collection)value) )
+                hasher = CacheHelper.hasher( hasher, item as Object, mode )
+            return hasher
+        }
 
-        return hasher
+        if( value instanceof Map ) {
+            for( Object item : ((Map)value).values() )
+                hasher = CacheHelper.hasher( hasher, item as Object, mode )
+            return hasher
+        }
+
+        if( value instanceof FileHolder )
+            return  CacheHelper.hasher(hasher, ((FileHolder) value).sourceObj, mode )
+
+        if( value instanceof Path )
+            return hashFile(hasher, (Path)value, mode)
+
+        if( value instanceof  File )
+            return hashFile(hasher, (File)value, mode)
+
+        if( value instanceof UUID ) {
+            def uuid = value as UUID
+            return hasher.putLong(uuid.mostSignificantBits).putLong(uuid.leastSignificantBits)
+        }
+
+        log.debug "Unknown hashing type: ${value.getClass()} -- ${value}"
+        return hasher.putInt( value.hashCode() )
     }
 
     /**
@@ -185,8 +176,8 @@ class CacheHelper {
 
         hasher = hasher.putUnencodedChars( file.toAbsolutePath().normalize().toString() )
 
-        if( file.exists() ) {
-            return hasher.putLong( file.size() ) .putLong(file.lastModified())
+        if( FilesEx.exists(file) ) {
+            return hasher.putLong(file.size()) .putLong(FilesEx.lastModified(file))
         }
         else {
             return hasher
@@ -208,7 +199,7 @@ class CacheHelper {
         path.withInputStream { input ->
             output << input
         }
-        output.closeQuietly()
+        FilesEx.closeQuietly(output)
         hasher
     }
 

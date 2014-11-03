@@ -21,6 +21,7 @@
 package nextflow.processor
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.executor.CrgExecutor
 import nextflow.executor.DrmaaExecutor
 import nextflow.executor.Executor
 import nextflow.executor.LocalExecutor
@@ -37,6 +38,7 @@ import nextflow.script.TaskBody
 import nextflow.util.ServiceDiscover
 
 /**
+ *  Factory class for {@TaskProcessor} instances
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -54,7 +56,8 @@ class ProcessFactory {
             'lsf': LsfExecutor,
             'pbs': PbsExecutor,
             'drmaa': DrmaaExecutor,
-            'slurm': SlurmExecutor
+            'slurm': SlurmExecutor,
+            'crg': CrgExecutor
     ]
 
     private final Session session
@@ -201,7 +204,10 @@ class ProcessFactory {
         // Note: the config object is wrapped by a TaskConfigWrapper because it is required
         // to raise a MissingPropertyException when some values is missing, so that the Closure
         // will try to fallback on the owner object
-        def script = new TaskConfigWrapper(taskConfig).with ( body ) as TaskBody
+        def script = taskConfig
+                .throwExceptionOnMissingProperty(true)
+                .with ( body ) as TaskBody
+        taskConfig.throwExceptionOnMissingProperty(false)
         if ( !script )
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 

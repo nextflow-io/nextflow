@@ -29,6 +29,7 @@ import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.CreateBranchCommand
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.errors.RefNotFoundException
+import org.eclipse.jgit.errors.RepositoryNotFoundException
 import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
@@ -59,7 +60,7 @@ class AssetManager {
     /**
      * The folder all pipelines scripts are installed
      */
-    private File root = Const.APP_HOME_DIR.resolve('assets').toFile()
+    private File root = System.getenv('NXF_ASSETS') ? new File(System.getenv('NXF_ASSETS')) : Const.APP_HOME_DIR.resolve('assets').toFile()
 
     /**
      * The pipeline name. It must be in the form {@code username/repo} where 'username'
@@ -283,7 +284,12 @@ class AssetManager {
      *         and the current HEAD, false if differences do exist
      */
     boolean isClean() {
-        git.status().call().isClean()
+        try {
+            git.status().call().isClean()
+        }
+        catch( RepositoryNotFoundException e ) {
+            return true
+        }
     }
 
     /**

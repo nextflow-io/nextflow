@@ -25,8 +25,8 @@ import nextflow.processor.ParallelTaskProcessor
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
+import nextflow.script.BaseScript
 import nextflow.trace.TraceRecord
-import org.ggf.drmaa.JobInfo
 import org.ggf.drmaa.JobTemplate
 import org.ggf.drmaa.Session
 import spock.lang.Specification
@@ -100,58 +100,68 @@ class DrmaaExecutorTest extends Specification {
         def workDir = Files.createTempDirectory('test')
         def executor = [:] as DrmaaExecutor
         def task = new TaskRun(id:1, name: 'hello', workDir: workDir)
-        def config = new TaskConfig([
-                queue: 'short',
-                clusterOptions:'-xyz 1',
-                maxDuration: '1h',
-                maxMemory: '2G'
-        ])
+        def base = Mock(BaseScript)
+        def config = new TaskConfig(base)
+        def handler = new DrmaaTaskHandler(task, config, executor)
 
         when:
-        def handler = new DrmaaTaskHandler(task, config, executor)
+        config.queue = test_queue
+        config.clusterOptions = test_opts
+        config.time = test_time
+        config.memory = test_mem
+        config.cpus = test_cpus
+        config.penv = test_penv
+
         then:
-        handler.getOptions() == '-notify -q short -l virtual_free=2G -xyz 1 -b y'
+        handler.getOptions() == expected
 
         cleanup:
         workDir?.deleteDir()
+
+        where:
+        test_queue  | test_opts | test_mem  | test_time | test_cpus | test_penv || expected
+        null        | null      | null      | null      | null      | null      || '-notify -b y'
+        'short1'    | null      | null      | null      | null      | null      || '-notify -q short1 -b y'
+        'long2'     | '-z abc'  | null      | null      | null      | null      || '-notify -q long2 -z abc -b y'
+        'long2'     | '-z abc'  | '1M'      | null      | null      | null      || '-notify -q long2 -l virtual_free=1M -z abc -b y'
+        'long2'     | '-z abc'  | '1G'      | '2h'      | null      | null      || '-notify -q long2 -l h_rt=02:00:00 -l virtual_free=1G -z abc -b y'
+        'alpha'     | '-z abc'  | '2G'      | '3h'      | 2         | null      || '-notify -q alpha -l slots=2 -l h_rt=03:00:00 -l virtual_free=2G -z abc -b y'
+        'delta'     | '-z abc'  | '2G'      | '3h'      | 2         | 'mpi'     || '-notify -q delta -pe mpi 2 -l h_rt=03:00:00 -l virtual_free=2G -z abc -b y'
 
     }
 
     def testHandlerGetTrace() {
 
         given:
+        def expected = new TraceRecord()
+        expected.task_id = 30
+        expected.native_id = '2000'
+        expected.hash = '123abc'
+        expected.name = 'hello'
+        expected.status = TaskHandler.Status.SUBMITTED
+        expected.exit = 99
+        expected.submit = 1406264935000
+        expected.start = 1406265009000
+        expected.complete = 1406265009000
+
         def workDir = Files.createTempDirectory('test')
-        def usage = [
-                start_time: '1406265009.0000',
-                submission_time: '1406264935.0000',
-                end_time: '1406265009.0000',
-                maxvmem: '100.0000',
-                cpu: '0.0040',
-                io: '200.000'
-        ]
-        def jobInfo = [getResourceUsage:{ usage }] as JobInfo
-        Session drmaa = Stub()
-        drmaa.wait(_,0) >> jobInfo
-        def executor = [ getDrmaaSession: { drmaa } ] as DrmaaExecutor
-        def task = new TaskRun(id:30, name: 'hello', workDir: workDir, exitStatus: 99)
+
+        def task = [:] as TaskRun
+        task.id = 30
+        task.name = 'hello'
+        task.workDir = workDir
+        task.exitStatus = 99
+        task.metaClass.getHashLog =  {'123abc'}
         def config = new TaskConfig([:])
 
         when:
-        def handler = new DrmaaTaskHandler(task, config, executor)
+        def handler = new DrmaaTaskHandler(task, config, Mock(DrmaaExecutor))
         handler.jobId = '2000'
         handler.status = TaskHandler.Status.SUBMITTED
+        handler.submitTimeMillis = 1406264935000
+        handler.startTimeMillis = 1406265009000
         then:
-        handler.getTraceRecord() == new TraceRecord(
-                taskId: 30,
-                nativeId: '2000',
-                name: 'hello',
-                status: TaskHandler.Status.SUBMITTED,
-                exit: 99,
-                start: 1406265009000,
-                submit: 1406264935000,
-                complete: 1406265009000,
-                cpu: '0.0040',
-                mem: '100.0000')
+        handler.getTraceRecord() == expected
 
 
         cleanup:

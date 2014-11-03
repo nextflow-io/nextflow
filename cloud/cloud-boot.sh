@@ -17,7 +17,7 @@ EOF
 #
 # Lauch docker and pull the container when DOCKER variable is defined
 #
-[[ "$CONTAINER" ]] && docker pull $CONTAINER
+[[ "$DOCKER_IMAGE" ]] && docker pull $DOCKER_IMAGE
 
 # the bucket name
 AWS_S3BUCKET=${AWS_S3BUCKET:-'nxf-cluster'}

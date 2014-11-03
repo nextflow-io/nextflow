@@ -26,7 +26,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import groovy.util.logging.Slf4j
-import nextflow.ExitCode
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
@@ -256,6 +255,24 @@ class ConfigBuilder {
         return result
     }
 
+    private String normalizeResumeId( String uniqueId ) {
+        if( !uniqueId )
+            return null
+
+        if( uniqueId == 'last' ) {
+            uniqueId = HistoryFile.history.retrieveLastUniqueId()
+            if( !uniqueId ) {
+                log.warn "It appears you have never run this pipeline before -- Option `-resume` is ignored"
+            }
+            return uniqueId
+        }
+
+        if( HistoryFile.history.findUniqueId(uniqueId))
+            return uniqueId
+
+        throw new AbortOperationException("Can't find a run with the specified id: ${uniqueId} -- Execution can't be resumed")
+    }
+
     private configRunOptions(Map config) {
 
         // -- override 'process' parameters defined on the cmd line
@@ -265,17 +282,8 @@ class ConfigBuilder {
 
         // -- check for the 'continue' flag
         if( cmdRun.resume ) {
-            def uniqueId = cmdRun.resume
-            if( uniqueId == 'last' ) {
-                uniqueId = HistoryFile.history.retrieveLastUniqueId()
-                if( !uniqueId ) {
-                    log.error "It appears you have never executed it before -- Cannot use the '-resume' command line option"
-                    System.exit(ExitCode.MISSING_UNIQUE_ID)
-                }
-            }
-            config.session.uniqueId = uniqueId
+            config.session.uniqueId = normalizeResumeId(cmdRun.resume)
         }
-
         // -- other configuration parameters
         if( cmdRun.poolSize ) {
             config.poolSize = cmdRun.poolSize
@@ -308,7 +316,14 @@ class ConfigBuilder {
             config.docker.enabled = true
             if( cmdRun.withDocker != '-' ) {
                 // this is supposed to be a docker image name
-                config.docker.image = cmdRun.withDocker
+                config.process.container = cmdRun.withDocker
+            }
+            else if( config.docker.image ) {
+                config.process.container = config.docker.image
+            }
+
+            if( ! config.process.container ) {
+                throw new AbortOperationException("You request to run with Docker but no image has been specified")
             }
         }
     }

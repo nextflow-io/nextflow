@@ -25,9 +25,9 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import nextflow.util.DaemonConfig
 import nextflow.util.Duration
-import nextflow.file.FileHelper
 import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.reflect.MethodUtils
 import org.gridgain.grid.Grid
@@ -39,6 +39,7 @@ import org.gridgain.grid.cache.GridCacheDistributionMode
 import org.gridgain.grid.cache.GridCacheMemoryMode
 import org.gridgain.grid.cache.GridCacheMode
 import org.gridgain.grid.cache.GridCacheWriteSynchronizationMode
+import org.gridgain.grid.cache.eviction.lru.GridCacheLruEvictionPolicy
 import org.gridgain.grid.ggfs.GridGgfsConfiguration
 import org.gridgain.grid.ggfs.GridGgfsGroupDataBlocksKeyMapper
 import org.gridgain.grid.ggfs.GridGgfsMode
@@ -59,7 +60,7 @@ import org.gridgain.grid.spi.loadbalancing.adaptive.GridAdaptiveLoadBalancingSpi
 @CompileStatic
 class GgGridFactory {
 
-    static final SESSIONS_CACHE = 'allSessions'
+    static final String SESSIONS_CACHE = 'allSessions'
 
     static final GRID_NAME = Const.APP_NAME
 
@@ -184,7 +185,8 @@ class GgGridFactory {
         dataCfg.with {
             name = 'ggfs-data'
             cacheMode = GridCacheMode.PARTITIONED
-            atomicityMode  = GridCacheAtomicityMode.TRANSACTIONAL
+            evictionPolicy = new GridCacheLruEvictionPolicy()
+            atomicityMode  = GridCacheAtomicityMode.TRANSACTIONAL   // note: transactional is mandatory
             queryIndexEnabled = false
             writeSynchronizationMode = daemonConfig.getAttribute('ggfs.data.writeSynchronizationMode', GridCacheWriteSynchronizationMode.PRIMARY_SYNC) as GridCacheWriteSynchronizationMode
             distributionMode = GridCacheDistributionMode.PARTITIONED_ONLY
@@ -206,9 +208,9 @@ class GgGridFactory {
         metaCfg.with {
             name = 'ggfs-meta'
             cacheMode = GridCacheMode.REPLICATED
-            atomicityMode  = GridCacheAtomicityMode.TRANSACTIONAL
+            atomicityMode  = GridCacheAtomicityMode.TRANSACTIONAL   // note: transactional is mandatory
             queryIndexEnabled = false
-            writeSynchronizationMode = GridCacheWriteSynchronizationMode.FULL_SYNC
+            writeSynchronizationMode = GridCacheWriteSynchronizationMode.PRIMARY_SYNC
         }
 
 

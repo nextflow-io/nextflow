@@ -19,7 +19,10 @@
  */
 
 package nextflow.processor
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
+import nextflow.executor.BashWrapperBuilder
 import nextflow.script.BaseScript
 import nextflow.script.EachInParam
 import nextflow.script.EnvInParam
@@ -54,12 +57,12 @@ class TaskConfig implements Map<String,Object> {
 
     static final transient BOOL_NO = ['false','no','off']
 
-    static final transient DEFAULT_SHELL = ['/bin/bash','-ue']
-
     @Delegate
     protected final Map<String,Object> configProperties
 
     private final BaseScript ownerScript
+
+    private boolean throwExceptionOnMissingProperty
 
     /**
      * Initialize the taskConfig object with the defaults values
@@ -82,7 +85,7 @@ class TaskConfig implements Map<String,Object> {
             echo = false
             undef = false
             cacheable = true
-            shell = (TaskConfig.DEFAULT_SHELL)
+            shell = (BashWrapperBuilder.BASH)
             validExitStatus = [0]
             inputs = new InputsList()
             outputs = new OutputsList()
@@ -112,10 +115,12 @@ class TaskConfig implements Map<String,Object> {
         return value != null && value.toString().toLowerCase() in BOOL_YES
     }
 
-    @Override
-    def boolean containsKey(Object name) {
-        return configProperties.containsKey(name)
+    @PackageScope
+    TaskConfig throwExceptionOnMissingProperty( boolean value ) {
+        this.throwExceptionOnMissingProperty = value
+        return this
     }
+
 
     def methodMissing( String name, def args ) {
 
@@ -134,7 +139,7 @@ class TaskConfig implements Map<String,Object> {
         return this
     }
 
-    Object get( Object name ) {
+    def getProperty( String name ) {
 
         switch( name ) {
             case 'cacheable':
@@ -146,26 +151,38 @@ class TaskConfig implements Map<String,Object> {
             case 'shell':
                 return getShell()
 
+            case 'time':
+                return getTime()
+
+            case 'memory':
+                return getMemory()
+
             default:
-                return configProperties.get(name)
+                if( configProperties.containsKey(name) )
+                    return configProperties.get(name)
+                else if( throwExceptionOnMissingProperty )
+                    throw new MissingPropertyException("Unknown variable '$name'", name, null)
+                else
+                    return null
         }
+
     }
 
-    @groovy.transform.PackageScope
+    @PackageScope
     BaseScript getOwnerScript() { ownerScript }
 
     /**
      * Type shortcut to {@code #configProperties.inputs}
      */
     InputsList getInputs() {
-        return configProperties.inputs
+        configProperties.inputs
     }
 
     /**
      * Type shortcut to {@code #configProperties.outputs}
      */
     OutputsList getOutputs() {
-        return configProperties.outputs
+        configProperties.outputs
     }
 
     List getSharedDefs () {
@@ -290,30 +307,63 @@ class TaskConfig implements Map<String,Object> {
     /**
      * The max memory allow to be used to the job
      *
-     * @param mem0 The maximum amount of memory expressed as string value,
+     * @param value The maximum amount of memory expressed as string value,
      *              accepted units are 'B', 'K', 'M', 'G', 'T', 'P'. So for example
      *              {@code maxMemory '100M'}, {@code maxMemory '2G'}, etc.
      */
-    TaskConfig maxMemory( Object mem0 ) {
-        assert mem0
-
-        configProperties.maxMemory = (mem0 instanceof MemoryUnit) ? mem0 : new MemoryUnit(mem0.toString())
-
+    @Deprecated
+    TaskConfig maxMemory( Object value ) {
+        log.warn("Directive 'maxMemory' has been deprecated. Use 'memory' instead.")
+        configProperties.memory = value
         return this
     }
 
     /**
      * The max duration time allowed for the job to be executed.
      *
-     * @param duration0 The max allowed time expressed as duration string, Accepted units are 'min', 'hour', 'day'.
+     * @param value The max allowed time expressed as duration string, Accepted units are 'min', 'hour', 'day'.
      *                  For example {@code maxDuration '30 min'}, {@code maxDuration '10 hour'}, {@code maxDuration '2 day'}
      */
-    TaskConfig maxDuration( Object duration0 ) {
-        assert duration0
-
-        configProperties.maxDuration = (duration0 instanceof Duration) ? duration0 : new Duration(duration0.toString())
-
+    @Deprecated
+    TaskConfig maxDuration( Object value ) {
+        log.warn("Directive 'maxDuration' has been deprecated. Use 'time' instead.")
+        configProperties.time = value
         return this
+    }
+
+
+    MemoryUnit getMemory() {
+        def value = configProperties.memory
+
+        if( !value )
+            return null
+
+        if( value instanceof MemoryUnit )
+            return value
+
+        try {
+            new MemoryUnit(value.toString().trim())
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Not a valid 'memory' value in process definition: $value")
+        }
+    }
+
+    Duration getTime() {
+        def value = configProperties.time
+
+        if( !value )
+            return null
+
+        if( value instanceof Duration )
+            return value
+
+        try {
+            new Duration(value.toString().trim())
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Not a valid `time` value in process definition: $value")
+        }
     }
 
 
@@ -329,7 +379,9 @@ class TaskConfig implements Map<String,Object> {
         return this
     }
 
-    List<Integer> getValidExitStatus() { configProperties.validExitStatus }
+    List<Integer> getValidExitStatus() {
+        (List<Integer>)configProperties.validExitStatus
+    }
 
     boolean isCacheable() {
         def value = configProperties.cache
@@ -401,7 +453,7 @@ class TaskConfig implements Map<String,Object> {
     List<String> getShell() {
         final value = configProperties.shell
         if( !value )
-            return DEFAULT_SHELL
+            return BashWrapperBuilder.BASH
 
         if( value instanceof List )
             return value

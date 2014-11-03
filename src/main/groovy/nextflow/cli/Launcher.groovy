@@ -33,10 +33,10 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.Const
 import nextflow.ExitCode
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
+import nextflow.trace.TraceFileObserver
 import nextflow.util.LoggerHelper
 import org.codehaus.groovy.control.CompilationFailedException
 import org.eclipse.jgit.api.errors.GitAPIException
@@ -138,9 +138,6 @@ class Launcher implements ExitCode {
             else if( command instanceof CmdRun )
                 options.logFile = ".nextflow.log"
         }
-
-        // define the generic error message using the log file name
-        Const.log_detail_tip_message =  options.logFile ? "-- See the ${options.logFile} file for details" : ''
     }
 
     private short getColumns() {
@@ -201,7 +198,7 @@ class Launcher implements ExitCode {
             }
 
             else if( current == '-with-trace' && (i==args.size() || args[i].startsWith('-'))) {
-                normalized << 'trace.csv'
+                normalized << TraceFileObserver.DEF_FILE_NAME
             }
 
             else if( current == '-with-docker' && (i==args.size() || args[i].startsWith('-'))) {
@@ -355,7 +352,7 @@ class Launcher implements ExitCode {
         }
 
         catch( ConfigParseException e )  {
-            log.error("${e.message}\n\n${e.cause?.message?.toString()?.indent('  ')}\n  ${Const.log_detail_tip_message}\n", e.cause ?: e)
+            log.error("${e.message}\n\n${e.cause?.message?.toString()?.indent('  ')}", e.cause ?: e)
             System.exit(INVALID_CONFIG)
         }
 
@@ -365,7 +362,7 @@ class Launcher implements ExitCode {
         }
 
         catch( Throwable fail ) {
-            log.error("${fail.toString()} ${Const.log_detail_tip_message}", fail)
+            log.error("@unknown", fail)
             System.exit(UNKNOWN_ERROR)
         }
 

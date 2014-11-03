@@ -27,7 +27,7 @@ import spock.lang.Specification
  */
 class HistoryFileTest extends Specification {
 
-    def 'test add and get' () {
+    def 'test add and get and find' () {
 
         setup:
         new File('.nextflow.history').delete()
@@ -48,11 +48,15 @@ class HistoryFileTest extends Specification {
 
         then:
         HistoryFile.history.retrieveLastUniqueId() == id3.toString()
-
+        HistoryFile.history.findUniqueId( id1.toString() )
+        HistoryFile.history.findUniqueId( id2.toString() )
+        HistoryFile.history.findUniqueId( id3.toString() )
+        !HistoryFile.history.findUniqueId( UUID.randomUUID().toString() )
 
         cleanup:
         HistoryFile.history.delete()
 
     }
+
 
 }

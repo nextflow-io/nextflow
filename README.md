@@ -197,6 +197,29 @@ It may take some minutes to complete.
 
 When complete, execute the program by using the `launch.sh` script in the project directory.
 
+The self-contained runnable Nextflow package can be created by using the following command:
+
+    $ ./gradlew pack
+
+Note: if the compilation stops reporting the error: `java.lang.VerifyError: Bad <init> method call from inside of a branch`,
+this is due to a bug affecting the following Java JDK:
+
+- 1.7.0 update 55
+- 1.7.0 update 65
+- 1.7.0 update 67
+- 1.8.0 update 11
+- 1.8.0 update 20
+
+Upgrade to a newer JDK to avoid to this issue. Alternatively a possible workaround is to define the following variable
+in your environment:
+
+    _JAVA_OPTIONS='-Xverify:none'
+
+Read more at these links:
+
+- https://bugs.openjdk.java.net/browse/JDK-8051012
+- https://jira.codehaus.org/browse/GROOVY-6951
+
 
 Required dependencies
 ---------------------
@@ -235,3 +258,4 @@ and <a href='http://www.gpars.org/' target='_blank'>Gpars</a>
 
 YourKit is kindly supporting this open source project with its full-featured Java Profiler.
 Read more http://www.yourkit.com
+

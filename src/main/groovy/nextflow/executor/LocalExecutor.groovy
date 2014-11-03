@@ -97,7 +97,7 @@ class LocalTaskHandler extends TaskHandler {
 
     private final Path exitFile
 
-    private final Long maxDurationMillis
+    private final Long wallTimeMillis
 
     private final Path wrapperFile
 
@@ -120,7 +120,7 @@ class LocalTaskHandler extends TaskHandler {
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
-        this.maxDurationMillis = taskConfig.maxDuration?.toMillis()
+        this.wallTimeMillis = taskConfig.getTime()?.toMillis()
         this.executor = executor
         this.session = executor.session
     }
@@ -128,9 +128,8 @@ class LocalTaskHandler extends TaskHandler {
 
     @Override
     def void submit() {
-
         // the cmd list to launch it
-        List cmd = new ArrayList(taskConfig.getShell()) << wrapperFile.getName()
+        List cmd = new ArrayList(BashWrapperBuilder.BASH) << wrapperFile.getName()
         log.trace "Launch cmd line: ${cmd.join(' ')}"
 
         session.getExecService().submit( {
@@ -146,6 +145,7 @@ class LocalTaskHandler extends TaskHandler {
                 result = process.waitFor()
             }
             catch( Throwable ex ) {
+                log.trace("Failed to execute command: ${cmd.join(' ')}", ex)
                 result = ex
             }
             finally {
@@ -194,11 +194,11 @@ class LocalTaskHandler extends TaskHandler {
             return true
         }
 
-        if( maxDurationMillis ) {
+        if( wallTimeMillis ) {
             /*
              * check if the task exceed max duration time
              */
-            if( elapsedTimeMillis() > maxDurationMillis ) {
+            if( elapsedTimeMillis() > wallTimeMillis ) {
                 destroy()
                 task.stdout = outputFile
                 status = Status.COMPLETED
@@ -216,7 +216,10 @@ class LocalTaskHandler extends TaskHandler {
      * Force the submitted job to quit
      */
     @Override
-    void kill() { destroy() }
+    void kill() {
+        log.trace("Killing process with pid: ${process.pid}")
+        new ProcessBuilder('kill', process.pid.toString()).redirectErrorStream(true).start()
+    }
 
     /**
      * Destroy the process handler, closing all associated streams
@@ -233,10 +236,13 @@ class LocalTaskHandler extends TaskHandler {
     }
 
 
+    /**
+     * @return An {@link TraceRecord} instance holding task runtime information
+     */
     @Override
     TraceRecord getTraceRecord() {
         def result = super.getTraceRecord()
-        result.nativeId = this.process?.pid
+        result.native_id = this.process?.pid
         return result
     }
 

@@ -18,7 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import embed.com.google.common.hash.HashCodes
+import com.google.common.hash.HashCodes
 import nextflow.util.CacheHelper
 
 /**
