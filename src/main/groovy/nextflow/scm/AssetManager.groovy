@@ -19,7 +19,6 @@
  */
 
 package nextflow.scm
-
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -35,7 +34,6 @@ import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
-
 /**
  * Handles operation on remote and local installed pipelines
  *
@@ -56,11 +54,12 @@ class AssetManager {
 
     static final String DEFAULT_HUB = System.getenv('NXF_HUB') ?: 'github'
 
+    static final File DEFAULT_ROOT = System.getenv('NXF_ASSETS') ? new File(System.getenv('NXF_ASSETS')) : Const.APP_HOME_DIR.resolve('assets').toFile()
 
     /**
      * The folder all pipelines scripts are installed
      */
-    private File root = System.getenv('NXF_ASSETS') ? new File(System.getenv('NXF_ASSETS')) : Const.APP_HOME_DIR.resolve('assets').toFile()
+    private File root = DEFAULT_ROOT
 
     /**
      * The pipeline name. It must be in the form {@code username/repo} where 'username'
