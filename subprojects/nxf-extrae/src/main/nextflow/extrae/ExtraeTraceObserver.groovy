@@ -75,11 +75,7 @@ class ExtraeTraceObserver implements TraceObserver {
         if( !configFile.exists() )
             createConfigFile(configFile)
 
-        Wrapper.defineEventType(1001,
-                "Nextflow task submission",
-                0,
-                null,
-                null)
+        Wrapper.defineEventType(1001, "Nextflow task submission", 0, null, null)
 
         Wrapper.resumeVirtualThread(1)
         Wrapper.Event(1000,1)
@@ -102,11 +98,7 @@ class ExtraeTraceObserver implements TraceObserver {
             tasksNames[p] = name
         }
 
-        Wrapper.defineEventType(1002,
-                "Nextflow Process Types",
-                size,
-                tasksTypes,
-                tasksNames)
+        Wrapper.defineEventType(1002, "Nextflow Process Types", size, tasksTypes, tasksNames)
 
         // reminder message for the user
         if( !session.isAborted() )
@@ -142,9 +134,17 @@ class ExtraeTraceObserver implements TraceObserver {
         long taskId = handler.getTask().id as long
         long procId = handler.getTask().processor.id
 
-        Wrapper.resumeVirtualThread( taskId +1 )
-        Wrapper.Event(1001, taskId )
-        Wrapper.Event(1002, procId )
+        Wrapper.resumeVirtualThread( taskId+1 )
+        Wrapper.Event(1001, taskId )    // Task ID
+        Wrapper.Event(1002, procId )    // Process ID
+        Wrapper.Event(1003, 0)          // % cpu
+        Wrapper.Event(1004, 0)          // rss
+        Wrapper.Event(1005, 0)          // virtual memory
+        Wrapper.Event(1006, 0)          // read chars
+        Wrapper.Event(1007, 0)          // write chars
+        Wrapper.Event(1008, 0)          // number of read ops
+        Wrapper.Event(1009, 0)          // number of write ops
+
         Wrapper.suspendVirtualThread()
 
     }
@@ -152,11 +152,20 @@ class ExtraeTraceObserver implements TraceObserver {
     @Override
     void onProcessComplete( TaskHandler handler ) {
 
-        def taskId = handler.getTask().id as long
+        final taskId = handler.getTask().id as long
+        final record = handler.getTraceRecord()
 
-        Wrapper.resumeVirtualThread(taskId +1)
+        Wrapper.resumeVirtualThread( taskId+1 )
         Wrapper.Event(1001, 0)
         Wrapper.Event(1002, 0)
+        Wrapper.Event(1003, (record.get('%cpu') as Float ?: 0f) * 10L as long)      // note: since the cpu usage percentage can contain a decimal digit, the value is multiply by 10
+        Wrapper.Event(1004, (record.get('rss') ?: 0) as long)                       // rss (bytes)
+        Wrapper.Event(1005, (record.get('vmem') ?: 0) as long)                      // virtual memory (bytes)
+        Wrapper.Event(1006, (record.get('rchar') ?: 0) as long)                     // read chars (bytes)
+        Wrapper.Event(1007, (record.get('wchar') ?: 0) as long)                     // write chars (bytes)
+        Wrapper.Event(1008, (record.get('syscr') ?: 0) as long)                     // number of read ops
+        Wrapper.Event(1009, (record.get('syscw') ?: 0) as long)                     // number of write ops
+
         Wrapper.suspendVirtualThread()
 
     }
