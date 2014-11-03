@@ -13,6 +13,7 @@ allows you to write the pipeline functional logic independently from the actual 
 In other words you can write your pipeline script once and have it running on your computer, a cluster resource manager
 or the cloud by simply changing the executor definition in the Nextflow configuration file.
 
+.. _local-executor:
 
 Local executor
 ===============
@@ -40,88 +41,14 @@ scenario, the cluster `head` node.
 
 To enable the SGE executor simply set to ``process.executor`` property to ``sge`` value in the ``nextflow.config`` file.
 
-Along with SGE executor, other optional configuration properties can be specified in the Nextflow configuration file.
+The amount of resources requested by each job submission is defined by the following process directives:
 
-================ ==========================
-Property         Description
-================ ==========================
-queue            The queue name to be used to schedule your pipeline jobs.
-maxDuration      How long the process is allowed to run.
-maxMemory        How much memory the process is allows to use.
-clusterOptions   It allows to specify SGE `native` configuration options.
-================ ==========================
-
-
-Property 'queue'
-------------------
-
-The ``queue`` executor property allows the SGE queue to be used to schedule your pipeline jobs. For example::
-
-    process.executor = 'sge'
-    process.queue = 'long'
-
-Multiple queues can be specified by separating their names with a comma for example::
-
-    process.executor = 'sge'
-    process.queue = 'short,long,cn-el6'
-
-
-Property 'maxDuration'
-------------------------
-
-The ``maxDuration`` configuration property allows you to define how long the process is allowed to run. For example::
-
-    process.executor = 'sge'
-    process.maxDuration = '1h'
-
-
-The following time unit suffix can be used when specifying the duration value:
-
-======= =============
-Unit    Description
-======= =============
-s       Seconds
-m       Minutes
-h       Hours
-d       Days
-======= =============
-
-
-
-Property 'maxMemory'
-----------------------
-
-The ``maxMemory`` configuration property allows you to define how much memory the process is allowed to use. For example::
-
-    process.executor = 'sge'
-    process.maxMemory = '2 GB'
-
-
-The following memory unit suffix can be used when specifying the memory value:
-
-======= =============
-Unit    Description
-======= =============
-B       Bytes
-KB      Kilobytes
-MB      Megabytes
-GB      Gigabytes
-TB      Terabytes
-======= =============
-
-This setting is equivalent to set the ``qsub -l virtual_free=<mem>`` command line option.
-
-
-Property 'clusterOptions'
---------------------------
-
-The ``clusterOptions`` configuration property allows to use any configuration `native` option accepted by the ``qsub`` command. For example::
-
-    process.executor = 'sge'
-    process.clusterOptions = '-pe smp 10'
-
-In the above example ``clusterOptions`` is used to reserve 10 cpu in the SGE parallel environment.
-
+* :ref:`process-cpus`
+* :ref:`process-queue`
+* :ref:`process-memory`
+* :ref:`process-penv`
+* :ref:`process-time`
+* :ref:`process-clusterOptions`
 
 .. _lsf-executor:
 
@@ -137,37 +64,14 @@ scenario, the cluster `head` node.
 
 To enable the LSF executor simply set to ``process.executor`` property to ``lsf`` value in the ``nextflow.config`` file.
 
-Along with LSF executor, other optional configuration properties can be specified in the Nextflow configuration file.
+The amount of resources requested by each job submission is defined by the following process directives:
 
-================ ==========================
-Property         Description
-================ ==========================
-queue            The queue name to be used to schedule your pipeline jobs.
-clusterOptions   It allows to specify LSF `native` configuration options.
-================ ==========================
+* :ref:`process-cpus`
+* :ref:`process-queue`
+* :ref:`process-time`
+* :ref:`process-memory`
+* :ref:`process-clusterOptions`
 
-
-Property 'queue'
-------------------
-
-The ``queue`` executor property allows the LSF queue to be used to schedule your pipeline jobs. For example::
-
-    process.executor = 'lsf'
-    process.queue = 'long'
-
-Multiple queues can be specified by separating their names with a comma for example::
-
-    process.executor = 'lsf'
-    process.queue = 'short,long,big-mem'
-
-
-Property 'clusterOptions'
---------------------------
-
-The ``clusterOptions`` configuration property allows to set any `native` cluster option accepted by the ``bsub`` command. For example::
-
-    process.executor = 'lsf'
-    process.clusterOptions = " -M 4000  -R 'rusage[mem=4000] select[mem>4000]' "
 
 
 .. _slurm-executor:
@@ -185,49 +89,18 @@ scenario, the cluster `head` node.
 
 To enable the SLURM executor simply set to ``process.executor`` property to ``slurm`` value in the ``nextflow.config`` file.
 
-Along with SLURM executor, other optional configuration properties can be specified in the Nextflow configuration file.
+The amount of resources requested by each job submission is defined by the following process directives:
 
-================ ==========================
-Property         Description
-================ ==========================
-maxDuration      How long the process is allowed to run.
-clusterOptions   It allows to specify SLURM `native` configuration options.
-================ ==========================
-
-Property 'maxDuration'
-------------------------
-
-The ``maxDuration`` configuration property allows you to define how long the process is allowed to run. For example::
-
-    process.executor = 'slurm'
-    process.maxDuration = '1d'
+* :ref:`process-cpus`
+* :ref:`process-time`
+* :ref:`process-memory`
+* :ref:`process-clusterOptions`
 
 
-The following time unit suffix can be used when specifying the duration value:
-
-======= =============
-Unit    Description
-======= =============
-s       Seconds
-m       Minutes
-h       Hours
-d       Days
-======= =============
-
-
-Property 'clusterOptions'
---------------------------
-
-The ``clusterOptions`` configuration property allows to set any `native` cluster option accepted by the ``sbatch`` command. For example::
-
-    process.executor = 'slurm'
-    process.clusterOptions = " -t 01:00:00 "
-
-
+.. _pbs-executor:
 
 PBS/Torque executor
 ====================
-
 
 The `PBS` executor allows you to run your pipeline script by using a resource manager belonging to the `PBS/Torque <http://en.wikipedia.org/wiki/Portable_Batch_System>`_ family of batch schedulers.
 
@@ -239,11 +112,13 @@ scenario, the cluster `login` node.
 
 To enable the PBS executor simply set the property ``process.executor = 'pbs'`` in the ``nextflow.config`` file.
 
-The configuration property ``clusterOptions`` allows you to set any `native` cluster option accepted by the ``qsub`` command. For example::
+The amount of resources requested by each job submission is defined by the following process directives:
 
-    process.executor = 'pbs'
-    process.clusterOptions = '-l walltime=1:00:00'
-
+* :ref:`process-cpus`
+* :ref:`process-queue`
+* :ref:`process-time`
+* :ref:`process-memory`
+* :ref:`process-clusterOptions`
 
 
 .. _drmaa-executor:
@@ -270,15 +145,6 @@ option. For example::
 Alternatively, instead of specifying the DRMAA library on the command line, you may want to use the environment variable
 ``NXF_DRMAA`` to define it.
 
-The ``clusterOptions`` configuration property allows you to set any `native` cluster options accepted by your
-grid engine platform.
-For example::
-
-    process.executor = 'drmaa'
-    process.clusterOptions = '-l walltime=1:00:00'
-
-
-
 .. tip:: If you get the following error message::
 
       ERROR: java.lang.UnsatisfiedLinkError: no drmaa in java.library.path
@@ -286,6 +152,14 @@ For example::
     It means that Nextflow is unable to find ``libdrmaa.so`` file. The most common solution is
     to include the path where this file is located in the ``LD_LIBRARY_PATH`` environment variable.
 
+
+The amount of resources requested by each job submission is defined by the following process directives:
+
+* :ref:`process-cpus`
+* :ref:`process-queue`
+* :ref:`process-time`
+* :ref:`process-memory`
+* :ref:`process-clusterOptions`
 
 .. _dnanexus-executor:
 

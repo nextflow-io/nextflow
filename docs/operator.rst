@@ -1100,16 +1100,16 @@ value to be appended to that file. For example::
 
 It will print::
 
-    File 'H.txt' contains:
-    Hola
-    Hello
-    Halo
-
     File 'B.txt' contains:
     Bonjour
 
     File 'C.txt' contains:
     Ciao
+
+    File 'H.txt' contains:
+    Halo
+    Hola
+    Hello
 
 
 .. tip:: When the items emitted by the source channel are files, the grouping criteria can be omitted. In this case
@@ -1124,8 +1124,61 @@ Name            Description
 name            Name of the file where all received values are stored
 seed            A value or a map of values used to initialise the files content
 newLine         Appends a ``newline`` character automatically after each entry (default: ``false``)
-storeDir        Folder where the resulting file(s) will be stored
+storeDir        Folder where the resulting file(s) are be stored
+tempDir         Folder where temporary files, used by the collecting process, are stored.
+sort            Defines sorting criteria of content in resulting file(s). See below for sorting options.
 =============== ========================
+
+.. note:: The file content is sorted in such a way that it does not depend on the order on which
+    entries have been added to it, this guarantees that it is consistent (i.e. do not change) across different executions
+    with the same data.
+
+The ordering of file's content can be defined by using the ``sort`` parameter. The following criteria
+can be specified:
+
+=============== ========================
+Sort            Description
+=============== ========================
+true            Order the content by the entries natural ordering i.e. numerical for number, lexicographic for string, etc. See http://docs.oracle.com/javase/tutorial/collections/interfaces/order.html
+index           Order the content by the incremental index number assigned to each entry while they are collected.
+hash            Order the content by the hash number associated to each entry
+deep            Similar to the previous, but the hash number is created on actual entries content e.g. when the entry is a file the hash is created on the actual file content.
+`custom`        A custom sorting criteria can be specified by using either a :ref:`Closure <script-closure>` or a `Comparator <http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html>`_ object.
+=============== ========================
+
+For example the following snippet shows how sort the content of the result file alphabetically::
+
+     Channel
+        .from('Z'..'A')
+        .collectFile(name:'result', sort: true, newLine: true)
+        .subscribe {
+            println it.text
+        }
+
+It will print::
+
+        A
+        B
+        C
+        :
+        Z
+
+
+The following example shows how use a `closure` to collect and sort all sequences in a FASTA file from shortest to longest::
+
+    Channel
+         .fromPath('/data/sequences.fa')
+         .splitFasta( record: [id: true, sequence: true] )
+         .collectFile( name:'result.fa', sort: { it.size() } )  {
+            it.sequence
+          }
+         .subscribe { println it.text }
+
+
+.. warning:: The ``collectFile`` operator to carry out its function need to store in a temporary folder that is
+ automatically deleted on job completion. For performance reason this folder is allocated in the machine local storage,
+ and it will require as much free space as are the data you are collecting. Optionally, an alternative temporary data
+ folder can be specified by using the ``tempDir`` parameter.
 
 concat
 --------

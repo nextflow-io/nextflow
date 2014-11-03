@@ -982,16 +982,22 @@ Some directives are generally available to all processes, some others depends on
 The directives are:
 
 * `cache`_
+* `cpus`_
 * `container`_
+* `clusterOptions`_
 * `echo`_
 * `errorStrategy`_
 * `executor`_
+* `queue`_
 * `maxErrors`_
 * `maxForks`_
 * `maxRetries`_
+* `memory`_
 * `module`_
+* `penv`_
 * `scratch`_
 * `storeDir`_
+* `walltime`_
 * `validExitStatus`_
 
 
@@ -1371,3 +1377,181 @@ In the above example, although the command script ends with a ``1`` exit status,
 will not return an error condition because the value ``1`` is declared as a `valid` status in 
 the ``validExitStatus`` directive.
 
+
+.. _process-cpus:
+
+cpus
+-------
+
+The ``cpus`` directive allows you to define the number of (logical) CPU required by the process' task.
+For example::
+
+    process big_job {
+
+      cpus 8
+      executor 'sge'
+
+      """
+      blastp -query input_sequence -num_threads ${task.cpus}
+      """
+    }
+
+
+This directive is required for tasks that execute multi-process or multi-threaded commands/tools and it is meant
+to reserve enough CPUs when a pipeline task is executed through a cluster resource manager.
+
+.. note:: Currently it is supported only by the following grid based executors:
+    :ref:`SGE <sge-executor>`, :ref:`LSF <lsf-executor>`, :ref:`SLURM <slurm-executor>`,
+    :ref:`PBS/Torque <pbs-executor>` and :ref:`DRMAA <drmaa-executor>`.
+
+
+See also: `penv`_, `memory`_, `time`_, `queue`_, `maxForks`_
+
+.. _process-queue:
+
+queue
+--------
+
+The ``queue`` directory allows you to set the `queue` where jobs are scheduled when using a grid based executor
+in your pipeline. For example::
+
+    process grid_job {
+
+        queue 'long'
+        executor 'sge'
+
+        """
+        your task script here
+        """
+    }
+
+
+Multiple queues can be specified by separating their names with a comma for example::
+
+    process grid_job {
+
+        queue 'short,long,cn-el6'
+        executor 'sge'
+
+        """
+        your task script here
+        """
+    }
+
+
+.. note:: This directive is taken in account only by the following executors: :ref:`SGE <sge-executor>`,
+  :ref:`LSF <lsf-executor>`, :ref:`PBS/Torque <pbs-executor>` and :ref:`DRMAA <drmaa-executor>`
+
+.. _process-memory:
+
+memory
+--------
+
+The ``memory`` directive allows you to define how much memory the process is allowed to use. For example::
+
+    process big_job {
+
+        memory '2 GB'
+        executor 'sge'
+
+        """
+        your task script here
+        """
+    }
+
+
+The following memory unit suffix can be used when specifying the memory value:
+
+======= =============
+Unit    Description
+======= =============
+B       Bytes
+KB      Kilobytes
+MB      Megabytes
+GB      Gigabytes
+TB      Terabytes
+======= =============
+
+.. This setting is equivalent to set the ``qsub -l virtual_free=<mem>`` command line option.
+
+.. note:: This directive is taken in account only when using one of the following grid based executors:
+  :ref:`SGE <sge-executor>`, :ref:`LSF <lsf-executor>`, :ref:`SLURM <slurm-executor>`, :ref:`PBS/Torque <pbs-executor>`
+  and :ref:`DRMAA <drmaa-executor>`
+
+
+See also: `cpus`_, `time`_, `queue`_
+
+.. _process-time:
+
+time
+--------
+
+The ``time`` directive allows you to define how long a process is allowed to run. For example::
+
+    process big_job {
+
+        time '1h'
+
+        """
+        your task script here
+        """
+    }
+
+
+
+The following time unit suffix can be used when specifying the duration value:
+
+======= =============
+Unit    Description
+======= =============
+s       Seconds
+m       Minutes
+h       Hours
+d       Days
+======= =============
+
+.. note:: This directive is taken in account only when using one of the following grid based executors:
+    :ref:`SGE <sge-executor>`, :ref:`LSF <lsf-executor>`, :ref:`SLURM <slurm-executor>`, :ref:`PBS/Torque <pbs-executor>`
+    and :ref:`DRMAA <drmaa-executor>`
+
+See also: `cpus`_, `memory`_, `queue`_
+
+.. _process-penv:
+
+penv
+-------
+
+The ``penv`` directive  allows you to define the `parallel environment` to be used when submitting a parallel task to the
+:ref:`SGE <sge-executor>` resource manager. For example::
+
+    process big_job {
+
+      cpus 4
+      penv 'smp'
+      executor 'sge'
+
+      """
+      blastp -query input_sequence -num_threads ${task.cpus}
+      """
+    }
+
+This configuration depends on the parallel environment provided by your grid engine installation. Refer to your
+cluster documentation or contact your admin to lean more about this.
+
+.. note:: This setting is available only for the :ref:`SGE grid executor <sge-executor>`.
+
+See also: `cpus`_, `memory`_, `time`_
+
+
+.. _process-clusterOptions:
+
+clusterOptions
+----------------
+
+The ``clusterOptions`` directive allows to use any `native` configuration option accepted by your cluster submit command.
+You can use it to request non-standard resources or use settings that are specific to your cluster and not supported
+out of the box by Nextflow.
+
+.. note:: This directive is taken in account only when using a grid based executor:
+  :ref:`SGE <sge-executor>`, :ref:`LSF <lsf-executor>`, :ref:`SLURM <slurm-executor>`, :ref:`PBS/Torque <pbs-executor>`
+  and :ref:`DRMAA <drmaa-executor>`
