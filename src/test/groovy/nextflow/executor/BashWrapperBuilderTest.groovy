@@ -507,8 +507,9 @@ class BashWrapperBuilderTest extends Specification {
                 name: 'xyz',
                 workDir: folder,
                 script: 'echo Hello world!',
+                container: 'busybox',
                 dockerMount: Paths.get('/some/path'),
-                dockerConfig: [image: 'busybox', temp: 'auto', sudo: true, enabled: true] )
+                dockerConfig: [temp: 'auto', sudo: true, enabled: true] )
         bash.build()
 
         then:
@@ -584,8 +585,9 @@ class BashWrapperBuilderTest extends Specification {
                 name: 'xyz',
                 workDir: folder,
                 script: 'echo Hello world!',
+                container: 'busybox',
                 dockerMount: Paths.get('/some/path'),
-                dockerConfig: [image: 'busybox', temp: 'auto', enabled: true] )
+                dockerConfig: [temp: 'auto', enabled: true] )
         bash.build()
 
         then:
@@ -664,8 +666,9 @@ class BashWrapperBuilderTest extends Specification {
                 name: 'c1',
                 workDir: folder,
                 script: 'echo Hello world!',
+                container: 'ubuntu',
                 dockerMount: Paths.get('/some/path'),
-                dockerConfig: [image: 'ubuntu', temp: 'auto', enabled: true, remove:false] )
+                dockerConfig: [temp: 'auto', enabled: true, remove:false] )
         bash.build()
 
         then:

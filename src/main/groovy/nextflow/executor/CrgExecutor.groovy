@@ -22,6 +22,7 @@ package nextflow.executor
 
 import java.nio.file.Path
 
+import groovy.transform.PackageScope
 import nextflow.processor.TaskRun
 
 
@@ -33,12 +34,19 @@ class CrgExecutor extends SgeExecutor {
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
 
-        if( task.container ) {
+        if( task.container && isDockerEnabled() ) {
             if( extraOptions == null ) extraOptions = []
-            extraOptions << '-soft' << '-l' << "docker_images=${task.container}"
+            extraOptions << '-soft' << '-l' << "docker_images=${task.container}" << '-hard'
         }
 
         return super.getSubmitCommandLine(task, scriptFile)
     }
+
+    @PackageScope
+    boolean isDockerEnabled() {
+        Map dockerConf = session.config.docker as Map
+        dockerConf?.enabled?.toString() == 'true'
+    }
+
 
 }

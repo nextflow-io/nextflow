@@ -104,11 +104,6 @@ class DockerBuilder {
         if( params.containsKey('sudo') )
             this.sudo = params.sudo?.toString() == 'true'
 
-        if( params.containsKey('registry') ) {
-            this.registry = params.registry
-            if( !registry.endsWith('/') ) registry += '/'
-        }
-
         if( params.containsKey('tty') )
             this.tty = params.tty?.toString() == 'true'
 
@@ -277,5 +272,30 @@ class DockerBuilder {
      * @return The command string to kill a running container
      */
     String getKillCommand() { killCommand }
+
+
+    static boolean isAbsoluteDockerName(String image) {
+        def p = image.indexOf('/')
+        if( p==-1 )
+            return false
+
+        image = image.substring(0,p)
+        image.contains('.') || image.contains(':')
+    }
+
+    static String normalizeDockerImageName( String imageName, Map dockerConf ) {
+
+        String reg = dockerConf?.registry
+        if( !reg )
+            return imageName
+
+        if( isAbsoluteDockerName(imageName) )
+            return imageName
+
+        if( !reg.endsWith('/') )
+            reg += '/'
+
+        return reg + imageName
+    }
 
 }

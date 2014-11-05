@@ -203,9 +203,8 @@ class BashWrapperBuilder {
         this.script = task.script.toString()
 
         // docker config
+        this.dockerImage = task.container
         this.dockerConfig = task.processor?.session?.config?.docker
-        // TODO deprecate docker.image property
-        this.dockerImage = task.container ?: dockerConfig?.image
 
         // stats
         this.statsEnabled = task.processor?.session?.statsEnabled
@@ -225,9 +224,8 @@ class BashWrapperBuilder {
         this.environment = params.environment
 
         // docker config
+        this.dockerImage = params.container
         this.dockerConfig = params.dockerConfig
-        // TODO deprecate docker.image property
-        this.dockerImage = params.container ?: dockerConfig?.image
         this.dockerMount = params.dockerMount
         this.statsEnabled = params.statsEnabled
     }

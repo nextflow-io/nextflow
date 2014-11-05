@@ -19,7 +19,6 @@
  */
 
 package nextflow.processor
-
 import java.util.concurrent.atomic.AtomicBoolean
 
 import groovy.transform.InheritConstructors
@@ -44,6 +43,8 @@ import nextflow.script.StdInParam
 import nextflow.script.ValueInParam
 import nextflow.script.ValueSharedParam
 import nextflow.util.CacheHelper
+import nextflow.util.DockerBuilder
+
 /**
  * Defines the parallel tasks execution logic
  *
@@ -317,11 +318,12 @@ class ParallelTaskProcessor extends TaskProcessor {
         }
 
         // set the docker container to be used
-        task.container = taskConfig.container
+        def imageName = taskConfig.container as String
+        def dockerConf = task.processor?.session?.config?.docker as Map
+        task.container = DockerBuilder.normalizeDockerImageName(imageName, dockerConf)
 
         return task
     }
-
 
     /**
      * The processor execution body

@@ -29,8 +29,7 @@ import spock.lang.Specification
 class DockerBuilderTest extends Specification {
 
 
-
-    def testDockerMounts() {
+    def 'test docker mounts'() {
 
         setup:
         def files =  [Paths.get('/folder/data'),  Paths.get('/folder/db'), Paths.get('/folder/db') ]
@@ -43,7 +42,7 @@ class DockerBuilderTest extends Specification {
     }
 
 
-    def testDockerEnv() {
+    def 'test docker env'() {
 
         expect:
         DockerBuilder.makeEnv('X=1').toString() == '-e "X=1"'
@@ -52,7 +51,7 @@ class DockerBuilderTest extends Specification {
         DockerBuilder.makeEnv( new File('/some/file.env') ).toString() == '-e "BASH_ENV=file.env"'
     }
 
-    def testDockerRunCommandLine() {
+    def 'test docker run command line'() {
 
         setup:
         def envFile = Paths.get('env-file')
@@ -66,8 +65,6 @@ class DockerBuilderTest extends Specification {
         new DockerBuilder('busybox').params(entry: '/bin/bash').build() == 'docker run -i -v $PWD:$PWD -w $PWD --entrypoint /bin/bash busybox'
         new DockerBuilder('busybox').params(runOptions: '-x --zeta').build() == 'docker run -i -v $PWD:$PWD -w $PWD -x --zeta busybox'
         new DockerBuilder('busybox').params(userEmulation:true).build() == 'docker run -i -u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME -v $PWD:$PWD -w $PWD busybox'
-        new DockerBuilder('busybox').params(registry:'local:5000').build() == 'docker run -i -v $PWD:$PWD -w $PWD local:5000/busybox'
-        new DockerBuilder('busybox').params(registry:'local:5000/').build() == 'docker run -i -v $PWD:$PWD -w $PWD local:5000/busybox'
         new DockerBuilder('busybox').setName('hola').build() == 'docker run -i -v $PWD:$PWD -w $PWD --name hola busybox'
 
         new DockerBuilder('fedora')
@@ -78,7 +75,7 @@ class DockerBuilderTest extends Specification {
 
     }
 
-    def testAddMount() {
+    def 'test add mount'() {
 
         when:
         def docker = new DockerBuilder('fedora')
@@ -94,7 +91,7 @@ class DockerBuilderTest extends Specification {
 
     }
 
-    def testGetCommands() {
+    def 'test get commands'() {
 
         when:
         def docker =  new DockerBuilder('busybox').setName('c1')
@@ -121,6 +118,32 @@ class DockerBuilderTest extends Specification {
         docker.runCommand == 'docker run -i -v $PWD:$PWD -w $PWD --name c3 busybox'
         docker.removeCommand == 'docker rm c3'
         docker.killCommand == 'docker kill c3'
+
+    }
+
+    def 'test is absolute image name' () {
+
+        expect:
+        !DockerBuilder.isAbsoluteDockerName('hello')
+        !DockerBuilder.isAbsoluteDockerName('image/name')
+        DockerBuilder.isAbsoluteDockerName('registry:5000/image/name')
+        DockerBuilder.isAbsoluteDockerName('d.reg/image/name')
+        DockerBuilder.isAbsoluteDockerName('d.reg/image')
+
+    }
+
+    def 'test normalize docker image name' () {
+
+        expect:
+        DockerBuilder.normalizeDockerImageName(image, [registry: registry]) == expected
+
+        where:
+        image                       | registry  | expected
+        'hello'                     | null      | 'hello'
+        'cbcrg/hello'               | null      | 'cbcrg/hello'
+        'cbcrg/hello'               | 'd.reg'   | 'd.reg/cbcrg/hello'
+        'cbcrg/hello'               | 'd.reg/'  | 'd.reg/cbcrg/hello'
+        'registry:5000/cbcrg/hello' | 'd.reg'   | 'registry:5000/cbcrg/hello'
 
     }
 

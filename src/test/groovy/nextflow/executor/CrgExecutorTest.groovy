@@ -22,6 +22,7 @@ package nextflow.executor
 
 import java.nio.file.Paths
 
+import nextflow.Session
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -46,6 +47,7 @@ class CrgExecutorTest extends Specification {
         // LSF executor
         def executor = [:] as CrgExecutor
         executor.taskConfig = config
+        executor.session = new Session()
 
         when:
         // process name
@@ -60,6 +62,7 @@ class CrgExecutorTest extends Specification {
         config.memory = test_mem
         config.time = test_time
         config.cpus = test_cpu
+        executor.session.config.docker = [enabled: test_enabled]
 
         def task = new TaskRun()
         task.processor = proc
@@ -71,16 +74,17 @@ class CrgExecutorTest extends Specification {
         executor.getSubmitCommandLine(task,script).join(' ') == expected
 
         where:
-        test_mem | test_time | test_cpu | test_penv | test_queue    | test_container | test_opts    || expected
-        null    | null       |  null    | null      | 'short'       | null           | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q short .job.sh'
-        null    | null       |  1       | null      | 'short'       | null           | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q short -l slots=1 .job.sh'
-        null    | '10s '     |  1       | null      | 'long'        | null           | '-extra opt '|| 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q long -l slots=1 -l h_rt=00:00:10 -extra opt .job.sh'
-        '1M'    | '10s '     |  1       | null      | 'long'        | null           | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q long -l slots=1 -l h_rt=00:00:10 -l virtual_free=1M .job.sh'
-        '2 M'   | '2 m'      | '1'      | 'smp'     | 'www'         | null           | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q www -pe smp 1 -l h_rt=00:02:00 -l virtual_free=2M .job.sh'
-        '3 g'   | '3 d'      | '2'      | 'mpi'     | 'www'         | null           | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q www -pe mpi 2 -l h_rt=72:00:00 -l virtual_free=3G .job.sh'
-        '4 GB ' | '1d3h'     | '4'      | 'orte'    | 'alpha'       | null           | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q alpha -pe orte 4 -l h_rt=27:00:00 -l virtual_free=4G .job.sh'
-        null    | null       |  null    | null      | 'alpha'       | 'ubuntu:latest'| null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q alpha -soft -l docker_images=ubuntu:latest .job.sh'
-        '3 g'   | '3 d'      | '2'      | 'mpi'     | 'alpha'       | 'busybox'      | '-a 1 -b 2'  || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q alpha -pe mpi 2 -l h_rt=72:00:00 -l virtual_free=3G -soft -l docker_images=busybox -a 1 -b 2 .job.sh'
+        test_mem | test_time | test_cpu | test_penv | test_queue    | test_container | test_enabled | test_opts    || expected
+        null    | null       |  null    | null      | 'short'       | null           | false        | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q short .job.sh'
+        null    | null       |  1       | null      | 'short'       | null           | false        | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q short -l slots=1 .job.sh'
+        null    | '10s '     |  1       | null      | 'long'        | null           | false        | '-extra opt '|| 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q long -l slots=1 -l h_rt=00:00:10 -extra opt .job.sh'
+        '1M'    | '10s '     |  1       | null      | 'long'        | null           | false        | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q long -l slots=1 -l h_rt=00:00:10 -l virtual_free=1M .job.sh'
+        '2 M'   | '2 m'      | '1'      | 'smp'     | 'www'         | null           | false        | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q www -pe smp 1 -l h_rt=00:02:00 -l virtual_free=2M .job.sh'
+        '3 g'   | '3 d'      | '2'      | 'mpi'     | 'www'         | null           | false        | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q www -pe mpi 2 -l h_rt=72:00:00 -l virtual_free=3G .job.sh'
+        '4 GB ' | '1d3h'     | '4'      | 'orte'    | 'alpha'       | null           | false        | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q alpha -pe orte 4 -l h_rt=27:00:00 -l virtual_free=4G .job.sh'
+        null    | null       |  null    | null      | 'alpha'       | 'ubuntu'       | false        | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q alpha .job.sh'
+        null    | null       |  null    | null      | 'alpha'       | 'ubuntu:latest'| true         | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q alpha -soft -l docker_images=ubuntu:latest -hard .job.sh'
+        '3 g'   | '3 d'      | '2'      | 'mpi'     | 'alpha'       | 'busybox'      | true         | '-a 1 -b 2'  || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q alpha -pe mpi 2 -l h_rt=72:00:00 -l virtual_free=3G -soft -l docker_images=busybox -hard -a 1 -b 2 .job.sh'
 
     }
 
