@@ -55,34 +55,41 @@ task_id hash      native_id   name          status      exit     submit         
 
 The following table shows the fields that can be included in the execution report:
 
-=============== ===============
-Name            Description
-=============== ===============
-``task_id``     Task ID
-``hash``        Task hash code
-``native_id``   Task ID given by the underlying execution system e.g. POSIX process PID when executed locally, job ID when executed by a grid engine, etc.
-``name``        Task name
-``status``      Task status
-``exit``        POSIX process exit status
-``submit``      Timestamp when the task has been submitted
-``start``       Timestamp when the task execution has started
-``complete``    Timestamp when task execution has completed
-``duration``    Time elapsed to complete since the submission
-``walltime``    Task execution time i.e. delta between completion and start timestamp
-``%cpu``        Percentage of CPU used by the process
-``%mem``        Percentage of memory used by the process
-``rss``         Real memory (resident set) size of the process. (Equivalent to ``ps -o rss``)
-``vmem``        Virtual memory size of the process (Equivalent to ``ps -o vsize``)
-``peak_rss``    Peak of real memory. This data is read from field ``VmHWM`` in ``/proc/$pid/status`` file. Not available on Mac OSX.
-``peak_vmem``   Peak of virtual memory. This data is read from field ``VmPeak`` in ``/proc/$pid/status`` file. Not available on Mac OSX.
-``rchar``       Number of bytes the process read, using any read-like system call (from files, pipes, tty, etc). This data is read from file ``/proc/$pid/io`` (not available on Mac OSX).
-``wchar``       Number of bytes the process wrote, using any write-like system call. This data is read from file ``/proc/$pid/io`` (not available on Mac OSX).
-``syscr``       Number of read-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io`` (not available on Mac OSX).
-``syscw``       Number of write-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io`` (not available on Mac OSX).
-``read_bytes``  Number of bytes the process directly read from disk. This data is read from file ``/proc/$pid/io`` (not available on Mac OSX).
-``write_bytes`` Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file ``/proc/$pid/io`` (not available on Mac OSX).
-=============== ===============
+======================= ===============
+Name                    Description
+======================= ===============
+task_id                 Task ID.
+hash                    Task hash code.
+native_id               Task ID given by the underlying execution system e.g. POSIX process PID when executed locally, job ID when executed by a grid engine, etc.
+name                    Task name.
+status                  Task status.
+exit                    POSIX process exit status.
+submit                  Timestamp when the task has been submitted.
+start                   Timestamp when the task execution has started.
+complete                Timestamp when task execution has completed.
+duration                Time elapsed to complete since the submission.
+walltime                Task execution time i.e. delta between completion and start timestamp.
+%cpu                    Percentage of CPU used by the process.
+%mem                    Percentage of memory used by the process.
+rss                     Real memory (resident set) size of the process. Equivalent to ``ps -o rss`` .
+vmem                    Virtual memory size of the process. Equivalent to ``ps -o vsize`` .
+:sup:`*` peak_rss       Peak of real memory. This data is read from field ``VmHWM`` in ``/proc/$pid/status`` file.
+:sup:`*` peak_vmem      Peak of virtual memory. This data is read from field ``VmPeak`` in ``/proc/$pid/status`` file.
+:sup:`*` rchar          Number of bytes the process read, using any read-like system call from files, pipes, tty, etc. This data is read from file ``/proc/$pid/io``.
+:sup:`*` wchar          Number of bytes the process wrote, using any write-like system call. This data is read from file ``/proc/$pid/io``.
+:sup:`*` syscr          Number of read-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io``.
+:sup:`*` syscw          Number of write-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io``.
+:sup:`*` read_bytes     Number of bytes the process directly read from disk. This data is read from file ``/proc/$pid/io``.
+:sup:`*` write_bytes    Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file ``/proc/$pid/io``.
+======================= ===============
 
+.. note:: Fields marked with (*) are not available when running the tracing on Mac OSX. Also note that the Mac OSX default ``date`` utility,
+  has a time resolution limited to seconds. For a more detailed time tracing it is suggested to install
+  `GNU coreutils <http://www.gnu.org/software/coreutils/>`_ package that includes the standard one.
+
+.. warning:: These numbers provide an estimation of the resources used by running tasks. They should not be intended as an alternative
+  to low level performance analysis provided by other tools and they may not be fully accurate, in particular for very short tasks
+  (taking less than one minute).
 
 Trace report layout and other configuration settings can be specified by using the ``nextflow.config`` configuration file.
 

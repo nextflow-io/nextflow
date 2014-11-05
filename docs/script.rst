@@ -703,7 +703,12 @@ When the source file is a directory, all the directory content is copied to the 
 
 If the target path does not exist, it will be created automatically.
 
-.. tip:: The ``copyTo`` method mimics the semantic of the Linux command ``cp -r <source> <target>``
+.. tip:: The ``copyTo`` method mimics the semantic of the Linux command ``cp -r <source> <target>``,
+  with the following caveats: Unix BASH distinguish between paths having or not having and ending slash, for example:
+  ``/some/path/name`` and ``/some/path/name/``. The first locates a regular file while the latter identifies a directory
+  location. With Nextflow, due to Java files API implementation, this not possibles and both strings represents the same path.
+  If that path exists on the file systems it is handled accordingly (as a regular file or as a directory). If the path does not
+  exist, it is supposed to locate a regular file (and any parent directory will be created automatically).
 
 
 
@@ -736,7 +741,8 @@ path of the above move operation would be::
     /any/dir_b
 
 
-.. tip:: The ``moveTo`` uses the same semantic as the Linux command ``mv <source> <target>``
+.. tip:: The ``moveTo`` uses the same semantic as the Linux command ``mv <source> <target>``. The same caveats as for
+  the method ``copyTo`` are applied.
 
 
 Rename files
