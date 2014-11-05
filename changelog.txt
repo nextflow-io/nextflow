@@ -1,6 +1,19 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.11.0 - 5 Nov 2014
+- Added sorting ability to collectFile operator
+- Added new 'cpus', 'memory', 'time', 'penv' process directives
+- Added cpu, memory and I/O resources in execution tracing report
+- Upgraded to groovy 2.3.7
+- Relaxed validation check of -resume option
+- Fixed symlink support to Github and BitBucket shared repositories
+- Fixed Channel.fromPath with S3 path
+- Enhanced error reporting
+- Removed blanks from jobs name
+- Added NXF_ASSEST environment variable
+- Added NXF_TEMP environment variable to define local temporary path
+
 0.10.3 - 3 Oct 2014
 - Fixed bug when composing SLURM 'squeue' command line which was containing 
   unnecessary quote characters thus invalidating the jobs status check mechanism  
