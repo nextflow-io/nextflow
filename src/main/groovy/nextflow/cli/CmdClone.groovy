@@ -33,7 +33,7 @@ import nextflow.scm.AssetManager
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Clone a pipeline into a folder")
-class CmdClone extends HubOptions {
+class CmdClone extends CmdBase implements HubOptions {
 
     static final NAME = 'clone'
 

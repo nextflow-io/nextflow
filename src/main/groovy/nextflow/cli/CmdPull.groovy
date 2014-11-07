@@ -34,7 +34,7 @@ import nextflow.scm.AssetManager
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Download or update a pipeline in the local repository")
-class CmdPull extends HubOptions {
+class CmdPull extends CmdBase implements HubOptions {
 
     static final NAME = 'pull'
 

@@ -32,12 +32,8 @@ import nextflow.scm.AssetManager
   * Author Paolo Di Tommaso
   */
 
-// TODO refactor to a trait
-
 @CompileStatic
-abstract class HubOptions extends CmdBase {
-
-    private disableInlinePassword
+trait HubOptions {
 
     @Parameter(names=['-hub'], description = "Service hub where pipeline is hosted - It can be either 'github' or 'bitbucket'", validateValueWith = HubValidator)
     String hubProvider = AssetManager.DEFAULT_HUB
