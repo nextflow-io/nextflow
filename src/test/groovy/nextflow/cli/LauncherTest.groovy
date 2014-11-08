@@ -159,6 +159,10 @@ class LauncherTest extends Specification {
 
         launcher.normalizeArgs('--alpha=1') == ['--alpha=1']
         launcher.normalizeArgs('--alpha','1') == ['--alpha=1']
+        launcher.normalizeArgs('run','--x') == ['run', '--x=true']
+        launcher.normalizeArgs('run','--x','--y') == ['run', '--x=true', '--y=true']
+        launcher.normalizeArgs('run','--x','--y', '-1', '--z') == ['run', '--x=true', '--y=-1', '--z=true']
+
         launcher.normalizeArgs('-x', '1', 'script.nf', '--long', 'v1', '--more', 'v2', '--flag') == ['-x','1','script.nf','--long=v1','--more=v2','--flag=true']
 
         launcher.normalizeArgs('-x', '1', '-process.alpha','2', '3') == ['-x', '1', '-process.alpha=2', '3']

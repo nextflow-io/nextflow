@@ -205,9 +205,9 @@ class Launcher implements ExitCode {
                 normalized << '-'
             }
 
-            else if( current ==~ /^\-\-[a-zA-Z\d].*/ && !current.contains('=')) {
+            else if( current ==~ /^\-\-[a-zA-Z\d].*/ && !current.contains('=') ) {
                 current += '='
-                current += ( i<args.size() ? args[i++] : 'true' )
+                current += ( i<args.size() && !args[i].startsWith('--') ? args[i++] : 'true' )
                 normalized[-1] = current
             }
 
