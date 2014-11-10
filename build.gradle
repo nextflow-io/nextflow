@@ -189,15 +189,15 @@ task buildInfo << {
     // docs sync
     file = new File('docs/sync-doc.sh')
     src = file.text
-    src = src.replaceAll(/docs\/v[0-9a-z_\-\.]+\//, "docs/v$version/" as String)
+    src = src.replaceAll(/docs\/v[0-9a-zA-Z_\-\.]+\//, "docs/v$version/" as String)
     file.text = src
 
     // -- update sphynx
     def major = version.split(/\./)[0..1].join('.')
     file = new File('docs/conf.py')
     src = file.text
-    src = src.replaceAll(/version *= *'[0-9a-z_\-\.]+'/, "version = '$major'" as String)
-    src = src.replaceAll(/release *= *'[0-9a-z_\-\.]+'/, "release = '$version'" as String)
+    src = src.replaceAll(/version *= *'[0-9a-zA-Z_\-\.]+'/, "version = '$major'" as String)
+    src = src.replaceAll(/release *= *'[0-9a-zA-Z_\-\.]+'/, "release = '$version'" as String)
     file.text = src
 }
 
