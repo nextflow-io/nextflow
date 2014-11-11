@@ -72,6 +72,7 @@ class KryoHelperTest extends  Specification {
 
     }
 
+
     def testGString() {
         setup:
         def w = "world!"
@@ -83,6 +84,26 @@ class KryoHelperTest extends  Specification {
 
         then:
         copy == x
+    }
+
+    def testDuration() {
+        given:
+        def d = Duration.of('24h')
+        when:
+        def buffer = KryoHelper.serialize(d)
+        then:
+        KryoHelper.deserialize(buffer) == d
+        KryoHelper.deserialize(buffer).toString() == '1d'
+    }
+
+    def testMemUnit() {
+        given:
+        def m = new MemoryUnit('100MB')
+        when:
+        def buffer = KryoHelper.serialize(m)
+        then:
+        KryoHelper.deserialize(buffer) == m
+        KryoHelper.deserialize(buffer).toString() == '100 MB'
     }
 
     @Ignore

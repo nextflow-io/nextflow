@@ -34,7 +34,7 @@ import org.apache.commons.lang.time.DurationFormatUtils
 @Slf4j
 @CompileStatic
 @EqualsAndHashCode(includes = 'durationInMillis')
-class Duration implements Comparable<Duration> {
+class Duration implements Comparable<Duration>, Serializable {
 
     static private final FORMAT = ~/(\d+)\s*([a-zA-Z]+)/
 
@@ -64,6 +64,13 @@ class Duration implements Comparable<Duration> {
         assert duration>=0
         this.durationInMillis = duration
     }
+
+
+    /**
+     * Default constructor is required by Kryo serializer
+     * Do not removed or use it directly
+     */
+    private Duration() { durationInMillis=0 }
 
     /**
      * Create the object using a string 'duration' format.

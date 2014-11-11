@@ -27,12 +27,13 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 
 /**
+ * Represent a memory unit
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
 @EqualsAndHashCode(includes = 'size')
-class MemoryUnit implements Comparable<MemoryUnit> {
+class MemoryUnit implements Comparable<MemoryUnit>, Serializable {
 
     static private final Pattern FORMAT = ~/([0-9\.]+)\s*(\S)?B?/
 
@@ -42,10 +43,26 @@ class MemoryUnit implements Comparable<MemoryUnit> {
 
     final long size
 
+    /**
+     * Default constructor is required by Kryo serializer
+     * Do not remove of use directly
+     */
+    private MemoryUnit() { this.size=0 }
+
+    /**
+     * Create a memory unit instance
+     *
+     * @param value The number of bytes it represent
+     */
     MemoryUnit( long value ) {
         this.size = value
     }
 
+    /**
+     * Create a memory unit instance with the given semantic string
+     *
+     * @param str A string using the following of of the following units: B, KB, MB, GB, TB, PB, EB, ZB
+     */
     MemoryUnit( String str ) {
 
         def matcher = FORMAT.matcher(str)

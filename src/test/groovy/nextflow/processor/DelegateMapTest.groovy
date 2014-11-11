@@ -25,6 +25,8 @@ import java.nio.file.Paths
 import nextflow.script.BaseScript
 import nextflow.script.TaskBody
 import nextflow.util.BlankSeparatedList
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
  *
@@ -69,6 +71,8 @@ class DelegateMapTest extends Specification {
         def map = new DelegateMap(processor, [:])
         map.alpha = 1
         map.beta = "${str}.txt"
+        map.delta = new Duration('1day')
+        map.micro = new MemoryUnit('100KB')
         map.file = Paths.get('Hola.txt')
         map.list = new BlankSeparatedList( Paths.get('A'), Paths.get('B'), Paths.get('C') )
         map.holder = 'just a string'
@@ -79,9 +83,11 @@ class DelegateMapTest extends Specification {
         def result = DelegateMap.read(processor, file)
 
         then:
-        result.size() == 6
+        result.size() == 8
         result.alpha == 1
         result.beta == "${str}.txt"
+        result.delta == new Duration('1day')
+        result.micro == new MemoryUnit('100KB')
         result.file.equals( Paths.get('Hola.txt') )
         result.context == [uno: 1, due: 'str', tre: "$str"]
         result.list == new BlankSeparatedList( Paths.get('A'), Paths.get('B'), Paths.get('C') )
