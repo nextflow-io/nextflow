@@ -56,6 +56,9 @@ class FilesExTest extends Specification {
         new File('/').getBaseName() == ''
         Paths.get('/').getBaseName() == ''
 
+        new File('/path/file.txt.gz').getBaseName(2) == 'file'
+        Paths.get('/path/file.txt.gz').getBaseName(2) == 'file'
+
     }
 
 
