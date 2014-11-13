@@ -20,6 +20,7 @@
 
 package nextflow.extension
 import static java.util.Arrays.asList
+import static CacheHelper.HashMode
 
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
@@ -49,7 +50,6 @@ import nextflow.file.FileHelper
 import nextflow.file.SimpleFileCollector
 import nextflow.file.SortFileCollector
 import nextflow.util.CacheHelper
-import nextflow.util.HashMode
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 /**

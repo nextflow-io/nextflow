@@ -31,9 +31,12 @@ import nextflow.script.TokenVar
 import nextflow.script.ValueInParam
 import nextflow.script.ValueSharedParam
 import nextflow.util.Duration
-import nextflow.util.HashMode
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
+
+import static nextflow.util.CacheHelper.HashMode
+
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
