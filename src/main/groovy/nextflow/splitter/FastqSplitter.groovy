@@ -4,8 +4,6 @@ import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.PoisonPill
-import net.sf.picard.fastq.FastqReader
-import net.sf.picard.fastq.FastqRecord
 /**
  * Split FASTQ formatted text content or files
  *
@@ -18,37 +16,34 @@ import net.sf.picard.fastq.FastqRecord
 @InheritConstructors
 class FastqSplitter extends AbstractTextSplitter {
 
-    static Map recordToMap( FastqRecord record, map ) {
+    static Map recordToMap( String l1, String l2, String l3, String l4, map ) {
         def result = [:]
 
         final isMap = map instanceof Map
         if( !isMap || (map as Map).containsKey('readHeader'))
-            result.readHeader = record.readHeader
+            result.readHeader = l1.substring(1)
 
         if( !isMap || (map as Map).containsKey('readString'))
-            result.readString = record.readString
+            result.readString = l2
 
-        if( !isMap || (map as Map).containsKey('baseQualityHeader'))
-            result.qualityHeader = record.baseQualityHeader
+        if( !isMap || (map as Map).containsKey('qualityHeader'))
+            result.qualityHeader = l3.substring(1)
 
-        if( !isMap || (map as Map).containsKey('baseQualityString'))
-            result.qualityString = record.baseQualityString
+        if( !isMap || (map as Map).containsKey('qualityString'))
+            result.qualityString = l4
 
         return result
     }
 
-    static void recordToText( FastqRecord record, StringBuilder buffer ) {
+    static void recordToText( String l1, String l2, String l3, String l4, StringBuilder buffer ) {
         // read header
-        buffer << '@' << record.readHeader << '\n'
+        buffer << l1 << '\n'
         // read string
-        buffer << record.readString << '\n'
+        buffer << l2 << '\n'
         // quality header
-        buffer << '+'
-        if( record.baseQualityHeader ) buffer << record.baseQualityHeader
-        buffer << '\n'
+        buffer << l3 << '\n'
         // quality string
-        buffer << record.baseQualityString
-        buffer << '\n'
+        buffer << l4 << '\n'
     }
 
     @Override
@@ -56,21 +51,33 @@ class FastqSplitter extends AbstractTextSplitter {
 
         BufferedReader reader0 = (BufferedReader)(targetObject instanceof BufferedReader ? targetObject : new BufferedReader(targetObject))
 
-        final fastq = new FastqReader(reader0)
         final StringBuilder buffer = new StringBuilder()
         int blockCount=0
         def result = null
 
+        def error = "Invalid FASTQ format"
+        if( sourceFile )
+            error += " for file: " + sourceFile
+
         try {
-            while( fastq.hasNext() ) {
-                def record = fastq.next()
+            while( true ) {
+                def l1 = reader0.readLine()
+                def l2 = reader0.readLine()
+                def l3 = reader0.readLine()
+                def l4 = reader0.readLine()
+
+                if( !l1 || !l2 || !l3 || !l4 )
+                    break
+
+                if( !l1.startsWith('@') || !l3.startsWith('+') )
+                    throw new IllegalStateException(error)
 
                 if( !recordMode )
-                    recordToText(record,buffer)
+                    recordToText(l1,l2,l3,l4,buffer)
 
                 if ( ++blockCount == count ) {
                     // invoke the closure, passing the read block as parameter
-                    def splitArg = recordMode ? recordToMap(record, recordCols) : buffer.toString()
+                    def splitArg = recordMode ? recordToMap(l1,l2,l3,l4, recordCols) : buffer.toString()
 
                     result = invokeEachClosure( closure, splitArg, index++ )
                     if( into != null ) {
@@ -84,7 +91,7 @@ class FastqSplitter extends AbstractTextSplitter {
             }
         }
         finally {
-            fastq.closeQuietly()
+            reader0.closeQuietly()
         }
 
         /*
