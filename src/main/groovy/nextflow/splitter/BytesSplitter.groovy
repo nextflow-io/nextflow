@@ -2,8 +2,6 @@ package nextflow.splitter
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.operator.PoisonPill
 /**
  * Splits a generic byte array in chunks having the specified length
  *
@@ -15,11 +13,12 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 class BytesSplitter extends AbstractBinarySplitter {
 
     @Override
-    def apply( InputStream targetObject, int index ) {
+    def process( InputStream targetObject, int index ) {
         assert targetObject != null
 
         def result = null
         int c=0
+        long bytesCount=0
         byte[] buffer = new byte[count]
         int item
 
@@ -36,6 +35,10 @@ class BytesSplitter extends AbstractBinarySplitter {
 
                     buffer = new byte[count]
                 }
+
+                // -- check the limit of allowed rows has been reached
+                if( limit && ++bytesCount == limit )
+                    break
             }
 
         }
@@ -60,19 +63,6 @@ class BytesSplitter extends AbstractBinarySplitter {
             if( into != null )
                 append(into,result)
         }
-
-        /*
-         * now close and return the result
-         * - when the target it's a channel, send stop message
-         * - when it's a list return it
-         * - otherwise return the last value
-         */
-        if( into instanceof DataflowWriteChannel && autoClose ) {
-            append(into,PoisonPill.instance)
-            return into
-        }
-        if( into != null )
-            return into
 
         return result
     }

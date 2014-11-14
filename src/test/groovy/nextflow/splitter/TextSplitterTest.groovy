@@ -1,7 +1,10 @@
 package nextflow.splitter
+import java.nio.file.Files
+import java.util.zip.GZIPOutputStream
 
-import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.Channel
 import spock.lang.Specification
+import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -16,6 +19,12 @@ class TextSplitterTest extends Specification {
 
     }
 
+    def testTextByLineWithLimit() {
+
+        expect:
+        new TextSplitter(limit: 3).target("1\n2\n3\n4\n5").list() == ['1\n','2\n','3\n']
+
+    }
 
     def testSplitLinesByCount () {
 
@@ -55,19 +64,76 @@ class TextSplitterTest extends Specification {
         channel.val == 'line1\nline2\n'
         channel.val == 'line3\nline4\n'
         channel.val == 'line5\n'
+        channel.val == Channel.STOP
 
     }
 
     def testSplitChannel() {
 
-
-        when:   '*into* is a Dataflow channel, get the chopped items, closing by a poison-pill'
+        when:
         def channel = new TextSplitter().target("Hello\nworld\n!").channel()
         then:
         channel.val == 'Hello\n'
         channel.val == 'world\n'
         channel.val == '!\n'
-        channel.val == PoisonPill.instance
+        channel.val == Channel.STOP
 
     }
+
+    def testSplitTextFile() {
+
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def file = folder.resolve('file.txt')
+        file.text = 'a\nbb\nccc'
+
+        when:
+        def channel = new TextSplitter().target(file).channel()
+        then:
+        channel.val == 'a\n'
+        channel.val == 'bb\n'
+        channel.val == 'ccc\n'
+        channel.val == Channel.STOP
+
+    }
+
+    def testSplitGzipTextFile() {
+
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def file = folder.resolve('file.txt.gz')
+        def out = new GZIPOutputStream(Files.newOutputStream(file))
+        out << 'a\nbb\nccc'
+        out.close()
+
+        when:
+        def channel = new TextSplitter().target(file).channel()
+        then:
+        channel.val == 'a\n'
+        channel.val == 'bb\n'
+        channel.val == 'ccc\n'
+        channel.val == Channel.STOP
+
+    }
+
+    def testSplitGzipTextFileWithDecompressOption() {
+
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def file = folder.resolve('file.txt')
+        def out = new GZIPOutputStream(Files.newOutputStream(file))
+        out << 'a\nbb\nccc'
+        out.close()
+
+        when:
+        def channel = new TextSplitter().target(file).options(decompress: true).channel()
+        then:
+        channel.val == 'a\n'
+        channel.val == 'bb\n'
+        channel.val == 'ccc\n'
+        channel.val == Channel.STOP
+
+    }
+
+
 }

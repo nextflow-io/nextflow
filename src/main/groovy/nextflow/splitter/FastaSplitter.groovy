@@ -4,8 +4,6 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.util.CacheHelper
 /**
  * Split FASTA formatted text content or files
@@ -139,13 +137,14 @@ class FastaSplitter extends AbstractTextSplitter {
 
 
     @Override
-    def apply( Reader targetObject, int index ) {
+    def process( Reader targetObject, int index ) {
         BufferedReader reader0 = (BufferedReader)(targetObject instanceof BufferedReader ? targetObject : new BufferedReader(targetObject))
 
         def result = null
         String line
         StringBuilder buffer = new StringBuilder()
         int blockCount=0
+        long itemsCount=0
         boolean openBlock = false
 
         try {
@@ -161,12 +160,11 @@ class FastaSplitter extends AbstractTextSplitter {
                     openBlock = true
                     buffer << line << '\n'
                 }
-                else if ( openBlock && line.charAt(0)=='>') {
-                    // another block is started
+                else if ( openBlock && line.charAt(0)=='>' ) {   // another block is started
 
                     if ( ++blockCount == count ) {
                         // invoke the closure, passing the read block as parameter
-                        def record = recordMode ? parseFastaRecord(buffer.toString(), recordCols) : buffer.toString()
+                        def record = recordMode ? parseFastaRecord(buffer.toString(), recordFields) : buffer.toString()
                         result = invokeEachClosure( closure, record, index++ )
                         if( into != null ) {
                             append(into, result)
@@ -175,6 +173,10 @@ class FastaSplitter extends AbstractTextSplitter {
                         buffer.setLength(0)
                         blockCount=0
                     }
+
+                    // -- check the limit of allowed rows has been reached
+                    if( limit && ++itemsCount == limit )
+                        break
 
                     buffer << line << '\n'
 
@@ -195,24 +197,11 @@ class FastaSplitter extends AbstractTextSplitter {
          * to be the last entry
          */
         if ( buffer.size() ) {
-            def record = recordMode ? parseFastaRecord(buffer.toString(), recordCols) : buffer.toString()
+            def record = recordMode ? parseFastaRecord(buffer.toString(), recordFields) : buffer.toString()
             result = invokeEachClosure(closure, record, index )
             if( into != null )
                 append(into, result)
         }
-
-        /*
-         * now close and return the result
-         * - when the target it's a channel, send stop message
-         * - when it's a list return it
-         * - otherwise return the last value
-         */
-        if( into instanceof DataflowWriteChannel && autoClose ) {
-            append(into, PoisonPill.instance)
-            return into
-        }
-        if( into != null )
-            return into
 
         return result
     }

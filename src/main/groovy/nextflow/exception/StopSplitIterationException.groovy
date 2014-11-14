@@ -18,34 +18,19 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.splitter
-
-import spock.lang.Specification
-
+package nextflow.exception
+import groovy.transform.CompileStatic
 /**
+ * Stop the split iteration. It is meant to be used only
+ * by
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class SplitterFactoryTest extends Specification {
+@CompileStatic
+class StopSplitIterationException extends RuntimeException {
 
-    def testCreateSplitter() {
-
-        expect:
-        SplitterFactory.create('text') instanceof TextSplitter
-        SplitterFactory.create('fasta') instanceof FastaSplitter
-
-    }
-
-    def testArgsToOptions() {
-
-        given:
-        def closure = { -> 1 }
-
-        expect:
-        SplitterFactory.argsToOpt( [ ] as Object[] ) == [:]
-        SplitterFactory.argsToOpt( [ closure ] as Object[] ) == [ each: closure ]
-        SplitterFactory.argsToOpt( [ [x:1, y:2] ] as Object[] ) == [x:1, y:2]
-        SplitterFactory.argsToOpt( [ [x:1, y:2], closure ] as Object[] ) == [x:1, y:2, each: closure]
+    StopSplitIterationException() {
+        super("Method `stop` it is meant to be used to interrupt execution of split operator or other operation supporting it")
     }
 
 }

@@ -46,12 +46,13 @@ class SplitterFactory {
      *      A map containing named parameters used to initialize the splitter object.
      *      See {@link AbstractSplitter#options(java.util.Map)}
      */
-    static SplitterStrategy create( String strategy, Map options = [:] ) {
+    static SplitterStrategy create( String strategy, String method = null ) {
         assert strategy
         String name = strategy.contains('.') ? strategy : "nextflow.splitter.${strategy.capitalize()}Splitter"
         try {
             def clazz = (Class<SplitterStrategy>) Class.forName(name)
-            create(clazz, options)
+            String operator = method ? method + strategy.capitalize() : null
+            create(clazz, operator )
         }
         catch( ClassNotFoundException e ) {
             log.debug "Cannot find any class implementing a split strategy for: $strategy"
@@ -69,8 +70,10 @@ class SplitterFactory {
      *      See {@link AbstractSplitter#options(java.util.Map)}
      * @return The splitter instance
      */
-    static SplitterStrategy create( Class<? extends SplitterStrategy> strategy, Map options = [:] ) {
-        (SplitterStrategy) strategy.newInstance( [options] as Object[] )
+    static SplitterStrategy create( Class<? extends SplitterStrategy> strategy, String name ) {
+        (SplitterStrategy) ( name
+                ? strategy.newInstance(name)
+                : strategy.newInstance())
     }
 
     /**
@@ -97,7 +100,7 @@ class SplitterFactory {
         // load the splitter class
         def method = methodName.substring(0,5)
         def qualifier = methodName.substring(5)
-        def splitter = create(qualifier)
+        def splitter = create(qualifier, method)
         if( !splitter )
             throw e
 
@@ -158,8 +161,7 @@ class SplitterFactory {
 
         int count = 0
         def splitEntry = { entry ->
-            def obj = strategy.normalizeType(entry)
-            strategy.apply(obj, count)
+            strategy.target(entry).apply(count)
         }
 
         DataflowExtensions.subscribe ( source, [onNext: splitEntry, onComplete: { resultChannel << Channel.STOP }] )
@@ -191,8 +193,7 @@ class SplitterFactory {
         strategy.options(opt)
 
         def splitEntry = { entry ->
-            def obj = strategy.normalizeType(entry)
-            strategy.apply(obj,0)
+            strategy.target(entry).apply()
         }
 
         DataflowExtensions.subscribe ( source, [onNext: splitEntry, onComplete: { result.bind(count) }] )

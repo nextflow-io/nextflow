@@ -3,8 +3,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.operator.PoisonPill
 import org.apache.commons.lang.StringUtils
 /**
  * Split a CSV file in records
@@ -90,6 +88,20 @@ class CsvSplitter extends AbstractTextSplitter {
     }
 
     /**
+     * @return A map representing the valid options for the splitter. The map keys define the
+     * accepted parameter names, the values the valid values for each of them.
+     */
+    protected Map<String,?> validOptions() {
+        def result = super.validOptions()
+        result.sep = String
+        result.strip = Boolean
+        result.header = [ Boolean, List ]
+        result.quote = String
+        result.skip = Integer
+        return result
+    }
+
+    /**
      * Implements the CSV parsing
      *
      * @param targetObject
@@ -97,12 +109,13 @@ class CsvSplitter extends AbstractTextSplitter {
      * @return
      */
     @Override
-    def apply( Reader targetObject, int index ) {
+    def process( Reader targetObject, int index ) {
         BufferedReader reader0 = (BufferedReader)(targetObject instanceof BufferedReader ? targetObject : new BufferedReader(targetObject))
 
         def result = null
         String line
         int c=0
+        long itemsCount=0
 
         List buffer = count > 1 ? [] : null
 
@@ -145,7 +158,7 @@ class CsvSplitter extends AbstractTextSplitter {
 
 
                 // -- append to the list buffer
-                if( buffer!=null ) {
+                if( buffer != null ) {
                     buffer.add(row)
                 }
 
@@ -159,6 +172,10 @@ class CsvSplitter extends AbstractTextSplitter {
                     if( buffer!=null )
                         buffer = []
                 }
+
+                // -- check the limit of allowed rows has been reached
+                if( limit && ++itemsCount == limit )
+                    break
             }
 
         }
@@ -175,19 +192,6 @@ class CsvSplitter extends AbstractTextSplitter {
             if( into != null )
                 append(into, result)
         }
-
-        /*
-         * now close and return the result
-         * - when the target it's a channel, send stop message
-         * - when it's a list return it
-         * - otherwise return the last value
-         */
-        if( into instanceof DataflowWriteChannel && autoClose ) {
-            append(into, PoisonPill.instance)
-            return into
-        }
-        if( into != null )
-            return into
 
         return result
     }

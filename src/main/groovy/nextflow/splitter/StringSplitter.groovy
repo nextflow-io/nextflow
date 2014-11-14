@@ -2,8 +2,6 @@ package nextflow.splitter
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.operator.PoisonPill
 /**
  * Simple slitter chunking a string in sub-strings having the specified length
  *
@@ -22,12 +20,24 @@ class StringSplitter extends AbstractTextSplitter {
         return this
     }
 
+    /**
+     * @return A map representing the valid options for the splitter. The map keys define the
+     * accepted parameter names, the values the valid values for each of them.
+     */
     @Override
-    def apply( Reader targetObject, int index ) {
+    protected Map<String,?> validOptions() {
+        def result = super.validOptions()
+        result.ignoreNewLine = Boolean
+        return result
+    }
+
+    @Override
+    def process( Reader targetObject, int index ) {
 
         def result = null
         def buffer = new StringBuilder()
         int c = 0
+        long itemsCount=0
         def ch
 
         try {
@@ -36,6 +46,7 @@ class StringSplitter extends AbstractTextSplitter {
                 if( ignoreNewLine && ( ch == '\n' as char || ch == '\r' as char ))
                     continue
                 buffer.append( (char)ch )
+
                 if ( ++c == count ) {
                     c = 0
                     result = invokeEachClosure(closure, buffer.toString(), index++ )
@@ -44,6 +55,10 @@ class StringSplitter extends AbstractTextSplitter {
 
                     buffer.setLength(0)
                 }
+
+                // -- check the limit of allowed rows has been reached
+                if( limit && ++itemsCount == limit )
+                    break
             }
 
         }
@@ -60,19 +75,6 @@ class StringSplitter extends AbstractTextSplitter {
             if( into != null )
                 append(into, result)
         }
-
-        /*
-         * now close and return the result
-         * - when the target it's a channel, send stop message
-         * - when it's a list return it
-         * - otherwise return the last value
-         */
-        if( into instanceof DataflowWriteChannel && autoClose ) {
-            append(into, PoisonPill.instance)
-            return into
-        }
-        if( into != null )
-            return into
 
         return result
     }

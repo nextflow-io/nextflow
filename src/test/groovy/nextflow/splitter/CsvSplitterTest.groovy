@@ -52,14 +52,35 @@ class CsvSplitterTest extends Specification {
 
     }
 
+    def testSplitRowsWithLimit() {
+
+        when:
+        def items = new CsvSplitter(limit: 3).target(text).list()
+
+        then:
+        items.size() == 3
+        items[0] == ['alpha', 'beta', 'delta']
+        items[1] == ['gamma', '', 'zeta']
+        items[2] == ['eta', 'theta', 'iota']
+
+    }
+
+
     def testSkipRows() {
         when:
         def items = new CsvSplitter().target(text).options(skip:3).list()
-
         then:
         items.size() == 2
         items[0] == ['mu', 'nu', 'xi']
         items[1] == ['pi', 'rho', 'sigma']
+
+        when:
+        items = new CsvSplitter().target(text).options(skip:1, limit: 3).list()
+        then:
+        items.size() == 3
+        items[0] == ['gamma', '', 'zeta']
+        items[1] == ['eta', 'theta', 'iota']
+        items[2] == ['mu', 'nu', 'xi']
     }
 
     def testSplitWithCount() {

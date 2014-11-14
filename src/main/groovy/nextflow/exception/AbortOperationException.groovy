@@ -24,7 +24,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 
 /**
- * Stop the current operation execution
+ * Abort the current operation execution
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

@@ -1177,7 +1177,7 @@ class DataflowExtensionsTest extends Specification {
         when:
         def ids = []
         def list = []
-        Channel.from(fasta).splitFasta(record:[id:true]) { item, int index ->
+        Channel.from(fasta).splitFasta(record:[id:true], meta:'index') { item, int index ->
             ids << item.id
             list << index
             return item

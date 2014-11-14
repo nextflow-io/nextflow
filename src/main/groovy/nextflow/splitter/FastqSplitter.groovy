@@ -2,34 +2,36 @@ package nextflow.splitter
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.exception.StopSplitIterationException
+
 /**
  * Split FASTQ formatted text content or files
  *
  * @link http://en.wikipedia.org/wiki/FASTQ_format
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Emilio Palumbo <emilio.palumbo@crg.eu>
  */
 @Slf4j
 @CompileStatic
 @InheritConstructors
 class FastqSplitter extends AbstractTextSplitter {
 
-    static Map recordToMap( String l1, String l2, String l3, String l4, map ) {
+    private boolean processQualityField
+
+    static Map recordToMap( String l1, String l2, String l3, String l4, Map fields ) {
         def result = [:]
 
-        final isMap = map instanceof Map
-        if( !isMap || (map as Map).containsKey('readHeader'))
+        if( !fields || fields.containsKey('readHeader'))
             result.readHeader = l1.substring(1)
 
-        if( !isMap || (map as Map).containsKey('readString'))
+        if( !fields || fields.containsKey('readString'))
             result.readString = l2
 
-        if( !isMap || (map as Map).containsKey('qualityHeader'))
+        if( !fields || fields.containsKey('qualityHeader'))
             result.qualityHeader = l3.substring(1)
 
-        if( !isMap || (map as Map).containsKey('qualityString'))
+        if( !fields || fields.containsKey('qualityString'))
             result.qualityString = l4
 
         return result
@@ -47,12 +49,13 @@ class FastqSplitter extends AbstractTextSplitter {
     }
 
     @Override
-    def apply( Reader targetObject, int index )  {
+    def process( Reader targetObject, int index )  {
 
         BufferedReader reader0 = (BufferedReader)(targetObject instanceof BufferedReader ? targetObject : new BufferedReader(targetObject))
 
         final StringBuilder buffer = new StringBuilder()
         int blockCount=0
+        long itemsCount=0
         def result = null
 
         def error = "Invalid FASTQ format"
@@ -77,9 +80,15 @@ class FastqSplitter extends AbstractTextSplitter {
 
                 if ( ++blockCount == count ) {
                     // invoke the closure, passing the read block as parameter
-                    def splitArg = recordMode ? recordToMap(l1,l2,l3,l4, recordCols) : buffer.toString()
+                    def closureArg
+                    if( recordMode )
+                        closureArg = recordToMap(l1,l2,l3,l4, recordFields)
+                    else if( processQualityField )
+                        closureArg = l4
+                    else
+                        closureArg = buffer.toString()
 
-                    result = invokeEachClosure( closure, splitArg, index++ )
+                    result = invokeEachClosure( closure, closureArg, index++ )
                     if( into != null ) {
                         append(into,result)
                     }
@@ -87,6 +96,10 @@ class FastqSplitter extends AbstractTextSplitter {
                     buffer.setLength(0)
                     blockCount=0
                 }
+
+                // -- check the limit of allowed rows has been reached
+                if( limit && ++itemsCount == limit )
+                    break
 
             }
         }
@@ -105,19 +118,47 @@ class FastqSplitter extends AbstractTextSplitter {
                 append(into,result)
         }
 
-        /*
-         * now close and return the result
-         * - when the target it's a channel, send stop message
-         * - when it's a list return it
-         * - otherwise return the last value
-         */
-        if( into instanceof DataflowWriteChannel && autoClose ) {
-            append(into, PoisonPill.instance)
-            return into
+        return result
+    }
+
+
+    /**
+     * Retrieve the encoding quality score of the fastq file
+     *
+     * See http://en.wikipedia.org/wiki/FASTQ_format#Encoding
+     *
+     * @param quality A fastq quality string
+     */
+    def int qualityScore(Map opts=null) {
+
+        if( opts ) options(opts)
+
+        processQualityField = true
+
+        int result = -1
+        closure = { String quality ->
+            result = detectQualityString(quality)
+            if( result != -1 )
+                throw new StopSplitIterationException()
         }
-        if( into != null )
-            return into
+        apply()
 
         return result
+    }
+
+
+    static int detectQualityString( String quality ) {
+        if( !quality )
+            return -1
+
+        for (int i=0; i<quality.size(); i++) {
+            def c = (int)quality.charAt(i)
+            if( c < 59 )
+                return 33
+            if( c > 74 )
+                return 64
+        }
+
+        return -1
     }
 }

@@ -9,7 +9,6 @@ import spock.lang.Specification
 class FastaSplitterTest extends Specification {
 
 
-
     def testFastaRecord() {
         def fasta = /
             ;
@@ -148,6 +147,37 @@ class FastaSplitterTest extends Specification {
 
     }
 
+
+    def testSplitWithLimit() {
+
+        given:
+        def fasta = '''
+            >1aboA
+            NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
+            NYITPVN
+            >1ycsB
+            KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
+            VPRNLLGLYP
+            >1pht
+            GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
+            WLNGYNETTGERGDFPGTYVEYIGRKKISP
+            >1vie
+            DRVRKKSGAAWQGQIVGWYCTNLTPEGYAVESEAHPGSVQIYPVAALERI
+            N
+            >1ihvA
+            NFRVYYRDSRDPVWKGPAKLLWKGEGAVVIQDNSDIKVVPRRKAKIIRD
+            '''
+            .stripIndent().leftTrim()
+
+        when:
+        def result = new FastaSplitter(record:[id: true], limit: 3).target(fasta).list()
+        then:
+        result.size() == 3
+        result[0] == [id: '1aboA']
+        result[1] == [id: '1ycsB']
+        result[2] == [id: '1pht']
+
+    }
 
 
 

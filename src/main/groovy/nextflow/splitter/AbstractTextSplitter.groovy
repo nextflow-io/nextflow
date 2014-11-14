@@ -1,6 +1,6 @@
 package nextflow.splitter
 import java.nio.charset.Charset
-import java.nio.file.Files
+import java.nio.charset.CharsetDecoder
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -16,7 +16,7 @@ import nextflow.util.CharsetHelper
 @InheritConstructors
 abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
 
-    protected Charset charset
+    protected Charset charset = Charset.defaultCharset()
 
     Charset getCharset() { charset }
 
@@ -25,6 +25,18 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
         charset = CharsetHelper.getCharset(options.charset)
         return this
     }
+
+    /**
+     * @return A map representing the valid options for the splitter. The map keys define the
+     * accepted parameter names, the values the valid values for each of them.
+     */
+    @Override
+    protected Map<String,?> validOptions() {
+        def result = super.validOptions()
+        result.charset = [ Charset, Map, String ]
+        return result
+    }
+
 
     protected Reader normalizeType( obj ) {
 
@@ -35,19 +47,26 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
             return new StringReader(obj.toString())
 
         if( obj instanceof Path )
-            return Files.newBufferedReader(obj, charset)
+            return newReader(obj, charset)
 
         if( obj instanceof InputStream )
             return new InputStreamReader(obj,charset)
 
         if( obj instanceof File )
-            return new FileReader(obj)
+            return newReader(obj.toPath(), charset)
 
         if( obj instanceof char[] )
             return new StringReader(new String((char[])obj))
 
         throw new IllegalArgumentException("Object of class '${obj.class.name}' does not support 'splitter' methods")
 
+    }
+
+    protected Reader newReader( Path path, Charset charset ) {
+        def source = newInputStream(path)
+        CharsetDecoder decoder = charset.newDecoder()
+        Reader reader = new InputStreamReader(source, decoder)
+        new BufferedReader(reader)
     }
 
 

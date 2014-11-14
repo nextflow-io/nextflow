@@ -21,6 +21,7 @@
 package nextflow.splitter
 
 import spock.lang.Specification
+import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -243,6 +244,162 @@ class FastqSplitterTest extends Specification {
             '''
                 .stripIndent().leftTrim()
 
+
+    }
+
+
+    def testFastqSplitWithLimit() {
+
+        given:
+        def text = '''
+        @SRR636272.19519409/1
+        GGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGATCG
+        +
+        CCCFFFFDHHD;FF=GGDHGGHIIIGHIIIBDGBFCAHG@E=6?CBDBB;?BB@BD8BB;BDB<>>;@?BB<9>&5<?288AAABDBBBBACBCAC?@AD?CAC?
+        @SRR636272.13995011/1
+        GCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAGATCGGAAGAGCACACGTCTGAACTCC
+        +
+        BBCFDFDEFFHHFIJIHGHGHGIIFIJJJJIGGBFHHIEGBEFEFFCDDDD:@@<BB8BBDDDDDDBBB?AA?CDABDD5?CDDDBB<A<>ACBB8ACDCD@CD>
+        @SRR636272.21107783/1
+        CGGGGAGCGCGGGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTAGGGAGCACCCCGCCGCAGGGGGACAGGCGAGATCGGAAGAGCACACGTCT
+        +
+        BCCFFDFFHHHHHJJJJJIJHHHHFFFFEEEEEEEDDDDDDBDBDBBDBBDBBB(:ABCDDDDDDDDDDDDDDDD@BBBDDDDDDDDDDDDBDDDDDDDDDDADC
+        @SRR636272.23331539/1
+        GGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGCTGGAGGAGCTGCTGGCCGGGAGGGACTTCACCGGCGAGATCGGAAGAG
+        +
+        CCCFFFFFHHHHHJJJJJJJJJJJJJJJHFDDBDDBDDDDDDDDDDDDADDDDDDDDDDDDDDDDDDDDDDDDDDBDBDDD9@DDDDDDDDDDDDBBDDDBDD@@
+        @SRR636272.7306321/1
+        CGGCCAGCAGCTCCTCCAGCTGTGGCACCTTCTTCCCTTTCTTCCTAGTGCACTCTGGCCGGGCCTCCCCCCGCAGCCCTCGCTCCTCTCCCTAGATCGGAAGAG
+        +
+        CCCFFFFFHHHHHJJJJIJJJJIJJJIJJJJJJJJJJIJJIJJJJIJIIGIJJJJJGIJJJJIHFFFDDDDDDDDDDDDDDBDDDDDDDDDDCCDDDDDDD<BDB
+        @SRR636272.23665592/1
+        GGAAGAAGGTGCCACAGCTGGAGGAGCTGCTGGCCGGGAGGGACTTCACCGGCGCCATCGCCTTGCTGGAGTTTCAGCGGCACGCGGGTGAGCAAGATCGGAAGA
+        +
+        BC@DFFFFHDFHHJJJJJJJJJJIIIJJJJIIGGHIJJGJJJFHIJJIHHHFFDDDDDDDDDDDDDDDDDDCCCDCCDDDDDBDDDDD<BDDDDDDDDDDDDDD?
+        @SRR636272.1267179/1
+        CGCGGCAACGGCGCCATCGGCGGCGCGGGGAGCGCGGGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGGCA
+        +
+        CCCFFFFFHHHGHJJJJJJJJJHBB?BDDD5:1:6@DDBBD@D68@<<?B8>CCDDCDDDCDDBBD>@?AA?B@D55@<ACDD8@9<?BDDDBB<<9>@BBD###
+        '''
+                .stripIndent().trim()
+
+        when:
+        def items = new FastqSplitter(limit:3, record:[readHeader:true]).target(text).list()
+
+        then:
+        items.size() == 3
+        items[0] == [readHeader: 'SRR636272.19519409/1']
+        items[1] == [readHeader: 'SRR636272.13995011/1']
+        items[2] == [readHeader: 'SRR636272.21107783/1']
+
+    }
+
+
+    static fastq33 = '''
+            @SRR636272.19519409/1
+            GGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGATCG
+            +
+            CCCFFFFDHHD;FF=GGDHGGHIIIGHIIIBDGBFCAHG@E=6?CBDBB;?BB@BD8BB;BDB<>>;@?BB<9>&5<?288AAABDBBBBACBCAC?@AD?CAC?
+            @SRR636272.13995011/1
+            GCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAGATCGGAAGAGCACACGTCTGAACTCC
+            +
+            BBCFDFDEFFHHFIJIHGHGHGIIFIJJJJIGGBFHHIEGBEFEFFCDDDD:@@<BB8BBDDDDDDBBB?AA?CDABDD5?CDDDBB<A<>ACBB8ACDCD@CD>
+            @SRR636272.21107783/1
+            CGGGGAGCGCGGGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTAGGGAGCACCCCGCCGCAGGGGGACAGGCGAGATCGGAAGAGCACACGTCT
+            +
+            BCCFFDFFHHHHHJJJJJIJHHHHFFFFEEEEEEEDDDDDDBDBDBBDBBDBBB(:ABCDDDDDDDDDDDDDDDD@BBBDDDDDDDDDDDDBDDDDDDDDDDADC
+            '''.stripIndent().trim()
+
+    static fastq64 = '''
+                    @V00-HWI-EAS132_5_30HYMAAXX:4:1:707:1948
+                    AAGCACTCTTACGGCTAGTTAAAGCAGCGATCTTTG
+                    +V00-HWI-EAS132_5_30HYMAAXX:4:1:707:1948
+                    ]]]]]]]]]]]]]]]b`]]b`]]b`]]`]CZYEZYS
+                    @V00-HWI-EAS132_5_30HYMAAXX:4:1:685:1955
+                    ACTGGAATGCCCAACATAGAGGCTTGGGCAACAACT
+                    +V00-HWI-EAS132_5_30HYMAAXX:4:1:685:1955
+                    ]]]]]]]]]]]]]]]]]]]]]]]]]]]]H]XNYXNU
+                    @V00-HWI-EAS132_5_30HYMAAXX:4:1:716:1946
+                    AGACTGTGTACGTATCATTGCTAACTTCAATCCAAG
+                    +V00-HWI-EAS132_5_30HYMAAXX:4:1:716:1946
+                    ][]][]][]]ZYV]]]]]]]]]]]]J[W]VVZCZYW
+                    @V00-HWI-EAS132_5_30HYMAAXX:4:1:714:1935
+                    AAGATACTATAGCTTCCGCTAGTAAATGTCGGTAAA
+                    +V00-HWI-EAS132_5_30HYMAAXX:4:1:714:1935
+                    ]]]]]]]]]]][]]]]][]]]][]]]]]][YZYZZW
+                    @V00-HWI-EAS132_5_30HYMAAXX:4:1:685:1945
+                    ATAAGGTGGTCGCAAACTTCGAGGATCAAGGGAAAT
+                    +V00-HWI-EAS132_5_30HYMAAXX:4:1:685:1945
+                    ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]Y[[[[V
+                    @V00-HWI-EAS132_5_30HYMAAXX:4:1:686:1949
+                    ACAAAACAAAAAAAAAGAATTATGGACTATGCCACA
+                    +V00-HWI-EAS132_5_30HYMAAXX:4:1:686:1949
+                    ][]]][[]]]]]][]]]]]]]]]]]]]]]]YYTZWW
+                    @V00-HWI-EAS132_5_30HYMAAXX:4:1:725:1945
+                    AAGGAATATTCCCTTCTAACTATGTGCGTTTGTTGG
+                    +V00-HWI-EAS132_5_30HYMAAXX:4:1:725:1945
+                    ]]]]]]]Z]]Q]Z]]]]Z]W]]]]]ZPZ]]ZZYVZV
+                    @V00-HWI-EAS132_5_30HYMAAXX:4:1:370:1109
+                    AATGGATTAGACACTAGCTAATATACGCTTTTTCAT
+                    +V00-HWI-EAS132_5_30HYMAAXX:4:1:370:1109
+                    ]]]]]]]ZQ]]]Z]ZYZMYY]]]]U]S]]]ZYZJHV
+                    @V00-HWI-EAS132_5_30HYMAAXX:4:1:700:1931
+                    ATCCAATTTATCAATCTAGTACCCTTCAGGAATAGA
+                    +V00-HWI-EAS132_5_30HYMAAXX:4:1:700:1931
+                    ]]]W]]][][[]]][]]OZ][]]]W]][J[ZWYZYC
+                    @V00-HWI-EAS132_5_30HYMAAXX:4:1:746:1938
+                    AAGGTCTTCAAGCGTGCCAAGAAGAATAGTAATAAG
+                    +V00-HWI-EAS132_5_30HYMAAXX:4:1:746:1938
+                    ]]]]]]]][]]][]X[[L]X]]][TX[]]HZCXXZV
+                   '''
+            .stripIndent().trim()
+
+
+
+    def testQualityCheckWithString () {
+
+        FastqSplitter splitter
+
+        when:
+        splitter = new FastqSplitter().target(fastq33)
+        then:
+        splitter.qualityScore() == 33
+
+        when:
+        splitter = new FastqSplitter().target(fastq64)
+        then:
+        splitter.qualityScore() == 64
+
+    }
+
+
+
+    def testQualityCheckWithPath () {
+
+        given:
+        def file = TestHelper.createInMemTempFile()
+        file.text = fastq64
+
+        when:
+        FastqSplitter splitter = new FastqSplitter().target(file)
+        then:
+        splitter.qualityScore() == 64
+
+    }
+
+
+    def testDetectFastqQuality() {
+        given:
+        def quality33 = "CCCFFFFDHHD;FF=GGDHGGHIIIGHIIIBDGBFCAHG@E=6?CBDBB;?BB@BD8BB;BDB<>>;@?BB<9>&5<?288AAABDBBBBACBCAC?@AD?CAC?"
+        def quality64 = "efcfffffcfeefffcffffffddf`feed]`]_Ba_^__[YBBBBBBBBBBRTT\\]][]dddd`ddd^dddadd^BBBBBBBBBBBBBBBBBBBBBBBB"
+        def qualityUnknown = ";<=>?@ABCDEFGHI"
+
+        expect:
+        FastqSplitter.detectQualityString(quality33) == 33
+        FastqSplitter.detectQualityString(quality64) == 64
+        FastqSplitter.detectQualityString('hello') == 64       // <- ask to emilio
+        FastqSplitter.detectQualityString(qualityUnknown) == -1
+        FastqSplitter.detectQualityString(null) == -1
 
     }
 
