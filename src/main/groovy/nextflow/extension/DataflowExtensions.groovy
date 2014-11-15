@@ -19,10 +19,11 @@
  */
 
 package nextflow.extension
-import static java.util.Arrays.asList
 import static CacheHelper.HashMode
+import static java.util.Arrays.asList
 import static nextflow.util.CheckHelper.checkParams
 
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -1206,16 +1207,32 @@ class DataflowExtensions {
      * @param mapper
      * @return
      */
-    static public final DataflowReadChannel<Map> groupBy(final DataflowReadChannel channel, final Closure mapper = DEFAULT_MAPPING_CLOSURE ) {
+    static public final DataflowReadChannel<Map> groupBy(final DataflowReadChannel channel, final params = null ) {
 
+        int index = 0
+        Closure mapper = DEFAULT_MAPPING_CLOSURE
+
+        if( params instanceof Closure )
+            mapper = params
+
+        else if( params instanceof Number ) {
+            index = params as int
+        }
+        else if( params != null ) {
+            throw new IllegalArgumentException("Not a valid `group` argument: $params")
+        }
+
+        int len = mapper.getMaximumNumberOfParameters()
         return reduce(channel, [:]) { map, item ->
-            def key = mapper ? mapper.call(item) : item
+            def key = len == 2 ? mapper.call(item,index) : mapper.call(item)
             def list = map.get(key)
             list = list ? list << item : [item]
             map.put(key, list)
             return map
         }
+
     }
+
 
     /**
      * Given a an associative array mapping a key with the destination channel, the operator route forwards the items emitted
@@ -1373,7 +1390,6 @@ class DataflowExtensions {
         def c2 = new BooleanReturningMethodInvoker("isCase");
 
         return bufferImpl(channel, {Object it -> c1.invoke(startingCriteria, it)}, {Object it -> c2.invoke(closingCriteria, it)}, false)
-
     }
 
     static public final <V> DataflowReadChannel<V> buffer( DataflowReadChannel<V> source, Map<String,?> params ) {
@@ -1612,27 +1628,38 @@ class DataflowExtensions {
      */
 
     @PackageScope
-    static DEFAULT_MAPPING_CLOSURE = { obj ->
+    static DEFAULT_MAPPING_CLOSURE = { obj, int index=0 ->
 
         switch( obj ) {
-            case Map:
-                def itr = ((Map)obj).entrySet().iterator()
-                return itr.hasNext() ? itr.next().value : null
 
-            case Map.Entry:
-                def entry = (Map.Entry) obj
-                return entry.key
-
-            case Collection:
-                def itr = ((Collection)obj) .iterator()
-                return itr.hasNext() ? itr.next() : null
+            case List:
+                def values = (List)obj
+                return values.size() ? values.get(index) : null
 
             case (Object[]):
                 def values = (Object[])obj
-                return values.size() ? values[0] : null
+                return values.size() ? values[index] : null
+
+            case Map:
+                obj = ((Map)obj).values()
+                // note: fallback into the following case
+
+            case Collection:
+                def itr = ((Collection)obj) .iterator()
+                def count=0
+                while( itr.hasNext() ) {
+                    def value = itr.next()
+                    if( count++ == index ) return value
+                }
+                return null
+
+            case Map.Entry:
+                def entry = (Map.Entry) obj
+                return (index == 0 ? entry.key :
+                        index == 1 ? entry.value : null)
 
             default:
-                return obj
+                return index==0 ? obj : null
         }
 
     }
