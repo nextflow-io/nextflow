@@ -112,22 +112,21 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
         catch ( StopSplitIterationException e ) {
             log.trace 'Split iteration interrupted'
         }
-        finally {
-            /*
-             * now close and return the result
-             * - when the target it's a channel, send stop message
-             * - when it's a list return it
-             * - otherwise return the last value
-             */
-            if( into instanceof DataflowWriteChannel && autoClose ) {
-                append(into, Channel.STOP)
-                return into
-            }
-            if( into != null )
-                return into
 
-            return result
+        /*
+         * now close and return the result
+         * - when the target it's a channel, send stop message
+         * - when it's a list return it
+         * - otherwise return the last value
+         */
+        if( into instanceof DataflowWriteChannel && autoClose ) {
+            append(into, Channel.STOP)
+            return into
         }
+        if( into != null )
+            return into
+
+        return result
     }
 
     /**
