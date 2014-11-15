@@ -21,6 +21,7 @@
 package nextflow.extension
 import static java.util.Arrays.asList
 import static CacheHelper.HashMode
+import static nextflow.util.CheckHelper.checkParams
 
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
@@ -529,12 +530,25 @@ class DataflowExtensions {
     }
 
 
+    static final Map COLLECT_FILE_PARAMS = [
+            sort: [Boolean,'none','true','natural','index','hash','deep',Closure, Comparator],
+            seed: Object,
+            name: [Path, Object],
+            storeDir: [Path,File,CharSequence],
+            tempDir: [Path,File,CharSequence],
+            newLine: Boolean,
+            sliceMaxSize: Integer,
+            sliceMaxItems: Integer,
+            deleteTempFilesOnClose: Boolean
+    ]
+
     static public final DataflowReadChannel collectFile( final DataflowReadChannel channel, final Closure closure = null ) {
         collectFile(channel,null,closure)
     }
 
     static public final DataflowReadChannel collectFile( final DataflowReadChannel channel, Map params, final Closure closure = null ) {
-        log.debug "CollectFile params: $params"
+        checkParams('collectFile', params, COLLECT_FILE_PARAMS)
+
         def result = new DataflowQueue()
         FileCollector collector
 
@@ -1261,7 +1275,7 @@ class DataflowExtensions {
     }
 
     static public final <V> DataflowReadChannel<V> buffer( DataflowReadChannel<V> source, Map<String,?> params ) {
-        checkParamsMap('buffer', BUFFER_PARAMS, params )
+        checkParams( 'buffer', params, 'size','skip','remainder' )
 
         int _skip = (int)params?.skip ?: 0
         int _size = (int)params.size
@@ -1273,16 +1287,6 @@ class DataflowExtensions {
             throw new IllegalArgumentException()
         }
     }
-
-    static final BUFFER_PARAMS = ['size','skip','remainder']
-
-    static void checkParamsMap( String name, List<String> valid,  Map<String,?> params )  {
-        params?.each {
-            if( !valid.contains(it.key) )
-                throw new IllegalArgumentException("Unknown argument '${it.key}' for operator '$name' -- Possible arguments: ${valid.join(', ')}")
-        }
-    }
-
 
     static private <V> DataflowReadChannel<V> bufferWithSizeConstraint( final DataflowReadChannel<V> channel, int size, int skip, boolean reminder ) {
         assert size>0
