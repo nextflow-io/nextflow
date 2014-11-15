@@ -646,7 +646,7 @@ class FilesEx {
      */
     static void closeQuietly( Closeable self ) {
         try {
-            self.close()
+            if(self) self.close()
         }
         catch (IOException ioe) {
             log.debug "Exception closing $self -- Cause: ${ioe.getMessage() ?: ioe.toString()}"

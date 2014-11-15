@@ -725,7 +725,8 @@ abstract class TaskProcessor {
             }
 
             // mark the task as failed
-            task.failed = true
+            if( task )
+                task.failed = true
 
             // MAKE sure the error is showed only the very first time across all processes
             if( errorShown.getAndSet(true) ) {
@@ -1248,11 +1249,6 @@ abstract class TaskProcessor {
         return result
     }
 
-
-    @Deprecated
-    protected List<FileHolder> expandWildcards( String filePattern, FileHolder... files ) {
-        expandWildcards( filePattern, files as List )
-    }
 
     /**
      * Given a map holding variables key-value pairs, create a script fragment

@@ -275,7 +275,10 @@ class TaskRun {
      * Return the list of all input files staged as inputs by this task execution
      */
     List<Path> getStagedInputs()  {
-        getInputFiles().values().flatten() *. stagePath
+        getInputFiles()
+                .values()
+                .flatten()
+                .collect { it.stagePath }
     }
 
     /**
