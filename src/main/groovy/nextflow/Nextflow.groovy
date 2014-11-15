@@ -27,7 +27,7 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.file.FileHelper
-import nextflow.util.TupleList
+import nextflow.util.ArrayTuple
 /**
  * Defines the main methods imported by default in the script scope
  *
@@ -157,14 +157,26 @@ class Nextflow {
         return result instanceof List ? result : [result]
     }
 
-    static  TupleList tuple( def value ) {
+    /**
+     * Creates a {@link ArrayTuple} object with the given open array items
+     *
+     * @param args The items used to created the tuple object
+     * @return An instance of {@link ArrayTuple} populated with the given argument(s)
+     */
+    static  ArrayTuple tuple( def value ) {
         if( !value )
-            return new TupleList()
+            return new ArrayTuple()
 
-        new TupleList( value instanceof Collection ? value : [value] )
+        new ArrayTuple( value instanceof Collection ? (Collection)value : [value] )
     }
 
-    static TupleList tuple( Object ... args ) {
+    /**
+     * Creates a {@link ArrayTuple} object with the given open array items
+     *
+     * @param args The items used to created the tuple object
+     * @return An instance of {@link ArrayTuple} populated with the given argument(s)
+     */
+    static ArrayTuple tuple( Object ... args ) {
         tuple( args as List )
     }
 

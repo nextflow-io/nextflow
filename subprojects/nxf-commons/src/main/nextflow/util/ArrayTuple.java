@@ -27,22 +27,22 @@ import java.util.List;
 import java.util.ListIterator;
 
 /**
- * A Tuple is an immutable list, moreover their have a special handling
- * when used with operators
+ * Provides a basic tuple implementation extending an {@link ArrayList}
+ * and not allowing any content change operation
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public class TupleList<E> extends ArrayList<E> {
+public class ArrayTuple<E> extends ArrayList<E> {
 
     private static final long serialVersionUID = - 4765828600345948947L;
 
-    public TupleList() {}
+    public ArrayTuple() {}
 
-    public TupleList(Collection<E> other) {
+    public ArrayTuple(Collection<E> other) {
         super(other);
     }
 
-    public TupleList(int initialCapacity) {
+    public ArrayTuple(int initialCapacity) {
         super(initialCapacity);
     }
 
@@ -88,7 +88,7 @@ public class TupleList<E> extends ArrayList<E> {
 
     public Iterator<E> iterator() {
         return new Iterator<E>() {
-            private final Iterator<? extends E> i = TupleList.super.iterator();
+            private final Iterator<? extends E> i = ArrayTuple.super.iterator();
 
             public boolean hasNext() {return i.hasNext(); }
             public E next()          {return i.next(); }
@@ -100,7 +100,7 @@ public class TupleList<E> extends ArrayList<E> {
 
     public ListIterator<E> listIterator(final int index) {
         return new ListIterator<E>() {
-            private final ListIterator<? extends E> i = TupleList.super.listIterator(index);
+            private final ListIterator<? extends E> i = ArrayTuple.super.listIterator(index);
 
             public boolean hasNext()     {return i.hasNext();}
             public E next()              {return i.next();}
@@ -122,7 +122,7 @@ public class TupleList<E> extends ArrayList<E> {
     }
 
     public List<E> subList(int fromIndex, int toIndex) {
-        return new TupleList<E>(super.subList(fromIndex, toIndex));
+        return new ArrayTuple<E>(super.subList(fromIndex, toIndex));
     }
 
 

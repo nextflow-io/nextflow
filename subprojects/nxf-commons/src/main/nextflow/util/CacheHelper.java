@@ -125,7 +125,7 @@ public class CacheHelper {
             return hasher;
         }
 
-        if( value instanceof Unordered || value instanceof Set )
+        if( value instanceof Bag || value instanceof Set )
             return hashUnorderedCollection(hasher, (Collection) value, mode);
 
         if( value instanceof Collection) {

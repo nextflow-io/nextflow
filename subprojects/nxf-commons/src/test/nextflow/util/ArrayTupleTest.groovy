@@ -26,11 +26,11 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class TupleListTest extends Specification {
+class ArrayTupleTest extends Specification {
 
     def testTuple() {
         when:
-        def tuple = new TupleList([1,2,3])
+        def tuple = new ArrayTuple([1,2,3])
         then:
         tuple[0] == 1
         tuple[1] == 2

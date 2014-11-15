@@ -106,6 +106,17 @@ class KryoHelperTest extends  Specification {
         KryoHelper.deserialize(buffer).toString() == '100 MB'
     }
 
+    def testSerializeArrayBag() {
+        given:
+        def bag = new ArrayBag(10,'Hello', 200F, 'World')
+        when:
+        def copy = KryoHelper.deserialize(KryoHelper.serialize(bag))
+        then:
+        copy == bag
+        copy instanceof ArrayBag
+        !copy.is(bag)
+    }
+
     @Ignore
     def testClosureSerialization() {
 

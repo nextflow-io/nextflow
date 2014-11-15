@@ -20,43 +20,54 @@
 
 package nextflow.util
 
-import com.esotericsoftware.kryo.Kryo
-import com.esotericsoftware.kryo.KryoSerializable
-import com.esotericsoftware.kryo.io.Input
-import com.esotericsoftware.kryo.io.Output
-import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
+import spock.lang.Specification
 
 /**
- * A list object which hash key does not care about items order
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+class ArrayBagTest extends Specification {
 
-@CompileStatic
-@EqualsAndHashCode
-class UnorderedList implements Unordered, KryoSerializable {
+    def testOrder( ) {
 
-    @Delegate
-    List target
+        given:
+        def alpha = new ArrayBag(['abc',123,'x', 9])
+        def delta = new ArrayBag([123,9,'abc','x'])
 
-    UnorderedList() { target = new ArrayList() }
+        expect:
+        //alpha == delta
+        //alpha.hashCode() == delta.hashCode()
+        CacheHelper.hasher(alpha).hash() == CacheHelper.hasher(delta).hash()
+        CacheHelper.hasher([1,alpha]).hash() == CacheHelper.hasher([1,delta]).hash()
 
-    UnorderedList( Collection items ) {
-        target = items != null ? new ArrayList(items) : []
     }
 
-    UnorderedList( Object ... items ) {
-        this(items as List)
+    def testGetAt() {
+
+        given:
+        def alpha = new ArrayBag(['abc',123,'x', 9])
+
+        expect:
+        alpha[0] == 'abc'
+        alpha[1] == 123
+        alpha[2] == 'x'
+        alpha[3] == 9
+
     }
 
-    void read (Kryo kryo, Input input) {
-        target = kryo.readObject(input,ArrayList)
-    }
+    def testSetAt() {
 
-    void write (Kryo kryo, Output output) {
-        kryo.writeObject(output, target)
-    }
+        given:
+        def alpha = new ArrayBag(['abc',123,'x', 9])
 
+        when:
+        alpha[2] = 'Hello'
+        then:
+        alpha[0] == 'abc'
+        alpha[1] == 123
+        alpha[2] == 'Hello'
+        alpha[3] == 9
+
+    }
 
 }
