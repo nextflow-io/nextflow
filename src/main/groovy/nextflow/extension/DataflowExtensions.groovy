@@ -579,6 +579,7 @@ class DataflowExtensions {
                     break
 
                 case Closure:
+                case Comparator:
                     collector.sort = params.sort;
                     break
 

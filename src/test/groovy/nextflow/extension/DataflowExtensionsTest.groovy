@@ -1342,6 +1342,51 @@ class DataflowExtensionsTest extends Specification {
         file.text == 'alpha\nbeta\ngamma\n'
     }
 
+    def testCollectFileWithDefaultName() {
+
+        when:
+        def result = Channel
+                .from('alpha', 'beta', 'gamma')
+                .collectFile(newLine: true, sort:'index')
+
+        def file = result.val
+
+        then:
+        result.val == Channel.STOP
+        file.name.startsWith('collect')
+        file.text == 'alpha\nbeta\ngamma\n'
+    }
+
+    def testCollectFileAndSortWithClosure() {
+
+        when:
+        def result = Channel
+                .from('delta', 'beta', 'gamma','alpha')
+                .collectFile(newLine: true, sort:{ it -> it })
+
+        def file = result.val
+
+        then:
+        result.val == Channel.STOP
+        file.name.startsWith('collect')
+        file.text == 'alpha\nbeta\ndelta\ngamma\n'
+    }
+
+    def testCollectFileAndSortWithComparator() {
+
+        when:
+        def result = Channel
+                .from('delta', 'beta', 'gamma','alpha')
+                .collectFile(newLine: true, sort:{ a,b -> b<=>a } as Comparator)
+
+        def file = result.val
+
+        then:
+        result.val == Channel.STOP
+        file.name.startsWith('collect')
+        file.text == 'gamma\ndelta\nbeta\nalpha\n'
+    }
+
     def testDataflowSeparateWithOpenArray() {
 
         when:
