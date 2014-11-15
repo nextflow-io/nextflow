@@ -630,19 +630,23 @@ class DataflowExtensions {
             storeDir = FileHelper.createTempFolder(session.workDir)
 
         /*
+         * set a default name if not provided
+         */
+        def defaultFileName = null
+        if( !fileName ) {
+            defaultFileName = Files.createTempFile(storeDir, 'collect', '.file').getName()
+        }
+
+        /*
          * each time a value is received, invoke the closure and
          * append its result value to a file
          */
         def processItem = { item ->
             def value = closure ? mapClosureCall(item,closure) : item
 
-            if( fileName && value != null ) {
-                collector.add( fileName, value )
-            }
-
             // when the value is a list, the first item hold the grouping key
             // all the others values are appended
-            else if( value instanceof List && value.size()>1 ) {
+            if( value instanceof List && value.size()>1 ) {
                 for( int i=1; i<value.size(); i++ ) {
                     collector.add(value[0] as String, value[i])
                 }
@@ -671,8 +675,11 @@ class DataflowExtensions {
                     collector.add(value.getName(), value)
             }
 
-            else
-                throw new IllegalArgumentException("Operator 'collectFile' cannot be handled value: $value ")
+            else if( value != null ) {
+
+                collector.add( fileName?:defaultFileName, value )
+
+            }
 
         }
 
