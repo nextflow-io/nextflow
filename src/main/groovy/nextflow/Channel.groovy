@@ -19,10 +19,8 @@
  */
 
 package nextflow
-import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
-import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
-import static java.nio.file.StandardWatchEventKinds.OVERFLOW
+import static java.nio.file.StandardWatchEventKinds.*
+
 import static nextflow.util.CheckHelper.*
 
 import java.nio.file.FileSystem
@@ -54,18 +52,29 @@ import org.codehaus.groovy.runtime.NullObject
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class Channel {
+class Channel  {
 
     static ControlMessage STOP = PoisonPill.getInstance()
 
     static NullObject VOID = NullObject.getNullObject()
 
     /**
-     * Create an empty channel
+     * Create an new channel
      *
-     * @return
+     * @return The channel instance
      */
     static <T> DataflowChannel<T> create() { new DataflowQueue() }
+
+    /**
+     * Create a empty channel i.e. only emits a STOP signal
+     *
+     * @return The channel instance
+     */
+    static <T> DataflowChannel<T> empty() {
+        def result = new DataflowQueue()
+        result.bind(STOP)
+        return result
+    }
 
     /**
      * Creates a channel sending the items in the collection over it
