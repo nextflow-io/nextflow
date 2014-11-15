@@ -1,5 +1,6 @@
 Nextflow
 ========
+[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/nextflow-io/nextflow?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 *"Dataflow variables are spectacularly expressive in concurrent programming"*
 <br>[Henri E. Bal , Jennifer G. Steiner , Andrew S. Tanenbaum](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.145.7873)
