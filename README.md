@@ -177,11 +177,10 @@ to compile and build *Nextflow* from source using the following command:
 Read more about the building procedure in the following section.
 
 
-
 Build from source
 -----------------
 
-*Nextflow* is written in [Groovy](http://groovy.codehaus.org) (a scripting language for the JVM). A precompiled,
+*Nextflow* is written in [Groovy](http://groovy.codehaus.org) (a scripting language for the JVM). A pre-compiled,
 ready-to-run, package is available at the [Github releases page](https://github.com/nextflow-io/nextflow/releases),
 thus it is not necessary to compile it in order to use it.
 
@@ -225,6 +224,23 @@ Required dependencies
 ---------------------
 
 Java 7 or higher
+
+
+IntelliJ IDEA
+---------------
+
+Nextflow development with [IntelliJ IDEA](https://www.jetbrains.com/idea/) requires the latest version of the IDE (14).
+
+If you have it installed in your computer, follow the steps below in order to use it with Nextflow:
+
+1. Clone the Nextflow repository to a directory in your computer.
+2. Open IntelliJ IDEA and choose "Import project" in the "File" menu bar.
+3. Select the Nextflow project root directory in your computer and click "OK".
+4. Then, choose the "Gradle" item in the "external module" list and click on "Next" button.
+5. Confirm the default import options and click on "Finish" to finalize the project configuration.
+6. When the import process complete, select the "Project structure" command in the "File" menu bar.
+7. In the showed dialog click on the "Project" item in the list of the left, and make sure that
+   the "Project SDK" choice on the right contains Java 7 (or higher).
 
 
 Documentation
