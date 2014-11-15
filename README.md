@@ -1,6 +1,5 @@
 Nextflow
 ========
-[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/nextflow-io/nextflow?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 *"Dataflow variables are spectacularly expressive in concurrent programming"*
 <br>[Henri E. Bal , Jennifer G. Steiner , Andrew S. Tanenbaum](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.145.7873)
@@ -238,6 +237,8 @@ Community
 
 You can post questions, or report problems by using the Nextflow Google group available
 at this link https://groups.google.com/forum/#!forum/nextflow
+
+[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/nextflow-io/nextflow?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 Build servers 
 --------------
