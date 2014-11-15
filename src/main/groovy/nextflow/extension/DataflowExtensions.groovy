@@ -709,6 +709,100 @@ class DataflowExtensions {
     }
 
 
+    static private Map GROUP_TUPLE_PARAMS = [ by: Integer, sort: [Boolean, 'true','natural','deep','hash',Closure,Comparator] ]
+
+    static public final DataflowReadChannel groupTuple( final DataflowReadChannel channel, final Map params ) {
+        checkParams('collectTuple', params, GROUP_TUPLE_PARAMS)
+
+        final index = params?.containsKey('by') ? params.by as int : 0
+
+        def reduced = reduce(channel, [:]) { Map groups, List tuple ->    // 'groups' is used to collect all values; 'tuple' is the record containing four items: barcode, seqid, bam file and bai file
+            final key = tuple[index]                        // the actual grouping key
+            final len = tuple.size()
+
+            final List item = groups.getOrCreate(key) {     // get the group for the specified key
+                def result = new ArrayList(len)             // create if does not exists
+                for( int i=0; i<len; i++ )
+                    result[i] = (i==index ? key : new ArrayList())
+                return result
+            }
+
+            for( int i=0; i<len; i++ ) {                    // append the values in the tuple
+                if( i != index )
+                    (item[i] as List) .add( tuple[i] )
+            }
+
+            return groups                                   // return it so that it will be used in the next iteration
+        }
+
+
+        Comparator comparator = null
+        switch(params?.sort) {
+            case null:
+                break
+
+            case true:
+            case 'true':
+            case 'natural':
+                comparator = { o1,o2 -> o1<=>o2 } as Comparator
+                break;
+
+            case 'hash':
+                comparator = { o1, o2 ->
+                    def h1 = CacheHelper.hasher(o1).hash()
+                    def h2 = CacheHelper.hasher(o2).hash()
+                    return h1.asLong() <=> h2.asLong()
+                } as Comparator
+                break
+
+            case 'deep':
+                comparator = { o1, o2 ->
+                    def h1 = CacheHelper.hasher(o1, HashMode.DEEP).hash()
+                    def h2 = CacheHelper.hasher(o2, HashMode.DEEP).hash()
+                    return h1.asLong() <=> h2.asLong()
+                } as Comparator
+                break
+
+            case Comparator:
+                comparator = params.sort as Comparator
+                break
+
+            case Closure:
+                comparator = { o1, o2 ->
+                    def closure = (Closure)params.sort
+                    def v1 = closure.call(o1)
+                    def v2 = closure.call(o2)
+                    return v1 <=> v2
+                } as Comparator
+                break
+
+            default:
+                throw new IllegalArgumentException("Not a valid sort argument: ${params.sort}")
+        }
+
+
+        // tricky part: get all grouped values and emit independently
+        reduced.flatMap{ Map it ->
+            def result = new ArrayList(it.values())
+            if( comparator )
+                sortInnerLists(result, comparator)
+            return result
+        }
+    }
+
+    private static sortInnerLists(List list, Comparator c ) {
+
+        for( int i=0; i<list.size(); i++ ) {
+            List tuple = (List)list[i]
+            for( int j=0; j<tuple.size(); j++ ) {
+                def entry = tuple[j]
+                if( !(entry instanceof List) ) continue
+                Collections.sort(entry as List, c)
+            }
+        }
+
+    }
+
     /**
      * Iterates over the collection of items and returns each item that matches the given filter
      * by calling the {@code Object#isCase}method used by switch statements.
@@ -1820,6 +1914,27 @@ class DataflowExtensions {
         newOperator([source], targets as List, new ChainWithClosure(new CopyChannelsClosure()))
 
         targets
+    }
+
+
+    static public DataflowReadChannel ifEmpty( DataflowReadChannel source, defValue ) {
+
+        boolean empty = true
+        def result = newChannelBy(source)
+        source.subscribe (
+                onNext: { result.bind(it); empty=false },
+                onComplete: {
+                    if(empty) {
+                        if( defValue instanceof Closure )
+                            result.bind(defValue.call())
+                        else
+                            result.bind(defValue)
+                    }
+                    result.bind(Channel.STOP)
+                }
+        )
+
+        return result
     }
 
 

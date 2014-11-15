@@ -1451,6 +1451,140 @@ class DataflowExtensionsTest extends Specification {
     }
 
 
+    def testGroupTuple() {
+
+        when:
+        def result = Channel
+                        .from([1,'a'], [1,'b'], [2,'x'], [3, 'q'], [1,'c'], [2, 'y'], [3, 'q'])
+                        .groupTuple()
+
+        then:
+        result.val == [1, ['a', 'b','c'] ]
+        result.val == [2, ['x', 'y'] ]
+        result.val == [3, ['q', 'q'] ]
+        result.val == Channel.STOP
+
+    }
+
+    def testGroupTupleWithSortNatural() {
+
+        when:
+        def result = Channel
+                .from([1,'z'], [1,'w'], [1,'a'], [1,'b'], [2, 'y'], [2,'x'], [3, 'q'], [1,'c'], [3, 'p'])
+                .groupTuple(sort: true)
+
+        then:
+        result.val == [1, ['a', 'b','c','w','z'] ]
+        result.val == [2, ['x','y'] ]
+        result.val == [3, ['p', 'q'] ]
+        result.val == Channel.STOP
+
+        when:
+        result = Channel
+                .from([1,'z'], [1,'w'], [1,'a'], [1,'b'], [2, 'y'], [2,'x'], [3, 'q'], [1,'c'], [3, 'p'])
+                .groupTuple(sort: 'natural')
+
+        then:
+        result.val == [1, ['a', 'b','c','w','z'] ]
+        result.val == [2, ['x','y'] ]
+        result.val == [3, ['p', 'q'] ]
+        result.val == Channel.STOP
+
+    }
+
+
+    def testGroupTupleWithSortHash() {
+
+        when:
+        def result = Channel
+                .from([1,'z'], [1,'w'], [1,'a'], [1,'b'], [2, 'y'], [2,'x'], [3, 'q'], [1,'c'], [3, 'p'])
+                .groupTuple(sort: 'hash')
+
+        then:
+        result.val == [1, ['a', 'c','z','b','w'] ]
+        result.val == [2, ['y','x'] ]
+        result.val == [3, ['p', 'q'] ]
+        result.val == Channel.STOP
+
+    }
+
+    def testGroupTupleWithComparator() {
+
+        when:
+        def result = Channel
+                .from([1,'z'], [1,'w'], [1,'a'], [1,'b'], [2, 'y'], [2,'x'], [3, 'q'], [1,'c'], [3, 'p'])
+                .groupTuple(sort: { o1, o2 -> o2<=>o1 } as Comparator )
+
+        then:
+        result.val == [1, ['z','w','c','b','a'] ]
+        result.val == [2, ['y','x'] ]
+        result.val == [3, ['q','p'] ]
+        result.val == Channel.STOP
+
+    }
+
+    def testGroupTupleWithClosure() {
+
+        when:
+        def result = Channel
+                .from([1,'z'], [1,'w'], [1,'a'], [1,'b'], [2, 'y'], [2,'x'], [3, 'q'], [1,'c'], [3, 'p'])
+                .groupTuple(sort: { it -> it } )
+
+        then:
+        result.val == [1, ['a', 'b','c','w','z'] ]
+        result.val == [2, ['x','y'] ]
+        result.val == [3, ['p', 'q'] ]
+        result.val == Channel.STOP
+
+    }
+
+
+    def testGroupTupleWithIndex () {
+
+        given:
+        def file1 = Paths.get('/path/file_1')
+        def file2 = Paths.get('/path/file_2')
+        def file3 = Paths.get('/path/file_3')
+
+        when:
+        def result = Channel
+                .from([1,'a', file1], [1,'b',file2], [2,'x',file2], [3, 'q',file1], [1,'c',file3], [2, 'y',file3], [3, 'q',file1])
+                .groupTuple(by: 2)
+
+        then:
+        result.val == [ [1,3,3], ['a','q','q'], file1 ]
+        result.val == [ [1,2], ['b','x'], file2 ]
+        result.val == [ [1,2], ['c','y'], file3 ]
+        result.val == Channel.STOP
+
+    }
+
+    def testChannelIfEmpty() {
+
+        def result
+
+        when:
+        result = Channel.from(1,2,3).ifEmpty(100)
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 3
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.empty().ifEmpty(100)
+        then:
+        result.val == 100
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.empty().ifEmpty { 1+2  }
+        then:
+        result.val == 3
+        result.val == Channel.STOP
+
+
+    }
 
 
 }
