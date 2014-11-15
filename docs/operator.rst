@@ -249,6 +249,7 @@ These operators are:
 * `flatten`_
 * `flatMap`_
 * `groupBy`_
+* `groupTuple`_
 * `map`_
 * `reduce`_
 * `toList`_
@@ -389,6 +390,43 @@ following these rules:
 * Any value of type ``Map.Entry`` is associated with the value of its ``key`` attribute.
 * Any value of type ``Collection`` or ``Array`` is associated with its first entry.
 * For any other value, the value itself is used as a key.
+
+groupTuple
+-----------
+
+The ``groupTuple`` operator collects tuples (or lists) of values emitted by the source channel grouping together the
+values that share the same key. Finally it emits a new tuple object for each distinct key collected.
+
+In other words transform a sequence of tuple like *(K, V, W, ..)* into a new channel emitting a sequence of
+*(K, list(V), list(W), ..)*
+
+For example::
+
+   Channel
+        .from( [1,'A'], [1,'B'], [2,'C'], [3, 'B'], [1,'C'], [2, 'A'], [3, 'D'] )
+        .groupTuple()
+        .subscribe { println it }
+
+It prints::
+
+    [1, [A, B, C]]
+    [2, [C, A]]
+    [3, [B, D]]
+
+By default the first entry in the tuple is used a the grouping key. A different key can be chosen by using the
+``by`` parameter and specifing the index of entry to be used as key (the index is zero-based). For example::
+
+   Channel
+        .from( [1,'A'], [1,'B'], [2,'C'], [3, 'B'], [1,'C'], [2, 'A'], [3, 'D'] )
+        .groupTuple(by: 1)
+        .subscribe { println it }
+
+Grouping by the second value in each tuple the result is::
+
+    [[1, 2], A]
+    [[1, 3], B]
+    [[2, 1], C]
+    [[3], D]
 
 
 buffer
@@ -663,12 +701,12 @@ by          The number of rows in each `chunk`
 sep         The character used to separate the values (default: ``,``)
 quote       Values may be quoted by single or double quote characters.
 header      When ``true``, the first line is used as columns names. Alternatively it can be used to provide the list of columns names.
-charset     Reads the CSV content by using the given charset e.g. ``UTF-8``
+charset     Parse the content by using the specified charset e.g. ``UTF-8``
 strip       Removes leading and trailing blanks from values (default: ``false``)
 skip        Number of lines since the file beginning to ignore when parsing the CSV content.
-
+limit       Limits the number of retrieved records to the specified value.
+decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
 =========== ============================
-
 
 
 splitFasta
@@ -707,6 +745,18 @@ required the fields, as shown in the example below::
 .. note:: In this example, the file ``misc/sample.fa`` is split into records containing the ``id`` and the ``seqString`` fields
   (i.e. the sequence id and the sequence data). The following ``filter`` operator only keeps the sequences which ID
   starts with the ``ENST0`` prefix, finally the sequence content is printed by using the ``subscribe`` operator.
+
+Available parameters:
+
+=========== ============================
+Field       Description
+=========== ============================
+by          Defines the number of sequences in each `chunk` (default: ``1``)
+limit       Limits the number of retrieved sequences to the specified value.
+record      Parse each entry in the FASTA file as record objects (see following table for accepted values)
+charset     Parse the content by using the specified charset e.g. ``UTF-8``
+decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
+=========== ============================
 
 
 The following fields are available when using the ``record`` parameter:
@@ -755,6 +805,18 @@ the required fields, or just specify ``record: true`` as in the example shown be
         .splitFastq( record: true )
         .subscribe { record -> println record.readHeader }
 
+
+Available parameters:
+
+=========== ============================
+Field       Description
+=========== ============================
+by          Defines the number of *reads* in each `chunk` (default: ``1``)
+limit       Limits the number of retrieved *reads* to the specified value.
+record      Parse each entry in the FASTQ file as record objects (see following table for accepted values)
+charset     Parse the content by using the specified charset e.g. ``UTF-8``
+decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
+=========== ============================
 
 The following fields are available when using the ``record`` parameter:
 
@@ -808,6 +870,16 @@ The following example shows how to split text files into chunks of 10 lines and 
 .. note:: Text chunks returned by the operator ``splitText`` are always terminated by a ``newline`` character.
 
 
+Available parameters:
+
+=========== ============================
+Field       Description
+=========== ============================
+by          Defines the number of lines in each `chunk` (default: ``1``)
+limit       Limits the number of retrieved lines to the specified value.
+charset     Parse the content by using the specified charset e.g. ``UTF-8``
+decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
+=========== ============================
 
 
 Combining operators
@@ -1141,7 +1213,7 @@ Sort            Description
 =============== ========================
 true            Order the content by the entries natural ordering i.e. numerical for number, lexicographic for string, etc. See http://docs.oracle.com/javase/tutorial/collections/interfaces/order.html
 index           Order the content by the incremental index number assigned to each entry while they are collected.
-hash            Order the content by the hash number associated to each entry
+hash            Order the content by the hash number associated to each entry (default)
 deep            Similar to the previous, but the hash number is created on actual entries content e.g. when the entry is a file the hash is created on the actual file content.
 `custom`        A custom sorting criteria can be specified by using either a :ref:`Closure <script-closure>` or a `Comparator <http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html>`_ object.
 =============== ========================
