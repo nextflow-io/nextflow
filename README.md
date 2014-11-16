@@ -176,6 +176,10 @@ to compile and build *Nextflow* from source using the following command:
 
 Read more about the building procedure in the following section.
 
+Required dependencies
+---------------------
+
+Java 7 or higher
 
 Build from source
 -----------------
@@ -218,12 +222,6 @@ Read more at these links:
 
 - https://bugs.openjdk.java.net/browse/JDK-8051012
 - https://jira.codehaus.org/browse/GROOVY-6951
-
-
-Required dependencies
----------------------
-
-Java 7 or higher
 
 
 IntelliJ IDEA
