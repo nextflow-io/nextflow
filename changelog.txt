@@ -1,6 +1,16 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.11.2 
+- Added 'groupTuple' operator
+- Added NXF_WORK variable to define default scratch path
+- Added Gzip uncompress ability to splitter operators 
+- Added 'limit' parameter to splitter operators
+- Added 'meta' parameter to splitter operators
+- Field 'walltime' has been renamed to 'realtime' in tracing file
+- Fixed issue on 'collectFile' operator when no 'name' parameter is specified  
+- Removed dependency on Picard library 
+
 0.11.1 - 11 Nov 2014
 - Fixed serialisation issue on pipeline resume
 - Fixed issue on command line parameters with no arg (flag)
