@@ -75,9 +75,9 @@ class TraceFileObserverTest extends Specification {
         when:
         trace = [:] as TraceFileObserver
         trace.useRawNumbers(true)
-        trace.setFieldsAndFormats(['task_id:str','name:str','status:num', 'start:date', 'duration:time', 'walltime'])
+        trace.setFieldsAndFormats(['task_id:str','name:str','status:num', 'start:date', 'duration:time', 'realtime'])
         then:
-        trace.fields ==  ['task_id','name','status', 'start', 'duration', 'walltime']
+        trace.fields ==  ['task_id','name','status', 'start', 'duration', 'realtime']
         trace.formats == ['str','str','num', 'num', 'num', 'num']
 
     }
@@ -144,10 +144,8 @@ class TraceFileObserverTest extends Specification {
         parts[4] == TaskHandler.Status.COMPLETED.toString()
         parts[5] == '127'                           // exist-status
         TraceRecord.getDateFormat().parse(parts[6]).time == record.submit           // submit time
-        TraceRecord.getDateFormat().parse(parts[7]).time == record.start            // start time
-        TraceRecord.getDateFormat().parse(parts[8]).time == record.complete         // complete time
-        new Duration(parts[9]).toMillis() == record.complete -record.submit         // wall-time
-        new Duration(parts[10]).toMillis() == record.complete -record.start         // run-time
+        new Duration(parts[7]).toMillis() == record.complete -record.submit         // wall-time
+        new Duration(parts[8]).toMillis() == record.complete -record.start         // run-time
 
         cleanup:
         testFolder.deleteDir()
@@ -169,7 +167,7 @@ class TraceFileObserverTest extends Specification {
         record.submit = 1408714874000
         record.complete = 1408714912000
         record.duration = 1408714912000 - 1408714874000
-        record.walltime = 1408714912000 - 1408714875000
+        record.realtime = 1408714912000 - 1408714875000
         record.'%cpu' = 17.50f
         record.rss = 10_000 * 1024
         record.vmem = 20_000 * 1024
@@ -188,14 +186,12 @@ class TraceFileObserverTest extends Specification {
         result[4] == 'COMPLETED'                // status
         result[5] == '99'                       // exit status
         result[6] == '2014-08-22 13:41:14.000'  // submit
-        result[7] == '2014-08-22 13:41:15.000'  // start
-        result[8] == '2014-08-22 13:41:52.000'  // completed
-        result[9] == '38s'                      // wall-time
-        result[10] == '37s'                     // run-time
-        result[11] == '17.5%'                   // cpu
-        result[12] == '9.8 MB'                  // vmem
-        result[13] == '19.5 MB'                 // rchar
-        result[14] == '29.3 MB'                 // wchar
+        result[7] == '38s'                      // wall-time
+        result[8] == '37s'                     // run-time
+        result[9] == '17.5%'                   // cpu
+        result[10] == '9.8 MB'                  // vmem
+        result[11] == '19.5 MB'                 // rchar
+        result[12] == '29.3 MB'                 // wchar
 
 
     }

@@ -57,7 +57,7 @@ class TraceRecord {
             start:      'date',
             complete:   'date',
             duration:   'time',
-            walltime:   'time',
+            realtime:   'time',
             '%cpu':     'perc',     // -- ps field '%cpu'
             '%mem':     'perc',     // -- ps field '%mem'
             rss:        'mem',      // -- ps field 'rss'
@@ -389,10 +389,10 @@ class TraceRecord {
             else if( count == 2 ) {
                 try {
                     def elapsed = row.toString().trim().toLong()
-                    this.put('walltime', elapsed)
+                    this.put('realtime', elapsed)
                 }
                 catch( Exception e ) {
-                    log.debug "Not a valid trace `walltime` value: '$count'"
+                    log.debug "Not a valid trace `realtime` value: '$count'"
                 }
             }
 

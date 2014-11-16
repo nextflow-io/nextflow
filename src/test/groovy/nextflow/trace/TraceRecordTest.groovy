@@ -151,7 +151,7 @@ class TraceRecordTest extends Specification {
         trace.syscw ==  1
         trace.read_bytes == 20
         trace.write_bytes == 30
-        trace.walltime == 153
+        trace.realtime == 153
 
     }
 
