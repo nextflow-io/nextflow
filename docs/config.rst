@@ -335,7 +335,8 @@ NXF_CLASSPATH       Allows to extend the Java runtime classpath with extra jar f
 NXF_DRMAA           Defines the Java DRMAA binding library to be used. It can be specified as a jar file location or a Maven dependency.
 NXF_ASSETS          Defined the directory where downloaded pipeline repositories are stored (default: `$NXF_HOME/assets`)
 NXF_PID_FILE        Name of the file where the process PID is saved when Nextflow is launched in background.
-NXF_TEMP            Base directory where temporary files are stored
+NXF_WORK            Directory where working files are stored (usually your *scratch* directory)
+NXF_TEMP            Directory where temporary files are stored
 JAVA_HOME           Path location of the Java VM installation used to run Nextflow.
 JAVA_CMD            Path location of the Java binary command used to launch  Nextflow.
 ================== ================

@@ -26,8 +26,11 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.exception.StopSplitIterationException
 import nextflow.file.FileHelper
-import nextflow.util.TupleList
+import nextflow.splitter.FastaSplitter
+import nextflow.splitter.FastqSplitter
+import nextflow.util.ArrayTuple
 /**
  * Defines the main methods imported by default in the script scope
  *
@@ -87,8 +90,6 @@ class Nextflow {
     static <T> DataflowQueue<T> channel( T... items ) {
         return channel(items as List)
     }
-
-
 
     /**
      * File factory utility method.
@@ -157,15 +158,54 @@ class Nextflow {
         return result instanceof List ? result : [result]
     }
 
-    static  TupleList tuple( def value ) {
+    /**
+     * Creates a {@link ArrayTuple} object with the given open array items
+     *
+     * @param args The items used to created the tuple object
+     * @return An instance of {@link ArrayTuple} populated with the given argument(s)
+     */
+    static  ArrayTuple tuple( def value ) {
         if( !value )
-            return new TupleList()
+            return new ArrayTuple()
 
-        new TupleList( value instanceof Collection ? value : [value] )
+        new ArrayTuple( value instanceof Collection ? (Collection)value : [value] )
     }
 
-    static TupleList tuple( Object ... args ) {
+    /**
+     * Creates a {@link ArrayTuple} object with the given open array items
+     *
+     * @param args The items used to created the tuple object
+     * @return An instance of {@link ArrayTuple} populated with the given argument(s)
+     */
+    static ArrayTuple tuple( Object ... args ) {
         tuple( args as List )
+    }
+
+    /**
+     * Creates a FASTQ splitter handler for the given object
+     *
+     * @param obj The object to be managed as a FASTQ
+     * @return An instance of {@link FastqSplitter
+     */
+    static FastqSplitter fastq( obj ) {
+        new FastqSplitter('fastq').target(obj)
+    }
+
+    /**
+     * Creates a FASTA splitter handler for the given object
+     *
+     * @param obj The object to be managed as a FASTA
+     * @return An instance of {@link FastqSplitter
+     */
+    static FastaSplitter fasta( obj ) {
+        new FastaSplitter('fasta').target(obj)
+    }
+
+    /**
+     * Interrupts the iteration when using a split operators
+     */
+    static void stop() {
+        throw new StopSplitIterationException()
     }
 
 }

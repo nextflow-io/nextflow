@@ -339,22 +339,44 @@ class FilesEx {
      *
      * The output will be the same irrespective of the machine that the code is running on.
      * @param file The filename to query, null returns null
+     * @param times The number of times it checks for the extension to be removed (useful for files with multiple extensions)
      * @return The name of the file without the path, or an empty string if none exists
      */
-    def static String getBaseName( File file ) {
-        getBaseName(file.toPath())
+    def static String getBaseName( File file, int times=1 ) {
+        getBaseName(file.toPath(), times)
     }
 
-    def static String getBaseName( Path self ) {
+    /**
+     * Gets the base name, minus the full path and extension, from a full filename.
+     *
+     * This method will handle a file in either Unix or Windows format.
+     * The text after the last forward or backslash and before the last dot is returned.
+     * <pre>
+     *   a/b/c.txt --> c
+     *   a.txt     --> a
+     *   a/b/c     --> c
+     *   a/b/c/    --> ""
+     * </pre>
+     *
+     * The output will be the same irrespective of the machine that the code is running on.
+     * @param file The filename to query, null returns null
+     * @param times The number of times it checks for the extension to be removed (useful for files with multiple extensions)
+     * @return The name of the file without the path, or an empty string if none exists
+     */
+    def static String getBaseName( Path self, int times=1 ) {
         assert self
 
         String name = self.getFileName()
         if( !name ) return ''
 
-        int pos = name.lastIndexOf('.')
-        if( pos == -1 ) return name.toString()
+        while( times-- > 0 ) {
+            int pos = name.lastIndexOf('.')
+            if( pos == -1 )
+                break
+            name = name.substring(0,pos)
+        }
 
-        return name.substring(0, pos)
+        return name.toString()
     }
 
     /**
@@ -624,7 +646,7 @@ class FilesEx {
      */
     static void closeQuietly( Closeable self ) {
         try {
-            self.close()
+            if(self) self.close()
         }
         catch (IOException ioe) {
             log.debug "Exception closing $self -- Cause: ${ioe.getMessage() ?: ioe.toString()}"

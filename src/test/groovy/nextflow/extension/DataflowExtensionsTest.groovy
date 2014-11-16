@@ -19,17 +19,16 @@
  */
 
 package nextflow.extension
-
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 
 import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.Session
 import spock.lang.Shared
 import spock.lang.Specification
-
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -437,13 +436,44 @@ class DataflowExtensionsTest extends Specification {
         Channel.from('hello','ciao','hola', 'hi', 'bonjour').countBy { it[0] } .val == [c:1, b:1, h:3]
     }
 
+
     def testGroupBy() {
 
-        expect:
-        Channel.from('hello','ciao','hola', 'hi', 'bonjour').groupBy { String str -> str[0] } .val == [c:['ciao'], b:['bonjour'], h:['hello','hola','hi']]
+        def result
 
-        Channel.from( [id: 1, str:'one'], [id: 2, str:'two'], [id: 2, str:'dos'] ).groupBy().val == [ 1: [[id: 1, str:'one']], 2: [[id: 2, str:'two'], [id: 2, str:'dos']] ]
+        when:
+        result = Channel.from('hello','ciao','hola', 'hi', 'bonjour').groupBy { String str -> str[0] }
+        then:
+        result.val == [c:['ciao'], b:['bonjour'], h:['hello','hola','hi']]
 
+        when:
+        result = Channel.from( [id: 1, str:'one'], [id: 2, str:'two'], [id: 2, str:'dos'] ).groupBy()
+        then:
+        result.val == [ 1: [[id: 1, str:'one']], 2: [[id: 2, str:'two'], [id: 2, str:'dos']] ]
+
+        when:
+        result = Channel.from( [1, 'a' ], [2, 'b'], [1, 'c'], [1, 'd'], [3, 'z'] ).groupBy()
+        then:
+        result.val == [1: [[1,'a'], [1,'c'], [1,'d']], 2: [[2,'b']], 3: [[3,'z']]]
+        result instanceof DataflowVariable
+
+        when:
+        result = Channel.from( [1, 'a' ], [2, 'b'], [3, 'a'], [4, 'c'], [5, 'a'] ).groupBy(1)
+        then:
+        result.val == [a: [[1,'a'], [3,'a'], [5,'a']], b: [[2,'b']], c: [[4,'c']]]
+        result instanceof DataflowVariable
+
+        when:
+        result = Channel.from( [id: 1, str:'one'], [id: 2, str:'two'], [id: 2, str:'dos'] ).groupBy()
+        then:
+        result.val == [ 1: [[id: 1, str:'one']], 2: [[id: 2, str:'two'], [id: 2, str:'dos']] ]
+        result instanceof DataflowVariable
+
+        when:
+        result = Channel.from('hello','ciao','hola', 'hi', 'bonjour').groupBy { String str -> str[0] }
+        then:
+        result.val == [c:['ciao'], b:['bonjour'], h:['hello','hola','hi']]
+        result instanceof DataflowVariable
 
     }
 
@@ -937,7 +967,6 @@ class DataflowExtensionsTest extends Specification {
 
         then:
         IllegalArgumentException e = thrown()
-        e.message == "Unknown argument 'xxx' for operator 'buffer' -- Possible arguments: size, skip, remainder"
 
     }
 
@@ -1032,15 +1061,38 @@ class DataflowExtensionsTest extends Specification {
     def testDefaultMappingClosure() {
 
         expect:
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [7,8,9] ) == 7
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [7,8,9], 2 ) == 9
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [] ) == null
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [], 2 ) == null
+
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [7,8,9] as Object[] ) == 7
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [7,8,9] as Object[], 1 ) == 8
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( ['alpha','beta'] as String[] ) == 'alpha'
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( ['alpha','beta'] as String[], 1 ) == 'beta'
+
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [ 6,7,8,9 ] as LinkedHashSet ) == 6
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [ 6,7,8,9 ] as LinkedHashSet, 1 ) == 7
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [ 6,7,8,9 ] as LinkedHashSet, 2 ) == 8
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [ 6,7,8,9 ] as LinkedHashSet, 5 ) == null
+
         DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9] ) == 1
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9], 1 ) == 2
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9], 2 ) == 9
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9], 3 ) == null
+
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9].entrySet().getAt(0) ) == 'a'
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9].entrySet().getAt(0), 1 ) == 1
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9].entrySet().getAt(0), 2 ) == null
+
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9].entrySet().getAt(1) ) == 'b'
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9].entrySet().getAt(1), 1 ) == 2
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9].entrySet().getAt(1), 2 ) == null
+
         DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [:] ) == null
 
-        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [3,2,1] ) == 3
-        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [] ) == null
-
-        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( [1,2,3] as Object[] ) == 1
-        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( ['alpha','beta'] as String[] ) == 'alpha'
         DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( 99 ) == 99
+        DataflowExtensions.DEFAULT_MAPPING_CLOSURE.call( 99, 2 ) == null
 
     }
 
@@ -1177,7 +1229,7 @@ class DataflowExtensionsTest extends Specification {
         when:
         def ids = []
         def list = []
-        Channel.from(fasta).splitFasta(record:[id:true]) { item, int index ->
+        Channel.from(fasta).splitFasta(record:[id:true], meta:'index') { item, int index ->
             ids << item.id
             list << index
             return item
@@ -1262,7 +1314,6 @@ class DataflowExtensionsTest extends Specification {
 
     def testCollectFileWithFiles() {
 
-
         given:
         def file1 = Files.createTempDirectory('temp').resolve('A')
         file1.text = 'alpha\nbeta'
@@ -1323,7 +1374,6 @@ class DataflowExtensionsTest extends Specification {
         list[2].name == 'H.txt'
         list[2].text == 'Hola\nHello\nHalo\n'
 
-
     }
 
 
@@ -1340,6 +1390,51 @@ class DataflowExtensionsTest extends Specification {
         result.val == Channel.STOP
         file.name == 'hello.txt'
         file.text == 'alpha\nbeta\ngamma\n'
+    }
+
+    def testCollectFileWithDefaultName() {
+
+        when:
+        def result = Channel
+                .from('alpha', 'beta', 'gamma')
+                .collectFile(newLine: true, sort:'index')
+
+        def file = result.val
+
+        then:
+        result.val == Channel.STOP
+        file.name.startsWith('collect')
+        file.text == 'alpha\nbeta\ngamma\n'
+    }
+
+    def testCollectFileAndSortWithClosure() {
+
+        when:
+        def result = Channel
+                .from('delta', 'beta', 'gamma','alpha')
+                .collectFile(newLine: true, sort:{ it -> it })
+
+        def file = result.val
+
+        then:
+        result.val == Channel.STOP
+        file.name.startsWith('collect')
+        file.text == 'alpha\nbeta\ndelta\ngamma\n'
+    }
+
+    def testCollectFileAndSortWithComparator() {
+
+        when:
+        def result = Channel
+                .from('delta', 'beta', 'gamma','alpha')
+                .collectFile(newLine: true, sort:{ a,b -> b<=>a } as Comparator)
+
+        def file = result.val
+
+        then:
+        result.val == Channel.STOP
+        file.name.startsWith('collect')
+        file.text == 'gamma\ndelta\nbeta\nalpha\n'
     }
 
     def testDataflowSeparateWithOpenArray() {
@@ -1406,6 +1501,140 @@ class DataflowExtensionsTest extends Specification {
     }
 
 
+    def testGroupTuple() {
+
+        when:
+        def result = Channel
+                        .from([1,'a'], [1,'b'], [2,'x'], [3, 'q'], [1,'c'], [2, 'y'], [3, 'q'])
+                        .groupTuple()
+
+        then:
+        result.val == [1, ['a', 'b','c'] ]
+        result.val == [2, ['x', 'y'] ]
+        result.val == [3, ['q', 'q'] ]
+        result.val == Channel.STOP
+
+    }
+
+    def testGroupTupleWithSortNatural() {
+
+        when:
+        def result = Channel
+                .from([1,'z'], [1,'w'], [1,'a'], [1,'b'], [2, 'y'], [2,'x'], [3, 'q'], [1,'c'], [3, 'p'])
+                .groupTuple(sort: true)
+
+        then:
+        result.val == [1, ['a', 'b','c','w','z'] ]
+        result.val == [2, ['x','y'] ]
+        result.val == [3, ['p', 'q'] ]
+        result.val == Channel.STOP
+
+        when:
+        result = Channel
+                .from([1,'z'], [1,'w'], [1,'a'], [1,'b'], [2, 'y'], [2,'x'], [3, 'q'], [1,'c'], [3, 'p'])
+                .groupTuple(sort: 'natural')
+
+        then:
+        result.val == [1, ['a', 'b','c','w','z'] ]
+        result.val == [2, ['x','y'] ]
+        result.val == [3, ['p', 'q'] ]
+        result.val == Channel.STOP
+
+    }
+
+
+    def testGroupTupleWithSortHash() {
+
+        when:
+        def result = Channel
+                .from([1,'z'], [1,'w'], [1,'a'], [1,'b'], [2, 'y'], [2,'x'], [3, 'q'], [1,'c'], [3, 'p'])
+                .groupTuple(sort: 'hash')
+
+        then:
+        result.val == [1, ['a', 'c','z','b','w'] ]
+        result.val == [2, ['y','x'] ]
+        result.val == [3, ['p', 'q'] ]
+        result.val == Channel.STOP
+
+    }
+
+    def testGroupTupleWithComparator() {
+
+        when:
+        def result = Channel
+                .from([1,'z'], [1,'w'], [1,'a'], [1,'b'], [2, 'y'], [2,'x'], [3, 'q'], [1,'c'], [3, 'p'])
+                .groupTuple(sort: { o1, o2 -> o2<=>o1 } as Comparator )
+
+        then:
+        result.val == [1, ['z','w','c','b','a'] ]
+        result.val == [2, ['y','x'] ]
+        result.val == [3, ['q','p'] ]
+        result.val == Channel.STOP
+
+    }
+
+    def testGroupTupleWithClosure() {
+
+        when:
+        def result = Channel
+                .from([1,'z'], [1,'w'], [1,'a'], [1,'b'], [2, 'y'], [2,'x'], [3, 'q'], [1,'c'], [3, 'p'])
+                .groupTuple(sort: { it -> it } )
+
+        then:
+        result.val == [1, ['a', 'b','c','w','z'] ]
+        result.val == [2, ['x','y'] ]
+        result.val == [3, ['p', 'q'] ]
+        result.val == Channel.STOP
+
+    }
+
+
+    def testGroupTupleWithIndex () {
+
+        given:
+        def file1 = Paths.get('/path/file_1')
+        def file2 = Paths.get('/path/file_2')
+        def file3 = Paths.get('/path/file_3')
+
+        when:
+        def result = Channel
+                .from([1,'a', file1], [1,'b',file2], [2,'x',file2], [3, 'q',file1], [1,'c',file3], [2, 'y',file3], [3, 'q',file1])
+                .groupTuple(by: 2)
+
+        then:
+        result.val == [ [1,3,3], ['a','q','q'], file1 ]
+        result.val == [ [1,2], ['b','x'], file2 ]
+        result.val == [ [1,2], ['c','y'], file3 ]
+        result.val == Channel.STOP
+
+    }
+
+    def testChannelIfEmpty() {
+
+        def result
+
+        when:
+        result = Channel.from(1,2,3).ifEmpty(100)
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 3
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.empty().ifEmpty(100)
+        then:
+        result.val == 100
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.empty().ifEmpty { 1+2  }
+        then:
+        result.val == 3
+        result.val == Channel.STOP
+
+
+    }
 
 
 }

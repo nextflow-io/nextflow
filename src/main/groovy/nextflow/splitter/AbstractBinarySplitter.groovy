@@ -1,5 +1,5 @@
 package nextflow.splitter
-import java.nio.file.Files
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -14,7 +14,6 @@ import groovy.transform.InheritConstructors
 @InheritConstructors
 abstract class AbstractBinarySplitter extends AbstractSplitter<InputStream> {
 
-
     protected InputStream normalizeType( obj ) {
 
         if( obj instanceof InputStream )
@@ -27,14 +26,15 @@ abstract class AbstractBinarySplitter extends AbstractSplitter<InputStream> {
             return new ByteArrayInputStream(obj.toString().bytes)
 
         if( obj instanceof Path )
-            return Files.newInputStream(obj)
+            return newInputStream(obj)
 
         if( obj instanceof File )
-            return new FileInputStream(obj)
+            newInputStream(obj.toPath())
 
         throw new IllegalAccessException("Object of class '${obj.class.name}' does not support 'splitter' methods")
 
     }
+
 
 
 }

@@ -1,10 +1,10 @@
 #!/bin/bash
 TARGET=../../nextflow-website/assets
 LATEST=$TARGET/docs/latest/
-VERSION=$TARGET/docs/v0.11.0-SNAPSHOT/
+VERSION=$TARGET/docs/v0.11.2/
 
 mkdir -p $TARGET/docs/latest/
-mkdir -p $TARGET/docs/v0.11.0-SNAPSHOT/
+mkdir -p $TARGET/docs/v0.11.2/
 
 rsync -r _build/html/* $LATEST
 rsync -r _build/html/* $VERSION

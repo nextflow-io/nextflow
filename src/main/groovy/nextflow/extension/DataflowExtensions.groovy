@@ -19,8 +19,11 @@
  */
 
 package nextflow.extension
+import static CacheHelper.HashMode
 import static java.util.Arrays.asList
+import static nextflow.util.CheckHelper.checkParams
 
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -49,7 +52,6 @@ import nextflow.file.FileHelper
 import nextflow.file.SimpleFileCollector
 import nextflow.file.SortFileCollector
 import nextflow.util.CacheHelper
-import nextflow.util.HashMode
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 /**
@@ -529,12 +531,25 @@ class DataflowExtensions {
     }
 
 
+    static final Map COLLECT_FILE_PARAMS = [
+            sort: [Boolean,'none','true','natural','index','hash','deep',Closure, Comparator],
+            seed: Object,
+            name: [Path, Object],
+            storeDir: [Path,File,CharSequence],
+            tempDir: [Path,File,CharSequence],
+            newLine: Boolean,
+            sliceMaxSize: Integer,
+            sliceMaxItems: Integer,
+            deleteTempFilesOnClose: Boolean
+    ]
+
     static public final DataflowReadChannel collectFile( final DataflowReadChannel channel, final Closure closure = null ) {
         collectFile(channel,null,closure)
     }
 
     static public final DataflowReadChannel collectFile( final DataflowReadChannel channel, Map params, final Closure closure = null ) {
-        log.debug "CollectFile params: $params"
+        checkParams('collectFile', params, COLLECT_FILE_PARAMS)
+
         def result = new DataflowQueue()
         FileCollector collector
 
@@ -565,6 +580,7 @@ class DataflowExtensions {
                     break
 
                 case Closure:
+                case Comparator:
                     collector.sort = params.sort;
                     break
 
@@ -615,19 +631,23 @@ class DataflowExtensions {
             storeDir = FileHelper.createTempFolder(session.workDir)
 
         /*
+         * set a default name if not provided
+         */
+        def defaultFileName = null
+        if( !fileName ) {
+            defaultFileName = Files.createTempFile(storeDir, 'collect', '.file').getName()
+        }
+
+        /*
          * each time a value is received, invoke the closure and
          * append its result value to a file
          */
         def processItem = { item ->
             def value = closure ? mapClosureCall(item,closure) : item
 
-            if( fileName && value != null ) {
-                collector.add( fileName, value )
-            }
-
             // when the value is a list, the first item hold the grouping key
             // all the others values are appended
-            else if( value instanceof List && value.size()>1 ) {
+            if( value instanceof List && value.size()>1 ) {
                 for( int i=1; i<value.size(); i++ ) {
                     collector.add(value[0] as String, value[i])
                 }
@@ -656,8 +676,11 @@ class DataflowExtensions {
                     collector.add(value.getName(), value)
             }
 
-            else
-                throw new IllegalArgumentException("Operator 'collectFile' cannot be handled value: $value ")
+            else if( value != null ) {
+
+                collector.add( fileName?:defaultFileName, value )
+
+            }
 
         }
 
@@ -686,6 +709,100 @@ class DataflowExtensions {
         return result
     }
 
+
+    static private Map GROUP_TUPLE_PARAMS = [ by: Integer, sort: [Boolean, 'true','natural','deep','hash',Closure,Comparator] ]
+
+    static public final DataflowReadChannel groupTuple( final DataflowReadChannel channel, final Map params ) {
+        checkParams('collectTuple', params, GROUP_TUPLE_PARAMS)
+
+        final index = params?.containsKey('by') ? params.by as int : 0
+
+        def reduced = reduce(channel, [:]) { Map groups, List tuple ->    // 'groups' is used to collect all values; 'tuple' is the record containing four items: barcode, seqid, bam file and bai file
+            final key = tuple[index]                        // the actual grouping key
+            final len = tuple.size()
+
+            final List item = groups.getOrCreate(key) {     // get the group for the specified key
+                def result = new ArrayList(len)             // create if does not exists
+                for( int i=0; i<len; i++ )
+                    result[i] = (i==index ? key : new ArrayList())
+                return result
+            }
+
+            for( int i=0; i<len; i++ ) {                    // append the values in the tuple
+                if( i != index )
+                    (item[i] as List) .add( tuple[i] )
+            }
+
+            return groups                                   // return it so that it will be used in the next iteration
+        }
+
+
+        Comparator comparator = null
+        switch(params?.sort) {
+            case null:
+                break
+
+            case true:
+            case 'true':
+            case 'natural':
+                comparator = { o1,o2 -> o1<=>o2 } as Comparator
+                break;
+
+            case 'hash':
+                comparator = { o1, o2 ->
+                    def h1 = CacheHelper.hasher(o1).hash()
+                    def h2 = CacheHelper.hasher(o2).hash()
+                    return h1.asLong() <=> h2.asLong()
+                } as Comparator
+                break
+
+            case 'deep':
+                comparator = { o1, o2 ->
+                    def h1 = CacheHelper.hasher(o1, HashMode.DEEP).hash()
+                    def h2 = CacheHelper.hasher(o2, HashMode.DEEP).hash()
+                    return h1.asLong() <=> h2.asLong()
+                } as Comparator
+                break
+
+            case Comparator:
+                comparator = params.sort as Comparator
+                break
+
+            case Closure:
+                comparator = { o1, o2 ->
+                    def closure = (Closure)params.sort
+                    def v1 = closure.call(o1)
+                    def v2 = closure.call(o2)
+                    return v1 <=> v2
+                } as Comparator
+                break
+
+            default:
+                throw new IllegalArgumentException("Not a valid sort argument: ${params.sort}")
+        }
+
+
+        // tricky part: get all grouped values and emit independently
+        reduced.flatMap{ Map it ->
+            def result = new ArrayList(it.values())
+            if( comparator )
+                sortInnerLists(result, comparator)
+            return result
+        }
+    }
+
+    private static sortInnerLists(List list, Comparator c ) {
+
+        for( int i=0; i<list.size(); i++ ) {
+            List tuple = (List)list[i]
+            for( int j=0; j<tuple.size(); j++ ) {
+                def entry = tuple[j]
+                if( !(entry instanceof List) ) continue
+                Collections.sort(entry as List, c)
+            }
+        }
+
+    }
 
     /**
      * Iterates over the collection of items and returns each item that matches the given filter
@@ -1090,16 +1207,32 @@ class DataflowExtensions {
      * @param mapper
      * @return
      */
-    static public final DataflowReadChannel<Map> groupBy(final DataflowReadChannel channel, final Closure mapper = DEFAULT_MAPPING_CLOSURE ) {
+    static public final DataflowReadChannel<Map> groupBy(final DataflowReadChannel channel, final params = null ) {
 
+        int index = 0
+        Closure mapper = DEFAULT_MAPPING_CLOSURE
+
+        if( params instanceof Closure )
+            mapper = params
+
+        else if( params instanceof Number ) {
+            index = params as int
+        }
+        else if( params != null ) {
+            throw new IllegalArgumentException("Not a valid `group` argument: $params")
+        }
+
+        int len = mapper.getMaximumNumberOfParameters()
         return reduce(channel, [:]) { map, item ->
-            def key = mapper ? mapper.call(item) : item
+            def key = len == 2 ? mapper.call(item,index) : mapper.call(item)
             def list = map.get(key)
             list = list ? list << item : [item]
             map.put(key, list)
             return map
         }
+
     }
+
 
     /**
      * Given a an associative array mapping a key with the destination channel, the operator route forwards the items emitted
@@ -1257,11 +1390,10 @@ class DataflowExtensions {
         def c2 = new BooleanReturningMethodInvoker("isCase");
 
         return bufferImpl(channel, {Object it -> c1.invoke(startingCriteria, it)}, {Object it -> c2.invoke(closingCriteria, it)}, false)
-
     }
 
     static public final <V> DataflowReadChannel<V> buffer( DataflowReadChannel<V> source, Map<String,?> params ) {
-        checkParamsMap('buffer', BUFFER_PARAMS, params )
+        checkParams( 'buffer', params, 'size','skip','remainder' )
 
         int _skip = (int)params?.skip ?: 0
         int _size = (int)params.size
@@ -1273,16 +1405,6 @@ class DataflowExtensions {
             throw new IllegalArgumentException()
         }
     }
-
-    static final BUFFER_PARAMS = ['size','skip','remainder']
-
-    static void checkParamsMap( String name, List<String> valid,  Map<String,?> params )  {
-        params?.each {
-            if( !valid.contains(it.key) )
-                throw new IllegalArgumentException("Unknown argument '${it.key}' for operator '$name' -- Possible arguments: ${valid.join(', ')}")
-        }
-    }
-
 
     static private <V> DataflowReadChannel<V> bufferWithSizeConstraint( final DataflowReadChannel<V> channel, int size, int skip, boolean reminder ) {
         assert size>0
@@ -1506,27 +1628,38 @@ class DataflowExtensions {
      */
 
     @PackageScope
-    static DEFAULT_MAPPING_CLOSURE = { obj ->
+    static DEFAULT_MAPPING_CLOSURE = { obj, int index=0 ->
 
         switch( obj ) {
-            case Map:
-                def itr = ((Map)obj).entrySet().iterator()
-                return itr.hasNext() ? itr.next().value : null
 
-            case Map.Entry:
-                def entry = (Map.Entry) obj
-                return entry.key
-
-            case Collection:
-                def itr = ((Collection)obj) .iterator()
-                return itr.hasNext() ? itr.next() : null
+            case List:
+                def values = (List)obj
+                return values.size() ? values.get(index) : null
 
             case (Object[]):
                 def values = (Object[])obj
-                return values.size() ? values[0] : null
+                return values.size() ? values[index] : null
+
+            case Map:
+                obj = ((Map)obj).values()
+                // note: fallback into the following case
+
+            case Collection:
+                def itr = ((Collection)obj) .iterator()
+                def count=0
+                while( itr.hasNext() ) {
+                    def value = itr.next()
+                    if( count++ == index ) return value
+                }
+                return null
+
+            case Map.Entry:
+                def entry = (Map.Entry) obj
+                return (index == 0 ? entry.key :
+                        index == 1 ? entry.value : null)
 
             default:
-                return obj
+                return index==0 ? obj : null
         }
 
     }
@@ -1808,6 +1941,27 @@ class DataflowExtensions {
         newOperator([source], targets as List, new ChainWithClosure(new CopyChannelsClosure()))
 
         targets
+    }
+
+
+    static public DataflowReadChannel ifEmpty( DataflowReadChannel source, defValue ) {
+
+        boolean empty = true
+        def result = newChannelBy(source)
+        source.subscribe (
+                onNext: { result.bind(it); empty=false },
+                onComplete: {
+                    if(empty) {
+                        if( defValue instanceof Closure )
+                            result.bind(defValue.call())
+                        else
+                            result.bind(defValue)
+                    }
+                    result.bind(Channel.STOP)
+                }
+        )
+
+        return result
     }
 
 

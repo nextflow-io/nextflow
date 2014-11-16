@@ -997,7 +997,7 @@ The directives are:
 * `penv`_
 * `scratch`_
 * `storeDir`_
-* `walltime`_
+* `time`_
 * `validExitStatus`_
 
 

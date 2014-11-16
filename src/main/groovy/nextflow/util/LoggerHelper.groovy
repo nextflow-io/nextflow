@@ -21,6 +21,7 @@
 package nextflow.util
 import static nextflow.Const.MAIN_PACKAGE
 
+import java.lang.reflect.Field
 import java.util.concurrent.atomic.AtomicBoolean
 
 import ch.qos.logback.classic.Level
@@ -253,7 +254,8 @@ class LoggerHelper {
 
         // add the log message
         if( fail instanceof MissingPropertyException ) {
-            buffer.append("Not such variable: '${fail.getProperty()}'")
+            def name = fail.property ?: getDetailMessage(fail)
+            buffer.append("Not such variable: ${name}")
         }
         else if( message && !message.startsWith('@') ) {
             buffer.append(message)
@@ -269,7 +271,7 @@ class LoggerHelper {
 
         // extra formatting
         if( error ) {
-            buffer.append("  -- Check script '${error[0]}' at line: ${error[1]}")
+            buffer.append("  -- Check script '${error[0]}' at line: ${error[1]} or see '${logFileName}' file for more details")
             buffer.append(CoreConstants.LINE_SEPARATOR)
         }
         else if( logFileName && !quiet ) {
@@ -277,6 +279,21 @@ class LoggerHelper {
             buffer.append(CoreConstants.LINE_SEPARATOR)
         }
 
+    }
+
+    static String getDetailMessage(Throwable error) {
+        try {
+            def clazz = error.class
+            while(  clazz != Throwable && clazz )
+                clazz = clazz.getSuperclass()
+            Field field = clazz.getDeclaredField('detailMessage')
+            field.setAccessible(true)
+            return field.get(error)
+        }
+        catch( Throwable e ) {
+            //
+            return null
+        }
     }
 
     static @PackageScope List<String> findErrorLine( Throwable e, String scriptName ) {

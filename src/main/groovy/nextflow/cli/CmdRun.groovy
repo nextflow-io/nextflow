@@ -75,7 +75,7 @@ class CmdRun extends CmdBase implements HubOptions {
     String test
 
     @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate results are stored')
-    String workDir = 'work'
+    String workDir = System.getenv('NXF_WORK') ?: 'work'
 
     /**
      * Defines the parameters to be passed to the pipeline script

@@ -102,7 +102,7 @@ if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
 fi  
 
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
-NXF_VER=${NXF_VER:-'0.11.1'}
+NXF_VER=${NXF_VER:-'0.11.2'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_ASSETS=${NXF_ASSETS:-$NXF_HOME/assets}
 NXF_CLI="$0 $@"
@@ -114,6 +114,7 @@ export NXF_HOME
 # Check if it is required to run in background
 bg=''
 declare -a args=("$@")
+declare -a cli=(clone config drop help history info ls pull run view node)
 cmd=''
 while [[ $# != 0 ]]; do
     case $1 in
@@ -149,7 +150,7 @@ while [[ $# != 0 ]]; do
       else NXF_DRMAA='us.levk:drmaa-gridengine:6.2u5'; fi
       ;;
     *)
-      [[ $1 && $1 != -* && ! "$cmd" ]] && cmd=$1
+      [[ $1 && $1 != -* && ! "$cmd" && ${cli[*]} =~ $1 ]] && cmd=$1
       ;;
     esac
     shift
@@ -215,7 +216,7 @@ elif [[ "$NXF_DRMAA" ]]; then
 fi
 
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}
-JAVA_OPTS="-noverify -Djava.awt.headless=true -Dcapsule.log=$CAPSULE_LOG -Dcapsule.trampoline"
+JAVA_OPTS="-noverify -Djava.awt.headless=true -Dcapsule.trampoline"
 [[ "$JAVA_HOME" ]] && JAVA_OPTS+=" -Dcapsule.java.home=$JAVA_HOME"
 [[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=" -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
 [[ "$NXF_OPTS" ]] && JAVA_OPTS+=" $NXF_OPTS"

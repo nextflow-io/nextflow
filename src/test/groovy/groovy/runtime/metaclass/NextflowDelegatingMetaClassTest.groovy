@@ -109,7 +109,7 @@ class NextflowDelegatingMetaClassTest extends Specification {
 
         when:
         file.text = 'Hello\nworld\n!'
-        list = file.splitText(into: [], count:2)
+        list = file.splitText(into: [], by:2)
         then:
         list == ['Hello\nworld\n','!\n']
 

@@ -65,6 +65,14 @@ class CacheHelperTest extends Specification {
 
         CacheHelper.hasher(['abc',123]).hash() == CacheHelper.hasher(['abc',123]).hash()
         CacheHelper.hasher(['abc',123]).hash() != CacheHelper.hasher([123,'abc']).hash()
+
+        // set hash-code is order invariant
+        CacheHelper.hasher(['abc',123] as Set ).hash() == CacheHelper.hasher(['abc',123] as Set ).hash()
+        CacheHelper.hasher(['abc',123] as Set ).hash() == CacheHelper.hasher([123,'abc'] as Set ).hash()
+
+        CacheHelper.hasher(['abc',123] as Set ).hash() == CacheHelper.hasher([123,'abc'] as Set ).hash()
+
+
     }
 
 
@@ -104,9 +112,41 @@ class CacheHelperTest extends Specification {
         path2.delete()
         path3.delete()
 
+    }
+
+
+    def testHashOrder () {
+
+        when:
+        def h1 = Hashing.murmur3_128().newHasher()
+        def h2 = Hashing.murmur3_128().newHasher()
+        def c1 = h1.putInt(1).putInt(2).hash()
+        def c2 = h2.putInt(2).putInt(1).hash()
+        then:
+        c1 != c2
+
+        when:
+        h1 = Hashing.murmur3_128().newHasher()
+        h2 = Hashing.murmur3_128().newHasher()
+
+        c1 = h1.putInt(1).putInt(2).hash()
+        h2.putInt(1)
+        h2.putInt(2)
+        c2 = h2.hash()
+
+        then:
+        c1 == c2
 
     }
 
+
+    def testSetAndMap() {
+
+        expect:
+        [x:1, y:2, z:3 ].hashCode() == [z:3, y:2, x:1 ].hashCode()
+        new HashSet(['a','b','z']).hashCode() == new HashSet(['z','b','a']).hashCode()
+
+    }
 
 
 }

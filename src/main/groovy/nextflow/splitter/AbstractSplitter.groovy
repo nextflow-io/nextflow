@@ -1,9 +1,16 @@
 package nextflow.splitter
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.zip.GZIPInputStream
+
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.Channel
+import nextflow.exception.StopSplitIterationException
+import nextflow.util.CheckHelper
 /**
  * Generic data splitter, provide main methods/interfaces
  *
@@ -13,7 +20,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 @CompileStatic
 abstract class AbstractSplitter<T> implements SplitterStrategy {
 
-    protected int count
+    protected int count = 1
 
     protected def into
 
@@ -21,26 +28,122 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
 
     protected boolean recordMode
 
-    protected Map recordCols
+    protected Map recordFields
 
     protected boolean autoClose = true
 
-    private T targetObj
+    protected Path sourceFile
 
-    AbstractSplitter( Map opt = [:] ) {
+    protected meta = 'file'
+
+    protected decompress
+
+    protected String operatorName
+
+    protected long limit
+
+    private targetObj
+
+    /**
+     * Create a splitter object for the specified operator name
+     *
+     * @param name The name of an operator invoking the splitter. This value
+     * is meant to be used only for reporting a meaningful error message
+     */
+    AbstractSplitter( String name = null ) {
+        this.operatorName = name
+    }
+
+    /**
+     * Create a splitter object with the specified option parameters
+     *
+     * See {@link #options(java.util.Map)}
+     *
+     * @param opt A map of named parameters
+     */
+    AbstractSplitter( Map opt ) {
         options(opt)
     }
 
+    /**
+     * @return A string representing the operator invoking the splitter
+     */
+    String getOperatorName() { operatorName ?: this.class.simpleName }
+
+    /**
+     * @return The number of entry of which each chunk is made up
+     */
     int getCount() { count }
 
+    /**
+     * @return The target object that receives the splitted chunks. It can be a {@link groovyx.gpars.dataflow.DataflowChannel} or a {@code List}
+     */
     def getInto() { into }
 
-    Map getRecordCols() { recordCols }
-
+    /**
+     * @return Whenever each split is parsed to a record object or a chunk in the native format i.e. text line(s) or bytes
+     */
     boolean getRecordMode() { recordMode }
 
-    abstract apply( T targetObject, int index )
+    /**
+     * @return The fields to be included in each parsed record
+     */
+    Map getRecordFields() { recordFields }
 
+    AbstractSplitter setRecordFields( Map fields ) {
+        recordMode = true
+        recordFields = fields
+        return this
+    }
+
+    /**
+     * Apply the splitting operation on the given object
+     *
+     * @param index the current split count
+     * @return Either {@link groovyx.gpars.dataflow.DataflowChannel} or a {@code List} which holds the splitted chunks
+     */
+    final apply( int index = 0 ) {
+        def obj = normalizeType(targetObj)
+        def result = null
+
+        try {
+            result = process(obj, index)
+        }
+        catch ( StopSplitIterationException e ) {
+            log.trace 'Split iteration interrupted'
+        }
+
+        /*
+         * now close and return the result
+         * - when the target it's a channel, send stop message
+         * - when it's a list return it
+         * - otherwise return the last value
+         */
+        if( into instanceof DataflowWriteChannel && autoClose ) {
+            append(into, Channel.STOP)
+            return into
+        }
+        if( into != null )
+            return into
+
+        return result
+    }
+
+    /**
+     * Apply the splitting operation on the given object
+     *
+     * @param targetObject The actual object to be splitted
+     * @param index the current split count
+     * @return Either {@link groovyx.gpars.dataflow.DataflowChannel} or a {@code List} which holds the splitted chunks
+     */
+    protected abstract process( T targetObject, int index )
+
+    /**
+     * Normalise the source object to be splitted
+     *
+     * @param object The object to be splitted
+     * @return The normalised version of of the object to be splitted
+     */
     abstract protected T normalizeType( object )
 
     /**
@@ -61,25 +164,19 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      * @return The object itself
      */
     AbstractSplitter options( Map options ) {
-        assert options != null
+        CheckHelper.checkParams(getOperatorName(), options, validOptions())
+
         closure = (Closure)options.each
-        count = options.by as Integer ?: 1
 
-        if( options.count ) {
-            log.warn "The 'count' parameter has been deprecated -- please use 'by' instead"
-            count = options.count as Integer ?: 1
-        }
-
-        //TODO add 'remainder' flag
+        if( options.by )
+            count = options.by as Integer
 
         into = options.into
-        if( into && !(into instanceof Collection) && !(into instanceof DataflowQueue) )
-            throw new IllegalArgumentException("Argument 'into' can be a subclass of Collection or a DataflowQueue type -- Entered value type: ${into.class.name}")
 
         recordMode = isTrueOrMap(options.record)
 
         if( options.record instanceof Map )
-            recordCols = (Map)options.record
+            recordFields = (Map)options.record
 
         if( recordMode && count>1 )
             throw new IllegalArgumentException("When using 'record' option 'count' cannot be greater than 1")
@@ -87,9 +184,34 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
         if( options.autoClose instanceof Boolean )
             autoClose = options.autoClose as boolean
 
+        if( options.meta )
+            meta = options.meta
+
+        if( options.decompress != null )
+            decompress = options.decompress
+
+        if( options.limit )
+            limit = options.limit as long
+
         return this
     }
 
+    /**
+     * @return A map representing the valid options for the splitter. The map keys define the
+     * accepted parameter names, the values the valid values for each of them.
+     */
+    protected Map<String,?> validOptions() {
+        [
+                each: Closure,
+                by: Integer,
+                into: [ Collection, DataflowQueue ],
+                record: [ Boolean, Map ],
+                autoClose: Boolean,
+                meta: ['file','path','index'],
+                limit: Integer,
+                decompress: Boolean
+        ]
+    }
 
     /**
      * Set the target object to be splitter. This method invokes {@link #normalizeType(java.lang.Object)}
@@ -98,7 +220,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      * @return The object itself
      */
     AbstractSplitter target( obj ) {
-        targetObj = normalizeType(obj)
+        targetObj = obj
         return this
     }
 
@@ -106,7 +228,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      * Start the slitting
      */
     def split() {
-        apply(targetObj, 0)
+        apply()
     }
 
     /**
@@ -116,7 +238,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      */
     void each( Closure closure ) {
         this.closure = closure
-        apply(targetObj, 0)
+        apply()
     }
 
     /**
@@ -125,7 +247,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
     long count() {
         long result = 0
         closure = { result++ }
-        apply(targetObj, 0)
+        apply()
         return result
     }
 
@@ -134,7 +256,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      */
     List list() {
         into = []
-        (List) apply(targetObj, 0)
+        (List) apply()
     }
 
     /**
@@ -142,7 +264,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      */
     DataflowQueue channel() {
         into = new DataflowQueue()
-        (DataflowQueue) apply(targetObj, 0)
+        (DataflowQueue) apply()
     }
 
     /**
@@ -154,15 +276,30 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      * @return
      */
     @PackageScope
-    static invokeEachClosure( Closure closure, Object obj, int index ) {
-        if( !closure ) return obj
-        def types = closure.getParameterTypes()
-        if( types.size()>1 ) {
-            return closure.call(obj, index)
-        }
-        else {
+    final invokeEachClosure( Closure closure, Object obj, int index ) {
+        if( !closure )
+            return obj
+
+        def len = closure.getMaximumNumberOfParameters()
+        if( len==1 )
             return closure.call(obj)
-        }
+
+        return closure.call(obj, metaParam(index))
+    }
+
+    @PackageScope
+    final metaParam( int index ) {
+
+        if( meta == 'file' && sourceFile )
+            return sourceFile.getName()
+
+        if( meta == 'path' && sourceFile )
+            return sourceFile
+
+        if( meta == 'index' )
+            return index
+
+        return null
     }
 
     /**
@@ -189,6 +326,22 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
             return true
 
         return value instanceof Boolean && (value as Boolean)
+    }
+
+    protected InputStream newInputStream( Path path ) {
+        this.sourceFile = path
+
+        def result = Files.newInputStream(path)
+
+        if( decompress == null && path.name.endsWith('.gz') )
+            decompress = true
+
+        if( decompress ) {
+            log.debug "Creating gzip splitter for: $path"
+            return new GZIPInputStream(result)
+        }
+
+        return result
     }
 
 }

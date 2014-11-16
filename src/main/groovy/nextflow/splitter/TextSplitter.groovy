@@ -2,8 +2,6 @@ package nextflow.splitter
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.operator.PoisonPill
 /**
  * Split a text file by one or more lines at times
  *
@@ -15,18 +13,20 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 class TextSplitter extends AbstractTextSplitter {
 
     @Override
-    def apply( Reader targetObject, int index )  {
+    def process( Reader targetObject, int index )  {
         BufferedReader reader0 = (BufferedReader)(targetObject instanceof BufferedReader ? targetObject : new BufferedReader(targetObject))
 
         def result = null
         String line
         StringBuilder buffer = new StringBuilder()
         int c=0
+        long itemsCount=0
 
         try {
 
             while( (line = reader0.readLine()) != null ) {
                 buffer << line << '\n'
+
                 if ( ++c == count ) {
                     c = 0
                     result = invokeEachClosure(closure, buffer.toString(), index++ )
@@ -35,6 +35,10 @@ class TextSplitter extends AbstractTextSplitter {
 
                     buffer.setLength(0)
                 }
+
+                // -- check the limit of allowed rows has been reached
+                if( limit && ++itemsCount == limit )
+                    break
             }
 
         }
@@ -52,21 +56,7 @@ class TextSplitter extends AbstractTextSplitter {
                 append(into, result)
         }
 
-        /*
-         * now close and return the result
-         * - when the target it's a channel, send stop message
-         * - when it's a list return it
-         * - otherwise return the last value
-         */
-        if( into instanceof DataflowWriteChannel && autoClose ) {
-            append(into, PoisonPill.instance)
-            return into
-        }
-        if( into != null )
-            return into
-
         return result
     }
-
 
 }

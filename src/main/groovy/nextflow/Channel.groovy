@@ -19,10 +19,9 @@
  */
 
 package nextflow
-import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
-import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
-import static java.nio.file.StandardWatchEventKinds.OVERFLOW
+import static java.nio.file.StandardWatchEventKinds.*
+
+import static nextflow.util.CheckHelper.*
 
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
@@ -44,9 +43,8 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.ControlMessage
 import groovyx.gpars.dataflow.operator.PoisonPill
-import nextflow.util.CheckHelper
-import nextflow.util.Duration
 import nextflow.file.FileHelper
+import nextflow.util.Duration
 import org.codehaus.groovy.runtime.NullObject
 /**
  * Channel factory object
@@ -54,18 +52,29 @@ import org.codehaus.groovy.runtime.NullObject
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class Channel {
+class Channel  {
 
     static ControlMessage STOP = PoisonPill.getInstance()
 
     static NullObject VOID = NullObject.getNullObject()
 
     /**
-     * Create an empty channel
+     * Create an new channel
      *
-     * @return
+     * @return The channel instance
      */
     static <T> DataflowChannel<T> create() { new DataflowQueue() }
+
+    /**
+     * Create a empty channel i.e. only emits a STOP signal
+     *
+     * @return The channel instance
+     */
+    static <T> DataflowChannel<T> empty() {
+        def result = new DataflowQueue()
+        result.bind(STOP)
+        return result
+    }
 
     /**
      * Creates a channel sending the items in the collection over it
@@ -210,7 +219,7 @@ class Channel {
             type:['file','dir','any'],
             followLinks: [false, true],
             hidden: [false, true],
-            maxDepth: null
+            maxDepth: Integer
             ]
 
     /**
@@ -227,7 +236,8 @@ class Channel {
         log.debug "files for syntax: $syntax; folder: $folder; pattern: $pattern; options: ${options}"
 
         // verify that the 'type' parameter has a valid value
-        CheckHelper.checkParamsMap( 'path', options, VALID_PATH_PARAMS )
+        checkParams( 'path', options, VALID_PATH_PARAMS )
+
         final type = options?.type ?: 'file'
         final walkOptions = options?.followLinks == false ? EnumSet.noneOf(FileVisitOption.class) : EnumSet.of(FileVisitOption.FOLLOW_LINKS)
         final int maxDepth = options?.maxDepth ? options.maxDepth as int : Integer.MAX_VALUE

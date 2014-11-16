@@ -18,7 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.splitter
+package nextflow.util
 
 import spock.lang.Specification
 
@@ -26,26 +26,36 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class SplitterFactoryTest extends Specification {
+class ArrayTupleTest extends Specification {
 
-    def testCreateSplitter() {
+    def testTuple() {
+        when:
+        def tuple = new ArrayTuple([1,2,3])
+        then:
+        tuple[0] == 1
+        tuple[1] == 2
+        tuple[2] == 3
+        tuple.size() == 3
+
+        when:
+        tuple.add(4)
+        then:
+        thrown(UnsupportedOperationException)
+
+        when:
+        tuple.remove(0)
+        then:
+        thrown(UnsupportedOperationException)
+
+        when:
+        tuple[0] = 2
+        then:
+        thrown(UnsupportedOperationException)
 
         expect:
-        SplitterFactory.create('text') instanceof TextSplitter
-        SplitterFactory.create('fasta') instanceof FastaSplitter
+        tuple.sum() == 6
+        tuple.iterator().next() == 1
+
 
     }
-
-    def testArgsToOptions() {
-
-        given:
-        def closure = { -> 1 }
-
-        expect:
-        SplitterFactory.argsToOpt( [ ] as Object[] ) == [:]
-        SplitterFactory.argsToOpt( [ closure ] as Object[] ) == [ each: closure ]
-        SplitterFactory.argsToOpt( [ [x:1, y:2] ] as Object[] ) == [x:1, y:2]
-        SplitterFactory.argsToOpt( [ [x:1, y:2], closure ] as Object[] ) == [x:1, y:2, each: closure]
-    }
-
 }

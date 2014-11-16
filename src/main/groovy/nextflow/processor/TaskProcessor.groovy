@@ -58,6 +58,7 @@ import nextflow.script.StdOutParam
 import nextflow.script.TaskBody
 import nextflow.script.ValueOutParam
 import nextflow.script.ValueSharedParam
+import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
@@ -724,7 +725,8 @@ abstract class TaskProcessor {
             }
 
             // mark the task as failed
-            task.failed = true
+            if( task )
+                task.failed = true
 
             // MAKE sure the error is showed only the very first time across all processes
             if( errorShown.getAndSet(true) ) {
@@ -1142,8 +1144,13 @@ abstract class TaskProcessor {
 
     protected List<FileHolder> normalizeInputToFiles( Object obj, int count ) {
 
-        def files = (obj instanceof Collection ? obj : [obj]).collect {
-            normalizeInputToFile(it, "input.${++count}")
+        Collection allItems = obj instanceof Collection ? obj : [obj]
+        def len = allItems.size()
+
+        // use a bag so that cache hash key is not affected by file entries order
+        def files = new ArrayBag(len)
+        for( def item : allItems ) {
+            files << normalizeInputToFile(item, "input.${++count}")
         }
 
         return files
@@ -1176,7 +1183,8 @@ abstract class TaskProcessor {
     protected List<FileHolder> expandWildcards( String name, List<FileHolder> files ) {
         assert files != null
 
-        final result = []
+        // use an unordered so that cache hash key is not affected by file entries order
+        final result = new ArrayBag()
         if( files.size()==0 ) { return result }
 
         if( !name || name == '*' ) {
@@ -1241,11 +1249,6 @@ abstract class TaskProcessor {
         return result
     }
 
-
-    @Deprecated
-    protected List<FileHolder> expandWildcards( String filePattern, FileHolder... files ) {
-        expandWildcards( filePattern, files as List )
-    }
 
     /**
      * Given a map holding variables key-value pairs, create a script fragment

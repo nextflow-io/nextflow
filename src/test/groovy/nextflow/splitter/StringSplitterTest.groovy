@@ -32,7 +32,14 @@ class StringSplitterTest extends Specification {
     def testSplitString () {
 
         expect:
-        new StringSplitter().target('012345678901234567') .options(by:5).list() == ['01234','56789','01234','567']
+        new StringSplitter(by: 5).target('012345678901234567') .list() == ['01234','56789','01234','567']
+
+    }
+
+    def testSplitStringWithLimit () {
+
+        expect:
+        new StringSplitter(by:5, limit: 11).target('012345678901234567') .list() == ['01234','56789','0']
 
     }
 

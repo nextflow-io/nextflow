@@ -22,7 +22,7 @@ package nextflow
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import nextflow.util.TupleList
+import nextflow.util.ArrayTuple
 import spock.lang.Specification
 /**
  *
@@ -82,10 +82,10 @@ class NextflowTest extends Specification {
     def testTuple() {
 
         expect:
-        Nextflow.tuple(1) == new TupleList([1])
-        Nextflow.tuple(1,2,3) == new TupleList([1,2,3])
-        Nextflow.tuple([4,5,6]) == new TupleList([4,5,6])
-        Nextflow.tuple([4,5,6], [1,2]) == new TupleList([[4,5,6], [1,2]])
+        Nextflow.tuple(1) == new ArrayTuple([1])
+        Nextflow.tuple(1,2,3) == new ArrayTuple([1,2,3])
+        Nextflow.tuple([4,5,6]) == new ArrayTuple([4,5,6])
+        Nextflow.tuple([4,5,6], [1,2]) == new ArrayTuple([[4,5,6], [1,2]])
     }
 
 

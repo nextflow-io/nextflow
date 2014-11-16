@@ -42,9 +42,11 @@ import nextflow.script.ValueInParam
 import nextflow.script.ValueOutParam
 import nextflow.script.ValueSharedParam
 import nextflow.util.Duration
-import nextflow.util.HashMode
 import nextflow.util.MemoryUnit
 import nextflow.util.ReadOnlyMap
+
+import static nextflow.util.CacheHelper.HashMode
+
 /**
  * Holds the task configuration properties
  *

@@ -18,34 +18,22 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.splitter
+package nextflow.util
 
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class SplitterFactoryTest extends Specification {
+class LoggerHelperTest extends Specification {
 
-    def testCreateSplitter() {
 
-        expect:
-        SplitterFactory.create('text') instanceof TextSplitter
-        SplitterFactory.create('fasta') instanceof FastaSplitter
-
-    }
-
-    def testArgsToOptions() {
-
-        given:
-        def closure = { -> 1 }
+    def 'test error line'() {
 
         expect:
-        SplitterFactory.argsToOpt( [ ] as Object[] ) == [:]
-        SplitterFactory.argsToOpt( [ closure ] as Object[] ) == [ each: closure ]
-        SplitterFactory.argsToOpt( [ [x:1, y:2] ] as Object[] ) == [x:1, y:2]
-        SplitterFactory.argsToOpt( [ [x:1, y:2], closure ] as Object[] ) == [x:1, y:2, each: closure]
+        LoggerHelper.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]') == ['pfam3d.nf','189']
+        LoggerHelper.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','pfam3d.nf') == ['pfam3d.nf','189']
+        LoggerHelper.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','hola') == null
     }
 
 }

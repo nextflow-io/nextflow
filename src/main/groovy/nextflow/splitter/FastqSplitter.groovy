@@ -2,77 +2,93 @@ package nextflow.splitter
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.operator.PoisonPill
-import net.sf.picard.fastq.FastqReader
-import net.sf.picard.fastq.FastqRecord
+import nextflow.exception.StopSplitIterationException
+
 /**
  * Split FASTQ formatted text content or files
  *
  * @link http://en.wikipedia.org/wiki/FASTQ_format
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Emilio Palumbo <emilio.palumbo@crg.eu>
  */
 @Slf4j
 @CompileStatic
 @InheritConstructors
 class FastqSplitter extends AbstractTextSplitter {
 
-    static Map recordToMap( FastqRecord record, map ) {
+    private boolean processQualityField
+
+    static Map recordToMap( String l1, String l2, String l3, String l4, Map fields ) {
         def result = [:]
 
-        final isMap = map instanceof Map
-        if( !isMap || (map as Map).containsKey('readHeader'))
-            result.readHeader = record.readHeader
+        if( !fields || fields.containsKey('readHeader'))
+            result.readHeader = l1.substring(1)
 
-        if( !isMap || (map as Map).containsKey('readString'))
-            result.readString = record.readString
+        if( !fields || fields.containsKey('readString'))
+            result.readString = l2
 
-        if( !isMap || (map as Map).containsKey('baseQualityHeader'))
-            result.qualityHeader = record.baseQualityHeader
+        if( !fields || fields.containsKey('qualityHeader'))
+            result.qualityHeader = l3.substring(1)
 
-        if( !isMap || (map as Map).containsKey('baseQualityString'))
-            result.qualityString = record.baseQualityString
+        if( !fields || fields.containsKey('qualityString'))
+            result.qualityString = l4
 
         return result
     }
 
-    static void recordToText( FastqRecord record, StringBuilder buffer ) {
+    static void recordToText( String l1, String l2, String l3, String l4, StringBuilder buffer ) {
         // read header
-        buffer << '@' << record.readHeader << '\n'
+        buffer << l1 << '\n'
         // read string
-        buffer << record.readString << '\n'
+        buffer << l2 << '\n'
         // quality header
-        buffer << '+'
-        if( record.baseQualityHeader ) buffer << record.baseQualityHeader
-        buffer << '\n'
+        buffer << l3 << '\n'
         // quality string
-        buffer << record.baseQualityString
-        buffer << '\n'
+        buffer << l4 << '\n'
     }
 
     @Override
-    def apply( Reader targetObject, int index )  {
+    def process( Reader targetObject, int index )  {
 
         BufferedReader reader0 = (BufferedReader)(targetObject instanceof BufferedReader ? targetObject : new BufferedReader(targetObject))
 
-        final fastq = new FastqReader(reader0)
         final StringBuilder buffer = new StringBuilder()
         int blockCount=0
+        long itemsCount=0
         def result = null
 
+        def error = "Invalid FASTQ format"
+        if( sourceFile )
+            error += " for file: " + sourceFile
+
         try {
-            while( fastq.hasNext() ) {
-                def record = fastq.next()
+            while( true ) {
+                def l1 = reader0.readLine()
+                def l2 = reader0.readLine()
+                def l3 = reader0.readLine()
+                def l4 = reader0.readLine()
+
+                if( !l1 || !l2 || !l3 || !l4 )
+                    break
+
+                if( !l1.startsWith('@') || !l3.startsWith('+') )
+                    throw new IllegalStateException(error)
 
                 if( !recordMode )
-                    recordToText(record,buffer)
+                    recordToText(l1,l2,l3,l4,buffer)
 
                 if ( ++blockCount == count ) {
                     // invoke the closure, passing the read block as parameter
-                    def splitArg = recordMode ? recordToMap(record, recordCols) : buffer.toString()
+                    def closureArg
+                    if( recordMode )
+                        closureArg = recordToMap(l1,l2,l3,l4, recordFields)
+                    else if( processQualityField )
+                        closureArg = l4
+                    else
+                        closureArg = buffer.toString()
 
-                    result = invokeEachClosure( closure, splitArg, index++ )
+                    result = invokeEachClosure( closure, closureArg, index++ )
                     if( into != null ) {
                         append(into,result)
                     }
@@ -81,10 +97,14 @@ class FastqSplitter extends AbstractTextSplitter {
                     blockCount=0
                 }
 
+                // -- check the limit of allowed rows has been reached
+                if( limit && ++itemsCount == limit )
+                    break
+
             }
         }
         finally {
-            fastq.closeQuietly()
+            reader0.closeQuietly()
         }
 
         /*
@@ -98,19 +118,47 @@ class FastqSplitter extends AbstractTextSplitter {
                 append(into,result)
         }
 
-        /*
-         * now close and return the result
-         * - when the target it's a channel, send stop message
-         * - when it's a list return it
-         * - otherwise return the last value
-         */
-        if( into instanceof DataflowWriteChannel && autoClose ) {
-            append(into, PoisonPill.instance)
-            return into
+        return result
+    }
+
+
+    /**
+     * Retrieve the encoding quality score of the fastq file
+     *
+     * See http://en.wikipedia.org/wiki/FASTQ_format#Encoding
+     *
+     * @param quality A fastq quality string
+     */
+    def int qualityScore(Map opts=null) {
+
+        if( opts ) options(opts)
+
+        processQualityField = true
+
+        int result = -1
+        closure = { String quality ->
+            result = detectQualityString(quality)
+            if( result != -1 )
+                throw new StopSplitIterationException()
         }
-        if( into != null )
-            return into
+        apply()
 
         return result
+    }
+
+
+    static int detectQualityString( String quality ) {
+        if( !quality )
+            return -1
+
+        for (int i=0; i<quality.size(); i++) {
+            def c = (int)quality.charAt(i)
+            if( c < 59 )
+                return 33
+            if( c > 74 )
+                return 64
+        }
+
+        return -1
     }
 }

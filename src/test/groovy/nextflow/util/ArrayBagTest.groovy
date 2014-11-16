@@ -18,7 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.splitter
+package nextflow.util
 
 import spock.lang.Specification
 
@@ -26,26 +26,48 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class SplitterFactoryTest extends Specification {
+class ArrayBagTest extends Specification {
 
-    def testCreateSplitter() {
+    def testOrder( ) {
+
+        given:
+        def alpha = new ArrayBag(['abc',123,'x', 9])
+        def delta = new ArrayBag([123,9,'abc','x'])
 
         expect:
-        SplitterFactory.create('text') instanceof TextSplitter
-        SplitterFactory.create('fasta') instanceof FastaSplitter
+        //alpha == delta
+        //alpha.hashCode() == delta.hashCode()
+        CacheHelper.hasher(alpha).hash() == CacheHelper.hasher(delta).hash()
+        CacheHelper.hasher([1,alpha]).hash() == CacheHelper.hasher([1,delta]).hash()
 
     }
 
-    def testArgsToOptions() {
+    def testGetAt() {
 
         given:
-        def closure = { -> 1 }
+        def alpha = new ArrayBag(['abc',123,'x', 9])
 
         expect:
-        SplitterFactory.argsToOpt( [ ] as Object[] ) == [:]
-        SplitterFactory.argsToOpt( [ closure ] as Object[] ) == [ each: closure ]
-        SplitterFactory.argsToOpt( [ [x:1, y:2] ] as Object[] ) == [x:1, y:2]
-        SplitterFactory.argsToOpt( [ [x:1, y:2], closure ] as Object[] ) == [x:1, y:2, each: closure]
+        alpha[0] == 'abc'
+        alpha[1] == 123
+        alpha[2] == 'x'
+        alpha[3] == 9
+
+    }
+
+    def testSetAt() {
+
+        given:
+        def alpha = new ArrayBag(['abc',123,'x', 9])
+
+        when:
+        alpha[2] = 'Hello'
+        then:
+        alpha[0] == 'abc'
+        alpha[1] == 123
+        alpha[2] == 'Hello'
+        alpha[3] == 9
+
     }
 
 }

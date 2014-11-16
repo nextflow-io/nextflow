@@ -20,42 +20,10 @@
 
 package nextflow.util
 
-import spock.lang.Specification
-
 /**
+ * Marker interface that define that the collection does not care about items order
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class TupleListTest extends Specification {
-
-    def testTuple() {
-        when:
-        def tuple = new TupleList([1,2,3])
-        then:
-        tuple[0] == 1
-        tuple[1] == 2
-        tuple[2] == 3
-        tuple.size() == 3
-
-        when:
-        tuple.add(4)
-        then:
-        thrown(UnsupportedOperationException)
-
-        when:
-        tuple.remove(0)
-        then:
-        thrown(UnsupportedOperationException)
-
-        when:
-        tuple[0] = 2
-        then:
-        thrown(UnsupportedOperationException)
-
-        expect:
-        tuple.sum() == 6
-        tuple.iterator().next() == 1
-
-
-    }
+interface Bag<E> extends Collection<E> {
 }

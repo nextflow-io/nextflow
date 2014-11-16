@@ -160,7 +160,7 @@ public abstract class TaskHandler {
                 // elapsed time since start of the job until completion
                 // note: this may be override run time provided by the trace file (3rd line)
                 if( startTimeMillis )
-                    record.walltime = completeTimeMillis - startTimeMillis
+                    record.realtime = completeTimeMillis - startTimeMillis
             }
 
             def file = task.workDir?.resolve(TaskRun.CMD_TRACE)

@@ -20,6 +20,8 @@
 
 package nextflow.splitter
 
+import java.nio.file.Paths
+
 import spock.lang.Specification
 /**
  *
@@ -30,10 +32,36 @@ class AbstractSplitterTest extends Specification {
 
     def testSplitCall() {
 
-        expect:
-        AbstractSplitter.invokeEachClosure(null, 'hola', 1) == 'hola'
-        AbstractSplitter.invokeEachClosure({ x -> x.reverse() }, 'hola', 2) == 'aloh'
-        AbstractSplitter.invokeEachClosure({ x, y -> y * 2 }, 'hola', 3) == 6
+        given:
+        def file = Paths.get('/some/file.txt')
+
+        when:
+        def splitter = [:] as AbstractSplitter
+        then:
+        splitter.invokeEachClosure(null, 'hola', 1) == 'hola'
+        splitter.invokeEachClosure({ x -> x.reverse() }, 'hola', 3) == 'aloh'
+
+        when:
+        splitter.sourceFile = file
+        then:
+        splitter.invokeEachClosure({ x, meta -> [x, meta] }, 'hola', 3) == ['hola', 'file.txt']
+
+        when:
+        splitter.meta = 'file'
+        then:
+        splitter.invokeEachClosure({ x, meta -> [x, meta] }, 'hola', 3) == ['hola', 'file.txt']
+
+        when:
+        splitter.meta = 'path'
+        then:
+        splitter.invokeEachClosure({ x, meta -> [x, meta] }, 'hola', 3) == ['hola', file]
+
+        when:
+        splitter.meta = 'index'
+        then:
+        splitter.invokeEachClosure({ x, meta -> [x, meta * 2] }, 'hola', 3) == ['hola', 6]
+
+        //splitter.invokeEachClosure({ x, y -> y * 2 }, 'hola', 3) == 6
 
     }
 
@@ -45,8 +73,6 @@ class AbstractSplitterTest extends Specification {
         !AbstractSplitter.isTrueOrMap(0)
         !AbstractSplitter.isTrueOrMap(false)
         !AbstractSplitter.isTrueOrMap(Boolean.FALSE)
-
-
 
     }
 
