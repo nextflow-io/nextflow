@@ -34,12 +34,14 @@ class CrgExecutor extends SgeExecutor {
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
 
+        def result = super.getSubmitCommandLine(task, scriptFile)
+
         if( task.container && isDockerEnabled() ) {
-            if( extraOptions == null ) extraOptions = []
-            extraOptions << '-soft' << '-l' << "docker_images=${task.container}" << '-hard'
+            def p = result.size()-1
+            result.addAll(p, ['-soft', '-l', "docker_images=${task.container}"])
         }
 
-        return super.getSubmitCommandLine(task, scriptFile)
+        return result
     }
 
     @PackageScope

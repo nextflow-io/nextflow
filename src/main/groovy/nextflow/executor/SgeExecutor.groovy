@@ -33,8 +33,6 @@ import nextflow.util.Duration
  */
 class SgeExecutor extends AbstractGridExecutor {
 
-    protected List<String> extraOptions
-
     /*
      * Prepare the 'qsub' cmdline. The following options are used
      * - wd: define the job working directory
@@ -83,10 +81,6 @@ class SgeExecutor extends AbstractGridExecutor {
         // task max memory
         if( taskConfig.memory ) {
             result << "-l" << "virtual_free=${taskConfig.memory.toString().replaceAll(/[\sB]/,'')}"
-        }
-
-        if( extraOptions ) {
-            result.addAll(extraOptions)
         }
 
         // -- at the end append the command script wrapped file name

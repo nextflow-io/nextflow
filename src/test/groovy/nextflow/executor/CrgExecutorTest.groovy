@@ -19,7 +19,6 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Paths
 
 import nextflow.Session
@@ -28,16 +27,13 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.script.BaseScript
 import spock.lang.Specification
-import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class CrgExecutorTest extends Specification {
 
-    @Unroll
-    def 'test qsub cmd line' () {
+    def testQsubCliCommand () {
 
         given:
         // mock process
@@ -83,11 +79,45 @@ class CrgExecutorTest extends Specification {
         '3 g'   | '3 d'      | '2'      | 'mpi'     | 'www'         | null           | false        | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q www -pe mpi 2 -l h_rt=72:00:00 -l virtual_free=3G .job.sh'
         '4 GB ' | '1d3h'     | '4'      | 'orte'    | 'alpha'       | null           | false        | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q alpha -pe orte 4 -l h_rt=27:00:00 -l virtual_free=4G .job.sh'
         null    | null       |  null    | null      | 'alpha'       | 'ubuntu'       | false        | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q alpha .job.sh'
-        null    | null       |  null    | null      | 'alpha'       | 'ubuntu:latest'| true         | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q alpha -soft -l docker_images=ubuntu:latest -hard .job.sh'
-        '3 g'   | '3 d'      | '2'      | 'mpi'     | 'alpha'       | 'busybox'      | true         | '-a 1 -b 2'  || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q alpha -pe mpi 2 -l h_rt=72:00:00 -l virtual_free=3G -soft -l docker_images=busybox -hard -a 1 -b 2 .job.sh'
+        null    | null       |  null    | null      | 'alpha'       | 'ubuntu:latest'| true         | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q alpha -soft -l docker_images=ubuntu:latest .job.sh'
+        '3 g'   | '3 d'      | '2'      | 'mpi'     | 'alpha'       | 'busybox'      | true         | '-a 1 -b 2'  || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q alpha -pe mpi 2 -l h_rt=72:00:00 -l virtual_free=3G -a 1 -b 2 -soft -l docker_images=busybox .job.sh'
 
     }
 
+
+    def testQsubCliTwice() {
+
+        given:
+        // mock process
+        def proc = Mock(TaskProcessor)
+        def base = Mock(BaseScript)
+        def config = new TaskConfig(base)
+        // LSF executor
+        def executor = [:] as CrgExecutor
+        executor.taskConfig = config
+        executor.session = new Session()
+
+        when:
+        // process name
+        proc.getName() >> 'task_x'
+        // the script
+        def script = Paths.get('.job.sh')
+        // config
+        config.name = 'task'
+        executor.session.config.docker = [enabled: true]
+
+        def task = new TaskRun()
+        task.processor = proc
+        task.workDir = Paths.get('/abc')
+        task.index = 2
+        task.container = 'cbcrg/hello'
+
+        then:
+        executor.getSubmitCommandLine(task,script).join(' ') == 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -soft -l docker_images=cbcrg/hello .job.sh'
+        executor.getSubmitCommandLine(task,script).join(' ') == 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -soft -l docker_images=cbcrg/hello .job.sh'
+        executor.getSubmitCommandLine(task,script).join(' ') == 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -soft -l docker_images=cbcrg/hello .job.sh'
+
+    }
 
     def testParseJobId() {
 
