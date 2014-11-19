@@ -371,7 +371,7 @@ class AssetManager {
 
         // verify that is clean
         if( !isClean() )
-            throw new AbortOperationException("$pipeline  contains uncommitted changes -- cannot pull from repository")
+            throw new AbortOperationException("$pipeline contains uncommitted changes -- cannot pull from repository")
 
         if( revision && revision != getCurrentRevision() ) {
             /*
@@ -504,7 +504,7 @@ class AssetManager {
 
         // verify that is clean
         if( !isClean() )
-            throw new AbortOperationException("Pipeline '$pipeline ' contains uncommitted changes -- Cannot switch to revision: $revision")
+            throw new AbortOperationException("$pipeline contains uncommitted changes -- Cannot switch to revision: $revision")
 
         try {
             git.checkout().setName(revision) .call()

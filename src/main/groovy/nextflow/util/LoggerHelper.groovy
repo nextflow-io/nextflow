@@ -22,6 +22,7 @@ package nextflow.util
 import static nextflow.Const.MAIN_PACKAGE
 
 import java.lang.reflect.Field
+import java.nio.file.NoSuchFileException
 import java.util.concurrent.atomic.AtomicBoolean
 
 import ch.qos.logback.classic.Level
@@ -223,7 +224,7 @@ class LoggerHelper {
                             ? (event.getThrowableProxy() as ThrowableProxy).throwable
                             : null) as Throwable
 
-                def script = ((Session)Global.session).scriptName
+                def script = ((Session)Global.session)?.scriptName
                 appendFormattedMessage(event, error, script, buffer)
             }
             else {
@@ -249,13 +250,16 @@ class LoggerHelper {
 
         // error string is not shown for abort operation
         if( !quiet ) {
-            buffer.append("ERROR: ")
+            buffer.append("ERROR ~ ")
         }
 
         // add the log message
         if( fail instanceof MissingPropertyException ) {
             def name = fail.property ?: getDetailMessage(fail)
             buffer.append("Not such variable: ${name}")
+        }
+        else if( fail instanceof NoSuchFileException ) {
+            buffer.append("Not such file: ${fail.message}")
         }
         else if( message && !message.startsWith('@') ) {
             buffer.append(message)
@@ -271,11 +275,11 @@ class LoggerHelper {
 
         // extra formatting
         if( error ) {
-            buffer.append("  -- Check script '${error[0]}' at line: ${error[1]} or see '${logFileName}' file for more details")
+            buffer.append(" -- Check script '${error[0]}' at line: ${error[1]} or see '${logFileName}' file for more details")
             buffer.append(CoreConstants.LINE_SEPARATOR)
         }
         else if( logFileName && !quiet ) {
-            buffer.append("  -- Check '${logFileName}' file for details")
+            buffer.append(" -- Check '${logFileName}' file for details")
             buffer.append(CoreConstants.LINE_SEPARATOR)
         }
 
@@ -310,7 +314,7 @@ class LoggerHelper {
     @PackageScope
     static List<String> getErrorLine( String line, String scriptName = null) {
         if( scriptName==null )
-            scriptName = '.+'
+            scriptName = /.+\.nf/
 
         def pattern = ~/.*\(($scriptName):(\d*)\).*/
         def m = pattern.matcher(line)

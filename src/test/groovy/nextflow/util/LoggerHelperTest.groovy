@@ -32,6 +32,7 @@ class LoggerHelperTest extends Specification {
 
         expect:
         LoggerHelper.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]') == ['pfam3d.nf','189']
+        LoggerHelper.getErrorLine('at pfam3d.run(JavaClass.java:189) ~[na:na]') == null
         LoggerHelper.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','pfam3d.nf') == ['pfam3d.nf','189']
         LoggerHelper.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','hola') == null
     }
