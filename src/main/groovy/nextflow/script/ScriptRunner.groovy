@@ -247,11 +247,6 @@ class ScriptRunner {
         importCustomizer.addImports( Path.name )
         importCustomizer.addImports( Channel.name )
         importCustomizer.addStaticStars( Nextflow.name )
-        importCustomizer.addStaticImport( groovyx.gpars.dataflow.Dataflow.name, 'splitter' )
-        importCustomizer.addStaticImport( groovyx.gpars.dataflow.Dataflow.name, 'operator' )
-        importCustomizer.addStaticImport( groovyx.gpars.dataflow.Dataflow.name, 'prioritySelector' )
-        importCustomizer.addStaticImport( groovyx.gpars.dataflow.Dataflow.name, 'select' )
-        importCustomizer.addStaticImport( groovyx.gpars.dataflow.Dataflow.name, 'selector' )
 
         def config = new CompilerConfiguration()
         config.addCompilationCustomizers( importCustomizer )
