@@ -57,7 +57,8 @@ class CmdDrop extends CmdBase {
         }
 
         if( this.force || manager.isClean() ) {
-            manager.localPath.deleteDir()
+            if( !manager.localPath.deleteDir() )
+                throw new AbortOperationException("Unable to delete pipeline -- Check access permissions for path: ${manager.localPath}")
             return
         }
 
