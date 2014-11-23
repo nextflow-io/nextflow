@@ -27,6 +27,7 @@ import nextflow.Const
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.CreateBranchCommand
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.api.ListBranchCommand
 import org.eclipse.jgit.api.errors.RefNotFoundException
 import org.eclipse.jgit.errors.RepositoryNotFoundException
 import org.eclipse.jgit.lib.Constants
@@ -351,7 +352,7 @@ class AssetManager {
             // make sure it contains a valid repository
             checkValidRemoteRepo()
 
-            log.debug "Pulling $pipeline  -- Using remote clone url: ${getGitRepositoryUrl()}"
+            log.debug "Pulling $pipeline -- Using remote clone url: ${getGitRepositoryUrl()}"
 
             // clone it
             def clone = Git.cloneRepository()
@@ -466,10 +467,20 @@ class AssetManager {
         def current = getCurrentRevision()
         def master = getDefaultBranch()
 
-        List<String> branches = git.branchList()
-                    .call()
-                    .findAll { it.name.startsWith('refs/heads/') }
-                    .collect { Repository.shortenRefName(it.name) }
+        List<String> branches = []
+        git.branchList()
+            .setListMode(ListBranchCommand.ListMode.ALL)
+            .call()
+            .each {
+                if( it.name.startsWith('refs/heads/') )
+                    branches << it.name.replace('refs/heads/','')
+
+                else if( it.name.startsWith('refs/remotes/origin/') )
+                    branches << it.name.replace('refs/remotes/origin/', '')
+            }
+
+        branches = branches
+                    .unique()
                     .collect { (it == current ? '* ' : '  ') + it + ( master == it ? ' (default)' : '')  }
 
         List<String> tags = git.tagList()
