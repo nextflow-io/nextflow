@@ -66,8 +66,8 @@ class TraceRecord {
             peak_vmem:  'mem',      // -- /proc/$pid/status field 'VmPeak' (Peak virtual memory size)
             rchar:      'mem',      // -- /proc/$pid/io
             wchar:      'mem',      // -- /proc/$pid/io
-            syscr:      'mem',      // -- /proc/$pid/io
-            syscw:      'mem',      // -- /proc/$pid/io
+            syscr:      'num',      // -- /proc/$pid/io
+            syscw:      'num',      // -- /proc/$pid/io
             read_bytes: 'mem',      // -- /proc/$pid/io
             write_bytes:'mem'       // -- /proc/$pid/io
     ]

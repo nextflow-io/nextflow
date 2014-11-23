@@ -28,7 +28,7 @@ class TraceRecordTest extends Specification {
 
     static long timestamp = 1412596982622
 
-    def testGet() {
+    def 'test get field'() {
 
         given:
         TraceRecord.getDateFormat().setTimeZone(TimeZone.getTimeZone('UTC')) // note: set the timezone to be sure the time string does not change on CI test servers§

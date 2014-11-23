@@ -33,6 +33,8 @@ import spock.lang.Specification
  */
 class TraceFileObserverTest extends Specification {
 
+    final static long MB = 1024 * 1024
+
 
     def 'test set fields'() {
 
@@ -193,6 +195,30 @@ class TraceFileObserverTest extends Specification {
         result[11] == '19.5 MB'                 // rchar
         result[12] == '29.3 MB'                 // wchar
 
+
+    }
+
+    def 'test custom render' () {
+
+
+        given:
+        def record = new TraceRecord()
+        record.task_id = '5'
+        record.syscr = 10
+        record.syscw = 20
+        record.rss = 10 * MB
+
+        when:
+        TraceRecord.getDateFormat().setTimeZone(TimeZone.getTimeZone('UTC')) // note: set the timezone to be sure the time string does not change on CI test servers
+        def trace = [:] as TraceFileObserver
+        trace.setFieldsAndFormats( 'task_id,syscr,syscw,rss,rss:num' )
+        def result = trace.render(record).split('\t')
+        then:
+        result[0] == '5'
+        result[1] == '10'
+        result[2] == '20'
+        result[3] == '10 MB'
+        result[4] == '10485760'
 
     }
 
