@@ -126,9 +126,5 @@ class Const {
       http://nextflow.io
 """
 
-    /*
-     * Generic error message using the log file name
-     */
-    static String log_detail_tip_message
 
 }

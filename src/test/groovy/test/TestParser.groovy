@@ -74,9 +74,6 @@ class TestParser {
         config.scriptBaseClass = BaseScript.class.name
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
         config.addCompilationCustomizers(importCustomizer)
-//        def preProcessor = new SourcePreProcessor()
-//        preProcessor.lexerFactory = lexerFactory
-//        config.setPluginFactory(preProcessor)
 
         // extend the class-loader if required
         def gcl = new GroovyClassLoader()
