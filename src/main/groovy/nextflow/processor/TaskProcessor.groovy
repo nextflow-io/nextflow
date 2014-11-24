@@ -1135,7 +1135,7 @@ abstract class TaskProcessor {
             return new FileHolder(input)
         }
 
-        def result = ownerScript.tempFile(altName)
+        def result = Nextflow.tempFile(altName)
         def source = input?.toString() ?: ''
         result.text = source
         return new FileHolder(source, result)

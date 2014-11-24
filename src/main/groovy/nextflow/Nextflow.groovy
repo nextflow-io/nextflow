@@ -19,25 +19,31 @@
  */
 
 package nextflow
+import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.io.FileType
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
-import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.exception.ProcessScriptException
 import nextflow.exception.StopSplitIterationException
 import nextflow.file.FileHelper
 import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.util.ArrayTuple
+import nextflow.util.CacheHelper
 /**
  * Defines the main methods imported by default in the script scope
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class Nextflow {
+
+    static private final Random random = new Random()
 
     /**
      * Create a {@code DataflowVariable} binding it to the specified value
@@ -62,17 +68,17 @@ class Nextflow {
      * @param values
      * @return
      */
-    static <T> DataflowQueue<T> channel( Collection<T> values = null ) {
+    static DataflowQueue channel( Collection values = null ) {
 
-        def channel = new DataflowQueue<T>()
+        final channel = new DataflowQueue()
         if ( values )  {
             // bind e
-            values.each { channel << it }
+            values.each { channel.bind(it)  }
 
             // since queue is 'finite' close it by a poison pill
             // so the operator will stop on when all values in the queue are consumed
             // (otherwise it will wait forever for a new entry)
-            channel << PoisonPill.instance
+            channel << Channel.STOP
         }
 
         return channel
@@ -87,7 +93,7 @@ class Nextflow {
      * @param item
      * @return
      */
-    static <T> DataflowQueue<T> channel( T... items ) {
+    static DataflowQueue channel( Object... items ) {
         return channel(items as List)
     }
 
@@ -188,7 +194,7 @@ class Nextflow {
      * @return An instance of {@link FastqSplitter
      */
     static FastqSplitter fastq( obj ) {
-        new FastqSplitter('fastq').target(obj)
+        (FastqSplitter)new FastqSplitter('fastq').target(obj)
     }
 
     /**
@@ -198,7 +204,7 @@ class Nextflow {
      * @return An instance of {@link FastqSplitter
      */
     static FastaSplitter fasta( obj ) {
-        new FastaSplitter('fasta').target(obj)
+        (FastaSplitter)new FastaSplitter('fasta').target(obj)
     }
 
     /**
@@ -207,5 +213,129 @@ class Nextflow {
     static void stop() {
         throw new StopSplitIterationException()
     }
+
+
+    /**
+     * Stop the current execution returning an error code and message
+     *
+     * @param exitCode The exit code to be returned
+     * @param message The message that will be reported in the log file (optional)
+     */
+    static void exit(int exitCode, String message = null) {
+        if ( exitCode && message ) {
+            log.error message
+        }
+        else if ( message ) {
+            log.info message
+        }
+        System.exit(exitCode)
+    }
+
+    /**
+     * Stop the current execution returning a 0 error code and the specified message
+     *
+     * @param message The message that will be reported in the log file
+     */
+    static void exit( String message ) {
+        exit(0, message)
+    }
+
+    /**
+     * Throws a script runtime error
+     * @param message An optional error message
+     */
+    static void error( String message = null ) {
+        throw message ? new ProcessScriptException(message) : new ProcessScriptException()
+    }
+
+    /**
+     * Create a folder for the given key. It guarantees to return the same folder name
+     * the same provided object key.
+     *
+     * @param key An object to be used as cache-key creating the folder, it can be any object
+     *          or an array or objects to use multi-objects key
+     *
+     * @return The {@code Path} to the cached directory or a newly created folder for the specified key
+     */
+    static Path cacheableDir( Object key ) {
+        assert key, "Please specify the 'key' argument on 'cacheableDir' method"
+
+        final session = (Session)Global.session
+        if( !session )
+            throw new IllegalStateException("Invalid access to `cacheableDir` method -- Session object not yet defined")
+
+        def hash = CacheHelper.hasher([ session.uniqueId, key, session.cacheable ? 0 : random.nextInt() ]).hash()
+
+        def file = FileHelper.getWorkFolder(session.workDir, hash)
+        if( !file.exists() && !file.mkdirs() ) {
+            throw new IOException("Unable to create folder: $file -- Check file system permission" )
+        }
+
+        return file
+    }
+
+    /**
+     * Create a file for the given key. It guarantees to return the same file name
+     * the same provided object key.
+     *
+     * @param key
+     * @param name
+     * @return
+     */
+    static Path cacheableFile( Object key, String name = null ) {
+
+        // the cacheability is guaranteed by the folder
+        def folder = cacheableDir(key)
+
+        if( !name ) {
+            if( key instanceof File ) {
+                name =  key.getName()
+            }
+            else if( key instanceof Path ) {
+                name =  key.getName()
+            }
+            else {
+                name = key.toString()
+            }
+        }
+
+        return folder.resolve(name)
+    }
+
+    /**
+     * @return Create a temporary directory
+     */
+    static Path tempDir( String name = null, boolean create = true ) {
+        final session = (Session)Global.session
+        if( !session )
+            throw new IllegalStateException("Invalid access to `tempDir` method -- Session object not yet defined")
+
+        def path = FileHelper.createTempFolder(session.workDir)
+        if( name )
+            path = path.resolve(name)
+
+        if( !path.exists() && create && !path.mkdirs() )
+            throw new IOException("Unable to create folder: $path -- Check file system permission" )
+
+        return path
+    }
+
+    /**
+     * @return Create a temporary file
+     */
+    static Path tempFile( String name = null, boolean create = false ) {
+
+        if( !name )
+            name = 'file.tmp'
+
+        def folder = tempDir()
+        def result = folder.resolve(name)
+        if( create )
+            Files.createFile(result)
+
+        return result
+    }
+
+
 
 }

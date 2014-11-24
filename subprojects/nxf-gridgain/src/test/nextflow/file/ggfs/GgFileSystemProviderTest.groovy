@@ -30,7 +30,6 @@ import nextflow.Session
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskProcessor
-import nextflow.script.BaseScript
 import org.gridgain.grid.GridGain
 import org.gridgain.grid.logger.slf4j.GridSlf4jLogger
 import spock.lang.Shared
@@ -389,12 +388,7 @@ class GgFileSystemProviderTest extends Specification {
         given:
         def session = new Session()
         session.workDir = new GgPath(fs, rndName('/work') )
-        def binding = new Binding()
-        binding.setVariable('__$session', session)
-
-        def script = new BaseScript(binding) { Object run() { return null } }
         def proc = [:] as TaskProcessor
-        proc.ownerScript = script
 
         when:
         def holder = proc.normalizeInputToFile('Hello', 'input.1')
