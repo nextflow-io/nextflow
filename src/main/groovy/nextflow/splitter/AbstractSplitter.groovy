@@ -20,6 +20,8 @@ import nextflow.util.CheckHelper
 @CompileStatic
 abstract class AbstractSplitter<T> implements SplitterStrategy {
 
+    protected Map fOptionsMap
+
     protected int count = 1
 
     protected def into
@@ -44,13 +46,17 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
 
     private targetObj
 
+    private CollectorStrategy collector
+
+    AbstractSplitter() { }
+
     /**
      * Create a splitter object for the specified operator name
      *
      * @param name The name of an operator invoking the splitter. This value
      * is meant to be used only for reporting a meaningful error message
      */
-    AbstractSplitter( String name = null ) {
+    AbstractSplitter( String name ) {
         this.operatorName = name
     }
 
@@ -61,7 +67,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      *
      * @param opt A map of named parameters
      */
-    AbstractSplitter( Map opt ) {
+    protected AbstractSplitter( Map opt ) {
         options(opt)
     }
 
@@ -69,6 +75,11 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      * @return A string representing the operator invoking the splitter
      */
     String getOperatorName() { operatorName ?: this.class.simpleName }
+
+    /**
+     * @return The splitter raw target object
+     */
+    protected Object getTargetObj() { targetObj }
 
     /**
      * @return The number of entry of which each chunk is made up
@@ -103,15 +114,26 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      * @return Either {@link groovyx.gpars.dataflow.DataflowChannel} or a {@code List} which holds the splitted chunks
      */
     final apply( int index = 0 ) {
-        def obj = normalizeType(targetObj)
-        def result = null
 
-        try {
-            result = process(obj, index)
+        setSource(targetObj)
+
+        def result = null
+        collector = createCollector()
+        if( collector instanceof CacheableCollector && collector.checkCached() ) {
+            log.debug "Operator `$operatorName` reusing cached chunks at path: ${collector.baseFile}"
+            result = resumeFromCache(collector, index)
         }
-        catch ( StopSplitIterationException e ) {
-            log.trace 'Split iteration interrupted'
+
+        else {
+            def obj = normalizeType(targetObj)
+            try {
+                result = process(obj, index)
+            }
+            catch ( StopSplitIterationException e ) {
+                log.trace 'Split iteration interrupted'
+            }
         }
+
 
         /*
          * now close and return the result
@@ -126,6 +148,33 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
         if( into != null )
             return into
 
+        return result
+    }
+
+    /**
+     * Set the file object to be split (if any)
+     * @param obj An instance of {@link Path} of {@code File}, otherwise do nothing
+     */
+    private void setSource( obj ) {
+        if( obj instanceof Path )
+            sourceFile = (Path)obj
+
+        else if( obj instanceof File )
+            sourceFile = (obj as File).toPath()
+    }
+
+    /**
+     * Emits the cache file chunks
+     *
+     * @param collector
+     * @param index
+     * @return
+     */
+    protected resumeFromCache(CacheableCollector collector, int index) {
+        def result = null
+        for( Path file : collector.chunks ) {
+            result = invokeEachClosure(closure, file, index++ )
+        }
         return result
     }
 
@@ -166,6 +215,8 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
     AbstractSplitter options( Map options ) {
         CheckHelper.checkParams(getOperatorName(), options, validOptions())
 
+        fOptionsMap = options
+
         closure = (Closure)options.each
 
         if( options.by )
@@ -177,9 +228,6 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
 
         if( options.record instanceof Map )
             recordFields = (Map)options.record
-
-        if( recordMode && count>1 )
-            throw new IllegalArgumentException("When using 'record' option 'count' cannot be greater than 1")
 
         if( options.autoClose instanceof Boolean )
             autoClose = options.autoClose as boolean
@@ -277,14 +325,19 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      */
     @PackageScope
     final invokeEachClosure( Closure closure, Object obj, int index ) {
-        if( !closure )
-            return obj
 
-        def len = closure.getMaximumNumberOfParameters()
-        if( len==1 )
-            return closure.call(obj)
+        def result = obj
+        if( closure ) {
+            def len = closure.getMaximumNumberOfParameters()
+            result = ( len==1
+                    ? closure.call(obj)
+                    : closure.call(obj, metaParam(index)))
+        }
 
-        return closure.call(obj, metaParam(index))
+        if( into != null )
+            append(into,result)
+
+        return result
     }
 
     @PackageScope
@@ -321,6 +374,10 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
             throw new IllegalArgumentException("Not a valid 'into' target object: ${into?.class?.name}")
     }
 
+    /**
+     * @param value An object to check
+     * @return {@code true} if the value is an instanceof {@link Map} of a boolean value equals to {@code true}
+     */
     static protected boolean isTrueOrMap( value ) {
         if( value instanceof Map )
             return true
@@ -328,8 +385,14 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
         return value instanceof Boolean && (value as Boolean)
     }
 
+    /**
+     * Given a {@link Path} return a new {@link InputStream} associated to it.
+     * When the file name ends with {@code .gz} the stream is filtered by a {@link GZIPInputStream}
+     *
+     * @param path An path for an existing file
+     * @return The {@link InputStream} object for the given file
+     */
     protected InputStream newInputStream( Path path ) {
-        this.sourceFile = path
 
         def result = Files.newInputStream(path)
 
@@ -343,5 +406,18 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
 
         return result
     }
+
+    /**
+     * @return The current {@link CollectorStrategy} object
+     */
+    final protected CollectorStrategy getCollector() {
+        collector
+    }
+
+    /**
+     * @return create a new {@link CollectorStrategy} object. Subclass must implement a valid
+     * strategy
+     */
+    abstract protected CollectorStrategy createCollector()
 
 }

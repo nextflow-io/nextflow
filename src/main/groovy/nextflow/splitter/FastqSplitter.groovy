@@ -37,7 +37,15 @@ class FastqSplitter extends AbstractTextSplitter {
         return result
     }
 
-    static void recordToText( String l1, String l2, String l3, String l4, StringBuilder buffer ) {
+
+    def private StringBuilder buffer = new StringBuilder()
+
+    private String errorMessage = "Invalid FASTQ format"
+
+
+    String recordToText( String l1, String l2, String l3, String l4 ) {
+        buffer.setLength(0)
+
         // read header
         buffer << l1 << '\n'
         // read string
@@ -46,81 +54,42 @@ class FastqSplitter extends AbstractTextSplitter {
         buffer << l3 << '\n'
         // quality string
         buffer << l4 << '\n'
+
+        return buffer.toString()
+    }
+
+
+    @Override
+    protected process( Reader targetObject, int index )  {
+
+        if( sourceFile )
+            errorMessage += " for file: " + sourceFile
+
+        super.process( targetObject, index )
     }
 
     @Override
-    def process( Reader targetObject, int index )  {
+    protected fetchRecord(BufferedReader reader) {
 
-        BufferedReader reader0 = (BufferedReader)(targetObject instanceof BufferedReader ? targetObject : new BufferedReader(targetObject))
+        def l1 = reader.readLine()
+        def l2 = reader.readLine()
+        def l3 = reader.readLine()
+        def l4 = reader.readLine()
 
-        final StringBuilder buffer = new StringBuilder()
-        int blockCount=0
-        long itemsCount=0
-        def result = null
+        if( !l1 || !l2 || !l3 || !l4 )
+            return null
 
-        def error = "Invalid FASTQ format"
-        if( sourceFile )
-            error += " for file: " + sourceFile
+        if( !l1.startsWith('@') || !l3.startsWith('+') )
+            throw new IllegalStateException(errorMessage)
 
-        try {
-            while( true ) {
-                def l1 = reader0.readLine()
-                def l2 = reader0.readLine()
-                def l3 = reader0.readLine()
-                def l4 = reader0.readLine()
+        if( recordMode )
+            return recordToMap(l1,l2,l3,l4, recordFields)
 
-                if( !l1 || !l2 || !l3 || !l4 )
-                    break
+        if( processQualityField )
+            return l4
 
-                if( !l1.startsWith('@') || !l3.startsWith('+') )
-                    throw new IllegalStateException(error)
-
-                if( !recordMode )
-                    recordToText(l1,l2,l3,l4,buffer)
-
-                if ( ++blockCount == count ) {
-                    // invoke the closure, passing the read block as parameter
-                    def closureArg
-                    if( recordMode )
-                        closureArg = recordToMap(l1,l2,l3,l4, recordFields)
-                    else if( processQualityField )
-                        closureArg = l4
-                    else
-                        closureArg = buffer.toString()
-
-                    result = invokeEachClosure( closure, closureArg, index++ )
-                    if( into != null ) {
-                        append(into,result)
-                    }
-
-                    buffer.setLength(0)
-                    blockCount=0
-                }
-
-                // -- check the limit of allowed rows has been reached
-                if( limit && ++itemsCount == limit )
-                    break
-
-            }
-        }
-        finally {
-            reader0.closeQuietly()
-        }
-
-        /*
-         * if there's something remaining in the buffer it's supposed
-         * to be the last entry
-         */
-        if ( buffer.size() ) {
-            // invoke the closure, passing the read block as parameter
-            result = invokeEachClosure( closure, buffer.toString(), index )
-            if( into != null )
-                append(into,result)
-        }
-
-        return result
+        return recordToText(l1,l2,l3,l4)
     }
-
 
     /**
      * Retrieve the encoding quality score of the fastq file

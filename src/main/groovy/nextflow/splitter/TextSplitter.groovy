@@ -12,51 +12,16 @@ import groovy.util.logging.Slf4j
 @InheritConstructors
 class TextSplitter extends AbstractTextSplitter {
 
+    /**
+     * A record is a text line
+     *
+     * @param reader The buffered reader
+     * @return A line string or {@code null} when the end of the file is reached
+     */
     @Override
-    def process( Reader targetObject, int index )  {
-        BufferedReader reader0 = (BufferedReader)(targetObject instanceof BufferedReader ? targetObject : new BufferedReader(targetObject))
-
-        def result = null
-        String line
-        StringBuilder buffer = new StringBuilder()
-        int c=0
-        long itemsCount=0
-
-        try {
-
-            while( (line = reader0.readLine()) != null ) {
-                buffer << line << '\n'
-
-                if ( ++c == count ) {
-                    c = 0
-                    result = invokeEachClosure(closure, buffer.toString(), index++ )
-                    if( into != null )
-                        append(into,result)
-
-                    buffer.setLength(0)
-                }
-
-                // -- check the limit of allowed rows has been reached
-                if( limit && ++itemsCount == limit )
-                    break
-            }
-
-        }
-        finally {
-            reader0.closeQuietly()
-        }
-
-        /*
-         * if there's something remaining in the buffer it's supposed
-         * to be the last entry
-         */
-        if ( buffer.size() ) {
-            result = invokeEachClosure(closure, buffer.toString(), index )
-            if( into != null )
-                append(into, result)
-        }
-
-        return result
+    protected fetchRecord(BufferedReader reader) {
+        def line = reader.readLine()
+        if( line != null ) line+='\n'
+        return line
     }
-
 }

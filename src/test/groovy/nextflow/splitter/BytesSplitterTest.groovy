@@ -33,7 +33,7 @@ class BytesSplitterTest extends Specification {
 
     def testSplitterCount() {
         expect:
-        new BytesSplitter(by: 6).target(bytes).count() == 3
+        new BytesSplitter().options(by: 6).target(bytes).count() == 3
 
     }
 
@@ -41,22 +41,22 @@ class BytesSplitterTest extends Specification {
     def testSplitterList() {
 
         expect:
-        new BytesSplitter(by: 5).target(bytes).list() == [ [0, 1, 2, 3, 4] as byte[], [5, 6, 7, 8, 9] as byte[] , [ 0, 1, 2, 3, 4] as byte[], [5, 6] as byte[] ]
+        new BytesSplitter().options(by: 5).target(bytes).list() == [ [0, 1, 2, 3, 4] as byte[], [5, 6, 7, 8, 9] as byte[] , [ 0, 1, 2, 3, 4] as byte[], [5, 6] as byte[] ]
 
     }
 
     def testSplitterWithLimit() {
 
         expect:
-        new BytesSplitter(by: 5, limit: 10).target(bytes).list() == [ [0, 1, 2, 3, 4] as byte[], [5, 6, 7, 8, 9] as byte[] ]
-        new BytesSplitter(by: 5, limit: 13).target(bytes).list() == [ [0, 1, 2, 3, 4] as byte[], [5, 6, 7, 8, 9] as byte[], [ 0, 1, 2 ] as byte[] ]
+        new BytesSplitter().options(by: 5, limit: 10).target(bytes).list() == [ [0, 1, 2, 3, 4] as byte[], [5, 6, 7, 8, 9] as byte[] ]
+        new BytesSplitter().options(by: 5, limit: 13).target(bytes).list() == [ [0, 1, 2, 3, 4] as byte[], [5, 6, 7, 8, 9] as byte[], [ 0, 1, 2 ] as byte[] ]
 
     }
 
     def testSplitterChannel() {
 
         when:
-        def c = new BytesSplitter(by: 5).target(bytes).channel()
+        def c = new BytesSplitter().options(by: 5).target(bytes).channel()
         then:
         c.val == [0, 1, 2, 3, 4] as byte[]
         c.val == [5, 6, 7, 8, 9] as byte[]

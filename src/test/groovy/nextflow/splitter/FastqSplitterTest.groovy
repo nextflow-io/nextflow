@@ -60,10 +60,7 @@ class FastqSplitterTest extends Specification {
 
     }
 
-    def testFastqSplit() {
-
-        given:
-        def text = '''
+    static final FASTAQ1 = '''
             @SRR636272.19519409/1
             GGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGATCG
             +
@@ -78,8 +75,11 @@ class FastqSplitterTest extends Specification {
             BCCFFDFFHHHHHJJJJJIJHHHHFFFFEEEEEEEDDDDDDBDBDBBDBBDBBB(:ABCDDDDDDDDDDDDDDDD@BBBDDDDDDDDDDDDBDDDDDDDDDDADC
             '''.stripIndent().trim()
 
+
+    def testFastqSplit() {
+
         when:
-        def items = new FastqSplitter().target(text).list()
+        def items = new FastqSplitter().target(FASTAQ1).list()
 
         then:
         items.size() == 3
@@ -106,10 +106,7 @@ class FastqSplitterTest extends Specification {
 
     }
 
-    def testFastqSplitByRecord() {
-
-        given:
-        def text = '''
+    static final FASTQ2 = '''
             @SRR636272.19519409/1
             GGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGATCG
             +
@@ -124,8 +121,10 @@ class FastqSplitterTest extends Specification {
             BCCFFDFFHHHHHJJJJJIJHHHHFFFFEEEEEEEDDDDDDBDBDBBDBBDBBB(:ABCDDDDDDDDDDDDDDDD@BBBDDDDDDDDDDDDBDDDDDDDDDDADC
             '''.stripIndent().trim()
 
+    def testFastqSplitByRecord() {
+
         when:
-        def records = new FastqSplitter().target(text).options(record: true).list()
+        def records = new FastqSplitter().target(FASTQ2).options(record: true).list()
         then:
         records.size() == 3
         records[0].readHeader == 'SRR636272.19519409/1'
@@ -144,7 +143,7 @@ class FastqSplitterTest extends Specification {
         records[2].qualityString == 'BCCFFDFFHHHHHJJJJJIJHHHHFFFFEEEEEEEDDDDDDBDBDBBDBBDBBB(:ABCDDDDDDDDDDDDDDDD@BBBDDDDDDDDDDDDBDDDDDDDDDDADC'
 
         when:
-        records = new FastqSplitter().target(text).options(record: [readHeader:true, readString:true, qualityString:true, qualityHeader: true]).list()
+        records = new FastqSplitter().target(FASTQ2).options(record: [readHeader:true, readString:true, qualityString:true, qualityHeader: true]).list()
         then:
         records.size() == 3
         records[0].readHeader == 'SRR636272.19519409/1'
@@ -165,10 +164,7 @@ class FastqSplitterTest extends Specification {
     }
 
 
-    def testFastqSplitBy3() {
-
-        given:
-        def text = '''
+    static final FASTQ3 = '''
         @SRR636272.19519409/1
         GGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGATCG
         +
@@ -198,10 +194,12 @@ class FastqSplitterTest extends Specification {
         +
         CCCFFFFFHHHGHJJJJJJJJJHBB?BDDD5:1:6@DDBBD@D68@<<?B8>CCDDCDDDCDDBBD>@?AA?B@D55@<ACDD8@9<?BDDDBB<<9>@BBD###
         '''
-        .stripIndent().trim()
+            .stripIndent().trim()
+
+    def testFastqSplitBy3() {
 
         when:
-        def items = new FastqSplitter().target(text).options(by:3).list()
+        def items = new FastqSplitter().target(FASTQ3).options(by:3).list()
 
         then:
         items.get(0) == '''
@@ -244,47 +242,72 @@ class FastqSplitterTest extends Specification {
             '''
                 .stripIndent().leftTrim()
 
+    }
+
+    def testFastqSplitBy3ToRecord() {
+
+        when:
+        def items = new FastqSplitter().target(FASTQ3).options(by:3, record:[readHeader:true]).list()
+        then:
+        items[0] == [ [readHeader: 'SRR636272.19519409/1'], [readHeader: 'SRR636272.13995011/1'], [readHeader: 'SRR636272.21107783/1']]
+        items[1] == [ [readHeader: 'SRR636272.23331539/1'], [readHeader: 'SRR636272.7306321/1'], [readHeader: 'SRR636272.23665592/1']]
+        items[2] == [ [readHeader: 'SRR636272.1267179/1'] ]
 
     }
 
+    def testFastqSplitBy3ToFile() {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+
+        when:
+        def items = new FastqSplitter().target(FASTQ3).options(by:3, file: folder).list()
+        then:
+        items.get(0).text == '''
+            @SRR636272.19519409/1
+            GGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGATCG
+            +
+            CCCFFFFDHHD;FF=GGDHGGHIIIGHIIIBDGBFCAHG@E=6?CBDBB;?BB@BD8BB;BDB<>>;@?BB<9>&5<?288AAABDBBBBACBCAC?@AD?CAC?
+            @SRR636272.13995011/1
+            GCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAGATCGGAAGAGCACACGTCTGAACTCC
+            +
+            BBCFDFDEFFHHFIJIHGHGHGIIFIJJJJIGGBFHHIEGBEFEFFCDDDD:@@<BB8BBDDDDDDBBB?AA?CDABDD5?CDDDBB<A<>ACBB8ACDCD@CD>
+            @SRR636272.21107783/1
+            CGGGGAGCGCGGGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTAGGGAGCACCCCGCCGCAGGGGGACAGGCGAGATCGGAAGAGCACACGTCT
+            +
+            BCCFFDFFHHHHHJJJJJIJHHHHFFFFEEEEEEEDDDDDDBDBDBBDBBDBBB(:ABCDDDDDDDDDDDDDDDD@BBBDDDDDDDDDDDDBDDDDDDDDDDADC
+            '''
+                .stripIndent().leftTrim()
+
+        items.get(1).text == '''
+            @SRR636272.23331539/1
+            GGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGCTGGAGGAGCTGCTGGCCGGGAGGGACTTCACCGGCGAGATCGGAAGAG
+            +
+            CCCFFFFFHHHHHJJJJJJJJJJJJJJJHFDDBDDBDDDDDDDDDDDDADDDDDDDDDDDDDDDDDDDDDDDDDDBDBDDD9@DDDDDDDDDDDDBBDDDBDD@@
+            @SRR636272.7306321/1
+            CGGCCAGCAGCTCCTCCAGCTGTGGCACCTTCTTCCCTTTCTTCCTAGTGCACTCTGGCCGGGCCTCCCCCCGCAGCCCTCGCTCCTCTCCCTAGATCGGAAGAG
+            +
+            CCCFFFFFHHHHHJJJJIJJJJIJJJIJJJJJJJJJJIJJIJJJJIJIIGIJJJJJGIJJJJIHFFFDDDDDDDDDDDDDDBDDDDDDDDDDCCDDDDDDD<BDB
+            @SRR636272.23665592/1
+            GGAAGAAGGTGCCACAGCTGGAGGAGCTGCTGGCCGGGAGGGACTTCACCGGCGCCATCGCCTTGCTGGAGTTTCAGCGGCACGCGGGTGAGCAAGATCGGAAGA
+            +
+            BC@DFFFFHDFHHJJJJJJJJJJIIIJJJJIIGGHIJJGJJJFHIJJIHHHFFDDDDDDDDDDDDDDDDDDCCCDCCDDDDDBDDDDD<BDDDDDDDDDDDDDD?
+            '''
+                .stripIndent().leftTrim()
+
+        items.get(2).text == '''
+            @SRR636272.1267179/1
+            CGCGGCAACGGCGCCATCGGCGGCGCGGGGAGCGCGGGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGGCA
+            +
+            CCCFFFFFHHHGHJJJJJJJJJHBB?BDDD5:1:6@DDBBD@D68@<<?B8>CCDDCDDDCDDBBD>@?AA?B@D55@<ACDD8@9<?BDDDBB<<9>@BBD###
+            '''
+                .stripIndent().leftTrim()
+
+    }
 
     def testFastqSplitWithLimit() {
 
-        given:
-        def text = '''
-        @SRR636272.19519409/1
-        GGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGATCG
-        +
-        CCCFFFFDHHD;FF=GGDHGGHIIIGHIIIBDGBFCAHG@E=6?CBDBB;?BB@BD8BB;BDB<>>;@?BB<9>&5<?288AAABDBBBBACBCAC?@AD?CAC?
-        @SRR636272.13995011/1
-        GCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAGATCGGAAGAGCACACGTCTGAACTCC
-        +
-        BBCFDFDEFFHHFIJIHGHGHGIIFIJJJJIGGBFHHIEGBEFEFFCDDDD:@@<BB8BBDDDDDDBBB?AA?CDABDD5?CDDDBB<A<>ACBB8ACDCD@CD>
-        @SRR636272.21107783/1
-        CGGGGAGCGCGGGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTAGGGAGCACCCCGCCGCAGGGGGACAGGCGAGATCGGAAGAGCACACGTCT
-        +
-        BCCFFDFFHHHHHJJJJJIJHHHHFFFFEEEEEEEDDDDDDBDBDBBDBBDBBB(:ABCDDDDDDDDDDDDDDDD@BBBDDDDDDDDDDDDBDDDDDDDDDDADC
-        @SRR636272.23331539/1
-        GGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGCTGGAGGAGCTGCTGGCCGGGAGGGACTTCACCGGCGAGATCGGAAGAG
-        +
-        CCCFFFFFHHHHHJJJJJJJJJJJJJJJHFDDBDDBDDDDDDDDDDDDADDDDDDDDDDDDDDDDDDDDDDDDDDBDBDDD9@DDDDDDDDDDDDBBDDDBDD@@
-        @SRR636272.7306321/1
-        CGGCCAGCAGCTCCTCCAGCTGTGGCACCTTCTTCCCTTTCTTCCTAGTGCACTCTGGCCGGGCCTCCCCCCGCAGCCCTCGCTCCTCTCCCTAGATCGGAAGAG
-        +
-        CCCFFFFFHHHHHJJJJIJJJJIJJJIJJJJJJJJJJIJJIJJJJIJIIGIJJJJJGIJJJJIHFFFDDDDDDDDDDDDDDBDDDDDDDDDDCCDDDDDDD<BDB
-        @SRR636272.23665592/1
-        GGAAGAAGGTGCCACAGCTGGAGGAGCTGCTGGCCGGGAGGGACTTCACCGGCGCCATCGCCTTGCTGGAGTTTCAGCGGCACGCGGGTGAGCAAGATCGGAAGA
-        +
-        BC@DFFFFHDFHHJJJJJJJJJJIIIJJJJIIGGHIJJGJJJFHIJJIHHHFFDDDDDDDDDDDDDDDDDDCCCDCCDDDDDBDDDDD<BDDDDDDDDDDDDDD?
-        @SRR636272.1267179/1
-        CGCGGCAACGGCGCCATCGGCGGCGCGGGGAGCGCGGGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGGCA
-        +
-        CCCFFFFFHHHGHJJJJJJJJJHBB?BDDD5:1:6@DDBBD@D68@<<?B8>CCDDCDDDCDDBBD>@?AA?B@D55@<ACDD8@9<?BDDDBB<<9>@BBD###
-        '''
-                .stripIndent().trim()
-
         when:
-        def items = new FastqSplitter(limit:3, record:[readHeader:true]).target(text).list()
+        def items = new FastqSplitter().options(limit:3, record:[readHeader:true]).target(FASTQ3).list()
 
         then:
         items.size() == 3
@@ -371,7 +394,6 @@ class FastqSplitterTest extends Specification {
         splitter.qualityScore() == 64
 
     }
-
 
 
     def testQualityCheckWithPath () {

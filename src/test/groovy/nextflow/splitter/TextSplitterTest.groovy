@@ -135,5 +135,34 @@ class TextSplitterTest extends Specification {
 
     }
 
+    def testSplitChunkToFiles() {
+
+        given:
+        def folder = TestHelper.createInMemTempDir()
+
+        String text = '''\
+        line1
+        line2
+        line3
+        line4
+        line5
+        line6
+        line7
+        '''.stripIndent()
+
+        when:
+        def chunks = new TextSplitter().options(by:3, file: folder).target(text).list()
+        then:
+        chunks.size() == 3
+        chunks[0].text == '''line1\nline2\nline3\n'''
+        chunks[1].text == '''line4\nline5\nline6\n'''
+        chunks[2].text == '''line7\n'''
+
+        chunks[0] == folder.resolve('chunk.1')
+        chunks[1] == folder.resolve('chunk.2')
+        chunks[2] == folder.resolve('chunk.3')
+
+    }
+
 
 }

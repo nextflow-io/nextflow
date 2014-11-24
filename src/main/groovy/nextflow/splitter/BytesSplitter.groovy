@@ -30,9 +30,6 @@ class BytesSplitter extends AbstractBinarySplitter {
                 if ( ++c == count ) {
                     c = 0
                     result = invokeEachClosure(closure, buffer, index++ )
-                    if( into != null )
-                        append(into,result)
-
                     buffer = new byte[count]
                 }
 
@@ -60,11 +57,13 @@ class BytesSplitter extends AbstractBinarySplitter {
             }
 
             result = invokeEachClosure(closure, buffer, index++ )
-            if( into != null )
-                append(into,result)
         }
 
         return result
     }
 
+    @Override
+    protected CollectorStrategy createCollector() {
+        return null
+    }
 }

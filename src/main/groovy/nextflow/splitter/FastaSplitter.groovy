@@ -136,74 +136,52 @@ class FastaSplitter extends AbstractTextSplitter {
     }
 
 
-    @Override
-    def process( Reader targetObject, int index ) {
-        BufferedReader reader0 = (BufferedReader)(targetObject instanceof BufferedReader ? targetObject : new BufferedReader(targetObject))
+    private StringBuilder buffer = new StringBuilder()
 
-        def result = null
-        String line
-        StringBuilder buffer = new StringBuilder()
-        int blockCount=0
-        long itemsCount=0
+    private String line
+
+    @Override
+    protected process( Reader targetObject, int offset ) {
+        line = null
+        super.process(targetObject, offset)
+    }
+
+    @Override
+    protected fetchRecord(BufferedReader reader) {
+
+        buffer.setLength(0)
         boolean openBlock = false
 
-        try {
+        // check if a line from a previous iteration is available
+        if( line==null )
+            line = reader.readLine()
 
-            while( (line = reader0.readLine()) != null ) {
-
-                if( line.startsWith(';')) continue
-
-                if ( line == '' ) {
-                    buffer << '\n'
-                }
-                else if ( !openBlock && line.charAt(0)=='>' ) {
-                    openBlock = true
-                    buffer << line << '\n'
-                }
-                else if ( openBlock && line.charAt(0)=='>' ) {   // another block is started
-
-                    if ( ++blockCount == count ) {
-                        // invoke the closure, passing the read block as parameter
-                        def record = recordMode ? parseFastaRecord(buffer.toString(), recordFields) : buffer.toString()
-                        result = invokeEachClosure( closure, record, index++ )
-                        if( into != null ) {
-                            append(into, result)
-                        }
-
-                        buffer.setLength(0)
-                        blockCount=0
-                    }
-
-                    // -- check the limit of allowed rows has been reached
-                    if( limit && ++itemsCount == limit )
-                        break
-
-                    buffer << line << '\n'
-
-                }
-                else {
-                    buffer << line << '\n'
-                }
+        while( line != null ) {
+            if( line.startsWith(';') ) {
+                // ignore this line
+            }
+            else if ( line == '' ) {
+                buffer << '\n'
+            }
+            else if ( !openBlock && line.charAt(0)=='>' ) {
+                openBlock = true
+                buffer << line << '\n'
+            }
+            else if ( openBlock && line.charAt(0)=='>' ) {   // another block is started
+                break
+            }
+            else {
+                buffer << line << '\n'
             }
 
-        }
-        finally {
-            reader0.closeQuietly()
+            // next line
+            line = reader.readLine()
         }
 
-
-        /*
-         * if there's something remaining in the buffer it's supposed
-         * to be the last entry
-         */
-        if ( buffer.size() ) {
-            def record = recordMode ? parseFastaRecord(buffer.toString(), recordFields) : buffer.toString()
-            result = invokeEachClosure(closure, record, index )
-            if( into != null )
-                append(into, result)
-        }
+        String result = buffer.size() ? buffer.toString() : null
+        if( result && recordMode )
+            return parseFastaRecord(result, recordFields)
 
         return result
     }
-
 }

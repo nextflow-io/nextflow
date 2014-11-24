@@ -20,51 +20,56 @@
 
 package nextflow.splitter
 
-import groovyx.gpars.dataflow.operator.PoisonPill
 import spock.lang.Specification
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class StringSplitterTest extends Specification {
+class ObjectListCollectorTest extends Specification {
 
+    def 'test list text buffer' () {
 
-    def testSplitString () {
-
-        expect:
-        new StringSplitter().options(by: 5).target('012345678901234567') .list() == ['01234','56789','01234','567']
-
-    }
-
-    def testSplitStringWithLimit () {
-
-        expect:
-        new StringSplitter().options(by:5, limit: 11).target('012345678901234567') .list() == ['01234','56789','0']
-
-    }
-
-    def testSplitWithClosure() {
-
-        expect:
-        new StringSplitter()
-            .target('012345678901234567')
-            .options(by:5, each: {it.reverse()} )
-            .list()  == ['43210','98765','43210','765']
-
-    }
-
-    def testSplitChannel() {
+        given:
+        def buffer = new ObjectListCollector()
 
         when:
-        def q = new StringSplitter().target('012345678901234567') .options(by:5). channel()
+        buffer.add('alpha')
+        buffer.add('delta')
+        buffer.add('gamma')
+
         then:
-        q.val == '01234'
-        q.val == '56789'
-        q.val == '01234'
-        q.val == '567'
-        q.val == PoisonPill.instance
+        buffer.getValue() == ['alpha','delta','gamma']
 
     }
 
+
+    def 'test is empty' () {
+
+        when:
+        def buffer = new ObjectListCollector()
+        then:
+        buffer.isEmpty()
+
+        when:
+        buffer.add('hello')
+        then:
+        !buffer.isEmpty()
+
+    }
+
+    def 'test reset' () {
+
+        given:
+        def buffer = new ObjectListCollector()
+        buffer.add('hello')
+
+        when:
+        buffer.next()
+        then:
+        buffer.isEmpty()
+        buffer.getValue() == []
+
+    }
 
 }

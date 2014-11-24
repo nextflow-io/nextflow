@@ -61,7 +61,6 @@ class AbstractSplitterTest extends Specification {
         then:
         splitter.invokeEachClosure({ x, meta -> [x, meta * 2] }, 'hola', 3) == ['hola', 6]
 
-        //splitter.invokeEachClosure({ x, y -> y * 2 }, 'hola', 3) == 6
 
     }
 

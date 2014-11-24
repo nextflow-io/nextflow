@@ -20,51 +20,57 @@
 
 package nextflow.splitter
 
-import groovyx.gpars.dataflow.operator.PoisonPill
 import spock.lang.Specification
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class StringSplitterTest extends Specification {
+class CharSequenceCollectorTest extends Specification {
 
+    def 'test string buffer' () {
 
-    def testSplitString () {
+        given:
+        def buffer = new CharSequenceCollector()
+        when:
+        buffer.add('alpha')
+        buffer.add('-')
+        buffer.add('gamma')
+        buffer.add('-')
+        buffer.add('delta')
+        buffer.add(null)
+        buffer.add('')
 
-        expect:
-        new StringSplitter().options(by: 5).target('012345678901234567') .list() == ['01234','56789','01234','567']
-
-    }
-
-    def testSplitStringWithLimit () {
-
-        expect:
-        new StringSplitter().options(by:5, limit: 11).target('012345678901234567') .list() == ['01234','56789','0']
-
-    }
-
-    def testSplitWithClosure() {
-
-        expect:
-        new StringSplitter()
-            .target('012345678901234567')
-            .options(by:5, each: {it.reverse()} )
-            .list()  == ['43210','98765','43210','765']
+        then:
+        buffer.toString() == 'alpha-gamma-delta'
 
     }
 
-    def testSplitChannel() {
+    def 'test is empty' () {
 
         when:
-        def q = new StringSplitter().target('012345678901234567') .options(by:5). channel()
+        def buffer = new CharSequenceCollector()
         then:
-        q.val == '01234'
-        q.val == '56789'
-        q.val == '01234'
-        q.val == '567'
-        q.val == PoisonPill.instance
+        buffer.isEmpty()
+
+        when:
+        buffer.add('hello')
+        then:
+        !buffer.isEmpty()
 
     }
 
+    def 'test reset' () {
+
+        given:
+        def buffer = new CharSequenceCollector()
+        buffer.add('hello')
+
+        when:
+        buffer.next()
+        then:
+        buffer.isEmpty()
+        buffer.toString() == ''
+    }
 
 }

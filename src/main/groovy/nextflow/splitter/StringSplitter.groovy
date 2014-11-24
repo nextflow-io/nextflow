@@ -31,51 +31,25 @@ class StringSplitter extends AbstractTextSplitter {
         return result
     }
 
+    protected CollectorStrategy createCollector() {
+        count > 1 ? new CharSequenceCollector() : null
+    }
+
     @Override
-    def process( Reader targetObject, int index ) {
+    protected fetchRecord(BufferedReader targetObject) {
 
-        def result = null
-        def buffer = new StringBuilder()
-        int c = 0
-        long itemsCount=0
-        def ch
+        int ch
+        while( true ) {
+            ch = targetObject.read()
+            if( ch == -1 )
+                return null
 
-        try {
+            if( ignoreNewLine && ( ch == '\n' as char || ch == '\r' as char ))
+                continue
 
-            while( (ch=targetObject.read()) != -1 ) {
-                if( ignoreNewLine && ( ch == '\n' as char || ch == '\r' as char ))
-                    continue
-                buffer.append( (char)ch )
-
-                if ( ++c == count ) {
-                    c = 0
-                    result = invokeEachClosure(closure, buffer.toString(), index++ )
-                    if( into != null )
-                        append(into, result)
-
-                    buffer.setLength(0)
-                }
-
-                // -- check the limit of allowed rows has been reached
-                if( limit && ++itemsCount == limit )
-                    break
-            }
-
-        }
-        finally {
-            targetObject.closeQuietly()
+            break
         }
 
-        /*
-         * if there's something remaining in the buffer it's supposed
-         * to be the last entry
-         */
-        if ( buffer.size() ) {
-            result = invokeEachClosure(closure, buffer.toString(), index++ )
-            if( into != null )
-                append(into, result)
-        }
-
-        return result
+        return ch as char
     }
 }

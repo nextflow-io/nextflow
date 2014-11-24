@@ -2,6 +2,8 @@ package nextflow.splitter
 
 import nextflow.Channel
 import spock.lang.Specification
+import test.TestHelper
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -179,6 +181,93 @@ class FastaSplitterTest extends Specification {
 
     }
 
+
+    def testSplitToFile() {
+
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def fasta = '''
+            >1aboA
+            NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
+            NYITPVN
+            >1ycsB
+            KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
+            VPRNLLGLYP
+            >1pht
+            GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
+            WLNGYNETTGERGDFPGTYVEYIGRKKISP
+            >1vie
+            DRVRKKSGAAWQGQIVGWYCTNLTPEGYAVESEAHPGSVQIYPVAALERI
+            N
+            >1ihvA
+            NFRVYYRDSRDPVWKGPAKLLWKGEGAVVIQDNSDIKVVPRRKAKIIRD
+            '''
+                .stripIndent().leftTrim()
+
+        when:
+        def result = new FastaSplitter().options(by: 2, file: folder).target(fasta).list()
+        then:
+        result.size() == 3
+        result[0].text ==
+            '''
+            >1aboA
+            NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
+            NYITPVN
+            >1ycsB
+            KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
+            VPRNLLGLYP
+            '''
+                    .stripIndent().leftTrim()
+
+
+        result[1].text == '''
+            >1pht
+            GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
+            WLNGYNETTGERGDFPGTYVEYIGRKKISP
+            >1vie
+            DRVRKKSGAAWQGQIVGWYCTNLTPEGYAVESEAHPGSVQIYPVAALERI
+            N
+            '''
+                .stripIndent().leftTrim()
+
+        result[2].text == '''
+            >1ihvA
+            NFRVYYRDSRDPVWKGPAKLLWKGEGAVVIQDNSDIKVVPRRKAKIIRD
+            '''
+                        .stripIndent().leftTrim()
+    }
+
+
+    def testSplitRecordBy2() {
+
+        given:
+        def fasta = '''
+            >1aboA
+            NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
+            NYITPVN
+            >1ycsB
+            KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
+            VPRNLLGLYP
+            >1pht
+            GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
+            WLNGYNETTGERGDFPGTYVEYIGRKKISP
+            >1vie
+            DRVRKKSGAAWQGQIVGWYCTNLTPEGYAVESEAHPGSVQIYPVAALERI
+            N
+            >1ihvA
+            NFRVYYRDSRDPVWKGPAKLLWKGEGAVVIQDNSDIKVVPRRKAKIIRD
+            '''
+                .stripIndent().leftTrim()
+
+        when:
+        def result = new FastaSplitter().options(record:[id: true], by:2).target(fasta).list()
+        then:
+        result.size() == 3
+        result[0] == [[id: '1aboA'], [id: '1ycsB']]
+        result[1] == [[id: '1pht'], [id: '1vie']]
+        result[2] == [[id: '1ihvA']]
+
+    }
 
 
 }

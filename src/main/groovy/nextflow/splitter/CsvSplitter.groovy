@@ -58,6 +58,7 @@ class CsvSplitter extends AbstractTextSplitter {
      * @return The splitter instance itself
      */
     CsvSplitter options(Map options) {
+
         super.options(options)
 
         // the separator character
@@ -109,22 +110,21 @@ class CsvSplitter extends AbstractTextSplitter {
      * @return
      */
     @Override
-    def process( Reader targetObject, int index ) {
-        BufferedReader reader0 = (BufferedReader)(targetObject instanceof BufferedReader ? targetObject : new BufferedReader(targetObject))
+    protected process( Reader targetObject, int index ) {
+        final reader = wrapReader(targetObject)
+        parseHeader(reader)
+        super.process(reader, index)
+    }
 
-        def result = null
+    protected void parseHeader(BufferedReader reader) {
+
         String line
-        int c=0
-        long itemsCount=0
-
-        List buffer = count > 1 ? [] : null
-
         int z = 0
-        while( z++ < skipLines && reader0.readLine()) { /* nope */ }
 
+        while( z++ < skipLines && reader.readLine()) { /* nope */ }
 
         if( firstLineAsHeader ) {
-            line = reader0.readLine()
+            line = reader.readLine()
             if( !line ) throw new IllegalStateException("Missing 'header' in CSV file")
             String[] allCols = StringUtils.splitPreserveAllTokens(line, sep)
             columnsHeader = new ArrayList<>(allCols.size())
@@ -134,66 +134,35 @@ class CsvSplitter extends AbstractTextSplitter {
                 columnsHeader[i] = col
             }
         }
+    }
 
-        try {
-            while( (line = reader0.readLine()) != null ) {
+    /**
+     * Process a CSV row at time
+     *
+     * @param reader The reader from which read the row
+     * @return A {@link List} or a {@link Map} object representing the CSV row
+     */
+    @Override
+    protected fetchRecord(BufferedReader reader) {
+        String line = reader.readLine()
+        if( !line )
+            return null
 
-                def row
-                def tokens = StringUtils.splitPreserveAllTokens(line, sep)
-                // -- strip blanks and quote
-                for( int i=0; i<tokens.length; i++ ) {
-                    tokens[i] = strip(tokens[i])
-                }
-
-                // -- convert to a map if there's a columns header
-                if( !columnsHeader ) {
-                    row = tokens
-                }
-                else {
-                    def map = [:]
-                    for( int i=0; i<columnsHeader.size(); i++ )
-                        map[ columnsHeader[i] ] = i<tokens.size() ? tokens[i] : null
-                    row = map
-                }
-
-
-                // -- append to the list buffer
-                if( buffer != null ) {
-                    buffer.add(row)
-                }
-
-                // -- invoke the closure
-                if ( ++c == count ) {
-                    c = 0
-                    result = invokeEachClosure(closure, buffer ?: row, index++ )
-                    if( into != null )
-                        append(into,result)
-
-                    if( buffer!=null )
-                        buffer = []
-                }
-
-                // -- check the limit of allowed rows has been reached
-                if( limit && ++itemsCount == limit )
-                    break
-            }
-
-        }
-        finally {
-            reader0.closeQuietly()
+        def tokens = StringUtils.splitPreserveAllTokens(line, sep)
+        // -- strip blanks and quote
+        for( int i=0; i<tokens.length; i++ ) {
+            tokens[i] = strip(tokens[i])
         }
 
-        /*
-         * if there's something remaining in the buffer it's supposed
-         * to be the last entry
-         */
-        if ( buffer ) {
-            result = invokeEachClosure(closure, buffer, index )
-            if( into != null )
-                append(into, result)
-        }
+        // -- convert to a map if there's a columns header
+        if( !columnsHeader )
+            return tokens
 
-        return result
+        def map = [:]
+        for( int i=0; i<columnsHeader.size(); i++ )
+            map[ columnsHeader[i] ] = i<tokens.size() ? tokens[i] : null
+
+        return map
     }
 
     /**
@@ -211,8 +180,17 @@ class CsvSplitter extends AbstractTextSplitter {
 
         if( value.length()>1 && value.startsWith(quote) && value.endsWith(quote) )
             return value.substring(1, value.length()-1)
+
         else
             return value
+    }
+
+    protected CollectorStrategy createCollector() {
+
+        if( count>1 )
+            return new ObjectListCollector()
+
+        return null
     }
 
 }

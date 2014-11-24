@@ -103,7 +103,7 @@ class CsvSplitterTest extends Specification {
     def testStrip( ) {
 
         when:
-        def splitter = new CsvSplitter(quote: '"')
+        def splitter = new CsvSplitter().options(quote: '"')
         then:
         splitter.strip('hello') == 'hello'
         splitter.strip('"hello"') == 'hello'
