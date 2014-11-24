@@ -53,9 +53,6 @@ class ScriptBindingTest extends Specification {
         bindings.getVariable('args')  == ['a','b','c']
         bindings.getVariable('variable_x') == 99
 
-        // note: the variable is not defined
-        !bindings.hasVariable('HOME')
-
         // note: BUT it fallback on the local environment
         bindings.getVariable('HOME') == '/this/path'
 

@@ -28,6 +28,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import jsr166y.Phaser
 import nextflow.cli.CliOptions
@@ -338,12 +339,20 @@ class Session {
         shutdownCallbacks.clear()
     }
 
-    void abort() {
-        log.debug "Session abort -- terminating all processors"
+    void abort(Throwable cause = null) {
+        log.debug "Session aborted -- Cause: ${cause?.message}"
         aborted = true
         allProcessors *. terminate()
         if( !delegateAbortToTaskMonitor )
             System.exit(ExitCode.SESSION_ABORTED)
+    }
+
+    protected void forceTermination() {
+        terminated = true
+        phaser.forceTermination()
+        allProcessors *. terminate()
+        execService?.shutdownNow()
+        GParsConfig.shutdown()
     }
 
     boolean isTerminated() { terminated }

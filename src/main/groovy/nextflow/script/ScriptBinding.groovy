@@ -86,11 +86,11 @@ class ScriptBinding extends Binding {
      */
     def getVariable( String name ) {
 
-        if ( super.hasVariable(name) ) {
+        if( super.hasVariable(name) ) {
             return super.getVariable(name)
         }
-        else if( fallbackMap()?.containsKey(name) ) {
-            fallbackMap().get(name)
+        else if( fallbackEnvMap()?.containsKey(name) ) {
+            fallbackEnvMap().get(name)
         }
         else if( sysEnv.containsKey(name) ) {
             return sysEnv.get(name)
@@ -101,9 +101,20 @@ class ScriptBinding extends Binding {
     }
 
     /**
+     * Override variable existence
+     *
+     * @param name
+     * @return
+     */
+    boolean hasVariable( String name ) {
+        super.hasVariable(name) || fallbackEnvMap()?.containsKey(name) || sysEnv.containsKey(name)
+    }
+
+
+    /**
      * The fallback session environment
-     * */
-    private Map fallbackMap() {
+     */
+    private Map fallbackEnvMap() {
         session.config.env as Map
     }
 

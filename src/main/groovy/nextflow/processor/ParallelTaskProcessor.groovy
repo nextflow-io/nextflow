@@ -308,7 +308,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         final delegate = new DelegateMap(this, contextMap)
         task.code = this.code.clone() as Closure
         task.code.delegate = delegate
-        task.code.setResolveStrategy(Closure.DELEGATE_FIRST)
+        task.code.setResolveStrategy(Closure.DELEGATE_ONLY)
 
         if( !delegate.containsKey('task') ) {
             delegate.task = task.localConfig

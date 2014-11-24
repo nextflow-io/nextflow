@@ -98,6 +98,11 @@ class ScriptRunner {
         bindings = new ScriptBinding(session)
     }
 
+    def ScriptRunner( Session session ) {
+        this.session = session
+        bindings = new ScriptBinding(session)
+    }
+
     def ScriptRunner setScript( Path file ) {
         this.scriptFile = file
         this.setScript = file.text

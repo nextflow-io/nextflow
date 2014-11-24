@@ -23,6 +23,7 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Session
+import nextflow.exception.ProcessScriptException
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.util.Duration
@@ -218,6 +219,58 @@ class ScriptRunnerTest extends Specification {
         runner.setScript(script).execute().val == '1-2-3'
 
     }
+
+
+    def 'test process missing variable' () {
+
+        setup:
+        def session = new Session( executor: 'nope' ) {
+            Throwable error
+            @Override
+            void abort(Throwable cause) {
+                this.error = cause
+                forceTermination()
+            }
+        }
+
+        def runner = new ScriptRunner(session)
+
+        def script = '''
+            process test {
+                script:
+                "$HELLO"
+            }
+
+            '''
+
+        when:
+        runner.setScript(script).execute()
+        then:
+        session.error instanceof ProcessScriptException
+        session.error.cause instanceof MissingPropertyException
+        session.error.cause.message =~ /Unknown variable 'HELLO' -- .*/
+
+    }
+
+
+    def 'test process fallback variable' () {
+
+        setup:
+        def runner = new ScriptRunner( executor: 'nope', env: [HELLO: 'Hello world!'] )
+
+        def script = '''
+            process test {
+                exec:
+                "$HELLO"
+            }
+
+            '''
+
+        expect:
+        runner.setScript(script).execute().val == 'Hello world!'
+
+    }
+
 
 
     def 'test process output file' () {

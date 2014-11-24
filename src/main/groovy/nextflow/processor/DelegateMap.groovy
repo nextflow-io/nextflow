@@ -117,12 +117,13 @@ class DelegateMap implements Map<String,Object> {
 
     @Override
     public Object get(Object property) {
+        assert property
 
         if( holder.containsKey(property) ) {
             return holder.get(property)
         }
 
-        else if ( script && script.binding?.hasVariable(property?.toString())) {
+        if( script && script.binding?.hasVariable(property.toString()) ) {
             return script.binding.getVariable(property.toString())
         }
 

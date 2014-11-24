@@ -748,7 +748,7 @@ abstract class TaskProcessor {
             log.error("Execution aborted due to an unexpected error", e )
         }
 
-        session.abort()
+        session.abort(error)
         return ErrorStrategy.TERMINATE
     }
 
