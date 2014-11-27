@@ -34,6 +34,11 @@ class CrgExecutor extends SgeExecutor {
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
 
+        if( taskConfig.cpus>1 && !taskConfig.penv ) {
+            log.debug 'Parallel environment not specified -- Using default value: `smp`'
+            taskConfig.penv = 'smp'
+        }
+
         def result = super.getSubmitCommandLine(task, scriptFile)
 
         if( task.container && isDockerEnabled() ) {
