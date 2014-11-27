@@ -102,7 +102,7 @@ if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
 fi  
 
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
-NXF_VER=${NXF_VER:-'0.11.2'}
+NXF_VER=${NXF_VER:-'0.11.3'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_ASSETS=${NXF_ASSETS:-$NXF_HOME/assets}
 NXF_CLI="$0 $@"
