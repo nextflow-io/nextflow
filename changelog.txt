@@ -1,6 +1,15 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.11.3 - 27 Nov 2014
+- Added to splitters ability to save chunks to files
+- Fixed a bug that prevented an error message to be reported when using a missing variable in the process script
+- Improved info command showing local and remote branches
+- Improved error report when failing to delete pipeline directory
+- Removed gpars methods implicit imports
+- Fixed unit for 'syscr' and 'syscw' fields in trace report
+- Upgraded JGit library version to 3.5.2.201411120430-r
+
 0.11.2 - 19 Nov 2014
 - Added 'groupTuple' operator
 - Added NXF_WORK variable to define default scratch path
