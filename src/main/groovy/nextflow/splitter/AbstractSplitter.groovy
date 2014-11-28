@@ -172,7 +172,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      */
     protected resumeFromCache(CacheableCollector collector, int index) {
         def result = null
-        for( Path file : collector.chunks ) {
+        for( Path file : collector.allChunks ) {
             result = invokeEachClosure(closure, file, index++ )
         }
         return result

@@ -49,14 +49,14 @@ class TextFileCollectorTest extends Specification {
         when:
         buffer.add('>seq1\n')
         buffer.add('alpha\n')
-        assert buffer.getValue() == base.resolveSibling('chunk.1.fasta')
+        assert buffer.getChunk() == base.resolveSibling('chunk.1.fasta')
 
         buffer.next()
         buffer.add('>seq2\n')
         buffer.add('gamma\n')
         buffer.add('>seq3\n')
         buffer.add('beta\n')
-        assert buffer.getValue() == base.resolveSibling('chunk.2.fasta')
+        assert buffer.getChunk() == base.resolveSibling('chunk.2.fasta')
 
         buffer.next()
         buffer.add('>seq4\n')
@@ -64,7 +64,7 @@ class TextFileCollectorTest extends Specification {
         buffer.add('>seq5\n')
         buffer.add('iota\n')
         buffer.add('delta\n')
-        assert buffer.getValue() == base.resolveSibling('chunk.3.fasta')
+        assert buffer.getChunk() == base.resolveSibling('chunk.3.fasta')
 
         buffer.next()
         buffer.close()
@@ -75,7 +75,43 @@ class TextFileCollectorTest extends Specification {
         base.resolveSibling('chunk.3.fasta').text == '>seq4\nkappa\n>seq5\niota\ndelta\n'
         base.resolveSibling('.chunks').exists()
         buffer.checkCached()
-        buffer.getChunks()*.name == ['chunk.1.fasta','chunk.2.fasta','chunk.3.fasta']
+        buffer.getAllChunks()*.name == ['chunk.1.fasta','chunk.2.fasta','chunk.3.fasta']
+
+        cleanup:
+        base?.parent?.deleteDir()
+    }
+
+
+    def 'test isEmpty' () {
+
+        given:
+        def base = Files.createTempDirectory('test').resolve('chunk.fasta')
+
+
+        when:
+        def buffer = new TextFileCollector(base)
+        then:
+        !buffer.hasChunk()
+
+        when:
+        buffer.add('>seq1\n')
+        buffer.add('alpha\n')
+        then:
+        buffer.hasChunk()
+
+        when:
+        buffer.next()
+        buffer.add('>seq2\n')
+        buffer.add('gamma\n')
+        buffer.add('>seq3\n')
+        buffer.add('beta\n')
+        then:
+        buffer.hasChunk()
+
+        when:
+        buffer.next()
+        then:
+        !buffer.hasChunk()
 
         cleanup:
         base?.parent?.deleteDir()

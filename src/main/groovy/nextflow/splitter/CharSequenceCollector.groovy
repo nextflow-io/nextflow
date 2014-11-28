@@ -47,8 +47,8 @@ class CharSequenceCollector implements CollectorStrategy {
     }
 
     @Override
-    boolean isEmpty() {
-        return holder.isEmpty()
+    boolean hasChunk() {
+        return !holder.isEmpty()
     }
 
     @Override
@@ -58,7 +58,7 @@ class CharSequenceCollector implements CollectorStrategy {
     }
 
     @Override
-    def getValue() {
+    def getChunk() {
         toString()
     }
 
