@@ -1157,7 +1157,8 @@ abstract class TaskProcessor {
     }
 
     protected singleItemOrList( List<FileHolder> items ) {
-        assert items
+        assert items != null
+
         if( items.size() == 1 ) {
             return items[0].stagePath
         }
@@ -1236,7 +1237,7 @@ abstract class TaskProcessor {
                 String match = (name =~ /\?+/)[0]
                 def replace = (count++).toString().padLeft(match.size(), '0')
                 def stageName = name.replace(match, replace)
-                result << holder.withName( stageName )
+                result << holder.withName(stageName)
             }
 
         }
