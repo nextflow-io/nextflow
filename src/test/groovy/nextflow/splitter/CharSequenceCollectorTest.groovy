@@ -51,12 +51,17 @@ class CharSequenceCollectorTest extends Specification {
         when:
         def buffer = new CharSequenceCollector()
         then:
-        buffer.isEmpty()
+        !buffer.hasChunk()
 
         when:
         buffer.add('hello')
         then:
-        !buffer.isEmpty()
+        buffer.hasChunk()
+
+        when:
+        buffer.next()
+        then:
+        !buffer.hasChunk()
 
     }
 
@@ -69,7 +74,7 @@ class CharSequenceCollectorTest extends Specification {
         when:
         buffer.next()
         then:
-        buffer.isEmpty()
+        !buffer.hasChunk()
         buffer.toString() == ''
     }
 

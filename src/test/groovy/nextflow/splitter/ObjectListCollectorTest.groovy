@@ -39,7 +39,7 @@ class ObjectListCollectorTest extends Specification {
         buffer.add('gamma')
 
         then:
-        buffer.getValue() == ['alpha','delta','gamma']
+        buffer.getChunk() == ['alpha','delta','gamma']
 
     }
 
@@ -49,12 +49,17 @@ class ObjectListCollectorTest extends Specification {
         when:
         def buffer = new ObjectListCollector()
         then:
-        buffer.isEmpty()
+        !buffer.hasChunk()
 
         when:
         buffer.add('hello')
         then:
-        !buffer.isEmpty()
+        buffer.hasChunk()
+
+        when:
+        buffer.next()
+        then:
+        !buffer.hasChunk()
 
     }
 
@@ -67,8 +72,8 @@ class ObjectListCollectorTest extends Specification {
         when:
         buffer.next()
         then:
-        buffer.isEmpty()
-        buffer.getValue() == []
+        !buffer.hasChunk()
+        buffer.getChunk() == []
 
     }
 

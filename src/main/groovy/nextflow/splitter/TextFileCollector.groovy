@@ -75,13 +75,13 @@ class TextFileCollector implements CollectorStrategy, CacheableCollector, Closea
     }
 
     @Override
-    def getValue() {
+    def getChunk() {
         currentPath
     }
 
     @Override
-    boolean isEmpty() {
-        return allPaths.isEmpty()
+    boolean hasChunk() {
+        return currentPath != null
     }
 
     @Override

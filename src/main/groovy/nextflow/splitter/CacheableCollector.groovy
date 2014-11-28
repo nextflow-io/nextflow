@@ -53,7 +53,7 @@ trait CacheableCollector  {
         }
     }
 
-    List<Path> getChunks() {
+    List<Path> getAllChunks() {
         new ArrayList<Path>(allPaths)
     }
 }

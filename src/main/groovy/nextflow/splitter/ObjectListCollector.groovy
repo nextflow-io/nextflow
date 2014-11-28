@@ -38,13 +38,13 @@ class ObjectListCollector implements CollectorStrategy {
     }
 
     @Override
-    def getValue() {
+    def getChunk() {
         new ArrayList(holder)
     }
 
     @Override
-    boolean isEmpty() {
-        return holder.isEmpty()
+    boolean hasChunk() {
+        return !holder.isEmpty()
     }
 
     @Override

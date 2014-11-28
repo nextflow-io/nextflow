@@ -42,13 +42,13 @@ interface CollectorStrategy {
     void next()
 
     /**
-     * @return {@link if at least an item as been added
+     * @return {@code true} if at least an item as been added
      */
-    boolean isEmpty()
+    boolean hasChunk()
 
     /**
      * @return The chunk made up of the added items
      */
-    Object getValue()
+    Object getChunk()
 
 }

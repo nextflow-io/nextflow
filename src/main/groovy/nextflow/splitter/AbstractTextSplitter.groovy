@@ -160,8 +160,8 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
             }
 
             // make sure to process collected entries
-            if ( collector && !collector.isEmpty() ) {
-                result = invokeEachClosure(closure, collector.getValue(), index )
+            if ( collector && collector.hasChunk() ) {
+                result = invokeEachClosure(closure, collector.getChunk(), index )
             }
         }
 
@@ -190,7 +190,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
             collector.add(record)
 
             if( ++blockCount == count ) {
-                result = invokeEachClosure(closure, collector.getValue(), index++ )
+                result = invokeEachClosure(closure, collector.getChunk(), index++ )
                 // reset the buffer
                 collector.next()
                 blockCount = 0
