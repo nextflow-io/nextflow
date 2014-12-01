@@ -38,7 +38,7 @@ class FileHolder  {
 
     final Path storePath
 
-    final Path stagePath
+    final StagePath stagePath
 
     FileHolder( Path inputFile ) {
         assert inputFile

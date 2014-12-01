@@ -1298,7 +1298,6 @@ abstract class TaskProcessor {
     }
 
 
-
     /**
      * Execute the specified task shell script
      *
@@ -1313,10 +1312,16 @@ abstract class TaskProcessor {
         task.workDir = folder
         task.localConfig.workDir = folder
 
+        // Important!
+        // when the task is implemented by a script string
+        // Invokes the closure which return the script whit all the variables replaced with the actual values
+        if( type == ScriptType.SCRIPTLET ) {
+            task.script = getScriptlet(task.code)
+        }
+
         // add the task to the collection of running tasks
         session.dispatcher.submit(task, blocking, runType.message)
     }
-
 
 
     /**

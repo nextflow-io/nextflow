@@ -19,6 +19,7 @@
  */
 
 package nextflow.executor
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.Callable
 import java.util.concurrent.Future
@@ -26,16 +27,17 @@ import java.util.concurrent.Future
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.file.FileHolder
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
+import nextflow.script.InParam
 import nextflow.script.ScriptType
 import nextflow.trace.TraceRecord
 import nextflow.util.Duration
 import nextflow.util.PosixProcess
-
 /**
  * Executes the specified task on the locally exploiting the underlying Java thread pool
  *
@@ -59,16 +61,17 @@ class LocalExecutor extends Executor {
         assert task
         assert task.workDir
 
-        /*
-         * when it is a native groovy code, use the native handler
-         */
-        if( task.type == ScriptType.GROOVY ) {
-            return new NativeTaskHandler(task,taskConfig,this)
-        }
+        if( task.type == ScriptType.GROOVY )
+            return createNativeTaskHandler(task)
 
-        /*
-         * otherwise as a bash script
-         */
+        else
+            return createBashTaskHandler(task)
+
+    }
+
+
+    protected TaskHandler createBashTaskHandler(TaskRun task) {
+
         final bash = new BashWrapperBuilder(task)
 
         // staging/unstage input/output files
@@ -77,9 +80,32 @@ class LocalExecutor extends Executor {
 
         // create the wrapper script
         bash.build()
-        return new LocalTaskHandler(task,taskConfig,this)
+        new LocalTaskHandler(task,taskConfig,this)
+
     }
 
+    protected TaskHandler createNativeTaskHandler(TaskRun task) {
+        stageInputFiles(task)
+        new NativeTaskHandler(task,taskConfig,this)
+    }
+
+
+    protected void stageInputFiles(TaskRun task) {
+
+        Map<InParam, List<FileHolder>> inputs = task.getInputFiles()
+        inputs.each { param, files ->
+
+            for( FileHolder holder : files ) {
+                def stage = holder.stagePath
+                def symlink = task.workDir.resolve( stage.getFileName() )
+                Files.createSymbolicLink(symlink, holder.storePath)
+                // update the stage path with the newly created symlink
+                // so that it can be referenced in the user script
+                stage.setTarget(symlink)
+            }
+
+        }
+    }
 
 }
 

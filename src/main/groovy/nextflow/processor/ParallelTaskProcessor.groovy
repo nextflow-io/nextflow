@@ -37,14 +37,12 @@ import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
 import nextflow.script.FileSharedParam
 import nextflow.script.InParam
-import nextflow.script.ScriptType
 import nextflow.script.SharedParam
 import nextflow.script.StdInParam
 import nextflow.script.ValueInParam
 import nextflow.script.ValueSharedParam
 import nextflow.util.CacheHelper
 import nextflow.util.DockerBuilder
-
 /**
  * Defines the parallel tasks execution logic
  *
@@ -340,20 +338,12 @@ class ParallelTaskProcessor extends TaskProcessor {
         // -- call the closure and execute the script
         currentTask.set(task)
 
-        // Important!
-        // when the task is implemented by a script string
-        // Invokes the closure which return the script whit all the variables replaced with the actual values
-        if( type == ScriptType.SCRIPTLET ) {
-            task.script = getScriptlet(task.code)
-        }
-
         // -- verify if exists a stored result for this case,
         //    if true skip the execution and return the stored data
-        if( checkStoredOutput(task) ) {
+        if( checkStoredOutput(task) )
             return
-        }
 
-        def keys = [ session.uniqueId, task.script ]
+        def keys = [ session.uniqueId, getSource() ]
         // add all the input name-value pairs to the key generator
         task.inputs.each { keys << it.key.name << it.value }
 

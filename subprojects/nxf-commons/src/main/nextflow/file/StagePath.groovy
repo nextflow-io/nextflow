@@ -32,7 +32,7 @@ import groovy.transform.CompileStatic
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class StagePath implements Path {
+class StagePath {
 
     @Delegate
     Path target
@@ -46,8 +46,15 @@ class StagePath implements Path {
         this.target = FileHelper.asPath(name)
     }
 
+    @Override
     String toString() {
         return target.getFileName().toString()
     }
+
+    void setTarget( Path value ) {
+        assert value
+        this.target = value
+    }
+
 
 }
