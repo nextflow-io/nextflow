@@ -96,6 +96,12 @@ class GridTaskHandler extends TaskHandler {
         // -- start the execution and notify the event to the monitor
         Process process = builder.start()
 
+        // -- forward the job launcher script to the command stdin if required
+        if( executor.pipeLauncherScript() ) {
+            process.out << wrapperFile.text
+            process.out.close()
+        }
+
         try {
             def exitStatus = 0
             String result = null
@@ -228,7 +234,7 @@ class GridTaskHandler extends TaskHandler {
     @Override
     boolean checkIfRunning() {
 
-        if( isSubmitted()  ) {
+        if( isSubmitted() ) {
 
             if( startFile && startFile.exists() && startFile.lastModified() > 0) {
                 status = RUNNING

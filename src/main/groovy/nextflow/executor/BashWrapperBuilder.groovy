@@ -156,6 +156,8 @@ class BashWrapperBuilder {
 
     Map<String,String> environment
 
+    String headerScript
+
     String stagingScript
 
     String unstagingScript
@@ -222,6 +224,7 @@ class BashWrapperBuilder {
         this.workDir = params.workDir
         this.targetDir = params.targetDir
         this.environment = params.environment
+        this.headerScript = params.headerScript
 
         // docker config
         this.dockerImage = params.container
@@ -331,6 +334,9 @@ class BashWrapperBuilder {
         final ENDL = '\n'
         def runner = new StringBuilder()
         runner << '#!' << BASH.join(' ') << ENDL
+        if( headerScript )
+            runner << headerScript << ENDL
+
         runner << scriptCleanUp(exitedFile, docker?.killCommand) << ENDL
         runner << 'touch ' << startedFile.toString() << ENDL
 

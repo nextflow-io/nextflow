@@ -19,7 +19,6 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Path
 
 import groovy.transform.InheritConstructors
@@ -39,32 +38,15 @@ import nextflow.util.Duration
 @InheritConstructors
 class SlurmExecutor extends AbstractGridExecutor {
 
-
     /**
-     * -c, --cpus-per-task=ncpus   number of cpus required per task
-     * -D, --chdir=path            change remote current working directory
-     * -e, --error=err             location of stderr redirection
-     * -E, --preserve-env          env vars for node and task counts override
-     * -i, --input=in              location of stdin redirection
-     * -J, --job-name=jobname      name of job
-     * -o, --output=out            location of stdout redirection
-     * -Q, --quiet                 quiet mode (suppress informational messages)
-     * -t, --time=minutes          time limit
-     * -u, --unbuffered            do not line-buffer stdout/err
-     * --mem=MB                minimum amount of real memory
-     * --mincpus=n             minimum number of logical processors (threads) per node
-     * --tmp=MB                minimum amount of temporary disk
-     * --mem-per-cpu=MB        maximum amount of real memory per allocated cpu required by the job. --mem >= --mem-per-cpu if --mem is specified.
+     * Gets the directives to submit the specified task to the cluster for execution
      *
-     * @param task
-     * @return
+     * @param task A {@link TaskRun} to be submitted
+     * @param result The {@link List} instance to which add the job directives
+     * @return A {@link List} containing all directive tokens and values.
      */
-    @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
+    protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        final result = new ArrayList<String>()
-
-        result << 'sbatch'
         result << '-D' << task.workDir.toString()
         result << '-J' << getJobNameFor(task)
         result << '-o' << '/dev/null'
@@ -86,12 +68,37 @@ class SlurmExecutor extends AbstractGridExecutor {
             result.addAll( getClusterOptionsAsList() )
         }
 
+        return result
+    }
+
+
+    /**
+     * The command line to submit this job
+     *
+     * @param task The {@link TaskRun} instance to submit for execution to the cluster
+     * @param scriptFile The file containing the job launcher script
+     * @return A list representing the submit command line
+     */
+    @Override
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
+
+        final result = ['sbatch']
+
+        // -- adds the jobs directives to the command line
+        getDirectives(task, result)
+
         // -- last entry to 'script' file name
         // replace with the 'shell' attribute
         result << scriptFile.getName()
 
     }
 
+    /**
+     * Parse the string returned by the {@code sbatch} command and extract the job ID string
+     *
+     * @param text The string returned when submitting the job
+     * @return The actual job ID string
+     */
     @Override
     def parseJobId(String text) {
         def pattern = ~ /Submitted batch job (\d+)/

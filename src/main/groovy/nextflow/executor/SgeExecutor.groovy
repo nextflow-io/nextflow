@@ -19,7 +19,6 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Path
 
 import groovy.transform.PackageScope
@@ -33,19 +32,15 @@ import nextflow.util.Duration
  */
 class SgeExecutor extends AbstractGridExecutor {
 
-    /*
-     * Prepare the 'qsub' cmdline. The following options are used
-     * - wd: define the job working directory
-     * - terse: output just the job id on the output stream
-     * - j: redirect qsub stdout and stderr to the same file (join)
-     * - sync: wait for the job completion
-     * -V: export the current environment
+    /**
+     * Gets the directives to submit the specified task to the cluster for execution
+     *
+     * @param task A {@link TaskRun} to be submitted
+     * @param result The {@link List} instance to which add the job directives
+     * @return A {@link List} containing all directive tokens and values.
      */
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
+    protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        final result = new ArrayList<String>()
-
-        result << 'qsub'
         result << '-wd' << task.workDir?.toString()
         result << '-N' << getJobNameFor(task)
         result << '-o' << '/dev/null'
@@ -66,7 +61,7 @@ class SgeExecutor extends AbstractGridExecutor {
         //number of cpus for multiprocessing/multi-threading
         if( taskConfig.cpus ) {
             if ( taskConfig.penv ) {
-                result << "-pe" << taskConfig.penv << taskConfig.cpus.toString()
+                result << "-pe" << taskConfig.penv.toString() << taskConfig.cpus.toString()
             } else {
                 result << "-l" << "slots=${taskConfig.cpus}"
             }
@@ -88,12 +83,37 @@ class SgeExecutor extends AbstractGridExecutor {
             result.addAll( getClusterOptionsAsList() )
         }
 
+        return result
+    }
+
+
+    /*
+     * Prepare the 'qsub' cmdline. The following options are used
+     * - wd: define the job working directory
+     * - terse: output just the job id on the output stream
+     * - j: redirect qsub stdout and stderr to the same file (join)
+     * - sync: wait for the job completion
+     * -V: export the current environment
+     */
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
+
+        final result = ['qsub']
+
+        // -- adds the jobs directives to the command line
+        getDirectives(task, result)
+
         // -- last entry to 'script' file name
         result << scriptFile.getName()
 
         return result
     }
 
+    /**
+     * Parse the string returned by the {@code qsub} command and extract the job ID string
+     *
+     * @param text The string returned when submitting the job
+     * @return The actual job ID string
+     */
     @Override
     def parseJobId( String text ) {
         // return always the last line
