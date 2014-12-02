@@ -89,9 +89,9 @@ configurations {
 
 dependencies {
     compile(project(':nxf-commons'))
-    compile "org.codehaus.groovy:groovy:2.3.7"
-    compile "org.codehaus.groovy:groovy-nio:2.3.7"
-    compile "org.codehaus.groovy:groovy-json:2.3.7"
+    compile "org.codehaus.groovy:groovy:2.3.8"
+    compile "org.codehaus.groovy:groovy-nio:2.3.8"
+    compile "org.codehaus.groovy:groovy-json:2.3.8"
     compile "org.slf4j:jcl-over-slf4j:1.7.7"
     compile "org.slf4j:jul-to-slf4j:1.7.7"
     compile "org.slf4j:log4j-over-slf4j:1.7.7"
@@ -129,8 +129,8 @@ dependencies {
 
     // Documentation required libraries
     gdocLibs 'org.fusesource.jansi:jansi:1.11'
-    gdocLibs "org.codehaus.groovy:groovy-groovydoc:2.3.7"
-    gdocLibs "org.codehaus.groovy:groovy-ant:2.3.7"
+    gdocLibs "org.codehaus.groovy:groovy-groovydoc:2.3.8"
+    gdocLibs "org.codehaus.groovy:groovy-ant:2.3.8"
 
 }
 
