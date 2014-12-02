@@ -38,14 +38,15 @@ import nextflow.util.MemoryUnit
  */
 class LsfExecutor extends AbstractGridExecutor {
 
-    @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
+    /**
+     * Gets the directives to submit the specified task to the cluster for execution
+     *
+     * @param task A {@link TaskRun} to be submitted
+     * @param result The {@link List} instance to which add the job directives
+     * @return A {@link List} containing all directive tokens and values.
+     */
+    protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        // note: LSF requires the job script file to be executable
-        scriptFile.setPermissions(7,0,0)
-
-        final result = new ArrayList<String>()
-        result << 'bsub'
         result << '-cwd' << task.workDir?.toString()
         result << '-o' << '/dev/null'
 
@@ -67,8 +68,8 @@ class LsfExecutor extends AbstractGridExecutor {
         if( taskConfig.getMemory() ) {
             def mem = taskConfig.getMemory()
             // LSF specify per-process (per-core) memory limit (in MB)
-            if( taskConfig.cpus && taskConfig.cpus>1 ) {
-                long bytes = mem.toBytes() / (int)taskConfig.cpus
+            if( taskConfig.cpus > 1 ) {
+                long bytes = mem.toBytes().intdiv(taskConfig.cpus as int)
                 mem = new MemoryUnit(bytes)
             }
             // convert to MB
@@ -83,6 +84,28 @@ class LsfExecutor extends AbstractGridExecutor {
             result.addAll( getClusterOptionsAsList() )
         }
 
+        return result
+    }
+
+
+    /**
+     * The command line to submit this job
+     *
+     * @param task The {@link TaskRun} instance to submit for execution to the cluster
+     * @param scriptFile The file containing the job launcher script
+     * @return A list representing the submit command line
+     */
+    @Override
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
+
+        // note: LSF requires the job script file to be executable
+        scriptFile.setPermissions(7,0,0)
+
+        final result = ['bsub']
+
+        // -- adds the jobs directives to the command line
+        getDirectives(task,result)
+
         // -- last entry to 'script' file name
         result << "./${scriptFile.getName()}"
 
@@ -90,6 +113,12 @@ class LsfExecutor extends AbstractGridExecutor {
 
     }
 
+    /**
+     * Parse the string returned by the {@code bsub} command and extract the job ID string
+     *
+     * @param text The string returned when submitting the job
+     * @return The actual job ID string
+     */
     @Override
     def parseJobId(String text) {
 

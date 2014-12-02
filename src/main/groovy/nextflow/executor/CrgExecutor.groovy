@@ -20,35 +20,41 @@
 
 package nextflow.executor
 
-import java.nio.file.Path
-
 import groovy.transform.PackageScope
 import nextflow.processor.TaskRun
-
-
 /**
  * An executor specialised for CRG cluster
  */
 class CrgExecutor extends SgeExecutor {
 
+    /**
+     * The jobs directives used for the job submission
+     *
+     * @param task The {@link TaskRun} instance to be submitted
+     * @param result A {@link List} object to which are added the directive tokens
+     * @return The a list of string containing the directives names and values
+     */
     @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
+    List<String> getDirectives(TaskRun task, List<String> result) {
 
         if( taskConfig.cpus>1 && !taskConfig.penv ) {
             log.debug 'Parallel environment not specified -- Using default value: `smp`'
             taskConfig.penv = 'smp'
         }
 
-        def result = super.getSubmitCommandLine(task, scriptFile)
+        super.getDirectives(task, result)
 
         if( task.container && isDockerEnabled() ) {
-            def p = result.size()-1
-            result.addAll(p, ['-soft', '-l', "docker_images=${task.container}"])
+            result << '-soft' << '-l' << "docker_images=${task.container}"
         }
 
         return result
     }
 
+    /**
+     * @return The value of the {@code docker.enabled} configuration setting defined in the
+     *  nextflow.config file
+     */
     @PackageScope
     boolean isDockerEnabled() {
         Map dockerConf = session.config.docker as Map

@@ -70,6 +70,8 @@ abstract class AbstractGridExecutor extends Executor {
 
         final bash = new BashWrapperBuilder(task)
 
+        // job directives headers
+        bash.headerScript = getHeaders(task)
         // staging/unstage input/output files
         bash.stagingScript = stagingInputFilesScript(task)
         bash.unstagingScript = unstageOutputFilesScript(task)
@@ -79,6 +81,29 @@ abstract class AbstractGridExecutor extends Executor {
 
         return new GridTaskHandler(task, taskConfig, this)
     }
+
+    /**
+     * Defines the jobs directive headers
+     *
+     * @param task
+     * @return A multi-line string containing the job directives
+     */
+    String getHeaders(TaskRun task) { null }
+
+    /**
+     * @param task The current task object
+     * @return A list of directives for this task used for the job submission
+     */
+    final List<String> getDirectives(TaskRun task) {
+        getDirectives(task, new ArrayList<String>())
+    }
+
+    /**
+     * @param task The current task object
+     * @param initial An initial list of directives
+     * @return A list of directives for this task used for the job submission
+     */
+    abstract protected List<String> getDirectives(TaskRun task, List<String> initial)
 
     /**
      * Given a task returns a *clean* name used to submit the job to the grid engine.
@@ -99,6 +124,13 @@ abstract class AbstractGridExecutor extends Executor {
      * @return A list holding the command line
      */
     abstract List<String> getSubmitCommandLine(TaskRun task, Path scriptFile)
+
+    /**
+     * Defines how script is run the by the grid-engine.
+     * @return When {@code true} the launcher script is piped over the submit tool stdin stream,
+     *  if {@code false} is specified as an argument on the command line
+     */
+    boolean pipeLauncherScript() { false }
 
     /**
      * Given the string returned the by grid submit command, extract the process handle i.e. the grid jobId

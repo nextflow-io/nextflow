@@ -28,16 +28,25 @@ import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
 
-
+/**
+ * Implements a executor for PBS/Torque cluster
+ *
+ * See http://www.pbsworks.com
+ */
 @Slf4j
 @InheritConstructors
 class PbsExecutor extends AbstractGridExecutor {
 
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
+    /**
+     * Gets the directives to submit the specified task to the cluster for execution
+     *
+     * @param task A {@link TaskRun} to be submitted
+     * @param result The {@link List} instance to which add the job directives
+     * @return A {@link List} containing all directive tokens and values.
+     */
+    protected List<String> getDirectives( TaskRun task, List<String> result ) {
+        assert result !=null
 
-        final result = new ArrayList<String>()
-
-        result << 'qsub'
         result << '-d' << task.workDir?.toString()
         result << '-N' << getJobNameFor(task)
         result << '-o' << '/dev/null'
@@ -69,12 +78,36 @@ class PbsExecutor extends AbstractGridExecutor {
             result.addAll( getClusterOptionsAsList() )
         }
 
+        return result
+    }
+
+    /**
+     * The command line to submit this job
+     *
+     * @param task The {@link TaskRun} instance to submit for execution to the cluster
+     * @param scriptFile The file containing the job launcher script
+     * @return A list representing the submit command line
+     */
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
+
+        final result = [ 'qsub' ]
+
+        // -- adds the jobs directives to the command line
+        getDirectives(task,result)
+
         // -- last entry to 'script' file name
         result << scriptFile.getName()
 
         return result
     }
 
+
+    /**
+     * Parse the string returned by the {@code qsub} command and extract the job ID string
+     *
+     * @param text The string returned when submitting the job
+     * @return The actual job ID string
+     */
     @Override
     def parseJobId( String text ) {
         // return always the last line
