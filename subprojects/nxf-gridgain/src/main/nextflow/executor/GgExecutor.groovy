@@ -301,7 +301,7 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
 
     /**
      * The local scratch dir where the task is actually executed in the remote node.
-     * Note: is declared transient because it is valid only on the remote-side execution,
+     * Note: is declared transient because it is valid only on the remote-side,
      * thus it do not need to be transported
      *
      */
