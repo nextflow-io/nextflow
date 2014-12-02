@@ -17,6 +17,8 @@ import nextflow.file.FileHelper;
 /**
  * Provides the "dynamic" splitter methods and {@code isEmpty} method for {@link File} and {@link Path} classes.
  *
+ * See http://groovy.codehaus.org/Using+the+Delegating+Meta+Class
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 public class NextflowDelegatingMetaClass extends groovy.lang.DelegatingMetaClass {
@@ -73,14 +75,14 @@ public class NextflowDelegatingMetaClass extends groovy.lang.DelegatingMetaClass
     static private final List<String> NAMES = Arrays.asList("choice","merge","separate");
 
     /**
-     *  Check teh following conditions:
+     *  Check the following conditions:
      *  <li>method name is the requested one
      *  <li>the target object is a {@link groovyx.gpars.dataflow.DataflowReadChannel}
      *  <li>the all items in the last arguments array are {@link groovyx.gpars.dataflow.DataflowWriteChannel}
      *  <li>the last item in the arguments array is a {@link Closure}
      */
     private static boolean checkOpenArrayDataflowMethod(List<String> validNames, Object obj, String methodName, Object[] args) {
-        if( !validNames.contains(methodName)  ) return false;
+        if( !validNames.contains(methodName) ) return false;
         if( !(obj instanceof DataflowReadChannel)) return false;
         if( args == null || args.length<2 ) return false;
         if( !(args[args.length-1] instanceof Closure) ) return false;
