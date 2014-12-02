@@ -96,7 +96,7 @@ class BashWrapperBuilderTest extends Specification {
          * simple bash run
          */
         when:
-        def bash = new BashWrapperBuilder(workDir: folder, script: 'echo Hello world!')
+        def bash = new BashWrapperBuilder(workDir: folder, script: 'echo Hello world!', headerScript: '#BSUB -x 1\n#BSUB -y 2')
         bash.build()
 
         then:
@@ -114,6 +114,8 @@ class BashWrapperBuilderTest extends Specification {
         folder.resolve('.command.run').text ==
                 """
                 #!/bin/bash -ue
+                #BSUB -x 1
+                #BSUB -y 2
                 nxf_kill() {
                     declare -a ALL_CHILD
                     while read P PP;do
@@ -158,6 +160,7 @@ class BashWrapperBuilderTest extends Specification {
         cleanup:
         folder?.deleteDir()
     }
+
 
     def 'test bash wrapper with trace'() {
 
