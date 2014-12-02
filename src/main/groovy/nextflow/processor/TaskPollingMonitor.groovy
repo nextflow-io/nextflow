@@ -214,8 +214,11 @@ class TaskPollingMonitor implements TaskMonitor {
                 notFull.await();
 
             if( !session.isTerminated()) {
-                pollingQueue.add(handler)
+                // submit the job execution -- throws a ProcessException when submit operation fail
                 handler.submit()
+                // note: add the 'handler' into the polling queue *after* the submit operation,
+                // this guarantees that in the queue are only jobs successfully submitted
+                pollingQueue.add(handler)
                 done = true
             }
 
