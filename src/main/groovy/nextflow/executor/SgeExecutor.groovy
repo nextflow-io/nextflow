@@ -45,13 +45,14 @@ class SgeExecutor extends AbstractGridExecutor {
         result << '-N' << getJobNameFor(task)
         result << '-o' << '/dev/null'
         result << '-j' << 'y'
-        result << '-terse'
-        result << '-V'
+        result << '-terse' << ''    // note: directive need to be returned as pairs
+        result << '-V' << ''        // for this reason an empty string value is added for flag options
+
         /*
          * By using command line option -notify SIGUSR1 will be sent to your script prior to SIGSTOP
          * and SIGUSR2 will be sent to your script prior to SIGKILL
          */
-        result << '-notify'
+        result << '-notify' << ''
 
         // the requested queue name
         if( taskConfig.queue ) {
@@ -61,7 +62,7 @@ class SgeExecutor extends AbstractGridExecutor {
         //number of cpus for multiprocessing/multi-threading
         if( taskConfig.cpus ) {
             if ( taskConfig.penv ) {
-                result << "-pe" << taskConfig.penv.toString() << taskConfig.cpus.toString()
+                result << "-pe" << "${taskConfig.penv} ${taskConfig.cpus}"
             } else {
                 result << "-l" << "slots=${taskConfig.cpus}"
             }
@@ -80,7 +81,7 @@ class SgeExecutor extends AbstractGridExecutor {
 
         // -- at the end append the command script wrapped file name
         if( taskConfig.clusterOptions ) {
-            result.addAll( getClusterOptionsAsList() )
+            result << taskConfig.clusterOptions.toString() << ''
         }
 
         return result
@@ -96,17 +97,32 @@ class SgeExecutor extends AbstractGridExecutor {
      * -V: export the current environment
      */
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
-
-        final result = ['qsub']
-
-        // -- adds the jobs directives to the command line
-        getDirectives(task, result)
-
-        // -- last entry to 'script' file name
-        result << scriptFile.getName()
-
-        return result
+         ['qsub', scriptFile.name]
     }
+
+    @Override
+    String getHeaders( TaskRun task ) {
+
+        def result = new StringBuilder()
+        def header = new ArrayList(2)
+        def dir = getDirectives(task)
+        def len = dir.size()-1
+        for( int i=0; i<len; i+=2) {
+            def opt = dir[i]
+            def val = dir[i+1]
+            if( opt ) header.add(opt)
+            if( val ) header.add(val)
+
+            if( header ) {
+                result << '#$ ' << header.join(' ') << '\n'
+            }
+
+            header.clear()
+        }
+
+        return result.toString()
+    }
+
 
     /**
      * Parse the string returned by the {@code qsub} command and extract the job ID string

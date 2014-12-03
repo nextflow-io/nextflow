@@ -19,7 +19,6 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Paths
 
 import nextflow.processor.TaskConfig
@@ -27,16 +26,24 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.script.BaseScript
 import spock.lang.Specification
-import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class SgeExecutorTest extends Specification {
 
-    @Unroll
+
     def 'test qsub cmd line' () {
+
+        given:
+        def executor = [:] as SgeExecutor
+
+        expect:
+        executor.getSubmitCommandLine( Mock(TaskRun), Paths.get('/some/file/name.sh')) == ['qsub','name.sh']
+
+    }
+
+    def 'test qsub headers' () {
 
         given:
         // mock process
@@ -50,16 +57,9 @@ class SgeExecutorTest extends Specification {
         when:
         // process name
         proc.getName() >> 'task x y'
-        // the script
-        def script = Paths.get('.job.sh')
         // config
         config.queue = 'my-queue'
-        config.clusterOptions = '-extra opt'
         config.name = 'task'
-        config.penv = test_penv
-        config.memory = test_mem
-        config.time = test_time
-        config.cpus = test_cpu
 
         def task = new TaskRun()
         task.processor = proc
@@ -67,17 +67,142 @@ class SgeExecutorTest extends Specification {
         task.index = 2
 
         then:
-        executor.getSubmitCommandLine(task,script).join(' ') == expected
+        executor.getHeaders(task) == '''
+                #$ -wd /abc
+                #$ -N nf-task_x_y_2
+                #$ -o /dev/null
+                #$ -j y
+                #$ -terse
+                #$ -V
+                #$ -notify
+                #$ -q my-queue
+                '''
+                .stripIndent().leftTrim()
 
-        where:
-        test_mem | test_time | test_cpu | test_penv || expected
-        null    | null       |  null    | null      || 'qsub -wd /abc -N nf-task_x_y_2 -o /dev/null -j y -terse -V -notify -q my-queue -extra opt .job.sh'
-        null    | null       |  1       | null      || 'qsub -wd /abc -N nf-task_x_y_2 -o /dev/null -j y -terse -V -notify -q my-queue -l slots=1 -extra opt .job.sh'
-        null    | '10s '     |  1       | null      || 'qsub -wd /abc -N nf-task_x_y_2 -o /dev/null -j y -terse -V -notify -q my-queue -l slots=1 -l h_rt=00:00:10 -extra opt .job.sh'
-        '1M'    | '10s '     |  1       | null      || 'qsub -wd /abc -N nf-task_x_y_2 -o /dev/null -j y -terse -V -notify -q my-queue -l slots=1 -l h_rt=00:00:10 -l virtual_free=1M -extra opt .job.sh'
-        '2 M'   | '2 m'      | '1'      | 'smp'     || 'qsub -wd /abc -N nf-task_x_y_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe smp 1 -l h_rt=00:02:00 -l virtual_free=2M -extra opt .job.sh'
-        '3 g'   | '3 d'      | '2'      | 'mpi'     || 'qsub -wd /abc -N nf-task_x_y_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe mpi 2 -l h_rt=72:00:00 -l virtual_free=3G -extra opt .job.sh'
-        '4 GB ' | '1d3h'     | '4'      | 'orte'    || 'qsub -wd /abc -N nf-task_x_y_2 -o /dev/null -j y -terse -V -notify -q my-queue -pe orte 4 -l h_rt=27:00:00 -l virtual_free=4G -extra opt .job.sh'
+        when:
+        config.cpus = 1
+        then:
+        executor.getHeaders(task) == '''
+                #$ -wd /abc
+                #$ -N nf-task_x_y_2
+                #$ -o /dev/null
+                #$ -j y
+                #$ -terse
+                #$ -V
+                #$ -notify
+                #$ -q my-queue
+                #$ -l slots=1
+                '''
+                .stripIndent().leftTrim()
+
+
+        when:
+        config.cpus = 1
+        config.time = '10s '
+        config.clusterOptions = '-hard -alpha -beta'
+        then:
+        executor.getHeaders(task) == '''
+                #$ -wd /abc
+                #$ -N nf-task_x_y_2
+                #$ -o /dev/null
+                #$ -j y
+                #$ -terse
+                #$ -V
+                #$ -notify
+                #$ -q my-queue
+                #$ -l slots=1
+                #$ -l h_rt=00:00:10
+                #$ -hard -alpha -beta
+                '''
+                .stripIndent().leftTrim()
+
+
+
+        when:
+        config.cpus = 1
+        config.time = '10m'
+        config.memory = '1M'
+        config.remove('clusterOptions')
+        then:
+        executor.getHeaders(task) == '''
+                #$ -wd /abc
+                #$ -N nf-task_x_y_2
+                #$ -o /dev/null
+                #$ -j y
+                #$ -terse
+                #$ -V
+                #$ -notify
+                #$ -q my-queue
+                #$ -l slots=1
+                #$ -l h_rt=00:10:00
+                #$ -l virtual_free=1M
+                '''
+                .stripIndent().leftTrim()
+
+
+
+        when:
+        config.cpus = 1
+        config.penv = 'smp'
+        config.time = '2 m'
+        config.memory = '2 M'
+        then:
+        executor.getHeaders(task) == '''
+                #$ -wd /abc
+                #$ -N nf-task_x_y_2
+                #$ -o /dev/null
+                #$ -j y
+                #$ -terse
+                #$ -V
+                #$ -notify
+                #$ -q my-queue
+                #$ -pe smp 1
+                #$ -l h_rt=00:02:00
+                #$ -l virtual_free=2M
+                '''
+                .stripIndent().leftTrim()
+
+        when:
+        config.cpus = 2
+        config.penv = 'mpi'
+        config.time = '3 d'
+        config.memory = '3 g'
+        then:
+        executor.getHeaders(task) == '''
+                #$ -wd /abc
+                #$ -N nf-task_x_y_2
+                #$ -o /dev/null
+                #$ -j y
+                #$ -terse
+                #$ -V
+                #$ -notify
+                #$ -q my-queue
+                #$ -pe mpi 2
+                #$ -l h_rt=72:00:00
+                #$ -l virtual_free=3G
+                '''
+                .stripIndent().leftTrim()
+
+        when:
+        config.cpus = 4
+        config.penv = 'orte'
+        config.time = '1d3h'
+        config.memory = '4 GB '
+        then:
+        executor.getHeaders(task) == '''
+                #$ -wd /abc
+                #$ -N nf-task_x_y_2
+                #$ -o /dev/null
+                #$ -j y
+                #$ -terse
+                #$ -V
+                #$ -notify
+                #$ -q my-queue
+                #$ -pe orte 4
+                #$ -l h_rt=27:00:00
+                #$ -l virtual_free=4G
+                '''
+                .stripIndent().leftTrim()
 
     }
 
