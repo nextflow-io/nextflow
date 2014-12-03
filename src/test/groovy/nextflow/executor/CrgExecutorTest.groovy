@@ -36,56 +36,15 @@ class CrgExecutorTest extends Specification {
     def testQsubCliCommand () {
 
         given:
-        // mock process
-        def proc = Mock(TaskProcessor)
-        def base = Mock(BaseScript)
-        def config = new TaskConfig(base)
-        // LSF executor
         def executor = [:] as CrgExecutor
-        executor.taskConfig = config
-        executor.session = new Session()
 
-        when:
-        // process name
-        proc.getName() >> 'task_x'
-        // the script
-        def script = Paths.get('.job.sh')
-        // config
-        config.queue = test_queue
-        config.clusterOptions = test_opts
-        config.name = 'task'
-        config.penv = test_penv
-        config.memory = test_mem
-        config.time = test_time
-        config.cpus = test_cpu
-        executor.session.config.docker = [enabled: test_enabled]
-
-        def task = new TaskRun()
-        task.processor = proc
-        task.workDir = Paths.get('/abc')
-        task.index = 2
-        task.container = test_container
-
-        then:
-        executor.getSubmitCommandLine(task,script).join(' ') == expected
-
-        where:
-        test_mem | test_time | test_cpu | test_penv | test_queue    | test_container | test_enabled | test_opts    || expected
-        null    | null       |  null    | null      | 'short'       | null           | false        | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q short .job.sh'
-        null    | null       |  1       | null      | 'short'       | null           | false        | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q short -l slots=1 .job.sh'
-        null    | '10s '     |  1       | null      | 'long'        | null           | false        | '-extra opt '|| 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q long -l slots=1 -l h_rt=00:00:10 -extra opt .job.sh'
-        '1M'    | '10s '     |  1       | null      | 'long'        | null           | false        | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q long -l slots=1 -l h_rt=00:00:10 -l virtual_free=1M .job.sh'
-        '2 M'   | '2 m'      | '1'      | 'smp'     | 'www'         | null           | false        | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q www -pe smp 1 -l h_rt=00:02:00 -l virtual_free=2M .job.sh'
-        '3 g'   | '3 d'      | '2'      | 'mpi'     | 'www'         | null           | false        | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q www -pe mpi 2 -l h_rt=72:00:00 -l virtual_free=3G .job.sh'
-        '4 GB ' | '1d3h'     | '4'      | 'orte'    | 'alpha'       | null           | false        | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q alpha -pe orte 4 -l h_rt=27:00:00 -l virtual_free=4G .job.sh'
-        null    | null       |  null    | null      | 'alpha'       | 'ubuntu'       | false        | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q alpha .job.sh'
-        null    | null       |  null    | null      | 'alpha'       | 'ubuntu:latest'| true         | null         || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q alpha -soft -l docker_images=ubuntu:latest .job.sh'
-        '3 g'   | '3 d'      | '2'      | 'mpi'     | 'alpha'       | 'busybox'      | true         | '-a 1 -b 2'  || 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -q alpha -pe mpi 2 -l h_rt=72:00:00 -l virtual_free=3G -a 1 -b 2 -soft -l docker_images=busybox .job.sh'
+        expect:
+        executor.getSubmitCommandLine( Mock(TaskRun), Paths.get('/some/file/name.sh')) == ['qsub','name.sh']
 
     }
 
 
-    def testQsubCliTwice() {
+    def testGetHeaders () {
 
         given:
         // mock process
@@ -97,27 +56,136 @@ class CrgExecutorTest extends Specification {
         executor.taskConfig = config
         executor.session = new Session()
 
-        when:
-        // process name
-        proc.getName() >> 'task_x'
-        // the script
-        def script = Paths.get('.job.sh')
-        // config
-        config.name = 'task'
-        executor.session.config.docker = [enabled: true]
-
         def task = new TaskRun()
         task.processor = proc
         task.workDir = Paths.get('/abc')
         task.index = 2
-        task.container = 'cbcrg/hello'
+        // process name
+        proc.getName() >> 'task_x'
+
+        when:
+
+        // config
+        config.queue = 'short'
+        config.memory = '4 GB'
+        config.time = '1d'
+        //executor.session.config.docker = [enabled: test_enabled]
+        // task.container = test_container
 
         then:
-        executor.getSubmitCommandLine(task,script).join(' ') == 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -soft -l docker_images=cbcrg/hello .job.sh'
-        executor.getSubmitCommandLine(task,script).join(' ') == 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -soft -l docker_images=cbcrg/hello .job.sh'
-        executor.getSubmitCommandLine(task,script).join(' ') == 'qsub -wd /abc -N nf-task_x_2 -o /dev/null -j y -terse -V -notify -soft -l docker_images=cbcrg/hello .job.sh'
+        executor.getHeaders(task) == '''
+                    #$ -wd /abc
+                    #$ -N nf-task_x_2
+                    #$ -o /dev/null
+                    #$ -j y
+                    #$ -terse
+                    #$ -V
+                    #$ -notify
+                    #$ -q short
+                    #$ -l h_rt=24:00:00
+                    #$ -l virtual_free=4G
+                    '''
+                    .stripIndent().leftTrim()
+
+        when:
+        executor.session.config.docker = [enabled: false]
+        task.container = 'ubuntu'
+
+        then:
+        executor.getHeaders(task) == '''
+                    #$ -wd /abc
+                    #$ -N nf-task_x_2
+                    #$ -o /dev/null
+                    #$ -j y
+                    #$ -terse
+                    #$ -V
+                    #$ -notify
+                    #$ -q short
+                    #$ -l h_rt=24:00:00
+                    #$ -l virtual_free=4G
+                    '''
+                .stripIndent().leftTrim()
+
+
+        when:
+        executor.session.config.docker = [enabled: true]
+        task.container = 'ubuntu'
+
+        then:
+        executor.getHeaders(task) == '''
+                    #$ -wd /abc
+                    #$ -N nf-task_x_2
+                    #$ -o /dev/null
+                    #$ -j y
+                    #$ -terse
+                    #$ -V
+                    #$ -notify
+                    #$ -q short
+                    #$ -l h_rt=24:00:00
+                    #$ -l virtual_free=4G
+                    #$ -soft -l docker_images=ubuntu
+                    '''
+                .stripIndent().leftTrim()
+
+        when:
+        config.memory = '3 g'
+        config.time = '3 d'
+        config.cpus = '2'
+        config.penv = 'mpi'
+        config.queue = 'long'
+        executor.session.config.docker = [enabled: true]
+        task.container = 'busybox'
+
+        then:
+        executor.getHeaders(task) == '''
+                    #$ -wd /abc
+                    #$ -N nf-task_x_2
+                    #$ -o /dev/null
+                    #$ -j y
+                    #$ -terse
+                    #$ -V
+                    #$ -notify
+                    #$ -q long
+                    #$ -pe mpi 2
+                    #$ -l h_rt=72:00:00
+                    #$ -l virtual_free=3G
+                    #$ -soft -l docker_images=busybox
+                    '''
+                .stripIndent().leftTrim()
+
+        /*
+         * repeat the same test to make sure it returns the same result
+         * i.e. check it is idempotent
+         */
+        when:
+        config.memory = '3 g'
+        config.time = '3 d'
+        config.cpus = '2'
+        config.penv = 'mpi'
+        config.queue = 'long'
+        executor.session.config.docker = [enabled: true]
+        task.container = 'busybox'
+
+        then:
+        executor.getHeaders(task) == '''
+                    #$ -wd /abc
+                    #$ -N nf-task_x_2
+                    #$ -o /dev/null
+                    #$ -j y
+                    #$ -terse
+                    #$ -V
+                    #$ -notify
+                    #$ -q long
+                    #$ -pe mpi 2
+                    #$ -l h_rt=72:00:00
+                    #$ -l virtual_free=3G
+                    #$ -soft -l docker_images=busybox
+                    '''
+                    .stripIndent().leftTrim()
+
 
     }
+
 
     def testParseJobId() {
 
