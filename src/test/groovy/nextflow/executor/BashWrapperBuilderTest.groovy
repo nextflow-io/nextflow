@@ -19,11 +19,12 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Files
 import java.nio.file.Paths
 
 import spock.lang.Specification
+import test.TestHelper
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -804,6 +805,48 @@ class BashWrapperBuilderTest extends Specification {
                     trap on_term TERM INT USR1 USR2
                     '''
                         .stripIndent().leftTrim()
+
+    }
+
+    def 'test environment file' () {
+
+        given:
+        def folder
+
+        when:
+        folder = TestHelper.createInMemTempDir()
+        new BashWrapperBuilder( workDir: folder, environment: [ALPHA:1, GAMMA:2], script: 'Hello world' ) .build()
+
+        then:
+        folder.resolve('.command.env').text == '''
+                    export ALPHA="1"
+                    export GAMMA="2"
+                    '''
+                    .stripIndent().leftTrim()
+
+        when:
+        folder = TestHelper.createInMemTempDir()
+        new BashWrapperBuilder( workDir: folder, environment: [DELTA:1, OMEGA:2], script: 'Hello world', moduleNames: ['xx','yy'] ) .build()
+
+        then:
+        folder.resolve('.command.env').text == '''
+                    module load xx
+                    module load yy
+                    export DELTA="1"
+                    export OMEGA="2"
+                    '''
+                .stripIndent().leftTrim()
+
+        when:
+        folder = TestHelper.createInMemTempDir()
+        new BashWrapperBuilder( workDir: folder, script: 'Hello world', moduleNames: ['ciao','mondo'] ) .build()
+
+        then:
+        folder.resolve('.command.env').text == '''
+                    module load ciao
+                    module load mondo
+                    '''
+                .stripIndent().leftTrim()
 
     }
 

@@ -222,6 +222,7 @@ class BashWrapperBuilder {
         this.workDir = params.workDir
         this.targetDir = params.targetDir
         this.environment = params.environment
+        this.moduleNames = params.moduleNames
 
         // docker config
         this.dockerImage = params.container
@@ -303,11 +304,18 @@ class BashWrapperBuilder {
         }
 
         /*
+         * add modules to the environment file
+         */
+        moduleNames?.each { String name ->
+            environmentFile << "module load $name\n"
+        }
+
+        /*
          * save the environment
          */
         if( environment ) {
             // create the *bash* environment script
-            environmentFile.text = TaskProcessor.bashEnvironmentScript(environment)
+            environmentFile << TaskProcessor.bashEnvironmentScript(environment)
         }
 
         // whenever it has to change to the scratch directory
@@ -337,11 +345,6 @@ class BashWrapperBuilder {
         // source the environment
         if( !runWithDocker ) {
             runner << '[ -f '<< environmentFile.toString() << ' ]' << ' && source ' << environmentFile.toString() << ENDL
-        }
-
-        // when a module is defined, load it
-        moduleNames?.each { String name ->
-            runner << 'module load ' << name << ENDL
         }
 
         if( changeDir ) {
