@@ -1,6 +1,15 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.11.4 - 3 Dic 2014 
+- Fixed issue in TextFileCollector empty condition that was creating a empty split file 
+  when the split size was equals to the number or records
+- Fixed bug that prevents a job is added to the polling queue when submit operation fails
+- Added more strict checks on $JAVA_CMD executable and $JAVA_HOME folder
+- Refactored 'sge' and 'crg' executors so that qsub directives are provided on top of job wrapper script
+- Added BSC specific executor
+- Upgraded to Groovy 2.3.8 
+
 0.11.3 - 27 Nov 2014
 - Added to splitters ability to save chunks to files
 - Fixed a bug that prevented an error message to be reported when using a missing variable in the process script
