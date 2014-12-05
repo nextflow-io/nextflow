@@ -172,8 +172,8 @@ export CAPSULE_CACHE_DIR=${CAPSULE_CACHE_DIR:=$NXF_HOME/capsule}
 CAPSULE_LOG=${CAPSULE_LOG:-'none'}
 
 # Determine the Java command to use to start the JVM.
-if [ -z "$JAVA_CMD" ] ; then
-    if [ -n "$JAVA_HOME" ] ; then
+if [ ! -x "$JAVA_CMD" ] ; then
+    if [ -d "$JAVA_HOME" ] ; then
         if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
             # IBM's JDK on AIX uses strange locations for the executables
             JAVA_CMD="$JAVA_HOME/jre/sh/java"
@@ -184,10 +184,6 @@ if [ -z "$JAVA_CMD" ] ; then
         JAVA_CMD="`which java`"
     fi
 fi
-if [ ! -x "$JAVA_CMD" ] ; then
-    die "Nextflow cannot start -- unable to run Java executable: $JAVA_CMD"
-fi
-
 
 # Verify installed Java version
 if [ ! -f "$NXF_BIN" ]; then # <-- only the first time
