@@ -225,7 +225,6 @@ class ProcessFactory {
 
         def execObj = execClass.newInstance()
         // inject the task configuration into the executor instance
-        execObj.taskConfig = taskConfig
         execObj.session = session
         execObj.name = execName
         execObj.init()

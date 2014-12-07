@@ -21,11 +21,10 @@
 package nextflow.executor
 import java.nio.file.Files
 
+import nextflow.processor.LocalConfig
 import nextflow.processor.ParallelTaskProcessor
-import nextflow.processor.TaskConfig
-import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
-import nextflow.script.BaseScript
+import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import org.ggf.drmaa.JobTemplate
 import org.ggf.drmaa.Session
@@ -42,10 +41,10 @@ class DrmaaExecutorTest extends Specification {
 
         given:
         def workDir = Files.createTempDirectory('temp')
-        def config = new TaskConfig([:])
-        def processor = [ getTaskConfig: {config}, getProcessEnvironment: {[:]} ] as ParallelTaskProcessor
+        //def config = new TaskConfig([:])
+        def processor = [ getProcessEnvironment: {[:]} ] as ParallelTaskProcessor
         def executor = [:] as DrmaaExecutor
-        def task = new TaskRun(id: 100, name: 'Hello', workDir: workDir, script: 'echo hello', processor: processor)
+        def task = new TaskRun(id: 100, name: 'Hello', workDir: workDir, script: 'echo hello', processor: processor, config: [:])
 
         when:
         def handler = executor.createTaskHandler(task)
@@ -70,16 +69,15 @@ class DrmaaExecutorTest extends Specification {
         drmaa.createJobTemplate() >> { template }
         drmaa.runJob(_) >> '12345'
 
-        def task = new TaskRun(id:1, name: 'hello', workDir: workDir)
-        def config = new TaskConfig([queue: 'short'])
+        def task = new TaskRun(id:1, name: 'hello', workDir: workDir, config: [queue: 'short'])
         def executor = [ getDrmaaSession: { drmaa } ] as DrmaaExecutor
 
-        def handler = new DrmaaTaskHandler(task, config, executor)
+        def handler = new DrmaaTaskHandler(task, executor)
         when:
         handler.submit()
 
         then:
-        handler.status == TaskHandler.Status.SUBMITTED
+        handler.status == TaskStatus.SUBMITTED
         handler.jobId == '12345'
 
         template.getWorkingDirectory() == workDir.toString()
@@ -100,10 +98,8 @@ class DrmaaExecutorTest extends Specification {
         def workDir = Files.createTempDirectory('test')
         def executor = [:] as DrmaaExecutor
         def task = new TaskRun(id:1, name: 'hello', workDir: workDir)
-        def base = Mock(BaseScript)
-        def config = new TaskConfig(base)
-        def handler = new DrmaaTaskHandler(task, config, executor)
-
+        def handler = new DrmaaTaskHandler(task, executor)
+        def config = task.config = new LocalConfig()
         when:
         config.queue = test_queue
         config.clusterOptions = test_opts
@@ -138,7 +134,7 @@ class DrmaaExecutorTest extends Specification {
         expected.native_id = '2000'
         expected.hash = '123abc'
         expected.name = 'hello'
-        expected.status = TaskHandler.Status.SUBMITTED
+        expected.status = TaskStatus.SUBMITTED
         expected.exit = 99
         expected.submit = 1406264935000
         expected.start = 1406265009000
@@ -152,12 +148,11 @@ class DrmaaExecutorTest extends Specification {
         task.workDir = workDir
         task.exitStatus = 99
         task.metaClass.getHashLog =  {'123abc'}
-        def config = new TaskConfig([:])
 
         when:
-        def handler = new DrmaaTaskHandler(task, config, Mock(DrmaaExecutor))
+        def handler = new DrmaaTaskHandler(task, Mock(DrmaaExecutor))
         handler.jobId = '2000'
-        handler.status = TaskHandler.Status.SUBMITTED
+        handler.status = TaskStatus.SUBMITTED
         handler.submitTimeMillis = 1406264935000
         handler.startTimeMillis = 1406265009000
         then:

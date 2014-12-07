@@ -200,8 +200,8 @@ class BashWrapperBuilder {
         this.environment = task.processor.getProcessEnvironment()
         this.environment.putAll( task.getInputEnvironment() )
 
-        this.moduleNames = task.processor.taskConfig.getModule()
-        this.shell = task.processor.taskConfig.shell
+        this.moduleNames = task.config.getModule()
+        this.shell = task.config.shell
         this.script = task.script.toString()
 
         // docker config

@@ -23,11 +23,11 @@ package nextflow.executor
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import nextflow.processor.TaskConfig
+import nextflow.processor.LocalConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import nextflow.script.BaseScript
 import spock.lang.Specification
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -39,11 +39,10 @@ class BscExecutorTest extends Specification {
         setup:
         // mock process
         def proc = Mock(TaskProcessor)
-        def base = Mock(BaseScript)
-        def config = new TaskConfig(base)
+        def config = new LocalConfig()
+
         // LSF executor
         def executor = [:] as BscExecutor
-        executor.taskConfig = config
 
         when:
         // process name
@@ -54,8 +53,10 @@ class BscExecutorTest extends Specification {
         config.cpus = '2'
         config.time = '1h 30min'
         config.memory = '8GB'
+
         // task object
         def task = new TaskRun()
+        task.config = config
         task.processor = proc
         task.workDir = Paths.get('/scratch')
         task.index = 1

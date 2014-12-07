@@ -66,6 +66,10 @@ class TaskConfig implements Map<String,Object> {
 
     private boolean throwExceptionOnMissingProperty
 
+    private inputs = new InputsList()
+
+    private outputs = new OutputsList()
+
     /**
      * Initialize the taskConfig object with the defaults values
      *
@@ -83,18 +87,13 @@ class TaskConfig implements Map<String,Object> {
         }
 
         configProperties = important ? new ReadOnlyMap(important) : new LinkedHashMap()
-        configProperties.with {
-            echo = false
-            undef = false
-            cacheable = true
-            shell = (BashWrapperBuilder.BASH)
-            validExitStatus = [0]
-            inputs = new InputsList()
-            outputs = new OutputsList()
-            maxRetries = 1
-            maxErrors = 3
-        }
-
+        configProperties.echo = false
+        configProperties.undef = false
+        configProperties.cacheable = true
+        configProperties.shell = BashWrapperBuilder.BASH
+        configProperties.validExitStatus = [0]
+        configProperties.maxRetries = 1
+        configProperties.maxErrors = 3
         configProperties.errorStrategy = ErrorStrategy.TERMINATE
     }
 
@@ -144,6 +143,12 @@ class TaskConfig implements Map<String,Object> {
     def getProperty( String name ) {
 
         switch( name ) {
+            case 'inputs':
+                return getInputs()
+
+            case 'outputs':
+                return getOutputs()
+
             case 'cacheable':
                 return isCacheable()
 
@@ -173,18 +178,23 @@ class TaskConfig implements Map<String,Object> {
     @PackageScope
     BaseScript getOwnerScript() { ownerScript }
 
+    @PackageScope
+    LocalConfig newLocalConfig() {
+        new LocalConfig(new HashMap(configProperties))
+    }
+
     /**
      * Type shortcut to {@code #configProperties.inputs}
      */
     InputsList getInputs() {
-        configProperties.inputs
+        inputs
     }
 
     /**
      * Type shortcut to {@code #configProperties.outputs}
      */
     OutputsList getOutputs() {
-        configProperties.outputs
+        outputs
     }
 
     List getSharedDefs () {
@@ -292,6 +302,7 @@ class TaskConfig implements Map<String,Object> {
     }
 
 
+    @Deprecated
     ErrorStrategy getErrorStrategy() {
         switch( configProperties.errorStrategy ) {
             case CharSequence:
@@ -304,7 +315,6 @@ class TaskConfig implements Map<String,Object> {
                 throw new IllegalArgumentException("Not a valid 'ErrorStrategy' value: ${configProperties.errorStrategy}")
         }
     }
-
 
     /**
      * The max memory allow to be used to the job
@@ -333,7 +343,7 @@ class TaskConfig implements Map<String,Object> {
         return this
     }
 
-
+    @Deprecated
     MemoryUnit getMemory() {
         def value = configProperties.memory
 
@@ -351,6 +361,7 @@ class TaskConfig implements Map<String,Object> {
         }
     }
 
+    @Deprecated
     Duration getTime() {
         def value = configProperties.time
 
@@ -403,10 +414,12 @@ class TaskConfig implements Map<String,Object> {
         configProperties.cache == 'deep' ? HashMode.DEEP : HashMode.STANDARD
     }
 
+    @Deprecated
     int getMaxRetries() {
         configProperties.maxRetries ? configProperties.maxRetries as int : 0
     }
 
+    @Deprecated
     int getMaxErrors() {
         configProperties.maxErrors ? configProperties.maxErrors as int : 0
     }
@@ -421,7 +434,8 @@ class TaskConfig implements Map<String,Object> {
         return this
     }
 
-    private List<String> parseModuleString( value, current = null) {
+    @PackageScope
+    static List<String> parseModuleString( value, current = null) {
 
         // if no modules list exist create it
         List<String> copy
@@ -444,6 +458,7 @@ class TaskConfig implements Map<String,Object> {
         return copy
     }
 
+    @Deprecated
     List<String> getModule() {
         def result = configProperties.module
         if( result instanceof String ) {
@@ -452,6 +467,7 @@ class TaskConfig implements Map<String,Object> {
         (List<String>) result
     }
 
+    @Deprecated
     List<String> getShell() {
         final value = configProperties.shell
         if( !value )
@@ -465,5 +481,6 @@ class TaskConfig implements Map<String,Object> {
 
         throw new IllegalArgumentException("Not a valid 'shell' configuration value: ${value}")
     }
+
 
 }

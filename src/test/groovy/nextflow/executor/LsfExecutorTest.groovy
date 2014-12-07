@@ -22,10 +22,9 @@ package nextflow.executor
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import nextflow.processor.TaskConfig
+import nextflow.processor.LocalConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import nextflow.script.BaseScript
 import spock.lang.Specification
 /**
  *
@@ -40,11 +39,9 @@ class LsfExecutorTest extends Specification {
         def folder = Files.createTempDirectory('test')
         // mock process
         def proc = Mock(TaskProcessor)
-        def base = Mock(BaseScript)
-        def config = new TaskConfig(base)
         // LSF executor
         def executor = [:] as LsfExecutor
-        executor.taskConfig = config
+        def config = new LocalConfig()
 
         when:
         // process name
@@ -58,7 +55,7 @@ class LsfExecutorTest extends Specification {
         config.time = test_time
         config.memory = test_mem
         // task object
-        def task = new TaskRun()
+        def task = new TaskRun(config: config)
         task.processor = proc
         task.workDir = Paths.get('/xxx')
         task.index = 1
@@ -73,9 +70,9 @@ class LsfExecutorTest extends Specification {
         where:
         test_cpu    | test_time    | test_mem   | test_queue || expected
         null        | null         | null       | 'alpha'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'alpha', '-J', 'nf-task_1', '-x', '1', './job.sh']
-        1           | null         | null       | 'alpha'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'alpha', '-n', '1', '-R', 'span[hosts=1]', '-J', 'nf-task_1', '-x', '1', './job.sh']
-        1           | '1min'       | '10 MB'    | 'alpha'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'alpha', '-n', '1', '-R', 'span[hosts=1]', '-W', '00:01', '-M', '10', '-J', 'nf-task_1', '-x', '1', './job.sh']
-        1           | '4h'         | '200 MB'   | 'gamma'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'gamma', '-n', '1', '-R', 'span[hosts=1]', '-W', '04:00', '-M', '200', '-J', 'nf-task_1', '-x', '1', './job.sh']
+        1           | null         | null       | 'alpha'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'alpha', '-J', 'nf-task_1', '-x', '1', './job.sh']
+        1           | '1min'       | '10 MB'    | 'alpha'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'alpha', '-W', '00:01', '-M', '10', '-J', 'nf-task_1', '-x', '1', './job.sh']
+        1           | '4h'         | '200 MB'   | 'gamma'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'gamma', '-W', '04:00', '-M', '200', '-J', 'nf-task_1', '-x', '1', './job.sh']
         4           | null         | '2 GB'     | 'gamma'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'gamma', '-n', '4', '-R', 'span[hosts=1]', '-M', '512', '-J', 'nf-task_1', '-x', '1', './job.sh']
         4           | '1d'         | '2 GB'     | 'gamma'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'gamma', '-n', '4', '-R', 'span[hosts=1]', '-W', '24:00', '-M', '512', '-J', 'nf-task_1', '-x', '1', './job.sh']
         8           | '2d'         | '2 GB'     | 'delta'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'delta', '-n', '8', '-R', 'span[hosts=1]', '-W', '48:00', '-M', '256', '-J', 'nf-task_1', '-x', '1', './job.sh']

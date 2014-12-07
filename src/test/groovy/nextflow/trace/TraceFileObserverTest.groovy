@@ -22,8 +22,8 @@ package nextflow.trace
 import java.nio.file.Files
 
 import nextflow.executor.NopeTaskHandler
-import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
+import nextflow.processor.TaskStatus
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import spock.lang.Specification
@@ -104,7 +104,7 @@ class TraceFileObserverTest extends Specification {
         observer.current == [:]
 
         when:
-        handler.status = TaskHandler.Status.SUBMITTED
+        handler.status = TaskStatus.SUBMITTED
         observer.onProcessSubmit( handler )
         def record = observer.current.get(111)
         then:
@@ -117,7 +117,7 @@ class TraceFileObserverTest extends Specification {
 
         when:
         sleep 50
-        handler.status = TaskHandler.Status.RUNNING
+        handler.status = TaskStatus.RUNNING
         observer.onProcessStart( handler )
         record = observer.current.get(111)
         then:
@@ -126,7 +126,7 @@ class TraceFileObserverTest extends Specification {
 
         when:
         sleep 50
-        handler.status = TaskHandler.Status.COMPLETED
+        handler.status = TaskStatus.COMPLETED
         handler.task.exitStatus = 127
         observer.onProcessComplete(handler)
         then:
@@ -143,7 +143,7 @@ class TraceFileObserverTest extends Specification {
         parts[1] == 'fe/ca28af'                     // hash
         parts[2] == '-'                             // native-id
         parts[3] == 'simple_task'                   // process name
-        parts[4] == TaskHandler.Status.COMPLETED.toString()
+        parts[4] == TaskStatus.COMPLETED.toString()
         parts[5] == '127'                           // exist-status
         TraceRecord.getDateFormat().parse(parts[6]).time == record.submit           // submit time
         new Duration(parts[7]).toMillis() == record.complete -record.submit         // wall-time
@@ -163,7 +163,7 @@ class TraceFileObserverTest extends Specification {
         record.hash = '43d7ef'
         record.native_id = '2000'
         record.name = 'hello'
-        record.status = TaskHandler.Status.COMPLETED
+        record.status = TaskStatus.COMPLETED
         record.exit = 99
         record.start = 1408714875000
         record.submit = 1408714874000

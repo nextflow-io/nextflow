@@ -30,11 +30,11 @@ import nextflow.exception.ProcessException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.processor.DelegateMap
-import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
+import nextflow.processor.TaskStatus
 import nextflow.script.ScriptType
 import nextflow.util.Duration
 import nextflow.util.InputStreamDeserializer
@@ -92,10 +92,10 @@ class GgExecutor extends Executor {
     TaskHandler createTaskHandler(TaskRun task) {
 
         if( task.type == ScriptType.GROOVY ) {
-            GgTaskHandler.createGroovyHandler(task, taskConfig,this)
+            GgTaskHandler.createGroovyHandler(task, this)
         }
         else {
-            GgTaskHandler.createScriptHandler(task, taskConfig, this)
+            GgTaskHandler.createScriptHandler(task, this)
         }
 
     }
@@ -172,8 +172,8 @@ class GgTaskHandler extends TaskHandler {
      */
     private GridFuture future
 
-    static GgTaskHandler createScriptHandler( TaskRun task, TaskConfig taskConfig, GgExecutor executor ) {
-        def handler = new GgTaskHandler(task,taskConfig)
+    static GgTaskHandler createScriptHandler( TaskRun task, GgExecutor executor ) {
+        def handler = new GgTaskHandler(task)
         handler.executor = executor
         handler.type = ScriptType.SCRIPTLET
         handler.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
@@ -181,15 +181,15 @@ class GgTaskHandler extends TaskHandler {
         return handler
     }
 
-    static GgTaskHandler createGroovyHandler( TaskRun task, TaskConfig taskConfig, GgExecutor executor ) {
-        def handler = new GgTaskHandler(task,taskConfig)
+    static GgTaskHandler createGroovyHandler( TaskRun task, GgExecutor executor ) {
+        def handler = new GgTaskHandler(task)
         handler.executor = executor
         handler.type = ScriptType.GROOVY
         return handler
     }
 
-    private GgTaskHandler(TaskRun task, TaskConfig config) {
-        super(task,config)
+    private GgTaskHandler(TaskRun task) {
+        super(task)
     }
 
     @Override
@@ -203,7 +203,7 @@ class GgTaskHandler extends TaskHandler {
         future.listenAsync( { executor.getTaskMonitor().signalComplete(); } as GridInClosure )
 
         // mark as submitted -- transition to STARTED has to be managed by the scheduler
-        status = TaskHandler.Status.SUBMITTED
+        status = TaskStatus.SUBMITTED
         log.trace "Task $task > Submitted"
     }
 
@@ -211,7 +211,7 @@ class GgTaskHandler extends TaskHandler {
     boolean checkIfRunning() {
         if( isSubmitted() && future ) {
             log.trace "Task ${task} > RUNNING"
-            status = TaskHandler.Status.RUNNING
+            status = TaskStatus.RUNNING
             return true
         }
 
@@ -222,7 +222,7 @@ class GgTaskHandler extends TaskHandler {
     boolean checkIfCompleted() {
 
         if( isRunning() && (future.isCancelled() || (future.isDone() && (!exitFile || exitFile.lastModified()>0)))  ) {
-            status = TaskHandler.Status.COMPLETED
+            status = TaskStatus.COMPLETED
 
             final result = (GridComputeJobResult)future.get()
             if( result.getException() ) {
@@ -536,7 +536,7 @@ class GgBashTask extends GgBaseTask<Integer>  {
         this.stdin = task.stdin
         this.container = task.container
         this.environment = task.processor.getProcessEnvironment()
-        this.shell = task.processor.taskConfig.getShell()
+        this.shell = task.config.getShell()
         this.script = task.script
     }
 

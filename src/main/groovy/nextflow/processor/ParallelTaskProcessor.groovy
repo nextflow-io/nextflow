@@ -43,6 +43,7 @@ import nextflow.script.ValueInParam
 import nextflow.script.ValueSharedParam
 import nextflow.util.CacheHelper
 import nextflow.util.DockerBuilder
+
 /**
  * Defines the parallel tasks execution logic
  *
@@ -291,15 +292,6 @@ class ParallelTaskProcessor extends TaskProcessor {
             task.setInput(param, val)
         }
 
-        // local config provide a set of attributes injected by default in the
-        // in the script evaluation context (scope: 'task')
-        task.localConfig = new LocalConfig()
-        task.localConfig.cpus = taskConfig.cpus ?: 1
-        if( taskConfig.penv ) task.localConfig.penv = taskConfig.penv
-        if( taskConfig.time ) task.localConfig.time = taskConfig.time
-        if( taskConfig.memory ) task.localConfig.memory = taskConfig.memory
-        if( taskConfig.queue ) task.localConfig.queue = taskConfig.queue
-
         /*
          * initialize the task code to be executed
          */
@@ -309,16 +301,17 @@ class ParallelTaskProcessor extends TaskProcessor {
         task.code.setResolveStrategy(Closure.DELEGATE_ONLY)
 
         if( !delegate.containsKey('task') ) {
-            delegate.task = task.localConfig
+            delegate.task = task.config
         }
         else if( !overrideWarnShown.getAndSet(true) ) {
-            log.warn "Process $name overrides value of reserved variable 'task' "
+            log.warn "Process $name overrides reserved variable `task`"
         }
 
-        // set the docker container to be used
-        def imageName = taskConfig.container as String
-        def dockerConf = task.processor?.session?.config?.docker as Map
-        task.container = DockerBuilder.normalizeDockerImageName(imageName, dockerConf)
+        /*
+         * set the delegate map as context ih the task config so that
+         * lazy directives will be resolved against it
+         */
+        task.config.setContext(delegate)
 
         return task
     }

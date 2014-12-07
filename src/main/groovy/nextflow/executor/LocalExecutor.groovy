@@ -28,12 +28,12 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.file.FileHolder
-import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.script.InParam
+import nextflow.processor.TaskStatus
 import nextflow.script.ScriptType
 import nextflow.trace.TraceRecord
 import nextflow.util.Duration
@@ -80,13 +80,12 @@ class LocalExecutor extends Executor {
 
         // create the wrapper script
         bash.build()
-        new LocalTaskHandler(task,taskConfig,this)
-
+        new LocalTaskHandler(task,this)
     }
 
     protected TaskHandler createNativeTaskHandler(TaskRun task) {
         stageInputFiles(task)
-        new NativeTaskHandler(task,taskConfig,this)
+        new NativeTaskHandler(task,this)
     }
 
 
@@ -140,13 +139,13 @@ class LocalTaskHandler extends TaskHandler {
     private volatile result
 
 
-    LocalTaskHandler( TaskRun task, TaskConfig taskConfig, LocalExecutor executor  ) {
-        super(task, taskConfig)
+    LocalTaskHandler( TaskRun task, LocalExecutor executor  ) {
+        super(task)
         // create the task handler
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
-        this.wallTimeMillis = taskConfig.getTime()?.toMillis()
+        this.wallTimeMillis = task.config.getTime()?.toMillis()
         this.executor = executor
         this.session = executor.session
     }
@@ -181,7 +180,7 @@ class LocalTaskHandler extends TaskHandler {
         } )
 
         // mark as submitted -- transition to STARTED has to be managed by the scheduler
-        status = Status.SUBMITTED
+        status = TaskStatus.SUBMITTED
     }
 
 
@@ -196,7 +195,7 @@ class LocalTaskHandler extends TaskHandler {
     boolean checkIfRunning() {
 
         if( isSubmitted() && process != null ) {
-            status = Status.RUNNING
+            status = TaskStatus.RUNNING
             return true
         }
 
@@ -215,7 +214,7 @@ class LocalTaskHandler extends TaskHandler {
             task.exitStatus = result instanceof Integer ? result : Integer.MAX_VALUE
             task.error = result instanceof Throwable ? result : null
             task.stdout = outputFile
-            status = Status.COMPLETED
+            status = TaskStatus.COMPLETED
             destroy()
             return true
         }
@@ -227,7 +226,7 @@ class LocalTaskHandler extends TaskHandler {
             if( elapsedTimeMillis() > wallTimeMillis ) {
                 destroy()
                 task.stdout = outputFile
-                status = Status.COMPLETED
+                status = TaskStatus.COMPLETED
 
                 // signal has completed
                 return true
@@ -307,8 +306,8 @@ class NativeTaskHandler extends TaskHandler {
         }
     }
 
-    protected NativeTaskHandler(TaskRun task, TaskConfig taskConfig, Executor executor) {
-        super(task, taskConfig)
+    protected NativeTaskHandler(TaskRun task, Executor executor) {
+        super(task)
         this.executor = executor
         this.session = executor.session
     }
@@ -320,13 +319,13 @@ class NativeTaskHandler extends TaskHandler {
         // it returns an error when everything is OK
         // of the exception throw in case of error
         result = session.getExecService().submit(new TaskSubmit(task))
-        status = Status.SUBMITTED
+        status = TaskStatus.SUBMITTED
     }
 
     @Override
     boolean checkIfRunning() {
         if( isSubmitted() && result != null ) {
-            status = Status.RUNNING
+            status = TaskStatus.RUNNING
             return true
         }
 
@@ -336,7 +335,7 @@ class NativeTaskHandler extends TaskHandler {
     @Override
     boolean checkIfCompleted() {
         if( isRunning() && result.isDone() ) {
-            status = Status.COMPLETED
+            status = TaskStatus.COMPLETED
             if( result.get() instanceof Throwable ) {
                 task.error = (Throwable)result.get()
             }

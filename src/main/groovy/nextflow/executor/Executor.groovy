@@ -27,13 +27,11 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.MissingFileException
 import nextflow.file.FileHolder
-import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 import nextflow.script.InParam
 import nextflow.script.ScriptType
-
 /**
  * Declares methods have to be implemented by a generic
  * execution strategy
@@ -43,11 +41,6 @@ import nextflow.script.ScriptType
 @Slf4j
 @SupportedScriptTypes( [ScriptType.SCRIPTLET] )
 abstract class Executor {
-
-    /**
-     * The object holding the configuration declared by this task
-     */
-    TaskConfig taskConfig
 
     /**
      * The current session object

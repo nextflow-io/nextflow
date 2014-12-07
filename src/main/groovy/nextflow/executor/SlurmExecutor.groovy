@@ -24,8 +24,6 @@ import java.nio.file.Path
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
-import nextflow.util.Duration
-
 /**
  * Processor for SLURM resource manager (DRAFT)
  *
@@ -51,22 +49,20 @@ class SlurmExecutor extends AbstractGridExecutor {
         result << '-J' << getJobNameFor(task)
         result << '-o' << '/dev/null'
 
-        if( taskConfig.cpus ) {
-            result << '-c' << taskConfig.cpus.toString()
+        if( task.config.cpus > 1 ) {
+            result << '-c' << task.config.cpus.toString()
         }
 
-        if( taskConfig.time ) {
-            result << '-t' << (taskConfig.time as Duration).format('HH:mm:ss')
+        if( task.config.time ) {
+            result << '-t' << task.config.getTime().format('HH:mm:ss')
         }
 
-        if( taskConfig.getMemory() ) {
-            result << '--mem' << taskConfig.getMemory().toMega().toString()
+        if( task.config.getMemory() ) {
+            result << '--mem' << task.config.getMemory().toMega().toString()
         }
 
         // -- at the end append the command script wrapped file name
-        if( taskConfig.clusterOptions ) {
-            result.addAll( getClusterOptionsAsList() )
-        }
+        result.addAll( task.config.getClusterOptionsAsList() )
 
         return result
     }

@@ -21,10 +21,9 @@
 package nextflow.executor
 import java.nio.file.Paths
 
-import nextflow.processor.TaskConfig
+import nextflow.processor.LocalConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import nextflow.script.BaseScript
 import spock.lang.Specification
 /**
  *
@@ -56,16 +55,13 @@ class SlurmExecutorTest extends Specification {
         // mock process
         def proc = Mock(TaskProcessor)
         proc.getName() >> { 'myJob' }
-        // mock script
-        def base = Mock(BaseScript)
         // config object
-        def config = new TaskConfig(base)
         def script = Paths.get('/some/script.sh')
         // task object
         def task = new TaskRun(workDir: Paths.get('/work/path'), index: 33, processor: proc)
         // SLURM executor
         def exec = [:] as SlurmExecutor
-        exec.taskConfig = config
+        def config = task.config = new LocalConfig()
 
         when:
         config.cpus = test_cpus
@@ -79,7 +75,7 @@ class SlurmExecutorTest extends Specification {
         test_cpus   | test_mem  | test_time | test_opts || expected
         null        | null      | null      | null      || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null script.sh'
         null        | null      | '1m'      | null      || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -t 00:01:00 script.sh'
-        1           | '50 M'    | '1h'      | '-a 1'    || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 1 -t 01:00:00 --mem 50 -a 1 script.sh'
+        1           | '50 M'    | '1h'      | '-a 1'    || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -t 01:00:00 --mem 50 -a 1 script.sh'
         2           | '200 M'   | '2h'      | '-b 2'    || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 2 -t 02:00:00 --mem 200 -b 2 script.sh'
         8           | '3 G'     | '2d'      | '-x 3'    || 'sbatch -D /work/path -J nf-myJob_33 -o /dev/null -c 8 -t 48:00:00 --mem 3072 -x 3 script.sh'
     }

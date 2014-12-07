@@ -19,14 +19,10 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Path
 
 import nextflow.processor.TaskRun
-import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-
-
 /**
  * Processor for LSF resource manager (DRAFT)
  *
@@ -51,25 +47,25 @@ class LsfExecutor extends AbstractGridExecutor {
         result << '-o' << '/dev/null'
 
         // add other parameters (if any)
-        if( taskConfig.queue ) {
-            result << '-q'  << (taskConfig.queue as String)
+        if( task.config.queue ) {
+            result << '-q'  << (task.config.queue as String)
         }
 
         //number of cpus for multiprocessing/multi-threading
-        if( taskConfig.cpus ) {
-            result << "-n" << taskConfig.cpus.toString()
+        if( task.config.cpus > 1 ) {
+            result << "-n" << task.config.cpus.toString()
             result << "-R" << "span[hosts=1]"
         }
 
-        if( taskConfig.time ) {
-            result << '-W' << (taskConfig.time as Duration).format('HH:mm')
+        if( task.config.time ) {
+            result << '-W' << task.config.getTime().format('HH:mm')
         }
 
-        if( taskConfig.getMemory() ) {
-            def mem = taskConfig.getMemory()
+        if( task.config.getMemory() ) {
+            def mem = task.config.getMemory()
             // LSF specify per-process (per-core) memory limit (in MB)
-            if( taskConfig.cpus > 1 ) {
-                long bytes = mem.toBytes().intdiv(taskConfig.cpus as int)
+            if( task.config.cpus > 1 ) {
+                long bytes = mem.toBytes().intdiv(task.config.cpus as int)
                 mem = new MemoryUnit(bytes)
             }
             // convert to MB
@@ -80,9 +76,7 @@ class LsfExecutor extends AbstractGridExecutor {
         result << '-J' << getJobNameFor(task)
 
         // -- at the end append the command script wrapped file name
-        if( taskConfig.clusterOptions ) {
-            result.addAll( getClusterOptionsAsList() )
-        }
+        result.addAll( task.config.getClusterOptionsAsList() )
 
         return result
     }

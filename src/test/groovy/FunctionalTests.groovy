@@ -44,7 +44,6 @@ class FunctionalTests extends Specification {
     }
 
 
-
     /**
      * test passing values through environment variables
      */

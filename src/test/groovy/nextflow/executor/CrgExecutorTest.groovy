@@ -19,14 +19,15 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Paths
 
 import nextflow.Session
-import nextflow.processor.TaskConfig
+import nextflow.processor.LocalConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import nextflow.script.BaseScript
 import spock.lang.Specification
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -49,11 +50,8 @@ class CrgExecutorTest extends Specification {
         given:
         // mock process
         def proc = Mock(TaskProcessor)
-        def base = Mock(BaseScript)
-        def config = new TaskConfig(base)
         // LSF executor
         def executor = [:] as CrgExecutor
-        executor.taskConfig = config
         executor.session = new Session()
 
         def task = new TaskRun()
@@ -64,13 +62,12 @@ class CrgExecutorTest extends Specification {
         proc.getName() >> 'task_x'
 
         when:
-
         // config
-        config.queue = 'short'
-        config.memory = '4 GB'
-        config.time = '1d'
-        //executor.session.config.docker = [enabled: test_enabled]
-        // task.container = test_container
+        task.config = new LocalConfig(
+                        queue: 'short',
+                        memory: '4 GB',
+                        time: '1d',
+                    )
 
         then:
         executor.getHeaders(task) == '''
@@ -89,7 +86,12 @@ class CrgExecutorTest extends Specification {
 
         when:
         executor.session.config.docker = [enabled: false]
-        task.container = 'ubuntu'
+        task.config = new LocalConfig(
+                queue: 'short',
+                memory: '4 GB',
+                time: '1d',
+                container: 'ubuntu'
+        )
 
         then:
         executor.getHeaders(task) == '''
@@ -109,7 +111,12 @@ class CrgExecutorTest extends Specification {
 
         when:
         executor.session.config.docker = [enabled: true]
-        task.container = 'ubuntu'
+        task.config = new LocalConfig(
+                queue: 'short',
+                memory: '4 GB',
+                time: '1d',
+                container: 'ubuntu'
+        )
 
         then:
         executor.getHeaders(task) == '''
@@ -128,13 +135,15 @@ class CrgExecutorTest extends Specification {
                 .stripIndent().leftTrim()
 
         when:
-        config.memory = '3 g'
-        config.time = '3 d'
-        config.cpus = '2'
-        config.penv = 'mpi'
-        config.queue = 'long'
         executor.session.config.docker = [enabled: true]
-        task.container = 'busybox'
+        task.config = new LocalConfig(
+                memory: '3 g',
+                time: '3 d',
+                cpus: '2',
+                penv: 'mpi',
+                queue: 'long',
+                container: 'busybox'
+        )
 
         then:
         executor.getHeaders(task) == '''
@@ -158,13 +167,15 @@ class CrgExecutorTest extends Specification {
          * i.e. check it is idempotent
          */
         when:
-        config.memory = '3 g'
-        config.time = '3 d'
-        config.cpus = '2'
-        config.penv = 'mpi'
-        config.queue = 'long'
         executor.session.config.docker = [enabled: true]
-        task.container = 'busybox'
+        task.config = new LocalConfig(
+                memory: '3 g',
+                time: '3 d',
+                cpus: '2',
+                penv: 'mpi',
+                queue: 'long',
+                container: 'busybox',
+        )
 
         then:
         executor.getHeaders(task) == '''

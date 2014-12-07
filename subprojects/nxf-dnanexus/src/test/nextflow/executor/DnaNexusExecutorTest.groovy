@@ -23,8 +23,8 @@ import java.nio.file.Files
 
 import nextflow.fs.dx.api.DxApi
 import nextflow.processor.TaskConfig
-import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
+import nextflow.processor.TaskStatus
 import nextflow.script.BaseScript
 import spock.lang.Specification
 /**
@@ -148,7 +148,7 @@ class DnaNexusExecutorTest extends Specification {
         handler.metaClass.checkStatus = { return [state:'runnable'] }
         when:
         handler.processJobId = '123'
-        handler.status = TaskHandler.Status.SUBMITTED
+        handler.status = TaskStatus.SUBMITTED
         then:
         handler.checkIfRunning()
 
@@ -172,10 +172,10 @@ class DnaNexusExecutorTest extends Specification {
         def handler = new DxTaskHandler(task, config, exec, [:], api);
         handler.metaClass.checkStatus = { return [state:'running'] }
         handler.processJobId = '123'
-        handler.status = TaskHandler.Status.RUNNING
+        handler.status = TaskStatus.RUNNING
         then:
         !handler.checkIfCompleted()
-        handler.status == TaskHandler.Status.RUNNING
+        handler.status == TaskStatus.RUNNING
 
         when:
         def task2 = new TaskRun()
@@ -184,10 +184,10 @@ class DnaNexusExecutorTest extends Specification {
         handler = new DxTaskHandler(task2, config, exec, [:], api);
         handler.metaClass.checkStatus = { return [state:'done', output:[exit_code:33]] }
         handler.processJobId = '123'
-        handler.status = TaskHandler.Status.RUNNING
+        handler.status = TaskStatus.RUNNING
         then:
         handler.checkIfCompleted()
-        handler.status == TaskHandler.Status.COMPLETED
+        handler.status == TaskStatus.COMPLETED
         task2.exitStatus == 33
         task2.stdout == 'Task says Hola'
 

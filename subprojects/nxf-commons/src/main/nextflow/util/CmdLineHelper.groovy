@@ -20,7 +20,7 @@
 
 package nextflow.util
 
-
+import groovy.transform.CompileStatic
 import org.apache.commons.lang.StringUtils
 
 /**
@@ -132,7 +132,7 @@ class CmdLineHelper {
      * @return A list of string on which each entry represent a command line argument, or an
      * empty list if the {@code cmdline} parameter is empty
      */
-    static def splitter( String cmdline ) {
+    static List<String> splitter( String cmdline ) {
 
         List<String> result = []
 

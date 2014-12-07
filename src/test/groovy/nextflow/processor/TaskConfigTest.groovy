@@ -19,12 +19,11 @@
  */
 
 package nextflow.processor
+import static nextflow.util.CacheHelper.HashMode
 
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.script.BaseScript
 import nextflow.script.FileInParam
-import nextflow.script.InputsList
-import nextflow.script.OutputsList
 import nextflow.script.StdInParam
 import nextflow.script.StdOutParam
 import nextflow.script.TokenVar
@@ -33,10 +32,6 @@ import nextflow.script.ValueSharedParam
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
-
-import static nextflow.util.CacheHelper.HashMode
-
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -54,9 +49,6 @@ class TaskConfigTest extends Specification {
         config.shell ==  ['/bin/bash','-ue']
         config.cacheable
         config.validExitStatus == [0]
-        config.errorStrategy == ErrorStrategy.TERMINATE
-        config.inputs instanceof InputsList
-        config.outputs instanceof OutputsList
     }
 
     def 'test setting properties' () {
@@ -147,8 +139,6 @@ class TaskConfigTest extends Specification {
         config.containsKey('echo')
         config.containsKey('shell')
         config.containsKey('validExitStatus')
-        config.containsKey('inputs')
-        config.containsKey('outputs')
         config.containsKey('undef')
         !config.containsKey('xyz')
         !config.containsKey('maxForks')
@@ -331,96 +321,6 @@ class TaskConfigTest extends Specification {
 
     }
 
-    def testErrorStrategy() {
-
-        when:
-        def config = new TaskConfig(map)
-        then:
-        config.errorStrategy == strategy
-        config.getErrorStrategy() == strategy
-        where:
-        strategy                    | map
-        null                        | [:]
-        ErrorStrategy.TERMINATE     | [errorStrategy: 'terminate']
-        ErrorStrategy.TERMINATE     | [errorStrategy: 'TERMINATE']
-        ErrorStrategy.IGNORE        | [errorStrategy: 'ignore']
-        ErrorStrategy.IGNORE        | [errorStrategy: 'Ignore']
-        ErrorStrategy.RETRY         | [errorStrategy: 'retry']
-        ErrorStrategy.RETRY         | [errorStrategy: 'Retry']
-
-    }
-
-    def testErrorStrategy2() {
-
-        when:
-        def config = new TaskConfig([:])
-        config.errorStrategy( value )
-        then:
-        config.errorStrategy == expect
-        config.getErrorStrategy() == expect
-
-        where:
-        expect                      | value
-        null                        | null
-        ErrorStrategy.TERMINATE     | 'terminate'
-        ErrorStrategy.TERMINATE     | 'TERMINATE'
-        ErrorStrategy.IGNORE        | 'ignore'
-        ErrorStrategy.IGNORE        | 'Ignore'
-        ErrorStrategy.RETRY         | 'retry'
-        ErrorStrategy.RETRY         | 'Retry'
-
-    }
-
-    def testModules() {
-
-        when:
-        def config = new TaskConfig([:])
-        config.module 't_coffee/10'
-        config.module( [ 'blast/2.2.1', 'clustalw/2'] )
-
-        then:
-        config.module == ['t_coffee/10','blast/2.2.1', 'clustalw/2']
-        config.getModule() == ['t_coffee/10','blast/2.2.1', 'clustalw/2']
-
-        when:
-        config = new TaskConfig([:])
-        config.module 'a/1'
-        config.module 'b/2:c/3'
-
-        then:
-        config.module == ['a/1','b/2','c/3']
-
-        when:
-        config = new TaskConfig([:])
-        config.module = 'b/2:c/3'
-
-        then:
-        // I don't like this because it's hot uniform with the above getter method
-        // TODO make it return a list as the getter
-        config.module == 'b/2:c/3'
-        config.getModule() == ['b/2','c/3']
-
-    }
-
-    def testShell() {
-
-        when:
-        def config = new TaskConfig([:])
-        config.shell(value)
-        then:
-        config.shell == expect
-        config.getShell() == expect
-
-        where:
-        expect               | value
-        ['/bin/bash', '-ue'] | null
-        ['/bin/bash', '-ue'] | []
-        ['/bin/bash', '-ue'] | ''
-        ['bash']             | 'bash'
-        ['bash']             | ['bash']
-        ['bash', '-e']       | ['bash', '-e']
-        ['zsh', '-x']        | ['zsh', '-x']
-    }
 
 
 }

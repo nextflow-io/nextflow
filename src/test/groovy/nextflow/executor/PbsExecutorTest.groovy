@@ -21,10 +21,9 @@
 package nextflow.executor
 import java.nio.file.Paths
 
-import nextflow.processor.TaskConfig
+import nextflow.processor.LocalConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import nextflow.script.BaseScript
 import spock.lang.Specification
 /**
  *
@@ -37,11 +36,9 @@ class PbsExecutorTest extends Specification {
         given:
         // mock process
         def proc = Mock(TaskProcessor)
-        def base = Mock(BaseScript)
-        def config = new TaskConfig(base)
         // LSF executor
         def executor = [:] as PbsExecutor
-        executor.taskConfig = config
+        def config = new LocalConfig()
 
         when:
         // process name
@@ -55,7 +52,7 @@ class PbsExecutorTest extends Specification {
         config.cpus = test_cpus
         config.clusterOptions = '-extra opt'
 
-        def task = new TaskRun()
+        def task = new TaskRun(config: config)
         task.processor = proc
         task.workDir = Paths.get('/work/dir')
         task.index = 2

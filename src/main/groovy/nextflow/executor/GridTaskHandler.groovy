@@ -19,22 +19,20 @@
  */
 
 package nextflow.executor
-import static nextflow.processor.TaskHandler.Status.COMPLETED
-import static nextflow.processor.TaskHandler.Status.RUNNING
-import static nextflow.processor.TaskHandler.Status.SUBMITTED
+import static nextflow.processor.TaskStatus.COMPLETED
+import static nextflow.processor.TaskStatus.RUNNING
+import static nextflow.processor.TaskStatus.SUBMITTED
 
 import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessSubmitException
-import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
 import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
-
 /**
  * Handles a job execution in the underlying grid platform
  */
@@ -63,8 +61,8 @@ class GridTaskHandler extends TaskHandler {
 
     final static private READ_TIMEOUT = Duration.of('270sec') // 4.5 minutes
 
-    GridTaskHandler( TaskRun task, TaskConfig config, AbstractGridExecutor executor ) {
-        super(task, config)
+    GridTaskHandler( TaskRun task, AbstractGridExecutor executor ) {
+        super(task)
 
         this.executor = executor
         this.startFile = task.workDir.resolve(TaskRun.CMD_START)

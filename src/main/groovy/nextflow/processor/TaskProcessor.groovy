@@ -428,23 +428,14 @@ abstract class TaskProcessor {
      * <li>{@code TaskRun#name}
      * <li>{@code TaskRun#process}
      *
-     * @return The new newly created {@code TaskRun{
+     * @return The new newly created {@code TaskRun}
      */
     final protected TaskRun createTaskRun() {
         log.trace "Creating a new process > $name"
 
         def id = allCount.incrementAndGet()
         def index = indexCount.incrementAndGet()
-        def task = new TaskRun(id: id, index: index, name: "$name ($index)", processor: this, type: type )
-
-        if( taskConfig.storeDir ) {
-            def path = Nextflow.file(taskConfig.storeDir)
-            if( !(path instanceof Path) ) throw new IllegalArgumentException("Invalid path for 'storeDir' attribute: ${taskConfig.storeDir}")
-            task.storeDir = path
-        }
-
-        // -- set the scratch folder
-        task.scratch = taskConfig.scratch
+        def task = new TaskRun(id: id, index: index, processor: this, type: type, config: taskConfig.newLocalConfig() )
 
         /*
          * initialize the inputs/outputs for this task instance
@@ -523,7 +514,7 @@ abstract class TaskProcessor {
      *      {@code false} otherwise
      */
     final boolean checkStoredOutput( TaskRun task ) {
-        if( !task.storeDir ) {
+        if( !task.config.storeDir ) {
             log.trace "[$task.name] Store dir not set -- return false"
             return false
         }
@@ -544,8 +535,8 @@ abstract class TaskProcessor {
             return false
         }
 
-        if( !task.storeDir.exists() ) {
-            log.trace "[$task.name] Store dir does not exists > ${task.storeDir} -- return false"
+        if( !task.config.storeDir.exists() ) {
+            log.trace "[$task.name] Store dir does not exists > ${task.config.storeDir} -- return false"
             // no folder -> no cached result
             return false
         }
@@ -564,7 +555,7 @@ abstract class TaskProcessor {
             return true
         }
         catch( MissingFileException | MissingValueException e ) {
-            log.trace "[$task.name] Missed store > ${e.getMessage()} -- folder: ${task.storeDir}"
+            log.trace "[$task.name] Missed store > ${e.getMessage()} -- folder: ${task.config.storeDir}"
             task.exitStatus = Integer.MAX_VALUE
             task.workDir = null
             return false
@@ -704,7 +695,7 @@ abstract class TaskProcessor {
 
             final taskErrCount = task ? task.failCount++ : 0
             final procErrCount = errorCount++
-            final taskStrategy = taskConfig.getErrorStrategy()
+            final taskStrategy = task.config.getErrorStrategy()
 
             // when is a task level error and the user has chosen to ignore error, just report and error message
             // return 'false' to DO NOT stop the execution
@@ -718,7 +709,7 @@ abstract class TaskProcessor {
                 }
 
                 // RETRY strategy -- check that process do not exceed 'maxError' and the task do not exceed 'maxRetries'
-                if( taskStrategy == ErrorStrategy.RETRY && procErrCount < taskConfig.getMaxErrors() && taskErrCount < taskConfig.getMaxRetries() ) {
+                if( taskStrategy == ErrorStrategy.RETRY && procErrCount < task.config.getMaxErrors() && taskErrCount < task.config.getMaxRetries() ) {
                     session.execService.submit({ checkCachedOrLaunchTask( task, task.hash, false, RunType.RETRY ) } as Runnable)
                     return ErrorStrategy.RETRY
                 }
@@ -917,7 +908,7 @@ abstract class TaskProcessor {
 
 
         // -- finally prints out the task output when 'echo' is true
-        if( taskConfig.echo ) {
+        if( task.config.echo ) {
             task.echoStdout()
         }
     }
@@ -1310,7 +1301,7 @@ abstract class TaskProcessor {
         // set hash-code & working directory
         task.hash = hash
         task.workDir = folder
-        task.localConfig.workDir = folder
+        task.config.workDir = folder
 
         // Important!
         // when the task is implemented by a script string

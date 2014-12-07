@@ -19,9 +19,9 @@
  */
 
 package nextflow.executor
-import static nextflow.processor.TaskHandler.Status.COMPLETED
-import static nextflow.processor.TaskHandler.Status.RUNNING
-import static nextflow.processor.TaskHandler.Status.SUBMITTED
+import static nextflow.processor.TaskStatus.COMPLETED
+import static nextflow.processor.TaskStatus.RUNNING
+import static nextflow.processor.TaskStatus.SUBMITTED
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -32,7 +32,6 @@ import nextflow.fs.dx.DxFileSystemSerializer
 import nextflow.fs.dx.DxPath
 import nextflow.fs.dx.DxPathSerializer
 import nextflow.fs.dx.api.DxApi
-import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
@@ -113,7 +112,7 @@ class DnaNexusExecutor extends Executor {
          * Saving the task script file in the appropriate task's working folder
          */
         Path taskScriptFile = scratch.resolve(TaskRun.CMD_SCRIPT)
-        taskScriptFile.text = TaskProcessor.normalizeScript(task.script.toString(), taskConfig.shell)
+        taskScriptFile.text = TaskProcessor.normalizeScript(task.script.toString(), task.config.shell)
         log.debug "Creating script file for process > ${task.name}\n\n "
 
         /*
@@ -142,7 +141,7 @@ class DnaNexusExecutor extends Executor {
             target = target.substring('dxfs://'.size())
         obj.target_dir = target
 
-        new DxTaskHandler(task, taskConfig, this, obj)
+        new DxTaskHandler(task, this, obj)
     }
 
 
@@ -223,8 +222,8 @@ class DxTaskHandler extends TaskHandler {
     private Path taskOutputFile
 
 
-    protected DxTaskHandler(TaskRun task, TaskConfig config, DnaNexusExecutor executor, Map params, DxApi api = null ) {
-        super(task, config)
+    protected DxTaskHandler(TaskRun task, DnaNexusExecutor executor, Map params, DxApi api = null ) {
+        super(task)
         this.inputParams = params
         this.executor = executor
         this.api = api ?: DxApi.instance
@@ -236,7 +235,7 @@ class DxTaskHandler extends TaskHandler {
     void submit() {
 
         // create the input parameters for the job to be executed
-        def processJobInputHash = executor.createInputObject( inputParams, (String)taskConfig.instanceType )
+        def processJobInputHash = executor.createInputObject( inputParams, (String)task.config.instanceType )
         log.debug "New job parameters: ${processJobInputHash}"
 
         // Launching the job.

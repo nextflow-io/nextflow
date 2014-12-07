@@ -268,7 +268,7 @@ class TaskPollingMonitor implements TaskMonitor {
      * @param status The status of the required task handlers
      * @return The list of {@code TaskHandler} win the specified {@code TaskHandler.Status}, or an empty list if not tashs are found.
      */
-    TaskHandler getTaskHandlerByStatus( final TaskHandler.Status status ) {
+    TaskHandler getTaskHandlerByStatus( final TaskStatus status ) {
         pollingQueue.find { handler -> handler.status == status }
     }
 

@@ -36,6 +36,8 @@ import nextflow.script.ScriptType
 import nextflow.script.SharedParam
 import nextflow.script.StdInParam
 import nextflow.script.ValueOutParam
+import nextflow.util.DockerBuilder
+
 /**
  * Models a task instance
  *
@@ -58,11 +60,6 @@ class TaskRun {
     def index
 
     /**
-     * Task name
-     */
-    def String name
-
-    /**
      * The unique hash code associated to this task
      */
     def HashCode hash
@@ -81,7 +78,6 @@ class TaskRun {
      * Holds the output value(s) for each task output parameter
      */
     Map<OutParam,Object> outputs = [:]
-
 
 
     def void setInput( InParam param, Object value = null ) {
@@ -190,11 +186,6 @@ class TaskRun {
     }
 
     /**
-     * Directory to store final results
-     */
-    Path storeDir
-
-    /**
      * The directory used to run the task
      */
     Path workDir
@@ -220,16 +211,6 @@ class TaskRun {
     def script
 
     /**
-     * The scratch property has defined in the configuration object
-     */
-    def scratch
-
-    /**
-     * The name of a docker container where the task is supposed to run when provided
-     */
-    def String container
-
-    /**
      * The number of times the execution of the task has failed
      */
     def volatile int failCount
@@ -239,8 +220,13 @@ class TaskRun {
      */
     def volatile boolean failed
 
-    def LocalConfig localConfig
+    def LocalConfig config
 
+    String getName() {
+        def baseName = processor.name
+        def key = config.containsKey('sampleId') ? config.sampleId : index
+        return "$baseName ($key)"
+    }
 
     def String getScript() {
         if( script instanceof Path ) {
@@ -348,9 +334,12 @@ class TaskRun {
 
 
     Path getTargetDir() {
-        storeDir ?: workDir
+        config.getStoreDir() ?: workDir
     }
 
+    def getScratch() {
+        config.scratch
+    }
 
     static final String CMD_ENV = '.command.env'
     static final String CMD_SCRIPT = '.command.sh'
@@ -393,6 +382,16 @@ class TaskRun {
             result << str[i]
         }
         return result.toString()
+    }
+
+    /**
+     * The name of a docker container where the task is supposed to run when provided
+     */
+    String getContainer() {
+        // set the docker container to be used
+        def imageName = config.container as String
+        def dockerConf = processor?.session?.config?.docker as Map
+        DockerBuilder.normalizeDockerImageName(imageName, dockerConf)
     }
 
 }

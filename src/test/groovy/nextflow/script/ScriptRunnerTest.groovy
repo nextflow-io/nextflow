@@ -542,7 +542,6 @@ class ScriptRunnerTest extends Specification {
             process hola {
               """
               cpus: ${task.cpus}
-              nodes: ${task.nodes}
               """
             }
             '''

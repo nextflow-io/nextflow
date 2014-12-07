@@ -19,7 +19,6 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Path
 
 import groovy.transform.PackageScope
@@ -27,10 +26,8 @@ import groovy.util.logging.Slf4j
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
-import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
 import org.apache.commons.lang.StringUtils
-
 /**
  * Generic task processor executing a task through a grid facility
  *
@@ -79,7 +76,7 @@ abstract class AbstractGridExecutor extends Executor {
         // create the wrapper script
         bash.build()
 
-        return new GridTaskHandler(task, taskConfig, this)
+        return new GridTaskHandler(task, this)
     }
 
     /**
@@ -153,33 +150,17 @@ abstract class AbstractGridExecutor extends Executor {
      */
     protected abstract List<String> killTaskCommand(def jobId);
 
-    /**
-     * @return Parse the {@code clusterOptions} configuration option and return the entries as a list of values
-     */
-    final protected List<String> getClusterOptionsAsList() {
-
-        if ( !taskConfig.clusterOptions ) {
-            return null
-        }
-
-        if( taskConfig.clusterOptions instanceof Collection ) {
-            return new ArrayList<String>(taskConfig.clusterOptions as Collection)
-        }
-        else {
-            return CmdLineHelper.splitter( taskConfig.clusterOptions.toString() )
-        }
-    }
 
     /**
      * @return Parse the {@code clusterOptions} configuration option and return the entries as a string
      */
     final protected String getClusterOptionsAsString() {
 
-        if( !taskConfig.clusterOptions ) {
+        if( !task.config.clusterOptions ) {
             return null
         }
 
-        def value = taskConfig.clusterOptions
+        def value = task.config.clusterOptions
         value instanceof Collection ? value.join(' ') : value.toString()
     }
 
@@ -193,7 +174,7 @@ abstract class AbstractGridExecutor extends Executor {
      */
     Map<?,QueueStatus> getQueueStatus() {
 
-        List cmd = queueStatusCommand( taskConfig.queue )
+        List cmd = queueStatusCommand( task.config.queue )
         if( !cmd ) return null
 
         try {
