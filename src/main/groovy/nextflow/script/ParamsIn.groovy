@@ -32,7 +32,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Nextflow
 import nextflow.extension.DataflowExtensions
-import nextflow.processor.TaskConfig
+import nextflow.processor.ProcessConfig
 /**
  * Base class for input/output parameters
  *
@@ -255,7 +255,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
         return inChannel
     }
 
-    BaseInParam( TaskConfig config ) {
+    BaseInParam( ProcessConfig config ) {
         this(config.getOwnerScript().getBinding(), config.getInputs())
     }
 

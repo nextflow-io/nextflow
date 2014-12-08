@@ -22,8 +22,8 @@ package nextflow.executor
 import java.nio.file.Files
 
 import nextflow.fs.dx.api.DxApi
-import nextflow.processor.LocalConfig
 import nextflow.processor.TaskConfig
+import nextflow.processor.ProcessConfig
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.script.BaseScript
@@ -53,7 +53,7 @@ class DnaNexusExecutorTest extends Specification {
         given:
         def api = Mock(DxApi)
         def folder = Files.createTempDirectory('tst-path')
-        def task = new TaskRun(name: 'task1', workDir: folder, config: new LocalConfig(instanceType: 'dx_m1.super'))
+        def task = new TaskRun(name: 'task1', workDir: folder, config: new TaskConfig(instanceType: 'dx_m1.super'))
         def exec = Mock(DnaNexusExecutor)
         def script = Mock(BaseScript)
 
@@ -87,7 +87,7 @@ class DnaNexusExecutorTest extends Specification {
         task.getWorkDir() >> folder
 
         def exec = Mock(DnaNexusExecutor)
-        def config = Mock(TaskConfig)
+        def config = Mock(ProcessConfig)
         def handler = new DxTaskHandler(task, exec, null, api);
         handler.processJobId = 'job-123'
 
@@ -114,7 +114,7 @@ class DnaNexusExecutorTest extends Specification {
         task.getWorkDir() >> folder
 
         def exec = Mock(DnaNexusExecutor)
-        def config = Mock(TaskConfig)
+        def config = Mock(ProcessConfig)
         def handler = new DxTaskHandler(task, exec, null, api);
         handler.processJobId = 'job-312'
 
@@ -140,7 +140,7 @@ class DnaNexusExecutorTest extends Specification {
         def task = Mock(TaskRun)
         task.getWorkDir() >> folder
 
-        def config = Mock(TaskConfig)
+        def config = Mock(ProcessConfig)
         def exec = Mock(DnaNexusExecutor)
         def handler = new DxTaskHandler(task, exec, [:], api);
         handler.metaClass.checkStatus = { return [state:'runnable'] }

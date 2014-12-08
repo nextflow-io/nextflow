@@ -21,7 +21,7 @@
 package nextflow.executor
 import java.nio.file.Paths
 
-import nextflow.processor.LocalConfig
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
@@ -38,7 +38,7 @@ class PbsExecutorTest extends Specification {
         def proc = Mock(TaskProcessor)
         // LSF executor
         def executor = [:] as PbsExecutor
-        def config = new LocalConfig()
+        def config = new TaskConfig()
 
         when:
         // process name

@@ -24,7 +24,7 @@ import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.processor.TaskConfig
+import nextflow.processor.ProcessConfig
 /**
  * Model a process generic input parameter
  *
@@ -100,7 +100,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         super(binding,list,ownerIndex)
     }
 
-    BaseOutParam( TaskConfig config ) {
+    BaseOutParam( ProcessConfig config ) {
         super(config.getOwnerScript().getBinding(), config.getOutputs())
     }
 

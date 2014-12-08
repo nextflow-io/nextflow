@@ -24,7 +24,7 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Session
 import nextflow.exception.ProcessScriptException
-import nextflow.processor.TaskConfig
+import nextflow.processor.ProcessConfig
 import nextflow.processor.TaskProcessor
 import spock.lang.Specification
 import test.TestParser
@@ -325,7 +325,7 @@ class ScriptRunnerTest extends Specification {
         TaskProcessor process = new TestParser(session).parseScript(script).run()
 
         then:
-        process.taskConfig instanceof TaskConfig
+        process.taskConfig instanceof ProcessConfig
         process.taskConfig.alpha == 1
         process.taskConfig.beta == '222'  // !! this value is overridden by the one in the config file
         process.taskConfig.delta == '333'
@@ -374,7 +374,7 @@ class ScriptRunnerTest extends Specification {
         TaskProcessor process = new TestParser(session).parseScript(script).run()
 
         then:
-        process.taskConfig instanceof TaskConfig
+        process.taskConfig instanceof ProcessConfig
         process.taskConfig.alpha == 1
         process.taskConfig.beta == '222'  // !! this value is overridden by the one in the config file
         process.taskConfig.delta == '333'
@@ -406,10 +406,10 @@ class ScriptRunnerTest extends Specification {
         TaskProcessor process = new TestParser(session).parseScript(script).run()
 
         then:
-        process.taskConfig instanceof TaskConfig
+        process.taskConfig instanceof ProcessConfig
         process.taskConfig.module == ['b/2','c/3']
-        process.taskConfig.newLocalConfig().module == ['b/2','c/3']
-        process.taskConfig.newLocalConfig().getModule() == ['b/2','c/3']
+        process.taskConfig.createTaskConfig().module == ['b/2','c/3']
+        process.taskConfig.createTaskConfig().getModule() == ['b/2','c/3']
     }
 
     def 'test module config 2'() {
@@ -439,10 +439,10 @@ class ScriptRunnerTest extends Specification {
         TaskProcessor process = new TestParser(session).parseScript(script).run()
 
         then:
-        process.taskConfig instanceof TaskConfig
+        process.taskConfig instanceof ProcessConfig
         process.taskConfig.module == ['b/2','z/9']
-        process.taskConfig.newLocalConfig().module == ['b/2','z/9']
-        process.taskConfig.newLocalConfig().getModule() == ['b/2','z/9']
+        process.taskConfig.createTaskConfig().module == ['b/2','z/9']
+        process.taskConfig.createTaskConfig().getModule() == ['b/2','z/9']
     }
 
     def 'test module config 3'() {
@@ -468,10 +468,10 @@ class ScriptRunnerTest extends Specification {
         TaskProcessor process = new TestParser(session).parseScript(script).run()
 
         then:
-        process.taskConfig instanceof TaskConfig
+        process.taskConfig instanceof ProcessConfig
         process.taskConfig.module == 'a/1'
-        process.taskConfig.newLocalConfig().module ==  ['a/1']
-        process.taskConfig.newLocalConfig().getModule() ==  ['a/1']
+        process.taskConfig.createTaskConfig().module ==  ['a/1']
+        process.taskConfig.createTaskConfig().getModule() ==  ['a/1']
 
     }
 
@@ -511,7 +511,7 @@ class ScriptRunnerTest extends Specification {
         def session = new Session(config)
         TaskProcessor process = new TestParser(session).parseScript(script).run()
         then:
-        process.taskConfig instanceof TaskConfig
+        process.taskConfig instanceof ProcessConfig
         process.taskConfig.queue == 'short'
         process.taskConfig.cpus == 2
         process.taskConfig.penv == 'mpi'
@@ -553,7 +553,7 @@ class ScriptRunnerTest extends Specification {
         def session = new Session()
         TaskProcessor process = new TestParser(session).parseScript(script).run()
         then:
-        process.taskConfig instanceof TaskConfig
+        process.taskConfig instanceof ProcessConfig
         process.taskConfig.cpus == null
 
         when:

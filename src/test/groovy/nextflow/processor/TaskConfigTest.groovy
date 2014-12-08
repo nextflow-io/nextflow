@@ -19,19 +19,13 @@
  */
 
 package nextflow.processor
-import static nextflow.util.CacheHelper.HashMode
 
-import groovyx.gpars.dataflow.DataflowVariable
-import nextflow.script.BaseScript
-import nextflow.script.FileInParam
-import nextflow.script.StdInParam
-import nextflow.script.StdOutParam
-import nextflow.script.TokenVar
-import nextflow.script.ValueInParam
-import nextflow.script.ValueSharedParam
+import java.nio.file.Paths
+
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -39,271 +33,236 @@ import spock.lang.Specification
 class TaskConfigTest extends Specification {
 
 
-    def 'test defaults' () {
+    def testShell() {
 
-        setup:
-        def script = Mock(BaseScript)
-        def config = new TaskConfig(script)
+        when:
+        def config = new TaskConfig().setContext(my_shell: 'hello')
+        config.shell = value
+        then:
+        config.shell == expected
+        config.getShell() == expected
 
-        expect:
-        config.shell ==  ['/bin/bash','-ue']
-        config.cacheable
-        config.validExitStatus == [0]
+        where:
+        expected             | value
+        ['/bin/bash', '-ue'] | null
+        ['/bin/bash', '-ue'] | []
+        ['/bin/bash', '-ue'] | ''
+        ['bash']             | 'bash'
+        ['bash']             | ['bash']
+        ['bash', '-e']       | ['bash', '-e']
+        ['zsh', '-x']        | ['zsh', '-x']
+        ['hello']            | { "$my_shell" }
     }
 
-    def 'test setting properties' () {
-
-        setup:
-        def script = Mock(BaseScript)
-        def config = new TaskConfig(script)
-
-        // setting property using method without brackets
-        when:
-        config.hola 'val 1'
-        then:
-        config.hola == 'val 1'
-
-        // setting list values
-        when:
-        config.hola 1,2,3
-        then:
-        config.hola == [1,2,3]
-
-        // setting named parameters attribute
-        when:
-        config.hola field1:'val1', field2: 'val2'
-        then:
-        config.hola == [field1:'val1', field2: 'val2']
-
-        // generic value assigned like a 'plain' property
-        when:
-        config.hola = 99
-        then:
-        config.hola == 99
-
-        // maxDuration property
-        when:
-        config.time '1h'
-        then:
-        config.time == '1h'
-        config.newLocalConfig().time == new Duration('1h')
-
-        // maxMemory property
-        when:
-        config.memory '2GB'
-        then:
-        config.memory == '2GB'
-        config.newLocalConfig().memory == new MemoryUnit('2GB')
-
-    }
-
-    def testParseProperties() {
-
-        when:
-        def config = new TaskConfig( maxDuration:'1h' )
-        then:
-        config.maxDuration as Duration == Duration.of('1h')
-    }
-
-
-    def 'test NO missingPropertyException' () {
-
-        when:
-        def script = Mock(BaseScript)
-        def config = new TaskConfig(script)
-        def x = config.hola
-
-        then:
-        x == null
-        noExceptionThrown()
-
-    }
-
-    def 'test MissingPropertyException' () {
-        when:
-        def script = Mock(BaseScript)
-        def config = new TaskConfig(script).throwExceptionOnMissingProperty(true)
-        def x = config.hola
-
-        then:
-        thrown(MissingPropertyException)
-    }
-
-
-    def 'test check property existence' () {
-
-        setup:
-        def script = Mock(BaseScript)
-        def config = new TaskConfig(script)
-
-        expect:
-        config.containsKey('echo')
-        config.containsKey('shell')
-        config.containsKey('validExitStatus')
-        !config.containsKey('xyz')
-        !config.containsKey('maxForks')
-        config.maxForks == null
-
-    }
-
-    def 'test input' () {
-
-        setup:
-        def script = Mock(BaseScript)
-        def config = new TaskConfig(script)
-
-        when:
-        config._in_file([infile:'filename.fa'])
-        config._in_val('x') .from(1)
-        config._in_stdin()
-
-        then:
-        config.getInputs().size() == 3
-
-        config.inputs.get(0) instanceof FileInParam
-        config.inputs.get(0).name == 'infile'
-        (config.inputs.get(0) as FileInParam).filePattern == 'filename.fa'
-
-        config.inputs.get(1) instanceof ValueInParam
-        config.inputs.get(1).name == 'x'
-
-        config.inputs.get(2).name == '-'
-        config.inputs.get(2) instanceof StdInParam
-
-        config.inputs.names == [ 'infile', 'x', '-' ]
-        config.inputs.ofType( FileInParam ) == [ config.getInputs().get(0) ]
-
-    }
-
-    def 'test outputs' () {
-
-        setup:
-        def script = Mock(BaseScript)
-        def config = new TaskConfig(script)
-
-        when:
-        config._out_stdout()
-        config._out_file('file1.fa').into('ch1')
-        config._out_file('file2.fa').into('ch2')
-        config._out_file('file3.fa').into('ch3')
-
-        then:
-        config.outputs.size() == 4
-        config.outputs.names == ['-', 'file1.fa', 'file2.fa', 'file3.fa']
-        config.outputs.ofType(StdOutParam).size() == 1
-
-        config.outputs[0] instanceof StdOutParam
-        config.outputs[1].name == 'file1.fa'
-        config.outputs[2].name == 'file2.fa'
-        config.outputs[3].name == 'file3.fa'
-
-
-    }
-
-    /*
-     *  shared: val x (seed x)
-     *  shared: val x seed y
-     *  shared: val x seed y using z
-     */
-    def testSharedValue() {
-
-        setup:
-        def binding = new Binding()
-        def script = Mock(BaseScript)
-        script.getBinding() >> { binding }
-
-        when:
-        def config = new TaskConfig(script)
-        def val = config._share_val( new TokenVar('xxx'))
-        then:
-        val instanceof ValueSharedParam
-        val.name == 'xxx'
-        val.inChannel.val == null
-        val.outChannel == null
-
-        when:
-        binding.setVariable('yyy', 'Hola')
-        config = new TaskConfig(script)
-        val = config._share_val(new TokenVar('yyy'))
-        then:
-        val instanceof ValueSharedParam
-        val.name == 'yyy'
-        val.inChannel.val == 'Hola'
-        val.outChannel == null
-
-        // specifying a value with the 'using' method
-        // that value is bound to the input channel
-        when:
-        config = new TaskConfig(script)
-        val = config._share_val('yyy') .from('Beta')
-        then:
-        val instanceof ValueSharedParam
-        val.name == 'yyy'
-        val.inChannel.val == 'Beta'
-        val.outChannel == null
-
-        // specifying a 'closure' with the 'using' method
-        // that value is bound to the input channel
-        when:
-        config = new TaskConfig(script)
-        val = config._share_val('yyy') .from({ 99 })
-        then:
-        val instanceof ValueSharedParam
-        val.name == 'yyy'
-        val.inChannel.val == 99
-        val.outChannel == null
-
-
-        // specifying a 'channel' it is reused
-        // that value is bound to the input channel
-        when:
-        def channel = new DataflowVariable()
-        channel << 123
-
-        config = new TaskConfig(script)
-        val = config._share_val('zzz') .from(channel)
-        then:
-        val instanceof ValueSharedParam
-        val.name == 'zzz'
-        val.inChannel.getVal() == 123
-        val.outChannel == null
-
-        // when a channel name is specified with the method 'into'
-        // a DataflowVariable is created in the script context
-        when:
-        config = new TaskConfig(script)
-        val = config._share_val(new TokenVar('x1')) .into( new TokenVar('x2') )
-        then:
-        val instanceof ValueSharedParam
-        val.name == 'x1'
-        val.inChannel.getVal() == null
-        val.outChannel instanceof DataflowVariable
-        binding.getVariable('x2') == val.outChannel
-
-    }
-
-    def testIsCacheable() {
+    def testErrorStrategy() {
 
         when:
         def config = new TaskConfig(map)
+
         then:
-        config.cacheable == result
-        config.isCacheable() == result
-        config.getHashMode() == mode
+        config.errorStrategy == strategy
+        config.getErrorStrategy() == strategy
 
         where:
-        result | mode               | map
-        true   | HashMode.STANDARD  | [:]
-        true   | HashMode.STANDARD  | [cache:true]
-        true   | HashMode.STANDARD  | [cache:'yes']
-        true   | HashMode.DEEP      | [cache:'deep']
-        false  | HashMode.STANDARD  | [cache:false]
-        false  | HashMode.STANDARD  | [cache:'false']
-        false  | HashMode.STANDARD  | [cache:'off']
-        false  | HashMode.STANDARD  | [cache:'no']
+        strategy                    | map
+        null                        | [:]
+        ErrorStrategy.TERMINATE     | [errorStrategy: 'terminate']
+        ErrorStrategy.TERMINATE     | [errorStrategy: 'TERMINATE']
+        ErrorStrategy.IGNORE        | [errorStrategy: 'ignore']
+        ErrorStrategy.IGNORE        | [errorStrategy: 'Ignore']
+        ErrorStrategy.RETRY         | [errorStrategy: 'retry']
+        ErrorStrategy.RETRY         | [errorStrategy: 'Retry']
+
+    }
+
+    def testErrorStrategy2() {
+
+        when:
+        def config = new TaskConfig()
+        config.context = [x:1]
+        config.errorStrategy = value
+        then:
+        config.errorStrategy == expect
+        config.getErrorStrategy() == expect
+
+        where:
+        expect                      | value
+        null                        | null
+        ErrorStrategy.TERMINATE     | 'terminate'
+        ErrorStrategy.TERMINATE     | 'TERMINATE'
+        ErrorStrategy.IGNORE        | 'ignore'
+        ErrorStrategy.IGNORE        | 'Ignore'
+        ErrorStrategy.RETRY         | 'retry'
+        ErrorStrategy.RETRY         | 'Retry'
+        ErrorStrategy.RETRY         | { x == 1 ? 'retry' : 'ignore' }
+
+    }
+
+    def testModules() {
+
+        def config
+        def local
+
+        when:
+        config = new ProcessConfig([:])
+        config.module 't_coffee/10'
+        config.module( [ 'blast/2.2.1', 'clustalw/2'] )
+        local = config.createTaskConfig()
+
+        then:
+        local.module == ['t_coffee/10','blast/2.2.1', 'clustalw/2']
+        local.getModule() == ['t_coffee/10','blast/2.2.1', 'clustalw/2']
+
+        when:
+        config = new ProcessConfig([:])
+        config.module 'a/1'
+        config.module 'b/2:c/3'
+        local = config.createTaskConfig()
+
+        then:
+        local.module == ['a/1','b/2','c/3']
+
+        when:
+        config = new ProcessConfig([:])
+        config.module = 'b/2:c/3'
+        local = config.createTaskConfig()
+
+        then:
+        local.module == ['b/2','c/3']
+        local.getModule() == ['b/2','c/3']
+
+    }
+
+    def testMaxRetries() {
+
+        when:
+        def config = new TaskConfig()
+        config.maxRetries = value
+        then:
+        config.maxRetries == expected
+        config.getMaxRetries() == expected
+
+        where:
+        value   | expected
+        null    | 0
+        0       | 0
+        1       | 1
+        '3'     | 3
+        10      | 10
+
+    }
+
+    def testMaxErrors() {
+
+        when:
+        def config = new TaskConfig()
+        config.maxErrors = value
+        then:
+        config.maxErrors == expected
+        config.getMaxErrors() == expected
+
+        where:
+        value   | expected
+        null    | 0
+        0       | 0
+        1       | 1
+        '3'     | 3
+        10      | 10
 
     }
 
 
+    def testGetTime() {
+
+        when:
+        def config = new TaskConfig().setContext(ten: 10)
+        config.time = value
+
+        then:
+        config.time == expected
+        config.getTime() == expected
+
+        where:
+        expected            || value
+        null                || null
+        new Duration('1s')  || 1000
+        new Duration('2h')  || '2h'
+        new Duration('10h') || { "$ten hours" }
+
+    }
+
+    def testGetMemory() {
+
+        when:
+        def config = new TaskConfig().setContext(ten: 10)
+        config.memory = value
+
+        then:
+        config.memory == expected
+        config.getMemory() == expected
+
+        where:
+        expected                || value
+        null                    || null
+        new MemoryUnit('1K')    || 1024
+        new MemoryUnit('2M')    || '2M'
+        new MemoryUnit('10G')   || { "$ten G" }
+
+    }
+
+    def testGetCpus() {
+
+        when:
+        def config = new TaskConfig().setContext(ten: 10)
+        config.cpus = value
+
+        then:
+        config.cpus == expected
+        config.getCpus() == expected
+
+        where:
+        expected                || value
+        1                       || null
+        1                       || 1
+        8                       || 8
+        10                      || { ten ?: 0  }
+
+    }
+
+    def testGetStore() {
+
+        when:
+        def config = new TaskConfig()
+        config.storeDir = value
+
+        then:
+        config.storeDir == expected
+        config.getStoreDir() == expected
+
+        where:
+        expected                            || value
+        null                                || null
+        Paths.get('/data/path/')            || '/data/path'
+        Paths.get('hello').toAbsolutePath() || 'hello'
+
+    }
+
+
+    def testGetClusterOptionsAsList() {
+
+        when:
+        def config = new TaskConfig()
+        config.clusterOptions = value
+
+        then:
+        config.getClusterOptionsAsList() == expected
+
+        where:
+        expected                            || value
+        Collections.emptyList()             || null
+        ['-queue','alpha']                  || ['-queue','alpha']
+        ['-queue','alpha']                  || '-queue alpha'
+        ['-queue','alpha and beta']         || "-queue 'alpha and beta"
+    }
 
 }

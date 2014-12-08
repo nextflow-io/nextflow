@@ -21,7 +21,7 @@
 package nextflow.executor
 import java.nio.file.Paths
 
-import nextflow.processor.LocalConfig
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
@@ -62,7 +62,7 @@ class SgeExecutorTest extends Specification {
         when:
 
         // config
-        config = task.config = new LocalConfig()
+        config = task.config = new TaskConfig()
         config.queue = 'my-queue'
         config.name = 'task'
 
@@ -80,7 +80,7 @@ class SgeExecutorTest extends Specification {
                 .stripIndent().leftTrim()
 
         when:
-        config = task.config = new LocalConfig()
+        config = task.config = new TaskConfig()
         config.queue = 'my-queue'
         config.name = 'task'
         then:
@@ -98,7 +98,7 @@ class SgeExecutorTest extends Specification {
 
 
         when:
-        config = task.config = new LocalConfig()
+        config = task.config = new TaskConfig()
         config.queue = 'my-queue'
         config.name = 'task'
         config.time = '10s '
@@ -121,7 +121,7 @@ class SgeExecutorTest extends Specification {
 
 
         when:
-        config = task.config = new LocalConfig()
+        config = task.config = new TaskConfig()
         config.queue = 'my-queue'
         config.name = 'task'
         config.time = '10m'
@@ -145,7 +145,7 @@ class SgeExecutorTest extends Specification {
 
 
         when:
-        config = task.config = new LocalConfig()
+        config = task.config = new TaskConfig()
         config.queue = 'my-queue'
         config.name = 'task'
         config.cpus = 1
@@ -169,7 +169,7 @@ class SgeExecutorTest extends Specification {
                 .stripIndent().leftTrim()
 
         when:
-        config = task.config = new LocalConfig()
+        config = task.config = new TaskConfig()
         config.queue = 'my-queue'
         config.name = 'task'
         config.cpus = 2
@@ -193,7 +193,7 @@ class SgeExecutorTest extends Specification {
                 .stripIndent().leftTrim()
 
         when:
-        config = task.config = new LocalConfig()
+        config = task.config = new TaskConfig()
         config.queue = 'my-queue'
         config.name = 'task'
         config.cpus = 4

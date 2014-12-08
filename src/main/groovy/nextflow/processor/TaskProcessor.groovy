@@ -78,6 +78,8 @@ abstract class TaskProcessor {
         RunType(String str) { message=str };
     }
 
+    static final protected String TASK_CONFIG = 'task'
+
     /**
      * Global count of all task instances
      */
@@ -128,7 +130,7 @@ abstract class TaskProcessor {
      * The corresponding task configuration properties, it holds the inputs/outputs
      * definition as well as other execution meta-declaration
      */
-    protected final TaskConfig taskConfig
+    protected final ProcessConfig config
 
 
     /**
@@ -191,13 +193,14 @@ abstract class TaskProcessor {
     /**
      * Create and initialize the processor object
      *
+     * @param name
      * @param executor
      * @param session
      * @param script
-     * @param taskConfig
+     * @param config
      * @param taskBody
      */
-    TaskProcessor( String name, Executor executor, Session session, BaseScript script, TaskConfig taskConfig, TaskBody taskBody ) {
+    TaskProcessor( String name, Executor executor, Session session, BaseScript script, ProcessConfig config, TaskBody taskBody ) {
         assert executor
         assert session
         assert script
@@ -206,7 +209,7 @@ abstract class TaskProcessor {
         this.executor = executor
         this.session = session
         this.ownerScript = script
-        this.taskConfig = taskConfig
+        this.config = config
         this.taskBody = taskBody
         this.name = name
 
@@ -220,7 +223,7 @@ abstract class TaskProcessor {
     /**
      * @return The {@code TaskConfig} object holding the task configuration properties
      */
-    TaskConfig getTaskConfig() { taskConfig }
+    ProcessConfig getTaskConfig() { config }
 
     /**
      * @return The current {@code Session} instance
@@ -281,21 +284,21 @@ abstract class TaskProcessor {
          * - at least one input channel have to be provided,
          *   if missing create an dummy 'input' set to true
          */
-        log.trace "TaskConfig: ${taskConfig}"
-        if( taskConfig.getInputs().size() == 0 ) {
-            taskConfig.fakeInput()
+        log.trace "TaskConfig: ${config}"
+        if( config.getInputs().size() == 0 ) {
+            config.fakeInput()
         }
 
-        final boolean hasEachParams = taskConfig.getInputs().any { it instanceof EachInParam }
-        final boolean allScalarValues = taskConfig.getInputs().allScalarInputs() && !hasEachParams
+        final boolean hasEachParams = config.getInputs().any { it instanceof EachInParam }
+        final boolean allScalarValues = config.getInputs().allScalarInputs() && !hasEachParams
 
         /*
          * Normalize the output
          * - even though the output may be empty, let return the stdout as output by default
          */
-        if ( taskConfig.getOutputs().size() == 0 ) {
+        if ( config.getOutputs().size() == 0 ) {
             def dummy =  allScalarValues ? Nextflow.variable() : Nextflow.channel()
-            taskConfig.fakeOutput(dummy)
+            config.fakeOutput(dummy)
         }
 
         // the state agent
@@ -318,7 +321,7 @@ abstract class TaskProcessor {
          * When there is a single output channel, return let returns that item
          * otherwise return the list
          */
-        def result = taskConfig.getOutputs().channels
+        def result = config.getOutputs().channels
         return result.size() == 1 ? result[0] : result
     }
 
@@ -419,23 +422,25 @@ abstract class TaskProcessor {
 
         def id = allCount.incrementAndGet()
         def index = indexCount.incrementAndGet()
-        def task = new TaskRun(id: id, index: index, processor: this, type: type, config: taskConfig.newLocalConfig() )
-
-        // -- create task local config
-        task.config = taskConfig.newLocalConfig()
+        def task = new TaskRun(
+                id: id,
+                index: index,
+                processor: this,
+                type: type,
+                config: config.createTaskConfig()
+        )
 
         /*
          * initialize the inputs/outputs for this task instance
          */
-        taskConfig.getInputs().each { InParam param ->
+        config.getInputs().each { InParam param ->
             if( param instanceof SetInParam )
                 param.inner.each { task.setInput(it)  }
             else
                 task.setInput(param)
         }
 
-
-        taskConfig.getOutputs().each { OutParam param ->
+        config.getOutputs().each { OutParam param ->
             if( param instanceof SetOutParam ) {
                 param.inner.each { task.setOutput(it) }
             }
@@ -445,7 +450,6 @@ abstract class TaskProcessor {
 
         return task
     }
-
 
     /**
      * Try to check if exists a previously executed process result in the a cached folder. If it exists
@@ -535,7 +539,7 @@ abstract class TaskProcessor {
             log.info "[skipping] Stored process > ${task.name}"
 
             // set the exit code in to the task object
-            task.exitStatus = taskConfig.getValidExitStatus()[0]
+            task.exitStatus = config.getValidExitStatus()[0]
 
             // -- now bind the results
             finalizeTask0(task)
@@ -569,7 +573,7 @@ abstract class TaskProcessor {
 
             def exitValue = exitFile.text.trim()
             exitCode = exitValue.isInteger() ? exitValue.toInteger() : null
-            if( exitCode == null || !(exitCode in taskConfig.validExitStatus) ) {
+            if( exitCode == null || !(exitCode in config.validExitStatus) ) {
                 log.trace "[$task.name] Exit code is not valid > $exitValue -- return false"
                 return false
             }
@@ -586,7 +590,7 @@ abstract class TaskProcessor {
                 return false
             }
 
-            ctxMap = DelegateMap.read(this, ctxFile)
+            ctxMap = ContextMap.read(this, ctxFile)
             populateSharedCtx(task, ctxMap)
         }
 
@@ -805,7 +809,7 @@ abstract class TaskProcessor {
      */
     final protected synchronized void sendPoisonPill() {
 
-        taskConfig.getOutputs().each { param ->
+        config.getOutputs().each { param ->
             def channel = param.outChannel
 
             if( channel instanceof DataflowQueue ) {
@@ -845,7 +849,7 @@ abstract class TaskProcessor {
 
         // -- creates the map of all tuple values to bind
         Map<Short,List> tuples = [:]
-        taskConfig.getOutputs().each { OutParam p -> tuples.put(p.index,[]) }
+        config.getOutputs().each { OutParam p -> tuples.put(p.index,[]) }
 
         // -- collects the values to bind
         task.outputs.each { OutParam param, value ->
@@ -867,7 +871,7 @@ abstract class TaskProcessor {
         }
 
         // -- bind out the collected values
-        taskConfig.getOutputs().each { param ->
+        config.getOutputs().each { param ->
             def list = tuples[param.index]
             if( list == null ) throw new IllegalStateException()
 
@@ -1250,7 +1254,6 @@ abstract class TaskProcessor {
     }
 
 
-
     protected decodeInputValue( InParam param, List values ) {
 
         def val = values[ param.index ]
@@ -1318,7 +1321,7 @@ abstract class TaskProcessor {
                 if( task.exitStatus == Integer.MAX_VALUE )
                     throw new ProcessFailedException("Process '${task.name}' terminated for an unknown reason -- Likely it has been terminated by the external system")
 
-                boolean success = (task.exitStatus in taskConfig.validExitStatus)
+                boolean success = (task.exitStatus in config.validExitStatus)
                 if ( !success )
                     throw new ProcessFailedException("Process '${task.name}' terminated with an error exit status")
             }
@@ -1334,7 +1337,10 @@ abstract class TaskProcessor {
             // only the 'cache' is active and
             if( isCacheable() && task.hasCacheableValues() && task.code.delegate != null ) {
                 def target = task.workDir.resolve(TaskRun.CMD_CONTEXT)
-                ((DelegateMap)task.code.delegate).save(target)
+                def context = (ContextMap)task.code.delegate
+                if( context.get(TASK_CONFIG) instanceof TaskConfig )
+                    context.remove(TASK_CONFIG)
+                context.save(target)
             }
 
         }
@@ -1351,7 +1357,7 @@ abstract class TaskProcessor {
      * Whenever the process can be cached
      */
     protected boolean isCacheable() {
-        session.cacheable && taskConfig.cacheable
+        session.cacheable && config.cacheable
     }
 
     protected boolean isResumable() {

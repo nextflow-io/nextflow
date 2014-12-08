@@ -23,7 +23,7 @@ package nextflow.executor
 import java.nio.file.Paths
 
 import nextflow.Session
-import nextflow.processor.LocalConfig
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
@@ -63,7 +63,7 @@ class CrgExecutorTest extends Specification {
 
         when:
         // config
-        task.config = new LocalConfig(
+        task.config = new TaskConfig(
                         queue: 'short',
                         memory: '4 GB',
                         time: '1d',
@@ -86,7 +86,7 @@ class CrgExecutorTest extends Specification {
 
         when:
         executor.session.config.docker = [enabled: false]
-        task.config = new LocalConfig(
+        task.config = new TaskConfig(
                 queue: 'short',
                 memory: '4 GB',
                 time: '1d',
@@ -111,7 +111,7 @@ class CrgExecutorTest extends Specification {
 
         when:
         executor.session.config.docker = [enabled: true]
-        task.config = new LocalConfig(
+        task.config = new TaskConfig(
                 queue: 'short',
                 memory: '4 GB',
                 time: '1d',
@@ -136,7 +136,7 @@ class CrgExecutorTest extends Specification {
 
         when:
         executor.session.config.docker = [enabled: true]
-        task.config = new LocalConfig(
+        task.config = new TaskConfig(
                 memory: '3 g',
                 time: '3 d',
                 cpus: '2',
@@ -168,7 +168,7 @@ class CrgExecutorTest extends Specification {
          */
         when:
         executor.session.config.docker = [enabled: true]
-        task.config = new LocalConfig(
+        task.config = new TaskConfig(
                 memory: '3 g',
                 time: '3 d',
                 cpus: '2',

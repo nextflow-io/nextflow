@@ -225,7 +225,7 @@ class TaskRun {
      */
     def volatile boolean failed
 
-    def LocalConfig config
+    def TaskConfig config
 
     String getName() {
         if( name )

@@ -21,7 +21,7 @@
 package nextflow.executor
 import java.nio.file.Paths
 
-import nextflow.processor.LocalConfig
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
@@ -61,7 +61,7 @@ class SlurmExecutorTest extends Specification {
         def task = new TaskRun(workDir: Paths.get('/work/path'), index: 33, processor: proc)
         // SLURM executor
         def exec = [:] as SlurmExecutor
-        def config = task.config = new LocalConfig()
+        def config = task.config = new TaskConfig()
 
         when:
         config.cpus = test_cpus

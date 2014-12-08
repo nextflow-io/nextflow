@@ -176,7 +176,7 @@ class ProcessFactory {
         }
 
         // -- the config object
-        def taskConfig = new TaskConfig(owner, importantAttributes)
+        def taskConfig = new ProcessConfig(owner, importantAttributes)
 
         // -- set 'default' properties defined in the configuration file in the 'process' section
         if( config.process instanceof Map ) {
@@ -235,7 +235,7 @@ class ProcessFactory {
      *
      * @param taskConfig
      */
-    private getExecutorName(TaskConfig taskConfig) {
+    private getExecutorName(ProcessConfig taskConfig) {
         log.trace ">> taskConfig $taskConfig"
 
         // create the processor object

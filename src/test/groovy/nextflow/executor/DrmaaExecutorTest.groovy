@@ -21,7 +21,7 @@
 package nextflow.executor
 import java.nio.file.Files
 
-import nextflow.processor.LocalConfig
+import nextflow.processor.TaskConfig
 import nextflow.processor.ParallelTaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -99,7 +99,7 @@ class DrmaaExecutorTest extends Specification {
         def executor = [:] as DrmaaExecutor
         def task = new TaskRun(id:1, name: 'hello', workDir: workDir)
         def handler = new DrmaaTaskHandler(task, executor)
-        def config = task.config = new LocalConfig()
+        def config = task.config = new TaskConfig()
         when:
         config.queue = test_queue
         config.clusterOptions = test_opts
