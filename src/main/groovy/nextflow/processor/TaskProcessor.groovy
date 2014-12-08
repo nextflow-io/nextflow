@@ -130,12 +130,6 @@ abstract class TaskProcessor {
      */
     protected final TaskConfig taskConfig
 
-    /**
-     * Used for framework generated task names
-     */
-    @Deprecated
-    private static final AtomicInteger tasksCount = new AtomicInteger()
-
 
     /**
      * Count the number of time an error occurred
@@ -203,7 +197,7 @@ abstract class TaskProcessor {
      * @param taskConfig
      * @param taskBody
      */
-    TaskProcessor( Executor executor, Session session, BaseScript script, TaskConfig taskConfig, TaskBody taskBody ) {
+    TaskProcessor( String name, Executor executor, Session session, BaseScript script, TaskConfig taskConfig, TaskBody taskBody ) {
         assert executor
         assert session
         assert script
@@ -214,18 +208,8 @@ abstract class TaskProcessor {
         this.ownerScript = script
         this.taskConfig = taskConfig
         this.taskBody = taskBody
+        this.name = name
 
-        /*
-         * set the task name
-         */
-        if( taskConfig.name ) {
-            this.name = taskConfig.name
-        }
-        else {
-            // generate the processor name if not specified
-            this.name = "task_${tasksCount.incrementAndGet()}"
-            taskConfig.name = this.name
-        }
     }
 
     /**
@@ -298,18 +282,18 @@ abstract class TaskProcessor {
          *   if missing create an dummy 'input' set to true
          */
         log.trace "TaskConfig: ${taskConfig}"
-        if( taskConfig.inputs.size() == 0 ) {
+        if( taskConfig.getInputs().size() == 0 ) {
             taskConfig.fakeInput()
         }
 
-        final boolean hasEachParams = taskConfig.inputs.any { it instanceof EachInParam }
-        final boolean allScalarValues = taskConfig.inputs.allScalarInputs() && !hasEachParams
+        final boolean hasEachParams = taskConfig.getInputs().any { it instanceof EachInParam }
+        final boolean allScalarValues = taskConfig.getInputs().allScalarInputs() && !hasEachParams
 
         /*
          * Normalize the output
          * - even though the output may be empty, let return the stdout as output by default
          */
-        if ( taskConfig.outputs.size() == 0 ) {
+        if ( taskConfig.getOutputs().size() == 0 ) {
             def dummy =  allScalarValues ? Nextflow.variable() : Nextflow.channel()
             taskConfig.fakeOutput(dummy)
         }
@@ -334,7 +318,7 @@ abstract class TaskProcessor {
          * When there is a single output channel, return let returns that item
          * otherwise return the list
          */
-        def result = taskConfig.outputs.channels
+        def result = taskConfig.getOutputs().channels
         return result.size() == 1 ? result[0] : result
     }
 
@@ -437,10 +421,13 @@ abstract class TaskProcessor {
         def index = indexCount.incrementAndGet()
         def task = new TaskRun(id: id, index: index, processor: this, type: type, config: taskConfig.newLocalConfig() )
 
+        // -- create task local config
+        task.config = taskConfig.newLocalConfig()
+
         /*
          * initialize the inputs/outputs for this task instance
          */
-        taskConfig.inputs.each { InParam param ->
+        taskConfig.getInputs().each { InParam param ->
             if( param instanceof SetInParam )
                 param.inner.each { task.setInput(it)  }
             else
@@ -448,7 +435,7 @@ abstract class TaskProcessor {
         }
 
 
-        taskConfig.outputs.each { OutParam param ->
+        taskConfig.getOutputs().each { OutParam param ->
             if( param instanceof SetOutParam ) {
                 param.inner.each { task.setOutput(it) }
             }
@@ -535,7 +522,7 @@ abstract class TaskProcessor {
             return false
         }
 
-        if( !task.config.storeDir.exists() ) {
+        if( !task.config.getStoreDir().exists() ) {
             log.trace "[$task.name] Store dir does not exists > ${task.config.storeDir} -- return false"
             // no folder -> no cached result
             return false
@@ -695,7 +682,7 @@ abstract class TaskProcessor {
 
             final taskErrCount = task ? task.failCount++ : 0
             final procErrCount = errorCount++
-            final taskStrategy = task.config.getErrorStrategy()
+            final taskStrategy = task?.config?.getErrorStrategy()
 
             // when is a task level error and the user has chosen to ignore error, just report and error message
             // return 'false' to DO NOT stop the execution
@@ -818,7 +805,7 @@ abstract class TaskProcessor {
      */
     final protected synchronized void sendPoisonPill() {
 
-        taskConfig.outputs.each { param ->
+        taskConfig.getOutputs().each { param ->
             def channel = param.outChannel
 
             if( channel instanceof DataflowQueue ) {

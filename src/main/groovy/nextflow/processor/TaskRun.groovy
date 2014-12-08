@@ -60,6 +60,11 @@ class TaskRun {
     def index
 
     /**
+     * Task name
+     */
+    def String name
+
+    /**
      * The unique hash code associated to this task
      */
     def HashCode hash
@@ -223,9 +228,12 @@ class TaskRun {
     def LocalConfig config
 
     String getName() {
+        if( name )
+            return name
+
         def baseName = processor.name
         def key = config.containsKey('sampleId') ? config.sampleId : index
-        return "$baseName ($key)"
+        return name = "$baseName ($key)"
     }
 
     def String getScript() {

@@ -75,24 +75,25 @@ class TaskConfigTest extends Specification {
         then:
         config.hola == [field1:'val1', field2: 'val2']
 
-        // maxDuration property
-        when:
-        config.maxDuration '1h'
-        then:
-        config.time == new Duration('1h')
-        config.time as Duration == new Duration('1h')
-
-        // maxMemory property
-        when:
-        config.maxMemory '2GB'
-        then:
-        config.memory == new MemoryUnit('2GB')
-
         // generic value assigned like a 'plain' property
         when:
         config.hola = 99
         then:
         config.hola == 99
+
+        // maxDuration property
+        when:
+        config.time '1h'
+        then:
+        config.time == '1h'
+        config.newLocalConfig().time == new Duration('1h')
+
+        // maxMemory property
+        when:
+        config.memory '2GB'
+        then:
+        config.memory == '2GB'
+        config.newLocalConfig().memory == new MemoryUnit('2GB')
 
     }
 
@@ -139,29 +140,11 @@ class TaskConfigTest extends Specification {
         config.containsKey('echo')
         config.containsKey('shell')
         config.containsKey('validExitStatus')
-        config.containsKey('undef')
         !config.containsKey('xyz')
         !config.containsKey('maxForks')
         config.maxForks == null
 
     }
-
-    def 'test undef' () {
-
-        setup:
-        def script = Mock(BaseScript)
-        def config = new TaskConfig(script)
-
-        expect:
-        config.undef == false
-
-        when:
-        config.undef(true)
-        then:
-        config.undef == true
-
-    }
-
 
     def 'test input' () {
 

@@ -114,7 +114,7 @@ class GridExecutorTest extends Specification {
     def testCheckIfTerminateEmptyFile() {
 
         given:
-        def task = new TaskRun()
+        def task = new TaskRun(name: 'task1')
         task.workDir = Files.createTempDirectory('testHandler')
 
         def executor = Mock(AbstractGridExecutor)
@@ -143,7 +143,7 @@ class GridExecutorTest extends Specification {
     def testCheckIfTerminateEmptyWithLatency() {
 
         setup:
-        def task = new TaskRun()
+        def task = new TaskRun(name: 'task1')
         task.workDir = Files.createTempDirectory('testHandler')
 
         def executor = Mock(AbstractGridExecutor)

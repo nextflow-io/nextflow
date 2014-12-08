@@ -19,6 +19,7 @@
  */
 
 package nextflow.script
+
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
@@ -164,6 +165,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 /**
  * Model a process *file* output parameter
  */
+@Slf4j
 @InheritConstructors
 class FileOutParam extends BaseOutParam implements OutParam {
 
@@ -187,16 +189,19 @@ class FileOutParam extends BaseOutParam implements OutParam {
 
     private TokenGString gstring
 
+    private Closure<String> dynamicObj
+
     String getSeparatorChar() { separatorChar }
 
     boolean getIncludeHidden() { includeHidden }
 
     boolean getIncludeInputs() { includeInputs }
 
+
     /**
      * @return {@code true} when the file name is parametric i.e contains a variable name to be resolved, {@code false} otherwise
      */
-    boolean isParametric() { gstring != null }
+    boolean isParametric() { dynamicObj || gstring != null }
 
     FileOutParam separatorChar( String value ) {
         this.separatorChar = value
@@ -216,13 +221,19 @@ class FileOutParam extends BaseOutParam implements OutParam {
     BaseOutParam bind( obj ) {
 
         if( obj instanceof TokenGString ) {
+            log.warn "Parametric output file names should be defined with closures -- Replace `file \"${obj.text}\"` with `file { \"${obj.text}\" }`"
             gstring = obj
             return this
         }
 
         if( obj instanceof TokenVar ) {
             this.nameObj = obj.name
-            gstring = new TokenGString(obj.name, [''], [obj.name])
+            dynamicObj = { delegate.containsKey(obj.name) ? delegate.get(obj.name): obj.name }
+            return this
+        }
+
+        if( obj instanceof Closure ) {
+            dynamicObj = obj
             return this
         }
 
@@ -233,7 +244,10 @@ class FileOutParam extends BaseOutParam implements OutParam {
     List<String> getFilePatterns(Map context) {
 
         def nameString
-        if( gstring ) {
+        if( dynamicObj ) {
+            nameString = context.with(dynamicObj)
+        }
+        else if( gstring ) {
             def strict = getName() == null
             nameString = gstring.resolve { String it -> resolveName(context, it, strict) }
         }
@@ -251,7 +265,6 @@ class FileOutParam extends BaseOutParam implements OutParam {
     String getName() {
         return nameObj ? super.getName() : null
     }
-
 
 }
 

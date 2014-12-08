@@ -19,12 +19,10 @@
  */
 
 package nextflow.processor
-
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
-import nextflow.Nextflow
 import nextflow.exception.AbortOperationException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.util.CmdLineHelper
@@ -180,11 +178,7 @@ class LocalConfig implements Map<String,Object> {
         if( !path )
             return null
 
-        def result = Nextflow.file(path)
-        if( result instanceof Path )
-            return (Path)result
-
-        throw new IllegalArgumentException("Invalid result for 'storeDir' attribute: $path}")
+        return (path as Path).complete()
     }
 
 

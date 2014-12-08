@@ -46,7 +46,7 @@ class TaskHandlerTest extends Specification {
 
         when:
         def handler = [:] as TaskHandler
-        handler.task = new TaskRun(workDir: folder)
+        handler.task = new TaskRun(workDir: folder, name:'task1')
         handler.status = TaskStatus.COMPLETED
         def trace = handler.getTraceRecord()
 

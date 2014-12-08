@@ -50,19 +50,14 @@ class DelegateMap implements Map<String,Object> {
     private String name
 
     /**
-     * When {@code true} referencing unknown variable names will true a {@code MissingPropertyException}
-     */
-    private boolean undef
-
-    /**
      * The name of the variables not hold by the target map, but available in script binding object
      */
     private transient Set<String> bindingNames
 
     DelegateMap( TaskProcessor processor, Map holder ) {
-        this.holder = holder ?: [:]
+        assert holder != null
+        this.holder = holder
         this.script = processor.ownerScript
-        this.undef = processor.taskConfig.getUndef()
         this.name = processor.name
 
         // fetch all the variables names referenced by the script body and retain
@@ -81,10 +76,9 @@ class DelegateMap implements Map<String,Object> {
     }
 
 
-    protected DelegateMap(Script script, Map holder, boolean undef, String name) {
+    protected DelegateMap(Script script, Map holder, String name) {
         this.script = script
         this.holder = holder
-        this.undef = undef
         this.name = name
         def names = script.getBinding()?.getVariables()?.keySet()
         this.bindingNames = names ? new HashSet<>(names) : new HashSet<>()
@@ -112,7 +106,7 @@ class DelegateMap implements Map<String,Object> {
 
     @Override
     String toString() {
-        "DelegateMap[process: $name; undef: $undef; script: ${script?.class?.name}; holder: ${holder}]"
+        "DelegateMap[process: $name; script: ${script?.class?.name}; holder: ${holder}]"
     }
 
     @Override
@@ -127,12 +121,7 @@ class DelegateMap implements Map<String,Object> {
             return script.binding.getVariable(property.toString())
         }
 
-        if( undef )
-        // so give a chance to the bash interpreted to evaluate it
-            return '$' + property
-        else
-            throw new MissingPropertyException("Unknown variable '$property' -- Make sure you didn't misspell it or define somewhere in the script before use it")
-
+        throw new MissingPropertyException("Unknown variable '$property' -- Make sure you didn't misspell it or define somewhere in the script before use it")
     }
 
     Object invokeMethod(String name, Object args) {
@@ -201,7 +190,6 @@ class DelegateMap implements Map<String,Object> {
         def buffer = new ByteArrayOutputStream(5*1024)
         def out = new Output(buffer)
         out.writeString(name)
-        out.writeBoolean(undef)
         kryo.writeClassAndObject(out,holder)
 
         // -- the script class
@@ -256,14 +244,13 @@ class DelegateMap implements Map<String,Object> {
         try {
             def input = new Input(new ByteArrayInputStream(binary))
             def name = input.readString()
-            def undef = input.readBoolean()
             Map holder = (Map)kryo.readClassAndObject(input)
             Class<Script> clazz = kryo.readObject(input,Class)
             Binding binding = kryo.readObject(input,Binding)
 
             Script script = clazz.newInstance()
             script.setBinding(binding)
-            return new DelegateMap(script, holder, undef, name)
+            return new DelegateMap(script, holder, name)
         }
         finally {
             // set back the original class loader

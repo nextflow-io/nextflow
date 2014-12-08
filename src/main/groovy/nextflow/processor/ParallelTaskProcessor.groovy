@@ -67,8 +67,8 @@ class ParallelTaskProcessor extends TaskProcessor {
     @Override
     protected void createOperator() {
 
-        def opInputs = new ArrayList(taskConfig.inputs.getChannels())
-        def opOutputs = new ArrayList(taskConfig.outputs.getChannels())
+        def opInputs = new ArrayList(taskConfig.getInputs().getChannels())
+        def opOutputs = new ArrayList(taskConfig.getOutputs().getChannels())
 
         // append the shared obj to the input list
         def allScalar = taskConfig.getInputs().allScalarInputs()
@@ -79,7 +79,7 @@ class ParallelTaskProcessor extends TaskProcessor {
          * the list holds the index in the list of all *inputs* for the {@code each} declaration
          */
         def iteratorIndexes = []
-        taskConfig.inputs.eachWithIndex { param, index ->
+        taskConfig.getInputs().eachWithIndex { param, index ->
             if( param instanceof EachInParam ) {
                 log.trace "Process ${name} > got each param: ${param.name} at index: ${index} -- ${param.dump()}"
                 iteratorIndexes << index
@@ -278,12 +278,15 @@ class ParallelTaskProcessor extends TaskProcessor {
             task.setInput(param, val)
         }
 
+        // -- create the delegate map
+        final delegate = new DelegateMap(this, contextMap)
+
         // -- all file parameters are processed in a second pass
         //    so that we can use resolve the variables that eventually are in the file name
         secondPass.each { FileInParam param, val ->
             def fileParam = param as FileInParam
             def normalized = normalizeInputToFiles(val,count)
-            def resolved = expandWildcards( fileParam.getFilePattern(contextMap), normalized )
+            def resolved = expandWildcards( fileParam.getFilePattern(delegate), normalized )
             contextMap[ param.name ] = singleItemOrList(resolved)
             count += resolved.size()
             val = resolved
@@ -292,10 +295,11 @@ class ParallelTaskProcessor extends TaskProcessor {
             task.setInput(param, val)
         }
 
-        /*
-         * initialize the task code to be executed
-         */
-        final delegate = new DelegateMap(this, contextMap)
+        // -- set the delegate map as context ih the task config
+        //    so that lazy directives will be resolved against it
+        task.config.setContext(delegate)
+
+        // -- initialize the task code to be executed
         task.code = this.code.clone() as Closure
         task.code.delegate = delegate
         task.code.setResolveStrategy(Closure.DELEGATE_ONLY)
@@ -306,12 +310,6 @@ class ParallelTaskProcessor extends TaskProcessor {
         else if( !overrideWarnShown.getAndSet(true) ) {
             log.warn "Process $name overrides reserved variable `task`"
         }
-
-        /*
-         * set the delegate map as context ih the task config so that
-         * lazy directives will be resolved against it
-         */
-        task.config.setContext(delegate)
 
         return task
     }
@@ -371,7 +369,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         @Override
         public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
             if( log.isTraceEnabled() ) {
-                def channelName = taskConfig.inputs?.names?.get(index)
+                def channelName = taskConfig.getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
                 log.trace "<${taskName}> Message arrived -- ${channelName} => ${message}"
             }
@@ -382,7 +380,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         @Override
         public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
             if( log.isTraceEnabled() ) {
-                def channelName = taskConfig.inputs?.names?.get(index)
+                def channelName = taskConfig.getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
                 log.trace "<${taskName}> Control message arrived ${channelName} => ${message}"
             }
@@ -452,20 +450,20 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         @Override
         public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "* process '$name' > message arrived for iterator '${taskConfig.inputs.names[index]}' with value: '$message'"
+            log.trace "* process '$name' > message arrived for iterator '${taskConfig.getInputs().names[index]}' with value: '$message'"
             return message;
         }
 
         @Override
         public Object messageSentOut(final DataflowProcessor processor, final DataflowWriteChannel<Object> channel, final int index, final Object message) {
-            log.trace "* process '$name' > message forwarded for iterator '${taskConfig.inputs.names[index]}' with value: '$message'"
+            log.trace "* process '$name' > message forwarded for iterator '${taskConfig.getInputs().names[index]}' with value: '$message'"
             return message;
         }
 
 
         @Override
         public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "* process '$name' > control message arrived for iterator '${taskConfig.inputs.names[index]}'"
+            log.trace "* process '$name' > control message arrived for iterator '${taskConfig.getInputs().names[index]}'"
             return message;
         }
 

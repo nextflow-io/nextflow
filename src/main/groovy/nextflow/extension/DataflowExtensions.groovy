@@ -631,14 +631,6 @@ class DataflowExtensions {
             storeDir = FileHelper.createTempFolder(session.workDir)
 
         /*
-         * set a default name if not provided
-         */
-        def defaultFileName = null
-        if( !fileName ) {
-            defaultFileName = Files.createTempFile(storeDir, 'collect', '.file').getName()
-        }
-
-        /*
          * each time a value is received, invoke the closure and
          * append its result value to a file
          */
@@ -677,9 +669,8 @@ class DataflowExtensions {
             }
 
             else if( value != null ) {
-
-                collector.add( fileName?:defaultFileName, value )
-
+                if( !fileName ) fileName = Files.createTempFile(storeDir, 'collect', '.file').getName()
+                collector.add( fileName, value )
             }
 
         }

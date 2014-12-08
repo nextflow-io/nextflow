@@ -26,8 +26,6 @@ import nextflow.Session
 import nextflow.exception.ProcessScriptException
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
-import nextflow.util.Duration
-import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import test.TestParser
 /**
@@ -84,7 +82,7 @@ class ScriptRunnerTest extends Specification {
             '''
         runner.setScript(script).execute()
         then:
-        runner.getScriptObj().getTaskProcessor().taskConfig.name == 'simpleTask'
+        runner.getScriptObj().getTaskProcessor().name == 'simpleTask'
         runner.getScriptObj().getTaskProcessor().taskConfig.instanceType == 'alpha'
 
 
@@ -110,7 +108,7 @@ class ScriptRunnerTest extends Specification {
         runner2.setScript(script2).execute()
 
         then:
-        runner2.getScriptObj().getTaskProcessor().taskConfig.name == 'otherTask'
+        runner2.getScriptObj().getTaskProcessor().name == 'otherTask'
         runner2.getScriptObj().getTaskProcessor().taskConfig.instanceType == 'beta'
 
     }
@@ -139,10 +137,9 @@ class ScriptRunnerTest extends Specification {
         then:
         runner.getResult().val == 'echo 1 - 3'
         runner.getScriptObj().getTaskProcessor().getName() == 'task2'
-        runner.getScriptObj().getTaskProcessor().taskConfig.name == 'task2'
-        runner.getScriptObj().getTaskProcessor().taskConfig.inputs[0].inChannel.getVal() == 1
-        runner.getScriptObj().getTaskProcessor().taskConfig.inputs[1].inChannel instanceof DataflowQueue
-        runner.getScriptObj().getTaskProcessor().taskConfig.outputs[0].outChannel instanceof DataflowWriteChannel
+        runner.getScriptObj().getTaskProcessor().taskConfig.getInputs()[0].inChannel.getVal() == 1
+        runner.getScriptObj().getTaskProcessor().taskConfig.getInputs()[1].inChannel instanceof DataflowQueue
+        runner.getScriptObj().getTaskProcessor().taskConfig.getOutputs()[0].outChannel instanceof DataflowWriteChannel
     }
 
 
@@ -167,10 +164,9 @@ class ScriptRunnerTest extends Specification {
 
         then:
         runner.getResult().val == 'echo 1'
-        runner.scriptObj.taskProcessor.taskConfig.name == 'test'
+        runner.scriptObj.taskProcessor.name == 'test'
 
     }
-
 
 
     def 'test process variables' () {
@@ -189,7 +185,6 @@ class ScriptRunnerTest extends Specification {
             }
 
             '''
-
 
         expect:
         runner.setScript(script).execute().val == '1-2-3'
@@ -281,6 +276,7 @@ class ScriptRunnerTest extends Specification {
 
         def script = '''
             X = file('filename')
+
             process test {
                 input:
                 file X
@@ -411,7 +407,9 @@ class ScriptRunnerTest extends Specification {
 
         then:
         process.taskConfig instanceof TaskConfig
-        process.taskConfig.getModule() == ['b/2','c/3']
+        process.taskConfig.module == ['b/2','c/3']
+        process.taskConfig.newLocalConfig().module == ['b/2','c/3']
+        process.taskConfig.newLocalConfig().getModule() == ['b/2','c/3']
     }
 
     def 'test module config 2'() {
@@ -442,7 +440,9 @@ class ScriptRunnerTest extends Specification {
 
         then:
         process.taskConfig instanceof TaskConfig
-        process.taskConfig.getModule() == ['b/2','z/9']
+        process.taskConfig.module == ['b/2','z/9']
+        process.taskConfig.newLocalConfig().module == ['b/2','z/9']
+        process.taskConfig.newLocalConfig().getModule() == ['b/2','z/9']
     }
 
     def 'test module config 3'() {
@@ -469,7 +469,10 @@ class ScriptRunnerTest extends Specification {
 
         then:
         process.taskConfig instanceof TaskConfig
-        process.taskConfig.getModule() == ['a/1']
+        process.taskConfig.module == 'a/1'
+        process.taskConfig.newLocalConfig().module ==  ['a/1']
+        process.taskConfig.newLocalConfig().getModule() ==  ['a/1']
+
     }
 
 
@@ -512,8 +515,8 @@ class ScriptRunnerTest extends Specification {
         process.taskConfig.queue == 'short'
         process.taskConfig.cpus == 2
         process.taskConfig.penv == 'mpi'
-        process.taskConfig.memory == new MemoryUnit('10G')
-        process.taskConfig.time == new Duration('6h')
+        process.taskConfig.memory == '10G'
+        process.taskConfig.time == '6 hour'
 
         when:
         def result = new ScriptRunner(config)

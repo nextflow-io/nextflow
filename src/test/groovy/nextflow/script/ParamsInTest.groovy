@@ -238,6 +238,50 @@ class ParamsInTest extends Specification {
         in3.getFilePattern(ctx) == 'the_file_name.fa'
         in3.inChannel.val == Paths.get('file.txt')
 
+    }
+
+    def testInputFilesWithClosure() {
+        setup:
+        def ctx = [x: 'main.txt', y: 'hello', z:'the_file_name']
+        def text = '''
+            q = java.nio.file.Paths.get('file.txt')
+
+            process hola {
+              input:
+              file { "$x" } from q
+              file { "${y}.txt" } from "str"
+              file f2 name { "${z}.fa" } from q
+              file f3:{ "${z}.txt" } from q
+
+              return ''
+            }
+            '''
+
+        when:
+        TaskProcessor process = parse(text).run()
+        FileInParam in1 = process.taskConfig.getInputs().get(0)
+        FileInParam in2 = process.taskConfig.getInputs().get(1)
+        FileInParam in3 = process.taskConfig.getInputs().get(2)
+        FileInParam in4 = process.taskConfig.getInputs().get(3)
+
+        then:
+        process.taskConfig.getInputs().size() == 4
+
+        in1.name.startsWith('Script1$_run_closure1_closure2@')
+        in1.getFilePattern(ctx) == 'main.txt'
+        in1.inChannel.val == Paths.get('file.txt')
+
+        in2.name.startsWith('Script1$_run_closure1_closure3@')
+        in2.getFilePattern(ctx) == 'hello.txt'
+        in2.inChannel.val == "str"
+
+        in3.name == 'f2'
+        in3.getFilePattern(ctx) == 'the_file_name.fa'
+        in3.inChannel.val == Paths.get('file.txt')
+
+        in4.name == 'f3'
+        in4.getFilePattern(ctx) == 'the_file_name.txt'
+        in4.inChannel.val == Paths.get('file.txt')
 
     }
 
@@ -408,6 +452,8 @@ class ParamsInTest extends Specification {
               set ('name_$x') from q
               set ("name_${x}.txt") from q
               set (file("hola_$x")) from q
+              set file( { "name_${x}.txt" } ) from q
+              set file( handle: { "name_${x}.txt" } ) from q
 
               return ''
             }
@@ -418,6 +464,8 @@ class ParamsInTest extends Specification {
         SetInParam in1 = process.taskConfig.getInputs().get(0)
         SetInParam in2 = process.taskConfig.getInputs().get(1)
         SetInParam in3 = process.taskConfig.getInputs().get(2)
+        SetInParam in4 = process.taskConfig.getInputs().get(3)
+        SetInParam in5 = process.taskConfig.getInputs().get(4)
         def ctx = [x:'the_file']
 
         then:
@@ -434,6 +482,13 @@ class ParamsInTest extends Specification {
         (in3.inner[0] as FileInParam).name == 'hola_$x'
         (in3.inner[0] as FileInParam).getFilePattern(ctx) == 'hola_the_file'
 
+        in4.inner[0] instanceof FileInParam
+        (in4.inner[0] as FileInParam).name.startsWith('Script1$_run_closure1_closure2@')
+        (in4.inner[0] as FileInParam).getFilePattern(ctx) == 'name_the_file.txt'
+
+        in5.inner[0] instanceof FileInParam
+        (in5.inner[0] as FileInParam).name == 'handle'
+        (in5.inner[0] as FileInParam).getFilePattern(ctx) == 'name_the_file.txt'
     }
 
     def testInputMap2() {

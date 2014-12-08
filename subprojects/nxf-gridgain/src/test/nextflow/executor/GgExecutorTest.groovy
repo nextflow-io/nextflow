@@ -23,7 +23,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.file.FileHolder
-import nextflow.processor.TaskConfig
+import nextflow.processor.LocalConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.script.FileInParam
@@ -99,10 +99,7 @@ class GgExecutorTest extends Specification {
         sourceFile1.text = 'Content for file1'
         sourceFile2.text = 'Content for file2'
 
-        def config = new TaskConfig([shell: '/bin/zsh' ])
-
         def processor = Mock(TaskProcessor)
-        processor.getTaskConfig() >> config
         processor.getProcessEnvironment() >> [ALPHA: 1, BETA:2 ]
 
         def binding = new Binding()
@@ -110,8 +107,8 @@ class GgExecutorTest extends Specification {
                 id: 123,
                 name: 'TestRun',
                 workDir: Paths.get('/some/path'),
-                storeDir: targetPath,
                 processor: processor,
+                config: new LocalConfig(storeDir: targetPath, shell: '/bin/zsh'),
                 script: 'echo Hello world!')
         def s1 = new FileInParam(binding, []).bind( new TokenVar('x') )
         task.setInput(s1, [ new FileHolder(sourceFile1), new FileHolder(sourceFile2) ])

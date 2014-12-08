@@ -19,9 +19,10 @@
  */
 
 package nextflow.processor
+import static nextflow.util.CacheHelper.HashMode
+
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.exception.AbortOperationException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.script.BaseScript
 import nextflow.script.EachInParam
@@ -41,12 +42,7 @@ import nextflow.script.StdOutParam
 import nextflow.script.ValueInParam
 import nextflow.script.ValueOutParam
 import nextflow.script.ValueSharedParam
-import nextflow.util.Duration
-import nextflow.util.MemoryUnit
 import nextflow.util.ReadOnlyMap
-
-import static nextflow.util.CacheHelper.HashMode
-
 /**
  * Holds the task configuration properties
  *
@@ -88,7 +84,6 @@ class TaskConfig implements Map<String,Object> {
 
         configProperties = important ? new ReadOnlyMap(important) : new LinkedHashMap()
         configProperties.echo = false
-        configProperties.undef = false
         configProperties.cacheable = true
         configProperties.shell = BashWrapperBuilder.BASH
         configProperties.validExitStatus = [0]
@@ -152,18 +147,6 @@ class TaskConfig implements Map<String,Object> {
             case 'cacheable':
                 return isCacheable()
 
-            case 'errorStrategy':
-                return getErrorStrategy()
-
-            case 'shell':
-                return getShell()
-
-            case 'time':
-                return getTime()
-
-            case 'memory':
-                return getMemory()
-
             default:
                 if( configProperties.containsKey(name) )
                     return configProperties.get(name)
@@ -216,11 +199,6 @@ class TaskConfig implements Map<String,Object> {
 
     void setUndef( def value ) {
         configProperties.undef = toBool(value)
-    }
-
-    TaskConfig undef( def value ) {
-        configProperties.undef = toBool(value)
-        return this
     }
 
     boolean getUndef() {
@@ -302,84 +280,6 @@ class TaskConfig implements Map<String,Object> {
     }
 
 
-    @Deprecated
-    ErrorStrategy getErrorStrategy() {
-        switch( configProperties.errorStrategy ) {
-            case CharSequence:
-                return configProperties.errorStrategy.toUpperCase() as ErrorStrategy
-            case ErrorStrategy:
-                return configProperties.errorStrategy
-            case null:
-                return null
-            default:
-                throw new IllegalArgumentException("Not a valid 'ErrorStrategy' value: ${configProperties.errorStrategy}")
-        }
-    }
-
-    /**
-     * The max memory allow to be used to the job
-     *
-     * @param value The maximum amount of memory expressed as string value,
-     *              accepted units are 'B', 'K', 'M', 'G', 'T', 'P'. So for example
-     *              {@code maxMemory '100M'}, {@code maxMemory '2G'}, etc.
-     */
-    @Deprecated
-    TaskConfig maxMemory( Object value ) {
-        log.warn("Directive 'maxMemory' has been deprecated. Use 'memory' instead.")
-        configProperties.memory = value
-        return this
-    }
-
-    /**
-     * The max duration time allowed for the job to be executed.
-     *
-     * @param value The max allowed time expressed as duration string, Accepted units are 'min', 'hour', 'day'.
-     *                  For example {@code maxDuration '30 min'}, {@code maxDuration '10 hour'}, {@code maxDuration '2 day'}
-     */
-    @Deprecated
-    TaskConfig maxDuration( Object value ) {
-        log.warn("Directive 'maxDuration' has been deprecated. Use 'time' instead.")
-        configProperties.time = value
-        return this
-    }
-
-    @Deprecated
-    MemoryUnit getMemory() {
-        def value = configProperties.memory
-
-        if( !value )
-            return null
-
-        if( value instanceof MemoryUnit )
-            return value
-
-        try {
-            new MemoryUnit(value.toString().trim())
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Not a valid 'memory' value in process definition: $value")
-        }
-    }
-
-    @Deprecated
-    Duration getTime() {
-        def value = configProperties.time
-
-        if( !value )
-            return null
-
-        if( value instanceof Duration )
-            return value
-
-        try {
-            new Duration(value.toString().trim())
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Not a valid `time` value in process definition: $value")
-        }
-    }
-
-
     TaskConfig validExitStatus( Object values ) {
 
         if( values instanceof List ) {
@@ -458,29 +358,7 @@ class TaskConfig implements Map<String,Object> {
         return copy
     }
 
-    @Deprecated
-    List<String> getModule() {
-        def result = configProperties.module
-        if( result instanceof String ) {
-            result = configProperties.module = parseModuleString(result)
-        }
-        (List<String>) result
-    }
 
-    @Deprecated
-    List<String> getShell() {
-        final value = configProperties.shell
-        if( !value )
-            return BashWrapperBuilder.BASH
-
-        if( value instanceof List )
-            return value
-
-        if( value instanceof CharSequence )
-            return [ value.toString() ]
-
-        throw new IllegalArgumentException("Not a valid 'shell' configuration value: ${value}")
-    }
 
 
 }

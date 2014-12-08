@@ -209,9 +209,8 @@ class ParamsOutTest extends Specification {
             }
             '''
 
-        def binding = [:]
+        def binding = [ x: 'hola', y:'hola_2', z: 'hola_z' ]
         TaskProcessor process = parse(text, binding).run()
-        def ctx = [ x: 'hola', y:'hola_2', z: 'hola_z' ]
 
         when:
         FileOutParam out1 = process.taskConfig.getOutputs().get(0)
@@ -222,21 +221,21 @@ class ParamsOutTest extends Specification {
 
         then:
         out1.name == 'x'
-        out1.getFilePatterns(ctx) == ['hola']
+        out1.getFilePatterns(binding) == ['hola']
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.x
 
         out2.name == null
-        out2.getFilePatterns(ctx) == ['hola_2']
+        out2.getFilePatterns(binding) == ['hola_2']
         out2.outChannel instanceof DataflowQueue
         out2.outChannel == binding.q
 
         out3.inner[0] instanceof FileOutParam
         (out3.inner[0] as FileOutParam).name == 'z'
-        (out3.inner[0] as FileOutParam).getFilePatterns(ctx) == ['hola_z']
+        (out3.inner[0] as FileOutParam).getFilePatterns(binding) == ['hola_z']
 
         out4.name == 'u'
-        out4.getFilePatterns(ctx) == ['u']
+        out4.getFilePatterns(binding) == ['u']
         out4.outChannel instanceof DataflowQueue
         out4.outChannel == binding.u
     }
@@ -264,10 +263,51 @@ class ParamsOutTest extends Specification {
         then:
         thrown(IllegalArgumentException)
 
-
-
     }
 
+    def testFileOutWithClosure() {
+
+        setup:
+        def text = '''
+
+            process hola {
+              output:
+              file { "${x}_name" } into channel1
+              file { "${params.fileName}_${y}.fa" } into channel2
+              set file({ "${z}.txt" }) into channel3
+
+              return ''
+            }
+            '''
+
+        def binding = [x: 'hola', y:99, z:'script_file', params: [fileName: 'hello']]
+        TaskProcessor process = parse(text, binding).run()
+
+        when:
+        FileOutParam out1 = process.taskConfig.getOutputs().get(0)
+        FileOutParam out2 = process.taskConfig.getOutputs().get(1)
+        SetOutParam out3 = process.taskConfig.getOutputs().get(2)
+
+        then:
+        out1.name == null
+        out1.getFilePatterns(binding) == ['hola_name']
+        out1.outChannel instanceof DataflowQueue
+        out1.outChannel == binding.channel1
+        out1.isParametric()
+
+        out2.name == null
+        out2.getFilePatterns(binding) == ['hello_99.fa']
+        out2.outChannel instanceof DataflowQueue
+        out2.outChannel == binding.channel2
+        out2.isParametric()
+
+        out3.outChannel instanceof DataflowQueue
+        out3.outChannel == binding.channel3
+        out3.inner[0] instanceof FileOutParam
+        (out3.inner[0] as FileOutParam) .getFilePatterns(binding) == ['script_file.txt']
+        (out3.inner[0] as FileOutParam) .isParametric()
+
+    }
 
 
     def testSetOutParams() {

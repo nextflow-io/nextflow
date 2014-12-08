@@ -19,6 +19,7 @@
  */
 
 package nextflow.script
+
 import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.transform.ToString
@@ -193,7 +194,7 @@ abstract class BaseParam {
         throw new IllegalArgumentException("Invalid output channel reference")
     }
 
-
+    @Deprecated
     final protected resolveName( Map context, String name, boolean strict = true ) {
         if( context && context.containsKey(name) )
             return context.get(name)
@@ -275,7 +276,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
     @Override
     protected void lazyInit() {
 
-        if( fromObject == null && (bindObject == null || bindObject instanceof TokenGString ) ) {
+        if( fromObject == null && (bindObject == null || bindObject instanceof TokenGString || bindObject instanceof Closure ) ) {
             throw new IllegalStateException("Missing 'bind' declaration in input parameter")
         }
 
@@ -306,13 +307,14 @@ abstract class BaseInParam extends BaseParam implements InParam {
      * @return The parameter name
      */
     def String getName() {
-        if( bindObject instanceof TokenVar ) {
+        if( bindObject instanceof TokenVar )
             return bindObject.name
-        }
 
-        if( bindObject instanceof String ) {
+        if( bindObject instanceof String )
             return bindObject
-        }
+
+        if( bindObject instanceof Closure )
+            return bindObject.toString()
 
         throw new IllegalArgumentException()
     }
@@ -350,6 +352,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
 /**
  *  Represents a process *file* input parameter
  */
+@Slf4j
 @InheritConstructors
 class FileInParam extends BaseInParam  {
 
@@ -365,6 +368,13 @@ class FileInParam extends BaseInParam  {
         }
 
         if( obj instanceof TokenGString ) {
+            log.warn "Parametric input file names should be defined with closures -- Replace `file \"${obj.text}\"` with `file { \"${obj.text}\" }`"
+
+            filePattern = obj
+            return this
+        }
+
+        if( obj instanceof Closure ) {
             filePattern = obj
             return this
         }
@@ -409,6 +419,10 @@ class FileInParam extends BaseInParam  {
     private resolve( Map ctx, value ) {
         if( value instanceof TokenGString )
             value.resolve { String it -> resolveName(ctx,it) }
+
+        else if( value instanceof Closure ) {
+            return ctx.with(value)
+        }
 
         else
             return value

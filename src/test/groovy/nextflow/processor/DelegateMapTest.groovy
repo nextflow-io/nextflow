@@ -22,7 +22,6 @@ package nextflow.processor
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import nextflow.script.BaseScript
 import nextflow.script.TaskBody
 import nextflow.util.BlankSeparatedList
 import nextflow.util.Duration
@@ -33,31 +32,6 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class DelegateMapTest extends Specification {
-
-    def 'test undef'( ) {
-
-        setup:
-        def script = Mock(BaseScript)
-        def map = new DelegateMap(script, [:], false, 'hola')
-
-        when:
-        map.x = 1
-        then:
-        map.x == 1
-
-        when:
-        map.get('y')
-        then:
-        thrown(MissingPropertyException)
-
-        when:
-        def val = new DelegateMap(script,[:], true, 'hola').get('y')
-        then:
-        val == '$y'
-
-
-    }
-
 
     def testSaveAndReadContextMap () {
 
@@ -115,7 +89,7 @@ class DelegateMapTest extends Specification {
         script.setBinding(bind)
 
         def local = [p:3, q:4, path: Paths.get('some/path')]
-        def delegate = new DelegateMap( script, local, false, 'hola' )
+        def delegate = new DelegateMap( script, local, 'hola' )
 
         when:
         def bytes = delegate.dehydrate()
@@ -126,10 +100,6 @@ class DelegateMapTest extends Specification {
         delegate.getHolder() == copy.getHolder()
         copy.getHolder() == local
 
-
     }
-
-
-
 
 }

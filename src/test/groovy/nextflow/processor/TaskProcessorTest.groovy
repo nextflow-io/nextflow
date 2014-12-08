@@ -19,25 +19,38 @@
  */
 
 package nextflow.processor
-
 import java.nio.file.Files
 import java.nio.file.Paths
 
 import groovyx.gpars.agent.Agent
 import nextflow.Session
+import nextflow.executor.NopeExecutor
 import nextflow.file.FileHolder
+import nextflow.script.BaseScript
 import nextflow.script.FileInParam
+import nextflow.script.TaskBody
 import nextflow.script.TokenVar
 import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
 import spock.lang.Specification
-import test.DummyProcessor
-import test.DummyScript
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class TaskProcessorTest extends Specification {
+
+    static class DummyProcessor extends TaskProcessor {
+
+        DummyProcessor(String name, Session session, BaseScript script, TaskConfig taskConfig) {
+            super(name, new NopeExecutor(), session, new DummyScript(), taskConfig, new TaskBody({}, '..', true))
+        }
+
+        @Override protected void createOperator() { }
+    }
+
+    static class DummyScript extends BaseScript {
+        @Override Object run() { return null }
+    }
 
 
     def filterHidden() {
@@ -97,7 +110,7 @@ class TaskProcessorTest extends Specification {
         def wrapper = new DummyScript()
         def session = new Session([env: [X:"1", Y:"2"]])
         session.setBaseDir(home)
-        def processor = new DummyProcessor(session, wrapper, new TaskConfig(wrapper))
+        def processor = new DummyProcessor('task1', session, wrapper, new TaskConfig(wrapper))
         def builder = new ProcessBuilder()
         builder.environment().putAll( processor.getProcessEnvironment() )
 
@@ -110,7 +123,7 @@ class TaskProcessorTest extends Specification {
         when:
         session = new Session([env: [X:"1", Y:"2", PATH:'/some']])
         session.setBaseDir(home)
-        processor = new DummyProcessor(session, wrapper, new TaskConfig(wrapper))
+        processor = new DummyProcessor('task1', session, wrapper, new TaskConfig(wrapper))
         builder = new ProcessBuilder()
         builder.environment().putAll( processor.getProcessEnvironment() )
 
@@ -287,6 +300,7 @@ class TaskProcessorTest extends Specification {
 
 
     }
+
 
 
 

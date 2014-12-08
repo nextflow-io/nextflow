@@ -20,9 +20,7 @@
 
 package nextflow.util
 
-import groovy.transform.CompileStatic
 import org.apache.commons.lang.StringUtils
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>

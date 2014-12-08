@@ -196,11 +196,6 @@ class ProcessFactory {
 
         options?.each { String key, value -> taskConfig.setProperty(key,value)}
 
-        // -- set the task name in the config object
-        if( name ) {
-            taskConfig.name = name
-        }
-
         // Invoke the code block, which will return the script closure to the executed
         // As side effect will set all the properties declaration in the 'taskConfig' object
         // Note: the config object is wrapped by a TaskConfigWrapper because it is required
@@ -230,7 +225,7 @@ class ProcessFactory {
         execObj.init()
 
         // create processor class
-        def result = ParallelTaskProcessor.class.newInstance( execObj, session, owner, taskConfig, script )
+        def result = ParallelTaskProcessor.class.newInstance( name, execObj, session, owner, taskConfig, script )
         return result
 
     }
@@ -240,7 +235,7 @@ class ProcessFactory {
      *
      * @param taskConfig
      */
-    private getExecutorName(Map taskConfig) {
+    private getExecutorName(TaskConfig taskConfig) {
         log.trace ">> taskConfig $taskConfig"
 
         // create the processor object
