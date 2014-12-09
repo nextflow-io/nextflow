@@ -19,7 +19,7 @@
  */
 
 package nextflow.executor
-import java.nio.file.Files
+
 import java.nio.file.Path
 import java.util.concurrent.Callable
 import java.util.concurrent.Future
@@ -27,12 +27,10 @@ import java.util.concurrent.Future
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.file.FileHolder
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
-import nextflow.script.InParam
 import nextflow.processor.TaskStatus
 import nextflow.script.ScriptType
 import nextflow.trace.TraceRecord
@@ -69,7 +67,6 @@ class LocalExecutor extends Executor {
 
     }
 
-
     protected TaskHandler createBashTaskHandler(TaskRun task) {
 
         final bash = new BashWrapperBuilder(task)
@@ -84,27 +81,9 @@ class LocalExecutor extends Executor {
     }
 
     protected TaskHandler createNativeTaskHandler(TaskRun task) {
-        stageInputFiles(task)
         new NativeTaskHandler(task,this)
     }
 
-
-    protected void stageInputFiles(TaskRun task) {
-
-        Map<InParam, List<FileHolder>> inputs = task.getInputFiles()
-        inputs.each { param, files ->
-
-            for( FileHolder holder : files ) {
-                def stage = holder.stagePath
-                def symlink = task.workDir.resolve( stage.getFileName() )
-                Files.createSymbolicLink(symlink, holder.storePath)
-                // update the stage path with the newly created symlink
-                // so that it can be referenced in the user script
-                stage.setTarget(symlink)
-            }
-
-        }
-    }
 
 }
 

@@ -168,12 +168,12 @@ abstract class Executor {
 
             // delete all previous files with the same name
             files.each {
-                delete << "rm -f '${it.stagePath.name}'"
+                delete << "rm -f '${it.stageName}'"
             }
 
             // link them
             files.each { FileHolder it ->
-                links << stageInputFileScript( it.storePath, it.stagePath.name )
+                links << stageInputFileScript( it.storePath, it.stageName )
             }
 
         }

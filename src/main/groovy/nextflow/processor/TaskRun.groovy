@@ -227,6 +227,8 @@ class TaskRun {
 
     def TaskConfig config
 
+    def ContextMap context
+
     String getName() {
         if( name )
             return name
@@ -268,11 +270,11 @@ class TaskRun {
     /**
      * Return the list of all input files staged as inputs by this task execution
      */
-    List<Path> getStagedInputs()  {
+    List<String> getStagedInputs()  {
         getInputFiles()
                 .values()
                 .flatten()
-                .collect { it.stagePath }
+                .collect { it.stageName }
     }
 
     /**
@@ -296,7 +298,7 @@ class TaskRun {
         getInputFiles()?.each { InParam param, List<FileHolder> files ->
             if( param instanceof FileSharedParam ) {
                 files.each { holder ->
-                    result.add( holder.stagePath.getName() )
+                    result.add( holder.stageName )
                 }
             }
         }

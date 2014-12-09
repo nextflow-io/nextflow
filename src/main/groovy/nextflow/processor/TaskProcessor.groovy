@@ -46,6 +46,8 @@ import nextflow.file.FileHolder
 import nextflow.script.BaseScript
 import nextflow.script.BasicMode
 import nextflow.script.EachInParam
+import nextflow.script.EnvInParam
+import nextflow.script.FileInParam
 import nextflow.script.FileOutParam
 import nextflow.script.FileSharedParam
 import nextflow.script.InParam
@@ -54,8 +56,10 @@ import nextflow.script.ScriptType
 import nextflow.script.SetInParam
 import nextflow.script.SetOutParam
 import nextflow.script.SharedParam
+import nextflow.script.StdInParam
 import nextflow.script.StdOutParam
 import nextflow.script.TaskBody
+import nextflow.script.ValueInParam
 import nextflow.script.ValueOutParam
 import nextflow.script.ValueSharedParam
 import nextflow.util.ArrayBag
@@ -146,6 +150,11 @@ abstract class TaskProcessor {
      * very first time  for all processes
      */
     private static final AtomicBoolean errorShown = new AtomicBoolean()
+
+    /**
+     * Used to show the override warning message only the very first time
+     */
+    private final overrideWarnShown = new AtomicBoolean()
 
     /**
      * Flag set {@code true} when the processor termination has been invoked
@@ -427,7 +436,8 @@ abstract class TaskProcessor {
                 index: index,
                 processor: this,
                 type: type,
-                config: config.createTaskConfig()
+                config: config.createTaskConfig(),
+                context: new ContextMap(this)
         )
 
         /*
@@ -1063,10 +1073,8 @@ abstract class TaskProcessor {
     protected List<Path> filterByRemovingStagedInputs( TaskRun task, List<Path> files ) {
 
         // get the list of input files
-        def List<Path> allStaged = task.getStagedInputs()
-        def List<String>  allInputNames = allStaged.collect { it.getName() }
-
-        files.findAll { !allInputNames.contains(it.getName()) }
+        def List<String> allStaged = task.getStagedInputs()
+        files.findAll { !allStaged.contains(it.getName()) }
 
     }
 
@@ -1138,15 +1146,18 @@ abstract class TaskProcessor {
         return files
     }
 
-    protected singleItemOrList( List<FileHolder> items ) {
+    protected singleItemOrList( List<FileHolder> items, Path stageDir ) {
         assert items != null
 
         if( items.size() == 1 ) {
-            return items[0].stagePath
+            return items[0].toStagePath(stageDir)
         }
-        else {
-            return new BlankSeparatedList( items *. stagePath )
+
+        def result = new ArrayList(items.size())
+        for( int i=0; i<items.size(); i++ ) {
+            result.add( items[i].toStagePath(stageDir) )
         }
+        return new BlankSeparatedList(result)
     }
 
 
@@ -1278,6 +1289,158 @@ abstract class TaskProcessor {
         return val
     }
 
+    /**
+     * Create the {@code TaskDef} data structure and initialize the task execution context
+     * with the received input values
+     *
+     * @param values
+     * @return
+     */
+    final protected TaskRun setupTask(List values) {
+        log.trace "Setup new process > $name"
+
+        // -- map the inputs to a map and use to delegate closure values interpolation
+        final secondPass = [:]
+        final task = createTaskRun()
+
+        int count = makeTaskContextStage1(task, secondPass, values)
+        makeTaskContextStage2(task, secondPass, count)
+
+        return task
+    }
+
+    final protected int makeTaskContextStage1( TaskRun task, Map secondPass, List values ) {
+
+        final delegate = task.context
+        final firstRun = task.index == 1
+        int count = 0
+
+        task.inputs.keySet().each { InParam param ->
+
+            // add the value to the task instance
+            def val = decodeInputValue(param,values)
+
+            switch(param) {
+                case EachInParam:
+                case ValueInParam:
+                    delegate.put( param.name, val )
+                    break
+
+                case FileInParam:
+                    secondPass[param] = val
+                    return // <-- leave it, because we do not want to add this 'val' at this stage
+
+                case FileSharedParam:
+                    def fileParam = param as FileSharedParam
+                    if( firstRun ) {
+                        def normalized = normalizeInputToFiles(val,count)
+                        if( normalized.size() > 1 )
+                            throw new IllegalStateException("Cannot share multiple files")
+
+                        val = expandWildcards( fileParam.filePattern, normalized )
+                        count += val.size()
+                        // track this obj
+                        sharedObjs[(SharedParam)param] = val
+                    }
+                    else {
+                        val = sharedObjs[(SharedParam)param]
+                    }
+
+                    delegate.put( fileParam.name, val )
+                    break
+
+                case ValueSharedParam:
+                    if( firstRun )
+                        sharedObjs[(SharedParam)param] = val
+                    else
+                        val = sharedObjs[(SharedParam)param]
+
+                    delegate.put( param.name, val )
+                    break
+
+                case StdInParam:
+                case EnvInParam:
+                    // nothing to do
+                    break
+
+                default:
+                    log.debug "Unsupported input param type: ${param?.class?.simpleName}"
+            }
+
+            // add the value to the task instance context
+            task.setInput(param, val)
+        }
+
+        return count
+    }
+
+    final protected void makeTaskContextStage2( TaskRun task, Map secondPass, int count ) {
+
+        final ctx = task.context
+
+        // -- all file parameters are processed in a second pass
+        //    so that we can use resolve the variables that eventually are in the file name
+        secondPass.each { FileInParam param, val ->
+            def fileParam = param as FileInParam
+            def normalized = normalizeInputToFiles(val,count)
+            def resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
+            ctx.put( param.name, resolved )
+            count += resolved.size()
+
+            // add the value to the task instance context
+            task.setInput(param, resolved)
+        }
+
+    }
+
+    final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
+
+        // set hash-code & working directory
+        task.hash = hash
+        task.workDir = folder
+        task.config.workDir = folder
+
+        final context = task.context
+
+        // -- resolve FileHolder's to StagePage
+        resolveStagePaths( context, folder )
+
+        // -- set the delegate map as context ih the task config
+        //    so that lazy directives will be resolved against it
+        task.config.setContext(context)
+
+        // -- set the `task.config` object in the context
+        if( !context.containsKey(TASK_CONFIG) ) {
+            context.put(TASK_CONFIG, task.config)
+        }
+        else if( !overrideWarnShown.getAndSet(true) ) {
+            log.warn "Process $name overrides reserved variable `task`"
+        }
+
+        // -- initialize the task code to be executed
+        task.code = this.code.clone() as Closure
+        task.code.delegate = context
+        task.code.setResolveStrategy(Closure.DELEGATE_ONLY)
+
+        // Important!
+        // when the task is implemented by a script string
+        // Invokes the closure which return the script whit all the variables replaced with the actual values
+        if( type == ScriptType.SCRIPTLET ) {
+            task.script = getScriptlet(task.code)
+        }
+
+    }
+
+    final protected resolveStagePaths( ContextMap context, Path folder ) {
+
+        for( String key : context.keySet() ) {
+            def entry = context.get(key)
+            if( entry instanceof ArrayBag<FileHolder> ) {
+                def resolved = singleItemOrList(entry, folder)
+                context.put(key, resolved)
+            }
+        }
+    }
 
     /**
      * Execute the specified task shell script
@@ -1288,17 +1451,7 @@ abstract class TaskProcessor {
     final protected void submitTask( TaskRun task, RunType runType, HashCode hash, Path folder ) {
         log.trace "[${task.name}] actual run folder: ${task.workDir}"
 
-        // set hash-code & working directory
-        task.hash = hash
-        task.workDir = folder
-        task.config.workDir = folder
-
-        // Important!
-        // when the task is implemented by a script string
-        // Invokes the closure which return the script whit all the variables replaced with the actual values
-        if( type == ScriptType.SCRIPTLET ) {
-            task.script = getScriptlet(task.code)
-        }
+        makeTaskContextStage3(task, hash, folder)
 
         // add the task to the collection of running tasks
         session.dispatcher.submit(task, blocking, runType.message)

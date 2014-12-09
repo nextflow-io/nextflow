@@ -339,7 +339,7 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
         def allFiles = task.getInputFiles().values()
         for( List<FileHolder> entry : allFiles ) {
             if( entry ) for( FileHolder it : entry ) {
-                attrs.inputFiles[ it.stagePath.name ] = it.storePath
+                attrs.inputFiles[ it.stageName ] = it.storePath
             }
         }
 

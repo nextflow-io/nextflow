@@ -20,41 +20,49 @@
 
 package nextflow.file
 
+import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.nio.file.Paths
 
-import groovy.transform.CompileStatic
-
+import org.codehaus.groovy.runtime.InvokerHelper
 /**
- * A Path object whose {@link Object#toString()} method return *always* the relative file name.
- * <p>
- *   This is needed when interpolating file in the process scripts
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
 class StagePath {
 
-    @Delegate
-    Path target
+    //@Delegate
+    final Path target
 
-    StagePath(Path path) {
-        assert path
-        this.target = path
+    StagePath( Path source ) {
+        this.target = source
     }
 
-    StagePath(String name) {
-        this.target = FileHelper.asPath(name)
+    StagePath( String fileName ) {
+        this.target = Paths.get(fileName)
     }
 
-    @Override
+    Object getProperty( String name ) {
+        InvokerHelper.getProperty(target,name)
+    }
+
+    void setProperty(String property, Object newValue) {
+        InvokerHelper.setProperty(target, property, newValue)
+    }
+
+    Object invokeMethod(String name, Object args) {
+        InvokerHelper.invokeMethod(target, name, args)
+    }
+
+    Path getFileName() {
+        target.getFileName()
+    }
+
+    Path toRealPath(LinkOption... options) {
+        return target
+    }
+
     String toString() {
-        return target.getFileName().toString()
+        target.getFileName().toString()
     }
-
-    void setTarget( Path value ) {
-        assert value
-        this.target = value
-    }
-
-
 }

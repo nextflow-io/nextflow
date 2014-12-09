@@ -168,13 +168,13 @@ class TaskProcessorTest extends Specification {
 
         when:
         def list = [ FileHolder.get(path1, 'x_file_1') ]
-        def result = processor.singleItemOrList(list)
+        def result = processor.resolveStagePaths(list)
         then:
         result.toString() == 'x_file_1'
 
         when:
         list = [ FileHolder.get(path1, 'x_file_1'), FileHolder.get(path2, 'x_file_2'), FileHolder.get(path3, 'x_file_3') ]
-        result = processor.singleItemOrList(list)
+        result = processor.resolveStagePaths(list)
         then:
         result*.toString() == [ 'x_file_1',  'x_file_2',  'x_file_3']
 
@@ -194,8 +194,8 @@ class TaskProcessorTest extends Specification {
         def list1 = processor.expandWildcards('file_name', [FileHolder.get('x')])
         def list2 = processor.expandWildcards('file_name', [FileHolder.get('x'), FileHolder.get('y')] )
         then:
-        list1 *. stagePath *. toString() == ['file_name']
-        list2 *. stagePath *. toString() == ['file_name1', 'file_name2']
+        list1 *. stageName  == ['file_name']
+        list2 *. stageName  == ['file_name1', 'file_name2']
 
 
         /*
@@ -206,8 +206,8 @@ class TaskProcessorTest extends Specification {
         list1 = processor.expandWildcards('file*.fa', [FileHolder.get('x')])
         list2 = processor.expandWildcards('file_*.fa', [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
         then:
-        list1 *. stagePath *. toString() == ['file.fa']
-        list2 *. stagePath *. toString() == ['file_1.fa', 'file_2.fa', 'file_3.fa']
+        list1 *. stageName == ['file.fa']
+        list2 *. stageName == ['file_1.fa', 'file_2.fa', 'file_3.fa']
 
         /*
          * The question mark wildcards *always* expand to an index number
@@ -220,16 +220,16 @@ class TaskProcessorTest extends Specification {
         list2 = processor.expandWildcards('file_???.fa', p1_p4 )
         def list3 = processor.expandWildcards('file_?.fa', p1_p12 )
         then:
-        list1 *. stagePath *. toString() == ['file1.fa']
-        list2 *. stagePath *. toString() == ['file_001.fa', 'file_002.fa', 'file_003.fa', 'file_004.fa']
-        list3 *. stagePath *. toString() == ['file_1.fa', 'file_2.fa', 'file_3.fa', 'file_4.fa', 'file_5.fa', 'file_6.fa', 'file_7.fa', 'file_8.fa', 'file_9.fa', 'file_10.fa', 'file_11.fa', 'file_12.fa']
+        list1 *. stageName == ['file1.fa']
+        list2 *. stageName == ['file_001.fa', 'file_002.fa', 'file_003.fa', 'file_004.fa']
+        list3 *. stageName == ['file_1.fa', 'file_2.fa', 'file_3.fa', 'file_4.fa', 'file_5.fa', 'file_6.fa', 'file_7.fa', 'file_8.fa', 'file_9.fa', 'file_10.fa', 'file_11.fa', 'file_12.fa']
 
         when:
         list1 = processor.expandWildcards('*', [FileHolder.get('a')])
         list2 = processor.expandWildcards('*', [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
         then:
-        list1 *. stagePath *. toString() == ['a']
-        list2 *. stagePath *. toString() == ['x','y','z']
+        list1 *. stageName == ['a']
+        list2 *. stageName == ['x','y','z']
 
 
     }
@@ -243,7 +243,7 @@ class TaskProcessorTest extends Specification {
 
         then:
         path.storePath == p1
-        path.stagePath == Paths.get('target.file')
+        path.stageName == Paths.get('target.file')
 
     }
 

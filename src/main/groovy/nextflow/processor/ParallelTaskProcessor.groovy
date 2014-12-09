@@ -19,7 +19,6 @@
  */
 
 package nextflow.processor
-import java.util.concurrent.atomic.AtomicBoolean
 
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
@@ -33,17 +32,9 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.Channel
 import nextflow.file.FileHolder
 import nextflow.script.EachInParam
-import nextflow.script.EnvInParam
-import nextflow.script.FileInParam
 import nextflow.script.FileSharedParam
-import nextflow.script.InParam
 import nextflow.script.SharedParam
-import nextflow.script.StdInParam
-import nextflow.script.ValueInParam
-import nextflow.script.ValueSharedParam
 import nextflow.util.CacheHelper
-import nextflow.util.DockerBuilder
-
 /**
  * Defines the parallel tasks execution logic
  *
@@ -53,11 +44,6 @@ import nextflow.util.DockerBuilder
 @Slf4j
 @InheritConstructors
 class ParallelTaskProcessor extends TaskProcessor {
-
-    /**
-     * Used to show the override warning message only the very first time
-     */
-    private final overrideWarnShown = new AtomicBoolean()
 
     /**
      * Keeps track of the task instance executed by the current thread
@@ -199,130 +185,6 @@ class ParallelTaskProcessor extends TaskProcessor {
 
     }
 
-    /**
-     * Create the {@code TaskDef} data structure and initialize the task execution context
-     * with the received input values
-     *
-     * @param values
-     * @return
-     */
-    final protected TaskRun setupTask(List values) {
-        log.trace "Setup new process > $name"
-
-        // -- map the inputs to a map and use to delegate closure values interpolation
-        final secondPass = [:]
-        final task = createTaskRun()
-        final delegate = new ContextMap(this)
-
-        int count = makeTaskContextStage1(task, delegate, secondPass, values)
-        makeTaskContextStage2(task, delegate, secondPass, count)
-        makeTaskContextStage3(task, delegate)
-
-        return task
-    }
-
-    final protected int makeTaskContextStage1( TaskRun task, ContextMap delegate, Map secondPass, List values ) {
-
-        final firstRun = task.index == 1
-        int count = 0
-
-        task.inputs.keySet().each { InParam param ->
-
-            // add the value to the task instance
-            def val = decodeInputValue(param,values)
-
-            switch(param) {
-                case EachInParam:
-                case ValueInParam:
-                    delegate.put( param.name, val )
-                    break
-
-                case FileInParam:
-                    secondPass[param] = val
-                    return // <-- leave it, because we do not want to add this 'val' at this stage
-
-                case FileSharedParam:
-                    def fileParam = param as FileSharedParam
-                    if( firstRun ) {
-                        def normalized = normalizeInputToFiles(val,count)
-                        if( normalized.size() > 1 )
-                            throw new IllegalStateException("Cannot share multiple files")
-
-                        def resolved = expandWildcards( fileParam.filePattern, normalized )
-                        count += resolved.size()
-                        val = resolved
-                        // track this obj
-                        sharedObjs[(SharedParam)param] = val
-                    }
-                    else {
-                        val = sharedObjs[(SharedParam)param]
-                    }
-
-                    delegate.put(fileParam.name, singleItemOrList(val))
-                    break
-
-                case ValueSharedParam:
-                    if( firstRun )
-                        sharedObjs[(SharedParam)param] = val
-                    else
-                        val = sharedObjs[(SharedParam)param]
-
-                    delegate.put( param.name, val )
-                    break
-
-                case StdInParam:
-                case EnvInParam:
-                    // nothing to do
-                    break
-
-                default:
-                    log.debug "Unsupported input param type: ${param?.class?.simpleName}"
-            }
-
-            // add the value to the task instance context
-            task.setInput(param, val)
-        }
-
-        return count
-    }
-
-    final protected makeTaskContextStage2( TaskRun task, ContextMap context, Map secondPass, int count ) {
-
-        // -- all file parameters are processed in a second pass
-        //    so that we can use resolve the variables that eventually are in the file name
-        secondPass.each { FileInParam param, val ->
-            def fileParam = param as FileInParam
-            def normalized = normalizeInputToFiles(val,count)
-            def resolved = expandWildcards( fileParam.getFilePattern(context), normalized )
-            context.put( param.name, singleItemOrList(resolved) )
-            count += resolved.size()
-            val = resolved
-
-            // add the value to the task instance context
-            task.setInput(param, val)
-        }
-
-    }
-
-    final protected makeTaskContextStage3( TaskRun task, ContextMap context ) {
-
-        // -- set the delegate map as context ih the task config
-        //    so that lazy directives will be resolved against it
-        task.config.setContext(context)
-
-        // -- initialize the task code to be executed
-        task.code = this.code.clone() as Closure
-        task.code.delegate = context
-        task.code.setResolveStrategy(Closure.DELEGATE_ONLY)
-
-        if( !context.containsKey(TASK_CONFIG) ) {
-            context.put(TASK_CONFIG, task.config)
-        }
-        else if( !overrideWarnShown.getAndSet(true) ) {
-            log.warn "Process $name overrides reserved variable `task`"
-        }
-
-    }
 
     /**
      * The processor execution body
@@ -352,7 +214,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         log.trace "[${task.name}] cache keys: ${keys} -- mode: $mode"
         final hash = CacheHelper.hasher(keys, mode).hash()
 
-        checkCachedOrLaunchTask(task,hash,resumable,TaskProcessor.RunType.SUBMIT)
+        checkCachedOrLaunchTask(task, hash, resumable, TaskProcessor.RunType.SUBMIT)
 
     }
 

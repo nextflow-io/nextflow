@@ -25,7 +25,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.transform.ToString
-
 /**
  * Implements a special {@code Path} used to stage files in the work area
  */
@@ -38,13 +37,15 @@ class FileHolder  {
 
     final Path storePath
 
-    final StagePath stagePath
+    final String stageName
+
+    private Path stagePath
 
     FileHolder( Path inputFile ) {
         assert inputFile
         this.sourceObj = inputFile
         this.storePath = inputFile
-        this.stagePath = new StagePath(inputFile)
+        this.stageName = inputFile.getFileName().toString()
     }
 
     FileHolder( def origin, Path path ) {
@@ -53,13 +54,13 @@ class FileHolder  {
 
         this.sourceObj = origin
         this.storePath = path
-        this.stagePath = new StagePath(path)
+        this.stageName = path.getFileName().toString()
     }
 
     protected FileHolder( def source, Path store, def stageName ) {
         this.sourceObj = source
         this.storePath = store
-        this.stagePath = new StagePath(stageName as Path)
+        this.stageName = stageName.toString()
     }
 
     FileHolder withName( def stageName )  {
@@ -71,6 +72,11 @@ class FileHolder  {
         Path storePath = path as Path
         def target = name ? name : storePath.getFileName()
         new FileHolder( path, storePath, target )
+    }
+
+    StagePath toStagePath( Path folder ) {
+        stagePath = folder.resolve(stageName)
+        new StagePath(stagePath)
     }
 
 }
