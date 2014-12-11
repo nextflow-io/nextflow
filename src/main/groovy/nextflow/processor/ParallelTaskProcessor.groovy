@@ -211,12 +211,25 @@ class ParallelTaskProcessor extends TaskProcessor {
         task.inputs.each { keys << it.key.name << it.value }
 
         final mode = taskConfig.getHashMode()
-        log.trace "[${task.name}] cache keys: ${keys} -- mode: $mode"
         final hash = CacheHelper.hasher(keys, mode).hash()
+        if( log.isTraceEnabled() ) {
+            traceInputsHashes(task, keys, mode, hash)
+        }
 
         checkCachedOrLaunchTask(task, hash, resumable, TaskProcessor.RunType.SUBMIT)
-
     }
+
+    private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
+
+        def buffer = new StringBuilder()
+        buffer.append("[${task.name}] cache hash: ${hash}; mode: $mode; entries: \n")
+        for( Object item : entries ) {
+            buffer.append( "  ${CacheHelper.hasher(item, mode).hash()} [${item?.class?.name}] $item \n")
+        }
+
+        log.trace(buffer.toString())
+    }
+
 
     /**
      *  Intercept dataflow process events
@@ -234,7 +247,7 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         @Override
         void afterRun(DataflowProcessor processor, List<Object> messages) {
-            log.trace "<${currentTask.get()?.name ?: name}> After run"
+            log.trace "<${name}> After run"
             currentTask.remove()
         }
 
