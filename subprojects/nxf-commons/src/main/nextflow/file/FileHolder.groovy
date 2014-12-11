@@ -39,8 +39,6 @@ class FileHolder  {
 
     final String stageName
 
-    private Path stagePath
-
     FileHolder( Path inputFile ) {
         assert inputFile
         this.sourceObj = inputFile
@@ -72,11 +70,6 @@ class FileHolder  {
         Path storePath = path as Path
         def target = name ? name : storePath.getFileName()
         new FileHolder( path, storePath, target )
-    }
-
-    StagePath toStagePath( Path folder ) {
-        stagePath = folder.resolve(stageName)
-        new StagePath(stagePath)
     }
 
 }

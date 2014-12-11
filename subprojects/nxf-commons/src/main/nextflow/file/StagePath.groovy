@@ -29,9 +29,9 @@ import org.codehaus.groovy.runtime.InvokerHelper
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Deprecated
 class StagePath {
 
-    //@Delegate
     final Path target
 
     StagePath( Path source ) {
