@@ -51,6 +51,7 @@ import nextflow.file.FileCollector
 import nextflow.file.FileHelper
 import nextflow.file.SimpleFileCollector
 import nextflow.file.SortFileCollector
+import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
@@ -704,7 +705,7 @@ class DataflowExtensions {
     static private Map GROUP_TUPLE_PARAMS = [ by: Integer, sort: [Boolean, 'true','natural','deep','hash',Closure,Comparator] ]
 
     static public final DataflowReadChannel groupTuple( final DataflowReadChannel channel, final Map params ) {
-        checkParams('collectTuple', params, GROUP_TUPLE_PARAMS)
+        checkParams('groupTuple', params, GROUP_TUPLE_PARAMS)
 
         final index = params?.containsKey('by') ? params.by as int : 0
 
@@ -715,7 +716,7 @@ class DataflowExtensions {
             final List item = groups.getOrCreate(key) {     // get the group for the specified key
                 def result = new ArrayList(len)             // create if does not exists
                 for( int i=0; i<len; i++ )
-                    result[i] = (i==index ? key : new ArrayList())
+                    result[i] = (i==index ? key : new ArrayBag())
                 return result
             }
 
