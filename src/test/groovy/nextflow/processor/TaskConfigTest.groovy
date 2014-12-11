@@ -265,4 +265,33 @@ class TaskConfigTest extends Specification {
         ['-queue','alpha and beta']         || "-queue 'alpha and beta"
     }
 
+    def testIsDynamic() {
+
+        given:
+        def config = new TaskConfig()
+
+        when:
+        config.alpha = 1
+        config.delta = 2
+        then:
+        !config.isDynamic()
+
+        when:
+        config.delta = { 'this' }
+        then:
+        config.isDynamic()
+
+        when:
+        config.foo = { 'this' }
+        config.bar = { 'this' }
+        then:
+        config.isDynamic()
+
+        when:
+        config = new TaskConfig( alpha:1, beta: { 'hello' } )
+        then:
+        config.isDynamic()
+
+    }
+
 }

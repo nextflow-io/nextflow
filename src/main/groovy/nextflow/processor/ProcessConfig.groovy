@@ -162,7 +162,7 @@ class ProcessConfig implements Map<String,Object> {
 
     @PackageScope
     TaskConfig createTaskConfig() {
-        new TaskConfig(new HashMap(configProperties))
+        new TaskConfig(configProperties)
     }
 
     /**

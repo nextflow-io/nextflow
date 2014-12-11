@@ -227,15 +227,26 @@ class TaskRun {
 
     def TaskConfig config
 
-    def ContextMap context
+    def TaskContext context
 
     String getName() {
         if( name )
             return name
 
-        def baseName = processor.name
-        def key = config.containsKey('sampleId') ? config.sampleId : index
-        return name = "$baseName ($key)"
+        final baseName = processor.name
+        if( config.containsKey('sampleId') )
+            try {
+                // -- look-up the 'sampleId' property, and if everything is fine
+                //    cache this value in the 'name' attribute
+                return name = "$baseName (${config.sampleId})"
+            }
+            catch( IllegalStateException e ) {
+                log.debug "Cannot access `sampleId` property for task: $baseName ($index)"
+            }
+
+        // fallback on the current task index, however do not set the 'name' attribute
+        // so it has a chance to recover the 'sampleId' at next invocation
+        return "$baseName ($index)"
     }
 
     def String getScript() {
@@ -251,9 +262,13 @@ class TaskRun {
      * Check whenever there are values to be cached
      */
     def boolean hasCacheableValues() {
+
+        if( config?.isDynamic() )
+            return true
+
         for( OutParam it : outputs.keySet() ) {
             if( it.class == ValueOutParam ) return true
-            if( it.class == FileOutParam && ((FileOutParam)it).isParametric() ) return true
+            if( it.class == FileOutParam && ((FileOutParam)it).isDynamic() ) return true
         }
 
         for( InParam it : inputs.keySet() ) {

@@ -168,13 +168,13 @@ class TaskProcessorTest extends Specification {
 
         when:
         def list = [ FileHolder.get(path1, 'x_file_1') ]
-        def result = processor.resolveStagePaths(list)
+        def result = processor.singleItemOrList(list)
         then:
         result.toString() == 'x_file_1'
 
         when:
         list = [ FileHolder.get(path1, 'x_file_1'), FileHolder.get(path2, 'x_file_2'), FileHolder.get(path3, 'x_file_3') ]
-        result = processor.resolveStagePaths(list)
+        result = processor.singleItemOrList(list)
         then:
         result*.toString() == [ 'x_file_1',  'x_file_2',  'x_file_3']
 
@@ -243,7 +243,7 @@ class TaskProcessorTest extends Specification {
 
         then:
         path.storePath == p1
-        path.stageName == Paths.get('target.file')
+        path.stageName == 'target.file'
 
     }
 

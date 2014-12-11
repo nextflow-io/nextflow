@@ -23,6 +23,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.transform.PackageScope
 import nextflow.exception.AbortOperationException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.util.CmdLineHelper
@@ -42,13 +43,16 @@ class TaskConfig implements Map<String,Object> {
 
     private Map context
 
+    private boolean dynamic
+
     TaskConfig() {
         target = new HashMap()
     }
 
-    TaskConfig( Map target ) {
-        assert target != null
-        this.target = target
+    TaskConfig( Map<String,Object> entries ) {
+        assert entries != null
+        this.target = new HashMap<>()
+        entries.each { String key, val -> put(key,val) }
     }
 
     TaskConfig setContext( Map context ) {
@@ -73,6 +77,17 @@ class TaskConfig implements Map<String,Object> {
         }
         return val
     }
+
+    Object put( String key, Object value ) {
+        dynamic |= (value instanceof Closure)
+        target.put(key, value)
+    }
+
+    @PackageScope
+    boolean isDynamic() { dynamic }
+
+    @PackageScope
+    boolean hasContext() { context != null }
 
     def getProperty(String name) {
 
@@ -126,7 +141,7 @@ class TaskConfig implements Map<String,Object> {
             return (Duration)value
 
         if( value instanceof Number )
-            return new Duration(value.toLong())
+            return new Duration(value as long)
 
         try {
             new Duration(value.toString().trim())

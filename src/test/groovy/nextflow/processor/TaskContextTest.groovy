@@ -31,7 +31,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ContextMapTest extends Specification {
+class TaskContextTest extends Specification {
 
     def testSaveAndReadContextMap () {
 
@@ -42,7 +42,7 @@ class ContextMapTest extends Specification {
         processor.metaClass.getTaskConfig = { taskConfig }
         processor.metaClass.getTaskBody = { new TaskBody(null,'source',true) }
         def str = 'Hola'
-        def map = new ContextMap(processor, [:])
+        def map = new TaskContext(processor, [:])
         map.alpha = 1
         map.beta = "${str}.txt"
         map.delta = new Duration('1day')
@@ -54,7 +54,7 @@ class ContextMapTest extends Specification {
 
         when:
         map.save(file)
-        def result = ContextMap.read(processor, file)
+        def result = TaskContext.read(processor, file)
 
         then:
         result.size() == 8
@@ -89,11 +89,11 @@ class ContextMapTest extends Specification {
         script.setBinding(bind)
 
         def local = [p:3, q:4, path: Paths.get('some/path')]
-        def delegate = new ContextMap( script, local, 'hola' )
+        def delegate = new TaskContext( script, local, 'hola' )
 
         when:
         def bytes = delegate.dehydrate()
-        def copy = ContextMap.rehydrate(bytes)
+        def copy = TaskContext.rehydrate(bytes)
 
         then:
         delegate == copy

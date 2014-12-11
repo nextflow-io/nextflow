@@ -29,7 +29,7 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
-import nextflow.processor.ContextMap
+import nextflow.processor.TaskContext
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
@@ -243,7 +243,7 @@ class GgTaskHandler extends TaskHandler {
             else {
                 def data = result.getData() as GgResultData
                 task.stdout = data.value
-                task.code.delegate = new ContextMap( task.processor, data.context )
+                task.code.delegate = new TaskContext( task.processor, data.context )
             }
 
             log.trace "Task ${task} > DONE"
@@ -651,7 +651,7 @@ class GgClosureTask extends GgBaseTask<GgResultData> {
     GgClosureTask( TaskRun task, UUID sessionId ) {
         super(task,sessionId)
         this.codeObj = SerializationUtils.serialize(task.code.dehydrate())
-        this.delegateObj = (task.code.delegate as ContextMap).dehydrate()
+        this.delegateObj = (task.code.delegate as TaskContext).dehydrate()
     }
 
     @Override
@@ -659,7 +659,7 @@ class GgClosureTask extends GgBaseTask<GgResultData> {
         log.debug "Running closure for task > ${name}"
 
         def loader = provider.getClassLoaderFor(sessionId)
-        def delegate = ContextMap.rehydrate(delegateObj,loader)
+        def delegate = TaskContext.rehydrate(delegateObj,loader)
         Closure closure = (Closure)InputStreamDeserializer.deserialize(codeObj,loader)
         Object result = closure.rehydrate(delegate, delegate.getScript(), delegate.getScript()).call()
         return new GgResultData(value: result, context: delegate?.getHolder())

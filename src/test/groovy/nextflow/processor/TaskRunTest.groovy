@@ -191,6 +191,16 @@ class TaskRunTest extends Specification {
         then:
         task4.hasCacheableValues()
 
+        when:
+        def task5 = new TaskRun( config: new TaskConfig(alpha: 1, beta: 2) )
+        then:
+        !task5.hasCacheableValues()
+
+        when:
+        def task6 = new TaskRun( config: new TaskConfig(alpha: { 'dynamic val' }) )
+        then:
+        task6.hasCacheableValues()
+
     }
 
 

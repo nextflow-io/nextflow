@@ -19,6 +19,7 @@
  */
 package nextflow.processor
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -437,7 +438,7 @@ abstract class TaskProcessor {
                 processor: this,
                 type: type,
                 config: config.createTaskConfig(),
-                context: new ContextMap(this)
+                context: new TaskContext(this)
         )
 
         /*
@@ -592,7 +593,7 @@ abstract class TaskProcessor {
         /*
          * verify cached context map
          */
-        Map ctxMap = null
+        TaskContext ctxMap = null
         def ctxFile = folder.resolve(TaskRun.CMD_CONTEXT)
         if( task.hasCacheableValues() ) {
             if( !ctxFile.exists() ) {
@@ -600,7 +601,7 @@ abstract class TaskProcessor {
                 return false
             }
 
-            ctxMap = ContextMap.read(this, ctxFile)
+            ctxMap = TaskContext.read(this, ctxFile)
             populateSharedCtx(task, ctxMap)
         }
 
@@ -620,8 +621,11 @@ abstract class TaskProcessor {
             if( exitCode != null ) {
                 task.exitStatus = exitCode
             }
-            if( task.code && ctxMap ) {
-                task.code.delegate = ctxMap
+            if( ctxMap != null ) {
+                task.context = ctxMap
+                task.config.setContext(ctxMap)
+                if( task.code )
+                    task.code.delegate = ctxMap
             }
 
             log.info "[${task.hashLog}] Cached process > ${task.name}"
@@ -1146,16 +1150,16 @@ abstract class TaskProcessor {
         return files
     }
 
-    protected singleItemOrList( List<FileHolder> items, Path stageDir ) {
+    protected singleItemOrList( List<FileHolder> items ) {
         assert items != null
 
         if( items.size() == 1 ) {
-            return items[0].toStagePath(stageDir)
+            return Paths.get(items[0].stageName)
         }
 
         def result = new ArrayList(items.size())
         for( int i=0; i<items.size(); i++ ) {
-            result.add( items[i].toStagePath(stageDir) )
+            result.add( Paths.get(items[i].stageName) )
         }
         return new BlankSeparatedList(result)
     }
@@ -1311,7 +1315,7 @@ abstract class TaskProcessor {
 
     final protected int makeTaskContextStage1( TaskRun task, Map secondPass, List values ) {
 
-        final delegate = task.context
+        final contextMap = task.context
         final firstRun = task.index == 1
         int count = 0
 
@@ -1323,7 +1327,7 @@ abstract class TaskProcessor {
             switch(param) {
                 case EachInParam:
                 case ValueInParam:
-                    delegate.put( param.name, val )
+                    contextMap.put( param.name, val )
                     break
 
                 case FileInParam:
@@ -1346,7 +1350,7 @@ abstract class TaskProcessor {
                         val = sharedObjs[(SharedParam)param]
                     }
 
-                    delegate.put( fileParam.name, val )
+                    contextMap.put( fileParam.name, singleItemOrList(val) )
                     break
 
                 case ValueSharedParam:
@@ -1355,7 +1359,7 @@ abstract class TaskProcessor {
                     else
                         val = sharedObjs[(SharedParam)param]
 
-                    delegate.put( param.name, val )
+                    contextMap.put( param.name, val )
                     break
 
                 case StdInParam:
@@ -1381,16 +1385,28 @@ abstract class TaskProcessor {
         // -- all file parameters are processed in a second pass
         //    so that we can use resolve the variables that eventually are in the file name
         secondPass.each { FileInParam param, val ->
+
             def fileParam = param as FileInParam
             def normalized = normalizeInputToFiles(val,count)
             def resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
-            ctx.put( param.name, resolved )
+            ctx.put( param.name, singleItemOrList(resolved) )
             count += resolved.size()
 
             // add the value to the task instance context
             task.setInput(param, resolved)
         }
 
+        // -- set the delegate map as context ih the task config
+        //    so that lazy directives will be resolved against it
+        task.config.setContext(ctx)
+
+        // -- set the `task.config` object in the context
+        if( !ctx.containsKey(TASK_CONFIG) ) {
+            ctx.put(TASK_CONFIG, task.config)
+        }
+        else if( !overrideWarnShown.getAndSet(true) ) {
+            log.warn "Process $name overrides reserved variable `task`"
+        }
     }
 
     final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
@@ -1400,26 +1416,9 @@ abstract class TaskProcessor {
         task.workDir = folder
         task.config.workDir = folder
 
-        final context = task.context
-
-        // -- resolve FileHolder's to StagePage
-        resolveStagePaths( context, folder )
-
-        // -- set the delegate map as context ih the task config
-        //    so that lazy directives will be resolved against it
-        task.config.setContext(context)
-
-        // -- set the `task.config` object in the context
-        if( !context.containsKey(TASK_CONFIG) ) {
-            context.put(TASK_CONFIG, task.config)
-        }
-        else if( !overrideWarnShown.getAndSet(true) ) {
-            log.warn "Process $name overrides reserved variable `task`"
-        }
-
         // -- initialize the task code to be executed
         task.code = this.code.clone() as Closure
-        task.code.delegate = context
+        task.code.delegate = task.context
         task.code.setResolveStrategy(Closure.DELEGATE_ONLY)
 
         // Important!
@@ -1429,17 +1428,6 @@ abstract class TaskProcessor {
             task.script = getScriptlet(task.code)
         }
 
-    }
-
-    final protected resolveStagePaths( ContextMap context, Path folder ) {
-
-        for( String key : context.keySet() ) {
-            def entry = context.get(key)
-            if( entry instanceof ArrayBag<FileHolder> ) {
-                def resolved = singleItemOrList(entry, folder)
-                context.put(key, resolved)
-            }
-        }
     }
 
     /**
@@ -1490,7 +1478,7 @@ abstract class TaskProcessor {
             // only the 'cache' is active and
             if( isCacheable() && task.hasCacheableValues() && task.code.delegate != null ) {
                 def target = task.workDir.resolve(TaskRun.CMD_CONTEXT)
-                def context = (ContextMap)task.code.delegate
+                def context = (TaskContext)task.code.delegate
                 if( context.get(TASK_CONFIG) instanceof TaskConfig )
                     context.remove(TASK_CONFIG)
                 context.save(target)

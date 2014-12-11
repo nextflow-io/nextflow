@@ -34,7 +34,7 @@ import nextflow.util.KryoHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class ContextMap implements Map<String,Object> {
+class TaskContext implements Map<String,Object> {
 
     @Delegate
     final private Map<String,Object> holder
@@ -54,7 +54,7 @@ class ContextMap implements Map<String,Object> {
      */
     private transient Set<String> bindingNames
 
-    ContextMap( TaskProcessor processor, Map holder = [:]) {
+    TaskContext( TaskProcessor processor, Map holder = [:]) {
         assert holder != null
         this.holder = holder
         this.script = processor.ownerScript
@@ -76,7 +76,7 @@ class ContextMap implements Map<String,Object> {
     }
 
 
-    protected ContextMap(Script script, Map holder, String name) {
+    protected TaskContext(Script script, Map holder, String name) {
         this.script = script
         this.holder = holder
         this.name = name
@@ -86,7 +86,7 @@ class ContextMap implements Map<String,Object> {
     }
 
     /** ONLY FOR TEST PURPOSE -- do not use */
-    protected ContextMap() {
+    protected TaskContext() {
 
     }
 
@@ -174,10 +174,10 @@ class ContextMap implements Map<String,Object> {
      * @param contextFile The file used to store the context map
      * @return A new {@code DelegateMap} instance holding the values read from map file
      */
-    static ContextMap read( TaskProcessor processor, Path contextFile ) {
+    static TaskContext read( TaskProcessor processor, Path contextFile ) {
 
         def map = (Map)KryoHelper.deserialize(contextFile)
-        new ContextMap(processor, map)
+        new TaskContext(processor, map)
 
     }
 
@@ -231,7 +231,7 @@ class ContextMap implements Map<String,Object> {
      * @return
      *      A {@code DelegateMap} object instantiated using the provided binary byte[]
      */
-    static ContextMap rehydrate(byte[] binary, ClassLoader loader = null) {
+    static TaskContext rehydrate(byte[] binary, ClassLoader loader = null) {
         assert binary
         final kryo = KryoHelper.kryo()
 
@@ -250,7 +250,7 @@ class ContextMap implements Map<String,Object> {
 
             Script script = clazz.newInstance()
             script.setBinding(binding)
-            return new ContextMap(script, holder, name)
+            return new TaskContext(script, holder, name)
         }
         finally {
             // set back the original class loader

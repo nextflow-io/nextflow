@@ -201,7 +201,7 @@ class FileOutParam extends BaseOutParam implements OutParam {
     /**
      * @return {@code true} when the file name is parametric i.e contains a variable name to be resolved, {@code false} otherwise
      */
-    boolean isParametric() { dynamicObj || gstring != null }
+    boolean isDynamic() { dynamicObj || gstring != null }
 
     FileOutParam separatorChar( String value ) {
         this.separatorChar = value
