@@ -95,6 +95,7 @@ abstract class RepositoryProvider {
 
         log.debug "Request [credentials ${user?:'-'}:${pwd ? pwd.replaceAll('.','*') : '-'}] -> $api"
         def connection = new URL(api).openConnection() as HttpURLConnection
+        connection.setConnectTimeout(5_000)
 
         if( user && pwd ){
             String authString=("$user:$pwd").bytes.encodeBase64().toString()
