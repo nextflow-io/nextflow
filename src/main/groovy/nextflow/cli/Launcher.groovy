@@ -321,6 +321,11 @@ class Launcher implements ExitCode {
     protected void run() {
 
         /*
+         * setup environment
+         */
+        setupEnvironment()
+
+        /*
          * Real execution starts here
          */
         try {
@@ -366,6 +371,81 @@ class Launcher implements ExitCode {
             System.exit(UNKNOWN_ERROR)
         }
 
+    }
+
+    /**
+     * set up environment and system properties
+     */
+    private void setupEnvironment() {
+
+        setProxy('http',System.getenv())
+        setProxy('https',System.getenv())
+
+    }
+
+    /**
+     * Setup proxy system properties
+     *
+     * See:
+     * http://docs.oracle.com/javase/6/docs/technotes/guides/net/proxies.html
+     * https://github.com/nextflow-io/nextflow/issues/24
+     *
+     * @param qualifier Either {@code http} or {@code https}
+     * @param env The environment variables system map
+     */
+    @PackageScope
+    static void setProxy(String qualifier, Map<String,String> env ) {
+        assert qualifier in ['http','https']
+        def str = null
+        def var = "${qualifier.toUpperCase()}_PROXY".toString()
+
+        // -- setup HTTP proxy
+        try {
+            List<String> proxy = parseProxy(str = env.get(var))
+            if( proxy ) {
+                log.debug "Setting $qualifier proxy: $proxy"
+                System.setProperty("${qualifier}.proxyHost", proxy[0])
+                if( proxy[1] ) System.setProperty("${qualifier}.proxyPort", proxy[1])
+            }
+        }
+        catch (MalformedURLException e ) {
+            log.warn "Not a valid $qualifier proxy: '$str' -- Check the value of variable `$var` in your environment"
+        }
+
+    }
+
+    /**
+     * Parse a proxy URL string retrieving the host and port components
+     *
+     * @param value A proxy string e.g. {@code hostname}, {@code hostname:port}, {@code http://hostname:port}
+     * @return A list object containing at least the host name and optionally a second entry for the port.
+     *      An empty list if the specified value is empty
+     *
+     * @throws MalformedURLException when the specified value is not a valid proxy url
+     */
+    @PackageScope
+    static List parseProxy( String value ) {
+        List<String> result = []
+        int p
+
+        if( !value ) return result
+
+        if( value.contains('://') ) {
+            def url = new URL(value)
+            result.add(url.host)
+            if( url.port > 0 )
+                result.add(url.port as String)
+
+        }
+        else if( (p=value.indexOf(':')) != -1 ) {
+            result.add( value.substring(0,p) )
+            result.add( value.substring(p+1) )
+        }
+        else {
+            result.add( value )
+        }
+
+        return result
     }
 
     /**
