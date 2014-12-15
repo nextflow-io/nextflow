@@ -339,4 +339,6 @@ NXF_WORK            Directory where working files are stored (usually your *scra
 NXF_TEMP            Directory where temporary files are stored
 JAVA_HOME           Path location of the Java VM installation used to run Nextflow.
 JAVA_CMD            Path location of the Java binary command used to launch  Nextflow.
+HTTP_PROXY          Defines the HTTP proxy server
+HTTPS_PROXY         Defines the HTTPS proxy server
 ================== ================

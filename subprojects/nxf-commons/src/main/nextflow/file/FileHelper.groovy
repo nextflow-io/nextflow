@@ -491,6 +491,7 @@ class FileHelper {
 
     /**
      * Applies the specified action on one or more files and directories matching the specified glob pattern
+     *
      * @param folder
      * @param filePattern
      * @param action
@@ -500,34 +501,61 @@ class FileHelper {
         assert filePattern
         assert action
 
-        def matcher = getPathMatcherFor("glob:${folder.resolve(filePattern)}", folder.fileSystem)
-        def singleParam = action.getMaximumNumberOfParameters() == 1
-        def relative = options?.relative == true
+        final type = options?.type ?: 'any'
+        final walkOptions = options?.followLinks == false ? EnumSet.noneOf(FileVisitOption.class) : EnumSet.of(FileVisitOption.FOLLOW_LINKS)
+        final int maxDepth = getMaxDepth(options?.maxDepth, filePattern)
+        final includeHidden = options?.hidden as Boolean ?: filePattern.startsWith('.')
+        final includeDir = type in ['dir','any']
+        final includeFile = type in ['file','any']
+        final syntax = options?.syntax ?: 'glob'
+        final relative = options?.relative == true
 
-        Files.walkFileTree(folder, EnumSet.of(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
+        final matcher = getPathMatcherFor("$syntax:${folder.resolve(filePattern)}", folder.fileSystem)
+        final singleParam = action.getMaximumNumberOfParameters() == 1
 
-            @Override
-            public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
-                log.trace "visitFile: $path "
-                if( matcher.matches(path) ) {
-                    def result = relative ? folder.relativize(path) : path
-                    singleParam ? action.call(result) : action.call(result,attrs)
-                }
-                return FileVisitResult.CONTINUE;
-            }
+        Files.walkFileTree(folder, walkOptions, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
 
             @Override
             public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) throws IOException {
-                log.trace "visitDir : $path"
-                if( matcher.matches(path) ) {
+                int depth = path.nameCount - folder.nameCount
+                log.trace "visit dir ($depth) > $path; includeDir: $includeDir; matches: ${matcher.matches(path)}; isDir: ${Files.isDirectory(path)}"
+
+                if (includeDir && matcher.matches(path) && Files.isDirectory(path) && (includeHidden || !Files.isHidden(path))) {
                     def result = relative ? folder.relativize(path) : path
                     singleParam ? action.call(result) : action.call(result,attrs)
                 }
-                return FileVisitResult.CONTINUE;
+
+                return depth > maxDepth ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE
             }
 
-        })
+            @Override
+            public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
+                log.trace "visit dir > $path; includeFile: $includeFile; matches: ${matcher.matches(path)}; isDir: ${Files.isDirectory(path)}"
 
+                if (includeFile && matcher.matches(path) && !Files.isDirectory(path) && (includeHidden || !Files.isHidden(path))) {
+                    def result = relative ? folder.relativize(path) : path
+                    singleParam ? action.call(result) : action.call(result,attrs)
+                }
+
+                return FileVisitResult.CONTINUE;
+            }
+      })
+
+    }
+
+    @PackageScope
+    static int getMaxDepth( value, String filePattern ) {
+
+        if( value != null )
+            return value as int
+
+        if( filePattern?.contains('**') )
+            return Integer.MAX_VALUE
+
+        if( filePattern?.contains('/') )
+            return filePattern.split('/').findAll { it }.size()-1
+
+        return 0
     }
 
     /**
@@ -567,5 +595,54 @@ class FileHelper {
 
         return null
     }
+
+    static List<String> getFolderAndPattern( String filePattern ) {
+
+        def scheme = null;
+        int i = filePattern.indexOf('://')
+        if( i != -1 ) {
+            scheme = filePattern.substring(0, i)
+            filePattern = filePattern.substring(i+3)
+        }
+
+        def folder
+        def pattern
+        def matcher
+        int p = filePattern.indexOf('*')
+        if( p != -1 ) {
+            i = filePattern.substring(0,p).lastIndexOf('/')
+        }
+        else if( (matcher=FileHelper.GLOB_FILE_BRACKETS.matcher(filePattern)).matches() ) {
+            def prefix = matcher.group(1)
+            if( prefix ) {
+                i = prefix.contains('/') ? prefix.lastIndexOf('/') : -1
+            }
+            else {
+                i = matcher.start(2) -1
+            }
+        }
+        else {
+            i = filePattern.lastIndexOf('/')
+        }
+
+        if( i != -1 ) {
+            folder = filePattern.substring(0,i+1)
+            pattern = filePattern.substring(i+1)
+        }
+        else {
+            folder = './'
+            pattern = filePattern
+        }
+
+        return [ folder, pattern, scheme ]
+    }
+
+
+    static FileSystem fileSystemForScheme(String scheme) {
+        ( !scheme
+                ? FileSystems.getDefault()
+                : getOrCreateFileSystemFor(scheme) )
+    }
+
 
 }

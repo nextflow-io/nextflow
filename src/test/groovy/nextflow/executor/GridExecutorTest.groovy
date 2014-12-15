@@ -20,7 +20,9 @@
 
 package nextflow.executor
 import java.nio.file.Files
+import java.nio.file.Path
 
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.util.Duration
@@ -36,14 +38,15 @@ class GridExecutorTest extends Specification {
 
         setup:
         def work = Files.createTempDirectory('test')
-        def task = Mock(TaskRun)
-        task.getWorkDir() >> work
+        def task = new TaskRun(workDir: work, name: 'hello', config: new TaskConfig(queue: 'gamma'))
 
         def executor = Mock(AbstractGridExecutor)
 
         when:
         def handler = new GridTaskHandler(task, executor)
         handler.status = TaskStatus.SUBMITTED
+        handler.queue = 'gamma'
+
         then:
         !handler.checkIfRunning()
         handler.status == TaskStatus.SUBMITTED
@@ -164,7 +167,6 @@ class GridExecutorTest extends Specification {
         handler.task.exitStatus == 123
 
     }
-
 
 
 }

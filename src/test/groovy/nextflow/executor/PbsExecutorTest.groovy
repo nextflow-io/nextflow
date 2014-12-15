@@ -19,6 +19,7 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Paths
 
 import nextflow.processor.TaskConfig
@@ -31,44 +32,138 @@ import spock.lang.Specification
  */
 class PbsExecutorTest extends Specification {
 
-    def testQsubCommandLine () {
-
-        given:
-        // mock process
-        def proc = Mock(TaskProcessor)
-        // LSF executor
-        def executor = [:] as PbsExecutor
-        def config = new TaskConfig()
+    def testGetCommandLine() {
 
         when:
-        // process name
-        proc.getName() >> 'task_x'
-        // the script
-        def script = Paths.get('job.sh')
-        // config
-        config.queue = test_queue
-        config.memory = test_mem
-        config.time = test_time
-        config.cpus = test_cpus
-        config.clusterOptions = '-extra opt'
+        def executor = [:] as PbsExecutor
+        then:
+        executor.getSubmitCommandLine(Mock(TaskRun), Paths.get('(/some/path/script.sh') ) == ['qsub', 'script.sh']
 
-        def task = new TaskRun(config: config)
+    }
+
+    def testHeaders() {
+
+        setup:
+        def executor = [:] as PbsExecutor
+
+        // mock process
+        def proc = Mock(TaskProcessor)
+        // process name
+        proc.getName() >> 'task'
+
+        // task object
+        def task = new TaskRun()
         task.processor = proc
         task.workDir = Paths.get('/work/dir')
-        task.index = 2
+        task.index = 33
 
+        when:
+        task.config = new TaskConfig()
         then:
-        executor.getSubmitCommandLine(task,script) == expected.split(' ') as List
+        executor.getHeaders(task) == '''
+                #PBS -d /work/dir
+                #PBS -N nf-task_33
+                #PBS -o /dev/null
+                #PBS -e /dev/null
+                #PBS -V
+                '''
+                .stripIndent().leftTrim()
 
-        where:
-        test_cpus| test_queue | test_mem | test_time|| expected
-        null     | null       | null     | null     || 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -extra opt job.sh'
-        null     | 'alpha'    | null     | '1m'     || 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q alpha -l walltime=00:01:00 -extra opt job.sh'
-        null     | 'alpha'    | '1m'     | '1m'     || 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q alpha -l walltime=00:01:00 -l mem=1mb -extra opt job.sh'
-        2        | 'delta'    | '5m'     | '10m'    || 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q delta -l nodes=1:ppn=2 -l walltime=00:10:00 -l mem=5mb -extra opt job.sh'
-        8        | 'delta'    | '1g'     | '1d'     || 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q delta -l nodes=1:ppn=8 -l walltime=24:00:00 -l mem=1gb -extra opt job.sh'
-        null     | 'gamma'    | '2g'     | '1d'     || 'qsub -d /work/dir -N nf-task_x_2 -o /dev/null -e /dev/null -V -q gamma -l walltime=24:00:00 -l mem=2gb -extra opt job.sh'
 
+        when:
+        task.config = new TaskConfig()
+        task.config.queue = 'alpha'
+        task.config.time = '1m'
+        then:
+        executor.getHeaders(task) == '''
+                #PBS -d /work/dir
+                #PBS -N nf-task_33
+                #PBS -o /dev/null
+                #PBS -e /dev/null
+                #PBS -V
+                #PBS -q alpha
+                #PBS -l walltime=00:01:00
+                '''
+                .stripIndent().leftTrim()
+
+
+        when:
+        task.config = new TaskConfig()
+        task.config.queue = 'alpha'
+        task.config.time = '1m'
+        task.config.memory = '1m'
+        then:
+        executor.getHeaders(task) == '''
+                #PBS -d /work/dir
+                #PBS -N nf-task_33
+                #PBS -o /dev/null
+                #PBS -e /dev/null
+                #PBS -V
+                #PBS -q alpha
+                #PBS -l walltime=00:01:00
+                #PBS -l mem=1mb
+                '''
+                .stripIndent().leftTrim()
+
+
+
+        when:
+        task.config = new TaskConfig()
+        task.config.queue = 'delta'
+        task.config.time = '10m'
+        task.config.memory = '5m'
+        task.config.cpus = 2
+        then:
+        executor.getHeaders(task) == '''
+                #PBS -d /work/dir
+                #PBS -N nf-task_33
+                #PBS -o /dev/null
+                #PBS -e /dev/null
+                #PBS -V
+                #PBS -q delta
+                #PBS -l nodes=1:ppn=2
+                #PBS -l walltime=00:10:00
+                #PBS -l mem=5mb
+                '''
+                .stripIndent().leftTrim()
+
+        when:
+        task.config = new TaskConfig()
+        task.config.queue = 'delta'
+        task.config.time = '1d'
+        task.config.memory = '1g'
+        task.config.cpus = 8
+        then:
+        executor.getHeaders(task) == '''
+                #PBS -d /work/dir
+                #PBS -N nf-task_33
+                #PBS -o /dev/null
+                #PBS -e /dev/null
+                #PBS -V
+                #PBS -q delta
+                #PBS -l nodes=1:ppn=8
+                #PBS -l walltime=24:00:00
+                #PBS -l mem=1gb
+                '''
+                .stripIndent().leftTrim()
+
+        when:
+        task.config = new TaskConfig()
+        task.config.queue = 'delta'
+        task.config.time = '2d 6h 10m'
+        task.config.memory = '2g'
+        then:
+        executor.getHeaders(task) == '''
+                #PBS -d /work/dir
+                #PBS -N nf-task_33
+                #PBS -o /dev/null
+                #PBS -e /dev/null
+                #PBS -V
+                #PBS -q delta
+                #PBS -l walltime=54:10:00
+                #PBS -l mem=2gb
+                '''
+                .stripIndent().leftTrim()
 
     }
 

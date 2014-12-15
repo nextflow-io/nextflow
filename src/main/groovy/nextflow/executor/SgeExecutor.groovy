@@ -97,28 +97,7 @@ class SgeExecutor extends AbstractGridExecutor {
          ['qsub', scriptFile.name]
     }
 
-    @Override
-    String getHeaders( TaskRun task ) {
-
-        def result = new StringBuilder()
-        def header = new ArrayList(2)
-        def dir = getDirectives(task)
-        def len = dir.size()-1
-        for( int i=0; i<len; i+=2) {
-            def opt = dir[i]
-            def val = dir[i+1]
-            if( opt ) header.add(opt)
-            if( val ) header.add(val)
-
-            if( header ) {
-                result << '#$ ' << header.join(' ') << '\n'
-            }
-
-            header.clear()
-        }
-
-        return result.toString()
-    }
+    protected String getHeaderToken() { '#$' }
 
 
     /**

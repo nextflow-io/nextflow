@@ -21,23 +21,21 @@
 package nextflow.processor
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.executor.BscExecutor
 import nextflow.executor.CrgExecutor
 import nextflow.executor.DrmaaExecutor
 import nextflow.executor.Executor
 import nextflow.executor.LocalExecutor
 import nextflow.executor.LsfExecutor
 import nextflow.executor.NopeExecutor
+import nextflow.executor.PbsExecutor
 import nextflow.executor.ServiceName
 import nextflow.executor.SgeExecutor
 import nextflow.executor.SlurmExecutor
 import nextflow.executor.SupportedScriptTypes
-import nextflow.executor.PbsExecutor
 import nextflow.script.BaseScript
 import nextflow.script.ScriptType
 import nextflow.script.TaskBody
 import nextflow.util.ServiceDiscover
-
 /**
  *  Factory class for {@TaskProcessor} instances
  *
@@ -59,7 +57,7 @@ class ProcessFactory {
             'drmaa': DrmaaExecutor,
             'slurm': SlurmExecutor,
             'crg': CrgExecutor,
-            'bsc': BscExecutor
+            'bsc': LsfExecutor
     ]
 
     private final Session session

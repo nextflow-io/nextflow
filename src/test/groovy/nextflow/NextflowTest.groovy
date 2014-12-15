@@ -37,9 +37,6 @@ class NextflowTest extends Specification {
         Nextflow.file('file.log').toFile() == new File('file.log').canonicalFile
         Nextflow.file('relative/file.test').toFile() == new File( new File('.').canonicalFile, 'relative/file.test')
         Nextflow.file('/user/home/file.log').toFile() == new File('/user/home/file.log')
-        Nextflow.file('~').toFile() == new File( System.getProperty('user.home') )
-        Nextflow.file('~/file.test').toFile() == new File( System.getProperty('user.home'), 'file.test' )
-        Nextflow.file('~file.name').toFile() == new File('~file.name').canonicalFile
 
     }
 
@@ -68,15 +65,154 @@ class NextflowTest extends Specification {
         folder.resolve('hello3').text = 'abc'
 
         expect:
-        Nextflow.file(folder.toString() + '/ciao*') == []
-        Nextflow.file(folder.toString() + '/hel*').sort().collect { it.name } == [ 'helo2','hello3' ].sort()
-        Nextflow.file(folder.toString() + '/hol??').collect { it.name } == [ 'hola1' ]
+        Nextflow.file("$folder/ciao*") == []
+        Nextflow.file("$folder/hel*").collect { it.name }.sort() == [ 'hello3','helo2' ]
+        Nextflow.file("$folder/hol??").collect { it.name } == [ 'hola1' ]
 
 
         cleanup:
         folder?.delete()
 
     }
+
+    def testFileWithWildcards2() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        folder.resolve('file1.txt').text = 'file 1'
+        folder.resolve('file2.fa').text = 'file 2'
+        Files.createSymbolicLink(folder.resolve('link_file2.fa'), folder.resolve('file2.fa'))
+        folder.resolve('dir1').mkdir()
+        folder.resolve('dir1').resolve('file_3.txt').text = 'file 3'
+        folder.resolve('dir1').resolve('file_4.txt').text = 'file 4'
+        folder.resolve('dir1').resolve('dir2').mkdir()
+
+        when:
+        def result = Nextflow.files(folder.resolve('file1.txt').toString())
+        then:
+        result.collect { it.name }.sort() == ['file1.txt']
+
+        when:
+        result = Nextflow.files("$folder/file*")
+        then:
+        result.collect { it.name }.sort() == ['file1.txt', 'file2.fa']
+
+        when:
+        result = Nextflow.files("$folder/dir1/dir2")
+        then:
+        result.collect { it.name }.sort()== ['dir2']
+
+        when:
+        result = Nextflow.files("$folder/**/file_*")
+        then:
+        result.collect { it.name }.sort() == ['file_3.txt', 'file_4.txt']
+
+        when:
+        result = Nextflow.files("$folder/*.fa")
+        then:
+        result.collect { it.name }.sort() == ['file2.fa', 'link_file2.fa']
+
+        when:
+        result = Nextflow.files("$folder/{file1.txt,dir1/file_4.txt}")
+        then:
+        result.collect { it.name }.sort() == ['file1.txt','file_4.txt']
+
+        when:
+        result = Nextflow.files("$folder/*")
+        then:
+        result.collect { it.name }.sort() == ['file1.txt', 'file2.fa', 'link_file2.fa']
+
+        when:
+        result = Nextflow.files("$folder/*", type:'file')
+        then:
+        result.collect { it.name }.sort() == ['file1.txt', 'file2.fa', 'link_file2.fa']
+
+        when:
+        result = Nextflow.files("$folder/*", type:'dir')
+        then:
+        result.collect { it.name }.sort() == ['dir1']
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
+    def testFileWithWildcards3() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        folder.resolve('file1.txt').text = 'file 1'
+        folder.resolve('file2.fa').text = 'file 2'
+        folder.resolve('dir1').mkdir()
+        folder.resolve('dir1').resolve('file3.txt').text = 'file 3'
+        folder.resolve('dir1').resolve('dir2').mkdirs()
+        folder.resolve('dir1').resolve('dir2').resolve('file4.fa').text = 'file '
+        Files.createSymbolicLink( folder.resolve('dir_link'), folder.resolve('dir1') )
+
+        when:
+        def result = Nextflow.files("$folder/**.fa", relative: true)
+        then:
+        result.collect { it.toString() } .sort() == ['dir1/dir2/file4.fa', 'dir_link/dir2/file4.fa', 'file2.fa']
+
+        when:
+        result = Nextflow.files("$folder/**.fa", relative: true, followLinks: false)
+        then:
+        result.collect { it.toString() } .sort() == ['dir1/dir2/file4.fa', 'file2.fa']
+
+        when:
+        result = Nextflow.files("$folder/**.fa", relative: true, maxDepth: 1)
+        then:
+        result.collect { it.toString() } .sort() == ['file2.fa']
+
+        when:
+        result = Nextflow.files("$folder/**", relative: true, type:'file')
+        then:
+        result.collect { it.toString() } .sort() == ['dir1/dir2/file4.fa',
+                                                     'dir1/file3.txt',
+                                                     'dir_link/dir2/file4.fa',
+                                                     'dir_link/file3.txt',
+                                                     'file1.txt',
+                                                     'file2.fa']
+
+        when:
+        result = Nextflow.files("$folder/**", relative: true, type:'file', followLinks: false)
+        then:
+        result.collect { it.toString() } .sort() == ['dir1/dir2/file4.fa',
+                                                     'dir1/file3.txt',
+                                                     'file1.txt',
+                                                     'file2.fa']
+
+        when:
+        result = Nextflow.files("$folder/**", relative: true, type:'dir')
+        then:
+        result.collect { it.toString() } .sort() == ['dir1',
+                                                     'dir1/dir2',
+                                                     'dir_link',
+                                                     'dir_link/dir2' ]
+
+
+        when:
+        result = Nextflow.files("$folder/**", relative: true, type:'dir', followLinks: false)
+        then:
+        result.collect { it.toString() } .sort() == ['dir1', 'dir1/dir2']
+
+
+        when:
+        result = Nextflow.files("$folder/**", relative: true, type:'any', followLinks: false)
+        then:
+        result.collect { it.toString() } .sort() == ['dir1',
+                                                     'dir1/dir2',
+                                                     'dir1/dir2/file4.fa',
+                                                     'dir1/file3.txt',
+                                                     'file1.txt',
+                                                     'file2.fa']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 
 
     def testTuple() {

@@ -21,8 +21,8 @@
 package nextflow.executor
 import java.nio.file.Files
 
-import nextflow.processor.TaskConfig
 import nextflow.processor.ParallelTaskProcessor
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
@@ -133,20 +133,23 @@ class DrmaaExecutorTest extends Specification {
         expected.task_id = 30
         expected.native_id = '2000'
         expected.hash = '123abc'
-        expected.name = 'hello'
+        expected.name = 'hello (1)'
+        expected.process = 'hello'
+        expected.tag = 'seq1'
         expected.status = TaskStatus.SUBMITTED
         expected.exit = 99
         expected.submit = 1406264935000
         expected.start = 1406265009000
-        expected.complete = 1406265009000
 
         def workDir = Files.createTempDirectory('test')
 
         def task = [:] as TaskRun
         task.id = 30
-        task.name = 'hello'
         task.workDir = workDir
         task.exitStatus = 99
+        task.config = new TaskConfig(tag: 'seq1')
+        task.metaClass.getProcessor = { [name: 'hello'] }
+        task.metaClass.getName = { 'hello (1)' }
         task.metaClass.getHashLog =  {'123abc'}
 
         when:

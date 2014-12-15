@@ -234,14 +234,14 @@ class TaskRun {
             return name
 
         final baseName = processor.name
-        if( config.containsKey('sampleId') )
+        if( config.containsKey('tag') )
             try {
                 // -- look-up the 'sampleId' property, and if everything is fine
                 //    cache this value in the 'name' attribute
-                return name = "$baseName (${config.sampleId})"
+                return name = "$baseName (${config.tag})"
             }
             catch( IllegalStateException e ) {
-                log.debug "Cannot access `sampleId` property for task: $baseName ($index)"
+                log.debug "Cannot access `tag` property for task: $baseName ($index)"
             }
 
         // fallback on the current task index, however do not set the 'name' attribute
@@ -307,7 +307,7 @@ class TaskRun {
         def result = []
 
         getOutputsByType(FileOutParam).keySet().each { FileOutParam param ->
-            result.addAll( param.getFilePatterns((Map)code?.delegate) )
+            result.addAll( param.getFilePatterns(context) )
         }
 
         getInputFiles()?.each { InParam param, List<FileHolder> files ->
@@ -318,7 +318,7 @@ class TaskRun {
             }
         }
 
-        return result
+        return result.unique()
     }
 
     /**

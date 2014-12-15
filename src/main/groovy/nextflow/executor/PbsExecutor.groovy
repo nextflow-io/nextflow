@@ -21,7 +21,6 @@
 package nextflow.executor
 import java.nio.file.Path
 
-import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
@@ -31,7 +30,6 @@ import nextflow.processor.TaskRun
  * See http://www.pbsworks.com
  */
 @Slf4j
-@InheritConstructors
 class PbsExecutor extends AbstractGridExecutor {
 
     /**
@@ -48,7 +46,7 @@ class PbsExecutor extends AbstractGridExecutor {
         result << '-N' << getJobNameFor(task)
         result << '-o' << '/dev/null'
         result << '-e' << '/dev/null'
-        result << '-V'
+        result << '-V' << ''
 
         // the requested queue name
         if( task.config.queue ) {
@@ -71,7 +69,9 @@ class PbsExecutor extends AbstractGridExecutor {
         }
 
         // -- at the end append the command script wrapped file name
-        result.addAll( task.config.getClusterOptionsAsList() )
+        if( task.config.clusterOptions ) {
+            result << task.config.clusterOptions.toString() << ''
+        }
 
         return result
     }
@@ -84,18 +84,10 @@ class PbsExecutor extends AbstractGridExecutor {
      * @return A list representing the submit command line
      */
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
-
-        final result = [ 'qsub' ]
-
-        // -- adds the jobs directives to the command line
-        getDirectives(task,result)
-
-        // -- last entry to 'script' file name
-        result << scriptFile.getName()
-
-        return result
+        [ 'qsub', scriptFile.getName() ]
     }
 
+    protected String getHeaderToken() { '#PBS' }
 
     /**
      * Parse the string returned by the {@code qsub} command and extract the job ID string

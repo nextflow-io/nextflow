@@ -57,6 +57,8 @@ class GridTaskHandler extends TaskHandler {
     /** The unique job ID as provided by the underlying grid platform */
     private jobId
 
+    private queue
+
     private long exitStatusReadTimeoutMillis
 
     final static private READ_TIMEOUT = Duration.of('270sec') // 4.5 minutes
@@ -71,6 +73,7 @@ class GridTaskHandler extends TaskHandler {
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
         final timeout = executor.session?.getExitReadTimeout(executor.name, READ_TIMEOUT) ?: READ_TIMEOUT
         this.exitStatusReadTimeoutMillis = timeout.toMillis()
+        this.queue = task.config?.queue
     }
 
     /*
@@ -156,7 +159,7 @@ class GridTaskHandler extends TaskHandler {
          */
         if( !exitFile || !exitFile.exists() || !exitFile.lastModified() ) {
             // -- fetch the job status before return a result
-            final active = executor.checkActiveStatus(jobId)
+            final active = executor.checkActiveStatus(jobId, queue)
 
             // --
             def elapsed = System.currentTimeMillis() - startedMillis

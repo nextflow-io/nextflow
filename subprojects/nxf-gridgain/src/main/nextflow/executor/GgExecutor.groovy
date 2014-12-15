@@ -243,7 +243,7 @@ class GgTaskHandler extends TaskHandler {
             else {
                 def data = result.getData() as GgResultData
                 task.stdout = data.value
-                task.code.delegate = new TaskContext( task.processor, data.context )
+                task.context = new TaskContext( task.processor, data.context )
             }
 
             log.trace "Task ${task} > DONE"
@@ -444,7 +444,10 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
      *        It can contain globs wildcards
      */
     protected void copyToTargetDir( String filePattern, Path from, Path to ) {
-        FileHelper.visitFiles( from, filePattern ) { Path it ->
+
+        def type = filePattern.contains('**') ? 'file' : 'any'
+
+        FileHelper.visitFiles( from, filePattern, type: type ) { Path it ->
             final rel = from.relativize(it)
             it.copyTo(to.resolve(rel))
         }
@@ -651,7 +654,7 @@ class GgClosureTask extends GgBaseTask<GgResultData> {
     GgClosureTask( TaskRun task, UUID sessionId ) {
         super(task,sessionId)
         this.codeObj = SerializationUtils.serialize(task.code.dehydrate())
-        this.delegateObj = (task.code.delegate as TaskContext).dehydrate()
+        this.delegateObj = task.context.dehydrate()
     }
 
     @Override

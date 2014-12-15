@@ -19,17 +19,17 @@
  */
 
 package nextflow.executor
+import java.nio.file.Files
 
-import nextflow.script.FileInParam
 import nextflow.file.FileHolder
+import nextflow.script.FileInParam
+import nextflow.script.FileOutParam
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ExecutorTest extends Specification {
-
-
 
 
     def testStagingFilesScript() {
@@ -72,5 +72,170 @@ class ExecutorTest extends Specification {
 
     }
 
+
+    def testCollectOutputFiles() {
+
+        given:
+        def param
+        def result
+        def executor = [:] as Executor
+
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('file1.txt').text = 'file 1'
+        folder.resolve('file2.fa').text = 'file 2'
+        folder.resolve('.hidden.fa').text = 'hidden'
+        folder.resolve('dir1').mkdir()
+        folder.resolve('dir1').resolve('file3.txt').text = 'file 3'
+        folder.resolve('dir1')
+        folder.resolve('dir1').resolve('dir2').mkdirs()
+        folder.resolve('dir1').resolve('dir2').resolve('file4.fa').text = 'file '
+        Files.createSymbolicLink( folder.resolve('dir_link'), folder.resolve('dir1') )
+
+        when:
+        result = executor.collectResultFile(folder, '*.fa', 'test', Mock(FileOutParam) )
+        then:
+        result.collect { it.name }  == ['file2.fa']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.type('file')
+        result = executor.collectResultFile(folder, '*.fa', 'test', param)
+        then:
+        result.collect { it.name }  == ['file2.fa']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.type('dir')
+        result = executor.collectResultFile(folder, '*.fa', 'test', param)
+        then:
+        result == []
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        result = executor.collectResultFile(folder, '**.fa', 'test', param)
+        then:
+        result.collect { it.name }.sort()  == ['file2.fa','file4.fa','file4.fa']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.followLinks(false)
+        result = executor.collectResultFile(folder, '**.fa', 'test', param)
+        then:
+        result.collect { it.name }.sort()  == ['file2.fa','file4.fa']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.maxDepth(1)
+        result = executor.collectResultFile(folder, '**.fa', 'test', param)
+        then:
+        result.collect { it.name }.sort()  == ['file2.fa']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        result = executor.collectResultFile(folder, '*', 'test', param)
+        then:
+        result.collect { it.name }.sort()  == ['dir1', 'dir_link', 'file1.txt', 'file2.fa']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.type('dir')
+        result = executor.collectResultFile(folder, '*', 'test', param)
+        then:
+        result.collect { it.name }.sort()  == ['dir1', 'dir_link']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.type('file')
+        result = executor.collectResultFile(folder, '*', 'test', param)
+        then:
+        result.collect { it.name }.sort()  == ['file1.txt', 'file2.fa']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.type('file')
+        param.hidden(true)
+        result = executor.collectResultFile(folder, '*', 'test', param)
+        then:
+        result.collect { it.name }.sort()  == ['.hidden.fa', 'file1.txt', 'file2.fa']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        result = executor.collectResultFile(folder,'.*', 'test', param)
+        then:
+        result.collect { it.name }.sort()  == ['.hidden.fa']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        result = executor.collectResultFile(folder,'file{1,2}.{txt,fa}', 'test', param)
+        then:
+        result.collect { it.name }.sort() == ['file1.txt', 'file2.fa']
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
+    def testCollectResultOpts() {
+
+        given:
+        def param
+        def executor = [:] as Executor
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        then:
+        executor.collectResultOpts(param,'file.txt') == [type:'any', followLinks: true, maxDepth: null, hidden: false, relative: false]
+        executor.collectResultOpts(param,'path/**') == [type:'file', followLinks: true, maxDepth: null, hidden: false, relative: false]
+        executor.collectResultOpts(param,'.hidden_file') == [type:'any', followLinks: true, maxDepth: null, hidden: true, relative: false]
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.type('dir')
+        then:
+        executor.collectResultOpts(param,'dir-name') == [type:'dir', followLinks: true, maxDepth: null, hidden: false, relative: false]
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.hidden(true)
+        then:
+        executor.collectResultOpts(param,'dir-name') == [type:'any', followLinks: true, maxDepth: null, hidden: true, relative: false]
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.followLinks(false)
+        then:
+        executor.collectResultOpts(param,'dir-name') == [type:'any', followLinks: false, maxDepth: null, hidden: false, relative: false]
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.maxDepth(5)
+        then:
+        executor.collectResultOpts(param,'dir-name') == [type:'any', followLinks: true, maxDepth: 5, hidden: false, relative: false]
+    }
+
+    def testCleanGlobStar() {
+
+        given:
+        def executor = [:] as Executor
+
+        expect:
+        executor.removeGlobStar('a/b/c') == 'a/b/c'
+        executor.removeGlobStar('/a/b/c') == '/a/b/c'
+        executor.removeGlobStar('some/*/path') == 'some/*/path'
+        executor.removeGlobStar('some/**/path') == 'some'
+        executor.removeGlobStar('some/**/path') == 'some'
+        executor.removeGlobStar('some*') == 'some*'
+        executor.removeGlobStar('some**') == '*'
+
+    }
+
+    def testNormalizePath() {
+
+        given:
+        def executor = [:] as Executor
+
+        expect:
+        executor.normalizeGlobStarPaths(['file1.txt','path/file2.txt','path/**/file3.txt', 'path/**/file4.txt','**/fa']) == ['file1.txt','path/file2.txt','path','*']
+    }
 
 }

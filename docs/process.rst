@@ -997,6 +997,7 @@ The directives are:
 * `penv`_
 * `scratch`_
 * `storeDir`_
+* `tag`_
 * `time`_
 * `validExitStatus`_
 
@@ -1555,3 +1556,8 @@ out of the box by Nextflow.
 .. note:: This directive is taken in account only when using a grid based executor:
   :ref:`SGE <sge-executor>`, :ref:`LSF <lsf-executor>`, :ref:`SLURM <slurm-executor>`, :ref:`PBS/Torque <pbs-executor>`
   and :ref:`DRMAA <drmaa-executor>`
+
+
+tag
+-----
+

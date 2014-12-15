@@ -19,7 +19,6 @@
  */
 
 package nextflow.script
-
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
@@ -170,6 +169,11 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 class FileOutParam extends BaseOutParam implements OutParam {
 
     /**
+     * ONLY FOR TESTING DO NOT USE
+     */
+    protected FileOutParam(Map params) { }
+
+    /**
      * The character used to separate multiple names (pattern) in the output specification
      */
     protected String separatorChar = ':'
@@ -187,15 +191,36 @@ class FileOutParam extends BaseOutParam implements OutParam {
      */
     protected boolean includeInputs
 
+    /**
+     * The type of path to output, either {@code file}, {@code dir} or {@code any}
+     */
+    protected String type
+
+    /**
+     * Maximum number of directory levels to visit (default: no limit)
+     */
+    protected Integer maxDepth
+
+    /**
+     * When true it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: true)
+     */
+    protected boolean followLinks = true
+
     private TokenGString gstring
 
     private Closure<String> dynamicObj
 
     String getSeparatorChar() { separatorChar }
 
-    boolean getIncludeHidden() { includeHidden }
+    boolean getHidden() { includeHidden }
 
     boolean getIncludeInputs() { includeInputs }
+
+    String getType() { type }
+
+    Integer getMaxDepth() { maxDepth }
+
+    boolean getFollowLinks() { followLinks }
 
 
     /**
@@ -217,6 +242,28 @@ class FileOutParam extends BaseOutParam implements OutParam {
         this.includeHidden = flag
         return this
     }
+
+    FileOutParam hidden( boolean flag ) {
+        this.includeHidden = flag
+        return this
+    }
+
+    FileOutParam type( String value ) {
+        assert value in ['file','dir','any']
+        type = value
+        return this
+    }
+
+    FileOutParam maxDepth( int value ) {
+        maxDepth = value
+        return this
+    }
+
+    FileOutParam followLinks( boolean value ) {
+        followLinks = value
+        return this
+    }
+
 
     BaseOutParam bind( obj ) {
 

@@ -309,6 +309,60 @@ class ParamsOutTest extends Specification {
 
     }
 
+    def testFileOutWithParams() {
+
+        setup:
+        def text = '''
+
+            process hola {
+              output:
+              file x into ch
+
+              file x maxDepth 5 into ch
+              file x hidden true into ch
+              file x followLinks false into ch
+              file x type 'file' into ch
+              file x separatorChar '#' into ch
+
+              file x hidden false into ch
+              file x followLinks true into ch
+              file x type 'dir' into ch
+
+              return ''
+            }
+            '''
+
+        TaskProcessor process = parse(text, [:]).run()
+
+        when:
+        FileOutParam out0 = process.taskConfig.getOutputs().get(0)
+        FileOutParam out1 = process.taskConfig.getOutputs().get(1)
+        FileOutParam out2 = process.taskConfig.getOutputs().get(2)
+        FileOutParam out3 = process.taskConfig.getOutputs().get(3)
+        FileOutParam out4 = process.taskConfig.getOutputs().get(4)
+        FileOutParam out5 = process.taskConfig.getOutputs().get(5)
+        FileOutParam out6 = process.taskConfig.getOutputs().get(6)
+        FileOutParam out7 = process.taskConfig.getOutputs().get(7)
+        FileOutParam out8 = process.taskConfig.getOutputs().get(8)
+
+        then:
+        out0.maxDepth == null
+        !out0.hidden
+        out0.followLinks
+        out0.type == null
+        out0.separatorChar == ':'
+
+        out1.maxDepth == 5
+        out2.hidden
+        !out3.followLinks
+        out4.type == 'file'
+        out5.separatorChar == '#'
+        !out6.hidden
+        out7.followLinks
+        out8.type == 'dir'
+
+    }
+
 
     def testSetOutParams() {
 

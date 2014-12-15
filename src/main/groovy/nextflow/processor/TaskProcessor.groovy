@@ -522,7 +522,7 @@ abstract class TaskProcessor {
         }
 
         // -- when store path is set, only output params of type 'file' can be specified
-        Map ctx = (Map)task.code.delegate
+        final ctx = task.context
         def invalid = task.getOutputs().keySet().any {
             if( it instanceof ValueOutParam ) {
                 return !ctx.containsKey(it.name)
@@ -925,7 +925,7 @@ abstract class TaskProcessor {
     }
 
     protected void collectOutputs( TaskRun task ) {
-        collectOutputs( task, task.getTargetDir(), task.@stdout, (Map)task.code?.delegate )
+        collectOutputs( task, task.getTargetDir(), task.@stdout, task.context )
     }
 
     /**
@@ -1009,30 +1009,28 @@ abstract class TaskProcessor {
         def fileParam = param as FileOutParam
         // type file parameter can contain a multiple files pattern separating them with a special character
         def entries = param.getFilePatterns(context)
+
         // for each of them collect the produced files
         entries.each { String pattern ->
-            def result = executor.collectResultFile(workDir, pattern, task.name)
-            log.trace "Process ${task.name} > collected outputs for pattern '$pattern': $result"
-
-            if( result instanceof List ) {
-                // filter the result collection
-                if( pattern.startsWith('*') && !fileParam.includeHidden ) {
-                    result = filterByRemovingHiddenFiles(result)
-                    log.trace "Process ${task.name} > after removing hidden files: ${result}"
-                }
-
+            List<Path> result=null
+            if( FileHelper.isGlobPattern(pattern) ) {
+                result = executor.collectResultFile(workDir, pattern, task.name, param)
                 // filter the inputs
                 if( !fileParam.includeInputs ) {
                     result = filterByRemovingStagedInputs(task, result)
                     log.trace "Process ${task.name} > after removing staged inputs: ${result}"
                 }
-
-                all.addAll((List) result)
+            }
+            else {
+                def file = workDir.resolve(pattern)
+                if( file.exists() )
+                    result = [file]
             }
 
-            else if( result ) {
-                all.add(result)
-            }
+            if( !result )
+                throw new MissingFileException("Missing output file(s): '$pattern' expected by process: ${task.name}")
+
+            all.addAll(result)
         }
 
         task.setOutput( param, all.size()==1 ? all[0] : all )
@@ -1407,14 +1405,6 @@ abstract class TaskProcessor {
         else if( !overrideWarnShown.getAndSet(true) ) {
             log.warn "Process $name overrides reserved variable `task`"
         }
-    }
-
-    final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
-
-        // set hash-code & working directory
-        task.hash = hash
-        task.workDir = folder
-        task.config.workDir = folder
 
         // -- initialize the task code to be executed
         task.code = this.code.clone() as Closure
@@ -1427,6 +1417,14 @@ abstract class TaskProcessor {
         if( type == ScriptType.SCRIPTLET ) {
             task.script = getScriptlet(task.code)
         }
+    }
+
+    final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
+
+        // set hash-code & working directory
+        task.hash = hash
+        task.workDir = folder
+        task.config.workDir = folder
 
     }
 
@@ -1476,12 +1474,11 @@ abstract class TaskProcessor {
 
             // save the context map for caching purpose
             // only the 'cache' is active and
-            if( isCacheable() && task.hasCacheableValues() && task.code.delegate != null ) {
+            if( isCacheable() && task.hasCacheableValues() && task.context != null ) {
                 def target = task.workDir.resolve(TaskRun.CMD_CONTEXT)
-                def context = (TaskContext)task.code.delegate
-                if( context.get(TASK_CONFIG) instanceof TaskConfig )
-                    context.remove(TASK_CONFIG)
-                context.save(target)
+                if( task.context.get(TASK_CONFIG) instanceof TaskConfig )
+                    task.context.remove(TASK_CONFIG)
+                task.context.save(target)
             }
 
         }

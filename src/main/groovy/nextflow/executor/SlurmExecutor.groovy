@@ -21,7 +21,6 @@
 package nextflow.executor
 import java.nio.file.Path
 
-import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 /**
@@ -33,7 +32,6 @@ import nextflow.processor.TaskRun
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@InheritConstructors
 class SlurmExecutor extends AbstractGridExecutor {
 
     /**
@@ -62,11 +60,14 @@ class SlurmExecutor extends AbstractGridExecutor {
         }
 
         // -- at the end append the command script wrapped file name
-        result.addAll( task.config.getClusterOptionsAsList() )
+        if( task.config.clusterOptions ) {
+            result << task.config.clusterOptions.toString() << ''
+        }
 
         return result
     }
 
+    String getHeaderToken() { '#SBATCH' }
 
     /**
      * The command line to submit this job
@@ -78,14 +79,7 @@ class SlurmExecutor extends AbstractGridExecutor {
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
 
-        final result = ['sbatch']
-
-        // -- adds the jobs directives to the command line
-        getDirectives(task, result)
-
-        // -- last entry to 'script' file name
-        // replace with the 'shell' attribute
-        result << scriptFile.getName()
+        ['sbatch', scriptFile.getName()]
 
     }
 
@@ -101,7 +95,7 @@ class SlurmExecutor extends AbstractGridExecutor {
         for( String line : text.readLines() ) {
             def m = pattern.matcher(line)
             if( m.matches() ) {
-                return m[0][1].toString()
+                return m.group(1).toString()
             }
         }
 
