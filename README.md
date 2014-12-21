@@ -265,6 +265,14 @@ License
 
 The *Nextflow* framework source code is released under the GNU GPL3 License.
 
+Citations
+----------
+
+If you use Nextflow for research purpose, please cite: 
+
+http://dx.doi.org/10.6084/m9.figshare.1254958
+
+(manuscript under preparation)
 
 Credits
 -------
