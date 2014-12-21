@@ -1,0 +1,11 @@
+machine:
+  java:
+    version: openjdk7
+  services:
+    - docker
+    
+test:
+  override:
+    - ./gradlew test
+    - export NXF_CMD=$PWD/launch.sh; cd validation; bash test.sh
+    
