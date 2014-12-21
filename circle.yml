@@ -7,5 +7,5 @@ machine:
 test:
   override:
     - ./gradlew test
-    - export NXF_CMD=$PWD/launch.sh; cd validation; bash test.sh
+    - export NXF_CMD=$PWD/launch.sh; cd validation; bash -x test.sh
     

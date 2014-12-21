@@ -41,6 +41,7 @@ git clone https://github.com/nextflow-io/rnatoy
 # AMPA-NF
 #
 git clone https://github.com/cbcrg/ampa-nf
+docker pull cbcrg/ampa-nf
 (
   cd ampa-nf; 
   $NXF_CMD run . -with-docker 
@@ -71,6 +72,7 @@ git clone  https://github.com/cbcrg/grape-nf
 # PIPER-NF
 #
 git clone https://github.com/cbcrg/piper-nf
+docker pull cbcrg/piper-nf
 (
   cd piper-nf; 
   $NXF_CMD run . -with-docker 
