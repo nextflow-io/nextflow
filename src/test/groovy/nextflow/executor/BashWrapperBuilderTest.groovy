@@ -853,4 +853,89 @@ class BashWrapperBuilderTest extends Specification {
 
     }
 
+
+    def 'test before/after script' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        /*
+         * bash run through docker
+         */
+        when:
+        def bash = new BashWrapperBuilder(
+                name: 'xyz',
+                workDir: folder,
+                script: 'echo Hello world!',
+                beforeScript: "init this",
+                afterScript: "cleanup that"
+       )
+        bash.build()
+
+        then:
+        Files.exists(folder.resolve('.command.sh'))
+        Files.exists(folder.resolve('.command.run'))
+
+        folder.resolve('.command.sh').text ==
+                '''
+                #!/bin/bash -ue
+                echo Hello world!
+                '''
+                        .stripIndent().leftTrim()
+
+
+        folder.resolve('.command.run').text ==
+                """
+                #!/bin/bash -ue
+                nxf_kill() {
+                    declare -a ALL_CHILD
+                    while read P PP;do
+                        ALL_CHILD[\$PP]+=" \$P"
+                    done < <(ps -e -o pid= -o ppid=)
+
+                    walk() {
+                        [[ \$1 != \$\$ ]] && kill \$1 2>/dev/null || true
+                        for i in \${ALL_CHILD[\$1]:=}; do walk \$i; done
+                    }
+
+                    walk \$1
+                }
+
+                on_exit() {
+                  exit_status=\${ret:=\$?}
+                  printf \$exit_status > ${folder}/.exitcode
+                  exit \$exit_status
+                }
+
+                on_term() {
+                    set +e
+                    [[ "\$pid" ]] && nxf_kill \$pid
+                }
+
+                trap on_exit EXIT
+                trap on_term TERM INT USR1 USR2
+
+                touch ${folder}/.command.begin
+                # user `beforeScript`
+                init this
+                [ -f ${folder}/.command.env ] && source ${folder}/.command.env
+
+                set +e
+                (
+                /bin/bash -ue ${folder}/.command.sh &> .command.out
+                ) &
+                pid=\$!
+                wait \$pid || ret=\$?
+                # user `afterScript`
+                cleanup that
+                """
+                        .stripIndent().leftTrim()
+
+
+        cleanup:
+        folder?.deleteDir()
+
+
+    }
+
 }

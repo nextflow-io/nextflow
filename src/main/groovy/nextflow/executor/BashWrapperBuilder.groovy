@@ -186,6 +186,10 @@ class BashWrapperBuilder {
 
     boolean statsEnabled
 
+    String beforeScript
+
+    String afterScript
+
     BashWrapperBuilder( TaskRun task ) {
         this.task = task
         this.name = "nxf-" + task.hash?.toString()?.substring(0,8)
@@ -203,6 +207,8 @@ class BashWrapperBuilder {
         this.moduleNames = task.config.getModule()
         this.shell = task.config.shell
         this.script = task.script.toString()
+        this.beforeScript = task.config.beforeScript
+        this.afterScript = task.config.afterScript
 
         // docker config
         this.dockerImage = task.container
@@ -226,6 +232,8 @@ class BashWrapperBuilder {
         this.environment = params.environment
         this.headerScript = params.headerScript
         this.moduleNames = params.moduleNames
+        this.beforeScript = params.beforeScript
+        this.afterScript = params.afterScript
 
         // docker config
         this.dockerImage = params.container
@@ -277,6 +285,7 @@ class BashWrapperBuilder {
         assert workDir, "Missing 'workDir' property in BashWrapperBuilder object"
         assert script, "Missing 'script' property in BashWrapperBuilder object"
 
+        final ENDL = '\n'
         final scriptFile = workDir.resolve(TaskRun.CMD_SCRIPT)
         final inputFile = workDir.resolve(TaskRun.CMD_INFILE)
         final environmentFile = workDir.resolve(TaskRun.CMD_ENV)
@@ -310,7 +319,7 @@ class BashWrapperBuilder {
          * add modules to the environment file
          */
         moduleNames?.each { String name ->
-            environmentFile << "module load $name\n"
+            environmentFile << "module load $name" << ENDL
         }
 
         /*
@@ -339,7 +348,6 @@ class BashWrapperBuilder {
          * Read more: http://man7.org/linux/man-pages/man7/signal.7.html
          */
 
-        final ENDL = '\n'
         def runner = new StringBuilder()
         runner << '#!' << BASH.join(' ') << ENDL
         if( headerScript )
@@ -347,6 +355,11 @@ class BashWrapperBuilder {
 
         runner << scriptCleanUp(exitedFile, docker?.killCommand) << ENDL
         runner << 'touch ' << startedFile.toString() << ENDL
+
+        if( beforeScript ) {
+            runner << '# user `beforeScript`' << ENDL
+            runner << beforeScript << ENDL
+        }
 
         // source the environment
         if( !runWithDocker ) {
@@ -428,6 +441,11 @@ class BashWrapperBuilder {
 
         if( changeDir && statsEnabled )
             runner << 'cp ' << TaskRun.CMD_TRACE << ' ' << workDir << ' || true' << ENDL
+
+        if( afterScript ) {
+            runner << '# user `afterScript`' << ENDL
+            runner << afterScript << ENDL
+        }
 
         runnerFile.text = wrapperScript = runner.toString()
         return runnerFile
