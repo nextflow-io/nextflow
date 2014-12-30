@@ -384,7 +384,7 @@ class TaskPollingMonitor implements TaskMonitor {
             try {
                 checkTaskStatus(handler)
             }
-            catch (Exception error) {
+            catch (Throwable error) {
                 handleException(handler, error)
             }
         }
@@ -450,7 +450,7 @@ class TaskPollingMonitor implements TaskMonitor {
             signalComplete()
     }
 
-    final protected void handleException( TaskHandler handler, Exception error ) {
+    final protected void handleException( TaskHandler handler, Throwable error ) {
         try {
             handler.task.processor.resumeOrDie(handler?.task, error)
         }
