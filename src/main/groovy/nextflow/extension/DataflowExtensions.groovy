@@ -93,7 +93,7 @@ class DataflowExtensions {
         @Override
         public boolean onException(final DataflowProcessor processor, final Throwable e) {
             DataflowExtensions.log.error("@unknown", e)
-            session?.abort()
+            session?.abort(e)
             return true;
         }
     }
@@ -252,7 +252,7 @@ class DataflowExtensions {
                 error = true
                 if( !events.onError ) {
                     DataflowExtensions.log.error("@unknown", e)
-                    session?.abort()
+                    session?.abort(e)
                 }
                 else {
                     events.onError.call(e)
@@ -387,7 +387,7 @@ class DataflowExtensions {
             @Override
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
                 DataflowExtensions.log.error("@unknown", e)
-                session?.abort()
+                session?.abort(e)
                 return true;
             }
         }
@@ -521,7 +521,7 @@ class DataflowExtensions {
 
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
                 DataflowExtensions.log.error("@unknown", e)
-                session?.abort()
+                session?.abort(e)
                 return true;
             }
         }
@@ -1329,7 +1329,7 @@ class DataflowExtensions {
 
                 public boolean onException(final DataflowProcessor processor, final Throwable e) {
                     DataflowExtensions.log.error("@unknown", e)
-                    session?.abort()
+                    session?.abort(e)
                     return true;
                 }
             }
@@ -1449,7 +1449,7 @@ class DataflowExtensions {
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
                 DataflowExtensions.log.error("@unknown", e)
-                session?.abort()
+                session?.abort(e)
                 return true
             }
         }
@@ -1519,7 +1519,7 @@ class DataflowExtensions {
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
                 DataflowExtensions.log.error("@unknown", e)
-                session?.abort()
+                session?.abort(e)
                 return true
             }
         }

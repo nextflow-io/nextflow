@@ -26,7 +26,6 @@ import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
 import groovy.util.logging.Slf4j
-import nextflow.ExitCode
 import nextflow.Session
 import nextflow.util.Duration
 /**
@@ -317,8 +316,6 @@ class TaskPollingMonitor implements TaskMonitor {
      * Implements the polling strategy
      */
     protected void pollLoop() {
-        // task monitor get control on exit when session is aborted
-        session.delegateAbortToTaskMonitor(true)
 
         while( true ) {
             long time = System.currentTimeMillis()
@@ -344,8 +341,6 @@ class TaskPollingMonitor implements TaskMonitor {
             }
         }
 
-        if( session.isAborted() )
-            System.exit( ExitCode.SESSION_ABORTED )
     }
 
     /**
@@ -366,7 +361,7 @@ class TaskPollingMonitor implements TaskMonitor {
     /**
      * Signal that a task has been completed
      */
-    void signalComplete() {
+    void signal() {
         mutex.withLock {
             taskComplete.signal()
         }
@@ -438,17 +433,6 @@ class TaskPollingMonitor implements TaskMonitor {
         listenersQueue << listener
     }
 
-
-    /**
-     * Task handler status should never be updated from an external thread, but their updated
-     * must be delegate to the task monitor by using this method.
-     *
-     */
-    final void schedule( boolean signal = true, Closure event ) {
-        eventsQueue.add( event )
-        if( signal )
-            signalComplete()
-    }
 
     final protected void handleException( TaskHandler handler, Throwable error ) {
         try {

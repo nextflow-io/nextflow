@@ -108,8 +108,6 @@ class Session {
 
     private volatile boolean terminated
 
-    private volatile boolean delegateAbortToTaskMonitor
-
     private volatile ExecutorService execService
 
     final private List<Closure<Void>> shutdownCallbacks = []
@@ -122,17 +120,12 @@ class Session {
 
     boolean getStatsEnabled() { statsEnabled }
 
-    void delegateAbortToTaskMonitor( boolean value ) {
-        this.delegateAbortToTaskMonitor = value
-    }
-
     /**
      * Creates a new session with an 'empty' (default) configuration
      */
     def Session() {
         this([:])
     }
-
 
     /**
      * Creates a new session using the configuration properties provided
@@ -318,8 +311,9 @@ class Session {
 
     void destroy() {
         log.trace "Session destroying"
-        if( execService ) execService.shutdown()
         cleanUp()
+        execService?.shutdown()
+        GParsConfig.shutdown()
         log.debug "Session destroyed"
     }
 
@@ -342,12 +336,12 @@ class Session {
     void abort(Throwable cause = null) {
         log.debug "Session aborted -- Cause: ${cause?.message}"
         aborted = true
+        dispatcher.signal()
         allProcessors *. terminate()
-        if( !delegateAbortToTaskMonitor )
-            System.exit(ExitCode.SESSION_ABORTED)
+        phaser.forceTermination()
     }
 
-    protected void forceTermination() {
+    void forceTermination() {
         terminated = true
         phaser.forceTermination()
         allProcessors *. terminate()

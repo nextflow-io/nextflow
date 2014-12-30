@@ -200,7 +200,7 @@ class GgTaskHandler extends TaskHandler {
         final remoteTask = ( type == ScriptType.SCRIPTLET ) ? new GgBashTask(task,sessionId) : new GgClosureTask(task,sessionId)
         future = executor.execute( remoteTask )
 
-        future.listenAsync( { executor.getTaskMonitor().signalComplete(); } as GridInClosure )
+        future.listenAsync( { executor.getTaskMonitor().signal(); } as GridInClosure )
 
         // mark as submitted -- transition to STARTED has to be managed by the scheduler
         status = TaskStatus.SUBMITTED

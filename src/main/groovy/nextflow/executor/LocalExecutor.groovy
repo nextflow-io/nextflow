@@ -153,7 +153,7 @@ class LocalTaskHandler extends TaskHandler {
                 result = ex
             }
             finally {
-                executor.getTaskMonitor().signalComplete()
+                executor.getTaskMonitor().signal()
             }
 
         } )
@@ -280,7 +280,7 @@ class NativeTaskHandler extends TaskHandler {
                 return error
             }
             finally {
-                executor.getTaskMonitor().signalComplete()
+                executor.getTaskMonitor().signal()
             }
         }
     }
