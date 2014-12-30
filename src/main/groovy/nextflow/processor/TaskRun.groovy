@@ -111,7 +111,7 @@ class TaskRun {
     /**
      * The exit code returned by executing the task script
      */
-    int exitStatus = Integer.MAX_VALUE
+    Integer exitStatus = Integer.MAX_VALUE
 
     /**
      * Flag set when the bind stage is completed successfully
@@ -417,6 +417,19 @@ class TaskRun {
         def imageName = config.container as String
         def dockerConf = processor?.session?.config?.docker as Map
         DockerBuilder.normalizeDockerImageName(imageName, dockerConf)
+    }
+
+    boolean isSuccess( status = exitStatus ) {
+        if( status == null )
+            return false
+
+        if( status instanceof String )
+            status = status.toInteger()
+
+        if( status == Integer.MAX_VALUE )
+            return false
+
+        return status in config.getValidExitStatus()
     }
 
 }

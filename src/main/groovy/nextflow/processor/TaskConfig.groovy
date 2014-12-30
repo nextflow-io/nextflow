@@ -41,6 +41,7 @@ class TaskConfig implements Map<String,Object> {
     @Delegate
     final private Map<String,Object> target
 
+    /** The context map against which dynamic properties are resolved */
     private Map context
 
     private boolean dynamic
@@ -51,14 +52,30 @@ class TaskConfig implements Map<String,Object> {
 
     TaskConfig( Map<String,Object> entries ) {
         assert entries != null
-        this.target = new HashMap<>()
-        entries.each { String key, val -> put(key,val) }
+        target = new HashMap<>()
+        putAll(entries)
     }
 
-    TaskConfig setContext( Map context ) {
-        assert context != null
-        this.context = context
+    TaskConfig setContext( Map value ) {
+        assert value != null
+        context = value
         return this
+    }
+
+    private normalize( String key, value ) {
+        if( value instanceof Closure ) {
+            if( context )
+                return context.with((Closure)value)
+
+            try {
+                return (value as Closure).call()
+            }
+            catch( MissingPropertyException e ) {
+                throw new IllegalStateException("Directive `$key` doesn't support dynamic value")
+            }
+        }
+
+        return value
     }
 
     /**
@@ -70,17 +87,24 @@ class TaskConfig implements Map<String,Object> {
      */
     @Memoized
     Object get( key ) {
-        def val = target.get(key)
-        if( val instanceof Closure ) {
-            if( context == null ) throw new IllegalStateException("Directive `$key` doesn't support dynamic value")
-            return context.with((Closure)val)
-        }
-        return val
+        def value = target.get(key)
+        normalize(key as String, value)
     }
 
     Object put( String key, Object value ) {
-        dynamic |= (value instanceof Closure)
+        if( value instanceof Closure ) {
+            dynamic |= true
+        }
+        else if( value instanceof List && key == 'module' ) {
+            // 'module' directive can be defined as a list of dynamic values
+            value.each { if (it instanceof Closure) dynamic |= true }
+        }
         target.put(key, value)
+    }
+
+    @Override
+    void putAll( Map entries ) {
+        entries.each { k, v -> put(k as String, v) }
     }
 
     @PackageScope
@@ -98,6 +122,21 @@ class TaskConfig implements Map<String,Object> {
         return this.get(name)
     }
 
+    boolean getEcho() {
+        def value = get('echo')
+        ProcessConfig.toBool(value)
+    }
+
+    List<Integer> getValidExitStatus() {
+        def result = get('validExitStatus')
+        if( result instanceof List<Integer> )
+            return result as List<Integer>
+
+        if( result != null )
+            return [result as Integer]
+
+        return [0]
+    }
 
     ErrorStrategy getErrorStrategy() {
         final strategy = get('errorStrategy')
@@ -167,11 +206,23 @@ class TaskConfig implements Map<String,Object> {
     }
 
     List<String> getModule() {
-        def result = get('module')
-        if( result instanceof String ) {
-            result = ProcessConfig.parseModuleString(result)
+        def value = get('module')
+        if( value instanceof String ) {
+            return ProcessConfig.parseModule(value)
         }
-        (List<String>) result
+
+        if( value instanceof List ) {
+            def result = []
+            value.each {
+                result = ProcessConfig.parseModule(normalize('module',it), result)
+            }
+            return result
+        }
+
+        if( value == null )
+            return []
+
+        throw new IllegalStateException("Not a valid `module` value: $value")
     }
 
     List<String> getShell() {
@@ -215,4 +266,10 @@ class TaskConfig implements Map<String,Object> {
         }
     }
 
+    @Override
+    String toString() {
+        def result = []
+        keySet().each { key -> result << "$key: ${getProperty(key)}" }
+        result.join('; ')
+    }
 }

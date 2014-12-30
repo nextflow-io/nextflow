@@ -79,7 +79,7 @@ class ProcessConfig implements Map<String,Object> {
 
         // parse the attribute as List before adding it to the read-only list
         if( important?.containsKey('module') ) {
-            important.module = parseModuleString(important.module)
+            important.module = parseModule(important.module)
         }
 
         configProperties = important ? new ReadOnlyMap(important) : new LinkedHashMap()
@@ -103,7 +103,8 @@ class ProcessConfig implements Map<String,Object> {
         log.trace "TaskConfig >> ownerScript: $ownerScript"
     }
 
-    private boolean toBool( value )  {
+    @PackageScope
+    static boolean toBool( value )  {
         if( value instanceof Boolean ) {
             return value.booleanValue()
         }
@@ -179,20 +180,16 @@ class ProcessConfig implements Map<String,Object> {
         outputs
     }
 
+    @Deprecated
     List getSharedDefs () {
         configProperties.inputs.findAll { it instanceof SharedParam }
     }
 
-    boolean getEcho() {
-        configProperties.echo
-    }
-
-    void setEcho( Object value ) {
-        configProperties.echo = toBool(value)
-    }
-
-    ProcessConfig echo( def value ) {
-        setEcho(value)
+    /*
+     * note: without this method definition {@link BaseScript#echo} will be invoked
+     */
+    ProcessConfig echo( value ) {
+        configProperties.echo = value
         return this
     }
 
@@ -249,10 +246,12 @@ class ProcessConfig implements Map<String,Object> {
 
     /// shared parameters
 
+    @Deprecated
     SharedParam _share_val( def obj )  {
         new ValueSharedParam(this).bind(obj) as SharedParam
     }
 
+    @Deprecated
     SharedParam _share_file( def obj )  {
         new FileSharedParam(this).bind(obj) as SharedParam
     }
@@ -270,22 +269,6 @@ class ProcessConfig implements Map<String,Object> {
         new StdOutParam(this).bind('-').into(target)
     }
 
-
-    ProcessConfig validExitStatus( Object values ) {
-
-        if( values instanceof List ) {
-            configProperties.validExitStatus = values
-        }
-        else {
-            configProperties.validExitStatus = [values]
-        }
-
-        return this
-    }
-
-    List<Integer> getValidExitStatus() {
-        (List<Integer>)configProperties.validExitStatus
-    }
 
     boolean isCacheable() {
         def value = configProperties.cache
@@ -310,16 +293,16 @@ class ProcessConfig implements Map<String,Object> {
         if( !moduleName )
             return this
 
-        def list = parseModuleString(moduleName, configProperties.module)
+        def list = parseModule(moduleName, configProperties.module)
         configProperties.put('module', list)
         return this
     }
 
     @PackageScope
-    static List<String> parseModuleString( value, current = null) {
+    static List parseModule( value, current = null) {
 
         // if no modules list exist create it
-        List<String> copy
+        List copy
 
         // normalize the current value to a list
         // note: any value that is not a list is discarded
@@ -334,7 +317,7 @@ class ProcessConfig implements Map<String,Object> {
         else if( value instanceof String && value.contains(':'))
             for( String it : value.split(':') ) { copy.add(it) }
         else
-            copy.add( value.toString() )
+            copy.add( value )
 
         return copy
     }

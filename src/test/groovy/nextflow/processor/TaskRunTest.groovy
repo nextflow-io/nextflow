@@ -261,5 +261,55 @@ class TaskRunTest extends Specification {
 
     }
 
+    def testIsSuccess() {
+
+        when:
+        def task = new TaskRun(config: [validExitStatus: [0]])
+        then:
+        task.isSuccess(0) == true
+        task.isSuccess('0') == true
+
+        task.isSuccess(1) == false
+        task.isSuccess(null) == false
+        task.isSuccess('1') == false
+        task.isSuccess(Integer.MAX_VALUE) == false
+
+
+        when:
+        task = new TaskRun(config: [validExitStatus: 0])
+        then:
+        task.isSuccess(0) == true
+        task.isSuccess('0') == true
+
+        task.isSuccess(1) == false
+        task.isSuccess(null) == false
+        task.isSuccess('1') == false
+        task.isSuccess(Integer.MAX_VALUE) == false
+
+        when:
+        task = new TaskRun(config: [validExitStatus: [0,1]])
+        then:
+        task.isSuccess(0) == true
+        task.isSuccess(1) == true
+        task.isSuccess(2) == false
+
+        when:
+        task = new TaskRun(config: [validExitStatus: [0]])
+        task.exitStatus = 0
+        then:
+        task.isSuccess() == true
+
+        when:
+        task = new TaskRun(config: [validExitStatus: [0]])
+        task.exitStatus = 1
+        then:
+        task.isSuccess() == false
+
+        when:
+        task = new TaskRun(config: [validExitStatus: [0]])
+        then:
+        task.isSuccess() == false
+    }
+
 
 }

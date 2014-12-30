@@ -441,6 +441,10 @@ abstract class TaskProcessor {
                 context: new TaskContext(this)
         )
 
+        // setup config
+        task.config.process = task.processor.name
+        task.config.executor = task.processor.executor.name
+
         /*
          * initialize the inputs/outputs for this task instance
          */
@@ -550,7 +554,7 @@ abstract class TaskProcessor {
             log.info "[skipping] Stored process > ${task.name}"
 
             // set the exit code in to the task object
-            task.exitStatus = config.getValidExitStatus()[0]
+            task.exitStatus = task.config.getValidExitStatus()[0]
 
             // -- now bind the results
             finalizeTask0(task)
@@ -582,10 +586,10 @@ abstract class TaskProcessor {
                 return false
             }
 
-            def exitValue = exitFile.text.trim()
-            exitCode = exitValue.isInteger() ? exitValue.toInteger() : null
-            if( exitCode == null || !(exitCode in config.validExitStatus) ) {
-                log.trace "[$task.name] Exit code is not valid > $exitValue -- return false"
+            def str = exitFile.text.trim()
+            exitCode = str.isInteger() ? str.toInteger() : null
+            if( !task.isSuccess(exitCode) ) {
+                log.trace "[$task.name] Exit code is not valid > $str -- return false"
                 return false
             }
         }
@@ -593,7 +597,7 @@ abstract class TaskProcessor {
         /*
          * verify cached context map
          */
-        TaskContext ctxMap = null
+        TaskContext ctx = null
         def ctxFile = folder.resolve(TaskRun.CMD_CONTEXT)
         if( task.hasCacheableValues() ) {
             if( !ctxFile.exists() ) {
@@ -601,8 +605,8 @@ abstract class TaskProcessor {
                 return false
             }
 
-            ctxMap = TaskContext.read(this, ctxFile)
-            populateSharedCtx(task, ctxMap)
+            ctx = TaskContext.read(this, ctxFile)
+            populateSharedCtx(task, ctx)
         }
 
         /*
@@ -612,7 +616,7 @@ abstract class TaskProcessor {
 
         try {
             // -- check if all output resources are available
-            collectOutputs(task, folder, stdoutFile, ctxMap)
+            collectOutputs(task, folder, stdoutFile, ctx)
 
             // set the exit code in to the task object
             task.hash = hash
@@ -621,11 +625,10 @@ abstract class TaskProcessor {
             if( exitCode != null ) {
                 task.exitStatus = exitCode
             }
-            if( ctxMap != null ) {
-                task.context = ctxMap
-                task.config.setContext(ctxMap)
-                if( task.code )
-                    task.code.delegate = ctxMap
+            if( ctx != null ) {
+                task.context = ctx
+                task.config.setContext(ctx)
+                task.code?.delegate = ctx
             }
 
             log.info "[${task.hashLog}] Cached process > ${task.name}"
@@ -1460,8 +1463,7 @@ abstract class TaskProcessor {
                 if( task.exitStatus == Integer.MAX_VALUE )
                     throw new ProcessFailedException("Process '${task.name}' terminated for an unknown reason -- Likely it has been terminated by the external system")
 
-                boolean success = (task.exitStatus in config.validExitStatus)
-                if ( !success )
+                if ( !task.isSuccess() )
                     throw new ProcessFailedException("Process '${task.name}' terminated with an error exit status")
             }
 

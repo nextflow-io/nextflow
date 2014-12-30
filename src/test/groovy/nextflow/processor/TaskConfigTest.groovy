@@ -124,12 +124,24 @@ class TaskConfigTest extends Specification {
 
         when:
         config = new ProcessConfig([:])
+        config.module { 'a/1' }
+        config.module { 'b/2:c/3' }
+        config.module 'd/4'
+        local = config.createTaskConfig()
+        local.setContext([:])
+        then:
+        local.module == ['a/1','b/2','c/3', 'd/4']
+
+
+        when:
+        config = new ProcessConfig([:])
         config.module = 'b/2:c/3'
         local = config.createTaskConfig()
 
         then:
         local.module == ['b/2','c/3']
         local.getModule() == ['b/2','c/3']
+
 
     }
 
@@ -293,5 +305,6 @@ class TaskConfigTest extends Specification {
         config.isDynamic()
 
     }
+
 
 }
