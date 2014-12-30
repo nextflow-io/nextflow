@@ -19,14 +19,11 @@
  */
 
 package nextflow.script
-
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import nextflow.Session
 import nextflow.util.ReadOnlyMap
 import org.apache.commons.lang.StringUtils
-
 /**
  * Defines the script execution context. By default provided the following variables
  * <li>{@code __$session}: the current execution session
@@ -44,17 +41,39 @@ import org.apache.commons.lang.StringUtils
 @CompileStatic
 class ScriptBinding extends Binding {
 
-    final private Session session
+    private Map config
 
-    def ScriptBinding(Session session1) {
-        super( new ReadOnlyMap( ['__$session':session1, args:[], params: new ParamsMap() ]) )
-        this.session = session1
+    /**
+     * Creates a new nextflow script binding object
+     *
+     * @param config Nextflow configuration object
+     * @return A new {@link ScriptBinding} instance
+     */
+    def ScriptBinding(Map config) {
+        super( new ReadOnlyMap( [args:[], params: new ParamsMap() ]) )
+        this.config = config != null ? config : [:]
+    }
+
+    Map getConfig() {
+        return config
     }
 
     @Memoized
     protected Map<String,String> getSysEnv() {
         new HashMap(System.getenv())
     }
+
+    /**
+     * The fallback session environment
+     */
+    @Memoized
+    protected Map getConfigEnv() {
+        if( config.env instanceof Map )
+            return (Map)config.env
+        else
+            [:]
+    }
+
 
     /**
      * The map of the CLI named parameters
@@ -89,8 +108,8 @@ class ScriptBinding extends Binding {
         if( super.hasVariable(name) ) {
             return super.getVariable(name)
         }
-        else if( fallbackEnvMap()?.containsKey(name) ) {
-            fallbackEnvMap().get(name)
+        else if( configEnv.containsKey(name) ) {
+            configEnv.get(name)
         }
         else if( sysEnv.containsKey(name) ) {
             return sysEnv.get(name)
@@ -107,17 +126,8 @@ class ScriptBinding extends Binding {
      * @return
      */
     boolean hasVariable( String name ) {
-        super.hasVariable(name) || fallbackEnvMap()?.containsKey(name) || sysEnv.containsKey(name)
+        super.hasVariable(name) || configEnv.containsKey(name) || sysEnv.containsKey(name)
     }
-
-
-    /**
-     * The fallback session environment
-     */
-    private Map fallbackEnvMap() {
-        session.config.env as Map
-    }
-
 
     /**
      * Holds parameter immutable values

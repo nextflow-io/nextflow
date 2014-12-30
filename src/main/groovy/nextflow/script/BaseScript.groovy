@@ -22,6 +22,7 @@ package nextflow.script
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.Session
 import nextflow.processor.ProcessFactory
 import nextflow.processor.TaskProcessor
@@ -33,7 +34,6 @@ import nextflow.processor.TaskProcessor
 @Slf4j
 abstract class BaseScript extends Script {
 
-
     protected BaseScript() { }
 
     protected BaseScript(Binding binding) {
@@ -44,7 +44,7 @@ abstract class BaseScript extends Script {
      * The script execution session, declare it private to prevent the user script to be able to access it
      */
     @Lazy
-    private Session session = { getBinding()?.getVariable('__$session') as Session } ()
+    private Session session = { Global.session as Session } ()
 
     @Lazy
     private boolean isTest = {

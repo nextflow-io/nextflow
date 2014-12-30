@@ -95,12 +95,12 @@ class ScriptRunner {
 
     def ScriptRunner( Map config ) {
         session = new Session(config)
-        bindings = new ScriptBinding(session)
+        bindings = new ScriptBinding(config)
     }
 
     def ScriptRunner( Session session ) {
         this.session = session
-        bindings = new ScriptBinding(session)
+        this.bindings = new ScriptBinding(session.config)
     }
 
     def ScriptRunner setScript( Path file ) {
