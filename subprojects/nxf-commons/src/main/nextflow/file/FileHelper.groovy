@@ -495,6 +495,8 @@ class FileHelper {
      * @param folder
      * @param filePattern
      * @param action
+     *
+     * @throws java.nio.file.NoSuchFileException if the specified {@code folder} does not exist
      */
     static void visitFiles( Map options = null, Path folder, String filePattern, Closure action ) {
         assert folder

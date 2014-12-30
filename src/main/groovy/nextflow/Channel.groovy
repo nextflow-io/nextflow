@@ -27,6 +27,7 @@ import static nextflow.util.CheckHelper.checkParams
 
 import java.nio.file.FileSystem
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.WatchEvent
 import java.nio.file.WatchKey
@@ -244,8 +245,15 @@ class Channel  {
             opts.type = 'file'
 
         Thread.start {
-            FileHelper.visitFiles(opts, path, pattern) { Path file -> channel.bind(file) }
-            channel << STOP
+            try {
+                FileHelper.visitFiles(opts, path, pattern) { Path file -> channel.bind(file) }
+            }
+            catch (NoSuchFileException e) {
+                log.debug "No such file: $folder -- Skipping visit"
+            }
+            finally {
+                channel << STOP
+            }
         }
 
         return channel

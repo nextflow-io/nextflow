@@ -21,6 +21,7 @@
 package nextflow
 
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
@@ -105,7 +106,12 @@ class Nextflow {
         if( !opts.type ) opts.type = 'file'
 
         def result = new LinkedList()
-        FileHelper.visitFiles(opts, fs.getPath(folder), pattern) { Path it -> result.add(it) }
+        try {
+            FileHelper.visitFiles(opts, fs.getPath(folder), pattern) { Path it -> result.add(it) }
+        }
+        catch (NoSuchFileException e) {
+            log.debug "No such file: $folder -- Skipping visit"
+        }
         return result
 
     }

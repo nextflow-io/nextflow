@@ -20,6 +20,7 @@
 
 package nextflow.file
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -395,6 +396,14 @@ class FileHelperTest extends Specification {
         FileHelper.getFolderAndPattern( 'data/{p/file1,q/file2}') == ['data/', '{p/file1,q/file2}', null]
     }
 
+    def testNoSuchFile() {
+
+        when:
+        FileHelper.visitFiles(Paths.get('/some/missing/path'),'*', { return it })
+        then:
+        thrown(NoSuchFileException)
+
+    }
 
 
 }

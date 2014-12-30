@@ -20,6 +20,7 @@
 
 package nextflow.executor
 
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import groovy.transform.PackageScope
@@ -126,7 +127,7 @@ abstract class Executor {
         try {
             FileHelper.visitFiles(opts, workDir, fileName) { Path it -> files.add(it) }
         }
-        catch( IOException e ) {
+        catch( NoSuchFileException e ) {
             throw new MissingFileException("Cannot access folder: '$workDir' expected by process: ${taskName}", e)
         }
 

@@ -213,6 +213,13 @@ class NextflowTest extends Specification {
         folder?.deleteDir()
     }
 
+    def testVisitNoSuchFile() {
+
+        when:
+        def result = Nextflow.file('/some/missing/path/*')
+        then:
+        result == []
+    }
 
 
     def testTuple() {
