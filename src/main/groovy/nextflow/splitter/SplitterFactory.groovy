@@ -159,12 +159,10 @@ class SplitterFactory {
         // set the splitter strategy options
         strategy.options(opt)
 
-        int count = 0
-        def splitEntry = { entry ->
-            strategy.target(entry).apply(count)
-        }
-
-        DataflowExtensions.subscribe ( source, [onNext: splitEntry, onComplete: { resultChannel << Channel.STOP }] )
+        DataflowExtensions.subscribe ( source, [
+                onNext: { entry -> strategy.target(entry).apply() },
+                onComplete: { resultChannel << Channel.STOP }
+        ] )
 
         // return the resulting channel
         return resultChannel

@@ -36,13 +36,13 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
 
     protected Path sourceFile
 
-    protected meta = 'file'
-
     protected decompress
 
     protected String operatorName
 
     protected long limit
+
+    protected int elem = -1
 
     private targetObj
 
@@ -113,21 +113,23 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      * @param index the current split count
      * @return Either {@link groovyx.gpars.dataflow.DataflowChannel} or a {@code List} which holds the splitted chunks
      */
-    final apply( int index = 0 ) {
-
-        setSource(targetObj)
+    final apply() {
 
         def result = null
+        def source = targetObj instanceof List ? findSource((List)targetObj) : targetObj
+
+        setSource(source)
+
         collector = createCollector()
         if( collector instanceof CacheableCollector && collector.checkCached() ) {
             log.debug "Operator `$operatorName` reusing cached chunks at path: ${collector.baseFile}"
-            result = resumeFromCache(collector, index)
+            result = resumeFromCache(collector)
         }
 
         else {
-            def obj = normalizeType(targetObj)
             try {
-                result = process(obj, index)
+                def stream = normalizeSource(source)
+                result = process(stream)
             }
             catch ( StopSplitIterationException e ) {
                 log.trace 'Split iteration interrupted'
@@ -152,6 +154,32 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
     }
 
     /**
+     * @param tuple
+     *      A non-empty list of objects
+     * @return
+     *      Returns the item at position defined by the attribute {@code #elem} in the list specified as parameter.
+     *      When {@code #elem} is equal to -1 find find out the first occourence of a file object.
+     *      If no file is available the first item in the list is returned
+     */
+    @PackageScope
+    def findSource( List tuple ) {
+
+        if( elem != -1 )
+            return tuple.get(elem)
+
+        for( int i=0; i<tuple.size(); i++ ) {
+            def it = tuple[i]
+            if(  it instanceof Path || it instanceof File ) {
+                elem = i
+                break
+            }
+        }
+
+        if( elem == -1 ) elem = 0
+        return tuple.get(elem)
+    }
+
+    /**
      * Set the file object to be split (if any)
      * @param obj An instance of {@link Path} of {@code File}, otherwise do nothing
      */
@@ -170,10 +198,10 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      * @param index
      * @return
      */
-    protected resumeFromCache(CacheableCollector collector, int index) {
+    protected resumeFromCache(CacheableCollector collector) {
         def result = null
         for( Path file : collector.allChunks ) {
-            result = invokeEachClosure(closure, file, index++ )
+            result = invokeEachClosure(closure, file)
         }
         return result
     }
@@ -185,7 +213,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      * @param index the current split count
      * @return Either {@link groovyx.gpars.dataflow.DataflowChannel} or a {@code List} which holds the splitted chunks
      */
-    protected abstract process( T targetObject, int index )
+    protected abstract process( T targetObject )
 
     /**
      * Normalise the source object to be splitted
@@ -193,7 +221,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      * @param object The object to be splitted
      * @return The normalised version of of the object to be splitted
      */
-    abstract protected T normalizeType( object )
+    abstract protected T normalizeSource( object )
 
     /**
      * Defines the splitter parameter. Subclass can override to provide format dependent options
@@ -232,14 +260,14 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
         if( options.autoClose instanceof Boolean )
             autoClose = options.autoClose as boolean
 
-        if( options.meta )
-            meta = options.meta
-
         if( options.decompress != null )
             decompress = options.decompress
 
         if( options.limit )
             limit = options.limit as long
+
+        if( options.elem )
+            elem = options.elem as int
 
         return this
     }
@@ -255,14 +283,14 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
                 into: [ Collection, DataflowQueue ],
                 record: [ Boolean, Map ],
                 autoClose: Boolean,
-                meta: ['file','path','index'],
                 limit: Integer,
+                elem: Integer,
                 decompress: Boolean
         ]
     }
 
     /**
-     * Set the target object to be splitter. This method invokes {@link #normalizeType(java.lang.Object)}
+     * Set the target object to be splitter. This method invokes {@link #normalizeSource(java.lang.Object)}
      *
      * @param object The object to be splitted
      * @return The object itself
@@ -319,19 +347,24 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      * Invoke the each closure
      *
      * @param closure
-     * @param obj
+     * @param chunk
      * @param index
      * @return
      */
     @PackageScope
-    final invokeEachClosure( Closure closure, Object obj, int index ) {
+    final invokeEachClosure( Closure closure, Object chunk ) {
 
-        def result = obj
+        def result
+        if( targetObj instanceof List ) {
+            result = new ArrayList((List)targetObj)
+            result.set(elem, chunk)
+        }
+        else {
+            result = chunk
+        }
+
         if( closure ) {
-            def len = closure.getMaximumNumberOfParameters()
-            result = ( len==1
-                    ? closure.call(obj)
-                    : closure.call(obj, metaParam(index)))
+            result = closure.call(result)
         }
 
         if( into != null )
@@ -340,20 +373,6 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
         return result
     }
 
-    @PackageScope
-    final metaParam( int index ) {
-
-        if( meta == 'file' && sourceFile )
-            return sourceFile.getName()
-
-        if( meta == 'path' && sourceFile )
-            return sourceFile
-
-        if( meta == 'index' )
-            return index
-
-        return null
-    }
 
     /**
      * Add a generic value to a target container, that can be either a {@code Collection}
@@ -363,7 +382,11 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      * @param value Any value
      * @throws {@code IllegalArgumentException} whenever parameter {@code into} is not a valid object
      */
+
+    private int debugCount = 0
+
     protected void append( into, value ) {
+        log.trace "Splitter value: ${debugCount++}"
         if( into instanceof Collection )
             into.add(value)
 

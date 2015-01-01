@@ -141,9 +141,9 @@ class FastaSplitter extends AbstractTextSplitter {
     private String line
 
     @Override
-    protected process( Reader targetObject, int offset ) {
+    protected process( Reader targetObject ) {
         line = null
-        super.process(targetObject, offset)
+        super.process(targetObject)
     }
 
     @Override

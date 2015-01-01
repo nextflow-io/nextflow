@@ -51,7 +51,10 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
 
         // file mode and record cannot be used at the same time
         if( fileMode && recordMode )
-            throw new AbortOperationException("Splitter `file` and `record` parameters conflict")
+            throw new AbortOperationException("Parameters `file` and `record` conflict on operator: $operatorName")
+
+        if( fileMode && count == 1 )
+            throw new AbortOperationException("Parameter `file` requires a split size grater than 1 for operator: $operatorName")
 
         return this
     }
@@ -76,7 +79,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
      * @return  A  {@link Reader} for the given object.
      * @throws IllegalArgumentException if the object specified is of a type not supported
      */
-    protected Reader normalizeType( obj ) {
+    protected Reader normalizeSource( obj ) {
 
         if( obj instanceof Reader )
             return (Reader) obj
@@ -127,8 +130,6 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
 
     private int blockCount
 
-    private int index
-
     private long itemsCount
 
     /**
@@ -138,9 +139,8 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
      * @param offset
      * @return
      */
-    protected process( Reader targetObject, int offset ) {
+    protected process( Reader targetObject ) {
 
-        index = offset
         def result = null
         BufferedReader reader = wrapReader(targetObject)
 
@@ -161,7 +161,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
 
             // make sure to process collected entries
             if ( collector && collector.hasChunk() ) {
-                result = invokeEachClosure(closure, collector.getChunk(), index )
+                result = invokeEachClosure(closure, collector.getChunk())
             }
         }
 
@@ -183,14 +183,14 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
 
         def result = null
         if( count == 1 ) {
-            result = invokeEachClosure(closure, record, index++ )
+            result = invokeEachClosure(closure, record)
         }
         else {
             // -- append to the list buffer
             collector.add(record)
 
             if( ++blockCount == count ) {
-                result = invokeEachClosure(closure, collector.getChunk(), index++ )
+                result = invokeEachClosure(closure, collector.getChunk())
                 // reset the buffer
                 collector.next()
                 blockCount = 0
@@ -220,32 +220,39 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
         return new CharSequenceCollector()
     }
 
+    private String getCollectFileName() {
+        if( collectName )
+            return collectName
+
+        if( sourceFile ) {
+            def fileName = sourceFile.getName()
+            if( fileName.endsWith('.gz') )
+                fileName = fileName[0..-4]
+
+            return fileName
+        }
+
+        return 'chunk'
+    }
+
     /**
      * @return A path where file chunks are cached
      */
     @PackageScope
     Path getCollectorBaseFile () {
 
+        final fileName = getCollectFileName()
         Path result
         if( collectPath ) {
-            result = collectPath.isDirectory() ? collectPath.resolve('chunk') : collectPath
+            result = collectPath.isDirectory() ? collectPath.resolve(fileName) : collectPath
         }
 
         else if( sourceFile ) {
-            String fileName
-            if( collectName )
-                fileName = collectName
-            else {
-                fileName = sourceFile.getName()
-                if( fileName.endsWith('.gz') )
-                    fileName = fileName[0..-4]
-            }
-
             result = Nextflow.cacheableFile( [sourceFile, getCacheableOptions()],  fileName)
         }
 
         else
-            result = Nextflow.cacheableFile( [targetObj, getCacheableOptions()], collectName ?: 'chunk' )
+            result = Nextflow.cacheableFile( [targetObj, getCacheableOptions()], collectName ?: fileName )
 
         log.debug "Splitter `$operatorName` collector path: $result"
         return result

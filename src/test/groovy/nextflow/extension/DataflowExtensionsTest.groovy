@@ -1190,7 +1190,7 @@ class DataflowExtensionsTest extends Specification {
     def testSplitFasta() {
 
         setup:
-        def fasta = """\
+        def fasta1 = """\
                 >1aboA
                 NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
                 NYITPVN
@@ -1204,7 +1204,7 @@ class DataflowExtensionsTest extends Specification {
                 """.stripIndent()
 
         when:
-        def records = Channel.from(fasta).splitFasta()
+        def records = Channel.from(fasta1).splitFasta()
         then:
         records.val == '>1aboA\nNLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS\nNYITPVN\n'
         records.val == '>1ycsB\nKGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY\nVPRNLLGLYP\n'
@@ -1217,7 +1217,7 @@ class DataflowExtensionsTest extends Specification {
             WLNGYNETTGERGDFPGTYVEYIGRKKISP
             VPRNLLGLYP
             '''
-        records = Channel.from(fasta, fasta2).splitFasta(record:[id:true])
+        records = Channel.from(fasta1, fasta2).splitFasta(record:[id:true])
         then:
         records.val == [id:'1aboA']
         records.val == [id:'1ycsB']
@@ -1227,19 +1227,16 @@ class DataflowExtensionsTest extends Specification {
 
 
         when:
-        def ids = []
-        def list = []
-        Channel.from(fasta).splitFasta(record:[id:true], meta:'index') { item, int index ->
-            ids << item.id
-            list << index
-            return item
+        def result = Channel.from( [fasta1, 'one'], [fasta2,'two'] ).splitFasta(record:[id:true]) { record, code ->
+            [record.id, code]
         }
 
-        sleep 100
         then:
-        ids == ['1aboA','1ycsB','1pht']
-        list == [0,1,2]
-
+        result.val == ['1aboA', 'one']
+        result.val == ['1ycsB', 'one']
+        result.val == ['1pht',  'one']
+        result.val == ['alpha123', 'two']
+        result.val == Channel.STOP
     }
 
     def testConcat() {
@@ -1633,8 +1630,8 @@ class DataflowExtensionsTest extends Specification {
         result.val == 3
         result.val == Channel.STOP
 
-
     }
+
 
 
 }

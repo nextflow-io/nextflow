@@ -110,10 +110,10 @@ class CsvSplitter extends AbstractTextSplitter {
      * @return
      */
     @Override
-    protected process( Reader targetObject, int index ) {
+    protected process( Reader targetObject ) {
         final reader = wrapReader(targetObject)
         parseHeader(reader)
-        super.process(reader, index)
+        super.process(reader)
     }
 
     protected void parseHeader(BufferedReader reader) {

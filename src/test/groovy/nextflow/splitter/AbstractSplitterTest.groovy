@@ -30,7 +30,7 @@ import spock.lang.Specification
 class AbstractSplitterTest extends Specification {
 
 
-    def testSplitCall() {
+    def 'test invokeEachClosure method'() {
 
         given:
         def file = Paths.get('/some/file.txt')
@@ -38,33 +38,20 @@ class AbstractSplitterTest extends Specification {
         when:
         def splitter = [:] as AbstractSplitter
         then:
-        splitter.invokeEachClosure(null, 'hola', 1) == 'hola'
-        splitter.invokeEachClosure({ x -> x.reverse() }, 'hola', 3) == 'aloh'
+        splitter.invokeEachClosure(null, 'hola') == 'hola'
+        splitter.invokeEachClosure({ x -> x.reverse() }, 'hola') == 'aloh'
 
         when:
-        splitter.sourceFile = file
+        splitter.elem = 0
+        splitter.target( [1,2,3] )
         then:
-        splitter.invokeEachClosure({ x, meta -> [x, meta] }, 'hola', 3) == ['hola', 'file.txt']
-
-        when:
-        splitter.meta = 'file'
-        then:
-        splitter.invokeEachClosure({ x, meta -> [x, meta] }, 'hola', 3) == ['hola', 'file.txt']
-
-        when:
-        splitter.meta = 'path'
-        then:
-        splitter.invokeEachClosure({ x, meta -> [x, meta] }, 'hola', 3) == ['hola', file]
-
-        when:
-        splitter.meta = 'index'
-        then:
-        splitter.invokeEachClosure({ x, meta -> [x, meta * 2] }, 'hola', 3) == ['hola', 6]
-
-
+        splitter.invokeEachClosure(null, 'hola') == ['hola', 2, 3]
+        splitter.invokeEachClosure( { x -> x } , 'hola') == ['hola', 2, 3]
+        splitter.invokeEachClosure( { a,b,c -> a } , 'hola') == 'hola'
+        splitter.invokeEachClosure( { tuple -> tuple[0] } , 'hola') == 'hola'
     }
 
-    def testIsTrueOrMap() {
+    def 'test isTrueOrMap'() {
         expect:
         AbstractSplitter.isTrueOrMap(true)
         AbstractSplitter.isTrueOrMap(Boolean.TRUE)
@@ -72,6 +59,34 @@ class AbstractSplitterTest extends Specification {
         !AbstractSplitter.isTrueOrMap(0)
         !AbstractSplitter.isTrueOrMap(false)
         !AbstractSplitter.isTrueOrMap(Boolean.FALSE)
+
+    }
+
+    def 'test findSource'() {
+
+        def splitter
+
+        when:
+        splitter = [:] as AbstractSplitter
+        then:
+        splitter.elem == -1
+        splitter.findSource([ 10, 20 ]) == 10
+        splitter.elem == 0
+
+        when:
+        splitter = [:] as AbstractSplitter
+        then:
+        splitter.elem == -1
+        splitter.findSource([ 10, Paths.get('/hello') ]) == Paths.get('/hello')
+        splitter.elem == 1
+
+
+        when:
+        splitter = [:] as AbstractSplitter
+        splitter.elem = 1
+        then:
+        splitter.findSource([ 10, 20, Paths.get('/hello') ]) == 20
+
 
     }
 
