@@ -329,7 +329,7 @@ class DataflowExtensions {
         DataflowReadChannel<V> target = newChannelBy(source);
         newOperator(source, target) { it ->
 
-            def result = mapClosureCall(it,closure)
+            def result = closure.call(it)
             def proc = ((DataflowProcessor) getDelegate())
 
             // bind the result value
@@ -342,24 +342,6 @@ class DataflowExtensions {
         }
         return target;
 
-    }
-
-    /**
-     * method used to invoke the closure in the {@code #map} and {@code #mapMany} operators
-     *
-     * @param item
-     * @param closure
-     * @return
-     */
-    static private mapClosureCall( Object item, Closure closure ) {
-        def result
-        final n = closure.getMaximumNumberOfParameters()
-        if( n>1 && item instanceof Collection && n==item.size() )
-            result = closure.call(*item)
-        else
-            result = closure.call(item)
-
-        return result
     }
 
 
@@ -394,7 +376,7 @@ class DataflowExtensions {
 
         newOperator(source, target, listener) {  item ->
 
-            def result = closure != null ? mapClosureCall(item, closure) : item
+            def result = closure != null ? closure.call(item) : item
             def proc = ((DataflowProcessor) getDelegate())
 
             switch( result ) {
@@ -636,7 +618,7 @@ class DataflowExtensions {
          * append its result value to a file
          */
         def processItem = { item ->
-            def value = closure ? mapClosureCall(item,closure) : item
+            def value = closure ? closure.call(item) : item
 
             // when the value is a list, the first item hold the grouping key
             // all the others values are appended
