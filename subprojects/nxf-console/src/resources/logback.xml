@@ -26,8 +26,8 @@
 <configuration debug="false">
 
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>%-5level - %msg%n</pattern>
+        <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+        <layout class="nextflow.ui.console.SimpleConsoleLayout" />
         </encoder>
     </appender>
 
