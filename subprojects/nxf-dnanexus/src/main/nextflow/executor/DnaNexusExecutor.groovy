@@ -90,7 +90,9 @@ class DnaNexusExecutor extends Executor {
          * Saving the environment to a file.
          */
         def taskEnvFile = null
-        Map environment = task.processor.getProcessEnvironment()
+        // note: create a copy of the process environment to avoid concurrent
+        // process executions override each others
+        Map environment = new HashMap( task.processor.getProcessEnvironment() )
         environment.putAll( task.getInputEnvironment() )
         final envBashText = TaskProcessor.bashEnvironmentScript(environment)
         // make sure to upload the file only there is an environment content

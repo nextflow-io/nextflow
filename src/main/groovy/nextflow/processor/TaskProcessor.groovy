@@ -1112,7 +1112,7 @@ abstract class TaskProcessor {
             }
         }
 
-        return result
+        return Collections.unmodifiableMap(result)
     }
 
     /**

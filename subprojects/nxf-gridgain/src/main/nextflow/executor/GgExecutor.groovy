@@ -538,7 +538,10 @@ class GgBashTask extends GgBaseTask<Integer>  {
         super(task, sessionId)
         this.stdin = task.stdin
         this.container = task.container
-        this.environment = task.processor.getProcessEnvironment()
+        // note: create a copy of the process environment to avoid concurrent
+        // process executions override each others
+        this.environment = new HashMap( task.processor.getProcessEnvironment() )
+        this.environment.putAll( task.getInputEnvironment() )
         this.shell = task.config.getShell()
         this.script = task.script
     }
