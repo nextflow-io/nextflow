@@ -1573,6 +1573,8 @@ class DataflowExtensions {
         return result
     }
 
+    static final private PHASE_PARAMS = [remainder: Boolean]
+
     /**
      * Phase channels
      *
@@ -1581,32 +1583,27 @@ class DataflowExtensions {
      * @param mapper
      * @return
      */
-    static final DataflowReadChannel phase( DataflowReadChannel source, DataflowReadChannel target, Closure mapper ) {
+    static final DataflowReadChannel phase( DataflowReadChannel source, Map opts, DataflowReadChannel target, Closure mapper = DEFAULT_MAPPING_CLOSURE ) {
+        checkParams('phase', opts, PHASE_PARAMS)
 
         def result = new DataflowQueue()
         def state = [:]
 
         final count = 2
         final stopCount = new AtomicInteger(count)
+        final remainder = opts.remainder ? opts.remainder as boolean : false
 
-        source.subscribe( phaseHandlers(state, count, 0, result, mapper, stopCount) )
-        target.subscribe( phaseHandlers(state, count, 1, result, mapper, stopCount) )
+        source.subscribe( phaseHandler(state, count, 0, result, mapper, stopCount, remainder) )
+        target.subscribe( phaseHandler(state, count, 1, result, mapper, stopCount, remainder) )
 
         return result
     }
 
-    /**
-     * Phase channels
-     *
-     * @param source
-     * @param target
-     * @return
-     */
-    static final DataflowReadChannel phase(DataflowReadChannel source, DataflowReadChannel target) {
-        phase(source, target, DEFAULT_MAPPING_CLOSURE )
+    static final DataflowReadChannel phase( DataflowReadChannel source, DataflowReadChannel target, Closure mapper = DEFAULT_MAPPING_CLOSURE ) {
+        phase(source, [:], target, mapper)
     }
 
-    /**
+        /**
      * Implements the default mapping strategy, having the following strategy:
      * <pre>
      *     Map -> first entry key
@@ -1666,11 +1663,11 @@ class DataflowExtensions {
      * @param mapper A closure mapping a value to its key
      * @return A map with {@code OnNext} and {@code onComplete} methods entries
      */
-    static private final Map phaseHandlers( Map<Object,Map<DataflowReadChannel,List>> buffer, int size, int index, DataflowWriteChannel target, Closure mapper, AtomicInteger stopCount ) {
+    static private final Map phaseHandler( Map<Object,Map<Integer,List>> buffer, int size, int index, DataflowWriteChannel target, Closure mapper, AtomicInteger stopCount, boolean remainder ) {
 
         [
                 onNext: {
-                    synchronized (buffer) {  // phaseImpl is NOT thread safe, synchronize it !
+                    synchronized (buffer) {
                         def entries = phaseImpl(buffer, size, index, it, mapper, false)
                         if( entries ) {
                             target.bind(entries)
@@ -1679,6 +1676,8 @@ class DataflowExtensions {
 
                 onComplete: {
                     if( stopCount.decrementAndGet()==0) {
+                        if( remainder )
+                            phaseRemainder(buffer,size, target)
                         target << Channel.STOP
                     }}
 
@@ -1701,6 +1700,16 @@ class DataflowExtensions {
      *
      */
     static private final List phaseImpl( Map<Object,Map<Integer,List>> buffer, int size, int index, def item, Closure mapper, boolean isCross = false) {
+
+        // The 'buffer' structure track the values emitted by the channel, it is arranged in the following manner:
+        //
+        //  Map< key, Map< channel index, List[ values ] >  >
+        //
+        // In the main map there's an entry for each 'key' for which a match is required,
+        // to which is associated another map which associate the channel (index) on which the item
+        // has been emitted and all the values received (for that channel) not yet emitted.
+        // (this is required to do not lost an item that is emitted more than one time on the same channel
+        //  before a match for it is found on another channel)
 
         // get the index key for this object
         final key = mapper.call(item)
@@ -1752,6 +1761,38 @@ class DataflowExtensions {
 
         return result
     }
+
+
+    static private final void phaseRemainder( Map<Object,Map<Integer,List>> buffers, int count, DataflowWriteChannel target ) {
+        Collection<Map<Integer,List>> slots = buffers.values()
+
+        slots.each { Map<Integer,List> entry ->
+
+            while( true ) {
+
+                boolean fill=false
+                def result = new ArrayList(count)
+                for( int i=0; i<count; i++ ) {
+                    List values = entry[i]
+                    if( values ) {
+                        fill |= true
+                        result[i] = values[0]
+                        values.remove(0)
+                    }
+                    else {
+                        result[i] = null
+                    }
+                }
+
+                if( fill )
+                    target.bind( result )
+                else
+                    break
+            }
+
+        }
+    }
+
 
     public static <T> DataflowReadChannel cross( DataflowReadChannel source, DataflowReadChannel target ) {
         cross(source,target,DEFAULT_MAPPING_CLOSURE)

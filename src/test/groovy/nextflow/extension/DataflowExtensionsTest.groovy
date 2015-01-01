@@ -1132,6 +1132,47 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    def testPhaseWithRemainder() {
+
+        def ch1
+        def ch2
+        def result
+
+        when:
+        ch1 = Channel.from( 1,2,3 )
+        ch2 = Channel.from( 1,0,0,2,7,8,9,3 )
+        result = ch1.phase(ch2, remainder: true)
+
+        then:
+        result.val == [1,1]
+        result.val == [2,2]
+        result.val == [3,3]
+        result.val == [null,0]
+        result.val == [null,0]
+        result.val == [null,7]
+        result.val == [null,8]
+        result.val == [null,9]
+        result.val == Channel.STOP
+
+
+        when:
+        ch1 = Channel.from( 1,0,0,2,7,8,9,3 )
+        ch2 = Channel.from( 1,2,3 )
+        result = ch1.phase(ch2, remainder: true)
+
+        then:
+        result.val == [1,1]
+        result.val == [2,2]
+        result.val == [3,3]
+        result.val == [0,null]
+        result.val == [0,null]
+        result.val == [7,null]
+        result.val == [8,null]
+        result.val == [9,null]
+        result.val == Channel.STOP
+    }
+
+
     def testCross() {
 
         setup:
