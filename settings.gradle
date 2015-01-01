@@ -3,6 +3,7 @@ include 'nxf-commons'
 include 'nxf-dnanexus'
 include 'nxf-gridgain'
 include 'nxf-extrae'
+include 'nxf-console'
 
 rootProject.children.each { prj ->
     prj.projectDir = new File("$rootDir/subprojects/$prj.name")

@@ -84,6 +84,7 @@ configurations {
     provided
     dnanexus.extendsFrom runtime
     gridgain.extendsFrom runtime
+    console.extendsFrom runtime
     gdocLibs.extendsFrom runtime
 }
 
@@ -122,8 +123,11 @@ dependencies {
         exclude module: 'nextflow'
     }
 
-    // GridGain build dependencies
     gridgain(project(':nxf-gridgain')) {
+        exclude module: 'nextflow'
+    }
+
+    console(project(':nxf-console')) {
         exclude module: 'nextflow'
     }
 
@@ -246,7 +250,7 @@ task pack(type: Jar) {
 
     doLast {
         ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: nextflowDir, overwrite: true)
-        println "\n+ Nextflow package copied to: $nextflowDir"
+        println "+ Nextflow package copied to: $nextflowDir\n"
     }
 }
 
@@ -274,7 +278,7 @@ task packDx(type: Jar) {
 
     doLast {
         ant.copy(file: "$buildDir/libs/nextflow-${version}-dx.jar", todir: nextflowDir, overwrite: true)
-        println "\n+ Nextflow DX package copied to: $nextflowDir"
+        println "+ Nextflow DX package copied to: $nextflowDir\n"
     }
 }
 
@@ -304,14 +308,43 @@ task packGg(type: Jar) {
 
     doLast {
         ant.copy(file: "$buildDir/libs/nextflow-${version}-gg.jar", todir: nextflowDir, overwrite: true)
-        println "\n+ Nextflow GG package copied to: $nextflowDir"
+        println "+ Nextflow GG package copied to: $nextflowDir\n"
     }
 }
 
 /*
+ * Creates a self-contained *fat* jar shipping all required dependencies
+ * including Console stuff
+ */
+task packConsole(type: Jar) {
+    dependsOn ':my-capsule:jar', configurations.console
+    archiveName = "nextflow-${version}-console.jar"
+
+    from jar // embed our application jar
+    from (configurations.console)
+    from (configurations.capsule.collect { zipTree(it) })
+
+    manifest {
+        attributes(
+                'Main-Class'        : 'CapsuleLoader',
+                'Application-Name'  : 'nextflow-console',
+                'Application-Class' : 'nextflow.ui.console.Nextflow',
+                'Application-Version': version,
+                'Min-Java-Version'  : '1.7.0'
+        )
+    }
+
+    doLast {
+        ant.copy(file: "$buildDir/libs/nextflow-${version}-console.jar", todir: nextflowDir, overwrite: true)
+        println "+ Nextflow REPL package copied to: $nextflowDir\n"
+    }
+}
+
+
+/*
  * Compile and pack all packages
  */
-task packAll( dependsOn: [pack, packDx, packGg]) {
+task packAll( dependsOn: [pack, packDx, packGg, packConsole]) {
 
 }
 
@@ -335,7 +368,7 @@ task release(type: Exec, dependsOn: [ test, packAll, makeSha1 ]) {
     files[0] = file('nextflow').absoluteFile
     files[1] = file('nextflow.sha1').absoluteFile
 
-    ['one','dx','gg'].each{
+    ['one','dx','gg','console'].each{
         files << file("$buildDir/libs/nextflow-${version}-${it}.jar").absoluteFile
     }
 
