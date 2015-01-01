@@ -31,6 +31,7 @@ import nextflow.Session
 import nextflow.ast.NextflowDSL
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
+import nextflow.exception.AbortRunException
 import nextflow.file.FileHelper
 import nextflow.util.ConfigHelper
 import org.apache.commons.lang.StringUtils
@@ -160,6 +161,10 @@ class ScriptRunner {
         }
         finally {
             terminate()
+        }
+
+        if( session.aborted ) {
+            throw new AbortRunException()
         }
 
         return result

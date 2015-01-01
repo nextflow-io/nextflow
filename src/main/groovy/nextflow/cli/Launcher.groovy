@@ -35,6 +35,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.ExitCode
 import nextflow.exception.AbortOperationException
+import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
 import nextflow.trace.TraceFileObserver
 import nextflow.util.LoggerHelper
@@ -350,10 +351,14 @@ class Launcher implements ExitCode {
 
         }
 
+        catch( AbortRunException e ) {
+            System.exit(RUNTIME_ERROR)
+        }
+
         catch ( GitAPIException | AbortOperationException e ) {
             System.err.println e.getMessage() ?: e.toString()
             log.debug ("Operation aborted", e.cause ?: e)
-            System.exit(COMMAND_RUNTIME_ERROR)
+            System.exit(COMMAND_ERROR)
         }
 
         catch( ConfigParseException e )  {

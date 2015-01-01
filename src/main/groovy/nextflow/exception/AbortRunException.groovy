@@ -18,28 +18,19 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow
+package nextflow.exception
+
+import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
 
 /**
- * Application exit status
+ * Exception thrown when execution is aborted by a failing process
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface ExitCode {
-
-    static final short OK = 0
-
-    static final short RUNTIME_ERROR = 101
-
-    static final short INVALID_COMMAND_LINE_PARAMETER = 102
-
-    static final short INVALID_CONFIG = 106
-
-    static final short COMMAND_ERROR = 108
-
-    static final short COMPILATION_ERROR = 109
-
-    static final short UNKNOWN_ERROR = 255
+@InheritConstructors
+@CompileStatic
+class AbortRunException extends RuntimeException {
 
 
 }
