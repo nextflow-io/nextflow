@@ -1530,8 +1530,6 @@ class DataflowExtensions {
     }
 
 
-
-
     /**
      * Similar to https://github.com/Netflix/RxJava/wiki/Combining-Observables#merge
      *
@@ -1958,8 +1956,15 @@ class DataflowExtensions {
         targets
     }
 
-
-    static public DataflowReadChannel ifEmpty( DataflowReadChannel source, defValue ) {
+    /**
+     * Empty the specified value only if the source channel to which is applied is empty i.e. do not emit
+     * any value.
+     *
+     * @param source The channel to which the operator is applied
+     * @param value The value to emit when the source channel is empty. If a closure is used the the value returned by its invocation is used.
+     * @return The resulting channel emitting the source items or the default value when the channel is empty
+     */
+    static public DataflowReadChannel ifEmpty( DataflowReadChannel source, value ) {
 
         boolean empty = true
         def result = newChannelBy(source)
@@ -1967,10 +1972,10 @@ class DataflowExtensions {
                 onNext: { result.bind(it); empty=false },
                 onComplete: {
                     if(empty) {
-                        if( defValue instanceof Closure )
-                            result.bind(defValue.call())
+                        if( value instanceof Closure )
+                            result.bind(value.call())
                         else
-                            result.bind(defValue)
+                            result.bind(value)
                     }
                     result.bind(Channel.STOP)
                 }
