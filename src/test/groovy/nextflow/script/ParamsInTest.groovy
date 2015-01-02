@@ -182,22 +182,27 @@ class ParamsInTest extends Specification {
         in1.name == 'x'
         in1.filePattern == '*'
         in1.inChannel.val == Paths.get('file.x')
+        in1.index == 0
 
         in2.name == 'f1'
         in2.filePattern == '*'
         in2.inChannel.val == Paths.get('file.x')
+        in2.index == 1
 
         in3.name == 'f2'
         in3.filePattern == 'abc'
         in3.inChannel.val == Paths.get('file.x')
+        in3.index == 2
 
         in4.name == 'f3'
         in4.filePattern == '*.fa'
         in4.inChannel.val == Paths.get('file.x')
+        in4.index == 3
 
         in5.name == 'file.txt'
         in5.filePattern == 'file.txt'
         in5.inChannel.val == Paths.get('file.x')
+        in5.index == 4
 
     }
 
@@ -267,11 +272,11 @@ class ParamsInTest extends Specification {
         then:
         process.taskConfig.getInputs().size() == 4
 
-        in1.name.startsWith('Script1$_run_closure1_closure2@')
+        in1.name == '__$fileinparam<0>'
         in1.getFilePattern(ctx) == 'main.txt'
         in1.inChannel.val == Paths.get('file.txt')
 
-        in2.name.startsWith('Script1$_run_closure1_closure3@')
+        in2.name == '__$fileinparam<1>'
         in2.getFilePattern(ctx) == 'hello.txt'
         in2.inChannel.val == "str"
 
@@ -483,7 +488,7 @@ class ParamsInTest extends Specification {
         (in3.inner[0] as FileInParam).getFilePattern(ctx) == 'hola_the_file'
 
         in4.inner[0] instanceof FileInParam
-        (in4.inner[0] as FileInParam).name.startsWith('Script1$_run_closure1_closure2@')
+        (in4.inner[0] as FileInParam).name == '__$fileinparam<3:0>'
         (in4.inner[0] as FileInParam).getFilePattern(ctx) == 'name_the_file.txt'
 
         in5.inner[0] instanceof FileInParam
@@ -513,7 +518,7 @@ class ParamsInTest extends Specification {
         then:
         process.taskConfig.getInputs().size() == 3
 
-        in0.name == 'SetInParam[0]'
+        in0.name == '__$setinparam<0>'
         in0.inChannel.val == 1
         in0.inner.size() == 3
         in0.inner.get(0) instanceof ValueInParam

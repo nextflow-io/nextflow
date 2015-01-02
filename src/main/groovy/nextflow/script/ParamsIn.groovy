@@ -78,7 +78,8 @@ abstract class BaseParam {
     }
 
     String toString() {
-        "${this.class.simpleName}[${index}]"
+        def p = mapIndex == -1 ? index : "$index:$mapIndex"
+        return "${this.class.simpleName.toLowerCase()}<$p>"
     }
 
     /**
@@ -314,7 +315,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
             return bindObject
 
         if( bindObject instanceof Closure )
-            return bindObject.toString()
+            return '__$' + this.toString()
 
         throw new IllegalArgumentException()
     }
@@ -513,7 +514,7 @@ class SetInParam extends BaseInParam {
 
     final List<InParam> inner = []
 
-    String getName() { toString() }
+    String getName() { '__$'+this.toString() }
 
     SetInParam bind( Object... obj ) {
 
