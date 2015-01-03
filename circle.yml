@@ -3,7 +3,11 @@ machine:
     version: openjdk7
   services:
     - docker
-    
+
+checkout:
+  post:
+    - git submodule update --init
+        
 test:
   override:
     - ./gradlew test
