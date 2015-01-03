@@ -8,6 +8,15 @@ get_abs_filename() {
 export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 
 #
+# Examples
+#
+(
+  export WITH_DOCKER=yes;
+  cd ../examples/tests; 
+  bash run.sh
+)
+
+#
 # Hello 
 #
 git clone https://github.com/nextflow-io/hello
@@ -17,15 +26,6 @@ git clone https://github.com/nextflow-io/hello
   $NXF_CMD run . -resume
 )
 
-#
-# Examples
-#
-git clone https://github.com/nextflow-io/examples
-(
-  export WITH_DOCKER=yes;
-  cd examples/tests; 
-  bash run.sh
-)
 
 #
 # Rna-Toy
