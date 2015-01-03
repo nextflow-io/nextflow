@@ -268,7 +268,7 @@ class FileOutParam extends BaseOutParam implements OutParam {
     BaseOutParam bind( obj ) {
 
         if( obj instanceof TokenGString ) {
-            log.warn "Parametric output file names should be defined with closures -- Replace `file \"${obj.text}\"` with `file { \"${obj.text}\" }`"
+            log.warn "Parametric output file names have been deprecated -- Replace `file \"${obj.text}\"` with `file { \"${obj.text}\" }`"
             gstring = obj
             return this
         }

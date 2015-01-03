@@ -171,7 +171,7 @@ class TaskRun {
      * @param n The maximum number of lines to dump (default: 20)
      * @return The actual number of dumped lines into {@code message} buffer
      */
-    List dumpStdout(int n = 50) {
+    List<String> dumpStdout(int n = 50) {
 
         List result = null
         try {
