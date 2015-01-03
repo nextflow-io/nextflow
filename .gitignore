@@ -24,7 +24,6 @@ dx-project/
 cache/
 lib/commons-cli-1.2.jar
 extrae_files/**
-examples
 misc/
 logo/
 cloud/examples-launch
