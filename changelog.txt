@@ -1,8 +1,24 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.12.0 - 2 Gen 2014
+- Added afterScript/beforeScript directives
+- Added tag directive to label task executions with a custom identifier
+- Added dynamic directives evaluation 
+- Added support for dynamic input/output file names with closures 
+- Added `ifEmpty` operator
+- Added `view` operator
+- Added `remainder` optional parameter to `phase` operator
+- Removed 'undef' directive
+- Refactored grid executors so that jobs directives are added on top of script wrapper
+- Renamed ContextMap to TaskContext
+- Renamed TaskConfig to ProcessConfig
+- Renamed LocalConfig to TaskConfig
+- Print pid/hostname in the status log
+- Upgraded to Groovy 2.3.9 and Slf4j 1.7.8
+
 0.11.4 - 3 Dic 2014 
-- Fixed issue in TextFileCollector empty condition that was creating a empty split file 
+- Fixed issue in TextFileCollector empty condition that was creating an empty split file
   when the split size was equals to the number or records
 - Fixed bug that prevents a job is added to the polling queue when submit operation fails
 - Added more strict checks on $JAVA_CMD executable and $JAVA_HOME folder
