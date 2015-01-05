@@ -1825,28 +1825,6 @@ class DataflowExtensions {
 
     }
 
-    /**
-     * Makes the output of the source channel to be an input for the specified channels
-     *
-     * @param source The source dataflow object
-     * @param target One or more writable to which source is copied
-     */
-    @Deprecated
-    public static <T> void split( DataflowReadChannel<T> source, DataflowWriteChannel<T>... target ) {
-        assert source != null
-        assert target
-        log.warn "Operator 'split' has been deprecated and it will be removed in future release -- Use operator 'into' instead"
-        source.split( target as List )
-    }
-
-    @Deprecated
-    public static <T> List split( DataflowReadChannel<T> source, int n ) {
-        log.warn "Operator 'split' has been deprecated and it will be removed in future release -- Use operator 'into' instead"
-        def list = []
-        n.times { list << newChannelBy(source) }
-        source.split(list)
-        return list
-    }
 
     private static append( DataflowWriteChannel result, List<DataflowReadChannel> channels, int index ) {
         def current = channels[index++]
@@ -1984,5 +1962,44 @@ class DataflowExtensions {
         return result
     }
 
+    /**
+     * Print out the channel content retuning a new channel emitting the identical content as the original one
+     *
+     * @param source
+     * @param closure
+     * @return
+     */
+    static public final <V> DataflowReadChannel<V> view(final DataflowReadChannel<?> source, Closure closure = null) {
+        assert source != null
+
+        DataflowReadChannel<V> target = newChannelBy(source);
+        newOperator(source, target) { it ->
+
+            def proc = ((DataflowProcessor) getDelegate())
+            if( it == Channel.STOP )
+                proc.terminate()
+
+            else {
+                println ( closure != null ? closure.call(it) : it )
+                proc.bindOutput(it)
+            }
+
+        }
+        return target;
+
+    }
+
+    /**
+     * Creates a channel emitting the entries in the collection to which is applied
+     * @param values
+     * @return
+     */
+    static public toChannel(Collection values) {
+        def result = new DataflowQueue()
+        def itr = values.iterator()
+        while( itr.hasNext() ) result.bind(itr.next())
+        result.bind(Channel.STOP)
+        return result
+    }
 
 }
