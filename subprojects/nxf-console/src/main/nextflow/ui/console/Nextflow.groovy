@@ -51,7 +51,7 @@ import org.codehaus.groovy.runtime.StackTraceUtils
 @Slf4j
 class Nextflow extends Console {
 
-    static final TITLE = 'Nextflow REPL'
+    static final TITLE = 'Nextflow REPL console'
 
     static {
 
@@ -76,8 +76,11 @@ class Nextflow extends Console {
         ];
     }
 
+    private ClassLoader loader
+
     Nextflow(ClassLoader loader) {
         super(loader, createBinding())
+        this.loader = loader
     }
 
     static protected Binding createBinding() {
@@ -125,7 +128,7 @@ class Nextflow extends Console {
         if (threadInterrupt) config.addCompilationCustomizers(new ASTTransformationCustomizer(ThreadInterrupt))
 
         // run and wait for termination
-        shell = new GroovyShell(parent, binding, config)
+        shell = new GroovyShell(loader, binding, config)
     }
 
     @Override
