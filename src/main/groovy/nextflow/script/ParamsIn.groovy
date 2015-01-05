@@ -20,6 +20,8 @@
 
 package nextflow.script
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.transform.ToString
@@ -359,6 +361,13 @@ class FileInParam extends BaseInParam  {
 
     protected filePattern
 
+    private AtomicBoolean warnShown = new AtomicBoolean()
+
+    private void warn(String str) {
+        if(!warnShown.getAndSet(true))
+        log.warn "Dynamic input file name has to be defined using a closure -- Replace `file \"${str}\"` with `file { \"${str}\" }`"
+    }
+
     /**
      * Define the file name
      */
@@ -369,8 +378,7 @@ class FileInParam extends BaseInParam  {
         }
 
         if( obj instanceof TokenGString ) {
-            log.warn "Parametric input file names should be defined with closures -- Replace `file \"${obj.text}\"` with `file { \"${obj.text}\" }`"
-
+            warn(obj.text)
             filePattern = obj
             return this
         }
@@ -391,6 +399,7 @@ class FileInParam extends BaseInParam  {
         }
 
         if( bindObject instanceof TokenGString ) {
+            warn(bindObject.text)
             return bindObject.text
         }
 
