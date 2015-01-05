@@ -1045,7 +1045,7 @@ abstract class TaskProcessor {
         // look into the task inputs value for an *ValueInParam* entry
         // having the same *name* as the requested output name
         if( !ctx.containsKey(param.name) ) {
-            throw new MissingValueException("Missing value declared as output paramter: ${param.name}")
+            throw new MissingValueException("Missing value declared as output parameter: ${param.name}")
         }
 
         // bind the value
