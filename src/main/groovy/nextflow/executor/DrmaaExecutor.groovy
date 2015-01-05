@@ -19,9 +19,9 @@
  */
 
 package nextflow.executor
-import static nextflow.processor.TaskHandler.Status.COMPLETED
-import static nextflow.processor.TaskHandler.Status.RUNNING
-import static nextflow.processor.TaskHandler.Status.SUBMITTED
+import static nextflow.processor.TaskStatus.COMPLETED
+import static nextflow.processor.TaskStatus.RUNNING
+import static nextflow.processor.TaskStatus.SUBMITTED
 
 import java.nio.file.Path
 
@@ -29,7 +29,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessFailedException
-import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
@@ -96,7 +95,7 @@ class DrmaaExecutor extends Executor {
         // create the wrapper script
         bash.build()
 
-        return new DrmaaTaskHandler(task, taskConfig, this)
+        return new DrmaaTaskHandler(task, this)
     }
 
 
@@ -137,8 +136,8 @@ class DrmaaTaskHandler extends TaskHandler {
 
     private JobInfo fJobInfo
 
-    DrmaaTaskHandler(TaskRun task, TaskConfig taskConfig, DrmaaExecutor executor) {
-        super(task, taskConfig)
+    DrmaaTaskHandler(TaskRun task, DrmaaExecutor executor) {
+        super(task)
 
         this.executor = executor
         this.drmaa = executor.getDrmaaSession()
@@ -157,34 +156,31 @@ class DrmaaTaskHandler extends TaskHandler {
         result << '-notify'
 
         // the requested queue name
-        if( taskConfig.queue ) {
-            result << '-q'  << taskConfig.queue
+        if( task.config.queue ) {
+            result << '-q'  << task.config.queue
         }
 
         //number of cpus for multiprocessing/multi-threading
-        if( taskConfig.cpus ) {
-            if ( taskConfig.penv ) {
-                result << "-pe" << taskConfig.penv << taskConfig.cpus.toString()
-            } else {
-                result << "-l" << "slots=${taskConfig.cpus}"
-            }
+        if ( task.config.penv ) {
+            result << "-pe" << "${task.config.penv} ${task.config.cpus}"
+        }
+        else if( task.config.cpus>1 ) {
+            result << "-l" << "slots=${task.config.cpus}"
         }
 
         // max task duration
-        if( taskConfig.getTime() ) {
-            final time = taskConfig.getTime()
+        if( task.config.getTime() ) {
+            final time = task.config.getTime()
             result << "-l" << "h_rt=${time.format('HH:mm:ss')}"
         }
 
         // task max memory
-        if( taskConfig.getMemory() ) {
-            result << "-l" << "virtual_free=${taskConfig.getMemory().toString().replaceAll(/[\sB]/,'')}"
+        if( task.config.getMemory() ) {
+            result << "-l" << "virtual_free=${task.config.getMemory().toString().replaceAll(/[\sB]/,'')}"
         }
 
         // -- at the end append the command script wrapped file name
-        if( taskConfig.clusterOptions ) {
-            result << taskConfig.clusterOptions
-        }
+        result.addAll( task.config.getClusterOptionsAsList() )
 
         result << '-b y'
         return result.join(' ')
@@ -204,8 +200,8 @@ class DrmaaTaskHandler extends TaskHandler {
         template.setNativeSpecification( getOptions() )
 
         // max task duration
-        if( taskConfig.getTime() ) {
-            final duration = taskConfig.getTime()
+        if( task.config.getTime() ) {
+            final duration = task.config.getTime()
             template.setHardRunDurationLimit( duration.toSeconds() )
         }
 

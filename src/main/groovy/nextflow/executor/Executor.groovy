@@ -19,21 +19,22 @@
  */
 
 package nextflow.executor
+
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
-import groovy.io.FileType
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.MissingFileException
+import nextflow.file.FileHelper
 import nextflow.file.FileHolder
-import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
+import nextflow.script.FileOutParam
 import nextflow.script.InParam
 import nextflow.script.ScriptType
-
 /**
  * Declares methods have to be implemented by a generic
  * execution strategy
@@ -43,11 +44,6 @@ import nextflow.script.ScriptType
 @Slf4j
 @SupportedScriptTypes( [ScriptType.SCRIPTLET] )
 abstract class Executor {
-
-    /**
-     * The object holding the configuration declared by this task
-     */
-    TaskConfig taskConfig
 
     /**
      * The current session object
@@ -117,41 +113,35 @@ abstract class Executor {
     /**
      * Collect the file(s) with the name specified, produced by the execution
      *
-     * @param path The job working path
+     * @param workDir The job working path
      * @param fileName The file name, it may include file name wildcards
      * @return The list of files matching the specified name
      */
-    def collectResultFile( Path workDirectory, String fileName, String taskName ) {
+    def collectResultFile( Path workDir, String fileName, String taskName, FileOutParam param ) {
         assert fileName
-        assert workDirectory
+        assert workDir
 
-        // replace any wildcards characters
-        // TODO use newDirectoryStream here and eventually glob -- keep this aligned with "GgBaseTask#copyToTargetDir"
-        String filePattern = fileName.replace("?", ".?").replace("*", ".*")
-
-        // when there's not change in the pattern, try to find a single file
-        if( filePattern == fileName ) {
-            def result = workDirectory.resolve(fileName)
-            if( !result.exists() ) {
-                throw new MissingFileException("Missing output file: '$fileName' expected by process: ${taskName}")
-            }
-            return result
-        }
-
-        // scan to find the file with that name
         List files = []
+        def opts = collectResultOpts(param, fileName)
+        // scan to find the file with that name
         try {
-            workDirectory.eachFileMatch(FileType.ANY, ~/$filePattern/ ) { files << it }
+            FileHelper.visitFiles(opts, workDir, fileName) { Path it -> files.add(it) }
         }
-        catch( IOException e ) {
-            throw new MissingFileException("Cannot access folder: '$workDirectory' expected by process: ${taskName}", e)
-        }
-
-        if( !files ) {
-            throw new MissingFileException("Missing output file(s): '$fileName' expected by process: ${taskName}")
+        catch( NoSuchFileException e ) {
+            throw new MissingFileException("Cannot access folder: '$workDir' expected by process: ${taskName}", e)
         }
 
         return files
+    }
+
+    protected Map collectResultOpts( FileOutParam param, String fileName ) {
+        final opts = [:]
+        opts.relative = false
+        opts.hidden = param.hidden ?: fileName.startsWith('.')
+        opts.followLinks = param.followLinks
+        opts.maxDepth = param.maxDepth
+        opts.type = param.type ? param.type : ( fileName.contains('**') ? 'file' : 'any' )
+        return opts
     }
 
 
@@ -175,12 +165,12 @@ abstract class Executor {
 
             // delete all previous files with the same name
             files.each {
-                delete << "rm -f '${it.stagePath.name}'"
+                delete << "rm -f '${it.stageName}'"
             }
 
             // link them
             files.each { FileHolder it ->
-                links << stageInputFileScript( it.storePath, it.stagePath.name )
+                links << stageInputFileScript( it.storePath, it.stageName )
             }
 
         }
@@ -217,18 +207,72 @@ abstract class Executor {
         // collect all the expected names (pattern) for files to be un-staged
         def result = []
         def fileOutNames = task.getOutputFilesNames()
+        def normalized = normalizeGlobStarPaths(fileOutNames)
 
         // create a bash script that will copy the out file to the working directory
-        log.trace "Unstaging file names: $fileOutNames"
-        if( fileOutNames ) {
+        log.trace "Unstaging file path: $normalized"
+        if( normalized ) {
             result << ""
             result << "mkdir -p ${task.getTargetDir()}"
-            result << "for item in ${fileOutNames.unique().join(' ')}; do"
-            result << "rsync -rRzl \"\$item\" ${task.getTargetDir()} || true" // <-- add true to avoid it stops on errors
-            result << "done"
+            normalized.each {
+                result << "rsync -rRzl $it ${task.getTargetDir()} || true" // <-- add true to avoid it stops on errors
+            }
         }
 
         return result.join(separatorChar)
     }
+
+    /**
+     * Normalize path that contains glob star wildcards (i.e. double star character) since
+     * they are not supported by plain BASH
+     *
+     * @param files
+     * @return
+     */
+    protected List<String> normalizeGlobStarPaths( List<String> files ) {
+
+        def result = []
+        for( int i=0; i<files.size(); i++ ) {
+            def item = removeGlobStar(files.get(i))
+            if( !result.contains(item) )
+                result.add(item)
+        }
+
+        return result
+    }
+
+    /**
+     * Remove a glob star specifier returning the longest parent path
+     *
+     * <pre>
+     * /some/data/&#42;&#42;/file.txt  ->   /some/data
+     * /some/data/file.txt     ->   /some/data/file.txt
+     * /some&#42;&#42;                 ->   *
+     * </pre>
+     *
+     * @param path
+     * @return
+     */
+    protected removeGlobStar(String path) {
+
+        def p = path?.indexOf('**')
+        if( p == -1 )
+            return path
+
+        def slash = -1
+        for( int i=p-1; i>=0; i-- ) {
+            if( path.charAt(i) == '/' as char) {
+                slash = i
+                break
+            }
+        }
+
+        if( slash == -1 )
+            return '*'
+
+        path.substring(0,slash)
+    }
+
+
 
 }

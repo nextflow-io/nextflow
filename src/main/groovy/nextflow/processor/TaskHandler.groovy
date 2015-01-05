@@ -35,28 +35,18 @@ import nextflow.trace.TraceRecord
 @Slf4j
 public abstract class TaskHandler {
 
-    enum Status { NEW, SUBMITTED, RUNNING, COMPLETED }
-
-    protected TaskHandler(TaskRun task, TaskConfig taskConfig) {
+    protected TaskHandler(TaskRun task) {
         this.task = task
-        this.taskConfig = taskConfig
     }
 
 
     /** Only for testing purpose */
-    protected TaskHandler() {
-
-    }
+    protected TaskHandler() { }
 
     /**
      * The task managed by this handler
      */
     TaskRun task
-
-    /**
-     * The configuration object defined by this task
-     */
-    TaskConfig taskConfig
 
     /**
      * The task managed by this handler
@@ -66,7 +56,7 @@ public abstract class TaskHandler {
     /**
      * Task current status
      */
-    volatile Status status = Status.NEW
+    volatile TaskStatus status = TaskStatus.NEW
 
     CountDownLatch latch
 
@@ -102,9 +92,9 @@ public abstract class TaskHandler {
     /**
      * Task status attribute setter.
      *
-     * @param status The sask status as defined by {@link Status}
+     * @param status The sask status as defined by {@link TaskStatus}
      */
-    def void setStatus( Status status ) {
+    def void setStatus( TaskStatus status ) {
 
         // skip if the status is the same aam
         if ( this.status == status || status == null )
@@ -113,20 +103,20 @@ public abstract class TaskHandler {
         // change the status
         this.status = status
         switch( status ) {
-            case Status.SUBMITTED: submitTimeMillis = System.currentTimeMillis(); break
-            case Status.RUNNING: startTimeMillis = System.currentTimeMillis(); break
-            case Status.COMPLETED: completeTimeMillis = System.currentTimeMillis(); break
+            case TaskStatus.SUBMITTED: submitTimeMillis = System.currentTimeMillis(); break
+            case TaskStatus.RUNNING: startTimeMillis = System.currentTimeMillis(); break
+            case TaskStatus.COMPLETED: completeTimeMillis = System.currentTimeMillis(); break
         }
 
     }
 
-    boolean isNew() { return status == Status.NEW }
+    boolean isNew() { return status == TaskStatus.NEW }
 
-    boolean isSubmitted() { return status == Status.SUBMITTED }
+    boolean isSubmitted() { return status == TaskStatus.SUBMITTED }
 
-    boolean isRunning() { return status == Status.RUNNING }
+    boolean isRunning() { return status == TaskStatus.RUNNING }
 
-    boolean isCompleted()  { return status == Status.COMPLETED  }
+    boolean isCompleted()  { return status == TaskStatus.COMPLETED  }
 
     protected StringBuilder toStringBuilder(StringBuilder builder) {
         builder << "id: ${task.id}; name: ${task.name}; status: $status; exit: ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}; workDir: ${task.workDir}"
@@ -149,6 +139,8 @@ public abstract class TaskHandler {
         record.exit = task.exitStatus
         record.submit = this.submitTimeMillis
         record.start = this.startTimeMillis
+        record.process = task.processor.name
+        record.tag = task.config.tag
 
         if( isCompleted() ) {
             if( completeTimeMillis ) {

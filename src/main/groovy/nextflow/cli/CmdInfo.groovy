@@ -88,24 +88,25 @@ class CmdInfo extends CmdBase {
     final static private BLANK = '  '
     final static private NEWLINE = '\n'
 
-    static String getInfo(boolean detailed = false) {
-        getInfo( detailed ? 1 : 0 )
+    static String status(boolean detailed = false) {
+        getInfo( detailed ? 1 : 0, true )
     }
 
     /**
      * @return A string containing some system runtime information
      */
-    static String getInfo(int level) {
+    static String getInfo(int level, boolean printProc=false) {
 
         def props = System.getProperties()
-
         def result = new StringBuilder()
         result << BLANK << "Version: ${Const.APP_VER} build ${Const.APP_BUILDNUM}" << NEWLINE
         result << BLANK << "Modified: ${Const.APP_TIMESTAMP_UTC} ${Const.deltaLocal()}" << NEWLINE
         result << BLANK << "System: ${props['os.name']} ${props['os.version']}" << NEWLINE
         result << BLANK << "Runtime: Groovy ${GroovySystem.getVersion()} on ${System.getProperty('java.vm.name')} ${props['java.runtime.version']}" << NEWLINE
         result << BLANK << "Encoding: ${System.getProperty('file.encoding')} (${System.getProperty('sun.jnu.encoding')})" << NEWLINE
-        result << BLANK << "Address: ${getLocalNameAndAddress()}" << NEWLINE
+
+        if( printProc )
+            result << BLANK << "Process: ${ManagementFactory.getRuntimeMXBean().getName()} " << getLocalAddress() << NEWLINE
 
         if( level == 0  )
             return result.toString()
@@ -223,8 +224,12 @@ class CmdInfo extends CmdBase {
     /**
      * @return A string holding the local host name and address used for logging
      */
-    static private getLocalNameAndAddress() {
-        def host = InetAddress.getLocalHost()
-        "${host.getHostName()} [${host.getHostAddress()}]"
+    static private getLocalAddress() {
+        try {
+            return "[${InetAddress.getLocalHost().getHostAddress()}]"
+        }
+        catch(Exception e) {
+            return null
+        }
     }
 }

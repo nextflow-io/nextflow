@@ -22,7 +22,6 @@ package nextflow.processor
 
 import spock.lang.Specification
 import test.TestHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -44,13 +43,28 @@ class TaskHandlerTest extends Specification {
         def folder = TestHelper.createInMemTempDir()
         folder.resolve( TaskRun.CMD_TRACE ).text = traceText
 
-        when:
         def handler = [:] as TaskHandler
-        handler.task = new TaskRun(workDir: folder)
-        handler.status = TaskHandler.Status.COMPLETED
+        handler.task = new TaskRun(id: 100, workDir: folder, name:'task1', exitStatus: 127)
+        handler.task.metaClass.getProcessor = { [name: 'TheProcessName'] }
+        handler.task.metaClass.getConfig = { [tag: 'seq_x'] }
+        handler.task.metaClass.getHashLog = { "5d5d7ds" }
+        handler.status = TaskStatus.COMPLETED
+        handler.submitTimeMillis = 1000
+        handler.startTimeMillis = 1500
+
+        when:
         def trace = handler.getTraceRecord()
 
         then:
+        trace.task_id == 100
+        trace.status == TaskStatus.COMPLETED
+        trace.hash == '5d5d7ds'
+        trace.name == 'task1'
+        trace.exit == 127
+        trace.submit == 1000
+        trace.start == 1500
+        trace.process == 'TheProcessName'
+        trace.tag == 'seq_x'
         trace.'%cpu' == 1.0f
         trace.'%mem' == 2.0f
         trace.rss == 1220 * KB

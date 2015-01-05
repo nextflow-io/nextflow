@@ -14,7 +14,7 @@ import groovy.transform.InheritConstructors
 @InheritConstructors
 abstract class AbstractBinarySplitter extends AbstractSplitter<InputStream> {
 
-    protected InputStream normalizeType( obj ) {
+    protected InputStream normalizeSource( obj ) {
 
         if( obj instanceof InputStream )
             return (InputStream) obj

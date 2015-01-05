@@ -126,6 +126,10 @@ class TaskDispatcher {
         started = true
     }
 
+    void signal() {
+        monitors.values().each { TaskMonitor monitor -> monitor.signal() }
+    }
+
 
     /**
      * Submit the specified task for execution to the underlying system

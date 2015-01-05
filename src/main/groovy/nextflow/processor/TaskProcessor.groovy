@@ -19,6 +19,7 @@
  */
 package nextflow.processor
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -46,6 +47,8 @@ import nextflow.file.FileHolder
 import nextflow.script.BaseScript
 import nextflow.script.BasicMode
 import nextflow.script.EachInParam
+import nextflow.script.EnvInParam
+import nextflow.script.FileInParam
 import nextflow.script.FileOutParam
 import nextflow.script.FileSharedParam
 import nextflow.script.InParam
@@ -54,8 +57,10 @@ import nextflow.script.ScriptType
 import nextflow.script.SetInParam
 import nextflow.script.SetOutParam
 import nextflow.script.SharedParam
+import nextflow.script.StdInParam
 import nextflow.script.StdOutParam
 import nextflow.script.TaskBody
+import nextflow.script.ValueInParam
 import nextflow.script.ValueOutParam
 import nextflow.script.ValueSharedParam
 import nextflow.util.ArrayBag
@@ -77,6 +82,8 @@ abstract class TaskProcessor {
 
         RunType(String str) { message=str };
     }
+
+    static final protected String TASK_CONFIG = 'task'
 
     /**
      * Global count of all task instances
@@ -128,13 +135,7 @@ abstract class TaskProcessor {
      * The corresponding task configuration properties, it holds the inputs/outputs
      * definition as well as other execution meta-declaration
      */
-    protected final TaskConfig taskConfig
-
-    /**
-     * Used for framework generated task names
-     */
-    @Deprecated
-    private static final AtomicInteger tasksCount = new AtomicInteger()
+    protected final ProcessConfig config
 
 
     /**
@@ -150,6 +151,11 @@ abstract class TaskProcessor {
      * very first time  for all processes
      */
     private static final AtomicBoolean errorShown = new AtomicBoolean()
+
+    /**
+     * Used to show the override warning message only the very first time
+     */
+    private final overrideWarnShown = new AtomicBoolean()
 
     /**
      * Flag set {@code true} when the processor termination has been invoked
@@ -197,13 +203,14 @@ abstract class TaskProcessor {
     /**
      * Create and initialize the processor object
      *
+     * @param name
      * @param executor
      * @param session
      * @param script
-     * @param taskConfig
+     * @param config
      * @param taskBody
      */
-    TaskProcessor( Executor executor, Session session, BaseScript script, TaskConfig taskConfig, TaskBody taskBody ) {
+    TaskProcessor( String name, Executor executor, Session session, BaseScript script, ProcessConfig config, TaskBody taskBody ) {
         assert executor
         assert session
         assert script
@@ -212,20 +219,10 @@ abstract class TaskProcessor {
         this.executor = executor
         this.session = session
         this.ownerScript = script
-        this.taskConfig = taskConfig
+        this.config = config
         this.taskBody = taskBody
+        this.name = name
 
-        /*
-         * set the task name
-         */
-        if( taskConfig.name ) {
-            this.name = taskConfig.name
-        }
-        else {
-            // generate the processor name if not specified
-            this.name = "task_${tasksCount.incrementAndGet()}"
-            taskConfig.name = this.name
-        }
     }
 
     /**
@@ -236,7 +233,7 @@ abstract class TaskProcessor {
     /**
      * @return The {@code TaskConfig} object holding the task configuration properties
      */
-    TaskConfig getTaskConfig() { taskConfig }
+    ProcessConfig getTaskConfig() { config }
 
     /**
      * @return The current {@code Session} instance
@@ -297,21 +294,21 @@ abstract class TaskProcessor {
          * - at least one input channel have to be provided,
          *   if missing create an dummy 'input' set to true
          */
-        log.trace "TaskConfig: ${taskConfig}"
-        if( taskConfig.inputs.size() == 0 ) {
-            taskConfig.fakeInput()
+        log.trace "TaskConfig: ${config}"
+        if( config.getInputs().size() == 0 ) {
+            config.fakeInput()
         }
 
-        final boolean hasEachParams = taskConfig.inputs.any { it instanceof EachInParam }
-        final boolean allScalarValues = taskConfig.inputs.allScalarInputs() && !hasEachParams
+        final boolean hasEachParams = config.getInputs().any { it instanceof EachInParam }
+        final boolean allScalarValues = config.getInputs().allScalarInputs() && !hasEachParams
 
         /*
          * Normalize the output
          * - even though the output may be empty, let return the stdout as output by default
          */
-        if ( taskConfig.outputs.size() == 0 ) {
+        if ( config.getOutputs().size() == 0 ) {
             def dummy =  allScalarValues ? Nextflow.variable() : Nextflow.channel()
-            taskConfig.fakeOutput(dummy)
+            config.fakeOutput(dummy)
         }
 
         // the state agent
@@ -334,7 +331,7 @@ abstract class TaskProcessor {
          * When there is a single output channel, return let returns that item
          * otherwise return the list
          */
-        def result = taskConfig.outputs.channels
+        def result = config.getOutputs().channels
         return result.size() == 1 ? result[0] : result
     }
 
@@ -428,36 +425,37 @@ abstract class TaskProcessor {
      * <li>{@code TaskRun#name}
      * <li>{@code TaskRun#process}
      *
-     * @return The new newly created {@code TaskRun{
+     * @return The new newly created {@code TaskRun}
      */
     final protected TaskRun createTaskRun() {
         log.trace "Creating a new process > $name"
 
         def id = allCount.incrementAndGet()
         def index = indexCount.incrementAndGet()
-        def task = new TaskRun(id: id, index: index, name: "$name ($index)", processor: this, type: type )
+        def task = new TaskRun(
+                id: id,
+                index: index,
+                processor: this,
+                type: type,
+                config: config.createTaskConfig(),
+                context: new TaskContext(this)
+        )
 
-        if( taskConfig.storeDir ) {
-            def path = Nextflow.file(taskConfig.storeDir)
-            if( !(path instanceof Path) ) throw new IllegalArgumentException("Invalid path for 'storeDir' attribute: ${taskConfig.storeDir}")
-            task.storeDir = path
-        }
-
-        // -- set the scratch folder
-        task.scratch = taskConfig.scratch
+        // setup config
+        task.config.process = task.processor.name
+        task.config.executor = task.processor.executor.name
 
         /*
          * initialize the inputs/outputs for this task instance
          */
-        taskConfig.inputs.each { InParam param ->
+        config.getInputs().each { InParam param ->
             if( param instanceof SetInParam )
                 param.inner.each { task.setInput(it)  }
             else
                 task.setInput(param)
         }
 
-
-        taskConfig.outputs.each { OutParam param ->
+        config.getOutputs().each { OutParam param ->
             if( param instanceof SetOutParam ) {
                 param.inner.each { task.setOutput(it) }
             }
@@ -467,7 +465,6 @@ abstract class TaskProcessor {
 
         return task
     }
-
 
     /**
      * Try to check if exists a previously executed process result in the a cached folder. If it exists
@@ -523,13 +520,13 @@ abstract class TaskProcessor {
      *      {@code false} otherwise
      */
     final boolean checkStoredOutput( TaskRun task ) {
-        if( !task.storeDir ) {
+        if( !task.config.storeDir ) {
             log.trace "[$task.name] Store dir not set -- return false"
             return false
         }
 
         // -- when store path is set, only output params of type 'file' can be specified
-        Map ctx = (Map)task.code.delegate
+        final ctx = task.context
         def invalid = task.getOutputs().keySet().any {
             if( it instanceof ValueOutParam ) {
                 return !ctx.containsKey(it.name)
@@ -544,8 +541,8 @@ abstract class TaskProcessor {
             return false
         }
 
-        if( !task.storeDir.exists() ) {
-            log.trace "[$task.name] Store dir does not exists > ${task.storeDir} -- return false"
+        if( !task.config.getStoreDir().exists() ) {
+            log.trace "[$task.name] Store dir does not exists > ${task.config.storeDir} -- return false"
             // no folder -> no cached result
             return false
         }
@@ -557,14 +554,14 @@ abstract class TaskProcessor {
             log.info "[skipping] Stored process > ${task.name}"
 
             // set the exit code in to the task object
-            task.exitStatus = taskConfig.getValidExitStatus()[0]
+            task.exitStatus = task.config.getValidExitStatus()[0]
 
             // -- now bind the results
             finalizeTask0(task)
             return true
         }
         catch( MissingFileException | MissingValueException e ) {
-            log.trace "[$task.name] Missed store > ${e.getMessage()} -- folder: ${task.storeDir}"
+            log.trace "[$task.name] Missed store > ${e.getMessage()} -- folder: ${task.config.storeDir}"
             task.exitStatus = Integer.MAX_VALUE
             task.workDir = null
             return false
@@ -589,10 +586,10 @@ abstract class TaskProcessor {
                 return false
             }
 
-            def exitValue = exitFile.text.trim()
-            exitCode = exitValue.isInteger() ? exitValue.toInteger() : null
-            if( exitCode == null || !(exitCode in taskConfig.validExitStatus) ) {
-                log.trace "[$task.name] Exit code is not valid > $exitValue -- return false"
+            def str = exitFile.text.trim()
+            exitCode = str.isInteger() ? str.toInteger() : null
+            if( !task.isSuccess(exitCode) ) {
+                log.trace "[$task.name] Exit code is not valid > $str -- return false"
                 return false
             }
         }
@@ -600,7 +597,7 @@ abstract class TaskProcessor {
         /*
          * verify cached context map
          */
-        Map ctxMap = null
+        TaskContext ctx = null
         def ctxFile = folder.resolve(TaskRun.CMD_CONTEXT)
         if( task.hasCacheableValues() ) {
             if( !ctxFile.exists() ) {
@@ -608,8 +605,8 @@ abstract class TaskProcessor {
                 return false
             }
 
-            ctxMap = DelegateMap.read(this, ctxFile)
-            populateSharedCtx(task, ctxMap)
+            ctx = TaskContext.read(this, ctxFile)
+            populateSharedCtx(task, ctx)
         }
 
         /*
@@ -619,7 +616,7 @@ abstract class TaskProcessor {
 
         try {
             // -- check if all output resources are available
-            collectOutputs(task, folder, stdoutFile, ctxMap)
+            collectOutputs(task, folder, stdoutFile, ctx)
 
             // set the exit code in to the task object
             task.hash = hash
@@ -628,8 +625,10 @@ abstract class TaskProcessor {
             if( exitCode != null ) {
                 task.exitStatus = exitCode
             }
-            if( task.code && ctxMap ) {
-                task.code.delegate = ctxMap
+            if( ctx != null ) {
+                task.context = ctx
+                task.config.setContext(ctx)
+                task.code?.delegate = ctx
             }
 
             log.info "[${task.hashLog}] Cached process > ${task.name}"
@@ -704,7 +703,7 @@ abstract class TaskProcessor {
 
             final taskErrCount = task ? task.failCount++ : 0
             final procErrCount = errorCount++
-            final taskStrategy = taskConfig.getErrorStrategy()
+            final taskStrategy = task?.config?.getErrorStrategy()
 
             // when is a task level error and the user has chosen to ignore error, just report and error message
             // return 'false' to DO NOT stop the execution
@@ -718,7 +717,7 @@ abstract class TaskProcessor {
                 }
 
                 // RETRY strategy -- check that process do not exceed 'maxError' and the task do not exceed 'maxRetries'
-                if( taskStrategy == ErrorStrategy.RETRY && procErrCount < taskConfig.getMaxErrors() && taskErrCount < taskConfig.getMaxRetries() ) {
+                if( taskStrategy == ErrorStrategy.RETRY && procErrCount < task.config.getMaxErrors() && taskErrCount < task.config.getMaxRetries() ) {
                     session.execService.submit({ checkCachedOrLaunchTask( task, task.hash, false, RunType.RETRY ) } as Runnable)
                     return ErrorStrategy.RETRY
                 }
@@ -827,7 +826,7 @@ abstract class TaskProcessor {
      */
     final protected synchronized void sendPoisonPill() {
 
-        taskConfig.outputs.each { param ->
+        config.getOutputs().each { param ->
             def channel = param.outChannel
 
             if( channel instanceof DataflowQueue ) {
@@ -867,7 +866,7 @@ abstract class TaskProcessor {
 
         // -- creates the map of all tuple values to bind
         Map<Short,List> tuples = [:]
-        taskConfig.getOutputs().each { OutParam p -> tuples.put(p.index,[]) }
+        config.getOutputs().each { OutParam p -> tuples.put(p.index,[]) }
 
         // -- collects the values to bind
         task.outputs.each { OutParam param, value ->
@@ -889,7 +888,7 @@ abstract class TaskProcessor {
         }
 
         // -- bind out the collected values
-        taskConfig.getOutputs().each { param ->
+        config.getOutputs().each { param ->
             def list = tuples[param.index]
             if( list == null ) throw new IllegalStateException()
 
@@ -917,7 +916,7 @@ abstract class TaskProcessor {
 
 
         // -- finally prints out the task output when 'echo' is true
-        if( taskConfig.echo ) {
+        if( task.config.echo ) {
             task.echoStdout()
         }
     }
@@ -929,7 +928,7 @@ abstract class TaskProcessor {
     }
 
     protected void collectOutputs( TaskRun task ) {
-        collectOutputs( task, task.getTargetDir(), task.@stdout, (Map)task.code?.delegate )
+        collectOutputs( task, task.getTargetDir(), task.@stdout, task.context )
     }
 
     /**
@@ -1013,30 +1012,28 @@ abstract class TaskProcessor {
         def fileParam = param as FileOutParam
         // type file parameter can contain a multiple files pattern separating them with a special character
         def entries = param.getFilePatterns(context)
+
         // for each of them collect the produced files
         entries.each { String pattern ->
-            def result = executor.collectResultFile(workDir, pattern, task.name)
-            log.trace "Process ${task.name} > collected outputs for pattern '$pattern': $result"
-
-            if( result instanceof List ) {
-                // filter the result collection
-                if( pattern.startsWith('*') && !fileParam.includeHidden ) {
-                    result = filterByRemovingHiddenFiles(result)
-                    log.trace "Process ${task.name} > after removing hidden files: ${result}"
-                }
-
+            List<Path> result=null
+            if( FileHelper.isGlobPattern(pattern) ) {
+                result = executor.collectResultFile(workDir, pattern, task.name, param)
                 // filter the inputs
                 if( !fileParam.includeInputs ) {
                     result = filterByRemovingStagedInputs(task, result)
                     log.trace "Process ${task.name} > after removing staged inputs: ${result}"
                 }
-
-                all.addAll((List) result)
+            }
+            else {
+                def file = workDir.resolve(pattern)
+                if( file.exists() )
+                    result = [file]
             }
 
-            else if( result ) {
-                all.add(result)
-            }
+            if( !result )
+                throw new MissingFileException("Missing output file(s): '$pattern' expected by process: ${task.name}")
+
+            all.addAll(result)
         }
 
         task.setOutput( param, all.size()==1 ? all[0] : all )
@@ -1048,7 +1045,7 @@ abstract class TaskProcessor {
         // look into the task inputs value for an *ValueInParam* entry
         // having the same *name* as the requested output name
         if( !ctx.containsKey(param.name) ) {
-            throw new MissingValueException("Missing value declared as output paramter: ${param.name}")
+            throw new MissingValueException("Missing value declared as output parameter: ${param.name}")
         }
 
         // bind the value
@@ -1081,10 +1078,8 @@ abstract class TaskProcessor {
     protected List<Path> filterByRemovingStagedInputs( TaskRun task, List<Path> files ) {
 
         // get the list of input files
-        def List<Path> allStaged = task.getStagedInputs()
-        def List<String>  allInputNames = allStaged.collect { it.getName() }
-
-        files.findAll { !allInputNames.contains(it.getName()) }
+        def List<String> allStaged = task.getStagedInputs()
+        files.findAll { !allStaged.contains(it.getName()) }
 
     }
 
@@ -1117,7 +1112,7 @@ abstract class TaskProcessor {
             }
         }
 
-        return result
+        return Collections.unmodifiableMap(result)
     }
 
     /**
@@ -1160,11 +1155,14 @@ abstract class TaskProcessor {
         assert items != null
 
         if( items.size() == 1 ) {
-            return items[0].stagePath
+            return Paths.get(items[0].stageName)
         }
-        else {
-            return new BlankSeparatedList( items *. stagePath )
+
+        def result = new ArrayList(items.size())
+        for( int i=0; i<items.size(); i++ ) {
+            result.add( Paths.get(items[i].stageName) )
         }
+        return new BlankSeparatedList(result)
     }
 
 
@@ -1272,7 +1270,6 @@ abstract class TaskProcessor {
     }
 
 
-
     protected decodeInputValue( InParam param, List values ) {
 
         def val = values[ param.index ]
@@ -1297,7 +1294,142 @@ abstract class TaskProcessor {
         return val
     }
 
+    /**
+     * Create the {@code TaskDef} data structure and initialize the task execution context
+     * with the received input values
+     *
+     * @param values
+     * @return
+     */
+    final protected TaskRun setupTask(List values) {
+        log.trace "Setup new process > $name"
 
+        // -- map the inputs to a map and use to delegate closure values interpolation
+        final secondPass = [:]
+        final task = createTaskRun()
+
+        int count = makeTaskContextStage1(task, secondPass, values)
+        makeTaskContextStage2(task, secondPass, count)
+
+        return task
+    }
+
+    final protected int makeTaskContextStage1( TaskRun task, Map secondPass, List values ) {
+
+        final contextMap = task.context
+        final firstRun = task.index == 1
+        int count = 0
+
+        task.inputs.keySet().each { InParam param ->
+
+            // add the value to the task instance
+            def val = decodeInputValue(param,values)
+
+            switch(param) {
+                case EachInParam:
+                case ValueInParam:
+                    contextMap.put( param.name, val )
+                    break
+
+                case FileInParam:
+                    secondPass[param] = val
+                    return // <-- leave it, because we do not want to add this 'val' at this stage
+
+                case FileSharedParam:
+                    def fileParam = param as FileSharedParam
+                    if( firstRun ) {
+                        def normalized = normalizeInputToFiles(val,count)
+                        if( normalized.size() > 1 )
+                            throw new IllegalStateException("Cannot share multiple files")
+
+                        val = expandWildcards( fileParam.filePattern, normalized )
+                        count += val.size()
+                        // track this obj
+                        sharedObjs[(SharedParam)param] = val
+                    }
+                    else {
+                        val = sharedObjs[(SharedParam)param]
+                    }
+
+                    contextMap.put( fileParam.name, singleItemOrList(val) )
+                    break
+
+                case ValueSharedParam:
+                    if( firstRun )
+                        sharedObjs[(SharedParam)param] = val
+                    else
+                        val = sharedObjs[(SharedParam)param]
+
+                    contextMap.put( param.name, val )
+                    break
+
+                case StdInParam:
+                case EnvInParam:
+                    // nothing to do
+                    break
+
+                default:
+                    log.debug "Unsupported input param type: ${param?.class?.simpleName}"
+            }
+
+            // add the value to the task instance context
+            task.setInput(param, val)
+        }
+
+        return count
+    }
+
+    final protected void makeTaskContextStage2( TaskRun task, Map secondPass, int count ) {
+
+        final ctx = task.context
+
+        // -- all file parameters are processed in a second pass
+        //    so that we can use resolve the variables that eventually are in the file name
+        secondPass.each { FileInParam param, val ->
+
+            def fileParam = param as FileInParam
+            def normalized = normalizeInputToFiles(val,count)
+            def resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
+            ctx.put( param.name, singleItemOrList(resolved) )
+            count += resolved.size()
+
+            // add the value to the task instance context
+            task.setInput(param, resolved)
+        }
+
+        // -- set the delegate map as context ih the task config
+        //    so that lazy directives will be resolved against it
+        task.config.setContext(ctx)
+
+        // -- set the `task.config` object in the context
+        if( !ctx.containsKey(TASK_CONFIG) ) {
+            ctx.put(TASK_CONFIG, task.config)
+        }
+        else if( !overrideWarnShown.getAndSet(true) ) {
+            log.warn "Process $name overrides reserved variable `task`"
+        }
+
+        // -- initialize the task code to be executed
+        task.code = this.code.clone() as Closure
+        task.code.delegate = task.context
+        task.code.setResolveStrategy(Closure.DELEGATE_ONLY)
+
+        // Important!
+        // when the task is implemented by a script string
+        // Invokes the closure which return the script whit all the variables replaced with the actual values
+        if( type == ScriptType.SCRIPTLET ) {
+            task.script = getScriptlet(task.code)
+        }
+    }
+
+    final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
+
+        // set hash-code & working directory
+        task.hash = hash
+        task.workDir = folder
+        task.config.workDir = folder
+
+    }
 
     /**
      * Execute the specified task shell script
@@ -1308,15 +1440,11 @@ abstract class TaskProcessor {
     final protected void submitTask( TaskRun task, RunType runType, HashCode hash, Path folder ) {
         log.trace "[${task.name}] actual run folder: ${task.workDir}"
 
-        // set hash-code & working directory
-        task.hash = hash
-        task.workDir = folder
-        task.localConfig.workDir = folder
+        makeTaskContextStage3(task, hash, folder)
 
         // add the task to the collection of running tasks
         session.dispatcher.submit(task, blocking, runType.message)
     }
-
 
 
     /**
@@ -1335,8 +1463,7 @@ abstract class TaskProcessor {
                 if( task.exitStatus == Integer.MAX_VALUE )
                     throw new ProcessFailedException("Process '${task.name}' terminated for an unknown reason -- Likely it has been terminated by the external system")
 
-                boolean success = (task.exitStatus in taskConfig.validExitStatus)
-                if ( !success )
+                if ( !task.isSuccess() )
                     throw new ProcessFailedException("Process '${task.name}' terminated with an error exit status")
             }
 
@@ -1349,9 +1476,11 @@ abstract class TaskProcessor {
 
             // save the context map for caching purpose
             // only the 'cache' is active and
-            if( isCacheable() && task.hasCacheableValues() && task.code.delegate != null ) {
+            if( isCacheable() && task.hasCacheableValues() && task.context != null ) {
                 def target = task.workDir.resolve(TaskRun.CMD_CONTEXT)
-                ((DelegateMap)task.code.delegate).save(target)
+                if( task.context.get(TASK_CONFIG) instanceof TaskConfig )
+                    task.context.remove(TASK_CONFIG)
+                task.context.save(target)
             }
 
         }
@@ -1368,7 +1497,7 @@ abstract class TaskProcessor {
      * Whenever the process can be cached
      */
     protected boolean isCacheable() {
-        session.cacheable && taskConfig.cacheable
+        session.cacheable && config.cacheable
     }
 
     protected boolean isResumable() {

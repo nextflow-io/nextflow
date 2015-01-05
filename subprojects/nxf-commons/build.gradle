@@ -29,10 +29,9 @@ sourceSets {
 }
 
 dependencies {
-    compile "org.codehaus.groovy:groovy:2.3.8"
-    compile "org.codehaus.groovy:groovy-nio:2.3.8"
+    compile "org.codehaus.groovy:groovy:2.3.9"
+    compile "org.codehaus.groovy:groovy-nio:2.3.9"
     compile "ch.qos.logback:logback-classic:1.1.2"
-    compile "ch.qos.logback:logback-core:1.1.2"
     compile "commons-lang:commons-lang:2.6"
     compile 'com.google.guava:guava:16.0.1'
 

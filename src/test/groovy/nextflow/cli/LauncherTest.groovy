@@ -200,5 +200,47 @@ class LauncherTest extends Specification {
     }
 
 
+    def testParseProxy( ) {
+
+        expect:
+        Launcher.parseProxy(null) == []
+        Launcher.parseProxy('http://domain') == ['domain']
+        Launcher.parseProxy('http://domain:333') == ['domain', '333']
+        Launcher.parseProxy('http://10.20.30.40') == ['10.20.30.40']
+        Launcher.parseProxy('http://10.20.30.40:333') == ['10.20.30.40', '333']
+        Launcher.parseProxy('http://10.20.30.40:333/some/path') == ['10.20.30.40', '333']
+
+        Launcher.parseProxy('foo') == ['foo']
+        Launcher.parseProxy('foo:123') == ['foo','123']
+
+    }
+
+    def testSetupProxy() {
+
+        given:
+        def httpProxyHost =System.getProperty('http.proxyHost')
+        def httpProxyPort =System.getProperty('http.proxyPort')
+        def httpsProxyHost =System.getProperty('https.proxyHost')
+        def httpsProxyPort =System.getProperty('https.proxyPort')
+
+        when:
+        Launcher.setProxy('http', [HTTP_PROXY: 'alpha.com:333'])
+        then:
+        System.getProperty('http.proxyHost') == 'alpha.com'
+        System.getProperty('http.proxyPort') == '333'
+
+        when:
+        Launcher.setProxy('https', [HTTPS_PROXY: 'beta.com:5466'])
+        then:
+        System.getProperty('https.proxyHost') == 'beta.com'
+        System.getProperty('https.proxyPort') == '5466'
+
+        cleanup:
+        System.setProperty('http.proxyHost', httpProxyHost ?: '')
+        System.setProperty('http.proxyPort', httpProxyPort ?: '')
+        System.setProperty('https.proxyHost', httpsProxyHost ?: '')
+        System.setProperty('https.proxyPort', httpsProxyPort ?: '')
+    }
+
 
 }

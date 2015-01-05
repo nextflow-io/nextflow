@@ -19,13 +19,13 @@
  */
 
 package nextflow.executor
-import java.nio.file.Files
+
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import nextflow.script.BaseScript
 import spock.lang.Specification
 /**
  *
@@ -33,53 +33,180 @@ import spock.lang.Specification
  */
 class LsfExecutorTest extends Specification {
 
-
-    def 'test bsub cmd line' () {
-
-        setup:
-        def folder = Files.createTempDirectory('test')
-        // mock process
-        def proc = Mock(TaskProcessor)
-        def base = Mock(BaseScript)
-        def config = new TaskConfig(base)
-        // LSF executor
-        def executor = [:] as LsfExecutor
-        executor.taskConfig = config
+    def testCommandLine() {
 
         when:
+        def executor = [:] as LsfExecutor
+        then:
+        executor.getSubmitCommandLine(Mock(TaskRun), null) == ['bsub']
+
+    }
+
+
+    def testHeaders() {
+
+        setup:
+        // LSF executor
+        def executor = [:] as LsfExecutor
+
+        // mock process
+        def proc = Mock(TaskProcessor)
         // process name
         proc.getName() >> 'task'
-        // the script
-        def script = folder.resolve('job.sh'); script.text = 'some content'
-        // config
-        config.queue = test_queue
-        config.clusterOptions = "-x 1"
-        config.cpus = test_cpu
-        config.time = test_time
-        config.memory = test_mem
+
         // task object
         def task = new TaskRun()
         task.processor = proc
-        task.workDir = Paths.get('/xxx')
+        task.workDir = Paths.get('/scratch')
         task.index = 1
 
+        when:
+        task.config = new TaskConfig()
+        // config
+        task.config.queue = 'bsc_ls'
+        task.config.clusterOptions = "-x 1 -R \"span[ptile=2]\""
+        task.config.cpus = '2'
+        task.config.time = '1h 30min'
+        task.config.memory = '8GB'
+
         then:
-        executor.getSubmitCommandLine(task, script) == expected
-        script.canExecute()
+        executor.getHeaders(task) == '''
+                #BSUB -cwd /scratch
+                #BSUB -o /dev/null
+                #BSUB -q bsc_ls
+                #BSUB -n 2
+                #BSUB -R "span[hosts=1]"
+                #BSUB -W 01:30
+                #BSUB -M 4096
+                #BSUB -J nf-task_1
+                #BSUB -x 1
+                #BSUB -R "span[ptile=2]"
+                '''
+                .stripIndent().leftTrim()
 
-        cleanup:
-        folder?.deleteDir()
 
-        where:
-        test_cpu    | test_time    | test_mem   | test_queue || expected
-        null        | null         | null       | 'alpha'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'alpha', '-J', 'nf-task_1', '-x', '1', './job.sh']
-        1           | null         | null       | 'alpha'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'alpha', '-n', '1', '-R', 'span[hosts=1]', '-J', 'nf-task_1', '-x', '1', './job.sh']
-        1           | '1min'       | '10 MB'    | 'alpha'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'alpha', '-n', '1', '-R', 'span[hosts=1]', '-W', '00:01', '-M', '10', '-J', 'nf-task_1', '-x', '1', './job.sh']
-        1           | '4h'         | '200 MB'   | 'gamma'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'gamma', '-n', '1', '-R', 'span[hosts=1]', '-W', '04:00', '-M', '200', '-J', 'nf-task_1', '-x', '1', './job.sh']
-        4           | null         | '2 GB'     | 'gamma'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'gamma', '-n', '4', '-R', 'span[hosts=1]', '-M', '512', '-J', 'nf-task_1', '-x', '1', './job.sh']
-        4           | '1d'         | '2 GB'     | 'gamma'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'gamma', '-n', '4', '-R', 'span[hosts=1]', '-W', '24:00', '-M', '512', '-J', 'nf-task_1', '-x', '1', './job.sh']
-        8           | '2d'         | '2 GB'     | 'delta'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'delta', '-n', '8', '-R', 'span[hosts=1]', '-W', '48:00', '-M', '256', '-J', 'nf-task_1', '-x', '1', './job.sh']
-        null        | '2d 12h 5m'  | '2 GB'     | 'delta'    || ['bsub','-cwd','/xxx','-o','/dev/null','-q', 'delta', '-W', '60:05', '-M', '2048', '-J', 'nf-task_1', '-x', '1', './job.sh']
+        when:
+        task.config = new TaskConfig()
+        task.config.queue = 'alpha'
+        task.config.cpus = 1
+        then:
+        executor.getHeaders(task) == '''
+                #BSUB -cwd /scratch
+                #BSUB -o /dev/null
+                #BSUB -q alpha
+                #BSUB -J nf-task_1
+                '''
+                .stripIndent().leftTrim()
+
+
+        when:
+        task.config = new TaskConfig()
+        task.config.queue = 'alpha'
+        task.config.cpus = 1
+        task.config.time = '1min'
+        task.config.memory = '10MB'
+        then:
+        executor.getHeaders(task) == '''
+                #BSUB -cwd /scratch
+                #BSUB -o /dev/null
+                #BSUB -q alpha
+                #BSUB -W 00:01
+                #BSUB -M 10
+                #BSUB -J nf-task_1
+                '''
+                .stripIndent().leftTrim()
+
+
+        when:
+        task.config = new TaskConfig()
+        task.config.queue = 'gamma'
+        task.config.cpus = 1
+        task.config.time = '4h'
+        task.config.memory = '200MB'
+        then:
+        executor.getHeaders(task) == '''
+                #BSUB -cwd /scratch
+                #BSUB -o /dev/null
+                #BSUB -q gamma
+                #BSUB -W 04:00
+                #BSUB -M 200
+                #BSUB -J nf-task_1
+                '''
+                .stripIndent().leftTrim()
+
+
+        when:
+        task.config = new TaskConfig()
+        task.config.queue = 'gamma'
+        task.config.cpus = 4
+        task.config.memory = '2GB'
+        then:
+        executor.getHeaders(task) == '''
+                #BSUB -cwd /scratch
+                #BSUB -o /dev/null
+                #BSUB -q gamma
+                #BSUB -n 4
+                #BSUB -R "span[hosts=1]"
+                #BSUB -M 512
+                #BSUB -J nf-task_1
+                '''
+                .stripIndent().leftTrim()
+
+        when:
+        task.config = new TaskConfig()
+        task.config.queue = 'gamma'
+        task.config.cpus = 4
+        task.config.memory = '2GB'
+        task.config.time = '1d'
+        then:
+        executor.getHeaders(task) == '''
+                #BSUB -cwd /scratch
+                #BSUB -o /dev/null
+                #BSUB -q gamma
+                #BSUB -n 4
+                #BSUB -R "span[hosts=1]"
+                #BSUB -W 24:00
+                #BSUB -M 512
+                #BSUB -J nf-task_1
+                '''
+                .stripIndent().leftTrim()
+
+
+        when:
+        task.config = new TaskConfig()
+        task.config.queue = 'gamma'
+        task.config.cpus = 8
+        task.config.memory = '2GB'
+        task.config.time = '2d'
+        then:
+        executor.getHeaders(task) == '''
+                #BSUB -cwd /scratch
+                #BSUB -o /dev/null
+                #BSUB -q gamma
+                #BSUB -n 8
+                #BSUB -R "span[hosts=1]"
+                #BSUB -W 48:00
+                #BSUB -M 256
+                #BSUB -J nf-task_1
+                '''
+                .stripIndent().leftTrim()
+
+
+        when:
+        task.config = new TaskConfig()
+        task.config.queue = 'delta'
+        task.config.memory = '2GB'
+        task.config.time = '2d 12h 5m'
+        then:
+        executor.getHeaders(task) == '''
+                #BSUB -cwd /scratch
+                #BSUB -o /dev/null
+                #BSUB -q delta
+                #BSUB -W 60:05
+                #BSUB -M 2048
+                #BSUB -J nf-task_1
+                '''
+                .stripIndent().leftTrim()
 
     }
 
@@ -141,4 +268,20 @@ class LsfExecutorTest extends Specification {
 
     }
 
+
+
+    def testWrapString() {
+
+        given:
+        def executor = [:] as LsfExecutor
+
+        expect:
+        executor.wrapHeader('') == ''
+        executor.wrapHeader('hello') == 'hello'
+        executor.wrapHeader('span[ptile=number]') == '"span[ptile=number]"'
+        executor.wrapHeader('hello world') == '"hello world"'
+
+        executor.pipeLauncherScript() == true
+        executor.getSubmitCommandLine(Mock(TaskRun), Mock(Path)) == ['bsub']
+    }
 }

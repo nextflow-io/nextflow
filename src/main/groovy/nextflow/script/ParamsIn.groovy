@@ -19,6 +19,9 @@
  */
 
 package nextflow.script
+
+import java.util.concurrent.atomic.AtomicBoolean
+
 import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.transform.ToString
@@ -31,7 +34,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Nextflow
 import nextflow.extension.DataflowExtensions
-import nextflow.processor.TaskConfig
+import nextflow.processor.ProcessConfig
 /**
  * Base class for input/output parameters
  *
@@ -77,7 +80,8 @@ abstract class BaseParam {
     }
 
     String toString() {
-        "${this.class.simpleName}[${index}]"
+        def p = mapIndex == -1 ? index : "$index:$mapIndex"
+        return "${this.class.simpleName.toLowerCase()}<$p>"
     }
 
     /**
@@ -193,7 +197,7 @@ abstract class BaseParam {
         throw new IllegalArgumentException("Invalid output channel reference")
     }
 
-
+    @Deprecated
     final protected resolveName( Map context, String name, boolean strict = true ) {
         if( context && context.containsKey(name) )
             return context.get(name)
@@ -254,7 +258,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
         return inChannel
     }
 
-    BaseInParam( TaskConfig config ) {
+    BaseInParam( ProcessConfig config ) {
         this(config.getOwnerScript().getBinding(), config.getInputs())
     }
 
@@ -275,7 +279,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
     @Override
     protected void lazyInit() {
 
-        if( fromObject == null && (bindObject == null || bindObject instanceof TokenGString ) ) {
+        if( fromObject == null && (bindObject == null || bindObject instanceof TokenGString || bindObject instanceof Closure ) ) {
             throw new IllegalStateException("Missing 'bind' declaration in input parameter")
         }
 
@@ -306,13 +310,14 @@ abstract class BaseInParam extends BaseParam implements InParam {
      * @return The parameter name
      */
     def String getName() {
-        if( bindObject instanceof TokenVar ) {
+        if( bindObject instanceof TokenVar )
             return bindObject.name
-        }
 
-        if( bindObject instanceof String ) {
+        if( bindObject instanceof String )
             return bindObject
-        }
+
+        if( bindObject instanceof Closure )
+            return '__$' + this.toString()
 
         throw new IllegalArgumentException()
     }
@@ -350,10 +355,18 @@ abstract class BaseInParam extends BaseParam implements InParam {
 /**
  *  Represents a process *file* input parameter
  */
+@Slf4j
 @InheritConstructors
 class FileInParam extends BaseInParam  {
 
     protected filePattern
+
+    private AtomicBoolean warnShown = new AtomicBoolean()
+
+    private void warn(String str) {
+        if(!warnShown.getAndSet(true))
+        log.warn "Dynamic input file name has to be defined using a closure -- Replace `file \"${str}\"` with `file { \"${str}\" }`"
+    }
 
     /**
      * Define the file name
@@ -365,6 +378,12 @@ class FileInParam extends BaseInParam  {
         }
 
         if( obj instanceof TokenGString ) {
+            warn(obj.text)
+            filePattern = obj
+            return this
+        }
+
+        if( obj instanceof Closure ) {
             filePattern = obj
             return this
         }
@@ -380,6 +399,7 @@ class FileInParam extends BaseInParam  {
         }
 
         if( bindObject instanceof TokenGString ) {
+            warn(bindObject.text)
             return bindObject.text
         }
 
@@ -409,6 +429,10 @@ class FileInParam extends BaseInParam  {
     private resolve( Map ctx, value ) {
         if( value instanceof TokenGString )
             value.resolve { String it -> resolveName(ctx,it) }
+
+        else if( value instanceof Closure ) {
+            return ctx.with(value)
+        }
 
         else
             return value
@@ -499,7 +523,7 @@ class SetInParam extends BaseInParam {
 
     final List<InParam> inner = []
 
-    String getName() { toString() }
+    String getName() { '__$'+this.toString() }
 
     SetInParam bind( Object... obj ) {
 

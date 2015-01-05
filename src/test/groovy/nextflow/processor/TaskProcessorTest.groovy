@@ -19,25 +19,38 @@
  */
 
 package nextflow.processor
-
 import java.nio.file.Files
 import java.nio.file.Paths
 
 import groovyx.gpars.agent.Agent
 import nextflow.Session
+import nextflow.executor.NopeExecutor
 import nextflow.file.FileHolder
+import nextflow.script.BaseScript
 import nextflow.script.FileInParam
+import nextflow.script.TaskBody
 import nextflow.script.TokenVar
 import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
 import spock.lang.Specification
-import test.DummyProcessor
-import test.DummyScript
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class TaskProcessorTest extends Specification {
+
+    static class DummyProcessor extends TaskProcessor {
+
+        DummyProcessor(String name, Session session, BaseScript script, ProcessConfig taskConfig) {
+            super(name, new NopeExecutor(), session, new DummyScript(), taskConfig, new TaskBody({}, '..', true))
+        }
+
+        @Override protected void createOperator() { }
+    }
+
+    static class DummyScript extends BaseScript {
+        @Override Object run() { return null }
+    }
 
 
     def filterHidden() {
@@ -97,7 +110,7 @@ class TaskProcessorTest extends Specification {
         def wrapper = new DummyScript()
         def session = new Session([env: [X:"1", Y:"2"]])
         session.setBaseDir(home)
-        def processor = new DummyProcessor(session, wrapper, new TaskConfig(wrapper))
+        def processor = new DummyProcessor('task1', session, wrapper, new ProcessConfig(wrapper))
         def builder = new ProcessBuilder()
         builder.environment().putAll( processor.getProcessEnvironment() )
 
@@ -110,7 +123,7 @@ class TaskProcessorTest extends Specification {
         when:
         session = new Session([env: [X:"1", Y:"2", PATH:'/some']])
         session.setBaseDir(home)
-        processor = new DummyProcessor(session, wrapper, new TaskConfig(wrapper))
+        processor = new DummyProcessor('task1', session, wrapper, new ProcessConfig(wrapper))
         builder = new ProcessBuilder()
         builder.environment().putAll( processor.getProcessEnvironment() )
 
@@ -181,8 +194,8 @@ class TaskProcessorTest extends Specification {
         def list1 = processor.expandWildcards('file_name', [FileHolder.get('x')])
         def list2 = processor.expandWildcards('file_name', [FileHolder.get('x'), FileHolder.get('y')] )
         then:
-        list1 *. stagePath *. toString() == ['file_name']
-        list2 *. stagePath *. toString() == ['file_name1', 'file_name2']
+        list1 *. stageName  == ['file_name']
+        list2 *. stageName  == ['file_name1', 'file_name2']
 
 
         /*
@@ -193,8 +206,8 @@ class TaskProcessorTest extends Specification {
         list1 = processor.expandWildcards('file*.fa', [FileHolder.get('x')])
         list2 = processor.expandWildcards('file_*.fa', [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
         then:
-        list1 *. stagePath *. toString() == ['file.fa']
-        list2 *. stagePath *. toString() == ['file_1.fa', 'file_2.fa', 'file_3.fa']
+        list1 *. stageName == ['file.fa']
+        list2 *. stageName == ['file_1.fa', 'file_2.fa', 'file_3.fa']
 
         /*
          * The question mark wildcards *always* expand to an index number
@@ -207,16 +220,16 @@ class TaskProcessorTest extends Specification {
         list2 = processor.expandWildcards('file_???.fa', p1_p4 )
         def list3 = processor.expandWildcards('file_?.fa', p1_p12 )
         then:
-        list1 *. stagePath *. toString() == ['file1.fa']
-        list2 *. stagePath *. toString() == ['file_001.fa', 'file_002.fa', 'file_003.fa', 'file_004.fa']
-        list3 *. stagePath *. toString() == ['file_1.fa', 'file_2.fa', 'file_3.fa', 'file_4.fa', 'file_5.fa', 'file_6.fa', 'file_7.fa', 'file_8.fa', 'file_9.fa', 'file_10.fa', 'file_11.fa', 'file_12.fa']
+        list1 *. stageName == ['file1.fa']
+        list2 *. stageName == ['file_001.fa', 'file_002.fa', 'file_003.fa', 'file_004.fa']
+        list3 *. stageName == ['file_1.fa', 'file_2.fa', 'file_3.fa', 'file_4.fa', 'file_5.fa', 'file_6.fa', 'file_7.fa', 'file_8.fa', 'file_9.fa', 'file_10.fa', 'file_11.fa', 'file_12.fa']
 
         when:
         list1 = processor.expandWildcards('*', [FileHolder.get('a')])
         list2 = processor.expandWildcards('*', [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
         then:
-        list1 *. stagePath *. toString() == ['a']
-        list2 *. stagePath *. toString() == ['x','y','z']
+        list1 *. stageName == ['a']
+        list2 *. stageName == ['x','y','z']
 
 
     }
@@ -230,7 +243,7 @@ class TaskProcessorTest extends Specification {
 
         then:
         path.storePath == p1
-        path.stagePath == Paths.get('target.file')
+        path.stageName == 'target.file'
 
     }
 
@@ -287,6 +300,7 @@ class TaskProcessorTest extends Specification {
 
 
     }
+
 
 
 

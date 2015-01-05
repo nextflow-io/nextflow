@@ -29,12 +29,12 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
-import nextflow.processor.DelegateMap
-import nextflow.processor.TaskConfig
+import nextflow.processor.TaskContext
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
+import nextflow.processor.TaskStatus
 import nextflow.script.ScriptType
 import nextflow.util.Duration
 import nextflow.util.InputStreamDeserializer
@@ -92,10 +92,10 @@ class GgExecutor extends Executor {
     TaskHandler createTaskHandler(TaskRun task) {
 
         if( task.type == ScriptType.GROOVY ) {
-            GgTaskHandler.createGroovyHandler(task, taskConfig,this)
+            GgTaskHandler.createGroovyHandler(task, this)
         }
         else {
-            GgTaskHandler.createScriptHandler(task, taskConfig, this)
+            GgTaskHandler.createScriptHandler(task, this)
         }
 
     }
@@ -172,8 +172,8 @@ class GgTaskHandler extends TaskHandler {
      */
     private GridFuture future
 
-    static GgTaskHandler createScriptHandler( TaskRun task, TaskConfig taskConfig, GgExecutor executor ) {
-        def handler = new GgTaskHandler(task,taskConfig)
+    static GgTaskHandler createScriptHandler( TaskRun task, GgExecutor executor ) {
+        def handler = new GgTaskHandler(task)
         handler.executor = executor
         handler.type = ScriptType.SCRIPTLET
         handler.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
@@ -181,15 +181,15 @@ class GgTaskHandler extends TaskHandler {
         return handler
     }
 
-    static GgTaskHandler createGroovyHandler( TaskRun task, TaskConfig taskConfig, GgExecutor executor ) {
-        def handler = new GgTaskHandler(task,taskConfig)
+    static GgTaskHandler createGroovyHandler( TaskRun task, GgExecutor executor ) {
+        def handler = new GgTaskHandler(task)
         handler.executor = executor
         handler.type = ScriptType.GROOVY
         return handler
     }
 
-    private GgTaskHandler(TaskRun task, TaskConfig config) {
-        super(task,config)
+    private GgTaskHandler(TaskRun task) {
+        super(task)
     }
 
     @Override
@@ -200,10 +200,10 @@ class GgTaskHandler extends TaskHandler {
         final remoteTask = ( type == ScriptType.SCRIPTLET ) ? new GgBashTask(task,sessionId) : new GgClosureTask(task,sessionId)
         future = executor.execute( remoteTask )
 
-        future.listenAsync( { executor.getTaskMonitor().signalComplete(); } as GridInClosure )
+        future.listenAsync( { executor.getTaskMonitor().signal(); } as GridInClosure )
 
         // mark as submitted -- transition to STARTED has to be managed by the scheduler
-        status = TaskHandler.Status.SUBMITTED
+        status = TaskStatus.SUBMITTED
         log.trace "Task $task > Submitted"
     }
 
@@ -211,7 +211,7 @@ class GgTaskHandler extends TaskHandler {
     boolean checkIfRunning() {
         if( isSubmitted() && future ) {
             log.trace "Task ${task} > RUNNING"
-            status = TaskHandler.Status.RUNNING
+            status = TaskStatus.RUNNING
             return true
         }
 
@@ -222,7 +222,7 @@ class GgTaskHandler extends TaskHandler {
     boolean checkIfCompleted() {
 
         if( isRunning() && (future.isCancelled() || (future.isDone() && (!exitFile || exitFile.lastModified()>0)))  ) {
-            status = TaskHandler.Status.COMPLETED
+            status = TaskStatus.COMPLETED
 
             final result = (GridComputeJobResult)future.get()
             if( result.getException() ) {
@@ -243,7 +243,7 @@ class GgTaskHandler extends TaskHandler {
             else {
                 def data = result.getData() as GgResultData
                 task.stdout = data.value
-                task.code.delegate = new DelegateMap( task.processor, data.context )
+                task.context = new TaskContext( task.processor, data.context )
             }
 
             log.trace "Task ${task} > DONE"
@@ -339,7 +339,7 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
         def allFiles = task.getInputFiles().values()
         for( List<FileHolder> entry : allFiles ) {
             if( entry ) for( FileHolder it : entry ) {
-                attrs.inputFiles[ it.stagePath.name ] = it.storePath
+                attrs.inputFiles[ it.stageName ] = it.storePath
             }
         }
 
@@ -444,7 +444,10 @@ abstract class GgBaseTask<T> implements GridCallable<T>, GridComputeJob {
      *        It can contain globs wildcards
      */
     protected void copyToTargetDir( String filePattern, Path from, Path to ) {
-        FileHelper.visitFiles( from, filePattern ) { Path it ->
+
+        def type = filePattern.contains('**') ? 'file' : 'any'
+
+        FileHelper.visitFiles( from, filePattern, type: type ) { Path it ->
             final rel = from.relativize(it)
             it.copyTo(to.resolve(rel))
         }
@@ -535,8 +538,11 @@ class GgBashTask extends GgBaseTask<Integer>  {
         super(task, sessionId)
         this.stdin = task.stdin
         this.container = task.container
-        this.environment = task.processor.getProcessEnvironment()
-        this.shell = task.processor.taskConfig.getShell()
+        // note: create a copy of the process environment to avoid concurrent
+        // process executions override each others
+        this.environment = new HashMap( task.processor.getProcessEnvironment() )
+        this.environment.putAll( task.getInputEnvironment() )
+        this.shell = task.config.getShell()
         this.script = task.script
     }
 
@@ -651,7 +657,7 @@ class GgClosureTask extends GgBaseTask<GgResultData> {
     GgClosureTask( TaskRun task, UUID sessionId ) {
         super(task,sessionId)
         this.codeObj = SerializationUtils.serialize(task.code.dehydrate())
-        this.delegateObj = (task.code.delegate as DelegateMap).dehydrate()
+        this.delegateObj = task.context.dehydrate()
     }
 
     @Override
@@ -659,7 +665,7 @@ class GgClosureTask extends GgBaseTask<GgResultData> {
         log.debug "Running closure for task > ${name}"
 
         def loader = provider.getClassLoaderFor(sessionId)
-        def delegate = DelegateMap.rehydrate(delegateObj,loader)
+        def delegate = TaskContext.rehydrate(delegateObj,loader)
         Closure closure = (Closure)InputStreamDeserializer.deserialize(codeObj,loader)
         Object result = closure.rehydrate(delegate, delegate.getScript(), delegate.getScript()).call()
         return new GgResultData(value: result, context: delegate?.getHolder())

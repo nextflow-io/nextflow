@@ -23,7 +23,7 @@ import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.processor.TaskConfig
+import nextflow.processor.ProcessConfig
 /**
  * Model a process generic input parameter
  *
@@ -99,7 +99,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         super(binding,list,ownerIndex)
     }
 
-    BaseOutParam( TaskConfig config ) {
+    BaseOutParam( ProcessConfig config ) {
         super(config.getOwnerScript().getBinding(), config.getOutputs())
     }
 
@@ -164,8 +164,14 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 /**
  * Model a process *file* output parameter
  */
+@Slf4j
 @InheritConstructors
 class FileOutParam extends BaseOutParam implements OutParam {
+
+    /**
+     * ONLY FOR TESTING DO NOT USE
+     */
+    protected FileOutParam(Map params) { }
 
     /**
      * The character used to separate multiple names (pattern) in the output specification
@@ -185,18 +191,42 @@ class FileOutParam extends BaseOutParam implements OutParam {
      */
     protected boolean includeInputs
 
+    /**
+     * The type of path to output, either {@code file}, {@code dir} or {@code any}
+     */
+    protected String type
+
+    /**
+     * Maximum number of directory levels to visit (default: no limit)
+     */
+    protected Integer maxDepth
+
+    /**
+     * When true it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: true)
+     */
+    protected boolean followLinks = true
+
     private TokenGString gstring
+
+    private Closure<String> dynamicObj
 
     String getSeparatorChar() { separatorChar }
 
-    boolean getIncludeHidden() { includeHidden }
+    boolean getHidden() { includeHidden }
 
     boolean getIncludeInputs() { includeInputs }
+
+    String getType() { type }
+
+    Integer getMaxDepth() { maxDepth }
+
+    boolean getFollowLinks() { followLinks }
+
 
     /**
      * @return {@code true} when the file name is parametric i.e contains a variable name to be resolved, {@code false} otherwise
      */
-    boolean isParametric() { gstring != null }
+    boolean isDynamic() { dynamicObj || gstring != null }
 
     FileOutParam separatorChar( String value ) {
         this.separatorChar = value
@@ -213,16 +243,44 @@ class FileOutParam extends BaseOutParam implements OutParam {
         return this
     }
 
+    FileOutParam hidden( boolean flag ) {
+        this.includeHidden = flag
+        return this
+    }
+
+    FileOutParam type( String value ) {
+        assert value in ['file','dir','any']
+        type = value
+        return this
+    }
+
+    FileOutParam maxDepth( int value ) {
+        maxDepth = value
+        return this
+    }
+
+    FileOutParam followLinks( boolean value ) {
+        followLinks = value
+        return this
+    }
+
+
     BaseOutParam bind( obj ) {
 
         if( obj instanceof TokenGString ) {
+            log.warn "Dynamic output file name has to be defined using a closure -- Replace `file \"${obj.text}\"` with `file { \"${obj.text}\" }`"
             gstring = obj
             return this
         }
 
         if( obj instanceof TokenVar ) {
             this.nameObj = obj.name
-            gstring = new TokenGString(obj.name, [''], [obj.name])
+            dynamicObj = { delegate.containsKey(obj.name) ? delegate.get(obj.name): obj.name }
+            return this
+        }
+
+        if( obj instanceof Closure ) {
+            dynamicObj = obj
             return this
         }
 
@@ -233,7 +291,10 @@ class FileOutParam extends BaseOutParam implements OutParam {
     List<String> getFilePatterns(Map context) {
 
         def nameString
-        if( gstring ) {
+        if( dynamicObj ) {
+            nameString = context.with(dynamicObj)
+        }
+        else if( gstring ) {
             def strict = getName() == null
             nameString = gstring.resolve { String it -> resolveName(context, it, strict) }
         }
@@ -251,7 +312,6 @@ class FileOutParam extends BaseOutParam implements OutParam {
     String getName() {
         return nameObj ? super.getName() : null
     }
-
 
 }
 

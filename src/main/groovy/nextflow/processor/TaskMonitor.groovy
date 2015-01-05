@@ -53,5 +53,5 @@ interface TaskMonitor {
     /**
      * Notify when a task terminates
      */
-    void signalComplete()
+    void signal()
 }

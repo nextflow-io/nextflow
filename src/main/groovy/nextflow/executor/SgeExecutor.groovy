@@ -23,8 +23,6 @@ import java.nio.file.Path
 
 import groovy.transform.PackageScope
 import nextflow.processor.TaskRun
-import nextflow.util.Duration
-
 /**
  * Execute a task script by running it on the SGE/OGE cluster
  *
@@ -55,33 +53,32 @@ class SgeExecutor extends AbstractGridExecutor {
         result << '-notify' << ''
 
         // the requested queue name
-        if( taskConfig.queue ) {
-            result << '-q' << (taskConfig.queue as String)
+        if( task.config.queue ) {
+            result << '-q' << (task.config.queue as String)
         }
 
         //number of cpus for multiprocessing/multi-threading
-        if( taskConfig.cpus ) {
-            if ( taskConfig.penv ) {
-                result << "-pe" << "${taskConfig.penv} ${taskConfig.cpus}"
-            } else {
-                result << "-l" << "slots=${taskConfig.cpus}"
-            }
+        if ( task.config.penv ) {
+            result << "-pe" << "${task.config.penv} ${task.config.cpus}"
+        }
+        else if( task.config.cpus>1 ) {
+            result << "-l" << "slots=${task.config.cpus}"
         }
 
         // max task duration
-        if( taskConfig.time ) {
-            final time = taskConfig.time as Duration
+        if( task.config.time ) {
+            final time = task.config.getTime()
             result << "-l" << "h_rt=${time.format('HH:mm:ss')}"
         }
 
         // task max memory
-        if( taskConfig.memory ) {
-            result << "-l" << "virtual_free=${taskConfig.memory.toString().replaceAll(/[\sB]/,'')}"
+        if( task.config.memory ) {
+            result << "-l" << "virtual_free=${task.config.memory.toString().replaceAll(/[\sB]/,'')}"
         }
 
         // -- at the end append the command script wrapped file name
-        if( taskConfig.clusterOptions ) {
-            result << taskConfig.clusterOptions.toString() << ''
+        if( task.config.clusterOptions ) {
+            result << task.config.clusterOptions.toString() << ''
         }
 
         return result
@@ -100,28 +97,7 @@ class SgeExecutor extends AbstractGridExecutor {
          ['qsub', scriptFile.name]
     }
 
-    @Override
-    String getHeaders( TaskRun task ) {
-
-        def result = new StringBuilder()
-        def header = new ArrayList(2)
-        def dir = getDirectives(task)
-        def len = dir.size()-1
-        for( int i=0; i<len; i+=2) {
-            def opt = dir[i]
-            def val = dir[i+1]
-            if( opt ) header.add(opt)
-            if( val ) header.add(val)
-
-            if( header ) {
-                result << '#$ ' << header.join(' ') << '\n'
-            }
-
-            header.clear()
-        }
-
-        return result.toString()
-    }
+    protected String getHeaderToken() { '#$' }
 
 
     /**

@@ -36,6 +36,8 @@ import nextflow.script.ScriptType
 import nextflow.script.SharedParam
 import nextflow.script.StdInParam
 import nextflow.script.ValueOutParam
+import nextflow.util.DockerBuilder
+
 /**
  * Models a task instance
  *
@@ -83,7 +85,6 @@ class TaskRun {
     Map<OutParam,Object> outputs = [:]
 
 
-
     def void setInput( InParam param, Object value = null ) {
         assert param
 
@@ -110,7 +111,7 @@ class TaskRun {
     /**
      * The exit code returned by executing the task script
      */
-    int exitStatus = Integer.MAX_VALUE
+    Integer exitStatus = Integer.MAX_VALUE
 
     /**
      * Flag set when the bind stage is completed successfully
@@ -170,7 +171,7 @@ class TaskRun {
      * @param n The maximum number of lines to dump (default: 20)
      * @return The actual number of dumped lines into {@code message} buffer
      */
-    List dumpStdout(int n = 50) {
+    List<String> dumpStdout(int n = 50) {
 
         List result = null
         try {
@@ -188,11 +189,6 @@ class TaskRun {
         }
         return result ?: []
     }
-
-    /**
-     * Directory to store final results
-     */
-    Path storeDir
 
     /**
      * The directory used to run the task
@@ -220,16 +216,6 @@ class TaskRun {
     def script
 
     /**
-     * The scratch property has defined in the configuration object
-     */
-    def scratch
-
-    /**
-     * The name of a docker container where the task is supposed to run when provided
-     */
-    def String container
-
-    /**
      * The number of times the execution of the task has failed
      */
     def volatile int failCount
@@ -239,8 +225,29 @@ class TaskRun {
      */
     def volatile boolean failed
 
-    def LocalConfig localConfig
+    def TaskConfig config
 
+    def TaskContext context
+
+    String getName() {
+        if( name )
+            return name
+
+        final baseName = processor.name
+        if( config.containsKey('tag') )
+            try {
+                // -- look-up the 'sampleId' property, and if everything is fine
+                //    cache this value in the 'name' attribute
+                return name = "$baseName (${config.tag})"
+            }
+            catch( IllegalStateException e ) {
+                log.debug "Cannot access `tag` property for task: $baseName ($index)"
+            }
+
+        // fallback on the current task index, however do not set the 'name' attribute
+        // so it has a chance to recover the 'sampleId' at next invocation
+        return "$baseName ($index)"
+    }
 
     def String getScript() {
         if( script instanceof Path ) {
@@ -255,9 +262,13 @@ class TaskRun {
      * Check whenever there are values to be cached
      */
     def boolean hasCacheableValues() {
+
+        if( config?.isDynamic() )
+            return true
+
         for( OutParam it : outputs.keySet() ) {
             if( it.class == ValueOutParam ) return true
-            if( it.class == FileOutParam && ((FileOutParam)it).isParametric() ) return true
+            if( it.class == FileOutParam && ((FileOutParam)it).isDynamic() ) return true
         }
 
         for( InParam it : inputs.keySet() ) {
@@ -274,11 +285,11 @@ class TaskRun {
     /**
      * Return the list of all input files staged as inputs by this task execution
      */
-    List<Path> getStagedInputs()  {
+    List<String> getStagedInputs()  {
         getInputFiles()
                 .values()
                 .flatten()
-                .collect { it.stagePath }
+                .collect { it.stageName }
     }
 
     /**
@@ -296,18 +307,18 @@ class TaskRun {
         def result = []
 
         getOutputsByType(FileOutParam).keySet().each { FileOutParam param ->
-            result.addAll( param.getFilePatterns((Map)code?.delegate) )
+            result.addAll( param.getFilePatterns(context) )
         }
 
         getInputFiles()?.each { InParam param, List<FileHolder> files ->
             if( param instanceof FileSharedParam ) {
                 files.each { holder ->
-                    result.add( holder.stagePath.getName() )
+                    result.add( holder.stageName )
                 }
             }
         }
 
-        return result
+        return result.unique()
     }
 
     /**
@@ -348,9 +359,12 @@ class TaskRun {
 
 
     Path getTargetDir() {
-        storeDir ?: workDir
+        config.getStoreDir() ?: workDir
     }
 
+    def getScratch() {
+        config.scratch
+    }
 
     static final String CMD_ENV = '.command.env'
     static final String CMD_SCRIPT = '.command.sh'
@@ -393,6 +407,29 @@ class TaskRun {
             result << str[i]
         }
         return result.toString()
+    }
+
+    /**
+     * The name of a docker container where the task is supposed to run when provided
+     */
+    String getContainer() {
+        // set the docker container to be used
+        def imageName = config.container as String
+        def dockerConf = processor?.session?.config?.docker as Map
+        DockerBuilder.normalizeDockerImageName(imageName, dockerConf)
+    }
+
+    boolean isSuccess( status = exitStatus ) {
+        if( status == null )
+            return false
+
+        if( status instanceof String )
+            status = status.toInteger()
+
+        if( status == Integer.MAX_VALUE )
+            return false
+
+        return status in config.getValidExitStatus()
     }
 
 }

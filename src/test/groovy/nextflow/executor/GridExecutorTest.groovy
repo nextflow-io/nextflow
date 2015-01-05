@@ -20,10 +20,11 @@
 
 package nextflow.executor
 import java.nio.file.Files
+import java.nio.file.Path
 
 import nextflow.processor.TaskConfig
-import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
+import nextflow.processor.TaskStatus
 import nextflow.util.Duration
 import spock.lang.Specification
 /**
@@ -37,18 +38,18 @@ class GridExecutorTest extends Specification {
 
         setup:
         def work = Files.createTempDirectory('test')
-        def task = Mock(TaskRun)
-        task.getWorkDir() >> work
+        def task = new TaskRun(workDir: work, name: 'hello', config: new TaskConfig(queue: 'gamma'))
 
-        def config = Mock(TaskConfig)
         def executor = Mock(AbstractGridExecutor)
 
         when:
-        def handler = new GridTaskHandler(task, config, executor)
-        handler.status = TaskHandler.Status.SUBMITTED
+        def handler = new GridTaskHandler(task, executor)
+        handler.status = TaskStatus.SUBMITTED
+        handler.queue = 'gamma'
+
         then:
         !handler.checkIfRunning()
-        handler.status == TaskHandler.Status.SUBMITTED
+        handler.status == TaskStatus.SUBMITTED
 
     }
 
@@ -60,15 +61,14 @@ class GridExecutorTest extends Specification {
         def task = Mock(TaskRun)
         task.getWorkDir() >> workDir
 
-        def config = Mock(TaskConfig)
         def executor = Mock(AbstractGridExecutor)
 
         when:
-        def handler = new GridTaskHandler(task, config, executor)
-        handler.status = TaskHandler.Status.SUBMITTED
+        def handler = new GridTaskHandler(task, executor)
+        handler.status = TaskStatus.SUBMITTED
         then:
         handler.checkIfRunning()
-        handler.status == TaskHandler.Status.RUNNING
+        handler.status == TaskStatus.RUNNING
 
         cleanup:
         workDir.deleteDir()
@@ -82,16 +82,15 @@ class GridExecutorTest extends Specification {
         def work = Files.createTempDirectory('test')
         def task = Mock(TaskRun)
         task.getWorkDir() >> work
-        def config = Mock(TaskConfig)
         def executor = [:] as AbstractGridExecutor
         executor.queueInterval = Duration.of('1min')
 
         when:
-        def handler = new GridTaskHandler(task, config, executor)
-        handler.status = TaskHandler.Status.RUNNING
+        def handler = new GridTaskHandler(task, executor)
+        handler.status = TaskStatus.RUNNING
         then:
         !handler.checkIfCompleted()
-        handler.status == TaskHandler.Status.RUNNING
+        handler.status == TaskStatus.RUNNING
 
     }
 
@@ -102,16 +101,15 @@ class GridExecutorTest extends Specification {
         def task = new TaskRun()
         task.workDir = Files.createTempDirectory('testHandler')
 
-        def config = Mock(TaskConfig)
         def executor = Mock(AbstractGridExecutor)
 
         when:
-        def handler = new GridTaskHandler(task, config, executor)
-        handler.status = TaskHandler.Status.RUNNING
+        def handler = new GridTaskHandler(task, executor)
+        handler.status = TaskStatus.RUNNING
         handler.exitFile.text = '33'
         then:
         handler.checkIfCompleted()
-        handler.status == TaskHandler.Status.COMPLETED
+        handler.status == TaskStatus.COMPLETED
         handler.task.exitStatus == 33
 
     }
@@ -119,16 +117,15 @@ class GridExecutorTest extends Specification {
     def testCheckIfTerminateEmptyFile() {
 
         given:
-        def task = new TaskRun()
+        def task = new TaskRun(name: 'task1')
         task.workDir = Files.createTempDirectory('testHandler')
 
-        def config = Mock(TaskConfig)
         def executor = Mock(AbstractGridExecutor)
         executor.checkActiveStatus(_) >> { return true }
 
         when:
-        def handler = new GridTaskHandler(task, config, executor)
-        handler.status = TaskHandler.Status.RUNNING
+        def handler = new GridTaskHandler(task, executor)
+        handler.status = TaskStatus.RUNNING
         handler.exitFile.text = ''
         handler.exitStatusReadTimeoutMillis = 1000
 
@@ -139,7 +136,7 @@ class GridExecutorTest extends Specification {
         sleep 1_500
         // now 'checkIfCompleted' returns true
         handler.checkIfCompleted()
-        handler.status == TaskHandler.Status.COMPLETED
+        handler.status == TaskStatus.COMPLETED
         // but the 'exitStatus' not ZERO
         handler.task.exitStatus == Integer.MAX_VALUE
 
@@ -149,15 +146,15 @@ class GridExecutorTest extends Specification {
     def testCheckIfTerminateEmptyWithLatency() {
 
         setup:
-        def task = new TaskRun()
+        def task = new TaskRun(name: 'task1')
         task.workDir = Files.createTempDirectory('testHandler')
-        def config = Mock(TaskConfig)
+
         def executor = Mock(AbstractGridExecutor)
         executor.checkActiveStatus(_) >> { true }
 
         when:
-        def handler = new GridTaskHandler(task, config, executor)
-        handler.status = TaskHandler.Status.RUNNING
+        def handler = new GridTaskHandler(task, executor)
+        handler.status = TaskStatus.RUNNING
         handler.exitFile.text = ''
 
         assert handler.checkIfCompleted() == false
@@ -166,11 +163,10 @@ class GridExecutorTest extends Specification {
 
         then:
         handler.checkIfCompleted()
-        handler.status == TaskHandler.Status.COMPLETED
+        handler.status == TaskStatus.COMPLETED
         handler.task.exitStatus == 123
 
     }
-
 
 
 }

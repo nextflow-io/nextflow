@@ -20,7 +20,6 @@
 
 package nextflow.script
 
-import nextflow.Session
 import nextflow.util.ReadOnlyMap
 import spock.lang.Specification
 /**
@@ -33,7 +32,7 @@ class ScriptBindingTest extends Specification {
     def 'test params' () {
 
         setup:
-        def bindings = new ScriptBinding(new Session([env:[HOME:'/this/path']]))
+        def bindings = new ScriptBinding(env: [HOME:'/this/path'])
         bindings.setParams( [field1: 1, field2: 'dos'] )
         bindings.setArgs(['a','b','c'])
 

@@ -61,6 +61,8 @@ Name                    Description
 task_id                 Task ID.
 hash                    Task hash code.
 native_id               Task ID given by the underlying execution system e.g. POSIX process PID when executed locally, job ID when executed by a grid engine, etc.
+process                 Nextflow process name.
+tag                     User provided identifier associated this task.
 name                    Task name.
 status                  Task status.
 exit                    POSIX process exit status.

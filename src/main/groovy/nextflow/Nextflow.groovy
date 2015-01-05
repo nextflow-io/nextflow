@@ -19,11 +19,11 @@
  */
 
 package nextflow
+
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
-import groovy.io.FileType
-import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
@@ -40,7 +40,6 @@ import nextflow.util.CacheHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@CompileStatic
 class Nextflow {
 
     static private final Random random = new Random()
@@ -97,70 +96,48 @@ class Nextflow {
         return channel(items as List)
     }
 
-    /**
-     * File factory utility method.
-     *
-     * @param name
-     * @return
-     */
-    static def fileNamePattern( def name ) {
+    static private fileNamePattern( String path, Map opts, java.nio.file.FileSystem fs ) {
 
-        if( !name ) return null
+        def ( String folder, String pattern, String scheme ) = FileHelper.getFolderAndPattern(path)
+        if( !fs )
+            fs = FileHelper.fileSystemForScheme(scheme)
 
-        /*
-         * expand special user home '~' character
-         */
-        def sName = name.toString()
-        if( sName == '~' ) {
-            sName = System.getProperty('user.home')
-        }
-        else if( sName.startsWith('~'+File.separatorChar) ) {
-            sName = sName.replace('~', System.getProperty('user.home'))
-        }
+        if( opts == null ) opts = [:]
+        if( !opts.type ) opts.type = 'file'
 
-        /*
-         * split the parent path from the file name
-         */
-        final path = FileHelper.asPath(sName).complete()
-        def base = path.getParent()
-        def filePattern = path.getFileName().toString()
-
-        /*
-         * punctual file, just return it
-         */
-        if( !filePattern.contains('*') && !filePattern.contains('?') ) {
-            return path
-        }
-
-        /*
-         * when the name contains a wildcard character, it returns the list of
-         * all matching files (eventually empty)
-         *
-         * TODO use newDirectoryStream here and glob eventually
-         */
-        filePattern = filePattern.replace("?", ".?").replace("*", ".*")
         def result = new LinkedList()
-        base.eachFileMatch(FileType.FILES, ~/$filePattern/ ) { result << it }
+        try {
+            FileHelper.visitFiles(opts, fs.getPath(folder), pattern) { Path it -> result.add(it) }
+        }
+        catch (NoSuchFileException e) {
+            log.debug "No such file: $folder -- Skipping visit"
+        }
         return result
 
     }
 
-    static file( def fileName ) {
-        assert fileName
+    static file( Map options = null, def path ) {
+        assert path
 
-        if( fileName instanceof Path )
-            return ((Path) fileName).complete()
+        if( path == null )
+            return null
 
-        if( fileName instanceof File )
-            return ((File) fileName).toPath().complete()
+        final isPath = path instanceof Path
+        final str = path.toString()
+        final fs = isPath ? path.getFileSystem() : null
 
-        // default case
-        return fileNamePattern(fileName?.toString())
+        // if it isn't a glob pattern simply return it a normalized absolute Path object
+        if( !FileHelper.isGlobPattern(str) ) {
+            if( !isPath ) path = FileHelper.asPath(str)
+            return path.complete()
+        }
 
+        // revolve the glob pattern returning all matches
+        return fileNamePattern(path.toString(), options, fs)
     }
 
-    static files( def fileName ) {
-        def result = file(fileName)
+    static files( Map options=null, def path ) {
+        def result = file(options, path)
         return result instanceof List ? result : [result]
     }
 

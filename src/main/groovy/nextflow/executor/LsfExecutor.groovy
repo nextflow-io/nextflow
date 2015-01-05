@@ -19,14 +19,10 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Path
 
 import nextflow.processor.TaskRun
-import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-
-
 /**
  * Processor for LSF resource manager (DRAFT)
  *
@@ -51,25 +47,25 @@ class LsfExecutor extends AbstractGridExecutor {
         result << '-o' << '/dev/null'
 
         // add other parameters (if any)
-        if( taskConfig.queue ) {
-            result << '-q'  << (taskConfig.queue as String)
+        if( task.config.queue ) {
+            result << '-q'  << (task.config.queue as String)
         }
 
         //number of cpus for multiprocessing/multi-threading
-        if( taskConfig.cpus ) {
-            result << "-n" << taskConfig.cpus.toString()
+        if( task.config.cpus > 1 ) {
+            result << "-n" << task.config.cpus.toString()
             result << "-R" << "span[hosts=1]"
         }
 
-        if( taskConfig.time ) {
-            result << '-W' << (taskConfig.time as Duration).format('HH:mm')
+        if( task.config.time ) {
+            result << '-W' << task.config.getTime().format('HH:mm')
         }
 
-        if( taskConfig.getMemory() ) {
-            def mem = taskConfig.getMemory()
+        if( task.config.getMemory() ) {
+            def mem = task.config.getMemory()
             // LSF specify per-process (per-core) memory limit (in MB)
-            if( taskConfig.cpus > 1 ) {
-                long bytes = mem.toBytes().intdiv(taskConfig.cpus as int)
+            if( task.config.cpus > 1 ) {
+                long bytes = mem.toBytes().intdiv(task.config.cpus as int)
                 mem = new MemoryUnit(bytes)
             }
             // convert to MB
@@ -80,9 +76,7 @@ class LsfExecutor extends AbstractGridExecutor {
         result << '-J' << getJobNameFor(task)
 
         // -- at the end append the command script wrapped file name
-        if( taskConfig.clusterOptions ) {
-            result.addAll( getClusterOptionsAsList() )
-        }
+        result.addAll( task.config.getClusterOptionsAsList() )
 
         return result
     }
@@ -96,22 +90,16 @@ class LsfExecutor extends AbstractGridExecutor {
      * @return A list representing the submit command line
      */
     @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) { ['bsub'] }
 
-        // note: LSF requires the job script file to be executable
-        scriptFile.setPermissions(7,0,0)
+    /**
+     * @return {@code true} since BSC grid requires the script to be piped to the {@code bsub} command
+     */
+    @Override
+    protected boolean pipeLauncherScript() { true }
 
-        final result = ['bsub']
+    protected String getHeaderToken() { '#BSUB' }
 
-        // -- adds the jobs directives to the command line
-        getDirectives(task,result)
-
-        // -- last entry to 'script' file name
-        result << "./${scriptFile.getName()}"
-
-        return result
-
-    }
 
     /**
      * Parse the string returned by the {@code bsub} command and extract the job ID string
@@ -126,7 +114,7 @@ class LsfExecutor extends AbstractGridExecutor {
         for( String line : text.readLines() ) {
             def m = pattern.matcher(line)
             if( m.find() ) {
-                return m[0][1].toString()
+                return m.group(1)
             }
         }
 
@@ -139,12 +127,12 @@ class LsfExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    protected List<String> queueStatusCommand(Object queue) {
+    protected List<String> queueStatusCommand( queue ) {
 
         def result = ['bjobs', '-o',  'JOBID STAT SUBMIT_TIME delimiter=\',\'', '-noheader']
 
         if( queue )
-            result << '-q' << queue
+            result << '-q' << queue.toString()
 
         return result
 
@@ -176,5 +164,27 @@ class LsfExecutor extends AbstractGridExecutor {
 
         return result
     }
+
+
+    private static String SPECIAL_CHARS = ' []|&!<>'
+
+    @Override
+    protected String wrapHeader( String str ) {
+        boolean needWrap = false
+
+        if( !str ) return str
+
+        for( int i=0; i<SPECIAL_CHARS.size(); i++ ) {
+            for( int x=0; x<str.size(); x++ ) {
+                if( str.charAt(x) == SPECIAL_CHARS.charAt(i) ) {
+                    needWrap = true
+                    break
+                }
+            }
+        }
+
+        return needWrap ? "\"$str\"" : str
+    }
+
 }
 

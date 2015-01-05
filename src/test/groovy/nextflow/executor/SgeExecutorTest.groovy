@@ -24,7 +24,6 @@ import java.nio.file.Paths
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import nextflow.script.BaseScript
 import spock.lang.Specification
 /**
  *
@@ -46,26 +45,27 @@ class SgeExecutorTest extends Specification {
     def 'test qsub headers' () {
 
         given:
+        def config
         // mock process
         def proc = Mock(TaskProcessor)
-        def base = Mock(BaseScript)
-        def config = new TaskConfig(base)
-        // LSF executor
-        def executor = [:] as SgeExecutor
-        executor.taskConfig = config
 
-        when:
         // process name
         proc.getName() >> 'task x y'
-        // config
-        config.queue = 'my-queue'
-        config.name = 'task'
 
+        // LSF executor
+        def executor = [:] as SgeExecutor
         def task = new TaskRun()
         task.processor = proc
         task.workDir = Paths.get('/abc')
         task.index = 2
 
+        when:
+
+        // config
+        config = task.config = new TaskConfig()
+        config.queue = 'my-queue'
+        config.name = 'task'
+
         then:
         executor.getHeaders(task) == '''
                 #$ -wd /abc
@@ -80,7 +80,9 @@ class SgeExecutorTest extends Specification {
                 .stripIndent().leftTrim()
 
         when:
-        config.cpus = 1
+        config = task.config = new TaskConfig()
+        config.queue = 'my-queue'
+        config.name = 'task'
         then:
         executor.getHeaders(task) == '''
                 #$ -wd /abc
@@ -91,13 +93,14 @@ class SgeExecutorTest extends Specification {
                 #$ -V
                 #$ -notify
                 #$ -q my-queue
-                #$ -l slots=1
                 '''
                 .stripIndent().leftTrim()
 
 
         when:
-        config.cpus = 1
+        config = task.config = new TaskConfig()
+        config.queue = 'my-queue'
+        config.name = 'task'
         config.time = '10s '
         config.clusterOptions = '-hard -alpha -beta'
         then:
@@ -110,7 +113,6 @@ class SgeExecutorTest extends Specification {
                 #$ -V
                 #$ -notify
                 #$ -q my-queue
-                #$ -l slots=1
                 #$ -l h_rt=00:00:10
                 #$ -hard -alpha -beta
                 '''
@@ -119,7 +121,9 @@ class SgeExecutorTest extends Specification {
 
 
         when:
-        config.cpus = 1
+        config = task.config = new TaskConfig()
+        config.queue = 'my-queue'
+        config.name = 'task'
         config.time = '10m'
         config.memory = '1M'
         config.remove('clusterOptions')
@@ -133,7 +137,6 @@ class SgeExecutorTest extends Specification {
                 #$ -V
                 #$ -notify
                 #$ -q my-queue
-                #$ -l slots=1
                 #$ -l h_rt=00:10:00
                 #$ -l virtual_free=1M
                 '''
@@ -142,6 +145,9 @@ class SgeExecutorTest extends Specification {
 
 
         when:
+        config = task.config = new TaskConfig()
+        config.queue = 'my-queue'
+        config.name = 'task'
         config.cpus = 1
         config.penv = 'smp'
         config.time = '2 m'
@@ -163,6 +169,9 @@ class SgeExecutorTest extends Specification {
                 .stripIndent().leftTrim()
 
         when:
+        config = task.config = new TaskConfig()
+        config.queue = 'my-queue'
+        config.name = 'task'
         config.cpus = 2
         config.penv = 'mpi'
         config.time = '3 d'
@@ -184,6 +193,9 @@ class SgeExecutorTest extends Specification {
                 .stripIndent().leftTrim()
 
         when:
+        config = task.config = new TaskConfig()
+        config.queue = 'my-queue'
+        config.name = 'task'
         config.cpus = 4
         config.penv = 'orte'
         config.time = '1d3h'

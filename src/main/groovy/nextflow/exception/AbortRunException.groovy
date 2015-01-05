@@ -18,36 +18,19 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package test
+package nextflow.exception
 
-import nextflow.Session
-import nextflow.executor.NopeExecutor
-import nextflow.processor.TaskConfig
-import nextflow.processor.TaskProcessor
-import nextflow.script.BaseScript
-import nextflow.script.TaskBody
+import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
 
 /**
+ * Exception thrown when execution is aborted by a failing process
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class DummyProcessor extends TaskProcessor {
+@InheritConstructors
+@CompileStatic
+class AbortRunException extends RuntimeException {
 
-    DummyProcessor(Session session, BaseScript script, TaskConfig taskConfig) {
-        super(new NopeExecutor(), session, new DummyScript(), taskConfig, new TaskBody({}, '..', true))
-    }
-
-    @Override
-    protected void createOperator() {
-    }
-}
-
-
-
-class DummyScript extends BaseScript {
-    @Override
-    Object run() {
-        return null
-    }
 
 }

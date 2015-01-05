@@ -24,9 +24,10 @@ import java.nio.file.Paths
 
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskHandler
-import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskMonitor
+import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
+import nextflow.processor.TaskStatus
 import nextflow.util.Duration
 
 /**
@@ -54,14 +55,14 @@ class NopeExecutor extends Executor {
 class NopeTaskHandler extends TaskHandler {
 
     protected NopeTaskHandler(TaskRun task) {
-        super(task,null)
+        super(task)
     }
 
     @Override
     void submit() {
         log.info ">> launching nope process: ${task}"
         task.workDir = Paths.get('.').complete()
-        status = Status.SUBMITTED
+        status = TaskStatus.SUBMITTED
         task.stdout = task.script
         task.exitStatus = 0
     }
@@ -70,7 +71,7 @@ class NopeTaskHandler extends TaskHandler {
     boolean checkIfRunning() {
         log.debug "isRunning: $status"
         if( isSubmitted() ) {
-            status = Status.RUNNING
+            status = TaskStatus.RUNNING
             return true
         }
         return false
@@ -80,7 +81,7 @@ class NopeTaskHandler extends TaskHandler {
     boolean checkIfCompleted() {
         log.debug "isTerminated: $status"
         if( isRunning() ) {
-            status = Status.COMPLETED
+            status = TaskStatus.COMPLETED
             return true
         }
         false

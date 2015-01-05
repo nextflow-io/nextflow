@@ -60,12 +60,12 @@ class FastqSplitter extends AbstractTextSplitter {
 
 
     @Override
-    protected process( Reader targetObject, int index )  {
+    protected process( Reader targetObject )  {
 
         if( sourceFile )
             errorMessage += " for file: " + sourceFile
 
-        super.process( targetObject, index )
+        super.process( targetObject )
     }
 
     @Override

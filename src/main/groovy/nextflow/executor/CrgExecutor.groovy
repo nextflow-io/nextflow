@@ -37,9 +37,9 @@ class CrgExecutor extends SgeExecutor {
     @Override
     List<String> getDirectives(TaskRun task, List<String> result) {
 
-        if( taskConfig.cpus>1 && !taskConfig.penv ) {
+        if( task.config.cpus>1 && !task.config.penv ) {
             log.debug 'Parallel environment not specified -- Using default value: `smp`'
-            taskConfig.penv = 'smp'
+            task.config.penv = 'smp'
         }
 
         super.getDirectives(task, result)

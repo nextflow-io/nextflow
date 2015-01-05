@@ -19,24 +19,23 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
-import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
 import org.apache.commons.lang.StringUtils
-
 /**
  * Generic task processor executing a task through a grid facility
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 abstract class AbstractGridExecutor extends Executor {
 
     protected Duration queueInterval
@@ -79,7 +78,7 @@ abstract class AbstractGridExecutor extends Executor {
         // create the wrapper script
         bash.build()
 
-        return new GridTaskHandler(task, taskConfig, this)
+        return new GridTaskHandler(task, this)
     }
 
     /**
@@ -88,7 +87,33 @@ abstract class AbstractGridExecutor extends Executor {
      * @param task
      * @return A multi-line string containing the job directives
      */
-    String getHeaders(TaskRun task) { null }
+    String getHeaders( TaskRun task ) {
+
+        final token = getHeaderToken()
+        def result = new StringBuilder()
+        def header = new ArrayList(2)
+        def dir = getDirectives(task)
+        def len = dir.size()-1
+        for( int i=0; i<len; i+=2) {
+            def opt = dir[i]
+            def val = dir[i+1]
+            if( opt ) header.add(opt)
+            if( val ) header.add(wrapHeader(val))
+
+            if( header ) {
+                result << token << ' ' << header.join(' ') << '\n'
+            }
+
+            header.clear()
+        }
+
+        return result.toString()
+    }
+
+    /**
+     * @return String used to declare job directives in the job script wrapper
+     */
+    abstract protected String getHeaderToken()
 
     /**
      * @param task The current task object
@@ -130,7 +155,7 @@ abstract class AbstractGridExecutor extends Executor {
      * @return When {@code true} the launcher script is piped over the submit tool stdin stream,
      *  if {@code false} is specified as an argument on the command line
      */
-    boolean pipeLauncherScript() { false }
+    protected boolean pipeLauncherScript() { false }
 
     /**
      * Given the string returned the by grid submit command, extract the process handle i.e. the grid jobId
@@ -153,35 +178,6 @@ abstract class AbstractGridExecutor extends Executor {
      */
     protected abstract List<String> killTaskCommand(def jobId);
 
-    /**
-     * @return Parse the {@code clusterOptions} configuration option and return the entries as a list of values
-     */
-    final protected List<String> getClusterOptionsAsList() {
-
-        if ( !taskConfig.clusterOptions ) {
-            return null
-        }
-
-        if( taskConfig.clusterOptions instanceof Collection ) {
-            return new ArrayList<String>(taskConfig.clusterOptions as Collection)
-        }
-        else {
-            return CmdLineHelper.splitter( taskConfig.clusterOptions.toString() )
-        }
-    }
-
-    /**
-     * @return Parse the {@code clusterOptions} configuration option and return the entries as a string
-     */
-    final protected String getClusterOptionsAsString() {
-
-        if( !taskConfig.clusterOptions ) {
-            return null
-        }
-
-        def value = taskConfig.clusterOptions
-        value instanceof Collection ? value.join(' ') : value.toString()
-    }
 
     /**
      * Status as returned by the grid engine
@@ -191,9 +187,9 @@ abstract class AbstractGridExecutor extends Executor {
     /**
      * @return The status for all the scheduled and running jobs
      */
-    Map<?,QueueStatus> getQueueStatus() {
+    Map<?,QueueStatus> getQueueStatus(queue) {
 
-        List cmd = queueStatusCommand( taskConfig.queue )
+        List cmd = queueStatusCommand(queue)
         if( !cmd ) return null
 
         try {
@@ -250,10 +246,10 @@ abstract class AbstractGridExecutor extends Executor {
      * @return {@code true} if the job is in RUNNING or HOLD status, or even if it is temporarily unable
      *  to retrieve the job status for some
      */
-    public boolean checkActiveStatus( jobId ) {
+    public boolean checkActiveStatus( jobId, queue ) {
 
         // -- fetch the queue status
-        fQueueStatus = queueInterval.throttle(null) { getQueueStatus() }
+        fQueueStatus = (Map<Object,QueueStatus>)queueInterval.throttle(null) { getQueueStatus(queue) }
         if( fQueueStatus == null ) // no data is returned, so return true
             return true
 
@@ -263,6 +259,9 @@ abstract class AbstractGridExecutor extends Executor {
         return fQueueStatus[jobId] == QueueStatus.RUNNING || fQueueStatus[jobId] == QueueStatus.HOLD
 
     }
+
+    protected String wrapHeader( String str ) { str }
+
 
 }
 

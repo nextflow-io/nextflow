@@ -22,7 +22,6 @@ package nextflow.processor
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import nextflow.script.BaseScript
 import nextflow.script.TaskBody
 import nextflow.util.BlankSeparatedList
 import nextflow.util.Duration
@@ -32,43 +31,18 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class DelegateMapTest extends Specification {
-
-    def 'test undef'( ) {
-
-        setup:
-        def script = Mock(BaseScript)
-        def map = new DelegateMap(script, [:], false, 'hola')
-
-        when:
-        map.x = 1
-        then:
-        map.x == 1
-
-        when:
-        map.get('y')
-        then:
-        thrown(MissingPropertyException)
-
-        when:
-        def val = new DelegateMap(script,[:], true, 'hola').get('y')
-        then:
-        val == '$y'
-
-
-    }
-
+class TaskContextTest extends Specification {
 
     def testSaveAndReadContextMap () {
 
         setup:
-        def taskConfig = new TaskConfig([undef:false])
+        def taskConfig = new ProcessConfig([:])
         def file = Files.createTempFile('test.ctx',null)
         def processor = [:] as TaskProcessor
         processor.metaClass.getTaskConfig = { taskConfig }
         processor.metaClass.getTaskBody = { new TaskBody(null,'source',true) }
         def str = 'Hola'
-        def map = new DelegateMap(processor, [:])
+        def map = new TaskContext(processor, [:])
         map.alpha = 1
         map.beta = "${str}.txt"
         map.delta = new Duration('1day')
@@ -80,7 +54,7 @@ class DelegateMapTest extends Specification {
 
         when:
         map.save(file)
-        def result = DelegateMap.read(processor, file)
+        def result = TaskContext.read(processor, file)
 
         then:
         result.size() == 8
@@ -115,21 +89,17 @@ class DelegateMapTest extends Specification {
         script.setBinding(bind)
 
         def local = [p:3, q:4, path: Paths.get('some/path')]
-        def delegate = new DelegateMap( script, local, false, 'hola' )
+        def delegate = new TaskContext( script, local, 'hola' )
 
         when:
         def bytes = delegate.dehydrate()
-        def copy = DelegateMap.rehydrate(bytes)
+        def copy = TaskContext.rehydrate(bytes)
 
         then:
         delegate == copy
         delegate.getHolder() == copy.getHolder()
         copy.getHolder() == local
 
-
     }
-
-
-
 
 }

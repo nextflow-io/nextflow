@@ -23,8 +23,9 @@ import java.nio.file.Files
 
 import nextflow.fs.dx.api.DxApi
 import nextflow.processor.TaskConfig
-import nextflow.processor.TaskHandler
+import nextflow.processor.ProcessConfig
 import nextflow.processor.TaskRun
+import nextflow.processor.TaskStatus
 import nextflow.script.BaseScript
 import spock.lang.Specification
 /**
@@ -52,17 +53,14 @@ class DnaNexusExecutorTest extends Specification {
         given:
         def api = Mock(DxApi)
         def folder = Files.createTempDirectory('tst-path')
-        def task = Mock(TaskRun)
-        task.getWorkDir() >> folder
+        def task = new TaskRun(name: 'task1', workDir: folder, config: new TaskConfig(instanceType: 'dx_m1.super'))
         def exec = Mock(DnaNexusExecutor)
         def script = Mock(BaseScript)
 
         def params = [file1:'abc', file2: 'xxx']
         // note: the *instanceType* configured must used in the submit method
-        def config = new TaskConfig(script)
-        config.instanceType = 'dx_m1.super'
         // define the handler
-        def handler = new DxTaskHandler(task, config, exec, params, api);
+        def handler = new DxTaskHandler(task, exec, params, api);
 
         // constraints
         and:
@@ -89,8 +87,8 @@ class DnaNexusExecutorTest extends Specification {
         task.getWorkDir() >> folder
 
         def exec = Mock(DnaNexusExecutor)
-        def config = Mock(TaskConfig)
-        def handler = new DxTaskHandler(task, config, exec, null, api);
+        def config = Mock(ProcessConfig)
+        def handler = new DxTaskHandler(task, exec, null, api);
         handler.processJobId = 'job-123'
 
         and:
@@ -116,8 +114,8 @@ class DnaNexusExecutorTest extends Specification {
         task.getWorkDir() >> folder
 
         def exec = Mock(DnaNexusExecutor)
-        def config = Mock(TaskConfig)
-        def handler = new DxTaskHandler(task, config, exec, null, api);
+        def config = Mock(ProcessConfig)
+        def handler = new DxTaskHandler(task, exec, null, api);
         handler.processJobId = 'job-312'
 
         and:
@@ -142,13 +140,13 @@ class DnaNexusExecutorTest extends Specification {
         def task = Mock(TaskRun)
         task.getWorkDir() >> folder
 
-        def config = Mock(TaskConfig)
+        def config = Mock(ProcessConfig)
         def exec = Mock(DnaNexusExecutor)
-        def handler = new DxTaskHandler(task, config, exec, [:], api);
+        def handler = new DxTaskHandler(task, exec, [:], api);
         handler.metaClass.checkStatus = { return [state:'runnable'] }
         when:
         handler.processJobId = '123'
-        handler.status = TaskHandler.Status.SUBMITTED
+        handler.status = TaskStatus.SUBMITTED
         then:
         handler.checkIfRunning()
 
@@ -162,32 +160,30 @@ class DnaNexusExecutorTest extends Specification {
         def api = Mock(DxApi)
 
         def work = Files.createTempDirectory('testWorkDir')
-        def task = Mock(TaskRun)
-        task.getWorkDir() >> work
+        def task = new TaskRun(name: 'task1', workDir: work)
 
-        def config = Mock(TaskConfig)
         def exec = Mock(DnaNexusExecutor)
 
         when:
-        def handler = new DxTaskHandler(task, config, exec, [:], api);
+        def handler = new DxTaskHandler(task, exec, [:], api);
         handler.metaClass.checkStatus = { return [state:'running'] }
         handler.processJobId = '123'
-        handler.status = TaskHandler.Status.RUNNING
+        handler.status = TaskStatus.RUNNING
         then:
         !handler.checkIfCompleted()
-        handler.status == TaskHandler.Status.RUNNING
+        handler.status == TaskStatus.RUNNING
 
         when:
-        def task2 = new TaskRun()
+        def task2 = new TaskRun(name: 'task1')
         task2.workDir = Files.createTempDirectory('testHandler')
         task2.workDir.resolve(TaskRun.CMD_OUTFILE).text = 'Task says Hola'
-        handler = new DxTaskHandler(task2, config, exec, [:], api);
+        handler = new DxTaskHandler(task2, exec, [:], api);
         handler.metaClass.checkStatus = { return [state:'done', output:[exit_code:33]] }
         handler.processJobId = '123'
-        handler.status = TaskHandler.Status.RUNNING
+        handler.status = TaskStatus.RUNNING
         then:
         handler.checkIfCompleted()
-        handler.status == TaskHandler.Status.COMPLETED
+        handler.status == TaskStatus.COMPLETED
         task2.exitStatus == 33
         task2.stdout == 'Task says Hola'
 

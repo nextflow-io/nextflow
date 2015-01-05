@@ -21,11 +21,8 @@
 package nextflow.executor
 import java.nio.file.Path
 
-import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
-import nextflow.util.Duration
-
 /**
  * Processor for SLURM resource manager (DRAFT)
  *
@@ -35,7 +32,6 @@ import nextflow.util.Duration
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@InheritConstructors
 class SlurmExecutor extends AbstractGridExecutor {
 
     /**
@@ -51,26 +47,27 @@ class SlurmExecutor extends AbstractGridExecutor {
         result << '-J' << getJobNameFor(task)
         result << '-o' << '/dev/null'
 
-        if( taskConfig.cpus ) {
-            result << '-c' << taskConfig.cpus.toString()
+        if( task.config.cpus > 1 ) {
+            result << '-c' << task.config.cpus.toString()
         }
 
-        if( taskConfig.time ) {
-            result << '-t' << (taskConfig.time as Duration).format('HH:mm:ss')
+        if( task.config.time ) {
+            result << '-t' << task.config.getTime().format('HH:mm:ss')
         }
 
-        if( taskConfig.getMemory() ) {
-            result << '--mem' << taskConfig.getMemory().toMega().toString()
+        if( task.config.getMemory() ) {
+            result << '--mem' << task.config.getMemory().toMega().toString()
         }
 
         // -- at the end append the command script wrapped file name
-        if( taskConfig.clusterOptions ) {
-            result.addAll( getClusterOptionsAsList() )
+        if( task.config.clusterOptions ) {
+            result << task.config.clusterOptions.toString() << ''
         }
 
         return result
     }
 
+    String getHeaderToken() { '#SBATCH' }
 
     /**
      * The command line to submit this job
@@ -82,14 +79,7 @@ class SlurmExecutor extends AbstractGridExecutor {
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
 
-        final result = ['sbatch']
-
-        // -- adds the jobs directives to the command line
-        getDirectives(task, result)
-
-        // -- last entry to 'script' file name
-        // replace with the 'shell' attribute
-        result << scriptFile.getName()
+        ['sbatch', scriptFile.getName()]
 
     }
 
@@ -105,7 +95,7 @@ class SlurmExecutor extends AbstractGridExecutor {
         for( String line : text.readLines() ) {
             def m = pattern.matcher(line)
             if( m.matches() ) {
-                return m[0][1].toString()
+                return m.group(1).toString()
             }
         }
 

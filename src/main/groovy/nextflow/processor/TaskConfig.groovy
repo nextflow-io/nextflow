@@ -19,329 +19,148 @@
  */
 
 package nextflow.processor
+import java.nio.file.Path
+
+import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
-import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.executor.BashWrapperBuilder
-import nextflow.script.BaseScript
-import nextflow.script.EachInParam
-import nextflow.script.EnvInParam
-import nextflow.script.FileInParam
-import nextflow.script.FileOutParam
-import nextflow.script.FileSharedParam
-import nextflow.script.InParam
-import nextflow.script.InputsList
-import nextflow.script.OutParam
-import nextflow.script.OutputsList
-import nextflow.script.SetInParam
-import nextflow.script.SetOutParam
-import nextflow.script.SharedParam
-import nextflow.script.StdInParam
-import nextflow.script.StdOutParam
-import nextflow.script.ValueInParam
-import nextflow.script.ValueOutParam
-import nextflow.script.ValueSharedParam
+import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import nextflow.util.ReadOnlyMap
-
-import static nextflow.util.CacheHelper.HashMode
-
 /**
- * Holds the task configuration properties
+ * Task local configuration properties
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
+@CompileStatic
 class TaskConfig implements Map<String,Object> {
 
-    static final transient BOOL_YES = ['true','yes','on']
-
-    static final transient BOOL_NO = ['false','no','off']
-
+    /** The target map holding the values */
     @Delegate
-    protected final Map<String,Object> configProperties
+    final private Map<String,Object> target
 
-    private final BaseScript ownerScript
+    /** The context map against which dynamic properties are resolved */
+    private Map context
 
-    private boolean throwExceptionOnMissingProperty
+    private boolean dynamic
+
+    TaskConfig() {
+        target = new HashMap()
+    }
+
+    TaskConfig( Map<String,Object> entries ) {
+        assert entries != null
+        target = new HashMap<>()
+        putAll(entries)
+    }
+
+    TaskConfig setContext( Map value ) {
+        assert value != null
+        context = value
+        return this
+    }
+
+    private normalize( String key, value ) {
+        if( value instanceof Closure ) {
+            if( context )
+                return context.with((Closure)value)
+
+            try {
+                return (value as Closure).call()
+            }
+            catch( MissingPropertyException e ) {
+                throw new IllegalStateException("Directive `$key` doesn't support dynamic value")
+            }
+        }
+
+        return value
+    }
 
     /**
-     * Initialize the taskConfig object with the defaults values
+     * Override the get method in such a way that {@link Closure} values are resolved against
+     * the {@link #context} map
      *
-     * @param script The owner {@code BaseScript} configuration object
-     * @param important The values specified by this map won't be overridden by attributes
-     *      having the same name defined at the task level
+     * @param key The map entry key
+     * @return The associated value
      */
-    TaskConfig( BaseScript script, Map important = null ) {
-
-        ownerScript = script
-
-        // parse the attribute as List before adding it to the read-only list
-        if( important?.containsKey('module') ) {
-            important.module = parseModuleString(important.module)
-        }
-
-        configProperties = important ? new ReadOnlyMap(important) : new LinkedHashMap()
-        configProperties.with {
-            echo = false
-            undef = false
-            cacheable = true
-            shell = (BashWrapperBuilder.BASH)
-            validExitStatus = [0]
-            inputs = new InputsList()
-            outputs = new OutputsList()
-            maxRetries = 1
-            maxErrors = 3
-        }
-
-        configProperties.errorStrategy = ErrorStrategy.TERMINATE
+    @Memoized
+    Object get( key ) {
+        def value = target.get(key)
+        normalize(key as String, value)
     }
 
-    /* Only for testing purpose */
-    protected TaskConfig( Map delegate ) {
-        configProperties = delegate
-    }
-
-    protected TaskConfig( TaskConfig cfg ) {
-        configProperties = cfg
-        ownerScript = cfg.@ownerScript
-        log.trace "TaskConfig >> ownerScript: $ownerScript"
-    }
-
-    private boolean toBool( value )  {
-        if( value instanceof Boolean ) {
-            return value.booleanValue()
+    Object put( String key, Object value ) {
+        if( value instanceof Closure ) {
+            dynamic |= true
         }
+        else if( value instanceof List && key == 'module' ) {
+            // 'module' directive can be defined as a list of dynamic values
+            value.each { if (it instanceof Closure) dynamic |= true }
+        }
+        target.put(key, value)
+    }
 
-        return value != null && value.toString().toLowerCase() in BOOL_YES
+    @Override
+    void putAll( Map entries ) {
+        entries.each { k, v -> put(k as String, v) }
     }
 
     @PackageScope
-    TaskConfig throwExceptionOnMissingProperty( boolean value ) {
-        this.throwExceptionOnMissingProperty = value
-        return this
-    }
-
-
-    def methodMissing( String name, def args ) {
-
-        if( args instanceof Object[] ) {
-            if( args.size()==1 ) {
-                configProperties[ name ] = args[0]
-            }
-            else {
-                configProperties[ name ] = args.toList()
-            }
-        }
-        else {
-            configProperties[ name ] = args
-        }
-
-        return this
-    }
-
-    def getProperty( String name ) {
-
-        switch( name ) {
-            case 'cacheable':
-                return isCacheable()
-
-            case 'errorStrategy':
-                return getErrorStrategy()
-
-            case 'shell':
-                return getShell()
-
-            case 'time':
-                return getTime()
-
-            case 'memory':
-                return getMemory()
-
-            default:
-                if( configProperties.containsKey(name) )
-                    return configProperties.get(name)
-                else if( throwExceptionOnMissingProperty )
-                    throw new MissingPropertyException("Unknown variable '$name'", name, null)
-                else
-                    return null
-        }
-
-    }
+    boolean isDynamic() { dynamic }
 
     @PackageScope
-    BaseScript getOwnerScript() { ownerScript }
+    boolean hasContext() { context != null }
 
-    /**
-     * Type shortcut to {@code #configProperties.inputs}
-     */
-    InputsList getInputs() {
-        configProperties.inputs
-    }
+    def getProperty(String name) {
 
-    /**
-     * Type shortcut to {@code #configProperties.outputs}
-     */
-    OutputsList getOutputs() {
-        configProperties.outputs
-    }
+        def meta = metaClass.getMetaProperty(name)
+        if( meta )
+            return meta.getProperty(this)
 
-    List getSharedDefs () {
-        configProperties.inputs.findAll { it instanceof SharedParam }
+        return this.get(name)
     }
 
     boolean getEcho() {
-        configProperties.echo
+        def value = get('echo')
+        ProcessConfig.toBool(value)
     }
 
-    void setEcho( Object value ) {
-        configProperties.echo = toBool(value)
+    List<Integer> getValidExitStatus() {
+        def result = get('validExitStatus')
+        if( result instanceof List<Integer> )
+            return result as List<Integer>
+
+        if( result != null )
+            return [result as Integer]
+
+        return [0]
     }
-
-    TaskConfig echo( def value ) {
-        setEcho(value)
-        return this
-    }
-
-    void setUndef( def value ) {
-        configProperties.undef = toBool(value)
-    }
-
-    TaskConfig undef( def value ) {
-        configProperties.undef = toBool(value)
-        return this
-    }
-
-    boolean getUndef() {
-        configProperties.undef
-    }
-
-    /// input parameters
-
-    InParam _in_val( obj ) {
-        new ValueInParam(this).bind(obj)
-    }
-
-    InParam _in_file( obj ) {
-        new FileInParam(this).bind(obj)
-    }
-
-    InParam _in_each( obj ) {
-        new EachInParam(this).bind(obj)
-    }
-
-    InParam _in_set( Object... obj ) {
-        new SetInParam(this).bind(obj)
-    }
-
-    InParam _in_stdin( obj = null ) {
-        def result = new StdInParam(this)
-        if( obj ) result.bind(obj)
-        result
-    }
-
-    InParam _in_env( obj ) {
-        new EnvInParam(this).bind(obj)
-    }
-
-
-    /// output parameters
-
-    OutParam _out_val( Object obj ) {
-        new ValueOutParam(this).bind(obj)
-    }
-
-
-    OutParam _out_file( Object obj ) {
-        def result = obj == '-' ? new StdOutParam(this) : new FileOutParam(this)
-        result.bind(obj)
-    }
-
-    OutParam _out_set( Object... obj ) {
-        new SetOutParam(this) .bind(obj)
-    }
-
-    OutParam _out_stdout( obj = null ) {
-        def result = new StdOutParam(this).bind('-')
-        if( obj ) result.into(obj)
-        result
-    }
-
-    /// shared parameters
-
-    SharedParam _share_val( def obj )  {
-        new ValueSharedParam(this).bind(obj) as SharedParam
-    }
-
-    SharedParam _share_file( def obj )  {
-        new FileSharedParam(this).bind(obj) as SharedParam
-    }
-
-
-    /**
-     * Defines a special *dummy* input parameter, when no inputs are
-     * provided by the user for the current task
-     */
-    def void fakeInput() {
-        new ValueInParam(this).from(true).bind('$')
-    }
-
-    def void fakeOutput( target ) {
-        new StdOutParam(this).bind('-').into(target)
-    }
-
 
     ErrorStrategy getErrorStrategy() {
-        switch( configProperties.errorStrategy ) {
-            case CharSequence:
-                return configProperties.errorStrategy.toUpperCase() as ErrorStrategy
-            case ErrorStrategy:
-                return configProperties.errorStrategy
-            case null:
-                return null
-            default:
-                throw new IllegalArgumentException("Not a valid 'ErrorStrategy' value: ${configProperties.errorStrategy}")
-        }
-    }
+        final strategy = get('errorStrategy')
+        if( strategy instanceof CharSequence )
+            return strategy.toString().toUpperCase() as ErrorStrategy
 
+        if( strategy instanceof ErrorStrategy )
+            return (ErrorStrategy)strategy
 
-    /**
-     * The max memory allow to be used to the job
-     *
-     * @param value The maximum amount of memory expressed as string value,
-     *              accepted units are 'B', 'K', 'M', 'G', 'T', 'P'. So for example
-     *              {@code maxMemory '100M'}, {@code maxMemory '2G'}, etc.
-     */
-    @Deprecated
-    TaskConfig maxMemory( Object value ) {
-        log.warn("Directive 'maxMemory' has been deprecated. Use 'memory' instead.")
-        configProperties.memory = value
-        return this
-    }
+        if( strategy == null )
+            return null
 
-    /**
-     * The max duration time allowed for the job to be executed.
-     *
-     * @param value The max allowed time expressed as duration string, Accepted units are 'min', 'hour', 'day'.
-     *                  For example {@code maxDuration '30 min'}, {@code maxDuration '10 hour'}, {@code maxDuration '2 day'}
-     */
-    @Deprecated
-    TaskConfig maxDuration( Object value ) {
-        log.warn("Directive 'maxDuration' has been deprecated. Use 'time' instead.")
-        configProperties.time = value
-        return this
+        throw new IllegalArgumentException("Not a valid `ErrorStrategy` value: ${strategy}")
     }
 
 
     MemoryUnit getMemory() {
-        def value = configProperties.memory
+        def value = get('memory')
 
         if( !value )
             return null
 
         if( value instanceof MemoryUnit )
-            return value
+            return (MemoryUnit)value
 
         try {
             new MemoryUnit(value.toString().trim())
@@ -352,13 +171,16 @@ class TaskConfig implements Map<String,Object> {
     }
 
     Duration getTime() {
-        def value = configProperties.time
+        def value = get('time')
 
         if( !value )
             return null
 
         if( value instanceof Duration )
-            return value
+            return (Duration)value
+
+        if( value instanceof Number )
+            return new Duration(value as long)
 
         try {
             new Duration(value.toString().trim())
@@ -368,102 +190,86 @@ class TaskConfig implements Map<String,Object> {
         }
     }
 
-
-    TaskConfig validExitStatus( Object values ) {
-
-        if( values instanceof List ) {
-            configProperties.validExitStatus = values
-        }
-        else {
-            configProperties.validExitStatus = [values]
-        }
-
-        return this
-    }
-
-    List<Integer> getValidExitStatus() {
-        (List<Integer>)configProperties.validExitStatus
-    }
-
-    boolean isCacheable() {
-        def value = configProperties.cache
-        if( value == null )
-            return true
-
-        if( value instanceof Boolean )
-            return value
-
-        if( value instanceof String && value in BOOL_NO )
-            return false
-
-        return true
-    }
-
-    HashMode getHashMode() {
-        configProperties.cache == 'deep' ? HashMode.DEEP : HashMode.STANDARD
+    int getCpus() {
+        final value = get('cpus')
+        value ? value as int : 1  // note: always return at least 1 cpus
     }
 
     int getMaxRetries() {
-        configProperties.maxRetries ? configProperties.maxRetries as int : 0
+        def result = get('maxRetries')
+        result ? result as int : 0
     }
 
     int getMaxErrors() {
-        configProperties.maxErrors ? configProperties.maxErrors as int : 0
-    }
-
-    TaskConfig module( moduleName ) {
-        // when no name is provided, just exit
-        if( !moduleName )
-            return this
-
-        def list = parseModuleString(moduleName, configProperties.module)
-        configProperties.put('module', list)
-        return this
-    }
-
-    private List<String> parseModuleString( value, current = null) {
-
-        // if no modules list exist create it
-        List<String> copy
-
-        // normalize the current value to a list
-        // note: any value that is not a list is discarded
-        if( current instanceof List )
-            copy = new ArrayList<>(current)
-        else
-            copy = []
-
-        // parse the module list
-        if( value instanceof List )
-            copy.addAll(value)
-        else if( value instanceof String && value.contains(':'))
-            for( String it : value.split(':') ) { copy.add(it) }
-        else
-            copy.add( value.toString() )
-
-        return copy
+        def result = get('maxErrors')
+        result ? result as int : 0
     }
 
     List<String> getModule() {
-        def result = configProperties.module
-        if( result instanceof String ) {
-            result = configProperties.module = parseModuleString(result)
+        def value = get('module')
+        if( value instanceof String ) {
+            return ProcessConfig.parseModule(value)
         }
-        (List<String>) result
+
+        if( value instanceof List ) {
+            def result = []
+            value.each {
+                result = ProcessConfig.parseModule(normalize('module',it), result)
+            }
+            return result
+        }
+
+        if( value == null )
+            return []
+
+        throw new IllegalStateException("Not a valid `module` value: $value")
     }
 
     List<String> getShell() {
-        final value = configProperties.shell
+        final value = get('shell')
         if( !value )
             return BashWrapperBuilder.BASH
 
         if( value instanceof List )
-            return value
+            return (List)value
 
         if( value instanceof CharSequence )
             return [ value.toString() ]
 
-        throw new IllegalArgumentException("Not a valid 'shell' configuration value: ${value}")
+        throw new IllegalArgumentException("Not a valid `shell` configuration value: ${value}")
     }
 
+    Path getStoreDir() {
+        def path = get('storeDir')
+        if( !path )
+            return null
+
+        return (path as Path).complete()
+    }
+
+
+    /**
+     * @return Parse the {@code clusterOptions} configuration option and return the entries as a list of values
+     */
+    List<String> getClusterOptionsAsList() {
+
+        def opts = get('clusterOptions')
+        if ( !opts ) {
+            return Collections.emptyList()
+        }
+
+        if( opts instanceof Collection ) {
+            return new ArrayList<String>(opts)
+        }
+        else {
+            return CmdLineHelper.splitter( opts.toString() )
+        }
+    }
+
+    @Override
+    String toString() {
+        def result = []
+        keySet().each { key -> result << "$key: ${getProperty(key)}" }
+        result.join('; ')
+    }
 }

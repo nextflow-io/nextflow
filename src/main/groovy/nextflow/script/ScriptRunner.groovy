@@ -31,6 +31,7 @@ import nextflow.Session
 import nextflow.ast.NextflowDSL
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
+import nextflow.exception.AbortRunException
 import nextflow.file.FileHelper
 import nextflow.util.ConfigHelper
 import org.apache.commons.lang.StringUtils
@@ -95,12 +96,12 @@ class ScriptRunner {
 
     def ScriptRunner( Map config ) {
         session = new Session(config)
-        bindings = new ScriptBinding(session)
+        bindings = new ScriptBinding(config)
     }
 
     def ScriptRunner( Session session ) {
         this.session = session
-        bindings = new ScriptBinding(session)
+        this.bindings = new ScriptBinding(session.config)
     }
 
     def ScriptRunner setScript( Path file ) {
@@ -160,6 +161,10 @@ class ScriptRunner {
         }
         finally {
             terminate()
+        }
+
+        if( session.aborted ) {
+            throw new AbortRunException()
         }
 
         return result

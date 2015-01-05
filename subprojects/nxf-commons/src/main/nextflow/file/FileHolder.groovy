@@ -21,28 +21,29 @@
 package nextflow.file
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.transform.ToString
-
 /**
  * Implements a special {@code Path} used to stage files in the work area
  */
 @ToString(includePackage = false, includeNames = true)
 @EqualsAndHashCode
+@CompileStatic
 class FileHolder  {
 
     final def sourceObj
 
     final Path storePath
 
-    final Path stagePath
+    final String stageName
 
     FileHolder( Path inputFile ) {
         assert inputFile
         this.sourceObj = inputFile
         this.storePath = inputFile
-        this.stagePath = inputFile.getFileName()
+        this.stageName = inputFile.getFileName().toString()
     }
 
     FileHolder( def origin, Path path ) {
@@ -51,13 +52,13 @@ class FileHolder  {
 
         this.sourceObj = origin
         this.storePath = path
-        this.stagePath = path.getFileName()
+        this.stageName = path.getFileName().toString()
     }
 
     protected FileHolder( def source, Path store, def stageName ) {
         this.sourceObj = source
         this.storePath = store
-        this.stagePath = stageName instanceof Path ? (Path)stageName : FileHelper.asPath(stageName.toString())
+        this.stageName = stageName.toString()
     }
 
     FileHolder withName( def stageName )  {
@@ -66,7 +67,7 @@ class FileHolder  {
 
     @PackageScope
     static FileHolder get( def path, def name = null ) {
-        Path storePath = path instanceof Path ? path : FileHelper.asPath(path.toString())
+        Path storePath = path as Path
         def target = name ? name : storePath.getFileName()
         new FileHolder( path, storePath, target )
     }

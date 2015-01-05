@@ -20,6 +20,7 @@
 
 package nextflow.file
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -298,7 +299,56 @@ class FileHelperTest extends Specification {
         cleanup:
         folder?.deleteDir()
 
+    }
 
+    def testVisitFiles2() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        folder.resolve('file1.txt').text = 'file 1'
+        folder.resolve('file2.fa').text = 'file 2'
+        folder.resolve('dir1').mkdir()
+        folder.resolve('dir1').resolve('file3.txt').text = 'file 3'
+        folder.resolve('dir1').resolve('dir2').mkdirs()
+        folder.resolve('dir1').resolve('dir2').resolve('file4.fa').text = 'file '
+        Files.createSymbolicLink( folder.resolve('dir_link'), folder.resolve('dir1') )
+
+        when:
+        def result = []
+        FileHelper.visitFiles(folder, '**.fa', relative: true) { result << it.toString() }
+        then:
+        result.sort() == ['dir1/dir2/file4.fa', 'dir_link/dir2/file4.fa', 'file2.fa']
+
+        when:
+        result = []
+        FileHelper.visitFiles(folder, '**.fa', relative: true, followLinks: false) { result << it.toString() }
+        then:
+        result.sort() == ['dir1/dir2/file4.fa', 'file2.fa']
+
+        when:
+        result = []
+        FileHelper.visitFiles(folder, '**.fa', relative: true, maxDepth: 1) { result << it.toString() }
+        then:
+        result.sort() == ['file2.fa']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def testGetMAxDepth() {
+        expect:
+        FileHelper.getMaxDepth(1,null) == 1
+        FileHelper.getMaxDepth(10,null) == 10
+        FileHelper.getMaxDepth(0,'**') == 0
+        FileHelper.getMaxDepth(1,'**') == 1
+        FileHelper.getMaxDepth(null,null) == 0
+        FileHelper.getMaxDepth(null,'abc') == 0
+        FileHelper.getMaxDepth(null,'a/b') == 1
+        FileHelper.getMaxDepth(null,'a/b/c') == 2
+        FileHelper.getMaxDepth(null,'a/b/c/d') == 3
+        FileHelper.getMaxDepth(null,'/a/b/c/d') == 3
+        FileHelper.getMaxDepth(null,'a/**') == Integer.MAX_VALUE
     }
 
     def testAwsCredentials() {
@@ -315,5 +365,71 @@ class FileHelperTest extends Specification {
 
     }
 
+
+    def testGetPathAndPattern () {
+
+        expect:
+        FileHelper.getFolderAndPattern( '/some/file/name.txt' ) == ['/some/file/', 'name.txt', null]
+        FileHelper.getFolderAndPattern( '/some/file/na*.txt' ) == ['/some/file/', 'na*.txt', null]
+        FileHelper.getFolderAndPattern( '/some/file/na??.txt' ) == ['/some/file/', 'na??.txt', null]
+        FileHelper.getFolderAndPattern( '/some/file/*.txt' ) == ['/some/file/', '*.txt', null]
+        FileHelper.getFolderAndPattern( '/some/file/?.txt' ) == ['/some/file/', '?.txt', null]
+        FileHelper.getFolderAndPattern( '/some/file/*' ) == ['/some/file/', '*', null]
+        FileHelper.getFolderAndPattern( '/some/file/' ) == ['/some/file/', '', null]
+        FileHelper.getFolderAndPattern( 'path/filename.txt' ) == ['path/', 'filename.txt', null]
+        FileHelper.getFolderAndPattern( 'filename.txt' ) == ['./', 'filename.txt', null]
+        FileHelper.getFolderAndPattern( './file.txt' ) == ['./', 'file.txt', null]
+
+        FileHelper.getFolderAndPattern( '/some/file/**/*.txt' ) == ['/some/file/', '**/*.txt', null]
+
+        FileHelper.getFolderAndPattern( 'dxfs:///some/file/**/*.txt' ) == ['/some/file/', '**/*.txt', 'dxfs']
+        FileHelper.getFolderAndPattern( 'dxfs://some/file/**/*.txt' ) == ['some/file/', '**/*.txt', 'dxfs']
+        FileHelper.getFolderAndPattern( 'dxfs://*.txt' ) == ['./', '*.txt', 'dxfs']
+        FileHelper.getFolderAndPattern( 'dxfs:///*.txt' ) == ['/', '*.txt', 'dxfs']
+        FileHelper.getFolderAndPattern( 'dxfs:///**/*.txt' ) == ['/', '**/*.txt', 'dxfs']
+
+        FileHelper.getFolderAndPattern( 'file{a,b}') == ['./', 'file{a,b}', null]
+        FileHelper.getFolderAndPattern( 'test/data/file{a,b}') == ['test/data/', 'file{a,b}', null]
+        FileHelper.getFolderAndPattern( 'test/{file1,file2}') == ['test/', '{file1,file2}', null]
+        FileHelper.getFolderAndPattern( '{file1,file2}') == ['./', '{file1,file2}', null]
+        FileHelper.getFolderAndPattern( '{test/file1,data/file2}') == ['./', '{test/file1,data/file2}', null]
+        FileHelper.getFolderAndPattern( 'data/{p/file1,q/file2}') == ['data/', '{p/file1,q/file2}', null]
+    }
+
+    def testNoSuchFile() {
+
+        when:
+        FileHelper.visitFiles(Paths.get('/some/missing/path'),'*', { return it })
+        then:
+        thrown(NoSuchFileException)
+
+    }
+
+    def 'test isGlobPattern' () {
+
+        expect:
+        FileHelper.isGlobPattern(pattern) == result
+
+        where:
+        pattern     | result
+        'hola'      | false
+        '1-2-3'     | false
+        'hello.txt' | false
+        'hello{x'   | false
+        'hello[x'   | false
+        'hello(a)'  | false
+        'some/path' | false
+        '*'         | true
+        'hola*'     | true
+        'hola?'     | true
+        '?'         | true
+        'hola[a]'   | true
+        'hola[a-z]' | true
+        'hola{a,b}' | true
+        'hola{}'    | false
+        'hola{a}'   | false
+        'hola[]'    | false
+
+    }
 
 }

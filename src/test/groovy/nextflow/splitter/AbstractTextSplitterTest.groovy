@@ -42,19 +42,19 @@ class AbstractTextSplitterTest extends Specification {
 
         when:
         splitter = [:] as AbstractTextSplitter
-        splitter.options(file: folder)
+        splitter.options(file: folder, by: 2)
         then:
         splitter.getCollectorBaseFile() == folder.resolve('chunk')
 
         when:
         splitter = [:] as AbstractTextSplitter
-        splitter.options(file: Paths.get('/some/file.txt'))
+        splitter.options(file: Paths.get('/some/file.txt'), by: 2)
         then:
         splitter.getCollectorBaseFile() == Paths.get('/some/file.txt')
 
         when:
         splitter = [:] as AbstractTextSplitter
-        splitter.options(file: true)
+        splitter.options(file: true, by: 2)
         result = splitter.getCollectorBaseFile()
         then:
         result.name == 'chunk'
@@ -62,7 +62,7 @@ class AbstractTextSplitterTest extends Specification {
 
         when:
         splitter = [:] as AbstractTextSplitter
-        splitter.options(file: 'chunk_name')
+        splitter.options(file: 'chunk_name', by:2)
         result = splitter.getCollectorBaseFile()
         then:
         result.name == 'chunk_name'
@@ -72,7 +72,7 @@ class AbstractTextSplitterTest extends Specification {
         when:
         splitter = [:] as AbstractTextSplitter
         splitter.sourceFile = Paths.get('/some/file.txt')
-        splitter.options(file: true)
+        splitter.options(file: true, by: 2)
         result = splitter.getCollectorBaseFile()
         then:
         result.name == 'file.txt'
@@ -81,7 +81,7 @@ class AbstractTextSplitterTest extends Specification {
         when:
         splitter = [:] as AbstractTextSplitter
         splitter.sourceFile = Paths.get('/some/file.fasta.gz')
-        splitter.options(file: true)
+        splitter.options(file: true, by: 2)
         result = splitter.getCollectorBaseFile()
         then:
         result.name == 'file.fasta'
@@ -89,11 +89,20 @@ class AbstractTextSplitterTest extends Specification {
 
         when:
         splitter = [:] as AbstractTextSplitter
-        splitter.sourceFile = Paths.get('/some/file.fasta.gz')
-        splitter.options(file: 'my_file_name')
+        splitter.sourceFile = Paths.get('/some/file.fa.gz')
+        splitter.options(file: 'my_file_name', by: 2)
         result = splitter.getCollectorBaseFile()
         then:
         result.name == 'my_file_name'
+        result.toString().startsWith( folder.toString() )
+
+        when:
+        splitter = [:] as AbstractTextSplitter
+        splitter.sourceFile = Paths.get('/some/file.fa.gz')
+        splitter.options(file: folder, by: 2)
+        result = splitter.getCollectorBaseFile()
+        then:
+        result.name == 'file.fa'
         result.toString().startsWith( folder.toString() )
 
     }

@@ -21,23 +21,21 @@
 package nextflow.processor
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.executor.BscExecutor
 import nextflow.executor.CrgExecutor
 import nextflow.executor.DrmaaExecutor
 import nextflow.executor.Executor
 import nextflow.executor.LocalExecutor
 import nextflow.executor.LsfExecutor
 import nextflow.executor.NopeExecutor
+import nextflow.executor.PbsExecutor
 import nextflow.executor.ServiceName
 import nextflow.executor.SgeExecutor
 import nextflow.executor.SlurmExecutor
 import nextflow.executor.SupportedScriptTypes
-import nextflow.executor.PbsExecutor
 import nextflow.script.BaseScript
 import nextflow.script.ScriptType
 import nextflow.script.TaskBody
 import nextflow.util.ServiceDiscover
-
 /**
  *  Factory class for {@TaskProcessor} instances
  *
@@ -59,7 +57,7 @@ class ProcessFactory {
             'drmaa': DrmaaExecutor,
             'slurm': SlurmExecutor,
             'crg': CrgExecutor,
-            'bsc': BscExecutor
+            'bsc': LsfExecutor
     ]
 
     private final Session session
@@ -176,7 +174,7 @@ class ProcessFactory {
         }
 
         // -- the config object
-        def taskConfig = new TaskConfig(owner, importantAttributes)
+        def taskConfig = new ProcessConfig(owner, importantAttributes)
 
         // -- set 'default' properties defined in the configuration file in the 'process' section
         if( config.process instanceof Map ) {
@@ -195,11 +193,6 @@ class ProcessFactory {
          */
 
         options?.each { String key, value -> taskConfig.setProperty(key,value)}
-
-        // -- set the task name in the config object
-        if( name ) {
-            taskConfig.name = name
-        }
 
         // Invoke the code block, which will return the script closure to the executed
         // As side effect will set all the properties declaration in the 'taskConfig' object
@@ -225,13 +218,12 @@ class ProcessFactory {
 
         def execObj = execClass.newInstance()
         // inject the task configuration into the executor instance
-        execObj.taskConfig = taskConfig
         execObj.session = session
         execObj.name = execName
         execObj.init()
 
         // create processor class
-        def result = ParallelTaskProcessor.class.newInstance( execObj, session, owner, taskConfig, script )
+        def result = ParallelTaskProcessor.class.newInstance( name, execObj, session, owner, taskConfig, script )
         return result
 
     }
@@ -241,7 +233,7 @@ class ProcessFactory {
      *
      * @param taskConfig
      */
-    private getExecutorName(Map taskConfig) {
+    private getExecutorName(ProcessConfig taskConfig) {
         log.trace ">> taskConfig $taskConfig"
 
         // create the processor object

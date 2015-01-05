@@ -13,7 +13,7 @@ import groovy.util.logging.Slf4j
 class BytesSplitter extends AbstractBinarySplitter {
 
     @Override
-    def process( InputStream targetObject, int index ) {
+    def process( InputStream targetObject) {
         assert targetObject != null
 
         def result = null
@@ -29,7 +29,7 @@ class BytesSplitter extends AbstractBinarySplitter {
 
                 if ( ++c == count ) {
                     c = 0
-                    result = invokeEachClosure(closure, buffer, index++ )
+                    result = invokeEachClosure(closure, buffer)
                     buffer = new byte[count]
                 }
 
@@ -56,7 +56,7 @@ class BytesSplitter extends AbstractBinarySplitter {
                 buffer = copy
             }
 
-            result = invokeEachClosure(closure, buffer, index++ )
+            result = invokeEachClosure(closure, buffer)
         }
 
         return result

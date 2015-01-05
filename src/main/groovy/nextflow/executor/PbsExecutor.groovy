@@ -19,22 +19,17 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Path
 
-import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
-import nextflow.util.Duration
-
 /**
  * Implements a executor for PBS/Torque cluster
  *
  * See http://www.pbsworks.com
  */
 @Slf4j
-@InheritConstructors
 class PbsExecutor extends AbstractGridExecutor {
 
     /**
@@ -51,31 +46,31 @@ class PbsExecutor extends AbstractGridExecutor {
         result << '-N' << getJobNameFor(task)
         result << '-o' << '/dev/null'
         result << '-e' << '/dev/null'
-        result << '-V'
+        result << '-V' << ''
 
         // the requested queue name
-        if( taskConfig.queue ) {
-            result << '-q'  << (String)taskConfig.queue
+        if( task.config.queue ) {
+            result << '-q'  << (String)task.config.queue
         }
 
-        if( taskConfig.cpus ) {
-            result << '-l' << "nodes=1:ppn=${taskConfig.cpus}"
+        if( task.config.cpus > 1 ) {
+            result << '-l' << "nodes=1:ppn=${task.config.cpus}"
         }
 
         // max task duration
-        if( taskConfig.time ) {
-            final duration = taskConfig.time as Duration
+        if( task.config.time ) {
+            final duration = task.config.getTime()
             result << "-l" << "walltime=${duration.format('HH:mm:ss')}"
         }
 
         // task max memory
-        if( taskConfig.memory ) {
-            result << "-l" << "mem=${taskConfig.memory.toString().replaceAll(/[\s]/,'').toLowerCase()}"
+        if( task.config.memory ) {
+            result << "-l" << "mem=${task.config.memory.toString().replaceAll(/[\s]/,'').toLowerCase()}"
         }
 
         // -- at the end append the command script wrapped file name
-        if( taskConfig.clusterOptions ) {
-            result.addAll( getClusterOptionsAsList() )
+        if( task.config.clusterOptions ) {
+            result << task.config.clusterOptions.toString() << ''
         }
 
         return result
@@ -89,18 +84,10 @@ class PbsExecutor extends AbstractGridExecutor {
      * @return A list representing the submit command line
      */
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
-
-        final result = [ 'qsub' ]
-
-        // -- adds the jobs directives to the command line
-        getDirectives(task,result)
-
-        // -- last entry to 'script' file name
-        result << scriptFile.getName()
-
-        return result
+        [ 'qsub', scriptFile.getName() ]
     }
 
+    protected String getHeaderToken() { '#PBS' }
 
     /**
      * Parse the string returned by the {@code qsub} command and extract the job ID string

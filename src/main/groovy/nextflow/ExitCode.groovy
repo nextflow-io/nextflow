@@ -29,21 +29,13 @@ interface ExitCode {
 
     static final short OK = 0
 
-    static final short MISSING_SCRIPT_FILE = 101
+    static final short RUNTIME_ERROR = 101
 
     static final short INVALID_COMMAND_LINE_PARAMETER = 102
 
-    static final short SESSION_ABORTED = 103
-
-    static final short MISSING_UNIQUE_ID = 104
-
-    static final short MISSING_PROPERTY = 105
-
     static final short INVALID_CONFIG = 106
 
-    static final short DAEMON_NOT_FOUND = 107
-
-    static final short COMMAND_RUNTIME_ERROR = 108
+    static final short COMMAND_ERROR = 108
 
     static final short COMPILATION_ERROR = 109
 

@@ -3,6 +3,7 @@ import java.nio.file.Files
 import java.util.zip.GZIPOutputStream
 
 import nextflow.Channel
+import nextflow.Session
 import spock.lang.Specification
 import test.TestHelper
 /**
@@ -161,6 +162,112 @@ class TextSplitterTest extends Specification {
         chunks[0] == folder.resolve('chunk.1')
         chunks[1] == folder.resolve('chunk.2')
         chunks[2] == folder.resolve('chunk.3')
+
+    }
+
+    def testSplitFileToFiles() {
+
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def source = folder.resolve('my_file.txt')
+        source.text = '''\
+                    line1
+                    line2
+                    line3
+                    line4
+                    line5
+                    line6
+                    line7
+                    '''.stripIndent()
+
+        when:
+        def chunks = new TextSplitter().options(by:3, file: folder).target(source).list()
+        then:
+        chunks.size() == 3
+        chunks[0].text == '''line1\nline2\nline3\n'''
+        chunks[1].text == '''line4\nline5\nline6\n'''
+        chunks[2].text == '''line7\n'''
+
+        chunks[0] == folder.resolve('my_file.1.txt')
+        chunks[1] == folder.resolve('my_file.2.txt')
+        chunks[2] == folder.resolve('my_file.3.txt')
+
+    }
+
+    def testSplitTextTuples() {
+
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def file = folder.resolve('lines.txt')
+        file.text = '''\
+        line1
+        line2
+        line3
+        line4
+        '''.stripIndent()
+
+        when:
+        def chunks = new TextSplitter().target([file, file.name]).list()
+        then:
+        chunks.size() == 4
+        chunks[0] == ['line1\n', 'lines.txt']
+        chunks[1] == ['line2\n', 'lines.txt']
+        chunks[2] == ['line3\n', 'lines.txt']
+        chunks[3] == ['line4\n', 'lines.txt']
+
+    }
+
+    def testSplitTextTuplesWithElement() {
+
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def file = folder.resolve('lines.txt')
+        file.text = '''\
+        line1
+        line2
+        line3
+        line4
+        '''.stripIndent()
+
+        when:
+        def chunks = new TextSplitter().target([1, file.name, file]).options(elem:2).list()
+        then:
+        chunks.size() == 4
+        chunks[0] == [1, 'lines.txt', 'line1\n']
+        chunks[1] == [1, 'lines.txt', 'line2\n']
+        chunks[2] == [1, 'lines.txt', 'line3\n']
+        chunks[3] == [1, 'lines.txt', 'line4\n']
+
+    }
+
+    def testSplitTupleWithFileToFileChunks() {
+
+        given:
+        def folder = TestHelper.createInMemTempDir()
+
+        def session = new Session()
+        session.workDir = folder.resolve('work')
+
+        def file = folder.resolve('lines.txt')
+        file.text = '''\
+        line1
+        line2
+        line3
+        line4
+        '''.stripIndent()
+
+        when:
+        def chunks = new TextSplitter().target([1, file]).options(elem:1,  by:2, file:true).list()
+        then:
+        chunks.size() == 2
+        chunks[0][0] == 1
+        chunks[1][0] == 1
+
+        chunks[0][1].name == 'lines.1.txt'
+        chunks[1][1].name == 'lines.2.txt'
+
+        chunks[0][1].text == 'line1\nline2\n'
+        chunks[1][1].text == 'line3\nline4\n'
 
     }
 

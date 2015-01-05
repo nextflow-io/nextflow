@@ -18,16 +18,36 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.processor
+package nextflow.ui.console;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.CoreConstants;
+import ch.qos.logback.core.LayoutBase;
 
 /**
- * Task local configuration properties
+ * Simplified logger layout used to output in the console window area
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class LocalConfig implements Map {
+public class SimpleConsoleLayout extends LayoutBase<ILoggingEvent> {
 
-    /** The target map holding the values */
-    @Delegate
-    private Map target = new LinkedHashMap()
+    @Override
+    public String doLayout(ILoggingEvent event) {
 
+        StringBuilder buffer = new StringBuilder(128);
+        if( event.getLevel() == Level.INFO ) {
+            buffer .append(event.getFormattedMessage()) .append(CoreConstants.LINE_SEPARATOR);
+        }
+
+        else {
+            buffer
+                .append( event.getLevel().toString() ) .append(": ")
+                .append(event.getFormattedMessage())
+                .append(CoreConstants.LINE_SEPARATOR);
+        }
+
+        return buffer.toString();
+
+    }
 }

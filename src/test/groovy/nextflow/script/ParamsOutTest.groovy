@@ -159,37 +159,37 @@ class ParamsOutTest extends Specification {
         out1.getFilePatterns(ctx) == ['hola_name']
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.channel1
-        out1.isParametric()
+        out1.isDynamic()
 
         out2.name == null
         out2.getFilePatterns(ctx) == ['hola_99.fa']
         out2.outChannel instanceof DataflowQueue
         out2.outChannel == binding.channel2
-        out2.isParametric()
+        out2.isDynamic()
 
         out3.name == 'simple.txt'
         out3.getFilePatterns(ctx) == ['simple.txt']
         out3.outChannel instanceof DataflowQueue
         out3.outChannel == binding.channel3
-        !out3.isParametric()
+        !out3.isDynamic()
 
         out4.name == null
         out4.getFilePatterns(ctx) == ['script_file.txt','hola.fa']
         out4.outChannel instanceof DataflowQueue
         out4.outChannel == binding.channel4
-        out4.isParametric()
+        out4.isDynamic()
 
         out5.outChannel instanceof DataflowQueue
         out5.outChannel == binding.channel5
         out5.inner[0] instanceof FileOutParam
         (out5.inner[0] as FileOutParam) .getFilePatterns(ctx) == ['script_file.txt','hola.fa']
-        (out5.inner[0] as FileOutParam) .isParametric()
+        (out5.inner[0] as FileOutParam) .isDynamic()
 
         out6.outChannel instanceof DataflowQueue
         out6.outChannel == binding.channel6
         out6.inner[0] instanceof FileOutParam
         (out6.inner[0] as FileOutParam) .getFilePatterns(ctx) == ['script_file.txt','hola.fa']
-        (out6.inner[0] as FileOutParam) .isParametric()
+        (out6.inner[0] as FileOutParam) .isDynamic()
 
     }
 
@@ -209,9 +209,8 @@ class ParamsOutTest extends Specification {
             }
             '''
 
-        def binding = [:]
+        def binding = [ x: 'hola', y:'hola_2', z: 'hola_z' ]
         TaskProcessor process = parse(text, binding).run()
-        def ctx = [ x: 'hola', y:'hola_2', z: 'hola_z' ]
 
         when:
         FileOutParam out1 = process.taskConfig.getOutputs().get(0)
@@ -222,21 +221,21 @@ class ParamsOutTest extends Specification {
 
         then:
         out1.name == 'x'
-        out1.getFilePatterns(ctx) == ['hola']
+        out1.getFilePatterns(binding) == ['hola']
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.x
 
         out2.name == null
-        out2.getFilePatterns(ctx) == ['hola_2']
+        out2.getFilePatterns(binding) == ['hola_2']
         out2.outChannel instanceof DataflowQueue
         out2.outChannel == binding.q
 
         out3.inner[0] instanceof FileOutParam
         (out3.inner[0] as FileOutParam).name == 'z'
-        (out3.inner[0] as FileOutParam).getFilePatterns(ctx) == ['hola_z']
+        (out3.inner[0] as FileOutParam).getFilePatterns(binding) == ['hola_z']
 
         out4.name == 'u'
-        out4.getFilePatterns(ctx) == ['u']
+        out4.getFilePatterns(binding) == ['u']
         out4.outChannel instanceof DataflowQueue
         out4.outChannel == binding.u
     }
@@ -264,10 +263,105 @@ class ParamsOutTest extends Specification {
         then:
         thrown(IllegalArgumentException)
 
+    }
 
+    def testFileOutWithClosure() {
+
+        setup:
+        def text = '''
+
+            process hola {
+              output:
+              file { "${x}_name" } into channel1
+              file { "${params.fileName}_${y}.fa" } into channel2
+              set file({ "${z}.txt" }) into channel3
+
+              return ''
+            }
+            '''
+
+        def binding = [x: 'hola', y:99, z:'script_file', params: [fileName: 'hello']]
+        TaskProcessor process = parse(text, binding).run()
+
+        when:
+        FileOutParam out1 = process.taskConfig.getOutputs().get(0)
+        FileOutParam out2 = process.taskConfig.getOutputs().get(1)
+        SetOutParam out3 = process.taskConfig.getOutputs().get(2)
+
+        then:
+        out1.name == null
+        out1.getFilePatterns(binding) == ['hola_name']
+        out1.outChannel instanceof DataflowQueue
+        out1.outChannel == binding.channel1
+        out1.isDynamic()
+
+        out2.name == null
+        out2.getFilePatterns(binding) == ['hello_99.fa']
+        out2.outChannel instanceof DataflowQueue
+        out2.outChannel == binding.channel2
+        out2.isDynamic()
+
+        out3.outChannel instanceof DataflowQueue
+        out3.outChannel == binding.channel3
+        out3.inner[0] instanceof FileOutParam
+        (out3.inner[0] as FileOutParam) .getFilePatterns(binding) == ['script_file.txt']
+        (out3.inner[0] as FileOutParam) .isDynamic()
 
     }
 
+    def testFileOutWithParams() {
+
+        setup:
+        def text = '''
+
+            process hola {
+              output:
+              file x into ch
+
+              file x maxDepth 5 into ch
+              file x hidden true into ch
+              file x followLinks false into ch
+              file x type 'file' into ch
+              file x separatorChar '#' into ch
+
+              file x hidden false into ch
+              file x followLinks true into ch
+              file x type 'dir' into ch
+
+              return ''
+            }
+            '''
+
+        TaskProcessor process = parse(text, [:]).run()
+
+        when:
+        FileOutParam out0 = process.taskConfig.getOutputs().get(0)
+        FileOutParam out1 = process.taskConfig.getOutputs().get(1)
+        FileOutParam out2 = process.taskConfig.getOutputs().get(2)
+        FileOutParam out3 = process.taskConfig.getOutputs().get(3)
+        FileOutParam out4 = process.taskConfig.getOutputs().get(4)
+        FileOutParam out5 = process.taskConfig.getOutputs().get(5)
+        FileOutParam out6 = process.taskConfig.getOutputs().get(6)
+        FileOutParam out7 = process.taskConfig.getOutputs().get(7)
+        FileOutParam out8 = process.taskConfig.getOutputs().get(8)
+
+        then:
+        out0.maxDepth == null
+        !out0.hidden
+        out0.followLinks
+        out0.type == null
+        out0.separatorChar == ':'
+
+        out1.maxDepth == 5
+        out2.hidden
+        !out3.followLinks
+        out4.type == 'file'
+        out5.separatorChar == '#'
+        !out6.hidden
+        out7.followLinks
+        out8.type == 'dir'
+
+    }
 
 
     def testSetOutParams() {

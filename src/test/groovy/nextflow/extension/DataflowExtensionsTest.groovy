@@ -1132,6 +1132,47 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    def testPhaseWithRemainder() {
+
+        def ch1
+        def ch2
+        def result
+
+        when:
+        ch1 = Channel.from( 1,2,3 )
+        ch2 = Channel.from( 1,0,0,2,7,8,9,3 )
+        result = ch1.phase(ch2, remainder: true)
+
+        then:
+        result.val == [1,1]
+        result.val == [2,2]
+        result.val == [3,3]
+        result.val == [null,0]
+        result.val == [null,0]
+        result.val == [null,7]
+        result.val == [null,8]
+        result.val == [null,9]
+        result.val == Channel.STOP
+
+
+        when:
+        ch1 = Channel.from( 1,0,0,2,7,8,9,3 )
+        ch2 = Channel.from( 1,2,3 )
+        result = ch1.phase(ch2, remainder: true)
+
+        then:
+        result.val == [1,1]
+        result.val == [2,2]
+        result.val == [3,3]
+        result.val == [0,null]
+        result.val == [0,null]
+        result.val == [7,null]
+        result.val == [8,null]
+        result.val == [9,null]
+        result.val == Channel.STOP
+    }
+
+
     def testCross() {
 
         setup:
@@ -1190,7 +1231,7 @@ class DataflowExtensionsTest extends Specification {
     def testSplitFasta() {
 
         setup:
-        def fasta = """\
+        def fasta1 = """\
                 >1aboA
                 NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
                 NYITPVN
@@ -1204,7 +1245,7 @@ class DataflowExtensionsTest extends Specification {
                 """.stripIndent()
 
         when:
-        def records = Channel.from(fasta).splitFasta()
+        def records = Channel.from(fasta1).splitFasta()
         then:
         records.val == '>1aboA\nNLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS\nNYITPVN\n'
         records.val == '>1ycsB\nKGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY\nVPRNLLGLYP\n'
@@ -1217,7 +1258,7 @@ class DataflowExtensionsTest extends Specification {
             WLNGYNETTGERGDFPGTYVEYIGRKKISP
             VPRNLLGLYP
             '''
-        records = Channel.from(fasta, fasta2).splitFasta(record:[id:true])
+        records = Channel.from(fasta1, fasta2).splitFasta(record:[id:true])
         then:
         records.val == [id:'1aboA']
         records.val == [id:'1ycsB']
@@ -1227,19 +1268,16 @@ class DataflowExtensionsTest extends Specification {
 
 
         when:
-        def ids = []
-        def list = []
-        Channel.from(fasta).splitFasta(record:[id:true], meta:'index') { item, int index ->
-            ids << item.id
-            list << index
-            return item
+        def result = Channel.from( [fasta1, 'one'], [fasta2,'two'] ).splitFasta(record:[id:true]) { record, code ->
+            [record.id, code]
         }
 
-        sleep 100
         then:
-        ids == ['1aboA','1ycsB','1pht']
-        list == [0,1,2]
-
+        result.val == ['1aboA', 'one']
+        result.val == ['1ycsB', 'one']
+        result.val == ['1pht',  'one']
+        result.val == ['alpha123', 'two']
+        result.val == Channel.STOP
     }
 
     def testConcat() {
@@ -1633,6 +1671,17 @@ class DataflowExtensionsTest extends Specification {
         result.val == 3
         result.val == Channel.STOP
 
+    }
+
+    def testToChannel() {
+
+        when:
+        def result = [10,20,30].toChannel()
+        then:
+        result.val == 10
+        result.val == 20
+        result.val == 30
+        result.val == Channel.STOP
 
     }
 
