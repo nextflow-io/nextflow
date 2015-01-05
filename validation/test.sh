@@ -54,8 +54,8 @@ docker pull cbcrg/ampa-nf
 git clone https://github.com/cbcrg/mta-nf
 (
   cd mta-nf;
-  $NXF_CMD run . -with-docker 
-  $NXF_CMD run . -with-docker -resume 
+  $NXF_CMD run . -with-docker --seq tutorial/small.fa --ntree 5
+  $NXF_CMD run . -with-docker --seq tutorial/small.fa --ntree 5 -resume
 )
 
 #
