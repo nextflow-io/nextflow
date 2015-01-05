@@ -405,5 +405,39 @@ class FileHelperTest extends Specification {
 
     }
 
+    def 'test indexOfWildcard'() {
+
+        expect:
+        FileHelper.indexOfWildcard('hello', '*' as char) == -1
+        FileHelper.indexOfWildcard('hell*', '*' as char) == 4
+        FileHelper.indexOfWildcard('hell\\*', '*' as char) == -1
+    }
+
+    def 'test isGlobPattern' () {
+
+        expect:
+        FileHelper.isGlobPattern(pattern) == result
+
+        where:
+        pattern     | result
+        'hola'      | false
+        '1-2-3'     | false
+        'hello.txt' | false
+        'hello{x'   | false
+        'hello[x'   | false
+        'hello(a)'  | false
+        'some/path' | false
+        '*'         | true
+        'hola*'     | true
+        'hola?'     | true
+        '?'         | true
+        'hola[a]'   | true
+        'hola[a-z]' | true
+        'hola{a,b}' | true
+        'hola{}'    | false
+        'hola{a}'   | false
+        'hola[]'    | false
+
+    }
 
 }

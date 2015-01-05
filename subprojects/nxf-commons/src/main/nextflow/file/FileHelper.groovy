@@ -56,7 +56,9 @@ class FileHelper {
 
     static final Path localTempBasePath
 
-    static final Pattern GLOB_FILE_BRACKETS = Pattern.compile(/(.*)(\{.+,.+\})(.*)/)
+    static final Pattern GLOB_CURLY_BRACKETS = Pattern.compile(/(.*)(\{.+,.+\})(.*)/)
+
+    static final Pattern GLOB_SQUARE_BRACKETS = Pattern.compile(/(.*)(\[.+\])(.*)/)
 
     static private Random rndGen = new Random()
 
@@ -415,8 +417,10 @@ class FileHelper {
         boolean glob  = false
         glob |= filePattern.contains('*')
         glob |= filePattern.contains('?')
-        return glob || GLOB_FILE_BRACKETS.matcher(filePattern).matches()
+        glob |= GLOB_SQUARE_BRACKETS.matcher(filePattern).matches()
+        return glob || GLOB_CURLY_BRACKETS.matcher(filePattern).matches()
     }
+
 
     /**
      * Returns a {@code PathMatcher} that performs match operations on the
@@ -614,7 +618,7 @@ class FileHelper {
         if( p != -1 ) {
             i = filePattern.substring(0,p).lastIndexOf('/')
         }
-        else if( (matcher=FileHelper.GLOB_FILE_BRACKETS.matcher(filePattern)).matches() ) {
+        else if( (matcher=FileHelper.GLOB_CURLY_BRACKETS.matcher(filePattern)).matches() ) {
             def prefix = matcher.group(1)
             if( prefix ) {
                 i = prefix.contains('/') ? prefix.lastIndexOf('/') : -1
