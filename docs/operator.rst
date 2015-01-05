@@ -15,6 +15,7 @@ Operators can be separated in to five groups:
 * `Combining operators`_
 * `Forking operators`_
 * `Maths operators`_
+* `Conditional operators`_
 
 
 
@@ -279,6 +280,7 @@ and is expressed with a :ref:`closure <script-closure>` as shown in the example 
     Done
 
 
+.. _operator-flatmap:
 
 flatMap
 ----------
@@ -700,12 +702,14 @@ Field       Description
 by          The number of rows in each `chunk`
 sep         The character used to separate the values (default: ``,``)
 quote       Values may be quoted by single or double quote characters.
-header      When ``true``, the first line is used as columns names. Alternatively it can be used to provide the list of columns names.
+header      When ``true`` the first line is used as columns names. Alternatively it can be used to provide the list of columns names.
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
 strip       Removes leading and trailing blanks from values (default: ``false``)
 skip        Number of lines since the file beginning to ignore when parsing the CSV content.
 limit       Limits the number of retrieved records to the specified value.
-decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
+decompress  When ``true`` decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
+file        When ``true`` saves each split to a file. Use a string instead of ``true`` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in oder to save the split files into the specified folder.
+elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
 =========== ============================
 
 
@@ -756,6 +760,8 @@ limit       Limits the number of retrieved sequences to the specified value.
 record      Parse each entry in the FASTA file as record objects (see following table for accepted values)
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
 decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
+file        When ``true`` saves each split to a file. Use a string instead of ``true`` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in oder to save the split files into the specified folder.
+elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
 =========== ============================
 
 
@@ -816,6 +822,8 @@ limit       Limits the number of retrieved *reads* to the specified value.
 record      Parse each entry in the FASTQ file as record objects (see following table for accepted values)
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
 decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
+file        When ``true`` saves each split to a file. Use a string instead of ``true`` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in oder to save the split files into the specified folder.
+elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
 =========== ============================
 
 The following fields are available when using the ``record`` parameter:
@@ -879,6 +887,8 @@ by          Defines the number of lines in each `chunk` (default: ``1``)
 limit       Limits the number of retrieved lines to the specified value.
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
 decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
+file        When ``true`` saves each split to a file. Use a string instead of ``true`` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in oder to save the split files into the specified folder.
+elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
 =========== ============================
 
 
@@ -1038,7 +1048,7 @@ For example::
 
 .. note:: The items emitted by the resulting mixed channel may appear in any order,
   regardless of which source channel they came from. Thus, the following example
-  it could be a possibile result of the above example as well.
+  it could be a possible result of the above example as well.
 
 ::
 
@@ -1048,6 +1058,7 @@ For example::
           2
           'b'
           3
+
 
 
 phase
@@ -1063,10 +1074,9 @@ For example::
 
         ch1 = Channel.from( 1,2,3 )
         ch2 = Channel.from( 1,0,0,2,7,8,9,3 )
+        ch1 .phase(ch2) .subscribe { println it }
 
-        result = ch1.phase(ch2).subscribe { println it }
-
-::
+It prints::
 
     [1,1]
     [2,2]
@@ -1077,34 +1087,40 @@ Optionally, a mapping function can be specified in order to provide a custom rul
 as shown in the following example::
 
 
-    ch1 = Channel.from( [sequence: 'aaaaaa', key: 1], [sequence: 'bbbbbb', key: 2] )
+    ch1 = Channel.from( [sequence: 'aaaaaa', id: 1], [sequence: 'bbbbbb', id: 2] )
     ch2 = Channel.from( [val: 'zzzz', id: 3], [val: 'xxxxx', id: 1], [val: 'yyyyy', id: 2])
-
-    // provide a custom function in order to get the right id depending the map
-    result = ch1.phase(ch2) { Map it ->
-
-        if( it.containsKey('key') ) {
-            return it.key
-        }
-        else if( it.containsKey('id') ) {
-            return it.id
-        }
-        return null
-
-    }
+    ch1 .phase(ch2) { it -> it.id } .subscribe { println it }
 
 
-::
+It prints::
 
-    [ [sequence: 'aaaaaa', key: 1], [val: 'xxxxx', id: 1] ]
-    [ [sequence: 'bbbbbb', key: 2], [val: 'yyyyy', id: 2] ]
+    [[sequence:aaaaaa, id:1], [val:xxxxx, id:1]]
+    [[sequence:bbbbbb, id:2], [val:yyyyy, id:2]]
+
+
+Finally, the ``phase`` operator can emit all the pairs that are incomplete, i.e. the items for which a matching element
+is missing, by specifying the optional parameter ``remainder`` as shown below::
+
+        ch1 = Channel.from( 1,0,0,2,5,3 )
+        ch2 = Channel.from( 1,2,3,4 )
+        ch1 .phase(ch2, remainder: true) .subscribe { println it }
+
+It prints::
+
+    [1, 1]
+    [2, 2]
+    [3, 3]
+    [0, null]
+    [0, null]
+    [5, null]
+    [null, 4]
 
 
 
 cross
 -------
 
-The ``cross`` operators allows you to combine the items of two channes in such a way that 
+The ``cross`` operators allows you to combine the items of two channels in such a way that
 the items of the source channel are emitted along with the items emitted by the target channel 
 for which they have a matching key.  
 
@@ -1579,7 +1595,7 @@ item that has the minimum length::
 
 	 "hi"
 
-Alternatively it is possibile to specify a comparator function i.e. a :ref:`closure <script-closure>` 
+Alternatively it is possible to specify a comparator function i.e. a :ref:`closure <script-closure>`
 taking two parameters that represent two emitted items to be compared. For example:: 
 
 
@@ -1619,7 +1635,7 @@ item that has the maximum length::
 
 	 "hello"
 
-Alternatively it is possibile to specify a comparator function i.e. a :ref:`closure <script-closure>` 
+Alternatively it is possible to specify a comparator function i.e. a :ref:`closure <script-closure>`
 taking two parameters that represent two emitted items to be compared. For example:: 
 
 
@@ -1659,5 +1675,33 @@ a function that, given an item, returns the value to be summed. For example::
 	Square: 91
 
 
+Conditional operators
+========================
 
 
+ifEmpty
+--------
+
+The ``ifEmpty`` operator creates a channel which emits a default value, specified as the operator parameter, when the channel to which
+is applied is *empty* i.e. doesn't emit any value. Otherwise the it will empty the same sequence of entries as the original channel.
+
+Thus, the following example prints::
+
+    Channel .from(1,2,3) .ifEmpty('Hello') .print()
+
+    1
+    2
+    3
+
+
+
+
+
+Instead, this one prints::
+
+    Channel.empty().ifEmpty('Hello') .print()
+
+    Hello
+
+The ``ifEmpty`` value parameter can be defined with a :ref:`closure <script-closure>`. In this case the result value of the closure evaluation
+will be emitted when the empty condition is satisfied.

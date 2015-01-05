@@ -246,7 +246,7 @@ For example::
 
 This expression says, create an array with the values 1,2,3 and 4, then call the `collect` method, passing in the
 closure we defined above. The collect method runs through each item in the array, calls the closure on the item,
-then puts the result in a new array, resulting in:
+then puts the result in a new array, resulting in::
 
     [ 1, 4, 9, 16 ]
 
@@ -420,21 +420,36 @@ given a file path string. For example::
 The ``file`` method can reference either `files` or `directories` depending on what the string path is locating in the
 file system.
 
-When using a wildcard character i.e. ``*`` or ``?`` the ``file`` method returns a list object holding the path of files
+When using a wildcard character i.e. ``*`` or ``?`` the argument is interpreted as a `glob`_ path matcher
+and the ``file`` method returns a list object holding the path of files
 whose name matches the specified pattern, or an empty list if no match is found. For example::
 
   listOfFiles = file('some/path/*.fa')
 
+.. note:: Two asterisks, i.e. ``**``, works like ``*`` but crosses directory boundaries. Also note that,
+  by default wildcard characters do not match against hidden and directory files.
 
-.. See also: traverse directories and Channel.path
+For example, if you want to include hidden files in the result list, add the optional parameter ``hidden`` as shown below::
+
+  listWithHidden = file('some/path/*.fa', hidden: true)
+
+The list of available options is shown below:
+
+=============== ===================
+Name            Description
+=============== ===================
+type            Type of paths returned, either ``file``, ``dir`` or ``any`` (default: ``file``)
+hidden          When ``true`` includes hidden files in the resulting paths (default: ``false``)
+maxDepth        Maximum number of directory levels to visit (default: `no limit`)
+followLinks     When ``true`` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: ``true``)
+=============== ===================
 
 
-.. note:: If you are a Java geek you will be interested to know that the ``file`` method returns a
+.. tip:: If you are a Java geek you will be interested to know that the ``file`` method returns a
   `Path <http://docs.oracle.com/javase/7/docs/api/java/nio/file/Path.html>`_ object, which allows
   you to use the usual methods as you would in a Java program.
 
-Learn more about `Java File I/O (NIO2) <http://docs.oracle.com/javase/tutorial/essential/io/fileio.html>`_.
-
+See also: :ref:`Channel.fromPath <channel-path>` .
 
 Basic read/write
 ------------------
@@ -823,3 +838,6 @@ respectively the `owner`, `group` and `other` permissions. For example::
 
 
 Learn more about `File permissions numeric notation <http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation>`_.
+
+
+.. _glob: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob

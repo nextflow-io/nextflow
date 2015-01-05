@@ -232,6 +232,9 @@ Will display::
     Hello Mr. c
 
 
+
+.. _process-input:
+
 Inputs
 =======
 
@@ -243,29 +246,29 @@ input block at a time and it must contain one or more inputs declarations.
 The input block follows the syntax shown below::
 
     input:
-      <input classifier> <input name> [from <source channel>] [attributes]
+      <input qualifier> <input name> [from <source channel>] [attributes]
 
 
-An input definition starts with an input `classifier` and the input `name`, followed by the keyword ``from`` and
+An input definition starts with an input `qualifier` and the input `name`, followed by the keyword ``from`` and
 the actual channel over which inputs are received. Finally some input optional attributes can be specified.
 
 .. note:: When the input name is the same as the channel name, the ``from`` part of the declaration can be omitted.
 
-The input classifier declares the `type` of data to be received. This information is used by Nextflow to apply the
-semantic rules associated to each classifier and handle it properly depending on the target execution platform
+The input qualifier declares the `type` of data to be received. This information is used by Nextflow to apply the
+semantic rules associated to each qualifier and handle it properly depending on the target execution platform
 (grid, cloud, etc).
 
-The classifiers available are the ones listed in the following table:
+The qualifiers available are the ones listed in the following table:
 
 =========== =============
-Classifier  Semantic
+Qualifier   Semantic
 =========== =============
 val         Lets you access the received input value by its name in the process script.
 env         Lets you use the received value to set an environment variable named
             as the specified input name.
 file        Lets you handle the received value as a file, staging it properly in the execution context.
 stdin       Lets you forward the received value to the process `stdin` special file.
-set         Lets you handle a group of input values having one of the above classifiers.
+set         Lets you handle a group of input values having one of the above qualifiers.
 each        Lets you execute the process for each entry in the input collection.
 =========== =============
 
@@ -273,7 +276,7 @@ each        Lets you execute the process for each entry in the input collection.
 Input of generic values
 -------------------------
 
-The ``val`` classifier allows you to receive data of any type as input. It can be accessed in the process script
+The ``val`` qualifier allows you to receive data of any type as input. It can be accessed in the process script
 by using the specified input name, as shown in the following example::
 
     num = Channel.from( 1, 2, 3 )
@@ -316,7 +319,7 @@ Thus the above example can be written as shown below::
 Input of files
 -----------------
 
-The ``file`` classifier allows you to receive a value as a file in the process execution context. This means that
+The ``file`` qualifier allows you to receive a value as a file in the process execution context. This means that
 Nextflow will stage it in the process execution directory, and you can access it in the script by using the name
 specified in the input declaration. For example::
 
@@ -448,17 +451,19 @@ The following fragment shows how a wildcard can be used in the input file declar
     }
 
 
-Parametric input file names
+Dynamic input file names
 ----------------------------
 
-When the input file name is specified by using the ``name`` file clause or the short `string` notation, you
-are allowed to use other input values as variables in the file name string. For example::
+An input file name can be specified in a *dynamic* manner by using a :ref:`Closure <script-closure>` statement.
 
+The closure can contain any arbitrary code and it must evaluate to a string that represent the target file name.
+It can access variables defined in the main script scope and other input values declare in the process :ref:`input block <process-input>`.
+For example::
 
   process simpleCount {
     input:
     val x from species
-    file "${x}.fa" from genomes
+    file { "${x}.fa" } from genomes
 
     """
     cat ${x}.fa | grep '>'
@@ -466,16 +471,21 @@ are allowed to use other input values as variables in the file name string. For 
   }
 
 
-In the above example, the file name of the input file is set by using the current value of the ``x`` input value.
+In the above example, the file of the input file is set by using the current value of the ``x`` input value.
 
 This allows you to stage the input files in the script working directory with a name that is coherent
 with the current execution context.
+
+.. tip:: In most cases, you won't need to use dynamic file names, because each process is executed in its own private temporary directory,
+  and input files are staged automatically to this directory by the framework. This guarantees that input files having the same name
+  won't override each other.
+
 
 
 Input of type 'stdin'
 -----------------------
 
-The ``stdin`` input classifier allows you the forwarding of the value received from a channel to the
+The ``stdin`` input qualifier allows you the forwarding of the value received from a channel to the
 `standard input <http://en.wikipedia.org/wiki/Standard_streams#Standard_input_.28stdin.29>`_
 of the command executed by the process. For example::
 
@@ -504,7 +514,7 @@ It will output::
 Input of type 'env'
 ---------------------
 
-The ``env`` classifier allows you to define an environment variable in the process execution context based
+The ``env`` qualifier allows you to define an environment variable in the process execution context based
 on the value received from the channel. For example::
 
     str = Channel.from('hello', 'hola', 'bonjour', 'ciao')
@@ -532,7 +542,7 @@ on the value received from the channel. For example::
 Input of type 'set'
 --------------------
 
-The ``set`` classifier allows you to group multiple parameters in a single parameter definition. It can be useful
+The ``set`` qualifier allows you to group multiple parameters in a single parameter definition. It can be useful
 when a process receives, in input, tuples of values that need to be handled separately. Each element in the tuple
 is associated to a corresponding element with the ``set`` definition. For example::
 
@@ -553,7 +563,7 @@ is associated to a corresponding element with the ``set`` definition. For exampl
 In the above example the ``set`` parameter is used to define the value ``x`` and the file ``latin.txt``,
 which will receive a value from the same channel.
 
-In the ``set`` declaration items can be defined by using the following classifiers: ``val``, ``env``, ``file`` and ``stdin``.
+In the ``set`` declaration items can be defined by using the following qualifiers: ``val``, ``env``, ``file`` and ``stdin``.
 
 A shorter notation can be used by applying the following substitution rules:
 
@@ -583,13 +593,13 @@ Thus the previous example could be rewritten as follows::
 
       }
 
-File names can contain parametric values as explained in the `Parametric input file names`_ section.
+File names can be defined in *dynamic* manner as explained in the `Dynamic input file names`_ section.
 
 
 Input repeaters
 ----------------
 
-The ``each`` classifier allows you to repeat the execution of a process for each item in a collection,
+The ``each`` qualifier allows you to repeat the execution of a process for each item in a collection,
 every time new data is received. For example::
 
   sequences = Channel.fromPath('*.fa')
@@ -662,9 +672,9 @@ It can be defined at most one output block and it can contain one or more output
 The output block follows the syntax shown below::
 
     output:
-      <output classifier> <output name> [into <target channel>] [attribute [,..]]
+      <output qualifier> <output name> [into <target channel>] [attribute [,..]]
 
-Output definitions start by an output `classifier` and the output `name`, followed by the keyword ``into`` and
+Output definitions start by an output `qualifier` and the output `name`, followed by the keyword ``into`` and
 the actual channel over which outputs are sent. Finally some optional attributes can be specified.
 
 .. note:: When the output name is the same as the channel name, the ``into`` part of the declaration can be omitted.
@@ -672,17 +682,10 @@ the actual channel over which outputs are sent. Finally some optional attributes
 
 .. TODO the channel is implicitly create if does not exist
 
-The provided classifiers are:
-
-- *val*: handle data of any type;
-- *file*: the output is managed as file to be staged in the process context;
-- *stdout*: the received data is redirected to the process `stdout` special file;
-
-
-The classifiers that can be used in the output declaration block are the ones listed in the following table:
+The qualifiers that can be used in the output declaration block are the ones listed in the following table:
 
 =========== =============
-Classifier  Semantic
+Qualifier   Semantic
 =========== =============
 val         Sends variable's with the name specified over the output channel.
 file        Sends a file produced by the process with the name specified over the output channel.
@@ -694,7 +697,7 @@ set         Lets to send multiple values over the same output channel.
 Output values
 -------------------------
 
-The ``val`` classifier allows to output a `value` defined in the script context. In a common usage scenario,
+The ``val`` qualifier allows to output a `value` defined in the script context. In a common usage scenario,
 this is a value which has been defined in the `input` declaration block, as shown in the following example::
 
    methods = ['prot','dna', 'rna']
@@ -706,17 +709,42 @@ this is a value which has been defined in the `input` declaration block, as show
      output:
      val x into receiver
 
-     "echo $x > file"
+     """
+     echo $x > file
+     """
 
    }
 
    receiver.subscribe { println "Received: $it" }
 
 
+The example that follows is almost identical to the previous one, but it shows how to output a value
+that is computed in the script block::
+
+    methods = ['prot','dna', 'rna']
+
+    process anyValue {
+      input:
+      val x from methods
+
+      output:
+      val str into receiver
+
+      script:
+      str = "Processing $x"
+      """
+      echo $x > file
+      """
+
+    }
+
+    receiver.subscribe { println "Received: $it" }
+
+
 Output files
 -----------------
 
-The ``file`` classifier allows to output one or more files, produced by the process, over the specified channel.
+The ``file`` qualifier allows to output one or more files, produced by the process, over the specified channel.
 For example::
 
 
@@ -748,8 +776,8 @@ be able to receive it.
 Multiple output files
 -----------------------
 
-When declaring an output file it is possible to specify its name using the usual Linux wildcards characters ``?`` and ``*``.
-This allows to output all the files matching the specified file name pattern as single item. For example::
+When an output file name contains a ``*`` or ``?`` wildcard character it is interpreted as a `glob`_ path matcher.
+This allows to *capture* multiple files into a list object and output them as a sole emission. For example::
 
     process splitLetters {
 
@@ -761,19 +789,43 @@ This allows to output all the files matching the specified file name pattern as 
         '''
     }
 
-    letters.subscribe { println it *.text }
+    letters
+        .flatMap()
+        .subscribe { println "File: ${it.name} => ${it.text}" }
 
-::
+It prints::
 
-    [H, o, l, a]
+    File: chunk_aa => H
+    File: chunk_ab => o
+    File: chunk_ac => l
+    File: chunk_ad => a
 
+.. note:: In the above example the operator :ref:`operator-flatmap` is used to transform the list of files emitted by
+  the ``letters`` channel into a channel that emits each file object independently.
 
-.. TODO Advanced file output
+Some caveats on glob pattern behavior:
 
-Parametric output file names
+* Input files are not included in the list of possible matches.
+* Glob pattern matches against both files and directories path.
+* When a two stars pattern ``**`` is used to recurse across directories, only file paths are matched
+  i.e. directories are not included in the result list.
+
+Read more about glob syntax at the following link `What is a glob? <glob>`_
+
+.. _glob: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
+
+.. _process-dynoutname:
+
+Dynamic output file names
 -----------------------------
 
-In the output file name you can use values defined in the input declaration block as variables. For example::
+When an output file name needs to be expressed dynamically, because it depends on a script parameter or on the value
+of some process inputs, you can define it by using a :ref:`Closure <script-closure>` statement.
+
+The closure can contain any arbitrary code and it must evaluate to a string that represent the target file name.
+It can access variables defined in the main script scope, input values declare in the process :ref:`input block <process-input>`
+and variables eventually defined in the process script block.
+For example::
 
 
   process align {
@@ -782,7 +834,7 @@ In the output file name you can use values defined in the input declaration bloc
     file seq from sequences
 
     output:
-    file "${x}.aln" into genomes
+    file { "${x}.aln" } into genomes
 
     """
     t_coffee -in $seq > ${x}.aln
@@ -792,11 +844,28 @@ In the output file name you can use values defined in the input declaration bloc
 In the above example, each time the process is executed an alignment file is produced whose name depends
 by the actual value of the ``x`` input.
 
+.. tip:: A very common misunderstanding when using Nextflow regards how to manage output files. With other
+  script/pipeline tools, commonly, it is required to organize the outputs in some kind of directory structure or,
+  more in general, to guarantee a unique file name scheme, so that result files won't overlap each other and that they
+  can be referenced univocally by downstream tasks.
+
+  With Nextflow, in most cases, you don't need to take care of output files naming, because each task is executed in its own
+  unique temporary directory, so files produced by different tasks can never overlap each other.
+  Also meta-data can be associated to outputs by using the :ref:`set output <process-set>` qualifier, instead to
+  include them in the output file name.
+
+  Summing up, prefer the use of output file with static names, over dynamic ones, whenever possible, because your processes
+  code will result simpler and more portable.
+
+
+
+
+.. _process-stdout:
 
 Output 'stdout' special file
 -------------------------------
 
-The ``stdout`` classifier allows to `capture` the `stdout` output of the executed process and send it over
+The ``stdout`` qualifier allows to `capture` the `stdout` output of the executed process and send it over
 the channel specified in the output parameter declaration. For example::
 
     process echoSomething {
@@ -811,12 +880,12 @@ the channel specified in the output parameter declaration. For example::
 
 
 
-
+.. _process-set:
 
 Output 'set' of values
 --------------------------
 
-The ``set`` classifier allows to send multiple values into a single channel. This feature is useful
+The ``set`` qualifier allows to send multiple values into a single channel. This feature is useful
 when you need to `together` the result of multiple execution of the same process, as shown in the following
 example::
 
@@ -842,7 +911,7 @@ In the above example a `BLAST` task is executed for each pair of ``specie`` and 
 When the task completes a new tuple containing the value for ``specie`` and the file ``result`` is sent to the ``blastOuts`` channel.
 
 
-A `set` declaration can contain any combination of the following classifiers, previously described: ``val``, ``file`` and ``stdout``.
+A `set` declaration can contain any combination of the following qualifiers, previously described: ``val``, ``file`` and ``stdout``.
 
 .. tip:: Variable identifiers are interpreted as `values` while strings literals are interpreted as `files` by default,
   thus the above output `set` can be rewritten using a short notation as shown below.
@@ -855,27 +924,29 @@ A `set` declaration can contain any combination of the following classifiers, pr
 
 
 
-File names can contain parametric values as explained in the `Parametric output file names`_ section.
+File names can be defined in a dynamic manner as explained in the :ref:`process-dynoutname` section.
 
 Shares
 =======
+
+.. warning:: This feature has been deprecated and will be removed in future releases
 
 Share declarations are a special type of process parameter that can act as an `input` and `output` parameter at the same time.
 
 The share block is declared by using the syntax shown below::
 
   share:
-    <share classifier> <parameter name> [from <source channel>] [into <target channel>] [attributes]
+    <share qualifier> <parameter name> [from <source channel>] [into <target channel>] [attributes]
 
 
-A share definition begins with the share `classifier` followed by the parameter `name`. Optionally the keyword ``from`` 
+A share definition begins with the share `qualifier` followed by the parameter `name`. Optionally the keyword ``from``
 can be used to specify the channel over which data is received, and the keyword ``into``, followed by a channel name, 
 can be used to specify the channel where the produced data has to be sent.
 
-Share parameters accept only the classifiers listed in the following table:
+Share parameters accept only the qualifiers listed in the following table:
 
 =========== =============
-Classifier  Semantic
+Qualifier   Semantic
 =========== =============
 val         Lets you access the input value in the process script and/or to send it over the output channel.
 file        Lets you handle the input value as a file, staging it properly in the execution context and/or send it as result over the output channel.
@@ -893,7 +964,7 @@ Share parameters have some important differences compared to input or output par
 Share generic values
 ---------------------
 
-The share ``val`` classifier allows you to declare a parameter whose value can be accessed, 
+The share ``val`` qualifier allows you to declare a parameter whose value can be accessed,
 in the script context, across multiple executions of the same process. For example::
 
     process printCount {
@@ -936,7 +1007,7 @@ Some caveats about shared value parameters:
 Share file
 ------------
 
-The share ``file`` classifier allows you to declare a parameter that shares its state using a file. For example::
+The share ``file`` qualifier allows you to declare a parameter that shares its state using a file. For example::
 
   process saveHello {
       input:
@@ -981,6 +1052,8 @@ Some directives are generally available to all processes, some others depends on
 
 The directives are:
 
+* `afterScript`_
+* `beforeScript`_
 * `cache`_
 * `cpus`_
 * `container`_
@@ -1180,9 +1253,9 @@ maxForks
 ---------
 
 The ``maxForks`` directive allows you to define the maximum number of process instances that can be executed in parallel.
-By default this value is equals to the number of CPU cores available plus 1.
+By default this value is equals to the number of CPU cores available minus 1.
 
-If you want to execute a process in a sequential manner, set this directive to one. For exaple::
+If you want to execute a process in a sequential manner, set this directive to one. For example::
 
     process doNotParallelizeIt {
 
@@ -1560,4 +1633,104 @@ out of the box by Nextflow.
 
 tag
 -----
+
+The ``tag`` directive allows you to associate each process execution with a custom label, so that it will be easier
+to identify them in the log file or in the trace execution report. For example::
+
+    process foo {
+      tag { code }
+
+      input:
+      val code from 'alpha', 'gamma', 'omega'
+
+      """
+      echo $code
+      """
+    }
+
+The above snipped will print a log similar to the following, where process names contain the tag value::
+
+    [6e/28919b] Submitted process > foo (alpha)
+    [d2/1c6175] Submitted process > foo (gamma)
+    [1c/3ef220] Submitted process > foo (omega)
+
+
+See also :ref:`Trace execution report <trace-report>`
+
+beforeScript
+-------------
+
+The ``beforeScript`` directive allows you to execute a custom (BASH) snippet *before* the main process script is run.
+This may be useful to initialise the underlying cluster environment or other custom initialisation.
+
+For example::
+
+    process foo {
+
+      beforeScript 'source /cluster/bin/setup'
+
+      """
+      echo bar
+      """
+
+    }
+
+
+afterScript
+-------------
+
+The ``afterScript`` directive allows you to execute a custom (BASH) snippet immediately *after* the main process has run.
+This may be useful to clean up your staging area.
+
+
+Dynamic directives
+-------------------
+
+A directive can be assigned *dynamically*, during process execution, so that its actual value can be evaluated
+depending the value of one, or more, process' input values.
+
+In order to be defined in a dynamic manner directive's value need to be expressed by using a :ref:`closure <script-closure>`
+states, like in the following example::
+
+    process foo {
+
+      executor 'sge'
+      queue { entries > 100 ? 'long' : 'short' }
+
+      input:
+      set entries, file(x) from data
+
+      script:
+      """
+      < your job here >
+      """
+    }
+
+In the above example the `queue`_ directive is evaluated dynamically, depending the input value ``entries``. When it is
+bigger than 100, jobs ill be submitted to the queue ``long``, otherwise the ``short`` one will be used.
+
+All directive can be assigned to a dynamic value but the following ones:
+
+* `executor`_
+* `maxForks`_
+
+
+.. note:: You can retrieve the current value of a dynamic directive in the process script by using the implicit variable ``task``
+  which holds all the directives defined in the current process.
+
+For example::
+
+
+   process foo {
+
+      queue { entries > 100 ? 'long' : 'short' }
+
+      input:
+      set entries, file(x) from data
+
+      script:
+      """
+      echo Current queue: ${task.queue}
+      """
+    }
 
