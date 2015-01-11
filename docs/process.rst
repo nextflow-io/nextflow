@@ -456,8 +456,8 @@ Dynamic input file names
 
 An input file name can be specified in a *dynamic* manner by using a :ref:`Closure <script-closure>` statement.
 
-The closure can contain any arbitrary code and it must evaluate to a string that represent the target file name.
-It can access variables defined in the main script scope and other input values declare in the process :ref:`input block <process-input>`.
+The closure can contain any arbitrary code and it must evaluate to a string value that represents the target file name.
+It can access variables defined in the main script scope and other input values declared in the process :ref:`input block <process-input>`.
 For example::
 
   process simpleCount {
@@ -471,14 +471,14 @@ For example::
   }
 
 
-In the above example, the file of the input file is set by using the current value of the ``x`` input value.
+In the above example, the input file name is set by using the current value of the ``x`` input value.
 
-This allows you to stage the input files in the script working directory with a name that is coherent
+This allows the input files to be staged in the script working directory with a name that is coherent
 with the current execution context.
 
-.. tip:: In most cases, you won't need to use dynamic file names, because each process is executed in its own private temporary directory,
-  and input files are staged automatically to this directory by the framework. This guarantees that input files having the same name
-  won't override each other.
+.. tip:: In most cases, you won't need to use dynamic file names, because each process is executed in its 
+  own private temporary directory, and input files are automatically staged to this directory by Nextflow. 
+  This guarantees that input files with the same name won't overwrite each other.
 
 
 
@@ -822,8 +822,8 @@ Dynamic output file names
 When an output file name needs to be expressed dynamically, because it depends on a script parameter or on the value
 of some process inputs, you can define it by using a :ref:`Closure <script-closure>` statement.
 
-The closure can contain any arbitrary code and it must evaluate to a string that represent the target file name.
-It can access variables defined in the main script scope, input values declare in the process :ref:`input block <process-input>`
+The closure can contain any arbitrary code and it must evaluate to a string value that represents the target file name.
+It can access variables defined in the main script scope, input values declared in the process :ref:`input block <process-input>`
 and variables eventually defined in the process script block.
 For example::
 
@@ -842,20 +842,20 @@ For example::
   }
 
 In the above example, each time the process is executed an alignment file is produced whose name depends
-by the actual value of the ``x`` input.
+on the actual value of the ``x`` input.
 
-.. tip:: A very common misunderstanding when using Nextflow regards how to manage output files. With other
-  script/pipeline tools, commonly, it is required to organize the outputs in some kind of directory structure or,
-  more in general, to guarantee a unique file name scheme, so that result files won't overlap each other and that they
-  can be referenced univocally by downstream tasks.
+.. tip:: The management of output files is a very common misunderstanding when using Nextflow. 
+  With other tools, it is generally necessary to organize the outputs files into some kind of directory 
+  structure or to guarantee a unique file name scheme, so that result files won't overwrite each other 
+  and that they can be referenced univocally by downstream tasks.
 
-  With Nextflow, in most cases, you don't need to take care of output files naming, because each task is executed in its own
-  unique temporary directory, so files produced by different tasks can never overlap each other.
-  Also meta-data can be associated to outputs by using the :ref:`set output <process-set>` qualifier, instead to
-  include them in the output file name.
+  With Nextflow, in most cases, you don't need to take care of naming output files, because each task is executed 
+  in its own unique temporary directory, so files produced by different tasks can never override each other.
+  Also meta-data can be associated with outputs by using the :ref:`set output <process-set>` qualifier, instead of
+  including them in the output file name.
 
-  Summing up, prefer the use of output file with static names, over dynamic ones, whenever possible, because your processes
-  code will result simpler and more portable.
+  To sum up, the use of output files with static names over dynamic ones is preferable whenever possible, 
+  because it will result in a simpler and more portable code.
 
 
 
