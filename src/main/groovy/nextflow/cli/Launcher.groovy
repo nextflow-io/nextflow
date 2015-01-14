@@ -349,6 +349,9 @@ class Launcher implements ExitCode {
             // launch the command
             command.run()
 
+            if( log.isTraceEnabled() ) {
+                log.trace "Exit\n" + dumpThreads()
+            }
         }
 
         catch( AbortRunException e ) {
@@ -376,6 +379,24 @@ class Launcher implements ExitCode {
             System.exit(UNKNOWN_ERROR)
         }
 
+    }
+
+    /**
+     * Dump th stack trace of current running threads
+     * @return
+     */
+    private String dumpThreads() {
+
+        def buffer = new StringBuffer()
+        Map<Thread, StackTraceElement[]> m = Thread.getAllStackTraces();
+        for(Map.Entry<Thread,  StackTraceElement[]> e : m.entrySet()) {
+            buffer.append('\n').append(e.getKey().toString()).append('\n')
+            for (StackTraceElement s : e.getValue()) {
+                buffer.append("  " + s).append('\n')
+            }
+        }
+
+        return buffer.toString()
     }
 
     /**
