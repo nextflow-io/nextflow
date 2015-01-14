@@ -1673,15 +1673,41 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
-    def testToChannel() {
+    def testChannel() {
 
         when:
-        def result = [10,20,30].toChannel()
+        def result = [10,20,30].channel()
         then:
         result.val == 10
         result.val == 20
         result.val == 30
         result.val == Channel.STOP
+
+    }
+
+    def testView() {
+
+        def result
+
+        when:
+        result = Channel.from(1,2,3).view()
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 3
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.from(1,2,3).count().view()
+        then:
+        result.val == 3
+        result.val == 3
+
+        when:
+        result = Channel.just(5).view()
+        then:
+        result.val == 5
+        result.val == 5
 
     }
 

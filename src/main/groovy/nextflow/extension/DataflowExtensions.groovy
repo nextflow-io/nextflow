@@ -1962,6 +1962,9 @@ class DataflowExtensions {
         return result
     }
 
+
+    static private final PARAMS_VIEW = [newLine: Boolean]
+
     /**
      * Print out the channel content retuning a new channel emitting the identical content as the original one
      *
@@ -1969,22 +1972,31 @@ class DataflowExtensions {
      * @param closure
      * @return
      */
-    static public final <V> DataflowReadChannel<V> view(final DataflowReadChannel<?> source, Closure closure = null) {
+    static public final <V> DataflowReadChannel<V> view(final DataflowReadChannel<?> source, Map opts = [:], Closure closure = null) {
         assert source != null
+        checkParams('view', opts, PARAMS_VIEW)
+        final newLine = opts.newLine != false
 
-        DataflowReadChannel<V> target = newChannelBy(source);
-        newOperator(source, target) { it ->
+        final target = newChannelBy(source);
+        final isChannel = !(target instanceof DataflowExpression)
 
-            def proc = ((DataflowProcessor) getDelegate())
-            if( it == Channel.STOP )
-                proc.terminate()
+        final printHandle = newLine ? System.out.&println : System.out.&print
 
-            else {
-                println ( closure != null ? closure.call(it) : it )
-                proc.bindOutput(it)
-            }
+        final apply = [
 
-        }
+                onNext:
+                        {
+                            printHandle ( closure != null ? closure.call(it) : it )
+                            target.bind(it)
+                        },
+
+                onComplete: {
+                    if(isChannel) target.bind(Channel.STOP)
+                }
+        ]
+
+        subscribe(source,apply)
+
         return target;
 
     }
@@ -1994,7 +2006,7 @@ class DataflowExtensions {
      * @param values
      * @return
      */
-    static public toChannel(Collection values) {
+    static public channel(Collection values) {
         def result = new DataflowQueue()
         def itr = values.iterator()
         while( itr.hasNext() ) result.bind(itr.next())
