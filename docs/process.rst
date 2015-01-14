@@ -1634,7 +1634,7 @@ out of the box by Nextflow.
 tag
 -----
 
-The ``tag`` directive allows you to associate each process execution with a custom label, so that it will be easier
+The ``tag`` directive allows you to associate each process executions with a custom label, so that it will be easier
 to identify them in the log file or in the trace execution report. For example::
 
     process foo {
@@ -1648,7 +1648,7 @@ to identify them in the log file or in the trace execution report. For example::
       """
     }
 
-The above snipped will print a log similar to the following, where process names contain the tag value::
+The above snippet will print a log similar to the following one, where process names contain the tag value::
 
     [6e/28919b] Submitted process > foo (alpha)
     [d2/1c6175] Submitted process > foo (gamma)
@@ -1661,7 +1661,7 @@ beforeScript
 -------------
 
 The ``beforeScript`` directive allows you to execute a custom (BASH) snippet *before* the main process script is run.
-This may be useful to initialise the underlying cluster environment or other custom initialisation.
+This may be useful to initialise the underlying cluster environment or for other custom initialisation.
 
 For example::
 
@@ -1686,11 +1686,11 @@ This may be useful to clean up your staging area.
 Dynamic directives
 -------------------
 
-A directive can be assigned *dynamically*, during process execution, so that its actual value can be evaluated
-depending the value of one, or more, process' input values.
+A directive can be assigned *dynamically*, during the process execution, so that its actual value can be evaluated
+depending on the value of one, or more, process' input values.
 
-In order to be defined in a dynamic manner directive's value need to be expressed by using a :ref:`closure <script-closure>`
-states, like in the following example::
+In order to be defined in a dynamic manner the directive's value needs to be expressed by using a :ref:`closure <script-closure>`
+statement, as in the following example::
 
     process foo {
 
@@ -1706,17 +1706,17 @@ states, like in the following example::
       """
     }
 
-In the above example the `queue`_ directive is evaluated dynamically, depending the input value ``entries``. When it is
-bigger than 100, jobs ill be submitted to the queue ``long``, otherwise the ``short`` one will be used.
+In the above example the `queue`_ directive is evaluated dynamically, depending on the input value ``entries``. When it is
+bigger than 100, jobs will be submitted to the queue ``long``, otherwise the ``short`` one will be used.
 
-All directive can be assigned to a dynamic value but the following ones:
+All directives can be assigned to a dynamic value except the following:
 
 * `executor`_
 * `maxForks`_
 
 
 .. note:: You can retrieve the current value of a dynamic directive in the process script by using the implicit variable ``task``
-  which holds all the directives defined in the current process.
+  which holds the directive values defined in the current process.
 
 For example::
 
