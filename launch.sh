@@ -35,13 +35,18 @@ if test -n "$JAVA_HOME"; then
 fi
 
 #
+# debugging JVM options
+#  export _JAVA_OPTIONS='-Xms1g -Xmx2g -verbose:gc -XX:+AggressiveOpts -XX:+UnlockDiagnosticVMOptions -XX:+UnlockExperimentalVMOptions -XX:+PrintFlagsFinal -XX:+TraceClassLoading -XX:+TraceClassUnloading -verbose:class'
+#
+
+#
 # Variable definition
 #
 declare -a args=()
 DEBUG=''
 COLUMNS=${COLUMNS:-`tput cols 2> /dev/tty`}
 MAIN_CLASS='nextflow.cli.Launcher'
-JVM_ARGS+=" -Djava.awt.headless=true -noverify"
+JVM_ARGS+=" -Djava.awt.headless=true -noverify -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
 NXF_CLI="$0 $@"
@@ -77,6 +82,8 @@ while [ "$*" != "" ]; do
   if [[ "$1" == '--debug' || "$1" == '--trace' ]]; then
     args+=("$1")
 
+  elif [ $1 == --with-yourkit ]; then 
+    JVM_ARGS+=" -agentpath:/Applications/YourKit_Java_Profiler_2014_build_14104.app/bin/mac/libyjpagent.jnilib=onexit=snapshot,tracing,dir=$PWD/snapshot "
   elif [ "$1" == '--with-jrebel' ]; then
     if [ "$JREBEL_HOME" ]; then
     JVM_ARGS+=" -javaagent:$JREBEL_HOME/jrebel.jar -Drebel.log.file=./jrebel-client.log"
@@ -109,4 +116,4 @@ if [ "$DEBUG" != '' ]; then
 fi
 
 # Launch the APP
-exec java $JVM_ARGS $DEBUG -noverify -cp "$CLASSPATH" "$MAIN_CLASS" "${args[@]}"
+exec java $JVM_ARGS $DEBUG -cp "$CLASSPATH" "$MAIN_CLASS" "${args[@]}"
