@@ -38,6 +38,7 @@ import nextflow.cli.CmdRun
 import nextflow.script.BaseScript
 import nextflow.script.ConfigBuilder
 import nextflow.script.ScriptBinding
+import nextflow.util.LoggerHelper
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -224,6 +225,9 @@ class Nextflow extends Console {
      * @param args
      */
     static void main(String... args) {
+        CliOptions opts = new CliOptions()
+        opts.logFile = '.nextflow-console.log'
+        LoggerHelper.configureLogger(opts)
 
         if (args.length == 2 && args[1] == '--help') {
             println 'usage: nextflow repl [filename]'

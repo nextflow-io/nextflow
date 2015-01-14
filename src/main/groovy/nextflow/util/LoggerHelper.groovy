@@ -44,6 +44,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.Global
 import nextflow.Session
+import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessException
@@ -72,9 +73,13 @@ class LoggerHelper {
      * @param debugConf The list of packages for which use a Debug logging level
      * @param traceConf The list of packages for which use a Trace logging level
      */
-    static void configureLogger( Launcher launcher ) {
 
-        final opts = launcher.options
+    static void configureLogger( Launcher launcher ) {
+        configureLogger(launcher.options, launcher.isDaemon())
+    }
+
+    static void configureLogger( final CliOptions opts, boolean isDaemon = false ) {
+
         logFileName = opts.logFile
 
         final boolean quiet = opts.quiet
@@ -93,7 +98,7 @@ class LoggerHelper {
         debugConf?.each { packages[it] = Level.DEBUG }
         traceConf?.each { packages[it] = Level.TRACE }
 
-        final ConsoleAppender consoleAppender = launcher.isDaemon() && opts.isBackground() ? null : new ConsoleAppender()
+        final ConsoleAppender consoleAppender = isDaemon && opts.isBackground() ? null : new ConsoleAppender()
         if( consoleAppender )  {
 
             final filter = new LoggerPackageFilter( packages )
