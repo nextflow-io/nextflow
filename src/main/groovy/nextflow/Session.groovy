@@ -23,6 +23,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.Phaser
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -30,7 +31,6 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
-import jsr166y.Phaser
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdRun
 import nextflow.exception.MissingLibraryException
@@ -102,7 +102,7 @@ class Session {
      */
     def final UUID uniqueId
 
-    final private Phaser phaser = new Phaser()
+    private Phaser phaser = new Phaser()
 
     private volatile boolean aborted
 
@@ -234,7 +234,6 @@ class Session {
             onShutdown { trace.onFlowComplete() }
         }
 
-        Global.onShutdown { cleanUp() }
         execService = Executors.newFixedThreadPool( poolSize )
         phaser.register()
         dispatcher.start()
@@ -313,11 +312,12 @@ class Session {
         log.trace "Session destroying"
         cleanUp()
         execService?.shutdown()
-        GParsConfig.shutdown()
+        execService = null
         log.debug "Session destroyed"
     }
 
-    final synchronized protected void cleanUp() {
+    final protected void cleanUp() {
+
         log.trace "Shutdown: $shutdownCallbacks"
         List<Closure<Void>> all = new ArrayList<>(shutdownCallbacks)
         for( def hook : all ) {
