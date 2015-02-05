@@ -12,7 +12,7 @@ export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 #
 (
   export WITH_DOCKER=yes;
-  cd ../tests/tests; 
+  cd ../tests/checks; 
   bash run.sh
 )
 
