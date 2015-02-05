@@ -8,11 +8,11 @@ get_abs_filename() {
 export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 
 #
-# Examples
+# Tests
 #
 (
   export WITH_DOCKER=yes;
-  cd ../examples/tests; 
+  cd ../tests/tests; 
   bash run.sh
 )
 
