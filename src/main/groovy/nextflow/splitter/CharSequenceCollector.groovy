@@ -77,10 +77,18 @@ class CharSequenceCollector implements CollectorStrategy {
             offset += len
         }
 
-        // use package private constructor to avoid to avoid to create a copy
-        // of the buffer character array
-        def constructor = String.class.getDeclaredConstructor(CHAR_ARRAY.class, boolean.class)
-        constructor.setAccessible(true)
-        constructor.newInstance(content, Boolean.TRUE)
+
+        try {
+            // use package private constructor to avoid to avoid to create a copy
+            // of the buffer character array
+            def constructor = String.class.getDeclaredConstructor(CHAR_ARRAY.class, boolean.class)
+            constructor.setAccessible(true)
+            constructor.newInstance(content, Boolean.TRUE)
+        }
+        catch( NoSuchMethodException e ) {
+            // the above private constructor is not available is not available in all 1.7 runtime versions
+            // fallback to the standard String constructor
+            return new String(content)
+        }
     }
 }
