@@ -19,10 +19,10 @@
 #  along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
 
 if [[ $TERM && $TERM != 'dumb' ]]; then
-NORMAL=$(tput sgr0)
 GREEN=$(tput setaf 2; tput bold)
 YELLOW=$(tput setaf 3)
 RED=$(tput setaf 1)
+NORMAL=$(tput sgr0)
 fi
 
 function echo_red() {
@@ -163,7 +163,7 @@ NXF_PACKAGE=${NXF_PACKAGE:-one}
 NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACKAGE.jar}
 NXF_BIN=${NXF_BIN:-$NXF_HOME/framework/$NXF_VER/$NXF_JAR}
 NXF_BASE=${NXF_BASE:-http://www.nextflow.io/releases}
-NXF_PATH=$(dirname $NXF_BIN)
+NXF_PATH=$(dirname "$NXF_BIN")
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
 NXF_GRAB=${NXF_GRAB:-''}
 NXF_CLASSPATH=${NXF_CLASSPATH:-''}
