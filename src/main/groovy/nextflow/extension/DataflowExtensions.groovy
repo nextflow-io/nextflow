@@ -31,6 +31,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
 import groovyx.gpars.dataflow.Dataflow
+import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
@@ -2011,6 +2012,13 @@ class DataflowExtensions {
         def itr = values.iterator()
         while( itr.hasNext() ) result.bind(itr.next())
         result.bind(Channel.STOP)
+        return result
+    }
+
+
+    static public DataflowBroadcast broadcast( DataflowReadChannel source ) {
+        def result = new DataflowBroadcast()
+        source.into(result)
         return result
     }
 
