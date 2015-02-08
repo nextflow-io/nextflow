@@ -47,6 +47,8 @@ DEBUG=''
 COLUMNS=${COLUMNS:-`tput cols 2> /dev/tty`}
 MAIN_CLASS='nextflow.cli.Launcher'
 JVM_ARGS+=" -Djava.awt.headless=true -noverify -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
+## flight recorded -- http://docs.oracle.com/javacomponents/jmc-5-4/jfr-runtime-guide/run.htm
+##JVM_ARGS+=" -XX:+UnlockCommercialFeatures -XX:+FlightRecorder -XX:StartFlightRecording=duration=60s,filename=myrecording.jfr"
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
 NXF_CLI="$0 $@"

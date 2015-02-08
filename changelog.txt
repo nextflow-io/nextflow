@@ -1,7 +1,16 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.12.0 - 5 Gen 2014
+0.12.1 - 8 Feb 2014
+- Fixed NoSuchMethodException issue on Java 1.7.0_01 due to missing private constructor
+- Fixed logging issue on Nextflow console
+- Fixed issue `view` operator which hung when used on a dataflow variable
+- Upgrade SLF4J to version 1.7.10
+- Upgrade Capsule to version 0.10.0
+- Removed dependency on jsr166y module
+- Removed `synchronized` declaration on Session cleanUp method
+
+0.12.0 - 5 Jan 2014
 - Added afterScript/beforeScript directives
 - Added tag directive to label task executions with a custom identifier
 - Added dynamic directives evaluation 

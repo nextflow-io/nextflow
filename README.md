@@ -208,8 +208,8 @@ The self-contained runnable Nextflow package can be created by using the followi
 Known compilation problems 
 ---------------------------
 
-Nextflow can be compiled both the JDK 7 or JDK 8. However when compiling with the later you **won't** be able
-to run it on a Java 7. The specify the compiler to be used by Gradle build set the 
+Nextflow can be compiled with both JDK 7 or JDK 8. However when compiling with the later you **won't** be able
+to run it on a Java 7. The Java compiler used by the build process can be choose by setting the
 `JAVA_HOME` environment variable accordingly. 
  
 
@@ -219,6 +219,7 @@ this is due to a bug affecting the following Java JDK:
 - 1.7.0 update 55
 - 1.7.0 update 65
 - 1.7.0 update 67
+- 1.7.0 update 71
 - 1.8.0 update 11
 - 1.8.0 update 20
 
