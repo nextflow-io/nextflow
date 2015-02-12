@@ -3,6 +3,7 @@ NEXTFLOW CHANGE-LOG
 
 0.12.2 - 12 Feb 2015
 - Fixed issue on some SGE implementation where `-terse` directive in job script is not working
+- Downgrade Capsule to 0.9.0 due to an issue in version 0.10.0 - https://github.com/puniverse/capsule/issues/56
 
 0.12.1 - 8 Feb 2015
 - Fixed NoSuchMethodException issue on Java 1.7.0_01 due to missing private constructor
