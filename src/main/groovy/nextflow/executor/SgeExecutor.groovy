@@ -86,15 +86,16 @@ class SgeExecutor extends AbstractGridExecutor {
 
 
     /*
-     * Prepare the 'qsub' cmdline. The following options are used
-     * - wd: define the job working directory
-     * - terse: output just the job id on the output stream
-     * - j: redirect qsub stdout and stderr to the same file (join)
-     * - sync: wait for the job completion
-     * -V: export the current environment
+     * Prepare the 'qsub' cmdline
      */
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
-         ['qsub', scriptFile.name]
+
+        // The '-terse' command line control the output of the qsub command line, when
+        // used it only return the ID of the submitted job.
+        // NOTE: In some SGE implementations the '-terse' only works on the qsub command line
+        // and it is ignored when used in the script job as directive, fir this reason it
+        // should not be remove from here
+        return ['qsub', '-terse', scriptFile.name]
     }
 
     protected String getHeaderToken() { '#$' }
@@ -109,10 +110,16 @@ class SgeExecutor extends AbstractGridExecutor {
     @Override
     def parseJobId( String text ) {
         // return always the last line
+        String id
         def lines = text.trim().readLines()
-        def id = lines[-1].trim()
-        if( id?.toString()?.isInteger() )
-            return id
+        def entry = lines[-1].trim()
+        if( entry ) {
+            if( entry.toString().isLong() )
+                return entry
+
+            if( entry.startsWith('Your job') && entry.endsWith('has been submitted') && (id=entry.tokenize().get(2)) )
+                return id
+        }
 
         throw new IllegalStateException("Invalid SGE submit response:\n$text\n\n")
     }

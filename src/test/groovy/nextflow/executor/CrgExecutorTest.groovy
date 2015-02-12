@@ -40,7 +40,7 @@ class CrgExecutorTest extends Specification {
         def executor = [:] as CrgExecutor
 
         expect:
-        executor.getSubmitCommandLine( Mock(TaskRun), Paths.get('/some/file/name.sh')) == ['qsub','name.sh']
+        executor.getSubmitCommandLine( Mock(TaskRun), Paths.get('/some/file/name.sh')) == ['qsub', '-terse','name.sh']
 
     }
 

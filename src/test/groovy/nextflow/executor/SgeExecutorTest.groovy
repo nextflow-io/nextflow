@@ -38,7 +38,7 @@ class SgeExecutorTest extends Specification {
         def executor = [:] as SgeExecutor
 
         expect:
-        executor.getSubmitCommandLine( Mock(TaskRun), Paths.get('/some/file/name.sh')) == ['qsub','name.sh']
+        executor.getSubmitCommandLine( Mock(TaskRun), Paths.get('/some/file/name.sh')) == ['qsub','-terse', 'name.sh']
 
     }
 
@@ -230,6 +230,9 @@ class SgeExecutorTest extends Specification {
             '''
         then:
         executor.parseJobId(textToParse) == '6472'
+        executor.parseJobId('Your job 1258076 ("nf-formatBlast_2") has been submitted') == '1258076'
+        executor.parseJobId('\nYour job 1258076 ("nf-formatBlast_2") has been submitted\n') == '1258076'
+        executor.parseJobId('Your job 341683 ("STDIN") has been submitted') == '341683'
     }
 
     def testKillTaskCommand() {
