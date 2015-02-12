@@ -1,7 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.12.1 - 8 Feb 2014
+0.12.2 - 12 Feb 2015
+- Fixed issue on some SGE implementation where `-terse` directive in job script is not working
+
+0.12.1 - 8 Feb 2015
 - Fixed NoSuchMethodException issue on Java 1.7.0_01 due to missing private constructor
 - Fixed logging issue on Nextflow console
 - Fixed issue `view` operator which hung when used on a dataflow variable
@@ -10,7 +13,7 @@ NEXTFLOW CHANGE-LOG
 - Removed dependency on jsr166y module
 - Removed `synchronized` declaration on Session cleanUp method
 
-0.12.0 - 5 Jan 2014
+0.12.0 - 5 Jan 2015
 - Added afterScript/beforeScript directives
 - Added tag directive to label task executions with a custom identifier
 - Added dynamic directives evaluation 
@@ -26,7 +29,7 @@ NEXTFLOW CHANGE-LOG
 - Print pid/hostname in the status log
 - Upgraded to Groovy 2.3.9 and Slf4j 1.7.8
 
-0.11.4 - 3 Dic 2014 
+0.11.4 - 3 Dec 2014 
 - Fixed issue in TextFileCollector empty condition that was creating an empty split file
   when the split size was equals to the number or records
 - Fixed bug that prevents a job is added to the polling queue when submit operation fails
