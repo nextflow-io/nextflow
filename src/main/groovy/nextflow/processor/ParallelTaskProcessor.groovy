@@ -206,17 +206,29 @@ class ParallelTaskProcessor extends TaskProcessor {
         if( checkStoredOutput(task) )
             return
 
+        def hash = createTaskHashKey(task)
+        checkCachedOrLaunchTask(task, hash, resumable, TaskProcessor.RunType.SUBMIT)
+    }
+
+    final protected createTaskHashKey(TaskRun task) {
+
         def keys = [ session.uniqueId, getSource() ]
         // add all the input name-value pairs to the key generator
         task.inputs.each { keys << it.key.name << it.value }
+
+        // add all variable references in the task script but not declared as input/output
+        def vars = task.context.getScriptVars()
+        if( vars ) {
+            log.trace "Adding script vars to task hash code: ${vars}"
+            vars.each { k, v -> keys << k << v }
+        }
 
         final mode = taskConfig.getHashMode()
         final hash = CacheHelper.hasher(keys, mode).hash()
         if( log.isTraceEnabled() ) {
             traceInputsHashes(task, keys, mode, hash)
         }
-
-        checkCachedOrLaunchTask(task, hash, resumable, TaskProcessor.RunType.SUBMIT)
+        return hash
     }
 
     private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {

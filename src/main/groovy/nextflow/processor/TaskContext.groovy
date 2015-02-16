@@ -104,6 +104,19 @@ class TaskContext implements Map<String,Object> {
        script
     }
 
+    /**
+     * @return The set of task variables accessed in global script context and not declared as input/output
+     */
+    public Map<String,Object> getScriptVars() {
+        def result = new HashMap(bindingNames.size())
+        def binding = script.getBinding()
+        bindingNames.each { String name ->
+            if( binding.hasVariable(name) && !getHolder().containsKey(name) )
+                result.put( name, binding.getVariable(name) )
+        }
+        return result
+    }
+
     @Override
     String toString() {
         "DelegateMap[process: $name; script: ${script?.class?.name}; holder: ${holder}]"
