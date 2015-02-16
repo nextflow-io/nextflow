@@ -49,8 +49,7 @@ class LocalExecutor extends Executor {
     @Override
     protected TaskMonitor createTaskMonitor() {
 
-        final defSize = Math.max( Runtime.getRuntime().availableProcessors()-1, 1 )
-        return TaskPollingMonitor.create(session, name, defSize, Duration.of('100ms'))
+        return TaskPollingMonitor.create(session, name, session.poolSize, Duration.of('100ms'))
 
     }
 
