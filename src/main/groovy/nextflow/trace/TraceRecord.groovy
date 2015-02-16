@@ -49,6 +49,8 @@ class TraceRecord {
             hash:       'str',
             native_id:  'str',
             process:    'str',
+            module:     'str',
+            container:  'str',
             tag:        'str',
             name:       'str',
             status:     'str',

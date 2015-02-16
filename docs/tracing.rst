@@ -66,11 +66,13 @@ tag                     User provided identifier associated this task.
 name                    Task name.
 status                  Task status.
 exit                    POSIX process exit status.
+module                  Environment module used to run the task.
+container               Docker image name used to execute the task.
 submit                  Timestamp when the task has been submitted.
 start                   Timestamp when the task execution has started.
 complete                Timestamp when task execution has completed.
 duration                Time elapsed to complete since the submission.
-walltime                Task execution time i.e. delta between completion and start timestamp.
+realtime                Task execution time i.e. delta between completion and start timestamp.
 %cpu                    Percentage of CPU used by the process.
 %mem                    Percentage of memory used by the process.
 rss                     Real memory (resident set) size of the process. Equivalent to ``ps -o rss`` .

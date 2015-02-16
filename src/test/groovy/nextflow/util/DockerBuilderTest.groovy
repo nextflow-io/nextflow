@@ -139,6 +139,8 @@ class DockerBuilderTest extends Specification {
 
         where:
         image                       | registry  | expected
+        null                        | null      | null
+        null                        | 'd.reg'   | null
         'hello'                     | null      | 'hello'
         'cbcrg/hello'               | null      | 'cbcrg/hello'
         'cbcrg/hello'               | 'd.reg'   | 'd.reg/cbcrg/hello'

@@ -141,6 +141,8 @@ public abstract class TaskHandler {
         record.start = this.startTimeMillis
         record.process = task.processor.name
         record.tag = task.config.tag
+        record.module = task.config.module
+        record.container = task.container
 
         if( isCompleted() ) {
             if( completeTimeMillis ) {

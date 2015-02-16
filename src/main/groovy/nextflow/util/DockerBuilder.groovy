@@ -285,6 +285,9 @@ class DockerBuilder {
 
     static String normalizeDockerImageName( String imageName, Map dockerConf ) {
 
+        if( !imageName )
+            return null
+
         String reg = dockerConf?.registry
         if( !reg )
             return imageName

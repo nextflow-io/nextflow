@@ -139,6 +139,9 @@ class TraceFileObserver implements TraceObserver {
                 fmt = x.substring(p+1)
             }
 
+            if( !fmt )
+                throw new IllegalArgumentException("Unknown trace field name: `$name`")
+
             if( useRawNumber && fmt in TraceRecord.NON_PRIMITIVE_TYPES ) {
                 fmt = 'num'
             }

@@ -44,9 +44,8 @@ class TaskHandlerTest extends Specification {
         folder.resolve( TaskRun.CMD_TRACE ).text = traceText
 
         def handler = [:] as TaskHandler
-        handler.task = new TaskRun(id: 100, workDir: folder, name:'task1', exitStatus: 127)
+        handler.task = new TaskRun(id: 100, workDir: folder, name:'task1', exitStatus: 127, config: [tag: 'seq_x', container: 'ubuntu']  )
         handler.task.metaClass.getProcessor = { [name: 'TheProcessName'] }
-        handler.task.metaClass.getConfig = { [tag: 'seq_x'] }
         handler.task.metaClass.getHashLog = { "5d5d7ds" }
         handler.status = TaskStatus.COMPLETED
         handler.submitTimeMillis = 1000

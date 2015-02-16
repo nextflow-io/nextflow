@@ -220,7 +220,7 @@ class TaskConfig implements Map<String,Object> {
         }
 
         if( value == null )
-            return []
+            return Collections.emptyList()
 
         throw new IllegalStateException("Not a valid `module` value: $value")
     }

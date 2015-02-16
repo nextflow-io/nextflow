@@ -140,6 +140,8 @@ class DrmaaExecutorTest extends Specification {
         expected.exit = 99
         expected.submit = 1406264935000
         expected.start = 1406265009000
+        expected.module = []
+        expected.container = null
 
         def workDir = Files.createTempDirectory('test')
 
