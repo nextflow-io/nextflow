@@ -1,6 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.12.3 - 16 Feb 2015
+- Added support for `module` and `container` fields in execution trace log
+- Fixed a small inconsistency on polling monitor queue size for local executor when using single core or two-cores cpu
+- Enhanced process key generation including global variables referenced in the process scope
+- Enhanced `sum` operator and added `mean` operator
+
 0.12.2 - 12 Feb 2015
 - Fixed issue on some SGE implementation where `-terse` directive in job script is not working
 - Downgrade Capsule to 0.9.0 due to an issue in version 0.10.0 - https://github.com/puniverse/capsule/issues/56
