@@ -1154,26 +1154,70 @@ class DataflowExtensions {
     }
 
     /**
-     *  The sum operators crates a channel that emits the sum of all values emitted by the source channel to which is applied
-     *
-     * @param channel The source channel providing the values to sum
-     * @return A {@code DataflowVariable} emitting the final sum value
-     */
-    static public final <V> DataflowReadChannel<V> sum(final DataflowQueue<V> channel) {
-        reduce(channel, 0) { sum, val -> sum += val }
-    }
-
-    /**
      * The sum operators crates a channel that emits the sum of all values emitted by the source channel to which is applied
      *
      * @param channel  The source channel providing the values to sum
      * @param closure  A closure that given an entry returns the value to sum
      * @return A {@code DataflowVariable} emitting the final sum value
      */
-    static public final <V> DataflowReadChannel<V> sum(final DataflowQueue<V> channel, Closure<V> closure) {
-        reduce(channel, 0) { sum, val -> sum += closure.call(val) }
+    static public final DataflowReadChannel sum(final DataflowQueue channel, Closure closure = null) {
+
+        def target = new DataflowVariable()
+        def aggregate = new Aggregate(name: 'sum', action: closure)
+        subscribe(channel, [onNext: aggregate.&process, onComplete: { target.bind( aggregate.result ) }])
+        return target
     }
 
+
+    static public final DataflowReadChannel mean(final DataflowQueue channel, Closure closure = null) {
+
+        def target = new DataflowVariable()
+        def aggregate = new Aggregate(name: 'mean', action: closure, mean: true)
+        subscribe(channel, [onNext: aggregate.&process, onComplete: { target.bind( aggregate.result ) }])
+        return target
+    }
+
+
+
+    private static class Aggregate {
+
+        def accum
+        long count = 0
+        boolean mean
+        Closure action
+        String name
+
+        def process(it) {
+            if( it == null || it == Channel.VOID )
+                return
+
+            count++
+
+            def item = action != null ? action.call(it) : it
+            if( accum == null )
+                accum = item
+
+            else if( accum instanceof Number )
+                accum += item
+
+            else if( accum instanceof List && item instanceof List)
+                for( int i=0; i<accum.size(); i++ )
+                    accum[i] += item.get(i)
+
+            else
+                throw new IllegalArgumentException("Invalid `$name` item: $item [${item.class.simpleName}]")
+        }
+
+        def getResult() {
+            if( !mean || count == 0 )
+                return accum
+
+            if( accum instanceof List )
+                return accum.collect { it / count }
+            else
+                return accum / count
+        }
+    }
 
     /**
      * Sorts all collection members into groups determined by the supplied mapping closure

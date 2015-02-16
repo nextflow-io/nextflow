@@ -422,6 +422,15 @@ class DataflowExtensionsTest extends Specification {
         expect:
         Channel.from(4,1,7,5).sum().val == 17
         Channel.from(4,1,7,5).sum { it * 2 } .val == 34
+        Channel.from( [1,1,1], [0,1,2], [10,20,30] ). sum() .val == [ 11, 22, 33 ]
+    }
+
+
+    def testMean() {
+        expect:
+        Channel.from(10,20,30).mean().val == 20
+        Channel.from(10,20,30).mean { it * 2 }.val == 40
+        Channel.from( [10,20,30], [10, 10, 10 ], [10, 30, 50]).mean().val == [10, 20, 30]
     }
 
     def testCount() {
