@@ -1201,7 +1201,7 @@ class DataflowExtensions {
                 accum += item
 
             else if( accum instanceof List && item instanceof List)
-                for( int i=0; i<accum.size(); i++ )
+                for( int i=0; i<accum.size() && i<item.size(); i++ )
                     accum[i] += item.get(i)
 
             else
