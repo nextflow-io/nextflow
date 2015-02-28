@@ -212,15 +212,23 @@ class ParallelTaskProcessor extends TaskProcessor {
 
     final protected createTaskHashKey(TaskRun task) {
 
-        def keys = [ session.uniqueId, getSource() ]
+        List keys = [ session.uniqueId, getSource() ]
         // add all the input name-value pairs to the key generator
-        task.inputs.each { keys << it.key.name << it.value }
+        task.inputs.each {
+            keys.add( it.key.name )
+            keys.add( it.value )
+        }
 
         // add all variable references in the task script but not declared as input/output
         def vars = task.context.getScriptVars()
         if( vars ) {
             log.trace "Adding script vars to task hash code: ${vars}"
-            vars.each { k, v -> keys << k << v }
+            vars.each { k, v ->
+                keys.add( k )
+                // value for 'workDir' and 'baseDir' folders are added always as string
+                // in order to avoid to invalid the cache key when resuming the execution
+                keys.add( k=='workDir' || k=='baseDir' ? v?.toString() : v )
+            }
         }
 
         final mode = taskConfig.getHashMode()
