@@ -2017,7 +2017,7 @@ class DataflowExtensions {
      * @param closure
      * @return
      */
-    static public final <V> DataflowReadChannel<V> view(final DataflowReadChannel<?> source, Map opts = [:], Closure closure = null) {
+    static public final <V> DataflowReadChannel<V> view(final DataflowReadChannel<?> source, Map opts, Closure closure = null) {
         assert source != null
         checkParams('view', opts, PARAMS_VIEW)
         final newLine = opts.newLine != false
@@ -2044,6 +2044,10 @@ class DataflowExtensions {
 
         return target;
 
+    }
+
+    static public final <V> DataflowReadChannel<V> view(final DataflowReadChannel<?> source, Closure closure = null) {
+        view(source,[:],closure)
     }
 
     /**

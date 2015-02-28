@@ -1707,6 +1707,22 @@ class DataflowExtensionsTest extends Specification {
         result.val == Channel.STOP
 
         when:
+        result = Channel.from(1,2,3).view { "$it" }
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 3
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.from(1,2,3).view(newLine:false) { "$it" }
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 3
+        result.val == Channel.STOP
+
+        when:
         result = Channel.from(1,2,3).count().view()
         then:
         result.val == 3
