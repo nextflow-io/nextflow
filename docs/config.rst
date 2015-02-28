@@ -310,7 +310,7 @@ brackets. For example::
     trace {
         enabled = true
         file = 'pipeline_trace.csv'
-        fields = 'task_id,name,status,exit,realtimeT,%cpu,rss'
+        fields = 'task_id,name,status,exit,realtime,%cpu,rss'
     }
 
 
