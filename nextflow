@@ -74,9 +74,9 @@ function get() {
 
 function install() {
     if [ "$(uname)" = 'Darwin' ]; then tmpfile=$(mktemp $PWD/XXXXX) || exit $?
-    else tmpfile=$(mktemp -t XXXXX --tmpdir=$PWD) || exit $?
+    else tmpfile=$(mktemp -t XXXXX -p $PWD) || exit $?
     fi
-    
+
     get "http://www.nextflow.io/releases/latest/nextflow" "$tmpfile" "$1" || exit $?
     mv $tmpfile $1 || exit $?
     chmod +x $1 || exit $?
@@ -98,8 +98,8 @@ if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
         exit 1
     fi
     install "$PWD/nextflow"
-    exit 0 
-fi  
+    exit 0
+fi
 
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_VER=${NXF_VER:-'0.12.3'}
