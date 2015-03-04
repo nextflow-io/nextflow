@@ -169,19 +169,21 @@ class SlurmExecutorTest extends Specification {
                 14 CA
                 15 F
                 4 R
+                22 S
                 """.stripIndent().trim()
 
 
         when:
         def result = executor.parseQueueStatus(text)
         then:
-        result.size() == 6
+        result.size() == 7
         result['4'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['5'] == AbstractGridExecutor.QueueStatus.PENDING
         result['6'] == AbstractGridExecutor.QueueStatus.PENDING
         result['13'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['14'] == AbstractGridExecutor.QueueStatus.ERROR
         result['15'] == AbstractGridExecutor.QueueStatus.ERROR
+        result['22'] == AbstractGridExecutor.QueueStatus.HOLD
 
     }
 
