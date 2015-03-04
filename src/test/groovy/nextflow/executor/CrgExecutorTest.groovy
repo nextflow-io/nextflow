@@ -130,7 +130,7 @@ class CrgExecutorTest extends Specification {
                     #$ -q short
                     #$ -l h_rt=24:00:00
                     #$ -l virtual_free=4G
-                    #$ -soft -l docker_images=ubuntu
+                    #$ -soft -l docker_images=*ubuntu*
                     '''
                 .stripIndent().leftTrim()
 
@@ -158,7 +158,7 @@ class CrgExecutorTest extends Specification {
                     #$ -pe mpi 2
                     #$ -l h_rt=72:00:00
                     #$ -l virtual_free=3G
-                    #$ -soft -l docker_images=busybox
+                    #$ -soft -l docker_images=*busybox*
                     '''
                 .stripIndent().leftTrim()
 
@@ -190,7 +190,7 @@ class CrgExecutorTest extends Specification {
                     #$ -pe mpi 2
                     #$ -l h_rt=72:00:00
                     #$ -l virtual_free=3G
-                    #$ -soft -l docker_images=busybox
+                    #$ -soft -l docker_images=*busybox*
                     '''
                     .stripIndent().leftTrim()
 
