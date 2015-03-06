@@ -45,7 +45,7 @@ class CrgExecutor extends SgeExecutor {
         super.getDirectives(task, result)
 
         if( task.container && isDockerEnabled() ) {
-            result << '-soft' << "-l docker_images=*${task.container}*"
+            result << '-soft' << "-l docker_images=*;${task.container};*"
         }
 
         return result
