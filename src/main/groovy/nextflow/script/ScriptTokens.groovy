@@ -145,6 +145,9 @@ class TaskBody {
 
     ScriptType type
 
+    /**
+     * The set of token variable and properties referenced in the task script
+     */
     Set<TokenValRef> valRefs
 
     TaskBody( Closure closure, String source, boolean scriptlet ) {
@@ -163,7 +166,9 @@ class TaskBody {
     }
 
     /**
-     * @return The list of variable names references by the user script
+     * @return
+     *      The set of variable and properties referenced in the user script.
+     *      NOTE: it includes properties in the form {@code object.propertyName}
      */
     Set<String> getValNames() {
         valRefs *. name

@@ -19,6 +19,7 @@
  */
 
 package nextflow.ast
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.script.TaskBody
@@ -705,11 +706,11 @@ public class NextflowDSLImpl implements ASTTransformation {
     }
 
     /**
-     * Fetch all the variable references in a closure expression
+     * Fetch all the variable references in a closure expression.
      *
      * @param closure
      * @param unit
-     * @return
+     * @return The set of variable names referenced in the script. NOTE: it includes properties in the form {@code object.propertyName}
      */
     protected Set<TokenValRef> fetchVariables( ClosureExpression closure, SourceUnit unit ) {
         def visitor = new VariableVisitor(unit)
@@ -730,15 +731,42 @@ public class NextflowDSLImpl implements ASTTransformation {
             this.sourceUnit = unit
         }
 
+        protected boolean isNormalized(PropertyExpression expr) {
+            if( !(expr.getProperty() instanceof ConstantExpression) )
+                return false
+
+            def target = expr.getObjectExpression()
+            while( target instanceof PropertyExpression) {
+                target = (target as PropertyExpression).getObjectExpression()
+            }
+
+            return target instanceof VariableExpression
+        }
+
+        public void visitPropertyExpression(PropertyExpression expr) {
+
+            if( isNormalized(expr)) {
+                final name = expr.text.replace('?','')
+                final line = expr.lineNumber
+                final coln = expr.columnNumber
+
+                if( !name.startsWith('this.') && !fAllVariables.containsKey(name) ) {
+                    fAllVariables[name] = new TokenValRef(name,line,coln)
+                }
+            }
+            else
+                super.visitPropertyExpression(expr)
+
+        }
+
         public void visitVariableExpression(VariableExpression var) {
-            if( var.name == 'this' )
-                return
+            final name = var.name
+            final line = var.lineNumber
+            final coln = var.columnNumber
 
-            def token = new TokenValRef(var.name, var.lineNumber, var.columnNumber)
-            NextflowDSLImpl.log.trace token.toString()
-
-            if( !fAllVariables.containsKey(var.name))
-                fAllVariables[var.name] = token
+            if( name != 'this' && !fAllVariables.containsKey(name) ) {
+                fAllVariables[name] = new TokenValRef(name,line,coln)
+            }
         }
 
         @Override
@@ -746,6 +774,10 @@ public class NextflowDSLImpl implements ASTTransformation {
             return sourceUnit
         }
 
+        /**
+         * @return The set of all variables referenced in the script.
+         * NOTE: it includes properties in the form {@code object.propertyName}
+         */
         Set<TokenValRef> getAllVariables() {
             new HashSet<TokenValRef>(fAllVariables.values())
         }

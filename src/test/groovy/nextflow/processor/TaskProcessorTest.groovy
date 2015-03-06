@@ -19,6 +19,9 @@
  */
 
 package nextflow.processor
+
+import static test.TestParser.parse
+
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -28,7 +31,9 @@ import nextflow.executor.NopeExecutor
 import nextflow.file.FileHolder
 import nextflow.script.BaseScript
 import nextflow.script.FileInParam
+import nextflow.script.ScriptRunner
 import nextflow.script.TaskBody
+import nextflow.script.TokenValRef
 import nextflow.script.TokenVar
 import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
@@ -296,11 +301,93 @@ class TaskProcessorTest extends Specification {
         agent.await()
         then:
         agent.val == [1,2]
-        //i == 2
-
 
     }
 
+
+    def testVarRefs( ) {
+
+        setup:
+        def text = '''
+
+        String x = 1
+
+        @Field
+        String = 'Ciao'
+
+        z = 'str'
+
+        process hola {
+
+          /
+          println $x + $y + $z
+          /
+        }
+        '''
+        when:
+        TaskProcessor process = parse(text).run()
+        then:
+        process.taskBody.valRefs == [
+                new TokenValRef('x', 13, 20),
+                new TokenValRef('y', 13, 25),
+                new TokenValRef('z', 13, 30) ] as Set
+
+        process.taskBody.getValNames() == ['x','y','z'] as Set
+    }
+
+    def testProcessVariables() {
+
+        when:
+        def runner = new ScriptRunner( process: [executor:'nope'] )
+        def script =
+                '''
+                class Foo { def foo() { return [x:1] };  }
+
+                alpha = 1
+                params.beta = 2
+                params.zeta = new Foo()
+                delta = new Foo()
+                x = 'alpha'
+
+                process simpleTask  {
+                    input:
+                    val x from 1
+
+                    """
+                    echo ${alpha}
+                    echo ${params.beta}
+                    echo ${params?.gamma?.omega}
+                    echo ${params.zeta.foo()}
+                    echo ${params.zeta.foo().x}
+                    echo ${delta.foo().x}
+                    echo ${params."$x"}
+                    """
+                }
+
+                '''
+        runner.setScript(script).execute()
+        then:
+        runner.getScriptObj().getTaskProcessor().getTaskBody().getValNames() == ['alpha', 'params.beta', 'params.gamma.omega', 'params.zeta', 'delta', 'params', 'x'] as Set
+
+    }
+
+    def testTaskGlobalVars() {
+
+        setup:
+        def processor = [:] as TaskProcessor
+        processor.name = 'Hello'
+
+        when:
+        def binding = new Binding(x:1, y:2, params: [alpha: 'one'], 'workDir': Paths.get('/work/dir'), baseDir: Paths.get('/base/dir'))
+        def vars = ['q','x','y','params.alpha','params.beta.delta', 'workDir', 'baseDir'] as Set
+        def local = [q: 'any value']
+        def result = processor.getTaskGlobalVars(binding, vars, local)
+
+        then:
+        // note: since 'q' is include in the task local scope, is not returned in the var list
+        result == [x:1, y:2, 'params.alpha': 'one', 'params.beta.delta': null , baseDir: '/base/dir', workDir: '/work/dir']
+
+    }
 
 
 

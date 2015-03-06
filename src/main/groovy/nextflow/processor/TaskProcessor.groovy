@@ -1431,6 +1431,86 @@ abstract class TaskProcessor {
 
     }
 
+    final protected createTaskHashKey(TaskRun task) {
+
+        List keys = [ session.uniqueId, getSource() ]
+        // add all the input name-value pairs to the key generator
+        task.inputs.each {
+            keys.add( it.key.name )
+            keys.add( it.value )
+        }
+
+        // add all variable references in the task script but not declared as input/output
+        def vars = getTaskGlobalVars(task)
+        if( vars ) {
+            log.trace "Adding script vars to task hash code: ${vars}"
+            vars.each { k, v -> keys.add( k ); keys.add( v ) }
+        }
+
+        final mode = taskConfig.getHashMode()
+        final hash = CacheHelper.hasher(keys, mode).hash()
+        if( log.isTraceEnabled() ) {
+            traceInputsHashes(task, keys, mode, hash)
+        }
+        return hash
+    }
+
+    private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
+
+        def buffer = new StringBuilder()
+        buffer.append("[${task.name}] cache hash: ${hash}; mode: $mode; entries: \n")
+        for( Object item : entries ) {
+            buffer.append( "  ${CacheHelper.hasher(item, mode).hash()} [${item?.class?.name}] $item \n")
+        }
+
+        log.trace(buffer.toString())
+    }
+
+    final protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
+        getTaskGlobalVars( ownerScript.binding, task.context.getVariableNames(), task.context.getHolder() )
+    }
+
+    /**
+     * @return The set of task variables accessed in global script context and not declared as input/output
+     */
+    final protected Map<String,Object> getTaskGlobalVars(Binding binding, Set<String> variableNames, Map localScope) {
+        GroovyShell shell = null
+        final result = new HashMap(variableNames.size())
+        final processName = name
+
+        variableNames.each { String name ->
+
+            if( !localScope.containsKey(name) ) {
+
+                def value
+                int p = name.indexOf('.')
+                try {
+                    if( p == -1 ) {
+                        value = binding.getVariable(name)
+                    }
+                    else {
+                        if( !shell ) shell = new GroovyShell(binding)
+                        value = shell.evaluate(name)
+                    }
+                }
+                catch( MissingPropertyException | NullPointerException e ) {
+                    log.debug "Process `${processName}` cannot access global variable `$name` -- Cause: ${e.message}"
+                    value = null
+                }
+
+                // value for 'workDir' and 'baseDir' folders are added always as string
+                // in order to avoid to invalid the cache key when resuming the execution
+                if( name=='workDir' || name=='baseDir' )
+                    value = value.toString()
+
+                result.put( name, value )
+            }
+
+        }
+        return result
+    }
+
+
     /**
      * Execute the specified task shell script
      *

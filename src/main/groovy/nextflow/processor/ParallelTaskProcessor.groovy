@@ -19,7 +19,6 @@
  */
 
 package nextflow.processor
-
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
@@ -34,7 +33,6 @@ import nextflow.file.FileHolder
 import nextflow.script.EachInParam
 import nextflow.script.FileSharedParam
 import nextflow.script.SharedParam
-import nextflow.util.CacheHelper
 /**
  * Defines the parallel tasks execution logic
  *
@@ -208,46 +206,6 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         def hash = createTaskHashKey(task)
         checkCachedOrLaunchTask(task, hash, resumable, TaskProcessor.RunType.SUBMIT)
-    }
-
-    final protected createTaskHashKey(TaskRun task) {
-
-        List keys = [ session.uniqueId, getSource() ]
-        // add all the input name-value pairs to the key generator
-        task.inputs.each {
-            keys.add( it.key.name )
-            keys.add( it.value )
-        }
-
-        // add all variable references in the task script but not declared as input/output
-        def vars = task.context.getScriptVars()
-        if( vars ) {
-            log.trace "Adding script vars to task hash code: ${vars}"
-            vars.each { k, v ->
-                keys.add( k )
-                // value for 'workDir' and 'baseDir' folders are added always as string
-                // in order to avoid to invalid the cache key when resuming the execution
-                keys.add( k=='workDir' || k=='baseDir' ? v?.toString() : v )
-            }
-        }
-
-        final mode = taskConfig.getHashMode()
-        final hash = CacheHelper.hasher(keys, mode).hash()
-        if( log.isTraceEnabled() ) {
-            traceInputsHashes(task, keys, mode, hash)
-        }
-        return hash
-    }
-
-    private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
-
-        def buffer = new StringBuilder()
-        buffer.append("[${task.name}] cache hash: ${hash}; mode: $mode; entries: \n")
-        for( Object item : entries ) {
-            buffer.append( "  ${CacheHelper.hasher(item, mode).hash()} [${item?.class?.name}] $item \n")
-        }
-
-        log.trace(buffer.toString())
     }
 
 

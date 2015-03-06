@@ -103,25 +103,4 @@ class TaskContextTest extends Specification {
     }
 
 
-    def testGetScriptVars() {
-
-        setup:
-        def bind = new Binding(x:1, y:2)
-        def script = new Script() {
-            @Override
-            Object run() {
-                return null
-            }
-        }
-        script.setBinding(bind)
-
-        when:
-        def local = [p:3, q:4, path: Paths.get('some/path')]
-        def context = new TaskContext( script, local, 'proc_hola' )
-
-        then:
-        context.getScriptVars() == [x:1, y:2]
-
-    }
-
 }

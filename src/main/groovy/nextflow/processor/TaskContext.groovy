@@ -50,9 +50,9 @@ class TaskContext implements Map<String,Object> {
     private String name
 
     /**
-     * The name of the variables not hold by the target map, but available in script binding object
+     * The name of the variables not hold in the task context, but referenced in the global script binding object
      */
-    private transient Set<String> bindingNames
+    private transient Set<String> variableNames
 
     TaskContext( TaskProcessor processor, Map holder = [:]) {
         assert holder != null
@@ -63,16 +63,16 @@ class TaskContext implements Map<String,Object> {
         // fetch all the variables names referenced by the script body and retain
         // only the ones not declared as input or output, because these are supposed to
         // to be the ones provided by the *external* script context
-        bindingNames = processor.getTaskBody().getValNames() ?: []
-        if( bindingNames ) {
+        variableNames = processor.getTaskBody().getValNames() ?: []
+        if( variableNames ) {
             Set<String> declaredNames = []
             declaredNames.addAll( processor.taskConfig.getInputs().getNames() )
             declaredNames.addAll( processor.taskConfig.getOutputs().getNames()  )
             if( declaredNames )
-                bindingNames = bindingNames - declaredNames
+                variableNames = variableNames - declaredNames
         }
 
-        log.trace "Binding names for '$name' > $bindingNames"
+        log.trace "Binding names for '$name' > $variableNames"
     }
 
 
@@ -81,41 +81,29 @@ class TaskContext implements Map<String,Object> {
         this.holder = holder
         this.name = name
         def names = script.getBinding()?.getVariables()?.keySet()
-        this.bindingNames = names ? new HashSet<>(names) : new HashSet<>()
-        log.trace "Binding names for '$name' > $bindingNames"
+        this.variableNames = names ? new HashSet<>(names) : new HashSet<>()
+        log.trace "Binding names for '$name' > $variableNames"
     }
 
     /** ONLY FOR TEST PURPOSE -- do not use */
-    protected TaskContext() {
-
-    }
+    protected TaskContext() { }
 
     /**
      * @return The inner map holding the process variables
      */
-    public Map getHolder() {
-        return holder
-    }
+    public Map getHolder() { holder }
 
     /**
      * @return The script instance to which this map reference i.e. the main script object
      */
-    public Script getScript() {
-       script
-    }
+    public Script getScript() { script }
 
     /**
-     * @return The set of task variables accessed in global script context and not declared as input/output
+     * @return
+     *      The set of variable and properties referenced in the user script.
+     *      NOTE: it includes properties in the form {@code object.propertyName}
      */
-    public Map<String,Object> getScriptVars() {
-        def result = new HashMap(bindingNames.size())
-        def binding = script.getBinding()
-        bindingNames.each { String name ->
-            if( binding.hasVariable(name) && !getHolder().containsKey(name) )
-                result.put( name, binding.getVariable(name) )
-        }
-        return result
-    }
+    public Set<String> getVariableNames() { variableNames }
 
     @Override
     String toString() {
@@ -210,7 +198,12 @@ class TaskContext implements Map<String,Object> {
 
         // -- only the binding values for which there's an entry in the holder map
         final copy = new Binding()
-        bindingNames.each { it -> checkAndSet(copy, it) }
+        variableNames.each { String it ->
+            // name can be a property, in this case use the root object
+            def p = it.indexOf('.')
+            def var = ( p == -1 ? it : it.substring(0,p) )
+            checkAndSet(var, copy)
+        }
         log.trace "Delegate for $name > binding copy: ${copy.getVariables()}"
         kryo.writeObject(out, copy)
 
@@ -218,7 +211,8 @@ class TaskContext implements Map<String,Object> {
         return buffer.toByteArray()
     }
 
-    private void checkAndSet( Binding target, String name ) {
+    private void checkAndSet( String name, Binding target ) {
+
         final binding = this.script.getBinding()
         if( !binding.hasVariable(name) )
             return
