@@ -15,7 +15,7 @@ Operators can be separated in to five groups:
 * `Combining operators`_
 * `Forking operators`_
 * `Maths operators`_
-* `Conditional operators`_
+* `Other operators`_
 
 
 
@@ -1675,7 +1675,7 @@ a function that, given an item, returns the value to be summed. For example::
 	Square: 91
 
 
-Conditional operators
+Other operators
 ========================
 
 
@@ -1687,7 +1687,7 @@ is applied is *empty* i.e. doesn't emit any value. Otherwise the it will empty t
 
 Thus, the following example prints::
 
-    Channel .from(1,2,3) .ifEmpty('Hello') .print()
+    Channel .from(1,2,3) .ifEmpty('Hello') .println()
 
     1
     2
@@ -1699,9 +1699,94 @@ Thus, the following example prints::
 
 Instead, this one prints::
 
-    Channel.empty().ifEmpty('Hello') .print()
+    Channel.empty().ifEmpty('Hello') .println()
 
     Hello
 
 The ``ifEmpty`` value parameter can be defined with a :ref:`closure <script-closure>`. In this case the result value of the closure evaluation
 will be emitted when the empty condition is satisfied.
+
+
+print
+------
+
+The ``print`` operator prints the items emitted by a channel to the console standard.
+An optional :ref:`closure <script-closure>` parameter can be specified to customise how items are printed.
+For example::
+
+  Channel
+        .from('foo', 'bar', 'baz', 'qux')
+        .print { it.toUpperCase() + ' ' }
+
+It prints::
+
+    FOO BAR BAZ QUX
+
+See also: `println`_ and `view`_.
+
+
+println
+--------
+
+The ``println`` operator prints the items emitted by a channel to the console standard output appending
+a *new line* character to each of them. For example::
+
+  Channel
+        .from('foo', 'bar', 'baz', 'qux')
+        .println()
+
+It prints::
+
+        foo
+        bar
+        baz
+        qux
+
+
+An optional closure parameter can be specified to customise how items are printed. For example::
+
+  Channel
+        .from('foo', 'bar', 'baz', 'qux')
+        .println { "~ $it" }
+
+
+It prints::
+
+        ~ foo
+        ~ bar
+        ~ baz
+        ~ qux
+
+See also: `print`_ and `view`_.
+
+
+view
+------
+
+The ``view`` operator prints the items emitted by a channel to the console standard output. For example::
+
+    Channel.from(1,2,3).view()
+
+    1
+    2
+    3
+
+Each item is printed on a separate line unless otherwise specified by using the ``newLine: false`` optional parameter.
+
+How the channel items are printed can be controlled by using an optional closure parameter. The closure it must return
+the actual value of the item being to be printed::
+
+    Channel.from(1,2,3)
+            .map { it -> [it, it*it] }
+            .view { num, sqr -> "Square of: $num is $sqr" }
+
+It prints::
+
+    Square of: 1 is 1
+    Square of: 2 is 4
+    Square of: 3 is 9
+
+
+.. note:: Both the *view* and `print`_ (or `println`_) operators consume them items emitted by the source channel to which they
+    are applied. However, the main difference between them is that the former returns a newly create channel whose content
+    is identical to the source one. This allows the *view* operator to be chained like other operators.

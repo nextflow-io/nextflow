@@ -2007,6 +2007,24 @@ class DataflowExtensions {
         return result
     }
 
+    /**
+     * Print the channel content to the console standard output
+     * @param source
+     * @param closure
+     */
+    static public void print(final DataflowReadChannel<?> source, Closure closure = null) {
+        subscribe(source, [onNext: { System.out.print( closure ? closure.call(it) : it ) }])
+    }
+
+    /**
+     * Print the channel content to the console standard output
+     * @param source
+     * @param closure
+     */
+    static public void println(final DataflowReadChannel<?> source, Closure closure = null) {
+        subscribe(source, [onNext: { System.out.println( closure ? closure.call(it) : it ) }])
+    }
+
 
     static private final PARAMS_VIEW = [newLine: Boolean]
 
