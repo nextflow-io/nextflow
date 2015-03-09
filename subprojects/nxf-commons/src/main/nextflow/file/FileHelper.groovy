@@ -226,6 +226,11 @@ class FileHelper {
             return FileSystems.getDefault().getPath(str)
         }
 
+        if( str.startsWith('s3://') && str[5]!='/' ) {
+            // normalise 's3' path so that it stars
+            str = "s3:///${str.substring(5)}"
+        }
+
         final uri = URI.create(str)
         if( uri.scheme == 'file' )
             return FileSystems.getDefault().getPath(uri.path)

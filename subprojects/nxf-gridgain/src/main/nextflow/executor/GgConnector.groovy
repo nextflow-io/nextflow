@@ -20,14 +20,15 @@
 
 package nextflow.executor
 
+import com.upplication.s3fs.S3Path
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.file.FileHelper
 import nextflow.file.ggfs.GgFileSystemProvider
 import nextflow.file.ggfs.GgPath
 import nextflow.processor.TaskPollingMonitor
 import nextflow.util.Duration
-import nextflow.file.FileHelper
 import nextflow.util.KryoHelper
 import nextflow.util.PathSerializer
 import nextflow.util.RemoteSession
@@ -38,7 +39,6 @@ import org.gridgain.grid.cache.GridCache
 import org.gridgain.grid.events.GridEventType
 import org.gridgain.grid.spi.discovery.GridDiscoverySpiListener
 import org.jetbrains.annotations.Nullable
-import org.weakref.s3fs.S3Path
 
 /**
  * Creates an instance of the GridGain node

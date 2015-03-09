@@ -19,16 +19,17 @@
  */
 
 package nextflow.daemon
+
+import com.upplication.s3fs.S3Path
 import groovy.util.logging.Slf4j
 import nextflow.executor.GgGridFactory
 import nextflow.executor.ServiceName
+import nextflow.file.FileHelper
 import nextflow.file.ggfs.GgFileSystemProvider
 import nextflow.file.ggfs.GgPath
-import nextflow.file.FileHelper
 import nextflow.util.KryoHelper
 import nextflow.util.PathSerializer
 import org.gridgain.grid.Grid
-import org.weakref.s3fs.S3Path
 
 /**
  * Launch the GridGain daemon

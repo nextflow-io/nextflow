@@ -76,6 +76,22 @@ class GridTaskHandler extends TaskHandler {
         this.queue = task.config?.queue
     }
 
+    protected Process startProcess() {
+
+        // -- log the qsub command
+        def cli = executor.getSubmitCommandLine(task, wrapperFile)
+        log.trace "start process ${task.name} > cli: ${cli}"
+
+        /*
+         * launch 'sub' script wrapper
+         */
+        ProcessBuilder builder = new ProcessBuilder()
+                .command( cli as String[] )
+                .redirectErrorStream(true)
+                .directory(task.workDir.toFile())
+
+        return builder.start()
+    }
 
     /*
      * {@inheritDocs}
@@ -83,23 +99,11 @@ class GridTaskHandler extends TaskHandler {
     @Override
     void submit() {
         log.debug "Launching process > ${task.name} -- work folder: ${task.workDir}"
-        // create the wrapper script
+        // -- create the wrapper script
         executor.createBashWrapperBuilder(task).build()
 
-        // -- log the qsub command
-        def cli = executor.getSubmitCommandLine(task, wrapperFile)
-        log.trace "submit ${task.name} > cli: ${cli}"
-
-        /*
-         * launch 'sub' script wrapper
-         */
-        ProcessBuilder builder = new ProcessBuilder()
-                .directory(task.workDir.toFile())
-                .command( cli as String[] )
-                .redirectErrorStream(true)
-
         // -- start the execution and notify the event to the monitor
-        Process process = builder.start()
+        def process = startProcess()
 
         // -- forward the job launcher script to the command stdin if required
         if( executor.pipeLauncherScript() ) {

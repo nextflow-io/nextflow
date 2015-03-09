@@ -299,7 +299,6 @@ class BashWrapperBuilder {
         final inputFile = workDir.resolve(TaskRun.CMD_INFILE)
         final environmentFile = workDir.resolve(TaskRun.CMD_ENV)
         final startedFile = workDir.resolve(TaskRun.CMD_START)
-        final outputFile = workDir.resolve(TaskRun.CMD_OUTFILE)
         final exitedFile = workDir.resolve(TaskRun.CMD_EXIT)
         final runnerFile = workDir.resolve(TaskRun.CMD_RUN)
         final wrapperFile = workDir.resolve(TaskRun.CMD_WRAPPER)
@@ -363,7 +362,7 @@ class BashWrapperBuilder {
             runner << headerScript << ENDL
 
         runner << scriptCleanUp(exitedFile, docker?.killCommand) << ENDL
-        runner << 'touch ' << startedFile.toString() << ENDL
+        runner << touchFile(startedFile) << ENDL
 
         if( beforeScript ) {
             runner << '# user `beforeScript`' << ENDL
@@ -372,7 +371,7 @@ class BashWrapperBuilder {
 
         // source the environment
         if( !runWithDocker ) {
-            runner << '[ -f '<< environmentFile.toString() << ' ]' << ' && source ' << environmentFile.toString() << ENDL
+            runner << '[ -f '<< fileStr(environmentFile) << ' ]' << ' && source ' << fileStr(environmentFile) << ENDL
         }
 
         if( changeDir ) {
@@ -404,9 +403,9 @@ class BashWrapperBuilder {
             wrapper << 'trap \'exit ${ret:=$?}\' EXIT' << ENDL
             wrapper << 'start_millis=$($NXF_DATE)'  << ENDL
             wrapper << '(' << ENDL
-            wrapper << interpreter << ' ' << scriptFile.toString()
-            if( input != null ) wrapper << ' < ' << inputFile.toString()
-            wrapper << ' &> ' << outputFile.getName() << ENDL
+            wrapper << interpreter << ' ' << fileStr(scriptFile)
+            if( input != null ) wrapper << ' < ' << fileStr(inputFile)
+            wrapper << ' &> ' << TaskRun.CMD_OUTFILE << ENDL
             wrapper << ') &' << ENDL
             wrapper << 'pid=$!' << ENDL                     // get the PID of the main job
             wrapper << 'nxf_trace "$pid" ' << TaskRun.CMD_TRACE << ' &' << ENDL
@@ -420,12 +419,12 @@ class BashWrapperBuilder {
             wrapperFile.text = wrapper.toString()
 
             // invoke it from the main script
-            runner << BASH.join(' ') << ' ' << wrapperFile.toString() << ENDL
+            runner << BASH.join(' ') << ' ' << fileStr(wrapperFile) << ENDL
         }
         else {
-            runner << interpreter << ' ' << scriptFile.toString()
-            if( input != null ) runner << ' < ' << inputFile.toString()
-            runner << ' &> ' << outputFile.getName() << ENDL
+            runner << interpreter << ' ' << fileStr(scriptFile)
+            if( input != null ) runner << ' < ' << fileStr(inputFile)
+            runner << ' &> ' << TaskRun.CMD_OUTFILE << ENDL
         }
         runner << ') &' << ENDL
         runner << 'pid=$!' << ENDL
@@ -443,13 +442,13 @@ class BashWrapperBuilder {
          * un-stage output files
          */
         if( changeDir )
-            runner << 'cp ' << outputFile.name << ' ' << workDir << ' || true' << ENDL
+            runner << copyFile(TaskRun.CMD_OUTFILE, workDir) << ' || true' << ENDL
 
         if( (changeDir || workDir != targetDir) && unstagingScript  )
             runner << unstagingScript << ENDL
 
         if( changeDir && statsEnabled )
-            runner << 'cp ' << TaskRun.CMD_TRACE << ' ' << workDir << ' || true' << ENDL
+            runner << copyFile(TaskRun.CMD_TRACE,  workDir) << ' || true' << ENDL
 
         if( afterScript ) {
             runner << '# user `afterScript`' << ENDL
@@ -470,7 +469,7 @@ class BashWrapperBuilder {
     @PackageScope
     String scriptCleanUp( Path file, String dockerKill ) {
         SCRIPT_CLEANUP
-                .replace('__EXIT_FILE__', file.toString())
+                .replace('__EXIT_FILE__', exitFile(file))
                 .replace('__KILL_CMD__', dockerKill ?: '[[ "$pid" ]] && nxf_kill $pid')
     }
 
@@ -525,5 +524,20 @@ class BashWrapperBuilder {
     }
 
 
+    protected String touchFile( Path file ) {
+        "touch ${file.toString()}"
+    }
+
+    protected String copyFile( String name, Path target ) {
+        "cp ${name} ${target}"
+    }
+
+    protected String exitFile( Path file ) {
+        file.toString()
+    }
+
+    protected String fileStr( Path file ) {
+        file.toString()
+    }
 
 }
