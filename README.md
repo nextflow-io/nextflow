@@ -267,7 +267,8 @@ at this link https://groups.google.com/forum/#!forum/nextflow
 Build servers 
 --------------
 
-  * [Travis-CI](https://travis-ci.org/nextflow-io/nextflow) 
+  * [Travis-CI](https://travis-ci.org/nextflow-io/nextflow)
+  * [Circle-CI](https://circleci.com/gh/nextflow-io/nextflow)
   * [Groovy Joint build](http://ci.groovy-lang.org/project.html?projectId=JointBuilds_Nextflow&guest=1) 
 
 License

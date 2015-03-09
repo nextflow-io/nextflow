@@ -1,6 +1,17 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.12.4 - 4 Mar 2015 
+- Added suspended job status handling to SLURM executor -- Issue #36
+- Added `print` and `println` operators plus tests and updated docs
+- Fixed issue on `view` operator when specifying a closure
+- Fixed Docker image resource request in CRG executor
+- Fixed typo in documentation
+- Improved task hash key generation and task variables handling
+- Compute `baseDir` and `workDir` as string values when creating task unique hash
+- Improved `sum` operator to allows it to handle lists with varying size
+- Upgrading Groovy runtime to version 2.3.10
+
 0.12.3 - 16 Feb 2015
 - Added support for `module` and `container` fields in execution trace log
 - Fixed a small inconsistency on polling monitor queue size for local executor when using single core or two-cores cpu
