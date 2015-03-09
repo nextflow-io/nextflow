@@ -270,10 +270,10 @@ class LoggerHelper {
             buffer.append(message)
         }
         else if( fail ) {
-            buffer.append( fail.message ?: "Unknown error [${fail.class.simpleName}]" )
+            buffer.append( fail.message ?: "Unexpected error [${fail.class.simpleName}]" )
         }
         else {
-            buffer.append("Unknown error")
+            buffer.append("Unexpected error")
         }
         buffer.append(CoreConstants.LINE_SEPARATOR)
         buffer.append(CoreConstants.LINE_SEPARATOR)
