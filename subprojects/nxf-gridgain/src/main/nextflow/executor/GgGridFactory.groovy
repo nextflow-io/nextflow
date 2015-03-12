@@ -23,6 +23,7 @@ import com.amazonaws.auth.BasicAWSCredentials
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
+import nextflow.Global
 import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
@@ -316,7 +317,7 @@ class GgGridFactory {
         }
 
         else if( join?.startsWith('s3:')) {
-            def credentials = FileHelper.getAwsCredentials(System.getenv(), config)
+            def credentials = Global.getAwsCredentials(System.getenv(), config)
             if( !credentials )
                 throw new AbortOperationException("Missing AWS credentials -- Please add AWS access credentials to your environment by defining the variables AWS_ACCESS_KEY and AWS_SECRET_KEY or in your nextflow config file")
 

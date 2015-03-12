@@ -20,7 +20,6 @@
 
 package nextflow.executor
 
-import com.upplication.s3fs.S3Path
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -39,7 +38,6 @@ import org.gridgain.grid.cache.GridCache
 import org.gridgain.grid.events.GridEventType
 import org.gridgain.grid.spi.discovery.GridDiscoverySpiListener
 import org.jetbrains.annotations.Nullable
-
 /**
  * Creates an instance of the GridGain node
  *
@@ -77,7 +75,6 @@ class GgConnector implements GridDiscoverySpiListener {
          * Register the path serializer
          */
         KryoHelper.register(GgPath, PathSerializer)
-        KryoHelper.register(S3Path, PathSerializer)
 
         /*
          * access to the GridGain file system to force the instantiation of a GridGain instance

@@ -22,7 +22,9 @@ package nextflow.executor
 import java.nio.file.Path
 
 import groovy.transform.InheritConstructors
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
@@ -68,7 +70,11 @@ class CirrusExecutor extends AbstractGridExecutor {
 
     @Override
     String stageInputFileScript( Path path, String targetName ) {
-        "es3 -q -v0 --no-stats sync s3:/${path} ${targetName}"
+        def op = "es3 -q -v0 --no-stats sync s3:/${path} ."
+        if( path.name != targetName )
+            op += " && mv ${path.name} ${targetName}"
+
+        return op
     }
 
     @Override
@@ -96,14 +102,27 @@ class CirrusExecutor extends AbstractGridExecutor {
         throw new UnsupportedOperationException()
     }
 
+    @Memoized
+    protected List<String> getAwsCredentials() {
+        Global.getAwsCredentials()
+    }
+
     @Override
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
         // set a tag for the task name
         result << '--tag' << "name=${getJobNameFor(task)}"
 
+        result << '--tag' << "uuid=${task.getHashLog()}"
+
         // Do not propagate host environment to worker nodes
         result << '--no-env'
+
+        def aws = getAwsCredentials()
+        if( aws ) {
+            result << '-v' << "AWS_ACCESS_KEY_ID=${aws[0]}"
+            result << '-v' << "AWS_SECRET_ACCESS_KEY=${aws[1]}"
+        }
 
         // the requested queue name
         if( task.config.queue ) {
@@ -158,7 +177,7 @@ class CirrusExecutor extends AbstractGridExecutor {
     protected Map<?, QueueStatus> parseQueueStatus(String text) {
         def result = [:]
         text.eachLine { String row, index ->
-            if( index< 2 ) return
+            if( index< 1 ) return
             def cols = row.trim().split(/\t+/)
             result.put( cols[0], DECODE_STATUS[cols[4]] )
         }
@@ -247,7 +266,7 @@ class CirrusWrapperBuilder extends BashWrapperBuilder {
     }
 
     protected String exitFile( Path file ) {
-        "${file.name} && es3 -q -v 0 --no-stats sync ${file.name} s3:/${file} || true"
+        "${file.name} && es3 -q -v 0 --no-stats sync ${file.name} s3:/${file.parent} || true"
     }
 
 }

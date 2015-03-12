@@ -20,7 +20,6 @@
 
 package nextflow.daemon
 
-import com.upplication.s3fs.S3Path
 import groovy.util.logging.Slf4j
 import nextflow.executor.GgGridFactory
 import nextflow.executor.ServiceName
@@ -30,7 +29,6 @@ import nextflow.file.ggfs.GgPath
 import nextflow.util.KryoHelper
 import nextflow.util.PathSerializer
 import org.gridgain.grid.Grid
-
 /**
  * Launch the GridGain daemon
  *
@@ -51,7 +49,6 @@ class GgDaemon implements DaemonLauncher {
          * register path serializer
          */
         KryoHelper.register(GgPath, PathSerializer)
-        KryoHelper.register(S3Path, PathSerializer)
 
         /*
          * Launch grid instance

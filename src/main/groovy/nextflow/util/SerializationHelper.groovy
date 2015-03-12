@@ -28,6 +28,7 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.upplication.s3fs.S3Path
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -50,6 +51,7 @@ class KryoHelper {
         serializers.put( URL, URLSerializer )
         serializers.put( UUID, UUIDSerializer )
         serializers.put( File, FileSerializer )
+        serializers.put( S3Path, PathSerializer )
 
         threadLocal = new ThreadLocal<Kryo>() {
             @Override

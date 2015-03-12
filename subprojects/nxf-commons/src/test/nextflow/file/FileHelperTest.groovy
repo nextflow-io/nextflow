@@ -351,21 +351,6 @@ class FileHelperTest extends Specification {
         FileHelper.getMaxDepth(null,'a/**') == Integer.MAX_VALUE
     }
 
-    def testAwsCredentials() {
-
-        expect:
-        FileHelper.getAwsCredentials(null, null) == null
-        FileHelper.getAwsCredentials([AWS_ACCESS_KEY: 'x', AWS_SECRET_KEY: '222'], null) == ['x','222']
-        FileHelper.getAwsCredentials([AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999'], null) == ['q','999']
-        FileHelper.getAwsCredentials([AWS_ACCESS_KEY: 'x', AWS_SECRET_KEY: '222',  AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999'], null) == ['x','222']
-
-        FileHelper.getAwsCredentials([AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999'], [aws:[accessKey: 'b', secretKey: '333']]) == ['b','333']
-        FileHelper.getAwsCredentials(null, [aws:[accessKey: 'b', secretKey: '333']]) == ['b','333']
-        FileHelper.getAwsCredentials(null, [aws:[accessKey: 'b']]) == null
-
-    }
-
-
     def testGetPathAndPattern () {
 
         expect:
