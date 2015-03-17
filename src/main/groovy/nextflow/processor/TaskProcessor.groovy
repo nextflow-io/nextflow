@@ -1028,6 +1028,8 @@ abstract class TaskProcessor {
                 def file = workDir.resolve(pattern)
                 if( file.exists() )
                     result = [file]
+                else
+                    log.debug "Process `${task.name}` is unable to find [${file.class.simpleName}]: `$file` (pattern: `$pattern`)"
             }
 
             if( !result )
