@@ -160,7 +160,7 @@ class CirrusExecutorTest extends Specification {
 
         expect:
         executor.queueStatusCommand(null) == ['kqueue']
-        executor.queueStatusCommand('long') == ['kqueue']
+        executor.queueStatusCommand('long') == ['kqueue','-q','long']
 
     }
 

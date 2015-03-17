@@ -165,7 +165,11 @@ class CirrusExecutor extends AbstractGridExecutor {
 
     @Override
     protected List<String> queueStatusCommand( queue ) {
-        ['kqueue']
+        def cmd = ['kqueue']
+        if( queue )
+            cmd << '-q' << queue.toString()
+
+        return cmd
     }
 
     /*
