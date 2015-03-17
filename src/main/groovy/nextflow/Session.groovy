@@ -48,7 +48,7 @@ import nextflow.util.FixedPoolFactory
  */
 @Slf4j
 @CompileStatic
-class Session {
+class Session implements ISession {
 
     static final String EXTRAE_TRACE_CLASS = 'nextflow.extrae.ExtraeTraceObserver'
 

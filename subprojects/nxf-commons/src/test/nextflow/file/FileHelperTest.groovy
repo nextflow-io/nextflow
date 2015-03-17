@@ -27,6 +27,7 @@ import java.nio.file.Paths
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import nextflow.Global
+import nextflow.ISession
 import spock.lang.Specification
 /**
  *
@@ -177,8 +178,8 @@ class FileHelperTest extends Specification {
     def testGeEnvMap() {
 
         given:
-        def rnd = UUID.randomUUID()
-        Global.session = rnd
+        def sess = Mock(ISession)
+        Global.session = sess
         def env = [:]
         env.put('AWS_ACCESS_KEY','a1')
         env.put('AWS_SECRET_KEY','s1')
@@ -190,7 +191,7 @@ class FileHelperTest extends Specification {
         FileHelper.getEnvMap0('s3', [:]) == [:]
 
         // any other return just the session
-        FileHelper.getEnvMap0('dxfs', env).session == rnd
+        FileHelper.getEnvMap0('dxfs', env).session == sess
 
     }
 

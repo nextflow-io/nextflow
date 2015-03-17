@@ -90,7 +90,7 @@ class GgGridFactory {
     }
 
     /**
-     * Creates a grid factory object by using the given {@link nextflow.Session} object.
+     * Creates a grid factory object by using the given {@link Session} object.
      * @param session
      */
     GgGridFactory( Session session ) {

@@ -33,7 +33,7 @@ class Global {
     /**
      * The pipeline session instance
      */
-    static private session
+    static private ISession session
 
     /**
      * The main configuration object
@@ -43,8 +43,8 @@ class Global {
     /**
      * @return The object instance representing the current session
      */
-    static <T> T getSession() {
-        (T)session
+    static ISession getSession() {
+        session
     }
 
     /**
@@ -52,7 +52,7 @@ class Global {
      *
      * @param value An object instance representing the current session
      */
-    static <T> void setSession( value ) {
+    static void setSession( ISession value ) {
         session = value
     }
 
