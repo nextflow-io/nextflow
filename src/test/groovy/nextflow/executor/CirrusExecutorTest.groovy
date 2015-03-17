@@ -53,7 +53,7 @@ class CirrusExecutorTest extends Specification {
         result = executor.getDirectives(task, [])
         then:
         result == ['--tag',
-                   'name=nf-task123_3',
+                   'NAME=nf-task123_3',
                     '--tag',
                     'uuid=a6f6aa6',
                    '--no-env',
@@ -71,7 +71,7 @@ class CirrusExecutorTest extends Specification {
         result = executor.getDirectives(task, [])
         then:
         result == ['--tag',
-                   'name=nf-task123_3',
+                   'NAME=nf-task123_3',
                    '--tag',
                    'uuid=a6f6aa6',
                    '--no-env',
@@ -95,7 +95,7 @@ class CirrusExecutorTest extends Specification {
         result = executor.getDirectives(task, [])
         then:
         result == ['--tag',
-                   'name=nf-task123_3',
+                   'NAME=nf-task123_3',
                    '--tag',
                    'uuid=a6f6aa6',
                    '--no-env',
@@ -137,7 +137,7 @@ class CirrusExecutorTest extends Specification {
         executor.getSubmitCommandLine(task, script) == [
                 'ksub',
                 '--tag',
-                'name=nf-task123_3',
+                'NAME=nf-task123_3',
                 '--tag',
                 'uuid=28612781',
                 '--no-env',

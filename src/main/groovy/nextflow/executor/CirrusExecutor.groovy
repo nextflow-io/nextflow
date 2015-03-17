@@ -111,7 +111,7 @@ class CirrusExecutor extends AbstractGridExecutor {
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
         // set a tag for the task name
-        result << '--tag' << "name=${getJobNameFor(task)}"
+        result << '--tag' << "NAME=${getJobNameFor(task)}"
 
         result << '--tag' << "uuid=${task.getHashLog()}"
 
