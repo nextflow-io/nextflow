@@ -45,6 +45,15 @@ class CrgExecutor extends SgeExecutor {
         super.getDirectives(task, result)
 
         if( task.container && isDockerEnabled() ) {
+            //  this will export the SGE_BINDING environment variable used to set Docker cpuset
+            result << '-binding' << "env linear:${task.config.cpus}"
+
+            // when it is a parallel job add 'reserve' flag
+            if( task.config.cpus>1 ) {
+                result << '-R' << 'y'
+            }
+
+            // request the docker image as a soft resource
             result << '-soft' << "-l docker_images=*;${task.container};*"
         }
 
@@ -61,5 +70,25 @@ class CrgExecutor extends SgeExecutor {
         dockerConf?.enabled?.toString() == 'true'
     }
 
+    protected BashWrapperBuilder createBashWrapperBuilder(TaskRun task) {
+
+        def builder = super.createBashWrapperBuilder(task)
+
+        // When job is execute in a docker container
+        // The Univa scheduler has to allocate the required cores for the job execution
+        // Variable '$SGE_BINDING' must contain the cores to be used
+        if( task.container && isDockerEnabled() ) {
+            final str =
+                    '''
+                    [[ -z $SGE_BINDING ]] && echo "Missing '$SGE_BINDING' variable -- Report this problem to your sysadmin" && exit 1
+                    cpuset=$(echo $SGE_BINDING | sed 's/ /,/')
+                    '''
+                    .stripIndent()
+            builder.setDockerCpuset('$cpuset')
+            builder.headerScript += str
+        }
+
+        return builder
+    }
 
 }

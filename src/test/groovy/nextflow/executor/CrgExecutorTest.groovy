@@ -130,6 +130,7 @@ class CrgExecutorTest extends Specification {
                     #$ -q short
                     #$ -l h_rt=24:00:00
                     #$ -l virtual_free=4G
+                    #$ -binding env linear:1
                     #$ -soft -l docker_images=*;ubuntu;*
                     '''
                 .stripIndent().leftTrim()
@@ -158,6 +159,8 @@ class CrgExecutorTest extends Specification {
                     #$ -pe mpi 2
                     #$ -l h_rt=72:00:00
                     #$ -l virtual_free=3G
+                    #$ -binding env linear:2
+                    #$ -R y
                     #$ -soft -l docker_images=*;busybox;*
                     '''
                 .stripIndent().leftTrim()
@@ -171,7 +174,7 @@ class CrgExecutorTest extends Specification {
         task.config = new TaskConfig(
                 memory: '3 g',
                 time: '3 d',
-                cpus: '2',
+                cpus: '4',
                 penv: 'mpi',
                 queue: 'long',
                 container: 'busybox',
@@ -187,9 +190,11 @@ class CrgExecutorTest extends Specification {
                     #$ -V
                     #$ -notify
                     #$ -q long
-                    #$ -pe mpi 2
+                    #$ -pe mpi 4
                     #$ -l h_rt=72:00:00
                     #$ -l virtual_free=3G
+                    #$ -binding env linear:4
+                    #$ -R y
                     #$ -soft -l docker_images=*;busybox;*
                     '''
                     .stripIndent().leftTrim()

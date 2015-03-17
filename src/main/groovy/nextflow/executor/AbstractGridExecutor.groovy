@@ -64,21 +64,18 @@ abstract class AbstractGridExecutor extends Executor {
         assert task
         assert task.workDir
 
-        final folder = task.workDir
-        log.debug "Launching process > ${task.name} -- work folder: $folder"
-
-        final bash = new BashWrapperBuilder(task)
-
-        // job directives headers
-        bash.headerScript = getHeaders(task)
-        // staging/unstage input/output files
-        bash.stagingScript = stagingInputFilesScript(task)
-        bash.unstagingScript = unstageOutputFilesScript(task)
-
-        // create the wrapper script
-        bash.build()
-
         return new GridTaskHandler(task, this)
+    }
+
+    protected BashWrapperBuilder createBashWrapperBuilder(TaskRun task) {
+
+        final builder = new BashWrapperBuilder(task)
+        // job directives headers
+        builder.headerScript = getHeaders(task)
+        // staging/unstage input/output files
+        builder.stagingScript = stagingInputFilesScript(task)
+        builder.unstagingScript = unstageOutputFilesScript(task)
+        return builder
     }
 
     /**

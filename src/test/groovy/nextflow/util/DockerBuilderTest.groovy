@@ -75,6 +75,16 @@ class DockerBuilderTest extends Specification {
 
     }
 
+    def 'test memory and cpuset' () {
+
+        expect:
+        new DockerBuilder('fedora').setCpus('1,2').build() == 'docker run -i --cpuset 1,2 -v $PWD:$PWD -w $PWD fedora'
+        new DockerBuilder('fedora').setMemory('10g').build() == 'docker run -i --memory 10g -v $PWD:$PWD -w $PWD fedora'
+        new DockerBuilder('fedora').setMemory(new MemoryUnit('100M')).build() == 'docker run -i --memory 100m -v $PWD:$PWD -w $PWD fedora'
+        new DockerBuilder('fedora').setCpus('1-3').setMemory(new MemoryUnit('100M')).build() == 'docker run -i --cpuset 1-3 --memory 100m -v $PWD:$PWD -w $PWD fedora'
+
+    }
+
     def 'test add mount'() {
 
         when:

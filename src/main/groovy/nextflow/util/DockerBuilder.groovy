@@ -65,6 +65,10 @@ class DockerBuilder {
 
     private String killCommand
 
+    private String cpus
+
+    private String memory
+
     DockerBuilder( String name ) {
         this.image = name
     }
@@ -123,6 +127,24 @@ class DockerBuilder {
         return this
     }
 
+    DockerBuilder setCpus( String value ) {
+        this.cpus = value
+        return this
+    }
+
+    DockerBuilder setMemory( value ) {
+        if( value instanceof MemoryUnit )
+            this.memory = "${value.toMega()}m"
+
+        else if( value instanceof String )
+            this.memory = value
+
+        else
+            throw new IllegalArgumentException("Not a supported memory value")
+
+        return this
+    }
+
     String build(StringBuilder result = new StringBuilder()) {
         assert image
 
@@ -133,6 +155,12 @@ class DockerBuilder {
             result << 'sudo '
 
         result << 'docker run -i '
+
+        if( cpus )
+            result << "--cpuset ${cpus} "
+
+        if( memory )
+            result << "--memory ${memory} "
 
         if( tty )
             result << '-t '

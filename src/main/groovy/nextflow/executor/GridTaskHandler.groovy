@@ -76,11 +76,15 @@ class GridTaskHandler extends TaskHandler {
         this.queue = task.config?.queue
     }
 
+
     /*
      * {@inheritDocs}
      */
     @Override
     void submit() {
+        log.debug "Launching process > ${task.name} -- work folder: ${task.workDir}"
+        // create the wrapper script
+        executor.createBashWrapperBuilder(task).build()
 
         // -- log the qsub command
         def cli = executor.getSubmitCommandLine(task, wrapperFile)

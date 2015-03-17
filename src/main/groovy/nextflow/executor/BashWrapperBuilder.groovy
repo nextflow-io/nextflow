@@ -26,6 +26,8 @@ import groovy.util.logging.Slf4j
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.DockerBuilder
+import nextflow.util.MemoryUnit
+
 /**
  * Builder to create the BASH script which is used to
  * wrap and launch the user task
@@ -180,6 +182,10 @@ class BashWrapperBuilder {
 
     Path dockerMount
 
+    String dockerCpuset
+
+    MemoryUnit dockerMemory
+
     String name
 
     private runWithDocker
@@ -215,6 +221,7 @@ class BashWrapperBuilder {
         // docker config
         this.dockerImage = task.container
         this.dockerConfig = task.processor?.session?.config?.docker
+        this.dockerMemory = task.config.getMemory()
 
         // stats
         this.statsEnabled = task.processor?.session?.statsEnabled
@@ -489,6 +496,12 @@ class BashWrapperBuilder {
 
         if( dockerMount )
             docker.addMount(dockerMount)
+
+        if( dockerMemory )
+            docker.setMemory(dockerMemory)
+
+        if( dockerCpuset )
+            docker.setCpus(dockerCpuset)
 
         // set the environment
         if( !envFile.empty() )
