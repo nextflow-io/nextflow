@@ -831,12 +831,13 @@ class FilesExTest extends Specification {
     def testPathMinus() {
 
         expect:
-        Paths.get('/') -1 == null
         Paths.get('/some/path') -1 == Paths.get('/some')
         Paths.get('/some/path/file.txt') -1 == Paths.get('/some/path')
         Paths.get('/some/path/file.txt') -2 == Paths.get('/some')
         Paths.get('/some/path/file.txt') -3 == Paths.get('/')
-        Paths.get('/some/path/file.txt') -4 == null
+        Paths.get('/some/path/file.txt') -4 == Paths.get('/')
+        Paths.get('/') -1 == Paths.get('/')
+
 //        Paths.get('/some/path/file.txt') - 'file.txt' == Paths.get('/some/path')
 
     }

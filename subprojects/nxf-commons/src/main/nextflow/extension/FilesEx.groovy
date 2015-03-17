@@ -1262,7 +1262,7 @@ class FilesEx {
         while( i-- > 0 && result != null )
             result = result.getParent()
 
-        return result
+        return result ?: path.getRoot()
     }
 //
 //    static Path minus( Path self, Path other ) {
