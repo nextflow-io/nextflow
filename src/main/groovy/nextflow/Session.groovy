@@ -334,7 +334,7 @@ class Session {
     }
 
     void abort(Throwable cause = null) {
-        log.debug "Session aborted -- Cause: ${cause?.message}"
+        log.debug "Session aborted -- Cause: ${cause}"
         aborted = true
         dispatcher.signal()
         allProcessors *. terminate()

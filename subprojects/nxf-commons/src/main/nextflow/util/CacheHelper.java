@@ -198,7 +198,7 @@ public class CacheHelper {
             return hasher.putLong(Files.size(file)) .putLong(FilesEx.lastModified(file));
         }
         catch (IOException e) {
-            log.debug("Unable to hash file: {}", file);
+            log.debug("Unable to hash file: {} -- Cause: {}", file, e.toString());
             return hasher;
         }
     }
