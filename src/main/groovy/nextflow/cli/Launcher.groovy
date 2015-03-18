@@ -208,25 +208,25 @@ class Launcher implements ExitCode {
 
             else if( current ==~ /^\-\-[a-zA-Z\d].*/ && !current.contains('=') ) {
                 current += '='
-                current += ( i<args.size() && !args[i].startsWith('--') ? args[i++] : 'true' )
+                current += ( i<args.size() && isValue(args[i]) ? args[i++] : 'true' )
                 normalized[-1] = current
             }
 
             else if( current ==~ /^\-process\..+/ && !current.contains('=')) {
                 current += '='
-                current += ( i<args.size() ? args[i++] : 'true' )
+                current += ( i<args.size() && isValue(args[i]) ? args[i++] : 'true' )
                 normalized[-1] = current
             }
 
             else if( current ==~ /^\-cluster\..+/ && !current.contains('=')) {
                 current += '='
-                current += ( i<args.size() ? args[i++] : 'true' )
+                current += ( i<args.size() && isValue(args[i]) ? args[i++] : 'true' )
                 normalized[-1] = current
             }
 
             else if( current ==~ /^\-executor\..+/ && !current.contains('=')) {
                 current += '='
-                current += ( i<args.size() ? args[i++] : 'true' )
+                current += ( i<args.size() && isValue(args[i]) ? args[i++] : 'true' )
                 normalized[-1] = current
             }
 
@@ -237,6 +237,12 @@ class Launcher implements ExitCode {
         }
 
         return normalized
+    }
+
+    private boolean isValue( String x ) {
+        if( !x ) return false                   // an empty string -> not a value
+        if( x.size() == 1 ) return true         // a single char is not an option -> value true
+        !x.startsWith('-') || x.isNumber()      // if not start with `-` or is a number -> value true
     }
 
     /**

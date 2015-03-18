@@ -167,6 +167,8 @@ class LauncherTest extends Specification {
 
         launcher.normalizeArgs('-x', '1', '-process.alpha','2', '3') == ['-x', '1', '-process.alpha=2', '3']
         launcher.normalizeArgs('-x', '1', '-process.echo') == ['-x', '1', '-process.echo=true']
+        launcher.normalizeArgs('-x', '1', '-process.echo', '-with-docker', 'ubuntu' ) == ['-x', '1', '-process.echo=true', '-with-docker','ubuntu']
+        launcher.normalizeArgs('-x', '1', '-process.echo', '-123') == ['-x', '1', '-process.echo=-123' ]
 
         launcher.normalizeArgs('-x', '1', '-cluster.alpha','2', '3') == ['-x', '1', '-cluster.alpha=2', '3']
         launcher.normalizeArgs('-x', '1', '-cluster.echo') == ['-x', '1', '-cluster.echo=true']
