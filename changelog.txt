@@ -1,6 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.12.5 - 18 Mar 2015
+- Fixed regression preventing jobs cleanup when nextflow process is killed
+- Fixed issue when command line flag has not value making it to consume following option
+- Added `uge` executor as alias of SgeExecutor class
+- Improved log messages
+- Upgraded Spock testing library to version 1.0
+
 0.12.4 - 4 Mar 2015 
 - Added suspended job status handling to SLURM executor -- Issue #36
 - Added `print` and `println` operators plus tests and updated docs
