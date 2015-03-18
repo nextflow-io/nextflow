@@ -287,8 +287,8 @@ class TaskPollingMonitor implements TaskMonitor {
      * @return The monitor object itself
      */
     def TaskMonitor start() {
-        log.debug ">>> phaser register (scheduler)"
-        session.phaser.register()
+        log.debug ">>> barrier register (monitor: ${this.name})"
+        session.barrier.register(this)
 
         // creates the lock and condition
         this.mutex = new ReentrantLock()
@@ -304,8 +304,8 @@ class TaskPollingMonitor implements TaskMonitor {
                 pollLoop()
             }
             finally {
-                log.debug "<<< phaser de-register (scheduler)"
-                session.phaser.arriveAndDeregister()
+                log.debug "<<< barrier arrives (monitor: ${this.name})"
+                session.barrier.arrive(this)
             }
         }
 

@@ -46,11 +46,7 @@ abstract class BaseScript extends Script {
     @Lazy
     private Session session = { Global.session as Session } ()
 
-    @Lazy
-    private boolean isTest = {
-        getBinding()?.hasVariable('__$TEST') ? getBinding().getVariable('__$TEST') : false
-    } ()
-
+    private boolean isTest = { session.testReturnTaskProcessor } ()
 
     /**
      * Holds the configuration object which will used to execution the user tasks

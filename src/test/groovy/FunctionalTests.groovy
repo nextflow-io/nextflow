@@ -18,6 +18,8 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+import nextflow.Session
 import nextflow.processor.ParallelTaskProcessor
 import nextflow.script.ScriptRunner
 import spock.lang.Shared
@@ -28,21 +30,19 @@ import spock.lang.Specification
  */
 class FunctionalTests extends Specification {
 
-
     @Shared
     File scriptFile
 
     // run before the first feature method
     def setupSpec() {
+        Session.testDisableExecutorShutdown = true
         scriptFile = new File('test.nf')
         scriptFile.deleteOnExit()
     }
 
-
     // run after the last feature method
     def cleanupSpec() {
     }
-
 
     /**
      * test passing values through environment variables
@@ -65,7 +65,6 @@ class FunctionalTests extends Specification {
 
         then:
         runner.setScript(script).execute() == ['value1', -1]
-
 
     }
 
@@ -92,7 +91,6 @@ class FunctionalTests extends Specification {
         result[2] == 2
 
     }
-
 
 
     def 'test configure processor'() {
@@ -139,8 +137,6 @@ class FunctionalTests extends Specification {
         processor.taskConfig.validExitStatus == [0,11,22,33]
 
     }
-
-
 
 
 }

@@ -22,8 +22,6 @@ package nextflow
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.Phaser
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -39,8 +37,10 @@ import nextflow.processor.TaskDispatcher
 import nextflow.processor.TaskProcessor
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceObserver
+import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
+import nextflow.util.FixedPoolFactory
 /**
  * Holds the information on the current execution
  *
@@ -102,7 +102,9 @@ class Session {
      */
     def final UUID uniqueId
 
-    private Phaser phaser = new Phaser()
+    private Barrier processesBarrier = new Barrier()
+
+    private Barrier monitorsBarrier = new Barrier()
 
     private volatile boolean aborted
 
@@ -119,6 +121,10 @@ class Session {
     private boolean statsEnabled
 
     boolean getStatsEnabled() { statsEnabled }
+
+    protected boolean testReturnTaskProcessor = false
+
+    protected static boolean testDisableExecutorShutdown = false
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -153,9 +159,8 @@ class Session {
             config.poolSize = cpus >= 3 ? cpus-1 : 2
         }
 
+        //set the thread pool size
         this.poolSize = config.poolSize as int
-        System.setProperty('gpars.poolsize', config.poolSize as String)
-        log.debug "Executor pool size: ${poolSize}"
 
         // create the task dispatcher instance
         dispatcher = new TaskDispatcher(this)
@@ -221,8 +226,24 @@ class Session {
         return result
     }
 
+    private createThreadsPoolAndExecutor() {
+        log.debug "Creating executor service"
+
+        def factory
+        if( !GParsConfig.poolFactory )
+            GParsConfig.poolFactory = factory = new FixedPoolFactory(poolSize)
+
+        else if( testDisableExecutorShutdown )
+            factory = (FixedPoolFactory)GParsConfig.poolFactory
+
+        else
+            throw new IllegalStateException("Gpars pool factory already defined")
+
+        execService = factory.pool.executorService
+    }
+
     def Session start() {
-        log.debug "Session start > phaser register (session)"
+        log.debug "Session start invoked"
 
         /*
          * - register all of them in the dispatcher class
@@ -234,8 +255,8 @@ class Session {
             onShutdown { trace.onFlowComplete() }
         }
 
-        execService = Executors.newFixedThreadPool( poolSize )
-        phaser.register()
+        Global.onShutdown { cleanUp() }
+        createThreadsPoolAndExecutor()
         dispatcher.start()
 
         // signal start to trace observers
@@ -245,7 +266,7 @@ class Session {
     }
 
     @PackageScope
-    def getPhaser() { phaser }
+    Barrier getBarrier() { monitorsBarrier }
 
     /**
      * The folder where script binaries file are located, by default the folder 'bin'
@@ -301,17 +322,29 @@ class Session {
      * Await the termination of all processors
      */
     void await() {
-        allProcessors *. join()
+        log.debug "Session await"
+        processesBarrier.awaitCompletion()
+        log.debug "Session await > processes completed"
         terminated = true
-        log.debug "<<< phaser deregister (session)"
-        phaser.arriveAndAwaitAdvance()
+        monitorsBarrier.awaitCompletion()
         log.debug "Session await > done"
     }
 
     void destroy() {
-        log.trace "Session destroying"
+        log.trace "Session > destroying"
         cleanUp()
-        execService?.shutdown()
+        log.trace "Session > after cleanup"
+
+        allProcessors *. join()
+        log.trace "Session > after processors join"
+
+        if( testDisableExecutorShutdown ) {
+            log.debug "Executor service shutdown disabled"
+            return
+        }
+
+        execService.shutdown()
+        log.trace "Session > executor shutdown"
         execService = null
         log.debug "Session destroyed"
     }
@@ -337,14 +370,20 @@ class Session {
         log.debug "Session aborted -- Cause: ${cause}"
         aborted = true
         dispatcher.signal()
+        processesBarrier.forceTermination()
+        monitorsBarrier.forceTermination()
         allProcessors *. terminate()
-        phaser.forceTermination()
     }
 
     void forceTermination() {
         terminated = true
-        phaser.forceTermination()
+        processesBarrier.forceTermination()
+        monitorsBarrier.forceTermination()
         allProcessors *. terminate()
+
+        if( testDisableExecutorShutdown )
+            return
+
         execService?.shutdownNow()
         GParsConfig.shutdown()
     }
@@ -353,21 +392,19 @@ class Session {
 
     boolean isAborted() { aborted }
 
-    def int taskRegister(TaskProcessor process) {
-        log.debug ">>> phaser register (process)"
+    def void taskRegister(TaskProcessor process) {
+        log.debug ">>> barrier register (process: ${process.name})"
         for( TraceObserver it : observers ) { it.onProcessCreate(process) }
-        phaser.register()
+        processesBarrier.register(process)
     }
 
-    def int taskDeregister(TaskProcessor process) {
-        log.debug "<<< phaser deregister (process)"
+    def void taskDeregister(TaskProcessor process) {
+        log.debug "<<< barrier arrive (process: ${process.name})"
         for( TraceObserver it : observers ) { it.onProcessDestroy(process) }
-        phaser.arriveAndDeregister()
+        processesBarrier.arrive(process)
     }
 
-    def ExecutorService getExecService() {
-        execService
-    }
+    def ExecutorService getExecService() { execService }
 
     /**
      * Register a shutdown hook to close services when the session terminates

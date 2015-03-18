@@ -40,24 +40,21 @@ class TestParser {
 
     def session
 
-
-    TestParser( Map session = null ) {
-        this.session = session ? new Session(session) : new Session()
+    TestParser( Map config = null ) {
+        session = config ? new Session(config) : new Session()
+        session.testReturnTaskProcessor = true
     }
 
     TestParser( Session session1 ) {
-        this.session = session1
+        session = session1
+        session.testReturnTaskProcessor = true
     }
-
 
     def parseScript ( String scriptText, Map map = null ) {
         parseScript(scriptText, new Binding(map))
     }
 
     def parseScript( String scriptText, Binding binding ) {
-
-        binding.setVariable('__$TEST', true)
-        binding.setVariable('__$session', session)
 
         def importCustomizer = new ImportCustomizer()
         importCustomizer.addImports( StringUtils.name, groovy.transform.Field.name )
