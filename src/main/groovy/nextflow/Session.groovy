@@ -234,6 +234,7 @@ class Session {
             onShutdown { trace.onFlowComplete() }
         }
 
+        Global.onShutdown { cleanUp() }
         execService = Executors.newFixedThreadPool( poolSize )
         phaser.register()
         dispatcher.start()
