@@ -52,6 +52,7 @@ class ProcessFactory {
             'local': LocalExecutor,
             'sge':  SgeExecutor,
             'oge':  SgeExecutor,
+            'uge':  SgeExecutor,
             'lsf': LsfExecutor,
             'pbs': PbsExecutor,
             'drmaa': DrmaaExecutor,
