@@ -18,7 +18,6 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-version = '0.12.6'
 apply plugin: 'groovy'
 apply plugin: 'idea'
 
@@ -44,7 +43,9 @@ ext {
 
 allprojects {
     apply plugin: 'java'
-    //apply plugin: 'codenarc'
+
+    version = '0.13.0-SNAPSHOT'
+    group = 'io.nextflow'
 
     sourceCompatibility = 1.7
     targetCompatibility = 1.7
@@ -154,6 +155,7 @@ compileGroovy {
     options.compilerArgs = ['-XDignore.symbol.file']
 }
 
+
 /*
  * http://www.gradle.org/docs/current/dsl/org.gradle.plugins.ide.idea.model.IdeaModule.html
  * http://stackoverflow.com/questions/20421681/provided-dependencies-using-gradle-jetgradle-and-intellij-idea-13
@@ -230,6 +232,66 @@ task compile {
 def homeDir = System.properties['user.home']
 def nextflowDir = "$homeDir/.nextflow/framework/$version"
 
+
+protected String formatModuleDependency(ModuleDependency d) {
+    def result = d.group + ':' + d.name + ':' + d.version + (d.artifacts.empty ? '' : ':' + d.artifacts.first().classifier)
+    if (!d.excludeRules.empty) {
+        def rules = d.excludeRules.collect { (it.group ?: '*') + ':' + (it.module ?: '*') }
+        result += "(" + rules.join(',') + ")"
+    }
+    return result
+}
+
+task thin(type: Jar) {
+    dependsOn ':my-capsule:jar', configurations.runtime
+    archiveName = "nextflow-${version}-loader.jar"
+
+//    def deps = ["io.nextflow:nextflow:${version}"]
+//    deps.addAll configurations.runtime.allDependencies.findAll { d -> d.name.startsWith('nxf-') }.collect { formatModuleDependency(it) }
+
+    from (configurations.capsule.collect { zipTree(it) })
+
+    /*
+     * main manifest attributes
+     */
+    manifest.attributes(
+                'Main-Class'        : 'CapsuleLoader',
+                'Application-Name'  : 'nextflow',
+                'Application-Class' : mainClassName,
+                'Application-Version': version,
+                'Min-Java-Version'  : '1.7.0',
+                'Dependencies'      : "io.nextflow:nextflow:${version}"
+    )
+
+    /*
+     * enable snapshot dependencies lookup
+     */
+    if( version.endsWith('-SNAPSHOT') ) {
+        manifest.attributes( 'Allow-Snapshots': true )
+    }
+
+    /*
+     * `default` dependencies
+     */
+    manifest.attributes('Dependencies':  "io.nextflow:nxf-extrae:${version}", 'one')
+    /*
+
+     * `console` dependencies
+     */
+    manifest.attributes('Application-Class' : 'nextflow.ui.console.Nextflow', 'console' )
+    manifest.attributes('Dependencies' :  "io.nextflow:nxf-console:${version}", 'console')
+
+    /*
+     * `gridgain` dependencies
+     */
+    manifest.attributes('Dependencies' :  "io.nextflow:nxf-gridgain:${version}", 'gg')
+
+    doLast {
+        ant.copy(file: "$buildDir/libs/nextflow-${version}-loader.jar", todir: nextflowDir, overwrite: true)
+        println "\n+ Nextflow package copied to: $nextflowDir"
+    }
+}
+
 task pack(type: Jar) {
     dependsOn ':my-capsule:jar', configurations.runtime
     archiveName = "nextflow-${version}-one.jar"
@@ -284,68 +346,11 @@ task packDx(type: Jar) {
 }
 
 
-/*
- * Creates a self-contained *fat* jar shipping all required dependencies
- * including GridGain stuff
- */
-task packGg(type: Jar) {
-    dependsOn ':my-capsule:jar', configurations.gridgain
-    archiveName = "nextflow-${version}-gg.jar"
-
-    from jar // embed our application jar
-    from (configurations.gridgain)
-    from (configurations.extrae) // add the extrae module
-    from (configurations.capsule.collect { zipTree(it) })
-
-    manifest {
-        attributes(
-                'Main-Class'        : 'CapsuleLoader',
-                'Application-Name'  : 'nextflow-gg',
-                'Application-Class' : mainClassName,
-                'Application-Version': version,
-                'Min-Java-Version'  : '1.7.0'
-        )
-    }
-
-    doLast {
-        ant.copy(file: "$buildDir/libs/nextflow-${version}-gg.jar", todir: nextflowDir, overwrite: true)
-        println "+ Nextflow GG package copied to: $nextflowDir\n"
-    }
-}
-
-/*
- * Creates a self-contained *fat* jar shipping all required dependencies
- * including Console stuff
- */
-task packConsole(type: Jar) {
-    dependsOn ':my-capsule:jar', configurations.console
-    archiveName = "nextflow-${version}-console.jar"
-
-    from jar // embed our application jar
-    from (configurations.console)
-    from (configurations.capsule.collect { zipTree(it) })
-
-    manifest {
-        attributes(
-                'Main-Class'        : 'CapsuleLoader',
-                'Application-Name'  : 'nextflow-console',
-                'Application-Class' : 'nextflow.ui.console.Nextflow',
-                'Application-Version': version,
-                'Min-Java-Version'  : '1.7.0'
-        )
-    }
-
-    doLast {
-        ant.copy(file: "$buildDir/libs/nextflow-${version}-console.jar", todir: nextflowDir, overwrite: true)
-        println "+ Nextflow REPL package copied to: $nextflowDir\n"
-    }
-}
-
 
 /*
  * Compile and pack all packages
  */
-task packAll( dependsOn: [pack, packDx, packGg, packConsole]) {
+task packAll( dependsOn: [pack, packDx]) {
 
 }
 
@@ -473,5 +478,84 @@ task supernarc(type: CodeNarc) {
     maxPriority3Violations = Integer.MAX_VALUE
 
     println 'Look for the report full report at this path: build/reports/codenarc/supernarc.html'
+}
+
+
+/*
+ * Maven central deployment
+ * http://central.sonatype.org/pages/gradle.html
+ */
+
+ext.mavenUploadProjects = [project(':'), project(':nxf-commons'), project(':nxf-console'), project(':nxf-extrae'), project(':nxf-gridgain')]
+
+configure(mavenUploadProjects) {
+    apply plugin: 'maven'
+    apply plugin: 'signing'
+
+    task javadocJar(type: Jar) {
+        classifier = 'javadoc'
+        from javadoc
+    }
+
+    task sourcesJar(type: Jar) {
+        classifier = 'sources'
+        from sourceSets.main.allSource
+    }
+
+    artifacts {
+        archives javadocJar, sourcesJar
+    }
+
+    signing {
+        sign configurations.archives
+    }
+
+    uploadArchives {
+        repositories {
+            mavenDeployer {
+                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+                repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                    authentication(userName: ossrhUserName, password: ossrhPassword)
+                }
+
+                snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+                    authentication(userName: ossrhUserName, password: ossrhPassword)
+                }
+
+                pom.project {
+                    name 'Nextflow'
+                    packaging 'jar'
+                    // optionally artifactId can be defined here
+                    description 'A DSL modelled around the UNIX pipe concept, that simplifies writing parallel and scalable pipelines in a portable manner'
+                    url 'http://www.nextflow.io'
+
+                    scm {
+                        connection 'scm:git:https://github.com/nextflow-io/nextflow'
+                        developerConnection 'scm:git:git@github.com:nextflow-io/nextflow.git'
+                        url 'https://github.com/nextflow-io/nextflow'
+                    }
+
+                    licenses {
+                        license {
+                            name 'GPLv3'
+                            url 'http://www.gnu.org/licenses/gpl-3.0.txt'
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id ossrhUserName
+                            name ossrhFullName
+                            email ossrhEmail
+                        }
+                    }
+
+                }
+            }
+        }
+    }
+
+
 }
 

@@ -101,8 +101,8 @@ if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
     exit 0
 fi
 
+NXF_VER=${NXF_VER:-'0.13.0-SNAPSHOT'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
-NXF_VER=${NXF_VER:-'0.12.6'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_ASSETS=${NXF_ASSETS:-$NXF_HOME/assets}
 NXF_CLI="$0 $@"
@@ -136,7 +136,7 @@ while [[ $# != 0 ]]; do
       ;;
     -process.executor|-executor.name)
       if [[ $2 && $2 == 'gridgain' ]]; then
-      NXF_PACKAGE='gg'; shift;
+      NXF_MODE='gg'; shift;
       fi
       ;;
     -with-extrae)
@@ -156,21 +156,22 @@ while [[ $# != 0 ]]; do
     shift
 done
 
-[[ "$cmd" == "console" ]] && NXF_PACKAGE='console'
-[[ "$cmd" == "node" && ! "$NXF_PACKAGE" ]] && NXF_PACKAGE='gg'
+[[ "$cmd" == "console" ]] && NXF_MODE='console'
+[[ "$cmd" == "node" && ! "$NXF_MODE" ]] && NXF_MODE='gg'
 
-NXF_PACKAGE=${NXF_PACKAGE:-one}
-NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACKAGE.jar}
+NXF_MODE=${NXF_MODE:-one}
+NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-loader.jar}
 NXF_BIN=${NXF_BIN:-$NXF_HOME/framework/$NXF_VER/$NXF_JAR}
 NXF_BASE=${NXF_BASE:-http://www.nextflow.io/releases}
 NXF_PATH=$(dirname "$NXF_BIN")
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
 NXF_GRAB=${NXF_GRAB:-''}
 NXF_CLASSPATH=${NXF_CLASSPATH:-''}
+CAPSULE_LOG=${CAPSULE_LOG:=''}
 
 # define the path when dependencies jars will be extracted
 export CAPSULE_CACHE_DIR=${CAPSULE_CACHE_DIR:=$NXF_HOME/capsule}
-CAPSULE_LOG=${CAPSULE_LOG:-'none'}
+
 
 # Determine the Java command to use to start the JVM.
 if [ ! -x "$JAVA_CMD" ] ; then
@@ -217,7 +218,9 @@ JAVA_OPTS="-noverify -Dcapsule.trampoline"
 if [[ $cmd == console ]]; then bg=1;
 else JAVA_OPTS+=" -Djava.awt.headless=true"
 fi
-[[ "$JAVA_HOME" ]] && JAVA_OPTS+=" -Dcapsule.java.home=$JAVA_HOME"
+
+[[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=" -Dcapsule.log=$CAPSULE_LOG"
+[[ "$JAVA_HOME" ]] && JAVA_OPTS+=" -Dcapsule.mode=$NXF_MODE -Dcapsule.java.home=$JAVA_HOME"
 [[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=" -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
 [[ "$NXF_OPTS" ]] && JAVA_OPTS+=" $NXF_OPTS"
 [[ "$NXF_CLASSPATH" ]] && export NXF_CLASSPATH
