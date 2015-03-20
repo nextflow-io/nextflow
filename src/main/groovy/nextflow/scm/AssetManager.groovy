@@ -462,37 +462,57 @@ class AssetManager {
      *  ticks that it is the default working branch (usually the master branch), while the string {@code (t)}
      *  shows that the revision is a git tag (instead of a branch)
      */
-    List<String> getRevisions() {
+    List<String> getRevisions(int level) {
 
         def current = getCurrentRevision()
         def master = getDefaultBranch()
 
-        List<String> branches = []
-        git.branchList()
+        List<String> branches = git.branchList()
             .setListMode(ListBranchCommand.ListMode.ALL)
             .call()
-            .each {
-                if( it.name.startsWith('refs/heads/') )
-                    branches << it.name.replace('refs/heads/','')
-
-                else if( it.name.startsWith('refs/remotes/origin/') )
-                    branches << it.name.replace('refs/remotes/origin/', '')
-            }
-
-        branches = branches
-                    .unique()
-                    .collect { (it == current ? '* ' : '  ') + it + ( master == it ? ' (default)' : '')  }
+            .findAll { it.name.startsWith('refs/heads/') || it.name.startsWith('refs/remotes/origin/') }
+            .unique { shortenRefName(it.name) }
+            .collect { Ref it -> formatRef(it,current,master,false,level) }
 
         List<String> tags = git.tagList()
                 .call()
                 .findAll  { it.name.startsWith('refs/tags/') }
-                .collect { Repository.shortenRefName(it.name) }
-                .collect { (it == current ? '* ' : '  ') + it + ' [t]'}
+                .collect { formatRef(it,current,master,true,level) }
 
         def result = new ArrayList<String>(branches.size() + tags.size())
         result.addAll(branches)
         result.addAll(tags)
         return result
+    }
+
+    protected String formatRef( Ref ref, String current, String master, boolean tag, int level ) {
+
+        def result = new StringBuilder()
+        def name = shortenRefName(ref.name)
+        result << (name == current ? '*' : ' ')
+
+        if( level ) {
+            def peel = git.getRepository().peel(ref)
+            def obj = peel.getPeeledObjectId() ?: peel.getObjectId()
+            result << ' '
+            result << (level == 1 ? obj.name().substring(0,10) : obj.name())
+        }
+
+        result << ' ' << name
+
+        if( tag )
+            result << ' [t]'
+        else if( master == name )
+            result << ' (default)'
+
+        return result.toString()
+    }
+
+    private String shortenRefName( String name ) {
+        if( name.startsWith('refs/remotes/origin/') )
+            return name.replace('refs/remotes/origin/', '')
+
+        return Repository.shortenRefName(name)
     }
 
     /**

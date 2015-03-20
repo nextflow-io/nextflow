@@ -54,8 +54,8 @@ class CmdInfo extends CmdBase {
 
     @Override
     void run() {
+        int level = moreDetailed ? 2 : ( detailed ? 1 : 0 )
         if( !args ) {
-            int level = moreDetailed ? 2 : ( detailed ? 1 : 0 )
             println getInfo(level)
             return
         }
@@ -76,7 +76,7 @@ class CmdInfo extends CmdBase {
         if( manager.description )
         println " description: ${manager.description}"
 
-        def revs = manager.getRevisions()
+        def revs = manager.getRevisions(level)
         if( revs.size() == 1 )
             println " revision   : ${revs[0]}"
         else {
