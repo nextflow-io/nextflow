@@ -19,7 +19,11 @@
  */
 
 package nextflow.trace
+
+import java.nio.charset.Charset
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
@@ -194,11 +198,11 @@ class TraceFileObserver implements TraceObserver {
         tracePath.rollFile()
 
         // create a new trace file
-        traceFile = new PrintWriter(new BufferedWriter( new FileWriter(tracePath.toFile())))
-        traceFile.println( fields.join(separator) )
+        traceFile = new PrintWriter(Files.newBufferedWriter(tracePath, Charset.defaultCharset(), StandardOpenOption.APPEND, StandardOpenOption.CREATE))
 
         // launch the agent
         writer = new Agent<PrintWriter>(traceFile)
+        writer.send { traceFile.println(fields.join(separator)); traceFile.flush() }
     }
 
     /**
@@ -264,7 +268,7 @@ class TraceFileObserver implements TraceObserver {
         current.remove(taskId)
 
         // save to the file
-        writer.send { PrintWriter it -> it.println(render(record)) }
+        writer.send { PrintWriter it -> it.println(render(record)); it.flush() }
     }
 
     @Override
