@@ -101,8 +101,8 @@ if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
     exit 0
 fi
 
-NXF_VER=${NXF_VER:-'0.13.0-SNAPSHOT'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
+NXF_VER=${NXF_VER:-'0.13.0-SNAPSHOT'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_ASSETS=${NXF_ASSETS:-$NXF_HOME/assets}
 NXF_CLI="$0 $@"
@@ -113,11 +113,17 @@ export NXF_HOME
 
 # Check if it is required to run in background
 bg=''
+declare -a jvmopts=()
 declare -a args=("$@")
 declare -a cli=(clone config drop help history info ls pull run view node console)
 cmd=''
 while [[ $# != 0 ]]; do
     case $1 in
+    -D*)
+      if [[ ! "$cmd" ]]; then
+      jvmopts+=("$1")
+      fi
+      ;;
     -bg)
       bg=1
       ;;
@@ -136,7 +142,7 @@ while [[ $# != 0 ]]; do
       ;;
     -process.executor|-executor.name)
       if [[ $2 && $2 == 'gridgain' ]]; then
-      NXF_MODE='gg'; shift;
+      NXF_MODE='gridgain'; shift;
       fi
       ;;
     -with-extrae)
@@ -157,21 +163,28 @@ while [[ $# != 0 ]]; do
 done
 
 [[ "$cmd" == "console" ]] && NXF_MODE='console'
-[[ "$cmd" == "node" && ! "$NXF_MODE" ]] && NXF_MODE='gg'
+[[ "$cmd" == "node" && ! "$NXF_MODE" ]] && NXF_MODE='gridgain'
 
-NXF_MODE=${NXF_MODE:-one}
-NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-loader.jar}
+CAPSULE_LOG=${CAPSULE_LOG:=''}
+CAPSULE_RESET=${CAPSULE_RESET:=''}
+CAPSULE_CACHE_DIR=${CAPSULE_CACHE_DIR:="$NXF_HOME/capsule"}
+
+NXF_PACK=one
+NXF_MODE=${NXF_MODE:-''}
+NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACK.jar}
 NXF_BIN=${NXF_BIN:-$NXF_HOME/framework/$NXF_VER/$NXF_JAR}
 NXF_BASE=${NXF_BASE:-http://www.nextflow.io/releases}
 NXF_PATH=$(dirname "$NXF_BIN")
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
 NXF_GRAB=${NXF_GRAB:-''}
 NXF_CLASSPATH=${NXF_CLASSPATH:-''}
-CAPSULE_LOG=${CAPSULE_LOG:=''}
+NXF_LAUNCHER=${NXF_HOME}/tmp/launcher/nextflow-${NXF_PACK}_${NXF_VER}
 
-# define the path when dependencies jars will be extracted
-export CAPSULE_CACHE_DIR=${CAPSULE_CACHE_DIR:=$NXF_HOME/capsule}
-
+# Determine the path to this file
+if [[ $NXF_PACK = 'all' ]]; then
+    NXF_BIN=$(which "$0" 2>/dev/null)
+    [ $? -gt 0 -a -f "$0" ] && NXF_BIN="./$0"
+fi
 
 # Determine the Java command to use to start the JVM.
 if [ ! -x "$JAVA_CMD" ] ; then
@@ -182,20 +195,25 @@ if [ ! -x "$JAVA_CMD" ] ; then
         else
             JAVA_CMD="$JAVA_HOME/bin/java"
         fi
+    elif [ -x /usr/libexec/java_home ]; then
+        JAVA_CMD="$(/usr/libexec/java_home -v 1.7+)"
     else
-        JAVA_CMD="`which java`"
+        JAVA_CMD="$(which java)"
     fi
 fi
 
 # Verify installed Java version
-if [ ! -f "$NXF_BIN" ]; then # <-- only the first time
+if [ ! -d "$NXF_LAUNCHER" ]; then # <-- only the first time
     $JAVA_CMD -version 2>&1 | awk '/version/ {print $3}' | grep '"1\.[7|8]\..*"' > /dev/null
     if [ $? -ne 0 ]; then
          echo_red "Error: cannot find Java or it's a wrong version -- please make sure that Java 7 or higher it's installed"
          echo_red "Note: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n JAVA_HOME: $JAVA_HOME\n"
          exit 1
     fi
+fi
 
+# Verify nextflow jar is available
+if [ ! -f "$NXF_BIN" ]; then
     [ -f "$NXF_PATH" ] && rm "$NXF_PATH"
     mkdir -p $NXF_PATH || exit $?
     get "$NXF_URL" "$NXF_BIN"
@@ -219,16 +237,20 @@ if [[ $cmd == console ]]; then bg=1;
 else JAVA_OPTS+=" -Djava.awt.headless=true"
 fi
 
+[[ "$NXF_MODE" ]] && JAVA_OPTS+=" -Dcapsule.mode=$NXF_MODE"
+[[ "$JAVA_HOME" ]] && JAVA_OPTS+=" -Dcapsule.java.home=$JAVA_HOME"
 [[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=" -Dcapsule.log=$CAPSULE_LOG"
-[[ "$JAVA_HOME" ]] && JAVA_OPTS+=" -Dcapsule.mode=$NXF_MODE -Dcapsule.java.home=$JAVA_HOME"
+[[ "$CAPSULE_RESET" ]] && JAVA_OPTS+=" -Dcapsule.reset=true"
 [[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=" -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
 [[ "$NXF_OPTS" ]] && JAVA_OPTS+=" $NXF_OPTS"
 [[ "$NXF_CLASSPATH" ]] && export NXF_CLASSPATH
 [[ "$NXF_GRAB" ]] && export NXF_GRAB
 [[ "$COLUMNS" ]] && export COLUMNS
+[[ "${jvmopts[@]}" ]] && JAVA_OPTS+=" ${jvmopts[@]}"
 # use drip to speedup startup time -- https://github.com/ninjudd/drip
 [[ "$NXF_DRIP" ]] && export DRIP_INIT='' && export DRIP_INIT_CLASS='nextflow.cli.DripMain'
 export JAVA_CMD
+export CAPSULE_CACHE_DIR
 
 # Start in daemon mode
 if [[ "$bg" ]]; then
@@ -239,7 +261,41 @@ if [[ "$bg" ]]; then
   exit 0
 fi
 
-exec `"$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"` "${args[@]}"
+# lookup the a `md5` command
+if hash md5sum 2>/dev/null; then MD5=md5sum;
+elif hash gmd5sum 2>/dev/null; then MD5=gmd5sum;
+elif hash md5 2>/dev/null; then MD5=md5;
+else MD5=''
+fi
+
+# when no md5 command is available fallback on default execution
+if [ ! "$MD5" ] || [ "$CAPSULE_RESET" ]; then
+    exec `"$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"` "${args[@]}"
+    exit 1
+fi
+
+# creates a md5 unique for the given variables
+env_md5() {
+cat <<EOF | $MD5 | cut -f1 -d' '
+$JAVA_CMD
+$JAVA_OPTS
+$NXF_OPTS
+$NXF_GRAB
+$NXF_CLASSPATH
+$NXF_DRIP
+EOF
+}
+
+# checked if a cached classpath file exists and it newer that the nextflow boot jar file
+LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
+if [ -f "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ]; then
+    LAUNCHER=$(cat "$LAUNCH_FILE")
+else
+    # otherwise run the capsule and get the result classpath in the 'LAUNCHER' and save it to a file
+    LAUNCHER=`"$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"`
+    mkdir -p ${NXF_LAUNCHER}
+    echo "$LAUNCHER" > "$LAUNCH_FILE"
+fi
+
+exec $LAUNCHER "${args[@]}"
 exit 1
-
-

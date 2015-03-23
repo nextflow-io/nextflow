@@ -22,7 +22,7 @@ apply plugin: 'application'
 
 dependencies {
     // Capsule manages the fat jar building process
-    compile 'co.paralleluniverse:capsule:0.9.0'
+    compile 'co.paralleluniverse:capsule:1.0-rc1'
     testCompile "junit:junit-dep:4.10"
     /* testCompile inherited from top gradle build file */
 }

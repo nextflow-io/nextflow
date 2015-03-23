@@ -105,8 +105,8 @@ dependencies {
     compile "com.google.code.findbugs:jsr305:1.3.9"
     compile "com.esotericsoftware.kryo:kryo:2.24.0"
     compile 'org.iq80.leveldb:leveldb:0.7'
-    compile('org.eclipse.jgit:org.eclipse.jgit.java7:3.5.2.201411120430-r') { exclude module: 'commons-logging' }
-    compile('com.upplication:s3fs:0.2.8') { exclude module: 'commons-logging' }
+    compile('org.eclipse.jgit:org.eclipse.jgit.java7:3.5.2.201411120430-r') { exclude group: 'commons-logging', module: 'commons-logging' }
+    compile('com.upplication:s3fs:0.2.8') { exclude group: 'commons-logging', module: 'commons-logging' }
 
     // include Ivy at runtime in order to have Grape @Grab work correctly
     runtime "org.apache.ivy:ivy:2.3.0"
@@ -222,7 +222,6 @@ task compile {
     dependsOn allprojects.jar
 }
 
-
 /*
  * Creates a self-contained *fat* jar shipping all required dependencies
  *
@@ -231,7 +230,12 @@ task compile {
 
 def homeDir = System.properties['user.home']
 def nextflowDir = "$homeDir/.nextflow/framework/$version"
+def releaseDir = "$buildDir/releases"
 
+protected error(String message) {
+    logger.error message
+    throw new StopExecutionException()
+}
 
 protected String formatModuleDependency(ModuleDependency d) {
     def result = d.group + ':' + d.name + ':' + d.version + (d.artifacts.empty ? '' : ':' + d.artifacts.first().classifier)
@@ -242,40 +246,33 @@ protected String formatModuleDependency(ModuleDependency d) {
     return result
 }
 
-task thin(type: Jar) {
+/*
+ * Default nextflow package. It contains the capsule loader
+ */
+task packOne(type: Jar) {
     dependsOn ':my-capsule:jar', configurations.runtime
-    archiveName = "nextflow-${version}-loader.jar"
-
-//    def deps = ["io.nextflow:nextflow:${version}"]
-//    deps.addAll configurations.runtime.allDependencies.findAll { d -> d.name.startsWith('nxf-') }.collect { formatModuleDependency(it) }
+    archiveName = "nextflow-${version}-one.jar"
 
     from (configurations.capsule.collect { zipTree(it) })
+    def defDeps = configurations.runtime.allDependencies.collect { formatModuleDependency(it) }.join(' ')
 
-    /*
-     * main manifest attributes
-     */
+    // main manifest attributes
     manifest.attributes(
                 'Main-Class'        : 'CapsuleLoader',
-                'Application-Name'  : 'nextflow',
+                'Application-Name'  : 'nextflow-one',
                 'Application-Class' : mainClassName,
                 'Application-Version': version,
                 'Min-Java-Version'  : '1.7.0',
-                'Dependencies'      : "io.nextflow:nextflow:${version}"
+                'Dependencies'      : "io.nextflow:nextflow:${version} $defDeps"
     )
 
-    /*
-     * enable snapshot dependencies lookup
-     */
+    // enable snapshot dependencies lookup
     if( version.endsWith('-SNAPSHOT') ) {
-        manifest.attributes( 'Allow-Snapshots': true )
+        manifest.attributes 'Allow-Snapshots': true
+        manifest.attributes 'Repositories': 'https://oss.sonatype.org/content/repositories/snapshots central'
     }
 
     /*
-     * `default` dependencies
-     */
-    manifest.attributes('Dependencies':  "io.nextflow:nxf-extrae:${version}", 'one')
-    /*
-
      * `console` dependencies
      */
     manifest.attributes('Application-Class' : 'nextflow.ui.console.Nextflow', 'console' )
@@ -284,17 +281,18 @@ task thin(type: Jar) {
     /*
      * `gridgain` dependencies
      */
-    manifest.attributes('Dependencies' :  "io.nextflow:nxf-gridgain:${version}", 'gg')
+    manifest.attributes('Dependencies' :  "io.nextflow:nxf-gridgain:${version}", 'gridgain')
 
     doLast {
-        ant.copy(file: "$buildDir/libs/nextflow-${version}-loader.jar", todir: nextflowDir, overwrite: true)
-        println "\n+ Nextflow package copied to: $nextflowDir"
+        ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: releaseDir, overwrite: true)
+        ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: nextflowDir, overwrite: true)
+        println "\n+ Nextflow package `ONE` copied to: $releaseDir"
     }
 }
 
-task pack(type: Jar) {
+task packAll(type: Jar) {
     dependsOn ':my-capsule:jar', configurations.runtime
-    archiveName = "nextflow-${version}-one.jar"
+    archiveName = "nextflow-${version}-all.jar"
 
     from jar // embed our application jar
     from (configurations.runtime)
@@ -304,7 +302,7 @@ task pack(type: Jar) {
     manifest {
         attributes(
                 'Main-Class'        : 'CapsuleLoader',
-                'Application-Name'  : 'nextflow-one',
+                'Application-Name'  : 'nextflow-all',
                 'Application-Class' : mainClassName,
                 'Application-Version': version,
                 'Min-Java-Version'  : '1.7.0'
@@ -312,8 +310,16 @@ task pack(type: Jar) {
     }
 
     doLast {
-        ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: nextflowDir, overwrite: true)
-        println "+ Nextflow package copied to: $nextflowDir\n"
+        file(releaseDir).mkdir()
+        // cleanup
+        def target = file("$releaseDir/nextflow-${version}-all"); target.delete()
+        // append the big jar
+        target.withOutputStream {
+            it << file('nextflow').text.replaceAll(/NXF_PACK\=.*/, 'NXF_PACK=all')
+            it << new FileInputStream(file("$buildDir/libs/nextflow-${version}-all.jar"))
+        }
+        // done
+        println "+ Nextflow package `ALL` copied to: $releaseDir\n"
     }
 }
 
@@ -340,43 +346,55 @@ task packDx(type: Jar) {
     }
 
     doLast {
-        ant.copy(file: "$buildDir/libs/nextflow-${version}-dx.jar", todir: nextflowDir, overwrite: true)
-        println "+ Nextflow DX package copied to: $nextflowDir\n"
+        ant.copy(file: "$buildDir/libs/nextflow-${version}-dx.jar", todir: releaseDir, overwrite: true)
+        println "+ Nextflow package `DX` copied to: $releaseDir\n"
     }
 }
-
 
 
 /*
  * Compile and pack all packages
  */
-task packAll( dependsOn: [pack, packDx]) {
+task pack( dependsOn: [packOne, packDx, packAll]) {
 
 }
 
-
 final s3CmdOpts="-q --no-mime-magic --reduced-redundancy --acl-public --access_key=${System.getenv('NXF_AWS_ACCESS')} --secret_key=${System.getenv('NXF_AWS_SECRET')}"
 
-/*
- * Publish 'nextflow' launcher
- */
-task publish(type: Exec) {
-    def cmd = "s3cmd put nextflow s3://www.nextflow.io/releases/latest/nextflow $s3CmdOpts"
-    commandLine 'bash', '-c', cmd
+task deploy( type: Exec, dependsOn: [clean, pack, allprojects.uploadArchives, makeSha1]) {
+
+    def temp = File.createTempFile('upload',null)
+    temp.deleteOnExit()
+    def files = []
+
+    doFirst {
+        def path = new File(releaseDir)
+        if( !path.exists() ) error("Releases path does not exists: $path")
+        path.eachFile {
+            if( it.name.startsWith("nextflow-$version"))
+                files << it
+        }
+
+        if( !files ) error("Can't find any file to upload -- Check path: $path")
+        files << file('nextflow').absoluteFile
+        files << file('nextflow.sha1').absoluteFile
+
+        println "Uploading artifacts: "
+        files.each { println "- $it"}
+        temp.text = files.collect { "s3cmd put ${it} s3://www.nextflow.io/releases/v${version}/${it.name} ${s3CmdOpts}"}.join('\n')
+    }
+
+    commandLine 'bash', '-e', temp.absolutePath
+
 }
 
 /*
  * Tag and upload the release
  */
-task release(type: Exec, dependsOn: [ test, packAll, makeSha1 ]) {
+task release(type: Exec, dependsOn: [ test, deploy ]) {
 
-    def files = []
-    files[0] = file('nextflow').absoluteFile
-    files[1] = file('nextflow.sha1').absoluteFile
-
-    ['one','dx','gg','console'].each{
-        files << file("$buildDir/libs/nextflow-${version}-${it}.jar").absoluteFile
-    }
+    def launcherFile = file('nextflow').absoluteFile
+    def launcherSha1 = file('nextflow.sha1').absoluteFile
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
@@ -385,14 +403,11 @@ task release(type: Exec, dependsOn: [ test, packAll, makeSha1 ]) {
     git push || exit \$?
     (git tag -a v$version -m 'Tagging version $version [release]' -f && git push origin v$version -f) || exit \$?
     github-release release -u nextflow-io -r nextflow -t v$version --pre-release
-    github-release upload -u nextflow-io -r nextflow -t v$version --file ${files[0]} --name ${files[0].name}
-
-    # upload assets
-    ${ files.collect { "s3cmd put ${it} s3://www.nextflow.io/releases/v${version}/${it.name} ${s3CmdOpts}"}.join('\n') }
+    github-release upload -u nextflow-io -r nextflow -t v$version --file ${launcherFile} --name ${launcherFile}
 
     # publish the script as the latest
-    s3cmd put ${files[0]} s3://www.nextflow.io/releases/latest/nextflow $s3CmdOpts
-    s3cmd put ${files[1]} s3://www.nextflow.io/releases/latest/nextflow.sha1 $s3CmdOpts
+    s3cmd put $launcherFile s3://www.nextflow.io/releases/latest/nextflow $s3CmdOpts
+    s3cmd put $launcherSha1 s3://www.nextflow.io/releases/latest/nextflow.sha1 $s3CmdOpts
 
     """.stripIndent()
 
@@ -406,47 +421,49 @@ task release(type: Exec, dependsOn: [ test, packAll, makeSha1 ]) {
 
 File dxProject = file('./dx-project')
 
-task dnanexus(dependsOn: packDx) << {
+task dnanexus(dependsOn: packDx) {
 
-    def binFolder = new File(dxProject,'resources/usr/bin')
-    binFolder.mkdirs()
-    ant.copy(file: "nextflow", todir: binFolder, overwrite: true)
+    doLast {
 
-    def framework = new File(dxProject, "resources/opt/nextflow/framework/$version/")
-    framework.mkdirs()
-    ant.copy(file: "$buildDir/libs/nextflow-${version}-dx.jar", todir: framework, overwrite: true)
+        def binFolder = new File(dxProject,'resources/usr/bin')
+        binFolder.mkdirs()
+        ant.copy(file: "nextflow", todir: binFolder, overwrite: true)
 
-    def dxApp = file('./subprojects/nxf-dnanexus/dxapp.json')
-    def dxScript = file('./subprojects/nxf-dnanexus/dxapp.sh')
+        def framework = new File(dxProject, "resources/opt/nextflow/framework/$version/")
+        framework.mkdirs()
+        ant.copy(file: "$buildDir/libs/nextflow-${version}-dx.jar", todir: framework, overwrite: true)
 
-    // copy the 'dxapp.json' if not exists
-    def target = new File(dxProject, dxApp.name)
-    if( !target.exists() ) {
-        target.text = dxApp.text
+        def dxApp = file('./subprojects/nxf-dnanexus/dxapp.json')
+        def dxScript = file('./subprojects/nxf-dnanexus/dxapp.sh')
+
+        // copy the 'dxapp.json' if not exists
+        def target = new File(dxProject, dxApp.name)
+        if( !target.exists() ) {
+            target.text = dxApp.text
+        }
+
+        // copy the 'dxapp.sh' if not exists
+        target = new File(dxProject, dxScript.name)
+        if( !target.exists() ) {
+            target.text = dxScript.text
+        }
+
+        // copy the example files
+        target = new File(dxProject,'resources/examples')
+        target.mkdirs()
+        def examples = new File('./tests')
+        examples.eachFile {
+            def copy = new File(target, it.name)
+            if( it.isFile() && !copy.exists() ) copy.text = it.text
+        }
+
+        println """
+        DnaNexus project ready
+        1. move to ${dxProject}
+        2. build it with the command 'dx build -f'
+        3. launch it using the command 'dx run nextflow'
+        """
     }
-
-    // copy the 'dxapp.sh' if not exists
-    target = new File(dxProject, dxScript.name)
-    if( !target.exists() ) {
-        target.text = dxScript.text
-    }
-
-    // copy the example files
-    target = new File(dxProject,'resources/examples')
-    target.mkdirs()
-    def examples = new File('./examples')
-    examples.eachFile {
-        def copy = new File(target, it.name)
-        if( it.isFile() && !copy.exists() ) copy.text = it.text
-    }
-
-    println """
-    DnaNexus project ready
-    1. move to ${dxProject}
-    2. build it with the command 'dx build -f'
-    3. launch it using the command 'dx run nextflow'
-    """
-
 }
 
 
