@@ -1360,4 +1360,14 @@ class FilesEx {
         self.toAbsolutePath().normalize()
     }
 
+    static BasicFileAttributes readAttributes(Path path) {
+        try {
+            Files.readAttributes(path,BasicFileAttributes)
+        }
+        catch( IOException e ) {
+            log.trace "Unable to read attributes for file: $path"
+            return null
+        }
+    }
+
 }

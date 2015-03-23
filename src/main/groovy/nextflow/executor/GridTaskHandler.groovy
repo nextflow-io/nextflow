@@ -166,7 +166,8 @@ class GridTaskHandler extends TaskHandler {
         /*
          * when the file does not exist return null, to force the monitor to continue to wait
          */
-        if( !exitFile || !exitFile.exists() || !exitFile.lastModified() ) {
+        def exitAttrs
+        if( !exitFile || !(exitAttrs=exitFile.readAttributes()) || !exitAttrs.lastModifiedTime()?.toMillis() ) {
             // -- fetch the job status before return a result
             final active = executor.checkActiveStatus(jobId, queue)
 
@@ -246,7 +247,8 @@ class GridTaskHandler extends TaskHandler {
 
         if( isSubmitted() ) {
 
-            if( startFile && startFile.exists() && startFile.lastModified() > 0) {
+            def startAttr
+            if( startFile && (startAttr=startFile.readAttributes()) && startAttr.lastModifiedTime()?.toMillis() > 0) {
                 status = RUNNING
                 // use local timestamp because files are created on remote nodes which
                 // may not have a synchronized clock
@@ -286,9 +288,10 @@ class GridTaskHandler extends TaskHandler {
         builder << "jobId: $jobId; "
 
         super.toStringBuilder(builder)
+        final exitAttrs = exitFile.readAttributes()
 
         builder << " started: " << (startedMillis ? startedMillis : '-') << ';'
-        builder << " exited: " << (exitFile.exists() ? exitFile.lastModified() : '-') << '; '
+        builder << " exited: " << (exitAttrs ? exitAttrs.lastModifiedTime() : '-') << '; '
 
         return builder
     }

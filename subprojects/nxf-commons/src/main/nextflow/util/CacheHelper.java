@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -195,7 +196,12 @@ public class CacheHelper {
         hasher = hasher.putUnencodedChars( file.toAbsolutePath().normalize().toString() );
 
         try {
-            return hasher.putLong(Files.size(file)) .putLong(FilesEx.lastModified(file));
+            BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
+            hasher = hasher.putLong(attrs.size());
+            if( attrs.lastAccessTime() != null) {
+                hasher = hasher.putLong( attrs.lastModifiedTime().toMillis() );
+            }
+            return hasher;
         }
         catch (IOException e) {
             log.debug("Unable to hash file: {} -- Cause: {}", file, e.toString());
