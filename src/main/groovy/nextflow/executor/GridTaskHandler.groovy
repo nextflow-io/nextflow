@@ -76,7 +76,7 @@ class GridTaskHandler extends TaskHandler {
         this.queue = task.config?.queue
     }
 
-    protected Process startProcess() {
+    protected ProcessBuilder createProcessBuilder() {
 
         // -- log the qsub command
         def cli = executor.getSubmitCommandLine(task, wrapperFile)
@@ -90,7 +90,7 @@ class GridTaskHandler extends TaskHandler {
                 .redirectErrorStream(true)
                 .directory(task.workDir.toFile())
 
-        return builder.start()
+        return builder
     }
 
     /*
@@ -103,7 +103,8 @@ class GridTaskHandler extends TaskHandler {
         executor.createBashWrapperBuilder(task).build()
 
         // -- start the execution and notify the event to the monitor
-        def process = startProcess()
+        final builder = createProcessBuilder()
+        final process = builder.start()
 
         // -- forward the job launcher script to the command stdin if required
         if( executor.pipeLauncherScript() ) {
@@ -130,7 +131,7 @@ class GridTaskHandler extends TaskHandler {
             }
             catch( Exception e ) {
                 task.exitStatus = exitStatus
-                task.script = CmdLineHelper.toLine(cli)
+                task.script = CmdLineHelper.toLine(builder.command())
                 task.stdout = result
                 status = COMPLETED
                 throw new ProcessFailedException("Error submitting process '${task.name}' for execution", e )

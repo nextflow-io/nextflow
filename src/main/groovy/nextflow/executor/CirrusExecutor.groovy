@@ -203,7 +203,7 @@ class CirrusExecutor extends AbstractGridExecutor {
 @InheritConstructors
 class CirrusTaskHandler extends GridTaskHandler {
 
-    protected Process startProcess() {
+    protected ProcessBuilder createProcessBuilder() {
 
         // -- log the qsub command
         def cli = executor.getSubmitCommandLine(task, wrapperFile)
@@ -216,7 +216,7 @@ class CirrusTaskHandler extends GridTaskHandler {
                 .command( cli as String[] )
                 .redirectErrorStream(true)
 
-        return builder.start()
+        return builder
     }
 
 }
