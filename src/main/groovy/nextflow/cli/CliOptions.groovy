@@ -20,6 +20,7 @@
 
 package nextflow.cli
 
+import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
 /**
  * Main application command line options
@@ -67,5 +68,7 @@ class CliOptions {
     @Parameter(names = ['-bg'], description = 'Execute nextflow in background', arity = 0)
     boolean background
 
+    @DynamicParameter(names = ['-D'], description = 'Set JMV properties' )
+    Map<String,String> jvmOpts = [:]
 
 }
