@@ -17,15 +17,27 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
+apply plugin: 'groovy'
 
-include 'my-capsule'
-include 'nxf-commons'
-include 'nxf-dnanexus'
-include 'nxf-gridgain'
-include 'nxf-extrae'
-include 'nxf-console'
-include 'nxf-drmaa'
-
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/subprojects/$prj.name")
+sourceSets {
+    main.java.srcDirs = []
+    main.groovy.srcDirs = ['src/main']
+    main.resources.srcDirs = ['src/resources']
+    test.groovy.srcDirs = ['src/test']
+    test.java.srcDirs = []
+    test.resources.srcDirs = []
 }
+
+dependencies {
+    // compile deps
+    compile project(':')
+    compile 'us.levk:drmaa-common:1.0'
+
+    // test deps
+    //testCompile project(path: ':', configuration: 'testCompile')
+    testCompile files(project.parent.sourceSets.test.output)
+    // http://forums.gradle.org/gradle/topics/subproject-test-dependency
+    // http://stackoverflow.com/questions/29253532/how-to-include-a-dependency-to-parent-test-classes-for-a-submodule-in-a-gradle-m
+
+}
+

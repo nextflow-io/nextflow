@@ -23,7 +23,6 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.executor.CirrusExecutor
 import nextflow.executor.CrgExecutor
-import nextflow.executor.DrmaaExecutor
 import nextflow.executor.Executor
 import nextflow.executor.LocalExecutor
 import nextflow.executor.LsfExecutor
@@ -56,7 +55,6 @@ class ProcessFactory {
             'uge':  SgeExecutor,
             'lsf': LsfExecutor,
             'pbs': PbsExecutor,
-            'drmaa': DrmaaExecutor,
             'slurm': SlurmExecutor,
             'crg': CrgExecutor,
             'bsc': LsfExecutor,

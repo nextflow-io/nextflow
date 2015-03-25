@@ -83,6 +83,7 @@ configurations {
     capsule
     extrae
     provided
+    drmaa.extendsFrom runtime
     dnanexus.extendsFrom runtime
     gridgain.extendsFrom runtime
     console.extendsFrom runtime
@@ -130,6 +131,10 @@ dependencies {
     }
 
     console(project(':nxf-console')) {
+        exclude module: 'nextflow'
+    }
+
+    drmaa(project(':nxf-drmaa')) {
         exclude module: 'nextflow'
     }
 

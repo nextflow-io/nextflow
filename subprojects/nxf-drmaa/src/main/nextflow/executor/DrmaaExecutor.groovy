@@ -35,6 +35,7 @@ import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
 import nextflow.util.Duration
+import org.ggf.drmaa.Session
 import org.ggf.drmaa.ExitTimeoutException
 import org.ggf.drmaa.JobInfo
 import org.ggf.drmaa.JobTemplate
@@ -51,7 +52,7 @@ import org.ggf.drmaa.SessionFactory
 @Slf4j
 class DrmaaExecutor extends Executor {
 
-    static private DrmaaSession drmaa
+    static private Session drmaa
 
     /**
      * Create a DRMAA session object the very first time an executor is created
@@ -66,7 +67,7 @@ class DrmaaExecutor extends Executor {
     /**
      * @return The DRMAA session instance
      */
-    DrmaaSession getDrmaaSession() { drmaa }
+    Session getDrmaaSession() { drmaa }
 
     /**
      * Create a a queue holder for this executor

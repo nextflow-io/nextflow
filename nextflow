@@ -162,9 +162,6 @@ while [[ $# != 0 ]]; do
     shift
 done
 
-[[ "$cmd" == "console" ]] && NXF_MODE='console'
-[[ "$cmd" == "node" && ! "$NXF_MODE" ]] && NXF_MODE='gridgain'
-
 CAPSULE_LOG=${CAPSULE_LOG:=''}
 CAPSULE_RESET=${CAPSULE_RESET:=''}
 CAPSULE_CACHE_DIR=${CAPSULE_CACHE_DIR:="$NXF_HOME/capsule"}
@@ -223,13 +220,18 @@ check=".+:.+:.+"
 if [[ "$NXF_DRMAA" =~ $check ]]; then
   # add drmaa library downloadable from maven to dependencies list
   NXF_GRAB+=" $NXF_DRMAA"
+  NXF_MODE='drmaa'
 elif [[ "$NXF_DRMAA" && -f "$NXF_DRMAA" ]]; then
   # add drmaa jar file to custom classpath
   NXF_CLASSPATH+=":$NXF_DRMAA"
+  NXF_MODE='drmaa'
 elif [[ "$NXF_DRMAA" ]]; then
   echo_red "Cannot find specified DRMAA library file: $NXF_DRMAA"
   exit 1
 fi
+
+[[ "$cmd" == "console" ]] && NXF_MODE='console'
+[[ "$cmd" == "node" && ! "$NXF_MODE" ]] && NXF_MODE='gridgain'
 
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}
 JAVA_OPTS="-noverify -Dcapsule.trampoline"
