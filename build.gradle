@@ -82,7 +82,7 @@ allprojects {
 configurations {
     capsule
     extrae
-    provided
+    //provided
     drmaa.extendsFrom runtime
     dnanexus.extendsFrom runtime
     gridgain.extendsFrom runtime
@@ -111,9 +111,10 @@ dependencies {
 
     // include Ivy at runtime in order to have Grape @Grab work correctly
     runtime "org.apache.ivy:ivy:2.3.0"
+
     // library used to compile but not included in the final jar
-    provided 'us.levk:drmaa-common:1.0'
-    testCompile 'us.levk:drmaa-common:1.0'
+    //provided 'us.levk:drmaa-common:1.0'
+    //testCompile 'us.levk:drmaa-common:1.0'
 
     // Capsule manages the fat jar building process
     capsule(project(':my-capsule'))
@@ -151,7 +152,7 @@ groovydoc {
     groovyClasspath = project.configurations.gdocLibs
 }
 
-sourceSets.main.compileClasspath += configurations.provided
+//sourceSets.main.compileClasspath += configurations.provided
 sourceSets.main.java.srcDirs = []
 sourceSets.main.groovy.srcDirs = ['src/main/java', 'src/main/groovy']
 sourceSets.main.resources.srcDirs = ['src/main/resources']
@@ -166,11 +167,11 @@ compileGroovy {
  * http://stackoverflow.com/questions/20421681/provided-dependencies-using-gradle-jetgradle-and-intellij-idea-13
  * http://forums.gradle.org/gradle/topics/gradle_2_0_idea_plugin_adding_a_custom_configuration_to_scope_throws_classcastexception
  */
-idea {
-    module {
-        scopes.PROVIDED.plus += [configurations.provided]
-    }
-}
+//idea {
+//    module {
+//        scopes.PROVIDED.plus += [configurations.provided]
+//    }
+//}
 
 /*
  * Update the build timestamp in the source source file
