@@ -505,24 +505,6 @@ task exportClasspath {
     new File('.launch.classpath').text = libs.join(':')
 }
 
-task supernarc(type: CodeNarc) {
-    def allGroovySourceDirs = subprojects
-            .findAll { p -> p.sourceSets.main.hasProperty('allGroovy') }
-            .collect { p -> p.sourceSets.main.allGroovy.getSrcDirs() }
-            .flatten()
-
-    allGroovySourceDirs.each {
-        source(it)
-    }
-
-    // BTW, if you know you have some violations and don't want the builds to fail because of too many violations, you can increase the threshold as follows
-    maxPriority1Violations = 5
-    maxPriority2Violations = Integer.MAX_VALUE
-    maxPriority3Violations = Integer.MAX_VALUE
-
-    println 'Look for the report full report at this path: build/reports/codenarc/supernarc.html'
-}
-
 
 /*
  * Maven central deployment
