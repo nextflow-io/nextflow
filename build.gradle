@@ -242,13 +242,24 @@ protected error(String message) {
     throw new StopExecutionException()
 }
 
-protected String formatModuleDependency(ModuleDependency d) {
-    def result = d.group + ':' + d.name + ':' + d.version + (d.artifacts.empty ? '' : ':' + d.artifacts.first().classifier)
-    if (!d.excludeRules.empty) {
-        def rules = d.excludeRules.collect { (it.group ?: '*') + ':' + (it.module ?: '*') }
-        result += "(" + rules.join(',') + ")"
-    }
-    return result
+protected resolveDeps( String configName, String... x ) {
+
+    final deps = [] as Set
+    final config = configurations.getByName(configName)
+    final incoming = config.getIncoming()
+
+    deps << incoming.getResolutionResult().root.moduleVersion.toString()
+    incoming.getDependencies().each{ deps << "${it.group}:${it.name}:${it.version}".toString() }
+
+    config.getResolvedConfiguration().getResolvedArtifacts().each{ deps << it.moduleVersion.id.toString() }
+
+    if( x )
+        deps.addAll(x as List)
+
+    logger.info ">> Dependencies for configuration: $configName"
+    deps.sort().each { logger.info " - $it" }
+
+    return deps.collect{ "$it(*:*)" }.join(' ')
 }
 
 /*
@@ -259,16 +270,17 @@ task packOne(type: Jar) {
     archiveName = "nextflow-${version}-one.jar"
 
     from (configurations.capsule.collect { zipTree(it) })
-    def defDeps = configurations.runtime.allDependencies.collect { formatModuleDependency(it) }.join(' ')
 
     // main manifest attributes
+    def deps = resolveDeps('runtime', "io.nextflow:nxf-extrae:${version}")
+
     manifest.attributes(
                 'Main-Class'        : 'CapsuleLoader',
-                'Application-Name'  : 'nextflow-one',
+                'Application-Name'  : 'nextflow',
                 'Application-Class' : mainClassName,
                 'Application-Version': version,
                 'Min-Java-Version'  : '1.7.0',
-                'Dependencies'      : "io.nextflow:nextflow:${version} $defDeps"
+                'Dependencies'      : deps
     )
 
     // enable snapshot dependencies lookup
@@ -280,13 +292,22 @@ task packOne(type: Jar) {
     /*
      * `console` dependencies
      */
+    deps = resolveDeps('console')
     manifest.attributes('Application-Class' : 'nextflow.ui.console.Nextflow', 'console' )
-    manifest.attributes('Dependencies' :  "io.nextflow:nxf-console:${version}", 'console')
+    manifest.attributes('Dependencies': deps, 'console')
 
     /*
      * `gridgain` dependencies
      */
-    manifest.attributes('Dependencies' :  "io.nextflow:nxf-gridgain:${version}", 'gridgain')
+    deps = resolveDeps('gridgain')
+    manifest.attributes('Dependencies': deps, 'gridgain')
+
+
+    /*
+     * `drmaa` dependencies
+     */
+    deps = resolveDeps('drmaa', "io.nextflow:nxf-extrae:${version}")
+    manifest.attributes('Dependencies': deps, 'drmaa')
 
     doLast {
         ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: releaseDir, overwrite: true)
