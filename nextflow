@@ -290,11 +290,12 @@ EOF
 
 # checked if a cached classpath file exists and it newer that the nextflow boot jar file
 LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
-if [ -f "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ]; then
+if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ]; then
     LAUNCHER=$(cat "$LAUNCH_FILE")
 else
     # otherwise run the capsule and get the result classpath in the 'LAUNCHER' and save it to a file
     LAUNCHER=`"$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"`
+    [[ $? -ne 0 ]] && echo 'Unable to initialize nextflow environment' && exit $?
     mkdir -p ${NXF_LAUNCHER}
     echo "$LAUNCHER" > "$LAUNCH_FILE"
 fi
