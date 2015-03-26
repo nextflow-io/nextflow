@@ -323,7 +323,15 @@ class ConfigBuilder {
             }
 
             if( ! config.process.container ) {
-                throw new AbortOperationException("You request to run with Docker but no image has been specified")
+                def subProcs = config.process.findAll { it.key.startsWith('$') }
+                if ( ! subProcs )
+                    throw new AbortOperationException("You request to run with Docker but no image has been specified")
+                subProcs.each { name, value ->
+                    if ( ! value.container ) {
+                        throw new AbortOperationException("You request to run with Docker but no image has been specified")
+                    }
+                }
+
             }
         }
     }
