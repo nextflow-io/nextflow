@@ -110,10 +110,11 @@ class FilesEx {
      * @return
      */
     def static boolean deleteDir(Path path) {
-        if( !Files.exists(path) )
+        def attr = readAttributes(path)
+        if( !attr )
              return true
 
-        if( !Files.isDirectory(path) )
+        if( !attr.isDirectory() )
             return false
 
         try {

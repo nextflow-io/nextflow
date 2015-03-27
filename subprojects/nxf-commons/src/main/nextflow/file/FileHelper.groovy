@@ -544,7 +544,7 @@ class FileHelper {
                 if( log.isTraceEnabled() )
                     log.trace "visit dir ($depth) > $path; includeDir: $includeDir; matches: ${matcher.matches(path)}; isDir: ${Files.isDirectory(path)}"
 
-                if (includeDir && matcher.matches(path) && Files.isDirectory(path) && (includeHidden || !Files.isHidden(path))) {
+                if (includeDir && matcher.matches(path) && attrs.isDirectory() && (includeHidden || !isHidden(path))) {
                     def result = relative ? folder.relativize(path) : path
                     singleParam ? action.call(result) : action.call(result,attrs)
                 }
@@ -557,7 +557,7 @@ class FileHelper {
                 if( log.isTraceEnabled() )
                     log.trace "visit dir > $path; includeFile: $includeFile; matches: ${matcher.matches(path)}; isDir: ${Files.isDirectory(path)}"
 
-                if (includeFile && matcher.matches(path) && !Files.isDirectory(path) && (includeHidden || !Files.isHidden(path))) {
+                if (includeFile && matcher.matches(path) && attrs.isRegularFile() && (includeHidden || !isHidden(path))) {
                     def result = relative ? folder.relativize(path) : path
                     singleParam ? action.call(result) : action.call(result,attrs)
                 }
@@ -566,6 +566,10 @@ class FileHelper {
             }
       })
 
+    }
+
+    private static boolean isHidden(Path path) {
+        path.getFileName().toString().startsWith('.')
     }
 
     @PackageScope

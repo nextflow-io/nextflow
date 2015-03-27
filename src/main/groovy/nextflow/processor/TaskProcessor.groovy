@@ -18,6 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.processor
+
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
@@ -581,12 +582,15 @@ abstract class TaskProcessor {
         def exitCode = null
         def exitFile = folder.resolve(TaskRun.CMD_EXIT)
         if( task.type == ScriptType.SCRIPTLET ) {
-            if( exitFile.empty() ) {
-                log.trace "[$task.name] Exit file is empty > $exitFile -- return false"
+            def str
+            try {
+                str = exitFile.text?.trim()
+            }
+            catch( IOException e ) {
+                log.trace "[$task.name] Exit file can't be read > $exitFile -- return false -- Cause: ${e.message}"
                 return false
             }
 
-            def str = exitFile.text.trim()
             exitCode = str.isInteger() ? str.toInteger() : null
             if( !task.isSuccess(exitCode) ) {
                 log.trace "[$task.name] Exit code is not valid > $str -- return false"
@@ -600,12 +604,14 @@ abstract class TaskProcessor {
         TaskContext ctx = null
         def ctxFile = folder.resolve(TaskRun.CMD_CONTEXT)
         if( task.hasCacheableValues() ) {
-            if( !ctxFile.exists() ) {
-                log.trace "[$task.name] Context map file does not exist: $ctxFile -- return false"
+            try {
+                ctx = TaskContext.read(this, ctxFile)
+            }
+            catch( IOException e ) {
+                log.trace "[$task.name] Context map can't be read: $ctxFile -- return false -- Cause: ${e.message}"
                 return false
             }
 
-            ctx = TaskContext.read(this, ctxFile)
             populateSharedCtx(task, ctx)
         }
 
