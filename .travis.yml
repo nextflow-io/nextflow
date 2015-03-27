@@ -1,6 +1,6 @@
 language: groovy
-install: ./gradlew assemble -x signArchives
-script: ./gradlew check -x signArchives
+install: ./gradlew assemble -x javadoc -x javadocJar -x signArchives
+script: ./gradlew check 
 jdk:
   - oraclejdk7
   - oraclejdk8
