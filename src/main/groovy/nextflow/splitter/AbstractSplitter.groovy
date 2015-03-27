@@ -406,7 +406,9 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
     private int debugCount = 0
 
     protected void append( into, value ) {
-        log.trace "Splitter value: ${debugCount++}"
+        if( log.isTraceEnabled() )
+            log.trace "Splitter value: ${debugCount++}"
+
         if( into instanceof Collection )
             into.add(value)
 

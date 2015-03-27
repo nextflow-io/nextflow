@@ -922,7 +922,9 @@ abstract class TaskProcessor {
     }
 
     protected void bindOutParam( OutParam param, def values ) {
-        log.trace "<$name> Binding param $param with $values"
+        if( log.isTraceEnabled() )
+            log.trace "<$name> Binding param $param with $values"
+
         def x = values.size() == 1 ? values[0] : values
         processor.bindOutput( param.index, x )
     }
@@ -937,8 +939,9 @@ abstract class TaskProcessor {
      * @param task
      */
     final protected void collectOutputs( TaskRun task, Path workDir, def stdout, Map context ) {
+        if( log.isTraceEnabled() )
+            log.trace "<$name> collecting output: ${task.outputs}"
 
-        log.trace "<$name> collecting output: ${task.outputs}"
         task.outputs.keySet().each { OutParam param ->
 
             switch( param ) {
@@ -964,7 +967,9 @@ abstract class TaskProcessor {
          * Shared objects behave as accumulators
          * Copying back updated values from context map to buffer map so that can be accessed in the next iteration
          */
-        log.trace "<${name}> collecting sharedObjs: $sharedObjs"
+        if( log.isTraceEnabled() )
+            log.trace "<${name}> collecting sharedObjs: $sharedObjs"
+
         sharedObjs?.keySet()?.each { param ->
 
             switch(param) {
@@ -1053,7 +1058,9 @@ abstract class TaskProcessor {
         // bind the value
         def val = ctx.get(param.name)
         task.setOutput( param, val )
-        log.trace "Collecting param: ${param.name}; value: ${val}"
+
+        if( log.isTraceEnabled() )
+            log.trace "Collecting param: ${param.name}; value: ${val}"
 
     }
 
@@ -1304,7 +1311,8 @@ abstract class TaskProcessor {
      * @return
      */
     final protected TaskRun setupTask(List values) {
-        log.trace "Setup new process > $name"
+        if( log.isTraceEnabled() )
+            log.trace "Setup new process > $name"
 
         // -- map the inputs to a map and use to delegate closure values interpolation
         final secondPass = [:]
@@ -1465,7 +1473,8 @@ abstract class TaskProcessor {
             buffer.append( "  ${CacheHelper.hasher(item, mode).hash()} [${item?.class?.name}] $item \n")
         }
 
-        log.trace(buffer.toString())
+        if( log.isTraceEnabled() )
+            log.trace(buffer.toString())
     }
 
     final protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
@@ -1520,7 +1529,8 @@ abstract class TaskProcessor {
      * @return {@code TaskDef}
      */
     final protected void submitTask( TaskRun task, RunType runType, HashCode hash, Path folder ) {
-        log.trace "[${task.name}] actual run folder: ${task.workDir}"
+        if( log.isTraceEnabled() )
+            log.trace "[${task.name}] actual run folder: ${task.workDir}"
 
         makeTaskContextStage3(task, hash, folder)
 
@@ -1537,7 +1547,8 @@ abstract class TaskProcessor {
      */
     @PackageScope
     final void finalizeTask( TaskRun task ) {
-        log.trace "finalizing process > ${task.name} -- $task"
+        if( log.isTraceEnabled() )
+            log.trace "finalizing process > ${task.name} -- $task"
 
         def strategy = null
         try {
@@ -1594,7 +1605,8 @@ abstract class TaskProcessor {
      * @param producedFiles The map of files to be bind the outputs
      */
     private void finalizeTask0( TaskRun task ) {
-        log.trace "Finalize process > ${task.name}"
+        if( log.isTraceEnabled() )
+            log.trace "Finalize process > ${task.name}"
 
         // -- bind output (files)
         if( task.canBind ) {

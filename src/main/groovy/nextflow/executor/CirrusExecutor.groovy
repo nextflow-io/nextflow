@@ -207,7 +207,8 @@ class CirrusTaskHandler extends GridTaskHandler {
 
         // -- log the qsub command
         def cli = executor.getSubmitCommandLine(task, wrapperFile)
-        log.trace "start process ${task.name} > cli: ${cli}"
+        if( log.isTraceEnabled())
+            log.trace "start process ${task.name} > cli: ${cli}"
 
         /*
          * launch 'sub' script wrapper

@@ -541,7 +541,8 @@ class FileHelper {
             @Override
             public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) throws IOException {
                 int depth = path.nameCount - folder.nameCount
-                log.trace "visit dir ($depth) > $path; includeDir: $includeDir; matches: ${matcher.matches(path)}; isDir: ${Files.isDirectory(path)}"
+                if( log.isTraceEnabled() )
+                    log.trace "visit dir ($depth) > $path; includeDir: $includeDir; matches: ${matcher.matches(path)}; isDir: ${Files.isDirectory(path)}"
 
                 if (includeDir && matcher.matches(path) && Files.isDirectory(path) && (includeHidden || !Files.isHidden(path))) {
                     def result = relative ? folder.relativize(path) : path
@@ -553,7 +554,8 @@ class FileHelper {
 
             @Override
             public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
-                log.trace "visit dir > $path; includeFile: $includeFile; matches: ${matcher.matches(path)}; isDir: ${Files.isDirectory(path)}"
+                if( log.isTraceEnabled() )
+                    log.trace "visit dir > $path; includeFile: $includeFile; matches: ${matcher.matches(path)}; isDir: ${Files.isDirectory(path)}"
 
                 if (includeFile && matcher.matches(path) && !Files.isDirectory(path) && (includeHidden || !Files.isHidden(path))) {
                     def result = relative ? folder.relativize(path) : path

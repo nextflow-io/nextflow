@@ -168,7 +168,8 @@ abstract public class BigSort<V> implements Closeable {
             Files.createDirectories(tempDir);
         }
 
-        log.trace("BigSort sliceMaxSize: {}; sliceMaxItems: {}; temp dir: {}",sliceMaxSize, sliceMaxItems, tempDir);
+        if( log.isTraceEnabled())
+            log.trace("BigSort sliceMaxSize: {}; sliceMaxItems: {}; temp dir: {}",sliceMaxSize, sliceMaxItems, tempDir);
 
         if( comparator == null ) {
             comparator = DefaultComparator.INSTANCE;

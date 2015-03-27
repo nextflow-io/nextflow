@@ -313,33 +313,40 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         @Override
         public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "* process '$name' > message arrived for iterator '${taskConfig.getInputs().names[index]}' with value: '$message'"
+            if( log.isTraceEnabled() )
+                log.trace "* process '$name' > message arrived for iterator '${taskConfig.getInputs().names[index]}' with value: '$message'"
             return message;
         }
 
         @Override
         public Object messageSentOut(final DataflowProcessor processor, final DataflowWriteChannel<Object> channel, final int index, final Object message) {
-            log.trace "* process '$name' > message forwarded for iterator '${taskConfig.getInputs().names[index]}' with value: '$message'"
+            if( log.isTraceEnabled() )
+                log.trace "* process '$name' > message forwarded for iterator '${taskConfig.getInputs().names[index]}' with value: '$message'"
             return message;
         }
 
 
         @Override
         public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            log.trace "* process '$name' > control message arrived for iterator '${taskConfig.getInputs().names[index]}'"
+            if( log.isTraceEnabled() )
+                log.trace "* process '$name' > control message arrived for iterator '${taskConfig.getInputs().names[index]}'"
             return message;
         }
 
         @Override
         public void afterRun(final DataflowProcessor processor, final List<Object> messages) {
-            log.trace "* process '$name' > after run on internal iteration process -- allScalarValues: $allScalarValues"
+            if( log.isTraceEnabled() )
+                log.trace "* process '$name' > after run on internal iteration process -- allScalarValues: $allScalarValues"
+
             if( allScalarValues )
                 processor.terminate()
         }
 
         @Override
         public void afterStop(final DataflowProcessor processor) {
-            log.trace "* process '$name' > after stop on internal iteration process -- allScalarValues: $allScalarValues"
+            if( log.isTraceEnabled() )
+                log.trace "* process '$name' > after stop on internal iteration process -- allScalarValues: $allScalarValues"
+
             if( allScalarValues )
                 processor.bindAllOutputs(Channel.STOP)
         }
