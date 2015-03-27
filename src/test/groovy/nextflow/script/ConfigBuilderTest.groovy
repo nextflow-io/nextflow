@@ -243,6 +243,57 @@ class ConfigBuilderTest extends Specification {
 
     }
 
+    def 'run with docker 3'() {
+        given:
+        def file = Files.createTempFile('test','config')
+        file.deleteOnExit()
+
+        when:
+        file.text =
+                '''
+                process.$test.container = 'busybox'
+                '''
+        def opt = new CliOptions(config: [file.toFile().canonicalPath])
+        def run = new CmdRun(withDocker: '-')
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        then:
+        config.docker.enabled
+        config.process.$test.container == 'busybox'
+
+        when:
+        file.text =
+                '''
+                process.container = 'busybox'
+                '''
+        opt = new CliOptions(config: [file.toFile().canonicalPath])
+        run = new CmdRun(withDocker: '-')
+        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        then:
+        config.docker.enabled
+        config.process.container == 'busybox'
+
+        when:
+        opt = new CliOptions()
+        run = new CmdRun(withDocker: '-')
+        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'You request to run with Docker but no image has been specified'
+
+        when:
+        file.text =
+                '''
+                process.$test.tag = 'tag'
+                '''
+        opt = new CliOptions(config: [file.toFile().canonicalPath])
+        run = new CmdRun(withDocker: '-')
+        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        then:
+        e = thrown(AbortOperationException)
+        e.message == 'You request to run with Docker but no image has been specified'
+
+    }
+
     def 'run without docker'() {
 
         given:
@@ -285,6 +336,21 @@ class ConfigBuilderTest extends Specification {
         config.cluster.slots == 10
         config.cluster.tcp.alpha == 'uno'
         config.cluster.tcp.beta == 'due'
+
+    }
+
+    def 'has container directive' () {
+        when:
+        def config = new ConfigBuilder()
+
+        then:
+        !config.hasContainerDirective(null)
+        !config.hasContainerDirective([:])
+        !config.hasContainerDirective([foo: true])
+        config.hasContainerDirective([container: 'hello/world'])
+        !config.hasContainerDirective([foo: 1, bar: 2])
+        !config.hasContainerDirective([foo: 1, bar: 2, baz: [container: 'user/repo']])
+        config.hasContainerDirective([foo: 1, bar: 2, $baz: [container: 'user/repo']])
 
     }
 

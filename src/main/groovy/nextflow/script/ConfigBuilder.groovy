@@ -322,10 +322,32 @@ class ConfigBuilder {
                 config.process.container = config.docker.image
             }
 
-            if( ! config.process.container ) {
+            if( !hasContainerDirective(config.process) )
                 throw new AbortOperationException("You request to run with Docker but no image has been specified")
-            }
+
         }
+    }
+
+    /**
+     * Verify that configuration for process contains at last one `container` directive
+     *
+     * @param process
+     * @return {@code true} when a `container` is defined or {@code false} otherwise
+     */
+    protected boolean hasContainerDirective(process)  {
+
+        if( process instanceof Map ) {
+            if( process.container )
+                return true
+
+            def result = process
+                            .findAll { String name, value -> name.startsWith('$') && value instanceof Map }
+                            .find { String name, Map value -> value.container as boolean }  // the first non-empty `container` string
+
+            return result as boolean
+        }
+
+        return false
     }
 
 
