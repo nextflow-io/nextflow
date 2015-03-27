@@ -234,14 +234,21 @@ task compile {
  * @link https://github.com/puniverse/capsule
  */
 
-def homeDir = System.properties['user.home']
-def nextflowDir = "$homeDir/.nextflow/framework/$version"
-def releaseDir = "$buildDir/releases"
+ext.ossrhUserName = hasProperty('ossrhUserName') ? properties.get('ossrhUserName') : null
+ext.ossrhPassword = hasProperty('ossrhPassword') ? properties.get('ossrhPassword') : null
+ext.ossrhFullName = hasProperty('ossrhFullName') ? properties.get('ossrhFullName') : null
+ext.ossrhEmail = hasProperty('ossrhEmail') ? properties.get('ossrhEmail') : null
+ext.deployable = [project(':'), project(':nxf-commons'), project(':nxf-console'), project(':nxf-extrae'), project(':nxf-gridgain')]
+
+ext.homeDir = System.properties['user.home']
+ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
+ext.releaseDir = "$buildDir/releases"
 
 protected error(String message) {
     logger.error message
     throw new StopExecutionException()
 }
+
 
 protected resolveDeps( String configName, String... x ) {
 
@@ -388,7 +395,7 @@ task pack( dependsOn: [packOne, packDx, packAll]) {
 
 final s3CmdOpts="-q --no-mime-magic --reduced-redundancy --acl-public --access_key=${System.getenv('NXF_AWS_ACCESS')} --secret_key=${System.getenv('NXF_AWS_SECRET')}"
 
-task deploy( type: Exec, dependsOn: [clean, pack, allprojects.uploadArchives, makeSha1]) {
+task deploy( type: Exec, dependsOn: [clean, pack, deployable.uploadArchives, makeSha1]) {
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
@@ -512,9 +519,7 @@ task exportClasspath {
  * http://central.sonatype.org/pages/gradle.html
  */
 
-ext.mavenUploadProjects = [project(':'), project(':nxf-commons'), project(':nxf-console'), project(':nxf-extrae'), project(':nxf-gridgain')]
-
-configure(mavenUploadProjects) {
+configure(deployable) {
     apply plugin: 'maven'
     apply plugin: 'signing'
 
@@ -581,7 +586,6 @@ configure(mavenUploadProjects) {
             }
         }
     }
-
 
 }
 
