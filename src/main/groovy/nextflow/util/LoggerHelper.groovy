@@ -121,7 +121,7 @@ class LoggerHelper {
             rollingPolicy.setContext(loggerContext)
             rollingPolicy.setParent(fileAppender)
             rollingPolicy.setMinIndex(1)
-            rollingPolicy.setMaxIndex(5)
+            rollingPolicy.setMaxIndex(9)
             rollingPolicy.start()
 
             def encoder = new PatternLayoutEncoder()

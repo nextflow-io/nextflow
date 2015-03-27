@@ -1292,7 +1292,7 @@ class FilesEx {
      * @param maxRolls Max number of time to apply the file rolling (i.e. rename to a new name)
      *
      */
-    static void rollFile( Path self, int maxRolls=5 ) {
+    static void rollFile( Path self, int maxRolls=9 ) {
 
         if( FilesEx.exists(self) ) {
             def newName = self.getFileName().toString() +'.1'
