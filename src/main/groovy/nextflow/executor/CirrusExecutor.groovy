@@ -21,10 +21,12 @@
 package nextflow.executor
 import java.nio.file.Path
 
+import com.upplication.s3fs.S3Path
 import groovy.transform.InheritConstructors
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Global
+import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
@@ -40,6 +42,16 @@ import nextflow.util.Duration
 @Slf4j
 @ServiceName('cirrus')
 class CirrusExecutor extends AbstractGridExecutor {
+
+    @Override
+    void register() {
+        super.register()
+        // check that the working directory is on S3 storage
+        if( !(session.workDir instanceof S3Path) ) {
+            session.abort()
+            throw new AbortOperationException("When using `cirrus` executor a S3 bucket must be provided as working directory -- Add the option `-w s3://<your-bucket/path>` to your run command line")
+        }
+    }
 
     /**
      * Create a a queue holder for this executor
