@@ -154,4 +154,16 @@ class BoltsTest extends Specification {
 
     }
 
+    def testIsCamelCase() {
+
+        expect:
+        !'hello'.isCamelCase()
+        'helloWorld'.isCamelCase()
+        !'hello_world'.isCamelCase()
+        !'HELLOworld'.isCamelCase()
+        !'Helloworld'.isCamelCase()
+        'HelloWorld'.isCamelCase()
+
+    }
+
 }

@@ -484,4 +484,14 @@ class Bolts {
 
     }
 
+    static boolean isCamelCase(String str) {
+        if( !str ) return false
+        for( int i=0; i<str.size()-1; i++ )
+            if( Character.getType(str.charAt(i)) == Character.LOWERCASE_LETTER && Character.getType(str.charAt(i+1)) == Character.UPPERCASE_LETTER)
+                return true
+
+        return false
+    }
+
+
 }
