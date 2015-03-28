@@ -19,14 +19,15 @@
  */
 
 package nextflow.fs.dx
+
+import com.upplication.s3fs.AmazonS3Client
+import com.upplication.s3fs.S3FileSystem
+import com.upplication.s3fs.S3FileSystemProvider
+import com.upplication.s3fs.S3Path
 import nextflow.file.FileHelper
 import nextflow.fs.dx.api.DxApi
 import nextflow.util.KryoHelper
 import nextflow.util.PathSerializer
-import org.weakref.s3fs.AmazonS3Client
-import org.weakref.s3fs.S3FileSystem
-import org.weakref.s3fs.S3FileSystemProvider
-import org.weakref.s3fs.S3Path
 import spock.lang.Specification
 /**
  *
