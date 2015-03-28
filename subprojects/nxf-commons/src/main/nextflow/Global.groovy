@@ -19,15 +19,15 @@
  */
 
 package nextflow
-import groovy.transform.CompileStatic
+
 import groovy.util.logging.Slf4j
+import org.apache.commons.lang.StringUtils
 /**
  * Hold global variables
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@CompileStatic
 class Global {
 
     /**
@@ -100,6 +100,29 @@ class Global {
 
     static List<String> getAwsCredentials() {
         getAwsCredentials(System.getenv(), config)
+    }
+
+    static Map<String,?> getAwsClientConfig() {
+        if( config.aws?.client instanceof Map ) {
+            return normalizeAwsClientConfig(config.aws.client)
+        }
+
+        return null
+    }
+
+    /**
+     * Convert configuration keys from camel-case notation (nextflow) to underscore
+     * separated notation expected by the AWS client
+     *
+     * @return A map object containing the AWS client configuration properties
+     */
+    static protected Map normalizeAwsClientConfig(Map<String,?> client) {
+        def result = [:]
+        client.each { String name, value ->
+            def newKey = name.isCamelCase() ? StringUtils.splitByCharacterTypeCamelCase(name).join('_').toLowerCase() : name
+            result.put(newKey,value?.toString())
+        }
+        return result
     }
 
     /**

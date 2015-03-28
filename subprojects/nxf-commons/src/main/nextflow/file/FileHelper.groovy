@@ -270,6 +270,11 @@ class FileHelper {
                 result.access_key = credentials[0]
                 result.secret_key = credentials[1]
             }
+
+            def config = Global.getAwsClientConfig()
+            if( config ) {
+                result.putAll(config)
+            }
         }
         else {
             assert Global.session, "Session is not available -- make sure to call this after Session object has been created"
