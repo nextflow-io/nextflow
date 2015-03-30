@@ -345,6 +345,7 @@ task packOne(type: Jar) {
                 'Application-Class' : mainClassName,
                 'Application-Version': version,
                 'Min-Java-Version'  : '1.7.0',
+                'Caplets'           : 'MavenCapsule',
                 'Dependencies'      : deps
     )
 

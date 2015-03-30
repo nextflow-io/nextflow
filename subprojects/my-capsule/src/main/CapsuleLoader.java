@@ -19,9 +19,9 @@
  */
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Implement capsule custom strategy to add maven dependencies as
@@ -35,15 +35,14 @@ public class CapsuleLoader extends Capsule {
      * Constructs a capsule from the given JAR file
      *
      * @param jarFile  the path to the JAR file
-     * @param cacheDir the path to the (shared) Capsule cache directory
      */
-    protected CapsuleLoader(Path jarFile, Path cacheDir) {
-        super(jarFile, cacheDir);
+    protected CapsuleLoader(Path jarFile) {
+        super(jarFile);
     }
 
-
-    protected ProcessBuilder prelaunch(List<String> args) {
-        ProcessBuilder pb = super.prelaunch(args);
+    @Override
+    protected ProcessBuilder prelaunch(List<String> jvmArgs, List<String> args) {
+        ProcessBuilder pb = super.prelaunch(jvmArgs,args);
 
         String drip = System.getenv().get("NXF_DRIP");
         if( drip != null && !"".equals(drip) ) {
@@ -61,23 +60,32 @@ public class CapsuleLoader extends Capsule {
     }
 
     @Override
-    protected List<String> getDependencies() {
-        List<String> parent = super.getDependencies();
-        return extendDepsWith(System.getenv("NXF_GRAB"), parent);
+    protected <T> T attribute(Map.Entry<String, T> attr) {
+
+        if (ATTR_DEPENDENCIES == attr && System.getenv("NXF_GRAB") != null ) {
+            String customDeps = System.getenv("NXF_GRAB");
+            List<String> parent = super.attribute((Map.Entry<String,List<String>>)attr);
+            return (T)extendDepsWith(System.getenv("NXF_GRAB"), parent);
+        }
+
+        if (ATTR_APP_CLASS_PATH == attr && System.getenv("NXF_CLASSPATH") != null) {
+            String classpath = System.getenv("NXF_CLASSPATH");
+            List<String> parent = super.attribute((Map.Entry<String, List<String>>) attr);
+            return (T)extendClassPathWith(classpath, parent);
+
+        }
+
+        return super.attribute(attr);
     }
 
-    protected List<Path> buildClassPath() {
-        List<Path> parent = super.buildClassPath();
-        String classpath = System.getenv("NXF_CLASSPATH");
-        return extendClassPathWith(classpath, parent);
-    }
 
-    static List<Path> extendClassPathWith(String classpath, List<Path> origin) {
+
+    static List<String> extendClassPathWith(String classpath, List<String> origin) {
         if( classpath == null || "".equals(classpath.trim()) ) {
             return origin;
         }
 
-        List<Path> result = new ArrayList<>();
+        List<String> result = new ArrayList<>();
         if( origin != null ) {
             result.addAll(origin);
         }
@@ -86,7 +94,7 @@ public class CapsuleLoader extends Capsule {
         for( String lib : classpath.split(":") ) {
             String trimmed = lib.trim();
             if( trimmed.length()>0 )
-                result.add(Paths.get(trimmed));
+                result.add(trimmed);
         }
 
         return result;
