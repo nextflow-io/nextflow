@@ -547,7 +547,7 @@ class FileHelper {
             public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) throws IOException {
                 int depth = path.nameCount - folder.nameCount
                 if( log.isTraceEnabled() )
-                    log.trace "visit dir ($depth) > $path; includeDir: $includeDir; matches: ${matcher.matches(path)}; isDir: ${Files.isDirectory(path)}"
+                    log.trace "visit dir ($depth) > $path; includeDir: $includeDir; matches: ${matcher.matches(path)}; isDir: ${attrs.isDirectory()}"
 
                 if (includeDir && matcher.matches(path) && attrs.isDirectory() && (includeHidden || !isHidden(path))) {
                     def result = relative ? folder.relativize(path) : path
@@ -560,7 +560,7 @@ class FileHelper {
             @Override
             public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
                 if( log.isTraceEnabled() )
-                    log.trace "visit dir > $path; includeFile: $includeFile; matches: ${matcher.matches(path)}; isDir: ${Files.isDirectory(path)}"
+                    log.trace "visit file > $path; includeFile: $includeFile; matches: ${matcher.matches(path)}; isRegularFile: ${attrs.isRegularFile()}"
 
                 if (includeFile && matcher.matches(path) && attrs.isRegularFile() && (includeHidden || !isHidden(path))) {
                     def result = relative ? folder.relativize(path) : path
@@ -574,7 +574,9 @@ class FileHelper {
     }
 
     private static boolean isHidden(Path path) {
-        path.getFileName().toString().startsWith('.')
+        // note: fileName can be null for root path
+        def fileName = path.getFileName()
+        return fileName ? fileName.toString()?.startsWith('.') : null
     }
 
     @PackageScope
