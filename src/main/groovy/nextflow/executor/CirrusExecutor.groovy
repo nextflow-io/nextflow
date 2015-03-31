@@ -145,9 +145,19 @@ class CirrusExecutor extends AbstractGridExecutor {
             result << "-c" << task.config.cpus.toString()
         }
 
+        // max task duration
+        if( task.config.time ) {
+            final time = task.config.getTime().toSeconds()
+            result << '--timeout' << String.valueOf(time)
+        }
+
         if( task.config.getMemory() ) {
             // convert to MB
-            result << '-m' << task.config.getMemory().toMega().toString()
+            result << '-m' << (task.config.getMemory().toMega() as String)
+        }
+
+        if( task.config.getDisk() ) {
+            result << '-dm' << (task.config.getDisk().toMega() as String)
         }
 
         // -- at the end append the command script wrapped file name

@@ -170,6 +170,23 @@ class TaskConfig implements Map<String,Object> {
         }
     }
 
+    MemoryUnit getDisk() {
+        def value = get('disk')
+
+        if( !value )
+            return null
+
+        if( value instanceof MemoryUnit )
+            return (MemoryUnit)value
+
+        try {
+            new MemoryUnit(value.toString().trim())
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Not a valid 'disk' value in process definition: $value")
+        }
+    }
+
     Duration getTime() {
         def value = get('time')
 

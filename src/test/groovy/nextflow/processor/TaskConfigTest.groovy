@@ -222,6 +222,25 @@ class TaskConfigTest extends Specification {
 
     }
 
+    def testGetDisk() {
+
+        when:
+        def config = new TaskConfig().setContext(x: 20)
+        config.disk = value
+
+        then:
+        config.disk == expected
+        config.getDisk() == expected
+
+        where:
+        expected                || value
+        null                    || null
+        new MemoryUnit('1M')    || 1024 * 1024
+        new MemoryUnit('5M')    || '5M'
+        new MemoryUnit('20G')   || { "$x G" }
+
+    }
+
     def testGetCpus() {
 
         when:

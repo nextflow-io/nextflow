@@ -112,6 +112,34 @@ class CirrusExecutorTest extends Specification {
                    '--any-other-option',
                    'x and y']
 
+
+        when:
+        config = task.config = new TaskConfig()
+        config.cpus = 8
+        config.disk = '20 G'
+        config.time = '5 h'
+        config.queue = 'test'
+        result = executor.getDirectives(task, [])
+        then:
+        result == ['--tag',
+                   'NAME=nf-task123_3',
+                   '--tag',
+                   'uuid=a6f6aa6',
+                   '--no-env',
+                   '-v',
+                   'AWS_ACCESS_KEY_ID=xxx',
+                   '-v',
+                   'AWS_SECRET_ACCESS_KEY=yyy',
+                   '-q',
+                   'test',
+                   '-c',
+                   '8',
+                   '--timeout',
+                   '18000',
+                   '-dm',
+                   '20480'
+                   ]
+
     }
 
     def 'test cirrus ksub command line'() {
