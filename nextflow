@@ -281,6 +281,7 @@ env_md5() {
 cat <<EOF | $MD5 | cut -f1 -d' '
 $JAVA_CMD
 $JAVA_OPTS
+$NXF_VER
 $NXF_OPTS
 $NXF_GRAB
 $NXF_CLASSPATH
