@@ -34,7 +34,7 @@ class GlobalTest extends Specification {
         Global.getAwsCredentials(null, null) == null
         Global.getAwsCredentials([AWS_ACCESS_KEY: 'x', AWS_SECRET_KEY: '222'], null) == ['x','222']
         Global.getAwsCredentials([AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999'], null) == ['q','999']
-        Global.getAwsCredentials([AWS_ACCESS_KEY: 'x', AWS_SECRET_KEY: '222',  AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999'], null) == ['x','222']
+        Global.getAwsCredentials([AWS_ACCESS_KEY: 'x', AWS_SECRET_KEY: '222',  AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999'], null) == ['q','999']
 
         Global.getAwsCredentials([AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999'], [aws:[accessKey: 'b', secretKey: '333']]) == ['b','333']
         Global.getAwsCredentials(null, [aws:[accessKey: 'b', secretKey: '333']]) == ['b','333']

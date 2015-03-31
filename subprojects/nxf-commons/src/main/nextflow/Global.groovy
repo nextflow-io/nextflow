@@ -81,13 +81,13 @@ class Global {
                 return [a, b]
         }
 
-        if( env && (a=env.AWS_ACCESS_KEY) && (b=env.AWS_SECRET_KEY) ) {
-            return [a, b]
-        }
-
         // as define by amazon doc
         // http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
         if( env && (a=env.AWS_ACCESS_KEY_ID) && (b=env.AWS_SECRET_ACCESS_KEY) )  {
+            return [a, b]
+        }
+
+        if( env && (a=env.AWS_ACCESS_KEY) && (b=env.AWS_SECRET_KEY) ) {
             return [a, b]
         }
 
@@ -103,8 +103,8 @@ class Global {
     }
 
     static Map<String,?> getAwsClientConfig() {
-        if( config.aws?.client instanceof Map ) {
-            return normalizeAwsClientConfig(config.aws.client)
+        if( config?.aws?.client instanceof Map ) {
+            return normalizeAwsClientConfig(config.aws.client as Map)
         }
 
         return null

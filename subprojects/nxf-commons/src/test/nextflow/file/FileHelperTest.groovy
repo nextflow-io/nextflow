@@ -186,7 +186,7 @@ class FileHelperTest extends Specification {
 
         expect:
         // properties have priority over the environment map
-        FileHelper.getEnvMap0('s3', env) == [access_key:'a1', secret_key:'s1']
+        filehelper.getenvmap0('s3', env) == [access_key:'a1', secret_key:'s1']
         // none of them
         FileHelper.getEnvMap0('s3', [:]) == [:]
 
