@@ -223,6 +223,8 @@ class DxTaskHandler extends TaskHandler {
 
     private Path taskOutputFile
 
+    private Path taskErrorFile
+
 
     protected DxTaskHandler(TaskRun task, DnaNexusExecutor executor, Map params, DxApi api = null ) {
         super(task)
@@ -231,6 +233,7 @@ class DxTaskHandler extends TaskHandler {
         this.api = api ?: DxApi.instance
         // the file that will receive the stdout
         this.taskOutputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
+        this.taskErrorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
     }
 
     @Override
@@ -303,15 +306,8 @@ class DxTaskHandler extends TaskHandler {
          * Getting the program output file.
          * When the 'echo' property is set, it prints out the task stdout
          */
-
-        if( !taskOutputFile.exists()) {
-            log.warn "Process ${task.name} > output file does not exist: $taskOutputFile"
-            task.stdout = '(none)'
-        }
-        else {
-            log.debug "Process ${task.name} > out file: $taskOutputFile -- exists: ${taskOutputFile.exists()}; size: ${taskOutputFile.size()}"
-            task.stdout = taskOutputFile
-        }
+        task.stdout = taskOutputFile
+        task.stderr = taskErrorFile
 
         status = COMPLETED
         return true

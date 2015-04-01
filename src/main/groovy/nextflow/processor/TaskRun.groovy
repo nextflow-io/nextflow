@@ -19,6 +19,8 @@
  */
 
 package nextflow.processor
+
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.locks.ReentrantLock
 
@@ -119,9 +121,14 @@ class TaskRun {
     boolean canBind
 
     /**
-     * The return std out
+     * Task produced standard output
      */
     def stdout
+
+    /**
+     * Task produced standard error
+     */
+    def stderr
 
     /**
      * @return The task produced stdout result as string
@@ -129,10 +136,34 @@ class TaskRun {
     def String getStdout() {
 
         if( stdout instanceof Path ) {
-            return stdout.exists() ? stdout.text : null
+            try {
+                return stdout.text
+            }
+            catch( NoSuchFileException e ) {
+                return null
+            }
         }
-        else if( stdout != null ) {
+
+        if( stdout != null ) {
             return stdout.toString()
+        }
+
+        return null
+    }
+
+    def String getStderr() {
+
+        if( stderr instanceof Path ) {
+            try {
+                return stderr.text
+            }
+            catch( NoSuchFileException e ) {
+                return null
+            }
+        }
+
+        if( stderr != null ) {
+            return stderr.toString()
         }
 
         return null
@@ -145,20 +176,22 @@ class TaskRun {
 
         // print the stdout
         if( stdout instanceof Path ) {
-            if( !stdout.exists() ) {
-                log.trace "Echo file does not exist: ${stdout}"
-                return
-            }
-
-            echoLock.lock()
             try {
-                stdout.withReader {  System.out << it }
+                echoLock.lock()
+                try {
+                    stdout.withReader {  System.out << it }
+                }
+                finally {
+                    echoLock.unlock()
+                }
             }
-            finally {
-                echoLock.unlock()
+            catch( NoSuchFileException e ) {
+                log.trace "Echo file does not exist: ${stdout}"
             }
+            return
         }
-        else if( stdout != null ) {
+
+        if( stdout != null ) {
             print stdout.toString()
         }
 
@@ -173,20 +206,41 @@ class TaskRun {
      */
     List<String> dumpStdout(int n = 50) {
 
-        List result = null
         try {
-            if( stdout instanceof Path )
-                result = stdout.tail(n).readLines()
-
-            else if( stdout != null ) {
-                result = stdout.toString().readLines()
-                if( result.size()>n )
-                    result = result[-n..-1]
-            }
+            return dumpObject(stdout,n)
         }
         catch( Exception e ) {
             log.debug "Unable to dump output of process '$name' -- Cause: ${e}"
+            return []
         }
+    }
+
+    List<String> dumpStderr(int n = 50) {
+
+        try {
+            return dumpObject(stderr,n)
+        }
+        catch( Exception e ) {
+            log.debug "Unable to dump error of process '$name' -- Cause: ${e}"
+            return []
+        }
+    }
+
+
+    protected List<String> dumpObject( obj, int max ) {
+        List result = null
+
+        if( obj instanceof Path )
+            result = obj.tail(max).readLines()
+
+        else if( obj != null ) {
+            result = obj.toString().readLines()
+            if( result.size()>max ) {
+                result = result[-max..-1]
+                result.add(0, '(more omitted..)')
+            }
+        }
+
         return result ?: []
     }
 
@@ -370,6 +424,7 @@ class TaskRun {
     static final String CMD_SCRIPT = '.command.sh'
     static final String CMD_INFILE = '.command.in'
     static final String CMD_OUTFILE = '.command.out'
+    static final String CMD_ERRFILE = '.command.err'
     static final String CMD_EXIT = '.exitcode'
     static final String CMD_START = '.command.begin'
     static final String CMD_RUN = '.command.run'

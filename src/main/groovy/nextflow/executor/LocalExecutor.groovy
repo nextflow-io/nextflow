@@ -106,6 +106,8 @@ class LocalTaskHandler extends TaskHandler {
 
     private final Path outputFile
 
+    private final Path errorFile
+
     private PosixProcess process
 
     private boolean destroyed
@@ -122,6 +124,7 @@ class LocalTaskHandler extends TaskHandler {
         // create the task handler
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
+        this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
         this.wallTimeMillis = task.config.getTime()?.toMillis()
         this.executor = executor
@@ -192,6 +195,7 @@ class LocalTaskHandler extends TaskHandler {
             task.exitStatus = result instanceof Integer ? result : Integer.MAX_VALUE
             task.error = result instanceof Throwable ? result : null
             task.stdout = outputFile
+            task.stderr = errorFile
             status = TaskStatus.COMPLETED
             destroy()
             return true
@@ -204,6 +208,7 @@ class LocalTaskHandler extends TaskHandler {
             if( elapsedTimeMillis() > wallTimeMillis ) {
                 destroy()
                 task.stdout = outputFile
+                task.stderr = errorFile
                 status = TaskStatus.COMPLETED
 
                 // signal has completed

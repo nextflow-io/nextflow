@@ -779,14 +779,20 @@ abstract class TaskProcessor {
             message << "\nCommand output:"
             final max = 50
             def lines = task.dumpStdout(max)
-            if( lines.size() == max ) {
-                message << "  (more omitted..)"
-            }
-            else if( lines.size() == 0 ) {
+            if( lines.size() == 0 ) {
                 message << "  (empty)"
             }
             lines.each {
                 message << "  ${task.workDir ? it.replace(task.workDir.toString()+'/','') : it }"
+            }
+
+            // - the tail of the process stderr
+            lines = task.dumpStderr(max)
+            if( lines ) {
+                message << "\nCommand error:"
+                lines.each {
+                    message << "  ${task.workDir ? it.replace(task.workDir.toString()+'/','') : it }"
+                }
             }
 
         }
@@ -806,6 +812,10 @@ abstract class TaskProcessor {
         message << "\nTip: ${getRndTip()}"
 
         return message
+    }
+
+    protected String formatDumpMessage( String lines ) {
+
     }
 
     static List tips = [
