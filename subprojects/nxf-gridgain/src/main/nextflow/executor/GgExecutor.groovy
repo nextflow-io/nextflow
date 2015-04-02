@@ -166,6 +166,7 @@ class GgTaskHandler extends TaskHandler {
 
     private Path outputFile
 
+    private Path errorFile
 
     /**
      * The result object for this task
@@ -178,6 +179,7 @@ class GgTaskHandler extends TaskHandler {
         handler.type = ScriptType.SCRIPTLET
         handler.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
         handler.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
+        handler.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         return handler
     }
 
@@ -238,6 +240,7 @@ class GgTaskHandler extends TaskHandler {
             // -- the task output depend by the kind of the task executed
             if( isScriptlet() ) {
                 task.stdout = outputFile
+                task.stderr = errorFile
                 task.exitStatus = result.getData() as Integer
             }
             else {
@@ -551,6 +554,7 @@ class GgBashTask extends GgBaseTask<Integer>  {
         // copy the 'exit' file and 'output' file
         copyFromScratchToWorkDir(TaskRun.CMD_EXIT)
         copyFromScratchToWorkDir(TaskRun.CMD_OUTFILE)
+        copyFromScratchToWorkDir(TaskRun.CMD_ERRFILE, true)
         copyFromScratchToWorkDir(TaskRun.CMD_TRACE, true)
     }
 

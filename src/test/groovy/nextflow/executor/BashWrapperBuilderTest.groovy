@@ -150,8 +150,8 @@ class BashWrapperBuilderTest extends Specification {
 
                 set +e
                 (
-                /bin/bash -ue ${folder}/.command.sh &> .command.out
-                ) &
+                /bin/bash -ue ${folder}/.command.sh
+                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
                 pid=\$!
                 wait \$pid || ret=\$?
                 """
@@ -224,7 +224,7 @@ class BashWrapperBuilderTest extends Specification {
                 set +e
                 (
                 /bin/bash -ue ${folder}/.command.run.1
-                ) &
+                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
                 pid=\$!
                 wait \$pid || ret=\$?
                 """
@@ -299,11 +299,12 @@ class BashWrapperBuilderTest extends Specification {
 
                 set +e
                 (
-                /bin/bash -ue ${folder}/.command.sh < ${folder}/.command.in &> .command.out
-                ) &
+                /bin/bash -ue ${folder}/.command.sh < ${folder}/.command.in
+                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
                 pid=\$!
                 wait \$pid || ret=\$?
                 cp .command.out ${folder} || true
+                cp .command.err ${folder} || true
                 """
                         .stripIndent().leftTrim()
 
@@ -393,10 +394,11 @@ class BashWrapperBuilderTest extends Specification {
                 set +e
                 (
                 /bin/bash -ue ${folder}/.command.run.1
-                ) &
+                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
                 pid=\$!
                 wait \$pid || ret=\$?
                 cp .command.out ${folder} || true
+                cp .command.err ${folder} || true
                 cp .command.trace ${folder} || true
                 """
                         .stripIndent().leftTrim()
@@ -478,7 +480,7 @@ class BashWrapperBuilderTest extends Specification {
             trap 'exit \${ret:=\$?}' EXIT
             start_millis=\$(\$NXF_DATE)
             (
-            /bin/bash -ue ${folder}/.command.sh < ${folder}/.command.in &> .command.out
+            /bin/bash -ue ${folder}/.command.sh < ${folder}/.command.in
             ) &
             pid=\$!
             nxf_trace "\$pid" .command.trace &
@@ -563,8 +565,8 @@ class BashWrapperBuilderTest extends Specification {
 
                 set +e
                 (
-                sudo docker run -i -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name xyz busybox /bin/bash -ue ${folder}/.command.sh &> .command.out
-                ) &
+                sudo docker run -i -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name xyz busybox /bin/bash -ue ${folder}/.command.sh
+                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
                 pid=\$!
                 wait \$pid || ret=\$?
                 sudo docker rm xyz &>/dev/null &
@@ -641,8 +643,8 @@ class BashWrapperBuilderTest extends Specification {
 
                 set +e
                 (
-                docker run -i -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name xyz busybox /bin/bash -ue ${folder}/.command.sh &> .command.out
-                ) &
+                docker run -i -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name xyz busybox /bin/bash -ue ${folder}/.command.sh
+                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
                 pid=\$!
                 wait \$pid || ret=\$?
                 docker rm xyz &>/dev/null &
@@ -722,8 +724,8 @@ class BashWrapperBuilderTest extends Specification {
 
                 set +e
                 (
-                docker run -i -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name c1 ubuntu /bin/bash -ue ${folder}/.command.sh &> .command.out
-                ) &
+                docker run -i -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --name c1 ubuntu /bin/bash -ue ${folder}/.command.sh
+                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
                 pid=\$!
                 wait \$pid || ret=\$?
                 """
@@ -922,8 +924,8 @@ class BashWrapperBuilderTest extends Specification {
 
                 set +e
                 (
-                /bin/bash -ue ${folder}/.command.sh &> .command.out
-                ) &
+                /bin/bash -ue ${folder}/.command.sh
+                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
                 pid=\$!
                 wait \$pid || ret=\$?
                 # user `afterScript`

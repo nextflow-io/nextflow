@@ -123,6 +123,9 @@ class DrmaaTaskHandler extends TaskHandler {
     /** Location of the file holding the task std output */
     final Path outputFile
 
+    /** Location of the file holding the task std error */
+    final Path errorFile
+
     /** The wrapper file used to execute the user script */
     final Path wrapperFile
 
@@ -145,6 +148,7 @@ class DrmaaTaskHandler extends TaskHandler {
         this.startFile = task.workDir.resolve(TaskRun.CMD_START)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
+        this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
         this.taskName = "nf-${task.name.replace(' ','_')}"
         this.workDir = task.workDir?.toFile()
@@ -261,6 +265,7 @@ class DrmaaTaskHandler extends TaskHandler {
             else if ( job.hasExited() && exitFile.lastModified() > 0 ) {
                 status = COMPLETED
                 task.stdout = outputFile
+                task.stderr = errorFile
                 task.exitStatus = job.getExitStatus()
                 return true
             }

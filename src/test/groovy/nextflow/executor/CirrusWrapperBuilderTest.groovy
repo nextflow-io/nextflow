@@ -104,11 +104,12 @@ class CirrusWrapperBuilderTest extends Specification {
 
                 set +e
                 (
-                /bin/bash -ue .command.sh &> .command.out
-                ) &
+                /bin/bash -ue .command.sh
+                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
                 pid=\$!
                 wait \$pid || ret=\$?
                 es3 -q -v 0 --no-stats sync .command.out s3:/${folder} || true
+                es3 -q -v 0 --no-stats sync .command.err s3:/${folder} || true
                 """
                         .stripIndent().leftTrim()
 

@@ -50,9 +50,9 @@ process() {
     # Execution of the task's script
     set +e
     if [ -f .command.in ]; then
-      ( ./.command.sh &> .command.out < .command.in )
+      ( ./.command.sh > >(tee .command.out) 2> >(tee .command.err >&2) < .command.in )
     else
-      ( ./.command.sh &> .command.out )
+      ( ./.command.sh > >(tee .command.out) 2> >(tee .command.err >&2) )
     fi
     exit_status=$?
     set -e
@@ -63,6 +63,7 @@ process() {
     # Upload and set as outputs the files which matches the
     # names or structures of the files declared in "outputs[]"
     dx upload .command.out --path ${target_dir}/.command.out --brief --no-progress --wait
+    [[ -s .command.err ]] && dx upload .command.err --path ${target_dir}/.command.err --brief --no-progress --wait
     for item in "${output_files[@]}"; do
         for name in `ls $item 2>/dev/null`; do
             dx upload -r $name --path "${target_dir}/$name" --brief --no-progress --wait

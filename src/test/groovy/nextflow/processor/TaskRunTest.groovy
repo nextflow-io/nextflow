@@ -229,7 +229,7 @@ class TaskRunTest extends Specification {
             9
             """.stripIndent()
         then:
-        task.dumpStdout(5) == ['5','6','7','8','9']
+        task.dumpStdout(5) == ['(more omitted..)', '5','6','7','8','9']
 
 
         when:

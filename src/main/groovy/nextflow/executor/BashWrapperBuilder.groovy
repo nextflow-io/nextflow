@@ -405,7 +405,7 @@ class BashWrapperBuilder {
             wrapper << '(' << ENDL
             wrapper << interpreter << ' ' << fileStr(scriptFile)
             if( input != null ) wrapper << ' < ' << fileStr(inputFile)
-            wrapper << ' &> ' << TaskRun.CMD_OUTFILE << ENDL
+            wrapper << ENDL
             wrapper << ') &' << ENDL
             wrapper << 'pid=$!' << ENDL                     // get the PID of the main job
             wrapper << 'nxf_trace "$pid" ' << TaskRun.CMD_TRACE << ' &' << ENDL
@@ -424,9 +424,9 @@ class BashWrapperBuilder {
         else {
             runner << interpreter << ' ' << fileStr(scriptFile)
             if( input != null ) runner << ' < ' << fileStr(inputFile)
-            runner << ' &> ' << TaskRun.CMD_OUTFILE << ENDL
+            runner << ENDL
         }
-        runner << ') &' << ENDL
+        runner << ') > >(tee '<< TaskRun.CMD_OUTFILE <<') 2> >(tee '<< TaskRun.CMD_ERRFILE <<' >&2) &' << ENDL
         runner << 'pid=$!' << ENDL
         runner << 'wait $pid || ret=$?' << ENDL
 
@@ -441,8 +441,10 @@ class BashWrapperBuilder {
         /*
          * un-stage output files
          */
-        if( changeDir )
+        if( changeDir ) {
             runner << copyFile(TaskRun.CMD_OUTFILE, workDir) << ' || true' << ENDL
+            runner << copyFile(TaskRun.CMD_ERRFILE, workDir) << ' || true' << ENDL
+        }
 
         if( (changeDir || workDir != targetDir) && unstagingScript  )
             runner << unstagingScript << ENDL
