@@ -67,7 +67,7 @@ class SgeExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #$ -wd /abc
                 #$ -N nf-the_task_name
-                #$ -o /dev/null
+                #$ -o /abc/.command.log
                 #$ -j y
                 #$ -terse
                 #$ -V
@@ -84,7 +84,7 @@ class SgeExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #$ -wd /abc
                 #$ -N nf-the_task_name
-                #$ -o /dev/null
+                #$ -o /abc/.command.log
                 #$ -j y
                 #$ -terse
                 #$ -V
@@ -104,7 +104,7 @@ class SgeExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #$ -wd /abc
                 #$ -N nf-the_task_name
-                #$ -o /dev/null
+                #$ -o /abc/.command.log
                 #$ -j y
                 #$ -terse
                 #$ -V
@@ -128,7 +128,7 @@ class SgeExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #$ -wd /abc
                 #$ -N nf-the_task_name
-                #$ -o /dev/null
+                #$ -o /abc/.command.log
                 #$ -j y
                 #$ -terse
                 #$ -V
@@ -153,7 +153,7 @@ class SgeExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #$ -wd /abc
                 #$ -N nf-the_task_name
-                #$ -o /dev/null
+                #$ -o /abc/.command.log
                 #$ -j y
                 #$ -terse
                 #$ -V
@@ -177,7 +177,7 @@ class SgeExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #$ -wd /abc
                 #$ -N nf-the_task_name
-                #$ -o /dev/null
+                #$ -o /abc/.command.log
                 #$ -j y
                 #$ -terse
                 #$ -V
@@ -201,7 +201,7 @@ class SgeExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #$ -wd /abc
                 #$ -N nf-the_task_name
-                #$ -o /dev/null
+                #$ -o /abc/.command.log
                 #$ -j y
                 #$ -terse
                 #$ -V

@@ -72,7 +72,7 @@ class LsfExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #BSUB -cwd /scratch
-                #BSUB -o /dev/null
+                #BSUB -o /scratch/.command.log
                 #BSUB -q bsc_ls
                 #BSUB -n 2
                 #BSUB -R "span[hosts=1]"
@@ -92,7 +92,7 @@ class LsfExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #BSUB -cwd /scratch
-                #BSUB -o /dev/null
+                #BSUB -o /scratch/.command.log
                 #BSUB -q alpha
                 #BSUB -J nf-mapping_hola
                 '''
@@ -108,7 +108,7 @@ class LsfExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #BSUB -cwd /scratch
-                #BSUB -o /dev/null
+                #BSUB -o /scratch/.command.log
                 #BSUB -q alpha
                 #BSUB -W 00:01
                 #BSUB -M 10
@@ -126,7 +126,7 @@ class LsfExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #BSUB -cwd /scratch
-                #BSUB -o /dev/null
+                #BSUB -o /scratch/.command.log
                 #BSUB -q gamma
                 #BSUB -W 04:00
                 #BSUB -M 200
@@ -143,7 +143,7 @@ class LsfExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #BSUB -cwd /scratch
-                #BSUB -o /dev/null
+                #BSUB -o /scratch/.command.log
                 #BSUB -q gamma
                 #BSUB -n 4
                 #BSUB -R "span[hosts=1]"
@@ -161,7 +161,7 @@ class LsfExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #BSUB -cwd /scratch
-                #BSUB -o /dev/null
+                #BSUB -o /scratch/.command.log
                 #BSUB -q gamma
                 #BSUB -n 4
                 #BSUB -R "span[hosts=1]"
@@ -181,7 +181,7 @@ class LsfExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #BSUB -cwd /scratch
-                #BSUB -o /dev/null
+                #BSUB -o /scratch/.command.log
                 #BSUB -q gamma
                 #BSUB -n 8
                 #BSUB -R "span[hosts=1]"
@@ -200,7 +200,7 @@ class LsfExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #BSUB -cwd /scratch
-                #BSUB -o /dev/null
+                #BSUB -o /scratch/.command.log
                 #BSUB -q delta
                 #BSUB -W 60:05
                 #BSUB -M 2048

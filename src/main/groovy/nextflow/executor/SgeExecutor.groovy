@@ -39,9 +39,9 @@ class SgeExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        result << '-wd' << task.workDir?.toString()
+        result << '-wd' << task.workDir.toString()
         result << '-N' << getJobNameFor(task)
-        result << '-o' << '/dev/null'
+        result << '-o' << task.workDir.resolve('.command.log').toString()
         result << '-j' << 'y'
         result << '-terse' << ''    // note: directive need to be returned as pairs
         result << '-V' << ''        // for this reason an empty string value is added for flag options

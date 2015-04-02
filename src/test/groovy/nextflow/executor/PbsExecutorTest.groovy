@@ -61,8 +61,8 @@ class PbsExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #PBS -d /work/dir
                 #PBS -N nf-the_task_name
-                #PBS -o /dev/null
-                #PBS -e /dev/null
+                #PBS -o /work/dir/.command.log
+                #PBS -j oe
                 #PBS -V
                 '''
                 .stripIndent().leftTrim()
@@ -76,8 +76,8 @@ class PbsExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #PBS -d /work/dir
                 #PBS -N nf-the_task_name
-                #PBS -o /dev/null
-                #PBS -e /dev/null
+                #PBS -o /work/dir/.command.log
+                #PBS -j oe
                 #PBS -V
                 #PBS -q alpha
                 #PBS -l walltime=00:01:00
@@ -94,8 +94,8 @@ class PbsExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #PBS -d /work/dir
                 #PBS -N nf-the_task_name
-                #PBS -o /dev/null
-                #PBS -e /dev/null
+                #PBS -o /work/dir/.command.log
+                #PBS -j oe
                 #PBS -V
                 #PBS -q alpha
                 #PBS -l walltime=00:01:00
@@ -115,8 +115,8 @@ class PbsExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #PBS -d /work/dir
                 #PBS -N nf-the_task_name
-                #PBS -o /dev/null
-                #PBS -e /dev/null
+                #PBS -o /work/dir/.command.log
+                #PBS -j oe
                 #PBS -V
                 #PBS -q delta
                 #PBS -l nodes=1:ppn=2
@@ -135,8 +135,8 @@ class PbsExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #PBS -d /work/dir
                 #PBS -N nf-the_task_name
-                #PBS -o /dev/null
-                #PBS -e /dev/null
+                #PBS -o /work/dir/.command.log
+                #PBS -j oe
                 #PBS -V
                 #PBS -q delta
                 #PBS -l nodes=1:ppn=8
@@ -154,8 +154,8 @@ class PbsExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #PBS -d /work/dir
                 #PBS -N nf-the_task_name
-                #PBS -o /dev/null
-                #PBS -e /dev/null
+                #PBS -o /work/dir/.command.log
+                #PBS -j oe
                 #PBS -V
                 #PBS -q delta
                 #PBS -l walltime=54:10:00

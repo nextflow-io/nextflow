@@ -79,7 +79,7 @@ class SlurmExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #SBATCH -D /work/path
                 #SBATCH -J nf-the_task_name
-                #SBATCH -o /dev/null
+                #SBATCH -o /work/path/.command.log
                 '''
                 .stripIndent().leftTrim()
 
@@ -90,7 +90,7 @@ class SlurmExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #SBATCH -D /work/path
                 #SBATCH -J nf-the_task_name
-                #SBATCH -o /dev/null
+                #SBATCH -o /work/path/.command.log
                 #SBATCH -t 00:01:00
                 '''
                 .stripIndent().leftTrim()
@@ -105,7 +105,7 @@ class SlurmExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #SBATCH -D /work/path
                 #SBATCH -J nf-the_task_name
-                #SBATCH -o /dev/null
+                #SBATCH -o /work/path/.command.log
                 #SBATCH -t 01:00:00
                 #SBATCH --mem 50
                 #SBATCH -a 1
@@ -123,7 +123,7 @@ class SlurmExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #SBATCH -D /work/path
                 #SBATCH -J nf-the_task_name
-                #SBATCH -o /dev/null
+                #SBATCH -o /work/path/.command.log
                 #SBATCH -c 2
                 #SBATCH -t 02:00:00
                 #SBATCH --mem 200
@@ -142,7 +142,7 @@ class SlurmExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #SBATCH -D /work/path
                 #SBATCH -J nf-the_task_name
-                #SBATCH -o /dev/null
+                #SBATCH -o /work/path/.command.log
                 #SBATCH -c 8
                 #SBATCH -t 51:00:00
                 #SBATCH --mem 3072

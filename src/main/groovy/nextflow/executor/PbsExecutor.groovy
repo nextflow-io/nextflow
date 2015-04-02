@@ -42,10 +42,10 @@ class PbsExecutor extends AbstractGridExecutor {
     protected List<String> getDirectives( TaskRun task, List<String> result ) {
         assert result !=null
 
-        result << '-d' << task.workDir?.toString()
+        result << '-d' << task.workDir.toString()
         result << '-N' << getJobNameFor(task)
-        result << '-o' << '/dev/null'
-        result << '-e' << '/dev/null'
+        result << '-o' << task.workDir.resolve('.command.log').toString()
+        result << '-j' << 'oe'
         result << '-V' << ''
 
         // the requested queue name

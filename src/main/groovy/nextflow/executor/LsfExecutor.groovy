@@ -43,8 +43,8 @@ class LsfExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        result << '-cwd' << task.workDir?.toString()
-        result << '-o' << '/dev/null'
+        result << '-cwd' << task.workDir.toString()
+        result << '-o' << task.workDir.resolve('.command.log').toString()
 
         // add other parameters (if any)
         if( task.config.queue ) {
@@ -69,7 +69,7 @@ class LsfExecutor extends AbstractGridExecutor {
                 mem = new MemoryUnit(bytes)
             }
             // convert to MB
-            result << '-M' << mem.toMega().toString()
+            result << '-M' << String.valueOf(mem.toMega())
         }
 
         // -- the job name

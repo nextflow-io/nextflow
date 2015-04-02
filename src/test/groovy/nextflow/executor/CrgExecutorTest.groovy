@@ -73,7 +73,7 @@ class CrgExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                     #$ -wd /abc
                     #$ -N nf-mapping_tag
-                    #$ -o /dev/null
+                    #$ -o /abc/.command.log
                     #$ -j y
                     #$ -terse
                     #$ -V
@@ -97,7 +97,7 @@ class CrgExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                     #$ -wd /abc
                     #$ -N nf-mapping_tag
-                    #$ -o /dev/null
+                    #$ -o /abc/.command.log
                     #$ -j y
                     #$ -terse
                     #$ -V
@@ -122,7 +122,7 @@ class CrgExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                     #$ -wd /abc
                     #$ -N nf-mapping_tag
-                    #$ -o /dev/null
+                    #$ -o /abc/.command.log
                     #$ -j y
                     #$ -terse
                     #$ -V
@@ -150,7 +150,7 @@ class CrgExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                     #$ -wd /abc
                     #$ -N nf-mapping_tag
-                    #$ -o /dev/null
+                    #$ -o /abc/.command.log
                     #$ -j y
                     #$ -terse
                     #$ -V
@@ -184,7 +184,7 @@ class CrgExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                     #$ -wd /abc
                     #$ -N nf-mapping_tag
-                    #$ -o /dev/null
+                    #$ -o /abc/.command.log
                     #$ -j y
                     #$ -terse
                     #$ -V
