@@ -201,7 +201,7 @@ class CmdRun extends CmdBase implements HubOptions {
                 throw new AbortOperationException("Cannot pipeline script from stdin")
 
             if( revision )
-                throw new AbortOperationException("Revision option can be used running a local pipeline script")
+                throw new AbortOperationException("Revision option cannot be used running a local pipeline script")
 
             return file
         }
@@ -216,7 +216,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
         if( script.exists() ) {
             if( revision )
-                throw new AbortOperationException("Revision option can be used running a local pipeline script")
+                throw new AbortOperationException("Revision option cannot be used running a local pipeline script")
             return script
         }
 
