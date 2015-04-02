@@ -49,15 +49,12 @@ class SgeExecutorTest extends Specification {
         // mock process
         def proc = Mock(TaskProcessor)
 
-        // process name
-        proc.getName() >> 'task x y'
-
         // LSF executor
         def executor = [:] as SgeExecutor
         def task = new TaskRun()
         task.processor = proc
         task.workDir = Paths.get('/abc')
-        task.index = 2
+        task.name = 'the task name'
 
         when:
 
@@ -69,7 +66,7 @@ class SgeExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #$ -wd /abc
-                #$ -N nf-task_x_y_2
+                #$ -N nf-the_task_name
                 #$ -o /dev/null
                 #$ -j y
                 #$ -terse
@@ -86,7 +83,7 @@ class SgeExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #$ -wd /abc
-                #$ -N nf-task_x_y_2
+                #$ -N nf-the_task_name
                 #$ -o /dev/null
                 #$ -j y
                 #$ -terse
@@ -106,7 +103,7 @@ class SgeExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #$ -wd /abc
-                #$ -N nf-task_x_y_2
+                #$ -N nf-the_task_name
                 #$ -o /dev/null
                 #$ -j y
                 #$ -terse
@@ -130,7 +127,7 @@ class SgeExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #$ -wd /abc
-                #$ -N nf-task_x_y_2
+                #$ -N nf-the_task_name
                 #$ -o /dev/null
                 #$ -j y
                 #$ -terse
@@ -155,7 +152,7 @@ class SgeExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #$ -wd /abc
-                #$ -N nf-task_x_y_2
+                #$ -N nf-the_task_name
                 #$ -o /dev/null
                 #$ -j y
                 #$ -terse
@@ -179,7 +176,7 @@ class SgeExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #$ -wd /abc
-                #$ -N nf-task_x_y_2
+                #$ -N nf-the_task_name
                 #$ -o /dev/null
                 #$ -j y
                 #$ -terse
@@ -203,7 +200,7 @@ class SgeExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #$ -wd /abc
-                #$ -N nf-task_x_y_2
+                #$ -N nf-the_task_name
                 #$ -o /dev/null
                 #$ -j y
                 #$ -terse

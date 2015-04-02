@@ -48,21 +48,19 @@ class PbsExecutorTest extends Specification {
 
         // mock process
         def proc = Mock(TaskProcessor)
-        // process name
-        proc.getName() >> 'task'
 
         // task object
         def task = new TaskRun()
         task.processor = proc
         task.workDir = Paths.get('/work/dir')
-        task.index = 33
+        task.name = 'the task name'
 
         when:
         task.config = new TaskConfig()
         then:
         executor.getHeaders(task) == '''
                 #PBS -d /work/dir
-                #PBS -N nf-task_33
+                #PBS -N nf-the_task_name
                 #PBS -o /dev/null
                 #PBS -e /dev/null
                 #PBS -V
@@ -77,7 +75,7 @@ class PbsExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #PBS -d /work/dir
-                #PBS -N nf-task_33
+                #PBS -N nf-the_task_name
                 #PBS -o /dev/null
                 #PBS -e /dev/null
                 #PBS -V
@@ -95,7 +93,7 @@ class PbsExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #PBS -d /work/dir
-                #PBS -N nf-task_33
+                #PBS -N nf-the_task_name
                 #PBS -o /dev/null
                 #PBS -e /dev/null
                 #PBS -V
@@ -116,7 +114,7 @@ class PbsExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #PBS -d /work/dir
-                #PBS -N nf-task_33
+                #PBS -N nf-the_task_name
                 #PBS -o /dev/null
                 #PBS -e /dev/null
                 #PBS -V
@@ -136,7 +134,7 @@ class PbsExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #PBS -d /work/dir
-                #PBS -N nf-task_33
+                #PBS -N nf-the_task_name
                 #PBS -o /dev/null
                 #PBS -e /dev/null
                 #PBS -V
@@ -155,7 +153,7 @@ class PbsExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #PBS -d /work/dir
-                #PBS -N nf-task_33
+                #PBS -N nf-the_task_name
                 #PBS -o /dev/null
                 #PBS -e /dev/null
                 #PBS -V

@@ -58,7 +58,7 @@ class LsfExecutorTest extends Specification {
         def task = new TaskRun()
         task.processor = proc
         task.workDir = Paths.get('/scratch')
-        task.index = 1
+        task.name = 'mapping hola'
 
         when:
         task.config = new TaskConfig()
@@ -78,7 +78,7 @@ class LsfExecutorTest extends Specification {
                 #BSUB -R "span[hosts=1]"
                 #BSUB -W 01:30
                 #BSUB -M 4096
-                #BSUB -J nf-task_1
+                #BSUB -J nf-mapping_hola
                 #BSUB -x 1
                 #BSUB -R "span[ptile=2]"
                 '''
@@ -94,7 +94,7 @@ class LsfExecutorTest extends Specification {
                 #BSUB -cwd /scratch
                 #BSUB -o /dev/null
                 #BSUB -q alpha
-                #BSUB -J nf-task_1
+                #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
 
@@ -112,7 +112,7 @@ class LsfExecutorTest extends Specification {
                 #BSUB -q alpha
                 #BSUB -W 00:01
                 #BSUB -M 10
-                #BSUB -J nf-task_1
+                #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
 
@@ -130,7 +130,7 @@ class LsfExecutorTest extends Specification {
                 #BSUB -q gamma
                 #BSUB -W 04:00
                 #BSUB -M 200
-                #BSUB -J nf-task_1
+                #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
 
@@ -148,7 +148,7 @@ class LsfExecutorTest extends Specification {
                 #BSUB -n 4
                 #BSUB -R "span[hosts=1]"
                 #BSUB -M 512
-                #BSUB -J nf-task_1
+                #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
 
@@ -167,7 +167,7 @@ class LsfExecutorTest extends Specification {
                 #BSUB -R "span[hosts=1]"
                 #BSUB -W 24:00
                 #BSUB -M 512
-                #BSUB -J nf-task_1
+                #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
 
@@ -187,7 +187,7 @@ class LsfExecutorTest extends Specification {
                 #BSUB -R "span[hosts=1]"
                 #BSUB -W 48:00
                 #BSUB -M 256
-                #BSUB -J nf-task_1
+                #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
 
@@ -204,7 +204,7 @@ class LsfExecutorTest extends Specification {
                 #BSUB -q delta
                 #BSUB -W 60:05
                 #BSUB -M 2048
-                #BSUB -J nf-task_1
+                #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
 

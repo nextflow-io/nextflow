@@ -57,7 +57,7 @@ class CrgExecutorTest extends Specification {
         def task = new TaskRun()
         task.processor = proc
         task.workDir = Paths.get('/abc')
-        task.index = 2
+        task.name = 'mapping tag'
         // process name
         proc.getName() >> 'task_x'
 
@@ -72,7 +72,7 @@ class CrgExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                     #$ -wd /abc
-                    #$ -N nf-task_x_2
+                    #$ -N nf-mapping_tag
                     #$ -o /dev/null
                     #$ -j y
                     #$ -terse
@@ -96,7 +96,7 @@ class CrgExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                     #$ -wd /abc
-                    #$ -N nf-task_x_2
+                    #$ -N nf-mapping_tag
                     #$ -o /dev/null
                     #$ -j y
                     #$ -terse
@@ -121,7 +121,7 @@ class CrgExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                     #$ -wd /abc
-                    #$ -N nf-task_x_2
+                    #$ -N nf-mapping_tag
                     #$ -o /dev/null
                     #$ -j y
                     #$ -terse
@@ -149,7 +149,7 @@ class CrgExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                     #$ -wd /abc
-                    #$ -N nf-task_x_2
+                    #$ -N nf-mapping_tag
                     #$ -o /dev/null
                     #$ -j y
                     #$ -terse
@@ -183,7 +183,7 @@ class CrgExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                     #$ -wd /abc
-                    #$ -N nf-task_x_2
+                    #$ -N nf-mapping_tag
                     #$ -o /dev/null
                     #$ -j y
                     #$ -terse

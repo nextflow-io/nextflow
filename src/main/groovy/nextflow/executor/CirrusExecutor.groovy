@@ -57,14 +57,21 @@ class CirrusExecutor extends AbstractGridExecutor {
      * Create a a queue holder for this executor
      * @return
      */
+    @Override
     def TaskMonitor createTaskMonitor() {
         return TaskPollingMonitor.create(session, name, 50, Duration.of('10 sec'))
     }
 
+    @Override
     def GridTaskHandler createTaskHandler(TaskRun task) {
         assert task
         assert task.workDir
 
+        return new CirrusTaskHandler(task, this)
+    }
+
+    @Override
+    protected BashWrapperBuilder createBashWrapperBuilder(TaskRun task) {
         final folder = task.workDir
         log.debug "Launching process > ${task.name} -- work folder: $folder"
 
@@ -75,9 +82,12 @@ class CirrusExecutor extends AbstractGridExecutor {
         bash.unstagingScript = unstageOutputFilesScript(task)
 
         // create the wrapper script
-        bash.build()
+        return bash
+    }
 
-        return new CirrusTaskHandler(task, this)
+    @Override
+    protected String getJobNameFor(TaskRun task) {
+        task.getName().replace(' ','_')
     }
 
     @Override

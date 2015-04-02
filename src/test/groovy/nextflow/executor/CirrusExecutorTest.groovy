@@ -38,12 +38,11 @@ class CirrusExecutorTest extends Specification {
         def config
         // processor
         def proc = Mock(TaskProcessor)
-        proc.getName() >> 'task123'
         // task
         def task = new TaskRun()
         task.metaClass.getHashLog = { 'a6f6aa6' }
         task.processor = proc
-        task.index = 3
+        task.name = 'task this and that'
         // executor
         def executor = [:] as CirrusExecutor
         executor.metaClass.getAwsCredentials = { ['xxx','yyy'] }
@@ -53,7 +52,7 @@ class CirrusExecutorTest extends Specification {
         result = executor.getDirectives(task, [])
         then:
         result == ['--tag',
-                   'NAME=nf-task123_3',
+                   'NAME=task_this_and_that',
                     '--tag',
                     'uuid=a6f6aa6',
                    '--no-env',
@@ -71,7 +70,7 @@ class CirrusExecutorTest extends Specification {
         result = executor.getDirectives(task, [])
         then:
         result == ['--tag',
-                   'NAME=nf-task123_3',
+                   'NAME=task_this_and_that',
                    '--tag',
                    'uuid=a6f6aa6',
                    '--no-env',
@@ -95,7 +94,7 @@ class CirrusExecutorTest extends Specification {
         result = executor.getDirectives(task, [])
         then:
         result == ['--tag',
-                   'NAME=nf-task123_3',
+                   'NAME=task_this_and_that',
                    '--tag',
                    'uuid=a6f6aa6',
                    '--no-env',
@@ -122,7 +121,7 @@ class CirrusExecutorTest extends Specification {
         result = executor.getDirectives(task, [])
         then:
         result == ['--tag',
-                   'NAME=nf-task123_3',
+                   'NAME=task_this_and_that',
                    '--tag',
                    'uuid=a6f6aa6',
                    '--no-env',
@@ -147,14 +146,14 @@ class CirrusExecutorTest extends Specification {
         given:
         // processor
         def proc = Mock(TaskProcessor)
-        proc.getName() >> 'task123'
 
         // task
         def task = new TaskRun()
         task.metaClass.getHashLog = { '28612781' }
         task.config = new TaskConfig(queue: 'default')
         task.processor = proc
-        task.index = 3
+        task.name = 'mapping this and that'
+
         // executor
         def executor = [:] as CirrusExecutor
         executor.metaClass.getAwsCredentials = { ['alpha','beta'] }
@@ -165,7 +164,7 @@ class CirrusExecutorTest extends Specification {
         executor.getSubmitCommandLine(task, script) == [
                 'ksub',
                 '--tag',
-                'NAME=nf-task123_3',
+                'NAME=mapping_this_and_that',
                 '--tag',
                 'uuid=28612781',
                 '--no-env',

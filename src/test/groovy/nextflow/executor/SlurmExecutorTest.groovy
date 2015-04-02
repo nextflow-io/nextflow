@@ -65,13 +65,12 @@ class SlurmExecutorTest extends Specification {
 
         // mock process
         def proc = Mock(TaskProcessor)
-        // process name
-        proc.getName() >> 'task'
 
         // task object
         def task = new TaskRun()
         task.processor = proc
         task.workDir = Paths.get('/work/path')
+        task.name = 'the task name'
 
         when:
         task.index = 21
@@ -79,26 +78,24 @@ class SlurmExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #SBATCH -D /work/path
-                #SBATCH -J nf-task_21
+                #SBATCH -J nf-the_task_name
                 #SBATCH -o /dev/null
                 '''
                 .stripIndent().leftTrim()
 
         when:
-        task.index = 22
         task.config = new TaskConfig()
         task.config.time = '1m'
         then:
         executor.getHeaders(task) == '''
                 #SBATCH -D /work/path
-                #SBATCH -J nf-task_22
+                #SBATCH -J nf-the_task_name
                 #SBATCH -o /dev/null
                 #SBATCH -t 00:01:00
                 '''
                 .stripIndent().leftTrim()
 
         when:
-        task.index = 23
         task.config = new TaskConfig()
         task.config.time = '1h'
         task.config.memory = '50 M'
@@ -107,7 +104,7 @@ class SlurmExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #SBATCH -D /work/path
-                #SBATCH -J nf-task_23
+                #SBATCH -J nf-the_task_name
                 #SBATCH -o /dev/null
                 #SBATCH -t 01:00:00
                 #SBATCH --mem 50
@@ -116,7 +113,6 @@ class SlurmExecutorTest extends Specification {
                 .stripIndent().leftTrim()
 
         when:
-        task.index = 24
         task.config = new TaskConfig()
         task.config.cpus = 2
         task.config.time = '2h'
@@ -126,7 +122,7 @@ class SlurmExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #SBATCH -D /work/path
-                #SBATCH -J nf-task_24
+                #SBATCH -J nf-the_task_name
                 #SBATCH -o /dev/null
                 #SBATCH -c 2
                 #SBATCH -t 02:00:00
@@ -136,7 +132,6 @@ class SlurmExecutorTest extends Specification {
                 .stripIndent().leftTrim()
 
         when:
-        task.index = 55
         task.config = new TaskConfig()
         task.config.cpus = 8
         task.config.time = '2d 3h'
@@ -146,7 +141,7 @@ class SlurmExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
                 #SBATCH -D /work/path
-                #SBATCH -J nf-task_55
+                #SBATCH -J nf-the_task_name
                 #SBATCH -o /dev/null
                 #SBATCH -c 8
                 #SBATCH -t 51:00:00
