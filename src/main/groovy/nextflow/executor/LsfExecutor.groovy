@@ -44,7 +44,7 @@ class LsfExecutor extends AbstractGridExecutor {
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
         result << '-cwd' << task.workDir.toString()
-        result << '-o' << task.workDir.resolve('.command.log').toString()
+        result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()
 
         // add other parameters (if any)
         if( task.config.queue ) {

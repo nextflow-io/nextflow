@@ -50,7 +50,7 @@ class DrmaaExecutorTest extends Specification {
         def handler = executor.createTaskHandler(task)
         then:
         handler instanceof DrmaaTaskHandler
-        handler.workDir == workDir.toFile()
+        handler.workDir == workDir
         handler.taskName == 'nf-Hello'
         handler.wrapperFile.exists()
 
@@ -84,7 +84,7 @@ class DrmaaExecutorTest extends Specification {
         template.getRemoteCommand() == '/bin/bash'
         template.getArgs() == [handler.wrapperFile.toString()]
         template.getJoinFiles() == true
-        template.getOutputPath() == ':/dev/null'
+        template.getOutputPath() == ':' + workDir.resolve('.command.log')
         template.getNativeSpecification() == handler.getOptions()
 
         cleanup:

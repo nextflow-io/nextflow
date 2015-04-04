@@ -420,6 +420,7 @@ class TaskRun {
         config.scratch
     }
 
+    static final String CMD_LOG = '.command.log'
     static final String CMD_ENV = '.command.env'
     static final String CMD_SCRIPT = '.command.sh'
     static final String CMD_INFILE = '.command.in'

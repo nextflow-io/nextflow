@@ -332,11 +332,12 @@ NXF_ORG             Default `organization` prefix when looking for a hosted repo
 NXF_GRAB            Provides extra runtime dependencies downloaded from a Maven repository service.
 NXF_OPTS            Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of ``-Dkey[=value]`` properties.
 NXF_CLASSPATH       Allows to extend the Java runtime classpath with extra jar files or class folders.
-NXF_DRMAA           Defines the Java DRMAA binding library to be used. It can be specified as a jar file location or a Maven dependency.
-NXF_ASSETS          Defined the directory where downloaded pipeline repositories are stored (default: `$NXF_HOME/assets`)
+NXF_DRMAA           Defines the Java DRMAA binding library to be used. It can be specified as a jar file location or a Maven coordinate.
+NXF_ASSETS          Defined the directory where downloaded pipeline repositories are stored (default: ``$NXF_HOME/assets``)
 NXF_PID_FILE        Name of the file where the process PID is saved when Nextflow is launched in background.
 NXF_WORK            Directory where working files are stored (usually your *scratch* directory)
 NXF_TEMP            Directory where temporary files are stored
+NXF_DEBUG           Defines scripts debugging level: ``1`` dump task environment variables in the task log file; ``2`` enables command script execution tracing; ``3`` enables command wrapper execution tracing.
 JAVA_HOME           Path location of the Java VM installation used to run Nextflow.
 JAVA_CMD            Path location of the Java binary command used to launch  Nextflow.
 HTTP_PROXY          Defines the HTTP proxy server

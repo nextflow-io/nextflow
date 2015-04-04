@@ -129,6 +129,18 @@ class DockerBuilderTest extends Specification {
         docker.removeCommand == 'docker rm c3'
         docker.killCommand == 'docker kill c3'
 
+        when:
+        docker =  new DockerBuilder('busybox').setName('c4').params(kill: 'SIGKILL')
+        docker.build()
+        then:
+        docker.killCommand == 'docker kill -s SIGKILL c4'
+
+        when:
+        docker =  new DockerBuilder('busybox').setName('c5').params(kill: false)
+        docker.build()
+        then:
+        docker.killCommand == null
+
     }
 
     def 'test is absolute image name' () {

@@ -175,7 +175,7 @@ class FileHelperTest extends Specification {
     }
 
 
-    def testGeEnvMap() {
+    def 'get env map'() {
 
         given:
         def sess = Mock(ISession)
@@ -186,7 +186,7 @@ class FileHelperTest extends Specification {
 
         expect:
         // properties have priority over the environment map
-        filehelper.getenvmap0('s3', env) == [access_key:'a1', secret_key:'s1']
+        FileHelper.getEnvMap0('s3', env) == [access_key:'a1', secret_key:'s1']
         // none of them
         FileHelper.getEnvMap0('s3', [:]) == [:]
 
@@ -195,7 +195,7 @@ class FileHelperTest extends Specification {
 
     }
 
-    def testCachedPath() {
+    def 'cached path'() {
 
         given:
         final localCacheDir = Files.createTempDirectory('cache')
@@ -254,7 +254,7 @@ class FileHelperTest extends Specification {
     }
 
 
-    def testVisitFiles() {
+    def 'visit files'() {
 
         given:
         def folder = Files.createTempDirectory('test')
@@ -302,7 +302,7 @@ class FileHelperTest extends Specification {
 
     }
 
-    def testVisitFiles2() {
+    def 'visit files 2'() {
 
         given:
         def folder = Files.createTempDirectory('test')
@@ -337,7 +337,7 @@ class FileHelperTest extends Specification {
         folder?.deleteDir()
     }
 
-    def testGetMAxDepth() {
+    def 'get max depth'() {
         expect:
         FileHelper.getMaxDepth(1,null) == 1
         FileHelper.getMaxDepth(10,null) == 10
@@ -352,7 +352,7 @@ class FileHelperTest extends Specification {
         FileHelper.getMaxDepth(null,'a/**') == Integer.MAX_VALUE
     }
 
-    def testGetPathAndPattern () {
+    def 'get path and pattern' () {
 
         expect:
         FileHelper.getFolderAndPattern( '/some/file/name.txt' ) == ['/some/file/', 'name.txt', null]
@@ -382,7 +382,7 @@ class FileHelperTest extends Specification {
         FileHelper.getFolderAndPattern( 'data/{p/file1,q/file2}') == ['data/', '{p/file1,q/file2}', null]
     }
 
-    def testNoSuchFile() {
+    def 'no such file'() {
 
         when:
         FileHelper.visitFiles(Paths.get('/some/missing/path'),'*', { return it })

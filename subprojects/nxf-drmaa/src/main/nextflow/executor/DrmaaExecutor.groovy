@@ -84,8 +84,7 @@ class DrmaaExecutor extends Executor {
         assert task
         assert task.workDir
 
-        final folder = task.workDir
-        log.debug "Launching process > ${task.name} -- work folder: $folder"
+        log.debug "Launching process > ${task.name} -- work folder: ${task.workDir}"
 
         final bash = new BashWrapperBuilder(task)
 
@@ -134,7 +133,7 @@ class DrmaaTaskHandler extends TaskHandler {
 
     private String taskName
 
-    private File workDir
+    private Path workDir
 
     private DrmaaSession drmaa
 
@@ -151,7 +150,7 @@ class DrmaaTaskHandler extends TaskHandler {
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
         this.taskName = "nf-${task.name.replace(' ','_')}"
-        this.workDir = task.workDir?.toFile()
+        this.workDir = task.workDir
     }
 
     @PackageScope
@@ -201,7 +200,7 @@ class DrmaaTaskHandler extends TaskHandler {
         template.setRemoteCommand('/bin/bash')
         template.setArgs( [wrapperFile.toString()] )
         template.setJoinFiles(true)
-        template.setOutputPath( ':/dev/null' )
+        template.setOutputPath( ":${workDir.resolve(TaskRun.CMD_LOG)}" )
         template.setNativeSpecification( getOptions() )
 
         // max task duration

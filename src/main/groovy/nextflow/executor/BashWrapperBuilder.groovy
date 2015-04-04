@@ -37,7 +37,28 @@ import nextflow.util.MemoryUnit
 @Slf4j
 class BashWrapperBuilder {
 
-    static final List<String> BASH = ['/bin/bash','-ue']
+    static final List<String> BASH
+
+    static private level = 0
+
+    static {
+        /*
+         * Env variable `NXF_DEBUG` is used to control debug options in executed BASH scripts
+         * - 0: no debug
+         * - 1: dump current environment in the `.command.log` file
+         * - 2: trace the execution of user script adding the `set -x` flag
+         * - 3: trace the execution of wrapper scripts
+         */
+        def str = System.getenv('NXF_DEBUG')
+        try {
+            level = str as Integer
+        }
+        catch( Exception e ) {
+            log.warn "Invalid value for `NXF_DEBUG` variable: $str -- See http://www.nextflow.io/docs/latest/config.html#environment-variables"
+        }
+        BASH = Collections.unmodifiableList(  level > 1 ? ['/bin/bash','-uex'] : ['/bin/bash','-ue'] )
+
+    }
 
     /*
      * Read more linux process handling and signal trap
@@ -46,6 +67,12 @@ class BashWrapperBuilder {
      * http://mywiki.wooledge.org/ProcessManagement
      */
     static final String SCRIPT_CLEANUP = '''
+        nxf_env() {
+            echo '============= task environment ============='
+            env | sort | sed "s/\\(.*\\)AWS\\(.*\\)=\\(.\\{6\\}\\).*/\\1AWS\\2=\\3xxxxxxxxxxxxx/"
+            echo '============= task output =================='
+        }
+
         nxf_kill() {
             declare -a ALL_CHILD
             while read P PP;do
@@ -63,6 +90,7 @@ class BashWrapperBuilder {
         on_exit() {
           exit_status=${ret:=$?}
           printf $exit_status > __EXIT_FILE__
+          sync
           exit $exit_status
         }
 
@@ -186,8 +214,6 @@ class BashWrapperBuilder {
 
     MemoryUnit dockerMemory
 
-    String name
-
     private runWithDocker
 
     boolean statsEnabled
@@ -198,7 +224,6 @@ class BashWrapperBuilder {
 
     BashWrapperBuilder( TaskRun task ) {
         this.task = task
-        this.name = "nxf-" + task.hash?.toString()?.substring(0,8)
 
         // set the input (when available)
         this.input = task.stdin
@@ -231,7 +256,6 @@ class BashWrapperBuilder {
         log.trace "Wrapper params: $params"
 
         task = null
-        this.name = params.name
         this.shell = params.shell ?: BASH
         this.script = params.script?.toString()
         this.input = params.input
@@ -305,6 +329,7 @@ class BashWrapperBuilder {
 
         // set true when running with docker
         runWithDocker = dockerImage && dockerConfig?.enabled?.toString() == 'true'
+        final dockerKill = dockerConfig?.kill != false
 
         /*
          * the script file
@@ -357,11 +382,27 @@ class BashWrapperBuilder {
          */
 
         def runner = new StringBuilder()
-        runner << '#!' << BASH.join(' ') << ENDL
+        runner << '#!/bin/bash' << ENDL
         if( headerScript )
             runner << headerScript << ENDL
 
-        runner << scriptCleanUp(exitedFile, docker?.killCommand) << ENDL
+        runner << 'set -e' << ENDL
+        runner << 'set -u' << ENDL
+        runner << 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 2 ]] && set -x' << ENDL << ENDL
+
+        if( runWithDocker ) {
+            runner << scriptCleanUp(exitedFile, docker.killCommand) << ENDL
+            // this is only required on OSX otherwise the following 'tr' fails
+            runner << 'export NXF_BOXID="nxf-$(cat /dev/urandom | LC_ALL=C tr -dc \'a-zA-Z0-9\' | fold -w 24 | head -n 1)"' << ENDL
+        }
+        else {
+            runner << scriptCleanUp(exitedFile) << ENDL
+        }
+
+        // -- print the current environment when debug is enabled
+        runner << '[[ $NXF_DEBUG > 0 ]] && nxf_env' << ENDL
+
+        // -- start creating a file to signal that task has began
         runner << touchFile(startedFile) << ENDL
 
         if( beforeScript ) {
@@ -390,7 +431,7 @@ class BashWrapperBuilder {
 
         // execute by invoking the command through a Docker container
         if( docker ) {
-            runner << docker.runCommand << ' '
+            runner << docker.runCommand << " -c '"
         }
 
         /*
@@ -398,7 +439,10 @@ class BashWrapperBuilder {
          */
         if( statsEnabled ) {
             final wrapper = new StringBuilder()
-            wrapper << '#!' << BASH.join(' ') << ENDL
+            wrapper << '#!/bin/bash' << ENDL
+            wrapper << 'set -e' << ENDL
+            wrapper << 'set -u' << ENDL
+            wrapper << 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 3 ]] && set -x' << ENDL << ENDL
             wrapper << SCRIPT_TRACE << ENDL
             wrapper << 'trap \'exit ${ret:=$?}\' EXIT' << ENDL
             wrapper << 'start_millis=$($NXF_DATE)'  << ENDL
@@ -419,10 +463,13 @@ class BashWrapperBuilder {
             wrapperFile.text = wrapper.toString()
 
             // invoke it from the main script
-            runner << BASH.join(' ') << ' ' << fileStr(wrapperFile) << ENDL
+            runner << '/bin/bash ' << fileStr(wrapperFile)
+            if( docker ) runner << "'"
+            runner << ENDL
         }
         else {
             runner << interpreter << ' ' << fileStr(scriptFile)
+            if( docker ) runner << "'"
             if( input != null ) runner << ' < ' << fileStr(inputFile)
             runner << ENDL
         }
@@ -469,7 +516,7 @@ class BashWrapperBuilder {
      * @return The script string to be included the in main launcher script
      */
     @PackageScope
-    String scriptCleanUp( Path file, String dockerKill ) {
+    String scriptCleanUp( Path file, String dockerKill = null ) {
         SCRIPT_CLEANUP
                 .replace('__EXIT_FILE__', exitFile(file))
                 .replace('__KILL_CMD__', dockerKill ?: '[[ "$pid" ]] && nxf_kill $pid')
@@ -493,7 +540,7 @@ class BashWrapperBuilder {
         }
 
         // set the name
-        docker.setName(this.name)
+        docker.setName('$NXF_BOXID')
 
         if( dockerMount )
             docker.addMount(dockerMount)
@@ -502,7 +549,7 @@ class BashWrapperBuilder {
             docker.setMemory(dockerMemory)
 
         if( dockerCpuset )
-            docker.setCpus(dockerCpuset)
+            docker.addRunOptions(dockerCpuset)
 
         // set the environment
         if( !envFile.empty() )
@@ -520,6 +567,11 @@ class BashWrapperBuilder {
         if( temp == 'auto' || temp == 'true' ) {
             docker.setTemp( changeDir ? '$NXF_SCRATCH' : '$(mktemp -d)' )
         }
+
+        if( dockerConfig.containsKey('kill') )
+            docker.params(kill: dockerConfig.kill)
+
+        docker.params(entry: '/bin/bash')
 
         docker.build()
         return docker

@@ -44,6 +44,121 @@ class CrgExecutorTest extends Specification {
 
     }
 
+    def testGetDirectives() {
+
+        setup:
+        def result
+        def config
+        // processor
+        def proc = Mock(TaskProcessor)
+        // task
+        def task = new TaskRun()
+        task.workDir = Paths.get('/work/dir')
+        task.metaClass.getHashLog = { 'a6f6aa6' }
+        task.processor = proc
+        task.name = 'task this and that'
+        // executor
+        def executor = [:] as CrgExecutor
+
+        when:
+        config = task.config = new TaskConfig()
+        result = executor.getDirectives(task, [])
+        then:
+        result == [
+                '-wd',
+                '/work/dir',
+                '-N',
+                'nf-task_this_and_that',
+                '-o',
+                '/work/dir/.command.log',
+                '-j',
+                'y',
+                '-terse',
+                '',
+                '-V',
+                '',
+                '-notify',
+                ''
+        ]
+
+        when:
+        config = task.config = new TaskConfig()
+        config.cpus = 4
+        result = executor.getDirectives(task, [])
+        then:
+        result == [
+                '-wd',
+                '/work/dir',
+                '-N',
+                'nf-task_this_and_that',
+                '-o',
+                '/work/dir/.command.log',
+                '-j',
+                'y',
+                '-terse',
+                '',
+                '-V',
+                '',
+                '-notify',
+                '',
+                '-pe',
+                'smp 4'
+        ]
+
+        when:
+        config = task.config = new TaskConfig()
+        config.cpus = 8
+        config.penv = 'orte'
+        result = executor.getDirectives(task, [])
+        then:
+        result == [
+                '-wd',
+                '/work/dir',
+                '-N',
+                'nf-task_this_and_that',
+                '-o',
+                '/work/dir/.command.log',
+                '-j',
+                'y',
+                '-terse',
+                '',
+                '-V',
+                '',
+                '-notify',
+                '',
+                '-pe',
+                'orte 8'
+        ]
+
+        when:
+        config = task.config = new TaskConfig()
+        config.container = 'busybox'
+        executor.metaClass.isDockerEnabled = { true }
+
+        result = executor.getDirectives(task, [])
+        then:
+        result == [
+                '-wd',
+                '/work/dir',
+                '-N',
+                'nf-task_this_and_that',
+                '-o',
+                '/work/dir/.command.log',
+                '-j',
+                'y',
+                '-terse',
+                '',
+                '-V',
+                '',
+                '-notify',
+                '',
+                '-binding',
+                'env linear:1',
+                '-soft',
+                '-l docker_images=*;busybox;*'
+        ]
+
+    }
 
     def testGetHeaders () {
 

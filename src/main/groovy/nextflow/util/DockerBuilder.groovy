@@ -41,7 +41,7 @@ class DockerBuilder {
 
     private boolean sudo
 
-    private String options
+    private List<String> options = []
 
     private boolean remove
 
@@ -68,6 +68,8 @@ class DockerBuilder {
     private String cpus
 
     private String memory
+
+    private kill = true
 
     DockerBuilder( String name ) {
         this.image = name
@@ -97,7 +99,7 @@ class DockerBuilder {
             this.temp = params.temp
 
         if( params.containsKey('runOptions') )
-            this.options = params.runOptions
+            addRunOptions(params.runOptions.toString())
 
         if ( params.containsKey('userEmulation') )
             this.userEmulation = params.userEmulation?.toString() == 'true'
@@ -113,6 +115,9 @@ class DockerBuilder {
 
         if( params.containsKey('entry') )
             this.entryPoint = params.entry
+
+        if( params.containsKey('kill') )
+            this.kill = params.kill
 
         return this
     }
@@ -142,6 +147,11 @@ class DockerBuilder {
         else
             throw new IllegalArgumentException("Not a supported memory value")
 
+        return this
+    }
+
+    DockerBuilder addRunOptions(String str) {
+        options.add(str)
         return this
     }
 
@@ -184,7 +194,7 @@ class DockerBuilder {
             result << '--entrypoint ' << entryPoint << ' '
 
         if( options )
-            result << options.trim() << ' '
+            result << options.join(' ') << ' '
 
         // the name is after the user option so it has precedence over any options provided by the user
         if( name )
@@ -205,8 +215,15 @@ class DockerBuilder {
             if( sudo ) removeCommand = 'sudo ' + removeCommand
         }
 
-        killCommand = 'docker kill ' + name
-        if( sudo ) killCommand = 'sudo ' + killCommand
+        if( kill )  {
+            killCommand = 'docker kill '
+            // if `kill` is a string it is interpreted as a the kill signal
+            if( kill instanceof String ) killCommand += "-s $kill "
+            killCommand += name
+            // prefix with sudo if required
+            if( sudo ) killCommand = 'sudo ' + killCommand
+        }
+
 
         return runCommand
     }

@@ -63,12 +63,22 @@ class CirrusWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash -ue
+                #!/bin/bash
                 # fetch scripts
                 es3 test s3:/${folder}/.command.env && es3 cat s3:/${folder}/.command.env > .command.env
                 es3 test s3:/${folder}/.command.sh && es3 cat s3:/${folder}/.command.sh > .command.sh
                 es3 test s3:/${folder}/.command.in && es3 cat s3:/${folder}/.command.in > .command.in
                 es3 test s3:/${folder}/.command.run.1 && es3 cat s3:/${folder}/.command.run.1 > .command.run.1
+
+                set -e
+                set -u
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
+
+                nxf_env() {
+                    echo '============= task environment ============='
+                    env | sort | sed "s/\\(.*\\)AWS\\(.*\\)=\\(.\\{6\\}\\).*/\\1AWS\\2=\\3xxxxxxxxxxxxx/"
+                    echo '============= task output =================='
+                }
 
                 nxf_kill() {
                     declare -a ALL_CHILD
@@ -87,6 +97,7 @@ class CirrusWrapperBuilderTest extends Specification {
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > .exitcode && es3 -q -v 0 --no-stats sync .exitcode s3:/${folder} || true
+                  sync
                   exit \$exit_status
                 }
 
@@ -98,6 +109,7 @@ class CirrusWrapperBuilderTest extends Specification {
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
+                [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 es3 touch s3:/${folder}/.command.begin
                 [ -f .command.env ] && source .command.env
                 NXF_SCRATCH=\${TMPDIR:-`mktemp -d`} && cd \$NXF_SCRATCH

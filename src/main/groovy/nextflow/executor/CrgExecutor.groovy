@@ -21,10 +21,13 @@
 package nextflow.executor
 
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
+
 /**
  * An executor specialised for CRG cluster
  */
+@Slf4j
 class CrgExecutor extends SgeExecutor {
 
     /**
@@ -70,20 +73,20 @@ class CrgExecutor extends SgeExecutor {
         dockerConf?.enabled?.toString() == 'true'
     }
 
+    @Override
     protected BashWrapperBuilder createBashWrapperBuilder(TaskRun task) {
 
         def builder = super.createBashWrapperBuilder(task)
 
         // When job is execute in a docker container
-        // The Univa scheduler has to allocate the required cores for the job execution
-        // Variable '$SGE_BINDING' must contain the cores to be used
+        // The Univa scheduler must allocate the required cores for the job execution
+        // The ariable '$SGE_BINDING' must contain the cores to be used
         if( task.container && isDockerEnabled() ) {
-            final str =
-                    '''
-                    [[ -z $SGE_BINDING ]] && echo "Missing '$SGE_BINDING' variable -- Report this problem to your sysadmin" && exit 1
-                    cpuset=$(echo $SGE_BINDING | sed 's/ /,/')
-                    '''
-                    .stripIndent()
+            final str = '''
+                        cpuset=${cpuset:=''}
+                        [[ $SGE_BINDING ]] && cpuset="--cpuset $(echo $SGE_BINDING | sed 's/ /,/')"
+                        '''
+                        .stripIndent()
             builder.setDockerCpuset('$cpuset')
             builder.headerScript += str
         }

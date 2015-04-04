@@ -44,7 +44,7 @@ class PbsExecutor extends AbstractGridExecutor {
 
         result << '-d' << task.workDir.toString()
         result << '-N' << getJobNameFor(task)
-        result << '-o' << task.workDir.resolve('.command.log').toString()
+        result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()
         result << '-j' << 'oe'
         result << '-V' << ''
 
