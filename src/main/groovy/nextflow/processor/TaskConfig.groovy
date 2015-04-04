@@ -22,7 +22,6 @@ package nextflow.processor
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import nextflow.exception.AbortOperationException
 import nextflow.executor.BashWrapperBuilder
@@ -85,7 +84,6 @@ class TaskConfig implements Map<String,Object> {
      * @param key The map entry key
      * @return The associated value
      */
-    @Memoized
     Object get( key ) {
         def value = target.get(key)
         normalize(key as String, value)
