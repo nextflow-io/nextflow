@@ -1505,32 +1505,33 @@ abstract class TaskProcessor {
         final result = new HashMap(variableNames.size())
         final processName = name
 
-        variableNames.each { String name ->
+        variableNames.each { String varName ->
 
-            if( !localScope.containsKey(name) ) {
+            final p = varName.indexOf('.')
+            final baseName = p !=- 1 ? varName.substring(0,p) : varName
 
+            if( !localScope.containsKey(baseName) ) {
                 def value
-                int p = name.indexOf('.')
                 try {
                     if( p == -1 ) {
-                        value = binding.getVariable(name)
+                        value = binding.getVariable(varName)
                     }
                     else {
                         if( !shell ) shell = new GroovyShell(binding)
-                        value = shell.evaluate(name)
+                        value = shell.evaluate(varName)
                     }
                 }
                 catch( MissingPropertyException | NullPointerException e ) {
-                    log.debug "Process `${processName}` cannot access global variable `$name` -- Cause: ${e.message}"
+                    log.debug "Process `${processName}` cannot access global variable `$varName` -- Cause: ${e.message}"
                     value = null
                 }
 
                 // value for 'workDir' and 'baseDir' folders are added always as string
                 // in order to avoid to invalid the cache key when resuming the execution
-                if( name=='workDir' || name=='baseDir' )
+                if( varName=='workDir' || varName=='baseDir' )
                     value = value.toString()
 
-                result.put( name, value )
+                result.put( varName, value )
             }
 
         }
