@@ -144,7 +144,6 @@ class LocalTaskHandler extends TaskHandler {
                 ProcessBuilder builder = new ProcessBuilder()
                         .directory(task.workDir.toFile())
                         .command(cmd)
-                        .redirectErrorStream(true)
 
                 // -- start the execution and notify the event to the monitor
                 process = new PosixProcess(builder.start())
