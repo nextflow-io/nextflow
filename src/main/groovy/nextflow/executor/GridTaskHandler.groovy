@@ -108,18 +108,20 @@ class GridTaskHandler extends TaskHandler {
 
         // -- start the execution and notify the event to the monitor
         final builder = createProcessBuilder()
-        final process = builder.start()
 
-        // -- forward the job launcher script to the command stdin if required
-        if( executor.pipeLauncherScript() ) {
-            process.out << wrapperFile.text
-            process.out.close()
-        }
+        def exitStatus = 0
+        String result = null
 
         try {
-            def exitStatus = 0
-            String result = null
+            final process = builder.start()
+
             try {
+                // -- forward the job launcher script to the command stdin if required
+                if( executor.pipeLauncherScript() ) {
+                    process.out << wrapperFile.text
+                    process.out.close()
+                }
+
                 // -- wait the the process completes
                 result = process.text
                 exitStatus = process.waitFor()
@@ -133,21 +135,21 @@ class GridTaskHandler extends TaskHandler {
                 this.jobId = executor.parseJobId(result)
                 this.status = SUBMITTED
             }
-            catch( Exception e ) {
-                task.exitStatus = exitStatus
-                task.script = CmdLineHelper.toLine(builder.command())
-                task.stdout = result
-                status = COMPLETED
-                throw new ProcessFailedException("Error submitting process '${task.name}' for execution", e )
+            finally {
+                // make sure to release all resources
+                process.in.closeQuietly()
+                process.out.closeQuietly()
+                process.err.closeQuietly()
+                process.destroy()
             }
 
         }
-        finally {
-            // make sure to release all resources
-            process.in.closeQuietly()
-            process.out.closeQuietly()
-            process.err.closeQuietly()
-            process.destroy()
+        catch( Exception e ) {
+            task.exitStatus = exitStatus
+            task.script = CmdLineHelper.toLine(builder.command())
+            task.stdout = result
+            status = COMPLETED
+            throw new ProcessFailedException("Error submitting process '${task.name}' for execution", e )
         }
 
     }
