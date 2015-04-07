@@ -202,7 +202,13 @@ class FilesEx {
         return Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING)
     }
 
-
+    /**
+     * Copy the a directory path to a new not existing folder
+     *
+     * @param source The origin path to copy from
+     * @param target The target path to which copy. Note: IT MUST BE EMPTY
+     * @return The resulting target path
+     */
     private static Path copyDirectory( Path source, Path target ) {
 
         def visitor = new SimpleFileVisitor<Path>() {
@@ -214,9 +220,8 @@ class FilesEx {
                 def delta = source.relativize(current)?.toString()
                 def newFolder = delta ? target.resolve(delta) : target
                 FilesEx.log.trace "Copy DIR: $current -> $newFolder"
-                if( !newFolder.exists() ) {
-                    Files.copy(current, newFolder, StandardCopyOption.REPLACE_EXISTING)
-                }
+                // this `copy` creates the new folder, but does not copy the contained files
+                Files.copy(current, newFolder, StandardCopyOption.REPLACE_EXISTING)
                 return FileVisitResult.CONTINUE;
             }
 
