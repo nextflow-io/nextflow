@@ -181,7 +181,7 @@ class FilesEx {
 
             // otherwise it is a file => we cannot write a directory with the same name
             if( targetExists )
-                throw new FileAlreadyExistsException("Copy copy directory -- A file with the same name already exists: $target")
+                throw new FileAlreadyExistsException("Cannot copy directory -- A file with the same name already exists: $target")
 
             def parent = target.getParent()
             if( parent && !parent.exists() ) parent.mkdirs()
