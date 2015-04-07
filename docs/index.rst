@@ -19,6 +19,7 @@ Contents:
    operator
    executor
    config
+   amazons3
    docker
    dnanexus
    gridgain

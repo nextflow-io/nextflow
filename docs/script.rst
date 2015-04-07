@@ -408,6 +408,8 @@ Remove first found numbers followed by a whitespace character::
 
 
 
+.. _script-file-io:
+
 Files and I/O
 ==============
 
