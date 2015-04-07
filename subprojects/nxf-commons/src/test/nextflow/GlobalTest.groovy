@@ -20,6 +20,8 @@
 
 package nextflow
 
+import java.nio.file.Files
+
 import spock.lang.Specification
 /**
  *
@@ -31,14 +33,32 @@ class GlobalTest extends Specification {
     def testAwsCredentials() {
 
         expect:
-        Global.getAwsCredentials(null, null) == null
-        Global.getAwsCredentials([AWS_ACCESS_KEY: 'x', AWS_SECRET_KEY: '222'], null) == ['x','222']
-        Global.getAwsCredentials([AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999'], null) == ['q','999']
-        Global.getAwsCredentials([AWS_ACCESS_KEY: 'x', AWS_SECRET_KEY: '222',  AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999'], null) == ['q','999']
+        Global.getAwsCredentials0(null, null) == null
+        Global.getAwsCredentials0([AWS_ACCESS_KEY: 'x', AWS_SECRET_KEY: '222'], null) == ['x','222']
+        Global.getAwsCredentials0([AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999'], null) == ['q','999']
+        Global.getAwsCredentials0([AWS_ACCESS_KEY: 'x', AWS_SECRET_KEY: '222',  AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999'], null) == ['q','999']
 
-        Global.getAwsCredentials([AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999'], [aws:[accessKey: 'b', secretKey: '333']]) == ['b','333']
-        Global.getAwsCredentials(null, [aws:[accessKey: 'b', secretKey: '333']]) == ['b','333']
-        Global.getAwsCredentials(null, [aws:[accessKey: 'b']]) == null
+        Global.getAwsCredentials0([AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999'], [aws:[accessKey: 'b', secretKey: '333']]) == ['b','333']
+        Global.getAwsCredentials0(null, [aws:[accessKey: 'b', secretKey: '333']]) == ['b','333']
+        Global.getAwsCredentials0(null, [aws:[accessKey: 'b']]) == null
+
+    }
+
+    def testAwsCredentialsWithFile() {
+
+        given:
+        def file = Files.createTempFile('test','test')
+        file.text = '''
+            [default]
+            aws_access_key_id = aaa
+            aws_secret_access_key = bbbb
+            '''
+
+        Global.getAwsCredentials0(null, null, [file]) == ['aaa','bbbb']
+        Global.getAwsCredentials0([AWS_ACCESS_KEY: 'x', AWS_SECRET_KEY: '222'], null, [file]) == ['x','222']
+
+        cleanup:
+        file?.delete()
 
     }
 

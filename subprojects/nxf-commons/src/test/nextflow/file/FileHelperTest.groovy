@@ -148,8 +148,6 @@ class FileHelperTest extends Specification {
 
     }
 
-
-
     def 'test nameParts' () {
 
         expect:
@@ -161,8 +159,6 @@ class FileHelperTest extends Specification {
         FileHelper.nameParts("1")  == ['',1]
 
     }
-
-
 
     def 'tests parent' () {
 
@@ -186,12 +182,10 @@ class FileHelperTest extends Specification {
 
         expect:
         // properties have priority over the environment map
-        FileHelper.getEnvMap0('s3', env) == [access_key:'a1', secret_key:'s1']
-        // none of them
-        FileHelper.getEnvMap0('s3', [:]) == [:]
+        FileHelper.envFor0('s3', env) == [access_key:'a1', secret_key:'s1']
 
         // any other return just the session
-        FileHelper.getEnvMap0('dxfs', env).session == sess
+        FileHelper.envFor0('dxfs', env).session == sess
 
     }
 

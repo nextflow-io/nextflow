@@ -19,8 +19,12 @@
  */
 
 package nextflow
+import java.nio.file.Path
+import java.nio.file.Paths
 
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.util.IniFile
 import org.apache.commons.lang.StringUtils
 /**
  * Hold global variables
@@ -68,7 +72,8 @@ class Global {
      * @return A pair where the first element is the access key and the second the secret key or
      *      {@code null} if the credentials are missing
      */
-    static List<String> getAwsCredentials( Map env, Map config ) {
+    @PackageScope
+    static List<String> getAwsCredentials0( Map env, Map config, List<Path> files = []) {
 
         String a
         String b
@@ -84,14 +89,32 @@ class Global {
         // as define by amazon doc
         // http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
         if( env && (a=env.AWS_ACCESS_KEY_ID) && (b=env.AWS_SECRET_ACCESS_KEY) )  {
+            log.debug "Using AWS credentials defined by environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY"
             return [a, b]
         }
 
         if( env && (a=env.AWS_ACCESS_KEY) && (b=env.AWS_SECRET_KEY) ) {
+            log.debug "Using AWS credentials defined by environment variables AWS_ACCESS_KEY and AWS_SECRET_KEY"
             return [a, b]
         }
 
+        for( Path it : files ) {
+            final conf = new IniFile(it)
+            if( (a=conf.section('default').aws_access_key_id) && (b=conf.section('default').aws_secret_access_key) ) {
+                log.debug "Using AWS credential defined in `default` section in file: ${conf.file}"
+                return [a,b]
+            }
+        }
+
         return null
+    }
+
+    static List<String> getAwsCredentials(Map env, Map config) {
+
+        def home = Paths.get(System.properties.get('user.home') as String)
+        def files = [ home.resolve('.aws/credentials'), home.resolve('.aws/config') ]
+        getAwsCredentials0(env,config, files)
+
     }
 
     static List<String> getAwsCredentials(Map env) {

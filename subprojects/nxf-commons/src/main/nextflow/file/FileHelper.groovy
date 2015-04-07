@@ -255,12 +255,12 @@ class FileHelper {
      * @return A map holding the current session
      */
     @Memoized
-    static protected Map getEnvMap(String scheme) {
-        getEnvMap0(scheme, System.getenv())
+    static protected Map envFor(String scheme) {
+        envFor0(scheme, System.getenv())
     }
 
     @PackageScope
-    static Map getEnvMap0(String scheme, Map env) {
+    static Map envFor0(String scheme, Map env) {
         def result = [:]
         if( scheme?.toLowerCase() == 's3' ) {
 
@@ -385,7 +385,7 @@ class FileHelper {
             catch( FileSystemNotFoundException e ) { fs=null }
             if( !fs ) {
                 log.debug "Creating a file system instance for provider: ${provider.class.simpleName}"
-                fs = provider.newFileSystem(uri, env ?: getEnvMap(uri.scheme))
+                fs = provider.newFileSystem(uri, env ?: envFor(uri.scheme))
             }
             fs
         }
