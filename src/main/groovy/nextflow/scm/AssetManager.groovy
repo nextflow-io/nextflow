@@ -449,6 +449,30 @@ class AssetManager {
         names.get( head.objectId ) ?: head.objectId.name()
     }
 
+    String getCurrentRevisionAndName() {
+        Ref head = git.getRepository().getRef(Constants.HEAD);
+        if( !head )
+            return '(unknown)'
+
+        if( head.isSymbolic() ) {
+            return "${head.objectId.name()?.substring(0,10)} [${Repository.shortenRefName(head.getTarget().getName())}]"
+        }
+
+        if( !head.getObjectId() )
+            return '(unknown)'
+
+        // try to resolve the the current object it to a tag name
+        Map<ObjectId, String> allNames = git.nameRev().addPrefix( "refs/tags/" ).add(head.objectId).call()
+        def name = allNames.get( head.objectId )
+        if( name ) {
+            return "${head.objectId.name()?.substring(0,10)} [${name}]"
+        }
+        else {
+            return head.objectId.name()?.substring(0,10)
+        }
+    }
+
+
     /**
      * @return A list of existing branches and tags names. For example
      * <pre>

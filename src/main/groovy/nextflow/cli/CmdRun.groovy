@@ -217,6 +217,7 @@ class CmdRun extends CmdBase implements HubOptions {
         if( script.exists() ) {
             if( revision )
                 throw new AbortOperationException("Revision option cannot be used running a local pipeline script")
+            log.info "Launching $script"
             return script
         }
 
@@ -239,6 +240,7 @@ class CmdRun extends CmdBase implements HubOptions {
         }
         // checkout requested revision
         manager.checkout(revision)
+        log.info "Launching '${repo}' - revision: ${manager.getCurrentRevisionAndName()}"
 
         // return the script file
         return manager.getMainScriptFile()
