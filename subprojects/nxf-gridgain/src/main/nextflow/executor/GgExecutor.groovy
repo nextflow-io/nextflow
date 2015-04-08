@@ -545,7 +545,7 @@ class GgBashTask extends GgBaseTask<Integer>  {
         // process executions override each others
         this.environment = new HashMap( task.processor.getProcessEnvironment() )
         this.environment.putAll( task.getInputEnvironment() )
-        this.shell = task.config.getShell()
+        this.shell = new ArrayList<>(task.config.getShell())
         this.script = task.script
     }
 
