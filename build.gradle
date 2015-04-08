@@ -257,9 +257,9 @@ protected resolveDeps( String configName, String... x ) {
     final incoming = config.getIncoming()
 
     deps << incoming.getResolutionResult().root.moduleVersion.toString()
-    incoming.getDependencies().each{ deps << "${it.group}:${it.name}:${it.version}".toString() }
+    incoming.getDependencies().each{ deps << coordinates(it) }
 
-    config.getResolvedConfiguration().getResolvedArtifacts().each{ deps << it.moduleVersion.id.toString() }
+    config.getResolvedConfiguration().getResolvedArtifacts().each{ deps << coordinates(it) }
 
     if( x )
         deps.addAll(x as List)
@@ -268,6 +268,19 @@ protected resolveDeps( String configName, String... x ) {
     deps.sort().each { logger.info " - $it" }
 
     return deps.collect{ "$it(*:*)" }.join(' ')
+}
+
+protected coordinates( it ) {
+    if( it instanceof Dependency )
+        return "${it.group}:${it.name}:${it.version}".toString()
+
+    if( it instanceof ResolvedArtifact ) {
+        def result = it.moduleVersion.id.toString()
+        if( it.classifier ) result += ":${it.classifier}"
+        return result
+    }
+
+    throw new IllegalArgumentException("Not a valid dependency object [${it?.class?.name}]: $it")
 }
 
 /*
