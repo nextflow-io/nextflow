@@ -393,7 +393,7 @@ class BashWrapperBuilder {
         if( runWithDocker ) {
             runner << scriptCleanUp(exitedFile, docker.killCommand) << ENDL
             // this is only required on OSX otherwise the following 'tr' fails
-            runner << 'export NXF_BOXID="nxf-$(cat /dev/urandom | LC_ALL=C tr -dc \'a-zA-Z0-9\' | fold -w 24 | head -n 1)"' << ENDL
+            runner << 'export NXF_BOXID="nxf-$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"' << ENDL
         }
         else {
             runner << scriptCleanUp(exitedFile) << ENDL
