@@ -238,7 +238,14 @@ ext.ossrhUserName = hasProperty('ossrhUserName') ? properties.get('ossrhUserName
 ext.ossrhPassword = hasProperty('ossrhPassword') ? properties.get('ossrhPassword') : null
 ext.ossrhFullName = hasProperty('ossrhFullName') ? properties.get('ossrhFullName') : null
 ext.ossrhEmail = hasProperty('ossrhEmail') ? properties.get('ossrhEmail') : null
-ext.deployable = [project(':'), project(':nxf-commons'), project(':nxf-console'), project(':nxf-extrae'), project(':nxf-gridgain')]
+ext.deployable = [
+        project(':'),
+        project(':nxf-commons'),
+        project(':nxf-extrae'),
+        project(':nxf-gridgain'),
+        project(':nxf-console'),
+        project(':nxf-drmaa')
+]
 
 ext.homeDir = System.properties['user.home']
 ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
