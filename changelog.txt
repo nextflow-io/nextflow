@@ -1,6 +1,29 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.13.0 - 8 Apr 2015
+- Added support for AWS S3 storage
+- Added support for ClusterK Cirrus cloud scheduler
+- Added multiple debugging level in command scripts by using `NXF_DEBUG` variable
+- Added ability to disable docker kill command
+- Added explicit `entrypoint` definition in docker run command
+- Added `uge` executor as alias of SgeExecutor class
+- Added `-D` JVM properties command line option
+- Added `.command.log` to grid executors
+- Separated `stdout` and `stderr` outputs
+- Refactored DRMAA executor to a separate sub-project
+- Refactored application packaging based on Capsule modes
+- Refactored application installer downloading dependencies at runtime
+- Optimised file attributes access usage
+- Increased log and trace files rolling max index to 9
+- Print revision and commit ID on pipeline startup
+- Improved handling of docker cpuset for `crg` executor
+- Improved TraceFileObserver to flush written content
+- Improved `info <pipeline>` command with `-d` option that shows git revision commit IDs
+- Fixed issue #39 - Per process containers not working with -with-docker option
+- Upgraded Groovy runtime to version 2.3.11
+- Upgraded Logback library to version 1.1.3
+
 0.12.5 - 18 Mar 2015
 - Fixed regression preventing jobs cleanup when nextflow process is killed
 - Fixed issue when command line flag has not value making it to consume following option
