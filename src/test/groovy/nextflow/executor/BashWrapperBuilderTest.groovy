@@ -718,7 +718,7 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
-                export NXF_BOXID="nxf-\$(cat /dev/urandom | LC_ALL=C tr -dc 'a-zA-Z0-9' | fold -w 24 | head -n 1)"
+                export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
 
@@ -809,7 +809,7 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
-                export NXF_BOXID="nxf-\$(cat /dev/urandom | LC_ALL=C tr -dc 'a-zA-Z0-9' | fold -w 24 | head -n 1)"
+                export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
 
@@ -902,7 +902,7 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
-                export NXF_BOXID="nxf-\$(cat /dev/urandom | LC_ALL=C tr -dc 'a-zA-Z0-9' | fold -w 24 | head -n 1)"
+                export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
 
@@ -991,7 +991,7 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
-                export NXF_BOXID="nxf-\$(cat /dev/urandom | LC_ALL=C tr -dc 'a-zA-Z0-9' | fold -w 24 | head -n 1)"
+                export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
 
