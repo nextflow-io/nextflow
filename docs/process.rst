@@ -810,9 +810,10 @@ Some caveats on glob pattern behavior:
 * When a two stars pattern ``**`` is used to recurse across directories, only file paths are matched
   i.e. directories are not included in the result list.
 
-Read more about glob syntax at the following link `What is a glob? <glob>`_
+Read more about glob syntax at the following link `What is a glob?`_
 
 .. _glob: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
+.. _What is a glob?: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
 
 .. _process-dynoutname:
 
@@ -1058,6 +1059,7 @@ The directives are:
 * `cpus`_
 * `container`_
 * `clusterOptions`_
+* `disk`_
 * `echo`_
 * `errorStrategy`_
 * `executor`_
@@ -1515,6 +1517,40 @@ Multiple queues can be specified by separating their names with a comma for exam
 
 .. note:: This directive is taken in account only by the following executors: :ref:`SGE <sge-executor>`,
   :ref:`LSF <lsf-executor>`, :ref:`PBS/Torque <pbs-executor>` and :ref:`DRMAA <drmaa-executor>`
+
+.. _process-disk:
+
+disk
+------
+
+The ``disk`` directive allows you to define how much local disk storage the process is allowed to use. For example::
+
+    process big_job {
+
+        disk '2 GB'
+        executor 'cirrus'
+
+        """
+        your task script here
+        """
+    }
+
+The following memory unit suffix can be used when specifying the disk value:
+
+======= =============
+Unit    Description
+======= =============
+B       Bytes
+KB      Kilobytes
+MB      Megabytes
+GB      Gigabytes
+TB      Terabytes
+======= =============
+
+.. note:: This directive currently is taken in account only by the :ref:`Cirrus <cirrus-executor>` executor.
+
+
+See also: `cpus`_, `memory`_ `time`_, `queue`_
 
 .. _process-memory:
 
