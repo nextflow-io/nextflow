@@ -457,7 +457,7 @@ task release(type: Exec, dependsOn: [ test, deploy ]) {
     git push || exit \$?
     (git tag -a v$version -m 'Tagging version $version [release]' -f && git push origin v$version -f) || exit \$?
     github-release release -u nextflow-io -r nextflow -t v$version --pre-release
-    github-release upload -u nextflow-io -r nextflow -t v$version --file ${launcherFile} --name ${launcherFile}
+    github-release upload -u nextflow-io -r nextflow -t v$version --file ${launcherFile} --name ${launcherFile.name}
 
     # publish the script as the latest
     s3cmd put $launcherFile s3://www.nextflow.io/releases/latest/nextflow $s3CmdOpts
