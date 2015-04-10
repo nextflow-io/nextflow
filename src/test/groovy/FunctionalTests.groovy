@@ -35,7 +35,7 @@ class FunctionalTests extends Specification {
 
     // run before the first feature method
     def setupSpec() {
-        Session.testDisableExecutorShutdown = true
+        Session.keepExecutorPoolAlive = true
         scriptFile = new File('test.nf')
         scriptFile.deleteOnExit()
     }

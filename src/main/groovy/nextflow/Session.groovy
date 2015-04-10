@@ -124,7 +124,7 @@ class Session implements ISession {
 
     protected boolean testReturnTaskProcessor = false
 
-    protected static boolean testDisableExecutorShutdown = false
+    protected static boolean keepExecutorPoolAlive = false
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -233,7 +233,7 @@ class Session implements ISession {
         if( !GParsConfig.poolFactory )
             GParsConfig.poolFactory = factory = new FixedPoolFactory(poolSize)
 
-        else if( testDisableExecutorShutdown )
+        else if( keepExecutorPoolAlive )
             factory = (FixedPoolFactory)GParsConfig.poolFactory
 
         else
@@ -338,7 +338,7 @@ class Session implements ISession {
         allProcessors *. join()
         log.trace "Session > after processors join"
 
-        if( testDisableExecutorShutdown ) {
+        if( keepExecutorPoolAlive ) {
             log.debug "Executor service shutdown disabled"
             return
         }
@@ -381,7 +381,7 @@ class Session implements ISession {
         monitorsBarrier.forceTermination()
         allProcessors *. terminate()
 
-        if( testDisableExecutorShutdown )
+        if( keepExecutorPoolAlive )
             return
 
         execService?.shutdownNow()
