@@ -44,7 +44,7 @@ ext {
 allprojects {
     apply plugin: 'java'
 
-    version = '0.13.0'
+    version = '0.13.1'
     group = 'io.nextflow'
 
     sourceCompatibility = 1.7
@@ -563,6 +563,11 @@ configure(deployable) {
 
     uploadArchives {
         repositories {
+
+            mavenDeployer {
+                repository(url: "file://${System.properties.get('user.home')}/.m2/repository/")
+            }
+
             mavenDeployer {
                 beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
 

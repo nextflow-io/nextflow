@@ -1,6 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.13.1 - 10 Apr 2015
+- Fixed IllegalStateException when executing a script in Nextflow console
+
 0.13.0 - 8 Apr 2015
 - Added support for AWS S3 storage
 - Added support for ClusterK Cirrus cloud scheduler
