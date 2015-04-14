@@ -274,7 +274,7 @@ class CirrusWrapperBuilder extends BashWrapperBuilder {
         def env = task.workDir.resolve(TaskRun.CMD_ENV)
         def script = task.workDir.resolve(TaskRun.CMD_SCRIPT)
         def infile = task.workDir.resolve(TaskRun.CMD_INFILE)
-        def wrapper = task.workDir.resolve(TaskRun.CMD_WRAPPER)
+        def wrapper = task.workDir.resolve(TaskRun.CMD_STUB)
 
         def ops = []
         ops << '# fetch scripts'

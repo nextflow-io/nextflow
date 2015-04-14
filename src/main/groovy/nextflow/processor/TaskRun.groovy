@@ -429,7 +429,7 @@ class TaskRun {
     static final String CMD_EXIT = '.exitcode'
     static final String CMD_START = '.command.begin'
     static final String CMD_RUN = '.command.run'
-    static final String CMD_WRAPPER = '.command.run.1'
+    static final String CMD_STUB = '.command.run.1'
     static final String CMD_CONTEXT = '.command.val'
     static final String CMD_TRACE = '.command.trace'
 

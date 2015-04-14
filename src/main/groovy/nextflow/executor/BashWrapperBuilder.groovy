@@ -37,6 +37,8 @@ import nextflow.util.MemoryUnit
 @Slf4j
 class BashWrapperBuilder {
 
+    static final private ENDL = '\n'
+
     static final List<String> BASH
 
     static private level = 0
@@ -318,18 +320,16 @@ class BashWrapperBuilder {
         assert workDir, "Missing 'workDir' property in BashWrapperBuilder object"
         assert script, "Missing 'script' property in BashWrapperBuilder object"
 
-        final ENDL = '\n'
         final scriptFile = workDir.resolve(TaskRun.CMD_SCRIPT)
         final inputFile = workDir.resolve(TaskRun.CMD_INFILE)
         final environmentFile = workDir.resolve(TaskRun.CMD_ENV)
         final startedFile = workDir.resolve(TaskRun.CMD_START)
         final exitedFile = workDir.resolve(TaskRun.CMD_EXIT)
-        final runnerFile = workDir.resolve(TaskRun.CMD_RUN)
-        final wrapperFile = workDir.resolve(TaskRun.CMD_WRAPPER)
+        final wrapperFile = workDir.resolve(TaskRun.CMD_RUN)
+        final stubFile = workDir.resolve(TaskRun.CMD_STUB)
 
         // set true when running with docker
         runWithDocker = dockerImage && dockerConfig?.enabled?.toString() == 'true'
-        final dockerKill = dockerConfig?.kill != false
 
         /*
          * the script file
@@ -381,131 +381,131 @@ class BashWrapperBuilder {
          * Read more: http://man7.org/linux/man-pages/man7/signal.7.html
          */
 
-        def runner = new StringBuilder()
-        runner << '#!/bin/bash' << ENDL
+        def wrapper = new StringBuilder()
+        wrapper << '#!/bin/bash' << ENDL
         if( headerScript )
-            runner << headerScript << ENDL
+            wrapper << headerScript << ENDL
 
-        runner << 'set -e' << ENDL
-        runner << 'set -u' << ENDL
-        runner << 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 2 ]] && set -x' << ENDL << ENDL
+        wrapper << 'set -e' << ENDL
+        wrapper << 'set -u' << ENDL
+        wrapper << 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 2 ]] && set -x' << ENDL << ENDL
 
         if( runWithDocker ) {
-            runner << scriptCleanUp(exitedFile, docker.killCommand) << ENDL
+            wrapper << scriptCleanUp(exitedFile, docker.killCommand) << ENDL
             // this is only required on OSX otherwise the following 'tr' fails
-            runner << 'export NXF_BOXID="nxf-$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"' << ENDL
+            wrapper << 'export NXF_BOXID="nxf-$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"' << ENDL
         }
         else {
-            runner << scriptCleanUp(exitedFile) << ENDL
+            wrapper << scriptCleanUp(exitedFile) << ENDL
         }
 
         // -- print the current environment when debug is enabled
-        runner << '[[ $NXF_DEBUG > 0 ]] && nxf_env' << ENDL
+        wrapper << '[[ $NXF_DEBUG > 0 ]] && nxf_env' << ENDL
 
         // -- start creating a file to signal that task has began
-        runner << touchFile(startedFile) << ENDL
+        wrapper << touchFile(startedFile) << ENDL
 
         if( beforeScript ) {
-            runner << '# user `beforeScript`' << ENDL
-            runner << beforeScript << ENDL
+            wrapper << '# user `beforeScript`' << ENDL
+            wrapper << beforeScript << ENDL
         }
 
         // source the environment
         if( !runWithDocker ) {
-            runner << '[ -f '<< fileStr(environmentFile) << ' ]' << ' && source ' << fileStr(environmentFile) << ENDL
+            wrapper << '[ -f '<< fileStr(environmentFile) << ' ]' << ' && source ' << fileStr(environmentFile) << ENDL
         }
 
         if( changeDir ) {
-            runner << changeDir << ENDL
+            wrapper << changeDir << ENDL
         }
 
         // staging input files when required
         if( stagingScript ) {
-            runner << stagingScript << ENDL
+            wrapper << stagingScript << ENDL
         }
 
         // execute the command script
-        runner << '' << ENDL
-        runner << 'set +e' << ENDL  // <-- note: use loose error checking so that ops after the script command are executed in all cases
-        runner << '(' << ENDL
+        wrapper << '' << ENDL
+        wrapper << 'set +e' << ENDL  // <-- note: use loose error checking so that ops after the script command are executed in all cases
+        wrapper << '(' << ENDL
 
         // execute by invoking the command through a Docker container
         if( docker ) {
-            runner << docker.runCommand << " -c '"
+            wrapper << docker.runCommand << " -c '"
         }
 
         /*
          * process stats
          */
         if( statsEnabled ) {
-            final wrapper = new StringBuilder()
-            wrapper << '#!/bin/bash' << ENDL
-            wrapper << 'set -e' << ENDL
-            wrapper << 'set -u' << ENDL
-            wrapper << 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 3 ]] && set -x' << ENDL << ENDL
-            wrapper << SCRIPT_TRACE << ENDL
-            wrapper << 'trap \'exit ${ret:=$?}\' EXIT' << ENDL
-            wrapper << 'start_millis=$($NXF_DATE)'  << ENDL
-            wrapper << '(' << ENDL
-            wrapper << interpreter << ' ' << fileStr(scriptFile)
-            if( input != null ) wrapper << ' < ' << fileStr(inputFile)
-            wrapper << ENDL
-            wrapper << ') &' << ENDL
-            wrapper << 'pid=$!' << ENDL                     // get the PID of the main job
-            wrapper << 'nxf_trace "$pid" ' << TaskRun.CMD_TRACE << ' &' << ENDL
-            wrapper << 'mon=$!' << ENDL                     // get the pid of the monitor process
-            wrapper << 'wait $pid' << ENDL                  // wait for main job completion
-            wrapper << 'ret=$?' << ENDL                     // get the main job error code
-            wrapper << 'end_millis=$($NXF_DATE)' << ENDL    // get the ending time
-            wrapper << 'kill $mon || wait $mon' << ENDL     // kill the monitor and wait for its ending
-            wrapper << '[ -f ' << TaskRun.CMD_TRACE << ' ] && echo $((end_millis-start_millis)) >> ' << TaskRun.CMD_TRACE << ENDL
+            final stub = new StringBuilder()
+            stub << '#!/bin/bash' << ENDL
+            stub << 'set -e' << ENDL
+            stub << 'set -u' << ENDL
+            stub << 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 3 ]] && set -x' << ENDL << ENDL
+            stub << SCRIPT_TRACE << ENDL
+            stub << 'trap \'exit ${ret:=$?}\' EXIT' << ENDL
+            stub << 'start_millis=$($NXF_DATE)'  << ENDL
+            stub << '(' << ENDL
+            stub << interpreter << ' ' << fileStr(scriptFile)
+            if( input != null ) stub << ' < ' << fileStr(inputFile)
+            stub << ENDL
+            stub << ') &' << ENDL
+            stub << 'pid=$!' << ENDL                     // get the PID of the main job
+            stub << 'nxf_trace "$pid" ' << TaskRun.CMD_TRACE << ' &' << ENDL
+            stub << 'mon=$!' << ENDL                     // get the pid of the monitor process
+            stub << 'wait $pid' << ENDL                  // wait for main job completion
+            stub << 'ret=$?' << ENDL                     // get the main job error code
+            stub << 'end_millis=$($NXF_DATE)' << ENDL    // get the ending time
+            stub << 'kill $mon || wait $mon' << ENDL     // kill the monitor and wait for its ending
+            stub << '[ -f ' << TaskRun.CMD_TRACE << ' ] && echo $((end_millis-start_millis)) >> ' << TaskRun.CMD_TRACE << ENDL
             // save to file
-            wrapperFile.text = wrapper.toString()
+            stubFile.text = stub.toString()
 
             // invoke it from the main script
-            runner << '/bin/bash ' << fileStr(wrapperFile)
-            if( docker ) runner << "'"
-            runner << ENDL
+            wrapper << '/bin/bash ' << fileStr(stubFile)
+            if( docker ) wrapper << "'"
+            wrapper << ENDL
         }
         else {
-            runner << interpreter << ' ' << fileStr(scriptFile)
-            if( docker ) runner << "'"
-            if( input != null ) runner << ' < ' << fileStr(inputFile)
-            runner << ENDL
+            wrapper << interpreter << ' ' << fileStr(scriptFile)
+            if( docker ) wrapper << "'"
+            if( input != null ) wrapper << ' < ' << fileStr(inputFile)
+            wrapper << ENDL
         }
-        runner << ') > >(tee '<< TaskRun.CMD_OUTFILE <<') 2> >(tee '<< TaskRun.CMD_ERRFILE <<' >&2) &' << ENDL
-        runner << 'pid=$!' << ENDL
-        runner << 'wait $pid || ret=$?' << ENDL
+        wrapper << ') > >(tee '<< TaskRun.CMD_OUTFILE <<') 2> >(tee '<< TaskRun.CMD_ERRFILE <<' >&2) &' << ENDL
+        wrapper << 'pid=$!' << ENDL
+        wrapper << 'wait $pid || ret=$?' << ENDL
 
         /*
          * docker clean-up
          */
         if( docker?.removeCommand ) {
             // remove the container in this way because 'docker run --rm'  fail in some cases -- see https://groups.google.com/d/msg/docker-user/0Ayim0wv2Ls/-mZ-ymGwg8EJ
-            runner << docker.removeCommand << ' &>/dev/null &' << ENDL
+            wrapper << docker.removeCommand << ' &>/dev/null &' << ENDL
         }
 
         /*
          * un-stage output files
          */
         if( changeDir ) {
-            runner << copyFile(TaskRun.CMD_OUTFILE, workDir) << ' || true' << ENDL
-            runner << copyFile(TaskRun.CMD_ERRFILE, workDir) << ' || true' << ENDL
+            wrapper << copyFile(TaskRun.CMD_OUTFILE, workDir) << ' || true' << ENDL
+            wrapper << copyFile(TaskRun.CMD_ERRFILE, workDir) << ' || true' << ENDL
         }
 
         if( (changeDir || workDir != targetDir) && unstagingScript  )
-            runner << unstagingScript << ENDL
+            wrapper << unstagingScript << ENDL
 
         if( changeDir && statsEnabled )
-            runner << copyFile(TaskRun.CMD_TRACE,  workDir) << ' || true' << ENDL
+            wrapper << copyFile(TaskRun.CMD_TRACE,  workDir) << ' || true' << ENDL
 
         if( afterScript ) {
-            runner << '# user `afterScript`' << ENDL
-            runner << afterScript << ENDL
+            wrapper << '# user `afterScript`' << ENDL
+            wrapper << afterScript << ENDL
         }
 
-        runnerFile.text = wrapperScript = runner.toString()
-        return runnerFile
+        wrapperFile.text = wrapperScript = wrapper.toString()
+        return wrapperFile
     }
 
     /**
