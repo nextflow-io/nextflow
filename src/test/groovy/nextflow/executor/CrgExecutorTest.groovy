@@ -434,4 +434,53 @@ class CrgExecutorTest extends Specification {
 
     }
 
+    def 'executor should inject `cpuset` option on docker run command' () {
+        given:
+        // processor
+        def proc = Mock(TaskProcessor)
+        proc.getProcessEnvironment() >> [:]
+        // task
+        def task = new TaskRun()
+        task.workDir = Paths.get('/some/dir')
+        task.processor = proc
+        task.name = 'the-name'
+        task.config = new TaskConfig()
+        def executor = [:] as CrgExecutor
+
+        when:
+        def builder = executor.createBashWrapperBuilder(task)
+        then:
+        builder.headerScript == '''
+            #$ -wd /some/dir
+            #$ -N nf-the-name
+            #$ -o /some/dir/.command.log
+            #$ -j y
+            #$ -terse
+            #$ -V
+            #$ -notify
+            '''
+            .stripIndent().leftTrim()
+
+
+        when:
+        task.config.container = 'foo'
+        executor.session = new Session(docker: [enabled: true])
+        builder = executor.createBashWrapperBuilder(task)
+        then:
+        builder.headerScript == '''
+            #$ -wd /some/dir
+            #$ -N nf-the-name
+            #$ -o /some/dir/.command.log
+            #$ -j y
+            #$ -terse
+            #$ -V
+            #$ -notify
+            #$ -binding env linear:1
+            #$ -soft -l docker_images=*;foo;*
+
+            cpuset=${cpuset:=''}
+            [[ $SGE_BINDING ]] && cpuset="--cpuset $(echo $SGE_BINDING | sed 's/ /,/g')"
+            '''
+                .stripIndent().leftTrim()
+    }
 }
