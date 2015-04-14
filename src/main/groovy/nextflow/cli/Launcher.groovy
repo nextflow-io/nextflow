@@ -26,10 +26,12 @@ import static nextflow.Const.SPLASH
 
 import java.lang.reflect.Field
 
+import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -265,23 +267,37 @@ class Launcher implements ExitCode {
             return
         }
 
-        def list = new ArrayList<CmdBase>(allCommands).findAll { it.name != CmdNode.NAME }
         println "Usage: nextflow [options] COMMAND [arg...]\n"
+        printOptions(CliOptions)
+        printCommands(allCommands)
+    }
 
-        List<Parameter> params = CliOptions.class.getDeclaredFields()
-                    .findAll { Field f -> def p=f.getAnnotation(Parameter); p && !p.hidden() && p.description() && p.names() }
-                    .collect { Field f -> f.getAnnotation(Parameter) }
+    @CompileDynamic
+    protected void printOptions(Class clazz) {
+        List params = []
+        for( Field f : clazz.getDeclaredFields() ) {
+            def p = f.getAnnotation(Parameter)
+            if(!p)
+                p = f.getAnnotation(DynamicParameter)
 
-        params.sort(true) { Parameter it -> it.names()[0] }
+            if( p && !p.hidden() && p.description() && p.names() )
+                params.add(p)
+
+        }
+
+        params.sort(true) { it -> it.names()[0] }
 
         println "Options:"
         for( def p : params ) {
             println "  ${p.names().join(', ')}"
             println "     ${p.description()}"
         }
+    }
 
-        println "\nCommands: "
+    protected void printCommands(List<CmdBase> cmds) {
+        println "\nCommands:"
 
+        def list = new ArrayList<CmdBase>(cmds).findAll { it.name != CmdNode.NAME }
         int len = 0
         def all = new TreeMap<String,String>()
         list.each {

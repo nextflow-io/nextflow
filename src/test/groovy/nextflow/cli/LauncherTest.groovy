@@ -22,14 +22,20 @@ package nextflow.cli
 
 import java.nio.file.Files
 
+import com.beust.jcommander.DynamicParameter
+import com.beust.jcommander.Parameter
 import com.beust.jcommander.ParameterException
 import spock.lang.Specification
+import test.OutputCapture
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class LauncherTest extends Specification {
 
+    @org.junit.Rule
+    OutputCapture capture = new OutputCapture()
 
     def testVersion () {
 
@@ -244,5 +250,54 @@ class LauncherTest extends Specification {
         System.setProperty('https.proxyPort', httpsProxyPort ?: '')
     }
 
+    def 'should print Parameter and DynamicParameter annotation'() {
 
+        given:
+        def launcher = new Launcher()
+        when:
+        launcher.printOptions(Opts)
+        then:
+        capture.toString() == '''
+            Options:
+              -D
+                 Set JMV properties
+              -c, -config
+                 Add the specified file to configuration set
+              -log
+                 Set nextflow log file
+            '''
+                .stripIndent().leftTrim()
+    }
+
+    def 'should print list of commands'() {
+        given:
+        def launcher = new Launcher()
+        when:
+        launcher.printCommands( [new CmdInfo(), new CmdRun(), new CmdList()] )
+        then:
+        capture.toString() == '''
+                Commands:
+                  info   Show the system runtime information
+                  ls     List all installed pipelines
+                  run    Launch a pipeline execution
+
+               '''
+                .stripIndent()
+    }
+
+    static class Opts {
+
+        @Parameter(names=['-log'], description = 'Set nextflow log file')
+        String opt1
+
+        @Parameter(names=['-c','-config'], description = 'Add the specified file to configuration set')
+        String opt2
+
+        @DynamicParameter(names = ['-D'], description = 'Set JMV properties' )
+        Map opt3
+
+        @Parameter(names=['hidden'], hidden = true)
+        String opt4
+
+    }
 }
