@@ -12,7 +12,7 @@ This means that Nextflow can execute any Groovy piece of code or use any library
 
 For a detailed description of the Groovy programming language, references these links:
 
-* `Groovy User Guide <http://groovy.codehaus.org/User+Guide>`_
+* `Groovy User Guide <http://groovy-lang.org/documentation.html>`_
 * `Groovy Cheat sheet <http://refcardz.dzone.com/refcardz/groovy>`_
 * `Groovy in Action <http://www.manning.com/koenig2/>`_
 
@@ -75,8 +75,8 @@ In order to get the length of the list use the ``size`` method::
 
 Learn more about lists:
 
-* `Groovy Lists tutorial <http://groovy.codehaus.org/Collections#Collections-Lists>`_
-* `Groovy List SDK <http://groovy.codehaus.org/groovy-jdk/java/util/List.html>`_
+* `Groovy Lists tutorial <http://groovy-lang.org/groovy-dev-kit.html#Collections-Lists>`_
+* `Groovy List SDK <http://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/List.html>`_
 * `Java List SDK <http://docs.oracle.com/javase/7/docs/api/java/util/List.html>`_
 
 
@@ -107,8 +107,8 @@ To modify or add data to a map, the syntax is similar to adding values to list.
 
 Learn more about maps at the following links:
 
-* `Groovy Maps tutorial <http://groovy.codehaus.org/Collections#Collections-maps>`_
-* `Groovy Map SDK <http://groovy.codehaus.org/groovy-jdk/java/util/Map.html>`_
+* `Groovy Maps tutorial <http://http://groovy-lang.org/groovy-dev-kit.html#Collections-Maps>`_
+* `Groovy Map SDK <http://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Map.html>`_
 * `Java Map SDK <http://docs.oracle.com/javase/7/docs/api/java/util/Map.html>`_
 
 
@@ -124,7 +124,7 @@ An array or a list object can used to assign multiple variables at once. For exa
 
 The three variables on the left of the assignment operator are initialized by the correspondent item in the list.
 
-Read more about `Multiple assignment <http://groovy.codehaus.org/Multiple+Assignment>`_ on the Groovy documentation.
+Read more about `Multiple assignment <http://www.groovy-lang.org/semantics.html#_multiple_assignment>`_ on the Groovy documentation.
 
 
 Conditional Execution
@@ -664,12 +664,12 @@ Several variants of the above method are available. See the table below for a co
 =================== ==================
 Name                Description
 =================== ==================
-eachFile            Iterates through first-level elements (files and directories). `Read more <http://groovy.codehaus.org/groovy-jdk/java/io/File.html#eachFile(groovy.io.FileType,%20groovy.lang.Closure)>`_
-eachDir             Iterates through first-level directories only. `Read more <http://groovy.codehaus.org/groovy-jdk/java/io/File.html#eachDir(groovy.lang.Closure)>`_
-eachFileMatch       Iterates through files and dirs whose name match the given filter. `Read more <http://groovy.codehaus.org/groovy-jdk/java/io/File.html#eachFileMatch(java.lang.Object,%20groovy.lang.Closure)>`_
-eachDirMatch        Iterates through directories whose name match the given filter. `Read more <http://groovy.codehaus.org/groovy-jdk/java/io/File.html#eachDirMatch(java.lang.Object,%20groovy.lang.Closure)>`_
-eachFileRecurse     Iterates through directory elements in a depth-first fashion. `Read more <http://groovy.codehaus.org/groovy-jdk/java/io/File.html#eachFileRecurse(groovy.lang.Closure)>`_
-eachDirRecurse      Iterates through directories in a depth-first fashion (regular files are ignored). `Read more <http://groovy.codehaus.org/groovy-jdk/java/io/File.html#eachDirRecurse(groovy.lang.Closure)>`_
+eachFile            Iterates through first-level elements (files and directories). `Read more <http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachFile(groovy.io.FileType,%20groovy.lang.Closure)>`_
+eachDir             Iterates through first-level directories only. `Read more <http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachDir(groovy.lang.Closure)>`_
+eachFileMatch       Iterates through files and dirs whose name match the given filter. `Read more <http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachFileMatch(java.lang.Object,%20groovy.lang.Closure)>`_
+eachDirMatch        Iterates through directories whose name match the given filter. `Read more <http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachDirMatch(java.lang.Object,%20groovy.lang.Closure)>`_
+eachFileRecurse     Iterates through directory elements in a depth-first fashion. `Read more <http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachFileRecurse(groovy.lang.Closure)>`_
+eachDirRecurse      Iterates through directories in a depth-first fashion (regular files are ignored). `Read more <http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachDirRecurse(groovy.lang.Closure)>`_
 =================== ==================
 
 
