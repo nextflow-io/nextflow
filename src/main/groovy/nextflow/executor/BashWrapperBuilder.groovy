@@ -107,6 +107,9 @@ class BashWrapperBuilder {
 
     // note: keep local 'xps' declaration separated by the variable assignment
     // see http://stackoverflow.com/a/4421282/395921
+    // resources record:
+    // 1    2      3     4     5      5    6       7      8      9      10     11     12          13           14
+    // PID, STATE, %CPU, %MEM, VSIZE, RSS; VmPeak, VmHWM; RCHAR, WCHAR, syscr, syscw, READ_BYTES, WRITE_BYTES, CANCEL_W_BYTES
     static final String SCRIPT_TRACE = '''
         nxf_tree() {
             declare -a ALL_CHILD
@@ -138,7 +141,7 @@ class BashWrapperBuilder {
             local data=$(nxf_tree $1)
             local tot=\'\'
             if [[ "$data" ]]; then
-              tot=$(awk '{ t3+=($3*10); t4+=($4*10); t5+=$5; t6+=$6; t7+=$7; t8+=$8; t9+=$9; t10+=$10; t11+=$11; t12+=$12; t13+=$13; t14+=$14 } END { print NR,"0",t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14 }' <<< "$data")
+              tot=$(awk '{ t3+=($3*10); t4+=($4*10); t5+=$5; t6+=$6; t7+=$7; t8+=$8; t9+=$9; t10+=$10; t11+=$11; t12+=$12; t13+=$13; t14+=$14 } END { printf "%d 0 %.0f %.0f %d %d %d %d %d %d %d %d %d %d\\n", NR,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14 }' <<< "$data")
               printf "$tot\\n"
             fi
         }
