@@ -56,6 +56,24 @@ class TraceRecordTest extends Specification {
 
     }
 
+    def 'test fmt str' () {
+
+        expect:
+        TraceRecord.fmtString(str, fmt) == expect
+
+        where:
+        str     | fmt   | expect
+        null    | null  | '-'
+        '0'     | null  | '0'
+        'hello' | null  | 'hello'
+        '123'   | null  | '123'
+        456     | null  | '456'
+        0       | null  | '0'
+        Integer.MAX_VALUE     | null  | '-'
+
+    }
+
+
     def 'test fmt memory'() {
         expect:
         TraceRecord.fmtMemory(str, fmt) == expect
@@ -104,7 +122,7 @@ class TraceRecordTest extends Specification {
         0                       | null  | '0'
         100                     | null  | '100'
         '333'                   | null  | '333'
-        Integer.MAX_VALUE       | null  | '-'
+        null                    | null  | '-'
 
     }
 
@@ -123,9 +141,9 @@ class TraceRecordTest extends Specification {
     }
 
 
-    def static final long KB = 1024
+    def static final long KB = 1024L
 
-    def 'test parse trace record'() {
+    def 'should parse a trace file and return a TraceRecord object'() {
 
         given:
         def traceText =  '''
@@ -139,8 +157,8 @@ class TraceRecordTest extends Specification {
         def handler = [:] as TraceRecord
         def trace = handler.parseTraceFile(traceText)
         then:
-        trace.'%cpu' == 1.0f
-        trace.'%mem' == 2.0f
+        trace.'%cpu' == 1.0
+        trace.'%mem' == 2.0
         trace.rss == 1220 * KB
         trace.vmem == 11084 * KB
         trace.peak_rss == 2220 * KB
@@ -154,8 +172,6 @@ class TraceRecordTest extends Specification {
         trace.realtime == 153
 
     }
-
-
 
 
 }

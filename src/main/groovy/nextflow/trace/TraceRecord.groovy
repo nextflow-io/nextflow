@@ -54,7 +54,7 @@ class TraceRecord {
             tag:        'str',
             name:       'str',
             status:     'str',
-            exit:       'num',
+            exit:       'str',
             submit:     'date',
             start:      'date',
             complete:   'date',
@@ -109,6 +109,9 @@ class TraceRecord {
      */
     @PackageScope
     static String fmtString(value, String fmt) {
+        if( value instanceof Number )
+            return value != Integer.MAX_VALUE ? value.toString() : NA
+
         value ? value.toString() : NA
     }
 
@@ -127,10 +130,7 @@ class TraceRecord {
         if( value == null )
             return NA
 
-        if( value instanceof Number )
-            return value != Integer.MAX_VALUE ? value.toString() : NA
-
-        if( value instanceof Duration )
+       if( value instanceof Duration )
             return value.toMillis().toString()
 
         if( value instanceof MemoryUnit )
