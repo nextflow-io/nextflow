@@ -19,13 +19,15 @@
  */
 
 package nextflow.processor
-
 import static test.TestParser.parse
 
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
 
 import groovyx.gpars.agent.Agent
+import nextflow.Global
+import nextflow.ISession
 import nextflow.Session
 import nextflow.executor.NopeExecutor
 import nextflow.file.FileHolder
@@ -38,6 +40,7 @@ import nextflow.script.TokenVar
 import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
 import spock.lang.Specification
+import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -389,6 +392,57 @@ class TaskProcessorTest extends Specification {
 
     }
 
+
+    def "should return a file holder" () {
+
+        given:
+        FileHolder holder
+        def tempFolder = Files.createTempDirectory('test')
+        def localFile = Files.createTempFile(tempFolder, 'test','test')
+        Global.session = Mock(ISession)
+        Global.session.workDir >> tempFolder
+        def processor = [:] as TaskProcessor
+
+        /*
+         * when the input file is on the local file system
+         * simple return a refernce to it in the holder object
+         */
+        when:
+        holder = processor.normalizeInputToFile(localFile,null)
+        then:
+        holder.sourceObj == localFile
+        holder.storePath == localFile
+        holder.stageName == localFile.getFileName().toString()
+
+        /*
+         * when the input is a on a foreign file system
+         * it is need to copy it to a local file
+         */
+        when:
+        def remoteFile = TestHelper.createInMemTempFile('remote_file.txt')
+        remoteFile.text = 'alpha beta gamma delta'
+        holder = processor.normalizeInputToFile(remoteFile,'local_copy.txt')
+        then:
+        holder.sourceObj == remoteFile
+        holder.storePath.fileSystem == FileSystems.default
+        holder.storePath.text == 'alpha beta gamma delta'
+        holder.stageName == 'local_copy.txt'
+
+        /*
+         * any generic input that is not a file is converted to a string
+         * and save to the local file system
+         */
+        when:
+        holder = processor.normalizeInputToFile("text data string",'simple_file_name.txt')
+        then:
+        holder.sourceObj == "text data string"
+        holder.storePath.fileSystem == FileSystems.default
+        holder.storePath.text == "text data string"
+        holder.stageName == 'simple_file_name.txt'
+
+        cleanup:
+        tempFolder?.deleteDir()
+    }
 
 
 }

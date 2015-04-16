@@ -19,6 +19,8 @@
  */
 package nextflow.processor
 
+import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
@@ -1151,11 +1153,27 @@ abstract class TaskProcessor {
      */
     protected FileHolder normalizeInputToFile( Object input, String altName ) {
 
-        if( input instanceof Path ) {
+        /*
+         * when it is a local file, just return a reference holder to it
+         */
+        if( input instanceof Path && input.fileSystem == FileSystems.default ) {
             return new FileHolder(input)
         }
 
+        /*
+         * when it is a file stored in a "foreign" storage, copy
+         * to a local file and return a reference holder to the local file
+         */
         def result = Nextflow.tempFile(altName)
+        if( input instanceof Path ) {
+            Files.copy(Files.newInputStream(input), result)
+            return new FileHolder(input, result)
+        }
+
+        /*
+         * default case, convert the input object to a string and save
+         * to a local file
+         */
         def source = input?.toString() ?: ''
         result.text = source
         return new FileHolder(source, result)
@@ -1219,7 +1237,7 @@ abstract class TaskProcessor {
         else if( !name.contains('*') && !name.contains('?') ) {
             /*
              * The name do not contain any wildcards *BUT* when multiple files are provide
-             * it is managed like having a 'start' at the end of the file name
+             * it is managed like having a 'star' at the end of the file name
              */
             if( files.size()>1 ) {
                 name += '*'

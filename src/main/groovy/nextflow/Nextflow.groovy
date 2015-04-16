@@ -283,7 +283,7 @@ class Nextflow {
      * @return Create a temporary directory
      */
     static Path tempDir( String name = null, boolean create = true ) {
-        final session = (Session)Global.session
+        final session = (ISession)Global.session
         if( !session )
             throw new IllegalStateException("Invalid access to `tempDir` method -- Session object not yet defined")
 
