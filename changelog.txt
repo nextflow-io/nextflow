@@ -1,6 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.13.2 - 16 Apr 2015
+- Handle staging in the local process directory of files on remote/foreign file systems
+- Fixed issue in resources stats tracing script  -- awk uses scientific notation for numbers instead of decimal format.
+- Fixed external links to Groovy docs
+- Fixed issue #40 -- Cannot find java binary on Mac OSX
+- Fixed missing `DynamicParameter` in usage string
+- Fixed docker run `—-cpuset` command line option when using `crg` executor
+
 0.13.1 - 10 Apr 2015
 - Fixed IllegalStateException when executing a script in Nextflow console
 

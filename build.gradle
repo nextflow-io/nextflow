@@ -44,7 +44,7 @@ ext {
 allprojects {
     apply plugin: 'java'
 
-    version = '0.13.1'
+    version = '0.13.2'
     group = 'io.nextflow'
 
     sourceCompatibility = 1.7
@@ -445,7 +445,7 @@ task deploy( type: Exec, dependsOn: [clean, pack, deployable.uploadArchives, mak
 /*
  * Tag and upload the release
  */
-task release(type: Exec, dependsOn: [ test, deploy ]) {
+task release(type: Exec) {
 
     def launcherFile = file('nextflow').absoluteFile
     def launcherSha1 = file('nextflow.sha1').absoluteFile
