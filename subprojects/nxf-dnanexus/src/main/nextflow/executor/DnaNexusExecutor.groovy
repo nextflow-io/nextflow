@@ -39,8 +39,6 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.KryoHelper
-import nextflow.util.PathSerializer
-
 /**
  * Executes script.nf indicated in dxapp.sh in the DnaNexus environment
  *
@@ -55,17 +53,11 @@ import nextflow.util.PathSerializer
 @ServiceName('dnanexus')
 class DnaNexusExecutor extends Executor {
 
-//    static {
-//        // call to force the installation of the DX file system provider
-//        FileHelper.getOrInstallProvider(DxFileSystemProvider)
-//    }
-
     @Override
     void register() {
         // -- register the serializer for the Dx file system objects
         KryoHelper.register(DxPath, DxPathSerializer)
         KryoHelper.register(DxFileSystem, DxFileSystemSerializer)
-        KryoHelper.register(S3Path, PathSerializer)
     }
 
     def TaskMonitor createTaskMonitor() {
