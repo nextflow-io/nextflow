@@ -263,6 +263,8 @@ ext.deployable = [
 ext.homeDir = System.properties['user.home']
 ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
 ext.releaseDir = "$buildDir/releases"
+ext.s3CmdOpts="-q --no-mime-magic --reduced-redundancy --acl-public --access_key=${System.env.NXF_AWS_ACCESS} --secret_key=${System.env.NXF_AWS_SECRET}"
+
 
 protected error(String message) {
     logger.error message
@@ -426,7 +428,6 @@ task pack( dependsOn: [packOne, packDx, packAll]) {
 
 }
 
-final s3CmdOpts="-q --no-mime-magic --reduced-redundancy --acl-public --access_key=${System.getenv('NXF_AWS_ACCESS')} --secret_key=${System.getenv('NXF_AWS_SECRET')}"
 
 task deploy( type: Exec, dependsOn: [clean, pack, deployable.uploadArchives, makeSha1, closeRepository]) {
 
@@ -538,10 +539,10 @@ task dnanexus(dependsOn: packDx) {
  * Save the runtime classpath
  */
 task exportClasspath {
-    dependsOn configurations.gridgain, configurations.extrae
+    dependsOn configurations.gridgain, configurations.extrae, configurations.console
 
     def home = System.getProperty('user.home')
-    def all = configurations.gridgain + configurations.extrae
+    def all = configurations.gridgain + configurations.extrae + configurations.console
     def libs = all.collect { File file -> /* println file.canonicalPath.replace(home, '$HOME'); */ file.canonicalPath;  }
     new File('.launch.classpath').text = libs.join(':')
 }
