@@ -18,8 +18,18 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.5.1"
+    }
+}
+
 apply plugin: 'groovy'
 apply plugin: 'idea'
+apply plugin: 'io.codearte.nexus-staging'   // See https://github.com/Codearte/gradle-nexus-staging-plugin/
 
 if (System.getenv('CI_GROOVY_VERSION')) {
     // Add ability to test with upcoming versions of Groovy
@@ -418,7 +428,7 @@ task pack( dependsOn: [packOne, packDx, packAll]) {
 
 final s3CmdOpts="-q --no-mime-magic --reduced-redundancy --acl-public --access_key=${System.getenv('NXF_AWS_ACCESS')} --secret_key=${System.getenv('NXF_AWS_SECRET')}"
 
-task deploy( type: Exec, dependsOn: [clean, pack, deployable.uploadArchives, makeSha1]) {
+task deploy( type: Exec, dependsOn: [clean, pack, deployable.uploadArchives, makeSha1, closeRepository]) {
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
@@ -536,6 +546,17 @@ task exportClasspath {
     new File('.launch.classpath').text = libs.join(':')
 }
 
+
+/*
+ * Configure Nextflow staging plugin -- https://github.com/Codearte/gradle-nexus-staging-plugin
+ * It adds the tasks
+ * - closeRepository
+ * - promoteRepository
+ */
+nexusStaging {
+    packageGroup = 'io.nextflow'
+    delayBetweenRetriesInMillis = 10_000
+}
 
 /*
  * Maven central deployment
