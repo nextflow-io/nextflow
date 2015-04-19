@@ -1,6 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.13.3 - 19 Apr 2015 
+- Fixed issue when staging file when using a non local pipeline workdir
+- Fixed invalid values in the trace file returned by `awk`
+- Removed unnecessary `S3Path` serialiser registation on DnaNexus executor initialisation
+- Updated S3 file system client to version 0.2.8g
+
 0.13.2 - 16 Apr 2015
 - Handle staging in the local process directory of files on remote/foreign file systems
 - Fixed issue in resources stats tracing script  -- awk uses scientific notation for numbers instead of decimal format.
