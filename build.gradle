@@ -107,7 +107,10 @@ dependencies {
     compile "com.esotericsoftware.kryo:kryo:2.24.0"
     compile 'org.iq80.leveldb:leveldb:0.7'
     compile('org.eclipse.jgit:org.eclipse.jgit.java7:3.5.2.201411120430-r') { exclude group: 'commons-logging', module: 'commons-logging' }
-    compile('io.nextflow:nxf-s3fs:0.2.8d') { exclude group: 'commons-logging', module: 'commons-logging' }
+    compile('io.nextflow:nxf-s3fs:0.2.8g') {
+        exclude group: 'commons-logging', module: 'commons-logging'
+        exclude group: 'org.apache.tika', module: 'tika-core'
+    }
 
     // include Ivy at runtime in order to have Grape @Grab work correctly
     runtime "org.apache.ivy:ivy:2.3.0"
