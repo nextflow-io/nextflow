@@ -241,7 +241,8 @@ class FileHelper {
     /**
      * @return The file system defined by the {@code Session#workDir} attribute
      */
-    static FileSystem getWorkFileSystem() {
+    @Memoized
+    static FileSystem getWorkDirFileSystem() {
         def result = Global.session?.workDir?.getFileSystem()
         if( !result ) {
             log.warn "Session working file system not defined -- fallback on JVM default file system"

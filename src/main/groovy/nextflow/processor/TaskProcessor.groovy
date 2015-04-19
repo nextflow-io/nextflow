@@ -18,8 +18,6 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.processor
-
-import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -1156,7 +1154,7 @@ abstract class TaskProcessor {
         /*
          * when it is a local file, just return a reference holder to it
          */
-        if( input instanceof Path && input.fileSystem == FileSystems.default ) {
+        if( input instanceof Path && input.fileSystem == FileHelper.workDirFileSystem ) {
             return new FileHolder(input)
         }
 
@@ -1166,6 +1164,7 @@ abstract class TaskProcessor {
          */
         def result = Nextflow.tempFile(altName)
         if( input instanceof Path ) {
+            log.debug "Copying to process workdir foreign file: ${input.toUri().toString()}"
             Files.copy(Files.newInputStream(input), result)
             return new FileHolder(input, result)
         }
