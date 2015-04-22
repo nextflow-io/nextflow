@@ -87,6 +87,14 @@ allprojects {
         }
     }
 
+    // Disable strict javadoc checks
+    // See http://blog.joda.org/2014/02/turning-off-doclint-in-jdk-8-javadoc.html
+    if (JavaVersion.current().isJava8Compatible()) {
+        tasks.withType(Javadoc) {
+            options.addStringOption('Xdoclint:none', '-quiet')
+        }
+    }
+
 }
 
 configurations {
