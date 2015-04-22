@@ -235,10 +235,14 @@ task buildInfo << {
 }
 
 task makeSha1 << {
+    byte[] digest
     String  str = file('nextflow').text
-    def sha1 = java.security.MessageDigest.getInstance("SHA1")
-    byte[] digest  = sha1.digest(str.getBytes())
-    file('nextflow.sha1').text = new  BigInteger(1, digest).toString(16) + '\n'
+    // create sha1
+    digest = java.security.MessageDigest.getInstance("SHA1").digest(str.getBytes())
+    file('nextflow.sha1').text = new BigInteger(1, digest).toString(16) + '\n'
+    // create sha-256
+    digest = java.security.MessageDigest.getInstance("SHA-256").digest(str.getBytes())
+    file('nextflow.sha256').text = new BigInteger(1, digest).toString(16) + '\n'
 }
 
 /*
