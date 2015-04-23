@@ -10,7 +10,7 @@ checkout:
         
 test:
   override:
-    - ./gradlew assemble -x javadoc -x javadocJar -x signArchives
+    - ./gradlew assemble
     - ./gradlew test
     - export NXF_CMD=$PWD/launch.sh; cd validation; bash -x test.sh
     

@@ -263,14 +263,15 @@ ext.ossrhUserName = hasProperty('ossrhUserName') ? properties.get('ossrhUserName
 ext.ossrhPassword = hasProperty('ossrhPassword') ? properties.get('ossrhPassword') : null
 ext.ossrhFullName = hasProperty('ossrhFullName') ? properties.get('ossrhFullName') : null
 ext.ossrhEmail = hasProperty('ossrhEmail') ? properties.get('ossrhEmail') : null
-ext.deployable = [
-        project(':'),
-        project(':nxf-commons'),
-        project(':nxf-extrae'),
-        project(':nxf-gridgain'),
-        project(':nxf-console'),
-        project(':nxf-drmaa')
-]
+ext.deployable = []
+if( hasProperty('signing.keyId') ) {  // <-- note: to sign and deploy artifacts make sure to have this property in the 'gradle.properties' file
+    ext.deployable << project(':')
+    ext.deployable << project(':nxf-commons')
+    ext.deployable << project(':nxf-extrae')
+    ext.deployable << project(':nxf-gridgain')
+    ext.deployable << project(':nxf-console')
+    ext.deployable << project(':nxf-drmaa')
+}
 
 ext.homeDir = System.properties['user.home']
 ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
