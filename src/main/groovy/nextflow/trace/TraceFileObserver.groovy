@@ -192,6 +192,7 @@ class TraceFileObserver implements TraceObserver {
      * Create the trace file, in file already existing with the same name it is
      * "rolled" to a new file
      */
+    @Override
     void onFlowStart(Session session) {
         log.debug "Flow starting -- trace file: $tracePath"
         // roll the any trace files that may exist
@@ -208,6 +209,7 @@ class TraceFileObserver implements TraceObserver {
     /**
      * Save the pending processes and close the trace file
      */
+    @Override
     void onFlowComplete() {
         log.debug "Flow completing -- flushing trace file"
         // wait for termination and flush the agent content
@@ -238,6 +240,7 @@ class TraceFileObserver implements TraceObserver {
      * This method is invoked before a process run is going to be submitted
      * @param handler
      */
+    @Override
     void onProcessSubmit(TaskHandler handler) {
         def trace = handler.getTraceRecord()
         current[ trace.taskId ] = trace
@@ -247,6 +250,7 @@ class TraceFileObserver implements TraceObserver {
      * This method is invoked when a process run is going to start
      * @param handler
      */
+    @Override
     void onProcessStart(TaskHandler handler) {
         def trace = handler.getTraceRecord()
         current[ trace.taskId ] = trace
@@ -256,6 +260,7 @@ class TraceFileObserver implements TraceObserver {
      * This method is invoked when a process run completes
      * @param handler
      */
+    @Override
     void onProcessComplete(TaskHandler handler) {
         final taskId = handler.task.id
         final record = handler.getTraceRecord()

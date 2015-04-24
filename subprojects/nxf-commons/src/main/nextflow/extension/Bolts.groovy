@@ -356,11 +356,11 @@ class Bolts {
 
         withLock(MAP_LOCK) {
             if( self.containsKey(key) )
-                return self.get(key)
+                return (T)self.get(key)
 
             def result = factory instanceof Closure ? factory.call(key) : factory
             self.put(key,result)
-            return result
+            return (T)result
         }
 
     }

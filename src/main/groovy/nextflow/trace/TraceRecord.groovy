@@ -131,7 +131,7 @@ class TraceRecord {
             return NA
 
        if( value instanceof Duration )
-            return value.toMillis().toString()
+            return String.valueOf(value.toMillis())
 
         if( value instanceof MemoryUnit )
             return String.valueOf(value.toBytes())
@@ -198,7 +198,7 @@ class TraceRecord {
      * @return
      */
     @PackageScope
-    static def fmtPercent( def value, String fmt ) {
+    static String fmtPercent( def value, String fmt ) {
         if( value == null ) return NA
         try {
             if( value instanceof Number )
@@ -414,6 +414,5 @@ class TraceRecord {
     int hashCode() {
         store.hashCode()
     }
-
 
 }
