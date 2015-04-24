@@ -35,6 +35,7 @@ import nextflow.exception.MissingLibraryException
 import nextflow.file.FileHelper
 import nextflow.processor.TaskDispatcher
 import nextflow.processor.TaskProcessor
+import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceObserver
 import nextflow.util.Barrier
@@ -208,6 +209,17 @@ class Session implements ISession {
             config.navigate('trace.raw') { it -> observer.useRawNumbers(it == true) }
             config.navigate('trace.sep') { observer.separator = it }
             config.navigate('trace.fields') { observer.setFieldsAndFormats(it) }
+            result << observer
+        }
+
+        /*
+         * Create timeline report file
+         */
+        if( runOpts.withTimeline ) {
+            String fileName = runOpts.withTimeline
+            if( !fileName ) fileName = TimelineObserver.DEF_FILE_NAME
+            def traceFile = Paths.get(fileName).complete()
+            def observer = new TimelineObserver(traceFile)
             result << observer
         }
 

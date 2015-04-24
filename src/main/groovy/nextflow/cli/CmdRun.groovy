@@ -116,6 +116,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = ['-with-trace'], description = 'Trace execution to the specified file')
     String withTrace
 
+    @Parameter(names = ['-with-timeline'], description = 'Create processes execution timeline file', hidden = true)
+    String withTimeline
+
     @Parameter(names = '-with-docker', description = 'Enable process execution in a Docker container')
     def withDocker
 
