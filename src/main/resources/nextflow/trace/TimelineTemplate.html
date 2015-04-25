@@ -60,8 +60,18 @@ text.timeline-label {
 .coloredDiv {
   height:20px; width:20px; float:left;
 }
+
+#footer {
+  padding-top: 3em; color: #bfbfbf; font-size: 13px;
+}
+
+#footer a:visited {
+  color: #bfbfbf;
+  text-decoration: underline;
+}
 </style>
 <script type="text/javascript">
+var handler=null;
 // see https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20c
 var colors = d3.scale.category20c().domain(d3.range(0,20)).range()
 
@@ -109,27 +119,27 @@ function getTickFormat() {
     tickInterval: 6,
     tickSize: 6
   }
-
 }
 
-var handler=null;
 function render() {
-handler=null;
-$("#timeline").empty()
+  handler=null;
+  $("#timeline").empty()
+  $('#label_elapsed').text(elapsed)
+  $('#label_launch').text( d3.time.format('%d %b %Y %H:%M')(new Date(beginningMillis)) )
 
-var width = $(window).width();
-var chart = d3.timeline()
-  .stack() // toggles graph stacking
-  .margin({left:150, right:100, top:0, bottom:0})
-  .tickFormat( getTickFormat() )
-  .rowSeperators('#f5f5f5')
-  ;
-var svg = d3.select("#timeline").append("svg").attr("width", width).datum(data).call(chart);
+  var width = $(window).width();
+  var chart = d3.timeline()
+    .stack() // toggles graph stacking
+    .margin({left:150, right:100, top:0, bottom:0})
+    .tickFormat( getTickFormat() )
+    .rowSeperators('#f5f5f5')
+    ;
+  var svg = d3.select("#timeline").append("svg").attr("width", width).datum(data).call(chart);
 }
 
 function hrz() {
 if( handler != null ) clearTimeout(handler)
- handler = setTimeout(render, 150);
+  handler = setTimeout(render, 150);
 }
 
 $(document).ready(render)
@@ -139,8 +149,16 @@ $(window).resize(hrz); // resize the applet on window resize
 
 <body>
 <div>
-    <h3>Processes execution timeline</h3>
-    <div id="timeline"></div>
+  <h3>Processes execution timeline</h3>
+  <p>
+    Launch time: <span id='label_launch'> </span><br>
+    Elapsed time: <span id='label_elapsed'> </span>
+  </p>
+  <div id="timeline"></div>
+</div>
+
+<div id='footer'>
+  Created with Nextflow -- <a href='http://www.nextflow.io' target='_blank'>http://nextflow.io</a>
 </div>
 </body>
 </html>
