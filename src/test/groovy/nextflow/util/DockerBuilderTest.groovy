@@ -108,9 +108,8 @@ class DockerBuilderTest extends Specification {
         then:
         docker.build() == 'docker run -i -v $PWD:$PWD -w $PWD --name c1 busybox'
         docker.runCommand == 'docker run -i -v $PWD:$PWD -w $PWD --name c1 busybox'
-        docker.removeCommand == null
+        docker.removeCommand == 'docker rm c1'
         docker.killCommand == 'docker kill c1'
-
 
         when:
         docker =  new DockerBuilder('busybox').setName('c2').params(sudo: true, remove: true)
@@ -136,10 +135,11 @@ class DockerBuilderTest extends Specification {
         docker.killCommand == 'docker kill -s SIGKILL c4'
 
         when:
-        docker =  new DockerBuilder('busybox').setName('c5').params(kill: false)
+        docker =  new DockerBuilder('busybox').setName('c5').params(kill: false,remove: false)
         docker.build()
         then:
         docker.killCommand == null
+        docker.removeCommand == null
 
     }
 
@@ -170,6 +170,7 @@ class DockerBuilderTest extends Specification {
         'registry:5000/cbcrg/hello' | 'd.reg'   | 'registry:5000/cbcrg/hello'
 
     }
+
 
 
 }

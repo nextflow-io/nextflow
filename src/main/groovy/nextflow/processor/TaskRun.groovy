@@ -19,7 +19,6 @@
  */
 
 package nextflow.processor
-
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.locks.ReentrantLock
@@ -38,8 +37,8 @@ import nextflow.script.ScriptType
 import nextflow.script.SharedParam
 import nextflow.script.StdInParam
 import nextflow.script.ValueOutParam
+import nextflow.util.ContainerScriptTokens
 import nextflow.util.DockerBuilder
-
 /**
  * Models a task instance
  *
@@ -470,9 +469,39 @@ class TaskRun {
      */
     String getContainer() {
         // set the docker container to be used
-        def imageName = config.container as String
-        def dockerConf = processor?.session?.config?.docker as Map
-        DockerBuilder.normalizeDockerImageName(imageName, dockerConf)
+        String imageName
+        if( isContainerExecutable() ) {
+            imageName = ContainerScriptTokens.parse(script.toString()).image
+        }
+        else {
+            imageName = config.container as String
+        }
+        DockerBuilder.normalizeDockerImageName(imageName, getDockerConfig())
+    }
+
+    /**
+     * @return A {@link Map} object holding the configuration attributes for the Docker engine
+     */
+    Map getDockerConfig() {
+        def result = processor.getSession().config?.docker as Map
+        result != null ? result : Collections.emptyMap()
+    }
+
+    /**
+     * @return {@true} when the process must run within a container and the docker engine is enabled
+     */
+    boolean isDockerEnabled() {
+        if( isContainerExecutable() )
+            return true
+
+        return getDockerConfig()?.enabled?.toString() == 'true'
+    }
+
+    /**
+     * @return {@true} when the process runs an *executable* container
+     */
+    boolean isContainerExecutable() {
+        config.container == true
     }
 
     boolean isSuccess( status = exitStatus ) {

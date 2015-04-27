@@ -43,7 +43,7 @@ class DockerBuilder {
 
     private List<String> options = []
 
-    private boolean remove
+    private boolean remove = true
 
     private String temp
 
@@ -158,9 +158,6 @@ class DockerBuilder {
     String build(StringBuilder result = new StringBuilder()) {
         assert image
 
-        if( remove && !name )
-            name = UUID.randomUUID().toString()
-
         if( sudo )
             result << 'sudo '
 
@@ -210,7 +207,7 @@ class DockerBuilder {
         runCommand = result.toString()
 
         // use an explicit 'docker rm' command since the --rm flag may fail. See https://groups.google.com/d/msg/docker-user/0Ayim0wv2Ls/tDC-tlAK03YJ
-        if( remove ) {
+        if( remove && name ) {
             removeCommand = 'docker rm ' + name
             if( sudo ) removeCommand = 'sudo ' + removeCommand
         }
@@ -345,5 +342,6 @@ class DockerBuilder {
 
         return reg + imageName
     }
+
 
 }

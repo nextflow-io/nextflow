@@ -22,6 +22,7 @@ package nextflow.executor
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.Session
 import nextflow.file.FileHolder
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -101,6 +102,7 @@ class GgExecutorTest extends Specification {
 
         def processor = Mock(TaskProcessor)
         processor.getProcessEnvironment() >> [ALPHA: 1, BETA:2 ]
+        processor.getSession() >> new Session()
 
         def binding = new Binding()
         def task = new TaskRun(

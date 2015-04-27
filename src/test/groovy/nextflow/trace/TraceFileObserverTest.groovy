@@ -21,8 +21,10 @@
 package nextflow.trace
 import java.nio.file.Files
 
+import nextflow.Session
 import nextflow.executor.NopeTaskHandler
 import nextflow.processor.TaskConfig
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.util.CacheHelper
@@ -93,7 +95,9 @@ class TraceFileObserverTest extends Specification {
 
         // the handler
         def task = new TaskRun(id:111, name:'simple_task', hash: CacheHelper.hasher(1).hash(), config: new TaskConfig())
-        task.metaClass.getProcessor = { [name:'x'] }
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session()
+        task.processor.getName() >> 'x'
 
         def handler = new NopeTaskHandler(task)
         def now = System.currentTimeMillis()

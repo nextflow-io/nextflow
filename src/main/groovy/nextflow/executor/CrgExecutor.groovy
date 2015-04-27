@@ -20,10 +20,8 @@
 
 package nextflow.executor
 
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
-
 /**
  * An executor specialised for CRG cluster
  */
@@ -47,7 +45,7 @@ class CrgExecutor extends SgeExecutor {
 
         super.getDirectives(task, result)
 
-        if( task.container && isDockerEnabled() ) {
+        if( task.container && task.isDockerEnabled() ) {
             //  this will export the SGE_BINDING environment variable used to set Docker cpuset
             result << '-binding' << "env linear:${task.config.cpus}"
 
@@ -63,15 +61,6 @@ class CrgExecutor extends SgeExecutor {
         return result
     }
 
-    /**
-     * @return The value of the {@code docker.enabled} configuration setting defined in the
-     *  nextflow.config file
-     */
-    @PackageScope
-    boolean isDockerEnabled() {
-        Map dockerConf = session.config.docker as Map
-        dockerConf?.enabled?.toString() == 'true'
-    }
 
     @Override
     protected BashWrapperBuilder createBashWrapperBuilder(TaskRun task) {
@@ -81,7 +70,7 @@ class CrgExecutor extends SgeExecutor {
         // When job is execute in a docker container
         // The Univa scheduler must allocate the required cores for the job execution
         // The variable '$SGE_BINDING' must contain the cores to be used
-        if( task.container && isDockerEnabled() ) {
+        if( task.container && task.isDockerEnabled() ) {
             final str = '''
                         cpuset=${cpuset:=''}
                         [[ $SGE_BINDING ]] && cpuset="--cpuset $(echo $SGE_BINDING | sed 's/ /,/g')"

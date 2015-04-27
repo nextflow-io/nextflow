@@ -49,13 +49,12 @@ class CrgExecutorTest extends Specification {
         setup:
         def result
         def config
-        // processor
-        def proc = Mock(TaskProcessor)
         // task
         def task = new TaskRun()
         task.workDir = Paths.get('/work/dir')
         task.metaClass.getHashLog = { 'a6f6aa6' }
-        task.processor = proc
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session()
         task.name = 'task this and that'
         // executor
         def executor = [:] as CrgExecutor
@@ -131,9 +130,10 @@ class CrgExecutorTest extends Specification {
         ]
 
         when:
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session(docker: [enabled: true])
         config = task.config = new TaskConfig()
         config.container = 'busybox'
-        executor.metaClass.isDockerEnabled = { true }
 
         result = executor.getDirectives(task, [])
         then:
@@ -163,18 +163,16 @@ class CrgExecutorTest extends Specification {
     def testGetHeaders () {
 
         given:
-        // mock process
-        def proc = Mock(TaskProcessor)
         // LSF executor
         def executor = [:] as CrgExecutor
         executor.session = new Session()
 
         def task = new TaskRun()
-        task.processor = proc
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session()
+        task.processor.getName() >> 'task_x'
         task.workDir = Paths.get('/abc')
         task.name = 'mapping tag'
-        // process name
-        proc.getName() >> 'task_x'
 
         when:
         // config
@@ -225,7 +223,8 @@ class CrgExecutorTest extends Specification {
 
 
         when:
-        executor.session.config.docker = [enabled: true]
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session(docker: [enabled: true])
         task.config = new TaskConfig(
                 queue: 'short',
                 memory: '4 GB',
@@ -251,7 +250,8 @@ class CrgExecutorTest extends Specification {
                 .stripIndent().leftTrim()
 
         when:
-        executor.session.config.docker = [enabled: true]
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session(docker: [enabled: true])
         task.config = new TaskConfig(
                 memory: '3 g',
                 time: '3 d',
@@ -436,13 +436,12 @@ class CrgExecutorTest extends Specification {
 
     def 'executor should inject `cpuset` option on docker run command' () {
         given:
-        // processor
-        def proc = Mock(TaskProcessor)
-        proc.getProcessEnvironment() >> [:]
         // task
         def task = new TaskRun()
         task.workDir = Paths.get('/some/dir')
-        task.processor = proc
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session()
+        task.processor.getProcessEnvironment() >> [:]
         task.name = 'the-name'
         task.config = new TaskConfig()
         def executor = [:] as CrgExecutor
@@ -464,7 +463,9 @@ class CrgExecutorTest extends Specification {
 
         when:
         task.config.container = 'foo'
-        executor.session = new Session(docker: [enabled: true])
+        task.processor = Mock(TaskProcessor)
+        task.processor.getProcessEnvironment() >> [:]
+        task.processor.getSession() >> new Session(docker: [enabled: true])
         builder = executor.createBashWrapperBuilder(task)
         then:
         builder.headerScript == '''

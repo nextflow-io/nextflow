@@ -529,7 +529,15 @@ class GgBashTask extends GgBaseTask<Integer>  {
      */
     List<String> shell
 
+    /**
+     * The name of the container to run
+     */
     String container
+
+    /**
+     * Whenever the process run an *executable* container
+     */
+    boolean executable
 
     Map environment
 
@@ -541,6 +549,7 @@ class GgBashTask extends GgBaseTask<Integer>  {
         super(task, sessionId)
         this.stdin = task.stdin
         this.container = task.container
+        this.executable = task.isContainerExecutable()
         // note: create a copy of the process environment to avoid concurrent
         // process executions override each others
         this.environment = new HashMap( task.processor.getProcessEnvironment() )
@@ -587,7 +596,8 @@ class GgBashTask extends GgBaseTask<Integer>  {
                 environment: environment,
                 dockerMount: localCacheDir,
                 dockerConfig: session?.config?.docker,
-                statsEnabled: session.statsEnabled
+                statsEnabled: session.statsEnabled,
+                executable: executable
         )
         shell.add( wrapper.build().toString() )
 

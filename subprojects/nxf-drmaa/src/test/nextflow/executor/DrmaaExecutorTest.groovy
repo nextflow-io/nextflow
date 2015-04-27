@@ -21,8 +21,8 @@
 package nextflow.executor
 import java.nio.file.Files
 
-import nextflow.processor.ParallelTaskProcessor
 import nextflow.processor.TaskConfig
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
@@ -42,9 +42,11 @@ class DrmaaExecutorTest extends Specification {
         given:
         def workDir = Files.createTempDirectory('temp')
         //def config = new TaskConfig([:])
-        def processor = [ getProcessEnvironment: {[:]} ] as ParallelTaskProcessor
         def executor = [:] as DrmaaExecutor
-        def task = new TaskRun(id: 100, name: 'Hello', workDir: workDir, script: 'echo hello', processor: processor, config: [:])
+        def task = new TaskRun(id: 100, name: 'Hello', workDir: workDir, script: 'echo hello', config: [:])
+        task.processor = Mock(TaskProcessor)
+        task.processor.getProcessEnvironment() >> [:]
+        task.processor.getSession() >> new nextflow.Session()
 
         when:
         def handler = executor.createTaskHandler(task)
@@ -150,7 +152,9 @@ class DrmaaExecutorTest extends Specification {
         task.workDir = workDir
         task.exitStatus = 99
         task.config = new TaskConfig(tag: 'seq1')
-        task.metaClass.getProcessor = { [name: 'hello'] }
+        task.processor = Mock(TaskProcessor)
+        task.processor.getName() >> 'hello'
+        task.processor.getSession() >> new nextflow.Session()
         task.metaClass.getName = { 'hello (1)' }
         task.metaClass.getHashLog =  {'123abc'}
 

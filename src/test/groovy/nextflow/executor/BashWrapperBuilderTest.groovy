@@ -22,9 +22,13 @@ package nextflow.executor
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.Session
+import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
+import nextflow.util.ContainerScriptTokens
+import nextflow.util.DockerBuilder
 import spock.lang.Specification
 import test.TestHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -473,7 +477,7 @@ class BashWrapperBuilderTest extends Specification {
         folder.resolve('.command.in').text == 'data xyz'
 
         /*
-         * the user scritp  file
+         * the user script  file
          */
         folder.resolve('.command.sh').text ==
                 '''
@@ -1009,6 +1013,119 @@ class BashWrapperBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should create script for docker executable container' () {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def session = new Session(); session.workDir = folder
+        def task = new TaskRun(
+                script: 'FOO=bar\ndocker-io/busybox --fox --baz',
+                config: [container: true],
+                workDir: folder )
+        task.processor = Mock(TaskProcessor)
+        task.processor.getProcessEnvironment() >> [:]
+        task.processor.getSession() >> session
+
+        when:
+        def bash = new BashWrapperBuilder(task)
+        bash.build()
+
+        then:
+        Files.exists(folder.resolve('.command.sh'))
+        Files.exists(folder.resolve('.command.run'))
+
+        folder.resolve('.command.sh').text ==
+                """
+                #!/bin/bash -ue
+                FOO=bar
+                docker run -i -e "FOO=bar" -v $folder:$folder -v \$PWD:\$PWD -w \$PWD --name \$NXF_BOXID docker-io/busybox --fox --baz
+                """
+                .stripIndent().leftTrim()
+
+        folder.resolve('.command.run').text ==
+                """
+                #!/bin/bash
+                set -e
+                set -u
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
+
+                nxf_env() {
+                    echo '============= task environment ============='
+                    env | sort | sed "s/\\(.*\\)AWS\\(.*\\)=\\(.\\{6\\}\\).*/\\1AWS\\2=\\3xxxxxxxxxxxxx/"
+                    echo '============= task output =================='
+                }
+
+                nxf_kill() {
+                    declare -a ALL_CHILD
+                    while read P PP;do
+                        ALL_CHILD[\$PP]+=" \$P"
+                    done < <(ps -e -o pid= -o ppid=)
+
+                    walk() {
+                        [[ \$1 != \$\$ ]] && kill \$1 2>/dev/null || true
+                        for i in \${ALL_CHILD[\$1]:=}; do walk \$i; done
+                    }
+
+                    walk \$1
+                }
+
+                on_exit() {
+                  exit_status=\${ret:=\$?}
+                  printf \$exit_status > ${folder}/.exitcode
+                  sync
+                  exit \$exit_status
+                }
+
+                on_term() {
+                    set +e
+                    docker kill \$NXF_BOXID
+                }
+
+                trap on_exit EXIT
+                trap on_term TERM INT USR1 USR2
+
+                export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
+                [[ \$NXF_DEBUG > 0 ]] && nxf_env
+                touch ${folder}/.command.begin
+
+                set +e
+                (
+                /bin/bash -ue ${folder}/.command.sh
+                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
+                pid=\$!
+                wait \$pid || ret=\$?
+                docker rm \$NXF_BOXID &>/dev/null &
+                """
+                        .stripIndent().leftTrim()
+    }
+
+    def 'should create docker run with registry' () {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def task = new TaskRun(
+                script: 'my.registry.com/docker-io/busybox --fox --baz',
+                config: [container: true],
+                workDir: folder )
+        task.processor = Mock(TaskProcessor)
+        task.processor.getProcessEnvironment() >> [:]
+        task.processor.getSession() >> new Session(docker: [registry: 'registry.com'])
+        task.processor.getSession().workDir = folder
+
+        when:
+        def bash = new BashWrapperBuilder(task)
+        bash.build()
+
+        then:
+        Files.exists(folder.resolve('.command.sh'))
+        Files.exists(folder.resolve('.command.run'))
+
+        folder.resolve('.command.sh').text ==
+                """
+                #!/bin/bash -ue
+                docker run -i -v $folder:$folder -v \$PWD:\$PWD -w \$PWD --name \$NXF_BOXID my.registry.com/docker-io/busybox --fox --baz
+                """
+                        .stripIndent().leftTrim()
+    }
+
     def 'test shell exit function' () {
 
         def bash
@@ -1235,6 +1352,49 @@ class BashWrapperBuilderTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+
+
+    }
+
+
+    def 'should add docker run to shell script' () {
+
+        given:
+
+        def bash = [:] as BashWrapperBuilder
+
+        when:
+        def script = '''
+            #!/bin/bash
+            FOO=bar
+            busybox --foo --bar
+            do_this
+            do_that
+            '''
+        def tokens = ContainerScriptTokens.parse(script)
+        def docker = new DockerBuilder('busybox').addEnv(tokens.variables)
+        docker.build()
+
+        then:
+        bash.addContainerRunCommand(tokens, docker) == '''
+            #!/bin/bash
+            FOO=bar
+            docker run -i -e "FOO=bar" -v $PWD:$PWD -w $PWD busybox --foo --bar
+            do_this
+            do_that
+            '''
+            .stripIndent().leftTrim()
+
+        when:
+        tokens = ContainerScriptTokens.parse('#!/bin/bash\nbusybox')
+        docker = new DockerBuilder('busybox')
+        docker.build()
+        then:
+        bash.addContainerRunCommand(tokens, docker) == '''
+            #!/bin/bash
+            docker run -i -v $PWD:$PWD -w $PWD busybox
+            '''
+                .stripIndent().leftTrim()
 
 
     }

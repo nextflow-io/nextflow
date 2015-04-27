@@ -20,6 +20,7 @@
 
 package nextflow.processor
 
+import nextflow.Session
 import spock.lang.Specification
 import test.TestHelper
 /**
@@ -45,8 +46,10 @@ class TaskHandlerTest extends Specification {
 
         def handler = [:] as TaskHandler
         handler.task = new TaskRun(id: 100, workDir: folder, name:'task1', exitStatus: 127, config: [tag: 'seq_x', container: 'ubuntu']  )
-        handler.task.metaClass.getProcessor = { [name: 'TheProcessName'] }
         handler.task.metaClass.getHashLog = { "5d5d7ds" }
+        handler.task.processor = Mock(TaskProcessor)
+        handler.task.processor.getSession() >> new Session()
+        handler.task.processor.getName() >> 'TheProcessName'
         handler.status = TaskStatus.COMPLETED
         handler.submitTimeMillis = 1000
         handler.startTimeMillis = 1500

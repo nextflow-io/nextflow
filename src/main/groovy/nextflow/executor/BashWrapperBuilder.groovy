@@ -20,11 +20,13 @@
 
 package nextflow.executor
 import java.nio.file.Path
+import java.nio.file.Paths
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.util.ContainerScriptTokens
 import nextflow.util.DockerBuilder
 import nextflow.util.MemoryUnit
 
@@ -38,6 +40,8 @@ import nextflow.util.MemoryUnit
 class BashWrapperBuilder {
 
     static final private ENDL = '\n'
+
+    static final ENV_FILE_NAME = Paths.get(TaskRun.CMD_ENV)
 
     static final List<String> BASH
 
@@ -219,6 +223,8 @@ class BashWrapperBuilder {
 
     MemoryUnit dockerMemory
 
+    private executable
+
     private runWithDocker
 
     boolean statsEnabled
@@ -250,8 +256,9 @@ class BashWrapperBuilder {
 
         // docker config
         this.dockerImage = task.container
-        this.dockerConfig = task.processor?.session?.config?.docker
+        this.dockerConfig = task.getDockerConfig()
         this.dockerMemory = task.config.getMemory()
+        this.executable = task.isContainerExecutable()
 
         // stats
         this.statsEnabled = task.processor?.session?.statsEnabled
@@ -278,6 +285,7 @@ class BashWrapperBuilder {
         this.dockerConfig = params.dockerConfig
         this.dockerMount = params.dockerMount
         this.statsEnabled = params.statsEnabled
+        this.executable = params.executable
     }
 
     /**
@@ -309,9 +317,7 @@ class BashWrapperBuilder {
             return 'NXF_SCRATCH=$(mktemp -d -p /dev/shm/) && cd $NXF_SCRATCH'
         }
 
-
         return "NXF_SCRATCH=\$(mktemp -d -p $scratch) && cd \$NXF_SCRATCH"
-
     }
 
     /**
@@ -332,17 +338,7 @@ class BashWrapperBuilder {
         final stubFile = workDir.resolve(TaskRun.CMD_STUB)
 
         // set true when running with docker
-        runWithDocker = dockerImage && dockerConfig?.enabled?.toString() == 'true'
-
-        /*
-         * the script file
-         */
-        final taskScript = scriptFile.text = TaskProcessor.normalizeScript(script, shell)
-
-        /*
-         * fetch the script interpreter
-         */
-        final interpreter = TaskProcessor.fetchInterpreter(taskScript)
+        runWithDocker = dockerImage && (executable || dockerConfig?.enabled?.toString() == 'true')
 
         /*
          * save the input when required
@@ -369,7 +365,33 @@ class BashWrapperBuilder {
         // whenever it has to change to the scratch directory
         final changeDir = changeToScratchDirectory()
 
-        DockerBuilder docker = runWithDocker ? createDockerBuilder(environmentFile,changeDir) : null
+        /*
+         * process the task script
+         */
+        ContainerScriptTokens scriptTokens = null
+        def taskScript = TaskProcessor.normalizeScript(script, shell)
+        if( executable ) {
+            scriptTokens = ContainerScriptTokens.parse(taskScript)
+            environment.putAll( scriptTokens.variables )
+        }
+
+        /*
+         * create the docker command if required
+         */
+        DockerBuilder docker = runWithDocker ? createDockerBuilder(environment,changeDir) : null
+
+        /*
+         * save the script file
+         */
+        if( scriptTokens ) {
+            taskScript = addContainerRunCommand( scriptTokens, docker )
+        }
+        scriptFile.text = taskScript
+
+        /*
+         * fetch the script interpreter
+         */
+        final interpreter = TaskProcessor.fetchInterpreter(taskScript)
 
         /*
          * create a script runner which do the following
@@ -433,7 +455,7 @@ class BashWrapperBuilder {
         wrapper << '(' << ENDL
 
         // execute by invoking the command through a Docker container
-        if( docker ) {
+        if( docker && !executable ) {
             wrapper << docker.runCommand << " -c '"
         }
 
@@ -467,12 +489,12 @@ class BashWrapperBuilder {
 
             // invoke it from the main script
             wrapper << '/bin/bash ' << fileStr(stubFile)
-            if( docker ) wrapper << "'"
+            if( docker && !executable ) wrapper << "'"
             wrapper << ENDL
         }
         else {
             wrapper << interpreter << ' ' << fileStr(scriptFile)
-            if( docker ) wrapper << "'"
+            if( docker && !executable ) wrapper << "'"
             if( input != null ) wrapper << ' < ' << fileStr(inputFile)
             wrapper << ENDL
         }
@@ -533,13 +555,13 @@ class BashWrapperBuilder {
      * @return A {@link DockerBuilder} instance
      */
     @PackageScope
-    DockerBuilder createDockerBuilder(Path envFile, String changeDir) {
+    DockerBuilder createDockerBuilder(Map environment, String changeDir) {
 
         def docker = new DockerBuilder(dockerImage)
         if( task ) {
             docker.addMountForInputs( task.getInputFiles() )
-                    .addMount( task.processor.session.workDir )
-                    .addMount( task.processor.session.binDir )
+                    .addMount( task.processor.getSession().workDir )
+                    .addMount( task.processor.getSession().binDir )
         }
 
         // set the name
@@ -555,12 +577,10 @@ class BashWrapperBuilder {
             docker.addRunOptions(dockerCpuset)
 
         // set the environment
-        if( !envFile.empty() )
-            docker.addEnv( envFile )
-
-        // turn on container remove by default
-        if( !dockerConfig.containsKey('remove') )
-            dockerConfig.remove = true
+        if( environment ) {
+            if( executable ) docker.addEnv( environment )
+            else docker.addEnv( ENV_FILE_NAME )
+        }
 
         // set up run docker params
         docker.params(dockerConfig)
@@ -574,7 +594,9 @@ class BashWrapperBuilder {
         if( dockerConfig.containsKey('kill') )
             docker.params(kill: dockerConfig.kill)
 
-        docker.params(entry: '/bin/bash')
+        // override the docker entry point the image is NOT defined as executable
+        if( !executable )
+            docker.params(entry: '/bin/bash')
 
         docker.build()
         return docker
@@ -597,4 +619,24 @@ class BashWrapperBuilder {
         file.toString()
     }
 
+    /**
+     * Given a normalised shell script (starting with a she-bang line)
+     * replace the first token on the first line with a docker run command
+     *
+     * @param script
+     * @param docker
+     * @return
+     */
+    String addContainerRunCommand( ContainerScriptTokens script, DockerBuilder docker ) {
+
+        final result = new ArrayList<String>(script.lines)
+        final i = script.index
+        final main = result[i].trim()
+        final p = main.indexOf(' ')
+        result[i] = ( p != -1
+                    ? docker.runCommand + main.substring(p)
+                    : docker.runCommand )
+        result.add('')
+        return result.join('\n')
+    }
 }

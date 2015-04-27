@@ -19,10 +19,10 @@
  */
 
 package nextflow.processor
-
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.Session
 import nextflow.file.FileHolder
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
@@ -311,5 +311,50 @@ class TaskRunTest extends Specification {
         task.isSuccess() == false
     }
 
+    def 'should return the specified container name' () {
+        given:
+        def task = [:] as TaskRun
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session()
+
+        when:
+        task.config = [container:'foo/bar']
+        then:
+        task.getContainer() == 'foo/bar'
+        !task.isContainerExecutable()
+
+        when:
+        task.processor = Mock(TaskProcessor)
+        task.processor.session >> { new Session( docker: [registry:'my.registry'] ) }
+        then:
+        task.getContainer() == 'my.registry/foo/bar'
+
+    }
+
+    def 'should return the container name defined in the script block' () {
+
+        given:
+        def task = [:] as TaskRun
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session()
+        task.script= '''
+                busybox --foo --bar
+                mv result to/dir
+                '''
+
+        when:
+        task.config = [container: true]
+        then:
+        task.getContainer() == 'busybox'
+        task.isContainerExecutable()
+
+        when:
+        task.processor = Mock(TaskProcessor)
+        task.processor.session >> { new Session( docker: [registry:'my.registry'] ) }
+        then:
+        task.getContainer() == 'my.registry/busybox'
+        task.isContainerExecutable()
+
+    }
 
 }

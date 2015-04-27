@@ -22,6 +22,7 @@ package nextflow.executor
 
 import java.nio.file.Files
 
+import nextflow.Session
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -39,6 +40,7 @@ class CirrusWrapperBuilderTest extends Specification {
         def folder = Files.createTempDirectory('test')
         def processor = Mock(TaskProcessor)
         processor.getProcessEnvironment() >> [:]
+        processor.getSession() >> new Session()
         def config = new TaskConfig()
         def task = new TaskRun(workDir: folder, processor: processor, config: config, script: 'echo Hello world!')
 

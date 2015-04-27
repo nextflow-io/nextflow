@@ -139,7 +139,7 @@ public abstract class TaskHandler {
         record.exit = task.exitStatus
         record.submit = this.submitTimeMillis
         record.start = this.startTimeMillis
-        record.process = task.processor.name
+        record.process = task.processor.getName()
         record.tag = task.config.tag
         record.module = task.config.module
         record.container = task.container
