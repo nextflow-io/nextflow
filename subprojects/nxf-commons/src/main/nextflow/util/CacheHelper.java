@@ -84,22 +84,26 @@ public class CacheHelper {
             return hasher;
 
         if( value instanceof Boolean )
-            return hasher.putBoolean( (Boolean)value );
+            return hasher.putBoolean((Boolean) value);
 
         if( value instanceof Short )
-            return hasher.putShort( (Short)value );
+            return hasher.putShort((Short) value);
 
          if( value instanceof Integer)
-            return hasher.putInt( (Integer)value );
+            return hasher.putInt((Integer) value);
 
          if( value instanceof Long )
-            return hasher.putLong( (Long)value );
+            return hasher.putLong((Long) value);
 
         if( value instanceof Float )
-            return hasher.putFloat( (Float)value );
+            return hasher.putFloat((Float) value);
 
         if( value instanceof Double )
             return hasher.putDouble( (Double)value );
+
+        if( value instanceof Number )
+            // reduce all other number types (BigInteger, BigDecimal, AtomicXxx, etc) to string equivalent
+            return hasher.putUnencodedChars(value.toString());
 
         if( value instanceof Character )
             return hasher.putChar( (Character)value );
@@ -149,7 +153,7 @@ public class CacheHelper {
             return hasher.putLong(uuid.getMostSignificantBits()).putLong(uuid.getLeastSignificantBits());
         }
 
-        log.debug("Unknown hashing type: {} -- {}", value.getClass(), value);
+        log.debug("[WARN] Unknown hashing type: {} -- {}", value.getClass(), value);
         return hasher.putInt( value.hashCode() );
     }
 
