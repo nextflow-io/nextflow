@@ -139,9 +139,9 @@ class Session implements ISession {
      *
      * @param config
      */
-    def Session( Map config ) {
-        assert config != null
-        this.config = config instanceof ConfigObject ? config.toMap() : config
+    def Session( Map cfg ) {
+        assert cfg != null
+        this.config = cfg instanceof ConfigObject ? cfg.toMap() : cfg
 
         // poor man singleton
         Global.setSession(this)
