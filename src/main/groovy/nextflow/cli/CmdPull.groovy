@@ -47,6 +47,9 @@ class CmdPull extends CmdBase implements HubOptions {
     @Override
     final String getName() { NAME }
 
+    /* only for testing purpose */
+    protected File root
+
     @Override
     void run() {
 
@@ -61,7 +64,8 @@ class CmdPull extends CmdBase implements HubOptions {
 
         list.each {
             log.info "Checking $it ..."
-            def manager = new AssetManager( pipeline: it, hub: getHubProvider(),  user: getHubUser(), pwd: getHubPassword())
+            def manager = new AssetManager( pipeline: it, hub: getHubProvider(),  user: getHubUser(), pwd: getHubPassword(), root: root)
+
             def result = manager.download()
             if( !result )
                 log.info " done"

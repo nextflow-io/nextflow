@@ -20,20 +20,30 @@
 
 package nextflow.cli
 
-import nextflow.cli.CmdPull
-import spock.lang.Specification
+import java.nio.file.Files
 
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class CmdPullTest extends Specification {
 
-    def testPullFromRemote() {
+    def 'should pull the github repository in the local folder'() {
 
         given:
-        def cmd = new CmdPull(args: ['pditommaso/awesome-pipeline'])
+        def accessToken = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def dir = Files.createTempDirectory('test')
+        def cmd = new CmdPull(args: ['nextflow-io/hello'], root: dir.toFile(), hubUser: accessToken)
 
+        when:
+        cmd.run()
+        then:
+        dir.resolve('nextflow-io/hello/.git').exists()
+        dir.resolve('nextflow-io/hello/README.md').exists()
+
+        cleanup:
+        dir?.deleteDir()
 
     }
 

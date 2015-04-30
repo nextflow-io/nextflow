@@ -114,6 +114,10 @@ class AssetManager {
         this.user = args?.user
         this.pwd = args?.pwd
 
+        if( args.root ) {
+            this.root = args.root as File
+        }
+
         if( args.pipeline ) {
             setPipeline(args.pipeline as String)
         }

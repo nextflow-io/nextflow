@@ -31,9 +31,10 @@ class CmdCloneTest extends Specification {
     def testClone() {
 
         given:
+        def accessToken = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def dir = Files.createTempDirectory('test')
-        def cmd = new CmdClone()
-        cmd.args = ['nextflow-io/hello', dir.toFile().toString()]
+        def cmd = new CmdClone(hubUser: accessToken)
+        cmd.args = ['nextflow-io/hello', dir.toFile().toString(), ]
 
         when:
         cmd.run()
