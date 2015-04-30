@@ -136,7 +136,7 @@ class LocalTaskHandler extends TaskHandler {
     def void submit() {
         // the cmd list to launch it
         def job = new ArrayList(BashWrapperBuilder.BASH) << wrapperFile.getName()
-        List cmd = ['/bin/sh','-c', job.join(' ') + ' &> /dev/null']
+        List cmd = ['/bin/bash','-c', job.join(' ') + ' &> /dev/null']
         log.trace "Launch cmd line: ${cmd.join(' ')}"
 
         session.getExecService().submit( {

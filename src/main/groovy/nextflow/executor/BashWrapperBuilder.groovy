@@ -93,10 +93,13 @@ class BashWrapperBuilder {
             walk $1
         }
 
+        function nxf_mktmp() {
+            [[ $(uname) = Darwin ]] && mktemp -u $PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p $PWD
+        }
+
         on_exit() {
           exit_status=${ret:=$?}
           printf $exit_status > __EXIT_FILE__
-          sync
           exit $exit_status
         }
 
@@ -452,6 +455,12 @@ class BashWrapperBuilder {
         // execute the command script
         wrapper << '' << ENDL
         wrapper << 'set +e' << ENDL  // <-- note: use loose error checking so that ops after the script command are executed in all cases
+        wrapper << 'COUT=$PWD/.command.po; mkfifo $COUT' << ENDL
+        wrapper << 'CERR=$PWD/.command.pe; mkfifo $CERR' << ENDL
+        wrapper << 'tee '<< TaskRun.CMD_OUTFILE <<' < $COUT &' << ENDL
+        wrapper << 'tee1=$!' << ENDL
+        wrapper << 'tee '<< TaskRun.CMD_ERRFILE <<' < $CERR >&2 &' << ENDL
+        wrapper << 'tee2=$!' << ENDL
         wrapper << '(' << ENDL
 
         // execute by invoking the command through a Docker container
@@ -490,17 +499,17 @@ class BashWrapperBuilder {
             // invoke it from the main script
             wrapper << '/bin/bash ' << fileStr(stubFile)
             if( docker && !executable ) wrapper << "'"
-            wrapper << ENDL
         }
         else {
             wrapper << interpreter << ' ' << fileStr(scriptFile)
             if( docker && !executable ) wrapper << "'"
             if( input != null ) wrapper << ' < ' << fileStr(inputFile)
-            wrapper << ENDL
         }
-        wrapper << ') > >(tee '<< TaskRun.CMD_OUTFILE <<') 2> >(tee '<< TaskRun.CMD_ERRFILE <<' >&2) &' << ENDL
+        wrapper << ENDL
+        wrapper << ') >$COUT 2>$CERR &' << ENDL
         wrapper << 'pid=$!' << ENDL
         wrapper << 'wait $pid || ret=$?' << ENDL
+        wrapper << 'wait $tee1 $tee2' << ENDL
 
         /*
          * docker clean-up

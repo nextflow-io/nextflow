@@ -145,10 +145,13 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
+                function nxf_mktmp() {
+                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                }
+
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
-                  sync
                   exit \$exit_status
                 }
 
@@ -165,11 +168,18 @@ class BashWrapperBuilderTest extends Specification {
                 [ -f ${folder}/.command.env ] && source ${folder}/.command.env
 
                 set +e
+                COUT=\$PWD/.command.po; mkfifo \$COUT
+                CERR=\$PWD/.command.pe; mkfifo \$CERR
+                tee .command.out < \$COUT &
+                tee1=\$!
+                tee .command.err < \$CERR >&2 &
+                tee2=\$!
                 (
                 /bin/bash -ue ${folder}/.command.sh
-                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
+                ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
+                wait \$tee1 \$tee2
                 """
                 .stripIndent().leftTrim()
 
@@ -231,10 +241,13 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
+                function nxf_mktmp() {
+                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                }
+
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
-                  sync
                   exit \$exit_status
                 }
 
@@ -251,11 +264,18 @@ class BashWrapperBuilderTest extends Specification {
                 [ -f ${folder}/.command.env ] && source ${folder}/.command.env
 
                 set +e
+                COUT=\$PWD/.command.po; mkfifo \$COUT
+                CERR=\$PWD/.command.pe; mkfifo \$CERR
+                tee .command.out < \$COUT &
+                tee1=\$!
+                tee .command.err < \$CERR >&2 &
+                tee2=\$!
                 (
                 /bin/bash ${folder}/.command.run.1
-                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
+                ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
+                wait \$tee1 \$tee2
                 """
                         .stripIndent().leftTrim()
 
@@ -411,10 +431,13 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
+                function nxf_mktmp() {
+                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                }
+
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
-                  sync
                   exit \$exit_status
                 }
 
@@ -432,11 +455,18 @@ class BashWrapperBuilderTest extends Specification {
                 NXF_SCRATCH=\${TMPDIR:-`mktemp -d`} && cd \$NXF_SCRATCH
 
                 set +e
+                COUT=\$PWD/.command.po; mkfifo \$COUT
+                CERR=\$PWD/.command.pe; mkfifo \$CERR
+                tee .command.out < \$COUT &
+                tee1=\$!
+                tee .command.err < \$CERR >&2 &
+                tee2=\$!
                 (
                 /bin/bash -ue ${folder}/.command.sh < ${folder}/.command.in
-                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
+                ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
+                wait \$tee1 \$tee2
                 cp .command.out ${folder} || true
                 cp .command.err ${folder} || true
                 """
@@ -517,10 +547,13 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
+                function nxf_mktmp() {
+                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                }
+
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
-                  sync
                   exit \$exit_status
                 }
 
@@ -538,11 +571,18 @@ class BashWrapperBuilderTest extends Specification {
                 NXF_SCRATCH=\${TMPDIR:-`mktemp -d`} && cd \$NXF_SCRATCH
 
                 set +e
+                COUT=\$PWD/.command.po; mkfifo \$COUT
+                CERR=\$PWD/.command.pe; mkfifo \$CERR
+                tee .command.out < \$COUT &
+                tee1=\$!
+                tee .command.err < \$CERR >&2 &
+                tee2=\$!
                 (
                 /bin/bash ${folder}/.command.run.1
-                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
+                ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
+                wait \$tee1 \$tee2
                 cp .command.out ${folder} || true
                 cp .command.err ${folder} || true
                 cp .command.trace ${folder} || true
@@ -707,10 +747,13 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
+                function nxf_mktmp() {
+                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                }
+
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
-                  sync
                   exit \$exit_status
                 }
 
@@ -727,11 +770,18 @@ class BashWrapperBuilderTest extends Specification {
                 touch ${folder}/.command.begin
 
                 set +e
+                COUT=\$PWD/.command.po; mkfifo \$COUT
+                CERR=\$PWD/.command.pe; mkfifo \$CERR
+                tee .command.out < \$COUT &
+                tee1=\$!
+                tee .command.err < \$CERR >&2 &
+                tee2=\$!
                 (
                 sudo docker run -i -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID busybox -c '/bin/bash -ue ${folder}/.command.sh'
-                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
+                ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
+                wait \$tee1 \$tee2
                 sudo docker rm \$NXF_BOXID &>/dev/null &
                 """
                         .stripIndent().leftTrim()
@@ -798,10 +848,13 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
+                function nxf_mktmp() {
+                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                }
+
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
-                  sync
                   exit \$exit_status
                 }
 
@@ -818,11 +871,18 @@ class BashWrapperBuilderTest extends Specification {
                 touch ${folder}/.command.begin
 
                 set +e
+                COUT=\$PWD/.command.po; mkfifo \$COUT
+                CERR=\$PWD/.command.pe; mkfifo \$CERR
+                tee .command.out < \$COUT &
+                tee1=\$!
+                tee .command.err < \$CERR >&2 &
+                tee2=\$!
                 (
                 docker run -i -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID busybox -c '/bin/bash -ue ${folder}/.command.sh'
-                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
+                ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
+                wait \$tee1 \$tee2
                 docker rm \$NXF_BOXID &>/dev/null &
                 """
                         .stripIndent().leftTrim()
@@ -891,10 +951,13 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
+                function nxf_mktmp() {
+                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                }
+
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
-                  sync
                   exit \$exit_status
                 }
 
@@ -911,11 +974,18 @@ class BashWrapperBuilderTest extends Specification {
                 touch ${folder}/.command.begin
 
                 set +e
+                COUT=\$PWD/.command.po; mkfifo \$COUT
+                CERR=\$PWD/.command.pe; mkfifo \$CERR
+                tee .command.out < \$COUT &
+                tee1=\$!
+                tee .command.err < \$CERR >&2 &
+                tee2=\$!
                 (
                 docker run -i -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c '/bin/bash -ue ${folder}/.command.sh'
-                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
+                ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
+                wait \$tee1 \$tee2
                 """
                         .stripIndent().leftTrim()
 
@@ -980,10 +1050,13 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
+                function nxf_mktmp() {
+                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                }
+
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
-                  sync
                   exit \$exit_status
                 }
 
@@ -1000,11 +1073,18 @@ class BashWrapperBuilderTest extends Specification {
                 touch ${folder}/.command.begin
 
                 set +e
+                COUT=\$PWD/.command.po; mkfifo \$COUT
+                CERR=\$PWD/.command.pe; mkfifo \$CERR
+                tee .command.out < \$COUT &
+                tee1=\$!
+                tee .command.err < \$CERR >&2 &
+                tee2=\$!
                 (
                 docker run -i -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c '/bin/bash -ue ${folder}/.command.sh'
-                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
+                ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
+                wait \$tee1 \$tee2
                 """
                         .stripIndent().leftTrim()
 
@@ -1068,10 +1148,13 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
+                function nxf_mktmp() {
+                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                }
+
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
-                  sync
                   exit \$exit_status
                 }
 
@@ -1088,11 +1171,18 @@ class BashWrapperBuilderTest extends Specification {
                 touch ${folder}/.command.begin
 
                 set +e
+                COUT=\$PWD/.command.po; mkfifo \$COUT
+                CERR=\$PWD/.command.pe; mkfifo \$CERR
+                tee .command.out < \$COUT &
+                tee1=\$!
+                tee .command.err < \$CERR >&2 &
+                tee2=\$!
                 (
                 /bin/bash -ue ${folder}/.command.sh
-                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
+                ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
+                wait \$tee1 \$tee2
                 docker rm \$NXF_BOXID &>/dev/null &
                 """
                         .stripIndent().leftTrim()
@@ -1155,10 +1245,13 @@ class BashWrapperBuilderTest extends Specification {
                         walk $1
                     }
 
+                    function nxf_mktmp() {
+                        [[ $(uname) = Darwin ]] && mktemp -u $PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p $PWD
+                    }
+
                     on_exit() {
                       exit_status=${ret:=$?}
                       printf $exit_status > /my/exit/file
-                      sync
                       exit $exit_status
                     }
 
@@ -1198,10 +1291,13 @@ class BashWrapperBuilderTest extends Specification {
                         walk $1
                     }
 
+                    function nxf_mktmp() {
+                        [[ $(uname) = Darwin ]] && mktemp -u $PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p $PWD
+                    }
+
                     on_exit() {
                       exit_status=${ret:=$?}
                       printf $exit_status > /my/exit/xxx
-                      sync
                       exit $exit_status
                     }
 
@@ -1317,10 +1413,13 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
+                function nxf_mktmp() {
+                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                }
+
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
-                  sync
                   exit \$exit_status
                 }
 
@@ -1339,11 +1438,18 @@ class BashWrapperBuilderTest extends Specification {
                 [ -f ${folder}/.command.env ] && source ${folder}/.command.env
 
                 set +e
+                COUT=\$PWD/.command.po; mkfifo \$COUT
+                CERR=\$PWD/.command.pe; mkfifo \$CERR
+                tee .command.out < \$COUT &
+                tee1=\$!
+                tee .command.err < \$CERR >&2 &
+                tee2=\$!
                 (
                 /bin/bash -ue ${folder}/.command.sh
-                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
+                ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
+                wait \$tee1 \$tee2
                 # user `afterScript`
                 cleanup that
                 """

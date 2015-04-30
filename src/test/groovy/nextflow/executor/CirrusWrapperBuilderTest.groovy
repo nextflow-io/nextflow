@@ -96,10 +96,13 @@ class CirrusWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
+                function nxf_mktmp() {
+                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                }
+
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > .exitcode && es3 -q -v 0 --no-stats sync .exitcode s3:/${folder} || true
-                  sync
                   exit \$exit_status
                 }
 
@@ -117,11 +120,18 @@ class CirrusWrapperBuilderTest extends Specification {
                 NXF_SCRATCH=\${TMPDIR:-`mktemp -d`} && cd \$NXF_SCRATCH
 
                 set +e
+                COUT=\$PWD/.command.po; mkfifo \$COUT
+                CERR=\$PWD/.command.pe; mkfifo \$CERR
+                tee .command.out < \$COUT &
+                tee1=\$!
+                tee .command.err < \$CERR >&2 &
+                tee2=\$!
                 (
                 /bin/bash -ue .command.sh
-                ) > >(tee .command.out) 2> >(tee .command.err >&2) &
+                ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
+                wait \$tee1 \$tee2
                 es3 -q -v 0 --no-stats sync .command.out s3:/${folder} || true
                 es3 -q -v 0 --no-stats sync .command.err s3:/${folder} || true
                 """
