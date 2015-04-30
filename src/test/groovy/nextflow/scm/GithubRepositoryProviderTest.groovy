@@ -45,7 +45,7 @@ class GithubRepositoryProviderTest extends Specification {
     def testReadContent() {
 
         given:
-        def (user,pwd) = System.getenv('NXF_GITHUB_ACCESS_TOKEN')?.tokenize(':')
+        def (user,pwd) = System.getenv('NXF_GITHUB_ACCESS_TOKEN')?.tokenize(':') ?: [null,null]
 
         when:
         def repo = new GithubRepositoryProvider(pipeline: 'nextflow-io/hello', user: user, pwd: pwd)
