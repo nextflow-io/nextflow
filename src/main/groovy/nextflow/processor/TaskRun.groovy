@@ -21,7 +21,6 @@
 package nextflow.processor
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
-import java.util.concurrent.locks.ReentrantLock
 
 import com.google.common.hash.HashCode
 import groovy.transform.Memoized
@@ -47,8 +46,6 @@ import nextflow.util.DockerBuilder
 
 @Slf4j
 class TaskRun {
-
-    static private final echoLock = new ReentrantLock(true)
 
     /**
      * Task unique id
@@ -176,12 +173,10 @@ class TaskRun {
         // print the stdout
         if( stdout instanceof Path ) {
             try {
-                echoLock.lock()
-                try {
-                    stdout.withReader {  System.out << it }
-                }
-                finally {
-                    echoLock.unlock()
+                synchronized (System.out) {
+                    stdout.withReader {  reader ->
+                        reader.eachLine { System.out.println(it) }
+                    }
                 }
             }
             catch( NoSuchFileException e ) {
