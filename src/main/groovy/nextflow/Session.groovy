@@ -19,9 +19,11 @@
  */
 
 package nextflow
+
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -41,7 +43,7 @@ import nextflow.trace.TraceObserver
 import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
-import nextflow.util.FixedPoolFactory
+
 /**
  * Holds the information on the current execution
  *
@@ -241,17 +243,10 @@ class Session implements ISession {
     private createThreadsPoolAndExecutor() {
         log.debug "Creating executor service"
 
-        def factory
-        if( !GParsConfig.poolFactory )
-            GParsConfig.poolFactory = factory = new FixedPoolFactory(poolSize)
+        System.setProperty('gpars.poolsize', config.poolSize as String)
+        log.debug "Executor pool size: ${poolSize}"
 
-        else if( keepExecutorPoolAlive )
-            factory = (FixedPoolFactory)GParsConfig.poolFactory
-
-        else
-            throw new IllegalStateException("Gpars pool factory already defined")
-
-        execService = factory.pool.executorService
+        execService = Executors.newFixedThreadPool( poolSize )
     }
 
     def Session start() {
@@ -350,11 +345,6 @@ class Session implements ISession {
         allProcessors *. join()
         log.trace "Session > after processors join"
 
-        if( keepExecutorPoolAlive ) {
-            log.debug "Executor service shutdown disabled"
-            return
-        }
-
         execService.shutdown()
         log.trace "Session > executor shutdown"
         execService = null
@@ -392,9 +382,6 @@ class Session implements ISession {
         processesBarrier.forceTermination()
         monitorsBarrier.forceTermination()
         allProcessors *. terminate()
-
-        if( keepExecutorPoolAlive )
-            return
 
         execService?.shutdownNow()
         GParsConfig.shutdown()

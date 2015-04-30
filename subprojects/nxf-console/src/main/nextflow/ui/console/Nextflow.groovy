@@ -155,7 +155,6 @@ class Nextflow extends Console {
         def binding = (ScriptBinding)shell.context
         def session = new Session(binding.config)
         session.init( new CmdRun(), scriptFile as Path)
-        session.keepExecutorPoolAlive = true
 
         binding.setVariable( 'baseDir', session.baseDir )
         binding.setVariable( 'workDir', session.workDir )

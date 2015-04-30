@@ -17,9 +17,6 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-
-import nextflow.Session
 import nextflow.processor.ParallelTaskProcessor
 import nextflow.script.ScriptRunner
 import spock.lang.Shared
@@ -35,7 +32,6 @@ class FunctionalTests extends Specification {
 
     // run before the first feature method
     def setupSpec() {
-        Session.keepExecutorPoolAlive = true
         scriptFile = new File('test.nf')
         scriptFile.deleteOnExit()
     }
