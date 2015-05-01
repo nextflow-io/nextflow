@@ -374,7 +374,7 @@ class TaskProcessorTest extends Specification {
 
     }
 
-    def testTaskGlobalVars() {
+    def 'should return tasks global variables map'() {
 
         setup:
         def processor = [:] as TaskProcessor
@@ -382,9 +382,8 @@ class TaskProcessorTest extends Specification {
 
         when:
         def binding = new Binding(x:1, y:2, params: [alpha: 'one'], 'workDir': Paths.get('/work/dir'), baseDir: Paths.get('/base/dir'))
-        def vars = ['q','x','y','params.alpha','params.beta.delta', 'workDir', 'baseDir'] as Set
-        def local = [q: 'any value']
-        def result = processor.getTaskGlobalVars(binding, vars, local)
+        def vars = ['q', 'x', 'y', 'params.alpha', 'params.beta.delta', 'workDir', 'baseDir'] as Set
+        def result = processor.getTaskGlobalVars(binding, vars)
 
         then:
         // note: since 'q' is include in the task local scope, is not returned in the var list

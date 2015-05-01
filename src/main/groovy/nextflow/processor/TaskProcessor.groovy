@@ -1511,13 +1511,13 @@ abstract class TaskProcessor {
     }
 
     final protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
-        getTaskGlobalVars( ownerScript.binding, task.context.getVariableNames(), task.context.getHolder() )
+        getTaskGlobalVars( ownerScript.binding, task.context.getVariableNames() )
     }
 
     /**
      * @return The set of task variables accessed in global script context and not declared as input/output
      */
-    final protected Map<String,Object> getTaskGlobalVars(Binding binding, Set<String> variableNames, Map localScope) {
+    final protected Map<String,Object> getTaskGlobalVars(Binding binding, Set<String> variableNames) {
         GroovyShell shell = null
         final result = new HashMap(variableNames.size())
         final processName = name
@@ -1527,7 +1527,7 @@ abstract class TaskProcessor {
             final p = varName.indexOf('.')
             final baseName = p !=- 1 ? varName.substring(0,p) : varName
 
-            if( !localScope.containsKey(baseName) ) {
+            if( binding.hasVariable(baseName) ) {
                 def value
                 try {
                     if( p == -1 ) {
@@ -1539,8 +1539,9 @@ abstract class TaskProcessor {
                     }
                 }
                 catch( MissingPropertyException | NullPointerException e ) {
-                    log.debug "Process `${processName}` cannot access global variable `$varName` -- Cause: ${e.message}"
                     value = null
+                    if( log.isTraceEnabled() )
+                    log.trace "Process `${processName}` cannot access global variable `$varName` -- Cause: ${e.message}"
                 }
 
                 // value for 'workDir' and 'baseDir' folders are added always as string
