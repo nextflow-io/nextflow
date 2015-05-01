@@ -50,14 +50,10 @@ class TaskProcessorTest extends Specification {
     static class DummyProcessor extends TaskProcessor {
 
         DummyProcessor(String name, Session session, BaseScript script, ProcessConfig taskConfig) {
-            super(name, new NopeExecutor(), session, new DummyScript(), taskConfig, new TaskBody({}, '..', true))
+            super(name, new NopeExecutor(), session, script, taskConfig, new TaskBody({}, '..', true))
         }
 
         @Override protected void createOperator() { }
-    }
-
-    static class DummyScript extends BaseScript {
-        @Override Object run() { return null }
     }
 
 
@@ -115,10 +111,9 @@ class TaskProcessorTest extends Specification {
         binFolder.mkdirs()
 
         when:
-        def wrapper = new DummyScript()
         def session = new Session([env: [X:"1", Y:"2"]])
         session.setBaseDir(home)
-        def processor = new DummyProcessor('task1', session, wrapper, new ProcessConfig(wrapper))
+        def processor = new DummyProcessor('task1', session, Mock(BaseScript), Mock(ProcessConfig))
         def builder = new ProcessBuilder()
         builder.environment().putAll( processor.getProcessEnvironment() )
 
@@ -131,7 +126,7 @@ class TaskProcessorTest extends Specification {
         when:
         session = new Session([env: [X:"1", Y:"2", PATH:'/some']])
         session.setBaseDir(home)
-        processor = new DummyProcessor('task1', session, wrapper, new ProcessConfig(wrapper))
+        processor = new DummyProcessor('task1', session,  Mock(BaseScript), Mock(ProcessConfig))
         builder = new ProcessBuilder()
         builder.environment().putAll( processor.getProcessEnvironment() )
 
