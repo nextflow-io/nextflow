@@ -1,17 +1,17 @@
 machine:
-  java:
-    version: openjdk7
-  services:
-    - docker
+    java:
+        version: openjdk7
+    services:
+        - docker
 
 checkout:
-  post:
-    - git submodule update --init
+    post:
+        - git submodule update --init
         
 test:
-  override:
-    - ./gradlew assemble
-    - ./gradlew test
-    - export NXF_CMD=$PWD/launch.sh; cd validation; bash -x test.sh :
-      timeout: 1800
+    override:
+        - ./gradlew assemble
+        - ./gradlew test
+        - export NXF_CMD=$PWD/launch.sh; cd validation; bash -x test.sh :
+            timeout: 1800
     
