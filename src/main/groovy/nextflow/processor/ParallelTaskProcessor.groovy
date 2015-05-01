@@ -89,7 +89,9 @@ class ParallelTaskProcessor extends TaskProcessor {
 
             // instantiate the iteration process
             def params = [inputs: opInputs, outputs: linkingChannels, maxForks: 1, listeners: [new IteratorProcessInterceptor(allScalarValues: allScalar)]]
-            session.allProcessors << (processor = new DataflowOperator(group, params, forwarder).start())
+            session.allProcessors << (processor = new DataflowOperator(group, params, forwarder))
+            // fix issue #41
+            processor.start()
 
             // set as next inputs the result channels of the iteration process
             opInputs = linkingChannels
@@ -123,7 +125,9 @@ class ParallelTaskProcessor extends TaskProcessor {
          * finally create the operator
          */
         def params = [inputs: opInputs, outputs: opOutputs, maxForks: maxForks, listeners: [new TaskProcessorInterceptor()] ]
-        session.allProcessors << (processor = new DataflowOperator(group, params, wrapper).start())
+        session.allProcessors << (processor = new DataflowOperator(group, params, wrapper))
+        // fix issue #41
+        processor.start()
 
     }
 

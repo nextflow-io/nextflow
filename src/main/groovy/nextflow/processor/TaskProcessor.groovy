@@ -124,8 +124,10 @@ abstract class TaskProcessor {
     /**
      * The corresponding {@code DataflowProcessor} which will receive and
      * manage accordingly the task inputs
+     *
+     * note: it must be declared volatile -- issue #41
      */
-    protected DataflowProcessor processor
+    protected volatile DataflowProcessor processor
 
     /**
      * The underlying executor which will run the task
