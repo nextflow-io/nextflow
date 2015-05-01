@@ -19,6 +19,8 @@
  */
 
 package nextflow.processor
+
+import java.nio.file.NoSuchFileException
 import java.util.concurrent.CountDownLatch
 
 import groovy.util.logging.Slf4j
@@ -158,8 +160,14 @@ public abstract class TaskHandler {
             }
 
             def file = task.workDir?.resolve(TaskRun.CMD_TRACE)
-            if( file?.exists() ) {
-                record.parseTraceFile(file.text)
+            try {
+                if(file) record.parseTraceFile(file.text)
+            }
+            catch( NoSuchFileException e ) {
+                // ignore it
+            }
+            catch( IOException e ) {
+                log.debug "[WARN] Cannot read trace file: $file -- Cause: ${e.message}"
             }
         }
 
