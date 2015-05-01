@@ -105,8 +105,12 @@ class DurationTest extends Specification {
 
         expect:
         new Duration(100).toString() == '100ms'
-        new Duration(1000).toString() == '1s'
+        new Duration(1_000).toString() == '1s'
+        new Duration(1_100).toString() == '1.1s'
+        new Duration(32_300).toString() == '32.3s'
         new Duration(61 * 1000).toString() == '1m 1s'
+        new Duration(61 * 1000 + 200).toString() == '1m 1s'
+        new Duration(61 * 1000 + 800).toString() == '1m 2s'
         new Duration(60 * 60 * 1000 + 1000).toString() == '1h 1s'
         new Duration(25 * 60 * 60 * 1000 + 1000).toString() == '1d 1h 1s'
 

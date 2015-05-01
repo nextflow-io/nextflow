@@ -244,34 +244,44 @@ class Duration implements Comparable<Duration>, Serializable {
 
     String toString() {
 
-        if( durationInMillis < 1000 ) {
-            return durationInMillis + MILLIS[0]
+        // just prints the milliseconds
+        if( durationInMillis < 1_000 ) {
+            return durationInMillis + 'ms'
         }
 
-        def value = format("d:H:m:s").split(':').collect { String it -> Integer.parseInt(it) }
+        // when less than 60 seconds round up to 100th of millis
+        if( durationInMillis < 60_000 ) {
+            return String.valueOf( Math.round(durationInMillis / 1_000 * 10 as float) / 10 ) + 's'
+        }
+
+        def secs
+        def mins
+        def hours
+        def days
         def result = []
 
-        // -- day / days
-        if( value[0] >= 1 ) {
-            result << value[0] + DAYS[0]
-        }
+        // round up to seconds
+        secs = Math.round( (double)(durationInMillis / 1_000) )
 
-        // hour / hours
-        if( value[1] >= 1 ) {
-            result << value[1] + HOURS[0]
-        }
+        mins = secs.intdiv(60)
+        secs = secs % 60
+        if( secs )
+            result.add( secs+'s' )
 
-        // -- minute / minutes
-        if( value[2] > 0 ) {
-            result << value[2] + MINUTES[0]
-        }
+        hours = mins.intdiv(60)
+        mins = mins % 60
+        if( mins )
+            result.add(0, mins+'m' )
 
-        // -- second / seconds
-        if( value[3] > 0 ) {
-            result << value[3] + SECONDS[0]
-        }
+        days = hours.intdiv(24)
+        hours = hours % 24
+        if( hours )
+            result.add(0, hours+'h' )
 
-        result.join(' ')
+        if( days )
+            result.add(0, days+'d')
+
+        return result.join(' ')
     }
 
 
