@@ -12,5 +12,6 @@ test:
   override:
     - ./gradlew assemble
     - ./gradlew test
-    - export NXF_CMD=$PWD/launch.sh; cd validation; bash -x test.sh
+    - export NXF_CMD=$PWD/launch.sh; cd validation; bash -x test.sh :
+      timeout: 1800
     

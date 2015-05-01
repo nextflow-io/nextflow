@@ -652,9 +652,9 @@ configure(deployable) {
 
 }
 
-
-test {
-    testLogging {
-        events "passed", "skipped", "failed", "standardOut", "standardError"
-    }
-}
+// verbose tests logging
+//test {
+//    testLogging {
+//        events "passed", "skipped", "failed", "standardOut", "standardError"
+//    }
+//}
