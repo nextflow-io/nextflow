@@ -190,44 +190,31 @@ class Session implements ISession {
             this.scriptName = scriptFile.name
         }
 
-
         this.observers = createObservers( runOpts )
         this.statsEnabled = observers.size()>0
     }
 
+    /**
+     * Given the `run` command line options creates the required {@link TraceObserver}s
+     *
+     * @param runOpts The {@code CmdRun} object holding the run command options
+     * @return A list of {@link TraceObserver} objects or an empty list
+     */
     @PackageScope
     List createObservers( CmdRun runOpts ) {
-        /*
-         * create the execution trace observer
-         */
         def result = []
-        Boolean isEnabled = config.navigate('trace.enabled') as Boolean
-        if( isEnabled || runOpts.withTrace ) {
-            String fileName = runOpts.withTrace
-            if( !fileName ) fileName = config.navigate('trace.file')
-            if( !fileName ) fileName = TraceFileObserver.DEF_FILE_NAME
-            def traceFile = Paths.get(fileName).complete()
-            def observer = new TraceFileObserver(traceFile)
-            config.navigate('trace.raw') { it -> observer.useRawNumbers(it == true) }
-            config.navigate('trace.sep') { observer.separator = it }
-            config.navigate('trace.fields') { observer.setFieldsAndFormats(it) }
-            result << observer
-        }
 
-        /*
-         * Create timeline report file
-         */
-        if( runOpts.withTimeline ) {
-            String fileName = runOpts.withTimeline
-            if( !fileName ) fileName = TimelineObserver.DEF_FILE_NAME
-            def traceFile = Paths.get(fileName).complete()
-            def observer = new TimelineObserver(traceFile)
-            result << observer
-        }
+        createTraceFileObserver(runOpts, result)
+        createTimelineObserver(runOpts, result)
+        createExtraeObserver(runOpts, result)
 
-        /*
-         * create the Extrae trace object
-         */
+        return result
+    }
+
+    /**
+     * create the Extrae trace observer
+     */
+    protected void createExtraeObserver(CmdRun runOpts, List result) {
         if( runOpts.withExtrae ) {
             try {
                 result << (TraceObserver)Class.forName(EXTRAE_TRACE_CLASS).newInstance()
@@ -236,8 +223,39 @@ class Session implements ISession {
                 log.warn("Unable to load Extrae profiler",e)
             }
         }
+    }
 
-        return result
+    /**
+     * Create timeline report file observer
+     */
+    protected void createTimelineObserver(CmdRun runOpts, List result) {
+        Boolean isEnabled = config.navigate('timeline.enabled') as Boolean
+        if( isEnabled || runOpts.withTimeline ) {
+            String fileName = runOpts.withTimeline
+            if( !fileName ) fileName = config.navigate('timeline.file')
+            if( !fileName ) fileName = TimelineObserver.DEF_FILE_NAME
+            def traceFile = (fileName as Path).complete()
+            def observer = new TimelineObserver(traceFile)
+            result << observer
+        }
+    }
+
+    /*
+     * create the execution trace observer
+     */
+    protected void createTraceFileObserver(CmdRun runOpts, List result) {
+        Boolean isEnabled = config.navigate('trace.enabled') as Boolean
+        if( isEnabled || runOpts.withTrace ) {
+            String fileName = runOpts.withTrace
+            if( !fileName ) fileName = config.navigate('trace.file')
+            if( !fileName ) fileName = TraceFileObserver.DEF_FILE_NAME
+            def traceFile = (fileName as Path).complete()
+            def observer = new TraceFileObserver(traceFile)
+            config.navigate('trace.raw') { it -> observer.useRawNumbers(it == true) }
+            config.navigate('trace.sep') { observer.separator = it }
+            config.navigate('trace.fields') { observer.setFieldsAndFormats(it) }
+            result << observer
+        }
     }
 
     private createThreadsPoolAndExecutor() {

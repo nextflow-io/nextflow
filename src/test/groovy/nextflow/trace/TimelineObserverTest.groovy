@@ -60,6 +60,8 @@ class TimelineObserverTest extends Specification {
         r2.submit = now
         r2.start = now + 100
         r2.complete = now + 500
+        r2.realtime = 400
+        r2.duration = 500
         r2.process = 'alpha'
 
         def r3 = new TraceRecord()
@@ -68,6 +70,8 @@ class TimelineObserverTest extends Specification {
         r3.submit = now
         r3.start = now + 200
         r3.complete = now + 700
+        r3.realtime = 500
+        r3.duration = 700
         r3.process = 'beta'
 
         def observer = [:] as TimelineObserver
@@ -79,13 +83,13 @@ class TimelineObserverTest extends Specification {
 
         expect:
         observer.renderData().toString() == /
-            var elapsed="2s"
+            var elapsed="2.5s"
             var beginningMillis=1000;
             var endingMillis=3500;
             var data=[
             {"label": "foo", "times": []},
-            {"label": "bar", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425241, "color":c1(0)}, {"starting_time": 1429821425241, "ending_time": 1429821425641, "color":c2(0), "label": "400ms"}]},
-            {"label": "baz", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425341, "color":c1(1)}, {"starting_time": 1429821425341, "ending_time": 1429821425841, "color":c2(1), "label": "500ms"}]}
+            {"label": "bar", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425241, "color":c1(0)}, {"starting_time": 1429821425241, "ending_time": 1429821425641, "color":c2(0), "label": "500ms \\/ -"}]},
+            {"label": "baz", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425341, "color":c1(1)}, {"starting_time": 1429821425341, "ending_time": 1429821425841, "color":c2(1), "label": "700ms \\/ -"}]}
             ]
             /
             .stripIndent().leftTrim()
@@ -106,6 +110,8 @@ class TimelineObserverTest extends Specification {
         r2.submit = now
         r2.start = now + 100
         r2.complete = now + 500
+        r2.realtime = 400
+        r2.duration = 500
         r2.process = 'alpha'
 
         def r3 = new TraceRecord()
@@ -114,6 +120,8 @@ class TimelineObserverTest extends Specification {
         r3.submit = now
         r3.start = now + 200
         r3.complete = now + 700
+        r3.realtime = 500
+        r3.duration = 700
         r3.process = 'beta'
 
         def h1 = Mock(TaskHandler)
@@ -155,6 +163,8 @@ class TimelineObserverTest extends Specification {
         r2.submit = now
         r2.start = now + 100
         r2.complete = now + 500
+        r2.realtime = 400
+        r2.duration = 500
         r2.process = 'alpha'
 
         def r3 = new TraceRecord()
@@ -163,6 +173,8 @@ class TimelineObserverTest extends Specification {
         r3.submit = now
         r3.start = now + 200
         r3.complete = now + 700
+        r3.realtime = 500
+        r3.duration = 700
         r3.process = 'beta'
 
         def file = TestHelper.createInMemTempFile('report.html')
@@ -258,13 +270,13 @@ var colors = d3.scale.category20c().domain(d3.range(0,20)).range()
 function c1(index) { return "#bdbdbd"; }
 function c2(index) { return colors[index % 16]; } // <-- note: uses only the first 16 colors
 
-var elapsed="2s"
+var elapsed="2.5s"
 var beginningMillis=1000;
 var endingMillis=3500;
 var data=[
 {"label": "foo", "times": []},
-{"label": "bar", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425241, "color":c1(0)}, {"starting_time": 1429821425241, "ending_time": 1429821425641, "color":c2(0), "label": "400ms"}]},
-{"label": "baz", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425341, "color":c1(1)}, {"starting_time": 1429821425341, "ending_time": 1429821425841, "color":c2(1), "label": "500ms"}]}
+{"label": "bar", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425241, "color":c1(0)}, {"starting_time": 1429821425241, "ending_time": 1429821425641, "color":c2(0), "label": "500ms \\/ -"}]},
+{"label": "baz", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425341, "color":c1(1)}, {"starting_time": 1429821425341, "ending_time": 1429821425841, "color":c2(1), "label": "700ms \\/ -"}]}
 ]
 
 

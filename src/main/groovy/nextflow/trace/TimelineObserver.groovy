@@ -19,7 +19,6 @@
  */
 
 package nextflow.trace
-
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
@@ -32,7 +31,6 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 import nextflow.util.Duration
 import org.apache.commons.lang.StringEscapeUtils
-
 /**
  * Render pipeline timeline processes execution
  *
@@ -145,6 +143,9 @@ class TimelineObserver implements TraceObserver {
         final tpl = readTemplate()
         final p = tpl.indexOf(REPLACE_STR)
 
+        // roll the any trace files that may exist
+        reportFile.rollFile()
+
         def writer = Files.newBufferedWriter(reportFile, Charset.defaultCharset())
         writer.write(tpl, 0, p)
         writer.append( renderData() )
@@ -171,8 +172,9 @@ class TimelineObserver implements TraceObserver {
         final name = record.get('name') as String ?: '(unknown)'
         final submit = record.get('submit') as Long
         final start = record.get('start') as Long
-        final complete = record.get('complete') as Long
+        final realtime = record.get('realtime') as Long
         final process = record.get('process') as String
+        final complete = record.get('complete') as Long
 
         template << '{'
         template << "\"label\": \"${StringEscapeUtils.escapeJavaScript(name)}\", "
@@ -181,14 +183,34 @@ class TimelineObserver implements TraceObserver {
         if( submit && start ) {
             final index = colorIndexes.getOrCreate(process) { colorIndexes.size() }
             template << "{\"starting_time\": $submit, \"ending_time\": $start, \"color\":c1($index)}"
-            if( start && complete ) {
-                def delta = new Duration(complete - start).toString()
-                template << ", {\"starting_time\": $start, \"ending_time\": $complete, \"color\":c2($index), \"label\": \"$delta\"}"
+
+            if( start && realtime ) {
+                def label = StringEscapeUtils.escapeJavaScript(labelString(record))
+                def ending = start+realtime
+                template << ", {\"starting_time\": $start, \"ending_time\": $ending, \"color\":c2($index), \"label\": \"$label\"}"
+
+                if( complete && ending < complete ) {
+                    template << ", {\"starting_time\": $ending, \"ending_time\": $complete, \"color\":c1($index)}"
+                }
             }
         }
 
         template << "]"
         template << '}'
+    }
+
+    protected String labelString( TraceRecord record ) {
+        def result = []
+        def duration = record.get('duration', null)
+        def memory = record.get('vmem', null)
+
+        if( duration )
+            result << duration.toString()
+
+        if( memory )
+            result <<  memory.toString()
+
+        result.join(' / ')
     }
 
     protected String readTemplate() {
