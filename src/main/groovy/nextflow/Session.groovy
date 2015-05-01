@@ -19,7 +19,6 @@
  */
 
 package nextflow
-
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ExecutorService
@@ -43,7 +42,6 @@ import nextflow.trace.TraceObserver
 import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
-
 /**
  * Holds the information on the current execution
  *
@@ -126,8 +124,6 @@ class Session implements ISession {
     boolean getStatsEnabled() { statsEnabled }
 
     protected boolean testReturnTaskProcessor = false
-
-    protected static boolean keepExecutorPoolAlive = false
 
     /**
      * Creates a new session with an 'empty' (default) configuration
