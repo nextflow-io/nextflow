@@ -256,7 +256,8 @@ class Session implements ISession {
          * - register all of them in the dispatcher class
          * - register the onComplete event
          */
-        for( TraceObserver trace : observers ) {
+        for( int i=0; i<observers.size(); i++ ) {
+            def trace = observers.get(i)
             log.debug "Registering observer: ${trace.class.name}"
             dispatcher.register(trace)
             onShutdown { trace.onFlowComplete() }
