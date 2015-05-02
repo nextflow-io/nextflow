@@ -160,6 +160,8 @@ abstract class TaskProcessor {
      */
     private final overrideWarnShown = new AtomicBoolean()
 
+    private boolean sharedWarnShown
+
     /**
      * Flag set {@code true} when the processor termination has been invoked
      *
@@ -1366,6 +1368,13 @@ abstract class TaskProcessor {
         return task
     }
 
+    final protected void sharedDeprecationWarn() {
+        if( !sharedWarnShown ) {
+            log.warn "Process `$name` declares one or more shared input/output parameters -- This feature has been deprecated and will be removed in a future release"
+            sharedWarnShown = true
+        }
+    }
+
     final protected int makeTaskContextStage1( TaskRun task, Map secondPass, List values ) {
 
         final contextMap = task.context
@@ -1388,6 +1397,7 @@ abstract class TaskProcessor {
                     return // <-- leave it, because we do not want to add this 'val' at this stage
 
                 case FileSharedParam:
+                    sharedDeprecationWarn()
                     def fileParam = param as FileSharedParam
                     if( firstRun ) {
                         def normalized = normalizeInputToFiles(val,count)
@@ -1407,6 +1417,7 @@ abstract class TaskProcessor {
                     break
 
                 case ValueSharedParam:
+                    sharedDeprecationWarn()
                     if( firstRun )
                         sharedObjs[(SharedParam)param] = val
                     else
