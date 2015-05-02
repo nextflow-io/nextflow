@@ -408,8 +408,8 @@ class Session implements ISession {
 
     def void taskRegister(TaskProcessor process) {
         log.debug ">>> barrier register (process: ${process.name})"
-        for( TraceObserver it : observers ) { it.onProcessCreate(process) }
         processesBarrier.register(process)
+        for( TraceObserver it : observers ) { it.onProcessCreate(process) }
     }
 
     def void taskDeregister(TaskProcessor process) {

@@ -317,18 +317,25 @@ abstract class TaskProcessor {
         // the state agent
         state = new Agent<>(new StateObj(allScalarValues,name))
         state.addListener { StateObj old, StateObj obj ->
-            log.trace "<$name> Process state changed to: $obj"
-            if( !terminated && obj.isFinished() ) {
-                terminateProcess()
-                terminated = true
+            try {
+                log.trace "<$name> Process state changed to: $obj"
+                if( !terminated && obj.isFinished() ) {
+                    terminateProcess()
+                    terminated = true
+                }
+            }
+            catch( Throwable e ) {
+                session.abort(e)
             }
         }
 
+        // register the processor
+        // note: register the task *before* creating (and starting the dataflow operator) in order
+        // a race condition on the processes barrier - this fix issue #43
+        session.taskRegister(this)
+
         // create the underlying dataflow operator
         createOperator()
-
-        // register the processor
-        session.taskRegister(this)
 
         /*
          * When there is a single output channel, return let returns that item
