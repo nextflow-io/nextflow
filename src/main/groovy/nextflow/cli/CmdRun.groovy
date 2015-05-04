@@ -113,10 +113,10 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = ['-with-drmaa'], description = 'Enable DRMAA binding')
     String withDrmaa
 
-    @Parameter(names = ['-with-trace'], description = 'Trace execution to the specified file')
+    @Parameter(names = ['-with-trace'], description = 'Create processes execution tracing file')
     String withTrace
 
-    @Parameter(names = ['-with-timeline'], description = 'Create processes execution timeline file', hidden = true)
+    @Parameter(names = ['-with-timeline'], description = 'Create processes execution timeline file')
     String withTimeline
 
     @Parameter(names = '-with-docker', description = 'Enable process execution in a Docker container')

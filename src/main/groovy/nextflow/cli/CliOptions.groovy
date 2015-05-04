@@ -35,7 +35,7 @@ class CliOptions {
     @Parameter(hidden = true, names='-debug')
     List<String> debug
 
-    @Parameter(names=['-log'], description = 'Set nextflow log file')
+    @Parameter(names=['-log'], description = 'Set nextflow log file path')
     String logFile
 
     @Parameter(names=['-c','-config'], description = 'Add the specified file to configuration set')
@@ -70,5 +70,8 @@ class CliOptions {
 
     @DynamicParameter(names = ['-D'], description = 'Set JMV properties' )
     Map<String,String> jvmOpts = [:]
+
+    @Parameter(names = ['-self-update'], description = 'Update nextflow to the latest version', arity = 0)
+    boolean selfUpdate
 
 }
