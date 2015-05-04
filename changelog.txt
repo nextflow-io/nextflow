@@ -1,6 +1,23 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.13.4 - 4 May 2015
+- Added html processes execution time report 
+- Added support for Docker executable containers - Feature #33
+- Added support for missing number types to CacheHelper
+- Added warning message when using a deprecated input/output shared parameter
+- Fixed issue causing process hangs when stdout+stderr is bigger than 64K when using local executor
+- Fixed process stdout/stderr synchronisation issue
+- Fixed race condition when accessing `processor` attribute - Issue #41
+- Fixed race condition on processes registration/termination - See issue #43
+- Fixed `echo` synchronisation strategy when writing to stdout
+- Use a fixed thread pool for tasks execution and keep it separated from Gpars thread pool
+- Do not set Gpars thread pool size along with nextflow pool size
+- Improved resolution to tenths of a second when converting a `Duration` to string
+- Removed unnecessary local scope map argument from `getTaskGlobalVars` method
+- Read trace file w/o checking existence in order to reduce round-trip on remote storage
+- Workaround for Groovy compiler issue GROOVY-7409
+
 0.13.3 - 19 Apr 2015 
 - Fixed issue when staging file when using a non local pipeline workdir
 - Fixed invalid values in the trace file returned by `awk`
