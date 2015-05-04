@@ -569,8 +569,8 @@ class BashWrapperBuilder {
         def docker = new DockerBuilder(dockerImage)
         if( task ) {
             docker.addMountForInputs( task.getInputFiles() )
-                    .addMount( task.processor.getSession().workDir )
-                    .addMount( task.processor.getSession().binDir )
+            docker.addMount( task.processor.getSession().workDir )
+            if(!executable) docker.addMount( task.processor.getSession().binDir )
         }
 
         // set the name
@@ -587,8 +587,14 @@ class BashWrapperBuilder {
 
         // set the environment
         if( environment ) {
-            if( executable ) docker.addEnv( environment )
-            else docker.addEnv( ENV_FILE_NAME )
+            if( executable ) {
+                // PATH variable cannot be extended in an executable container
+                // make sure to not include it to avoid to override the container PATH
+                environment.remove('PATH')
+                docker.addEnv( environment )
+            }
+            else
+                docker.addEnv( ENV_FILE_NAME )
         }
 
         // set up run docker params
