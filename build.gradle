@@ -442,7 +442,7 @@ task pack( dependsOn: [packOne, packDx, packAll]) {
 }
 
 
-task deploy( type: Exec, dependsOn: [clean, pack, deployable.uploadArchives, makeSha1, closeRepository]) {
+task deploy( type: Exec, dependsOn: [clean, pack, deployable.uploadArchives, makeSha1]) {
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
