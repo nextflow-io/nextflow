@@ -160,6 +160,7 @@ class Session implements ISession {
 
         //set the thread pool size
         this.poolSize = config.poolSize as int
+        log.debug "Executor pool size: ${poolSize}"
 
         // create the task dispatcher instance
         dispatcher = new TaskDispatcher(this)
@@ -254,15 +255,6 @@ class Session implements ISession {
         }
     }
 
-    private createThreadsPoolAndExecutor() {
-        log.debug "Creating executor service"
-
-        System.setProperty('gpars.poolsize', config.poolSize as String)
-        log.debug "Executor pool size: ${poolSize}"
-
-        execService = Executors.newFixedThreadPool( poolSize )
-    }
-
     def Session start() {
         log.debug "Session start invoked"
 
@@ -277,10 +269,12 @@ class Session implements ISession {
             onShutdown { trace.onFlowComplete() }
         }
 
+        // register shut-down cleanup hooks
         Global.onShutdown { cleanUp() }
-        createThreadsPoolAndExecutor()
+        // create tasks executor
+        execService = Executors.newFixedThreadPool(poolSize)
+        // signal start to tasks dispatcher
         dispatcher.start()
-
         // signal start to trace observers
         observers.each { trace -> trace.onFlowStart(this) }
 
