@@ -1654,6 +1654,32 @@ class DataflowExtensionsTest extends Specification {
         result.val == [ [1,2], ['c','y'], file3 ]
         result.val == Channel.STOP
 
+
+        when:
+        result = Channel
+                .from([1,'a', file1], [1,'b',file2], [2,'x',file2], [3, 'q',file1], [1,'c',file3], [2, 'y',file3], [3, 'q',file1])
+                .groupTuple(by: [2])
+
+        then:
+        result.val == [ [1,3,3], ['a','q','q'], file1 ]
+        result.val == [ [1,2], ['b','x'], file2 ]
+        result.val == [ [1,2], ['c','y'], file3 ]
+        result.val == Channel.STOP
+
+
+        when:
+        result = Channel
+                .from([1,'a', file1], [1,'b',file2], [2,'x',file2], [1, 'q',file1], [3, 'y', file3], [1,'c',file2], [2, 'y',file2], [3, 'q',file1], [1, 'z', file2], [3, 'c', file3])
+                .groupTuple(by: [0,2])
+
+        then:
+        result.val == [ 1, ['a','q'], file1 ]
+        result.val == [ 1, ['b','c','z'], file2 ]
+        result.val == [ 2, ['x','y'], file2 ]
+        result.val == [ 3, ['y','c'], file3 ]
+        result.val == [ 3, ['q'], file1 ]
+        result.val == Channel.STOP
+
     }
 
     def testChannelIfEmpty() {

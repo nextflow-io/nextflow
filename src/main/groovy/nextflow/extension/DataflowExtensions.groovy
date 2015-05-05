@@ -19,7 +19,7 @@
  */
 
 package nextflow.extension
-import static CacheHelper.HashMode
+
 import static java.util.Arrays.asList
 import static nextflow.util.CheckHelper.checkParams
 
@@ -685,26 +685,42 @@ class DataflowExtensions {
     }
 
 
-    static private Map GROUP_TUPLE_PARAMS = [ by: Integer, sort: [Boolean, 'true','natural','deep','hash',Closure,Comparator] ]
+    static private Map GROUP_TUPLE_PARAMS = [ by: [Integer, List], sort: [Boolean, 'true','natural','deep','hash',Closure,Comparator] ]
+
+    static private GROUP_DEFAULT_INDEX = [0]
+
+    static private List<Integer> getGroupTupleIndices( Map params ) {
+
+        if( params?.by == null )
+            return GROUP_DEFAULT_INDEX
+
+        if( params.by instanceof List )
+            return params.by as List<Integer>
+
+        if( params.by instanceof Integer || params.by.toString().isInteger() )
+            return [params.by as Integer]
+
+        throw new IllegalArgumentException("Not a valid `by` index for `groupTuple` operator: '${params.by}' -- It must be an integer value or a list of integers")
+    }
 
     static public final DataflowReadChannel groupTuple( final DataflowReadChannel channel, final Map params ) {
         checkParams('groupTuple', params, GROUP_TUPLE_PARAMS)
 
-        final index = params?.containsKey('by') ? params.by as int : 0
+        final indices = getGroupTupleIndices(params)
 
         def reduced = reduce(channel, [:]) { Map groups, List tuple ->    // 'groups' is used to collect all values; 'tuple' is the record containing four items: barcode, seqid, bam file and bai file
-            final key = tuple[index]                        // the actual grouping key
+            final key = tuple[indices]                        // the actual grouping key
             final len = tuple.size()
 
             final List item = groups.getOrCreate(key) {     // get the group for the specified key
                 def result = new ArrayList(len)             // create if does not exists
                 for( int i=0; i<len; i++ )
-                    result[i] = (i==index ? key : new ArrayBag())
+                    result[i] = (i in indices ? tuple[i] : new ArrayBag())
                 return result
             }
 
             for( int i=0; i<len; i++ ) {                    // append the values in the tuple
-                if( i != index )
+                if( ! (i in indices) )
                     (item[i] as List) .add( tuple[i] )
             }
 
