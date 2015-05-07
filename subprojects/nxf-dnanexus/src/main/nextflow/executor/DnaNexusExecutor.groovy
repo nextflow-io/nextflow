@@ -307,7 +307,7 @@ class DxTaskHandler extends TaskHandler {
     }
 
 
-    private Map checkStatus() {
+    protected Map checkStatus() {
 
         long delta = System.currentTimeMillis() - lastStatusMillis
         if( delta < 15_000 ) {
