@@ -1,6 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.13.5 - 7 May 2015 
+- Fixed issue #44 - Pipeline hangs when `map` operator is applied to a dataflow variable
+
 0.13.4 - 4 May 2015
 - Added html processes execution time report 
 - Added support for Docker executable containers - Feature #33
