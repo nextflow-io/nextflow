@@ -327,6 +327,7 @@ class DataflowExtensions {
         assert source != null
         assert closure
 
+        final stopOnFirst = source instanceof DataflowExpression
         DataflowReadChannel<V> target = newChannelBy(source);
         newOperator(source, target) { it ->
 
@@ -337,7 +338,9 @@ class DataflowExtensions {
             if (result != Channel.VOID)
                 proc.bindOutput(result)
 
-            if( result == Channel.STOP )
+            // when the `map` operator is applied to a dataflow flow variable
+            // terminate the processor after the first emission -- Issue #44
+            if( result == Channel.STOP || stopOnFirst )
                 proc.terminate()
 
         }
