@@ -20,6 +20,7 @@
 
 package nextflow.processor
 import java.nio.file.Path
+import java.nio.file.Paths
 
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
@@ -27,6 +28,8 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.Global
+import nextflow.exception.ProcessException
 import nextflow.util.KryoHelper
 /**
  * Map used to delegate variable resolution to script scope
@@ -126,7 +129,10 @@ class TaskContext implements Map<String,Object> {
     }
 
     Object invokeMethod(String name, Object args) {
-        script.invokeMethod(name, args)
+        if( name == 'template' )
+            template(args)
+        else
+            script.invokeMethod(name, args)
     }
 
     public getProperty( String name ) {
@@ -266,6 +272,40 @@ class TaskContext implements Map<String,Object> {
 
     }
 
+    /**
+     * Helper method to be used inside a process to load a script template. For example:
+     *
+     *     <pre>
+     *         process foo {
+     *             input:
+     *             file file_name
+     *
+     *             script:
+     *             template('script/file.sh')
+     *         }
+     *     </pre>
+     *
+     * @param path The path to the template file. When relative the file is resolved against script {@code $baseDir/templates} folder
+     * @return The resolved template path
+     */
+    protected Path template( path ) {
+        if( !path )
+            throw new ProcessException("Process `$name` missing template name")
 
+        if( !(path instanceof Path) )
+            path = Paths.get(path.toString())
+
+        // if the path is already absolute just return it
+        if( path.isAbsolute() )
+            return path
+
+        // otherwise make
+        def base = Global.session.baseDir
+        if( base )
+            return base.resolve('templates').resolve(path)
+
+        // if the base dir is not available just use as it is
+        return path
+    }
 
 }

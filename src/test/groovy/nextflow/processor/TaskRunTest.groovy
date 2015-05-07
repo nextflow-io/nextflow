@@ -35,6 +35,8 @@ import nextflow.script.ValueInParam
 import nextflow.script.ValueOutParam
 import nextflow.script.ValueSharedParam
 import spock.lang.Specification
+import test.TestHelper
+
 /**
  *
  *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -354,6 +356,25 @@ class TaskRunTest extends Specification {
         then:
         task.getContainer() == 'my.registry/busybox'
         task.isContainerExecutable()
+
+    }
+
+
+    def 'should render template and set task attributes'() {
+
+        given:
+        def script = TestHelper.createInMemTempFile('template.sh')
+        script.text = 'echo ${name}'
+        def task = new TaskRun()
+        task.context = Mock(TaskContext)
+        task.context.getHolder() >> [name: 'Foo']
+
+        when:
+        def template = task.renderTemplate(script).strip()
+        then:
+        template == 'echo Foo'
+        task.source == 'echo ${name}'
+        task.template == script
 
     }
 

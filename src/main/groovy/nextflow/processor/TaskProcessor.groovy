@@ -41,7 +41,6 @@ import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
-import nextflow.exception.ProcessScriptException
 import nextflow.executor.Executor
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
@@ -258,14 +257,7 @@ abstract class TaskProcessor {
     /**
      *  Define the type of script hold by the {@code #code} property
      */
-    protected ScriptType getType() { taskBody.type }
-
-    /**
-     * The source fragment as entered by the user for debugging purpose
-     */
-    protected String getSource() { taskBody.source }
-
-    protected Closure getCode() { taskBody.closure }
+    protected ScriptType getScriptType() { taskBody.type }
 
     /**
      * @return The user provided script block
@@ -290,9 +282,8 @@ abstract class TaskProcessor {
      */
     def run() {
 
-        if ( !code )
-            throw new IllegalArgumentException("Missing 'script' attribute")
-
+        if ( !taskBody )
+            throw new IllegalStateException("Missing task body for process `$name`")
 
         /*
          * Normalize the input channels:
@@ -448,7 +439,7 @@ abstract class TaskProcessor {
                 id: id,
                 index: index,
                 processor: this,
-                type: type,
+                type: scriptType,
                 config: config.createTaskConfig(),
                 context: new TaskContext(this)
         )
@@ -676,21 +667,6 @@ abstract class TaskProcessor {
         }
     }
 
-    /**
-     * Given the script closure, that hold the code entered by the user, returns
-     * the final script string to be executed
-     *
-     * @param code
-     * @return
-     */
-    final protected String getScriptlet( Closure<String> code ) {
-        try {
-            return code.call()?.toString()
-        }
-        catch( Throwable e ) {
-            throw new ProcessScriptException("Process script contains error(s)", e)
-        }
-    }
 
     /**
      * Handles an error raised during the processor execution
@@ -778,7 +754,7 @@ abstract class TaskProcessor {
          */
         if( task?.script ) {
             // - print the executed command
-            message << "Command executed:\n"
+            message << "Command executed${task.template ? " [$task.template]": ''}:\n"
             task.script?.stripIndent()?.trim()?.eachLine {
                 message << "  ${it}"
             }
@@ -808,9 +784,9 @@ abstract class TaskProcessor {
 
         }
         else {
-            if( source )  {
+            if( task?.source )  {
                 message << "\nSource block:"
-                source.stripIndent().eachLine {
+                task.source.stripIndent().eachLine {
                     message << "  $it"
                 }
             }
@@ -1347,26 +1323,6 @@ abstract class TaskProcessor {
         return val
     }
 
-    /**
-     * Create the {@code TaskDef} data structure and initialize the task execution context
-     * with the received input values
-     *
-     * @param values
-     * @return
-     */
-    final protected TaskRun setupTask(List values) {
-        if( log.isTraceEnabled() )
-            log.trace "Setup new process > $name"
-
-        // -- map the inputs to a map and use to delegate closure values interpolation
-        final secondPass = [:]
-        final task = createTaskRun()
-
-        int count = makeTaskContextStage1(task, secondPass, values)
-        makeTaskContextStage2(task, secondPass, count)
-
-        return task
-    }
 
     final protected void sharedDeprecationWarn() {
         if( !sharedWarnShown ) {
@@ -1472,17 +1428,7 @@ abstract class TaskProcessor {
             log.warn "Process $name overrides reserved variable `task`"
         }
 
-        // -- initialize the task code to be executed
-        task.code = this.code.clone() as Closure
-        task.code.delegate = task.context
-        task.code.setResolveStrategy(Closure.DELEGATE_ONLY)
-
-        // Important!
-        // when the task is implemented by a script string
-        // Invokes the closure which return the script whit all the variables replaced with the actual values
-        if( type == ScriptType.SCRIPTLET ) {
-            task.script = getScriptlet(task.code)
-        }
+        task.resolve(taskBody)
     }
 
     final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
@@ -1496,7 +1442,7 @@ abstract class TaskProcessor {
 
     final protected createTaskHashKey(TaskRun task) {
 
-        List keys = [ session.uniqueId, getSource() ]
+        List keys = [ session.uniqueId, task.source ]
         // add all the input name-value pairs to the key generator
         task.inputs.each {
             keys.add( it.key.name )

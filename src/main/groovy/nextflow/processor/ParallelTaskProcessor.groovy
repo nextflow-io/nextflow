@@ -197,11 +197,19 @@ class ParallelTaskProcessor extends TaskProcessor {
     final protected void invokeTask( def args ) {
 
         // create and initialize the task instance to be executed
-        List params = args instanceof List ? args : [args]
-        final task = setupTask(params)
+        final List values = args instanceof List ? args : [args]
+        if( log.isTraceEnabled() )
+            log.trace "Setup new process > $name"
 
-        // -- call the closure and execute the script
+        // -- create the task run instance
+        final task = createTaskRun()
+        // -- set the task instance as the current in this thread
         currentTask.set(task)
+
+        // -- map the inputs to a map and use to delegate closure values interpolation
+        final secondPass = [:]
+        int count = makeTaskContextStage1(task, secondPass, values)
+        makeTaskContextStage2(task, secondPass, count)
 
         // -- verify if exists a stored result for this case,
         //    if true skip the execution and return the stored data

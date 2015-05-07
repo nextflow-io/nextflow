@@ -23,8 +23,13 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import com.google.common.hash.HashCode
+import groovy.text.GStringTemplateEngine
 import groovy.transform.Memoized
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.exception.ProcessException
+import nextflow.exception.ProcessMissingTemplateException
+import nextflow.exception.ProcessScriptException
 import nextflow.file.FileHolder
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
@@ -35,6 +40,7 @@ import nextflow.script.OutParam
 import nextflow.script.ScriptType
 import nextflow.script.SharedParam
 import nextflow.script.StdInParam
+import nextflow.script.TaskBody
 import nextflow.script.ValueOutParam
 import nextflow.util.ContainerScriptTokens
 import nextflow.util.DockerBuilder
@@ -259,9 +265,19 @@ class TaskRun {
     Closure code
 
     /**
-     * The script executed by the system
+     * The script to be executed by the system
      */
     def script
+
+    /**
+     * The process source as entered by the user in the process definition
+     */
+    String source
+
+    /**
+     * The process template file
+     */
+    Path template
 
     /**
      * The number of times the execution of the task has failed
@@ -511,6 +527,75 @@ class TaskRun {
 
         return status in config.getValidExitStatus()
     }
+
+    /**
+     * Given the task body token declared in the process definition:
+     * 1) assign to the task run instance the code closure to execute
+     * 2) extract the process code `source`
+     * 3) assign the `script` code to execute
+     *
+     * @param body A {@code TaskBody} object instance
+     */
+    @PackageScope void resolve( TaskBody body ) {
+
+        // -- initialize the task code to be executed
+        this.code = body.closure.clone() as Closure
+        this.code.delegate = this.context
+        this.code.setResolveStrategy(Closure.DELEGATE_ONLY)
+
+        // -- set the task source
+        // note: this may be overwritten when a template file used
+        this.source = body.source
+
+        if( type != ScriptType.SCRIPTLET )
+            return
+
+        // Important!
+        // when the task is implemented by a script string
+        // Invokes the closure which return the script whit all the variables replaced with the actual values
+        try {
+            def result = code.call()
+            if ( result instanceof Path ) {
+                script = renderTemplate(result)
+            }
+            else {
+                script = result.toString()
+            }
+        }
+        catch( ProcessException e ) {
+            throw e
+        }
+        catch( Throwable e ) {
+            throw new ProcessScriptException("Process `$name` script contains error(s)", e)
+        }
+
+    }
+
+
+    /**
+     * Given a template script file and a binding, returns the rendered script content
+     *
+     * @param script
+     * @param binding
+     * @return
+     */
+    final protected String renderTemplate( Path template ) {
+        try {
+            // read the template and override the task `source` with it
+            this.source = template.text
+            // keep track of template file
+            this.template = template
+
+            new GStringTemplateEngine()
+                    .createTemplate(source)
+                    .make(context.getHolder())
+                    .toString()
+        }
+        catch( NoSuchFileException e ) {
+            throw new ProcessMissingTemplateException("Process `${processor.name}` can't find template file: $template")
+        }
+    }
+
 
 }
 
