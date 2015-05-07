@@ -185,6 +185,17 @@ class DataflowExtensionsTest extends Specification {
         result.val == Channel.STOP
     }
 
+    def testMapWithVariable() {
+        given:
+        def variable = Channel.just('Hello')
+        when:
+        def result = variable.map { it.reverse() }
+        then:
+        result.val == 'olleH'
+        result.val == 'olleH'
+        result.val == 'olleH'
+    }
+
     def testMapParamExpanding () {
 
         when:
