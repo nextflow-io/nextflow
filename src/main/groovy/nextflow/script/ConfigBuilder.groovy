@@ -25,6 +25,7 @@ import static nextflow.util.ConfigHelper.parseValue
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdNode
@@ -32,7 +33,6 @@ import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.util.HistoryFile
-
 /**
  * Builds up the Nextflow configuration object
  *
@@ -160,7 +160,7 @@ class ConfigBuilder {
         return result
     }
 
-    def Map buildConfig( List<Path> files ) {
+    def ConfigObject buildConfig( List<Path> files ) {
 
         final Map<String,String> vars = cmdRun?.env
         final boolean exportSysEnv = cmdRun?.exportSysEnv
@@ -216,7 +216,7 @@ class ConfigBuilder {
     }
 
 
-    def Map buildConfig0( Map env, List configEntries )  {
+    def ConfigObject buildConfig0( Map env, List configEntries )  {
         assert env != null
 
         ConfigObject result = new ConfigSlurper().parse('env{}; session{}; params{}; process{}; executor{} ')
@@ -264,26 +264,43 @@ class ConfigBuilder {
             if( !uniqueId ) {
                 log.warn "It appears you have never run this pipeline before -- Option `-resume` is ignored"
             }
-            return uniqueId
         }
 
-        if( HistoryFile.history.findUniqueId(uniqueId))
-            return uniqueId
-
-        throw new AbortOperationException("Can't find a run with the specified id: ${uniqueId} -- Execution can't be resumed")
+        return uniqueId
     }
 
-    private configRunOptions(Map config) {
+    @PackageScope
+    void configRunOptions(ConfigObject config, CmdRun cmdRun) {
+
+        // -- set config options
+        config.cacheable = cmdRun.cacheable
+
+        // -- sets the working directory
+        if( cmdRun.workDir )
+            config.workDir = cmdRun.workDir
+
+        else if( !config.workDir )
+            config.workDir = System.getenv('NXF_WORK') ?: 'work'
+
+        // -- sets the library path
+        if( cmdRun.libPath )
+            config.libDir = cmdRun.libPath
+
+        else if ( !config.libDir )
+            config.libDir = System.getenv('NXF_LIB')
 
         // -- override 'process' parameters defined on the cmd line
         cmdRun.process.each { name, value ->
             config.process[name] = parseValue(value)
         }
 
-        // -- check for the 'continue' flag
-        if( cmdRun.resume ) {
-            config.session.uniqueId = normalizeResumeId(cmdRun.resume)
-        }
+        // -- sets the resume option
+        if( cmdRun.resume )
+            config.resume = cmdRun.resume
+
+        if( config.isSet('resume') )
+            config.resume = normalizeResumeId(config.resume as String)
+
         // -- other configuration parameters
         if( cmdRun.poolSize ) {
             config.poolSize = cmdRun.poolSize
@@ -294,6 +311,33 @@ class ConfigBuilder {
         if( cmdRun.pollInterval ) {
             config.executor.pollInterval = cmdRun.pollInterval
         }
+
+        // -- sets trace file options
+        if( cmdRun.withTrace ) {
+            if( !(config.trace instanceof Map) )
+                config.trace = [:]
+            config.trace.enabled = true
+            if( !config.trace.file )
+                config.trace.file = cmdRun.withTrace
+
+        }
+
+        // -- sets timeline report options
+        if( cmdRun.withTimeline ) {
+            if( !(config.timeline instanceof Map) )
+                config.timeline = [:]
+            config.timeline.enabled = true
+            if( !config.timeline.file )
+                config.timeline.file = cmdRun.withTimeline
+        }
+
+        // -- sets extrae profiling options
+        if( cmdRun.withExtrae ) {
+            if( !(config.extrae instanceof Map) )
+                config.extrae = [:]
+            config.extrae.enabled = true
+        }
+
 
         // -- add the command line parameters to the 'taskConfig' object
         cmdRun.params?.each { name, value ->
@@ -367,7 +411,7 @@ class ConfigBuilder {
         def config = buildConfig(configFiles)
 
         if( cmdRun )
-            configRunOptions(config)
+            configRunOptions(config, cmdRun)
 
         // convert the ConfigObject to plain map
         // this because when accessing a non-existing entry in a ConfigObject it return and empty map as value

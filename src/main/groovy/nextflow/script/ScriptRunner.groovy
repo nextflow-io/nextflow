@@ -29,11 +29,11 @@ import nextflow.Channel
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.ast.NextflowDSL
-import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.file.FileHelper
 import nextflow.util.ConfigHelper
+import nextflow.util.HistoryFile
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -71,11 +71,6 @@ class ScriptRunner {
      * The pipeline as a text content
      */
     private String setScript
-
-    /**
-     * The command line options
-     */
-    private CmdRun runOptions
 
     /*
      * the script raw output
@@ -115,11 +110,6 @@ class ScriptRunner {
         return this
     }
 
-    def ScriptRunner setRunOptions( CmdRun options ) {
-        this.runOptions = options
-        return this
-    }
-
     Session getSession() { session }
 
     /**
@@ -148,8 +138,7 @@ class ScriptRunner {
         assert setScript
 
         // init session
-        if( runOptions )
-            session.init(runOptions, scriptFile)
+        session.init(scriptFile)
 
         // start session
         session.start()
@@ -182,7 +171,7 @@ class ScriptRunner {
         assert methodName
 
         // init session
-        session.init(runOptions, scriptFile)
+        session.init(scriptFile)
 
         script = parseScript(setScript, args)
         def values = args ? args.collect { parseValue(it) } : null
@@ -312,6 +301,22 @@ class ScriptRunner {
         session.destroy()
     }
 
+    /**
+     * @param cli The launcher command line string
+     */
+    void verifyAndTrackHistory(String cli) {
+
+        // -- when resume, make sure the session id exists in the executions history
+        if( session.resumeMode && !HistoryFile.history.findUniqueId(session.uniqueId.toString())) {
+            throw new AbortOperationException("Can't find a run with the specified id: ${session.uniqueId} -- Execution can't be resumed")
+        }
+
+        if( !cli )
+            return
+        def p = cli.indexOf('nextflow ')
+        if( p != -1 ) cli = 'nextflow ' + cli.substring(p+9)
+        HistoryFile.history.write( session.uniqueId, cli )
+    }
 
     /**
      * Extends an {@code ArrayList} class adding a nicer index-out-of-range error message

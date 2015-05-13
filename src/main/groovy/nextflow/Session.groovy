@@ -31,9 +31,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.cli.CliOptions
-import nextflow.cli.CmdRun
 import nextflow.exception.MissingLibraryException
-import nextflow.file.FileHelper
 import nextflow.processor.TaskDispatcher
 import nextflow.processor.TaskProcessor
 import nextflow.trace.TimelineObserver
@@ -66,42 +64,42 @@ class Session implements ISession {
     /**
      * Holds the configuration object
      */
-    def Map config
+    Map config
 
     /**
      * Enable / disable tasks result caching
      */
-    def boolean cacheable
+    boolean cacheable
 
     /**
      * whenever it has been launched in resume mode
      */
-    def boolean resumeMode
+    boolean resumeMode
 
     /**
      * The folder where tasks temporary files are stored
      */
-    def Path workDir = Paths.get('work').toAbsolutePath()
+    Path workDir
 
     /**
      * The folder where the main script is contained
      */
-    def Path baseDir
+    Path baseDir
 
     /**
      * The pipeline script name (without parent path)
      */
-    def String scriptName
+    String scriptName
 
     /**
      * Folder(s) containing libs and classes to be added to the classpath
      */
-    def List<Path> libDir
+    List<Path> libDir
 
     /**
      * The unique identifier of this session
      */
-    def final UUID uniqueId
+    final UUID uniqueId
 
     private Barrier processesBarrier = new Barrier()
 
@@ -141,17 +139,25 @@ class Session implements ISession {
         assert cfg != null
         this.config = cfg instanceof ConfigObject ? cfg.toMap() : cfg
 
-        // poor man singleton
+        // poor man session object dependency injection
         Global.setSession(this)
         Global.setConfig(config)
+
+        cacheable = config.cacheable
+
+        // sets resumeMode and uniqueId
+        if( config.resume ) {
+            resumeMode = true
+            uniqueId = UUID.fromString(config.resume as String)
+        }
+        else {
+           uniqueId = UUID.randomUUID()
+        }
+        log.debug "Session uuid: $uniqueId"
 
         // normalize taskConfig object
         if( config.process == null ) config.process = [:]
         if( config.env == null ) config.env = [:]
-
-        // set unique session from the taskConfig object, or create a new one
-        uniqueId = (config.session as Map)?.uniqueId ? UUID.fromString( (config.session as Map).uniqueId as String) : UUID.randomUUID()
-        log.debug "Session uuid: $uniqueId"
 
         if( !config.poolSize ) {
             def cpus = Runtime.getRuntime().availableProcessors()
@@ -171,14 +177,10 @@ class Session implements ISession {
      *  {@link CliOptions} object
      *
      */
-    def void init( CmdRun runOpts, Path scriptFile ) {
+    void init( Path scriptFile ) {
 
-        this.cacheable = runOpts.cacheable
-        this.resumeMode = runOpts.resume != null
-
-        // note -- make sure to use 'FileHelper.asPath' since it guarantee to handle correctly non-standard file system e.g. 'dxfs'
-        this.workDir = FileHelper.asPath(runOpts.workDir).toAbsolutePath()
-        this.setLibDir( runOpts.libPath )
+        this.workDir = ((config.workDir ?: 'work') as Path).toAbsolutePath()
+        this.setLibDir( config.libDir as String )
 
         if( scriptFile ) {
             // the folder that contains the main script
@@ -187,7 +189,7 @@ class Session implements ISession {
             this.scriptName = scriptFile.name
         }
 
-        this.observers = createObservers( runOpts )
+        this.observers = createObservers()
         this.statsEnabled = observers.size()>0
     }
 
@@ -198,12 +200,12 @@ class Session implements ISession {
      * @return A list of {@link TraceObserver} objects or an empty list
      */
     @PackageScope
-    List createObservers( CmdRun runOpts ) {
+    List createObservers() {
         def result = []
 
-        createTraceFileObserver(runOpts, result)
-        createTimelineObserver(runOpts, result)
-        createExtraeObserver(runOpts, result)
+        createTraceFileObserver(result)
+        createTimelineObserver(result)
+        createExtraeObserver(result)
 
         return result
     }
@@ -211,8 +213,9 @@ class Session implements ISession {
     /**
      * create the Extrae trace observer
      */
-    protected void createExtraeObserver(CmdRun runOpts, List result) {
-        if( runOpts.withExtrae ) {
+    protected void createExtraeObserver(List result) {
+        Boolean isEnabled = config.navigate('extrae.enabled') as Boolean
+        if( isEnabled ) {
             try {
                 result << (TraceObserver)Class.forName(EXTRAE_TRACE_CLASS).newInstance()
             }
@@ -225,11 +228,10 @@ class Session implements ISession {
     /**
      * Create timeline report file observer
      */
-    protected void createTimelineObserver(CmdRun runOpts, List result) {
+    protected void createTimelineObserver(List result) {
         Boolean isEnabled = config.navigate('timeline.enabled') as Boolean
-        if( isEnabled || runOpts.withTimeline ) {
-            String fileName = runOpts.withTimeline
-            if( !fileName ) fileName = config.navigate('timeline.file')
+        if( isEnabled ) {
+            String fileName = config.navigate('timeline.file')
             if( !fileName ) fileName = TimelineObserver.DEF_FILE_NAME
             def traceFile = (fileName as Path).complete()
             def observer = new TimelineObserver(traceFile)
@@ -240,11 +242,10 @@ class Session implements ISession {
     /*
      * create the execution trace observer
      */
-    protected void createTraceFileObserver(CmdRun runOpts, List result) {
+    protected void createTraceFileObserver(List result) {
         Boolean isEnabled = config.navigate('trace.enabled') as Boolean
-        if( isEnabled || runOpts.withTrace ) {
-            String fileName = runOpts.withTrace
-            if( !fileName ) fileName = config.navigate('trace.file')
+        if( isEnabled ) {
+            String fileName = config.navigate('trace.file')
             if( !fileName ) fileName = TraceFileObserver.DEF_FILE_NAME
             def traceFile = (fileName as Path).complete()
             def observer = new TraceFileObserver(traceFile)

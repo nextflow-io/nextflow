@@ -34,7 +34,6 @@ import nextflow.Session
 import nextflow.ast.NextflowDSL
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdInfo
-import nextflow.cli.CmdRun
 import nextflow.script.BaseScript
 import nextflow.script.ConfigBuilder
 import nextflow.script.ScriptBinding
@@ -154,7 +153,7 @@ class Nextflow extends Console {
 
         def binding = (ScriptBinding)shell.context
         def session = new Session(binding.config)
-        session.init( new CmdRun(), scriptFile as Path)
+        session.init(scriptFile as Path)
 
         binding.setVariable( 'baseDir', session.baseDir )
         binding.setVariable( 'workDir', session.workDir )

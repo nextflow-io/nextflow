@@ -354,4 +354,158 @@ class ConfigBuilderTest extends Specification {
 
     }
 
+    def 'should set session trace options' () {
+
+        given:
+        def config = new ConfigObject()
+        def builder = [:] as ConfigBuilder
+
+        when:
+        config.trace.enabled = true
+        builder.configRunOptions(config, new CmdRun())
+
+        then:
+        config.trace instanceof Map
+        config.trace.enabled
+        !config.trace.file
+
+        when:
+        builder.configRunOptions(config, new CmdRun(withTrace: 'some-file'))
+        then:
+        config.trace instanceof Map
+        config.trace.enabled
+        config.trace.file == 'some-file'
+
+    }
+
+    def 'should set session timeline options' () {
+
+        given:
+        def config = new ConfigObject()
+        def builder = [:] as ConfigBuilder
+
+        when:
+        builder.configRunOptions(config, new CmdRun())
+        then:
+        !config.timeline
+
+        when:
+        config.timeline.enabled = true
+        builder.configRunOptions(config, new CmdRun())
+
+        then:
+        config.timeline instanceof Map
+        config.timeline.enabled
+        !config.timeline.file
+
+        when:
+        builder.configRunOptions(config, new CmdRun(withTimeline: 'my-timeline.html'))
+        then:
+        config.timeline instanceof Map
+        config.timeline.enabled
+        config.timeline.file == 'my-timeline.html'
+
+    }
+
+    def 'should set session extrae enabled'  () {
+
+        given:
+        def config = new ConfigObject()
+        def builder = [:] as ConfigBuilder
+
+        when:
+        builder.configRunOptions(config, new CmdRun(withExtrae: 'true'))
+        then:
+        config.extrae instanceof Map
+        config.extrae.enabled
+
+    }
+
+    def 'SHOULD SET `RESUME` OPTION'() {
+
+        given:
+        def config = new ConfigObject()
+        def builder = [:] as ConfigBuilder
+
+        when:
+        builder.configRunOptions(config, new CmdRun())
+        then:
+        !config.isSet('resume')
+
+        when:
+        config = new ConfigObject()
+        config.resume ='alpha-beta-delta'
+        builder.configRunOptions(config, new CmdRun())
+        then:
+        config.resume == 'alpha-beta-delta'
+
+        when:
+        config = new ConfigObject()
+        config.resume ='alpha-beta-delta'
+        builder.configRunOptions(config, new CmdRun(resume: 'xxx-yyy'))
+        then:
+        config.resume == 'xxx-yyy'
+
+    }
+
+    def 'should set `workDir`' () {
+
+        given:
+        def config = new ConfigObject()
+        def builder = [:] as ConfigBuilder
+
+        when:
+        builder.configRunOptions(config, new CmdRun())
+        then:
+        config.workDir == System.properties.NXF_WORK ?: 'work'
+
+        when:
+        config = new ConfigObject()
+        config.workDir = 'hello/there'
+        builder.configRunOptions(config, new CmdRun())
+        then:
+        config.workDir == 'hello/there'
+
+        when:
+        config = new ConfigObject()
+        config.workDir = 'hello/there'
+        builder.configRunOptions(config, new CmdRun(workDir: 'my/work/dir'))
+        then:
+        config.workDir == 'my/work/dir'
+    }
+
+    def 'should set `libDir`' () {
+        given:
+        def config = new ConfigObject()
+        def builder = [:] as ConfigBuilder
+
+        when:
+        builder.configRunOptions(config, new CmdRun())
+        then:
+        config.libDir == null
+
+        when:
+        builder.configRunOptions(config, new CmdRun(libPath: 'my/lib/dir'))
+        then:
+        config.libDir == 'my/lib/dir'
+    }
+
+    def 'should set `cacheable`' () {
+        given:
+        def config
+        def builder = [:] as ConfigBuilder
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, new CmdRun())
+        then:
+        config.cacheable == true
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, new CmdRun(cacheable: false))
+        then:
+        config.cacheable == false
+    }
+
 }

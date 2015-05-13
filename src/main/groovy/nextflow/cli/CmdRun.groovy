@@ -31,7 +31,6 @@ import nextflow.scm.AssetManager
 import nextflow.script.ConfigBuilder
 import nextflow.script.ScriptRunner
 import nextflow.util.Duration
-import nextflow.util.HistoryFile
 /**
  * CLI sub-command RUN
  *
@@ -75,7 +74,7 @@ class CmdRun extends CmdBase implements HubOptions {
     String test
 
     @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate results are stored')
-    String workDir = System.getenv('NXF_WORK') ?: 'work'
+    String workDir
 
     /**
      * Defines the parameters to be passed to the pipeline script
@@ -166,7 +165,6 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- create a new runner instance
         def runner = new ScriptRunner(config)
                             .setScript(scriptFile)
-                            .setRunOptions(this)
 
         if( this.test ) {
             runner.test(this.test, scriptArgs )
@@ -176,21 +174,13 @@ class CmdRun extends CmdBase implements HubOptions {
             log.debug( '\n'+info )
 
             // -- add this run to the local history
-            trackHistory(runner.session.uniqueId)
+            runner.verifyAndTrackHistory(launcher.cliString)
 
             // -- run it!
             runner.execute(scriptArgs)
         }
     }
 
-    protected void trackHistory(UUID uuid) {
-        def cli = launcher.cliString
-        if( !cli )
-            return
-        def p = cli.indexOf('nextflow ')
-        if( p != -1 ) cli = 'nextflow ' + cli.substring(p+9)
-        HistoryFile.history.write( uuid, cli )
-    }
 
     protected File getScriptFile(String pipelineName) {
         assert pipelineName

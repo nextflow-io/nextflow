@@ -19,11 +19,9 @@
  */
 
 package nextflow
-
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import nextflow.cli.CmdRun
 import nextflow.trace.TraceFileObserver
 import nextflow.util.Duration
 import spock.lang.Specification
@@ -227,23 +225,24 @@ class SessionTest extends Specification {
 
         when:
         session = [:] as Session
-        result = session.createObservers(new CmdRun())
+        result = session.createObservers()
         then:
         !result
 
         when:
         session = [:] as Session
-        result = session.createObservers(new CmdRun(withTrace: 'file.txt'))
+        session.config = [trace: [enabled: true, file:'name.txt']]
+        result = session.createObservers()
         observer = result[0] as TraceFileObserver
         then:
         result.size() == 1
-        observer.tracePath == Paths.get('file.txt').complete()
+        observer.tracePath == Paths.get('name.txt').complete()
         observer.separator == '\t'
 
         when:
         session = [:] as Session
-        session.config = [trace: [sep: 'x', fields: 'task_id,name,exit']]
-        result = session.createObservers(new CmdRun(withTrace: 'alpha.txt'))
+        session.config = [trace: [enabled: true, sep: 'x', fields: 'task_id,name,exit', file: 'alpha.txt']]
+        result = session.createObservers()
         observer = result[0] as TraceFileObserver
         then:
         result.size() == 1
@@ -254,14 +253,14 @@ class SessionTest extends Specification {
         when:
         session = [:] as Session
         session.config = [trace: [sep: 'x', fields: 'task_id,name,exit']]
-        result = session.createObservers(new CmdRun())
+        result = session.createObservers()
         then:
         !result
 
         when:
         session = [:] as Session
         session.config = [trace: [enabled: true, fields: 'task_id,name,exit,vmem']]
-        result = session.createObservers(new CmdRun())
+        result = session.createObservers()
         observer = result[0] as TraceFileObserver
         then:
         result.size() == 1
