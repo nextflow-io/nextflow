@@ -214,12 +214,44 @@ abstract class Executor {
         if( normalized ) {
             result << ""
             result << "mkdir -p ${task.getTargetDir()}"
-            normalized.each {
-                result << "rsync -rRzl $it ${task.getTargetDir()} || true" // <-- add true to avoid it stops on errors
+            String strategy = task.getProcessor().getTaskConfig().unstageStrategy
+            for( int i=0; i<normalized.size(); i++ ) {
+                final path = normalized[i]
+                final cmd = copyCommand(path, task.getTargetDir().toString(), strategy) + ' || true' // <-- add true to avoid it stops on errors
+                result << cmd
             }
         }
 
         return result.join(separatorChar)
+    }
+
+    /**
+     * Compose a `cp` or `mv` command given the source and target paths
+     *
+     * @param source
+     * @param target
+     * @param move When {@code true} use unix {@code mv} instead of {@code cp}
+     * @return A shell copy or move command string
+     */
+    protected String copyCommand( String source, String target, String strategy = null) {
+
+        def cmd
+        if( strategy == 'copy' || !strategy )
+            cmd = 'cp -fR'
+        else if( strategy == 'move' )
+            cmd = 'mv -f'
+        else if( strategy == 'rsync' )
+            return "rsync -rRl $source $target"
+        else
+            throw new IllegalArgumentException("Unknown un-stage strategy: $strategy")
+
+        final p = source.lastIndexOf('/')
+        if( p<=0 ) {
+            return "$cmd $source $target"
+        }
+
+        def path  = new File(target,source.substring(0,p)).toString()
+        return "mkdir -p $path && $cmd $source $path"
     }
 
     /**

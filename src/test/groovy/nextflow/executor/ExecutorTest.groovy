@@ -20,8 +20,12 @@
 
 package nextflow.executor
 import java.nio.file.Files
+import java.nio.file.Paths
 
 import nextflow.file.FileHolder
+import nextflow.processor.ProcessConfig
+import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
 import nextflow.script.FileInParam
 import nextflow.script.FileOutParam
 import spock.lang.Specification
@@ -236,6 +240,112 @@ class ExecutorTest extends Specification {
 
         expect:
         executor.normalizeGlobStarPaths(['file1.txt','path/file2.txt','path/**/file3.txt', 'path/**/file4.txt','**/fa']) == ['file1.txt','path/file2.txt','path','*']
+    }
+
+    def 'should return a valid `cp` command' () {
+
+        given:
+        def executor = [:] as Executor
+        expect:
+        executor.copyCommand(source, target) == result
+
+        where:
+        source              | target    | result
+        'file.txt'          | '/to/dir' | 'cp -fR file.txt /to/dir'
+        'path_name'         | '/to/dir' | 'cp -fR path_name /to/dir'
+        'input/file.txt'    | '/to/dir' | 'mkdir -p /to/dir/input && cp -fR input/file.txt /to/dir/input'
+        'long/path/name'    | '/to/dir' | 'mkdir -p /to/dir/long/path && cp -fR long/path/name /to/dir/long/path'
+        'path_name/*'       | '/to/dir' | 'mkdir -p /to/dir/path_name && cp -fR path_name/* /to/dir/path_name'
+        'path_name/'        | '/to/dir' | 'mkdir -p /to/dir/path_name && cp -fR path_name/ /to/dir/path_name'
+
+    }
+
+    def 'should return a valid `mv` command' () {
+
+        given:
+        def executor = [:] as Executor
+        expect:
+        executor.copyCommand(source, target, 'move') == result
+
+        where:
+        source              | target    | result
+        'file.txt'          | '/to/dir' | 'mv -f file.txt /to/dir'
+        'file.txt'          | '/to/dir' | 'mv -f file.txt /to/dir'
+        'path_name'         | '/to/dir' | 'mv -f path_name /to/dir'
+        'input/file.txt'    | '/to/dir' | 'mkdir -p /to/dir/input && mv -f input/file.txt /to/dir/input'
+        'long/path/name'    | '/to/dir' | 'mkdir -p /to/dir/long/path && mv -f long/path/name /to/dir/long/path'
+        'path_name/*'       | '/to/dir' | 'mkdir -p /to/dir/path_name && mv -f path_name/* /to/dir/path_name'
+        'path_name/'        | '/to/dir' | 'mkdir -p /to/dir/path_name && mv -f path_name/ /to/dir/path_name'
+
+    }
+
+    def 'should return a valid `rsync` command' () {
+
+        given:
+        def executor = [:] as Executor
+        expect:
+        executor.copyCommand(source, target, 'rsync') == result
+
+        where:
+        source              | target    | result
+        'file.txt'          | '/to/dir' | 'rsync -rRl file.txt /to/dir'
+        'file.txt'          | '/to/dir' | 'rsync -rRl file.txt /to/dir'
+        'path_name'         | '/to/dir' | 'rsync -rRl path_name /to/dir'
+        'input/file.txt'    | '/to/dir' | 'rsync -rRl input/file.txt /to/dir'
+        'long/path/name'    | '/to/dir' | 'rsync -rRl long/path/name /to/dir'
+        'path_name/*'       | '/to/dir' | 'rsync -rRl path_name/* /to/dir'
+        'path_name/'        | '/to/dir' | 'rsync -rRl path_name/ /to/dir'
+
+    }
+
+    def 'should return cp script to unstage output files' () {
+
+        given:
+        def process = Mock(TaskProcessor)
+        process.getTaskConfig() >> Mock(ProcessConfig)
+
+        def executor = [:] as Executor
+        def task = Mock(TaskRun)
+        task.getProcessor() >> process
+        task.getOutputFilesNames() >> [ 'simple.txt', 'my/path/file.bam' ]
+        task.getTargetDir() >> Paths.get('/target/work/dir')
+
+        when:
+        def script = executor.unstageOutputFilesScript( task )
+        then:
+        script == '''
+                mkdir -p /target/work/dir
+                cp -fR simple.txt /target/work/dir || true
+                mkdir -p /target/work/dir/my/path && cp -fR my/path/file.bam /target/work/dir/my/path || true
+                '''
+                .stripIndent().rightTrim()
+
+    }
+
+    def 'should return rsync script to unstage output files' () {
+
+        given:
+        def config = new ProcessConfig([unstageStrategy: 'rsync'])
+
+        def process = Mock(TaskProcessor)
+        process.getTaskConfig() >> config
+
+        def executor = [:] as Executor
+        def task = Mock(TaskRun)
+        task.getProcessor() >> process
+        task.getOutputFilesNames() >> [ 'simple.txt', 'my/path/file.bam' ]
+        task.getTargetDir() >> Paths.get('/target/work/dir')
+
+        when:
+        def script = executor.unstageOutputFilesScript( task )
+        then:
+        script == '''
+                mkdir -p /target/work/dir
+                rsync -rRl simple.txt /target/work/dir || true
+                rsync -rRl my/path/file.bam /target/work/dir || true
+                '''
+                .stripIndent().rightTrim()
+
     }
 
 }
