@@ -60,13 +60,13 @@ class ParamsInTest extends Specification {
 
         when:
         TaskProcessor process = parse(text).run()
-        def in1 = process.taskConfig.getInputs().get(0)
-        def in2 = process.taskConfig.getInputs().get(1)
-        def in3 = process.taskConfig.getInputs().get(2)
-        def in4 = process.taskConfig.getInputs().get(3)
+        def in1 = process.config.getInputs().get(0)
+        def in2 = process.config.getInputs().get(1)
+        def in3 = process.config.getInputs().get(2)
+        def in4 = process.config.getInputs().get(3)
 
         then:
-        process.taskConfig.getInputs().size() == 4
+        process.config.getInputs().size() == 4
 
         in1.class == ValueInParam
         in1.name == 'x'
@@ -108,9 +108,9 @@ class ParamsInTest extends Specification {
 
         when:
         TaskProcessor process = parse(text).run()
-        def in1 = process.taskConfig.getInputs().get(0)
-        def in2 = process.taskConfig.getInputs().get(1)
-        def in3 = process.taskConfig.getInputs().get(2)
+        def in1 = process.config.getInputs().get(0)
+        def in2 = process.config.getInputs().get(1)
+        def in3 = process.config.getInputs().get(2)
 
         then:
         in1.name == 'x'
@@ -170,14 +170,14 @@ class ParamsInTest extends Specification {
 
         when:
         TaskProcessor process = parse(text).run()
-        FileInParam in1 = process.taskConfig.getInputs().get(0)
-        FileInParam in2 = process.taskConfig.getInputs().get(1)
-        FileInParam in3 = process.taskConfig.getInputs().get(2)
-        FileInParam in4 = process.taskConfig.getInputs().get(3)
-        FileInParam in5 = process.taskConfig.getInputs().get(4)
+        FileInParam in1 = process.config.getInputs().get(0)
+        FileInParam in2 = process.config.getInputs().get(1)
+        FileInParam in3 = process.config.getInputs().get(2)
+        FileInParam in4 = process.config.getInputs().get(3)
+        FileInParam in5 = process.config.getInputs().get(4)
 
         then:
-        process.taskConfig.getInputs().size() == 5
+        process.config.getInputs().size() == 5
 
         in1.name == 'x'
         in1.filePattern == '*'
@@ -224,12 +224,12 @@ class ParamsInTest extends Specification {
 
         when:
         TaskProcessor process = parse(text).run()
-        FileInParam in1 = process.taskConfig.getInputs().get(0)
-        FileInParam in2 = process.taskConfig.getInputs().get(1)
-        FileInParam in3 = process.taskConfig.getInputs().get(2)
+        FileInParam in1 = process.config.getInputs().get(0)
+        FileInParam in2 = process.config.getInputs().get(1)
+        FileInParam in3 = process.config.getInputs().get(2)
 
         then:
-        process.taskConfig.getInputs().size() == 3
+        process.config.getInputs().size() == 3
 
         in1.name == '$x'
         in1.getFilePattern(ctx) == 'main.txt'
@@ -264,13 +264,13 @@ class ParamsInTest extends Specification {
 
         when:
         TaskProcessor process = parse(text).run()
-        FileInParam in1 = process.taskConfig.getInputs().get(0)
-        FileInParam in2 = process.taskConfig.getInputs().get(1)
-        FileInParam in3 = process.taskConfig.getInputs().get(2)
-        FileInParam in4 = process.taskConfig.getInputs().get(3)
+        FileInParam in1 = process.config.getInputs().get(0)
+        FileInParam in2 = process.config.getInputs().get(1)
+        FileInParam in3 = process.config.getInputs().get(2)
+        FileInParam in4 = process.config.getInputs().get(3)
 
         then:
-        process.taskConfig.getInputs().size() == 4
+        process.config.getInputs().size() == 4
 
         in1.name == '__$fileinparam<0>'
         in1.getFilePattern(ctx) == 'main.txt'
@@ -307,11 +307,11 @@ class ParamsInTest extends Specification {
 
         when:
         TaskProcessor process = parse(text).run()
-        def in1 = process.taskConfig.getInputs().get(0)
-        def in2 = process.taskConfig.getInputs().get(1)
+        def in1 = process.config.getInputs().get(0)
+        def in2 = process.config.getInputs().get(1)
 
         then:
-        process.taskConfig.getInputs().size() == 2
+        process.config.getInputs().size() == 2
 
         in1.class == StdInParam
         in1.name == '-'
@@ -339,11 +339,11 @@ class ParamsInTest extends Specification {
 
         when:
         TaskProcessor process = parse(text).run()
-        def in1 = process.taskConfig.getInputs().get(0)
-        def in2 = process.taskConfig.getInputs().get(1)
+        def in1 = process.config.getInputs().get(0)
+        def in2 = process.config.getInputs().get(1)
 
         then:
-        process.taskConfig.getInputs().size() == 2
+        process.config.getInputs().size() == 2
 
         in1.class == EnvInParam
         in1.name == 'VAR_X'
@@ -377,14 +377,14 @@ class ParamsInTest extends Specification {
 
         when:
         TaskProcessor process = parse(text).run()
-        SetInParam in1 = process.taskConfig.getInputs().get(0)
-        SetInParam in2 = process.taskConfig.getInputs().get(1)
-        SetInParam in3 = process.taskConfig.getInputs().get(2)
-        SetInParam in4 = process.taskConfig.getInputs().get(3)
-        SetInParam in5 = process.taskConfig.getInputs().get(4)
+        SetInParam in1 = process.config.getInputs().get(0)
+        SetInParam in2 = process.config.getInputs().get(1)
+        SetInParam in3 = process.config.getInputs().get(2)
+        SetInParam in4 = process.config.getInputs().get(3)
+        SetInParam in5 = process.config.getInputs().get(4)
 
         then:
-        process.taskConfig.getInputs().size() == 5
+        process.config.getInputs().size() == 5
 
         in1.inner.size() == 1
         in1.inner.get(0) instanceof ValueInParam
@@ -466,11 +466,11 @@ class ParamsInTest extends Specification {
 
         when:
         TaskProcessor process = parse(text).run()
-        SetInParam in1 = process.taskConfig.getInputs().get(0)
-        SetInParam in2 = process.taskConfig.getInputs().get(1)
-        SetInParam in3 = process.taskConfig.getInputs().get(2)
-        SetInParam in4 = process.taskConfig.getInputs().get(3)
-        SetInParam in5 = process.taskConfig.getInputs().get(4)
+        SetInParam in1 = process.config.getInputs().get(0)
+        SetInParam in2 = process.config.getInputs().get(1)
+        SetInParam in3 = process.config.getInputs().get(2)
+        SetInParam in4 = process.config.getInputs().get(3)
+        SetInParam in5 = process.config.getInputs().get(4)
         def ctx = [x:'the_file']
 
         then:
@@ -511,12 +511,12 @@ class ParamsInTest extends Specification {
 
         when:
         TaskProcessor process = parse(text).run()
-        SetInParam in0 = process.taskConfig.getInputs().get(0)
-        SetInParam in1 = process.taskConfig.getInputs().get(1)
-        SetInParam in2 = process.taskConfig.getInputs().get(2)
+        SetInParam in0 = process.config.getInputs().get(0)
+        SetInParam in1 = process.config.getInputs().get(1)
+        SetInParam in2 = process.config.getInputs().get(2)
 
         then:
-        process.taskConfig.getInputs().size() == 3
+        process.config.getInputs().size() == 3
 
         in0.name == '__$setinparam<0>'
         in0.inChannel.val == 1
@@ -582,12 +582,12 @@ class ParamsInTest extends Specification {
         binding.q = new DataflowQueue<>()
         binding.q << 1 << 2 << 3  << Channel.STOP
         TaskProcessor process = parse(text, binding).run()
-        def in1 = process.taskConfig.getInputs().get(0)
-        def in2 = process.taskConfig.getInputs().get(1)
-        def in3 = process.taskConfig.getInputs().get(2)
+        def in1 = process.config.getInputs().get(0)
+        def in2 = process.config.getInputs().get(1)
+        def in3 = process.config.getInputs().get(2)
 
         then:
-        process.taskConfig.getInputs().size() == 3
+        process.config.getInputs().size() == 3
 
         in1.class == EachInParam
         in1.name == 'x'
@@ -619,7 +619,7 @@ class ParamsInTest extends Specification {
             '''
         when:
         TaskProcessor process = parse(text).run()
-        process.taskConfig.getInputs().get(0).inChannel
+        process.config.getInputs().get(0).inChannel
 
         then:
         thrown(MissingPropertyException)

@@ -237,7 +237,7 @@ abstract class TaskProcessor {
     /**
      * @return The {@code TaskConfig} object holding the task configuration properties
      */
-    ProcessConfig getTaskConfig() { config }
+    ProcessConfig getConfig() { config }
 
     /**
      * @return The current {@code Session} instance
@@ -1452,7 +1452,7 @@ abstract class TaskProcessor {
             vars.each { k, v -> keys.add( k ); keys.add( v ) }
         }
 
-        final mode = taskConfig.getHashMode()
+        final mode = config.getHashMode()
         final hash = CacheHelper.hasher(keys, mode).hash()
         if( log.isTraceEnabled() ) {
             traceInputsHashes(task, keys, mode, hash)

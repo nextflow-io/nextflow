@@ -69,8 +69,8 @@ class TaskContext implements Map<String,Object> {
         variableNames = processor.getTaskBody().getValNames() ?: []
         if( variableNames ) {
             Set<String> declaredNames = []
-            declaredNames.addAll( processor.taskConfig.getInputs().getNames() )
-            declaredNames.addAll( processor.taskConfig.getOutputs().getNames()  )
+            declaredNames.addAll( processor.config.getInputs().getNames() )
+            declaredNames.addAll( processor.config.getOutputs().getNames()  )
             if( declaredNames )
                 variableNames = variableNames - declaredNames
         }

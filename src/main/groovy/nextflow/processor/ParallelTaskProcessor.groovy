@@ -51,19 +51,19 @@ class ParallelTaskProcessor extends TaskProcessor {
     @Override
     protected void createOperator() {
 
-        def opInputs = new ArrayList(taskConfig.getInputs().getChannels())
-        def opOutputs = new ArrayList(taskConfig.getOutputs().getChannels())
+        def opInputs = new ArrayList(config.getInputs().getChannels())
+        def opOutputs = new ArrayList(config.getOutputs().getChannels())
 
         // append the shared obj to the input list
-        def allScalar = taskConfig.getInputs().allScalarInputs()
-        def sharedCount = taskConfig.getInputs().count { it instanceof SharedParam }
+        def allScalar = config.getInputs().allScalarInputs()
+        def sharedCount = config.getInputs().count { it instanceof SharedParam }
 
         /*
          * check if there are some iterators declaration
          * the list holds the index in the list of all *inputs* for the {@code each} declaration
          */
         def iteratorIndexes = []
-        taskConfig.getInputs().eachWithIndex { param, index ->
+        config.getInputs().eachWithIndex { param, index ->
             if( param instanceof EachInParam ) {
                 log.trace "Process ${name} > got each param: ${param.name} at index: ${index} -- ${param.dump()}"
                 iteratorIndexes << index
@@ -115,8 +115,8 @@ class ParallelTaskProcessor extends TaskProcessor {
             maxForks = 1
             blocking = true
         }
-        else if( taskConfig.maxForks ) {
-            maxForks = taskConfig.maxForks
+        else if( config.maxForks ) {
+            maxForks = config.maxForks
             blocking = true
         }
         log.debug "Creating operator > $name -- maxForks: $maxForks"
@@ -244,7 +244,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         @Override
         public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
             if( log.isTraceEnabled() ) {
-                def channelName = taskConfig.getInputs()?.names?.get(index)
+                def channelName = config.getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
                 log.trace "<${taskName}> Message arrived -- ${channelName} => ${message}"
             }
@@ -255,7 +255,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         @Override
         public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
             if( log.isTraceEnabled() ) {
-                def channelName = taskConfig.getInputs()?.names?.get(index)
+                def channelName = config.getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
                 log.trace "<${taskName}> Control message arrived ${channelName} => ${message}"
             }
@@ -326,14 +326,14 @@ class ParallelTaskProcessor extends TaskProcessor {
         @Override
         public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
             if( log.isTraceEnabled() )
-                log.trace "* process '$name' > message arrived for iterator '${taskConfig.getInputs().names[index]}' with value: '$message'"
+                log.trace "* process '$name' > message arrived for iterator '${config.getInputs().names[index]}' with value: '$message'"
             return message;
         }
 
         @Override
         public Object messageSentOut(final DataflowProcessor processor, final DataflowWriteChannel<Object> channel, final int index, final Object message) {
             if( log.isTraceEnabled() )
-                log.trace "* process '$name' > message forwarded for iterator '${taskConfig.getInputs().names[index]}' with value: '$message'"
+                log.trace "* process '$name' > message forwarded for iterator '${config.getInputs().names[index]}' with value: '$message'"
             return message;
         }
 
@@ -341,7 +341,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         @Override
         public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
             if( log.isTraceEnabled() )
-                log.trace "* process '$name' > control message arrived for iterator '${taskConfig.getInputs().names[index]}'"
+                log.trace "* process '$name' > control message arrived for iterator '${config.getInputs().names[index]}'"
             return message;
         }
 

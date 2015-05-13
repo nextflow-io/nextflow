@@ -125,12 +125,12 @@ class FunctionalTests extends Specification {
         then:
         processor instanceof ParallelTaskProcessor
         processor.getName() == 'taskHello'
-        processor.taskConfig.echo == true
-        processor.taskConfig.shell == 'zsh'
-        processor.taskConfig.maxForks == 11
-        processor.taskConfig.dummyField == 99
-        processor.taskConfig.environment.entrySet() == [a:1,b:2,c:3].entrySet()
-        processor.taskConfig.validExitStatus == [0,11,22,33]
+        processor.config.echo == true
+        processor.config.shell == 'zsh'
+        processor.config.maxForks == 11
+        processor.config.dummyField == 99
+        processor.config.environment.entrySet() == [a:1,b:2,c:3].entrySet()
+        processor.config.validExitStatus == [0,11,22,33]
 
     }
 

@@ -214,7 +214,7 @@ abstract class Executor {
         if( normalized ) {
             result << ""
             result << "mkdir -p ${task.getTargetDir()}"
-            String strategy = task.getProcessor().getTaskConfig().unstageStrategy
+            String strategy = task.getProcessor().getConfig().unstageStrategy
             for( int i=0; i<normalized.size(); i++ ) {
                 final path = normalized[i]
                 final cmd = copyCommand(path, task.getTargetDir().toString(), strategy) + ' || true' // <-- add true to avoid it stops on errors

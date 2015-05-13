@@ -83,7 +83,7 @@ class ScriptRunnerTest extends Specification {
         runner.setScript(script).execute()
         then:
         runner.getScriptObj().getTaskProcessor().name == 'simpleTask'
-        runner.getScriptObj().getTaskProcessor().taskConfig.instanceType == 'alpha'
+        runner.getScriptObj().getTaskProcessor().config.instanceType == 'alpha'
 
 
         /*
@@ -109,7 +109,7 @@ class ScriptRunnerTest extends Specification {
 
         then:
         runner2.getScriptObj().getTaskProcessor().name == 'otherTask'
-        runner2.getScriptObj().getTaskProcessor().taskConfig.instanceType == 'beta'
+        runner2.getScriptObj().getTaskProcessor().config.instanceType == 'beta'
 
     }
 
@@ -137,9 +137,9 @@ class ScriptRunnerTest extends Specification {
         then:
         runner.getResult().val == 'echo 1 - 3'
         runner.getScriptObj().getTaskProcessor().getName() == 'task2'
-        runner.getScriptObj().getTaskProcessor().taskConfig.getInputs()[0].inChannel.getVal() == 1
-        runner.getScriptObj().getTaskProcessor().taskConfig.getInputs()[1].inChannel instanceof DataflowQueue
-        runner.getScriptObj().getTaskProcessor().taskConfig.getOutputs()[0].outChannel instanceof DataflowWriteChannel
+        runner.getScriptObj().getTaskProcessor().config.getInputs()[0].inChannel.getVal() == 1
+        runner.getScriptObj().getTaskProcessor().config.getInputs()[1].inChannel instanceof DataflowQueue
+        runner.getScriptObj().getTaskProcessor().config.getOutputs()[0].outChannel instanceof DataflowWriteChannel
     }
 
 
@@ -325,11 +325,11 @@ class ScriptRunnerTest extends Specification {
         TaskProcessor process = new TestParser(session).parseScript(script).run()
 
         then:
-        process.taskConfig instanceof ProcessConfig
-        process.taskConfig.alpha == 1
-        process.taskConfig.beta == '222'  // !! this value is overridden by the one in the config file
-        process.taskConfig.delta == '333'
-        process.taskConfig.gamma == '555'
+        process.config instanceof ProcessConfig
+        process.config.alpha == 1
+        process.config.beta == '222'  // !! this value is overridden by the one in the config file
+        process.config.delta == '333'
+        process.config.gamma == '555'
 
     }
 
@@ -374,11 +374,11 @@ class ScriptRunnerTest extends Specification {
         TaskProcessor process = new TestParser(session).parseScript(script).run()
 
         then:
-        process.taskConfig instanceof ProcessConfig
-        process.taskConfig.alpha == 1
-        process.taskConfig.beta == '222'  // !! this value is overridden by the one in the config file
-        process.taskConfig.delta == '333'
-        process.taskConfig.gamma == '555'
+        process.config instanceof ProcessConfig
+        process.config.alpha == 1
+        process.config.beta == '222'  // !! this value is overridden by the one in the config file
+        process.config.delta == '333'
+        process.config.gamma == '555'
 
     }
 
@@ -406,10 +406,10 @@ class ScriptRunnerTest extends Specification {
         TaskProcessor process = new TestParser(session).parseScript(script).run()
 
         then:
-        process.taskConfig instanceof ProcessConfig
-        process.taskConfig.module == ['b/2','c/3']
-        process.taskConfig.createTaskConfig().module == ['b/2','c/3']
-        process.taskConfig.createTaskConfig().getModule() == ['b/2','c/3']
+        process.config instanceof ProcessConfig
+        process.config.module == ['b/2','c/3']
+        process.config.createTaskConfig().module == ['b/2','c/3']
+        process.config.createTaskConfig().getModule() == ['b/2','c/3']
     }
 
     def 'test module config 2'() {
@@ -439,10 +439,10 @@ class ScriptRunnerTest extends Specification {
         TaskProcessor process = new TestParser(session).parseScript(script).run()
 
         then:
-        process.taskConfig instanceof ProcessConfig
-        process.taskConfig.module == ['b/2','z/9']
-        process.taskConfig.createTaskConfig().module == ['b/2','z/9']
-        process.taskConfig.createTaskConfig().getModule() == ['b/2','z/9']
+        process.config instanceof ProcessConfig
+        process.config.module == ['b/2','z/9']
+        process.config.createTaskConfig().module == ['b/2','z/9']
+        process.config.createTaskConfig().getModule() == ['b/2','z/9']
     }
 
     def 'test module config 3'() {
@@ -468,10 +468,10 @@ class ScriptRunnerTest extends Specification {
         TaskProcessor process = new TestParser(session).parseScript(script).run()
 
         then:
-        process.taskConfig instanceof ProcessConfig
-        process.taskConfig.module == 'a/1'
-        process.taskConfig.createTaskConfig().module ==  ['a/1']
-        process.taskConfig.createTaskConfig().getModule() ==  ['a/1']
+        process.config instanceof ProcessConfig
+        process.config.module == 'a/1'
+        process.config.createTaskConfig().module ==  ['a/1']
+        process.config.createTaskConfig().getModule() ==  ['a/1']
 
     }
 
@@ -511,12 +511,12 @@ class ScriptRunnerTest extends Specification {
         def session = new Session(config)
         TaskProcessor process = new TestParser(session).parseScript(script).run()
         then:
-        process.taskConfig instanceof ProcessConfig
-        process.taskConfig.queue == 'short'
-        process.taskConfig.cpus == 2
-        process.taskConfig.penv == 'mpi'
-        process.taskConfig.memory == '10G'
-        process.taskConfig.time == '6 hour'
+        process.config instanceof ProcessConfig
+        process.config.queue == 'short'
+        process.config.cpus == 2
+        process.config.penv == 'mpi'
+        process.config.memory == '10G'
+        process.config.time == '6 hour'
 
         when:
         def result = new ScriptRunner(config)
@@ -553,8 +553,8 @@ class ScriptRunnerTest extends Specification {
         def session = new Session()
         TaskProcessor process = new TestParser(session).parseScript(script).run()
         then:
-        process.taskConfig instanceof ProcessConfig
-        process.taskConfig.cpus == null
+        process.config instanceof ProcessConfig
+        process.config.cpus == null
 
         when:
         def result = new ScriptRunner(process: [executor:'nope'])

@@ -52,14 +52,14 @@ class ParamsOutTest extends Specification {
         TaskProcessor process = parse(text, binding).run()
 
         when:
-        def out1 = process.taskConfig.getOutputs().get(0)
-        def out2 = process.taskConfig.getOutputs().get(1)
+        def out1 = process.config.getOutputs().get(0)
+        def out2 = process.config.getOutputs().get(1)
 
         // it MUST
         // - create a value out parameter named 'x'
         // - create in the script context (binding) a new variable of type DataflowQueue named 'x'
         then:
-        process.taskConfig.getOutputs().size() == 2
+        process.config.getOutputs().size() == 2
 
         out1.class == ValueOutParam
         out1.name == 'x'
@@ -92,15 +92,15 @@ class ParamsOutTest extends Specification {
         TaskProcessor process = parse(text, binding).run()
 
         when:
-        def out1 = process.taskConfig.getOutputs().get(0)
-        def out2 = process.taskConfig.getOutputs().get(1)
-        def out3 = process.taskConfig.getOutputs().get(2)
+        def out1 = process.config.getOutputs().get(0)
+        def out2 = process.config.getOutputs().get(1)
+        def out3 = process.config.getOutputs().get(2)
 
         // it MUST
         // - create a value out parameter named 'x'
         // - create in the script context (binding) a new variable of type DataflowQueue named 'x'
         then:
-        process.taskConfig.getOutputs().size() == 3
+        process.config.getOutputs().size() == 3
 
         out1.class == FileOutParam
         out1.name == 'x'
@@ -145,15 +145,15 @@ class ParamsOutTest extends Specification {
         def ctx = [x: 'hola', y:99, z:'script_file']
 
         when:
-        FileOutParam out1 = process.taskConfig.getOutputs().get(0)
-        FileOutParam out2 = process.taskConfig.getOutputs().get(1)
-        FileOutParam out3 = process.taskConfig.getOutputs().get(2)
-        FileOutParam out4 = process.taskConfig.getOutputs().get(3)
-        SetOutParam out5 = process.taskConfig.getOutputs().get(4)
-        SetOutParam out6 = process.taskConfig.getOutputs().get(5)
+        FileOutParam out1 = process.config.getOutputs().get(0)
+        FileOutParam out2 = process.config.getOutputs().get(1)
+        FileOutParam out3 = process.config.getOutputs().get(2)
+        FileOutParam out4 = process.config.getOutputs().get(3)
+        SetOutParam out5 = process.config.getOutputs().get(4)
+        SetOutParam out6 = process.config.getOutputs().get(5)
 
         then:
-        process.taskConfig.getOutputs().size() == 6
+        process.config.getOutputs().size() == 6
 
         out1.name == null
         out1.getFilePatterns(ctx) == ['hola_name']
@@ -213,10 +213,10 @@ class ParamsOutTest extends Specification {
         TaskProcessor process = parse(text, binding).run()
 
         when:
-        FileOutParam out1 = process.taskConfig.getOutputs().get(0)
-        FileOutParam out2 = process.taskConfig.getOutputs().get(1)
-        SetOutParam out3 = process.taskConfig.getOutputs().get(2)
-        FileOutParam out4 = process.taskConfig.getOutputs().get(3)
+        FileOutParam out1 = process.config.getOutputs().get(0)
+        FileOutParam out2 = process.config.getOutputs().get(1)
+        SetOutParam out3 = process.config.getOutputs().get(2)
+        FileOutParam out4 = process.config.getOutputs().get(3)
 
 
         then:
@@ -257,7 +257,7 @@ class ParamsOutTest extends Specification {
         TaskProcessor process = parse(text, binding).run()
 
         when:
-        FileOutParam out1 = process.taskConfig.getOutputs().get(0)
+        FileOutParam out1 = process.config.getOutputs().get(0)
         def x = out1.outChannel
 
         then:
@@ -284,9 +284,9 @@ class ParamsOutTest extends Specification {
         TaskProcessor process = parse(text, binding).run()
 
         when:
-        FileOutParam out1 = process.taskConfig.getOutputs().get(0)
-        FileOutParam out2 = process.taskConfig.getOutputs().get(1)
-        SetOutParam out3 = process.taskConfig.getOutputs().get(2)
+        FileOutParam out1 = process.config.getOutputs().get(0)
+        FileOutParam out2 = process.config.getOutputs().get(1)
+        SetOutParam out3 = process.config.getOutputs().get(2)
 
         then:
         out1.name == null
@@ -335,15 +335,15 @@ class ParamsOutTest extends Specification {
         TaskProcessor process = parse(text, [:]).run()
 
         when:
-        FileOutParam out0 = process.taskConfig.getOutputs().get(0)
-        FileOutParam out1 = process.taskConfig.getOutputs().get(1)
-        FileOutParam out2 = process.taskConfig.getOutputs().get(2)
-        FileOutParam out3 = process.taskConfig.getOutputs().get(3)
-        FileOutParam out4 = process.taskConfig.getOutputs().get(4)
-        FileOutParam out5 = process.taskConfig.getOutputs().get(5)
-        FileOutParam out6 = process.taskConfig.getOutputs().get(6)
-        FileOutParam out7 = process.taskConfig.getOutputs().get(7)
-        FileOutParam out8 = process.taskConfig.getOutputs().get(8)
+        FileOutParam out0 = process.config.getOutputs().get(0)
+        FileOutParam out1 = process.config.getOutputs().get(1)
+        FileOutParam out2 = process.config.getOutputs().get(2)
+        FileOutParam out3 = process.config.getOutputs().get(3)
+        FileOutParam out4 = process.config.getOutputs().get(4)
+        FileOutParam out5 = process.config.getOutputs().get(5)
+        FileOutParam out6 = process.config.getOutputs().get(6)
+        FileOutParam out7 = process.config.getOutputs().get(7)
+        FileOutParam out8 = process.config.getOutputs().get(8)
 
         then:
         out0.maxDepth == null
@@ -382,12 +382,12 @@ class ParamsOutTest extends Specification {
         TaskProcessor process = parse(text, binding).run()
 
         when:
-        SetOutParam out1 = process.taskConfig.getOutputs().get(0)
-        SetOutParam out2 = process.taskConfig.getOutputs().get(1)
-        SetOutParam out3 = process.taskConfig.getOutputs().get(2)
+        SetOutParam out1 = process.config.getOutputs().get(0)
+        SetOutParam out2 = process.config.getOutputs().get(1)
+        SetOutParam out3 = process.config.getOutputs().get(2)
 
         then:
-        process.taskConfig.getOutputs().size() == 3
+        process.config.getOutputs().size() == 3
 
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.p
@@ -442,12 +442,12 @@ class ParamsOutTest extends Specification {
         TaskProcessor process = parse(text, binding).run()
 
         when:
-        SetOutParam out1 = process.taskConfig.getOutputs().get(0)
-        SetOutParam out2 = process.taskConfig.getOutputs().get(1)
-        SetOutParam out3 = process.taskConfig.getOutputs().get(2)
+        SetOutParam out1 = process.config.getOutputs().get(0)
+        SetOutParam out2 = process.config.getOutputs().get(1)
+        SetOutParam out3 = process.config.getOutputs().get(2)
 
         then:
-        process.taskConfig.getOutputs().size() == 3
+        process.config.getOutputs().size() == 3
 
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.p
@@ -502,10 +502,10 @@ class ParamsOutTest extends Specification {
         TaskProcessor process = parse(text, binding).run()
 
         when:
-        def out1 = process.taskConfig.getOutputs().get(0)
+        def out1 = process.config.getOutputs().get(0)
 
         then:
-        process.taskConfig.getOutputs().size() == 1
+        process.config.getOutputs().size() == 1
 
         out1.class == StdOutParam
 

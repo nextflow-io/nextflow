@@ -50,12 +50,12 @@ class ParamsSharedTest extends Specification {
         def binding = [:]
         when:
         TaskProcessor process = parse(text, binding).run()
-        ValueSharedParam share1 = process.taskConfig.getInputs().get(0)
-        ValueSharedParam share2 = process.taskConfig.getInputs().get(1)
-        ValueSharedParam share3 = process.taskConfig.getInputs().get(2)
+        ValueSharedParam share1 = process.config.getInputs().get(0)
+        ValueSharedParam share2 = process.config.getInputs().get(1)
+        ValueSharedParam share3 = process.config.getInputs().get(2)
 
         then:
-        process.taskConfig.getInputs().size() == 3
+        process.config.getInputs().size() == 3
 
         share1.name == 'x'
         share1.inChannel instanceof DataflowVariable
@@ -96,7 +96,7 @@ class ParamsSharedTest extends Specification {
         def binding = [:]
         when:
         TaskProcessor process = parse(text, binding).run()
-        process.taskConfig.getInputs().get(0).inChannel
+        process.config.getInputs().get(0).inChannel
 
         then:
         thrown(IllegalArgumentException)
@@ -125,12 +125,12 @@ class ParamsSharedTest extends Specification {
         def binding = [:]
         when:
         TaskProcessor process = parse(text, binding).run()
-        ValueSharedParam share1 = process.taskConfig.getInputs().get(0)
-        ValueSharedParam share2 = process.taskConfig.getInputs().get(1)
-        ValueSharedParam share3 = process.taskConfig.getInputs().get(2)
+        ValueSharedParam share1 = process.config.getInputs().get(0)
+        ValueSharedParam share2 = process.config.getInputs().get(1)
+        ValueSharedParam share3 = process.config.getInputs().get(2)
 
         then:
-        process.taskConfig.getInputs().size() == 3
+        process.config.getInputs().size() == 3
 
         share1.name == 'x'
         share1.inChannel instanceof DataflowVariable
@@ -170,11 +170,11 @@ class ParamsSharedTest extends Specification {
 
         when:
         TaskProcessor process = parse(text).run()
-        ValueSharedParam share1 = process.taskConfig.getInputs().get(0)
-        ValueSharedParam share2 = process.taskConfig.getInputs().get(1)
+        ValueSharedParam share1 = process.config.getInputs().get(0)
+        ValueSharedParam share2 = process.config.getInputs().get(1)
 
         then:
-        process.taskConfig.getInputs().size() ==2
+        process.config.getInputs().size() ==2
 
         share1.name == 'x'
         share1.inChannel.val == 1
@@ -210,15 +210,15 @@ class ParamsSharedTest extends Specification {
         def binding = [:]
         when:
         TaskProcessor process = parse(text, binding).run()
-        FileSharedParam share0 = process.taskConfig.getInputs().get(0)
-        FileSharedParam share1 = process.taskConfig.getInputs().get(1)
-        FileSharedParam share2 = process.taskConfig.getInputs().get(2)
-        FileSharedParam share3 = process.taskConfig.getInputs().get(3)
-        FileSharedParam share4 = process.taskConfig.getInputs().get(4)
-        FileSharedParam share5 = process.taskConfig.getInputs().get(5)
+        FileSharedParam share0 = process.config.getInputs().get(0)
+        FileSharedParam share1 = process.config.getInputs().get(1)
+        FileSharedParam share2 = process.config.getInputs().get(2)
+        FileSharedParam share3 = process.config.getInputs().get(3)
+        FileSharedParam share4 = process.config.getInputs().get(4)
+        FileSharedParam share5 = process.config.getInputs().get(5)
 
         then:
-        process.taskConfig.getInputs().size() == 6
+        process.config.getInputs().size() == 6
 
         share0.name == 'alpha'
         share0.inChannel instanceof DataflowVariable

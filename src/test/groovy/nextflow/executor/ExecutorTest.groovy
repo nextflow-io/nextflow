@@ -302,7 +302,7 @@ class ExecutorTest extends Specification {
 
         given:
         def process = Mock(TaskProcessor)
-        process.getTaskConfig() >> Mock(ProcessConfig)
+        process.getConfig() >> Mock(ProcessConfig)
 
         def executor = [:] as Executor
         def task = Mock(TaskRun)
@@ -328,7 +328,7 @@ class ExecutorTest extends Specification {
         def config = new ProcessConfig([unstageStrategy: 'rsync'])
 
         def process = Mock(TaskProcessor)
-        process.getTaskConfig() >> config
+        process.getConfig() >> config
 
         def executor = [:] as Executor
         def task = Mock(TaskRun)
