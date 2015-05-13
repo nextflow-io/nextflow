@@ -387,7 +387,7 @@ class TraceRecord {
                 }
             }
 
-            // third line is supposed to be
+            // third line is the cpu realtime
             else if( count == 2 ) {
                 try {
                     def elapsed = row.toString().trim().toLong()

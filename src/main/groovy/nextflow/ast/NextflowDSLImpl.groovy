@@ -535,8 +535,8 @@ public class NextflowDSLImpl implements ASTTransformation {
          */
         if( expr instanceof GStringExpression && ( withinFileMethod || withinSetMethod ) ) {
 
-            def strings = (List<Expression>)expr.getStrings()
-            def varNames = (List<Expression>)expr.getValues().collect { it -> new ConstantExpression((it as VariableExpression).name) }
+            def strings = expr.getStrings() as List<Expression>
+            def varNames = expr.getValues().collect { it -> new ConstantExpression((it as VariableExpression).name) } as List<Expression>
 
             return newObj( TokenGString, new ConstantExpression(expr.text), new ListExpression(strings), new ListExpression(varNames) )
         }

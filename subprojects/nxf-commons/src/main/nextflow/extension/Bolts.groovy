@@ -441,9 +441,14 @@ class Bolts {
      * @param prefix
      * @return The string indented
      */
-    public static String indent( String text, String prefix = ' ') {
+    public static String indent( String text, String prefix = ' ' ) {
         def result = new StringBuilder()
-        text?.eachLine { result << prefix << it << '\n' }
+        def lines = text ? text.readLines() : Collections.emptyList()
+        for( int i=0; i<lines.size(); i++ ) {
+            result << prefix
+            result << lines.get(i)
+            result << '\n'
+        }
         return result.toString()
     }
 

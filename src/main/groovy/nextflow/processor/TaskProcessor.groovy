@@ -801,10 +801,6 @@ abstract class TaskProcessor {
         return message
     }
 
-    protected String formatDumpMessage( String lines ) {
-
-    }
-
     static List tips = [
             'when you have fixed the problem you can continue the execution appending to the nextflow command line the option \'-resume\'',
             "you can try to figure out what's wrong by changing to the process work dir and showing the script file named: '${TaskRun.CMD_SCRIPT}'",
