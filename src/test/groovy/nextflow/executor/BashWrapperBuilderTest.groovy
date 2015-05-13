@@ -358,6 +358,7 @@ class BashWrapperBuilderTest extends Specification {
 
 
                 trap 'exit \${ret:=\$?}' EXIT
+                touch .command.trace
                 start_millis=\$(\$NXF_DATE)
                 (
                 /bin/bash -ue ${folder}/.command.sh
@@ -365,11 +366,10 @@ class BashWrapperBuilderTest extends Specification {
                 pid=\$!
                 nxf_trace "\$pid" .command.trace &
                 mon=\$!
-                wait \$pid
-                ret=\$?
+                wait \$pid || ret=\$?
                 end_millis=\$(\$NXF_DATE)
                 kill \$mon || wait \$mon
-                [ -f .command.trace ] && echo \$((end_millis-start_millis)) >> .command.trace
+                echo \$((end_millis-start_millis)) >> .command.trace
                 """
                     .stripIndent().leftTrim()
 
@@ -668,6 +668,7 @@ class BashWrapperBuilderTest extends Specification {
 
 
             trap 'exit \${ret:=\$?}' EXIT
+            touch .command.trace
             start_millis=\$(\$NXF_DATE)
             (
             /bin/bash -ue ${folder}/.command.sh < ${folder}/.command.in
@@ -675,11 +676,10 @@ class BashWrapperBuilderTest extends Specification {
             pid=\$!
             nxf_trace "\$pid" .command.trace &
             mon=\$!
-            wait \$pid
-            ret=\$?
+            wait \$pid || ret=\$?
             end_millis=\$(\$NXF_DATE)
             kill \$mon || wait \$mon
-            [ -f .command.trace ] && echo \$((end_millis-start_millis)) >> .command.trace
+            echo \$((end_millis-start_millis)) >> .command.trace
             """
                     .stripIndent().leftTrim()
 
@@ -1093,6 +1093,37 @@ class BashWrapperBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should append chown command to fix ownership of files created by docker' () {
+
+        given:
+        def folder = TestHelper.createInMemTempDir()
+
+        /*
+          * bash run through docker
+          */
+        when:
+        def bash = new BashWrapperBuilder(
+                workDir: folder,
+                script: 'echo Hello world!',
+                container: 'sl65',
+                dockerConfig: [enabled: true, fixOwnership: true] )
+        bash.systemOsName = 'Linux'
+        bash.build()
+
+        then:
+
+        folder.resolve('.command.sh').text ==
+                """
+                #!/bin/bash -ue
+                echo Hello world!
+
+                # patch root ownership problem of files created with docker
+                [ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${folder}/{*,.*} || true
+                """
+                        .stripIndent().leftTrim()
+
+    }
+
     def 'should create script for docker executable container' () {
         given:
         def folder = TestHelper.createInMemTempDir()
@@ -1117,7 +1148,7 @@ class BashWrapperBuilderTest extends Specification {
                 """
                 #!/bin/bash -ue
                 FOO=bar
-                docker run -i -e "FOO=bar" -v $folder:$folder -v \$PWD:\$PWD -w \$PWD --name \$NXF_BOXID docker-io/busybox --fox --baz
+                docker run -i -e "NXF_DEBUG=\$NXF_DEBUG" -e "FOO=bar" -v $folder:$folder -v \$PWD:\$PWD -w \$PWD --name \$NXF_BOXID docker-io/busybox --fox --baz
                 """
                 .stripIndent().leftTrim()
 

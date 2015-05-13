@@ -47,6 +47,9 @@ class BashWrapperBuilder {
 
     static private level = 0
 
+    @PackageScope
+    static String systemOsName = System.getProperty('os.name')
+
     static {
         /*
          * Env variable `NXF_DEBUG` is used to control debug options in executed BASH scripts
@@ -285,7 +288,7 @@ class BashWrapperBuilder {
 
         // docker config
         this.dockerImage = params.container
-        this.dockerConfig = params.dockerConfig
+        this.dockerConfig = params.dockerConfig ?: Collections.emptyMap()
         this.dockerMount = params.dockerMount
         this.statsEnabled = params.statsEnabled
         this.executable = params.executable
@@ -341,7 +344,7 @@ class BashWrapperBuilder {
         final stubFile = workDir.resolve(TaskRun.CMD_STUB)
 
         // set true when running with docker
-        runWithDocker = dockerImage && (executable || dockerConfig?.enabled?.toString() == 'true')
+        runWithDocker = dockerImage && (executable || dockerConfig.enabled?.toString() == 'true')
 
         /*
          * save the input when required
@@ -419,9 +422,14 @@ class BashWrapperBuilder {
         wrapper << 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 2 ]] && set -x' << ENDL << ENDL
 
         if( runWithDocker ) {
+            // append the process - or - container kill command
             wrapper << scriptCleanUp(exitedFile, docker.killCommand) << ENDL
-            // this is only required on OSX otherwise the following 'tr' fails
+            // create a random string id to be used an container name
             wrapper << 'export NXF_BOXID="nxf-$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"' << ENDL
+            // append to script file chown command to change `root` owner of files created by docker
+            // note: this is not required when running docker in OSX through boo2docker because it manage correctly files ownership
+            if( systemOsName == 'Linux' && dockerConfig.fixOwnership )
+            scriptFile << "\n# patch root ownership problem of files created with docker\n[ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*} || true\n"
         }
         else {
             wrapper << scriptCleanUp(exitedFile) << ENDL
@@ -479,6 +487,7 @@ class BashWrapperBuilder {
             stub << 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 3 ]] && set -x' << ENDL << ENDL
             stub << SCRIPT_TRACE << ENDL
             stub << 'trap \'exit ${ret:=$?}\' EXIT' << ENDL
+            stub << 'touch ' << TaskRun.CMD_TRACE << ENDL
             stub << 'start_millis=$($NXF_DATE)'  << ENDL
             stub << '(' << ENDL
             stub << interpreter << ' ' << fileStr(scriptFile)
@@ -488,11 +497,10 @@ class BashWrapperBuilder {
             stub << 'pid=$!' << ENDL                     // get the PID of the main job
             stub << 'nxf_trace "$pid" ' << TaskRun.CMD_TRACE << ' &' << ENDL
             stub << 'mon=$!' << ENDL                     // get the pid of the monitor process
-            stub << 'wait $pid' << ENDL                  // wait for main job completion
-            stub << 'ret=$?' << ENDL                     // get the main job error code
+            stub << 'wait $pid || ret=$?' << ENDL        // wait for main job completion and get its exit status
             stub << 'end_millis=$($NXF_DATE)' << ENDL    // get the ending time
             stub << 'kill $mon || wait $mon' << ENDL     // kill the monitor and wait for its ending
-            stub << '[ -f ' << TaskRun.CMD_TRACE << ' ] && echo $((end_millis-start_millis)) >> ' << TaskRun.CMD_TRACE << ENDL
+            stub << 'echo $((end_millis-start_millis)) >> ' << TaskRun.CMD_TRACE << ENDL
             // save to file
             stubFile.text = stub.toString()
 
@@ -587,6 +595,13 @@ class BashWrapperBuilder {
 
         // set the environment
         if( environment ) {
+            // export the nextflow script debug variable
+            docker.addEnv( 'NXF_DEBUG=$NXF_DEBUG')
+
+            // add the user owner variable in order to patch root owned files problem
+            if( dockerConfig.fixOwnership )
+                docker.addEnv( 'NXF_OWNER=$(id -u):$(id -g)' )
+
             if( executable ) {
                 // PATH variable cannot be extended in an executable container
                 // make sure to not include it to avoid to override the container PATH
@@ -595,6 +610,7 @@ class BashWrapperBuilder {
             }
             else
                 docker.addEnv( ENV_FILE_NAME )
+
         }
 
         // set up run docker params
