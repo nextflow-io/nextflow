@@ -154,11 +154,6 @@ abstract class TaskProcessor {
      */
     private static final AtomicBoolean errorShown = new AtomicBoolean()
 
-    /**
-     * Used to show the override warning message only the very first time
-     */
-    private final overrideWarnShown = new AtomicBoolean()
-
     private boolean sharedWarnShown
 
     /**
@@ -635,7 +630,7 @@ abstract class TaskProcessor {
             }
             if( ctx != null ) {
                 task.context = ctx
-                task.config.setContext(ctx)
+                task.config.context = ctx
                 task.code?.delegate = ctx
             }
 
@@ -1414,16 +1409,9 @@ abstract class TaskProcessor {
 
         // -- set the delegate map as context ih the task config
         //    so that lazy directives will be resolved against it
-        task.config.setContext(ctx)
+        task.config.context = ctx
 
-        // -- set the `task.config` object in the context
-        if( !ctx.containsKey(TASK_CONFIG) ) {
-            ctx.put(TASK_CONFIG, task.config)
-        }
-        else if( !overrideWarnShown.getAndSet(true) ) {
-            log.warn "Process $name overrides reserved variable `task`"
-        }
-
+        // -- resolve the task command script
         task.resolve(taskBody)
     }
 

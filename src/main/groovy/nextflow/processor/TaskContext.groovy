@@ -21,6 +21,7 @@
 package nextflow.processor
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.atomic.AtomicBoolean
 
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
@@ -41,6 +42,11 @@ class TaskContext implements Map<String,Object> {
 
     @Delegate
     final private Map<String,Object> holder
+
+    /**
+     * Used to show the override warning message only the very first time
+     */
+    private transient final overrideWarnShown = new AtomicBoolean()
 
     /**
      * The main script owning the process
@@ -145,6 +151,11 @@ class TaskContext implements Map<String,Object> {
 
     @Override
     public put(String property, Object newValue) {
+
+        if( property == 'task' && !(newValue instanceof TaskConfig ) && !overrideWarnShown.getAndSet(true) ) {
+            log.warn "Process $name overrides reserved variable `task`"
+        }
+
         holder.put(property, newValue)
     }
 

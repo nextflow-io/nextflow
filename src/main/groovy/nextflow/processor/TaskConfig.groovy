@@ -19,6 +19,8 @@
  */
 
 package nextflow.processor
+import static nextflow.processor.TaskProcessor.TASK_CONFIG
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -55,9 +57,17 @@ class TaskConfig implements Map<String,Object> {
         putAll(entries)
     }
 
-    TaskConfig setContext( Map value ) {
-        assert value != null
-        context = value
+    /**
+     * Assign the context map for dynamic evaluation of task config properties
+     * @param binding The context binding object
+     * @return The {@code TaskConfig} instance itself
+     */
+    TaskConfig setContext( Map binding ) {
+        assert binding != null
+        context = binding
+        // -- set the this object in the task context  in order to allow task properties to be resolved in process script
+        binding.put(TASK_CONFIG, this)
+
         return this
     }
 
