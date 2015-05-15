@@ -596,7 +596,7 @@ class BashWrapperBuilder {
         // set the environment
         if( environment ) {
             // export the nextflow script debug variable
-            docker.addEnv( 'NXF_DEBUG=$NXF_DEBUG')
+            docker.addEnv( 'NXF_DEBUG=${NXF_DEBUG:=0}')
 
             // add the user owner variable in order to patch root owned files problem
             if( dockerConfig.fixOwnership )

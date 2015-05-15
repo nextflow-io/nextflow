@@ -1148,7 +1148,7 @@ class BashWrapperBuilderTest extends Specification {
                 """
                 #!/bin/bash -ue
                 FOO=bar
-                docker run -i -e "NXF_DEBUG=\$NXF_DEBUG" -e "FOO=bar" -v $folder:$folder -v \$PWD:\$PWD -w \$PWD --name \$NXF_BOXID docker-io/busybox --fox --baz
+                docker run -i -e "NXF_DEBUG=\${NXF_DEBUG:=0}" -e "FOO=bar" -v $folder:$folder -v \$PWD:\$PWD -w \$PWD --name \$NXF_BOXID docker-io/busybox --fox --baz
                 """
                 .stripIndent().leftTrim()
 
