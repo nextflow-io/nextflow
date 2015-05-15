@@ -323,7 +323,40 @@ class TaskConfigTest extends Specification {
         then:
         config.isDynamic()
 
+        when:
+        config = new TaskConfig( alpha:1, beta: "${->foo}" )
+        then:
+        config.isDynamic()
+
+
     }
+
+    def 'should return a new value when changing context' () {
+
+        given:
+        def config = new TaskConfig()
+        config.alpha = 'Simple string'
+        config.beta = { 'Static' }
+        config.delta = { foo }
+        config.gamma = "${-> bar }"
+
+        when:
+        config.setContext( foo: 'Hello', bar: 'World' )
+        then:
+        config.alpha == 'Simple string'
+        config.beta == 'Static'
+        config.delta == 'Hello'
+        config.gamma == 'World'
+
+        when:
+        config.setContext( foo: 'Hola', bar: 'Mundo' )
+        then:
+        config.alpha == 'Simple string'
+        config.beta == 'Static'
+        config.delta == 'Hola'
+        config.gamma == 'Mundo'
+    }
+
 
 
 }

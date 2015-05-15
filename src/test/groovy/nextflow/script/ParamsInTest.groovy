@@ -231,11 +231,11 @@ class ParamsInTest extends Specification {
         then:
         process.config.getInputs().size() == 3
 
-        in1.name == '$x'
+        in1.name == '__$fileinparam<0>'
         in1.getFilePattern(ctx) == 'main.txt'
         in1.inChannel.val == Paths.get('file.txt')
 
-        in2.name == '$y.txt'
+        in2.name == '__$fileinparam<1>'
         in2.getFilePattern(ctx) == 'hello.txt'
         in2.inChannel.val == "str"
 
@@ -454,10 +454,13 @@ class ParamsInTest extends Specification {
 
             process hola {
               input:
-              set ('name_$x') from q
-              set ("name_${x}.txt") from q
-              set (file("hola_$x")) from q
-              set file( { "name_${x}.txt" } ) from q
+              set( 'name_$x' ) from q
+              set( "${x}_name.${str}" ) from q
+
+              set( file("hola_${x}") ) from q
+              set( file( handle: "${x}.txt") ) from q
+
+              set file( { "${x}_name.txt" } ) from q
               set file( handle: { "name_${x}.txt" } ) from q
 
               return ''
@@ -466,30 +469,35 @@ class ParamsInTest extends Specification {
 
         when:
         TaskProcessor process = parse(text).run()
-        SetInParam in1 = process.config.getInputs().get(0)
-        SetInParam in2 = process.config.getInputs().get(1)
-        SetInParam in3 = process.config.getInputs().get(2)
-        SetInParam in4 = process.config.getInputs().get(3)
-        SetInParam in5 = process.config.getInputs().get(4)
-        def ctx = [x:'the_file']
+        SetInParam in0 = process.config.getInputs().get(0)
+        SetInParam in1 = process.config.getInputs().get(1)
+        SetInParam in2 = process.config.getInputs().get(2)
+        SetInParam in3 = process.config.getInputs().get(3)
+        SetInParam in4 = process.config.getInputs().get(4)
+        SetInParam in5 = process.config.getInputs().get(5)
+        def ctx = [x:'the_file', str: 'fastq']
 
         then:
-        in1.inChannel.val == 'the file content'
+        in0.inChannel.val == 'the file content'
+        in0.inner[0] instanceof FileInParam
+        (in0.inner[0] as FileInParam).name == 'name_$x'
+        (in0.inner[0] as FileInParam).getFilePattern(ctx) == 'name_$x'
+
         in1.inner[0] instanceof FileInParam
-        (in1.inner[0] as FileInParam).name == 'name_$x'
-        (in1.inner[0] as FileInParam).getFilePattern(ctx) == 'name_$x'
+        (in1.inner[0] as FileInParam).name == '__$fileinparam<1:0>'
+        (in1.inner[0] as FileInParam).getFilePattern(ctx) == 'the_file_name.fastq'
 
         in2.inner[0] instanceof FileInParam
-        (in2.inner[0] as FileInParam).name == 'name_$x.txt'
-        (in2.inner[0] as FileInParam).getFilePattern(ctx) == 'name_the_file.txt'
+        (in2.inner[0] as FileInParam).name == '__$fileinparam<2:0>'
+        (in2.inner[0] as FileInParam).getFilePattern(ctx) == 'hola_the_file'
 
         in3.inner[0] instanceof FileInParam
-        (in3.inner[0] as FileInParam).name == 'hola_$x'
-        (in3.inner[0] as FileInParam).getFilePattern(ctx) == 'hola_the_file'
+        (in3.inner[0] as FileInParam).name == 'handle'
+        (in3.inner[0] as FileInParam).getFilePattern(ctx) == 'the_file.txt'
 
         in4.inner[0] instanceof FileInParam
-        (in4.inner[0] as FileInParam).name == '__$fileinparam<3:0>'
-        (in4.inner[0] as FileInParam).getFilePattern(ctx) == 'name_the_file.txt'
+        (in4.inner[0] as FileInParam).name == '__$fileinparam<4:0>'
+        (in4.inner[0] as FileInParam).getFilePattern(ctx) == 'the_file_name.txt'
 
         in5.inner[0] instanceof FileInParam
         (in5.inner[0] as FileInParam).name == 'handle'
@@ -625,7 +633,5 @@ class ParamsInTest extends Specification {
         thrown(MissingPropertyException)
 
     }
-
-
 
 }

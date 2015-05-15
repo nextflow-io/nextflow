@@ -83,6 +83,9 @@ class TaskConfig implements Map<String,Object> {
                 throw new IllegalStateException("Directive `$key` doesn't support dynamic value")
             }
         }
+        else if( value instanceof GString ) {
+            return value.cloneWith(context).toString()
+        }
 
         return value
     }
@@ -107,6 +110,11 @@ class TaskConfig implements Map<String,Object> {
             // 'module' directive can be defined as a list of dynamic values
             value.each { if (it instanceof Closure) dynamic |= true }
         }
+        else if( value instanceof GString ) {
+            for( int i=0; i<value.valueCount; i++ )
+                if (value.values[i] instanceof Closure)
+                    dynamic |= true
+        }
         target.put(key, value)
     }
 
@@ -117,9 +125,6 @@ class TaskConfig implements Map<String,Object> {
 
     @PackageScope
     boolean isDynamic() { dynamic }
-
-    @PackageScope
-    boolean hasContext() { context != null }
 
     def getProperty(String name) {
 

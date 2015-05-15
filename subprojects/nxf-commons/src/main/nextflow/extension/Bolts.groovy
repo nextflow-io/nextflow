@@ -30,6 +30,7 @@ import nextflow.file.FileHelper
 import nextflow.util.Duration
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
+import org.codehaus.groovy.runtime.GStringImpl
 import org.codehaus.groovy.runtime.ResourceGroovyMethods
 import org.codehaus.groovy.runtime.StringGroovyMethods
 
@@ -498,5 +499,26 @@ class Bolts {
         return false
     }
 
+    static Closure cloneWith( Closure self, Map binding ) {
+        assert binding != null
+        def copy = (Closure)self.clone()
+        copy.setDelegate(binding)
+        copy.setResolveStrategy( Closure.DELEGATE_ONLY )
+        return copy
+    }
 
+    static GString cloneWith( GString self, Map binding ) {
+
+        def values = new Object[ self.valueCount ]
+
+        // clone the gstring changing setting the delegate for each closure argument
+        for( int i=0; i<self.valueCount; i++ ) {
+            values[i] = ( self.values[i] instanceof Closure
+                    ? cloneWith(self.values[i] as Closure, binding)
+                    : self.values[i]
+            )
+        }
+
+        new GStringImpl(values, self.strings)
+    }
 }

@@ -52,8 +52,8 @@ class ParamsOutTest extends Specification {
         TaskProcessor process = parse(text, binding).run()
 
         when:
-        def out1 = process.config.getOutputs().get(0)
-        def out2 = process.config.getOutputs().get(1)
+        def out0 = process.config.getOutputs().get(0)
+        def out1 = process.config.getOutputs().get(1)
 
         // it MUST
         // - create a value out parameter named 'x'
@@ -61,14 +61,14 @@ class ParamsOutTest extends Specification {
         then:
         process.config.getOutputs().size() == 2
 
-        out1.class == ValueOutParam
-        out1.name == 'x'
-        out1.outChannel instanceof DataflowQueue
+        out0.class == ValueOutParam
+        out0.name == 'x'
+        out0.outChannel instanceof DataflowQueue
         binding.containsKey('x')
 
-        out2.class == ValueOutParam
-        out2.name == 'p'
-        out2.outChannel instanceof DataflowQueue
+        out1.class == ValueOutParam
+        out1.name == 'p'
+        out1.outChannel instanceof DataflowQueue
         !binding.containsKey('p')
         binding.containsKey('q')
 
@@ -81,7 +81,7 @@ class ParamsOutTest extends Specification {
             process hola {
               output:
               file x
-              file 'y'  mode flatten
+              file 'y' mode flatten
               file p into q mode standard
 
               return ''
@@ -145,51 +145,51 @@ class ParamsOutTest extends Specification {
         def ctx = [x: 'hola', y:99, z:'script_file']
 
         when:
-        FileOutParam out1 = process.config.getOutputs().get(0)
-        FileOutParam out2 = process.config.getOutputs().get(1)
-        FileOutParam out3 = process.config.getOutputs().get(2)
-        FileOutParam out4 = process.config.getOutputs().get(3)
-        SetOutParam out5 = process.config.getOutputs().get(4)
-        SetOutParam out6 = process.config.getOutputs().get(5)
+        FileOutParam out0 = process.config.getOutputs().get(0)
+        FileOutParam out1 = process.config.getOutputs().get(1)
+        FileOutParam out2 = process.config.getOutputs().get(2)
+        FileOutParam out3 = process.config.getOutputs().get(3)
+        SetOutParam out4 = process.config.getOutputs().get(4)
+        SetOutParam out5 = process.config.getOutputs().get(5)
 
         then:
         process.config.getOutputs().size() == 6
 
+        out0.name == null
+        out0.getFilePatterns(ctx) == ['hola_name']
+        out0.outChannel instanceof DataflowQueue
+        out0.outChannel == binding.channel1
+        out0.isDynamic()
+
         out1.name == null
-        out1.getFilePatterns(ctx) == ['hola_name']
+        out1.getFilePatterns(ctx) == ['hola_99.fa']
         out1.outChannel instanceof DataflowQueue
-        out1.outChannel == binding.channel1
+        out1.outChannel == binding.channel2
         out1.isDynamic()
 
-        out2.name == null
-        out2.getFilePatterns(ctx) == ['hola_99.fa']
+        out2.name == 'simple.txt'
+        out2.getFilePatterns(ctx) == ['simple.txt']
         out2.outChannel instanceof DataflowQueue
-        out2.outChannel == binding.channel2
-        out2.isDynamic()
+        out2.outChannel == binding.channel3
+        !out2.isDynamic()
 
-        out3.name == 'simple.txt'
-        out3.getFilePatterns(ctx) == ['simple.txt']
+        out3.name == null
+        out3.getFilePatterns(ctx) == ['script_file.txt','hola.fa']
         out3.outChannel instanceof DataflowQueue
-        out3.outChannel == binding.channel3
-        !out3.isDynamic()
+        out3.outChannel == binding.channel4
+        out3.isDynamic()
 
-        out4.name == null
-        out4.getFilePatterns(ctx) == ['script_file.txt','hola.fa']
         out4.outChannel instanceof DataflowQueue
-        out4.outChannel == binding.channel4
-        out4.isDynamic()
+        out4.outChannel == binding.channel5
+        out4.inner[0] instanceof FileOutParam
+        (out4.inner[0] as FileOutParam) .getFilePatterns(ctx) == ['script_file.txt','hola.fa']
+        (out4.inner[0] as FileOutParam) .isDynamic()
 
         out5.outChannel instanceof DataflowQueue
-        out5.outChannel == binding.channel5
+        out5.outChannel == binding.channel6
         out5.inner[0] instanceof FileOutParam
         (out5.inner[0] as FileOutParam) .getFilePatterns(ctx) == ['script_file.txt','hola.fa']
         (out5.inner[0] as FileOutParam) .isDynamic()
-
-        out6.outChannel instanceof DataflowQueue
-        out6.outChannel == binding.channel6
-        out6.inner[0] instanceof FileOutParam
-        (out6.inner[0] as FileOutParam) .getFilePatterns(ctx) == ['script_file.txt','hola.fa']
-        (out6.inner[0] as FileOutParam) .isDynamic()
 
     }
 
@@ -485,7 +485,6 @@ class ParamsOutTest extends Specification {
     }
 
 
-
     def testStdOut() {
 
         setup:
@@ -546,9 +545,9 @@ class ParamsOutTest extends Specification {
         where:
         value                       | expected
         'combine'                   | SetOutParam.CombineMode.combine
-        new TokenVar('combine')    | SetOutParam.CombineMode.combine
+        new TokenVar('combine')     | SetOutParam.CombineMode.combine
         'flatten'                   | BasicMode.flatten
-        new TokenVar('flatten')    | BasicMode.flatten
+        new TokenVar('flatten')     | BasicMode.flatten
 
     }
 

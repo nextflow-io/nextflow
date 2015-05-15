@@ -19,13 +19,11 @@
  */
 
 package nextflow.ast
-
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.script.TaskBody
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
-import nextflow.script.TokenGString
 import nextflow.script.TokenStdinCall
 import nextflow.script.TokenStdoutCall
 import nextflow.script.TokenValCall
@@ -42,7 +40,6 @@ import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.ConstructorCallExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
-import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.expr.MapExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
@@ -68,9 +65,11 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
 public class NextflowDSLImpl implements ASTTransformation {
 
-    def String currentTaskName
+    protected String currentTaskName
 
-    def String currentLabel
+    protected String currentLabel
+
+    protected GStringToLazyVisitor makeGStringLazyVisitor
 
     @Override
     void visit(ASTNode[] astNodes, SourceUnit unit) {
@@ -162,6 +161,8 @@ public class NextflowDSLImpl implements ASTTransformation {
             def block = (lastArg as ClosureExpression).code as BlockStatement
             def len = block.statements.size()
 
+            makeGStringLazyVisitor = new GStringToLazyVisitor(unit)
+
             /*
              * iterate over the list of statements to:
              * - converts the method after the 'input:' label as input parameters
@@ -182,6 +183,7 @@ public class NextflowDSLImpl implements ASTTransformation {
                 switch(currentLabel) {
                     case 'input':
                         if( stm instanceof ExpressionStatement ) {
+                            fixLazyGString( stm )
                             fixStdinStdout( stm )
                             convertInputMethod( stm.getExpression() )
                         }
@@ -189,6 +191,7 @@ public class NextflowDSLImpl implements ASTTransformation {
 
                     case 'output':
                         if( stm instanceof ExpressionStatement ) {
+                            fixLazyGString( stm )
                             fixStdinStdout( stm )
                             convertOutputMethod( stm.getExpression() )
                         }
@@ -211,6 +214,9 @@ public class NextflowDSLImpl implements ASTTransformation {
                         execStatements << stm
                         readSource(stm,source,unit)
                         break
+
+                    default:
+                        fixLazyGString(stm)
 
                 }
             }
@@ -308,6 +314,12 @@ public class NextflowDSLImpl implements ASTTransformation {
             buffer.append( unit.source.getLine(i, null) ) .append('\n')
         }
 
+    }
+
+    protected void fixLazyGString( Statement stm ) {
+        if( stm instanceof ExpressionStatement && stm.getExpression() instanceof MethodCallExpression ) {
+            makeGStringLazyVisitor.visitExpressionStatement(stm)
+        }
     }
 
     protected void fixStdinStdout( ExpressionStatement stm ) {
@@ -526,21 +538,6 @@ public class NextflowDSLImpl implements ASTTransformation {
                 return newObj( TokenVar, new ConstantExpression(name) )
         }
 
-        /*
-         * Handles GStrings in declaration file this
-         * output:
-         *   file "$name" into xx
-         *   set( "$name" ) into xx
-         *   set( file("$name") ) into xx
-         */
-        if( expr instanceof GStringExpression && ( withinFileMethod || withinSetMethod ) ) {
-
-            def strings = expr.getStrings() as List<Expression>
-            def varNames = expr.getValues().collect { it -> new ConstantExpression((it as VariableExpression).name) } as List<Expression>
-
-            return newObj( TokenGString, new ConstantExpression(expr.text), new ListExpression(strings), new ListExpression(varNames) )
-        }
-
         if( expr instanceof MethodCallExpression ) {
             def methodCall = expr as MethodCallExpression
 
@@ -743,7 +740,8 @@ public class NextflowDSLImpl implements ASTTransformation {
             return target instanceof VariableExpression
         }
 
-        public void visitPropertyExpression(PropertyExpression expr) {
+        @Override
+        void visitPropertyExpression(PropertyExpression expr) {
 
             if( isNormalized(expr)) {
                 final name = expr.text.replace('?','')
@@ -759,7 +757,8 @@ public class NextflowDSLImpl implements ASTTransformation {
 
         }
 
-        public void visitVariableExpression(VariableExpression var) {
+        @Override
+        void visitVariableExpression(VariableExpression var) {
             final name = var.name
             final line = var.lineNumber
             final coln = var.columnNumber
@@ -783,5 +782,83 @@ public class NextflowDSLImpl implements ASTTransformation {
         }
     }
 
+    /**
+     * Transform any GString to a Lazy GString i.e.
+     *
+     * from
+     *   "${foo} ${bar}"
+     * to
+     *   "${->foo} ${->bar}
+     *
+     */
+    static class GStringToLazyVisitor extends ClassCodeVisitorSupport {
+
+        final SourceUnit sourceUnit
+
+        private withinClosure
+
+        GStringToLazyVisitor(SourceUnit unit) {
+            this.sourceUnit = unit
+        }
+
+        @Override
+        public void visitClosureExpression(ClosureExpression expression) {
+            withinClosure = true
+            try {
+                super.visitClosureExpression(expression)
+            }
+            finally {
+                withinClosure = false
+            }
+        }
+
+        @Override
+        void visitGStringExpression(GStringExpression expression) {
+            if( !withinClosure ) {
+                xformToLazy(expression)
+            }
+        }
+
+        protected void xformToLazy(GStringExpression str) {
+            def values = str.getValues()
+            def normalised = new Expression[values.size()]
+
+            // wrap all non-closure to a ClosureExpression
+            for( int i=0; i<values.size(); i++ ) {
+                final item = values[i]
+                if( item instanceof ClosureExpression  ) {
+                    // when there is already a closure the conversion it is aborted
+                    // because it supposed the gstring is already a lazy-string
+                    return
+                }
+                normalised[i] = wrapWithClosure(item)
+            }
+
+            for( int i=0; i<values.size(); i++ ) {
+                values[i] = normalised[i]
+            }
+        }
+
+        protected ClosureExpression wrapWithClosure( Expression expr ) {
+
+            // create an expression statement for the given `expression`
+            def statement = new ExpressionStatement(expr)
+            // add it to a new block
+            def block = new BlockStatement()
+            block.addStatement(statement)
+            // create a closure over the given block
+            // note: the closure parameter argument must be *null* to force the creation of a closure like {-> something}
+            // otherwise it creates a closure with an implicit parameter that is managed in a different manner by the
+            // GString -- see http://docs.groovy-lang.org/latest/html/documentation/#_special_case_of_interpolating_closure_expressions
+            new ClosureExpression( null, block )
+
+        }
+
+        @Override
+        protected SourceUnit getSourceUnit() {
+            return sourceUnit
+        }
+
+    }
 
 }

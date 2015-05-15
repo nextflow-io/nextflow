@@ -228,10 +228,14 @@ class ProcessConfig implements Map<String,Object> {
         new ValueOutParam(this).bind(obj)
     }
 
-
     OutParam _out_file( Object obj ) {
-        def result = obj == '-' ? new StdOutParam(this) : new FileOutParam(this)
-        result.bind(obj)
+        // note: check that is a String type to avoid to force
+        // the evaluation of GString object to a string
+        if( obj instanceof String && obj == '-' )
+            new StdOutParam(this).bind(obj)
+
+        else
+            new FileOutParam(this).bind(obj)
     }
 
     OutParam _out_set( Object... obj ) {

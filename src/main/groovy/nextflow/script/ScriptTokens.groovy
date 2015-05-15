@@ -19,12 +19,9 @@
  */
 
 package nextflow.script
-
 import groovy.transform.Canonical
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
-import org.codehaus.groovy.runtime.GStringImpl
-
 /**
  * Presents a variable definition in the script context.
  *
@@ -111,26 +108,6 @@ class TokenValCall {
 }
 
 
-/**
- * This class is used to replace a GString usage in the output file declaration, for example:
- *
- *     <pre>
- *         output:
- *         file "${x}.txt" into something
- *     </pre>
- *
- */
-@Canonical
-class TokenGString {
-    String text
-    List<String> strings
-    List<String> valNames
-
-    String resolve( Closure map ) {
-        def values = valNames.collect { String it -> map(it) }
-        return new GStringImpl(values as Object[], strings as String[]).toString()
-    }
-}
 
 /**
  * Holds process script meta-data

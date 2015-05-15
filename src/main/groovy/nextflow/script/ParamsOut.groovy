@@ -206,7 +206,7 @@ class FileOutParam extends BaseOutParam implements OutParam {
      */
     protected boolean followLinks = true
 
-    private TokenGString gstring
+    private GString gstring
 
     private Closure<String> dynamicObj
 
@@ -267,8 +267,7 @@ class FileOutParam extends BaseOutParam implements OutParam {
 
     BaseOutParam bind( obj ) {
 
-        if( obj instanceof TokenGString ) {
-            log.warn "Dynamic output file name has to be defined using a closure -- Replace `file \"${obj.text}\"` with `file { \"${obj.text}\" }`"
+        if( obj instanceof GString ) {
             gstring = obj
             return this
         }
@@ -294,9 +293,14 @@ class FileOutParam extends BaseOutParam implements OutParam {
         if( dynamicObj ) {
             nameString = context.with(dynamicObj)
         }
-        else if( gstring ) {
+        else if( gstring != null ) {
             def strict = getName() == null
-            nameString = gstring.resolve { String it -> resolveName(context, it, strict) }
+            try {
+                nameString = gstring.cloneWith(context)
+            }
+            catch( MissingPropertyException e ) {
+                if( strict ) throw e
+            }
         }
         else {
             nameString = nameObj
@@ -347,6 +351,9 @@ class SetOutParam extends BaseOutParam {
             else if( item instanceof TokenValCall )
                 create(ValueOutParam).bind(item.name)
 
+            else if( item instanceof GString )
+                create(FileOutParam).bind(item)
+
             else if( item instanceof TokenStdoutCall || item == '-'  )
                 create(StdOutParam).bind('-')
 
@@ -356,9 +363,6 @@ class SetOutParam extends BaseOutParam {
             else if( item instanceof TokenFileCall )
                 // note that 'filePattern' can be a string or a Gstring
                 create(FileOutParam).bind(item.target)
-
-            else if( item instanceof TokenGString )
-                create(FileOutParam).bind(item)
 
             else
                 throw new IllegalArgumentException("Invalid map output parameter declaration -- item: ${item}")

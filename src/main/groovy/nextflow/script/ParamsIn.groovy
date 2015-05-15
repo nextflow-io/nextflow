@@ -279,7 +279,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
     @Override
     protected void lazyInit() {
 
-        if( fromObject == null && (bindObject == null || bindObject instanceof TokenGString || bindObject instanceof Closure ) ) {
+        if( fromObject == null && (bindObject == null || bindObject instanceof GString || bindObject instanceof Closure ) ) {
             throw new IllegalStateException("Missing 'bind' declaration in input parameter")
         }
 
@@ -377,12 +377,13 @@ class FileInParam extends BaseInParam  {
             return this
         }
 
-        if( obj instanceof TokenGString ) {
-            warn(obj.text)
+        if( obj instanceof GString ) {
             filePattern = obj
             return this
         }
 
+        // the ability to pass a closure as file name has been replaced by
+        // lazy gstring -- this should be deprecated
         if( obj instanceof Closure ) {
             filePattern = obj
             return this
@@ -398,9 +399,8 @@ class FileInParam extends BaseInParam  {
             return entry?.key
         }
 
-        if( bindObject instanceof TokenGString ) {
-            warn(bindObject.text)
-            return bindObject.text
+        if( bindObject instanceof GString ) {
+            return '__$' + this.toString()
         }
 
         return super.getName()
@@ -427,8 +427,9 @@ class FileInParam extends BaseInParam  {
     }
 
     private resolve( Map ctx, value ) {
-        if( value instanceof TokenGString )
-            value.resolve { String it -> resolveName(ctx,it) }
+        if( value instanceof GString ) {
+            value.cloneWith(ctx)
+        }
 
         else if( value instanceof Closure ) {
             return ctx.with(value)
@@ -538,12 +539,6 @@ class SetInParam extends BaseInParam {
             else if( item instanceof Map )
                 newItem(FileInParam).bind(item)
 
-            else if( item == '-' )
-                newItem(StdInParam)
-
-            else if( item instanceof String )
-                newItem(FileInParam).bind(item)
-
             else if( item instanceof TokenValCall )
                 newItem(ValueInParam).bind(item.name)
 
@@ -553,7 +548,13 @@ class SetInParam extends BaseInParam {
             else if( item instanceof TokenStdinCall )
                 newItem(StdInParam)
 
-            else if( item instanceof TokenGString )
+            else if( item instanceof GString )
+                newItem(FileInParam).bind(item)
+
+            else if( item == '-' )
+                newItem(StdInParam)
+
+            else if( item instanceof String )
                 newItem(FileInParam).bind(item)
 
             else
