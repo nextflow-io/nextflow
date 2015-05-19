@@ -1,5 +1,6 @@
 #!/bin/bash 
 set -e 
+trap "exit" INT
 
 get_abs_filename() {
   echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
