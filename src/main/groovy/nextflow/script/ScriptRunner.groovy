@@ -58,11 +58,6 @@ class ScriptRunner {
     private BaseScript script
 
     /**
-     * The extra binding variables specified by the user
-     */
-    private ScriptBinding bindings
-
-    /**
      * The pipeline file (it may be null when it's provided as string)
      */
     private Path scriptFile
@@ -91,12 +86,10 @@ class ScriptRunner {
 
     def ScriptRunner( Map config ) {
         session = new Session(config)
-        bindings = new ScriptBinding(config)
     }
 
     def ScriptRunner( Session session ) {
         this.session = session
-        this.bindings = new ScriptBinding(session.config)
     }
 
     def ScriptRunner setScript( Path file ) {
@@ -234,11 +227,11 @@ class ScriptRunner {
 
     protected BaseScript parseScript( String scriptText, List<String> args = null) {
         log.debug "> Script parsing"
-        bindings.setArgs( new ArgsList(args) )
-        bindings.setParams( session.config.params as Map )
+        session.binding.setArgs( new ArgsList(args) )
+        session.binding.setParams( session.config.params as Map )
         // TODO add test for this property
-        bindings.setVariable( 'baseDir', session.baseDir )
-        bindings.setVariable( 'workDir', session.workDir )
+        session.binding.setVariable( 'baseDir', session.baseDir )
+        session.binding.setVariable( 'workDir', session.workDir )
 
         // define the imports
         def importCustomizer = new ImportCustomizer()
@@ -270,7 +263,7 @@ class ScriptRunner {
 
         // run and wait for termination
         BaseScript result
-        def groovy = new GroovyShell(gcl, bindings, config)
+        def groovy = new GroovyShell(gcl, session.binding, config)
         if( session.scriptName )
             result = groovy.parse(scriptText, session.scriptName) as BaseScript
         else

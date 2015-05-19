@@ -18,50 +18,22 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow
+package nextflow.extension
 
-import java.nio.file.Path
+import spock.lang.Specification
 
 /**
- * Nextflow session interface
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface ISession {
+class CapturePropertiesTest extends Specification {
 
-    /**
-     * The folder where tasks temporary files are stored
-     */
-    Path getWorkDir()
+    def 'should capture variable names in a closure' () {
 
-    /**
-     * The folder where the main script is contained
-     */
-    Path getBaseDir()
+        expect:
+        CaptureProperties.capture { alpha } == ['alpha'] as Set
+        CaptureProperties.capture { alpha; beta; gamma } == ['alpha', 'beta', 'gamma'] as Set
 
-    /**
-     * Holds the configuration object
-     */
-    Map getConfig()
-
-    /**
-     * The pipeline script name (without parent path)
-     */
-    String getScriptName()
-
-    /**
-     * @return List of path added to application classpath at runtime
-     */
-    List<Path> getLibDir()
-
-    /**
-     * The unique identifier of this session
-     */
-    UUID getUniqueId()
-
-    /**
-     * @return The global script binding object
-     */
-    Binding getBinding()
+    }
 
 }

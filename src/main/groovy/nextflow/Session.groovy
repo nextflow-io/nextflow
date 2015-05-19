@@ -34,6 +34,7 @@ import nextflow.cli.CliOptions
 import nextflow.exception.MissingLibraryException
 import nextflow.processor.TaskDispatcher
 import nextflow.processor.TaskProcessor
+import nextflow.script.ScriptBinding
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceObserver
@@ -111,6 +112,8 @@ class Session implements ISession {
 
     private volatile ExecutorService execService
 
+    private ScriptBinding binding
+
     final private List<Closure<Void>> shutdownCallbacks = []
 
     final int poolSize
@@ -170,6 +173,9 @@ class Session implements ISession {
 
         // create the task dispatcher instance
         dispatcher = new TaskDispatcher(this)
+
+        // holds the global script variables
+        binding = new ScriptBinding(config)
     }
 
     /**
@@ -281,6 +287,8 @@ class Session implements ISession {
 
         return this
     }
+
+    ScriptBinding getBinding() { binding }
 
     @PackageScope
     Barrier getBarrier() { monitorsBarrier }

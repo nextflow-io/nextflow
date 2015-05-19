@@ -80,7 +80,7 @@ class Channel  {
      * @param items
      * @return
      */
-    static <T> DataflowChannel<T> from( Collection<T> items ) { Nextflow.channel(items) }
+    static DataflowChannel from( Collection items ) { Nextflow.channel(items) }
 
     /**
      * Creates a channel sending the items in the collection over it
@@ -89,7 +89,7 @@ class Channel  {
      * @return
      */
 
-    static <T> DataflowChannel<T> from( T... items ) { Nextflow.<T>channel(items) }
+    static DataflowChannel from( Object... items ) { Nextflow.channel(items) }
 
     /**
      * Convert an object into a *channel* variable that emits that object

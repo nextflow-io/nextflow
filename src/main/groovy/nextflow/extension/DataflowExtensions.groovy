@@ -68,7 +68,7 @@ import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 @Slf4j
 class DataflowExtensions {
 
-    private static Session session = Global.getSession()
+    private static Session session = Global.getSession() as Session
 
     /**
      * INTERNAL ONLY API
@@ -1999,6 +1999,101 @@ class DataflowExtensions {
     }
 
     /**
+     * Forward source dataflow channel *into* one or more dataflow channels. For example:
+     * <pre>
+     *     Channel.from( ... )
+     *            .map { ... }
+     *            .into { foo; bar }
+     * </pre>
+     *
+     * It creates two new dataflow variables named {@code foo} and {@code bar} and copied the map
+     * result into them.
+     *
+     * @param source The source dataflow channel which items are copied into newly created dataflow variables.
+     * @param holder A closure that defines one or more variable names into which source items are copied.
+     */
+    static void into( DataflowReadChannel source, Closure holder ) {
+        final names = CaptureProperties.capture(holder)
+        final binding = Global.session.binding
+
+        def targets = []
+        names.each { it ->
+            if( binding.hasVariable(it) ) {
+                def ch = binding.getVariable(it)
+                if( ch instanceof DataflowWriteChannel ) {
+                    targets.add(ch)
+                    return
+                }
+                log.warn "Variable '$it' is overridden by `into` operator -- Consider to use another name for it"
+            }
+            def ch = newChannelBy(source)
+            targets.add(ch)
+            binding.setVariable(it, ch)
+        }
+
+        newOperator([source], targets, new ChainWithClosure(new CopyChannelsClosure()))
+    }
+
+
+    /**
+     * Implements a tap that create implicitly a new dataflow variable in the global script context.
+     * For example:
+     *
+     * <pre>
+     *     Channel.from(...)
+     *            .tap { newChannelName }
+     *            .map { ... }
+     *  </pre>
+     *
+     * @param source The source dataflow variable
+     * @param holder The closure defining the new variable name
+     * @return The tap resulting dataflow channel
+     */
+    static DataflowReadChannel tap( DataflowReadChannel source, Closure holder ) {
+        final name = CaptureProperties.capture(holder)
+        if( !name )
+            throw new IllegalArgumentException("Missing target channel on `tap` operator")
+
+        if( name.size()>1 )
+            throw new IllegalArgumentException("Operator `tap` does not allow more than one target channel")
+
+        final target = newChannelBy(source)
+        final binding = Global.session.binding
+        if( binding.hasVariable(name[0]) ) {
+            log.warn "A variable named '${name[0]}' already exists in script global context -- Consider renaming it "
+        }
+        binding.setVariable(name[0], target)
+        source.tap(target)
+    }
+
+    /**
+     * Assign the {@code source} channel to a global variable with the name specified by the closure.
+     * For example:
+     * <pre>
+     *     Channel.from( ... )
+     *            .map { ... }
+     *            .set { newChannelName }
+     * </pre>
+     *
+     * @param DataflowReadChannel
+     * @param holder A closure that must define a single variable expression
+     */
+    static void set( DataflowReadChannel source, Closure holder ) {
+        final name = CaptureProperties.capture(holder)
+        if( !name )
+            throw new IllegalArgumentException("Missing name to which set the channel variable")
+
+        if( name.size()>1 )
+            throw new IllegalArgumentException("Operation `set` does not allow more than one target name")
+
+        final binding = Global.session.binding
+        if( binding.hasVariable(name[0]) ) {
+            log.warn "A variable named '${name[0]}' already exists in script global context -- Consider renaming it "
+        }
+        binding.setVariable(name[0], source)
+    }
+
+    /**
      * Empty the specified value only if the source channel to which is applied is empty i.e. do not emit
      * any value.
      *
@@ -2092,7 +2187,7 @@ class DataflowExtensions {
      * @param values
      * @return
      */
-    static public channel(Collection values) {
+    static DataflowQueue channel(Collection values) {
         def result = new DataflowQueue()
         def itr = values.iterator()
         while( itr.hasNext() ) result.bind(itr.next())
@@ -2105,6 +2200,20 @@ class DataflowExtensions {
         def result = new DataflowBroadcast()
         source.into(result)
         return result
+    }
+
+    /**
+     * Close a dataflow queue channel binding a {@link Channel#STOP} item
+     *
+     * @param source The source dataflow channel to be closed.
+     */
+    static void close( DataflowReadChannel source ) {
+        if( source instanceof DataflowQueue ) {
+            source.bind(Channel.STOP)
+        }
+        else {
+            log.warn "Operation `close` can only be applied to a queue channel"
+        }
     }
 
 }

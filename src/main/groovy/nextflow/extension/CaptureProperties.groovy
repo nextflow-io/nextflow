@@ -18,50 +18,30 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow
+package nextflow.extension
 
-import java.nio.file.Path
+import groovy.transform.CompileStatic
 
 /**
- * Nextflow session interface
- *
+ * Hack to capture the names of referenced variables into a closure
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface ISession {
+@CompileStatic
+class CaptureProperties {
 
-    /**
-     * The folder where tasks temporary files are stored
-     */
-    Path getWorkDir()
+    Set<String> names = []
 
-    /**
-     * The folder where the main script is contained
-     */
-    Path getBaseDir()
+    def propertyMissing(String name) {
+        names.add(name)
+        return null
+    }
 
-    /**
-     * Holds the configuration object
-     */
-    Map getConfig()
-
-    /**
-     * The pipeline script name (without parent path)
-     */
-    String getScriptName()
-
-    /**
-     * @return List of path added to application classpath at runtime
-     */
-    List<Path> getLibDir()
-
-    /**
-     * The unique identifier of this session
-     */
-    UUID getUniqueId()
-
-    /**
-     * @return The global script binding object
-     */
-    Binding getBinding()
+    static Set<String> capture(Closure holder) {
+        final recorder = new CaptureProperties()
+        holder.setResolveStrategy( Closure.DELEGATE_ONLY )
+        holder.delegate = recorder
+        holder.call()
+        return recorder.names
+    }
 
 }

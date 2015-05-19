@@ -406,6 +406,44 @@ class DataflowExtensionsTest extends Specification {
         ch3.val == Channel.STOP
     }
 
+    def 'should create new dataflow variables and forward item to them'  () {
+
+        given:
+        def session = new Session()
+
+        when:
+        Channel.from(10,2,30).into { alpha; gamma }
+        then:
+        session.binding.alpha.val == 10
+        session.binding.alpha.val == 2
+        session.binding.alpha.val == 30
+        session.binding.alpha.val == Channel.STOP
+
+        session.binding.gamma.val == 10
+        session.binding.gamma.val == 2
+        session.binding.gamma.val == 30
+        session.binding.gamma.val == Channel.STOP
+
+    }
+
+    def 'should `tap` item to a new channel' () {
+        given:
+        def session = new Session()
+
+        when:
+        def result = Channel.from( 4,7,9 ) .tap { first }.map { it+1 }
+        then:
+        session.binding.first.val == 4
+        session.binding.first.val == 7
+        session.binding.first.val == 9
+        session.binding.first.val == Channel.STOP
+
+        result.val == 5
+        result.val == 8
+        result.val == 10
+        result.val == Channel.STOP
+
+    }
 
 
     def testMin() {
@@ -1719,7 +1757,7 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
-    def testChannel() {
+    def 'should create a channel given a list'() {
 
         when:
         def result = [10,20,30].channel()
@@ -1731,6 +1769,36 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    def 'should close the dataflow channel' () {
+
+        given:
+        def result = [10,20,30].channel()
+        result.close()
+
+        expect:
+        result.val == 10
+        result.val == 20
+        result.val == 30
+        result.val == Channel.STOP
+
+    }
+
+    def 'should assign a channel to new variable' () {
+        given:
+        def session = new Session()
+
+        when:
+        Channel.from(10,20,30)
+                .map { it +2 }
+                .set { result }
+
+        then:
+        session.binding.result.val == 12
+        session.binding.result.val == 22
+        session.binding.result.val == 32
+        session.binding.result.val == Channel.STOP
+
+    }
 
 
 }
