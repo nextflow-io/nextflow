@@ -346,12 +346,12 @@ class ConfigBuilder {
 
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution
-            log.debug "Disabling execution in Docker contained as request by cli option `-without-docker`"
+            log.debug "Disabling execution in Docker contained as requested by cli option `-without-docker`"
             config.docker.enabled = false
         }
 
         if( cmdRun.withDocker ) {
-            log.debug "Enabling execution in Docker container as request by cli option `-with-docker ${cmdRun.withDocker}`"
+            log.debug "Enabling execution in Docker container as requested by cli option `-with-docker ${cmdRun.withDocker}`"
             if( !config.containsKey('docker') )
                 config.docker = [:]
             if( !(config.docker instanceof Map) )
@@ -367,7 +367,7 @@ class ConfigBuilder {
             }
 
             if( !hasContainerDirective(config.process) )
-                throw new AbortOperationException("You request to run with Docker but no image has been specified")
+                throw new AbortOperationException("You have requested to run with Docker but no image were specified")
 
         }
     }
