@@ -34,99 +34,105 @@
  * limitations under the License.
  */
 
-package nextflow.util
+package nextflow.processor
 
+import ch.grengine.Grengine
 import groovy.text.Template
 import groovy.text.TemplateEngine
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.runtime.InvokerHelper
 
 /**
+ * A template engine that uses {@link Grengine} to parse template scripts
+ * It also that ignore dollar variable and uses a custom character for variable interpolation
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public class EscapeTemplateEngine extends TemplateEngine {
-    private boolean verbose;
-    private static int counter = 1;
+@Slf4j
+@CompileStatic
+class TaskTemplateEngine extends TemplateEngine {
 
-    private GroovyShell groovyShell;
+    final static private int DOLLAR = (int)('$' as char)
+    final static private int BACKSLASH = (int)('\\' as char)
+    final static private int CURLY_OPEN = (int)('{' as char)
+    final static private int CURLY_CLOSE = (int)('}' as char)
+    final static private int DOUBLE_QUOTE = (int)('"' as char)
+    final static private int NL = (int)('\n' as char)
+    final static private int CR = (int)('\r' as char)
+    final static private int PERIOD = (int)('.' as char)
 
-    public EscapeTemplateEngine() {
-        this(GroovyShell.class.getClassLoader());
+    private Grengine grengine;
+
+    private char placeholder = '$' as char
+
+    private boolean enableShortNotation
+
+    TaskTemplateEngine() {
+        grengine = new Grengine()
     }
 
-    public EscapeTemplateEngine(boolean verbose) {
-        this(GroovyShell.class.getClassLoader());
-        setVerbose(verbose);
+    TaskTemplateEngine( Grengine engine ) {
+        this.grengine = engine
     }
 
-    public EscapeTemplateEngine(ClassLoader parentLoader) {
-        this(new GroovyShell(parentLoader));
+    String render( String text, Map binding = null )  {
+        def template = createTemplate(text)
+        def result = binding ? template.make(binding) : template.make()
+        result?.toString()
     }
 
-    public EscapeTemplateEngine(GroovyShell groovyShell) {
-        this.groovyShell = groovyShell;
-    }
+    Template createTemplate(Reader reader) throws CompilationFailedException, IOException {
+        if( !grengine )
+            grengine = new Grengine()
 
-    public Template createTemplate(Reader reader) throws CompilationFailedException, IOException {
-        SimpleTemplate template = new SimpleTemplate();
+        ParsableTemplate template = placeholder == DOLLAR ? new SimpleTemplate() : new EscapeTemplate()
         String script = template.parse(reader);
-        if (verbose) {
-            System.out.println("\n-- script source --");
-            System.out.print(script);
-            System.out.println("\n-- script end --\n");
+        if( log.isTraceEnabled() ) {
+            log.trace "\n-- script source --${script}\n-- script end --\n"
         }
         try {
-            template.script = groovyShell.parse(script, "EscapeTemplateScript" + counter++ + ".groovy");
-        } catch (Exception e) {
-            throw new GroovyRuntimeException("Failed to parse template script (your template may contain an error or be trying to use expressions not currently supported): " + e.getMessage());
+            template.script = grengine.create(script);
+        }
+        catch (Exception e) {
+            throw new GroovyRuntimeException("Failed to parse template script (your template may contain an error or be trying to use expressions not currently supported): " + e.getCause() ?: e.toString());
         }
         return template;
     }
 
+    TaskTemplateEngine setEnableShortNotation(boolean value) {
+        enableShortNotation = value
+        return this
+    }
+
+    TaskTemplateEngine setPlaceholder(char ch) {
+        placeholder = ch
+        return this
+    }
+
     /**
-     * @param verbose true if you want the engine to display the template source file for debugging purposes
+     * Common template methods
      */
-    public void setVerbose(boolean verbose) {
-        this.verbose = verbose;
-    }
+    private static abstract class ParsableTemplate implements Template {
 
-    public boolean isVerbose() {
-        return verbose;
-    }
-
-    private static class SimpleTemplate implements Template {
+        abstract String parse(Reader reader) throws IOException
 
         protected Script script;
 
-        public Writable make() {
+        Writable make() {
             return make(null);
         }
 
-        final static private DOLLAR = (int)('$' as char)
-        final static private BACKSLASH = (int)('\\' as char)
-        final static private PLACEHOLDER = (int)('&' as char)
-        final static private CURLY_OPEN = (int)('{' as char)
-        final static private CURLY_CLOSE = (int)('}' as char)
-        final static private DOUBLE_QUOTE = (int)('"' as char)
-        final static private NL = (int)('\n' as char)
-        final static private CR = (int)('\r' as char)
-        final static private PERIOD = (int)('.' as char)
-
-
-        public Writable make(final Map map) {
+        Writable make(final Map map) {
             return new Writable() {
                 /**
                  * Write the template document with the set binding applied to the writer.
                  *
                  * @see groovy.lang.Writable#writeTo(java.io.Writer)
                  */
-                public Writer writeTo(Writer writer) {
-                    Binding binding;
-                    if (map == null)
-                        binding = new Binding();
-                    else
-                        binding = new Binding(map);
+                Writer writeTo(Writer writer) {
+                    Binding binding = map == null ? new Binding() : new Binding(map);
                     Script scriptObject = InvokerHelper.createScript(script.getClass(), binding);
                     PrintWriter pw = new PrintWriter(writer);
                     scriptObject.setProperty("out", pw);
@@ -140,13 +146,21 @@ public class EscapeTemplateEngine extends TemplateEngine {
                  *
                  * @see java.lang.Object#toString()
                  */
-                public String toString() {
+                String toString() {
                     StringWriter sw = new StringWriter();
                     writeTo(sw);
                     return sw.toString();
                 }
             };
         }
+
+    }
+
+    /**
+     * Template class escaping standard $ prefixed variables and using a custom character
+     * as variable placeholder
+     */
+    private class EscapeTemplate extends ParsableTemplate {
 
         /**
          * Parse the text document looking for <% or <%= and then call out to the appropriate handler, otherwise copy the text directly
@@ -156,39 +170,42 @@ public class EscapeTemplateEngine extends TemplateEngine {
          * @return the parsed text
          * @throws IOException if something goes wrong
          */
-        protected String parse(Reader reader) throws IOException {
+        String parse(Reader reader) throws IOException {
             if (!reader.markSupported()) {
                 reader = new BufferedReader(reader);
             }
+
+            final PLACEHOLDER = (int)TaskTemplateEngine.this.placeholder
+
             StringWriter sw = new StringWriter();
             startScript(sw);
             int c;
             while ((c = reader.read()) != -1) {
 
-                if (c == DOLLAR) {
+                if( c == DOLLAR ) {
                     // escape dollar characters
                     sw.write(BACKSLASH)
                     sw.write(DOLLAR)
                     continue
                 }
 
-                if (c == BACKSLASH) {
+                if( c == BACKSLASH ) {
                     // escape backslash itself
                     sw.write(BACKSLASH)
                     sw.write(BACKSLASH)
                     continue
                 }
 
-                if (c == PLACEHOLDER) {
+                if( c == PLACEHOLDER ) {
                     reader.mark(1);
                     c = reader.read();      // read the next character
-                    if ( c == CURLY_OPEN ){
+                    if( c == CURLY_OPEN ){
                         reader.mark(1)
                         sw.write(DOLLAR)    // <-- replace the placeholder with a $ char
                         sw.write(CURLY_OPEN)
-                        processGSstring(reader, sw);
+                        processGString(reader, sw);
                     }
-                    else if (Character.isJavaIdentifierStart(c)) {
+                    else if( enableShortNotation && Character.isJavaIdentifierStart(c) ) {
                         sw.write(DOLLAR)    // <-- replace the placeholder with a $ char
                         reader.reset()
                         processIdentifier(reader, sw)
@@ -204,14 +221,14 @@ public class EscapeTemplateEngine extends TemplateEngine {
                     continue; // at least '$' is consumed ... read next chars.
                 }
 
-                if (c == DOUBLE_QUOTE) {
+                if( c == DOUBLE_QUOTE ) {
                     sw.write('\\');
                 }
 
                 /*
                  * Handle raw new line characters.
                  */
-                if (c == NL || c == CR) {
+                if( c == NL || c == CR ) {
                     if (c == CR) { // on Windows, "\r\n" is a new line.
                         reader.mark(1);
                         c = reader.read();
@@ -234,23 +251,22 @@ public class EscapeTemplateEngine extends TemplateEngine {
 
         private void endScript(StringWriter sw) {
             sw.write("\"\"\");\n");
-            sw.write("\n/* Generated by SimpleTemplateEngine */");
+            sw.write("\n");
         }
 
-        private void processGSstring(Reader reader, StringWriter sw) throws IOException {
+        private void processGString(Reader reader, StringWriter sw) throws IOException {
             int c;
             def name = new StringBuilder()
 
             while ((c = reader.read()) != -1) {
-                if (c != NL && c != CR) {
+                if( c != NL && c != CR ) {
                     sw.write(c);
                 }
-                if (c == CURLY_CLOSE) {
+                if(c == CURLY_CLOSE ) {
                     break;
                 }
-                name.append((char)c)
+                name.append(c)
             }
-
         }
 
         private void processIdentifier(Reader reader, StringWriter sw) {
@@ -263,7 +279,7 @@ public class EscapeTemplateEngine extends TemplateEngine {
 
                 if( (pos==0 && Character.isJavaIdentifierStart(c)) || Character.isJavaIdentifierPart(c) ) {
                     pos++
-                    name.append((char)c)
+                    name.append(c)
                     continue
                 }
 
@@ -283,9 +299,90 @@ public class EscapeTemplateEngine extends TemplateEngine {
                 }
                 break
             }
-
         }
 
-
     }
+
+    /**
+     * Default template that interpolates variables
+     */
+    private static class SimpleTemplate extends ParsableTemplate {
+
+        /**
+         * Parse the text document looking for <% or <%= and then call out to the appropriate handler, otherwise copy the text directly
+         * into the script while escaping quotes.
+         *
+         * @param reader a reader for the template text
+         * @return the parsed text
+         * @throws IOException if something goes wrong
+         */
+        String parse(Reader reader) throws IOException {
+            if (!reader.markSupported()) {
+                reader = new BufferedReader(reader);
+            }
+            StringWriter sw = new StringWriter();
+            startScript(sw);
+            int c;
+            while ((c = reader.read()) != -1) {
+
+                if (c == DOLLAR) {
+                    reader.mark(1);
+                    c = reader.read();
+                    if (c != CURLY_OPEN) {
+                        sw.write(DOLLAR);
+                        reader.reset();
+                    } else {
+                        reader.mark(1);
+                        sw.write(DOLLAR);
+                        sw.write(CURLY_OPEN);
+
+                        processGString(reader, sw);
+                    }
+                    continue; // at least '$' is consumed ... read next chars.
+                }
+                if (c == DOUBLE_QUOTE) {
+                    sw.write('\\');
+                }
+                /*
+                 * Handle raw new line characters.
+                 */
+                if (c == NL || c == CR) {
+                    if (c == CR) { // on Windows, "\r\n" is a new line.
+                        reader.mark(1);
+                        c = reader.read();
+                        if (c != '\n') {
+                            reader.reset();
+                        }
+                    }
+                    sw.write("\n");
+                    continue;
+                }
+                sw.write(c);
+            }
+            endScript(sw);
+            return sw.toString();
+        }
+
+        private void startScript(StringWriter sw) {
+            sw.write("out.print(\"\"\"");
+        }
+
+        private void endScript(StringWriter sw) {
+            sw.write("\"\"\");\n");
+            sw.write(NL);
+        }
+
+        private void processGString(Reader reader, StringWriter sw) throws IOException {
+            int c;
+            while ((c = reader.read()) != -1) {
+                if (c != NL && c != CR) {
+                    sw.write(c);
+                }
+                if (c == CURLY_CLOSE) {
+                    break;
+                }
+            }
+        }
+    }
+
 }

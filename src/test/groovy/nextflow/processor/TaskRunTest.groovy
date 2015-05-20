@@ -22,6 +22,7 @@ package nextflow.processor
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import ch.grengine.Grengine
 import nextflow.Session
 import nextflow.file.FileHolder
 import nextflow.script.EnvInParam
@@ -30,6 +31,7 @@ import nextflow.script.FileOutParam
 import nextflow.script.FileSharedParam
 import nextflow.script.StdInParam
 import nextflow.script.StdOutParam
+import nextflow.script.TaskBody
 import nextflow.script.TokenVar
 import nextflow.script.ValueInParam
 import nextflow.script.ValueOutParam
@@ -368,9 +370,11 @@ class TaskRunTest extends Specification {
         def task = new TaskRun()
         task.context = Mock(TaskContext)
         task.context.getHolder() >> [name: 'Foo']
+        task.processor = [:] as TaskProcessor
+        task.processor.grengine = new Grengine()
 
         when:
-        def template = task.renderTemplate(script).strip()
+        def template = task.renderTemplate(script)
         then:
         template == 'echo Foo'
         task.source == 'echo ${name}'
@@ -378,4 +382,139 @@ class TaskRunTest extends Specification {
 
     }
 
+    def 'should resolve the task body script' () {
+
+        given:
+        def task = new TaskRun()
+        task.processor = [:] as TaskProcessor
+        task.processor.grengine = new Grengine()
+
+        /*
+         * plain task script
+         */
+        when:
+        task.resolve(new TaskBody({-> 'Hello'}, 'Hello', 'script'))
+        then:
+        task.script == 'Hello'
+        task.source == 'Hello'
+
+        /*
+         * task script with a groovy variable
+         */
+        when:
+        task.context = new TaskContext(Mock(Script),[x: 'world'],'foo')
+        task.resolve(new TaskBody({-> "Hello ${x}"}, 'Hello ${x}', 'script'))
+        then:
+        task.script == 'Hello world'
+        task.source == 'Hello ${x}'
+
+    }
+
+    def 'should parse a `shell` script' () {
+
+        given:
+        def task = new TaskRun()
+        task.processor = [:] as TaskProcessor
+        task.processor.grengine = new Grengine()
+
+        /*
+         * bash script where $ vars are ignore and !{xxx} variables are interpolated
+        */
+        when:
+        task.context = new TaskContext(Mock(Script),[nxf_var: 'YES'],'foo')
+        task.config = new TaskConfig().setContext(task.context)
+        task.resolve(new TaskBody({-> '$BASH_VAR !{nxf_var}'}, '$BASH_VAR !{nxf_var}', 'shell'))  // <-- note: 'shell' type
+        then:
+        task.script == '$BASH_VAR YES'
+        task.source == '$BASH_VAR !{nxf_var}'
+
+        /*
+         * bash script where $ vars are ignore and #{xxx} variables are interpolated
+         */
+        when:
+        task.context = new TaskContext(Mock(Script),[nxf_var: '>interpolated value<'],'foo')
+        task.config = new TaskConfig().setContext(task.context)
+        task.config.placeholder = '#' as char
+        task.resolve(new TaskBody({-> '$BASH_VAR #{nxf_var}'}, '$BASH_VAR #{nxf_var}', 'shell'))  // <-- note: 'shell' type
+        then:
+        task.script == '$BASH_VAR >interpolated value<'
+        task.source == '$BASH_VAR #{nxf_var}'
+
+    }
+
+    def 'should resolve a task template file' () {
+
+        given:
+        def task = new TaskRun()
+        task.processor = [:] as TaskProcessor
+        task.processor.grengine = new Grengine()
+
+        // create a file template
+        def file = TestHelper.createInMemTempFile('template.sh')
+        file.text = 'echo ${say_hello}'
+        // create the task context with two variables
+        // - my_file
+        // - say_hello
+        task.context = new TaskContext(Mock(Script),[say_hello: 'Ciao mondo', my_file: file],'foo')
+        task.config = new TaskConfig().setContext(task.context)
+
+        when:
+        task.resolve( new TaskBody({-> template(my_file)}, 'template($file)', 'script'))
+        then:
+        task.script == 'echo Ciao mondo'
+        task.source == 'echo ${say_hello}'
+        task.template == file
+
+    }
+
+    def 'should resolve a shell template file, ignore BASH variables and parse !{xxx} ones' () {
+
+        given:
+        def task = new TaskRun()
+        task.processor = [:] as TaskProcessor
+        task.processor.grengine = new Grengine()
+
+        // create a file template
+        def file = TestHelper.createInMemTempFile('template.sh')
+        file.text = 'echo $HOME ~ !{user_name}'
+        // create the task context with two variables
+        // - my_file
+        // - say_hello
+        task.context = new TaskContext(Mock(Script),[user_name: 'Foo bar', my_file: file],'foo')
+        task.config = new TaskConfig().setContext(task.context)
+
+        when:
+        task.resolve( new TaskBody({-> template(my_file)}, 'template($file)', 'shell'))
+        then:
+        task.script == 'echo $HOME ~ Foo bar'
+        task.source == 'echo $HOME ~ !{user_name}'
+        task.template == file
+
+    }
+
+    def 'should resolve a shell template file, ignore BASH variables and parse #{xxx} ones' () {
+
+        given:
+        def task = new TaskRun()
+        task.processor = [:] as TaskProcessor
+        task.processor.grengine = new Grengine()
+
+        // create a file template
+        def file = TestHelper.createInMemTempFile('template.sh')
+        file.text = 'echo $HOME ~ #{user_name}'
+        // create the task context with two variables
+        // - my_file
+        // - say_hello
+        task.context = new TaskContext(Mock(Script),[user_name: 'Foo bar', my_file: file],'foo')
+        task.config = new TaskConfig().setContext(task.context)
+        task.config.placeholder = '#' as char
+
+        when:
+        task.resolve( new TaskBody({-> template(my_file)}, 'template($file)', 'shell'))
+        then:
+        task.script == 'echo $HOME ~ Foo bar'
+        task.source == 'echo $HOME ~ #{user_name}'
+        task.template == file
+
+    }
 }

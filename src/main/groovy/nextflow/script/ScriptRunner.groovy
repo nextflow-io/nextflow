@@ -261,6 +261,9 @@ class ScriptRunner {
         // so that it can be propagated to remote note (when necessary)
         session.getLibDir().add(targetDir)
 
+        // set the script class-loader
+        session.classLoader = gcl
+
         // run and wait for termination
         BaseScript result
         def groovy = new GroovyShell(gcl, session.binding, config)

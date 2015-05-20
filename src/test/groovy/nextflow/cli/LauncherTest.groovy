@@ -37,7 +37,7 @@ class LauncherTest extends Specification {
     @org.junit.Rule
     OutputCapture capture = new OutputCapture()
 
-    def testVersion () {
+    def 'should return `version` option' () {
 
         when:
         def launcher = new Launcher().parseMainArgs('-v')
@@ -53,7 +53,7 @@ class LauncherTest extends Specification {
 
     }
 
-    def testHelp () {
+    def 'should return `help` command' () {
 
         when:
         def launcher = new Launcher().parseMainArgs('-h')
@@ -75,7 +75,7 @@ class LauncherTest extends Specification {
 
     }
 
-    def testInfo() {
+    def 'should return `info` command'() {
 
         when:
         def launcher = new Launcher().parseMainArgs('info')
@@ -91,7 +91,7 @@ class LauncherTest extends Specification {
 
     }
 
-    def testPull() {
+    def 'should return `pull` command'() {
 
         when:
         def launcher = new Launcher().parseMainArgs('pull','alpha')
@@ -110,7 +110,7 @@ class LauncherTest extends Specification {
 
     }
 
-    def testClone() {
+    def 'should return `clone` command'() {
         when:
         def launcher = new Launcher().parseMainArgs('clone','xxx', '-hub', 'bitbucket', '-user','xx:yy')
         then:
@@ -122,7 +122,7 @@ class LauncherTest extends Specification {
     }
 
 
-    def testRun() {
+    def 'should return `run` command'() {
         when:
         def launcher = new Launcher().parseMainArgs('run','xxx', '-hub', 'bitbucket', '-user','xx:yy')
         then:
@@ -140,13 +140,20 @@ class LauncherTest extends Specification {
         launcher.command.hubProvider == 'github'
 
         when:
+        launcher = new Launcher().parseMainArgs('run', 'script.nf', '--alpha', '0', '--omega', '9')
+        then:
+        launcher.command instanceof CmdRun
+        launcher.command.params.'alpha' == '0'
+        launcher.command.params.'omega' == '9'
+
+        when:
         new Launcher().parseMainArgs('run','alpha', '-hub', 'xyz')
         then:
         thrown(ParameterException)
     }
 
 
-    def testNormalizeCmdline () {
+    def 'should normalise command line options' () {
 
         given:
         def script = Files.createTempFile('file',null)
@@ -212,7 +219,7 @@ class LauncherTest extends Specification {
     }
 
 
-    def testParseProxy( ) {
+    def 'should parse proxy env variables'( ) {
 
         expect:
         Launcher.parseProxy(null) == []
@@ -227,7 +234,7 @@ class LauncherTest extends Specification {
 
     }
 
-    def testSetupProxy() {
+    def 'should setup proxy properties'() {
 
         given:
         def httpProxyHost =System.getProperty('http.proxyHost')

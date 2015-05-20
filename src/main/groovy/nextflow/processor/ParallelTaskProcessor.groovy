@@ -181,8 +181,7 @@ class ParallelTaskProcessor extends TaskProcessor {
             """
 
         final Binding binding = new Binding( indexes: indexes, n: numOfInputs )
-        final result = (Closure)new GroovyShell(binding).evaluate (str)
-
+        final result = (Closure)grengine.run(str, binding)
         return result
 
     }

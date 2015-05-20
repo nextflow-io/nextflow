@@ -33,14 +33,14 @@ import spock.lang.Specification
  */
 class TaskContextTest extends Specification {
 
-    def testSaveAndReadContextMap () {
+    def 'should save and read TaskContext object' () {
 
         setup:
         def taskConfig = new ProcessConfig([:])
         def file = Files.createTempFile('test.ctx',null)
         def processor = [:] as TaskProcessor
         processor.metaClass.getTaskConfig = { taskConfig }
-        processor.metaClass.getTaskBody = { new TaskBody(null,'source',true) }
+        processor.metaClass.getTaskBody = { new TaskBody(null,'source') }
         def str = 'Hola'
         def map = new TaskContext(processor, [:])
         map.alpha = 1
@@ -76,7 +76,7 @@ class TaskContextTest extends Specification {
     }
 
 
-    def testDehydrateRehydrate() {
+    def 'should dehydrate rehydrate'() {
 
         setup:
         def bind = new Binding(x:1, y:2)

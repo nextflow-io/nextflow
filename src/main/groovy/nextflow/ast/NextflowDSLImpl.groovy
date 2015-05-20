@@ -210,6 +210,7 @@ public class NextflowDSLImpl implements ASTTransformation {
                         break
 
                     case 'script':
+                    case 'shell':
                         iterator.remove()
                         execStatements << stm
                         readSource(stm,source,unit)
@@ -234,8 +235,7 @@ public class NextflowDSLImpl implements ASTTransformation {
 
                 // append the new block to the
                 // set the 'script' flag parameter
-                def flag = currentLabel == 'script'
-                def wrap = makeScriptWrapper(execClosure, source, flag, unit)
+                def wrap = makeScriptWrapper(execClosure, source, currentLabel, unit)
                 block.addStatement( new ExpressionStatement(wrap)  )
                 done = true
 
@@ -281,12 +281,12 @@ public class NextflowDSLImpl implements ASTTransformation {
      * @param unit
      * @return a {@code TaskBody} object
      */
-    private Expression makeScriptWrapper( ClosureExpression closure, CharSequence source, boolean scriptOrNative, SourceUnit unit ) {
+    private Expression makeScriptWrapper( ClosureExpression closure, CharSequence source, String section, SourceUnit unit ) {
 
         final newArgs = []
         newArgs << (closure)
         newArgs << ( new ConstantExpression(source.toString()) )
-        newArgs << ( scriptOrNative ? ConstantExpression.PRIM_TRUE : ConstantExpression.PRIM_FALSE )
+        newArgs << ( new ConstantExpression(section) )
 
         final variables = fetchVariables(closure,unit)
         for( TokenValRef var: variables ) {
@@ -296,7 +296,8 @@ public class NextflowDSLImpl implements ASTTransformation {
             newArgs << newObj( TokenValRef, pName, pLine, pCol )
         }
 
-        newObj(TaskBody, newArgs as Object[] )
+        // invokes the TaskBody constructor
+        newObj( TaskBody, newArgs as Object[] )
     }
 
     /**
@@ -636,7 +637,7 @@ public class NextflowDSLImpl implements ASTTransformation {
 
             // append to the list of statement
             //def wrap = newObj(TaskBody, closureExp, new ConstantExpression(source.toString()), ConstantExpression.TRUE)
-            def wrap = makeScriptWrapper(closureExp, source, true, unit )
+            def wrap = makeScriptWrapper(closureExp, source, 'script', unit )
             block.statements.add( new ExpressionStatement(wrap) )
 
             return [true,0,0]

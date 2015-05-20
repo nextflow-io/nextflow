@@ -23,7 +23,6 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import com.google.common.hash.HashCode
-import groovy.text.GStringTemplateEngine
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -44,6 +43,7 @@ import nextflow.script.TaskBody
 import nextflow.script.ValueOutParam
 import nextflow.util.ContainerScriptTokens
 import nextflow.util.DockerBuilder
+
 /**
  * Models a task instance
  *
@@ -547,7 +547,7 @@ class TaskRun {
         // note: this may be overwritten when a template file used
         this.source = body.source
 
-        if( type != ScriptType.SCRIPTLET )
+        if( body.type != ScriptType.SCRIPTLET )
             return
 
         // Important!
@@ -556,7 +556,10 @@ class TaskRun {
         try {
             def result = code.call()
             if ( result instanceof Path ) {
-                script = renderTemplate(result)
+                script = renderTemplate(result, body.isShell)
+            }
+            else if( result != null && body.isShell ) {
+                script = renderScript(result)
             }
             else {
                 script = result.toString()
@@ -579,23 +582,36 @@ class TaskRun {
      * @param binding
      * @return
      */
-    final protected String renderTemplate( Path template ) {
+    final protected String renderTemplate( Path template, boolean shell=false ) {
         try {
             // read the template and override the task `source` with it
             this.source = template.text
             // keep track of template file
             this.template = template
-
-            new GStringTemplateEngine()
-                    .createTemplate(source)
-                    .make(context.getHolder())
-                    .toString()
+            // the script binding
+            final binding = context.getHolder()
+            // parse the template
+            final engine = new TaskTemplateEngine(processor.grengine)
+            if( shell ) {
+                engine.setPlaceholder(placeholderChar())
+            }
+            return engine.render(source, binding)
         }
         catch( NoSuchFileException e ) {
             throw new ProcessMissingTemplateException("Process `${processor.name}` can't find template file: $template")
         }
     }
 
+    final protected String renderScript( script ) {
+        final binding = context.getHolder()
+        new TaskTemplateEngine(processor.grengine)
+                .setPlaceholder(placeholderChar())
+                .setEnableShortNotation(false)
+                .render(script.toString(), binding)
+    }
 
+    protected placeholderChar() {
+        (config.placeholder ?: '!') as char
+    }
 }
 

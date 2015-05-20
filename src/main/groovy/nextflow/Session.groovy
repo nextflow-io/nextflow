@@ -114,6 +114,8 @@ class Session implements ISession {
 
     private ScriptBinding binding
 
+    private ClassLoader classLoader
+
     final private List<Closure<Void>> shutdownCallbacks = []
 
     final int poolSize
@@ -289,6 +291,13 @@ class Session implements ISession {
     }
 
     ScriptBinding getBinding() { binding }
+
+    ClassLoader getClassLoader() { classLoader }
+
+    Session setClassLoader( ClassLoader loader ) {
+        this.classLoader = loader
+        return this
+    }
 
     @PackageScope
     Barrier getBarrier() { monitorsBarrier }

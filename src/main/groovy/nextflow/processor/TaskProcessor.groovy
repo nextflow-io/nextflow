@@ -24,6 +24,7 @@ import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
+import ch.grengine.Grengine
 import com.google.common.hash.HashCode
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -180,6 +181,11 @@ abstract class TaskProcessor {
     protected Agent<StateObj> state
 
     /**
+     * Groovy engine used to evaluate dynamic code
+     */
+    protected Grengine grengine
+
+    /**
      * Process ID number. The first is 1, the second 2 and so on ..
      */
     private final int id
@@ -194,6 +200,7 @@ abstract class TaskProcessor {
      */
     {
         id = ++processCount
+        grengine = session && session.classLoader ? new Grengine(session.classLoader) : new Grengine()
     }
 
     /* for testing purpose - do not remove */
@@ -410,7 +417,7 @@ abstract class TaskProcessor {
 
         final str = " { ${args.join(',')} -> callback([ ${args.join(',')} ]) }"
         final binding = new Binding( ['callback': method] )
-        final result = (Closure)new GroovyShell(binding).evaluate (str)
+        final result = (Closure)grengine.run(str,binding)
 
         return result
     }
@@ -1468,7 +1475,6 @@ abstract class TaskProcessor {
      * @return The set of task variables accessed in global script context and not declared as input/output
      */
     final protected Map<String,Object> getTaskGlobalVars(Binding binding, Set<String> variableNames) {
-        GroovyShell shell = null
         final result = new HashMap(variableNames.size())
         final processName = name
 
@@ -1484,8 +1490,7 @@ abstract class TaskProcessor {
                         value = binding.getVariable(varName)
                     }
                     else {
-                        if( !shell ) shell = new GroovyShell(binding)
-                        value = shell.evaluate(varName)
+                        value = grengine.run(varName, binding)
                     }
                 }
                 catch( MissingPropertyException | NullPointerException e ) {

@@ -19,7 +19,6 @@
  */
 
 package nextflow.processor
-import static test.TestParser.parse
 
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -33,9 +32,7 @@ import nextflow.executor.NopeExecutor
 import nextflow.file.FileHolder
 import nextflow.script.BaseScript
 import nextflow.script.FileInParam
-import nextflow.script.ScriptRunner
 import nextflow.script.TaskBody
-import nextflow.script.TokenValRef
 import nextflow.script.TokenVar
 import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
@@ -50,14 +47,14 @@ class TaskProcessorTest extends Specification {
     static class DummyProcessor extends TaskProcessor {
 
         DummyProcessor(String name, Session session, BaseScript script, ProcessConfig taskConfig) {
-            super(name, new NopeExecutor(), session, script, taskConfig, new TaskBody({}, '..', true))
+            super(name, new NopeExecutor(), session, script, taskConfig, new TaskBody({}, '..'))
         }
 
         @Override protected void createOperator() { }
     }
 
 
-    def filterHidden() {
+    def 'should filter hidden files'() {
 
         setup:
         def processor = [:] as TaskProcessor
@@ -70,7 +67,7 @@ class TaskProcessorTest extends Specification {
 
     }
 
-    def filterStagedInputs() {
+    def 'should filter staged inputs'() {
 
         setup:
         def processor = [:] as TaskProcessor
@@ -103,7 +100,7 @@ class TaskProcessorTest extends Specification {
     }
 
 
-    def testEnvironment() {
+    def 'should evaluate environment variables'() {
 
         setup:
         def home = Files.createTempDirectory('test')
@@ -142,7 +139,7 @@ class TaskProcessorTest extends Specification {
 
     }
 
-    def testFetchInterpreter() {
+    def 'should fetch interpreter from shebang line'() {
 
         when:
         def script =
@@ -161,7 +158,7 @@ class TaskProcessorTest extends Specification {
         i == null
     }
 
-    def testSingleItemOrCollection() {
+    def 'should return single item or collection'() {
 
         setup:
         def processor = [:] as TaskProcessor
@@ -184,7 +181,7 @@ class TaskProcessorTest extends Specification {
     }
 
 
-    def testWildcardExpand() {
+    def 'should expand wildcards'() {
 
         setup:
         def processor = [:] as TaskProcessor
@@ -238,7 +235,7 @@ class TaskProcessorTest extends Specification {
     }
 
 
-    def testStagePath() {
+    def 'shold stage path'() {
 
         when:
         def p1 = Paths.get('/home/data/source.file')
@@ -251,7 +248,7 @@ class TaskProcessorTest extends Specification {
     }
 
 
-    def testGetHashLog() {
+    def 'should return task hash log'() {
 
         when:
         def h = CacheHelper.hasher('x').hash()
@@ -262,7 +259,7 @@ class TaskProcessorTest extends Specification {
     }
 
 
-    def testState() {
+    def 'should update agent state'() {
 
         when:
         def state = new Agent<StateObj>(new StateObj())
@@ -287,7 +284,7 @@ class TaskProcessorTest extends Specification {
 
     }
 
-    def testState2() {
+    def 'should update agent state 2'() {
 
         when:
         def agent = new Agent<List>([])
@@ -302,72 +299,6 @@ class TaskProcessorTest extends Specification {
 
     }
 
-
-    def testVarRefs( ) {
-
-        setup:
-        def text = '''
-
-        String x = 1
-
-        @Field
-        String = 'Ciao'
-
-        z = 'str'
-
-        process hola {
-
-          /
-          println $x + $y + $z
-          /
-        }
-        '''
-        when:
-        TaskProcessor process = parse(text).run()
-        then:
-        process.taskBody.valRefs == [
-                new TokenValRef('x', 13, 20),
-                new TokenValRef('y', 13, 25),
-                new TokenValRef('z', 13, 30) ] as Set
-
-        process.taskBody.getValNames() == ['x','y','z'] as Set
-    }
-
-    def testProcessVariables() {
-
-        when:
-        def runner = new ScriptRunner( process: [executor:'nope'] )
-        def script =
-                '''
-                class Foo { def foo() { return [x:1] };  }
-
-                alpha = 1
-                params.beta = 2
-                params.zeta = new Foo()
-                delta = new Foo()
-                x = 'alpha'
-
-                process simpleTask  {
-                    input:
-                    val x from 1
-
-                    """
-                    echo ${alpha}
-                    echo ${params.beta}
-                    echo ${params?.gamma?.omega}
-                    echo ${params.zeta.foo()}
-                    echo ${params.zeta.foo().x}
-                    echo ${delta.foo().x}
-                    echo ${params."$x"}
-                    """
-                }
-
-                '''
-        runner.setScript(script).execute()
-        then:
-        runner.getScriptObj().getTaskProcessor().getTaskBody().getValNames() == ['alpha', 'params.beta', 'params.gamma.omega', 'params.zeta', 'delta', 'params', 'x'] as Set
-
-    }
 
     def 'should return tasks global variables map'() {
 
