@@ -138,7 +138,7 @@ class TaskTemplateEngineTest extends Specification {
     def 'should interpolate file template' () {
 
         given:
-        def template = this.class.getResourceAsStream('template.txt')
+        def template = this.class.getResourceAsStream('/nextflow/processor/test-file.tpl')
         when:
         def binding = [foo: 'bar', x: 9, y: 1, z: 2, obj: [beta: 'Hello', pico: 'World']]
         def result = new TaskTemplateEngine()
@@ -147,7 +147,7 @@ class TaskTemplateEngineTest extends Specification {
                     .make(binding)
                     .toString()
         then:
-        result == new InputStreamReader(this.class.getResourceAsStream('template.result')).text
+        result == new InputStreamReader(this.class.getResourceAsStream('/nextflow/processor/test-result.tpl')).text
 
     }
 }
