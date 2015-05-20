@@ -197,7 +197,7 @@ class GgTaskHandler extends TaskHandler {
     @Override
     void submit() {
 
-        // submit to an hazelcast node for execution
+        // submit to a gridgain node for execution
         final sessionId = task.processor.session.uniqueId
         final remoteTask = ( type == ScriptType.SCRIPTLET ) ? new GgBashTask(task,sessionId) : new GgClosureTask(task,sessionId)
         future = executor.execute( remoteTask )
