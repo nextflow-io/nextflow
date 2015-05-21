@@ -562,6 +562,8 @@ class TaskRun {
                 script = renderScript(result)
             }
             else {
+                // note `toString` transform GString to plain string object resolving
+                // interpolated variables
                 script = result.toString()
             }
         }

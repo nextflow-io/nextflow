@@ -150,4 +150,18 @@ class TaskTemplateEngineTest extends Specification {
         result == new InputStreamReader(this.class.getResourceAsStream('/nextflow/processor/test-result.tpl')).text
 
     }
+
+    def 'should not change the binding map object content' () {
+
+        given:
+        def binding = [x: 'Hello', y: 0]
+        when:
+        def original = new HashMap(binding)
+        def result = new TaskTemplateEngine().render('Say: $x ${++y} and ${++y} times', binding)
+        then:
+        result == 'Say: Hello 1 and 2 times'
+        original == binding  // the binding map does not change
+        binding.y == 0
+
+    }
 }

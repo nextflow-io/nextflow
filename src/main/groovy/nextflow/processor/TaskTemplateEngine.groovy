@@ -35,7 +35,6 @@
  */
 
 package nextflow.processor
-
 import ch.grengine.Grengine
 import groovy.text.Template
 import groovy.text.TemplateEngine
@@ -84,13 +83,10 @@ class TaskTemplateEngine extends TemplateEngine {
     }
 
     Template createTemplate(Reader reader) throws CompilationFailedException, IOException {
-        if( !grengine )
-            grengine = new Grengine()
-
         ParsableTemplate template = placeholder == DOLLAR ? new SimpleTemplate() : new EscapeTemplate()
         String script = template.parse(reader);
         if( log.isTraceEnabled() ) {
-            log.trace "\n-- script source --${script}\n-- script end --\n"
+            log.trace "\n-- script source --\n${script}\n-- script end --\n"
         }
         try {
             template.script = grengine.create(script);
@@ -120,22 +116,38 @@ class TaskTemplateEngine extends TemplateEngine {
 
         protected Script script;
 
+        protected void startScript(StringWriter sw) {
+            sw.write('__$$_out.print("""');
+        }
+
+        protected void endScript(StringWriter sw) {
+            sw.write('""");\n');
+            sw.write('\n');
+        }
+
+
         Writable make() {
             return make(null);
         }
 
         Writable make(final Map map) {
             return new Writable() {
+
                 /**
                  * Write the template document with the set binding applied to the writer.
                  *
                  * @see groovy.lang.Writable#writeTo(java.io.Writer)
                  */
                 Writer writeTo(Writer writer) {
-                    Binding binding = map == null ? new Binding() : new Binding(map);
+                    // Note: the code below, in order to print the string inject the a PrintVariable object
+                    // in the binding map. To avoid any side-effect in the original a newly create HashMap
+                    // is specified a binding object (however this do not prevent that inner referenced object
+                    // can be modified e.g `obj.something++`)
+                    Binding binding = map == null ? new Binding() : new Binding(new HashMap(map));
                     Script scriptObject = InvokerHelper.createScript(script.getClass(), binding);
                     PrintWriter pw = new PrintWriter(writer);
-                    scriptObject.setProperty("out", pw);
+                    // note:
+                    scriptObject.setProperty('__$$_out', pw);
                     scriptObject.run();
                     pw.flush();
                     return writer;
@@ -243,15 +255,6 @@ class TaskTemplateEngine extends TemplateEngine {
             }
             endScript(sw);
             return sw.toString();
-        }
-
-        private void startScript(StringWriter sw) {
-            sw.write("out.print(\"\"\"");
-        }
-
-        private void endScript(StringWriter sw) {
-            sw.write("\"\"\");\n");
-            sw.write("\n");
         }
 
         private void processGString(Reader reader, StringWriter sw) throws IOException {
@@ -363,14 +366,6 @@ class TaskTemplateEngine extends TemplateEngine {
             return sw.toString();
         }
 
-        private void startScript(StringWriter sw) {
-            sw.write("out.print(\"\"\"");
-        }
-
-        private void endScript(StringWriter sw) {
-            sw.write("\"\"\");\n");
-            sw.write(NL);
-        }
 
         private void processGString(Reader reader, StringWriter sw) throws IOException {
             int c;
