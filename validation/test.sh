@@ -12,7 +12,7 @@ export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 # Tests
 #
 (
-  export WITH_DOCKER=yes;
+  export WITH_DOCKER='-with-docker';
   cd ../tests/checks; 
   bash run.sh
 )
