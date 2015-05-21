@@ -210,6 +210,10 @@ class ParallelTaskProcessor extends TaskProcessor {
         int count = makeTaskContextStage1(task, secondPass, values)
         makeTaskContextStage2(task, secondPass, count)
 
+        // verify that `when` guard, when specified, is satisfied
+        if( !checkWhenGuard(task) )
+            return
+
         // -- verify if exists a stored result for this case,
         //    if true skip the execution and return the stored data
         if( checkStoredOutput(task) )

@@ -22,6 +22,7 @@ package nextflow.ast
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.script.TaskBody
+import nextflow.script.TaskClosure
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenStdinCall
@@ -171,6 +172,10 @@ public class NextflowDSLImpl implements ASTTransformation {
              */
             def source = new StringBuilder()
             List<Statement> execStatements = []
+
+            List<Statement> whenStatements = []
+            def whenSource = new StringBuilder()
+
             def iterator = block.getStatements().iterator()
             while( iterator.hasNext() ) {
 
@@ -216,10 +221,24 @@ public class NextflowDSLImpl implements ASTTransformation {
                         readSource(stm,source,unit)
                         break
 
+                    // capture the statements in a when guard and remove from the current block
+                    case 'when':
+                        iterator.remove()
+                        whenStatements << stm
+                        readSource(stm,whenSource,unit)
+                        break
+
                     default:
                         fixLazyGString(stm)
 
                 }
+            }
+
+            /*
+             * add the `when` block if found
+             */
+            if( whenStatements ) {
+                addWhenGuardCall(whenStatements, whenSource, block)
             }
 
             /*
@@ -273,6 +292,30 @@ public class NextflowDSLImpl implements ASTTransformation {
     }
 
     /**
+     * Converts a `when` block into a when method call expression. The when code is converted into a
+     * closure expression and set a `when` directive in the process configuration properties.
+     *
+     * See {@link nextflow.processor.ProcessConfig#configProperties}
+     * See {@link nextflow.processor.TaskConfig#getGuard(java.lang.String)}
+     */
+    protected void addWhenGuardCall( List<Statement> statements, StringBuilder source, BlockStatement parent ) {
+        // wrap the code block into a closure expression
+        def block = new BlockStatement(statements, new VariableScope(parent.variableScope))
+        def closure = new ClosureExpression( Parameter.EMPTY_ARRAY, block )
+
+        // the closure expression is wrapped itself into a TaskClosure object
+        // in order to capture the closure source other than the closure code
+        def newArgs = []
+        newArgs << closure
+        newArgs << new ConstantExpression(source.toString())
+        def whenObj = newObj( TaskClosure, newArgs as Object[] )
+
+        // creates a method call expression for the method `when`
+        def method = new MethodCallExpression(VariableExpression.THIS_EXPRESSION, 'when', whenObj)
+        parent.addStatement( new ExpressionStatement(method) )
+
+    }
+    /**
      * Wrap the user provided piece of code, either a script or a closure with a {@code TaskBody} object
      *
      * @param closure
@@ -313,6 +356,30 @@ public class NextflowDSLImpl implements ASTTransformation {
         def last = statement.getLastLineNumber()
         for( int i=line; i<=last; i++ ) {
             buffer.append( unit.source.getLine(i, null) ) .append('\n')
+        }
+
+    }
+
+    @Deprecated
+    protected void fixGuards( Statement stm, SourceUnit unit ) {
+
+        if( stm instanceof ExpressionStatement && stm.getExpression() instanceof MethodCallExpression ) {
+
+            def method = stm.getExpression() as MethodCallExpression
+            if( method.arguments instanceof ArgumentListExpression ) {
+                def args = method.arguments as ArgumentListExpression
+                if( args.size() == 1 && args.getExpression(0) instanceof ClosureExpression ) {
+                    // read the source code of the closure
+                    def closure = args.getExpression(0) as ClosureExpression
+                    def source = new StringBuilder()
+                    readSource(closure.getCode(), source, unit)
+
+                    // wrap the closure expression by a TaskClosure object invocation
+                    def wrap = newObj( TaskClosure, closure, new ConstantExpression(source.toString()) )
+                    // replace it with the original closure argument
+                    args.expressions.set(0, wrap)
+                }
+            }
         }
 
     }

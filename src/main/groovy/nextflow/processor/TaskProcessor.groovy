@@ -38,6 +38,7 @@ import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
 import nextflow.Nextflow
 import nextflow.Session
+import nextflow.exception.FailedGuardException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
@@ -729,11 +730,17 @@ abstract class TaskProcessor {
 
             def message = []
             message << "Error executing process > '${task?.name ?: name}'"
-            if( error instanceof ProcessException ) {
-                formatTaskError( message, error, task )
-            }
-            else {
-                message << formatErrorCause(error)
+            switch( error ) {
+                case ProcessException:
+                    formatTaskError( message, error, task )
+                    break
+
+                case FailedGuardException:
+                    formatGuardError( message, error as FailedGuardException, task )
+                    break;
+
+                default:
+                    message << formatErrorCause(error)
             }
             log.error message.join('\n'), error
         }
@@ -744,6 +751,23 @@ abstract class TaskProcessor {
 
         session.abort(error)
         return ErrorStrategy.TERMINATE
+    }
+
+    final protected formatGuardError( List message, FailedGuardException error, TaskRun task ) {
+        // compose a readable error message
+        message << formatErrorCause( error )
+
+        if( error.source )  {
+            message << "\nWhen block:"
+            error.source.stripIndent().eachLine {
+                message << "  $it"
+            }
+        }
+
+        if( task?.workDir )
+            message << "\nWork dir:\n  ${task.workDir.toString()}"
+
+        return message
     }
 
     final protected formatTaskError( List message, Throwable error, TaskRun task ) {
@@ -1526,8 +1550,26 @@ abstract class TaskProcessor {
 
         // add the task to the collection of running tasks
         session.dispatcher.submit(task, blocking, runType.message)
+
     }
 
+    protected boolean checkWhenGuard(TaskRun task) {
+
+        try {
+            def pass = task.config.getGuard('when')
+            if( pass ) {
+                return true
+            }
+
+            log.trace "Task ${task.name} is not executed becase `when` condition is not verified"
+            finalizeTask0(task)
+            return false
+        }
+        catch ( FailedGuardException error ) {
+            handleException(error, task)
+            return false
+        }
+    }
 
     /**
      * Finalize the task execution, checking the exit status

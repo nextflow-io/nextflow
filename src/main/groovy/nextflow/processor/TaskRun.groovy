@@ -26,6 +26,7 @@ import com.google.common.hash.HashCode
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.exception.FailedGuardException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessMissingTemplateException
 import nextflow.exception.ProcessScriptException

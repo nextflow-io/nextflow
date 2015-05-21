@@ -19,13 +19,13 @@
  */
 
 package nextflow.processor
-
 import java.nio.file.Paths
 
+import nextflow.exception.FailedGuardException
+import nextflow.script.TaskClosure
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -357,6 +357,29 @@ class TaskConfigTest extends Specification {
         config.gamma == 'Mundo'
     }
 
+    def 'should return the guard condition' () {
 
+        given:
+        def config = new TaskConfig()
+        def closure = new TaskClosure({ x == 'Hello' && count==1 }, '{closure source code}')
+        config.put('when', closure)
+
+        when:
+        config.getGuard('when')
+        then:
+        FailedGuardException ex = thrown()
+        ex.source == '{closure source code}'
+
+        when:
+        config.context = [x: 'Hello', count: 1]
+        then:
+        config.getGuard('when')
+
+        when:
+        config.context = [x: 'Hello', count: 3]
+        then:
+        !config.getGuard('when')
+
+    }
 
 }

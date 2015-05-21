@@ -26,7 +26,9 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.exception.AbortOperationException
+import nextflow.exception.FailedGuardException
 import nextflow.executor.BashWrapperBuilder
+import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -73,11 +75,9 @@ class TaskConfig implements Map<String,Object> {
 
     private normalize( String key, value ) {
         if( value instanceof Closure ) {
-            if( context )
-                return context.with((Closure)value)
-
+            def copy = value.cloneWith(context)
             try {
-                return (value as Closure).call()
+                return copy.call()
             }
             catch( MissingPropertyException e ) {
                 throw new IllegalStateException("Directive `$key` doesn't support dynamic value")
@@ -295,6 +295,34 @@ class TaskConfig implements Map<String,Object> {
             return CmdLineHelper.splitter( opts.toString() )
         }
     }
+
+    /**
+     * Get a closure guard condition and evaluate to a boolean result
+     *
+     * @param name The name of the guard to test e.g. {@code when}
+     * @return {@code true} when the condition is verified
+     */
+    protected boolean getGuard( String name, boolean defValue=true ) throws FailedGuardException {
+
+        final code = target.get(name)
+        if( code == null )
+            return defValue
+
+        String source = null
+        try {
+            if( code instanceof Closure ) {
+                if( code instanceof TaskClosure ) source = code.getSource()
+                return code.cloneWith(context).call()
+            }
+            // try to convert to a boolean value
+            return code as Boolean
+        }
+        catch( Throwable e ) {
+            throw new FailedGuardException("Cannot evaluate `$name` expression", source, e)
+        }
+
+    }
+
 
     @Override
     String toString() {

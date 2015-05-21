@@ -499,14 +499,32 @@ class Bolts {
         return false
     }
 
-    static Closure cloneWith( Closure self, Map binding ) {
+    /**
+     * Clone a {@link Closure} object and set the specified map as delegate object
+     * in the resulting closure
+     *
+     * @param self The {@link Closure} object to be cloned
+     * @param binding The delegate object to set in the new closure
+     * @return The cloned {@link Closure} object
+     */
+    static <T extends Closure> T cloneWith( T self, Map binding ) {
         assert binding != null
-        def copy = (Closure)self.clone()
-        copy.setDelegate(binding)
-        copy.setResolveStrategy( Closure.DELEGATE_ONLY )
+        def copy = (T)self.clone()
+        if( binding != null ) {
+            copy.setDelegate(binding)
+            copy.setResolveStrategy( Closure.DELEGATE_ONLY )
+        }
+
         return copy
     }
 
+    /**
+     * Create a copy of a {@link GString} object cloning all values that are instance of {@link Closure}
+     *
+     * @param self The {@link GString} itself
+     * @param binding A {@link Map} object that is set as delegate object in the cloned closure.
+     * @return The cloned {@link GString} instance
+     */
     static GString cloneWith( GString self, Map binding ) {
 
         def values = new Object[ self.valueCount ]
