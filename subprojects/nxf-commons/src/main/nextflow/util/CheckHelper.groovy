@@ -23,6 +23,8 @@ package nextflow.util
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
+import nextflow.extension.Bolts
+
 /**
  * Validation helper
  *
@@ -99,7 +101,7 @@ class CheckHelper {
 
         for( String key : params.keySet() ) {
             if( !valid.contains(key) ) {
-                def matches = CmdLineHelper.findBestMatchesFor(key, valid) ?: valid
+                def matches = Bolts.findBestMatchesFor(valid,key) ?: valid
                 def message = "Unknown argument '${key}' for operator '$name'. Did you mean one of these?\n" + matches.collect { "  $it"}.join('\n')
                 throw new IllegalArgumentException(message)
             }

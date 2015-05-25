@@ -19,8 +19,6 @@
  */
 
 package nextflow.util
-
-import org.apache.commons.lang.StringUtils
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -77,44 +75,6 @@ class CmdLineHelper {
         }
 
         return val.flatten()
-    }
-
-
-    /**
-     * Find all the best matches for the given example string in a list of values
-     *
-     * @param sample The example string -- cannot be empty
-     * @param options A list of string
-     * @return The list of options that best matches to the specified example -- return an empty list if none match
-     */
-    static List<String> findBestMatchesFor( String sample, Collection<String> options ) {
-        assert sample
-        assert options, "You must specify a not empty list of alternatives to 'findBestMatchesFor' method"
-
-        // Otherwise look for the most similar
-        def diffs = [:]
-        options.each {
-            diffs[it] = StringUtils.getLevenshteinDistance(sample, it)
-        }
-
-        // sort the Levenshtein Distance and get the fist entry
-        def sorted = diffs.sort { it.value }
-        def nearest = sorted.find()
-        def min = nearest.value
-        def len = sample.length()
-
-        def threshold = len<=3 ? 1 : ( len > 10 ? 5 : Math.floor(len/2))
-
-        def result
-        if( min <= threshold ) {
-            result = sorted.findAll { it.value==min } .collect { it.key }
-        }
-        else {
-            result = []
-        }
-
-        return result
-
     }
 
 

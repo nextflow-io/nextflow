@@ -135,6 +135,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @DynamicParameter(names = ['-cluster.'], description = 'Define cluster options', hidden = true )
     Map<String,String> clusterOptions = [:]
 
+    @Parameter(names=['-profile'], description = 'Choose a configuration profile')
+    String profile
+
     @Override
     final String getName() { NAME }
 

@@ -218,6 +218,13 @@ class FileHelper {
             Files.createTempDirectory(prefix)
     }
 
+    /**
+     * Given a fully qualified string path return a {@link Path} object
+     * eventually creating the associated file system if required
+     *
+     * @param str A path string eventually qualified with the scheme prefix
+     * @return A {@link Path} object
+     */
     static Path asPath( String str ) {
         assert str
 
@@ -231,11 +238,21 @@ class FileHelper {
             str = "s3:///${str.substring(5)}"
         }
 
-        final uri = URI.create(str)
-        if( uri.scheme == 'file' )
-            return FileSystems.getDefault().getPath(uri.path)
+        asPath(URI.create(str))
+    }
 
-        getOrCreateFileSystemFor(uri).provider().getPath(uri)
+    /**
+     * Given a {@link URI} return a {@link Path} object
+     * eventually creating the associated file system if required
+     *
+     * @param uri A URI for identifying the requested path
+     * @return A {@link Path} object
+     */
+    static Path asPath( URI uri ) {
+        if( uri.scheme == 'file' )
+            FileSystems.getDefault().getPath(uri.path)
+        else
+            getOrCreateFileSystemFor(uri).provider().getPath(uri)
     }
 
     /**

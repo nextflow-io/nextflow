@@ -24,6 +24,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.cli.CliOptions
+import nextflow.cli.CmdConfig
 import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
@@ -506,6 +507,85 @@ class ConfigBuilderTest extends Specification {
         builder.configRunOptions(config, new CmdRun(cacheable: false))
         then:
         config.cacheable == false
+    }
+
+    def 'should check for a valid profile' () {
+
+        given:
+        def builder = new ConfigBuilder()
+
+        when:
+        builder.profile = 'omega'
+        builder.checkValidProfile([])
+        then:
+        def ex = thrown(AbortOperationException)
+        ex.message == "Unknown configuration profile: 'omega'"
+
+        when:
+        builder.profile = 'omigo'
+        builder.checkValidProfile(['alpha','delta','omega'])
+        then:
+        ex = thrown(AbortOperationException)
+        ex.message == """
+            Unknown configuration profile: 'omigo'
+
+            Did you mean one of these?
+                omega
+
+            """
+            .stripIndent().leftTrim()
+
+
+        when:
+        builder.profile = 'delta'
+        builder.checkValidProfile(['alpha','delta','omega'])
+        then:
+        true
+
+    }
+
+    def 'should set profile options' () {
+
+        def builder
+
+        when:
+        builder = new ConfigBuilder().setCmdRun(new CmdRun(profile: 'foo'))
+        then:
+        builder.profile == 'foo'
+        builder.validateProfile
+
+        when:
+        builder = new ConfigBuilder().setCmdRun(new CmdRun())
+        then:
+        builder.profile == 'standard'
+        !builder.validateProfile
+
+        when:
+        builder = new ConfigBuilder().setCmdRun(new CmdRun(profile: 'standard'))
+        then:
+        builder.profile == 'standard'
+        builder.validateProfile
+    }
+
+    def 'should set config options' () {
+        def builder
+
+        when:
+        builder = new ConfigBuilder().setCmdConfig(new CmdConfig())
+        then:
+        !builder.showAllProfiles
+
+        when:
+        builder = new ConfigBuilder().setCmdConfig(new CmdConfig(showAllProfiles: true))
+        then:
+        builder.showAllProfiles
+
+        when:
+        builder = new ConfigBuilder().setCmdConfig(new CmdConfig(profile: 'foo'))
+        then:
+        builder.profile == 'foo'
+        builder.validateProfile
+
     }
 
 }

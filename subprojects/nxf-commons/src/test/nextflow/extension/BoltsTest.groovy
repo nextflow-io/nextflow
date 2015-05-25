@@ -166,4 +166,16 @@ class BoltsTest extends Specification {
 
     }
 
+    def 'should return the nearest match' () {
+
+        given:
+        def salut = ['hello','hola','halo','hey','ciao','bonjour']
+
+        expect:
+        salut.findBestMatchesFor('hola') == ['hola']
+        salut.findBestMatchesFor('hol') == ['hola']
+        salut.findBestMatchesFor('cioa') == ['ciao']
+        salut.findBestMatchesFor('helo') == ['hello','halo']
+    }
+
 }

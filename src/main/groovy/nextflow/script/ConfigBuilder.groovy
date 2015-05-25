@@ -28,8 +28,10 @@ import java.nio.file.Paths
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cli.CliOptions
+import nextflow.cli.CmdConfig
 import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
+import nextflow.config.ComposedConfigSlurper
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.util.HistoryFile
@@ -41,6 +43,8 @@ import nextflow.util.HistoryFile
 @Slf4j
 class ConfigBuilder {
 
+    static final DEFAULT_PROFILE = 'standard'
+
     CliOptions options
 
     CmdRun cmdRun
@@ -51,6 +55,12 @@ class ConfigBuilder {
 
     Path workDir = Paths.get('.').complete()
 
+    boolean showAllProfiles
+
+    String profile
+
+    boolean validateProfile
+
     ConfigBuilder setOptions( CliOptions options ) {
         this.options = options
         return this
@@ -58,6 +68,7 @@ class ConfigBuilder {
 
     ConfigBuilder setCmdRun( CmdRun cmdRun ) {
         this.cmdRun = cmdRun
+        setProfile(cmdRun.profile)
         return this
     }
 
@@ -71,6 +82,17 @@ class ConfigBuilder {
         return this
     }
 
+    ConfigBuilder setCmdConfig( CmdConfig cmdConfig ) {
+        showAllProfiles = cmdConfig.showAllProfiles
+        setProfile(cmdConfig.profile)
+        return this
+    }
+
+    ConfigBuilder setProfile( String value ) {
+        profile = value ?: DEFAULT_PROFILE
+        validateProfile = value as boolean
+        return this
+    }
 
     static private wrapValue( value ) {
         if( !value )
@@ -219,7 +241,8 @@ class ConfigBuilder {
     def ConfigObject buildConfig0( Map env, List configEntries )  {
         assert env != null
 
-        ConfigObject result = new ConfigSlurper().parse('env{}; session{}; params{}; process{}; executor{} ')
+        final slurper = new ComposedConfigSlurper()
+        ConfigObject result = slurper.parse('env{}; session{}; params{}; process{}; executor{} ')
 
         // add the user specified environment to the session env
         env.sort().each { name, value -> result.env.put(name,value) }
@@ -233,26 +256,60 @@ class ConfigBuilder {
             binding.put('workDir', workDir)
             binding.put('baseDir', baseDir)
 
-            configEntries.each { entry ->
+            slurper.setBinding(binding)
 
-                def text = entry instanceof Path ? entry.text : entry.toString()
-
-                if ( text ) {
-                    def cfg = new ConfigSlurper()
-                    cfg.setBinding(binding)
-                    try {
-                        result.merge( cfg.parse(text) )
-                    }
-                    catch( Exception e ) {
-                        def message = (entry instanceof Path ? "Unable to parse config file: '$entry' " : "Unable to parse configuration ")
-                        throw new ConfigParseException(message,e)
-                    }
-                }
+            // select the profile
+            if( !showAllProfiles ) {
+                log.debug "Setting config profile: '${profile}'"
+                slurper.registerConditionalBlock('profiles', profile)
             }
 
+            // merge of the provided configuration files
+            configEntries.each { entry ->
+
+                try {
+                    if( entry instanceof File )
+                        result.merge( slurper.parse(entry) )
+
+                    else if( entry instanceof Path )
+                        result.merge( slurper.parse(entry.toFile()) )
+
+                    else if( entry )
+                        result.merge( slurper.parse(entry.toString()) )
+                }
+                catch( Exception e ) {
+                    def message = (entry instanceof Path ? "Unable to parse config file: '$entry' " : "Unable to parse configuration ")
+                    throw new ConfigParseException(message,e)
+                }
+
+            }
+
+            if( validateProfile )
+                checkValidProfile(slurper.getConditionalBlockNames())
         }
 
         return result
+    }
+
+    protected checkValidProfile(Collection<String> names) {
+
+        if( !profile ) {
+            return
+        }
+
+        if( names.contains(profile) ) { // OK !
+            return
+        }
+
+        def message = "Unknown configuration profile: '${profile}'"
+        def choices = names.findBestMatchesFor(profile)
+        if( choices ) {
+            message += "\n\nDid you mean one of these?\n"
+            choices.each { message += "    ${it}\n" }
+            message += '\n'
+        }
+
+        throw new AbortOperationException(message)
     }
 
     private String normalizeResumeId( String uniqueId ) {

@@ -27,6 +27,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
 import nextflow.scm.AssetManager
 import nextflow.script.ConfigBuilder
 /**
@@ -44,6 +45,12 @@ class CmdConfig extends CmdBase {
     @Parameter(description = 'pipeline name')
     List<String> args = []
 
+    @Parameter(names=['-a','-show-profiles'], description = 'Show all configuration profiles')
+    boolean showAllProfiles
+
+    @Parameter(names=['-profile'], description = 'Choose a configuration profile')
+    String profile
+
     @Override
     String getName() { NAME }
 
@@ -53,9 +60,14 @@ class CmdConfig extends CmdBase {
         if( args ) base = getBaseDir(args[0])
         if( !base ) base = Paths.get('.')
 
+        if( profile && showAllProfiles ) {
+            throw new AbortOperationException("Option `-profile` conflicts with option `-show-profiles`")
+        }
+
         def config = new ConfigBuilder()
                 .setOptions(launcher.options)
                 .setBaseDir(base.complete())
+                .setCmdConfig(this)
                 .build()
 
         PrintWriter stdout = new PrintWriter(System.out,true);
