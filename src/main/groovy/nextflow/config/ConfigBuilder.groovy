@@ -18,8 +18,8 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.script
-import static nextflow.Const.APP_HOME_DIR
+package nextflow.config
+
 import static nextflow.util.ConfigHelper.parseValue
 
 import java.nio.file.Path
@@ -27,11 +27,11 @@ import java.nio.file.Paths
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Const
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdConfig
 import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
-import nextflow.config.ComposedConfigSlurper
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.util.HistoryFile
@@ -137,7 +137,7 @@ class ConfigBuilder {
         /*
          * config file in the nextflow home
          */
-        def home = APP_HOME_DIR.resolve('config')
+        def home = Const.APP_HOME_DIR.resolve('config')
         if( home.exists() ) {
             log.debug "Found config home: $home"
             result << home

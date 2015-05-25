@@ -29,7 +29,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.scm.AssetManager
-import nextflow.script.ConfigBuilder
+import nextflow.config.ConfigBuilder
 /**
  *  Prints the pipeline configuration
  *

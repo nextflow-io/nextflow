@@ -26,7 +26,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.daemon.DaemonLauncher
 import nextflow.executor.ServiceName
-import nextflow.script.ConfigBuilder
+import nextflow.config.ConfigBuilder
 import nextflow.util.ServiceDiscover
 /**
  * CLI-command NODE

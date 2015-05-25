@@ -35,7 +35,7 @@ import nextflow.ast.NextflowDSL
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdInfo
 import nextflow.script.BaseScript
-import nextflow.script.ConfigBuilder
+import nextflow.config.ConfigBuilder
 import nextflow.script.ScriptBinding
 import nextflow.util.LoggerHelper
 import org.apache.commons.lang.StringUtils

@@ -28,7 +28,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.scm.AssetManager
-import nextflow.script.ConfigBuilder
+import nextflow.config.ConfigBuilder
 import nextflow.script.ScriptRunner
 import nextflow.util.Duration
 /**
