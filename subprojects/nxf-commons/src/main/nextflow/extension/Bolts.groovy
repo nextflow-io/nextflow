@@ -513,7 +513,7 @@ class Bolts {
         def copy = (T)self.clone()
         if( binding != null ) {
             copy.setDelegate(binding)
-            copy.setResolveStrategy( Closure.DELEGATE_ONLY )
+            copy.setResolveStrategy( Closure.DELEGATE_FIRST )
         }
 
         return copy
