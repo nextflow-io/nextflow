@@ -1800,5 +1800,16 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    def 'should always the same value' () {
+
+        when:
+        def x = Channel.value('Hello')
+        then:
+        x.val == 'Hello'
+        x.val == 'Hello'
+        x.val == 'Hello'
+
+    }
+
 
 }

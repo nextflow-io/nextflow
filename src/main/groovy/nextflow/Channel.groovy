@@ -97,13 +97,16 @@ class Channel  {
      * @param obj
      * @return
      */
-    static <T> DataflowChannel<T> just( T obj = null ) {
+    static DataflowVariable just( obj = null ) {
+        value(obj)
+    }
 
-        def result = new DataflowVariable<T>()
+    static DataflowVariable value( obj = null ) {
+
+        def result = new DataflowVariable()
         if( obj != null ) result.bind(obj)
 
         return result
-
     }
 
     /**
