@@ -147,6 +147,12 @@ class ProcessConfig implements Map<String,Object> {
             case 'cacheable':
                 return isCacheable()
 
+            case 'ext':
+                if( !configProperties.containsKey('ext') ) {
+                    configProperties.put('ext', new HashMap())
+                }
+                return configProperties.get('ext')
+
             default:
                 if( configProperties.containsKey(name) )
                     return configProperties.get(name)

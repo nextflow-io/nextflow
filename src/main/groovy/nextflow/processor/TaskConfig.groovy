@@ -38,93 +38,34 @@ import nextflow.util.MemoryUnit
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class TaskConfig implements Map<String,Object> {
+class TaskConfig extends LazyMap {
 
-    /** The target map holding the values */
-    @Delegate
-    final private Map<String,Object> target
-
-    /** The context map against which dynamic properties are resolved */
-    private Map context
-
-    private boolean dynamic
-
-    TaskConfig() {
-        target = new HashMap()
-    }
+    TaskConfig() { }
 
     TaskConfig( Map<String,Object> entries ) {
-        assert entries != null
-        target = new HashMap<>()
-        putAll(entries)
+        super(entries)
     }
 
     /**
      * Assign the context map for dynamic evaluation of task config properties
-     * @param binding The context binding object
+     * @param context The context binding object
      * @return The {@code TaskConfig} instance itself
      */
-    TaskConfig setContext( Map binding ) {
-        assert binding != null
-        context = binding
-        // -- set the this object in the task context  in order to allow task properties to be resolved in process script
-        binding.put(TASK_CONFIG, this)
+    TaskConfig setContext( Map context ) {
+        assert context != null
+
+        // set the binding context for this map
+        this.binding = context
+
+        // set the binding context for 'ext' map
+        if( target.ext instanceof LazyMap )
+            (target.ext as LazyMap).binding = context
+
+        // set the this object in the task context  in order to allow task properties to be resolved in process script
+        context.put(TASK_CONFIG, this)
 
         return this
     }
-
-    private normalize( String key, value ) {
-        if( value instanceof Closure ) {
-            def copy = value.cloneWith(context)
-            try {
-                return copy.call()
-            }
-            catch( MissingPropertyException e ) {
-                throw new IllegalStateException("Directive `$key` doesn't support dynamic value")
-            }
-        }
-        else if( value instanceof GString ) {
-            return value.cloneWith(context).toString()
-        }
-
-        return value
-    }
-
-    /**
-     * Override the get method in such a way that {@link Closure} values are resolved against
-     * the {@link #context} map
-     *
-     * @param key The map entry key
-     * @return The associated value
-     */
-    Object get( key ) {
-        def value = target.get(key)
-        normalize(key as String, value)
-    }
-
-    Object put( String key, Object value ) {
-        if( value instanceof Closure ) {
-            dynamic |= true
-        }
-        else if( value instanceof List && key == 'module' ) {
-            // 'module' directive can be defined as a list of dynamic values
-            value.each { if (it instanceof Closure) dynamic |= true }
-        }
-        else if( value instanceof GString ) {
-            for( int i=0; i<value.valueCount; i++ )
-                if (value.values[i] instanceof Closure)
-                    dynamic |= true
-        }
-        target.put(key, value)
-    }
-
-    @Override
-    void putAll( Map entries ) {
-        entries.each { k, v -> put(k as String, v) }
-    }
-
-    @PackageScope
-    boolean isDynamic() { dynamic }
 
     def getProperty(String name) {
 
@@ -132,8 +73,47 @@ class TaskConfig implements Map<String,Object> {
         if( meta )
             return meta.getProperty(this)
 
-        return this.get(name)
+        return get(name)
     }
+
+    def get( String key ) {
+        if( key != 'ext' ) {
+            return super.get(key)
+        }
+
+        if( !target.containsKey('ext') ) {
+            target.ext = new LazyMap()
+        }
+
+        return target.ext
+    }
+
+    Object put( String key, Object value ) {
+        if( key == 'module' && value instanceof List ) {
+            // 'module' directive can be defined as a list of dynamic values
+            value.each { if (it instanceof Closure) dynamic |= true }
+            target.put(key, value)
+        }
+        else if( key == 'ext' && value instanceof Map ) {
+            super.put( key, new LazyMap(value) )
+        }
+        else {
+            super.put(key,value)
+        }
+    }
+
+
+    @PackageScope
+    boolean isDynamic() {
+        if( dynamic )
+            return true
+
+        if( target.ext instanceof LazyMap )
+            return (target.ext as LazyMap).dynamic
+
+        return false
+    }
+
 
     boolean getEcho() {
         def value = get('echo')
@@ -244,7 +224,7 @@ class TaskConfig implements Map<String,Object> {
         if( value instanceof List ) {
             def result = []
             value.each {
-                result = ProcessConfig.parseModule(normalize('module',it), result)
+                result = ProcessConfig.parseModule(resolve('module',it), result)
             }
             return result
         }
@@ -312,7 +292,7 @@ class TaskConfig implements Map<String,Object> {
         try {
             if( code instanceof Closure ) {
                 if( code instanceof TaskClosure ) source = code.getSource()
-                return code.cloneWith(context).call()
+                return code.cloneWith(binding).call()
             }
             // try to convert to a boolean value
             return code as Boolean
@@ -323,6 +303,80 @@ class TaskConfig implements Map<String,Object> {
 
     }
 
+}
+
+/**
+ * A map that resolve closure and gstring in a lazy manner
+ *
+ */
+@CompileStatic
+class LazyMap implements Map<String,Object> {
+
+    /** The target map holding the values */
+    @Delegate
+    final protected Map<String,Object> target
+
+    /** The context map against which dynamic properties are resolved */
+    protected Map binding
+
+    boolean dynamic
+
+    LazyMap() {
+        target = new HashMap<>()
+    }
+
+    LazyMap( Map<String,Object> entries ) {
+        assert entries != null
+        target = new HashMap<>()
+        putAll(entries)
+    }
+
+    protected resolve( String key, value ) {
+        if( value instanceof Closure ) {
+            def copy = value.cloneWith(binding)
+            try {
+                return copy.call()
+            }
+            catch( MissingPropertyException e ) {
+                throw new IllegalStateException("Directive `$key` doesn't support dynamic value")
+            }
+        }
+        else if( value instanceof GString ) {
+            return value.cloneWith(binding).toString()
+        }
+
+        return value
+    }
+
+
+    /**
+     * Override the get method in such a way that {@link Closure} values are resolved against
+     * the {@link #binding} map
+     *
+     * @param key The map entry key
+     * @return The associated value
+     */
+    Object get( key ) {
+        def value = target.get(key)
+        resolve(key as String, value)
+    }
+
+    Object put( String key, Object value ) {
+        if( value instanceof Closure ) {
+            dynamic |= true
+        }
+        else if( value instanceof GString ) {
+            for( int i=0; i<value.valueCount; i++ )
+                if (value.values[i] instanceof Closure)
+                    dynamic |= true
+        }
+        target.put(key, value)
+    }
+
+    @Override
+    void putAll( Map entries ) {
+        entries.each { k, v -> put(k as String, v) }
+    }
 
     @Override
     String toString() {

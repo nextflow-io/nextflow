@@ -39,7 +39,7 @@ import spock.lang.Specification
 class ProcessConfigTest extends Specification {
 
 
-    def 'test defaults' () {
+    def 'should return defaults' () {
 
         setup:
         def script = Mock(BaseScript)
@@ -51,7 +51,7 @@ class ProcessConfigTest extends Specification {
         config.validExitStatus == [0]
     }
 
-    def 'test setting properties' () {
+    def 'should set properties' () {
 
         setup:
         def script = Mock(BaseScript)
@@ -97,7 +97,7 @@ class ProcessConfigTest extends Specification {
 
     }
 
-    def testParseProperties() {
+    def 'should parse properties'() {
 
         when:
         def config = new ProcessConfig( maxDuration:'1h' )
@@ -106,7 +106,7 @@ class ProcessConfigTest extends Specification {
     }
 
 
-    def 'test NO missingPropertyException' () {
+    def 'should not throw MissingPropertyException' () {
 
         when:
         def script = Mock(BaseScript)
@@ -119,7 +119,7 @@ class ProcessConfigTest extends Specification {
 
     }
 
-    def 'test MissingPropertyException' () {
+    def 'should throw MissingPropertyException' () {
         when:
         def script = Mock(BaseScript)
         def config = new ProcessConfig(script).throwExceptionOnMissingProperty(true)
@@ -130,7 +130,7 @@ class ProcessConfigTest extends Specification {
     }
 
 
-    def 'test check property existence' () {
+    def 'should check property existence' () {
 
         setup:
         def script = Mock(BaseScript)
@@ -146,7 +146,7 @@ class ProcessConfigTest extends Specification {
 
     }
 
-    def 'test input' () {
+    def 'should create input directives' () {
 
         setup:
         def script = Mock(BaseScript)
@@ -175,7 +175,7 @@ class ProcessConfigTest extends Specification {
 
     }
 
-    def 'test outputs' () {
+    def 'should create output directives' () {
 
         setup:
         def script = Mock(BaseScript)
@@ -196,7 +196,6 @@ class ProcessConfigTest extends Specification {
         config.outputs[1].name == 'file1.fa'
         config.outputs[2].name == 'file2.fa'
         config.outputs[3].name == 'file3.fa'
-
 
     }
 
@@ -282,7 +281,7 @@ class ProcessConfigTest extends Specification {
 
     }
 
-    def testIsCacheable() {
+    def 'should set cache attribute'() {
 
         when:
         def config = new ProcessConfig(map)
@@ -305,5 +304,29 @@ class ProcessConfigTest extends Specification {
     }
 
 
+    def 'should set ext property' () {
+
+        setup:
+        def script = Mock(BaseScript)
+        def config = new ProcessConfig(script)
+
+        // setting property using method without brackets
+        when:
+        config.ext.tool = 'blast'
+        config.ext.modules = ['a/1', 'b/2']
+        config.ext.command = { "echo $foo" }
+        then:
+        config.ext.tool == 'blast'
+        config.ext.modules ==  ['a/1', 'b/2']
+
+        when:
+        def task = config.createTaskConfig()
+        task.setContext( [foo: 'Hello'] )
+        then:
+        task.ext.tool == 'blast'
+        task.ext.modules.join(',') == 'a/1,b/2'
+        task.ext.command == 'echo Hello'
+
+    }
 
 }

@@ -382,4 +382,29 @@ class TaskConfigTest extends Specification {
 
     }
 
+    def 'should create ext config properties' () {
+
+        given:
+        def config = new TaskConfig()
+        config.ext.alpha = 'AAAA'
+        config.ext.delta = { foo }
+        config.ext.omega = "${-> bar}"
+
+        when:
+        config.setContext( foo: 'DDDD', bar: 'OOOO' )
+        then:
+        config.isDynamic()
+        config.ext.alpha == 'AAAA'
+        config.ext.delta == 'DDDD'
+        config.ext.omega == 'OOOO'
+
+        when:
+        config.setContext( foo: 'dddd', bar: 'oooo' )
+        then:
+        config.ext.alpha == 'AAAA'
+        config.ext.delta == 'dddd'
+        config.ext.omega == 'oooo'
+
+    }
+
 }
