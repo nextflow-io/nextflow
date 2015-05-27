@@ -59,13 +59,13 @@ abstract class ComposedConfigScript extends Script {
     /**
      * Implements the config file include
      */
-    def includeConfig( String includeFile ) {
+    def includeConfig( includeFile ) {
         assert includeFile
 
         if( configStack == null ) configStack = new Stack<>()
 
         def owner = configStack ? this.configStack.peek() : null
-        def includePath = FileHelper.asPath(includeFile)
+        def includePath = FileHelper.asPath(includeFile.toString())
         log.trace "Include config file: $includeFile [parent: $owner]"
 
         if( !includePath.isAbsolute() && owner ) {
