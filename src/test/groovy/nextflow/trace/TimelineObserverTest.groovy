@@ -306,9 +306,9 @@ function getTickFormat() {
 
   if( delta < 2 * DAY ) {
     return {
-      format: d3.time.format("%H"),
+      format: d3.time.format("%H:%M"),
       tickTime: d3.time.hours,
-      tickInterval: 5,
+      tickInterval: 1,
       tickSize: 6
     }
   }
