@@ -1467,7 +1467,7 @@ abstract class TaskProcessor {
         // add all variable references in the task script but not declared as input/output
         def vars = getTaskGlobalVars(task)
         if( vars ) {
-            log.trace "Adding script vars to task hash code: ${vars}"
+            log.trace "Task: $name > Adding script vars hash code: ${vars}"
             vars.each { k, v -> keys.add( k ); keys.add( v ) }
         }
 
@@ -1492,20 +1492,31 @@ abstract class TaskProcessor {
     }
 
     final protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
-        getTaskGlobalVars( ownerScript.binding, task.context.getVariableNames() )
+        getTaskGlobalVars( task.context.getVariableNames(), ownerScript.binding, task.context.getHolder() )
     }
 
     /**
+     * @param variableNames The collection of variables referenced in the task script
+     * @param binding The script global binding
+     * @param context The task variable context
      * @return The set of task variables accessed in global script context and not declared as input/output
      */
-    final protected Map<String,Object> getTaskGlobalVars(Binding binding, Set<String> variableNames) {
+    final protected Map<String,Object> getTaskGlobalVars(Set<String> variableNames, Binding binding, Map context) {
         final result = new HashMap(variableNames.size())
         final processName = name
 
-        variableNames.each { String varName ->
+        def itr = variableNames.iterator()
+        while( itr.hasNext() ) {
+            final varName = itr.next()
 
             final p = varName.indexOf('.')
             final baseName = p !=- 1 ? varName.substring(0,p) : varName
+
+            if( context.containsKey(baseName) ) {
+                // when the variable belong to the task local context just ignore it,
+                // because it must has been provided as an input parameter
+                continue
+            }
 
             if( binding.hasVariable(baseName) ) {
                 def value
