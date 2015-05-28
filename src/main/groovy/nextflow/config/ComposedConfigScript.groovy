@@ -46,6 +46,12 @@ abstract class ComposedConfigScript extends Script {
 
     private Stack<Path> configStack
 
+    private boolean ignoreIncludes
+
+    protected void setIgnoreIncludes( boolean value ) {
+        this.ignoreIncludes = value
+    }
+
     protected void setConfigPath(Path path) {
         if( configStack == null )
             configStack = new Stack<>()
@@ -62,7 +68,11 @@ abstract class ComposedConfigScript extends Script {
     def includeConfig( includeFile ) {
         assert includeFile
 
-        if( configStack == null ) configStack = new Stack<>()
+        if( ignoreIncludes )
+            return
+
+        if( configStack == null )
+            configStack = new Stack<>()
 
         def owner = configStack ? this.configStack.peek() : null
         def includePath = FileHelper.asPath(includeFile.toString())

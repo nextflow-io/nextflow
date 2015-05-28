@@ -24,6 +24,7 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
+import nextflow.config.ComposedConfigSlurper
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.CreateBranchCommand
 import org.eclipse.jgit.api.Git
@@ -264,7 +265,7 @@ class AssetManager {
         try {
             def text = localPath.exists() ? new File(localPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
             if( text ) {
-                def config = new ConfigSlurper().parse(text)
+                def config = new ComposedConfigSlurper().setIgnoreIncludes(true).parse(text)
                 result = (ConfigObject)config.manifest
             }
         }

@@ -92,6 +92,8 @@ class ComposedConfigSlurper {
     private final Stack<Map<String, ConfigObject>> conditionalBlocks = new Stack<Map<String,ConfigObject>>()
     private final Set<String> conditionalNames = new HashSet<>()
 
+    private boolean ignoreIncludes
+
     ComposedConfigSlurper() {
         this('')
     }
@@ -240,7 +242,8 @@ class ComposedConfigSlurper {
      * @param location The original location of the Script as a URL
      * @return The ConfigObject instance
      */
-    ConfigObject parse(Script script, URL location) {
+    ConfigObject parse(Script _script, URL location) {
+        final script = (ComposedConfigScript)_script
         Stack<String> currentConditionalBlock = new Stack<String>()
         def config = location ? new ConfigObject(location) : new ConfigObject()
         GroovySystem.metaClassRegistry.removeMetaClass(script.class)
@@ -348,9 +351,13 @@ class ComposedConfigSlurper {
         // add the script file location into the binding
         if( location ) {
             final configPath = FileHelper.asPath(location.toURI())
-            ((ComposedConfigScript)script).setConfigPath(configPath)
+            script.setConfigPath(configPath)
         }
 
+        // disable include parsing when required
+        script.setIgnoreIncludes(ignoreIncludes)
+
+        // -- set the binding and run
         script.binding = binding
         script.run()
         config.merge(overrides)
@@ -358,6 +365,16 @@ class ComposedConfigSlurper {
         return config
     }
 
+    /**
+     * Disable parsing of {@code includeConfig} directive
+     *
+     * @param value A boolean value, when {@code true} includes are disabled
+     * @return The {@link ComposedConfigSlurper} object itself
+     */
+    ComposedConfigSlurper setIgnoreIncludes( boolean value ) {
+        this.ignoreIncludes = value
+        return this
+    }
 
     /**
      * Since Groovy Script doesn't support overriding setProperty, we have to using a trick with the Binding to provide this

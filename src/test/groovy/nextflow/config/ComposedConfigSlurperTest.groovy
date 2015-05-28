@@ -20,6 +20,8 @@
 
 package nextflow.config
 
+import java.nio.file.NoSuchFileException
+
 import spock.lang.Specification
 /**
  *
@@ -328,5 +330,28 @@ class ComposedConfigSlurperTest extends Specification {
         slurper.parse(text)
         then:
         slurper.getConditionalBlockNames() == [] as Set
+    }
+
+    def 'should disable includeConfig parsing' () {
+        given:
+        def text = '''
+        manifest {
+          description = 'some text ..'
+        }
+
+        includeConfig 'this'
+        includeConfig 'that'
+        '''
+
+        when:
+        def config = new ComposedConfigSlurper().setIgnoreIncludes(true).parse(text)
+        then:
+        config.manifest.description == 'some text ..'
+
+        when:
+        new ComposedConfigSlurper().parse(text)
+        then:
+        thrown(NoSuchFileException)
+
     }
 }
