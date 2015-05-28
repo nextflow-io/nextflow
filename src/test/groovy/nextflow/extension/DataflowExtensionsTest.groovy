@@ -1812,4 +1812,20 @@ class DataflowExtensionsTest extends Specification {
     }
 
 
+    def 'should add a stop after the first run' () {
+        Map params
+
+        when:
+        params = [inputs: [new DataflowQueue<>()]]
+        then:
+        !DataflowExtensions.addStopListener(params) .listeners
+
+        when:
+        params = [inputs: [new DataflowVariable<>()]]
+        then:
+        DataflowExtensions.addStopListener(params) .listeners.size() ==1
+        DataflowExtensions.addStopListener(params) .listeners[0] == DataflowExtensions.DEF_STOP_ON_FIRST
+
+    }
+
 }

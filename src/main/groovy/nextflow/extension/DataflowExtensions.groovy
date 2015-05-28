@@ -90,7 +90,8 @@ class DataflowExtensions {
     /*
      * The default operators listener when no other else is specified
      */
-    static private DEF_ERROR_LISTENER = new DataflowEventAdapter() {
+    @PackageScope
+    static DEF_ERROR_LISTENER = new DataflowEventAdapter() {
         @Override
         public boolean onException(final DataflowProcessor processor, final Throwable e) {
             DataflowExtensions.log.error("@unknown", e)
@@ -99,23 +100,46 @@ class DataflowExtensions {
         }
     }
 
+    @PackageScope
+    static DEF_STOP_ON_FIRST = new DataflowEventAdapter() {
+        @Override
+        void afterRun(DataflowProcessor processor, List<Object> messages) {
+            processor.terminate()
+        }
+    }
+
+    @PackageScope
+    static Map addStopListener(Map params)  {
+
+        if( params.inputs?.size()==1 && params.inputs.get(0) instanceof DataflowExpression ) {
+            if( !params.listeners ) {
+                params.listeners = []
+            }
+            params.listeners.add( DEF_STOP_ON_FIRST )
+        }
+
+        return params
+    }
+
     /**
      * Creates a new {@code Dataflow.operator} adding the created instance to the current session list
      *
      * @see Session#allProcessors
      *
-     * @param channels The map holding inputs, outputs channels and other parameters
+     * @param params The map holding inputs, outputs channels and other parameters
      * @param code The closure to be executed by the operator
      */
-    static private void newOperator( Map channels, Closure code ) {
+    static private void newOperator( Map params, Closure code ) {
 
         // -- add a default error listener
-        if( !channels.containsKey('listeners') )
-            channels.listeners = [ DEF_ERROR_LISTENER ]
+        if( !params.containsKey('listeners') ) {
+            // add the default error handler
+            params.listeners = [ DEF_ERROR_LISTENER ]
+        }
 
-        final op = Dataflow.operator(channels, code)
+        final op = Dataflow.operator(params, code)
         if( session?.allProcessors != null ) {
-            session.allProcessors << op
+            session.allProcessors.add(op)
         }
     }
 
@@ -1985,7 +2009,7 @@ class DataflowExtensions {
         assert source != null
         assert targets != null
 
-        newOperator([source], targets as List, new ChainWithClosure(new CopyChannelsClosure()))
+        into0(source, targets as List)
     }
 
     static public final List<DataflowReadChannel> into( final DataflowReadChannel source, int n ) {
@@ -1993,8 +2017,7 @@ class DataflowExtensions {
         for( int i=0; i<n; i++ )
             targets << new DataflowQueue()
 
-        newOperator([source], targets as List, new ChainWithClosure(new CopyChannelsClosure()))
-
+        into0(source, targets as List)
         targets
     }
 
@@ -2031,9 +2054,19 @@ class DataflowExtensions {
             binding.setVariable(it, ch)
         }
 
-        newOperator([source], targets, new ChainWithClosure(new CopyChannelsClosure()))
+        into0(source,targets)
     }
 
+    static private void into0( DataflowReadChannel source, List<DataflowWriteChannel> targets ) {
+        final params = [:]
+        params.inputs = [source]
+        params.outputs = targets
+        params.listeners = [DEF_ERROR_LISTENER]
+
+        addStopListener(params)
+
+        newOperator(params, new ChainWithClosure(new CopyChannelsClosure()))
+    }
 
     /**
      * Implements a tap that create implicitly a new dataflow variable in the global script context.
