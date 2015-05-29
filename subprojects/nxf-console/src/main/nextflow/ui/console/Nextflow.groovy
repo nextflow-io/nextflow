@@ -151,8 +151,8 @@ class Nextflow extends Console {
 
     private runWith( Closure launcher ) {
 
-        def binding = (ScriptBinding)shell.context
-        def session = new Session(binding.config)
+        def binding = shell.context as ScriptBinding
+        def session = new Session(binding)
         session.init(scriptFile as Path)
 
         binding.setVariable( 'baseDir', session.baseDir )

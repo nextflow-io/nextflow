@@ -60,7 +60,7 @@ class Session implements ISession {
     /**
      * Dispatch tasks for executions
      */
-    final TaskDispatcher dispatcher
+    TaskDispatcher dispatcher
 
     /**
      * Holds the configuration object
@@ -100,7 +100,7 @@ class Session implements ISession {
     /**
      * The unique identifier of this session
      */
-    final UUID uniqueId
+    private UUID uniqueId
 
     private Barrier processesBarrier = new Barrier()
 
@@ -116,9 +116,9 @@ class Session implements ISession {
 
     private ClassLoader classLoader
 
-    final private List<Closure<Void>> shutdownCallbacks = []
+    private List<Closure<Void>> shutdownCallbacks = []
 
-    final int poolSize
+    private int poolSize
 
     private List<TraceObserver> observers = []
 
@@ -131,18 +131,54 @@ class Session implements ISession {
     /**
      * Creates a new session with an 'empty' (default) configuration
      */
-    def Session() {
-        this([:])
+    Session() {
+        create(new ScriptBinding([:]))
     }
+
+    /**
+     * Create a new session given the {@link ScriptBinding} object
+     *
+     * @param binding
+     */
+    Session(ScriptBinding binding) {
+        create(binding)
+    }
+
+    /**
+     * Create a new session given the configuration specified
+     *
+     * @param config
+     */
+    Session(Map cfg) {
+        final config = cfg instanceof ConfigObject ? cfg.toMap() : cfg
+        create(new ScriptBinding(config))
+    }
+
+    /**
+     * @return The current session {@link UUID}
+     */
+    UUID getUniqueId() { uniqueId }
+
+    /**
+     * @return The session max number of thread allowed
+     */
+    int getPoolSize() { poolSize }
+
+    /**
+     * @return The session {@link TaskDispatcher}
+     */
+    TaskDispatcher getDispatcher() { dispatcher }
 
     /**
      * Creates a new session using the configuration properties provided
      *
-     * @param config
+     * @param binding
      */
-    def Session( Map cfg ) {
-        assert cfg != null
-        this.config = cfg instanceof ConfigObject ? cfg.toMap() : cfg
+    private void create( ScriptBinding binding ) {
+        assert binding != null
+
+        this.binding = binding
+        this.config = binding.config
 
         // poor man session object dependency injection
         Global.setSession(this)
@@ -174,10 +210,8 @@ class Session implements ISession {
         log.debug "Executor pool size: ${poolSize}"
 
         // create the task dispatcher instance
-        dispatcher = new TaskDispatcher(this)
+        this.dispatcher = new TaskDispatcher(this)
 
-        // holds the global script variables
-        binding = new ScriptBinding(config)
     }
 
     /**
