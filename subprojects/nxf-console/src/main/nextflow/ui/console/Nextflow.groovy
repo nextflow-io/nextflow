@@ -226,7 +226,7 @@ class Nextflow extends Console {
     static void main(String... args) {
         CliOptions opts = new CliOptions()
         opts.logFile = '.nextflow-console.log'
-        LoggerHelper.configureLogger(opts)
+        new LoggerHelper(opts).setup()
 
         if (args.length == 2 && args[1] == '--help') {
             println 'usage: nextflow repl [filename]'

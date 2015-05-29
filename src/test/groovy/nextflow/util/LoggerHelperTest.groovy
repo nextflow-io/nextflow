@@ -20,6 +20,7 @@
 
 package nextflow.util
 
+import nextflow.cli.CliOptions
 import spock.lang.Specification
 /**
  *
@@ -28,13 +29,26 @@ import spock.lang.Specification
 class LoggerHelperTest extends Specification {
 
 
-    def 'test error line'() {
+    def 'should parse error line'() {
 
         expect:
         LoggerHelper.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]') == ['pfam3d.nf','189']
         LoggerHelper.getErrorLine('at pfam3d.run(JavaClass.java:189) ~[na:na]') == null
         LoggerHelper.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','pfam3d.nf') == ['pfam3d.nf','189']
         LoggerHelper.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','hola') == null
+    }
+
+
+    def 'should create LoggerHelper object' () {
+
+        given:
+        def logger = new LoggerHelper(Mock(CliOptions))
+        when:
+        logger.setDaemon(true)
+        then:
+        logger.daemon
+
+
     }
 
 }

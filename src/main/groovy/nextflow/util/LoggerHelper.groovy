@@ -32,6 +32,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.spi.ThrowableProxy
 import ch.qos.logback.core.ConsoleAppender
 import ch.qos.logback.core.CoreConstants
+import ch.qos.logback.core.FileAppender
 import ch.qos.logback.core.LayoutBase
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder
 import ch.qos.logback.core.filter.Filter
@@ -52,7 +53,7 @@ import nextflow.file.FileHelper
 import org.apache.commons.lang.exception.ExceptionUtils
 import org.slf4j.LoggerFactory
 /**
- * Helper methods to setup the logging subsystem
+ * Helper class to setup the logging subsystem
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -61,81 +62,66 @@ class LoggerHelper {
 
     static private String logFileName
 
-    /**
-     * Configure the underlying logging subsystem. The logging information are saved
-     * in a file named '.nextflow.log' in the current path, plus to the terminal console.
-     * <p>
-     *     By default only the INFORMATION level logging messages are visualized to the console,
-     *     instead in the file are saved the DEBUG level messages.
-     *
-     * @param logFileName The file where save the application log
-     * @param quiet When {@code true} only Warning and Error messages are visualized to teh console
-     * @param debugConf The list of packages for which use a Debug logging level
-     * @param traceConf The list of packages for which use a Trace logging level
-     */
+    private CliOptions opts
 
-    static void configureLogger( Launcher launcher ) {
-        configureLogger(launcher.options, launcher.isDaemon())
+    private boolean rolling = false
+
+    private boolean daemon = false
+
+    private int minIndex = 1
+
+    private int maxIndex = 9
+
+    private Map<String,Level> packages = [:]
+
+    private LoggerContext loggerContext
+
+    LoggerHelper setRolling( boolean value ) {
+        this.rolling = value
+        return this
     }
 
-    static void configureLogger( final CliOptions opts, boolean isDaemon = false ) {
+    LoggerHelper setDaemon( boolean value ) {
+        this.daemon = value
+        return this
+    }
 
+    LoggerHelper setMinIndex( int value ) {
+        this.minIndex = value
+        return this
+    }
+
+    LoggerHelper setMaxIndex( int value ) {
+        this.maxIndex = value
+        return this
+    }
+
+    LoggerHelper(CliOptions opts) {
+        this.opts = opts
+        this.loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory()
+    }
+
+    void setup() {
         logFileName = opts.logFile
 
         final boolean quiet = opts.quiet
         final List<String> debugConf = opts.debug
         final List<String> traceConf = opts.trace
 
-        LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory()
-
         // Reset all the logger
         final root = loggerContext.getLogger('ROOT')
         root.detachAndStopAllAppenders()
 
         // -- define the console appender
-        Map<String,Level> packages = [:]
         packages[MAIN_PACKAGE] = quiet ? Level.WARN : Level.INFO
         debugConf?.each { packages[it] = Level.DEBUG }
         traceConf?.each { packages[it] = Level.TRACE }
 
-        final ConsoleAppender consoleAppender = isDaemon && opts.isBackground() ? null : new ConsoleAppender()
-        if( consoleAppender )  {
-
-            final filter = new LoggerPackageFilter( packages )
-            filter.setContext(loggerContext)
-            filter.start()
-
-            consoleAppender.setContext(loggerContext)
-            consoleAppender.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
-            consoleAppender.addFilter(filter)
-            consoleAppender.start()
-        }
+        // -- the console appender
+        final consoleAppender = createConsoleAppender()
 
         // -- the file appender
-        RollingFileAppender fileAppender = logFileName ? new RollingFileAppender() : null
-        if( fileAppender ) {
-            fileAppender.file = logFileName
-
-            def rollingPolicy = new  FixedWindowRollingPolicy( )
-            rollingPolicy.fileNamePattern = "${logFileName}.%i"
-            rollingPolicy.setContext(loggerContext)
-            rollingPolicy.setParent(fileAppender)
-            rollingPolicy.setMinIndex(1)
-            rollingPolicy.setMaxIndex(9)
-            rollingPolicy.start()
-
-            def encoder = new PatternLayoutEncoder()
-            encoder.setPattern('%d{MMM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n')
-            encoder.setContext(loggerContext)
-            encoder.start()
-
-            fileAppender.rollingPolicy = rollingPolicy
-            fileAppender.encoder = encoder
-            fileAppender.setContext(loggerContext)
-            fileAppender.setTriggeringPolicy(new RollOnStartupPolicy())
-            fileAppender.start()
-        }
-
+        FileAppender fileAppender = rolling ? createRollingAppender() : createFileAppender()
 
         // -- configure the ROOT logger
         root.setLevel(Level.INFO)
@@ -180,7 +166,95 @@ class LoggerHelper {
             logger.debug "Console appender: disabled"
     }
 
+    protected ConsoleAppender createConsoleAppender() {
 
+        final ConsoleAppender result = daemon && opts.isBackground() ? null : new ConsoleAppender()
+        if( result )  {
+
+            final filter = new LoggerPackageFilter( packages )
+            filter.setContext(loggerContext)
+            filter.start()
+
+            result.setContext(loggerContext)
+            result.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
+            result.addFilter(filter)
+            result.start()
+        }
+
+        return result
+    }
+
+    protected RollingFileAppender createRollingAppender() {
+
+        RollingFileAppender result = logFileName ? new RollingFileAppender() : null
+        if( result ) {
+            result.file = logFileName
+
+            def rollingPolicy = new  FixedWindowRollingPolicy( )
+            rollingPolicy.fileNamePattern = "${logFileName}.%i"
+            rollingPolicy.setContext(loggerContext)
+            rollingPolicy.setParent(result)
+            rollingPolicy.setMinIndex(1)
+            rollingPolicy.setMaxIndex(9)
+            rollingPolicy.start()
+
+            result.rollingPolicy = rollingPolicy
+            result.encoder = createEncoder()
+            result.setContext(loggerContext)
+            result.setTriggeringPolicy(new RollOnStartupPolicy())
+            result.start()
+        }
+
+        return result
+    }
+
+    protected FileAppender createFileAppender() {
+
+        FileAppender result = logFileName ? new FileAppender() : null
+        if( result ) {
+            result.file = logFileName
+            result.encoder = createEncoder()
+            result.setContext(loggerContext)
+            result.start()
+        }
+
+        return result
+    }
+
+    protected PatternLayoutEncoder createEncoder() {
+        def result = new PatternLayoutEncoder()
+        result.setPattern('%d{MMM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n')
+        result.setContext(loggerContext)
+        result.start()
+        return result
+    }
+
+    /**
+     * Configure the underlying logging subsystem. The logging information are saved
+     * in a file named '.nextflow.log' in the current path, plus to the terminal console.
+     * <p>
+     *     By default only the INFORMATION level logging messages are visualized to the console,
+     *     instead in the file are saved the DEBUG level messages.
+     *
+     * @param logFileName The file where save the application log
+     * @param quiet When {@code true} only Warning and Error messages are visualized to teh console
+     * @param debugConf The list of packages for which use a Debug logging level
+     * @param traceConf The list of packages for which use a Trace logging level
+     */
+
+    static void configureLogger( Launcher launcher ) {
+        new LoggerHelper(launcher.options)
+                .setDaemon(launcher.isDaemon())
+                .setRolling(true)
+                .setup()
+    }
+
+    static void configureLogger( final CliOptions opts, boolean daemon = false ) {
+        new LoggerHelper(opts)
+                .setDaemon(daemon)
+                .setRolling(true)
+                .setup()
+    }
 
     /*
      * Filters the logging event based on the level assigned to a specific 'package'
