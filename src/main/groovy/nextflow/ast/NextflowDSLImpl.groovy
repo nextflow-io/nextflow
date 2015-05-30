@@ -263,7 +263,7 @@ public class NextflowDSLImpl implements ASTTransformation {
             /*
              * when the last statement is a string script, the 'script:' label can be omitted
              */
-            else if( len ) {
+            else if( len && !whenStatements ) {
                 def stm = block.getStatements().get(len-1)
                 readSource(stm,source,unit)
 
@@ -286,7 +286,7 @@ public class NextflowDSLImpl implements ASTTransformation {
 
             if (!done) {
                 log.trace "Invalid 'process' definition -- Process must terminate with string expression"
-                unit.addError( new SyntaxException("Not a valid process definition -- Make sure process ends with the script to be executed wrapped by quote characters", line,coln))
+                unit.addError( new SyntaxException("Not a valid process definition -- Make sure the process ends with a script wrapped by quote characters", line,coln))
             }
         }
     }
