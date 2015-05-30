@@ -2040,18 +2040,10 @@ class DataflowExtensions {
         final binding = Global.session.binding
 
         def targets = []
-        names.each { it ->
-            if( binding.hasVariable(it) ) {
-                def ch = binding.getVariable(it)
-                if( ch instanceof DataflowWriteChannel ) {
-                    targets.add(ch)
-                    return
-                }
-                log.warn "Variable '$it' is overridden by `into` operator -- Consider to use another name for it"
-            }
-            def ch = newChannelBy(source)
-            targets.add(ch)
-            binding.setVariable(it, ch)
+        names.each { identifier ->
+            def channel = newChannelBy(source)
+            targets.add(channel)
+            binding.setVariable(identifier, channel)
         }
 
         into0(source,targets)
@@ -2120,9 +2112,6 @@ class DataflowExtensions {
             throw new IllegalArgumentException("Operation `set` does not allow more than one target name")
 
         final binding = Global.session.binding
-        if( binding.hasVariable(name[0]) ) {
-            log.warn "A variable named '${name[0]}' already exists in script global context -- Consider renaming it "
-        }
         binding.setVariable(name[0], source)
     }
 
