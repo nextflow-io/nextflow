@@ -47,8 +47,8 @@ class DockerBuilderTest extends Specification {
         expect:
         DockerBuilder.makeEnv('X=1').toString() == '-e "X=1"'
         DockerBuilder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == '-e "VAR_X=1" -e "VAR_Y=2"'
-        DockerBuilder.makeEnv( Paths.get('/some/file.env') ).toString() == '-e "BASH_ENV=file.env"'
-        DockerBuilder.makeEnv( new File('/some/file.env') ).toString() == '-e "BASH_ENV=file.env"'
+        DockerBuilder.makeEnv( Paths.get('/some/file.env') ).toString() == '-e "BASH_ENV=/some/file.env"'
+        DockerBuilder.makeEnv( new File('/some/file.env') ).toString() == '-e "BASH_ENV=/some/file.env"'
     }
 
     def 'test docker run command line'() {

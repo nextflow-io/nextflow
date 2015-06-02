@@ -20,7 +20,6 @@
 
 package nextflow.executor
 import java.nio.file.Path
-import java.nio.file.Paths
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -29,7 +28,6 @@ import nextflow.processor.TaskRun
 import nextflow.util.ContainerScriptTokens
 import nextflow.util.DockerBuilder
 import nextflow.util.MemoryUnit
-
 /**
  * Builder to create the BASH script which is used to
  * wrap and launch the user task
@@ -40,8 +38,6 @@ import nextflow.util.MemoryUnit
 class BashWrapperBuilder {
 
     static final private ENDL = '\n'
-
-    static final ENV_FILE_NAME = Paths.get(TaskRun.CMD_ENV)
 
     static final List<String> BASH
 
@@ -609,7 +605,7 @@ class BashWrapperBuilder {
                 docker.addEnv( environment )
             }
             else
-                docker.addEnv( ENV_FILE_NAME )
+                docker.addEnv( workDir.resolve(TaskRun.CMD_ENV) )
 
         }
 
