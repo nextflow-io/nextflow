@@ -71,7 +71,9 @@ class ComposedConfigSlurperTest extends Specification {
         config.process.resources.nested.bar == 2
 
         when:
-        def str = config.prettyPrint()
+        def buffer = new StringWriter()
+        config.writeTo(buffer)
+        def str = buffer.toString()
         then:
         str == '''
         process {
