@@ -129,12 +129,10 @@ class ConfigBuilderTest extends Specification {
 
         setup:
         def builder = [:] as ConfigBuilder
-        builder.workDir = Paths.get('/some/path')
         builder.baseDir = Paths.get('/base/path')
 
         def text = '''
         params {
-            p = "$workDir/1"
             q = "$baseDir/2"
         }
         '''
@@ -142,7 +140,6 @@ class ConfigBuilderTest extends Specification {
         when:
         def cfg = builder.buildConfig0([:], [text])
         then:
-        cfg.params.p == '/some/path/1'
         cfg.params.q == '/base/path/2'
 
     }

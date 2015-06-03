@@ -53,8 +53,6 @@ class ConfigBuilder {
 
     Path baseDir
 
-    Path workDir = Paths.get('.').complete()
-
     boolean showAllProfiles
 
     String profile
@@ -253,7 +251,6 @@ class ConfigBuilder {
             // in the current environment
             final binding = new HashMap(System.getenv())
             binding.putAll(env)
-            binding.put('workDir', workDir)
             binding.put('baseDir', baseDir)
 
             slurper.setBinding(binding)
