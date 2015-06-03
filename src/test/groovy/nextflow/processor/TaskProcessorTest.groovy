@@ -23,11 +23,13 @@ package nextflow.processor
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.concurrent.ExecutorService
 
 import groovyx.gpars.agent.Agent
 import nextflow.Global
 import nextflow.ISession
 import nextflow.Session
+import nextflow.exception.ProcessException
 import nextflow.executor.NopeExecutor
 import nextflow.file.FileHolder
 import nextflow.script.BaseScript
@@ -38,6 +40,7 @@ import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
 import spock.lang.Specification
 import test.TestHelper
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -374,5 +377,59 @@ class TaskProcessorTest extends Specification {
         tempFolder?.deleteDir()
     }
 
+
+    def 'should return `ignore` strategy' () {
+
+        given:
+        def task
+        def proc = [:] as TaskProcessor
+        def error = Mock(ProcessException)
+
+        when:
+        task = new TaskRun()
+        task.config = new TaskConfig()
+        then:
+        proc.checkErrorStrategy(task, error, 1,1) == null
+
+        when:
+        task = new TaskRun()
+        task.config = new TaskConfig(errorStrategy: 'ignore')
+        then:
+        proc.checkErrorStrategy(task, error, 10, 10) == ErrorStrategy.IGNORE
+
+    }
+
+    def 'should return `retry` strategy' () {
+
+        given:
+
+        def task
+        def error = Mock(ProcessException)
+        def session = Mock(Session)
+        session.getExecService() >> Mock(ExecutorService)
+
+        def proc = [:] as TaskProcessor
+        proc.session = session
+
+        when:
+        task = new TaskRun()
+        task.config = new TaskConfig(errorStrategy:'retry', maxErrors: max_errors, maxRetries: max_retries )
+        then:
+        proc.checkErrorStrategy(task, error, task_err_count , proc_err_count) == strategy
+
+        where:
+        max_retries | max_errors    |   task_err_count  |  proc_err_count   | strategy
+                1   |        3      |               0   |               0   | ErrorStrategy.RETRY
+                1   |        3      |               1   |               0   | null
+                1   |        3      |               0   |               1   | ErrorStrategy.RETRY
+                1   |        3      |               0   |               2   | ErrorStrategy.RETRY
+                1   |        3      |               0   |               3   | null
+                3   |       -1      |               0   |               0   | ErrorStrategy.RETRY
+                3   |       -1      |               1   |               1   | ErrorStrategy.RETRY
+                3   |       -1      |               2   |               2   | ErrorStrategy.RETRY
+                3   |       -1      |               2   |               9   | ErrorStrategy.RETRY
+                3   |       -1      |               3   |               9   | null
+
+    }
 
 }

@@ -100,7 +100,7 @@ abstract class TaskProcessor {
     /**
      * The current workflow execution session
      */
-    protected final Session session
+    protected Session session
 
     /**
      * The script object which defines this task
@@ -697,26 +697,15 @@ abstract class TaskProcessor {
             // do not recoverable error, just trow it again
             if( error instanceof Error ) throw error
 
-            final taskErrCount = task ? task.failCount++ : 0
-            final procErrCount = errorCount++
-            final taskStrategy = task?.config?.getErrorStrategy()
+            final int taskErrCount = task ? task.failCount++ : 0
+            final int procErrCount = errorCount++
 
-            // when is a task level error and the user has chosen to ignore error, just report and error message
-            // return 'false' to DO NOT stop the execution
+            // when is a task level error and the user has chosen to ignore error,
+            // just report and error message and DO NOT stop the execution
             if( task && error instanceof ProcessException ) {
-
-                // IGNORE strategy -- just continue
-                if( taskStrategy == ErrorStrategy.IGNORE ) {
-                    log.warn "Error running process > ${error.getMessage()} -- error is ignored"
-                    task.failed = true
-                    return ErrorStrategy.IGNORE
-                }
-
-                // RETRY strategy -- check that process do not exceed 'maxError' and the task do not exceed 'maxRetries'
-                if( taskStrategy == ErrorStrategy.RETRY && procErrCount < task.config.getMaxErrors() && taskErrCount < task.config.getMaxRetries() ) {
-                    session.execService.submit({ checkCachedOrLaunchTask( task, task.hash, false, RunType.RETRY ) } as Runnable)
-                    return ErrorStrategy.RETRY
-                }
+                final strategy = checkErrorStrategy(task, error, taskErrCount, procErrCount)
+                if( strategy )
+                    return strategy
             }
 
             // mark the task as failed
@@ -751,6 +740,30 @@ abstract class TaskProcessor {
 
         session.abort(error)
         return ErrorStrategy.TERMINATE
+    }
+
+    protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, int taskErrCount, int procErrCount ) {
+
+        final taskStrategy = task?.config?.getErrorStrategy()
+
+        // IGNORE strategy -- just continue
+        if( taskStrategy == ErrorStrategy.IGNORE ) {
+            log.warn "Error running process > ${error.getMessage()} -- error is ignored"
+            task.failed = true
+            return ErrorStrategy.IGNORE
+        }
+
+        // RETRY strategy -- check that process do not exceed 'maxError' and the task do not exceed 'maxRetries'
+        if( taskStrategy == ErrorStrategy.RETRY ) {
+            final int maxErrors = task.config.getMaxErrors()
+            final int maxRetries = task.config.getMaxRetries()
+            if( (procErrCount < maxErrors || maxErrors == -1) && taskErrCount < maxRetries ) {
+                session.getExecService().submit({ checkCachedOrLaunchTask( task, task.hash, false, RunType.RETRY ) } as Runnable)
+                return ErrorStrategy.RETRY
+            }
+        }
+
+        return null
     }
 
     final protected formatGuardError( List message, FailedGuardException error, TaskRun task ) {
