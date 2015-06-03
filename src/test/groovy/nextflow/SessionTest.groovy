@@ -25,6 +25,8 @@ import java.nio.file.Paths
 import nextflow.trace.TraceFileObserver
 import nextflow.util.Duration
 import spock.lang.Specification
+import test.TestHelper
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -268,6 +270,22 @@ class SessionTest extends Specification {
         observer.separator == '\t'
         observer.fields == ['task_id','name','exit','vmem']
 
+
+    }
+
+    def 'should return absolute workDir' () {
+
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def script = folder.resolve('pipeline.nf')
+
+        when:
+        def session = new Session([workDir: '../work'])
+        session.init(script)
+        then:
+        session.baseDir == folder
+        session.workDir.isAbsolute()
+        !session.workDir.toString().contains('..')
 
     }
 

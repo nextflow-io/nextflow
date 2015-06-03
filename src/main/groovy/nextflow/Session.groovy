@@ -30,7 +30,6 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
-import nextflow.cli.CliOptions
 import nextflow.exception.MissingLibraryException
 import nextflow.processor.TaskDispatcher
 import nextflow.processor.TaskProcessor
@@ -215,13 +214,11 @@ class Session implements ISession {
     }
 
     /**
-     *  Initialize the session object by using the command line options provided by
-     *  {@link CliOptions} object
-     *
+     * Initialize the session workDir, libDir, baseDir and scriptName variables
      */
     void init( Path scriptFile ) {
 
-        this.workDir = ((config.workDir ?: 'work') as Path).toAbsolutePath()
+        this.workDir = ((config.workDir ?: 'work') as Path).complete()
         this.setLibDir( config.libDir as String )
 
         if( scriptFile ) {
