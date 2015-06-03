@@ -18,7 +18,6 @@ Operators can be separated in to five groups:
 * `Other operators`_
 
 
-
 Filtering operators
 ===================
 
@@ -429,6 +428,10 @@ Grouping by the second value in each tuple the result is::
     [[1, 3], B]
     [[2, 1], C]
     [[3], D]
+
+
+.. tip::
+    A multiple-items key can be defined by specifing a list of indices as value for the ``by`` parameters.
 
 
 buffer
@@ -929,26 +932,37 @@ the source channel are copied to the target channel(s). For example::
     d
 
 
+.. note:: The target channel specified as a parameter to the ``into`` operator must has been declared previously.
+
+A second version of the ``into`` operator takes a :ref:`closure <script-closure>` as parameter which declares one or more
+target channels to which connect the source one. For example::
+
+    Channel
+        .from( 'a', 'b', 'c', 'd' )
+        .into { foo; bar }
+
+The advantage of using this syntax is that the ``into`` operator implicitly creates the target channel(s) as needed
+and you won't need to create it/them as in the previous example.
 
 
-A second version of the ``into`` operator takes an integer `n` as an argument and returns
+Finally, a third version of the ``into`` operator takes an integer `n` as an argument and returns
 a list of `n` channels, each of which emits a copy of the items there were emitted by the
 source channel. For example::
 
 
-    (ch1, ch2) = Channel.from( 'a','b','c').into(2)
-    ch1.subscribe { println "Channel 1 emit: " + it }
-    ch2.subscribe { println "Channel 2 emit: " + it }
+    (foo, bar) = Channel.from( 'a','b','c').into(2)
+    foo.subscribe { println "Channel 1 emit: " + it }
+    bar.subscribe { println "Channel 2 emit: " + it }
 
 ::
 
-    Channel 1 emit: a
-    Channel 1 emit: b
-    Channel 1 emit: c
+    Foo emit: a
+    Foo emit: b
+    Foo emit: c
 
-    Channel 2 emit: a
-    Channel 2 emit: b
-    Channel 2 emit: c
+    Bar emit: a
+    Bar emit: b
+    Bar emit: c
 
 
 .. note:: The above example takes advantage of the :ref:`multiple assignment <script-multiple-assignment>` syntax
@@ -994,7 +1008,21 @@ as in the following example::
     Result: bb
     Result: cc
 
+The ``tap`` operator also allows the target channel to be specified by using a closure. The advantage of this syntax
+is that you won't need to previously create the target channel, because it is created implicitly by the operator itself.
 
+Using the closure syntax the above example can be rewritten as shown below::
+
+    Channel
+        .from ( 'a', 'b', 'c' )
+  	    .tap { log1 }
+  	    .map { it * 2 }
+  	    .tap { log2 }
+  	    .subscribe { println "Result: $it" }
+
+
+    log1.subscribe { println "Log 1: $it" }
+    log2.subscribe { println "Log 2: $it" }
 
 See also `into`_ and `separate`_ operators
 
@@ -1679,6 +1707,23 @@ Other operators
 ========================
 
 
+set
+----
+
+The ``set`` operator assign the channel to which is applied to a variable whose name is specified as closure parameter.
+For example::
+
+    Channel.from(10,20,30).set { my_channel }
+
+This is semantically equivalent to the following assignment::
+
+    my_channel = Channel.from(10,20,30)
+
+However the ``set`` operator is more idiomatic in Nextflow scripting, since it can be used at the end
+of chain of operator transformations, thus resulting in a more fluent and readable operation.
+
+
+
 ifEmpty
 --------
 
@@ -1790,3 +1835,10 @@ It prints::
 .. note:: Both the *view* and `print`_ (or `println`_) operators consume them items emitted by the source channel to which they
     are applied. However, the main difference between them is that the former returns a newly create channel whose content
     is identical to the source one. This allows the *view* operator to be chained like other operators.
+
+close
+------
+
+The ``close`` operator send a termination signal over the channels, causing downstream processes or operators to stop.
+In a common usage scenario channels are closed implicitly by Nextflow, so won't need to use this operator.
+

@@ -12,7 +12,9 @@ a script that is executed by it. A basic process looks like the following exampl
 
   process sayHello {
 
-      "echo 'Hello world!' > file"
+      """
+      echo 'Hello world!' > file
+      """
 
   }
 
@@ -32,15 +34,16 @@ inputs, outputs, shares and finally the process script. The syntax is defined as
      output:
       < process outputs >
 
-     share:
-      < shared input/output >
+     when:
+      < condition >
 
-     [script:|exec:]
+     [script|shell|exec]:
      < user script to be executed >
 
   }
 
 
+.. _process-script:
 
 Script
 =======
@@ -115,6 +118,9 @@ In this example the ``$MAX`` variable has to be defined somewhere before, in the
 `Nextflow` replaces it with the actual value before executing the script. Instead, the ``$DB`` variable
 must exist in the script execution environment and the BASH interpreter will replace it with the actual value.
 
+.. tip::
+  Alternatively you can use the :ref:`process-shell` block definition which allows a script to contain both
+  BASH and Nextflow variables without having to escape the first.
 
 Scripts `à la carte`
 --------------------
@@ -203,6 +209,94 @@ script string to be executed. It's much easier to use than to explain, for examp
 In the above example the process will execute the script fragment depending on the value of the ``mode`` parameter.
 By default it will execute the ``tcoffee`` command, changing the ``mode`` variable to ``mafft`` or ``clustalo`` value,
 the other branches will be executed.
+
+.. _process-template:
+
+Template
+---------
+
+Process script can be externalised by using *template* files which can be reused across different process and tested
+independently by the overall pipeline execution.
+
+A template is simply a shell script file that Nextflow is able to execute by using the ``template`` function
+as shown below::
+
+    process template_example {
+
+        input:
+        val STR from 'this', 'that'
+
+        script:
+        template 'my_script.sh'
+
+    }
+
+
+Nextflow looks for the ``my_script.sh`` template file in the directory `templates` that must exist in the same folder
+where the nextflow script file is located (any other location can be provided by using a absolute template path).
+
+The template script can contain any piece of code that can be executed by the underlying system. For example::
+
+  #!/bin/bash
+  echo "process started at `date`"
+  echo $STR
+  :
+  echo "process completed"
+
+
+
+.. tip::
+  Note that the dollar character (``$``) is interpreted as a Nextflow variable placeholder, thus if you need to use
+  BASH variables in your template you will need to escape them with a back-slash character.
+
+  Although this can be inconvenient when your script contains many BASH variables, it can be very useful to test
+  your script autonomously, i.e. independently from Nextflow execution. You only need to provide a BASH environment
+  variable for each Nextflow variable existing your script. For example it would be possible to execute the above
+  script entering the following command in the shell terminal: ``STR='foo' bash templates/my_script.sh``
+
+
+.. _process-shell:
+
+Shell
+--------
+
+.. warning:: This is an incubating feature. It may change in future Nextflow releases.
+
+
+The ``shell`` block is string statement that defines the *shell* command executed by the process to carry out the
+task its tasks. It is an alternative to the :ref:`process-script` definition with the important difference that it uses
+the question mark character as variable placeholder for Nextflow variables interpolation in place of usual dollar character.
+
+In this way it is possible to use both Nextflow and BASH variables in the same script without having to escape
+the latter and making process scripts more readable and easy to maintain. For example::
+
+    process myTask {
+
+        input:
+        val str from 'Hello', 'Hola', 'Bonjour'
+
+        shell:
+        '''
+        echo User $USER says !{str}
+        '''
+
+    }
+
+
+
+In the above trivial example the ``$USER`` variable is managed by BASH while ``!{str}`` is handled as a process input
+variable managed by handled by Nextflow.
+
+.. note::
+
+    - Shell script definition requires the use of single-quote ``'`` delimited strings. When using double-quote ``"``
+      delimited strings, dollar variables are interpreted as Nextflow variables as usual. See :ref:`string-interpolation`.
+
+    - Exclamation mark prefixed variables need always to be included between a curly brackets characters i.e. ``${str}``
+      is a valid variable while ``!str`` it is ignored.
+
+    - Shell script supports the use the file :ref:`process-template` mechanism. The same rules are applied to the variables
+      defined in the script template.
 
 .. _process-native:
 
@@ -927,6 +1021,30 @@ A `set` declaration can contain any combination of the following qualifiers, pre
 
 File names can be defined in a dynamic manner as explained in the :ref:`process-dynoutname` section.
 
+When
+=======
+
+The ``when`` declaration allows you to define a condition that must be verified in order to execute the process.
+This can be any expression that evaluate to a boolean value.
+
+This can be useful to enable/disable the process execution depending various inputs state. For example::
+
+
+    process find {
+      input:
+      file proteins
+      val type from dbtype
+
+      when:
+      proteins.name =~ /^BB11.*/ && type == 'nr'
+
+      script:
+      """
+      blastp -query $proteins -db nr
+      """
+
+    }
+
 Shares
 =======
 
@@ -1063,6 +1181,7 @@ The directives are:
 * `echo`_
 * `errorStrategy`_
 * `executor`_
+* `ext`_
 * `queue`_
 * `maxErrors`_
 * `maxForks`_
@@ -1717,6 +1836,12 @@ afterScript
 
 The ``afterScript`` directive allows you to execute a custom (BASH) snippet immediately *after* the main process has run.
 This may be useful to clean up your staging area.
+
+ext
+----
+
+The ``ext`` is a special directive used as *namespace* for user custom configuration properties that can be defined at
+process level. This can be useful for advanced configuration options.
 
 
 Dynamic directives

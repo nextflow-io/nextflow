@@ -27,9 +27,9 @@ The available factory methods are:
 * `create`_
 * `from`_
 * `just`_
+* `value`_
 * `fromPath`_
 * `watchPath`_
-
 
 .. _channel-create:
 
@@ -86,22 +86,30 @@ creates a channel emitting three entries each of which is a list containing two 
 
 
 
-.. _channel-just:
+.. _channel-value:
 
-just
+value
 -------
 
 This method creates a dataflow `variable` that is a channel to which one entry, at most, can be bound. An optional
 not ``null`` value can be specified as a parameters, which is bound to the newly created channel. For example::
 
 
-    expl1 = Channel.just()
-    expl2 = Channel.just( 'Hello there' )
-    expl3 = Channel.just( [1,2,3,4,5] )
+    expl1 = Channel.value()
+    expl2 = Channel.value( 'Hello there' )
+    expl3 = Channel.value( [1,2,3,4,5] )
 
 
 The first line in the example creates an 'empty' variable. The second line creates a channel and binds a string to it.
 Finally the last one creates a channel and binds a list object to it that will be emitted as a sole emission.
+
+.. _channel-just:
+
+just
+-----
+
+A synonym for `value`_ method.
+
 
 .. _channel-path:
 
@@ -288,7 +296,7 @@ specifying the expected value type, as showed in the following example::
 Read :ref:`script-closure` paragraph to learn more about `closure` feature.
 
 
-onNext, onCompleted, and onError
+onNext, onComplete, and onError
 --------------------------------
 
 The ``subscribe()`` method may accept one or more of the following event handlers:
