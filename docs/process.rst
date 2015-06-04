@@ -548,16 +548,14 @@ The following fragment shows how a wildcard can be used in the input file declar
 Dynamic input file names
 ----------------------------
 
-An input file name can be specified in a *dynamic* manner by using a :ref:`Closure <script-closure>` statement.
+When the input file name is specified by using the ``name`` file clause or the short `string` notation, you
+are allowed to use other input values as variables in the file name string. For example::
 
-The closure can contain any arbitrary code and it must evaluate to a string value that represents the target file name.
-It can access variables defined in the main script scope and other input values declared in the process :ref:`input block <process-input>`.
-For example::
 
   process simpleCount {
     input:
     val x from species
-    file { "${x}.fa" } from genomes
+    file "${x}.fa" from genomes
 
     """
     cat ${x}.fa | grep '>'
@@ -904,6 +902,28 @@ Some caveats on glob pattern behavior:
 * When a two stars pattern ``**`` is used to recurse across directories, only file paths are matched
   i.e. directories are not included in the result list.
 
+
+.. tip::
+    By default all the files matching the specified glob pattern are emitted by the channel as a sole (list) item.
+    It is also possible to emit each file as a sole item by adding the ``mode flatten`` attribute in the output file
+    declaration.
+
+By using the `mode` attribute the previous example can be re-written as show below::
+
+    process splitLetters {
+
+        output:
+        file 'chunk_*' into letters mode flatten
+
+        '''
+        printf 'Hola' | split -b 1 - chunk_
+        '''
+    }
+
+    letters .subscribe { println "File: ${it.name} => ${it.text}" }
+
+
+
 Read more about glob syntax at the following link `What is a glob?`_
 
 .. _glob: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
@@ -914,12 +934,8 @@ Read more about glob syntax at the following link `What is a glob?`_
 Dynamic output file names
 -----------------------------
 
-When an output file name needs to be expressed dynamically, because it depends on a script parameter or on the value
-of some process inputs, you can define it by using a :ref:`Closure <script-closure>` statement.
-
-The closure can contain any arbitrary code and it must evaluate to a string value that represents the target file name.
-It can access variables defined in the main script scope, input values declared in the process :ref:`input block <process-input>`
-and variables eventually defined in the process script block.
+When an output file name needs to be expressed dynamically, it is possible to define it using a dynamic evaluated
+string which references values defined in the input declaration block or in the script global context.
 For example::
 
 
@@ -929,7 +945,7 @@ For example::
     file seq from sequences
 
     output:
-    file { "${x}.aln" } into genomes
+    file "${x}.aln" into genomes
 
     """
     t_coffee -in $seq > ${x}.aln
@@ -951,8 +967,6 @@ on the actual value of the ``x`` input.
 
   To sum up, the use of output files with static names over dynamic ones is preferable whenever possible, 
   because it will result in a simpler and more portable code.
-
-
 
 
 .. _process-stdout:

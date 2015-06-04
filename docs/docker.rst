@@ -48,6 +48,13 @@ In the above example replace ``nextflow/examples:latest`` with any Docker image 
 Read the :ref:`config-page` page to learn more about the ``nextflow.config`` file and how to use it to configure
 your pipeline execution.
 
+.. warning::
+    Nextflow manages automatically the file system mounts each time a container is launched depending the process
+    input files. Note however that when a process input is a *symbolic link* file, the target file **must** be stored
+    in the same folder where the symlink is located, or any sub-folder. Otherwise the process execution will fail because the
+    launched container won't be able to access the resolved target file.
+
+
 Multiple containers
 =====================
 
