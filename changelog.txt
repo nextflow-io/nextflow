@@ -1,6 +1,34 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.14.0 - 4 Jun 2015
+- Added support for file templates in process definition
+- Added process `when` guard for conditional execution
+- Added process `shell` block that allows both BASH and Groovy variables in the same script block
+- Added support for includes in configuration files
+- Added support for profiles in configuration files
+- Added channel operator `set { }`
+- Added channel operator `into { }`
+- Added channel operator `tap { }`
+- Added channel method `close()`
+- Added channel factory `value()`
+- Added `fixOwnership` docker config option
+- Added `unstageStrategy` process config option
+- Added minlog-slf4j kryo logging redirection
+- Added `ext` directive for user defined configuration properties
+- Added support for multi-indices grouping key to `groupTuple` operator
+- Fixed issue that caused task attribute to be lost when resuming execution
+- Fixed pipeline hangs when `map` operator is applied to a dataflow variables - Issue #44
+- Fixed pipeline hangs when `into` operator is applied to a dataflow variable
+- Improved dynamic code compilation with `Grengine` module
+- Increased default queue size to 100 tasks when using a grid executor
+- Refactored `Session` to remove dependency with `CmdRun` object Added ability to set `workDir` in the config file
+- New implicit lazy Gstring in process parameter and directive definitions
+- Changed file unstage strategy using `cp` command instead of `rsync` I
+- Removed `workDir` variable from config file
+- Updated JGit to version 3.7.1
+- Updated Slf4j to version 1.7.12
+
 0.13.5 - 7 May 2015 
 - Fixed issue #44 - Pipeline hangs when `map` operator is applied to a dataflow variable
 
