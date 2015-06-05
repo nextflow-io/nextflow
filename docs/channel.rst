@@ -25,6 +25,7 @@ factory methods.
 The available factory methods are:
 
 * `create`_
+* `empty`_
 * `from`_
 * `just`_
 * `value`_
@@ -221,6 +222,17 @@ You can specified more than one of these events by using a comma separated strin
   Thus, whenever you use it in your script, the resulting pipeline will never finish.
 
 See also: `fromPath`_ factory method.
+
+
+.. _channel-empty:
+
+empty
+-----------
+
+The ``empty`` factory method creates a channel that doesn't emit any value by definition.
+
+See also: :ref:`operator-ifempty` and :ref:`operator-close` operators.
+
 
 Binding values
 ==============

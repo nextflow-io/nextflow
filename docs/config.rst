@@ -398,7 +398,7 @@ Configuration files can contains the definition of one more *profiles*. A profil
 that can be activated/chosen when launching a pipeline execution by using the ``-profile`` command line option.
 
 Configuration profiles are defined by using the special scope ``profiles`` which groups the attributes that belongs
-to the same profile using a common profix. For example::
+to the same profile using a common prefix. For example::
 
     profiles {
 
@@ -421,9 +421,9 @@ to the same profile using a common profix. For example::
     }
 
 
-This configuration defines three profiles: ``standard``, ``cluster`` and ``cloud`` that defines difference process
+This configuration defines three profiles: ``standard``, ``cluster`` and ``cloud`` that set different process
 configuration strategies depending the target runtime platform. By convention the ``standard`` profile is implicitly used
-when no other profile is specified on the nextflow command line.
+when no other profile is specified by the user.
 
 
 Environment variables

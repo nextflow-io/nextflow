@@ -1706,6 +1706,7 @@ a function that, given an item, returns the value to be summed. For example::
 Other operators
 ========================
 
+.. _operator-set:
 
 set
 ----
@@ -1722,7 +1723,7 @@ This is semantically equivalent to the following assignment::
 However the ``set`` operator is more idiomatic in Nextflow scripting, since it can be used at the end
 of chain of operator transformations, thus resulting in a more fluent and readable operation.
 
-
+.. _operator-ifempty:
 
 ifEmpty
 --------
@@ -1751,6 +1752,9 @@ Instead, this one prints::
 The ``ifEmpty`` value parameter can be defined with a :ref:`closure <script-closure>`. In this case the result value of the closure evaluation
 will be emitted when the empty condition is satisfied.
 
+See also: :ref:`channel-empty` method.
+
+.. _operator-print:
 
 print
 ------
@@ -1769,6 +1773,7 @@ It prints::
 
 See also: `println`_ and `view`_.
 
+.. _operator-println:
 
 println
 --------
@@ -1804,6 +1809,7 @@ It prints::
 
 See also: `print`_ and `view`_.
 
+.. _operator-view:
 
 view
 ------
@@ -1836,9 +1842,12 @@ It prints::
     are applied. However, the main difference between them is that the former returns a newly create channel whose content
     is identical to the source one. This allows the *view* operator to be chained like other operators.
 
+.. _operator-close:
+
 close
 ------
 
-The ``close`` operator send a termination signal over the channels, causing downstream processes or operators to stop.
+The ``close`` operator send a termination signal over the channel, causing downstream processes or operators to stop.
 In a common usage scenario channels are closed implicitly by Nextflow, so won't need to use this operator.
 
+See also: :ref:`channel-empty` factory method.
