@@ -202,12 +202,6 @@ public class NextflowDSLImpl implements ASTTransformation {
                         }
                         break
 
-                    case 'share':
-                        if( stm instanceof ExpressionStatement ) {
-                            convertShareMethod( stm.getExpression() )
-                        }
-                        break
-
                     case 'exec':
                         iterator.remove()
                         execStatements << stm
@@ -472,32 +466,6 @@ public class NextflowDSLImpl implements ASTTransformation {
         }
 
         return method.getMethodAsString() == name
-    }
-
-
-    /*
-     * handle *shared* parameters
-     */
-
-    protected void convertShareMethod( Expression expression ) {
-        log.trace "convert > shared expression: $expression"
-
-        if( expression instanceof MethodCallExpression ) {
-            def methodCall = expression as MethodCallExpression
-            def methodName = methodCall.getMethodAsString()
-            def nested = methodCall.objectExpression instanceof MethodCallExpression
-            log.trace "convert > shared method: $methodName"
-
-            if( methodName in ['from','file','val','into','mode'] ) {
-                if( !nested )
-                    methodCall.setMethod( new ConstantExpression( '_share_' + methodName ) )
-                fixMethodCall(methodCall)
-            }
-
-            if( methodCall.objectExpression instanceof MethodCallExpression ) {
-                convertShareMethod(methodCall.objectExpression)
-            }
-        }
     }
 
 

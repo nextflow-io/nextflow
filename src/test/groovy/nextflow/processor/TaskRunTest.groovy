@@ -28,17 +28,14 @@ import nextflow.file.FileHolder
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
 import nextflow.script.FileOutParam
-import nextflow.script.FileSharedParam
 import nextflow.script.StdInParam
 import nextflow.script.StdOutParam
 import nextflow.script.TaskBody
 import nextflow.script.TokenVar
 import nextflow.script.ValueInParam
 import nextflow.script.ValueOutParam
-import nextflow.script.ValueSharedParam
 import spock.lang.Specification
 import test.TestHelper
-
 /**
  *
  *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -112,15 +109,13 @@ class TaskRunTest extends Specification {
 
         def x = new ValueInParam(binding, list).bind( new TokenVar('x') )
         def y = new FileInParam(binding, list).bind('y')
-        def z = new FileSharedParam(binding, list).bind('z')
 
         task.setInput(x, 1)
         task.setInput(y, [ new FileHolder(Paths.get('file_y_1')) ])
-        task.setInput(z, [ new FileHolder(Paths.get('file_z_1')), new FileHolder(Paths.get('file_z_2')) ])
 
         expect:
-        task.getInputFiles().size() == 2
-        task.stagedInputs.size() == 3
+        task.getInputFiles().size() == 1
+        task.stagedInputs.size() == 1
 
     }
 
@@ -134,19 +129,17 @@ class TaskRunTest extends Specification {
 
         when:
         def i1 = new ValueInParam(binding, list).bind( new TokenVar('x') )
-        def s1 = new FileSharedParam(binding, list).bind( new TokenVar('y') )
         def o1 = new FileOutParam(binding,list).bind('file_out.alpha')
         def o2 = new ValueOutParam(binding,list).bind( 'x' )
         def o3 = new FileOutParam(binding,list).bind('file_out.beta')
 
         task.setInput(i1, 'Hello' )
-        task.setInput(s1, [ new FileHolder(Paths.get('file_shared.delta')) ])
         task.setOutput(o1)
         task.setOutput(o2)
         task.setOutput(o3)
 
         then:
-        task.getOutputFilesNames() == ['file_out.alpha', 'file_out.beta', 'file_shared.delta']
+        task.getOutputFilesNames() == ['file_out.alpha', 'file_out.beta']
     }
 
     def testHasCacheableValues() {
@@ -184,16 +177,6 @@ class TaskRunTest extends Specification {
         task3.setOutput(s3)
         then:
         task3.hasCacheableValues()
-
-        /*
-         * shared input => true
-         */
-        when:
-        def s4 = new ValueSharedParam(binding, list).bind( 'x' )
-        def task4 = new TaskRun()
-        task4.setInput(s4)
-        then:
-        task4.hasCacheableValues()
 
         when:
         def task5 = new TaskRun( config: new TaskConfig(alpha: 1, beta: 2) )

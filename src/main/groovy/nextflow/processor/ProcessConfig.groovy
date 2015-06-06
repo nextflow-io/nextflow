@@ -29,19 +29,16 @@ import nextflow.script.EachInParam
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
 import nextflow.script.FileOutParam
-import nextflow.script.FileSharedParam
 import nextflow.script.InParam
 import nextflow.script.InputsList
 import nextflow.script.OutParam
 import nextflow.script.OutputsList
 import nextflow.script.SetInParam
 import nextflow.script.SetOutParam
-import nextflow.script.SharedParam
 import nextflow.script.StdInParam
 import nextflow.script.StdOutParam
 import nextflow.script.ValueInParam
 import nextflow.script.ValueOutParam
-import nextflow.script.ValueSharedParam
 import nextflow.util.ReadOnlyMap
 /**
  * Holds the process configuration properties
@@ -186,10 +183,6 @@ class ProcessConfig implements Map<String,Object> {
         outputs
     }
 
-    @Deprecated
-    List getSharedDefs () {
-        configProperties.inputs.findAll { it instanceof SharedParam }
-    }
 
     /*
      * note: without this method definition {@link BaseScript#echo} will be invoked
@@ -252,18 +245,6 @@ class ProcessConfig implements Map<String,Object> {
         def result = new StdOutParam(this).bind('-')
         if( obj ) result.into(obj)
         result
-    }
-
-    /// shared parameters
-
-    @Deprecated
-    SharedParam _share_val( def obj )  {
-        new ValueSharedParam(this).bind(obj) as SharedParam
-    }
-
-    @Deprecated
-    SharedParam _share_file( def obj )  {
-        new FileSharedParam(this).bind(obj) as SharedParam
     }
 
 

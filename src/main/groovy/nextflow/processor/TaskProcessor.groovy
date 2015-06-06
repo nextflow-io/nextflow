@@ -52,19 +52,16 @@ import nextflow.script.EachInParam
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
 import nextflow.script.FileOutParam
-import nextflow.script.FileSharedParam
 import nextflow.script.InParam
 import nextflow.script.OutParam
 import nextflow.script.ScriptType
 import nextflow.script.SetInParam
 import nextflow.script.SetOutParam
-import nextflow.script.SharedParam
 import nextflow.script.StdInParam
 import nextflow.script.StdOutParam
 import nextflow.script.TaskBody
 import nextflow.script.ValueInParam
 import nextflow.script.ValueOutParam
-import nextflow.script.ValueSharedParam
 import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
@@ -156,8 +153,6 @@ abstract class TaskProcessor {
      */
     private static final AtomicBoolean errorShown = new AtomicBoolean()
 
-    private boolean sharedWarnShown
-
     /**
      * Flag set {@code true} when the processor termination has been invoked
      *
@@ -170,11 +165,6 @@ abstract class TaskProcessor {
      * shared object in a thread safe manner
      */
     protected boolean blocking
-
-    /**
-     * Holds the values shared by multiple task instances
-     */
-    Map<SharedParam,Object> sharedObjs = [:]
 
     /**
      * The state is maintained by using an agent
@@ -616,8 +606,6 @@ abstract class TaskProcessor {
                 log.trace "[$task.name] Context map can't be read: $ctxFile -- return false -- Cause: ${e.message}"
                 return false
             }
-
-            populateSharedCtx(task, ctx)
         }
 
         /*
@@ -656,20 +644,6 @@ abstract class TaskProcessor {
         }
 
     }
-
-    /**
-     * Populate the 'shared' status context map with entries
-     *
-     * @param task
-     * @param ctx
-     * @return
-     */
-    final protected populateSharedCtx( TaskRun task, Map ctx ) {
-        task.inputs.keySet().findAll { it.class instanceof SharedParam } .each { SharedParam param ->
-            sharedObjs[param.name] = ctx[param.name]
-        }
-    }
-
 
     /**
      * Handles an error raised during the processor execution
@@ -998,29 +972,6 @@ abstract class TaskProcessor {
                 default:
                     throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
 
-            }
-        }
-
-        /*
-         * Shared objects behave as accumulators
-         * Copying back updated values from context map to buffer map so that can be accessed in the next iteration
-         */
-        if( log.isTraceEnabled() )
-            log.trace "<${name}> collecting sharedObjs: $sharedObjs"
-
-        sharedObjs?.keySet()?.each { param ->
-
-            switch(param) {
-                case ValueSharedParam:
-                    sharedObjs[param] = context.get(param.name)
-                    break
-
-                case FileSharedParam:
-                    // the 'sharedObjs' is updated in the 'beforeRun' method
-                    break
-
-                default:
-                    throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
             }
         }
 
@@ -1359,13 +1310,6 @@ abstract class TaskProcessor {
     }
 
 
-    final protected void sharedDeprecationWarn() {
-        if( !sharedWarnShown ) {
-            log.warn "Process `$name` declares one or more shared input/output parameters -- This feature has been deprecated and will be removed in a future release"
-            sharedWarnShown = true
-        }
-    }
-
     final protected int makeTaskContextStage1( TaskRun task, Map secondPass, List values ) {
 
         final contextMap = task.context
@@ -1386,36 +1330,6 @@ abstract class TaskProcessor {
                 case FileInParam:
                     secondPass[param] = val
                     return // <-- leave it, because we do not want to add this 'val' at this stage
-
-                case FileSharedParam:
-                    sharedDeprecationWarn()
-                    def fileParam = param as FileSharedParam
-                    if( firstRun ) {
-                        def normalized = normalizeInputToFiles(val,count)
-                        if( normalized.size() > 1 )
-                            throw new IllegalStateException("Cannot share multiple files")
-
-                        val = expandWildcards( fileParam.filePattern, normalized )
-                        count += val.size()
-                        // track this obj
-                        sharedObjs[(SharedParam)param] = val
-                    }
-                    else {
-                        val = sharedObjs[(SharedParam)param]
-                    }
-
-                    contextMap.put( fileParam.name, singleItemOrList(val) )
-                    break
-
-                case ValueSharedParam:
-                    sharedDeprecationWarn()
-                    if( firstRun )
-                        sharedObjs[(SharedParam)param] = val
-                    else
-                        val = sharedObjs[(SharedParam)param]
-
-                    contextMap.put( param.name, val )
-                    break
 
                 case StdInParam:
                 case EnvInParam:

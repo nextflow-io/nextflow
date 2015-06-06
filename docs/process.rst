@@ -20,7 +20,7 @@ a script that is executed by it. A basic process looks like the following exampl
 
 
 more specifically a process may contain five definition blocks, respectively: directives,
-inputs, outputs, shares and finally the process script. The syntax is defined as follows:
+inputs, outputs, when clause and finally the process script. The syntax is defined as follows:
 
 ::
 
@@ -51,7 +51,7 @@ Script
 The `script` block is a string statement that defines the command that is executed by the process to carry out its task.
 
 A process contains one and only one script block, and it must be the last statement when the process contains
-input, output and share declarations.
+input and output declarations.
 
 The entered string is executed as a `BASH <http://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ script in the
 `host` system. It can be any command, script or combination of them, that you would normally use in terminal shell
@@ -1056,114 +1056,6 @@ It is useful to enable/disable the process execution depending the state of vari
       """
 
     }
-
-Shares
-=======
-
-.. warning:: This feature has been deprecated and will be removed in future releases
-
-Share declarations are a special type of process parameter that can act as an `input` and `output` parameter at the same time.
-
-The share block is declared by using the syntax shown below::
-
-  share:
-    <share qualifier> <parameter name> [from <source channel>] [into <target channel>] [attributes]
-
-
-A share definition begins with the share `qualifier` followed by the parameter `name`. Optionally the keyword ``from``
-can be used to specify the channel over which data is received, and the keyword ``into``, followed by a channel name, 
-can be used to specify the channel where the produced data has to be sent.
-
-Share parameters accept only the qualifiers listed in the following table:
-
-=========== =============
-Qualifier   Semantic
-=========== =============
-val         Lets you access the input value in the process script and/or to send it over the output channel.
-file        Lets you handle the input value as a file, staging it properly in the execution context and/or send it as result over the output channel.
-=========== =============
-
-
-Share parameters have some important differences compared to input or output parameters:
-
-* A share parameter can only receive a single input value, which is bound in the script evaluation context before the process first execution.
-* If a share parameter declares an output channel it emits exactly one value, after the process last execution.
-* It allows you to `share` the parameter's value across multiple process executions.
-* Whenever a share parameter is declared, the process is executed serially, instead of in a parallel manner.
-
-
-Share generic values
----------------------
-
-The share ``val`` qualifier allows you to declare a parameter whose value can be accessed,
-in the script context, across multiple executions of the same process. For example::
-
-    process printCount {
-      input:
-      val cheers from 'Bonjour', 'Ciao', 'Hello', 'Hola'
-
-      share:
-      val count from 1 into result
-
-      script:
-      count += count
-      "echo $cheers world! "
-
-    }
-
-
-    result.subscribe  { println "Result = $it" }
-
-Will output::
-
-    Result = 16
-
-
-This example shows how the `state` of the ``count`` variable is maintained throughout the process executions, and
-how on process termination the final value is sent over the channel declared by the ``into`` keyword.
-
-Some caveats about shared value parameters:
-
-* The ``from`` declaration can be used to initialise the parameter by specifying a variable defined in the 
-  pipeline script or by using a `literal` value (as in the above example).
-
-* When the ``from`` declaration is omitted, the parameter is initialised to the variable's value in the script scope
-  having the same name as the parameter.
-
-* When a variable with the parameter's name doesn't exist in the script scope and no ``from`` is specified,
-  the parameter is initialised to ``null``.
-
-
-
-Share file
-------------
-
-The share ``file`` qualifier allows you to declare a parameter that shares its state using a file. For example::
-
-  process saveHello {
-      input:
-      val cheers from 'Bonjour', 'Ciao', 'Hello', 'Hola'
-
-      share:
-      file greetings into result
-
-      "echo '$cheers' >> $greetings "
-
-    }
-
-    result.subscribe { println it.text  }
-
-
-It will print::
-
-    Bonjour
-    Ciao
-    Hello
-    Hola
-
-
-This example shows how the file content is shared through the process executions. When the process 
-completes, the file is sent over the channel declared as output.
 
 
 .. _process-directives:
