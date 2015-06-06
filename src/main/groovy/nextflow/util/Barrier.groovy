@@ -43,6 +43,8 @@ class Barrier {
      */
     private final Lock section
 
+    private volatile boolean terminated
+
     /**
      * Signal condition
      */
@@ -85,12 +87,12 @@ class Barrier {
      * Block until all registered parties "arrive" to the barrier condition
      */
     void awaitCompletion() {
-        if( !parties.size() )
+        if( !parties.size() || terminated )
             return
 
         section.withLock {
             while( true ) {
-                if( allArrived() ) break
+                if( allArrived() || terminated ) break
                 condition.await()
             }
         }
@@ -115,6 +117,7 @@ class Barrier {
      * Force the barrier termination
      */
     void forceTermination() {
+        terminated = true
         section.withLock {
             for( def key: parties.keySet() ) {
                 parties.put(key, true)

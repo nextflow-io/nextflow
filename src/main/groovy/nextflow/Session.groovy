@@ -400,8 +400,10 @@ class Session implements ISession {
         cleanUp()
         log.trace "Session > after cleanup"
 
-        allProcessors *. join()
-        log.trace "Session > after processors join"
+        if( !aborted ) {
+            allProcessors *. join()
+            log.trace "Session > after processors join"
+        }
 
         execService.shutdown()
         log.trace "Session > executor shutdown"
