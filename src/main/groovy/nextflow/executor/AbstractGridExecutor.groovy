@@ -135,7 +135,15 @@ abstract class AbstractGridExecutor extends Executor {
      * @return A string that represent to submit job name
      */
     protected String getJobNameFor(TaskRun task) {
-        "nf-" + task.getName().replace(' ','_')
+        final BLANK = ' ' as char
+        final COLON = ':' as char
+        final result = new StringBuilder("nf-")
+        final name = task.getName()
+        for( int i=0; i<name.size(); i++ ) {
+            def ch = name.charAt(i)
+            result.append( ch == BLANK || ch == COLON ? '_' : ch )
+        }
+        result.toString()
     }
 
     /**
