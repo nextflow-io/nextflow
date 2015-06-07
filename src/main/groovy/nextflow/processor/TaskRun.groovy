@@ -26,7 +26,6 @@ import com.google.common.hash.HashCode
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.exception.FailedGuardException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessMissingTemplateException
 import nextflow.exception.ProcessScriptException
@@ -44,7 +43,6 @@ import nextflow.script.TaskBody
 import nextflow.script.ValueOutParam
 import nextflow.util.ContainerScriptTokens
 import nextflow.util.DockerBuilder
-
 /**
  * Models a task instance
  *
@@ -591,14 +589,12 @@ class TaskRun {
             this.source = template.text
             // keep track of template file
             this.template = template
-            // the script binding
-            final binding = context.getHolder()
             // parse the template
             final engine = new TaskTemplateEngine(processor.grengine)
             if( shell ) {
                 engine.setPlaceholder(placeholderChar())
             }
-            return engine.render(source, binding)
+            return engine.render(source, context)
         }
         catch( NoSuchFileException e ) {
             throw new ProcessMissingTemplateException("Process `${processor.name}` can't find template file: $template")
@@ -606,11 +602,11 @@ class TaskRun {
     }
 
     final protected String renderScript( script ) {
-        final binding = context.getHolder()
+
         new TaskTemplateEngine(processor.grengine)
                 .setPlaceholder(placeholderChar())
                 .setEnableShortNotation(false)
-                .render(script.toString(), binding)
+                .render(script.toString(), context)
     }
 
     protected placeholderChar() {

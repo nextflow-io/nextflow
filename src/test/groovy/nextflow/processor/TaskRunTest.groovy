@@ -29,6 +29,7 @@ import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
 import nextflow.script.FileOutParam
 import nextflow.script.FileSharedParam
+import nextflow.script.ScriptBinding
 import nextflow.script.StdInParam
 import nextflow.script.StdOutParam
 import nextflow.script.TaskBody
@@ -365,20 +366,31 @@ class TaskRunTest extends Specification {
     def 'should render template and set task attributes'() {
 
         given:
-        def script = TestHelper.createInMemTempFile('template.sh')
-        script.text = 'echo ${name}'
+        // global binding object attached to the script
+        def binding = new ScriptBinding([:])
+        binding.setParams(query: '/some/file')
+        def script = Mock(Script)
+        script.getBinding() >> binding
+
+        // local values
+        def local = [name: 'Foo']
+
+        // the script template
+        def tpl = TestHelper.createInMemTempFile('template.sh')
+        tpl.text = 'echo: ${name} ~ query: ${params.query}'
+
+        // the task run
         def task = new TaskRun()
-        task.context = Mock(TaskContext)
-        task.context.getHolder() >> [name: 'Foo']
+        task.context = new TaskContext(script, local, 'hello')
         task.processor = [:] as TaskProcessor
         task.processor.grengine = new Grengine()
 
         when:
-        def template = task.renderTemplate(script)
+        def template = task.renderTemplate(tpl)
         then:
-        template == 'echo Foo'
-        task.source == 'echo ${name}'
-        task.template == script
+        template == 'echo: Foo ~ query: /some/file'
+        task.source == 'echo: ${name} ~ query: ${params.query}'
+        task.template == tpl
 
     }
 
@@ -413,6 +425,14 @@ class TaskRunTest extends Specification {
     def 'should parse a `shell` script' () {
 
         given:
+        // global binding object attached to the script
+        def binding = new ScriptBinding([:])
+        binding.setParams(var_no: 'NO')
+        def script = Mock(Script)
+        script.getBinding() >> binding
+
+        def local = [nxf_var: 'YES']
+
         def task = new TaskRun()
         task.processor = [:] as TaskProcessor
         task.processor.grengine = new Grengine()
@@ -421,12 +441,12 @@ class TaskRunTest extends Specification {
          * bash script where $ vars are ignore and !{xxx} variables are interpolated
         */
         when:
-        task.context = new TaskContext(Mock(Script),[nxf_var: 'YES'],'foo')
+        task.context = new TaskContext(script,local,'foo')
         task.config = new TaskConfig().setContext(task.context)
-        task.resolve(new TaskBody({-> '$BASH_VAR !{nxf_var}'}, '$BASH_VAR !{nxf_var}', 'shell'))  // <-- note: 'shell' type
+        task.resolve(new TaskBody({-> '$BASH_VAR !{nxf_var} - !{params.var_no}'}, '<the source script>', 'shell'))  // <-- note: 'shell' type
         then:
-        task.script == '$BASH_VAR YES'
-        task.source == '$BASH_VAR !{nxf_var}'
+        task.script == '$BASH_VAR YES - NO'
+        task.source == '<the source script>'
 
         /*
          * bash script where $ vars are ignore and #{xxx} variables are interpolated

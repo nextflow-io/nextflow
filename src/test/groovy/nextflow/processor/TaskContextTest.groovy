@@ -102,5 +102,29 @@ class TaskContextTest extends Specification {
 
     }
 
+    def 'should interpolate variables' () {
+
+        given:
+        GroovyShell shell
+
+        when:
+        shell = new GroovyShell(new Binding([foo: 'hello', params:[bar:'world']]))
+        then:
+        shell.evaluate('"$foo - ${params.bar}"').toString() == 'hello - world'
+
+        when:
+        def binding = new Binding(params:[bar:'world'])
+        def local = [foo: 'hello']
+
+        def script = Mock(Script)
+        script.getBinding() >> binding
+
+        def context = new TaskContext(script, local, 'hola')
+        shell = new GroovyShell(new Binding(context))
+        then:
+        shell.evaluate('"$foo - ${params.bar}"').toString() == 'hello - world'
+
+    }
+
 
 }

@@ -160,8 +160,28 @@ class TaskTemplateEngineTest extends Specification {
         def result = new TaskTemplateEngine().render('Say: $x ${++y} and ${++y} times', binding)
         then:
         result == 'Say: Hello 1 and 2 times'
-        original == binding  // the binding map does not change
-        binding.y == 0
+        original.size() == binding.size()
+
+    }
+
+    def 'should hold a print writer object' () {
+
+        given:
+        def writer = new StringWriter()
+        def context = new TaskTemplateEngine.TemplateBinding([x:'foo', z:'bar'], writer)
+
+        when:
+        context.getVariable('__$$_out') << 'Hello world'
+
+        then:
+        writer.toString() == 'Hello world'
+        context.getVariable('x') == 'foo'
+        context.getVariable('z') == 'bar'
+        context.x == 'foo'
+        context.z == 'bar'
+        context.hasVariable('x')
+        context.hasVariable('z')
+        !context.hasVariable('y')
 
     }
 }

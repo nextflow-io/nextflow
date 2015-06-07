@@ -39,10 +39,9 @@ import ch.grengine.Grengine
 import groovy.text.Template
 import groovy.text.TemplateEngine
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.control.CompilationFailedException
-import org.codehaus.groovy.runtime.InvokerHelper
-
 /**
  * A template engine that uses {@link Grengine} to parse template scripts
  * It also that ignore dollar variable and uses a custom character for variable interpolation
@@ -84,16 +83,7 @@ class TaskTemplateEngine extends TemplateEngine {
 
     Template createTemplate(Reader reader) throws CompilationFailedException, IOException {
         ParsableTemplate template = placeholder == DOLLAR ? new SimpleTemplate() : new EscapeTemplate()
-        String script = template.parse(reader);
-        if( log.isTraceEnabled() ) {
-            log.trace "\n-- script source --\n${script}\n-- script end --\n"
-        }
-        try {
-            template.script = grengine.create(script);
-        }
-        catch (Exception e) {
-            throw new GroovyRuntimeException("Failed to parse template script (your template may contain an error or be trying to use expressions not currently supported): " + e.getCause() ?: e.toString());
-        }
+        template.create(reader, grengine)
         return template;
     }
 
@@ -110,11 +100,35 @@ class TaskTemplateEngine extends TemplateEngine {
     /**
      * Common template methods
      */
+    @Slf4j
     private static abstract class ParsableTemplate implements Template {
+
+        protected Script script;
+
+        protected Grengine grengine
 
         abstract String parse(Reader reader) throws IOException
 
-        protected Script script;
+        void create(Reader reader, Grengine grengine) {
+
+            // -- set the grengine instance
+            this.grengine = grengine
+
+            // -- parse the template reader and create script string
+            String script = parse(reader);
+            if( log.isTraceEnabled() ) {
+                log.trace "\n-- script source --\n${script}\n-- script end --\n"
+            }
+
+            // -- finally create the Script object
+            try {
+                this.script = grengine.create(script);
+            }
+            catch (Exception e) {
+                throw new GroovyRuntimeException("Failed to parse template script (your template may contain an error or be trying to use expressions not currently supported): " + e.getCause() ?: e.toString());
+            }
+
+        }
 
         protected void startScript(StringWriter sw) {
             sw.write('__$$_out.print("""');
@@ -130,7 +144,7 @@ class TaskTemplateEngine extends TemplateEngine {
             return make(null);
         }
 
-        Writable make(final Map map) {
+        Writable make(final Map context) {
             return new Writable() {
 
                 /**
@@ -139,17 +153,14 @@ class TaskTemplateEngine extends TemplateEngine {
                  * @see groovy.lang.Writable#writeTo(java.io.Writer)
                  */
                 Writer writeTo(Writer writer) {
-                    // Note: the code below, in order to print the string inject the a PrintVariable object
-                    // in the binding map. To avoid any side-effect in the original a newly create HashMap
-                    // is specified a binding object (however this do not prevent that inner referenced object
-                    // can be modified e.g `obj.something++`)
-                    Binding binding = map == null ? new Binding() : new Binding(new HashMap(map));
-                    Script scriptObject = InvokerHelper.createScript(script.getClass(), binding);
-                    PrintWriter pw = new PrintWriter(writer);
-                    // note:
-                    scriptObject.setProperty('__$$_out', pw);
-                    scriptObject.run();
-                    pw.flush();
+
+                    final binding = new TemplateBinding(context,writer)
+                    try {
+                        grengine.run(script, binding)
+                    }
+                    finally {
+                        binding.flush();
+                    }
                     return writer;
                 }
 
@@ -164,6 +175,38 @@ class TaskTemplateEngine extends TemplateEngine {
                     return sw.toString();
                 }
             };
+        }
+    }
+
+    /**
+     * Extends the {@link Binding} class adding an implicit writer object,
+     * named {@code __$$_out} that is used by the template engine to render the target script,
+     * in order to avoid to change the original context map
+     */
+    @PackageScope
+    static class TemplateBinding extends Binding implements Closeable {
+
+        private PrintWriter writer
+
+        TemplateBinding(Map context, Writer writer) {
+            super(context != null ? context : [:])
+            this.writer = writer instanceof PrintWriter ? (PrintWriter)writer : new PrintWriter(writer)
+        }
+
+        @Override
+        public Object getVariable(String name) {
+            if( name == '__$$_out' )
+                return writer
+            else
+                return super.getVariable(name)
+        }
+
+        final void flush() {
+            writer.flush()
+        }
+
+        public void close() throws IOException {
+            writer.close()
         }
 
     }
