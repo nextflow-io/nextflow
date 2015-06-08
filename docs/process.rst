@@ -215,7 +215,7 @@ the other branches will be executed.
 Template
 ---------
 
-Process script can be externalised by using *template* files which can be reused across different process and tested
+Process script can be externalised by using *template* files which can be reused across different processes and tested
 independently by the overall pipeline execution.
 
 A template is simply a shell script file that Nextflow is able to execute by using the ``template`` function
@@ -233,7 +233,7 @@ as shown below::
 
 
 Nextflow looks for the ``my_script.sh`` template file in the directory ``templates`` that must exist in the same folder
-where the nextflow script file is located (any other location can be provided by using a absolute template path).
+where the Nextflow script file is located (any other location can be provided by using an absolute template path).
 
 The template script can contain any piece of code that can be executed by the underlying system. For example::
 
@@ -246,10 +246,10 @@ The template script can contain any piece of code that can be executed by the un
 
 
 .. tip::
-  Note that the dollar character (``$``) is interpreted as a Nextflow variable placeholder, when the script is run as
+  Note that the dollar character (``$``) is interpreted as a Nextflow variable placeholder, when the script is run as a
   Nextflow template, while it is evaluated as a BASH variable when it is run alone. This can be very useful to test
   your script autonomously, i.e. independently from Nextflow execution. You only need to provide a BASH environment
-  variable for each Nextflow variable existing in your script. For example, it would be possible to execute the above
+  variable for each the Nextflow variable existing in your script. For example, it would be possible to execute the above
   script entering the following command in the shell terminal: ``STR='foo' bash templates/my_script.sh``
 
 
@@ -261,9 +261,9 @@ Shell
 .. warning:: This is an incubating feature. It may change in future Nextflow releases.
 
 
-The ``shell`` block is string statement that defines the *shell* command executed by the process to carry out its task.
-It is an alternative to the :ref:`process-script` definition with the important difference that it uses
-the question mark character as variable placeholder for Nextflow variables in place of the usual dollar character.
+The ``shell`` block is a string statement that defines the *shell* command executed by the process to carry out its task.
+It is an alternative to the :ref:`process-script` definition with an important difference, it uses
+the exclamation mark ``!`` character as the variable placeholder for Nextflow variables in place of the usual dollar character.
 
 In this way it is possible to use both Nextflow and BASH variables in the same piece of code without having to escape
 the latter and making process scripts more readable and easy to maintain. For example::
@@ -282,18 +282,18 @@ the latter and making process scripts more readable and easy to maintain. For ex
 
 
 
-In the above trivial example the ``$USER`` variable is managed by BASH while ``!{str}`` is handled as a process input
-variable managed by Nextflow.
+In the above trivial example the ``$USER`` variable is managed by the BASH interpreter, while ``!{str}`` is handled 
+as a process input variable managed by Nextflow.
 
 .. note::
 
     - Shell script definition requires the use of single-quote ``'`` delimited strings. When using double-quote ``"``
       delimited strings, dollar variables are interpreted as Nextflow variables as usual. See :ref:`string-interpolation`.
 
-    - Exclamation mark prefixed variables need always to be included between a curly brackets characters i.e. ``!{str}``
-      is a valid variable while ``!str`` it is ignored.
+    - Exclamation mark prefixed variables always need to be enclosed in curly brackets i.e. ``!{str}`` is a valid 
+      variable while ``!str`` is ignored.
 
-    - Shell script supports the use the file :ref:`process-template` mechanism. The same rules are applied to the variables
+    - Shell script supports the use of the file :ref:`process-template` mechanism. The same rules are applied to the variables
       defined in the script template.
 
 .. _process-native:
@@ -1037,7 +1037,7 @@ When
 =======
 
 The ``when`` declaration allows you to define a condition that must be verified in order to execute the process.
-This can be any expression that evaluate to a boolean value.
+This can be any expression that evaluates a boolean value.
 
 It is useful to enable/disable the process execution depending the state of various inputs and parameters. For example::
 

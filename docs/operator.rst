@@ -932,10 +932,10 @@ the source channel are copied to the target channel(s). For example::
     d
 
 
-.. note:: The target channel specified as a parameter to the ``into`` operator must has been declared previously.
+.. note:: The target channel specified as a parameter to the ``into`` operator must have been declared previously.
 
-A second version of the ``into`` operator takes a :ref:`closure <script-closure>` as parameter which declares one or more
-target channels to which connect the source one. For example::
+A second version of the ``into`` operator takes a :ref:`closure <script-closure>` as a parameter which declares one or more
+target channels to which the source one is connected. For example::
 
     Channel
         .from( 'a', 'b', 'c', 'd' )
@@ -946,7 +946,7 @@ and you won't need to create it/them as in the previous example.
 
 
 Finally, a third version of the ``into`` operator takes an integer `n` as an argument and returns
-a list of `n` channels, each of which emits a copy of the items there were emitted by the
+a list of `n` channels, each of which emits a copy of the items that were emitted by the
 source channel. For example::
 
 
@@ -1711,7 +1711,7 @@ Other operators
 set
 ----
 
-The ``set`` operator assign the channel to which is applied to a variable whose name is specified as closure parameter.
+The ``set`` operator assigns the channel to a variable whose name is specified as a closure parameter.
 For example::
 
     Channel.from(10,20,30).set { my_channel }
@@ -1721,7 +1721,7 @@ This is semantically equivalent to the following assignment::
     my_channel = Channel.from(10,20,30)
 
 However the ``set`` operator is more idiomatic in Nextflow scripting, since it can be used at the end
-of chain of operator transformations, thus resulting in a more fluent and readable operation.
+of a chain of operator transformations, thus resulting in a more fluent and readable operation.
 
 .. _operator-ifempty:
 
@@ -1847,7 +1847,7 @@ It prints::
 close
 ------
 
-The ``close`` operator send a termination signal over the channel, causing downstream processes or operators to stop.
-In a common usage scenario channels are closed implicitly by Nextflow, so won't need to use this operator.
+The ``close`` operator sends a termination signal over the channel, causing downstream processes or operators to stop.
+In a common usage scenario channels are closed automatically by Nextflow, so you won't need to use this operator explicitly.
 
 See also: :ref:`channel-empty` factory method.

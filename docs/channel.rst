@@ -229,7 +229,7 @@ See also: `fromPath`_ factory method.
 empty
 -----------
 
-The ``empty`` factory method creates a channel that doesn't emit any value by definition.
+The ``empty`` factory method, by definition, creates a channel that doesn't emit any value.
 
 See also: :ref:`operator-ifempty` and :ref:`operator-close` operators.
 

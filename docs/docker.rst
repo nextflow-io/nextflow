@@ -8,7 +8,7 @@ Nextflow integration with `Docker containers <http://www.docker.io>`_ technology
 and truly reproducible computational pipelines.
 
 By using this feature any process in a Nextflow script can be transparently executed into a Docker container. This may
-be extremely useful to package the binaries dependencies of a script into a standard and portable format that can be 
+be extremely useful to package the binary dependencies of a script into a standard and portable format that can be 
 executed on any platform supporting the Docker engine.
 
 Prerequisites
@@ -25,7 +25,7 @@ How it works
 =============
 
 You won't need to modify your Nextflow script in order to run it with Docker. Simply specify the Docker image from
-where containers are started by using the ``-with-docker`` command line option. For example::
+where the containers are started by using the ``-with-docker`` command line option. For example::
 
   nextflow run <your script> -with-docker <docker image>
 
@@ -49,10 +49,10 @@ Read the :ref:`config-page` page to learn more about the ``nextflow.config`` fil
 your pipeline execution.
 
 .. warning::
-    Nextflow manages automatically the file system mounts each time a container is launched depending the process
-    input files. Note however that when a process input is a *symbolic link* file, the target file **must** be stored
-    in the same folder where the symlink is located, or any sub-folder. Otherwise the process execution will fail because the
-    launched container won't be able to access the resolved target file.
+    Nextflow automatically manages the file system mounts each time a container is launched depending on the process
+    input files. Note, however, that when a process input is a *symbolic link* file, the linked file **must** be stored
+    in the same folder where the symlink is located, or any its sub-folder. Otherwise the process execution will fail because the
+    launched container won't be able to access the linked file.
 
 
 Multiple containers

@@ -394,10 +394,10 @@ file                Timeline file name (default: ``timeline.html``).
 Config profiles
 ================
 
-Configuration files can contains the definition of one more *profiles*. A profile is a set of configuration attributes
+Configuration files can contain the definition of one or more *profiles*. A profile is a set of configuration attributes
 that can be activated/chosen when launching a pipeline execution by using the ``-profile`` command line option.
 
-Configuration profiles are defined by using the special scope ``profiles`` which groups the attributes that belongs
+Configuration profiles are defined by using the special scope ``profiles`` which group the attributes that belong
 to the same profile using a common prefix. For example::
 
     profiles {
@@ -421,8 +421,8 @@ to the same profile using a common prefix. For example::
     }
 
 
-This configuration defines three profiles: ``standard``, ``cluster`` and ``cloud`` that set different process
-configuration strategies depending the target runtime platform. By convention the ``standard`` profile is implicitly used
+This configuration defines three different profiles: ``standard``, ``cluster`` and ``cloud`` that set different process
+configuration strategies depending on the target runtime platform. By convention the ``standard`` profile is implicitly used
 when no other profile is specified by the user.
 
 
