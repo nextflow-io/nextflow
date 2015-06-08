@@ -1,6 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.14.1 - 8 Jun 2015
+- Strip colon character from grid task name
+- Fixed synchronisation issue that caused pipeline hung when execution was aborted
+- Fixed an issue raising a MissingPropertyException when a script global variable was referenced in a process `shell` block
+
 0.14.0 - 4 Jun 2015
 - Added support for file templates in process definition
 - Added process `when` guard for conditional execution

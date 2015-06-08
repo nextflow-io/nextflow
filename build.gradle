@@ -28,6 +28,7 @@ buildscript {
 }
 
 apply plugin: 'groovy'
+apply plugin: "jacoco"
 apply plugin: 'idea'
 apply plugin: 'io.codearte.nexus-staging'   // See https://github.com/Codearte/gradle-nexus-staging-plugin/
 
@@ -54,7 +55,7 @@ ext {
 allprojects {
     apply plugin: 'java'
 
-    version = '0.14.0'
+    version = '0.14.1'
     group = 'io.nextflow'
 
     sourceCompatibility = 1.7
