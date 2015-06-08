@@ -540,10 +540,10 @@ class SetInParam extends BaseInParam {
                 newItem(FileInParam).bind(item)
 
             else if( item instanceof TokenValCall )
-                newItem(ValueInParam).bind(item.name)
+                newItem(ValueInParam).bind(item.val)
 
             else if( item instanceof TokenEnvCall )
-                newItem(EnvInParam).bind(item.name)
+                newItem(EnvInParam).bind(item.val)
 
             else if( item instanceof TokenStdinCall )
                 newItem(StdInParam)

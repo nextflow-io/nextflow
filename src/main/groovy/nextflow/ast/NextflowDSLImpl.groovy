@@ -531,7 +531,7 @@ public class NextflowDSLImpl implements ASTTransformation {
     protected Expression varToStr( Expression expr ) {
         if( expr instanceof VariableExpression ) {
             def name = ((VariableExpression) expr).getName()
-            return new ConstantExpression(name)
+            return newObj( TokenVar, new ConstantExpression(name) )
         }
 
         if( expr instanceof TupleExpression )  {
@@ -607,8 +607,6 @@ public class NextflowDSLImpl implements ASTTransformation {
             }
 
         }
-
-
 
         // -- TupleExpression or ArgumentListExpression
         if( expr instanceof TupleExpression )  {

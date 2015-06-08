@@ -20,6 +20,7 @@
 
 package nextflow.script
 import groovy.transform.InheritConstructors
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
@@ -121,7 +122,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         outChannel = outputValToChannel(target, DataflowQueue)
     }
 
-    @groovy.transform.PackageScope
+    @PackageScope
     BaseOutParam bind( def obj ) {
         if( obj instanceof TokenVar )
             this.nameObj = obj.name
@@ -324,7 +325,52 @@ class FileOutParam extends BaseOutParam implements OutParam {
  * Model a process *value* output parameter
  */
 @InheritConstructors
-class ValueOutParam extends BaseOutParam { }
+class ValueOutParam extends BaseOutParam {
+
+    protected target
+
+    String getName() {
+        return nameObj ? super.getName() : null
+    }
+
+
+    BaseOutParam bind( def obj ) {
+        // the target value object
+        target = obj
+
+        // retrieve the variable name to be used to fetch the value
+        if( obj instanceof TokenVar ) {
+            this.nameObj = obj.name
+        }
+
+        return this
+    }
+
+    /**
+     * Given the {@link nextflow.processor.TaskContext} object resolve the actual value
+     * to which this param is bound
+     *
+     * @param context An instance of {@link nextflow.processor.TaskContext} holding the task evaluation context
+     * @return The actual value to which this out param is bound
+     */
+    def resolve( Map context ) {
+
+        switch( target ) {
+        case TokenVar:
+            return context.get(target.name)
+
+        case Closure:
+            return target.cloneWith(context).call()
+
+        case GString:
+            return target.cloneWith(context).toString()
+
+        default:
+            return target
+        }
+    }
+
+}
 
 /**
  * Model the process *stdout* parameter
@@ -349,7 +395,7 @@ class SetOutParam extends BaseOutParam {
                 create(ValueOutParam).bind(item)
 
             else if( item instanceof TokenValCall )
-                create(ValueOutParam).bind(item.name)
+                create(ValueOutParam).bind(item.val)
 
             else if( item instanceof GString )
                 create(FileOutParam).bind(item)

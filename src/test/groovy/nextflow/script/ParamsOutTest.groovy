@@ -24,6 +24,7 @@ import static test.TestParser.parse
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.processor.TaskProcessor
 import spock.lang.Specification
+import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -43,6 +44,10 @@ class ParamsOutTest extends Specification {
               output:
               val x
               val p into q
+              val 10 into t
+              val 'str' into y
+              val { x } into w
+              val "${y}" into z
 
               return ''
             }
@@ -52,25 +57,54 @@ class ParamsOutTest extends Specification {
         TaskProcessor process = parse(text, binding).run()
 
         when:
-        def out0 = process.config.getOutputs().get(0)
-        def out1 = process.config.getOutputs().get(1)
+        def out0 = (ValueOutParam)process.config.getOutputs().get(0)
+        def out1 = (ValueOutParam)process.config.getOutputs().get(1)
+        def out2 = (ValueOutParam)process.config.getOutputs().get(2)
+        def out3 = (ValueOutParam)process.config.getOutputs().get(3)
+        def out4 = (ValueOutParam)process.config.getOutputs().get(4)
+        def out5 = (ValueOutParam)process.config.getOutputs().get(5)
 
         // it MUST
         // - create a value out parameter named 'x'
         // - create in the script context (binding) a new variable of type DataflowQueue named 'x'
         then:
-        process.config.getOutputs().size() == 2
+        process.config.getOutputs().size() == 6
 
-        out0.class == ValueOutParam
         out0.name == 'x'
+        out0.resolve( [x: 100] ) == 100
         out0.outChannel instanceof DataflowQueue
         binding.containsKey('x')
 
-        out1.class == ValueOutParam
         out1.name == 'p'
+        out1.resolve( [p: 200] ) == 200
         out1.outChannel instanceof DataflowQueue
         !binding.containsKey('p')
         binding.containsKey('q')
+
+        out2.name == null
+        out2.resolve( [:] ) == 10
+        out2.outChannel instanceof DataflowQueue
+        binding.containsKey('t')
+
+        out3.name == null
+        out3.resolve( [:] ) == 'str'
+        out3.outChannel instanceof DataflowQueue
+        binding.containsKey('y')
+
+        out4.name == null
+        out4.resolve( [x:'Hello', y:'world'] ) == 'Hello'
+        out4.outChannel instanceof DataflowQueue
+        binding.containsKey('w')
+
+        out5.name == null
+        out5.resolve( [x:'Hello', y:'world'] ) == 'world'
+        out5.outChannel instanceof DataflowQueue
+        binding.containsKey('z')
+
+//        when:
+//        out0.getVal([:])
+//        then:
+//        thrown(MissingValueException)
 
     }
 
@@ -179,12 +213,14 @@ class ParamsOutTest extends Specification {
         out3.outChannel == binding.channel4
         out3.isDynamic()
 
+        out4.name == 'setoutparam<4>'
         out4.outChannel instanceof DataflowQueue
         out4.outChannel == binding.channel5
         out4.inner[0] instanceof FileOutParam
         (out4.inner[0] as FileOutParam) .getFilePatterns(ctx) == ['script_file.txt','hola.fa']
         (out4.inner[0] as FileOutParam) .isDynamic()
 
+        out5.name == 'setoutparam<5>'
         out5.outChannel instanceof DataflowQueue
         out5.outChannel == binding.channel6
         out5.inner[0] instanceof FileOutParam
@@ -442,48 +478,119 @@ class ParamsOutTest extends Specification {
         TaskProcessor process = parse(text, binding).run()
 
         when:
-        SetOutParam out1 = process.config.getOutputs().get(0)
-        SetOutParam out2 = process.config.getOutputs().get(1)
-        SetOutParam out3 = process.config.getOutputs().get(2)
+        SetOutParam out0 = process.config.getOutputs().get(0)
+        SetOutParam out1 = process.config.getOutputs().get(1)
+        SetOutParam out2 = process.config.getOutputs().get(2)
 
         then:
         process.config.getOutputs().size() == 3
 
+        out0.outChannel instanceof DataflowQueue
+        out0.outChannel == binding.p
+        out0.inner.size() == 1
+        out0.inner[0] instanceof ValueOutParam
+        out0.inner[0].name == 'x'
+        out0.inner[0].index == 0
+        out0.mode == BasicMode.standard
+
         out1.outChannel instanceof DataflowQueue
-        out1.outChannel == binding.p
-        out1.inner.size() == 1
+        out1.outChannel == binding.q
         out1.inner[0] instanceof ValueOutParam
-        out1.inner[0].name == 'x'
-        out1.inner[0].index == 0
-        out1.mode == BasicMode.standard
+        out1.inner[0].name == 'y'
+        out1.inner[0].index == 1
+        out1.inner[1] instanceof StdOutParam
+        out1.inner[1].name == '-'
+        out1.inner[1].index == 1
+        out1.inner[2] instanceof FileOutParam
+        out1.inner[2].name == '*.fa'
+        out1.inner[2].index == 1
+        out1.inner.size() ==3
+        out1.mode == BasicMode.flatten
 
         out2.outChannel instanceof DataflowQueue
-        out2.outChannel == binding.q
-        out2.inner[0] instanceof ValueOutParam
-        out2.inner[0].name == 'y'
-        out2.inner[0].index == 1
-        out2.inner[1] instanceof StdOutParam
-        out2.inner[1].name == '-'
-        out2.inner[1].index == 1
-        out2.inner[2] instanceof FileOutParam
-        out2.inner[2].name == '*.fa'
-        out2.inner[2].index == 1
-        out2.inner.size() ==3
-        out2.mode == BasicMode.flatten
-
-        out3.outChannel instanceof DataflowQueue
-        out3.outChannel == binding.t
-        out3.inner.size() == 2
-        out3.inner[0] instanceof StdOutParam
-        out3.inner[0].name == '-'
-        out3.inner[0].index == 2
-        out3.inner[1] instanceof ValueOutParam
-        out3.inner[1].name == 'z'
-        out3.inner[1].index == 2
-        out3.mode == SetOutParam.CombineMode.combine
+        out2.outChannel == binding.t
+        out2.inner.size() == 2
+        out2.inner[0] instanceof StdOutParam
+        out2.inner[0].name == '-'
+        out2.inner[0].index == 2
+        out2.inner[1] instanceof ValueOutParam
+        out2.inner[1].name == 'z'
+        out2.inner[1].index == 2
+        out2.mode == SetOutParam.CombineMode.combine
 
     }
 
+    def testSetOutValues() {
+
+        setup:
+        def text = '''
+            process hola {
+              output:
+                set val(x), val('x') into p
+                set val(1), val('2') into q
+                set val("$foo"), val { bar } into t
+
+              return ''
+            }
+            '''
+
+        def binding = [:]
+        TaskProcessor process = parse(text, binding).run()
+
+        when:
+        SetOutParam out0 = process.config.getOutputs().get(0)
+        SetOutParam out1 = process.config.getOutputs().get(1)
+        SetOutParam out2 = process.config.getOutputs().get(2)
+
+        then:
+        process.config.getOutputs().size() == 3
+
+        // first set
+        out0.outChannel instanceof DataflowQueue
+        out0.outChannel == binding.p
+        out0.inner.size() == 2
+        // val(x)
+        out0.inner[0] instanceof ValueOutParam
+        out0.inner[0].name == 'x'
+        out0.inner[0].index == 0
+        out0.inner[0].resolve([x: 'hello']) == 'hello'
+        // val('x')
+        out0.inner[1] instanceof ValueOutParam
+        out0.inner[1].name == null
+        out0.inner[1].index == 0
+        out0.inner[1].resolve([:]) == 'x'
+
+        // -- second set
+        out1.outChannel instanceof DataflowQueue
+        out1.outChannel == binding.q
+        out1.inner.size() == 2
+        // val(1)
+        out1.inner[0] instanceof ValueOutParam
+        out1.inner[0].name == null
+        out1.inner[0].index == 1
+        out1.inner[0].resolve([:]) == 1
+        // val('2')
+        out1.inner[1] instanceof ValueOutParam
+        out1.inner[1].name == null
+        out1.inner[1].index == 1
+        out1.inner[1].resolve([:]) == '2'
+
+        // -- third set
+        out2.outChannel instanceof DataflowQueue
+        out2.outChannel == binding.t
+        out2.inner.size() == 2
+        // val("$foo")
+        out2.inner[0] instanceof ValueOutParam
+        out2.inner[0].name == null
+        out2.inner[0].index == 2
+        out2.inner[0].resolve([foo:'hello', bar:'world']) == 'hello'
+        // val { bar }
+        out2.inner[1] instanceof ValueOutParam
+        out2.inner[1].name == null
+        out2.inner[1].index == 2
+        out2.inner[1].resolve([foo:'hello', bar:'world']) == 'world'
+
+    }
 
     def testStdOut() {
 
@@ -573,6 +680,57 @@ class ParamsOutTest extends Specification {
         new FileOutParam(bind, list).mode == BasicMode.standard
         new SetOutParam(bind, list).mode == BasicMode.standard
 
+    }
+
+    def 'should fetch output value' () {
+
+        given:
+        def param = new ValueOutParam(new Binding(), [])
+
+        /*
+         * test input:
+         * val x
+         */
+        when:
+        param.target = new TokenVar('x')
+        then:
+        param.resolve(TestHelper.createTaskContext([x:'foo'])) == 'foo'
+
+        when:
+        param.resolve(TestHelper.createTaskContext([z:'foo']))
+        then:
+        def error = thrown(MissingPropertyException)
+        error.property == 'x'
+
+        /*
+         * test input:
+         * val { str }
+         */
+        when:
+        param.target = { str }
+        then:
+        param.resolve( TestHelper.createTaskContext([str:'foo']) ) == 'foo'
+
+        when:
+        param.resolve(TestHelper.createTaskContext([:]))
+        then:
+        error = thrown(MissingPropertyException)
+        error.property == 'str'
+
+        /*
+         * test input:
+         * val "${params.data}"
+         */
+        when:
+        param.target = "${->params.data}"
+        then:
+        param.resolve( TestHelper.createTaskContext([params:[data:99]]) ) == '99'
+
+        when:
+        param.resolve(TestHelper.createTaskContext([:]))
+        then:
+        error = thrown(MissingPropertyException)
+        error.property == 'params'
     }
 
 }

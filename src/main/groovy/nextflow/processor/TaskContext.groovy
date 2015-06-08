@@ -131,7 +131,7 @@ class TaskContext implements Map<String,Object> {
             return script.binding.getVariable(property.toString())
         }
 
-        throw new MissingPropertyException("Unknown variable '$property' -- Make sure you didn't misspell it or define somewhere in the script before use it")
+        throw new MissingPropertyException("Unknown variable '$property' -- Make sure you didn't misspell it or define somewhere in the script before use it", property as String, null)
     }
 
     Object invokeMethod(String name, Object args) {

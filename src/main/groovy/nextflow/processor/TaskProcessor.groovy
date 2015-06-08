@@ -1038,18 +1038,18 @@ abstract class TaskProcessor {
 
     protected void collectOutValues( TaskRun task, ValueOutParam param, Map ctx ) {
 
-        // look into the task inputs value for an *ValueInParam* entry
-        // having the same *name* as the requested output name
-        if( !ctx.containsKey(param.name) ) {
-            throw new MissingValueException("Missing value declared as output parameter: ${param.name}")
+        try {
+            // fetch the output value
+            final val = param.resolve(ctx)
+            // set into the output set
+            task.setOutput(param,val)
+            // trace the result
+            if( log.isTraceEnabled() )
+                log.trace "Collecting param: ${param.name}; value: ${val}"
         }
-
-        // bind the value
-        def val = ctx.get(param.name)
-        task.setOutput( param, val )
-
-        if( log.isTraceEnabled() )
-            log.trace "Collecting param: ${param.name}; value: ${val}"
+        catch( MissingPropertyException e ) {
+            throw new MissingValueException("Missing value declared as output parameter: ${e.property}")
+        }
 
     }
 
