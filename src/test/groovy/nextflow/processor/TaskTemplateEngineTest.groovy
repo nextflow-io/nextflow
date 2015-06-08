@@ -45,11 +45,12 @@ class TaskTemplateEngineTest extends Specification {
         gamma: ${bash var}
         say..: !{foo} !{obj.bar}
         not..: !Hello
+        $XXXXXX!{ZZZ}
         '''
                 .stripIndent()
 
         when:
-        def binding = [foo: 'Hello', obj: [bar: 'world!']]
+        def binding = [foo: 'Hello', obj: [bar: 'world!'], ZZZ: '___']
         def result = new TaskTemplateEngine()
                     .setPlaceholder('!' as char)
                     .createTemplate(text)
@@ -62,6 +63,7 @@ class TaskTemplateEngineTest extends Specification {
             gamma: ${bash var}
             say..: Hello world!
             not..: !Hello
+            $XXXXXX___
             '''
                 .stripIndent()
 
