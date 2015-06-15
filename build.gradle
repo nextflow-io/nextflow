@@ -237,6 +237,12 @@ task buildInfo << {
     file.text = src
 }
 
+String bytesToHex(byte[] bytes) {
+    StringBuffer result = new StringBuffer();
+    for (byte byt : bytes) result.append(Integer.toString((byt & 0xff) + 0x100, 16).substring(1));
+    return result.toString();
+}
+
 task makeSha1 << {
     byte[] digest
     String  str = file('nextflow').text
@@ -245,7 +251,7 @@ task makeSha1 << {
     file('nextflow.sha1').text = new BigInteger(1, digest).toString(16) + '\n'
     // create sha-256
     digest = java.security.MessageDigest.getInstance("SHA-256").digest(str.getBytes())
-    file('nextflow.sha256').text = new BigInteger(1, digest).toString(16) + '\n'
+    file('nextflow.sha256').text = bytesToHex(digest) + '\n'
 }
 
 /*
