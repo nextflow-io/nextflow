@@ -1024,7 +1024,7 @@ Using the closure syntax the above example can be rewritten as shown below::
     log1.subscribe { println "Log 1: $it" }
     log2.subscribe { println "Log 2: $it" }
 
-See also `into`_ and `separate`_ operators
+See also `into`_ and `separate`_ operators.
 
 
 merge
