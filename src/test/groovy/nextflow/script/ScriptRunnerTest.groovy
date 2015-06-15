@@ -25,7 +25,6 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Session
 import nextflow.exception.ProcessScriptException
 import nextflow.processor.ProcessConfig
-import nextflow.processor.TaskProcessor
 import spock.lang.Specification
 import test.TestParser
 /**
@@ -322,7 +321,7 @@ class ScriptRunnerTest extends Specification {
         def session = new Session( new ConfigSlurper().parse(config))
 
         when:
-        TaskProcessor process = new TestParser(session).parseScript(script).run()
+        def process = new TestParser(session).parseAndGetProcess(script)
 
         then:
         process.config instanceof ProcessConfig
@@ -371,7 +370,7 @@ class ScriptRunnerTest extends Specification {
         def session = new Session( new ConfigSlurper().parse(config))
 
         when:
-        TaskProcessor process = new TestParser(session).parseScript(script).run()
+        def process = new TestParser(session).parseAndGetProcess(script)
 
         then:
         process.config instanceof ProcessConfig
@@ -403,7 +402,7 @@ class ScriptRunnerTest extends Specification {
         def session = new Session(new ConfigSlurper().parse(config))
 
         when:
-        TaskProcessor process = new TestParser(session).parseScript(script).run()
+        def process = new TestParser(session).parseAndGetProcess(script)
 
         then:
         process.config instanceof ProcessConfig
@@ -436,7 +435,7 @@ class ScriptRunnerTest extends Specification {
         def session = new Session(new ConfigSlurper().parse(config))
 
         when:
-        TaskProcessor process = new TestParser(session).parseScript(script).run()
+        def process = new TestParser(session).parseAndGetProcess(script)
 
         then:
         process.config instanceof ProcessConfig
@@ -465,7 +464,7 @@ class ScriptRunnerTest extends Specification {
         def session = new Session(new ConfigSlurper().parse(config))
 
         when:
-        TaskProcessor process = new TestParser(session).parseScript(script).run()
+        def process = new TestParser(session).parseAndGetProcess(script)
 
         then:
         process.config instanceof ProcessConfig
@@ -509,7 +508,7 @@ class ScriptRunnerTest extends Specification {
 
         when:
         def session = new Session(config)
-        TaskProcessor process = new TestParser(session).parseScript(script).run()
+        def process = new TestParser(session).parseAndGetProcess(script)
         then:
         process.config instanceof ProcessConfig
         process.config.queue == 'short'
@@ -551,7 +550,7 @@ class ScriptRunnerTest extends Specification {
 
         when:
         def session = new Session()
-        TaskProcessor process = new TestParser(session).parseScript(script).run()
+        def process = new TestParser(session).parseAndGetProcess(script)
         then:
         process.config instanceof ProcessConfig
         process.config.cpus == null

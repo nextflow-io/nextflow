@@ -19,10 +19,9 @@
  */
 
 package nextflow.script
-import static test.TestParser.parse
+import static test.TestParser.parseAndReturnProcess
 
 import groovyx.gpars.dataflow.DataflowVariable
-import nextflow.processor.TaskProcessor
 import spock.lang.Specification
 /**
  *
@@ -49,7 +48,7 @@ class ParamsSharedTest extends Specification {
 
         def binding = [:]
         when:
-        TaskProcessor process = parse(text, binding).run()
+        def process = parseAndReturnProcess(text, binding)
         ValueSharedParam share1 = process.config.getInputs().get(0)
         ValueSharedParam share2 = process.config.getInputs().get(1)
         ValueSharedParam share3 = process.config.getInputs().get(2)
@@ -95,7 +94,7 @@ class ParamsSharedTest extends Specification {
 
         def binding = [:]
         when:
-        TaskProcessor process = parse(text, binding).run()
+        def process = parseAndReturnProcess(text, binding)
         process.config.getInputs().get(0).inChannel
 
         then:
@@ -124,7 +123,7 @@ class ParamsSharedTest extends Specification {
 
         def binding = [:]
         when:
-        TaskProcessor process = parse(text, binding).run()
+        def process = parseAndReturnProcess(text, binding)
         ValueSharedParam share1 = process.config.getInputs().get(0)
         ValueSharedParam share2 = process.config.getInputs().get(1)
         ValueSharedParam share3 = process.config.getInputs().get(2)
@@ -169,7 +168,7 @@ class ParamsSharedTest extends Specification {
             '''
 
         when:
-        TaskProcessor process = parse(text).run()
+        def process = parseAndReturnProcess(text)
         ValueSharedParam share1 = process.config.getInputs().get(0)
         ValueSharedParam share2 = process.config.getInputs().get(1)
 
@@ -209,7 +208,7 @@ class ParamsSharedTest extends Specification {
 
         def binding = [:]
         when:
-        TaskProcessor process = parse(text, binding).run()
+        def process = parseAndReturnProcess(text, binding)
         FileSharedParam share0 = process.config.getInputs().get(0)
         FileSharedParam share1 = process.config.getInputs().get(1)
         FileSharedParam share2 = process.config.getInputs().get(2)

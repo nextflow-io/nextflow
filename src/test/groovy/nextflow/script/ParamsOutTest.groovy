@@ -19,10 +19,9 @@
  */
 
 package nextflow.script
-import static test.TestParser.parse
+import static test.TestParser.parseAndReturnProcess
 
 import groovyx.gpars.dataflow.DataflowQueue
-import nextflow.processor.TaskProcessor
 import spock.lang.Specification
 /**
  *
@@ -49,7 +48,7 @@ class ParamsOutTest extends Specification {
             '''
 
         def binding = [:]
-        TaskProcessor process = parse(text, binding).run()
+        def process = parseAndReturnProcess(text, binding)
 
         when:
         def out0 = process.config.getOutputs().get(0)
@@ -89,7 +88,7 @@ class ParamsOutTest extends Specification {
             '''
 
         def binding = [:]
-        TaskProcessor process = parse(text, binding).run()
+        def process = parseAndReturnProcess(text, binding)
 
         when:
         def out1 = process.config.getOutputs().get(0)
@@ -141,7 +140,7 @@ class ParamsOutTest extends Specification {
             '''
 
         def binding = [:]
-        TaskProcessor process = parse(text, binding).run()
+        def process = parseAndReturnProcess(text, binding)
         def ctx = [x: 'hola', y:99, z:'script_file']
 
         when:
@@ -210,7 +209,7 @@ class ParamsOutTest extends Specification {
             '''
 
         def binding = [ x: 'hola', y:'hola_2', z: 'hola_z' ]
-        TaskProcessor process = parse(text, binding).run()
+        def process = parseAndReturnProcess(text, binding)
 
         when:
         FileOutParam out1 = process.config.getOutputs().get(0)
@@ -254,7 +253,7 @@ class ParamsOutTest extends Specification {
             '''
 
         def binding = [:]
-        TaskProcessor process = parse(text, binding).run()
+        def process = parseAndReturnProcess(text, binding)
 
         when:
         FileOutParam out1 = process.config.getOutputs().get(0)
@@ -281,7 +280,7 @@ class ParamsOutTest extends Specification {
             '''
 
         def binding = [x: 'hola', y:99, z:'script_file', params: [fileName: 'hello']]
-        TaskProcessor process = parse(text, binding).run()
+        def process = parseAndReturnProcess(text, binding)
 
         when:
         FileOutParam out1 = process.config.getOutputs().get(0)
@@ -332,7 +331,7 @@ class ParamsOutTest extends Specification {
             }
             '''
 
-        TaskProcessor process = parse(text, [:]).run()
+        def process = parseAndReturnProcess(text, [:])
 
         when:
         FileOutParam out0 = process.config.getOutputs().get(0)
@@ -379,7 +378,7 @@ class ParamsOutTest extends Specification {
             '''
 
         def binding = [:]
-        TaskProcessor process = parse(text, binding).run()
+        def process = parseAndReturnProcess(text, binding)
 
         when:
         SetOutParam out1 = process.config.getOutputs().get(0)
@@ -439,7 +438,7 @@ class ParamsOutTest extends Specification {
             '''
 
         def binding = [:]
-        TaskProcessor process = parse(text, binding).run()
+        def process = parseAndReturnProcess(text, binding)
 
         when:
         SetOutParam out1 = process.config.getOutputs().get(0)
@@ -498,7 +497,7 @@ class ParamsOutTest extends Specification {
             '''
 
         def binding = [:]
-        TaskProcessor process = parse(text, binding).run()
+        def process = parseAndReturnProcess(text, binding)
 
         when:
         def out1 = process.config.getOutputs().get(0)

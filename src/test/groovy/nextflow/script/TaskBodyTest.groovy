@@ -19,12 +19,9 @@
  */
 
 package nextflow.script
+import static test.TestParser.parseAndReturnProcess
 
-import static test.TestParser.parse
-
-import nextflow.processor.TaskProcessor
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -77,7 +74,7 @@ class TaskBodyTest extends Specification {
         }
         '''
         when:
-        TaskProcessor process = parse(text).run()
+        def process = parseAndReturnProcess(text)
         then:
         process.taskBody.valRefs == [
                 new TokenValRef('x', 13, 20),

@@ -85,6 +85,21 @@ class ProcessFactory {
     }
 
     /**
+     * Create a new task processor and initialise with the given parameters
+     *
+     * @param name The processor name
+     * @param executor The executor object
+     * @param session The session object
+     * @param script The owner script
+     * @param config The process configuration
+     * @param taskBody The process task body
+     * @return An instance of {@link TaskProcessor}
+     */
+    protected TaskProcessor newTaskProcessor( String name, Executor executor, Session session, BaseScript script, ProcessConfig config, TaskBody taskBody ) {
+        new ParallelTaskProcessor(name, executor, session, script, config, taskBody)
+    }
+
+    /**
      * Extract the executor name by using the annotation {@code ServiceName} or fallback to simple classname
      * if the annotation is not provided
      *
@@ -224,9 +239,7 @@ class ProcessFactory {
         execObj.init()
 
         // create processor class
-        def result = ParallelTaskProcessor.class.newInstance( name, execObj, session, owner, taskConfig, script )
-        return result
-
+        newTaskProcessor( name, execObj, session, owner, taskConfig, script )
     }
 
     /**

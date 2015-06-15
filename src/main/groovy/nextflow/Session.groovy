@@ -125,8 +125,6 @@ class Session implements ISession {
 
     boolean getStatsEnabled() { statsEnabled }
 
-    protected boolean testReturnTaskProcessor = false
-
     /**
      * Creates a new session with an 'empty' (default) configuration
      */

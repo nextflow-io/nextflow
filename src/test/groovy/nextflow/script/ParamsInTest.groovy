@@ -20,7 +20,7 @@
 
 package nextflow.script
 
-import static test.TestParser.parse
+import static test.TestParser.parseAndReturnProcess
 
 import java.nio.file.Paths
 
@@ -59,7 +59,7 @@ class ParamsInTest extends Specification {
             '''
 
         when:
-        TaskProcessor process = parse(text).run()
+        def process = parseAndReturnProcess(text)
         def in1 = process.config.getInputs().get(0)
         def in2 = process.config.getInputs().get(1)
         def in3 = process.config.getInputs().get(2)
@@ -107,7 +107,7 @@ class ParamsInTest extends Specification {
             '''
 
         when:
-        TaskProcessor process = parse(text).run()
+        TaskProcessor process = parseAndReturnProcess(text)
         def in1 = process.config.getInputs().get(0)
         def in2 = process.config.getInputs().get(1)
         def in3 = process.config.getInputs().get(2)
@@ -130,7 +130,7 @@ class ParamsInTest extends Specification {
 
     }
 
-    def testFailFromMutlipleChannels() {
+    def testFailFromMultipleChannels() {
         setup:
         def text = '''
             A = Channel.create()
@@ -145,7 +145,7 @@ class ParamsInTest extends Specification {
             '''
 
         when:
-        TaskProcessor process = parse(text).run()
+        parseAndReturnProcess(text)
         then:
         thrown(IllegalArgumentException)
 
@@ -169,7 +169,7 @@ class ParamsInTest extends Specification {
             '''
 
         when:
-        TaskProcessor process = parse(text).run()
+        def process = parseAndReturnProcess(text)
         FileInParam in1 = process.config.getInputs().get(0)
         FileInParam in2 = process.config.getInputs().get(1)
         FileInParam in3 = process.config.getInputs().get(2)
@@ -223,7 +223,7 @@ class ParamsInTest extends Specification {
             '''
 
         when:
-        TaskProcessor process = parse(text).run()
+        def process = parseAndReturnProcess(text)
         FileInParam in1 = process.config.getInputs().get(0)
         FileInParam in2 = process.config.getInputs().get(1)
         FileInParam in3 = process.config.getInputs().get(2)
@@ -263,7 +263,7 @@ class ParamsInTest extends Specification {
             '''
 
         when:
-        TaskProcessor process = parse(text).run()
+        def process = parseAndReturnProcess(text)
         FileInParam in1 = process.config.getInputs().get(0)
         FileInParam in2 = process.config.getInputs().get(1)
         FileInParam in3 = process.config.getInputs().get(2)
@@ -306,7 +306,7 @@ class ParamsInTest extends Specification {
             '''
 
         when:
-        TaskProcessor process = parse(text).run()
+        def process = parseAndReturnProcess(text)
         def in1 = process.config.getInputs().get(0)
         def in2 = process.config.getInputs().get(1)
 
@@ -338,7 +338,7 @@ class ParamsInTest extends Specification {
             '''
 
         when:
-        TaskProcessor process = parse(text).run()
+        def process = parseAndReturnProcess(text)
         def in1 = process.config.getInputs().get(0)
         def in2 = process.config.getInputs().get(1)
 
@@ -376,7 +376,7 @@ class ParamsInTest extends Specification {
             '''
 
         when:
-        TaskProcessor process = parse(text).run()
+        def process = parseAndReturnProcess(text)
         SetInParam in1 = process.config.getInputs().get(0)
         SetInParam in2 = process.config.getInputs().get(1)
         SetInParam in3 = process.config.getInputs().get(2)
@@ -468,7 +468,7 @@ class ParamsInTest extends Specification {
             '''
 
         when:
-        TaskProcessor process = parse(text).run()
+        def process = parseAndReturnProcess(text)
         SetInParam in0 = process.config.getInputs().get(0)
         SetInParam in1 = process.config.getInputs().get(1)
         SetInParam in2 = process.config.getInputs().get(2)
@@ -518,7 +518,7 @@ class ParamsInTest extends Specification {
             '''
 
         when:
-        TaskProcessor process = parse(text).run()
+        def process = parseAndReturnProcess(text)
         SetInParam in0 = process.config.getInputs().get(0)
         SetInParam in1 = process.config.getInputs().get(1)
         SetInParam in2 = process.config.getInputs().get(2)
@@ -589,7 +589,7 @@ class ParamsInTest extends Specification {
         def binding =  [:]
         binding.q = new DataflowQueue<>()
         binding.q << 1 << 2 << 3  << Channel.STOP
-        TaskProcessor process = parse(text, binding).run()
+        def process = parseAndReturnProcess(text, binding)
         def in1 = process.config.getInputs().get(0)
         def in2 = process.config.getInputs().get(1)
         def in3 = process.config.getInputs().get(2)
@@ -626,7 +626,7 @@ class ParamsInTest extends Specification {
             }
             '''
         when:
-        TaskProcessor process = parse(text).run()
+        def process = parseAndReturnProcess(text)
         process.config.getInputs().get(0).inChannel
 
         then:

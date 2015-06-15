@@ -21,12 +21,19 @@
 package test
 import java.nio.file.Path
 
+import groovy.transform.InheritConstructors
 import nextflow.Channel
 import nextflow.Nextflow
 import nextflow.Session
 
 import nextflow.ast.NextflowDSL
+import nextflow.executor.Executor
+import nextflow.processor.ParallelTaskProcessor
+import nextflow.processor.ProcessConfig
+import nextflow.processor.ProcessFactory
+import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
+import nextflow.script.TaskBody
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -38,23 +45,21 @@ import org.codehaus.groovy.control.customizers.ImportCustomizer
  */
 class TestParser {
 
-    def session
+    Session session
 
     TestParser( Map config = null ) {
         session = config ? new Session(config) : new Session()
-        session.testReturnTaskProcessor = true
     }
 
     TestParser( Session session1 ) {
         session = session1
-        session.testReturnTaskProcessor = true
     }
 
-    def parseScript ( String scriptText, Map map = null ) {
+    def BaseScript parseScript ( String scriptText, Map map = null ) {
         parseScript(scriptText, new Binding(map))
     }
 
-    def parseScript( String scriptText, Binding binding ) {
+    def BaseScript parseScript( String scriptText, Binding binding ) {
 
         def importCustomizer = new ImportCustomizer()
         importCustomizer.addImports( StringUtils.name, groovy.transform.Field.name )
@@ -72,13 +77,41 @@ class TestParser {
 
         // run and wait for termination
         def groovy = new GroovyShell(gcl, binding, config)
-        groovy.parse( scriptText ) as BaseScript
+        def script = groovy.parse( scriptText ) as BaseScript
+        // initialize it
+        script.setSession(session)
+        script.setProcessFactory(new MockProcessFactory(script, session))
+        // return it
+        return script
+    }
 
+    def TaskProcessor parseAndGetProcess( String scriptText ) {
+        def script = parseScript(scriptText)
+        script.run()
+        return script.getTaskProcessor()
     }
 
 
-    static parse ( String scriptText, Map map = [:] ) {
-        new TestParser().parseScript(scriptText, map)
+    static TaskProcessor parseAndReturnProcess( String scriptText, Map map = [:] ) {
+        def script = new TestParser().parseScript(scriptText, map)
+        script.run()
+        return script.getTaskProcessor()
+    }
+
+
+    @InheritConstructors
+    static class MockProcessFactory extends ProcessFactory  {
+
+        TaskProcessor newTaskProcessor( String name, Executor executor, Session session, BaseScript script, ProcessConfig config, TaskBody taskBody ) {
+            new MockTaskProcessor(name, executor, session, script, config, taskBody)
+        }
+
+    }
+
+    @InheritConstructors
+    static class MockTaskProcessor extends ParallelTaskProcessor {
+        @Override
+        def run () { }
     }
 
 }

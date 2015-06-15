@@ -19,7 +19,6 @@
  */
 
 package nextflow.script
-
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Global
@@ -43,16 +42,24 @@ abstract class BaseScript extends Script {
     /*
      * The script execution session, declare it private to prevent the user script to be able to access it
      */
-    @Lazy
-    private Session session = { Global.session as Session } ()
+    private Session sessionObj
 
-    private boolean isTest = { session.testReturnTaskProcessor } ()
+    @PackageScope
+    void setSession( Session value )  {
+        sessionObj = value
+    }
+
+    private Session getSession() {
+        if( !sessionObj ) {
+            sessionObj = Global.session as Session
+        }
+        return sessionObj
+    }
 
     /**
      * Holds the configuration object which will used to execution the user tasks
      */
-    @Lazy
-    Map config = { session.config } ()
+    Map getConfig() { getSession().getConfig() }
 
     @Lazy
     InputStream stdin = { System.in }()
@@ -69,8 +76,19 @@ abstract class BaseScript extends Script {
     @PackageScope
     Object getResult() { result }
 
-    @Lazy
-    private ProcessFactory processFactory = new ProcessFactory(this,session)
+    private ProcessFactory processFactory
+
+    private getProcessFactory() {
+        if( !processFactory ) {
+            processFactory = new ProcessFactory(this, getSession())
+        }
+        return processFactory
+    }
+
+    @PackageScope
+    void setProcessFactory( ProcessFactory value ) {
+        this.processFactory = value
+    }
 
     /**
      * Enable disable task 'echo' configuration property
@@ -94,12 +112,8 @@ abstract class BaseScript extends Script {
      * @param body The body of the process declaration. It holds all the process definitions: inputs, outputs, code, etc.
      */
     protected process( Map<String,?> args, String name, Closure body ) {
-
         // create the process
-        taskProcessor = processFactory.createProcessor(name, body, args)
-        if( isTest )
-            return taskProcessor
-
+        taskProcessor = getProcessFactory().createProcessor(name, body, args)
         // launch it
         result = taskProcessor.run()
     }
@@ -116,15 +130,10 @@ abstract class BaseScript extends Script {
      * @param body The body of the process declaration. It holds all the process definitions: inputs, outputs, code, etc.
      */
     protected process( String name, Closure body ) {
-
         // create the process
-        taskProcessor = processFactory.createProcessor(name, body )
-        if( isTest )
-            return taskProcessor
-
+        taskProcessor = getProcessFactory().createProcessor(name, body)
         // launch it
         result = taskProcessor.run()
     }
-
 
 }
