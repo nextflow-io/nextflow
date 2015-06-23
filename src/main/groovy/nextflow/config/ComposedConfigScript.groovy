@@ -19,7 +19,6 @@
  */
 
 package nextflow.config
-
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -74,8 +73,8 @@ abstract class ComposedConfigScript extends Script {
         if( configStack == null )
             configStack = new Stack<>()
 
-        def owner = configStack ? this.configStack.peek() : null
-        def includePath = FileHelper.asPath(includeFile.toString())
+        Path owner = configStack ? this.configStack.peek() : null
+        Path includePath = FileHelper.asPath(includeFile.toString())
         log.trace "Include config file: $includeFile [parent: $owner]"
 
         if( !includePath.isAbsolute() && owner ) {
@@ -100,9 +99,10 @@ abstract class ComposedConfigScript extends Script {
          * here it is the magic code
          */
         def script = (ComposedConfigScript)clazz.newInstance()
-        script.setMetaClass(this.metaClass)
-        script.setBinding(this.getBinding())
         script.setConfigStack(this.configStack)
+        script.setBinding(this.getBinding())
+        script.metaClass.getProperty = { String name -> this.metaClass.getProperty(this, name) }
+        script.metaClass.invokeMethod = { String name, args -> this.metaClass.invokeMethod(this, name, args)}
         script.&run.call()
 
         // remove the path from the stack

@@ -95,6 +95,52 @@ class ComposedConfigSlurperTest extends Specification {
 
     }
 
+    def 'should parse include config using dot properties syntax' () {
+
+        given:
+        def folder = File.createTempDir()
+        def snippet1 = new File(folder,'config1.txt').absoluteFile
+        def snippet2 = new File(folder,'config2.txt').absoluteFile
+
+
+        def text = """
+        process.name = 'alpha'
+        includeConfig "$snippet1"
+        """
+
+        snippet1.text = """
+        params.xxx = 'x'
+
+        process.cpus = 4
+        process.memory = '8GB'
+
+        includeConfig("$snippet2")
+        """
+
+        snippet2.text = '''
+        params.yyy = 'y'
+        process { disk = '1TB' }
+        process.resources.foo = 1
+        process.resources.bar = 2
+        '''
+
+        when:
+        def config = new ComposedConfigSlurper().setBinding().parse(text)
+        then:
+        config.params.xxx == 'x'
+        config.params.yyy == 'y'
+        config.process.name == 'alpha'
+        config.process.cpus == 4
+        config.process.memory == '8GB'
+        config.process.disk == '1TB'
+        config.process.resources.foo == 1
+        config.process.resources.bar == 2
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
     def 'should parse multiple relative files' () {
 
         given:
