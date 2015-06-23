@@ -19,6 +19,8 @@
  */
 
 package nextflow.extension
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING
+
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.FileAlreadyExistsException
@@ -30,7 +32,6 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.NotLinkException
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
-import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileTime
@@ -190,7 +191,7 @@ class FilesEx {
 
         if( target.isDirectory() ) {
             target = target.resolve(source.getName())
-            return Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING)
+            return Files.copy(source, target, REPLACE_EXISTING)
         }
 
         // create the target parent directories if do not exist
@@ -199,7 +200,7 @@ class FilesEx {
             parent.mkdirs()
         }
 
-        return Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING)
+        return Files.copy(source, target, REPLACE_EXISTING)
     }
 
     /**
@@ -221,7 +222,7 @@ class FilesEx {
                 def newFolder = delta ? target.resolve(delta) : target
                 FilesEx.log.trace "Copy DIR: $current -> $newFolder"
                 // this `copy` creates the new folder, but does not copy the contained files
-                Files.copy(current, newFolder, StandardCopyOption.REPLACE_EXISTING)
+                Files.copy(current, newFolder, REPLACE_EXISTING)
                 return FileVisitResult.CONTINUE;
             }
 
@@ -233,7 +234,7 @@ class FilesEx {
                 def delta = source.relativize(current)?.toString()
                 def newFile = delta ? target.resolve(delta) : target
                 FilesEx.log.trace "Copy file: $current -> $newFile"
-                Files.copy(current, newFile, StandardCopyOption.REPLACE_EXISTING)
+                Files.copy(current, newFile, REPLACE_EXISTING)
                 return FileVisitResult.CONTINUE;
             }
 
@@ -302,12 +303,12 @@ class FilesEx {
             if( target.isDirectory() ) {
                 // when the target path is a directory
                 // move the source path into the target folder
-                return Files.move(source, target.resolve(source.getFileName()))
+                return Files.move(source, target.resolve(source.getFileName()), REPLACE_EXISTING)
             }
             else {
                 def parent = target.getParent()
                 if( parent && !parent.exists()) { parent.mkdirs() }
-                return Files.move(source, target)
+                return Files.move(source, target, REPLACE_EXISTING)
             }
         }
 
@@ -315,7 +316,7 @@ class FilesEx {
         // move the source file into the target using the same name
         if( target.isDirectory() ) {
             target = target.resolve(source.getName())
-            return Files.move(source, target)
+            return Files.move(source, target, REPLACE_EXISTING)
         }
 
         // create the parent directories if do not exist
@@ -324,7 +325,7 @@ class FilesEx {
 
         // move the source file to the target file,
         // overwriting the target if exists
-        return Files.move(source, target, StandardCopyOption.REPLACE_EXISTING)
+        return Files.move(source, target, REPLACE_EXISTING)
     }
 
     def static Path moveTo( Path source, String target ) {

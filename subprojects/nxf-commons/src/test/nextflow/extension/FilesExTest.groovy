@@ -317,10 +317,65 @@ class FilesExTest extends Specification {
         sourceFolder?.deleteDir()
         targetFolder.getParent()?.deleteDir()
 
-
     }
 
-    def testFileShit() {
+    def 'move should overwrite target file' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('source.txt').text = 'Hello world'
+        folder.resolve('target.txt').text = 'blah blah'
+        assert folder.resolve('target.txt').exists()
+
+        when:
+        folder.resolve('source.txt').moveTo(folder.resolve('target.txt'))
+        then:
+        folder.resolve('target.txt').text == 'Hello world'
+        !folder.resolve('source.txt').exists()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'move should overwrite target file with dir' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('dir1').mkdir()
+        folder.resolve('file.txt').text = 'Hello world'
+        folder.resolve('dir1/file.txt').text = 'blah blah'
+
+        when:
+        folder.resolve('file.txt').moveTo(folder.resolve('dir1'))
+        then:
+        folder.resolve('dir1/file.txt').text == 'Hello world'
+        !folder.resolve('file.txt').exists()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'move should overwrite target dir' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('dir1').mkdir()
+        folder.resolve('dir2').mkdir()
+
+        folder.resolve('dir1/file_a').text = 'AAA'
+        folder.resolve('dir1/file_b').text = 'BBB'
+        folder.resolve('dir2/target').text = 'ZZZ'
+
+        when:
+        folder.resolve('dir1').moveTo(folder.resolve('dir2/target'))
+
+        then:
+        !folder.resolve('dir1').exists()
+        folder.resolve('dir2/target/file_a').text == 'AAA'
+        folder.resolve('dir2/target/file_b').text == 'BBB'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def testFileShift() {
 
         setup:
         def file = new File('test_file_shift')
