@@ -1,6 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.14.2 - 25 Jun 2015
+- Fixed issue #48 - IncludeConfig does not support dot properties syntax
+- Fixed issue #49 - GridGain executor raises a NPE exception when launching a native process
+- Fixed issue #52 - Method `moveTo` should not throw a `FileAlreadyExistsException` when target file already exists
+
 0.14.1 - 8 Jun 2015
 - Strip colon character from grid task name
 - Fixed synchronisation issue that caused pipeline hung when execution was aborted
