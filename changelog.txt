@@ -1,6 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.14.3 - 3 Jul 2015 
+0 Fixed isse #53 - Cannot access files list entry by using square bracket syntax
+
 0.14.2 - 25 Jun 2015
 - Fixed issue #48 - IncludeConfig does not support dot properties syntax
 - Fixed issue #49 - GridGain executor raises a NPE exception when launching a native process
