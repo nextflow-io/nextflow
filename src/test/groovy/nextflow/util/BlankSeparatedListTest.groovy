@@ -28,11 +28,23 @@ import spock.lang.Specification
  */
 class BlankSeparatedListTest extends Specification {
 
-    def testToString() {
+    def 'should return a blank separated list of values'() {
 
         expect:
         new BlankSeparatedList('a'..'z').toString() == ('a'..'z').join(' ')
         "${new BlankSeparatedList('a'..'z')}" == ('a'..'z').join(' ')
 
     }
+
+
+    def 'should access entry with square brackets'() {
+
+        when:
+        def x = new BlankSeparatedList('a'..'z')
+        then:
+        x[0] == 'a'
+        x[1] == 'b'
+        x[2] == 'c'
+    }
+
 }

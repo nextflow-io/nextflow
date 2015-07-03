@@ -63,4 +63,8 @@ public class BlankSeparatedList implements KryoSerializable {
         kryo.writeObject(output, target)
     }
 
+    def getAt( int index ) {
+        target.getAt(index)
+    }
+
 }
