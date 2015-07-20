@@ -70,8 +70,9 @@ Copy the following example into a file named `pipeline.nf` .
          file top_hits
 
         """
-        blastp -db ${params.db} -query ${params.query} -outfmt 6 > blast_result
-        cat blast_result | head -n 10 | cut -f 2 > top_hits
+        blastp -query ${params.query} -db ${params.db} -outfmt 6 \
+        | head -n 10 \
+        | cut -f 2 > top_hits
         """
     }
 
@@ -141,7 +142,7 @@ Currently the following clusters are supported:
   
   + Oracle Grid Engine (SGE)
   + Platform LSF
-  + SLURM (beta)
+  + Linux SLURM
   + PBS/Torque (beta)
 
 
@@ -166,15 +167,21 @@ the global *Nextflow* configuration.
 Cloud support
 -------------
 
-*Nextflow* provides an experimental support for [DNAnexus](http://www.dnanexus.com) cloud platform.
+Nextflow provides build-in support for [ClusterK](https://clusterk.com/) cloud platform
+and [Amazon S3](http://aws.amazon.com/s3/) storage. 
 
-Since this requires some extra runtime dependencies, to have Nextflow running on the DNAnexus you will need
-to compile and build *Nextflow* from source using the following command:
+To run your pipeline script in the ClusterK cloud you will only need to add the following settings in the 
+`nextflow.config` configuration file: 
 
-    ./gradlew dnanexus
+    process {
+      executor = 'cirrus'
+      queue = '<ClusterK queue name>'
+    }
 
+When launching the pipeline execution provide a S3 bucket as the pipeline working directory, for example: 
 
-Read more about the building procedure in the following section.
+    nextflow run my_script.nf -w s3://my_s3_bucket/work/path
+
 
 Required dependencies
 ---------------------
