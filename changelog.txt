@@ -1,6 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.14.4 - 20 Jul 2015
+- Fixed issue #54 - Nextflow installer does not work when running behind a proxy server
+- Upgraded Capsule package manager to version 1.0-rc2
+
 0.14.3 - 3 Jul 2015 
 - Fixed issue #53 - Cannot access files list entry by using square bracket syntax
 
