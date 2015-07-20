@@ -20,7 +20,6 @@
 
 import static org.junit.Assert.assertEquals;
 
-import java.nio.file.Paths;
 import java.util.Arrays;
 
 import org.junit.Test;
@@ -44,12 +43,10 @@ public class CapsuleLoaderTest {
     @Test
     public void testExtendClasspath() {
         assertEquals( CapsuleLoader.extendClassPathWith(null, null), null );
-
-        assertEquals( CapsuleLoader.extendClassPathWith("x", null), Arrays.asList(Paths.get("x")));
-        assertEquals( CapsuleLoader.extendClassPathWith("x:y ", null), Arrays.asList(Paths.get("x"), Paths.get("y")));
-        assertEquals( CapsuleLoader.extendClassPathWith("x :: y ", null), Arrays.asList(Paths.get("x"), Paths.get("y")));
-
-        assertEquals( CapsuleLoader.extendClassPathWith("x:y:z", Arrays.asList(Paths.get("lib1.jar"), Paths.get("lib2.jar"))), Arrays.asList( Paths.get("lib1.jar"), Paths.get("lib2.jar"), Paths.get("x"), Paths.get("y"), Paths.get("z")));
+        assertEquals( CapsuleLoader.extendClassPathWith("x", null), Arrays.asList("x"));
+        assertEquals( CapsuleLoader.extendClassPathWith("x:y ", null), Arrays.asList("x","y"));
+        assertEquals( CapsuleLoader.extendClassPathWith("x :: y ", null), Arrays.asList("x","y"));
+        assertEquals( CapsuleLoader.extendClassPathWith("x:y:z", Arrays.asList("lib1.jar","lib2.jar")), Arrays.asList( "lib1.jar","lib2.jar","x","y","z"));
 
     }
 

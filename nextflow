@@ -88,6 +88,23 @@ function install() {
     echo ''
 }
 
+function launch_nextflow() {
+    # the launch command line
+    local cmdline="${launcher[@]} ${args[@]}"
+
+    # start in daemon mode
+    if [[ "$bg" ]]; then
+      local pid_file="${NXF_PID_FILE:-.nextflow.pid}"
+      bash -c "exec $cmdline" &
+      disown
+      printf $! > "$pid_file"
+      exit 0
+    fi
+    # trampoline syntax -- https://github.com/puniverse/capsule/pull/71
+    exec bash -c "exec $cmdline"
+    exit 1
+}
+
 # check self-install
 if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
     if [ -d nextflow ]; then
@@ -234,7 +251,7 @@ fi
 [[ "$cmd" == "node" && ! "$NXF_MODE" ]] && NXF_MODE='gridgain'
 
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}
-JAVA_OPTS="-noverify -Dcapsule.trampoline"
+JAVA_OPTS="-noverify -Dcapsule.trampoline -Dcapsule.java.cmd=$JAVA_CMD"
 if [[ $cmd == console ]]; then bg=1;
 else JAVA_OPTS+=" -Djava.awt.headless=true"
 fi
@@ -254,15 +271,6 @@ fi
 export JAVA_CMD
 export CAPSULE_CACHE_DIR
 
-# Start in daemon mode
-if [[ "$bg" ]]; then
-  NXF_PID_FILE=${NXF_PID_FILE:-'.nextflow.pid'}
-  `"$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"` "${args[@]}" &
-  disown
-  printf $! > $NXF_PID_FILE
-  exit 0
-fi
-
 # lookup the a `md5` command
 if hash md5sum 2>/dev/null; then MD5=md5sum;
 elif hash gmd5sum 2>/dev/null; then MD5=gmd5sum;
@@ -272,7 +280,8 @@ fi
 
 # when no md5 command is available fallback on default execution
 if [ ! "$MD5" ] || [ "$CAPSULE_RESET" ]; then
-    exec `"$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"` "${args[@]}"
+    launcher=($("$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"))
+    launch_nextflow
     exit 1
 fi
 
@@ -292,14 +301,14 @@ EOF
 # checked if a cached classpath file exists and it newer that the nextflow boot jar file
 LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
 if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ]; then
-    LAUNCHER=$(cat "$LAUNCH_FILE")
+    launcher=($(cat "$LAUNCH_FILE"))
 else
-    # otherwise run the capsule and get the result classpath in the 'LAUNCHER' and save it to a file
-    LAUNCHER=`"$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"`
+    # otherwise run the capsule and get the result classpath in the 'launcher' and save it to a file
+    launcher=($("$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"))
     [[ $? -ne 0 ]] && echo 'Unable to initialize nextflow environment' && exit $?
     mkdir -p ${NXF_LAUNCHER}
-    echo "$LAUNCHER" > "$LAUNCH_FILE"
+    echo "${launcher[@]}" > "$LAUNCH_FILE"
 fi
 
-exec $LAUNCHER "${args[@]}"
-exit 1
+# finally run it
+launch_nextflow

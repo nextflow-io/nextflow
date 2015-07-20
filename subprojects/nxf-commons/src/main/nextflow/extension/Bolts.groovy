@@ -211,6 +211,49 @@ class Bolts {
         StringUtils.uncapitalize(self)
     }
 
+    /**
+     * Check if a alphabetic characters in a string are lowercase. Non alphabetic characters are ingored
+     * @param self The string to check
+     * @return {@true} if the string contains no uppercase characters, {@code false} otherwise
+     */
+    static boolean isLowerCase(String self) {
+        if( self ) for( int i=0; i<self.size(); i++ ) {
+            if( Character.isUpperCase(self.charAt(i)))
+                return false
+        }
+        return true
+    }
+
+    /**
+     * Check if a alphabetic characters in a string are uppercase. Non alphabetic characters are ignored
+     * @param self The string to check
+     * @return {@true} if the string contains no lowercase characters, {@code false} otherwise
+     */
+    static boolean isUpperCase(String self) {
+        if( self ) for( int i=0; i<self.size(); i++ ) {
+            if( Character.isLowerCase(self.charAt(i)))
+                return false
+        }
+        return true
+    }
+
+    /**
+     * Check if ALL characters in a string are lowercase.
+     * @param self The string to check
+     * @return {@true} when all characters are uppercase, {@code false} otherwise
+     */
+    static boolean isAllLowerCase(String self) {
+        StringUtils.isAllLowerCase(self)
+    }
+
+    /**
+     * Check if ALL characters in a string are uppercase.
+     * @param self The string to check
+     * @return {@true} when all characters are uppercase, {@code false} otherwise
+     */
+    static boolean isAllUpperCase(String self) {
+        StringUtils.isAllUpperCase(self)
+    }
 
     static private Pattern getPattern( obj ) {
 

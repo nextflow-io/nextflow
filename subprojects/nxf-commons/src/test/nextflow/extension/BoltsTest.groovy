@@ -178,4 +178,32 @@ class BoltsTest extends Specification {
         salut.findBestMatchesFor('helo') == ['hello','halo']
     }
 
+    def 'should check lower case strings' () {
+        expect:
+        'abc'.isLowerCase()
+        !'AAA'.isLowerCase()
+        '1a11a1a'.isLowerCase()
+    }
+
+    def 'should check upper case strings' () {
+        expect:
+        'ABCD'.isUpperCase()
+        !'aaaa'.isUpperCase()
+        '1A11A1A'.isUpperCase()
+    }
+
+    def 'should check all lower case strings' () {
+        expect:
+        'abc'.isAllLowerCase()
+        !'AAA'.isAllLowerCase()
+        !'1a11a1a'.isAllLowerCase()
+    }
+
+    def 'should check all upper case strings' () {
+        expect:
+        'ABCD'.isAllUpperCase()
+        !'aaaa'.isAllUpperCase()
+        !'1A11A1A'.isAllUpperCase()
+    }
+
 }

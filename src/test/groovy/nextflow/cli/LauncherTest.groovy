@@ -243,16 +243,28 @@ class LauncherTest extends Specification {
         def httpsProxyPort =System.getProperty('https.proxyPort')
 
         when:
-        Launcher.setProxy('http', [HTTP_PROXY: 'alpha.com:333'])
+        Launcher.setProxy('HTTP', [HTTP_PROXY: 'alpha.com:333'])
         then:
         System.getProperty('http.proxyHost') == 'alpha.com'
         System.getProperty('http.proxyPort') == '333'
 
         when:
-        Launcher.setProxy('https', [HTTPS_PROXY: 'beta.com:5466'])
+        Launcher.setProxy('http', [http_proxy: 'gamma.com:444'])
+        then:
+        System.getProperty('http.proxyHost') == 'gamma.com'
+        System.getProperty('http.proxyPort') == '444'
+
+        when:
+        Launcher.setProxy('HTTPS', [HTTPS_PROXY: 'beta.com:5466'])
         then:
         System.getProperty('https.proxyHost') == 'beta.com'
         System.getProperty('https.proxyPort') == '5466'
+
+        when:
+        Launcher.setProxy('https', [https_proxy: 'zeta.com:6646'])
+        then:
+        System.getProperty('https.proxyHost') == 'zeta.com'
+        System.getProperty('https.proxyPort') == '6646'
 
         cleanup:
         System.setProperty('http.proxyHost', httpProxyHost ?: '')

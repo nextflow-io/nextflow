@@ -427,9 +427,17 @@ class Launcher implements ExitCode {
     }
 
     /**
-     * set up environment and system properties
+     * set up environment and system properties. It checks the following
+     * environment variables:
+     * <li>http_proxy</li>
+     * <li>https_proxy</li>
+     * <li>HTTP_PROXY</li>
+     * <li>HTTPS_PROXY</li>
      */
     private void setupEnvironment() {
+
+        setProxy('HTTP',System.getenv())
+        setProxy('HTTPS',System.getenv())
 
         setProxy('http',System.getenv())
         setProxy('https',System.getenv())
@@ -443,25 +451,25 @@ class Launcher implements ExitCode {
      * http://docs.oracle.com/javase/6/docs/technotes/guides/net/proxies.html
      * https://github.com/nextflow-io/nextflow/issues/24
      *
-     * @param qualifier Either {@code http} or {@code https}
+     * @param qualifier Either {@code http/HTTP} or {@code https/HTTPS}.
      * @param env The environment variables system map
      */
     @PackageScope
     static void setProxy(String qualifier, Map<String,String> env ) {
-        assert qualifier in ['http','https']
+        assert qualifier in ['http','https','HTTP','HTTPS']
         def str = null
-        def var = "${qualifier.toUpperCase()}_PROXY".toString()
+        def var = "${qualifier}_" + (qualifier.isLowerCase() ? 'proxy' : 'PROXY')
 
         // -- setup HTTP proxy
         try {
-            List<String> proxy = parseProxy(str = env.get(var))
+            List<String> proxy = parseProxy(str = env.get(var.toString()))
             if( proxy ) {
                 log.debug "Setting $qualifier proxy: $proxy"
-                System.setProperty("${qualifier}.proxyHost", proxy[0])
-                if( proxy[1] ) System.setProperty("${qualifier}.proxyPort", proxy[1])
+                System.setProperty("${qualifier.toLowerCase()}.proxyHost", proxy[0])
+                if( proxy[1] ) System.setProperty("${qualifier.toLowerCase()}.proxyPort", proxy[1])
             }
         }
-        catch (MalformedURLException e ) {
+        catch ( MalformedURLException e ) {
             log.warn "Not a valid $qualifier proxy: '$str' -- Check the value of variable `$var` in your environment"
         }
 

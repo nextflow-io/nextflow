@@ -42,43 +42,35 @@ public class CapsuleLoader extends Capsule {
 
     @Override
     protected ProcessBuilder prelaunch(List<String> jvmArgs, List<String> args) {
-        ProcessBuilder pb = super.prelaunch(jvmArgs,args);
+        ProcessBuilder pb = super.prelaunch(jvmArgs, args);
 
         String drip = System.getenv().get("NXF_DRIP");
-        if( drip != null && !"".equals(drip) ) {
+        if( drip != null && !drip.isEmpty() ) {
             pb.command().set(0, drip);
             return pb;
-        }
-
-        String javaCmd = System.getenv().get("JAVA_CMD");
-        if( javaCmd != null && !"".equals(javaCmd) ) {
-            // use the Java command provided by the env variable
-            pb.command().set(0, javaCmd);
         }
 
         return pb;
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected <T> T attribute(Map.Entry<String, T> attr) {
 
         if (ATTR_DEPENDENCIES == attr && System.getenv("NXF_GRAB") != null ) {
-            String customDeps = System.getenv("NXF_GRAB");
+            String deps = System.getenv("NXF_GRAB");
             List<String> parent = super.attribute((Map.Entry<String,List<String>>)attr);
-            return (T)extendDepsWith(System.getenv("NXF_GRAB"), parent);
+            return (T)extendDepsWith(deps, parent);
         }
 
         if (ATTR_APP_CLASS_PATH == attr && System.getenv("NXF_CLASSPATH") != null) {
             String classpath = System.getenv("NXF_CLASSPATH");
-            List<String> parent = super.attribute((Map.Entry<String, List<String>>) attr);
+            List<String> parent = super.attribute((Map.Entry<String, List<String>>)attr);
             return (T)extendClassPathWith(classpath, parent);
-
         }
 
         return super.attribute(attr);
     }
-
-
 
     static List<String> extendClassPathWith(String classpath, List<String> origin) {
         if( classpath == null || "".equals(classpath.trim()) ) {
@@ -89,7 +81,6 @@ public class CapsuleLoader extends Capsule {
         if( origin != null ) {
             result.addAll(origin);
         }
-
 
         for( String lib : classpath.split(":") ) {
             String trimmed = lib.trim();
