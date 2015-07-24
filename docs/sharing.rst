@@ -176,11 +176,10 @@ repository home page will be ``http://github.com/foo/bar`` and people will able 
 Manage dependencies
 =====================
 
-Computational pipelines are rarely composed by a single script. In real world applications they depend on other
-pieces of software. These can be other scripts, tools or applications compiled to a platform native binary format.
+Computational pipelines are rarely composed by a single script. In real world applications they depend on dozens of other components. These can be other scripts, databases, or applications compiled for a platform native binary format.
 
 External dependencies are the most common source of problems when sharing a piece of software, because the
-users need to have an identical set of tools and the same configuration to be able to use it. On many cases this has proven to be
+users need to have an identical set of tools and the same configuration to be able to use it. In many cases this has proven to be
 a painful and error prone process, that can severely limit the ability to reproduce computational results on a system other than
 the one on which it was originally developed.
 
@@ -190,8 +189,8 @@ Nextflow tackles this problem by integrating GitHub and BitBucket sharing platfo
 The use of a code management system is important to keep together all the dependencies of your
 pipeline and allows you to track the changes of the source code in a consistent manner.
 
-Moreover to guarantee that a pipeline is reproducible it should be self-contained i.e. it should not have any
-dependencies with the hosting environment. By using Nextflow you can achieve this goal following these methods:
+Moreover to guarantee that a pipeline is reproducible it should be self-contained i.e. it should have ideally no 
+dependencies on the hosting environment. By using Nextflow you can achieve this goal following these methods:
 
 Third party scripts
 --------------------
