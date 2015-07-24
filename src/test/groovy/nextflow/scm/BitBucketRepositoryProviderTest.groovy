@@ -20,6 +20,7 @@
 
 package nextflow.scm
 
+import spock.lang.Requires
 import spock.lang.Specification
 
 /**
@@ -27,11 +28,16 @@ import spock.lang.Specification
  */
 class BitBucketRepositoryProviderTest extends Specification {
 
+    @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
     def testBitbucketCloneURL() {
+
+        given:
+        def (user,pwd) = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')?.tokenize(':')
+
         when:
-        def url = new BitbucketRepositoryProvider(pipeline: 'pditommaso/tutorial').getCloneUrl()
+        def url = new BitbucketRepositoryProvider(pipeline: 'pditommaso/tutorial', user: user, pwd: pwd).getCloneUrl()
         then:
-        url == 'https://bitbucket.org/pditommaso/tutorial.git'
+        url == "https://${user}@bitbucket.org/pditommaso/tutorial.git".toString()
     }
 
 

@@ -29,8 +29,11 @@ class GithubRepositoryProviderTest extends Specification {
 
     def testGitCloneUrl() {
 
+        given:
+        def (user,pwd) = System.getenv('NXF_GITHUB_ACCESS_TOKEN')?.tokenize(':') ?: [null,null]
+
         when:
-        def url = new GithubRepositoryProvider(pipeline: 'nextflow-io/hello').getCloneUrl()
+        def url = new GithubRepositoryProvider(pipeline: 'nextflow-io/hello', user: user, pwd: pwd).getCloneUrl()
         then:
         url == 'https://github.com/nextflow-io/hello.git'
 
