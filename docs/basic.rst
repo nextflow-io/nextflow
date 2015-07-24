@@ -87,9 +87,13 @@ without modifying it, by simply defining the target execution platform in the co
 
 The following HPC and cloud platforms are supported:
 
-* `Sun/Open Grid Engine <http://gridscheduler.sourceforge.net/>`_
+* `Open grid engine <http://gridscheduler.sourceforge.net/>`_
+* `Univa grid engine <http://www.univa.com/>`_
 * `Platform LSF <http://www.ibm.com/systems/technicalcomputing/platformcomputing/products/lsf/>`_
-* `SLURM <https://computing.llnl.gov/linux/slurm/>`_
+* `Linux SLURM <https://computing.llnl.gov/linux/slurm/>`_
+* `PBS Works <http://www.pbsworks.com/gridengine/>`_
+* `Torque <http://www.adaptivecomputing.com/products/open-source/torque/>`_
+* `ClusterK <http://clusterk.com/>`_
 * `DNAnexus <http://www.dnanexus.com>`_
 
 
