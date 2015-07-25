@@ -57,7 +57,7 @@ class ScriptBindingTest extends Specification {
 
     }
 
-    def 'test read only map ' () {
+    def 'test read only map' () {
 
         setup:
         ReadOnlyMap map1 = new ReadOnlyMap([:], ['x','y'])
@@ -86,7 +86,7 @@ class ScriptBindingTest extends Specification {
 
     }
 
-    def 'test hyphenToCamelCase' () {
+    def 'should convert hyphen separated string to camel case' () {
 
         expect:
         ScriptBinding.ParamsMap.hyphenToCamelCase('a') == 'a'
@@ -98,7 +98,7 @@ class ScriptBindingTest extends Specification {
 
     }
 
-    def 'test camelCaseToHyphen' () {
+    def 'should convert camel case string to hyphen separated' () {
 
         expect:
         ScriptBinding.ParamsMap.camelCaseToHyphen('alphaBetaDelta') == 'alpha-beta-delta'
@@ -112,7 +112,7 @@ class ScriptBindingTest extends Specification {
 
     }
 
-    def 'test put params map' () {
+    def 'should put an entry in the params map' () {
 
         when:
         def map = new ScriptBinding.ParamsMap()
@@ -150,6 +150,38 @@ class ScriptBindingTest extends Specification {
 
     }
 
+    def 'should wrap a string value with quote character' () {
+
+        expect:
+        ScriptBinding.ParamsMap.wrap('hello',null) == 'hello'
+        ScriptBinding.ParamsMap.wrap('hello','"') == '"hello"'
+        ScriptBinding.ParamsMap.wrap('hello world',null) == '"hello world"'
+        ScriptBinding.ParamsMap.wrap('hello world',"'") == "'hello world'"
+        ScriptBinding.ParamsMap.wrap('hello"world',"'") == "'hello\"world'"
+        ScriptBinding.ParamsMap.wrap('hello"world',null) == '"hello\\"world"'
+
+    }
+
+    def 'should return a command line formatted string'() {
+
+        when:
+        def params = new ScriptBinding.ParamsMap('foo-bar':1)
+        then:
+        params.size() == 2
+        params.fooBar == 1
+        params.'foo-bar' == 1
+        params.all() == '--foo-bar 1'
+
+        expect:
+        new ScriptBinding.ParamsMap(x:1).all() == '--x 1'
+        new ScriptBinding.ParamsMap(x:1, y: 2).all() == '--x 1 --y 2'
+        new ScriptBinding.ParamsMap(x:1, y: 2).all(sep:'=') == '--x=1 --y=2'
+        new ScriptBinding.ParamsMap(x:1, y: 2).all(sep:'=', prefix:'-') == '-x=1 -y=2'
+        new ScriptBinding.ParamsMap(x:1, y: 'hello world').all() == '--x 1 --y "hello world"'
+        new ScriptBinding.ParamsMap(x:1, y: 'hello world').all(quote:"'") == '--x \'1\' --y \'hello world\''
+        new ScriptBinding.ParamsMap(x:1, y: "O'Connors").all(quote:"'") == "--x '1' --y 'O\\'Connors'"
+
+    }
 
 
 }
