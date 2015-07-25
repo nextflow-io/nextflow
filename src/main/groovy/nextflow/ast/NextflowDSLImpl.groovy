@@ -202,12 +202,6 @@ public class NextflowDSLImpl implements ASTTransformation {
                         }
                         break
 
-                    case 'share':
-                        if( stm instanceof ExpressionStatement ) {
-                            convertShareMethod( stm.getExpression() )
-                        }
-                        break
-
                     case 'exec':
                         iterator.remove()
                         execStatements << stm
@@ -475,32 +469,6 @@ public class NextflowDSLImpl implements ASTTransformation {
     }
 
 
-    /*
-     * handle *shared* parameters
-     */
-
-    protected void convertShareMethod( Expression expression ) {
-        log.trace "convert > shared expression: $expression"
-
-        if( expression instanceof MethodCallExpression ) {
-            def methodCall = expression as MethodCallExpression
-            def methodName = methodCall.getMethodAsString()
-            def nested = methodCall.objectExpression instanceof MethodCallExpression
-            log.trace "convert > shared method: $methodName"
-
-            if( methodName in ['from','file','val','into','mode'] ) {
-                if( !nested )
-                    methodCall.setMethod( new ConstantExpression( '_share_' + methodName ) )
-                fixMethodCall(methodCall)
-            }
-
-            if( methodCall.objectExpression instanceof MethodCallExpression ) {
-                convertShareMethod(methodCall.objectExpression)
-            }
-        }
-    }
-
-
     protected void convertOutputMethod( Expression expression ) {
         log.trace "convert > output expression: $expression"
 
@@ -563,7 +531,7 @@ public class NextflowDSLImpl implements ASTTransformation {
     protected Expression varToStr( Expression expr ) {
         if( expr instanceof VariableExpression ) {
             def name = ((VariableExpression) expr).getName()
-            return new ConstantExpression(name)
+            return newObj( TokenVar, new ConstantExpression(name) )
         }
 
         if( expr instanceof TupleExpression )  {
@@ -639,8 +607,6 @@ public class NextflowDSLImpl implements ASTTransformation {
             }
 
         }
-
-
 
         // -- TupleExpression or ArgumentListExpression
         if( expr instanceof TupleExpression )  {

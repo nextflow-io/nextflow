@@ -86,7 +86,7 @@ class TokenStdoutCall { }
  */
 @Canonical
 class TokenEnvCall {
-    String name
+    Object val
 }
 
 
@@ -104,7 +104,7 @@ class TokenEnvCall {
  */
 @Canonical
 class TokenValCall {
-    String name
+    Object val
 }
 
 

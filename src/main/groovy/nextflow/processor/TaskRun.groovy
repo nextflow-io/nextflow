@@ -33,11 +33,9 @@ import nextflow.file.FileHolder
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
 import nextflow.script.FileOutParam
-import nextflow.script.FileSharedParam
 import nextflow.script.InParam
 import nextflow.script.OutParam
 import nextflow.script.ScriptType
-import nextflow.script.SharedParam
 import nextflow.script.StdInParam
 import nextflow.script.TaskBody
 import nextflow.script.ValueOutParam
@@ -334,15 +332,11 @@ class TaskRun {
             if( it.class == FileOutParam && ((FileOutParam)it).isDynamic() ) return true
         }
 
-        for( InParam it : inputs.keySet() ) {
-            if( it instanceof SharedParam ) return true
-        }
-
         return false
     }
 
     def Map<InParam,List<FileHolder>> getInputFiles() {
-        (Map<InParam,List<FileHolder>>) getInputsByType( FileInParam, FileSharedParam )
+        (Map<InParam,List<FileHolder>>) getInputsByType( FileInParam )
     }
 
     /**
@@ -371,14 +365,6 @@ class TaskRun {
 
         getOutputsByType(FileOutParam).keySet().each { FileOutParam param ->
             result.addAll( param.getFilePatterns(context) )
-        }
-
-        getInputFiles()?.each { InParam param, List<FileHolder> files ->
-            if( param instanceof FileSharedParam ) {
-                files.each { holder ->
-                    result.add( holder.stageName )
-                }
-            }
         }
 
         return result.unique()

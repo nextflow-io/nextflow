@@ -29,10 +29,7 @@ import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.Channel
-import nextflow.file.FileHolder
 import nextflow.script.EachInParam
-import nextflow.script.FileSharedParam
-import nextflow.script.SharedParam
 /**
  * Defines the parallel tasks execution logic
  *
@@ -56,7 +53,6 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         // append the shared obj to the input list
         def allScalar = config.getInputs().allScalarInputs()
-        def sharedCount = config.getInputs().count { it instanceof SharedParam }
 
         /*
          * check if there are some iterators declaration
@@ -106,16 +102,10 @@ class ParallelTaskProcessor extends TaskProcessor {
         /*
          * define the max forks attribute:
          * - by default the process execution is parallel using the poolSize value
-         * - when there is at least one shared variable it is executed in serial mode (maxForks==1) to guarantee thread safe access
          * - otherwise use the value defined by the user via 'taskConfig'
          */
         def maxForks = session.poolSize
-        if( sharedCount ) {
-            log.debug "Process declares shared inputs -- Using thread safe mode (maxForks=1)"
-            maxForks = 1
-            blocking = true
-        }
-        else if( config.maxForks ) {
+        if( config.maxForks ) {
             maxForks = config.maxForks
             blocking = true
         }
@@ -278,24 +268,7 @@ class ParallelTaskProcessor extends TaskProcessor {
 
         @Override
         public void afterStop(final DataflowProcessor processor) {
-            log.debug "<${name}> After stop -- shareObjs ${ParallelTaskProcessor.this.sharedObjs}"
-
-            // bind shared outputs
-            ParallelTaskProcessor.this.sharedObjs?.each { param, obj ->
-
-                if( !param.outChannel )
-                    return
-
-                log.trace "Binding shared out param: ${param.name} = ${obj}"
-                if( param instanceof FileSharedParam ) {
-                    if( obj instanceof Collection )
-                        obj = obj[0]
-                    if( obj instanceof FileHolder )
-                        obj = obj.storePath
-                }
-
-                param.outChannel.bind( obj )
-            }
+            log.debug "<${name}> After stop"
         }
 
         /**
