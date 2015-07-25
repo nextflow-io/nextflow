@@ -23,6 +23,8 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.Lock
+import java.util.concurrent.locks.ReentrantLock
 
 import ch.grengine.Grengine
 import com.google.common.hash.HashCode
@@ -141,12 +143,15 @@ abstract class TaskProcessor {
      */
     protected final ProcessConfig config
 
-
     /**
      * Count the number of time an error occurred
      */
     private volatile int errorCount
 
+    /**
+     * Lock the work dir creation process
+     */
+    private Lock lockWorkDirCreation = new ReentrantLock()
 
     /**
      * Set to true the very first time the error is shown.
@@ -487,6 +492,7 @@ abstract class TaskProcessor {
      *      or {@code true} if the task has been submitted for execution
      *
      */
+
     final protected boolean checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache, RunType runType ) {
 
         int tries = 0
@@ -495,20 +501,25 @@ abstract class TaskProcessor {
                 hash = CacheHelper.defaultHasher().newHasher().putBytes(hash.asBytes()).putInt(tries).hash()
             }
 
+            boolean exists=false
             final folder = FileHelper.getWorkFolder(session.workDir, hash)
-            final exists = folder.exists()
-            log.trace "[${task.name}] Cacheable folder: $folder -- exists: $exists; try: $tries"
+            lockWorkDirCreation.lock()
+            try {
+                exists = folder.exists()
+                if( !exists && !folder.mkdirs() )
+                    throw new IOException("Unable to create folder: $folder -- check file system permission")
+            }
+            finally {
+                lockWorkDirCreation.unlock()
+            }
 
+            log.trace "[${task.name}] Cacheable folder: $folder -- exists: $exists; try: $tries"
             def cached = shouldTryCache && exists && checkCachedOutput(task, folder, hash)
             if( cached )
                 return false
 
             if( exists )
                 continue
-
-            if( !folder.mkdirs() ) {
-                throw new IOException("Unable to create folder: $folder -- check file system permission")
-            }
 
             // submit task for execution
             submitTask( task, runType, hash, folder )
@@ -1470,7 +1481,7 @@ abstract class TaskProcessor {
 
     final protected createTaskHashKey(TaskRun task) {
 
-        List keys = [ session.uniqueId, task.source ]
+        List keys = [ session.uniqueId, name, task.source ]
         // add all the input name-value pairs to the key generator
         task.inputs.each {
             keys.add( it.key.name )
