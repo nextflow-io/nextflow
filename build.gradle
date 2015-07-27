@@ -469,6 +469,7 @@ task deploy( type: Exec, dependsOn: [clean, pack, deployable.uploadArchives, mak
         if( !files ) error("Can't find any file to upload -- Check path: $path")
         files << file('nextflow').absoluteFile
         files << file('nextflow.sha1').absoluteFile
+        files << file('nextflow.sha256').absoluteFile
 
         println "Uploading artifacts: "
         files.each { println "- $it"}
@@ -486,6 +487,7 @@ task release(type: Exec) {
 
     def launcherFile = file('nextflow').absoluteFile
     def launcherSha1 = file('nextflow.sha1').absoluteFile
+    def launcherSha256 = file('nextflow.sha256').absoluteFile
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
@@ -499,7 +501,7 @@ task release(type: Exec) {
     # publish the script as the latest
     s3cmd put $launcherFile s3://www.nextflow.io/releases/latest/nextflow $s3CmdOpts
     s3cmd put $launcherSha1 s3://www.nextflow.io/releases/latest/nextflow.sha1 $s3CmdOpts
-
+    s3cmd put $launcherSha256 s3://www.nextflow.io/releases/latest/nextflow.sha256 $s3CmdOpts
     """.stripIndent()
 
     commandLine 'bash', '-e', temp.absolutePath
