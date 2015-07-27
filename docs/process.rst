@@ -792,7 +792,7 @@ this is a value which has been defined in the `input` declaration block, as show
 
    methods = ['prot','dna', 'rna']
 
-   process anyValue {
+   process foo {
      input:
      val x from methods
 
@@ -805,30 +805,29 @@ this is a value which has been defined in the `input` declaration block, as show
 
    }
 
-   receiver.subscribe { println "Received: $it" }
+   receiver.println { "Received: $it" }
 
 
-The example that follows is almost identical to the previous one, but it shows how to output a value
-that is computed in the script block::
+Valid output values are value literals, input values identifiers, variables accessible in the process scope and
+value expressions. For example::
 
-    methods = ['prot','dna', 'rna']
-
-    process anyValue {
+    process foo {
       input:
-      val x from methods
+      file fasta from 'dummy'
 
       output:
-      val str into receiver
+      val x into var_channel
+      val 'BB11' into str_channel
+      val "${fasta.baseName}.out" into exp_channel
 
       script:
-      str = "Processing $x"
+      x = fasta.name
       """
-      echo $x > file
+      cat $x > file
       """
-
     }
 
-    receiver.subscribe { println "Received: $it" }
+
 
 
 Output files
