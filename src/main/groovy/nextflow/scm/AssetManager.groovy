@@ -298,6 +298,16 @@ class AssetManager {
     }
 
     /**
+     * Close the underlying Git repository
+     */
+    void close() {
+        if( _git ) {
+            _git.close()
+            _git = null
+        }
+    }
+
+    /**
      * @return The list of available pipelines
      */
     List<String> list() {
