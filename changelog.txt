@@ -1,6 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.15.0 - 27 Jul 2015
+- Issue #56 - Added method `all()` to params object 
+- Issue #57 - Processes having identical commands and inputs are given the same hash key
+- Issue #59 - Enhanced output `val` declaration adding support for value literals and value expressions
+- Fixed minor issue when deleting pipeline repo with `drop` command
+- Removed deprecated `share` process clause
+- Updated JGit to version 4.0.1
+
 0.14.4 - 20 Jul 2015
 - Fixed issue #54 - Nextflow installer does not work when running behind a proxy server
 - Upgraded Capsule package manager to version 1.0-rc2
