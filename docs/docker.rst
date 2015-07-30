@@ -34,7 +34,7 @@ specified image. In practice Nextflow will automatically wrap your processes and
 command with the image you have provided.
 
 .. note:: A Docker image can contain any tool or piece of software you may need to carry out a process execution. Moreover the
-  container is run in such a way that the process result files are created in the hosting file system, in other words
+  container is run in such a way that the process result files are created in the hosting file system, thus
   it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
 
 If you want to avoid entering the Docker image as a command line parameter, you can define it in the Nextflow configuration
