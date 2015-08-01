@@ -19,6 +19,9 @@
  */
 
 package nextflow.script
+
+import java.nio.file.Path
+
 import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -290,24 +293,37 @@ class FileOutParam extends BaseOutParam implements OutParam {
 
     List<String> getFilePatterns(Map context) {
 
-        def nameString
+        def entry = null
         if( dynamicObj ) {
-            nameString = context.with(dynamicObj)
+            entry = context.with(dynamicObj)
         }
         else if( gstring != null ) {
-            def strict = getName() == null
+            def strict = (getName() == null)
             try {
-                nameString = gstring.cloneWith(context)
+                entry = gstring.cloneWith(context)
             }
             catch( MissingPropertyException e ) {
-                if( strict ) throw e
+                if( strict )
+                    throw e
             }
         }
         else {
-            nameString = nameObj
+            entry = nameObj
         }
 
-        return separatorChar ? nameString.split(/\${separatorChar}/) : [nameString]
+        if( !entry )
+            return []
+
+        if( entry instanceof Path )
+            return [ entry.getFileName().toString() ]
+
+        // normalize to a string object
+        final nameString = entry.toString()
+        if( separatorChar && nameString.contains(separatorChar) )
+            return nameString.split(/\${separatorChar}/) as List<String>
+
+        return [nameString]
+
     }
 
     /**
