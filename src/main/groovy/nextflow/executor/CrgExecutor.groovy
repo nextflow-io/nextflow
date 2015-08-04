@@ -45,6 +45,10 @@ class CrgExecutor extends SgeExecutor {
 
         super.getDirectives(task, result)
 
+        if( task.config.getDisk() ) {
+            result << "-l" << "disk=${task.config.getDisk().toMega()}M"
+        }
+
         if( task.container && task.isDockerEnabled() ) {
             //  this will export the SGE_BINDING environment variable used to set Docker cpuset
             result << '-binding' << "env linear:${task.config.cpus}"

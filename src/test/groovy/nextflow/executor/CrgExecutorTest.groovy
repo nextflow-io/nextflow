@@ -180,6 +180,7 @@ class CrgExecutorTest extends Specification {
                         queue: 'short',
                         memory: '4 GB',
                         time: '1d',
+                        disk: '2G'
                     )
 
         then:
@@ -194,6 +195,7 @@ class CrgExecutorTest extends Specification {
                     #$ -q short
                     #$ -l h_rt=24:00:00
                     #$ -l virtual_free=4G
+                    #$ -l disk=2048M
                     '''
                     .stripIndent().leftTrim()
 
