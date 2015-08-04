@@ -220,7 +220,7 @@ The ``take`` operator allows you to filter only the first `n` items emitted by a
     3
     Done
 
-Note:: by specifying the value ``-1`` the operator ``takes`` all values.
+.. note:: By specifying the value ``-1`` the operator takes all values.
 
 last
 -------

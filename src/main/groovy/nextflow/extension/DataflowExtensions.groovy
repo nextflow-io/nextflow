@@ -996,17 +996,34 @@ class DataflowExtensions {
         assert !(source instanceof DataflowExpression)
 
         def count = 0
-        def target = new DataflowQueue<V>()
-        newOperator([source],[]) {
+        final target = new DataflowQueue<V>()
 
-            if( count++ < n || n == -1 ) {
-                target << it
-                return
+        if( n==0 ) {
+            target.bind(Channel.STOP)
+            return target
+        }
+
+        final listener = new DataflowEventAdapter() {
+            @Override
+            public void afterRun(final DataflowProcessor processor, final List<Object> messages) {
+                if( ++count >= n ) {
+                    processor.bindOutput( Channel.STOP )
+                    processor.terminate()
+                }
             }
 
-            target << Channel.STOP
-            ((DataflowProcessor) getDelegate()).terminate()
+            public boolean onException(final DataflowProcessor processor, final Throwable e) {
+                DataflowExtensions.log.error("@unknown", e)
+                session?.abort(e)
+                return true;
+            }
         }
+
+        newOperator(
+                inputs: [source],
+                outputs: [target],
+                listeners: (n > 0 ? [listener] : []),
+                new ChainWithClosure(new CopyChannelsClosure()))
 
         return target
     }

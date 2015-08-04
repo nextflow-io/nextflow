@@ -353,6 +353,25 @@ class DataflowExtensionsTest extends Specification {
         result.val == 3
         result.val == Channel.STOP
 
+        when:
+        result = Channel.from(1).take(3)
+        then:
+        result.val == 1
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.from(1,2,3).take(0)
+        then:
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.from(1,2,3).take(-1)
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 3
+        result.val == Channel.STOP
+
     }
 
     def testLast() {
