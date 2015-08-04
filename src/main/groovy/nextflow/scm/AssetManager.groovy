@@ -194,6 +194,9 @@ class AssetManager {
         if( name == 'bitbucket')
             return new BitbucketRepositoryProvider(pipeline: pipeline, user: user, pwd: pwd)
 
+        if( name == 'gitlab' )
+            return new GitlabRepositoryProvider(pipeline: pipeline, user: user, pwd: pwd)
+
         throw new AbortOperationException("Unkwnon pipeline repository provider: $name")
     }
 

@@ -19,13 +19,11 @@
  */
 
 package nextflow.scm
-
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
-
 /**
  *
  * Base class for a generic source repository provider
@@ -98,8 +96,7 @@ abstract class RepositoryProvider {
         connection.setConnectTimeout(5_000)
 
         if( user && pwd ){
-            String authString=("$user:$pwd").bytes.encodeBase64().toString()
-            connection.setRequestProperty("Authorization","Basic " + authString)
+            auth(connection)
         }
 
         checkResponse(connection)
@@ -111,6 +108,16 @@ abstract class RepositoryProvider {
         finally{
             content?.close()
         }
+    }
+
+    /**
+     * Sets the authentication credential on the connection object
+     *
+     * @param connection The URL connection object to be authenticated
+     */
+    protected void auth( HttpURLConnection connection ) {
+        String authString=("$user:$pwd").bytes.encodeBase64().toString()
+        connection.setRequestProperty("Authorization","Basic " + authString)
     }
 
     /**
@@ -146,12 +153,13 @@ abstract class RepositoryProvider {
     /**
      * Invoke the API request specified and parse the JSON response
      *
-     * @param api A API request url e.g. https://api.github.com/repos/nextflow-io/hello
+     * @param request A API request url e.g. https://request.github.com/repos/nextflow-io/hello
      * @return The remote service response parsed to a {@link Map} object
      */
-    protected Map invokeAndParseResponse( String api ) {
+    @Memoized
+    protected Map invokeAndParseResponse( String request ) {
 
-        def response = invoke(api)
+        def response = invoke(request)
         return new JsonSlurper().parseText(response) as Map
 
     }
@@ -199,119 +207,4 @@ abstract class RepositoryProvider {
 }
 
 
-/**
- * Implements a repository provider for GitHub service
- *
- * Author Maria Chatzou
- * Author Paolo Di Tommaso
- */
-@CompileStatic
-final class GithubRepositoryProvider extends RepositoryProvider{
 
-    /** {@inheritDoc} */
-    @Override
-    String getName() { "GitHub" }
-
-    /** {@inheritDoc} */
-    @Override
-    String getRepoUrl() {
-        "https://api.github.com/repos/${pipeline}"
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    String getContentUrl( String path ) {
-        "https://api.github.com/repos/$pipeline/contents/$path"
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    String getCloneUrl() {
-        Map response = invokeAndParseResponse( getRepoUrl() )
-
-        def result = response.get('clone_url')
-        if( !result )
-            throw new IllegalStateException("Missing clone URL for: $pipeline")
-
-        return result
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    String getHomePage() {
-        "https://github.com/$pipeline"
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    byte[] readBytes(String path) {
-
-        def url = getContentUrl(path)
-        Map response  = invokeAndParseResponse(url)
-        response.get('content')?.toString()?.decodeBase64()
-
-    }
-}
-
-
-/**
- * Implements a repository provider for the BitBucket service
- *
- * Author Maria Chatzou
- * Author Paolo Di Tommaso
- */
-@Slf4j
-final class BitbucketRepositoryProvider extends RepositoryProvider {
-
-    /** {@inheritDoc} */
-    @Override
-    String getName() { "BitBucket" }
-
-    @Override
-    String getRepoUrl() {
-        return "https://bitbucket.org/api/2.0/repositories/${pipeline}"
-    }
-
-    @Override
-    String getContentUrl( String path ) {
-        return "https://bitbucket.org/api/1.0/repositories/$pipeline/src/${getMainBranch()}/$path"
-    }
-
-    private String getMainBranchUrl() {
-        "https://bitbucket.org/api/1.0/repositories/$pipeline/main-branch/"
-    }
-
-    @Memoized
-    String getMainBranch() {
-        invokeAndParseResponse(getMainBranchUrl()) ?. name
-    }
-
-    @Override
-    String getCloneUrl() {
-        Map response = invokeAndParseResponse( getRepoUrl() )
-
-        if( response?.scm != "git" ){
-            throw new AbortOperationException("Bitbucket repository at ${getHomePage()} is not supporting Git")
-        }
-
-        def result = response?.links?.clone?.find{ it.name == "https" } as Map
-        if( !result )
-            throw new IllegalStateException("Missing clone URL for: $pipeline")
-
-        return result.href
-    }
-
-    @Override
-    String getHomePage() {
-        return "https://bitbucket.org/$pipeline"
-    }
-
-    @Override
-    byte[] readBytes(String path) {
-
-        def url = getContentUrl(path)
-        Map response  = invokeAndParseResponse(url)
-        response.get('data')?.toString()?.getBytes()
-
-    }
-}

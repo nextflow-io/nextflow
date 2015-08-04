@@ -206,7 +206,6 @@ class AssetManagerTest extends Specification {
         when:
         def manager= [ pipeline:'x/y', user:'maria', pwd: 'whatever' ] as AssetManager
         def repo=manager.createHubProviderFor('github')
-
         then:
         repo instanceof GithubRepositoryProvider
         repo.user=="maria"
@@ -216,12 +215,20 @@ class AssetManagerTest extends Specification {
         when:
         manager= [ pipeline:'x/y', user:'maria', pwd: 'whatever' ] as AssetManager
         repo=manager.createHubProviderFor('bitbucket')
-
         then:
         repo instanceof BitbucketRepositoryProvider
         repo.user=="maria"
         repo.pwd=="whatever"
         repo.pipeline=="x/y"
+
+        when:
+        manager = [ pipeline: 'project/foo', user: 'paolo', pwd: '12345'] as AssetManager
+        repo = manager.createHubProviderFor('gitlab')
+        then:
+        repo instanceof GitlabRepositoryProvider
+        repo.user == 'paolo'
+        repo.pwd == '12345'
+        repo.pipeline == 'project/foo'
 
         when:
         manager = [ ] as AssetManager

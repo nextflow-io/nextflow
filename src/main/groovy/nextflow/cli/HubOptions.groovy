@@ -77,7 +77,7 @@ trait HubOptions {
     @CompileStatic
     static class HubValidator implements IValueValidator<String> {
 
-        final static List VALID_HUB = ['github','bitbucket']
+        final static List VALID_HUB = ['github','bitbucket','gitlab']
 
         @Override
         void validate(String name, String value) throws ParameterException {
