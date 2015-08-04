@@ -1,6 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.15.1 - 4 Jul 2015
+- Added feature #60 - Implements support for Gitlab source code management platform.
+- Added support for `disk` directive to `crg` executor.
+- Fixed issue #57 - Creation folder lock must be a singleton instance.
+- Fixed issue #62 - Operator hangs for negative values or when it is greater or equals to the total number of emitted items.
+- Fixed an exception when output file is specified with variable identifier e.g. output: file(x) into channel
+
 0.15.0 - 27 Jul 2015
 - Issue #56 - Added method `all()` to params object 
 - Issue #57 - Processes having identical commands and inputs are given the same hash key
