@@ -148,7 +148,7 @@ abstract class TaskProcessor {
     /**
      * Lock the work dir creation process
      */
-    private Lock lockWorkDirCreation = new ReentrantLock()
+    private static Lock lockWorkDirCreation = new ReentrantLock()
 
     /**
      * Set to true the very first time the error is shown.
