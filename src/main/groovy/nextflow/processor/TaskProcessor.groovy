@@ -1146,9 +1146,10 @@ abstract class TaskProcessor {
          * when it is a file stored in a "foreign" storage, copy
          * to a local file and return a reference holder to the local file
          */
-        def result = Nextflow.tempFile(altName)
+
         if( input instanceof Path ) {
             log.debug "Copying to process workdir foreign file: ${input.toUri().toString()}"
+            def result = Nextflow.tempFile(input.getFileName().toString())
             Files.copy(Files.newInputStream(input), result)
             return new FileHolder(input, result)
         }
@@ -1158,6 +1159,7 @@ abstract class TaskProcessor {
          * to a local file
          */
         def source = input?.toString() ?: ''
+        def result = Nextflow.tempFile(altName)
         result.text = source
         return new FileHolder(source, result)
     }

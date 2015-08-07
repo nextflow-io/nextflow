@@ -338,7 +338,7 @@ class TaskProcessorTest extends Specification {
 
         /*
          * when the input file is on the local file system
-         * simple return a refernce to it in the holder object
+         * simple return a reference to it in the holder object
          */
         when:
         holder = processor.normalizeInputToFile(localFile,null)
@@ -354,12 +354,12 @@ class TaskProcessorTest extends Specification {
         when:
         def remoteFile = TestHelper.createInMemTempFile('remote_file.txt')
         remoteFile.text = 'alpha beta gamma delta'
-        holder = processor.normalizeInputToFile(remoteFile,'local_copy.txt')
+        holder = processor.normalizeInputToFile(remoteFile,'input.1')
         then:
         holder.sourceObj == remoteFile
         holder.storePath.fileSystem == FileSystems.default
         holder.storePath.text == 'alpha beta gamma delta'
-        holder.stageName == 'local_copy.txt'
+        holder.stageName == remoteFile.getName()
 
         /*
          * any generic input that is not a file is converted to a string
