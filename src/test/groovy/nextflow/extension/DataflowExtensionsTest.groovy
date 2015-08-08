@@ -1639,6 +1639,34 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    def testGroupTupleWithCount() {
+
+        when:
+        def result = Channel
+                .from([1,'a'], [1,'b'], [2,'x'], [3, 'q'], [1,'d'], [1,'c'], [2, 'y'], [1,'f'])
+                .groupTuple(size: 2)
+
+        then:
+        result.val == [1, ['a', 'b'] ]
+        result.val == [1, ['d', 'c'] ]
+        result.val == [2, ['x', 'y'] ]
+        result.val == Channel.STOP
+
+        when:
+        result = Channel
+                .from([1,'a'], [1,'b'], [2,'x'], [3, 'q'], [1,'d'], [1,'c'], [2, 'y'], [1,'f'])
+                .groupTuple(size: 2, remainder: true)
+
+        then:
+        result.val == [1, ['a', 'b'] ]
+        result.val == [1, ['d', 'c'] ]
+        result.val == [2, ['x', 'y'] ]
+        result.val == [3, ['q']]
+        result.val == [1, ['f']]
+        result.val == Channel.STOP
+
+    }
+
     def testGroupTupleWithSortNatural() {
 
         when:
