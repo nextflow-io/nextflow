@@ -1387,10 +1387,6 @@ example::
 Note, it must be wrapped by single quotation characters, otherwise the variable will be evaluated in the
 pipeline script context.
 
-.. warning:: The variable must guarantee to provide a unique temporary folder for each process invocation, usually such
-    a variable is defined by the batch scheduler platform.
-
-
 You can also provide a specific folder path as scratch value, for example::
 
   scratch '/tmp/my/path'
@@ -1405,11 +1401,11 @@ Summary of allowed values:
 =========== ==================
 scratch     Description
 =========== ==================
-false       Do not use the scratch folder
-true        Use the scratch folder defined by ``$TMPDIR`` variable, fallback to ``mktemp`` if that variable do not exists
-$<YOUR_VAR> Use the scratch folder defined by the ``$<YOUR_VAR>`` environment variable, or fallback to ``mktemp`` if that variable do not exists
-/tmp/my     Create a temporary scratch directory in the specified directory
-ram-disk    Create a temporary scratch directory in the RAM disk
+false       Do not use the scratch folder.
+true        Creates a scratch folder in the directory defined by the ``$TMPDIR`` variable; fallback to ``mktemp /tmp`` if that variable do not exists.
+$YOUR_VAR   Creates a scratch folder in the directory defined by the ``$YOUR_VAR`` environment variable; fallback to ``mktemp /tmp`` if that variable do not exists.
+/my/tmp     Creates a scratch folder in the specified directory.
+ram-disk    Creates a scratch folder in the RAM disk ``/dev/shm/`` (experimental).
 =========== ==================
 
 storeDir

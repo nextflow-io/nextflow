@@ -46,22 +46,22 @@ class BashWrapperBuilderTest extends Specification {
         when:
         builder.scratch = true
         then:
-        builder.changeToScratchDirectory() == 'NXF_SCRATCH=${TMPDIR:-`mktemp -d`} && cd $NXF_SCRATCH'
+        builder.changeToScratchDirectory() == 'NXF_SCRATCH="$(set +u; nxf_mktemp $TMPDIR)" && cd $NXF_SCRATCH'
 
         when:
         builder.scratch = '$SOME_DIR'
         then:
-        builder.changeToScratchDirectory() == 'NXF_SCRATCH=${SOME_DIR:-`mktemp -d`} && cd $NXF_SCRATCH'
+        builder.changeToScratchDirectory() == 'NXF_SCRATCH="$(set +u; nxf_mktemp $SOME_DIR)" && cd $NXF_SCRATCH'
 
         when:
         builder.scratch = '/my/temp'
         then:
-        builder.changeToScratchDirectory() == 'NXF_SCRATCH=$(mktemp -d -p /my/temp) && cd $NXF_SCRATCH'
+        builder.changeToScratchDirectory() == 'NXF_SCRATCH="$(set +u; nxf_mktemp /my/temp)" && cd $NXF_SCRATCH'
 
         when:
-        builder.scratch = '/my/temp'
+        builder.scratch = 'ram-disk'
         then:
-        builder.changeToScratchDirectory() == 'NXF_SCRATCH=$(mktemp -d -p /my/temp) && cd $NXF_SCRATCH'
+        builder.changeToScratchDirectory() == 'NXF_SCRATCH="$(nxf_mktemp /dev/shm/)" && cd $NXF_SCRATCH'
 
     }
 
@@ -145,8 +145,9 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
-                function nxf_mktmp() {
-                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                function nxf_mktemp() {
+                    local base=\${1:-/tmp}
+                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
                 }
 
                 on_exit() {
@@ -241,8 +242,9 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
-                function nxf_mktmp() {
-                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                function nxf_mktemp() {
+                    local base=\${1:-/tmp}
+                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
                 }
 
                 on_exit() {
@@ -431,8 +433,9 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
-                function nxf_mktmp() {
-                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                function nxf_mktemp() {
+                    local base=\${1:-/tmp}
+                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
                 }
 
                 on_exit() {
@@ -452,7 +455,7 @@ class BashWrapperBuilderTest extends Specification {
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
                 [ -f ${folder}/.command.env ] && source ${folder}/.command.env
-                NXF_SCRATCH=\${TMPDIR:-`mktemp -d`} && cd \$NXF_SCRATCH
+                NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)" && cd \$NXF_SCRATCH
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo \$COUT
@@ -547,8 +550,9 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
-                function nxf_mktmp() {
-                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                function nxf_mktemp() {
+                    local base=\${1:-/tmp}
+                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
                 }
 
                 on_exit() {
@@ -568,7 +572,7 @@ class BashWrapperBuilderTest extends Specification {
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
                 [ -f ${folder}/.command.env ] && source ${folder}/.command.env
-                NXF_SCRATCH=\${TMPDIR:-`mktemp -d`} && cd \$NXF_SCRATCH
+                NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)" && cd \$NXF_SCRATCH
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo \$COUT
@@ -705,7 +709,7 @@ class BashWrapperBuilderTest extends Specification {
                 script: 'echo Hello world!',
                 container: 'busybox',
                 dockerMount: Paths.get('/some/path'),
-                dockerConfig: [temp: 'auto', sudo: true, enabled: true] )
+                dockerConfig: [sudo: true, enabled: true] )
         bash.build()
 
         then:
@@ -747,8 +751,9 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
-                function nxf_mktmp() {
-                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                function nxf_mktemp() {
+                    local base=\${1:-/tmp}
+                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
                 }
 
                 on_exit() {
@@ -777,7 +782,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < \$CERR >&2 &
                 tee2=\$!
                 (
-                sudo docker run -i -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID busybox -c '/bin/bash -ue ${folder}/.command.sh'
+                sudo docker run -i -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID busybox -c '/bin/bash -ue ${folder}/.command.sh'
                 ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -848,8 +853,9 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
-                function nxf_mktmp() {
-                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                function nxf_mktemp() {
+                    local base=\${1:-/tmp}
+                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
                 }
 
                 on_exit() {
@@ -878,7 +884,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < \$CERR >&2 &
                 tee2=\$!
                 (
-                docker run -i -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID busybox -c '/bin/bash -ue ${folder}/.command.sh'
+                docker run -i -v \$(nxf_mktemp):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID busybox -c '/bin/bash -ue ${folder}/.command.sh'
                 ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -951,8 +957,9 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
-                function nxf_mktmp() {
-                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                function nxf_mktemp() {
+                    local base=\${1:-/tmp}
+                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
                 }
 
                 on_exit() {
@@ -981,7 +988,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < \$CERR >&2 &
                 tee2=\$!
                 (
-                docker run -i -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c '/bin/bash -ue ${folder}/.command.sh'
+                docker run -i -v \$(nxf_mktemp):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c '/bin/bash -ue ${folder}/.command.sh'
                 ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1050,8 +1057,9 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
-                function nxf_mktmp() {
-                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                function nxf_mktemp() {
+                    local base=\${1:-/tmp}
+                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
                 }
 
                 on_exit() {
@@ -1080,7 +1088,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < \$CERR >&2 &
                 tee2=\$!
                 (
-                docker run -i -v \$(mktemp -d):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c '/bin/bash -ue ${folder}/.command.sh'
+                docker run -i -v \$(nxf_mktemp):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c '/bin/bash -ue ${folder}/.command.sh'
                 ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1179,8 +1187,9 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
-                function nxf_mktmp() {
-                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                function nxf_mktemp() {
+                    local base=\${1:-/tmp}
+                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
                 }
 
                 on_exit() {
@@ -1276,8 +1285,9 @@ class BashWrapperBuilderTest extends Specification {
                         walk $1
                     }
 
-                    function nxf_mktmp() {
-                        [[ $(uname) = Darwin ]] && mktemp -u $PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p $PWD
+                    function nxf_mktemp() {
+                        local base=\${1:-/tmp}
+                        [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
                     }
 
                     on_exit() {
@@ -1322,8 +1332,9 @@ class BashWrapperBuilderTest extends Specification {
                         walk $1
                     }
 
-                    function nxf_mktmp() {
-                        [[ $(uname) = Darwin ]] && mktemp -u $PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p $PWD
+                    function nxf_mktemp() {
+                        local base=\${1:-/tmp}
+                        [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
                     }
 
                     on_exit() {
@@ -1444,8 +1455,9 @@ class BashWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
-                function nxf_mktmp() {
-                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                function nxf_mktemp() {
+                    local base=\${1:-/tmp}
+                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
                 }
 
                 on_exit() {

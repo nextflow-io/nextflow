@@ -92,8 +92,9 @@ class BashWrapperBuilder {
             walk $1
         }
 
-        function nxf_mktmp() {
-            [[ $(uname) = Darwin ]] && mktemp -u $PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p $PWD
+        function nxf_mktemp() {
+            local base=${1:-/tmp}
+            [[ $(uname) = Darwin ]] && mktemp -d $base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p $base
         }
 
         on_exit() {
@@ -304,22 +305,17 @@ class BashWrapperBuilder {
          * try to use the 'TMP' variable, if does not exist fallback to a tmp folder
          */
         if( scratch == true ) {
-            return 'NXF_SCRATCH=${TMPDIR:-`mktemp -d`} && cd $NXF_SCRATCH'
+            return 'NXF_SCRATCH="$(set +u; nxf_mktemp $TMPDIR)" && cd $NXF_SCRATCH'
         }
 
         // convert to string for safety
         final scratchStr = scratch.toString()
 
-        // when it is defined by a variable, just use it
-        if( scratchStr.startsWith('$') ) {
-            return "NXF_SCRATCH=\${${scratchStr.substring(1)}:-`mktemp -d`} && cd \$NXF_SCRATCH"
-        }
-
         if( scratchStr.toLowerCase() in ['ramdisk','ram-disk']) {
-            return 'NXF_SCRATCH=$(mktemp -d -p /dev/shm/) && cd $NXF_SCRATCH'
+            return 'NXF_SCRATCH="$(nxf_mktemp /dev/shm/)" && cd $NXF_SCRATCH'
         }
 
-        return "NXF_SCRATCH=\$(mktemp -d -p $scratch) && cd \$NXF_SCRATCH"
+        return "NXF_SCRATCH=\"\$(set +u; nxf_mktemp $scratchStr)\" && cd \$NXF_SCRATCH"
     }
 
     /**
@@ -615,7 +611,7 @@ class BashWrapperBuilder {
         // extra rule for the 'auto' temp dir temp dir
         def temp = dockerConfig.temp?.toString()
         if( temp == 'auto' || temp == 'true' ) {
-            docker.setTemp( changeDir ? '$NXF_SCRATCH' : '$(mktemp -d)' )
+            docker.setTemp( changeDir ? '$NXF_SCRATCH' : '$(nxf_mktemp)' )
         }
 
         if( dockerConfig.containsKey('kill') )

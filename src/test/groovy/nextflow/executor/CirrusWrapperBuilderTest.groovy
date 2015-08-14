@@ -96,8 +96,9 @@ class CirrusWrapperBuilderTest extends Specification {
                     walk \$1
                 }
 
-                function nxf_mktmp() {
-                    [[ \$(uname) = Darwin ]] && mktemp -u \$PWD/XXXXXXXXXX || mktemp -u -t XXXXXXXXXX -p \$PWD
+                function nxf_mktemp() {
+                    local base=\${1:-/tmp}
+                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
                 }
 
                 on_exit() {
@@ -117,7 +118,7 @@ class CirrusWrapperBuilderTest extends Specification {
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 es3 touch s3:/${folder}/.command.begin
                 [ -f .command.env ] && source .command.env
-                NXF_SCRATCH=\${TMPDIR:-`mktemp -d`} && cd \$NXF_SCRATCH
+                NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)\" && cd \$NXF_SCRATCH
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo \$COUT
