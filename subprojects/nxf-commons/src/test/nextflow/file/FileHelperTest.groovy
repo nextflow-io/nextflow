@@ -24,8 +24,6 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import com.google.common.jimfs.Configuration
-import com.google.common.jimfs.Jimfs
 import nextflow.Global
 import nextflow.ISession
 import spock.lang.Specification
@@ -35,17 +33,119 @@ import spock.lang.Specification
  */
 class FileHelperTest extends Specification {
 
-    def 'test asPath' () {
-
-        given:
-        Jimfs.newFileSystem(Configuration.unix());
+    def 'should return a Path object' () {
 
         expect:
         FileHelper.asPath('file.txt') == Paths.get('file.txt')
-        FileHelper.asPath('file:///file.txt') == Paths.get( URI.create('file:///file.txt') )
-        FileHelper.asPath('jimfs:test/some/file') == Paths.get('jimfs:test/some/file')
+        FileHelper.asPath('file:file.txt') == Paths.get('file:file.txt')
+        FileHelper.asPath('file:/some/file.txt') == Paths.get('/some/file.txt')
+        FileHelper.asPath('file:///some/file.txt') == Paths.get('/some/file.txt')
+        FileHelper.asPath('file:///some/fil?.{fa,txt}') == Paths.get('/some/fil?.{fa,txt}')
+
+        when:
+        FileHelper.asPath('file://some/file.txt')
+        then:
+        thrown(IllegalArgumentException)
 
     }
+
+    def 'should create a valid uri' () {
+
+        def URI uri
+
+        when:
+        uri = FileHelper.toPathURI('jimfs:test/some/file')
+        then:
+        uri == new URI('jimfs:test/some/file')
+        uri.scheme == 'jimfs'
+        uri.path == null        // note: path is null because it is not a valid hierarchical URI. See http://docs.oracle.com/javase/7/docs/api/java/net/URI.html
+
+        when:
+        uri = FileHelper.toPathURI('/a/b/c')
+        then:
+        uri == new URI('/a/b/c')
+        uri.path == '/a/b/c'
+        uri.authority == null
+
+        when:
+        uri = FileHelper.toPathURI('a/b/c')
+        then:
+        uri == new URI('a/b/c')
+        uri.path == 'a/b/c'
+        uri.authority == null
+
+        when:
+        uri = FileHelper.toPathURI('//xxx/a/b/c')
+        then:
+        uri == new URI('//xxx/a/b/c')
+        uri.authority == 'xxx'
+        uri.path == '/a/b/c'
+
+        when:
+        uri = FileHelper.toPathURI('file:/a/b/c')
+        then:
+        uri == new URI('file:/a/b/c')
+        uri.path == '/a/b/c'
+        uri.scheme == 'file'
+
+        when:
+        uri = FileHelper.toPathURI('file://a/b/c')
+        then:
+        uri == new URI('file://a/b/c')
+        uri.path == '/b/c'
+        uri.scheme == 'file'
+        uri.authority == 'a'
+
+        when:
+        uri = FileHelper.toPathURI('file:///a/b/c')
+        then:
+        uri == new URI('file:///a/b/c')
+        uri.path == '/a/b/c'
+        uri.scheme == 'file'
+
+        when:
+        uri = FileHelper.toPathURI('file:///a/b/c{1,2}')
+        then:
+        uri.path == '/a/b/c{1,2}'
+        uri.scheme == 'file'
+
+        when:
+        uri = FileHelper.toPathURI('s3:///cbcrg-eu/raw/**_R1*{fastq,fq,fastq.gz,fq.gz}')
+        then:
+        uri.path == '/cbcrg-eu/raw/**_R1*{fastq,fq,fastq.gz,fq.gz}'
+        uri.scheme == 's3'
+
+        when:
+        uri = FileHelper.toPathURI('s3:///cbcrg-eu//raw/x_r1.fq')
+        then:
+        uri == new URI('s3:///cbcrg-eu//raw/x_r1.fq')
+        uri.path == '/cbcrg-eu//raw/x_r1.fq'
+        uri.scheme == 's3'
+
+        when:
+        uri = FileHelper.toPathURI('dxfs://grape:/data/ggal/ggal_test_1.fq')
+        then:
+        uri == new URI('dxfs://grape:/data/ggal/ggal_test_1.fq')
+        uri.scheme == 'dxfs'
+        uri.path == '/data/ggal/ggal_test_1.fq'
+        uri.authority == 'grape:'
+
+        when:
+        uri = FileHelper.toPathURI('dxfs://grape:/data/ggal/ggal_test_?.fq')
+        then:
+        uri == new URI('dxfs://grape:/data/ggal/ggal_test_%3F.fq')
+        uri.scheme == 'dxfs'
+        uri.path == '/data/ggal/ggal_test_?.fq'
+        uri.authority == 'grape:'
+
+        when:
+        uri = FileHelper.toPathURI('file:///some/file.txt#abc')
+        then:
+        uri.scheme == 'file'
+        uri.path == '/some/file.txt#abc'
+
+    }
+
 
     def 'test normalize' () {
 
@@ -174,8 +274,7 @@ class FileHelperTest extends Specification {
     def 'get env map'() {
 
         given:
-        def sess = Mock(ISession)
-        Global.session = sess
+        def sess = Global.session = Mock(ISession)
         def env = [:]
         env.put('AWS_ACCESS_KEY','a1')
         env.put('AWS_SECRET_KEY','s1')

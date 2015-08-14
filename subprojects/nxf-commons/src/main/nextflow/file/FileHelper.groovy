@@ -219,27 +219,33 @@ class FileHelper {
     }
 
     /**
-     * Given a fully qualified string path return a {@link Path} object
-     * eventually creating the associated file system if required
+     * Given an hierarchical file URI path returns a {@link Path} object
+     * eventually creating the associated file system if required.
+     * <p>
+     * An hierarchical URI is either an absolute URI whose scheme-specific part begins with a slash character (e.g. {@code file:/some/file.txt}),
+     * or a relative URI, that is, a URI that does not specify a scheme (e.g. {@code some/file.txt}).
+     *
+     * See http://docs.oracle.com/javase/7/docs/api/java/net/URI.html
      *
      * @param str A path string eventually qualified with the scheme prefix
      * @return A {@link Path} object
      */
     static Path asPath( String str ) {
-        assert str
+        if( !str )
+            throw new IllegalArgumentException("Path string cannot be empty")
 
-        int p = str.indexOf('://')
-        if( p == -1 ) {
-            return FileSystems.getDefault().getPath(str)
+        if( !str.contains(':/') ) {
+            return Paths.get(str)
         }
 
+        // normalise 's3' path
         if( str.startsWith('s3://') && str[5]!='/' ) {
-            // normalise 's3' path so that it stars
             str = "s3:///${str.substring(5)}"
         }
 
-        asPath(URI.create(str))
+        asPath(toPathURI(str))
     }
+
 
     /**
      * Given a {@link URI} return a {@link Path} object
@@ -249,10 +255,48 @@ class FileHelper {
      * @return A {@link Path} object
      */
     static Path asPath( URI uri ) {
-        if( uri.scheme == 'file' )
-            FileSystems.getDefault().getPath(uri.path)
-        else
-            getOrCreateFileSystemFor(uri).provider().getPath(uri)
+        if( !uri.scheme || uri.scheme == 'file' ) {
+            checkFileURI(uri)
+            return FileSystems.getDefault().getPath(uri.path)
+        }
+
+        getOrCreateFileSystemFor(uri).provider().getPath(uri)
+    }
+
+
+    private static checkFileURI(URI uri) {
+        if( uri.scheme ) {
+            if( uri.authority )
+                throw new IllegalArgumentException("Malformed file URI: $uri -- It must start either with a `file:/` or `file:///` prefix")
+
+            if( !uri.path )
+                throw new IllegalArgumentException("Malformed file URI: $uri -- Make sure it starts with an absolue path prefix i.e. `file:/`")
+        }
+        else if( !uri.path ) {
+            throw new IllegalArgumentException("URI path cannot be empty")
+        }
+    }
+
+    /**
+     * Helper method that converts a file path to an hierarchical URI {@link URI} object.
+     * <p>
+     * An hierarchical URI is either an absolute URI whose scheme-specific part begins with a slash character (e.g. {@code file:/some/file.txt}),
+     * or a relative URI, that is, a URI that does not specify a scheme (e.g. {@code some/file.txt}).
+     * <p>
+     * The main difference between this method and Java API {@link URI#create(java.lang.String)} is that the former
+     * handle the query and fragments special characters (respectively `?` and `#`) as valid path chars. This because
+     * question mark is required to be used as glob wildcard in path handling.
+     * <p>
+     * As side effect this method always returns a null {@link URI#query} and {@link URI#fragment} components.
+     *
+     * @param str A string representing a URI file path
+     * @return A {@link URI} for the given string
+     */
+
+    @PackageScope
+    static URI toPathURI( String str ) {
+        // note: this URI constructor parse the path parameter and extract the `scheme` and `authority` components
+        new URI(null,null,str,null,null)
     }
 
     /**
