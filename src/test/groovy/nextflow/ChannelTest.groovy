@@ -27,7 +27,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import org.junit.Rule
 import spock.lang.Specification
+import test.TemporaryPath
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -49,11 +52,13 @@ class ChannelTest extends Specification {
 
     }
 
+    @Rule
+    TemporaryPath tempDir = new TemporaryPath()
 
     def testGlobAlternative() {
 
         setup:
-        def folder = Files.createTempDirectory('testFiles')
+        def folder = tempDir.root
         def file1 = Files.createFile(folder.resolve('alpha.txt'))
         def file2 = Files.createFile(folder.resolve('beta.txt'))
         def file3 = Files.createFile(folder.resolve('gamma.txt'))
@@ -82,8 +87,6 @@ class ChannelTest extends Specification {
         then:
         result == [ 'file4.txt', 'file5.txt', 'file66.txt' ]
 
-        cleanup:
-        folder.deleteDir()
 
     }
 
@@ -91,7 +94,7 @@ class ChannelTest extends Specification {
     def testGlobHiddenFiles() {
 
         setup:
-        def folder = Files.createTempDirectory('testFiles')
+        final folder = tempDir.root
         def file1 = Files.createFile(folder.resolve('.alpha.txt'))
         def file2 = Files.createFile(folder.resolve('.beta.txt'))
         def file3 = Files.createFile(folder.resolve('delta.txt'))
@@ -112,15 +115,12 @@ class ChannelTest extends Specification {
         then:
         result == [file1, file2, file3, file4]
 
-        cleanup:
-        folder.deleteDir()
-
     }
 
     def testGlobFiles() {
 
         setup:
-        def folder = Files.createTempDirectory('testFiles')
+        def folder = tempDir.root
         def file1 = Files.createFile(folder.resolve('file1.txt'))
         def file2 = Files.createFile(folder.resolve('file2.txt'))
         def file3 = Files.createFile(folder.resolve('file3.txt'))
@@ -144,9 +144,6 @@ class ChannelTest extends Specification {
         then:
         result3 == [file5]
 
-        cleanup:
-        folder.deleteDir()
-
     }
 
 
@@ -168,7 +165,7 @@ class ChannelTest extends Specification {
     def testFromPath() {
 
         setup:
-        def folder = Files.createTempDirectory('testFiles')
+        def folder = tempDir.root
         def file1 = Files.createFile(folder.resolve('file1.txt'))
         def file2 = Files.createFile(folder.resolve('file2.txt'))
         def file3 = Files.createFile(folder.resolve('file3.log'))
@@ -241,16 +238,13 @@ class ChannelTest extends Specification {
         then:
         thrown( IllegalArgumentException )
 
-        cleanup:
-        folder?.deleteDir()
-
     }
 
 
     def testFromPathWithLinks() {
 
         setup:
-        def folder = Files.createTempDirectory('testFiles')
+        def folder = tempDir.root
         def file1 = Files.createFile(folder.resolve('file1.txt'))
         def file2 = Files.createFile(folder.resolve('file2.txt'))
         def sub1 = Files.createDirectories(folder.resolve('sub_1'))
@@ -270,17 +264,13 @@ class ChannelTest extends Specification {
         then:
         result2 == ['file3.txt','file4.txt']
 
-        cleanup:
-        folder?.deleteDir()
-
-
     }
 
 
     def testFromPathHidden() {
 
         setup:
-        def folder = Files.createTempDirectory('testFiles')
+        def folder = tempDir.root
         Files.createFile(folder.resolve('file1.txt'))
         Files.createFile(folder.resolve('file2.txt'))
         Files.createFile(folder.resolve('.file_hidden.txt'))
@@ -300,10 +290,6 @@ class ChannelTest extends Specification {
         result = Channel.fromPath( folder.toAbsolutePath().toString() + '/*.txt', hidden: true ).toSortedList({it.name}).getVal().collect { it.getName() }
         then:
         result == ['.file_hidden.txt', 'file1.txt','file2.txt']
-
-
-        cleanup:
-        folder?.deleteDir()
 
 
     }
