@@ -338,7 +338,8 @@ class LazyMap implements Map<String,Object> {
                 return copy.call()
             }
             catch( MissingPropertyException e ) {
-                throw new IllegalStateException("Directive `$key` doesn't support dynamic value")
+                if( binding == null ) throw new IllegalStateException("Directive `$key` doesn't support dynamic value (or context not yet initialized)")
+                else throw e
             }
         }
         else if( value instanceof GString ) {

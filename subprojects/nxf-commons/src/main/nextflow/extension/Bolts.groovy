@@ -552,7 +552,7 @@ class Bolts {
      * @return The cloned {@link Closure} object
      */
     static <T extends Closure> T cloneWith( T self, binding ) {
-        assert binding != null
+
         def copy = (T)self.clone()
         if( binding != null ) {
             copy.setDelegate(binding)
