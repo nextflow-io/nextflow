@@ -236,6 +236,7 @@ class CmdRun extends CmdBase implements HubOptions {
         }
         // checkout requested revision
         manager.checkout(revision)
+        manager.updateModules()
         log.info "Launching '${repo}' - revision: ${manager.getCurrentRevisionAndName()}"
 
         // return the script file

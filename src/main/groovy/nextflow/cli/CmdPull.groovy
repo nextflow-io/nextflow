@@ -67,6 +67,8 @@ class CmdPull extends CmdBase implements HubOptions {
             def manager = new AssetManager( pipeline: it, hub: getHubProvider(),  user: getHubUser(), pwd: getHubPassword(), root: root)
 
             def result = manager.download()
+            manager.updateModules()
+
             if( !result )
                 log.info " done"
             else

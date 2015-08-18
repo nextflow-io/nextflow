@@ -19,6 +19,7 @@
  */
 
 package nextflow.scm
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -125,8 +126,7 @@ class AssetManager {
 
     }
 
-
-
+    @PackageScope
     AssetManager setRoot( File root ) {
         assert root
         this.root = root
@@ -196,6 +196,12 @@ class AssetManager {
 
         if( name == 'gitlab' )
             return new GitlabRepositoryProvider(pipeline: pipeline, user: user, pwd: pwd)
+
+        if( name.startsWith('file:') ) {
+            def base = new File(name.substring(5)).absoluteFile
+            return new LocalRepositoryProvider(pipeline: pipeline, root: base)
+        }
+
 
         throw new AbortOperationException("Unkwnon pipeline repository provider: $name")
     }
@@ -382,6 +388,7 @@ class AssetManager {
                 .setDirectory(localPath)
                 .call()
 
+            // return status message
             return "downloaded from ${gitRepositoryUrl}"
         }
 
@@ -600,5 +607,36 @@ class AssetManager {
                 .call()
     }
 
+    public void updateModules() {
+
+        if( !localPath )
+            return // nothing to do
+
+        final marker = new File(localPath, '.gitmodules')
+        if( !marker.exists() || marker.empty() )
+            return
+
+        // the `gitmodules` attribute in the manifest makes it possible to enable/disable modules updating
+        final modules = readManifest().gitmodules
+        if( modules == false )
+            return
+
+        List<String> filter = []
+        if( modules instanceof List ) {
+            filter.addAll(modules as List)
+        }
+        else if( modules instanceof String ) {
+            filter.addAll( (modules as String).tokenize(', ') )
+        }
+
+        final init = git.submoduleInit()
+        final update = git.submoduleUpdate()
+        filter.each { String m -> init.addPath(m); update.addPath(m) }
+        // call submodule init
+        init.call()
+        // call submodule update
+        def updatedList = update.call()
+        log.debug "Update submodules $updatedList"
+    }
 
 }
