@@ -556,7 +556,7 @@ class FileHelper {
      * @param syntaxAndPattern
      * @return A {@link PathMatcher} instance for the specified file pattern
      */
-    static PathMatcher getPathMatcherFor(String syntaxAndPattern, FileSystem fileSystem ) {
+    static PathMatcher getPathMatcherFor( String syntaxAndPattern, FileSystem fileSystem ) {
         assert fileSystem
         assert syntaxAndPattern
 

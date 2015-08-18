@@ -30,7 +30,6 @@ import spock.lang.Specification
 class FilesExTest extends Specification {
 
 
-
     def testGetExtension() {
 
         expect:
@@ -974,5 +973,19 @@ class FilesExTest extends Specification {
         cleanup:
         folder?.deleteDir()
     }
+
+    def 'should match glob pattern' () {
+
+        expect:
+        Paths.get('file.txt').matches('file.txt')
+        Paths.get('file.txt').matches('file.*')
+        Paths.get('file.txt').matches('fil?.txt')
+        Paths.get('file.txt').matches('file.{log,txt}')
+        Paths.get('/some/file/file.txt').matches('**/file.{log,txt}')
+
+        !Paths.get('file.txt').matches('file.log')
+        !Paths.get('file.txt').matches('fil??.txt')
+    }
+
 
 }

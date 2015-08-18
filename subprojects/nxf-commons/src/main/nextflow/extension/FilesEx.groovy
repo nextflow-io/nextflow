@@ -1377,4 +1377,12 @@ class FilesEx {
         }
     }
 
+    static boolean matches( Path self, String pattern ) {
+        FileHelper.getPathMatcherFor("glob:$pattern", self.fileSystem).matches(self)
+    }
+
+    static boolean matches( File self, String pattern ) {
+        matches(self.toPath(), pattern)
+    }
+
 }
