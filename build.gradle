@@ -285,7 +285,7 @@ if( hasProperty('signing.keyId') ) {  // <-- note: to sign and deploy artifacts 
 ext.homeDir = System.properties['user.home']
 ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
 ext.releaseDir = "$buildDir/releases"
-ext.s3CmdOpts="-q --no-mime-magic --reduced-redundancy --acl-public --access_key=${System.env.NXF_AWS_ACCESS} --secret_key=${System.env.NXF_AWS_SECRET}"
+ext.s3CmdOpts="--acl public-read --storage-class REDUCED_REDUNDANCY"
 
 
 protected error(String message) {
@@ -473,7 +473,13 @@ task deploy( type: Exec, dependsOn: [clean, pack, deployable.uploadArchives, mak
 
         println "Uploading artifacts: "
         files.each { println "- $it"}
-        temp.text = files.collect { "s3cmd put ${it} s3://www.nextflow.io/releases/v${version}/${it.name} ${s3CmdOpts}"}.join('\n')
+
+        def script = []
+        script << "export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}"
+        script << "export AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET}"
+        script.addAll( files.collect { "aws s3 cp ${it} s3://www.nextflow.io/releases/v${version}/${it.name} ${s3CmdOpts}"})
+
+        temp.text = script.join('\n')
     }
 
     commandLine 'bash', '-e', temp.absolutePath
