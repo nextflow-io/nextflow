@@ -1,7 +1,18 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.15.1 - 4 Jul 2015
+0.15.2 - 19 Aug 2015
+- Improved `groupTuple` operator adding the support of `size` and `remainder` parameters.
+- Fixed issue #45. Creation of scratch folder on Mac OS-X.
+- Fixed issue #65. An input file that is staged from a foreign file system lost it's original name.
+- Fixed issue #66. Git submodules are not cloned/updated when a pipeline project is pulled from a remote repository.
+- Fixed minor issue when evaluating config lazy property with no binding object.
+- Updated Capsule to latest version () fixing an issue that was preventing to add a custom path to the application classpath.
+- Added Path matches extension method [experimental].
+- Added support for `into` parameter to `splitXxx` operators.
+- Changed signature of `close` operator so that it returns the channel to which it is applied.
+
+0.15.1 - 4 Aug 2015
 - Added feature #60 - Implements support for Gitlab source code management platform.
 - Added support for `disk` directive to `crg` executor.
 - Fixed issue #57 - Creation folder lock must be a singleton instance.
