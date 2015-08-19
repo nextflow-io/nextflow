@@ -1313,58 +1313,6 @@ class DataflowExtensionsTest extends Specification {
     }
 
 
-    def testSplitFasta() {
-
-        setup:
-        def fasta1 = """\
-                >1aboA
-                NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
-                NYITPVN
-                >1ycsB
-                KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
-                VPRNLLGLYP
-                ; comment
-                >1pht
-                GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
-                WLNGYNETTGERGDFPGTYVEYIGRKKISP
-                """.stripIndent()
-
-        when:
-        def records = Channel.from(fasta1).splitFasta()
-        then:
-        records.val == '>1aboA\nNLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS\nNYITPVN\n'
-        records.val == '>1ycsB\nKGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY\nVPRNLLGLYP\n'
-        records.val == '>1pht\nGYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG\nWLNGYNETTGERGDFPGTYVEYIGRKKISP\n'
-        records.val == Channel.STOP
-
-        when:
-        def fasta2 = '''
-            >alpha123
-            WLNGYNETTGERGDFPGTYVEYIGRKKISP
-            VPRNLLGLYP
-            '''
-        records = Channel.from(fasta1, fasta2).splitFasta(record:[id:true])
-        then:
-        records.val == [id:'1aboA']
-        records.val == [id:'1ycsB']
-        records.val == [id:'1pht']
-        records.val == [id:'alpha123']
-        records.val == Channel.STOP
-
-
-        when:
-        def result = Channel.from( [fasta1, 'one'], [fasta2,'two'] ).splitFasta(record:[id:true]) { record, code ->
-            [record.id, code]
-        }
-
-        then:
-        result.val == ['1aboA', 'one']
-        result.val == ['1ycsB', 'one']
-        result.val == ['1pht',  'one']
-        result.val == ['alpha123', 'two']
-        result.val == Channel.STOP
-    }
-
     def testConcat() {
 
         when:
@@ -1827,15 +1775,18 @@ class DataflowExtensionsTest extends Specification {
     def 'should close the dataflow channel' () {
 
         given:
-        def result = [10,20,30].channel()
-        result.close()
+        def source = Channel.create()
+        source << 10
+        source << 20
+        source << 30
+        def result = source.close()
 
         expect:
+        result.is source
         result.val == 10
         result.val == 20
         result.val == 30
         result.val == Channel.STOP
-
     }
 
     def 'should assign a channel to new variable' () {

@@ -2140,13 +2140,14 @@ class DataflowExtensions {
      *
      * @param source The source dataflow channel to be closed.
      */
-    static void close( DataflowReadChannel source ) {
+    static close( DataflowReadChannel source ) {
         if( source instanceof DataflowQueue ) {
             source.bind(Channel.STOP)
         }
         else {
             log.warn "Operation `close` can only be applied to a queue channel"
         }
+        return source
     }
 
 }

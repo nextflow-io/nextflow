@@ -143,21 +143,30 @@ class SplitterFactory {
      *
      * @param source
      * @param splitter
-     * @param opt
+     * @param opts
      * @return
      */
-    static protected splitOverChannel( DataflowReadChannel source, SplitterStrategy splitter, Map opt )  {
+    static protected splitOverChannel( DataflowReadChannel source, SplitterStrategy splitter, Map opts )  {
 
         def strategy = splitter as AbstractSplitter
 
+        if( opts.containsKey('autoClose') ) throw new IllegalArgumentException('Parameter `autoClose` do not supported')
+        if( opts.into && !(opts.into instanceof DataflowQueue) ) throw new IllegalArgumentException('Parameter `into` must reference a channel object')
+
         // create a new DataflowChannel that will receive the splitter entries
-        DataflowQueue resultChannel = opt.into = new DataflowQueue()
+        DataflowQueue resultChannel
+        if( opts.into ) {
+            resultChannel = opts.into as DataflowQueue
+        }
+        else {
+            resultChannel = opts.into = new DataflowQueue()
+        }
 
         // turn off channel auto-close
-        opt.autoClose = false
+        opts.autoClose = false
 
         // set the splitter strategy options
-        strategy.options(opt)
+        strategy.options(opts)
 
         DataflowExtensions.subscribe ( source, [
                 onNext: { entry -> strategy.target(entry).apply() },

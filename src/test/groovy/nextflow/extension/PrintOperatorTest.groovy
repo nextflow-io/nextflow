@@ -21,6 +21,7 @@
 package nextflow.extension
 
 import nextflow.Channel
+import org.junit.Rule
 import test.OutputCapture
 import spock.lang.Specification
 
@@ -28,15 +29,15 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class DataflowExtensionsTest2 extends Specification{
+class PrintOperatorTest extends Specification{
 
     /*
      * Read more http://mrhaki.blogspot.com.es/2015/02/spocklight-capture-and-assert-system.html
      */
-    @org.junit.Rule
+    @Rule
     OutputCapture capture = new OutputCapture()
 
-    def testPrint() {
+    def 'should print channel item to stdout'() {
 
         when:
         Channel.from(1,2,3).print()
@@ -46,7 +47,7 @@ class DataflowExtensionsTest2 extends Specification{
 
     }
 
-    def testPrintWithClosure() {
+    def 'should print item applying closure formatting rule'() {
 
         when:
         Channel.from(1,2,3).print { "> $it " }
@@ -56,7 +57,7 @@ class DataflowExtensionsTest2 extends Specification{
 
     }
 
-    def testPrintln() {
+    def 'should print item appending newline character'() {
 
         when:
         Channel.from(1,2,3).println()
@@ -66,7 +67,7 @@ class DataflowExtensionsTest2 extends Specification{
 
     }
 
-    def testPrintlnWithClosure() {
+    def 'should print items applying closure formatting and appending newline'() {
 
         when:
         Channel.from(1,2,3).map{ "> $it" }.println()
@@ -77,44 +78,5 @@ class DataflowExtensionsTest2 extends Specification{
     }
 
 
-    def testView() {
-
-        when:
-        def result = Channel.from(1,2,3).view()
-        then:
-        result.val == 1
-        result.val == 2
-        result.val == 3
-        result.val == Channel.STOP
-        capture.toString() == '1\n2\n3\n'
-
-    }
-
-    def testViewWithClosure() {
-
-        when:
-        def result = Channel.from(1,2,3).view { "~ $it " }
-        then:
-        result.val == 1
-        result.val == 2
-        result.val == 3
-        result.val == Channel.STOP
-
-        capture.toString() == '~ 1 \n~ 2 \n~ 3 \n'
-
-    }
-
-    def testViewNoNewLine() {
-
-        when:
-        def result = Channel.from(1,2,3).view(newLine:false) { " ~ $it" }
-        then:
-        result.val == 1
-        result.val == 2
-        result.val == 3
-        result.val == Channel.STOP
-
-        capture.toString() == ' ~ 1 ~ 2 ~ 3'
-    }
 
 }
