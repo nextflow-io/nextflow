@@ -43,6 +43,8 @@ class DockerBuilder {
 
     private List<String> options = []
 
+    private List<String> engineOptions = []
+
     private boolean remove = true
 
     private String temp
@@ -97,6 +99,9 @@ class DockerBuilder {
 
         if( params.containsKey('temp') )
             this.temp = params.temp
+
+        if( params.containsKey('engineOptions') )
+            addEngineOptions(params.engineOptions.toString())
 
         if( params.containsKey('runOptions') )
             addRunOptions(params.runOptions.toString())
@@ -155,13 +160,23 @@ class DockerBuilder {
         return this
     }
 
+    DockerBuilder addEngineOptions(String str) {
+        engineOptions.add(str)
+        return this
+    }
+
     String build(StringBuilder result = new StringBuilder()) {
         assert image
 
         if( sudo )
             result << 'sudo '
 
-        result << 'docker run -i '
+        result << 'docker '
+
+        if( engineOptions )
+            result << engineOptions.join(' ') << ' '
+
+        result << 'run -i '
 
         if( cpus )
             result << "--cpuset ${cpus} "
