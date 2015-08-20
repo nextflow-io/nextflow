@@ -66,6 +66,7 @@ class DockerBuilderTest extends Specification {
         new DockerBuilder('busybox').params(runOptions: '-x --zeta').build() == 'docker run -i -v $PWD:$PWD -w $PWD -x --zeta busybox'
         new DockerBuilder('busybox').params(userEmulation:true).build() == 'docker run -i -u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME -v $PWD:$PWD -w $PWD busybox'
         new DockerBuilder('busybox').setName('hola').build() == 'docker run -i -v $PWD:$PWD -w $PWD --name hola busybox'
+        new DockerBuilder('busybox').params(engineOptions: '--tlsverify --tlscert="/path/to/my/cert"').build() == 'docker --tlsverify --tlscert="/path/to/my/cert" run -i -v $PWD:$PWD -w $PWD busybox'
 
         new DockerBuilder('fedora')
                 .addEnv(envFile)
