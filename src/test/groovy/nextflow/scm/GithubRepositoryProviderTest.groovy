@@ -20,6 +20,7 @@
 
 package nextflow.scm
 
+import spock.lang.Requires
 import spock.lang.Specification
 
 /**
@@ -27,10 +28,11 @@ import spock.lang.Specification
  */
 class GithubRepositoryProviderTest extends Specification {
 
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testGitCloneUrl() {
 
         given:
-        def (user,pwd) = System.getenv('NXF_GITHUB_ACCESS_TOKEN')?.tokenize(':') ?: [null,null]
+        def (user,pwd) = System.getenv('NXF_GITHUB_ACCESS_TOKEN')?.tokenize(':')
 
         when:
         def url = new GithubRepositoryProvider(pipeline: 'nextflow-io/hello', user: user, pwd: pwd).getCloneUrl()
@@ -44,11 +46,11 @@ class GithubRepositoryProviderTest extends Specification {
         new GithubRepositoryProvider(pipeline: 'nextflow-io/hello').getHomePage() == "https://github.com/nextflow-io/hello"
     }
 
-
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testReadContent() {
 
         given:
-        def (user,pwd) = System.getenv('NXF_GITHUB_ACCESS_TOKEN')?.tokenize(':') ?: [null,null]
+        def (user,pwd) = System.getenv('NXF_GITHUB_ACCESS_TOKEN')?.tokenize(':')
 
         when:
         def repo = new GithubRepositoryProvider(pipeline: 'nextflow-io/hello', user: user, pwd: pwd)
