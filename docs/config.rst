@@ -251,6 +251,7 @@ remove              Clean-up the container after the execution (default: ``true`
 runOptions          This attribute can be used to provide any extra command line options supported by the ``docker run`` command. For details see: http://docs.docker.com/reference/run
 registry            The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``
 fixOwnership        Fix ownership of files created by the docker container
+engineOptions       This attribute can be used to provide any option supported by the Docker engine i.e. ``docker [OPTIONS]``
 ================== ================
 
 The above options can be used by prefixing them with the ``docker`` scope or surrounding them by curly
