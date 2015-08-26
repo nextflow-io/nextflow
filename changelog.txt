@@ -1,9 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.15.3 - 26 Aug 2015
+- Merged #68. Add `engineOptions` setting to Docker configuration.
+
 0.15.2 - 19 Aug 2015
 - Improved `groupTuple` operator adding the support of `size` and `remainder` parameters.
-- Fixed issue #45. Creation of scratch folder on Mac OS-X.
+- Fixed issue #47. Creation of scratch folder on Mac OS-X.
+- Fixed issue #64. `Channel.fromPath` throws an exception when curly brackets glob pattern is used with a S3 path.
 - Fixed issue #65. An input file that is staged from a foreign file system lost it's original name.
 - Fixed issue #66. Git submodules are not cloned/updated when a pipeline project is pulled from a remote repository.
 - Fixed minor issue when evaluating config lazy property with no binding object.
