@@ -992,7 +992,7 @@ Output 'set' of values
 --------------------------
 
 The ``set`` qualifier allows to send multiple values into a single channel. This feature is useful
-when you need to `group` the result of multiple execution of the same process, as shown in the following
+when you need to `group together` the results of multiple executions of the same process, as shown in the following
 example::
 
     query = Channel.fromPath '*.fa'
