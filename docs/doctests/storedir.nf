@@ -5,15 +5,15 @@ genomes = Channel.path( params.genomes )
     storeDir 'blastdb'
 
     input:
-    file specie from genomes
+    file species from genomes
 
     output:
     file "${dbName}.*" into blastDb
 
     script:
-    dbName = specie.baseName
+    dbName = species.baseName
     """
-    makeblastdb -dbtype prot -in ${specie} -out ${dbName}
+    makeblastdb -dbtype prot -in ${species} -out ${dbName}
     """
 
   }

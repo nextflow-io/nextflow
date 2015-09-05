@@ -992,20 +992,20 @@ Output 'set' of values
 --------------------------
 
 The ``set`` qualifier allows to send multiple values into a single channel. This feature is useful
-when you need to `together` the result of multiple execution of the same process, as shown in the following
+when you need to `group together` the results of multiple executions of the same process, as shown in the following
 example::
 
     query = Channel.fromPath '*.fa'
-    specie = Channel.from 'human', 'cow', 'horse'
+    species = Channel.from 'human', 'cow', 'horse'
 
     process blast {
 
     input:
-        val specie
+        val species
         file query
 
     output:
-        set val(specie), file('result') into blastOuts
+        set val(species), file('result') into blastOuts
 
 
     "blast -db nr -query $query" > result
@@ -1013,8 +1013,8 @@ example::
     }
 
 
-In the above example a `BLAST` task is executed for each pair of ``specie`` and ``query`` that are received.
-When the task completes a new tuple containing the value for ``specie`` and the file ``result`` is sent to the ``blastOuts`` channel.
+In the above example a `BLAST` task is executed for each pair of ``species`` and ``query`` that are received.
+When the task completes a new tuple containing the value for ``species`` and the file ``result`` is sent to the ``blastOuts`` channel.
 
 
 A `set` declaration can contain any combination of the following qualifiers, previously described: ``val``, ``file`` and ``stdout``.
@@ -1026,7 +1026,7 @@ A `set` declaration can contain any combination of the following qualifiers, pre
 ::
 
     output:
-        set specie, 'result' into blastOuts
+        set species, 'result' into blastOuts
 
 
 
@@ -1423,7 +1423,7 @@ In more detail, it affects the process execution in two main ways:
    specified by the ``storeDir`` directive.
 
 The following example shows how use the ``storeDir`` directive to create a directory containing a BLAST database
-for each specie specified by an input parameter::
+for each species specified by an input parameter::
 
   genomes = Channel.fromPath(params.genomes)
 
@@ -1432,15 +1432,15 @@ for each specie specified by an input parameter::
     storeDir '/db/genomes'
 
     input:
-    file specie from genomes
+    file species from genomes
 
     output:
     file "${dbName}.*" into blastDb
 
     script:
-    dbName = specie.baseName
+    dbName = species.baseName
     """
-    makeblastdb -dbtype nucl -in ${specie} -out ${dbName}
+    makeblastdb -dbtype nucl -in ${species} -out ${dbName}
     """
 
   }
