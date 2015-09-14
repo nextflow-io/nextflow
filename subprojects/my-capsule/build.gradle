@@ -18,7 +18,6 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 apply plugin: 'java'
-apply plugin: 'application'
 
 dependencies {
     // Capsule manages the fat jar building process
