@@ -76,10 +76,6 @@ public class CacheHelper {
 
     public static Hasher hasher( Hasher hasher, Object value, HashMode mode ) {
 
-        /*
-         * Used huge IF instead of Switch because the groovy switch implementation is very slow
-         */
-
         if( value == null )
             return hasher;
 

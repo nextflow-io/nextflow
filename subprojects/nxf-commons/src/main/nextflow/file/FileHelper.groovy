@@ -54,7 +54,7 @@ import nextflow.util.CacheHelper
 @CompileStatic
 class FileHelper {
 
-    static final Path localTempBasePath
+    static final private Path localTempBasePath
 
     static final Pattern GLOB_CURLY_BRACKETS = Pattern.compile(/(.*)(\{.+,.+\})(.*)/)
 
@@ -72,6 +72,9 @@ class FileHelper {
             // make sure the path exists
             if( !Files.exists(localTempBasePath) )
                 Files.createDirectories(localTempBasePath)
+        }
+        else {
+            localTempBasePath = Files.createTempDirectory('nxf')
         }
     }
 
@@ -207,7 +210,6 @@ class FileHelper {
 
             return result.toAbsolutePath()
         }
-
     }
 
 
@@ -216,6 +218,10 @@ class FileHelper {
             Files.createTempDirectory(localTempBasePath, prefix)
         else
             Files.createTempDirectory(prefix)
+    }
+
+    final static Path getLocalTempPath() {
+        return localTempBasePath
     }
 
     /**

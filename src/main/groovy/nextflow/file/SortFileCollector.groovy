@@ -25,10 +25,13 @@ import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
 
+import com.google.common.hash.HashCode
+import com.google.common.hash.Hasher
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.sort.LevelDbSort
+import nextflow.util.CacheHelper
 import nextflow.util.KryoHelper
 import org.iq80.leveldb.DB
 import org.iq80.leveldb.Options
@@ -57,12 +60,18 @@ class SortFileCollector extends FileCollector implements Closeable {
          */
         long index
 
+        /**
+         * The entry hash code
+         */
+        byte[] hash
+
         // required by kryo de-serialization
         protected IndexEntry () {}
 
-        IndexEntry( Comparable a, long n ) {
+        IndexEntry( Comparable a, long n, byte[] h ) {
             this.group = a
             this.index = n
+            this.hash = h
         }
 
     }
@@ -122,7 +131,6 @@ class SortFileCollector extends FileCollector implements Closeable {
 
     }
 
-
     def sort
 
     Long sliceMaxSize
@@ -136,6 +144,8 @@ class SortFileCollector extends FileCollector implements Closeable {
     private LevelDbSort<IndexEntry> index;
 
     private Path fTempDir
+
+    private List directory
 
     void setSort( def value ) {
         if( value == null || value instanceof Closure || value instanceof Comparator )
@@ -199,7 +209,7 @@ class SortFileCollector extends FileCollector implements Closeable {
             return new ByteArrayInputStream(value.toString().getBytes())
 
         if( value instanceof byte[] )
-            return new ByteArrayInputStream((byte[])value)
+            return new ByteArrayInputStream(value as byte[])
 
         throw new IllegalArgumentException("Not a valid file collector argument [${value.class.name}]: $value")
     }
@@ -219,9 +229,10 @@ class SortFileCollector extends FileCollector implements Closeable {
 
         // serialise the main value
         def payload = KryoHelper.serialize(value);
+        def hash = hash(key, value)
 
         store.put( bytes(count), payload )
-        index.add( new IndexEntry(group: key, index: count) )
+        index.add( new IndexEntry(key, count, hash) )
 
         count++
 
@@ -232,6 +243,12 @@ class SortFileCollector extends FileCollector implements Closeable {
         return ByteBuffer.allocate(8).putLong(value).array();
     }
 
+    private byte[] hash(String key, value) {
+        def h
+        h = CacheHelper.hasher(key, hashMode)
+        h = CacheHelper.hasher(h, value, hashMode)
+        return h.hash().asBytes()
+    }
 
     /**
      * Append the content of a file to the target file having {@code key} as name
@@ -256,19 +273,35 @@ class SortFileCollector extends FileCollector implements Closeable {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    List<Path> saveTo(Path target) {
-        target.createDirIfNotExists()
+    @Override
+    protected HashCode makeHash() {
 
-        def result = []
-        saveFile { String name ->
-            Path newFile = target.resolve(name)
-            result << newFile
-            return newFile
+        if( !index )
+            return null
+
+        def last = null
+        Hasher hasher = cacheable ? CacheHelper.hasher( hashKeys, CacheHelper.HashMode.STANDARD ) : null
+        if( hasher && log.isTraceEnabled() ) {
+            log.trace "  hasher: ${CacheHelper.hasher( hashKeys, CacheHelper.HashMode.STANDARD ) } \n"
         }
-        return result
+        directory = new LinkedList()
+
+        index.sort { IndexEntry entry ->
+            if( last != entry.group ) {
+                directory.add(-1)
+                directory.add(entry.group)
+            }
+            directory.add(entry.index)
+
+            if( hasher ) {
+                hasher = CacheHelper.hasher(hasher, entry.hash, CacheHelper.HashMode.STANDARD)
+                if( log.isTraceEnabled() )
+                log.trace "  index: $entry.index - ${CacheHelper.hasher(entry.hash).hash()} \n"
+            }
+
+        }
+
+        return hasher?.hash()
     }
 
     /**
@@ -276,14 +309,21 @@ class SortFileCollector extends FileCollector implements Closeable {
      */
     void saveFile( Closure<Path> closure ) {
 
-        if( !index )
+        if( !directory )
             return
 
         def last = null
+        def name = null
         OutputStream output = null
 
-        index.sort { IndexEntry entry ->
-            def name = entry.group
+        def itr = directory.iterator()
+        while( itr.hasNext() ) {
+            def item = itr.next()
+            if( item == -1 ) {
+                name = itr.next()
+                continue
+            }
+
             if( last != name ) {
                 // close current output stream
                 output?.closeQuietly()
@@ -294,13 +334,13 @@ class SortFileCollector extends FileCollector implements Closeable {
                  * given a 'group' name returns the target file where to save
                  */
                 def target = closure.call(name)
-                output = Files.newOutputStream(target, APPEND)
+                output = Files.newOutputStream(target, TRUNCATE)
 
                 /*
                  * write the 'seed' value
                  */
                 if( seed instanceof Map ) {
-                    if( seed.containsKey(name) ) appendStream(normalizeToStream(seed.get(name)), output)
+                    if( ((Map)seed).containsKey(name) ) appendStream(normalizeToStream(((Map)seed).get(name)), output)
                 }
                 else if( seed ) {
                     appendStream(normalizeToStream(seed), output)
@@ -310,7 +350,8 @@ class SortFileCollector extends FileCollector implements Closeable {
             /*
              * add the current value
              */
-            def bytes = (byte[])store.get(bytes(entry.index))
+            def index = (long)item
+            def bytes = (byte[])store.get(bytes(index))
             def val = KryoHelper.deserialize(bytes)
             appendStream(normalizeToStream(val), output)
         }

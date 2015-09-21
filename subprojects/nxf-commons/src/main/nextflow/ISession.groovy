@@ -64,4 +64,8 @@ interface ISession {
      */
     Binding getBinding()
 
+    boolean isCacheable()
+
+    boolean isResumeMode()
+
 }

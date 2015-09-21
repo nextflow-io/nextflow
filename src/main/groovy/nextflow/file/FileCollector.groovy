@@ -21,15 +21,18 @@
 package nextflow.file
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.OpenOption
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 
+import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.extension.FilesEx
-
+import nextflow.util.CacheHelper
+import nextflow.util.KryoHelper
 /**
  * File collector base class
  *
@@ -39,19 +42,29 @@ import nextflow.extension.FilesEx
 @CompileStatic
 abstract class FileCollector implements Closeable {
 
-    static final public OpenOption[] APPEND = [StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE] as OpenOption[]
+    static final public OpenOption[] APPEND = [StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND] as OpenOption[]
 
-    public Boolean newLine
+    static final public OpenOption[] TRUNCATE = [StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING] as OpenOption[]
 
-    public seed
+    Boolean newLine
 
-    public boolean deleteTempFilesOnClose = true;
+    def seed
+
+    boolean deleteTempFilesOnClose = true;
+
+    CacheHelper.HashMode hashMode = CacheHelper.HashMode.STANDARD
+
+    List hashKeys
+
+    boolean cacheable
+
+    boolean resumable
 
     private Path tempDir
 
     private boolean created
 
-    private boolean closed;
+    private boolean closed
 
     protected FileCollector() { }
 
@@ -113,9 +126,11 @@ abstract class FileCollector implements Closeable {
 
     /**
      * Save an collect entry to the respective grouping file
-     * @param closure Closure mapping a group name to the respective groupping file e.g. { name -> Paths.get(name) }
+     * @param closure Closure mapping a group name to the respective grouping file e.g. { name -> Paths.get(name) }
      */
     abstract void saveFile( Closure<Path> closure );
+
+    protected HashCode makeHash() { return null }
 
     /**
      * Normalize values to a {@link InputStream}
@@ -134,7 +149,7 @@ abstract class FileCollector implements Closeable {
             return new ByteArrayInputStream(value.toString().getBytes())
 
         if( value instanceof byte[] )
-            return new ByteArrayInputStream((byte[])value)
+            return new ByteArrayInputStream(value as byte[])
 
         throw new IllegalArgumentException("Not a valid file collector argument [${value.class.name}]: $value")
     }
@@ -147,7 +162,7 @@ abstract class FileCollector implements Closeable {
      *              automatically
      * @return The list of files where entries have been saved.
      */
-    List<Path> saveTo(Path target) {
+    private List<Path> saveTo0(Path target) {
         target.createDirIfNotExists()
 
         def result = []
@@ -157,6 +172,30 @@ abstract class FileCollector implements Closeable {
             return newFile
         }
         return result
+    }
+
+    List<Path> saveTo(Path target) {
+
+        // verify if a cached list exists
+        final hash = makeHash()?.toString()
+        Path temp = hash ? FileHelper.getLocalTempPath().resolve("${hash}.collect-file") : null
+
+        // try to retrieve cached files
+        List<Path> items = null
+        if( resumable && temp ) {
+            items = retrieveCachedFiles(temp)
+        }
+
+        // get the list of files to generated
+        if( items == null ) {
+            items = saveTo0(target)
+            // save the list of collected files
+            if( cacheable && temp ) {
+                cacheCollectedFile(items, temp)
+            }
+        }
+
+        return items
     }
 
     /**
@@ -185,5 +224,35 @@ abstract class FileCollector implements Closeable {
         }
     }
 
+    private List<Path> retrieveCachedFiles(Path temp) {
+        try {
+            List<Path> items = (List<Path>)KryoHelper.deserialize(temp)
+            def notFound = items.find { Path p -> !p.exists() }
+            if( notFound ) throw new NoSuchFileException("Missing cached file: $notFound")
+            log.debug "Retrivied cached collect-files from: ${temp} -- cached files: ${items}"
+            return items
+        }
+        catch( NoSuchFileException e ) {
+            log.debug "Missing collect-file cache -- cause: ${e.message}"
+        }
+        catch( Exception e ) {
+            log.debug "Unable retrieve cached collect-files from: ${temp}", e
+            temp.delete()
+        }
+        return null
+    }
+
+    private void cacheCollectedFile(List items, Path temp) {
+        def copy = new ArrayList(items)
+        try {
+            KryoHelper.serialize(copy, temp)
+            log.debug "Saved collect-files list to: ${temp}"
+        }
+        catch( Exception e ) {
+            log.warn "Cannot cache collected files -- See the log file for details"
+            log.debug("Error serialising collected files", e)
+        }
+
+    }
 
 }

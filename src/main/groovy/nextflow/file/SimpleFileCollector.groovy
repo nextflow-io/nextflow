@@ -21,6 +21,7 @@
 package nextflow.file
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
@@ -45,8 +46,8 @@ class SimpleFileCollector extends FileCollector {
     protected Path _file( String name ) {
         (Path)cache.getOrCreate(name) {
             def result = Files.createFile(getTempDir().resolve(name))
-            if( seed instanceof Map && seed.containsKey(name)) {
-                append0(result, normalizeToStream(seed.get(name)))
+            if( seed instanceof Map && ((Map)seed).containsKey(name)) {
+                append0(result, normalizeToStream(((Map)seed).get(name)))
             }
             else if( seed ) {
                 append0(result, normalizeToStream(seed))
@@ -122,7 +123,7 @@ class SimpleFileCollector extends FileCollector {
         while( itr.hasNext() ) {
             def item = itr.next()
             def target = closure.call(item.getName())
-            result << Files.move(item, target)
+            result << Files.move(item, target, StandardCopyOption.REPLACE_EXISTING)
             itr.remove()
         }
 

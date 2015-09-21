@@ -19,15 +19,13 @@
  */
 
 package nextflow.extension
-import java.nio.file.Files
-import java.nio.file.Path
+
 import java.nio.file.Paths
 
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.Session
-import spock.lang.Shared
 import spock.lang.Specification
 /**
  *
@@ -1350,163 +1348,6 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
-
-    @Shared
-    def Session session
-
-    def setupSpec() {
-        session = new Session()
-        session.workDir = Files.createTempDirectory('hello')
-    }
-
-    def cleanupSpec() {
-        session.workDir.deleteDir()
-    }
-
-    def testCollectFileString() {
-
-        when:
-        def result = Channel
-                .from('alpha','beta','gamma')
-                .collectFile { it == 'beta' ? ['file2', it.reverse() ] : ['file1',it] }
-                .toSortedList { it.name }
-
-        List<Path> list = result.val
-
-        then:
-        list[0].name == 'file1'
-        list[0].text == 'alphagamma'
-
-        list[1].name == 'file2'
-        list[1].text == 'ateb'
-
-    }
-
-
-    def testCollectFileWithFiles() {
-
-        given:
-        def file1 = Files.createTempDirectory('temp').resolve('A')
-        file1.text = 'alpha\nbeta'
-
-        def file2 = Files.createTempDirectory('temp').resolve('B')
-        file2.text = 'Hello\nworld'
-
-        def file3 = Files.createTempDirectory('temp').resolve('A')
-        file3.text = 'xyz'
-
-        when:
-        def list = Channel
-                .from(file1,file2,file3)
-                .collectFile(sort:'index')
-                .toSortedList { it.name }
-                .getVal() as List<Path>
-
-        then:
-        list[0].name == 'A'
-        list[0].text == 'alpha\nbetaxyz'
-
-        list[1].name == 'B'
-        list[1].text == 'Hello\nworld'
-
-
-        when:
-        list = Channel
-                .from(file1,file2,file3)
-                .collectFile(sort:'index', newLine:true)
-                .toSortedList { it.name }
-                .getVal() as List<Path>
-
-        then:
-        list[0].name == 'A'
-        list[0].text == 'alpha\nbeta\nxyz\n'
-
-        list[1].name == 'B'
-        list[1].text == 'Hello\nworld\n'
-
-    }
-
-    def testCollectManyFiles() {
-
-
-        when:
-        def list = Channel
-                .from('Hola', 'Ciao', 'Hello', 'Bonjour', 'Halo')
-                .collectFile(sort:'index') { item -> [ "${item[0]}.txt", item + '\n' ] }
-                .toList()
-                .getVal()
-                .sort { it.name }
-
-        then:
-        list[0].name == 'B.txt'
-        list[0].text == 'Bonjour\n'
-        list[1].text == 'Ciao\n'
-        list[1].name == 'C.txt'
-        list[2].name == 'H.txt'
-        list[2].text == 'Hola\nHello\nHalo\n'
-
-    }
-
-
-    def testCollectFileWithStrings() {
-
-        when:
-        def result = Channel
-                .from('alpha', 'beta', 'gamma')
-                .collectFile(name: 'hello.txt', newLine: true, sort:'index')
-
-        def file = result.val
-
-        then:
-        result.val == Channel.STOP
-        file.name == 'hello.txt'
-        file.text == 'alpha\nbeta\ngamma\n'
-    }
-
-    def testCollectFileWithDefaultName() {
-
-        when:
-        def result = Channel
-                .from('alpha', 'beta', 'gamma')
-                .collectFile(newLine: true, sort:'index')
-
-        def file = result.val
-
-        then:
-        result.val == Channel.STOP
-        file.name.startsWith('collect')
-        file.text == 'alpha\nbeta\ngamma\n'
-    }
-
-    def testCollectFileAndSortWithClosure() {
-
-        when:
-        def result = Channel
-                .from('delta', 'beta', 'gamma','alpha')
-                .collectFile(newLine: true, sort:{ it -> it })
-
-        def file = result.val
-
-        then:
-        result.val == Channel.STOP
-        file.name.startsWith('collect')
-        file.text == 'alpha\nbeta\ndelta\ngamma\n'
-    }
-
-    def testCollectFileAndSortWithComparator() {
-
-        when:
-        def result = Channel
-                .from('delta', 'beta', 'gamma','alpha')
-                .collectFile(newLine: true, sort:{ a,b -> b<=>a } as Comparator)
-
-        def file = result.val
-
-        then:
-        result.val == Channel.STOP
-        file.name.startsWith('collect')
-        file.text == 'gamma\ndelta\nbeta\nalpha\n'
-    }
 
     def testDataflowSeparateWithOpenArray() {
 
