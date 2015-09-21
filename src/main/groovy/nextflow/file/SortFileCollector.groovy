@@ -141,11 +141,12 @@ class SortFileCollector extends FileCollector implements Closeable {
 
     private DB store;
 
-    private LevelDbSort<IndexEntry> index;
+    private LevelDbSort<IndexEntry> index
 
-    private Path fTempDir
+    private Path tempDir
 
-    private List directory
+    private SequentialFileStore sortedIndex
+
 
     void setSort( def value ) {
         if( value == null || value instanceof Closure || value instanceof Comparator )
@@ -174,8 +175,8 @@ class SortFileCollector extends FileCollector implements Closeable {
         if( sliceMaxItems ) result.sliceMaxItems(sliceMaxItems)
 
         index = result.create()
+        tempDir = getTempDir()
 
-        fTempDir = getTempDir()
     }
 
     private IndexSort createSortComparator() {
@@ -206,10 +207,10 @@ class SortFileCollector extends FileCollector implements Closeable {
             return value.newInputStream()
 
         if( value instanceof CharSequence )
-            return new ByteArrayInputStream(value.toString().getBytes())
+            return new FastByteArrayInputStream(value.toString().getBytes())
 
         if( value instanceof byte[] )
-            return new ByteArrayInputStream(value as byte[])
+            return new FastByteArrayInputStream(value as byte[])
 
         throw new IllegalArgumentException("Not a valid file collector argument [${value.class.name}]: $value")
     }
@@ -279,24 +280,30 @@ class SortFileCollector extends FileCollector implements Closeable {
         if( !index )
             return null
 
-        def last = null
+
         Hasher hasher = cacheable ? CacheHelper.hasher( hashKeys, CacheHelper.HashMode.STANDARD ) : null
         if( hasher && log.isTraceEnabled() ) {
             log.trace "  hasher: ${CacheHelper.hasher( hashKeys, CacheHelper.HashMode.STANDARD ) } \n"
         }
-        directory = new LinkedList()
 
+        // index route file
+        sortedIndex = new SequentialFileStore(tempDir.resolve('sort.index'))
+
+        def last = null
         index.sort { IndexEntry entry ->
             if( last != entry.group ) {
-                directory.add(-1)
-                directory.add(entry.group)
+                last = entry.group
+                def bytes = KryoHelper.serialize(last)
+                sortedIndex.writeLong( -bytes.length )
+                sortedIndex.writeBytes( bytes )
             }
-            directory.add(entry.index)
+            sortedIndex.writeLong(entry.index)
 
             if( hasher ) {
                 hasher = CacheHelper.hasher(hasher, entry.hash, CacheHelper.HashMode.STANDARD)
-                if( log.isTraceEnabled() )
-                log.trace "  index: $entry.index - ${CacheHelper.hasher(entry.hash).hash()} \n"
+                if( log.isTraceEnabled() ) {
+                    log.trace "  index: $entry.index - ${CacheHelper.hasher(entry.hash).hash()} \n"
+                }
             }
 
         }
@@ -309,18 +316,28 @@ class SortFileCollector extends FileCollector implements Closeable {
      */
     void saveFile( Closure<Path> closure ) {
 
-        if( !directory )
+        if( !sortedIndex )
             return
 
         def last = null
         def name = null
         OutputStream output = null
 
-        def itr = directory.iterator()
-        while( itr.hasNext() ) {
-            def item = itr.next()
-            if( item == -1 ) {
-                name = itr.next()
+        // turn the index buffer into 'read' mode
+        sortedIndex.flip()
+
+        while( true ) {
+            long item
+            try {
+                item = sortedIndex.readLong()
+            }
+            catch( EOFException e ) {
+                break
+            }
+
+            if( item < 0  ) {
+                def data = sortedIndex.readBytes((int)-item)
+                name = KryoHelper.deserialize(data)
                 continue
             }
 
@@ -339,8 +356,8 @@ class SortFileCollector extends FileCollector implements Closeable {
                 /*
                  * write the 'seed' value
                  */
-                if( seed instanceof Map ) {
-                    if( ((Map)seed).containsKey(name) ) appendStream(normalizeToStream(((Map)seed).get(name)), output)
+                if( seed instanceof Map && ((Map)seed).containsKey(name) ) {
+                    appendStream(normalizeToStream(((Map)seed).get(name)), output)
                 }
                 else if( seed ) {
                     appendStream(normalizeToStream(seed), output)
@@ -350,8 +367,7 @@ class SortFileCollector extends FileCollector implements Closeable {
             /*
              * add the current value
              */
-            def index = (long)item
-            def bytes = (byte[])store.get(bytes(index))
+            def bytes = (byte[])store.get(bytes(item))
             def val = KryoHelper.deserialize(bytes)
             appendStream(normalizeToStream(val), output)
         }
@@ -368,12 +384,13 @@ class SortFileCollector extends FileCollector implements Closeable {
         log.trace "Closing sorting dbs"
         store?.closeQuietly()
         index?.closeQuietly()
+        sortedIndex?.closeQuietly()
 
         // finally invoke the the parent close
         super.close()
 
-        if( deleteTempFilesOnClose && fTempDir ) {
-            fTempDir.deleteDir()
+        if( deleteTempFilesOnClose && tempDir ) {
+            tempDir.deleteDir()
         }
         else {
             log.debug "FileCollector temp dir not removed: $tempDir"
