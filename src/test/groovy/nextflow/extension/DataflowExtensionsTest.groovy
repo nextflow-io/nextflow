@@ -1834,4 +1834,23 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    def 'should emit channel items until the condition is verified' () {
+
+        when:
+        def result = Channel.from(1,2,3,4).until { it == 3 }
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.from(1,2,3).until { it == 5 }
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 3
+        result.val == Channel.STOP
+
+    }
+
 }

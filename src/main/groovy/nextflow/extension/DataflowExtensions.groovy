@@ -751,6 +751,24 @@ class DataflowExtensions {
         return target
     }
 
+    static public <T> DataflowReadChannel<T> until(DataflowReadChannel<T> source, final Closure<Boolean> closure) {
+        def target = newChannelBy(source)
+        newOperator(source, target, {
+            final result = DefaultTypeTransformation.castToBoolean(closure.call(it))
+            final proc = ((DataflowProcessor) getDelegate())
+
+            if( result ) {
+                proc.bindOutput(Channel.STOP)
+                proc.terminate()
+            }
+            else {
+                proc.bindOutput(it)
+            }
+        })
+        return target
+    }
+
+
     /**
      * Modifies this collection to remove all duplicated items, using the default comparator.
      *
