@@ -22,6 +22,7 @@ package nextflow.scm
 import java.nio.file.Files
 
 import nextflow.exception.AbortOperationException
+import spock.lang.Requires
 import spock.lang.Specification
 /**
  *
@@ -101,11 +102,13 @@ class AssetManagerTest extends Specification {
     }
 
 
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testPull() {
 
         given:
+        def (user,pwd) = System.getenv('NXF_GITHUB_ACCESS_TOKEN')?.tokenize(':')
         def folder = Files.createTempDirectory('test')
-        def manager = new AssetManager().setRoot(folder.toFile()).setPipeline('nextflow-io/hello')
+        def manager = new AssetManager(user:user, pwd: pwd).setRoot(folder.toFile()).setPipeline('nextflow-io/hello')
 
         when:
         manager.download()
@@ -122,11 +125,14 @@ class AssetManagerTest extends Specification {
 
     }
 
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testClone() {
 
         given:
+        def (user,pwd) = System.getenv('NXF_GITHUB_ACCESS_TOKEN')?.tokenize(':')
         def dir = Files.createTempDirectory('test')
-        def manager = new AssetManager('pditommaso/awesome-pipeline')
+        def manager = new AssetManager(user:user, pwd: pwd, pipeline: 'pditommaso/awesome-pipeline')
 
         when:
         manager.clone(dir.toFile())
