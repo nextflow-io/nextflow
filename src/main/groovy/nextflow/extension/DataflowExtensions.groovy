@@ -709,12 +709,9 @@ class DataflowExtensions {
         return result
     }
 
-
     static public final DataflowReadChannel groupTuple( final DataflowReadChannel channel, final Map params ) {
-
-        new GroupTuple(params, channel).apply()
+        new GroupTupleOp(params, channel).apply()
     }
-
 
     /**
      * Iterates over the collection of items and returns each item that matches the given filter

@@ -32,7 +32,7 @@ import nextflow.util.CheckHelper
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class GroupTuple {
+class GroupTupleOp {
 
     static private Map GROUP_TUPLE_PARAMS = [ by: [Integer, List], sort: [Boolean, 'true','natural','deep','hash',Closure,Comparator], size: Integer, remainder: Boolean ]
 
@@ -62,7 +62,7 @@ class GroupTuple {
 
     private sort
 
-    GroupTuple( Map params, DataflowReadChannel source ) {
+    GroupTupleOp(Map params, DataflowReadChannel source) {
 
         CheckHelper.checkParams('groupTuple', params, GROUP_TUPLE_PARAMS)
 
