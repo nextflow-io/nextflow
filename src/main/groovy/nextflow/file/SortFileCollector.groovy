@@ -35,6 +35,7 @@ import nextflow.util.CacheHelper
 import nextflow.util.KryoHelper
 import org.iq80.leveldb.DB
 import org.iq80.leveldb.Options
+
 /**
  *  Helper class used to aggregate values having the same key
  *  to files
@@ -145,7 +146,7 @@ class SortFileCollector extends FileCollector implements Closeable {
 
     private Path tempDir
 
-    private SequentialFileStore sortedIndex
+    private SequentialFileStore trail
 
 
     void setSort( def value ) {
@@ -280,24 +281,29 @@ class SortFileCollector extends FileCollector implements Closeable {
         if( !index )
             return null
 
-
         Hasher hasher = cacheable ? CacheHelper.hasher( hashKeys, CacheHelper.HashMode.STANDARD ) : null
         if( hasher && log.isTraceEnabled() ) {
             log.trace "  hasher: ${CacheHelper.hasher( hashKeys, CacheHelper.HashMode.STANDARD ) } \n"
         }
 
         // index route file
-        sortedIndex = new SequentialFileStore(tempDir.resolve('sort.index'))
+        trail = new SequentialFileStore(tempDir.resolve('sort.index'))
 
+        /*
+         * Sort the index and record the entry indices into the 'trail' structure.
+         */
         def last = null
         index.sort { IndexEntry entry ->
+            // the index is sorted by group, when the current 'group'
+            // is different from the previous one save it to the 'trail'
             if( last != entry.group ) {
                 last = entry.group
                 def bytes = KryoHelper.serialize(last)
-                sortedIndex.writeLong( -bytes.length )
-                sortedIndex.writeBytes( bytes )
+                trail.writeLong( -bytes.length )
+                trail.writeBytes( bytes )
             }
-            sortedIndex.writeLong(entry.index)
+            // save the entry position on the index
+            trail.writeLong(entry.index)
 
             if( hasher ) {
                 hasher = CacheHelper.hasher(hasher, entry.hash, CacheHelper.HashMode.STANDARD)
@@ -316,31 +322,46 @@ class SortFileCollector extends FileCollector implements Closeable {
      */
     void saveFile( Closure<Path> closure ) {
 
-        if( !sortedIndex )
+        if( !trail )
             return
 
+        /*
+         * turn the index buffer into 'read' mode
+         */
+        trail.flip()
+
+        long index
         def last = null
         def name = null
         OutputStream output = null
 
-        // turn the index buffer into 'read' mode
-        sortedIndex.flip()
-
+        /*
+         * the 'trail' contain the ordered sequence of item indices
+         */
         while( true ) {
-            long item
+            /*
+             * read the next item index
+             */
             try {
-                item = sortedIndex.readLong()
+                index = trail.readLong()
             }
             catch( EOFException e ) {
                 break
             }
 
-            if( item < 0  ) {
-                def data = sortedIndex.readBytes((int)-item)
+            /*
+             * when it's a negative value the next element is the grouping element
+             * and the value represent the number of bytes to read
+             */
+            if( index < 0  ) {
+                def data = trail.readBytes((int)-index)
                 name = KryoHelper.deserialize(data)
                 continue
             }
 
+            /*
+             * check if a new group has been found
+             */
             if( last != name ) {
                 // close current output stream
                 output?.closeQuietly()
@@ -365,9 +386,9 @@ class SortFileCollector extends FileCollector implements Closeable {
             }
 
             /*
-             * add the current value
+             * append the current item value
              */
-            def bytes = (byte[])store.get(bytes(item))
+            def bytes = (byte[])store.get(bytes(index))
             def val = KryoHelper.deserialize(bytes)
             appendStream(normalizeToStream(val), output)
         }
@@ -384,7 +405,7 @@ class SortFileCollector extends FileCollector implements Closeable {
         log.trace "Closing sorting dbs"
         store?.closeQuietly()
         index?.closeQuietly()
-        sortedIndex?.closeQuietly()
+        trail?.closeQuietly()
 
         // finally invoke the the parent close
         super.close()

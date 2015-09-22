@@ -68,11 +68,10 @@ class SequentialFileStore implements Closeable {
     SequentialFileStore(Path path, int size = 0) {
         this.path = path
         this.limit = size ?: DEFAULT_BUFFER_SIZE
-        this.buffer = new byte[ size ?: this.limit]
+        this.buffer = new byte[ size ?: this.limit ]
         this.file = new RandomAccessFile(path.toFile(), 'rw')
         this.outputStream = new DataOutputStream(new FastBufferedOutputStream(new FileOutputStream(file.getFD()), buffer))
     }
-
 
     SequentialFileStore writeBool( boolean value ) {
         outputStream.writeBoolean(value)
