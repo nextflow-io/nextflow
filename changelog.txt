@@ -1,6 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.15.4 - 22 Sep 2015
+- Fixed #72. Adding cache support for `collectFile` operator.
+- Added experimental operator `until`
+- Added `self-update` in the command usage help
+- Updated Capsule to version 1.0
+- Updated to Gradle 2.7
+
 0.15.3 - 26 Aug 2015
 - Merged #68. Add `engineOptions` setting to Docker configuration.
 
