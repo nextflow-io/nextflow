@@ -99,7 +99,8 @@ class Launcher implements ExitCode {
                 new CmdConfig(),
                 new CmdNode(),
                 new CmdView(),
-                new CmdHelp()
+                new CmdHelp(),
+                new CmdSelfUpdate()
         ]
 
         options = new CliOptions()
