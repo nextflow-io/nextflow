@@ -226,6 +226,7 @@ abstract class FileCollector implements Closeable {
 
     private List<Path> retrieveCachedFiles(Path temp) {
         try {
+            log.debug ">> temp file exists? ${temp.exists()}"
             List<Path> items = (List<Path>)KryoHelper.deserialize(temp)
             def notFound = items.find { Path p -> !p.exists() }
             if( notFound ) throw new NoSuchFileException("Missing cached file: $notFound")
@@ -233,7 +234,7 @@ abstract class FileCollector implements Closeable {
             return items
         }
         catch( NoSuchFileException e ) {
-            log.debug "Missing collect-file cache -- cause: ${e.message}"
+            log.debug "Missed collect-file cache -- cause: ${e}"
         }
         catch( Exception e ) {
             log.debug "Unable retrieve cached collect-files from: ${temp}", e

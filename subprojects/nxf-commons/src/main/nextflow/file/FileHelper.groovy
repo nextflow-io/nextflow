@@ -69,13 +69,16 @@ class FileHelper {
         if( temp ) {
             localTempBasePath = Paths.get(temp)
             log.debug "Using NXF_TEMP=${localTempBasePath}"
-            // make sure the path exists
-            if( !Files.exists(localTempBasePath) )
-                Files.createDirectories(localTempBasePath)
         }
         else {
-            localTempBasePath = Files.createTempDirectory('nxf')
+            temp = System.getProperty('java.io.tmpdir')
+            if( !temp ) throw new IllegalStateException("Missing system temporary directory -- You can specify it using the NXF_TEMP environment variable")
+            localTempBasePath = Paths.get(temp)
         }
+
+        // make sure the path exists
+        if( !Files.exists(localTempBasePath) )
+            Files.createDirectories(localTempBasePath)
     }
 
     static String normalizePath( String path ) {
