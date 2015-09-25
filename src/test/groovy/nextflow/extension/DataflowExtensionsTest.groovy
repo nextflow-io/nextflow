@@ -185,7 +185,7 @@ class DataflowExtensionsTest extends Specification {
 
     def testMapWithVariable() {
         given:
-        def variable = Channel.just('Hello')
+        def variable = Channel.value('Hello')
         when:
         def result = variable.map { it.reverse() }
         then:
@@ -395,7 +395,7 @@ class DataflowExtensionsTest extends Specification {
 
         expect:
         Channel.from(3,6,4,5,4,3,9).last().val == 9
-        Channel.just('x').last().val == 'x'
+        Channel.value('x').last().val == 'x'
     }
 
     def testInto() {

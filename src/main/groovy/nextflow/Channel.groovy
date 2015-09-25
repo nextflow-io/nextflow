@@ -97,6 +97,7 @@ class Channel  {
      * @param obj
      * @return
      */
+    @Deprecated
     static DataflowVariable just( obj = null ) {
         value(obj)
     }
