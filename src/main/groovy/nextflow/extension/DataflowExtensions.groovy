@@ -1399,7 +1399,6 @@ class DataflowExtensions {
         return result
     }
 
-    static final private PHASE_PARAMS = [remainder: Boolean]
 
     /**
      * Phase channels
@@ -1409,27 +1408,22 @@ class DataflowExtensions {
      * @param mapper
      * @return
      */
-    static final DataflowReadChannel phase( DataflowReadChannel source, Map opts, DataflowReadChannel target, Closure mapper = DEFAULT_MAPPING_CLOSURE ) {
-        checkParams('phase', opts, PHASE_PARAMS)
+    static final DataflowReadChannel phase( DataflowReadChannel source, Map opts, DataflowReadChannel target, Closure mapper = null ) {
 
-        def result = new DataflowQueue()
-        def state = [:]
-
-        final count = 2
-        final stopCount = new AtomicInteger(count)
-        final remainder = opts.remainder ? opts.remainder as boolean : false
-
-        source.subscribe( phaseHandler(state, count, 0, result, mapper, stopCount, remainder) )
-        target.subscribe( phaseHandler(state, count, 1, result, mapper, stopCount, remainder) )
-
-        return result
+        new PhaseOp(source,target)
+            .setMapper(mapper)
+            .setOpts(opts)
+            .apply()
     }
 
-    static final DataflowReadChannel phase( DataflowReadChannel source, DataflowReadChannel target, Closure mapper = DEFAULT_MAPPING_CLOSURE ) {
-        phase(source, [:], target, mapper)
+    static final DataflowReadChannel phase( DataflowReadChannel source, DataflowReadChannel target, Closure mapper = null ) {
+
+        new PhaseOp(source,target)
+                .setMapper(mapper)
+                .apply()
     }
 
-        /**
+    /**
      * Implements the default mapping strategy, having the following strategy:
      * <pre>
      *     Map -> first entry key
@@ -1442,8 +1436,7 @@ class DataflowExtensions {
      * @return
      */
 
-    @PackageScope
-    static DEFAULT_MAPPING_CLOSURE = { obj, int index=0 ->
+    public static Closure DEFAULT_MAPPING_CLOSURE = { obj, int index=0 ->
 
         switch( obj ) {
 
@@ -1479,211 +1472,15 @@ class DataflowExtensions {
 
     }
 
-    /**
-     * Returns the methods {@code OnNext} and {@code onComplete} which will implement the phase logic
-     *
-     * @param buffer The shared state buffering the channel received values
-     * @param count The overall number of channel
-     * @param current The current channel
-     * @param target The channel over which the results are sent
-     * @param mapper A closure mapping a value to its key
-     * @return A map with {@code OnNext} and {@code onComplete} methods entries
-     */
-    static private final Map phaseHandler( Map<Object,Map<Integer,List>> buffer, int size, int index, DataflowWriteChannel target, Closure mapper, AtomicInteger stopCount, boolean remainder ) {
 
-        [
-                onNext: {
-                    synchronized (buffer) {
-                        def entries = phaseImpl(buffer, size, index, it, mapper, false)
-                        if( entries ) {
-                            target.bind(entries)
-                        }
-                    }},
+    public static <T> DataflowReadChannel cross( DataflowReadChannel source, DataflowReadChannel target, Closure mapper = null ) {
 
-                onComplete: {
-                    if( stopCount.decrementAndGet()==0) {
-                        if( remainder )
-                            phaseRemainder(buffer,size, target)
-                        target << Channel.STOP
-                    }}
-
-        ]
+        new CrossOp(source, target)
+            .setMapper(mapper)
+            .apply()
 
     }
 
-    /**
-     * Implements the phase operator logic. Basically buffers the values received on each channel by their key .
-     *
-     * When a value with the same key has arrived on each channel, they are removed from the buffer and returned as list
-     *
-     *
-     * @param buffer The shared state buffer
-     * @param size The overall number of channels
-     * @param current The current channel
-     * @param item The value just arrived
-     * @param mapper The mapping closure retrieving a key by the item just arrived over the current channel
-     * @return The list a values having a common key for each channel or {@code null} when some values are missing
-     *
-     */
-    static private final List phaseImpl( Map<Object,Map<Integer,List>> buffer, int size, int index, def item, Closure mapper, boolean isCross = false) {
-
-        // The 'buffer' structure track the values emitted by the channel, it is arranged in the following manner:
-        //
-        //  Map< key, Map< channel index, List[ values ] >  >
-        //
-        // In the main map there's an entry for each 'key' for which a match is required,
-        // to which is associated another map which associate the channel (index) on which the item
-        // has been emitted and all the values received (for that channel) not yet emitted.
-        // (this is required to do not lost an item that is emitted more than one time on the same channel
-        //  before a match for it is found on another channel)
-
-        // get the index key for this object
-        final key = mapper.call(item)
-
-        // given a key we expect to receive on object with the same key on each channel
-        def channels = buffer.get(key)
-        if( channels==null ) {
-            channels = new TreeMap<Integer, List>()
-            buffer[key] = channels
-        }
-
-        if( !channels.containsKey(index) ) {
-            channels[index] = []
-        }
-        def entries = channels[index]
-
-        // add the received item to the list
-        // when it is used in the gather op add always as the first item
-        if( isCross && index == 0 ) {
-            entries[0] = item
-        }
-        else  {
-            entries << item
-        }
-
-        // now check if it has received a element matching for each channel
-        if( channels.size() != size )  {
-            return null
-        }
-
-        def result = []
-
-        Iterator<Map.Entry<Integer,List>> itr = channels.iterator()
-        while( itr.hasNext() ) {
-            def entry = itr.next()
-
-            def list = entry.getValue()
-            result << list[0]
-
-            // do not remove the first element when it is 'cross' op
-            if( isCross && entry.getKey() == 0 )
-                continue
-
-            list.remove(0)
-            if( list.size() == 0 ) {
-                itr.remove()
-            }
-        }
-
-        return result
-    }
-
-
-    static private final void phaseRemainder( Map<Object,Map<Integer,List>> buffers, int count, DataflowWriteChannel target ) {
-        Collection<Map<Integer,List>> slots = buffers.values()
-
-        slots.each { Map<Integer,List> entry ->
-
-            while( true ) {
-
-                boolean fill=false
-                def result = new ArrayList(count)
-                for( int i=0; i<count; i++ ) {
-                    List values = entry[i]
-                    if( values ) {
-                        fill |= true
-                        result[i] = values[0]
-                        values.remove(0)
-                    }
-                    else {
-                        result[i] = null
-                    }
-                }
-
-                if( fill )
-                    target.bind( result )
-                else
-                    break
-            }
-
-        }
-    }
-
-
-    public static <T> DataflowReadChannel cross( DataflowReadChannel source, DataflowReadChannel target ) {
-        cross(source,target,DEFAULT_MAPPING_CLOSURE)
-    }
-
-    public static <T> DataflowReadChannel cross( DataflowReadChannel source, DataflowReadChannel target, Closure mapper ) {
-
-        def result = new DataflowQueue()
-        def state = [:]
-
-        final count = 2
-        final stopCount = new AtomicInteger(count)
-
-        source.subscribe( crossHandlers(state, count, 0, result, mapper, stopCount ) )
-        target.subscribe( crossHandlers(state, count, 1, result, mapper, stopCount ) )
-
-        return result
-    }
-
-
-    static private final Map crossHandlers( Map<Object,Map<DataflowReadChannel,List>> buffer, int size, int index, DataflowWriteChannel target, Closure mapper, AtomicInteger stopCount ) {
-
-        [
-                onNext: {
-                    synchronized (buffer) {  // phaseImpl is NOT thread safe, synchronize it !
-                        while( true ) {
-                            def entries = phaseImpl(buffer, size, index, it, mapper, true)
-                            log.trace "Cross #${target.hashCode()} ($index) > item: $it; entries: $entries "
-
-                            if( entries ) {
-                                target.bind(entries)
-                                // when it is invoked on the 'left' operator channel
-                                // try to invoke it one more time to consume value eventually produced and accumulated by the 'right' channel
-                                if( index == 0 )
-                                    continue
-                            }
-                            break
-                        }
-
-                    }},
-
-                onComplete: {
-                    log.trace "Cross #${target.hashCode()} ($index) > Complete"
-                    if( stopCount.decrementAndGet()==0) {
-                        log.trace "Cross #${target.hashCode()} ($index) > STOP"
-                        target << Channel.STOP
-                    }}
-
-        ]
-
-    }
-
-
-    private static append( DataflowWriteChannel result, List<DataflowReadChannel> channels, int index ) {
-        def current = channels[index++]
-        def next = index < channels.size() ? channels[index] : null
-
-        current.subscribe ([
-                onNext: { result.bind(it) },
-                onComplete: {
-                    if(next) append(result, channels, index)
-                    else result.bind(Channel.STOP)
-                }
-        ])
-    }
 
     /**
      * Creates a channel that emits the items in same order as they are emitted by two or more channel
@@ -1693,16 +1490,8 @@ class DataflowExtensions {
      * @return
      */
     static final DataflowWriteChannel concat( DataflowReadChannel source, DataflowReadChannel... target ) {
-        assert source != null
-        assert target
 
-        final result = new DataflowQueue()
-        final allChannels = [source]
-        allChannels.addAll(target)
-
-        append(result, allChannels, 0)
-
-        return result
+        new ConcatOp(source, target).apply()
     }
 
 

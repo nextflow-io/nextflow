@@ -56,8 +56,6 @@ class DataflowExtensionsTest extends Specification {
         DataflowExtensions.checkSubscribeHandlers( [ xxx:{}] )
         then:
         thrown(IllegalArgumentException)
-
-
     }
 
     def testFilter() {
@@ -350,7 +348,6 @@ class DataflowExtensionsTest extends Specification {
         Channel.from( 'a', 'b', 'c', 1, 2 ).first( Number ) .val == 1
         Channel.from( 'a', 'b', 1, 2, 'aaa', 'bbb' ).first( ~/aa.*/ ) .val == 'aaa'
         Channel.from( 'a', 'b', 1, 2, 'aaa', 'bbb' ).first( 1 ) .val == 1
-
 
     }
 
@@ -900,7 +897,6 @@ class DataflowExtensionsTest extends Specification {
         r2.val == 'b'
         r2.val == Channel.STOP
 
-
         when:
         def r3 = Channel.from( [1,2] as Integer[], [3,4] as Integer[] ).flatten()
         then:
@@ -1032,9 +1028,6 @@ class DataflowExtensionsTest extends Specification {
     }
 
 
-
-
-
     def testBufferClose() {
 
         when:
@@ -1156,15 +1149,15 @@ class DataflowExtensionsTest extends Specification {
 
         when:
         def map = [ : ]
-        result = DataflowExtensions.phaseImpl(map, 2, 0, 'a', { it })
+        result = PhaseOp.phaseImpl(map, 2, 0, 'a', { it })
         then:
         result == null
         map == [ a:[0: ['a']] ]
 
         when:
         map = [ : ]
-        result = DataflowExtensions.phaseImpl(map, 2, 0, 'a', { it })
-        result = DataflowExtensions.phaseImpl(map, 2, 1, 'a', { it })
+        result = PhaseOp.phaseImpl(map, 2, 0, 'a', { it })
+        result = PhaseOp.phaseImpl(map, 2, 1, 'a', { it })
         then:
         result == ['a','a']
         map == [ a:[:] ]
@@ -1175,18 +1168,18 @@ class DataflowExtensionsTest extends Specification {
         def r2
         def r3
         map = [ : ]
-        r1 = DataflowExtensions.phaseImpl(map, 3, 0, 'a', { it })
-        r1 = DataflowExtensions.phaseImpl(map, 3, 1, 'a', { it })
-        r1 = DataflowExtensions.phaseImpl(map, 3, 2, 'a', { it })
+        r1 = PhaseOp.phaseImpl(map, 3, 0, 'a', { it })
+        r1 = PhaseOp.phaseImpl(map, 3, 1, 'a', { it })
+        r1 = PhaseOp.phaseImpl(map, 3, 2, 'a', { it })
 
-        r2 = DataflowExtensions.phaseImpl(map, 3, 0, 'b', { it })
-        r2 = DataflowExtensions.phaseImpl(map, 3, 1, 'b', { it })
-        r2 = DataflowExtensions.phaseImpl(map, 3, 2, 'b', { it })
+        r2 = PhaseOp.phaseImpl(map, 3, 0, 'b', { it })
+        r2 = PhaseOp.phaseImpl(map, 3, 1, 'b', { it })
+        r2 = PhaseOp.phaseImpl(map, 3, 2, 'b', { it })
 
-        r3 = DataflowExtensions.phaseImpl(map, 3, 0, 'z', { it })
-        r3 = DataflowExtensions.phaseImpl(map, 3, 1, 'z', { it })
-        r3 = DataflowExtensions.phaseImpl(map, 3, 1, 'z', { it })
-        r3 = DataflowExtensions.phaseImpl(map, 3, 2, 'z', { it })
+        r3 = PhaseOp.phaseImpl(map, 3, 0, 'z', { it })
+        r3 = PhaseOp.phaseImpl(map, 3, 1, 'z', { it })
+        r3 = PhaseOp.phaseImpl(map, 3, 1, 'z', { it })
+        r3 = PhaseOp.phaseImpl(map, 3, 2, 'z', { it })
 
         then:
         r1 == ['a','a','a']
@@ -1380,7 +1373,6 @@ class DataflowExtensionsTest extends Specification {
         all.val == 'b'
         all.val == 'c'
         all.val == Channel.STOP
-
 
         when:
         def d1 = Channel.create()
