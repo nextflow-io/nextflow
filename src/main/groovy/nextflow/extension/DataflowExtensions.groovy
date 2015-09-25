@@ -91,27 +91,6 @@ class DataflowExtensions {
         }
     }
 
-    @PackageScope
-    static DEF_STOP_ON_FIRST = new DataflowEventAdapter() {
-        @Override
-        void afterRun(DataflowProcessor processor, List<Object> messages) {
-            processor.terminate()
-        }
-    }
-
-    @PackageScope
-    static Map addStopListener(Map params)  {
-
-        if( params.inputs?.size()==1 && params.inputs.get(0) instanceof DataflowExpression ) {
-            if( !params.listeners ) {
-                params.listeners = []
-            }
-            params.listeners.add( DEF_STOP_ON_FIRST )
-        }
-
-        return params
-    }
-
     /**
      * Creates a new {@code Dataflow.operator} adding the created instance to the current session list
      *
@@ -1829,12 +1808,28 @@ class DataflowExtensions {
     }
 
     static private void into0( DataflowReadChannel source, List<DataflowWriteChannel> targets ) {
+
+        final stopOnFirst = source instanceof DataflowExpression
+        final listener = new DataflowEventAdapter() {
+            @Override
+            void afterRun(DataflowProcessor processor, List<Object> messages) {
+                if( !stopOnFirst ) return
+                processor.terminate()
+                targets.findAll { !(it instanceof DataflowExpression) }.each { it.bind(Channel.STOP) }
+            }
+
+            @Override
+            public boolean onException(final DataflowProcessor processor, final Throwable e) {
+                DataflowExtensions.log.error("@unknown", e)
+                session?.abort(e)
+                return true;
+            }
+        }
+
         final params = [:]
         params.inputs = [source]
         params.outputs = targets
-        params.listeners = [DEF_ERROR_LISTENER]
-
-        addStopListener(params)
+        params.listeners = [listener]
 
         newOperator(params, new ChainWithClosure(new CopyChannelsClosure()))
     }

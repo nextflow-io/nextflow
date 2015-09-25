@@ -31,8 +31,9 @@ import groovy.lang.MetaClass;
 import groovy.lang.MissingMethodException;
 import groovyx.gpars.dataflow.DataflowReadChannel;
 import groovyx.gpars.dataflow.DataflowWriteChannel;
-import nextflow.splitter.SplitterFactory;
+import nextflow.extension.DataflowExtensions;
 import nextflow.file.FileHelper;
+import nextflow.splitter.SplitterFactory;
 
 /**
  * Provides the "dynamic" splitter methods and {@code isEmpty} method for {@link File} and {@link Path} classes.
@@ -64,7 +65,12 @@ public class NextflowDelegatingMetaClass extends groovy.lang.DelegatingMetaClass
             if( obj instanceof Path )
                 return FileHelper.empty((Path)obj);
         }
-
+        else if( len>0 && isInto(methodName, obj, args) ) {
+            DataflowWriteChannel[] target = new DataflowWriteChannel[len];
+            System.arraycopy(args,0,target,0,len);
+            DataflowExtensions.into((DataflowReadChannel) obj, target);
+            return null;
+        }
 
         /*
          * invoke the method
@@ -123,6 +129,18 @@ public class NextflowDelegatingMetaClass extends groovy.lang.DelegatingMetaClass
         }
         return result;
     }
+
+    private static boolean isInto( String name, Object source, Object[] args ) {
+        if( !"into".equals(name)) return false;
+
+        if( !(source instanceof DataflowReadChannel) ) return false;
+
+        for( int i=0; i<args.length; i++ )
+            if( !(args[i] instanceof DataflowWriteChannel )) return false;
+
+        return true;
+    }
+
 
 
 }

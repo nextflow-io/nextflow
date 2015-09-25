@@ -233,6 +233,18 @@ class DataflowExtensionsTest extends Specification {
         result.val == Channel.STOP
     }
 
+    @Timeout(1)
+    def testMapManyWithSingleton() {
+
+        when:
+        def result = Channel.value([1,2,3]).flatMap()
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 3
+        result.val == Channel.STOP
+
+    }
 
     def testMapManyWithTuples () {
 
@@ -431,6 +443,18 @@ class DataflowExtensionsTest extends Specification {
         ch3.val == 'b'
         ch3.val == [1,2]
         ch3.val == Channel.STOP
+    }
+
+    @Timeout(1)
+    def testIntoWithSingleton() {
+
+        when:
+        def result = Channel.create()
+        Channel.value('Hello').into(result)
+        then:
+        result.val == 'Hello'
+        result.val == Channel.STOP
+
     }
 
     def 'should create new dataflow variables and forward item to them'  () {
@@ -907,6 +931,16 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    @Timeout(1)
+    def testFlattenWithSingleton() {
+        when:
+        def result = Channel.value([3,2,1]).flatten()
+        then:
+        result.val == 3
+        result.val == 2
+        result.val == 1
+        result.val == Channel.STOP
+    }
 
     def testCollate() {
 
@@ -1101,6 +1135,14 @@ class DataflowExtensionsTest extends Specification {
         'z' in result
         !('c' in result)
 
+    }
+
+    @Timeout(1)
+    def testMixWithSingleton() {
+        when:
+        def result = Channel.value(1).mix( Channel.from([2,3])  )
+        then:
+        result.toList().val.sort() == [1,2,3]
     }
 
 
@@ -1359,6 +1401,17 @@ class DataflowExtensionsTest extends Specification {
         result.val == 'q'
         result.val == Channel.STOP
 
+    }
+
+    @Timeout(1)
+    def testContactWithSingleton() {
+        when:
+        def result = Channel.value(1).concat( Channel.from(2,3) )
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 3
+        result.val == Channel.STOP
     }
 
 
@@ -1660,6 +1713,21 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+
+    def 'should assign singleton channel to a new variable' () {
+        given:
+        def session = new Session()
+
+        when:
+        Channel.value('Hello').set { result }
+
+        then:
+        session.binding.result.val == 'Hello'
+        session.binding.result.val == 'Hello'
+        session.binding.result.val == 'Hello'
+
+    }
+
     def 'should always the same value' () {
 
         when:
@@ -1671,22 +1739,6 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
-
-    def 'should add a stop after the first run' () {
-        Map params
-
-        when:
-        params = [inputs: [new DataflowQueue<>()]]
-        then:
-        !DataflowExtensions.addStopListener(params) .listeners
-
-        when:
-        params = [inputs: [new DataflowVariable<>()]]
-        then:
-        DataflowExtensions.addStopListener(params) .listeners.size() ==1
-        DataflowExtensions.addStopListener(params) .listeners[0] == DataflowExtensions.DEF_STOP_ON_FIRST
-
-    }
 
     def 'should emit channel items until the condition is verified' () {
 
