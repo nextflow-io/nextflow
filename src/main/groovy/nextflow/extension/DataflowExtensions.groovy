@@ -1117,27 +1117,49 @@ class DataflowExtensions {
     }
 
 
-    static public final DataflowReadChannel spread( final DataflowReadChannel channel, Object other ) {
+    static public final DataflowReadChannel spread( final DataflowReadChannel source, Object other ) {
 
-        DataflowQueue target = new DataflowQueue()
+        final result = new DataflowQueue()
 
-        def source
+        def inputs
         switch(other) {
-            case DataflowQueue: source = ((DataflowQueue) other).toList(); break
-            case DataflowExpression: source = other; break
-            case Collection: source = Channel.just(other); break
-            case (Object[]): source = Channel.just(other as List); break
+            case DataflowQueue: inputs = ((DataflowQueue) other).toList(); break
+            case DataflowExpression: inputs = other; break
+            case Collection: inputs = Channel.just(other); break
+            case (Object[]): inputs = Channel.just(other as List); break
             default: throw new IllegalArgumentException("Not a valid argument for 'spread' operator [${other?.class?.simpleName}]: ${other} -- Use a Collection or a channel instead. ")
         }
 
-        newOperator( [channel, source], [target] ) { a, b ->
+        final stopOnFirst = source instanceof DataflowExpression
+        final listener = new DataflowEventAdapter() {
+            @Override
+            void afterRun(DataflowProcessor processor, List<Object> messages) {
+                if( !stopOnFirst ) return
+                processor.terminate()
+                result.bind(Channel.STOP)
+            }
+
+            @Override
+            public boolean onException(final DataflowProcessor processor, final Throwable e) {
+                DataflowExtensions.log.error("@unknown", e)
+                session?.abort(e)
+                return true;
+            }
+        }
+
+        final params = [:]
+        params.inputs = [source, inputs]
+        params.outputs = [result]
+        params.listeners = [listener]
+
+        newOperator(params) { a, b ->
             def proc = ((DataflowProcessor) getDelegate())
             [ [a], (b as List) ]
                     .combinations()
                     .each{ Collection it -> proc.bindOutput(it.flatten())  }
         }
 
-        return target
+        return result
     }
 
 

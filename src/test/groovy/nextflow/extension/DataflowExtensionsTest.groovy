@@ -27,6 +27,8 @@ import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.Session
 import spock.lang.Specification
+import spock.lang.Timeout
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -841,6 +843,17 @@ class DataflowExtensionsTest extends Specification {
         result.val == [[id:3, val:'z'], 'beta']
         result.val == [[id:3, val:'z'], 'gamma']
 
+        result.val == Channel.STOP
+    }
+
+    @Timeout(1)
+    def testSpreadWithSingleton() {
+        when:
+        def result = Channel.value(7).spread(['a','b','c'])
+        then:
+        result.val == [7, 'a']
+        result.val == [7, 'b']
+        result.val == [7, 'c']
         result.val == Channel.STOP
     }
 
