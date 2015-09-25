@@ -1215,7 +1215,7 @@ class DataflowExtensions {
     static public final <V> DataflowReadChannel<V> buffer( DataflowReadChannel<V> source, Map<String,?> params ) {
         checkParams( 'buffer', params, 'size','skip','remainder' )
 
-        int _skip = (int)params?.skip ?: 0
+        int _skip = (int)(params?.skip ?: 0)
         int _size = (int)params.size
         boolean _remainder = params?.remainder ?: false
         if( _size ) {
