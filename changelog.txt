@@ -1,6 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.15.5 - 28 Sep 2015
+- Fixed #74. Operator "spread" hangs when it is applied to a singleton channel.
+
 0.15.4 - 22 Sep 2015
 - Fixed #72. Adding cache support for `collectFile` operator.
 - Added experimental operator `until`
