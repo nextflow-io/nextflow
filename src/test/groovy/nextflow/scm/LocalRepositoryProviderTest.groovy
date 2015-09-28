@@ -57,7 +57,8 @@ class LocalRepositoryProviderTest extends Specification {
     def 'should return the repo url' () {
 
         given:
-        def manager = new LocalRepositoryProvider(pipeline: 'nextflow-io/hello', root: testFolder.toFile())
+        def config = new ProviderConfig('local', [path: testFolder])
+        def manager = new LocalRepositoryProvider('nextflow-io/hello', config)
         expect:
         manager.getRepoUrl() == "file:${testFolder}/nextflow-io/hello".toString()
 
@@ -66,7 +67,8 @@ class LocalRepositoryProviderTest extends Specification {
     def 'should return content url' () {
 
         given:
-        def manager = new LocalRepositoryProvider(pipeline: 'nextflow-io/hello', root: testFolder.toFile())
+        def config = new ProviderConfig('local', [path: testFolder])
+        def manager = new LocalRepositoryProvider('nextflow-io/hello', config)
         expect:
         manager.getContentUrl('main.nf') == "file:${testFolder}/nextflow-io/hello/main.nf".toString()
 
@@ -74,14 +76,16 @@ class LocalRepositoryProviderTest extends Specification {
 
     def 'should return local clone url'() {
         given:
-        def manager = new LocalRepositoryProvider(pipeline: 'nextflow-io/hello', root: testFolder.toFile())
+        def config = new ProviderConfig('local', [path: testFolder])
+        def manager = new LocalRepositoryProvider('nextflow-io/hello', config)
         expect:
         manager.getCloneUrl() == "file:${testFolder}/nextflow-io/hello/.git".toString()
     }
 
     def 'should read file bytes' () {
         given:
-        def manager = new LocalRepositoryProvider(pipeline: 'test/pipe', root: testFolder.toFile())
+        def config = new ProviderConfig('local', [path: testFolder])
+        def manager = new LocalRepositoryProvider('test/pipe', config)
         expect:
         new String(manager.readBytes('main.nf')) == "main script"
     }

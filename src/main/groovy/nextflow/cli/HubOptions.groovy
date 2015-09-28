@@ -19,12 +19,10 @@
  */
 
 package nextflow.cli
-
 import com.beust.jcommander.IValueValidator
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.ParameterException
 import groovy.transform.CompileStatic
-import nextflow.scm.AssetManager
 /**
   * Defines the command line parameters for command that need to interact with a pipeline service hub i.e. GitHub or BitBucket
   *
@@ -35,8 +33,8 @@ import nextflow.scm.AssetManager
 @CompileStatic
 trait HubOptions {
 
-    @Parameter(names=['-hub'], description = "Service hub where pipeline is hosted - It can be either 'github' or 'bitbucket'", validateValueWith = HubValidator)
-    String hubProvider = AssetManager.DEFAULT_HUB
+    @Parameter(names=['-hub'], description = "Service hub where pipeline is hosted")
+    String hubProvider
 
     @Parameter(names='-user', description = 'Private repository user name')
     String hubUser

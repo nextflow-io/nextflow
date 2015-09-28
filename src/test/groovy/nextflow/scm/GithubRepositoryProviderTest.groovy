@@ -32,10 +32,11 @@ class GithubRepositoryProviderTest extends Specification {
     def testGitCloneUrl() {
 
         given:
-        def (user,pwd) = System.getenv('NXF_GITHUB_ACCESS_TOKEN')?.tokenize(':')
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def config = new ProviderConfig('github').setAuth(token)
 
         when:
-        def url = new GithubRepositoryProvider(pipeline: 'nextflow-io/hello', user: user, pwd: pwd).getCloneUrl()
+        def url = new GithubRepositoryProvider('nextflow-io/hello',config).getCloneUrl()
         then:
         url == 'https://github.com/nextflow-io/hello.git'
 
@@ -43,17 +44,18 @@ class GithubRepositoryProviderTest extends Specification {
 
     def testGetHomePage() {
         expect:
-        new GithubRepositoryProvider(pipeline: 'nextflow-io/hello').getHomePage() == "https://github.com/nextflow-io/hello"
+        new GithubRepositoryProvider('nextflow-io/hello').getHomePage() == "https://github.com/nextflow-io/hello"
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testReadContent() {
 
         given:
-        def (user,pwd) = System.getenv('NXF_GITHUB_ACCESS_TOKEN')?.tokenize(':')
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def config = new ProviderConfig('github').setAuth(token)
 
         when:
-        def repo = new GithubRepositoryProvider(pipeline: 'nextflow-io/hello', user: user, pwd: pwd)
+        def repo = new GithubRepositoryProvider('nextflow-io/hello', config)
         def result = repo.readText('main.nf')
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')

@@ -32,14 +32,14 @@ class GitlabRepositoryProviderTest extends Specification {
     def 'should return repo url' () {
 
         expect:
-        new GitlabRepositoryProvider(pipeline: 'pditommaso/hello').getRepoUrl() == 'https://gitlab.com/api/v3/projects/pditommaso%2Fhello'
+        new GitlabRepositoryProvider('pditommaso/hello').getRepoUrl() == 'https://gitlab.com/api/v3/projects/pditommaso%2Fhello'
 
     }
 
     def 'should return project URL' () {
 
         expect:
-        new GitlabRepositoryProvider(pipeline: 'pditommaso/hello').getHomePage() == 'https://gitlab.com/pditommaso/hello'
+        new GitlabRepositoryProvider('pditommaso/hello').getHomePage() == 'https://gitlab.com/pditommaso/hello'
 
     }
 
@@ -48,9 +48,10 @@ class GitlabRepositoryProviderTest extends Specification {
 
         given:
         def token = System.getenv('NXF_GITLAB_ACCESS_TOKEN')
+        def config = new ProviderConfig('gitlab').setAuth(token)
 
         when:
-        def url = new GitlabRepositoryProvider(pipeline: 'pditommaso/hello', user: 'foo', pwd: token).getCloneUrl()
+        def url = new GitlabRepositoryProvider('pditommaso/hello', config).getCloneUrl()
         then:
         url == 'https://gitlab.com/pditommaso/hello.git'
 
@@ -62,9 +63,10 @@ class GitlabRepositoryProviderTest extends Specification {
 
         given:
         def token = System.getenv('NXF_GITLAB_ACCESS_TOKEN')
+        def config = new ProviderConfig('gitlab').setAuth(token)
 
         when:
-        def repo = new GitlabRepositoryProvider(pipeline: 'pditommaso/hello', user: 'foo', pwd: token)
+        def repo = new GitlabRepositoryProvider('pditommaso/hello', config)
         def result = repo.readText('main.nf')
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')
@@ -74,10 +76,11 @@ class GitlabRepositoryProviderTest extends Specification {
     def 'should return default branch' () {
 
         given:
-        def token = System.getenv('NXF_GITLAB_ACCESS_TOKEN') ?: '8YvZH7Yi_m8ngeSpC8RY'
+        def token = System.getenv('NXF_GITLAB_ACCESS_TOKEN')
+        def config = new ProviderConfig('gitlab').setAuth(token)
 
         when:
-        def provider = new GitlabRepositoryProvider(pipeline: 'pditommaso/hello', user: 'foo', pwd: token)
+        def provider = new GitlabRepositoryProvider('pditommaso/hello', config)
         then:
         provider.getDefaultBranch() == 'master'
 

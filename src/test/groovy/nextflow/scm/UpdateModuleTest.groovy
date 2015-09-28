@@ -82,8 +82,8 @@ class UpdateModuleTest extends Specification {
 
         setup:
         // create the main project
-        baseFolder.resolve('test/pipe').mkdirs()
-        def dir = baseFolder.resolve('test/pipe').toFile()
+        baseFolder.resolve('pipe').mkdirs()
+        def dir = baseFolder.resolve('pipe').toFile()
         def init = Git.init()
         def repo = init.setDirectory( dir ).call()
         repo.submoduleAdd().setPath('prj_aaa').setURI( baseFolder.resolve('prj_aaa/.git').toString() ).call()
@@ -92,30 +92,26 @@ class UpdateModuleTest extends Specification {
         repo.add().addFilepattern('.').call()
         repo.commit().setAll(true).setMessage('First commit').call()
 
-        when:
         def target = baseFolder.resolve('target')
-        def manager = new AssetManager()
-        manager.with {
-            setRoot( target.toFile() )
-            setHub( "file:${baseFolder}" )
-            setPipeline('test/pipe')
-        }
+        AssetManager.root = target.toFile()
 
+        when:
+        def manager = new AssetManager("file:${baseFolder.resolve('pipe.git')}")
         manager.download()
         manager.updateModules()
 
         then:
-        target.resolve('test/pipe').exists()
-        target.resolve('test/pipe/.git').exists()
-        target.resolve('test/pipe/main.nf').exists()
+        target.resolve('pipe').exists()
+        target.resolve('pipe/.git').exists()
+        target.resolve('pipe/main.nf').exists()
 
-        target.resolve('test/pipe/prj_aaa').exists()
-        target.resolve('test/pipe/prj_aaa/file1.txt').text == 'Hello'
-        target.resolve('test/pipe/prj_aaa/file2.log').text == 'World'
+        target.resolve('pipe/prj_aaa').exists()
+        target.resolve('pipe/prj_aaa/file1.txt').text == 'Hello'
+        target.resolve('pipe/prj_aaa/file2.log').text == 'World'
 
-        target.resolve('test/pipe/prj_bbb').exists()
-        target.resolve('test/pipe/prj_bbb/file1.txt').text == 'Ciao'
-        target.resolve('test/pipe/prj_bbb/file2.log').text == 'Mondo'
+        target.resolve('pipe/prj_bbb').exists()
+        target.resolve('pipe/prj_bbb/file1.txt').text == 'Ciao'
+        target.resolve('pipe/prj_bbb/file2.log').text == 'Mondo'
     }
 
 
@@ -123,8 +119,8 @@ class UpdateModuleTest extends Specification {
 
         setup:
         // create the main project
-        baseFolder.resolve('test/pipe_2').mkdirs()
-        def dir = baseFolder.resolve('test/pipe_2').toFile()
+        baseFolder.resolve('pipe_2').mkdirs()
+        def dir = baseFolder.resolve('pipe_2').toFile()
         def init = Git.init()
         def repo = init.setDirectory( dir ).call()
         repo.submoduleAdd().setPath('prj_aaa').setURI( baseFolder.resolve('prj_aaa/.git').toString() ).call()
@@ -134,33 +130,29 @@ class UpdateModuleTest extends Specification {
         repo.add().addFilepattern('.').call()
         repo.commit().setAll(true).setMessage('First commit').call()
 
-        when:
         def target = baseFolder.resolve('target2')
-        def manager = new AssetManager()
-        manager.with {
-            setRoot( target.toFile() )
-            setHub( "file:${baseFolder}" )
-            setPipeline('test/pipe_2')
-        }
+        AssetManager.root = target.toFile()
 
+        when:
+        def manager = new AssetManager( baseFolder.resolve('pipe_2.git').toString() )
         manager.download()
         manager.updateModules()
 
         then:
-        target.resolve('test/pipe_2').exists()
-        target.resolve('test/pipe_2/.git').exists()
-        target.resolve('test/pipe_2/main.nf').exists()
+        target.resolve('pipe_2').exists()
+        target.resolve('pipe_2/.git').exists()
+        target.resolve('pipe_2/main.nf').exists()
 
-        !target.resolve('test/pipe_2/prj_aaa').exists()
-        !target.resolve('test/pipe_2/prj_bbb').exists()
+        !target.resolve('pipe_2/prj_aaa').exists()
+        !target.resolve('pipe_2/prj_bbb').exists()
     }
 
     def 'should selected submodules' () {
 
         setup:
         // create the main project
-        baseFolder.resolve('test/pipe_3').mkdirs()
-        def dir = baseFolder.resolve('test/pipe_3').toFile()
+        baseFolder.resolve('pipe_3').mkdirs()
+        def dir = baseFolder.resolve('pipe_3').toFile()
         def init = Git.init()
         def repo = init.setDirectory( dir ).call()
         repo.submoduleAdd().setPath('prj_aaa').setURI( baseFolder.resolve('prj_aaa/.git').toString() ).call()
@@ -171,30 +163,26 @@ class UpdateModuleTest extends Specification {
         repo.add().addFilepattern('.').call()
         repo.commit().setAll(true).setMessage('First commit').call()
 
-        when:
         def target = baseFolder.resolve('target3')
-        def manager = new AssetManager()
-        manager.with {
-            setRoot( target.toFile() )
-            setHub( "file:${baseFolder}" )
-            setPipeline('test/pipe_3')
-        }
+        AssetManager.root = target.toFile()
 
+        when:
+        def manager = new AssetManager( baseFolder.resolve('pipe_3.git').toString() )
         manager.download()
         manager.updateModules()
 
         then:
-        target.resolve('test/pipe_3').exists()
-        target.resolve('test/pipe_3/.git').exists()
-        target.resolve('test/pipe_3/main.nf').exists()
+        target.resolve('pipe_3').exists()
+        target.resolve('pipe_3/.git').exists()
+        target.resolve('pipe_3/main.nf').exists()
 
-        !target.resolve('test/pipe_3/prj_aaa').exists()
+        !target.resolve('pipe_3/prj_aaa').exists()
 
-        target.resolve('test/pipe_3/prj_bbb').exists()
-        target.resolve('test/pipe_3/prj_bbb/file1.txt').text == 'Ciao'
+        target.resolve('pipe_3/prj_bbb').exists()
+        target.resolve('pipe_3/prj_bbb/file1.txt').text == 'Ciao'
 
-        target.resolve('test/pipe_3/prj_ccc').exists()
-        target.resolve('test/pipe_3/prj_ccc/file-x.txt').text == 'x'
+        target.resolve('pipe_3/prj_ccc').exists()
+        target.resolve('pipe_3/prj_ccc/file-x.txt').text == 'x'
 
     }
 

@@ -29,12 +29,24 @@ package nextflow.scm
  */
 class GitlabRepositoryProvider extends RepositoryProvider {
 
-    final String getProjectName() {
-        URLEncoder.encode(pipeline,'utf-8')
+    GitlabRepositoryProvider(String project, ProviderConfig config=null) {
+        this.project = project
+        this.config = config ?: new ProviderConfig('gitlab')
     }
 
-    protected void auth( HttpURLConnection connection ) {
-        connection.setRequestProperty("PRIVATE-TOKEN",pwd)
+    public RepositoryProvider setCredentials(String userName, String password) {
+        if( password ) {
+            config.setAuth(password)
+        }
+        return this
+    }
+
+    final String getProjectName() {
+        URLEncoder.encode(project,'utf-8')
+    }
+
+    protected void auth( HttpURLConnection connection, String token) {
+        connection.setRequestProperty("PRIVATE-TOKEN", token)
     }
 
     @Override
@@ -42,7 +54,7 @@ class GitlabRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getRepoUrl() {
-        return "https://gitlab.com/api/v3/projects/${getProjectName()}"
+        return "${config.endpoint}/api/v3/projects/${getProjectName()}"
     }
 
     String getDefaultBranch() {
@@ -52,7 +64,7 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getContentUrl( String path ) {
-        "https://gitlab.com/api/v3/projects/${getProjectName()}/repository/files?file_path=${path}&ref=${getDefaultBranch()}"
+        "${config.endpoint}/api/v3/projects/${getProjectName()}/repository/files?file_path=${path}&ref=${getDefaultBranch()}"
     }
 
     /** {@inheritDoc} */
@@ -62,7 +74,7 @@ class GitlabRepositoryProvider extends RepositoryProvider {
 
         def result = response.get('http_url_to_repo')
         if( !result )
-            throw new IllegalStateException("Missing clone URL for: $pipeline")
+            throw new IllegalStateException("Missing clone URL for: $project")
 
         return result
     }
@@ -70,7 +82,7 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getHomePage() {
-        "https://gitlab.com/$pipeline"
+        "${config.host}/$project"
     }
 
     /** {@inheritDoc} */

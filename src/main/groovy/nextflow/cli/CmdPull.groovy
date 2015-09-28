@@ -25,7 +25,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.scm.AssetManager
-
 /**
  * CLI sub-command PULL
  *
@@ -56,15 +55,19 @@ class CmdPull extends CmdBase implements HubOptions {
         if( !all && !args )
             throw new AbortOperationException('Missing argument')
 
-        def list = all ? new AssetManager().list() : args.toList()
+        def list = all ? AssetManager.list() : args.toList()
         if( !list ) {
             log.info "(nothing to do)"
             return
         }
 
+        if( root ) {
+            AssetManager.root = root
+        }
+
         list.each {
             log.info "Checking $it ..."
-            def manager = new AssetManager( pipeline: it, hub: getHubProvider(),  user: getHubUser(), pwd: getHubPassword(), root: root)
+            def manager = new AssetManager(it, this)
 
             def result = manager.download()
             manager.updateModules()

@@ -50,7 +50,7 @@ class CmdClone extends CmdBase implements HubOptions {
     void run() {
         // the pipeline name
         String pipeline = args[0]
-        final manager = new AssetManager(pipeline: pipeline, hub: getHubProvider(), user: getHubUser(), pwd: getHubPassword())
+        final manager = new AssetManager(pipeline, this)
 
         // the target directory is the second parameter
         // otherwise default the current pipeline name
@@ -66,9 +66,9 @@ class CmdClone extends CmdBase implements HubOptions {
         }
 
         manager.checkValidRemoteRepo()
-        print "Cloning ${manager.pipeline}${revision ? ':'+revision:''} ..."
+        print "Cloning ${manager.project}${revision ? ':'+revision:''} ..."
         manager.clone(target, revision)
         print "\r"
-        println "${manager.pipeline} cloned to: $target"
+        println "${manager.project} cloned to: $target"
     }
 }

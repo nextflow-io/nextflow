@@ -38,17 +38,19 @@ abstract class RepositoryProvider {
     /**
      * The pipeline qualified name following the syntax {@code owner/repository}
      */
-    protected String pipeline
+    protected String project
 
     /**
-     * The user name to access a private repository
+     * Holds the provider configuration
      */
-    protected String user
+    protected ProviderConfig config
 
-    /**
-     * The password to access a private repository
-     */
-    protected String pwd
+    public RepositoryProvider setCredentials(String userName, String password) {
+        if( userName && password ) {
+            config.setAuth(userName,password)
+        }
+        return this
+    }
 
     /**
      * @return The name of the source hub service e.g. github or bitbucket
@@ -91,12 +93,12 @@ abstract class RepositoryProvider {
     protected String invoke( String api ) {
         assert api
 
-        log.debug "Request [credentials ${user?:'-'}:${pwd ? pwd.replaceAll('.','*') : '-'}] -> $api"
+        log.debug "Request [credentials ${config.getAuthObfuscated() ?: '-'}] -> $api"
         def connection = new URL(api).openConnection() as HttpURLConnection
         connection.setConnectTimeout(5_000)
 
-        if( user && pwd ){
-            auth(connection)
+        if( config.auth ){
+            this.auth(connection, config.auth)
         }
 
         checkResponse(connection)
@@ -115,8 +117,8 @@ abstract class RepositoryProvider {
      *
      * @param connection The URL connection object to be authenticated
      */
-    protected void auth( HttpURLConnection connection ) {
-        String authString=("$user:$pwd").bytes.encodeBase64().toString()
+    protected void auth( HttpURLConnection connection, String token ) {
+        String authString = token.bytes.encodeBase64().toString()
         connection.setRequestProperty("Authorization","Basic " + authString)
     }
 
@@ -138,11 +140,11 @@ abstract class RepositoryProvider {
                 log.debug "Response status: $code -- ${connection.getErrorStream().text}"
                 def limit = connection.getHeaderField('X-RateLimit-Remaining')
                 if( limit == '0' ) {
-                    def message = user ? "Check ${name.capitalize()}'s API rate limits for more details" : "Provide your ${name.capitalize()} user name and password to get a higher rate limit"
+                    def message = config.auth ? "Check ${name.capitalize()}'s API rate limits for more details" : "Provide your ${name.capitalize()} user name and password to get a higher rate limit"
                     throw new AbortOperationException("API rate limit exceeded -- $message")
                 }
                 else {
-                    def message = user ? "Check that the ${name.capitalize()} user name and password provided are correct" : "Provide your ${name.capitalize()} user name and password to access this repository"
+                    def message = config.auth ? "Check that the ${name.capitalize()} user name and password provided are correct" : "Provide your ${name.capitalize()} user name and password to access this repository"
                     throw new AbortOperationException("Forbidden -- $message")
                 }
         }
@@ -195,7 +197,7 @@ abstract class RepositoryProvider {
                 invokeAndParseResponse( getRepoUrl() )
             }
             catch( IOException e2 ) {
-                throw new AbortOperationException("Cannot find '$pipeline' -- Make sure exists a ${name.capitalize()} repository at this address ${getHomePage()}")
+                throw new AbortOperationException("Cannot find '$project' -- Make sure exists a ${name.capitalize()} repository at this address ${getHomePage()}")
             }
 
             throw new AbortOperationException("Illegal pipeline repository ${getHomePage()} -- It must contain a script named '${AssetManager.DEFAULT_MAIN_FILE_NAME}' or a file '${AssetManager.MANIFEST_FILE_NAME}'")
@@ -203,6 +205,29 @@ abstract class RepositoryProvider {
 
     }
 
+    /**
+     * Factory method
+     *
+     * @param provider
+     * @return
+     */
+    static RepositoryProvider create( ProviderConfig config, String project ) {
+        switch(config.platform) {
+            case 'github':
+                return new GithubRepositoryProvider(project, config)
+
+            case 'bitbucket':
+                return new BitbucketRepositoryProvider(project, config)
+
+            case 'gitlab':
+                return new GitlabRepositoryProvider(project, config)
+
+            case 'file':
+                return new LocalRepositoryProvider(project, config)
+        }
+
+        throw new AbortOperationException("Unkwnon pipeline repository platform: ${config.platform}")
+    }
 
 }
 

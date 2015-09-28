@@ -31,22 +31,27 @@ import nextflow.exception.AbortOperationException
 @Slf4j
 final class BitbucketRepositoryProvider extends RepositoryProvider {
 
+    BitbucketRepositoryProvider(String project, ProviderConfig config=null) {
+        this.project = project
+        this.config = config ?: new ProviderConfig('bitbucket')
+    }
+
     /** {@inheritDoc} */
     @Override
     String getName() { "BitBucket" }
 
     @Override
     String getRepoUrl() {
-        return "https://bitbucket.org/api/2.0/repositories/${pipeline}"
+        "${config.endpoint}/api/2.0/repositories/${project}"
     }
 
     @Override
     String getContentUrl( String path ) {
-        return "https://bitbucket.org/api/1.0/repositories/$pipeline/src/${getMainBranch()}/$path"
+        "${config.endpoint}/api/1.0/repositories/$project/src/${getMainBranch()}/$path"
     }
 
     private String getMainBranchUrl() {
-        "https://bitbucket.org/api/1.0/repositories/$pipeline/main-branch/"
+        "${config.endpoint}/api/1.0/repositories/$project/main-branch/"
     }
 
     String getMainBranch() {
@@ -63,14 +68,14 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
         def result = response?.links?.clone?.find{ it.name == "https" } as Map
         if( !result )
-            throw new IllegalStateException("Missing clone URL for: $pipeline")
+            throw new IllegalStateException("Missing clone URL for: $project")
 
         return result.href
     }
 
     @Override
     String getHomePage() {
-        return "https://bitbucket.org/$pipeline"
+        return "${config.host}/$project"
     }
 
     @Override

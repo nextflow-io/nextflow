@@ -32,25 +32,26 @@ class BitBucketRepositoryProviderTest extends Specification {
     def testBitbucketCloneURL() {
 
         given:
-        def (user,pwd) = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')?.tokenize(':')
+        def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
+        def config = new ProviderConfig('bitbucket').setAuth(token)
 
         when:
-        def url = new BitbucketRepositoryProvider(pipeline: 'pditommaso/tutorial', user: user, pwd: pwd).getCloneUrl()
+        def url = new BitbucketRepositoryProvider('pditommaso/tutorial',config).getCloneUrl()
         then:
-        url == "https://${user}@bitbucket.org/pditommaso/tutorial.git".toString()
+        url == "https://${config.user}@bitbucket.org/pditommaso/tutorial.git".toString()
     }
 
 
     def testGetHomePage() {
         expect:
-        new BitbucketRepositoryProvider(pipeline: 'pditommaso/tutorial').getHomePage() == "https://bitbucket.org/pditommaso/tutorial"
+        new BitbucketRepositoryProvider('pditommaso/tutorial').getHomePage() == "https://bitbucket.org/pditommaso/tutorial"
     }
 
 
     def testReadContent() {
 
         when:
-        def repo = new BitbucketRepositoryProvider(pipeline: 'pditommaso/tutorial')
+        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial')
         def result = repo.readText('main.nf')
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')

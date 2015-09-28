@@ -19,39 +19,41 @@
  */
 
 package nextflow.scm
-import java.nio.file.Files
-
 import nextflow.exception.AbortOperationException
+import org.junit.Rule
 import spock.lang.Requires
 import spock.lang.Specification
+import test.TemporaryPath
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class AssetManagerTest extends Specification {
 
+    @Rule
+    TemporaryPath tempDir = new TemporaryPath()
+
+    def setup() {
+        AssetManager.root = tempDir.root.toFile()
+    }
+
     def testList() {
 
         given:
-        def folder = Files.createTempDirectory('test')
+        def folder = tempDir.getRoot()
         folder.resolve('cbcrg/pipe1').mkdirs()
         folder.resolve('cbcrg/pipe2').mkdirs()
         folder.resolve('ncbi/blast').mkdirs()
 
-        def manager = new AssetManager().setRoot(folder.toFile())
-
         when:
-        def list = manager.list()
+        def list = AssetManager.list()
         then:
         list.sort() == ['cbcrg/pipe1','cbcrg/pipe2','ncbi/blast']
 
         expect:
-        manager.find('blast') == 'ncbi/blast'
-        manager.find('pipe1') == 'cbcrg/pipe1'
-        manager.find('pipe') as Set == ['cbcrg/pipe1', 'cbcrg/pipe2'] as Set
-
-        cleanup:
-        folder?.deleteDir()
+        AssetManager.find('blast') == 'ncbi/blast'
+        AssetManager.find('pipe1') == 'cbcrg/pipe1'
+        AssetManager.find('pipe') as Set == ['cbcrg/pipe1', 'cbcrg/pipe2'] as Set
 
     }
 
@@ -59,12 +61,12 @@ class AssetManagerTest extends Specification {
     def testResolveName() {
 
         given:
-        def folder = Files.createTempDirectory('test')
+        def folder = tempDir.getRoot()
         folder.resolve('cbcrg/pipe1').mkdirs()
         folder.resolve('cbcrg/pipe2').mkdirs()
         folder.resolve('ncbi/blast').mkdirs()
 
-        def manager = new AssetManager().setRoot(folder.toFile())
+        def manager = new AssetManager()
 
         when:
         def result = manager.resolveName('x/y')
@@ -96,9 +98,6 @@ class AssetManagerTest extends Specification {
         then:
         thrown(AbortOperationException)
 
-        cleanup:
-        folder?.deleteDir()
-
     }
 
 
@@ -106,9 +105,9 @@ class AssetManagerTest extends Specification {
     def testPull() {
 
         given:
-        def (user,pwd) = System.getenv('NXF_GITHUB_ACCESS_TOKEN')?.tokenize(':')
-        def folder = Files.createTempDirectory('test')
-        def manager = new AssetManager(user:user, pwd: pwd).setRoot(folder.toFile()).setPipeline('nextflow-io/hello')
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [github: [auth: token]])
 
         when:
         manager.download()
@@ -120,9 +119,6 @@ class AssetManagerTest extends Specification {
         then:
         noExceptionThrown()
 
-        cleanup:
-        folder?.deleteDir()
-
     }
 
 
@@ -130,9 +126,9 @@ class AssetManagerTest extends Specification {
     def testClone() {
 
         given:
-        def (user,pwd) = System.getenv('NXF_GITHUB_ACCESS_TOKEN')?.tokenize(':')
-        def dir = Files.createTempDirectory('test')
-        def manager = new AssetManager(user:user, pwd: pwd, pipeline: 'pditommaso/awesome-pipeline')
+        def dir = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [github: [auth: token]])
 
         when:
         manager.clone(dir.toFile())
@@ -141,19 +137,15 @@ class AssetManagerTest extends Specification {
         dir.resolve('README.md').exists()
         dir.resolve('.git').isDirectory()
 
-        cleanup:
-        dir?.deleteDir()
-
     }
 
     def testGetScriptName() {
 
         given:
-        def dir = Files.createTempDirectory('test')
+        def dir = tempDir.getRoot()
         dir.resolve('sub1').mkdir()
         dir.resolve('sub1/nextflow.config').text = "manifest.mainScript = 'pippo.nf'"
         dir.resolve('sub2').mkdir()
-
 
         when:
         def holder = new AssetManager()
@@ -202,46 +194,36 @@ class AssetManagerTest extends Specification {
         holder.resolveName('hello/my-script.nf') == 'nextflow-io/hello'
         holder.getMainScriptName() == 'my-script.nf'
 
-        cleanup:
-        dir?.deleteDir()
-
     }
 
     def testCreateProviderFor(){
 
         when:
-        def manager= [ pipeline:'x/y', user:'maria', pwd: 'whatever' ] as AssetManager
-        def repo=manager.createHubProviderFor('github')
+        def manager = [ user:'maria', pwd: 'whatever' ] as AssetManager
+        def repo = manager.createHubProviderFor('github')
         then:
         repo instanceof GithubRepositoryProvider
-        repo.user=="maria"
-        repo.pwd=="whatever"
-        repo.pipeline=="x/y"
+        repo.config.auth == "maria:whatever"
 
         when:
-        manager= [ pipeline:'x/y', user:'maria', pwd: 'whatever' ] as AssetManager
-        repo=manager.createHubProviderFor('bitbucket')
+        manager = [ user:'maria', pwd: 'whatever' ] as AssetManager
+        repo = manager.createHubProviderFor('bitbucket')
         then:
         repo instanceof BitbucketRepositoryProvider
-        repo.user=="maria"
-        repo.pwd=="whatever"
-        repo.pipeline=="x/y"
+        repo.config.auth == "maria:whatever"
 
         when:
-        manager = [ pipeline: 'project/foo', user: 'paolo', pwd: '12345'] as AssetManager
+        manager = [ user: 'paolo', pwd: '12345'] as AssetManager
         repo = manager.createHubProviderFor('gitlab')
         then:
         repo instanceof GitlabRepositoryProvider
-        repo.user == 'paolo'
-        repo.pwd == '12345'
-        repo.pipeline == 'project/foo'
+        repo.config.auth == '12345'
 
         when:
-        manager = [ ] as AssetManager
+        manager = [:] as AssetManager
         manager.createHubProviderFor('xxx')
         then:
         thrown(AbortOperationException)
-
 
     }
 
@@ -258,37 +240,31 @@ class AssetManagerTest extends Specification {
                     description = 'This pipeline do this and that'
                 }
                 '''
-        def dir = Files.createTempDirectory('test')
+        def dir = tempDir.getRoot()
         dir.resolve('foo/bar').mkdirs()
         dir.resolve('foo/bar/nextflow.config').text = config
 
         when:
         def holder = new AssetManager()
-        holder.root = dir.toFile()
-        holder.setPipeline('foo/bar')
+        holder.build('foo/bar')
         then:
         holder.getMainScriptName() == 'hello.nf'
         holder.getDefaultBranch() == 'super-stuff'
         holder.getHomePage() == 'http://foo.com'
         holder.getDescription() == 'This pipeline do this and that'
 
-
-        cleanup:
-        dir.deleteDir()
-
     }
 
     def testReadManifest2 () {
 
         given:
-        def dir = Files.createTempDirectory('test')
+        def dir = tempDir.getRoot()
         dir.resolve('foo/bar').mkdirs()
         dir.resolve('foo/bar/nextflow.config').text = 'empty: 1'
 
         when:
         def holder = new AssetManager()
-        holder.root = dir.toFile()
-        holder.setPipeline('foo/bar')
+        holder.build('foo/bar')
 
         then:
         holder.getMainScriptName() == 'main.nf'
@@ -296,8 +272,53 @@ class AssetManagerTest extends Specification {
         holder.getHomePage() == 'https://github.com/foo/bar'
         holder.getDescription() == null
 
-        cleanup:
-        dir.deleteDir()
+    }
+
+    static final GIT_CONFIG = '''
+        [core]
+            repositoryformatversion = 0
+            filemode = true
+            bare = false
+            logallrefupdates = true
+            ignorecase = true
+        [remote "origin"]
+            url = git@github.com:nextflow-io/nextflow.git
+            fetch = +refs/heads/*:refs/remotes/origin/*
+        [branch "master"]
+            remote = origin
+            merge = refs/heads/master
+        [submodule "tests"]
+            url = git@github.com:nextflow-io/tests.git
+        '''
+
+
+    def 'should parse git config and return the remote url' () {
+
+        given:
+        def dir = tempDir.root
+        dir.resolve('.git').mkdir()
+        dir.resolve('.git/config').text = GIT_CONFIG
+
+        when:
+        def manager = new AssetManager().setLocalPath(dir.toFile())
+        then:
+        manager.getGitConfigRemoteUrl() == 'git@github.com:nextflow-io/nextflow.git'
 
     }
+
+    def 'should parse git config and return the remote host' () {
+
+        given:
+        def dir = tempDir.root
+        dir.resolve('.git').mkdir()
+        dir.resolve('.git/config').text = GIT_CONFIG
+
+        when:
+        def manager = new AssetManager().setLocalPath(dir.toFile())
+        then:
+        manager.getGitConfigRemoteServer() == 'github.com'
+
+    }
+
+
 }

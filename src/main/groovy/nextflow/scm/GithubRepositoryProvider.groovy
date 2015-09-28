@@ -29,7 +29,12 @@ import groovy.transform.CompileStatic
  * Author Paolo Di Tommaso
  */
 @CompileStatic
-final class GithubRepositoryProvider extends RepositoryProvider{
+final class GithubRepositoryProvider extends RepositoryProvider {
+
+    GithubRepositoryProvider(String project, ProviderConfig config=null) {
+        this.project = project
+        this.config = config ?: new ProviderConfig('github')
+    }
 
     /** {@inheritDoc} */
     @Override
@@ -38,13 +43,13 @@ final class GithubRepositoryProvider extends RepositoryProvider{
     /** {@inheritDoc} */
     @Override
     String getRepoUrl() {
-        "https://api.github.com/repos/${pipeline}"
+        "${config.endpoint}/repos/${project}"
     }
 
     /** {@inheritDoc} */
     @Override
     String getContentUrl( String path ) {
-        "https://api.github.com/repos/$pipeline/contents/$path"
+        "${config.endpoint}/repos/$project/contents/$path"
     }
 
     /** {@inheritDoc} */
@@ -54,7 +59,7 @@ final class GithubRepositoryProvider extends RepositoryProvider{
 
         def result = response.get('clone_url')
         if( !result )
-            throw new IllegalStateException("Missing clone URL for: $pipeline")
+            throw new IllegalStateException("Missing clone URL for: $project")
 
         return result
     }
@@ -62,7 +67,7 @@ final class GithubRepositoryProvider extends RepositoryProvider{
     /** {@inheritDoc} */
     @Override
     String getHomePage() {
-        "https://github.com/$pipeline"
+        "${config.host}/$project"
     }
 
     /** {@inheritDoc} */
@@ -74,4 +79,5 @@ final class GithubRepositoryProvider extends RepositoryProvider{
         response.get('content')?.toString()?.decodeBase64()
 
     }
+
 }

@@ -170,7 +170,7 @@ class CmdRun extends CmdBase implements HubOptions {
                             .setScript(scriptFile)
 
         if( this.test ) {
-            runner.test(this.test, scriptArgs )
+            runner.test(this.test, scriptArgs)
         }
         else {
             def info = CmdInfo.status( log.isTraceEnabled() )
@@ -220,13 +220,8 @@ class CmdRun extends CmdBase implements HubOptions {
         /*
          * try to look for a pipeline in the repository
          */
-        def manager = new AssetManager(hub: getHubProvider(), user: getHubUser(), pwd: getHubPassword())
-        def repo = manager.resolveName(pipelineName)
-
-        /*
-         * set the required name
-         */
-        manager.setPipeline(repo as String)
+        def manager = new AssetManager(pipelineName, this)
+        def repo = manager.getProject()
 
         if( !manager.isLocal() || latest ) {
             log.info "Pulling $repo ..."

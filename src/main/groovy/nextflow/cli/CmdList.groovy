@@ -43,7 +43,7 @@ class CmdList extends CmdBase {
     @Override
     void run() {
 
-        def all = new AssetManager().list()
+        def all = AssetManager.list()
         if( !all ) {
             log.info '(none)'
             return
@@ -51,7 +51,5 @@ class CmdList extends CmdBase {
 
         all.each { println it }
     }
-
-
 
 }

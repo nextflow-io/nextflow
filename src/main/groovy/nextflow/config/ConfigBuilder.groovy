@@ -451,12 +451,7 @@ class ConfigBuilder {
 
 
     /**
-     * Given the command line options {@code CliOptions} object
-     * read the application configuration file and returns the
-     * config object
-     *
-     * @param options The {@code CliOptions} as specified by the user
-     * @return A the application options hold in a {@code Map} object
+     * @return A the application options hold in a {@code ConfigObject} instance
      */
     ConfigObject build() {
 
@@ -467,9 +462,16 @@ class ConfigBuilder {
         if( cmdRun )
             configRunOptions(config, cmdRun)
 
-        // convert the ConfigObject to plain map
-        // this because when accessing a non-existing entry in a ConfigObject it return and empty map as value
         return config
+    }
+
+    /**
+     * @param options The command line {@link CliOptions} object
+     * @param currentPath The current working path where the file `nextflow.config` is eventually located
+     * @return The resulting config {@link ConfigObject} object
+     */
+    static ConfigObject defaultConfig() {
+        new ConfigBuilder() .build()
     }
 
 }

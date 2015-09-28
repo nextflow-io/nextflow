@@ -19,14 +19,15 @@
  */
 
 package nextflow.scm
-
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
+import nextflow.cli.HubOptions
 import nextflow.config.ComposedConfigSlurper
 import nextflow.exception.AbortOperationException
+import nextflow.util.IniFile
 import org.eclipse.jgit.api.CreateBranchCommand
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ListBranchCommand
@@ -62,36 +63,40 @@ class AssetManager {
     /**
      * The folder all pipelines scripts are installed
      */
-    private File root = DEFAULT_ROOT
+    @PackageScope
+    static File root = DEFAULT_ROOT
 
     /**
      * The pipeline name. It must be in the form {@code username/repo} where 'username'
      * is a valid user name or organisation account, while 'repo' is the repository name
      * containing the pipeline code
      */
-    private String pipeline
+    private String project
 
     /**
-     * Directory where the pipeline is cloned (i.e downloaded)
+     * Directory where the pipeline is cloned (i.e. downloaded)
      */
     private File localPath
 
     private Git _git
 
-    private String _mainScript
+    private String mainScript
 
     private RepositoryProvider provider
 
-    String hub = DEFAULT_HUB
+    private String hub
 
-    String user
+    private String user
 
-    String pwd
+    private String pwd
+
+    private List<ProviderConfig> providerConfigs
 
     /**
      * Create a new asset manager object with default parameters
      */
     AssetManager() {
+        this.providerConfigs = ProviderConfig.createDefault()
     }
 
     /**
@@ -99,42 +104,58 @@ class AssetManager {
      *
      * @param pipeline The pipeline to be managed by this manager e.g. {@code nextflow-io/hello}
      */
-    AssetManager(String pipeline) {
-        setPipeline(pipeline)
-    }
-
-    /**
-     * Create a new asset managed with the specified parameters. Accepted parameters are:
-     * <li>hub
-     * <li>user
-     * <li>pas
-     *
-     * @param args
-     */
-    AssetManager(Map args) {
-        this.hub = args?.hub ?: DEFAULT_HUB
-        this.user = args?.user
-        this.pwd = args?.pwd
-
-        if( args.root ) {
-            this.root = args.root as File
-        }
-
-        if( args.pipeline ) {
-            setPipeline(args.pipeline as String)
-        }
-
+    AssetManager( String pipelineName, HubOptions cliOpts = null) {
+        assert pipelineName
+        // read the default config file (if available)
+        def config = ProviderConfig.getDefault()
+        // build the object
+        build(pipelineName, config, cliOpts)
     }
 
     @PackageScope
-    AssetManager setRoot( File root ) {
-        assert root
-        this.root = root
+    AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null ) {
+
+        this.providerConfigs = ProviderConfig.createFromMap(config)
+
+        this.project = resolveName(pipelineName)
+        this.localPath = new File(root, project)
+
+        if( !hub )
+            this.hub = cliOpts?.getHubProvider()
+        if( !hub )
+            hub = guessHubProviderFromGitConfig()
+        if( !hub )
+            hub = DEFAULT_HUB
+
+        if( cliOpts ) {
+            cliOpts.hubProvider = hub
+            this.user = cliOpts.getHubUser()
+            this.pwd = cliOpts.getHubPassword()
+        }
+
+        this.provider = createHubProviderFor(hub)
         return this
     }
 
     String resolveName( String name ) {
         assert name
+
+        if( name.endsWith('.git') ) {
+            try {
+                def url = new GitUrlParser(name)
+
+                if( url.protocol == 'file' ) {
+                    this.hub = "file:${url.location}"
+                    this.user = url.user
+                    providerConfigs << new ProviderConfig(this.hub, [path:url.location])
+                }
+
+                return url.project
+            }
+            catch( IllegalArgumentException e ) {
+                log.debug e.message
+            }
+        }
 
         String[] parts = name.split('/')
         def last = parts[-1]
@@ -143,11 +164,11 @@ class AssetManager {
                 throw new AbortOperationException("Not a valid pipeline name: $name")
 
             if( parts.size()==2 ) {
-                _mainScript = last
+                mainScript = last
                 parts = [ parts.first() ]
             }
             else {
-                _mainScript = parts[2..-1].join('/')
+                mainScript = parts[2..-1].join('/')
                 parts = parts[0..1]
             }
         }
@@ -174,36 +195,18 @@ class AssetManager {
         return qualifiedName
     }
 
-    AssetManager setPipeline( String name ) {
-        assert name
-
-        this.pipeline = resolveName(name)
-        this.provider = createHubProviderFor(hub)
-        this.localPath = new File(root, pipeline)
-        this._git = null
-        return this
-    }
-
-    String getPipeline() { pipeline }
+    String getProject() { project }
 
     @PackageScope
-    RepositoryProvider createHubProviderFor(String name) {
-        if( name == 'github')
-            return new GithubRepositoryProvider(pipeline: pipeline, user: user, pwd: pwd)
+    RepositoryProvider createHubProviderFor(String providerName) {
 
-        if( name == 'bitbucket')
-            return new BitbucketRepositoryProvider(pipeline: pipeline, user: user, pwd: pwd)
+        final config = providerConfigs.find { it.name == providerName }
+        if( !config )
+            throw new AbortOperationException("Unknown pipeline repository configuration provider: $providerName")
 
-        if( name == 'gitlab' )
-            return new GitlabRepositoryProvider(pipeline: pipeline, user: user, pwd: pwd)
-
-        if( name.startsWith('file:') ) {
-            def base = new File(name.substring(5)).absoluteFile
-            return new LocalRepositoryProvider(pipeline: pipeline, root: base)
-        }
-
-
-        throw new AbortOperationException("Unkwnon pipeline repository provider: $name")
+        RepositoryProvider
+                .create(config, project)
+                .setCredentials(user, pwd)
     }
 
     AssetManager setLocalPath(File path) {
@@ -220,7 +223,6 @@ class AssetManager {
         def scriptName = getMainScriptName()
         provider.validateFor(scriptName)
     }
-
 
     @Memoized
     String getGitRepositoryUrl() {
@@ -248,8 +250,8 @@ class AssetManager {
     }
 
     String getMainScriptName() {
-        if( _mainScript )
-            return _mainScript
+        if( mainScript )
+            return mainScript
 
         readManifest().mainScript ?: DEFAULT_MAIN_FILE_NAME
     }
@@ -286,7 +288,9 @@ class AssetManager {
     }
 
     String getBaseName() {
-        pipeline.split('/')[1]
+        def result = project.tokenize('/')
+        if( result.size() > 2 ) throw new IllegalArgumentException("Not a valid projct name: $project")
+        return result.size()==1 ? result[0] : result[1]
     }
 
     boolean isLocal() {
@@ -319,7 +323,7 @@ class AssetManager {
     /**
      * @return The list of available pipelines
      */
-    List<String> list() {
+    static List<String> list() {
         log.debug "Listing pipelines in folders: $root"
 
         def result = []
@@ -335,7 +339,7 @@ class AssetManager {
         return result
     }
 
-    def find( String name ) {
+    static protected def find( String name ) {
         def exact = []
         def partial = []
 
@@ -366,7 +370,7 @@ class AssetManager {
      * @result A message representing the operation result
      */
     def download(String revision=null) {
-        assert pipeline
+        assert project
 
         /*
          * if the pipeline already exists locally pull it from the remote repo
@@ -376,7 +380,7 @@ class AssetManager {
             // make sure it contains a valid repository
             checkValidRemoteRepo()
 
-            log.debug "Pulling $pipeline -- Using remote clone url: ${getGitRepositoryUrl()}"
+            log.debug "Pulling $project -- Using remote clone url: ${getGitRepositoryUrl()}"
 
             // clone it
             def clone = Git.cloneRepository()
@@ -393,11 +397,11 @@ class AssetManager {
         }
 
 
-        log.debug "Pull pipeline $pipeline  -- Using local path: $localPath"
+        log.debug "Pull pipeline $project  -- Using local path: $localPath"
 
         // verify that is clean
         if( !isClean() )
-            throw new AbortOperationException("$pipeline contains uncommitted changes -- cannot pull from repository")
+            throw new AbortOperationException("$project contains uncommitted changes -- cannot pull from repository")
 
         if( revision && revision != getCurrentRevision() ) {
             /*
@@ -423,7 +427,7 @@ class AssetManager {
 
         def result = pull.call()
         if(!result.isSuccessful())
-            throw new AbortOperationException("Cannot pull pipeline: '$pipeline ' -- ${result.toString()}")
+            throw new AbortOperationException("Cannot pull pipeline: '$project ' -- ${result.toString()}")
 
         return result?.mergeResult?.mergeStatus?.toString()
 
@@ -439,10 +443,10 @@ class AssetManager {
 
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
-        log.debug "Clone pipeline $pipeline  -- Using remote URI: ${uri} into: $directory"
+        log.debug "Clone pipeline $project  -- Using remote URI: ${uri} into: $directory"
 
         if( !uri )
-            throw new AbortOperationException("Cannot find the specified pipeline: $pipeline ")
+            throw new AbortOperationException("Cannot find the specified pipeline: $project ")
 
         clone.setURI(uri)
         clone.setDirectory(directory)
@@ -574,7 +578,7 @@ class AssetManager {
         def current = getCurrentRevision()
         if( current != defaultBranch ) {
             if( !revision ) {
-                throw new AbortOperationException("Pipeline '$pipeline ' currently is sticked on revision: $current -- you need to specify explicitly a revision with the option '-r' to use it")
+                throw new AbortOperationException("Pipeline '$project ' currently is sticked on revision: $current -- you need to specify explicitly a revision with the option '-r' to use it")
             }
         }
         else if( !revision || revision == current ) {
@@ -584,7 +588,7 @@ class AssetManager {
 
         // verify that is clean
         if( !isClean() )
-            throw new AbortOperationException("$pipeline contains uncommitted changes -- Cannot switch to revision: $revision")
+            throw new AbortOperationException("$project contains uncommitted changes -- Cannot switch to revision: $revision")
 
         try {
             git.checkout().setName(revision) .call()
@@ -639,4 +643,45 @@ class AssetManager {
         log.debug "Update submodules $updatedList"
     }
 
+    protected String getGitConfigRemoteUrl() {
+        if( !localPath ) {
+            return null
+        }
+
+        final gitConfig = new File(localPath,'.git/config')
+        if( !gitConfig.exists() ) {
+            return null
+        }
+
+        final iniFile = new IniFile().load(gitConfig)
+        final branch = getDefaultBranch() ?: DEFAULT_BRANCH
+        final remote = iniFile.getString("branch \"${branch}\"", "remote", "origin")
+        final url = iniFile.getString("remote \"${remote}\"", "url")
+
+        return url
+    }
+
+    protected String getGitConfigRemoteServer() {
+
+        def url = getGitConfigRemoteUrl()
+        if( !url ) return null
+
+        try {
+            return new GitUrlParser(url).location
+        }
+        catch( IllegalArgumentException e) {
+            log.debug e.message ?: e.toString()
+            return null
+        }
+
+    }
+
+
+    protected String guessHubProviderFromGitConfig() {
+
+        final server = getGitConfigRemoteServer()
+        final result = providerConfigs.find { it -> it.domain == server }
+
+        return result ? result.name : null
+    }
 }

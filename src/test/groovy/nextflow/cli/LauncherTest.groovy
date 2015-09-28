@@ -19,15 +19,12 @@
  */
 
 package nextflow.cli
-
 import java.nio.file.Files
 
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
-import com.beust.jcommander.ParameterException
 import spock.lang.Specification
 import test.OutputCapture
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -146,10 +143,6 @@ class LauncherTest extends Specification {
         launcher.command.params.'alpha' == '0'
         launcher.command.params.'omega' == '9'
 
-        when:
-        new Launcher().parseMainArgs('run','alpha', '-hub', 'xyz')
-        then:
-        thrown(ParameterException)
     }
 
 

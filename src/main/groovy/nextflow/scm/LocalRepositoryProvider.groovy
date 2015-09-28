@@ -27,35 +27,45 @@ package nextflow.scm
  */
 class LocalRepositoryProvider extends RepositoryProvider {
 
-    File root
+    LocalRepositoryProvider( String project, ProviderConfig config) {
+        assert project
+        assert config
+        assert config.path
+
+        this.project = project
+        this.config = config
+        this.path = new File(config.path)
+    }
+
+    private File path
 
     @Override
     String getName() { 'local' }
 
     @Override
     String getRepoUrl() {
-        return "file:${new File(root, pipeline)}"
+        return "file:${new File(path, project)}"
     }
 
     @Override
     String getContentUrl(String path) {
-        def base = new File(root, pipeline)
+        def base = new File(this.path, project)
         def result = new File(base, path)
         return "file:$result"
     }
 
     @Override
     String getCloneUrl() {
-        return "file:${new File(root, pipeline)}/.git"
+        return "file:${new File(path, project)}/.git"
     }
 
     @Override
     String getHomePage() {
-        new File(root, pipeline).toString()
+        new File(path, project).toString()
     }
 
     @Override
     protected byte[] readBytes(String path) {
-        return new File(new File(root, pipeline), path).readBytes()
+        return new File(new File(this.path, project), path).readBytes()
     }
 }
