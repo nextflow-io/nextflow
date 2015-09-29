@@ -104,6 +104,7 @@ configurations {
     drmaa.extendsFrom runtime
     dnanexus.extendsFrom runtime
     gridgain.extendsFrom runtime
+    ignite.extendsFrom runtime
     console.extendsFrom runtime
     gdocLibs.extendsFrom runtime
 }
@@ -151,6 +152,10 @@ dependencies {
     }
 
     gridgain(project(':nxf-gridgain')) {
+        exclude module: 'nextflow'
+    }
+
+    ignite(project(':nxf-ignite')) {
         exclude module: 'nextflow'
     }
 
@@ -276,6 +281,7 @@ if( hasProperty('signing.keyId') ) {  // <-- note: to sign and deploy artifacts 
     ext.deployable << project(':')
     ext.deployable << project(':nxf-commons')
     ext.deployable << project(':nxf-extrae')
+    ext.deployable << project(':nxf-ignite')
     ext.deployable << project(':nxf-gridgain')
     ext.deployable << project(':nxf-console')
     ext.deployable << project(':nxf-drmaa')
@@ -367,6 +373,11 @@ task packOne(type: Jar) {
     deps = resolveDeps('gridgain')
     manifest.attributes('Dependencies': deps, 'gridgain')
 
+    /*
+     * `ignite` dependencies
+     */
+    deps = resolveDeps('ignite')
+    manifest.attributes('Dependencies': deps, 'ignite')
 
     /*
      * `drmaa` dependencies
@@ -571,10 +582,10 @@ task dnanexus(dependsOn: packDx) {
  * Save the runtime classpath
  */
 task exportClasspath {
-    dependsOn configurations.gridgain, configurations.extrae, configurations.console
+    dependsOn configurations.ignite, configurations.gridgain, configurations.extrae, configurations.console
 
     def home = System.getProperty('user.home')
-    def all = configurations.gridgain + configurations.extrae + configurations.console
+    def all = configurations.ignite + configurations.gridgain + configurations.extrae + configurations.console
     def libs = all.collect { File file -> /* println file.canonicalPath.replace(home, '$HOME'); */ file.canonicalPath;  }
     new File('.launch.classpath').text = libs.join(':')
 }

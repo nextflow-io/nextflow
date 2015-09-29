@@ -24,9 +24,9 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.config.ConfigBuilder
 import nextflow.daemon.DaemonLauncher
 import nextflow.executor.ServiceName
-import nextflow.config.ConfigBuilder
 import nextflow.util.ServiceDiscover
 /**
  * CLI-command NODE
@@ -50,9 +50,12 @@ class CmdNode extends CmdBase {
         launcher.options.background = value
     }
 
+    @Parameter
+    List<String> provider
+
     @Override
     void run() {
-        launchDaemon()
+        launchDaemon(provider ? provider[0] : null)
     }
 
 
@@ -99,7 +102,9 @@ class CmdNode extends CmdBase {
     static DaemonLauncher loadDaemonByName( String name ) {
 
         Class<DaemonLauncher> clazz = null
-        for( Class item : ServiceDiscover.load(DaemonLauncher).iterator() ) {
+        final itr = ServiceDiscover.load(DaemonLauncher).iterator()
+        while( itr.hasNext() ) {
+            final item = itr.next()
             log.debug "Discovered daemon class: ${item.name}"
             ServiceName annotation = item.getAnnotation(ServiceName)
             if( annotation && annotation.value() == name ) {
