@@ -199,25 +199,22 @@ class AssetManagerTest extends Specification {
     def testCreateProviderFor(){
 
         when:
-        def manager = [ user:'maria', pwd: 'whatever' ] as AssetManager
+        def manager = new AssetManager()
         def repo = manager.createHubProviderFor('github')
         then:
         repo instanceof GithubRepositoryProvider
-        repo.config.auth == "maria:whatever"
 
         when:
-        manager = [ user:'maria', pwd: 'whatever' ] as AssetManager
+        manager = new AssetManager()
         repo = manager.createHubProviderFor('bitbucket')
         then:
         repo instanceof BitbucketRepositoryProvider
-        repo.config.auth == "maria:whatever"
 
         when:
-        manager = [ user: 'paolo', pwd: '12345'] as AssetManager
+        manager = new AssetManager()
         repo = manager.createHubProviderFor('gitlab')
         then:
         repo instanceof GitlabRepositoryProvider
-        repo.config.auth == '12345'
 
         when:
         manager = [:] as AssetManager

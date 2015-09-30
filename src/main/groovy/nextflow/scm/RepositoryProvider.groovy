@@ -45,12 +45,19 @@ abstract class RepositoryProvider {
      */
     protected ProviderConfig config
 
-    public RepositoryProvider setCredentials(String userName, String password) {
-        if( userName && password ) {
-            config.setAuth(userName,password)
-        }
+    RepositoryProvider setCredentials(String userName, String password) {
+        config.user = user
+        config.password = password
         return this
     }
+
+    boolean hasCredentials() {
+        config?.auth
+    }
+
+    String getUser() { config?.user }
+
+    String getPassword() { config?.password }
 
     /**
      * @return The name of the source hub service e.g. github or bitbucket
@@ -97,9 +104,7 @@ abstract class RepositoryProvider {
         def connection = new URL(api).openConnection() as HttpURLConnection
         connection.setConnectTimeout(5_000)
 
-        if( config.auth ){
-            this.auth(connection, config.auth)
-        }
+        auth(connection)
 
         checkResponse(connection)
 
@@ -117,9 +122,12 @@ abstract class RepositoryProvider {
      *
      * @param connection The URL connection object to be authenticated
      */
-    protected void auth( HttpURLConnection connection, String token ) {
-        String authString = token.bytes.encodeBase64().toString()
-        connection.setRequestProperty("Authorization","Basic " + authString)
+    protected void auth( HttpURLConnection connection ) {
+        if( hasCredentials() ) {
+            String authString = config.auth.bytes.encodeBase64().toString()
+            connection.setRequestProperty("Authorization","Basic " + authString)
+        }
+
     }
 
     /**

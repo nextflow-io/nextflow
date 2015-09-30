@@ -75,7 +75,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getHomePage() {
-        return "${config.host}/$project"
+        return "${config.server}/$project"
     }
 
     @Override

@@ -31,12 +31,13 @@ class ProviderConfigTest extends Specification {
     static final String CONFIG = '''
         providers {
               github {
-                auth = '12732:35454'
-                host = 'https://github.com'
+                user = '12732'
+                password = '35454'
+                server = 'https://github.com'
               }
 
               custom {
-                host = 'http://local.host'
+                server = 'http://local.host'
                 platform = 'gitlab'
               }
 
@@ -56,14 +57,14 @@ class ProviderConfigTest extends Specification {
 
         then:
         obj1.name == 'github'
-        obj1.host == 'https://github.com'
+        obj1.server == 'https://github.com'
         obj1.auth == '12732:35454'
         obj1.domain == 'github.com'
         obj1.platform == 'github'
         obj1.endpoint == 'https://api.github.com'
 
         obj2.name == 'custom'
-        obj2.host == 'http://local.host'
+        obj2.server == 'http://local.host'
         obj2.platform == 'gitlab'
         obj2.endpoint == 'http://local.host'
 
@@ -78,7 +79,7 @@ class ProviderConfigTest extends Specification {
         def config = new ProviderConfig('github')
         then:
         config.name == 'github'
-        config.host == 'https://github.com'
+        config.server == 'https://github.com'
         config.endpoint == 'https://api.github.com'
         config.platform == 'github'
         config.domain == 'github.com'
@@ -87,7 +88,7 @@ class ProviderConfigTest extends Specification {
         config = new ProviderConfig('gitlab')
         then:
         config.name == 'gitlab'
-        config.host == 'https://gitlab.com'
+        config.server == 'https://gitlab.com'
         config.endpoint == 'https://gitlab.com'
         config.platform == 'gitlab'
         config.domain == 'gitlab.com'
@@ -96,7 +97,7 @@ class ProviderConfigTest extends Specification {
         config = new ProviderConfig('bitbucket')
         then:
         config.name == 'bitbucket'
-        config.host == 'https://bitbucket.org'
+        config.server == 'https://bitbucket.org'
         config.endpoint == 'https://bitbucket.org'
         config.platform == 'bitbucket'
         config.domain == 'bitbucket.org'
@@ -105,25 +106,27 @@ class ProviderConfigTest extends Specification {
     def 'should return provider attributes' () {
 
         when:
-        def config = new ProviderConfig('custom',[platform: 'github', auth: 'xyz', host:'http://local.host'])
+        def config = new ProviderConfig('custom',[platform: 'github', server:'http://local.host'])
         then:
         config.name == 'custom'
         config.platform == 'github'
         config.domain == 'local.host'
-        config.host == 'http://local.host'
+        config.server == 'http://local.host'
         config.endpoint == 'http://local.host'
-        config.auth == 'xyz'
 
         when:
-        config.setAuth('abc')
+        config = new ProviderConfig('custom')
+        config.setPassword('abc')
         then:
+        config.password == 'abc'
         config.auth == 'abc'
-        config.authObfuscated == '***'
+        config.authObfuscated == '-:***'
         config.user == null
         config.password == 'abc'
 
         when:
-        config.setAuth('yo','123')
+        config = new ProviderConfig('custom')
+        config.setUser('yo').setPassword('123')
         then:
         config.auth == 'yo:123'
         config.authObfuscated == 'yo:***'
@@ -131,20 +134,35 @@ class ProviderConfigTest extends Specification {
         config.password == '123'
 
         when:
-        config.setAuth(null,'123')
-        then:
-        config.auth == ':123'
-        config.authObfuscated == '-:***'
-        config.user == null
-        config.password == '123'
-
-        when:
-        config.setAuth('hello',null)
+        config = new ProviderConfig('custom')
+        config.setUser('hello')
         then:
         config.auth == 'hello:'
         config.authObfuscated == 'hello:-'
         config.user == 'hello'
         config.password == null
+
+        when:
+        config = new ProviderConfig('custom', [auth: 'yo:123'])
+        then:
+        config.auth == 'yo:123'
+        config.user == 'yo'
+        config.password == '123'
+
+        when:
+        config = new ProviderConfig('custom', [auth: 'xyz'])
+        then:
+        config.auth == 'xyz'
+        config.user == null
+        config.password == 'xyz'
+    }
+
+    def 'should ending slash and add protocol prefix' () {
+        when:
+        def config = new ProviderConfig('custom',[server:'host.com///'])
+        then:
+        config.server == 'https://host.com'
+
     }
 
     def 'should create all config providers'() {
@@ -155,14 +173,14 @@ class ProviderConfigTest extends Specification {
         then:
         result.size() == 5
 
-        result.find { it.name == 'github' }.host == 'https://github.com'
+        result.find { it.name == 'github' }.server == 'https://github.com'
         result.find { it.name == 'github' }.auth == '12732:35454'
 
-        result.find { it.name == 'gitlab' }.host == 'https://gitlab.com'
+        result.find { it.name == 'gitlab' }.server == 'https://gitlab.com'
 
-        result.find { it.name == 'bitbucket' }.host == 'https://bitbucket.org'
+        result.find { it.name == 'bitbucket' }.server == 'https://bitbucket.org'
 
-        result.find { it.name == 'custom' }.host == 'http://local.host'
+        result.find { it.name == 'custom' }.server == 'http://local.host'
         result.find { it.name == 'custom' }.platform == 'gitlab'
 
         result.find { it.name == 'local' }.path == '/home/data/projects'

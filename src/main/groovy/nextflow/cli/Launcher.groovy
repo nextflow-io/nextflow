@@ -386,7 +386,13 @@ class Launcher implements ExitCode {
             System.exit(RUNTIME_ERROR)
         }
 
-        catch ( GitAPIException | AbortOperationException e ) {
+        catch ( AbortOperationException e ) {
+            System.err.println e.getMessage() ?: e.toString()
+            log.debug ("Operation aborted", e.cause ?: e)
+            System.exit(COMMAND_ERROR)
+        }
+
+        catch ( GitAPIException e ) {
             System.err.println e.getMessage() ?: e.toString()
             log.debug ("Operation aborted", e.cause ?: e)
             System.exit(COMMAND_ERROR)

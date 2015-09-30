@@ -67,7 +67,7 @@ final class GithubRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getHomePage() {
-        "${config.host}/$project"
+        "${config.server}/$project"
     }
 
     /** {@inheritDoc} */

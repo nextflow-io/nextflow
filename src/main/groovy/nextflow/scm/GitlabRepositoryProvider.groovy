@@ -34,19 +34,14 @@ class GitlabRepositoryProvider extends RepositoryProvider {
         this.config = config ?: new ProviderConfig('gitlab')
     }
 
-    public RepositoryProvider setCredentials(String userName, String password) {
-        if( password ) {
-            config.setAuth(password)
-        }
-        return this
-    }
-
     final String getProjectName() {
         URLEncoder.encode(project,'utf-8')
     }
 
-    protected void auth( HttpURLConnection connection, String token) {
-        connection.setRequestProperty("PRIVATE-TOKEN", token)
+    protected void auth( HttpURLConnection connection ) {
+        if( config.password ) {
+            connection.setRequestProperty("PRIVATE-TOKEN", config.password)
+        }
     }
 
     @Override
@@ -82,7 +77,7 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getHomePage() {
-        "${config.host}/$project"
+        "${config.server}/$project"
     }
 
     /** {@inheritDoc} */

@@ -86,10 +86,6 @@ class AssetManager {
 
     private String hub
 
-    private String user
-
-    private String pwd
-
     private List<ProviderConfig> providerConfigs
 
     /**
@@ -127,13 +123,16 @@ class AssetManager {
         if( !hub )
             hub = DEFAULT_HUB
 
-        if( cliOpts ) {
+        // create the hub provider
+        this.provider = createHubProviderFor(hub)
+
+        if( cliOpts?.hubUser ) {
             cliOpts.hubProvider = hub
-            this.user = cliOpts.getHubUser()
-            this.pwd = cliOpts.getHubPassword()
+            final user = cliOpts.getHubUser()
+            final pwd = cliOpts.getHubPassword()
+            provider.setCredentials(user, pwd)
         }
 
-        this.provider = createHubProviderFor(hub)
         return this
     }
 
@@ -146,7 +145,6 @@ class AssetManager {
 
                 if( url.protocol == 'file' ) {
                     this.hub = "file:${url.location}"
-                    this.user = url.user
                     providerConfigs << new ProviderConfig(this.hub, [path:url.location])
                 }
 
@@ -204,9 +202,8 @@ class AssetManager {
         if( !config )
             throw new AbortOperationException("Unknown pipeline repository configuration provider: $providerName")
 
-        RepositoryProvider
-                .create(config, project)
-                .setCredentials(user, pwd)
+        RepositoryProvider .create(config, project)
+
     }
 
     AssetManager setLocalPath(File path) {
@@ -384,8 +381,8 @@ class AssetManager {
 
             // clone it
             def clone = Git.cloneRepository()
-            if( user && pwd )
-                clone.setCredentialsProvider( new UsernamePasswordCredentialsProvider(user, pwd) )
+            if( provider.hasCredentials() )
+                clone.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
 
             clone
                 .setURI(getGitRepositoryUrl())
@@ -422,8 +419,8 @@ class AssetManager {
 
         // now pull to update it
         def pull = git.pull()
-        if( user && pwd )
-            pull.setCredentialsProvider( new UsernamePasswordCredentialsProvider(user, pwd))
+        if( provider.hasCredentials() )
+            pull.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password))
 
         def result = pull.call()
         if(!result.isSuccessful())
@@ -450,8 +447,8 @@ class AssetManager {
 
         clone.setURI(uri)
         clone.setDirectory(directory)
-        if( user && pwd )
-            clone.setCredentialsProvider( new UsernamePasswordCredentialsProvider(user, pwd))
+        if( provider.hasCredentials() )
+            clone.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password))
 
         if( revision )
             clone.setBranch(revision)

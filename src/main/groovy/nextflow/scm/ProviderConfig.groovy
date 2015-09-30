@@ -34,32 +34,36 @@ class ProviderConfig {
 
     private String name
 
-    private Map attributes
+    private Map attr
 
     ProviderConfig( String name, Map values ) {
         this.name = name
-        this.attributes = new HashMap(values)
+        this.attr = new HashMap(values)
 
         // init defaults
         switch( name ) {
             case 'github':
-                attributes.platform = name
-                if( !attributes.host ) attributes.host = 'https://github.com'
-                if( !attributes.endpoint ) attributes.endpoint = 'https://api.github.com'
+                attr.platform = name
+                if( !attr.server ) attr.server = 'https://github.com'
+                if( !attr.endpoint ) attr.endpoint = 'https://api.github.com'
                 break
 
             case 'gitlab':
-                attributes.platform = name
-                if( !attributes.host ) attributes.host = 'https://gitlab.com'
+                attr.platform = name
+                if( !attr.server ) attr.server = 'https://gitlab.com'
                 break
 
             case 'bitbucket':
-                attributes.platform = name
-                if( !attributes.host ) attributes.host = 'https://bitbucket.org'
+                attr.platform = name
+                if( !attr.server ) attr.server = 'https://bitbucket.org'
         }
 
-        if( attributes.path )
-            attributes.platform = 'file'
+        if( attr.path )
+            attr.platform = 'file'
+
+        if( attr.auth ) {
+            setAuth(attr.auth.toString())
+        }
     }
 
     ProviderConfig( String name ) {
@@ -73,17 +77,28 @@ class ProviderConfig {
 
     /**
      * @return
-     *      Remote host including protocol and eventually port number e.g.
+     *      Remote server including protocol and eventually port number e.g.
      *      {@code https://github.com}
      */
-    String getHost() { attributes.host }
+    String getServer() {
+        def result = (String)attr.server
+        if( !result ) return null
+
+        if( !result.contains('://') )
+            result = 'https://' + result
+
+        // remove ending slash
+        while( result.endsWith('/')  )
+            result = result.substring(0,result.size()-1)
+        return result
+    }
 
     /**
      * @return
-     *      Remote host name e.g. {@code github.com}
+     *      Remote server name e.g. {@code github.com}
      */
     String getDomain() {
-        def result = host
+        def result = server
         def p = result.indexOf('://')
         p != -1 ? result.substring(p+3) : result
     }
@@ -92,85 +107,69 @@ class ProviderConfig {
      * @return The provider identifier e.g. {@code github}, {@code gitlab} or {@code bitbucket}
      */
     String getPlatform() {
-        attributes.platform
+        attr.platform
     }
 
     /**
      * @return The authentication token
      */
-    String getAuth() { attributes.auth }
+    String getAuth() {
+        def result = new StringBuilder()
+        if( user ) {
+            result << user
+            result << ':'
+        }
+        if( password )
+            result << password
+
+        return result ? result.toString() : null
+    }
 
     String getAuthObfuscated() {
-        if( !auth ) return null
-        def p=auth.indexOf(':')
-        if( p != -1 ) {
-            def result = []
-            result[0] = p>0 ? auth.substring(0,p) : '-'
-            result[1] = p+1<auth.size() ? '*' * (auth.size()-p-1) : '-'
-            return result.join(':')
-        }
-        else {
-            return '*' * auth.size()
-        }
+        "${user ?: '-'}:${password? '*' * password.size() : '-'}"
     }
 
-    /**
-     * Sets the authentication token
-     * @param value The auth token string
-     * @return The {@link ProviderConfig} object itself
-     */
-    ProviderConfig setAuth( String value ) {
-        attributes.auth = value
-        return this
-    }
-
-    /**
-     * Sets the authentication token putting together the user name and password strings
-     *
-     * @param userName The user name string
-     * @param password The password string
-     * @return The {@link ProviderConfig} object itself
-     */
-    ProviderConfig setAuth( String userName, String password ) {
-        def pair = [ userName?:'' , password?:'' ]
-        attributes.auth = pair.join(':')
+    ProviderConfig setAuth( String str ) {
+        if( str ) {
+            def p = str.indexOf(':')
+            if( p==-1 ) {
+                setPassword(str)
+            }
+            else {
+                setUser(str.substring(0,p))
+                setPassword(str.substring(p+1))
+            }
+        }
         return this
     }
 
     /**
      * @return
      *      The API root endpoint url e.g. {@code http://api.github.com}. Fallback on
-     *      the {@link #getHost()} if not defined
+     *      the {@link #getServer()} if not defined
      */
     String getEndpoint() {
-        attributes.endpoint ?: attributes.host
+        attr.endpoint ?: attr.server
     }
 
-    String getUser() {
-        if(!auth)
-            return null
-
-        def p=auth.indexOf(':')
-        return p>0 ? auth.substring(0,p) : null
+    ProviderConfig setUser(String user) {
+        attr.user = user
+        return this
     }
 
-    String getPassword() {
-        if(!auth)
-            return null
-
-        def p = auth.indexOf(':')
-        if( p != -1 ) {
-            return p+1<auth.size() ? auth.substring(p+1) : null
-        }
-        else {
-            return auth
-        }
+    ProviderConfig setPassword( String password ) {
+        attr.password = password
+        return this
     }
 
-    String getPath() { attributes.path?.toString() }
+    String getUser() { attr.user }
+
+    String getPassword() { attr.password }
+
+    String getPath() { attr.path?.toString() }
 
     String toString() {
-        "ProviderConfig[name: $name, platform: $platform, host: $host]"
+        "ProviderConfig[name: $name, platform: $platform, server: $server]"
     }
 
     @PackageScope
