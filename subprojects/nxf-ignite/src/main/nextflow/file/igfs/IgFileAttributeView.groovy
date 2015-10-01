@@ -70,7 +70,7 @@ class IgFileAttributeView implements BasicFileAttributeView {
     /**
      * @Inheritdoc
      *
-     * NOTE: Creation time is not supported by GGFS, this attribute is just ignored
+     * NOTE: Creation time is not supported by the Ignite file system, this attribute is just ignored
      *
      * @param lastModifiedTime
      * @param lastAccessTime

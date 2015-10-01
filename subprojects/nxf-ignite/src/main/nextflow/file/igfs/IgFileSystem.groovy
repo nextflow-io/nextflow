@@ -34,7 +34,7 @@ import groovy.transform.PackageScope
 import nextflow.file.FileHelper
 import org.apache.ignite.IgniteFileSystem
 /**
- * Implements a {@code FileSystem} for the GridGain provider
+ * Implements a {@code FileSystem} for the Ignite provider
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -44,7 +44,7 @@ class IgFileSystem extends FileSystem {
     private IgFileSystemProvider provider
 
     /**
-     * The underlying {@code GridGgfs} instance
+     * The underlying {@link IgniteFileSystem} instance
      */
     private IgniteFileSystem igfs
 
@@ -54,7 +54,7 @@ class IgFileSystem extends FileSystem {
     }
 
     /**
-     * @return The underlying {@code GridGgfs} instance providing GridGain platform in-memory storage
+     * @return The underlying {@link IgniteFileSystem} instance providing Ignite platform in-memory storage
      */
     @PackageScope
     IgniteFileSystem getIgfs() { igfs }
@@ -93,7 +93,7 @@ class IgFileSystem extends FileSystem {
     }
 
     /**
-     * @return {@code GgPath#PATH_SEPARATOR}
+     * @return {@link IgPath#PATH_SEPARATOR}
      */
     @Override
     String getSeparator() {

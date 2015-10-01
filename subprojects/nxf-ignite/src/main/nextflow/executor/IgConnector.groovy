@@ -36,11 +36,13 @@ import org.apache.ignite.IgniteCompute
 import org.apache.ignite.cluster.ClusterGroup
 import org.apache.ignite.cluster.ClusterNode
 import org.apache.ignite.events.EventType
+import org.apache.ignite.lang.IgniteRunnable
+import org.apache.ignite.resources.IgniteInstanceResource
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage
 import org.apache.ignite.spi.discovery.DiscoverySpiListener
 import org.jetbrains.annotations.Nullable
 /**
- * Creates an instance of the GridGain node
+ * Creates an instance of the Ignite node
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -63,14 +65,21 @@ class IgConnector implements DiscoverySpiListener {
     private Thread watcher
 
     private IgConnector(TaskPollingMonitor monitor) {
-        log.debug "Create GridGain master node"
+        log.debug "Create Ignite master node"
         this.monitor = monitor
         this.session = monitor.session
 
         initialize()
     }
 
-    private initialize() {
+    /**
+     * Initialise the Ignite instance:
+     * 1) register the Kryo serializer
+     * 2) create an instance of the igfs file system
+     * 3) create a {@link RemoteSession} object for the current {@link Session}
+     * 4) create the shutdown hooks
+     */
+    private void initialize() {
 
         /*
          * Register the path serializer
@@ -78,7 +87,7 @@ class IgConnector implements DiscoverySpiListener {
         KryoHelper.register(IgPath, PathSerializer)
 
         /*
-         * access to the GridGain file system to force the instantiation of a GridGain instance
+         * access to the Ignite file system to force the instantiation of a Ignite instance
          * if it is not already available
          */
         def fs = FileHelper.getOrCreateFileSystemFor(URI.create('igfs:///'))
@@ -96,9 +105,14 @@ class IgConnector implements DiscoverySpiListener {
         /*
          * shutdown the instance on session termination
          */
+        final shutdownOnComplete = session.config.cluster?.shutdownOnComplete?.toString() == 'true'
         monitor.session.onShutdown {
             if( watcher ) watcher.interrupt()
-            allSessions.remove(session.uniqueId)
+            if( shutdownOnComplete )
+                shutdown()
+            else
+                allSessions.remove(session.uniqueId)
+            // close the current instance
             grid.close()
         }
     }
@@ -149,6 +163,19 @@ class IgConnector implements DiscoverySpiListener {
         grid.compute(getCluster())
     }
 
+    /**
+     * Shutdown all grid nodes
+     */
+    def void shutdown() {
+        log.debug "Shutting down grid nodes"
+        try {
+            grid.compute(grid.cluster().forRemotes()).broadcast(new PoisonPill())
+        }
+        catch( Exception e ) {
+            log.debug e.message ?: e.toString()
+        }
+    }
+
     @Override
     void onDiscovery(int type,
                      long topVer,
@@ -168,4 +195,17 @@ class IgConnector implements DiscoverySpiListener {
             (EventType.EVT_NODE_SEGMENTED):       'EVT_NODE_SEGMENTED'
     ]
 
+    /**
+     * Runnable task used to kill remote node on shut-down
+     */
+    static class PoisonPill implements IgniteRunnable {
+
+        @IgniteInstanceResource
+        private transient Ignite ignite
+
+        @Override
+        void run() {
+            Thread.start { ignite.close()  }
+        }
+    }
 }

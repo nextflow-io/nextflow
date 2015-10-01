@@ -33,6 +33,7 @@ import groovy.util.logging.Slf4j
 import org.apache.ignite.igfs.IgfsFile
 import org.apache.ignite.igfs.IgfsPath
 /**
+ * Implements a Ignite file system path compatible with JSR-203
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -181,7 +182,7 @@ class IgPath implements Path {
     }
 
     @Memoized
-    IgfsPath toGridGgfsPath() {
+    IgfsPath toIgnitePath() {
         def str = delegate.toString()
         if( str.startsWith(PATH_SEPARATOR) )
             new IgfsPath(str)
@@ -239,25 +240,25 @@ class IgPath implements Path {
 
     @PackageScope()
     boolean nativeDelete( boolean recursive = false ) {
-        fileSystem.igfs.delete( toGridGgfsPath(), recursive )
+        fileSystem.igfs.delete( toIgnitePath(), recursive )
     }
 
     void nativeMkdirs() {
-        fileSystem.igfs.mkdirs( toGridGgfsPath() )
+        fileSystem.igfs.mkdirs( toIgnitePath() )
     }
 
     @PackageScope
     IgfsFile nativeReadAttributes() {
-        return fileSystem.igfs.info( toGridGgfsPath() )
+        return fileSystem.igfs.info( toIgnitePath() )
     }
 
     @PackageScope
     def nativeExists() {
-        fileSystem.igfs.exists( toGridGgfsPath() )
+        fileSystem.igfs.exists( toIgnitePath() )
     }
 
     @PackageScope
     def nativeSetTime(long accessTime, long modificationTime) {
-        fileSystem.igfs.setTimes(toGridGgfsPath(), accessTime, modificationTime)
+        fileSystem.igfs.setTimes(toIgnitePath(), accessTime, modificationTime)
     }
 }

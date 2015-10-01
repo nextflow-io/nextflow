@@ -28,7 +28,7 @@ import groovy.util.logging.Slf4j
 import org.apache.ignite.igfs.IgfsFile
 import org.apache.ignite.igfs.IgfsPath
 /**
- * Implements a DirectoryStream iterator for GridGain file system
+ * Implements a DirectoryStream iterator for Ignite file system
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -44,15 +44,15 @@ class IgDirectoryStream implements DirectoryStream<Path> {
     /**
      * Create the directory stream iterator
      *
-     * @param path The {@code GgPath} to iterate over
-     * @param filter The {@code DirectoryStream.Filter} to be applied
+     * @param path The {@link IgPath} to iterate over
+     * @param filter The {@link DirectoryStream.Filter} to be applied
      * @throws IOException
      */
     public IgDirectoryStream( IgPath path, DirectoryStream.Filter<? super Path> filter ) throws IOException {
-        this.path = path.toGridGgfsPath();
+        this.path = path.toIgnitePath();
         this.fileSystem = path.fileSystem
         this.filter = filter;
-        this.target = path.getFileSystem().getIgfs().listFiles(path.toGridGgfsPath()).iterator()
+        this.target = path.getFileSystem().getIgfs().listFiles(path.toIgnitePath()).iterator()
     }
 
 

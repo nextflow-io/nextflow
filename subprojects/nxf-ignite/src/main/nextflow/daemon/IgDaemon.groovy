@@ -31,7 +31,7 @@ import nextflow.util.PathSerializer
 import org.apache.ignite.Ignite
 
 /**
- * Launch the GridGain daemon
+ * Launch the Ignite daemon
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -64,39 +64,4 @@ class IgDaemon implements DaemonLauncher {
     }
 
 
-//    @Slf4j
-//    class DaemonLifecycleBean implements GridLifecycleBean {
-//
-//        @Override
-//        void onLifecycleEvent(GridLifecycleEventType event) throws GridException {
-//            if( event == GridLifecycleEventType.BEFORE_GRID_START ) {
-//                onBeforeStart()
-//            }
-//            else if( event == GridLifecycleEventType.AFTER_GRID_START ) {
-//                onAfterStart()
-//            }
-//            else if( event == GridLifecycleEventType.BEFORE_GRID_STOP ) {
-//                onBeforeStop()
-//            }
-//            else if( event == GridLifecycleEventType.AFTER_GRID_STOP ) {
-//                onAfterStop()
-//            }
-//        }
-//
-//        def onBeforeStart() {
-//            log.debug "Grid > before start"
-//        }
-//
-//        def onAfterStart() {
-//            log.debug "Grid > after start"
-//        }
-//
-//        def onBeforeStop() {
-//            log.debug "Grid > before stop"
-//        }
-//
-//        def onAfterStop() {
-//            log.debug "Grid > after stop"
-//        }
-//    }
 }

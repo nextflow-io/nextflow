@@ -87,6 +87,7 @@ class IgGridFactory {
 
         this.role = role
         this.daemonConfig = new DaemonConfig('ignite', clusterConfig, role == 'worker' ? System.getenv() : null )
+
     }
 
     /**
@@ -98,7 +99,7 @@ class IgGridFactory {
     }
 
     /**
-     * Creates teh config object and starts a GridGain instance
+     * Creates teh config object and starts a Ignite instance
      *
      * @return The {@link Ignite} instance
      * @throws org.apache.ignite.IgniteException If grid could not be started. This exception will be thrown
@@ -114,32 +115,10 @@ class IgGridFactory {
      */
     IgniteConfiguration config() {
 
-//        System.setProperty('GRIDGAIN_UPDATE_NOTIFIER','false')
-//
-//        if( daemonConfig.getAttribute('debug') as Boolean ) {
-//            log.debug "Debugging ENABLED"
-//            System.setProperty('GRIDGAIN_DEBUG_ENABLED','true')
-//        }
+        System.setProperty('IGNITE_UPDATE_NOTIFIER','false')
+        System.setProperty('IGNITE_NO_ASCII', 'true')
 
-
-        IgniteConfiguration cfg
-
-//        // -- try loading a config file
-//        String url = daemonConfig.getAttribute('config.url')
-//        String file = daemonConfig.getAttribute('config.file')
-//        if( file ) {
-//            log.debug "Apache Ignite config > using config file: $file"
-//            return Ignition.loadConfiguration(file).get1()
-//        }
-//
-//        // -- try config by reading remote URL
-//        if( url ) {
-//            log.debug "Apache Ignite config > using config URL: $url"
-//            return Ignition.loadConfiguration(new URL(url)).get1()
-//        }
-
-        // fallback of default
-        cfg = new IgniteConfiguration()
+        IgniteConfiguration cfg = new IgniteConfiguration()
         collisionConfig(cfg)
         discoveryConfig(cfg)
         balancingConfig(cfg)
@@ -158,7 +137,7 @@ class IgGridFactory {
 //        }
 
         // this is not really used -- just set to avoid it complaining
-        cfg.setIgniteHome( new File(System.getProperty('user.dir'),'ignite').toString() )
+        cfg.setWorkDirectory( FileHelper.getLocalTempPath().resolve('ignite').toString() )
 
         return cfg
     }
@@ -216,7 +195,6 @@ class IgGridFactory {
     }
 
 
-
     /*
      * igfs configuration
      */
@@ -253,7 +231,6 @@ class IgGridFactory {
 
     }
 
-
     /**
      * the *early* load balancing strategy
      *
@@ -286,7 +263,7 @@ class IgGridFactory {
             else {
                 def host = addr.substring(0,indx)
                 def port = addr.substring(indx+1) as Integer
-                log.debug "GridGain config > interface: $host:$port"
+                log.debug "Ignite config > interface: $host:$port"
                 discoverCfg.setLocalAddress(host)
                 discoverCfg.setLocalPort(port)
             }
@@ -295,7 +272,7 @@ class IgGridFactory {
         // -- try to set the join/discovery mechanism
         def join = daemonConfig.getAttribute('join') as String
         if( join == 'multicast' ) {
-            log.debug "GridGain config > default discovery multicast"
+            log.debug "Ignite config > default discovery multicast"
             discoverCfg.setIpFinder( new TcpDiscoveryMulticastIpFinder())
         }
         else if( join?.startsWith('multicast:') ) {
@@ -303,11 +280,11 @@ class IgGridFactory {
             def address = join.replace('multicast:','')
             def parts = address.split(':')
             if( parts.size() ) {
-                log.debug "GridGain config > discovery multicast address: ${parts[0]}"
+                log.debug "Ignite config > discovery multicast address: ${parts[0]}"
                 finder.setMulticastGroup(parts[0])
             }
             if( parts.size()==2 ) {
-                log.debug "GridGain config > discovery multicast port: ${parts[1]}"
+                log.debug "Ignite config > discovery multicast port: ${parts[1]}"
                 finder.setMulticastPort(parts[1] as Integer)
             }
             discoverCfg.setIpFinder(finder)
@@ -324,7 +301,7 @@ class IgGridFactory {
             if( bucket.startsWith('/'))
                 bucket = bucket.substring(1)
 
-            log.debug "GridGain config > discovery AWS bucket: $bucket; access: ${accessKey.substring(0,6)}..; ${secretKey.substring(0,6)}.."
+            log.debug "Ignite config > discovery AWS bucket: $bucket; access: ${accessKey.substring(0,6)}..; ${secretKey.substring(0,6)}.."
             final finder = new TcpDiscoveryS3IpFinder()
             finder.setAwsCredentials( new BasicAWSCredentials(accessKey, secretKey) )
             finder.setBucketName(bucket)
@@ -334,10 +311,10 @@ class IgGridFactory {
         else if( join?.startsWith('path:') ) {
             def path = FileHelper.asPath(join.substring(5).trim())
             if( path.exists() ) {
-                log.debug "GridGain config > discovery path: $path"
+                log.debug "Ignite config > discovery path: $path"
             }
             else {
-                log.debug "GridGain config > CREATING discovery path: $path"
+                log.debug "Ignite config > CREATING discovery path: $path"
                 path.mkdirs()
             }
 
@@ -371,11 +348,9 @@ class IgGridFactory {
             def p = name.split(/\./)[-1]
             def x = value instanceof Duration ? value.toMillis() : value
             def n = 'set' + StringUtils.capitalize(p)
-            log.debug "GridGain config > $name [$n]: $x [${x.class.name}]"
+            log.debug "Ignite config > $name [$n]: $x [${x.class.name}]"
             MethodUtils.invokeMethod(discoverCfg, n, x)
         }
     }
-
-
 
 }

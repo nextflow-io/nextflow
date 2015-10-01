@@ -158,8 +158,8 @@ while [[ $# != 0 ]]; do
       fi
       ;;
     -process.executor|-executor.name)
-      if [[ $2 && $2 == 'gridgain' ]]; then
-      NXF_MODE='gridgain'; shift;
+      if [[ $2 && $2 == 'ignite' ]]; then
+      NXF_MODE='ignite'; shift;
       fi
       ;;
     -with-extrae)
@@ -248,7 +248,7 @@ elif [[ "$NXF_DRMAA" ]]; then
 fi
 
 [[ "$cmd" == "console" ]] && NXF_MODE='console'
-[[ "$cmd" == "node" && ! "$NXF_MODE" ]] && NXF_MODE='gridgain'
+[[ "$cmd" == "node" && ! "$NXF_MODE" ]] && NXF_MODE='ignite'
 
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}
 JAVA_OPTS="-noverify -Dcapsule.trampoline -Dcapsule.java.cmd=$JAVA_CMD"

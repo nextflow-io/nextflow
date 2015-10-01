@@ -49,7 +49,7 @@ import org.apache.ignite.IgniteFileSystem
 import org.apache.ignite.Ignition
 
 /**
- * Implements a GridGain file system provider complaint with JSR203 a.k.a. NIO2
+ * Implements an Ignite file system provider complaint with JSR203 a.k.a. NIO2
  *
  * @link https://jcp.org/en/jsr/detail?id=203
  *
@@ -122,7 +122,7 @@ class IgFileSystemProvider extends FileSystemProvider {
         if( currentFileSystem )
             throw new FileSystemAlreadyExistsException("File system object already exists -- URI: $uri")
 
-        def ggfs = getGgfsFor(env)
+        def ggfs = getIgniteFileSystem(env)
         return currentFileSystem = new IgFileSystem(this, ggfs)
     }
 
@@ -162,22 +162,22 @@ class IgFileSystemProvider extends FileSystemProvider {
         throw new IllegalStateException("Cannot access underlying Apache Ignite instance -- not a valid grid identifier: [${grid?.class?.name} $grid]")
     }
 
-    private IgniteFileSystem getGgfsFor( Map env ) {
+    private IgniteFileSystem getIgniteFileSystem( Map env ) {
 
         // -- now find out the grid file system object
-        def ggfs = env.get('igfs')
-        if( ggfs instanceof IgniteFileSystem )
-            return (IgniteFileSystem)ggfs
+        def igfs = env.get('igfs')
+        if( igfs instanceof IgniteFileSystem )
+            return (IgniteFileSystem)igfs
 
         grid = getGridFor(env)
-        if( !ggfs )
+        if( !igfs )
             return grid.fileSystem('igfs')
 
-        if( ggfs instanceof String )
-            return grid.fileSystem(ggfs as String)
+        if( igfs instanceof String )
+            return grid.fileSystem(igfs as String)
 
 
-        throw new IllegalStateException("Cannot access underlying Apache Ignite file system instance -- not a valid fs idenitifier: [${ggfs?.class?.name}] $ggfs")
+        throw new IllegalStateException("Cannot access underlying Apache Ignite file system instance -- not a valid fs idenitifier: [${igfs?.class?.name}] $igfs")
     }
 
     /**
@@ -201,7 +201,7 @@ class IgFileSystemProvider extends FileSystemProvider {
     }
 
     /**
-     * GridGain do not support {@code SeekableByteChannel} implemented this method only
+     * Ignite do not support {@link SeekableByteChannel} implemented this method only
      * to have {@code Files.create} to work properly
      *
      * @param path
@@ -221,7 +221,7 @@ class IgFileSystemProvider extends FileSystemProvider {
             throw new FileAlreadyExistsException("File igfs://${path} already exists")
 
         def gg = path as IgPath
-        def stream = gg.fileSystem.igfs.create(gg.toGridGgfsPath(), false)
+        def stream = gg.fileSystem.igfs.create(gg.toIgnitePath(), false)
         new OnlyCloseChannel(stream)
     }
 
@@ -262,7 +262,7 @@ class IgFileSystemProvider extends FileSystemProvider {
         }
 
         def gg = path as IgPath
-        gg.fileSystem.igfs.open( gg.toGridGgfsPath() )
+        gg.fileSystem.igfs.open( gg.toIgnitePath() )
     }
 
     /**
@@ -315,11 +315,11 @@ class IgFileSystemProvider extends FileSystemProvider {
         final append = ( StandardOpenOption.APPEND in opts )
         if( append ) {
             boolean create = StandardOpenOption.CREATE in opts
-            gg.fileSystem.igfs.append( gg.toGridGgfsPath(), create )
+            gg.fileSystem.igfs.append( gg.toIgnitePath(), create )
         }
         else {
             boolean overwrite = ( StandardOpenOption.TRUNCATE_EXISTING in opts )
-            gg.fileSystem.igfs.create( gg.toGridGgfsPath(), overwrite )
+            gg.fileSystem.igfs.create( gg.toIgnitePath(), overwrite )
         }
 
     }
@@ -449,7 +449,7 @@ class IgFileSystemProvider extends FileSystemProvider {
         if( Files.exists(ggTarget) && !options.contains(StandardCopyOption.REPLACE_EXISTING))
             throw new FileAlreadyExistsException("File 'igfs://$target' already exists")
 
-        ggSource.fileSystem.igfs.rename( ggSource.toGridGgfsPath(), ggTarget.toGridGgfsPath() )
+        ggSource.fileSystem.igfs.rename( ggSource.toIgnitePath(), ggTarget.toIgnitePath() )
     }
 
     /**

@@ -103,7 +103,6 @@ configurations {
     //provided
     drmaa.extendsFrom runtime
     dnanexus.extendsFrom runtime
-    gridgain.extendsFrom runtime
     ignite.extendsFrom runtime
     console.extendsFrom runtime
     gdocLibs.extendsFrom runtime
@@ -148,10 +147,6 @@ dependencies {
 
     // DnaNexus build dependencies
     dnanexus(project(':nxf-dnanexus')) {
-        exclude module: 'nextflow'
-    }
-
-    gridgain(project(':nxf-gridgain')) {
         exclude module: 'nextflow'
     }
 
@@ -282,7 +277,6 @@ if( hasProperty('signing.keyId') ) {  // <-- note: to sign and deploy artifacts 
     ext.deployable << project(':nxf-commons')
     ext.deployable << project(':nxf-extrae')
     ext.deployable << project(':nxf-ignite')
-    ext.deployable << project(':nxf-gridgain')
     ext.deployable << project(':nxf-console')
     ext.deployable << project(':nxf-drmaa')
 }
@@ -368,12 +362,6 @@ task packOne(type: Jar) {
     manifest.attributes('Dependencies': deps, 'console')
 
     /*
-     * `gridgain` dependencies
-     */
-    deps = resolveDeps('gridgain')
-    manifest.attributes('Dependencies': deps, 'gridgain')
-
-    /*
      * `ignite` dependencies
      */
     deps = resolveDeps('ignite')
@@ -397,19 +385,18 @@ task packAll(type: Jar) {
     archiveName = "nextflow-${version}-all.jar"
 
     from jar // embed our application jar
-    from (configurations.runtime)
+    from (configurations.ignite)
     from (configurations.extrae) // add the extrae module
     from (configurations.capsule.collect { zipTree(it) })
 
-    manifest {
-        attributes(
-                'Main-Class'        : 'CapsuleLoader',
-                'Application-Name'  : 'nextflow-all',
-                'Application-Class' : mainClassName,
-                'Application-Version': version,
-                'Min-Java-Version'  : '1.7.0'
-        )
-    }
+    manifest.attributes( 'Main-Class'        : 'CapsuleLoader',
+                          'Application-Name'  : 'nextflow-all',
+                          'Application-Class' : mainClassName,
+                          'Application-Version': version,
+                          'Min-Java-Version'  : '1.7.0'
+                          )
+
+    manifest.attributes('Main-Class': 'CapsuleLoader', 'ignite')
 
     doLast {
         file(releaseDir).mkdir()
@@ -582,10 +569,10 @@ task dnanexus(dependsOn: packDx) {
  * Save the runtime classpath
  */
 task exportClasspath {
-    dependsOn configurations.ignite, configurations.gridgain, configurations.extrae, configurations.console
+    dependsOn configurations.ignite, configurations.extrae, configurations.console
 
     def home = System.getProperty('user.home')
-    def all = configurations.ignite + configurations.gridgain + configurations.extrae + configurations.console
+    def all = configurations.ignite + configurations.extrae + configurations.console
     def libs = all.collect { File file -> /* println file.canonicalPath.replace(home, '$HOME'); */ file.canonicalPath;  }
     new File('.launch.classpath').text = libs.join(':')
 }

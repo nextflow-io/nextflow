@@ -29,7 +29,7 @@ import groovy.util.logging.Slf4j
 import org.apache.ignite.igfs.IgfsFile
 import org.apache.ignite.internal.processors.igfs.IgfsFileImpl
 /**
- * Implements the basic attributes object for GridGain file system provider
+ * Implements the basic attributes object for Ignite file system provider
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -80,7 +80,7 @@ class IgFileAttributes implements BasicFileAttributes {
     }
 
     /**
-     * Creation time not supported by GridGain file system provider
+     * Creation time not supported by Ignite file system provider
      */
     @Override
     FileTime creationTime() {
@@ -104,7 +104,7 @@ class IgFileAttributes implements BasicFileAttributes {
     }
 
     /**
-     * Sym link are not supported by GridGain file system provider
+     * Sym link are not supported by Ignite file system provider
      *
      * @return {@code false} by definition
      */
@@ -114,7 +114,7 @@ class IgFileAttributes implements BasicFileAttributes {
     }
 
     /**
-     * Other group is not supported by GridGain file system provider
+     * Other group is not supported by Ignite file system provider
      *
      * @return {@code false} by definition
      */

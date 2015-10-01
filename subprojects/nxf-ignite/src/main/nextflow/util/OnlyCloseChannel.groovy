@@ -25,6 +25,7 @@ import java.nio.channels.SeekableByteChannel
 
 import groovy.transform.CompileStatic
 /**
+ * Fake channel only supporting the close operation.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
