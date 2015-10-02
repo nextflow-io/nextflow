@@ -112,8 +112,7 @@ class DnaNexusExecutor extends Executor {
         /*
          * create the stage inputs script
          */
-        def inputFiles = task.getInputFiles()
-        def stageScript = stagingFilesScript( inputFiles, '; ' )
+        def stageScript = new DxTaskHandler.DxFileCopyStrategy(task).getStageInputFilesScript()
 
         /*
          * the DnaNexus job params object
@@ -138,22 +137,6 @@ class DnaNexusExecutor extends Executor {
         new DxTaskHandler(task, this, obj)
     }
 
-
-    @Override
-    String stageInputFileScript( Path path, String target ) {
-        if( !(path instanceof DxPath) ) {
-            return super.stageInputFileScript(path,target)
-        }
-
-        if( Files.isDirectory(path) ) {
-            def origin = path.toAbsolutePath().normalize();
-            return "tmp=\$(mktemp -d); mkdir -p '$target'; dx download --no-progress -r ${origin} -o \$tmp; mv \$tmp/${origin}/* '${target}'"
-        }
-        else {
-            return "dx download --no-progress ${(path as DxPath).getFileId()} -o $target"
-        }
-
-    }
 
 
     /**
@@ -323,5 +306,55 @@ class DxTaskHandler extends TaskHandler {
 
         lastStatusMillis = System.currentTimeMillis()
         lastStatusResult = response
+    }
+
+
+    static class DxFileCopyStrategy extends SimpleFileCopyStrategy {
+
+        DxFileCopyStrategy( TaskRun task ) {
+            super()
+            this.inputFiles = task.getInputFilesMap()
+            this.separatorChar = '; '
+        }
+
+        @Override
+        String stageInputFile( Path path, String target ) {
+            if( !(path instanceof DxPath) ) {
+                return super.stageInputFile(path,target)
+            }
+
+            if( Files.isDirectory(path) ) {
+                def origin = path.toAbsolutePath().normalize();
+                return "tmp=\$(mktemp -d); mkdir -p '$target'; dx download --no-progress -r ${origin} -o \$tmp; mv \$tmp/${origin}/* '${target}'"
+            }
+            else {
+                return "dx download --no-progress ${(path as DxPath).getFileId()} -o $target"
+            }
+        }
+
+
+        String getUnstageOutputFilesScript() {
+            throw new UnsupportedOperationException()
+        }
+
+        @Override
+        String touchFile(Path file) {
+            throw new UnsupportedOperationException()
+        }
+
+        @Override
+        String fileStr(Path file) {
+            throw new UnsupportedOperationException()
+        }
+
+        @Override
+        String copyFile(String name, Path target) {
+            throw new UnsupportedOperationException()
+        }
+
+        @Override
+        String exitFile(Path file) {
+            throw new UnsupportedOperationException()
+        }
     }
 }

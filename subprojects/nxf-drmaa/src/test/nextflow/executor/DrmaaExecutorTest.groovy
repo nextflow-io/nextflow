@@ -47,6 +47,7 @@ class DrmaaExecutorTest extends Specification {
         task.processor = Mock(TaskProcessor)
         task.processor.getProcessEnvironment() >> [:]
         task.processor.getSession() >> new nextflow.Session()
+        task.processor.getConfig() >> [:]
 
         when:
         def handler = executor.createTaskHandler(task)

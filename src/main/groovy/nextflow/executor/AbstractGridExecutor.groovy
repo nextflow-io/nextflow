@@ -68,13 +68,10 @@ abstract class AbstractGridExecutor extends Executor {
     }
 
     protected BashWrapperBuilder createBashWrapperBuilder(TaskRun task) {
-
+        // creates the wrapper script
         final builder = new BashWrapperBuilder(task)
         // job directives headers
         builder.headerScript = getHeaders(task)
-        // staging/unstage input/output files
-        builder.stagingScript = stagingInputFilesScript(task)
-        builder.unstagingScript = unstageOutputFilesScript(task)
         return builder
     }
 

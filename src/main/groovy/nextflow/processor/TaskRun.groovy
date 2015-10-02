@@ -350,6 +350,22 @@ class TaskRun {
     }
 
     /**
+     * @return A map object containing all the task input files as <stage name, store path> pairs
+     */
+    Map<String,Path> getInputFilesMap() {
+
+        def result = [:]
+        def allFiles = getInputFiles().values()
+        for( List<FileHolder> entry : allFiles ) {
+            if( entry ) for( FileHolder it : entry ) {
+                result[ it.stageName ] = it.storePath
+            }
+        }
+
+        return result
+    }
+
+    /**
      * It is made of two parts:
      *
      * 1) Look at the {@code nextflow.script.FileOutParam} which name is the expected

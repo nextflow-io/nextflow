@@ -217,10 +217,7 @@ class FileHelper {
 
 
     final static Path createLocalDir(String prefix = 'nxf') {
-        if( localTempBasePath )
-            Files.createTempDirectory(localTempBasePath, prefix)
-        else
-            Files.createTempDirectory(prefix)
+        Files.createTempDirectory(localTempBasePath, prefix)
     }
 
     final static Path getLocalTempPath() {

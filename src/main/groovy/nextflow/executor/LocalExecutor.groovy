@@ -68,14 +68,10 @@ class LocalExecutor extends Executor {
 
     protected TaskHandler createBashTaskHandler(TaskRun task) {
 
-        final bash = new BashWrapperBuilder(task)
-
-        // staging/unstage input/output files
-        bash.stagingScript = stagingInputFilesScript(task)
-        bash.unstagingScript = unstageOutputFilesScript(task)
-
         // create the wrapper script
+        final bash = new BashWrapperBuilder(task)
         bash.build()
+
         new LocalTaskHandler(task,this)
     }
 

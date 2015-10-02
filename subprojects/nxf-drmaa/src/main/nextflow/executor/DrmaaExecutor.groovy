@@ -86,13 +86,8 @@ class DrmaaExecutor extends Executor {
 
         log.debug "Launching process > ${task.name} -- work folder: ${task.workDir}"
 
-        final bash = new BashWrapperBuilder(task)
-
-        // staging/unstage input/output files
-        bash.stagingScript = stagingInputFilesScript(task)
-        bash.unstagingScript = unstageOutputFilesScript(task)
-
         // create the wrapper script
+        final bash = new BashWrapperBuilder(task)
         bash.build()
 
         return new DrmaaTaskHandler(task, this)

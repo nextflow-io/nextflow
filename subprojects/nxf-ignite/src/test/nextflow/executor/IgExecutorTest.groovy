@@ -103,6 +103,7 @@ class IgExecutorTest extends Specification {
         def processor = Mock(TaskProcessor)
         processor.getProcessEnvironment() >> [ALPHA: 1, BETA:2 ]
         processor.getSession() >> new Session()
+        processor.getConfig() >> [:]
 
         def binding = new Binding()
         def task = new TaskRun(

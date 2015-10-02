@@ -59,7 +59,7 @@ class IgExecutor extends Executor {
 
     /**
      * Creates the task monitor for this executor
-     * @return An instance of {@code TaskMonitor}
+     * @return An instance of {@link TaskMonitor}
      */
     @Override
     protected TaskMonitor createTaskMonitor() {

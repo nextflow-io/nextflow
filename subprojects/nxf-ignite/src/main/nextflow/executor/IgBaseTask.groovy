@@ -24,7 +24,6 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import nextflow.exception.ProcessException
 import nextflow.file.FileHelper
-import nextflow.file.FileHolder
 import nextflow.processor.TaskRun
 import nextflow.util.KryoHelper
 import nextflow.util.RemoteSession
@@ -35,7 +34,6 @@ import org.apache.ignite.compute.ComputeJob
 import org.apache.ignite.lang.IgniteCallable
 import org.apache.ignite.resources.IgniteInstanceResource
 import org.apache.ignite.resources.LoggerResource
-
 /**
  * Models a task executed remotely in a Ignite cluster node
  *
@@ -102,17 +100,11 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
         attrs.name = task.name
         attrs.workDir = task.workDir
         attrs.targetDir = task.targetDir
-        attrs.inputFiles = [:]
-        attrs.outputFiles = []
+        attrs.scratch = task.scratch
+        attrs.unstageStrategy = task.getProcessor().getConfig().unstageStrategy
 
         // -- The a mapping of input files and target names
-        def allFiles = task.getInputFiles().values()
-        for( List<FileHolder> entry : allFiles ) {
-            if( entry ) for( FileHolder it : entry ) {
-                attrs.inputFiles[ it.stageName ] = it.storePath
-            }
-        }
-
+        attrs.inputFiles = task.getInputFilesMap()
         // -- the list of expected file names in the scratch dir
         attrs.outputFiles = task.getOutputFilesNames()
 
@@ -125,33 +117,45 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
     /**
      * @return The task unique ID
      */
-    protected Object getTaskId() { attrs.taskId }
+    protected Object getTaskId() { attrs?.taskId }
 
     /**
      * @return The task descriptive name (only for debugging)
      */
-    protected String getName() { attrs.name }
+    protected String getName() { attrs?.name }
 
     /**
      * @return The path where result files have to be copied
      */
-    protected Path getTargetDir() { (Path)attrs.targetDir }
+    protected Path getTargetDir() { (Path)attrs?.targetDir }
 
     /**
      * @return The task working directory i.e. the folder containing the scripts files, but
      * it is not the actual task execution directory
      */
-    protected Path getWorkDir() { (Path)attrs.workDir }
+    protected Path getWorkDir() { (Path)attrs?.workDir }
 
     /**
      * @return The a mapping of input files and target names
      */
-    Map<String,Path> getInputFiles() { (Map<String,Path>)attrs.inputFiles }
+    Map<String,Path> getInputFiles() { (Map<String,Path>)attrs?.inputFiles }
 
     /**
      * @return the list of expected file names in the scratch dir
      */
-    List<String> getOutputFiles() { (List<String>)attrs.outputFiles }
+    List<String> getOutputFiles() { (List<String>)attrs?.outputFiles }
+
+    /**
+     * @return The task {@code scratch} configuration value
+     */
+    String getScratch() {
+        def result = attrs?.scratch?.toString()
+        return (result == 'true' || result == 'auto'
+                ? FileHelper.getLocalTempPath().toString()
+                : result)
+    }
+
+    String getUnstageStrategy() { attrs?.unstageStrategy }
 
     /**
      * Copies to the task input files to the execution folder, that is {@code scratchDir}
@@ -159,9 +163,6 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
      *
      */
     protected void stage() {
-
-        if( attrs == null && payload )
-            attrs = (Map<String,Object>)KryoHelper.deserialize(payload)
 
         // create a local scratch dir
         scratchDir = FileHelper.createLocalDir()
@@ -222,6 +223,13 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
         }
     }
 
+    protected void deserialize() {
+
+        if( attrs == null && payload )
+            attrs = (Map<String,Object>)KryoHelper.deserialize(payload)
+
+    }
+
 
     /**
      * Invoke the task execution. It calls the following methods in this sequence: {@code stage}, {@code execute0} and {@code unstage}
@@ -232,6 +240,8 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
     @Override
     final T call() throws Exception {
         try {
+            deserialize()
+
             /*
              * stage the input files in the working are`
              */

@@ -1146,6 +1146,7 @@ class BashWrapperBuilderTest extends Specification {
 
         when:
         def bash = new BashWrapperBuilder(task)
+        bash.copyStrategy = new SimpleFileCopyStrategy()
         bash.build()
 
         then:
@@ -1242,6 +1243,7 @@ class BashWrapperBuilderTest extends Specification {
 
         when:
         def bash = new BashWrapperBuilder(task)
+        bash.copyStrategy = new SimpleFileCopyStrategy()
         bash.build()
 
         then:
@@ -1262,6 +1264,7 @@ class BashWrapperBuilderTest extends Specification {
 
         when:
         bash = [:] as BashWrapperBuilder
+        bash.copyStrategy = new SimpleFileCopyStrategy()
         then:
         bash.scriptCleanUp( Paths.get('/my/exit/file'), null ) ==
                     '''
@@ -1309,6 +1312,7 @@ class BashWrapperBuilderTest extends Specification {
 
         when:
         bash = [:] as BashWrapperBuilder
+        bash.copyStrategy = new SimpleFileCopyStrategy()
         then:
         bash.scriptCleanUp( Paths.get('/my/exit/xxx'), 'docker stop x' ) ==
                 '''

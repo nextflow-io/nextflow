@@ -200,9 +200,8 @@ class BashWrapperBuilder {
 
     String headerScript
 
-    String stagingScript
-
-    String unstagingScript
+    @Delegate
+    ScriptFileCopyStrategy copyStrategy
 
     String wrapperScript
 
@@ -282,6 +281,7 @@ class BashWrapperBuilder {
         this.moduleNames = params.moduleNames
         this.beforeScript = params.beforeScript
         this.afterScript = params.afterScript
+        this.copyStrategy = params.copyStrategy
 
         // docker config
         this.dockerImage = params.container
@@ -296,7 +296,10 @@ class BashWrapperBuilder {
      */
     protected String changeToScratchDirectory() {
 
-        if( scratch == null || scratch == false ) {
+        // convert to string for safety
+        final scratchStr = scratch?.toString()
+
+        if( scratchStr == null || scratchStr == 'false' ) {
             return null
         }
 
@@ -304,12 +307,9 @@ class BashWrapperBuilder {
          * when 'scratch' is defined as a bool value
          * try to use the 'TMP' variable, if does not exist fallback to a tmp folder
          */
-        if( scratch == true ) {
+        if( scratchStr == 'true' ) {
             return 'NXF_SCRATCH="$(set +u; nxf_mktemp $TMPDIR)" && cd $NXF_SCRATCH'
         }
-
-        // convert to string for safety
-        final scratchStr = scratch.toString()
 
         if( scratchStr.toLowerCase() in ['ramdisk','ram-disk']) {
             return 'NXF_SCRATCH="$(nxf_mktemp /dev/shm/)" && cd $NXF_SCRATCH'
@@ -326,6 +326,10 @@ class BashWrapperBuilder {
     Path build() {
         assert workDir, "Missing 'workDir' property in BashWrapperBuilder object"
         assert script, "Missing 'script' property in BashWrapperBuilder object"
+
+        if( !copyStrategy ) {
+            copyStrategy = task ? new SimpleFileCopyStrategy(task) : new SimpleFileCopyStrategy()
+        }
 
         final scriptFile = workDir.resolve(TaskRun.CMD_SCRIPT)
         final inputFile = workDir.resolve(TaskRun.CMD_INFILE)
@@ -430,6 +434,11 @@ class BashWrapperBuilder {
         // -- print the current environment when debug is enabled
         wrapper << '[[ $NXF_DEBUG > 0 ]] && nxf_env' << ENDL
 
+        def beforeStart = copyStrategy.getBeforeStartScript()
+        if( beforeStart ) {
+            wrapper << beforeStart << ENDL
+        }
+
         // -- start creating a file to signal that task has began
         wrapper << touchFile(startedFile) << ENDL
 
@@ -448,6 +457,7 @@ class BashWrapperBuilder {
         }
 
         // staging input files when required
+        def stagingScript = copyStrategy.getStageInputFilesScript()
         if( stagingScript ) {
             wrapper << stagingScript << ENDL
         }
@@ -527,7 +537,8 @@ class BashWrapperBuilder {
             wrapper << copyFile(TaskRun.CMD_ERRFILE, workDir) << ' || true' << ENDL
         }
 
-        if( (changeDir || workDir != targetDir) && unstagingScript  )
+        def unstagingScript
+        if( (changeDir || workDir != targetDir) && (unstagingScript=copyStrategy.getUnstageOutputFilesScript()) )
             wrapper << unstagingScript << ENDL
 
         if( changeDir && statsEnabled )
@@ -626,21 +637,6 @@ class BashWrapperBuilder {
     }
 
 
-    protected String touchFile( Path file ) {
-        "touch ${file.toString()}"
-    }
-
-    protected String copyFile( String name, Path target ) {
-        "cp ${name} ${target}"
-    }
-
-    protected String exitFile( Path file ) {
-        file.toString()
-    }
-
-    protected String fileStr( Path file ) {
-        file.toString()
-    }
 
     /**
      * Given a normalised shell script (starting with a she-bang line)

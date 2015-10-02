@@ -120,6 +120,25 @@ class TaskRunTest extends Specification {
 
     }
 
+    def testGetInputFilesMap() {
+        setup:
+        def binding = new Binding()
+        def task = new TaskRun()
+        def list = []
+
+        def x = new ValueInParam(binding, list).bind( new TokenVar('x') )
+        def y = new FileInParam(binding, list).bind('y')
+        def z = new FileInParam(binding, list).bind('z')
+
+        task.setInput(x, 1)
+        task.setInput(y, [ new FileHolder(Paths.get('file_y_1')).withName('foo.txt') ])
+        task.setInput(z, [ new FileHolder(Paths.get('file_y_2')).withName('bar.txt') ])
+
+        expect:
+        task.getInputFilesMap() == ['foo.txt': Paths.get('file_y_1'), 'bar.txt': Paths.get('file_y_2')]
+
+    }
+
 
     def testGetOutputFilesNames() {
 

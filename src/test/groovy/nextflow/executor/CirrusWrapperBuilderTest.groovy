@@ -48,7 +48,8 @@ class CirrusWrapperBuilderTest extends Specification {
          * simple bash run
          */
         when:
-        def bash = new CirrusWrapperBuilder(task)
+        def executor = [:] as CirrusExecutor
+        def bash = executor.createBashWrapperBuilder(task)
         bash.build()
 
         then:
@@ -66,12 +67,6 @@ class CirrusWrapperBuilderTest extends Specification {
         folder.resolve('.command.run').text ==
                 """
                 #!/bin/bash
-                # fetch scripts
-                es3 test s3:/${folder}/.command.env && es3 cat s3:/${folder}/.command.env > .command.env
-                es3 test s3:/${folder}/.command.sh && es3 cat s3:/${folder}/.command.sh > .command.sh
-                es3 test s3:/${folder}/.command.in && es3 cat s3:/${folder}/.command.in > .command.in
-                es3 test s3:/${folder}/.command.run.1 && es3 cat s3:/${folder}/.command.run.1 > .command.run.1
-
                 set -e
                 set -u
                 NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
@@ -116,9 +111,15 @@ class CirrusWrapperBuilderTest extends Specification {
                 trap on_term TERM INT USR1 USR2
 
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
+                # fetch scripts
+                es3 test s3:/${folder}/.command.env && es3 cat s3:/${folder}/.command.env > .command.env
+                es3 test s3:/${folder}/.command.sh && es3 cat s3:/${folder}/.command.sh > .command.sh
+                es3 test s3:/${folder}/.command.in && es3 cat s3:/${folder}/.command.in > .command.in
+                es3 test s3:/${folder}/.command.run.1 && es3 cat s3:/${folder}/.command.run.1 > .command.run.1
+
                 es3 touch s3:/${folder}/.command.begin
                 [ -f .command.env ] && source .command.env
-                NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)\" && cd \$NXF_SCRATCH
+                NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)" && cd \$NXF_SCRATCH
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo \$COUT

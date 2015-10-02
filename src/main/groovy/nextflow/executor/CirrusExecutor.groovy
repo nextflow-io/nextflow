@@ -75,13 +75,10 @@ class CirrusExecutor extends AbstractGridExecutor {
         final folder = task.workDir
         log.debug "Launching process > ${task.name} -- work folder: $folder"
 
-        final bash = new CirrusWrapperBuilder(task)
-
-        // staging/unstage input/output files
-        bash.stagingScript = stagingInputFilesScript(task)
-        bash.unstagingScript = unstageOutputFilesScript(task)
-
         // create the wrapper script
+        final bash = new BashWrapperBuilder(task)
+        bash.copyStrategy = new CirrusFileCopyStrategy(task)
+        bash.scratch = '$TMPDIR'
         return bash
     }
 
@@ -90,34 +87,6 @@ class CirrusExecutor extends AbstractGridExecutor {
         task.getName().replace(' ','_')
     }
 
-    @Override
-    String stageInputFileScript( Path path, String targetName ) {
-        def op = "es3 -q -v0 --no-stats sync s3:/${path} ."
-        if( path.name != targetName )
-            op += " && mv ${path.name} ${targetName}"
-
-        return op
-    }
-
-    @Override
-    String unstageOutputFilesScript( final TaskRun task, final String separatorChar = '\n' ) {
-
-        // collect all the expected names (pattern) for files to be un-staged
-        def result = []
-        def fileOutNames = task.getOutputFilesNames()
-        def normalized = normalizeGlobStarPaths(fileOutNames)
-
-        // create a bash script that will copy the out file to the working directory
-        log.trace "Unstaging file path: $normalized"
-        if( normalized ) {
-            result << ""
-            normalized.each {
-                result << "es3 -q -v0 --no-stats sync $it s3:/${task.getTargetDir()} || true" // <-- add true to avoid it stops on errors
-            }
-        }
-
-        return result.join(separatorChar)
-    }
 
     @Override
     protected String getHeaderToken() {
@@ -255,56 +224,4 @@ class CirrusTaskHandler extends GridTaskHandler {
 }
 
 
-/**
- * BASH wrapper builder for running task in Cirrus cluster
- *
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- */
-class CirrusWrapperBuilder extends BashWrapperBuilder {
-
-    CirrusWrapperBuilder( TaskRun task ) {
-        super(task)
-        scratch = '$TMPDIR'
-        headerScript = fetchScripts(task)
-    }
-
-    private String fetchScripts( TaskRun task ) {
-
-        def env = task.workDir.resolve(TaskRun.CMD_ENV)
-        def script = task.workDir.resolve(TaskRun.CMD_SCRIPT)
-        def infile = task.workDir.resolve(TaskRun.CMD_INFILE)
-        def wrapper = task.workDir.resolve(TaskRun.CMD_STUB)
-
-        def ops = []
-        ops << '# fetch scripts'
-        ops << "es3 test s3:/${env} && es3 cat s3:/${env} > ${env.name}"
-        ops << "es3 test s3:/${script} && es3 cat s3:/${script} > ${script.name}"
-        ops << "es3 test s3:/${infile} && es3 cat s3:/${infile} > ${infile.name}"
-        ops << "es3 test s3:/${wrapper} && es3 cat s3:/${wrapper} > ${wrapper.name}"
-        ops << ''
-
-        ops.join('\n')
-    }
-
-    @Override
-    protected String touchFile( Path file ) {
-        "es3 touch s3:/${file}"
-    }
-
-    @Override
-    protected String fileStr( Path file ) {
-        file.getFileName().toString()
-    }
-
-    @Override
-    protected String copyFile( String name, Path target ) {
-        "es3 -q -v 0 --no-stats sync ${name} s3:/${target}"
-    }
-
-    protected String exitFile( Path file ) {
-        "${file.name} && es3 -q -v 0 --no-stats sync ${file.name} s3:/${file.parent} || true"
-    }
-
-}
 
