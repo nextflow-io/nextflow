@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.Const
 import nextflow.config.ComposedConfigSlurper
+import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 /**
  * Models a repository provider configuration attributes
@@ -31,6 +32,8 @@ import nextflow.exception.ConfigParseException
  */
 @CompileStatic
 class ProviderConfig {
+
+    static private File SCM_FILE = Const.APP_HOME_DIR.resolve('scm').toFile()
 
     private String name
 
@@ -60,6 +63,10 @@ class ProviderConfig {
 
         if( attr.path )
             attr.platform = 'file'
+
+        if( !attr.platform ) {
+            throw new AbortOperationException("Missing `platform` attribute for `$name` scm provider configuration -- Check file: ${SCM_FILE}")
+        }
 
         if( attr.auth ) {
             setAuth(attr.auth.toString())
@@ -221,7 +228,7 @@ class ProviderConfig {
 
     @PackageScope
     static Map getDefault() {
-        def file = Const.APP_HOME_DIR.resolve('scm').toFile()
+        def file = SCM_FILE
         return file.exists() ? getFromFile(file) : [:]
     }
 

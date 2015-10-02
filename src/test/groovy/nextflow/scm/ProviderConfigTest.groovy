@@ -115,7 +115,7 @@ class ProviderConfigTest extends Specification {
         config.endpoint == 'http://local.host'
 
         when:
-        config = new ProviderConfig('custom')
+        config = new ProviderConfig('github')
         config.setPassword('abc')
         then:
         config.password == 'abc'
@@ -125,7 +125,7 @@ class ProviderConfigTest extends Specification {
         config.password == 'abc'
 
         when:
-        config = new ProviderConfig('custom')
+        config = new ProviderConfig('github')
         config.setUser('yo').setPassword('123')
         then:
         config.auth == 'yo:123'
@@ -134,7 +134,7 @@ class ProviderConfigTest extends Specification {
         config.password == '123'
 
         when:
-        config = new ProviderConfig('custom')
+        config = new ProviderConfig('github')
         config.setUser('hello')
         then:
         config.auth == 'hello:'
@@ -143,14 +143,14 @@ class ProviderConfigTest extends Specification {
         config.password == null
 
         when:
-        config = new ProviderConfig('custom', [auth: 'yo:123'])
+        config = new ProviderConfig('github', [auth: 'yo:123'])
         then:
         config.auth == 'yo:123'
         config.user == 'yo'
         config.password == '123'
 
         when:
-        config = new ProviderConfig('custom', [auth: 'xyz'])
+        config = new ProviderConfig('github', [auth: 'xyz'])
         then:
         config.auth == 'xyz'
         config.user == null
@@ -159,7 +159,7 @@ class ProviderConfigTest extends Specification {
 
     def 'should ending slash and add protocol prefix' () {
         when:
-        def config = new ProviderConfig('custom',[server:'host.com///'])
+        def config = new ProviderConfig('github',[server:'host.com///'])
         then:
         config.server == 'https://host.com'
 

@@ -230,9 +230,14 @@ class CmdRun extends CmdBase implements HubOptions {
                 log.info " $result"
         }
         // checkout requested revision
-        manager.checkout(revision)
-        manager.updateModules()
-        log.info "Launching '${repo}' - revision: ${manager.getCurrentRevisionAndName()}"
+        try {
+            manager.checkout(revision)
+            manager.updateModules()
+            log.info "Launching '${repo}' - revision: ${manager.getCurrentRevisionAndName()}"
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Unknown error accessing pipeline: '$repo' -- Repository may be corrupted: ${manager.localPath}", e)
+        }
 
         // return the script file
         return manager.getMainScriptFile()
