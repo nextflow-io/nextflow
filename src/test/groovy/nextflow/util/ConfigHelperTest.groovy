@@ -24,6 +24,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -31,7 +32,8 @@ import spock.lang.Specification
  */
 class ConfigHelperTest extends Specification {
 
-    def testParseValue () {
+    @Unroll
+    def "should parse string value: #str" () {
 
         expect:
         ConfigHelper.parseValue(str) == value
@@ -45,6 +47,7 @@ class ConfigHelperTest extends Specification {
         'False'     | false
         "10.2"      | 10.2
         '5sec'      | Duration.of('5sec')
+        'live_in_3d'| 'live_in_3d'
 
     }
 

@@ -36,7 +36,7 @@ import org.apache.commons.lang.time.DurationFormatUtils
 @EqualsAndHashCode(includes = 'durationInMillis')
 class Duration implements Comparable<Duration>, Serializable {
 
-    static private final FORMAT = ~/(\d+)\s*([a-zA-Z]+)/
+    static private final FORMAT = ~/^(\d+)\s*([a-zA-Z]+)/
 
     static private final LEGACY = ~/(\d{1,2}):(\d{1,2}):(\d{1,2})/
 
