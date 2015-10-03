@@ -66,7 +66,14 @@ class DurationTest extends Specification {
 
     }
 
-    def testMulti() {
+    def 'should not be parsed as a duration' () {
+        when:
+        new Duration('live_in_3d')
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'should parse multi unit time format'() {
         expect:
         Duration.of('1d 2h').toMillis() ==  DAY + 2 * HOUR
         Duration.of('1 d 2 h').toMillis() ==  DAY + 2 * HOUR
@@ -74,7 +81,7 @@ class DurationTest extends Specification {
         Duration.of('2d 3h 4m').toMillis() ==  2 * DAY + 3 * HOUR + 4 * MIN
     }
 
-    def testParseLegacy () {
+    def 'should parse legacy time format string' () {
 
         expect:
         Duration.of('1:0:0').toString() == '1h'
