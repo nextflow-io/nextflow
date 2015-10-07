@@ -95,13 +95,13 @@ function launch_nextflow() {
     # start in daemon mode
     if [[ "$bg" ]]; then
       local pid_file="${NXF_PID_FILE:-.nextflow.pid}"
-      bash -c "exec $cmdline" &
+      bash -f -c "exec $cmdline" &
       disown
       printf $! > "$pid_file"
       exit 0
     fi
     # trampoline syntax -- https://github.com/puniverse/capsule/pull/71
-    exec bash -c "exec $cmdline"
+    exec bash -f -c "exec $cmdline"
     exit 1
 }
 
