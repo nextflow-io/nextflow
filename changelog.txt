@@ -1,6 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.15.6 - 7 Oct 2015
+- Fixed #78. Command line parsing of parameters does not handle some strings properly.
+- Fixed #80. Command line argument containing a glob pattern is expanded even when escaped or enclosed in quote characters.
+
 0.15.5 - 28 Sep 2015
 - Fixed #74. Operator "spread" hangs when it is applied to a singleton channel.
 
