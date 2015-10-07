@@ -73,6 +73,7 @@ class GitlabRepositoryProviderTest extends Specification {
 
     }
 
+    @Requires({System.getenv('NXF_GITLAB_ACCESS_TOKEN')})
     def 'should return default branch' () {
 
         given:
@@ -83,7 +84,6 @@ class GitlabRepositoryProviderTest extends Specification {
         def provider = new GitlabRepositoryProvider('pditommaso/hello', config)
         then:
         provider.getDefaultBranch() == 'master'
-
 
     }
 

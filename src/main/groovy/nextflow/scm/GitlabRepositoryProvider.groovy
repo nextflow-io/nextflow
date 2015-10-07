@@ -19,6 +19,9 @@
  */
 
 package nextflow.scm
+
+import nextflow.exception.AbortOperationException
+
 /**
  * Implements a repository provider for GitHub service
  *
@@ -39,9 +42,10 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     }
 
     protected void auth( HttpURLConnection connection ) {
-        if( config.password ) {
-            connection.setRequestProperty("PRIVATE-TOKEN", config.password)
-        }
+        if(!config.token)
+            throw new AbortOperationException("Missing Gitlab private token -- Check file: ${ProviderConfig.SCM_FILE}")
+        // set the token in the request header
+        connection.setRequestProperty("PRIVATE-TOKEN", config.token)
     }
 
     @Override

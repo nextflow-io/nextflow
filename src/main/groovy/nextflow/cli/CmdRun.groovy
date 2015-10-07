@@ -223,7 +223,7 @@ class CmdRun extends CmdBase implements HubOptions {
         def manager = new AssetManager(pipelineName, this)
         def repo = manager.getProject()
 
-        if( !manager.isLocal() || latest ) {
+        if( !manager.isRunnable() || latest ) {
             log.info "Pulling $repo ..."
             def result = manager.download()
             if( result )

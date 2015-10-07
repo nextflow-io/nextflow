@@ -52,7 +52,7 @@ abstract class RepositoryProvider {
     }
 
     boolean hasCredentials() {
-        config?.auth
+        config ? config.user && config.password : false
     }
 
     String getUser() { config?.user }
@@ -124,7 +124,7 @@ abstract class RepositoryProvider {
      */
     protected void auth( HttpURLConnection connection ) {
         if( hasCredentials() ) {
-            String authString = config.auth.bytes.encodeBase64().toString()
+            String authString = "${config.user}:${config.password}".bytes.encodeBase64().toString()
             connection.setRequestProperty("Authorization","Basic " + authString)
         }
 

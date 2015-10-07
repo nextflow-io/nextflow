@@ -152,9 +152,10 @@ class ProviderConfigTest extends Specification {
         when:
         config = new ProviderConfig('github', [auth: 'xyz'])
         then:
-        config.auth == 'xyz'
+        config.auth == null
         config.user == null
-        config.password == 'xyz'
+        config.password == null
+        config.token == 'xyz'
     }
 
     def 'should ending slash and add protocol prefix' () {

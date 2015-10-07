@@ -33,7 +33,8 @@ import nextflow.exception.ConfigParseException
 @CompileStatic
 class ProviderConfig {
 
-    static private File SCM_FILE = Const.APP_HOME_DIR.resolve('scm').toFile()
+    @PackageScope
+    static File SCM_FILE = Const.APP_HOME_DIR.resolve('scm').toFile()
 
     private String name
 
@@ -120,6 +121,7 @@ class ProviderConfig {
     /**
      * @return The authentication token
      */
+    @PackageScope
     String getAuth() {
         def result = new StringBuilder()
         if( user ) {
@@ -132,19 +134,26 @@ class ProviderConfig {
         return result ? result.toString() : null
     }
 
+    @PackageScope
     String getAuthObfuscated() {
         "${user ?: '-'}:${password? '*' * password.size() : '-'}"
     }
 
+    @PackageScope
     ProviderConfig setAuth( String str ) {
         if( str ) {
-            def p = str.indexOf(':')
-            if( p==-1 ) {
-                setPassword(str)
+            def items = str.tokenize(':')
+            if( items.size()==1 ) {
+                setToken(items[0])
             }
-            else {
-                setUser(str.substring(0,p))
-                setPassword(str.substring(p+1))
+            else if( items.size()==2 ) {
+                setUser(items[0])
+                setPassword(items[1])
+            }
+            else if( items.size()>2 ) {
+                setUser(items[0])
+                setPassword(items[1])
+                setToken(items[2])
             }
         }
         return this
@@ -169,11 +178,18 @@ class ProviderConfig {
         return this
     }
 
+    ProviderConfig setToken( String tkn ) {
+        attr.token = tkn
+        return this
+    }
+
     String getUser() { attr.user }
 
     String getPassword() { attr.password }
 
     String getPath() { attr.path?.toString() }
+
+    String getToken() { attr.token }
 
     String toString() {
         "ProviderConfig[name: $name, platform: $platform, server: $server]"

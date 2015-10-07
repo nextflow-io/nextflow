@@ -295,6 +295,14 @@ class AssetManager {
     }
 
     /**
+     * @return {@code true} when the local project path exists and contains at least the default script
+     *      file (i.e. main.nf) or the nextflow manifest file (i.e. nextflow.config)
+     */
+    boolean isRunnable() {
+        localPath.exists() && ( new File(localPath,DEFAULT_MAIN_FILE_NAME).exists() || new File(localPath,MANIFEST_FILE_NAME).exists() )
+    }
+
+    /**
      * @return true if no differences exist between the working-tree, the index,
      *         and the current HEAD, false if differences do exist
      */
