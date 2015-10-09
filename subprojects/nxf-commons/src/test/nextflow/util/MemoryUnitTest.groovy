@@ -114,4 +114,30 @@ class MemoryUnitTest extends Specification {
         mem.toGiga() == 0
     }
 
+    def 'should multiply memory'()  {
+
+        expect:
+        new MemoryUnit('2GB') * 3 == new MemoryUnit('6GB')
+        new MemoryUnit('2GB') * 1.5 == new MemoryUnit('3GB')
+
+    }
+
+    def 'should divide memory'()  {
+
+        expect:
+        new MemoryUnit('4GB') / 2 == new MemoryUnit('2GB')
+        new MemoryUnit('3GB') / 1.5 == new MemoryUnit('2GB')
+
+    }
+
+    def 'should add memory' () {
+        expect:
+        new MemoryUnit('1GB') + new MemoryUnit('2GB') == new MemoryUnit('3GB')
+    }
+
+    def 'should subtract memory' () {
+        expect:
+        new MemoryUnit('5GB') - new MemoryUnit('2GB') == new MemoryUnit('3GB')
+    }
+
 }

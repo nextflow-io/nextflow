@@ -50,6 +50,17 @@ class Duration implements Comparable<Duration>, Serializable {
 
     static private final List<String> DAYS = ['d','day','days']
 
+    static public final List<String> UNITS
+
+    static {
+        UNITS = []
+        UNITS.addAll(MILLIS)
+        UNITS.addAll(SECONDS)
+        UNITS.addAll(MINUTES)
+        UNITS.addAll(HOURS)
+        UNITS.addAll(DAYS)
+    }
+
     /**
      * Duration in millis
      */
@@ -61,7 +72,7 @@ class Duration implements Comparable<Duration>, Serializable {
      * @param duration The duration as milliseconds
      */
     Duration(long duration) {
-        assert duration>=0
+        assert duration>=0, "Duration unit cannot be a negative number"
         this.durationInMillis = duration
     }
 
@@ -180,9 +191,10 @@ class Duration implements Comparable<Duration>, Serializable {
         throw new IllegalStateException()
     }
 
-    Duration(long value0, TimeUnit unit) {
-        assert unit
-        this.durationInMillis = unit.toMillis(value0)
+    Duration(long value, TimeUnit unit) {
+        assert value>=0, "Duration unit cannot be a negative number"
+        assert unit, "Time unit cannot be null"
+        this.durationInMillis = unit.toMillis(value)
     }
 
     static Duration of( long value ) {
@@ -282,6 +294,22 @@ class Duration implements Comparable<Duration>, Serializable {
             result.add(0, days+'d')
 
         return result.join(' ')
+    }
+
+    def plus( Duration value )  {
+        return new Duration( durationInMillis + value.durationInMillis )
+    }
+
+    def minus( Duration value )  {
+        return new Duration( durationInMillis - value.durationInMillis )
+    }
+
+    def multiply( Number value ) {
+        return new Duration( durationInMillis * value )
+    }
+
+    def div( Number value ) {
+        return new Duration( Math.round((double)(durationInMillis / value)) )
     }
 
 
