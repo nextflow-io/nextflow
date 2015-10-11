@@ -19,7 +19,6 @@
  */
 
 package nextflow.processor
-
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -34,13 +33,13 @@ import nextflow.executor.NopeExecutor
 import nextflow.file.FileHolder
 import nextflow.script.BaseScript
 import nextflow.script.FileInParam
+import nextflow.script.FileOutParam
 import nextflow.script.TaskBody
 import nextflow.script.TokenVar
 import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
 import spock.lang.Specification
 import test.TestHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -431,5 +430,150 @@ class TaskProcessorTest extends Specification {
                 3   |       -1      |               3   |               9   | null
 
     }
+
+
+
+    def 'should return the list of output files'() {
+
+        given:
+        def param
+        def result
+
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('file1.txt').text = 'file 1'
+        folder.resolve('file2.fa').text = 'file 2'
+        folder.resolve('.hidden.fa').text = 'hidden'
+        folder.resolve('dir1').mkdir()
+        folder.resolve('dir1').resolve('file3.txt').text = 'file 3'
+        folder.resolve('dir1')
+        folder.resolve('dir1').resolve('dir2').mkdirs()
+        folder.resolve('dir1').resolve('dir2').resolve('file4.fa').text = 'file '
+        Files.createSymbolicLink( folder.resolve('dir_link'), folder.resolve('dir1') )
+
+        def processor = [:] as TaskProcessor
+
+        when:
+        result = processor.fetchResultFiles(Mock(FileOutParam), '*.fa', folder )
+        then:
+        result.collect { it.name }  == ['file2.fa']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.type('file')
+        result = processor.fetchResultFiles(param, '*.fa', folder)
+        then:
+        result.collect { it.name }  == ['file2.fa']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.type('dir')
+        result = processor.fetchResultFiles(param, '*.fa', folder)
+        then:
+        result == []
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        result = processor.fetchResultFiles(param, '**.fa', folder)
+        then:
+        result.collect { it.name }.sort()  == ['file2.fa','file4.fa','file4.fa']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.followLinks(false)
+        result = processor.fetchResultFiles(param, '**.fa', folder)
+        then:
+        result.collect { it.name }.sort()  == ['file2.fa','file4.fa']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.maxDepth(1)
+        result = processor.fetchResultFiles(param, '**.fa', folder)
+        then:
+        result.collect { it.name }.sort()  == ['file2.fa']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        result = processor.fetchResultFiles(param, '*', folder)
+        then:
+        result.collect { it.name }.sort()  == ['dir1', 'dir_link', 'file1.txt', 'file2.fa']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.type('dir')
+        result = processor.fetchResultFiles(param, '*', folder)
+        then:
+        result.collect { it.name }.sort()  == ['dir1', 'dir_link']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.type('file')
+        result = processor.fetchResultFiles(param, '*', folder)
+        then:
+        result.collect { it.name }.sort()  == ['file1.txt', 'file2.fa']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.type('file')
+        param.hidden(true)
+        result = processor.fetchResultFiles(param, '*', folder)
+        then:
+        result.collect { it.name }.sort()  == ['.hidden.fa', 'file1.txt', 'file2.fa']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        result = processor.fetchResultFiles(param,'.*', folder)
+        then:
+        result.collect { it.name }.sort()  == ['.hidden.fa']
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        result = processor.fetchResultFiles(param,'file{1,2}.{txt,fa}', folder)
+        then:
+        result.collect { it.name }.sort() == ['file1.txt', 'file2.fa']
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
+    def 'should create the map of path visit options'() {
+
+        given:
+        def param
+        def processor = [:] as TaskProcessor
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        then:
+        processor.visitOptions(param,'file.txt') == [type:'any', followLinks: true, maxDepth: null, hidden: false, relative: false]
+        processor.visitOptions(param,'path/**') == [type:'file', followLinks: true, maxDepth: null, hidden: false, relative: false]
+        processor.visitOptions(param,'.hidden_file') == [type:'any', followLinks: true, maxDepth: null, hidden: true, relative: false]
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.type('dir')
+        then:
+        processor.visitOptions(param,'dir-name') == [type:'dir', followLinks: true, maxDepth: null, hidden: false, relative: false]
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.hidden(true)
+        then:
+        processor.visitOptions(param,'dir-name') == [type:'any', followLinks: true, maxDepth: null, hidden: true, relative: false]
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.followLinks(false)
+        then:
+        processor.visitOptions(param,'dir-name') == [type:'any', followLinks: false, maxDepth: null, hidden: false, relative: false]
+
+        when:
+        param = new FileOutParam(Mock(Binding), Mock(List))
+        param.maxDepth(5)
+        then:
+        processor.visitOptions(param,'dir-name') == [type:'any', followLinks: true, maxDepth: 5, hidden: false, relative: false]
+    }
+
+
 
 }

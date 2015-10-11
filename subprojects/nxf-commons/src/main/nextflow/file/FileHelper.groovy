@@ -244,11 +244,6 @@ class FileHelper {
             return Paths.get(str)
         }
 
-        // normalise 's3' path
-        if( str.startsWith('s3://') && str[5]!='/' ) {
-            str = "s3:///${str.substring(5)}"
-        }
-
         asPath(toPathURI(str))
     }
 
@@ -301,6 +296,17 @@ class FileHelper {
 
     @PackageScope
     static URI toPathURI( String str ) {
+
+        // normalise 's3' path
+        if( str.startsWith('s3://') && str[5]!='/' ) {
+            str = "s3:///${str.substring(5)}"
+
+        }
+        // normalise 'igfs' path
+        else if( str.startsWith('igfs://') && str[7]!='/' ) {
+            str = "igfs:///${str.substring(7)}"
+        }
+
         // note: this URI constructor parse the path parameter and extract the `scheme` and `authority` components
         new URI(null,null,str,null,null)
     }
@@ -316,6 +322,96 @@ class FileHelper {
             result = FileSystems.getDefault()
         }
         result
+    }
+
+    /**
+     * Check if the specified path is a NFS mount
+     *
+     * @param path The path to verify
+     * @return The {@code true} when the path is a NFS mount {@code false} otherwise
+     */
+    @Memoized
+    static boolean isPathNFS(Path path) {
+        assert path
+        if( path.getFileSystem() != FileSystems.getDefault() )
+            return false
+
+        final process = Runtime.runtime.exec("stat -f -c %T ${path}")
+        final status = process.waitFor()
+        final text = process.text?.trim()
+        process.destroy()
+        if( status ) {
+            log.debug "Can't check if specified path is NFS ($status): $path\n${Bolts.indent(text,'  ')}"
+            return false
+        }
+
+        def result = text == 'nfs'
+        log.debug "NFS path ($result): $path"
+        return result
+    }
+
+    /**
+     * @return
+     *      {@code true} when the current session working directory is a MFS mounted path
+     *      {@code false otherwise}
+     */
+    static boolean getWorkDirIsNFS() {
+        isPathNFS(Global.session.workDir)
+    }
+
+    /**
+     * Experimental. Check if a file exists making a second try on NFS mount
+     * to avoid false negative.
+     *
+     * @param self
+     * @param timeout
+     * @return
+     */
+    @PackageScope
+    static boolean safeExists(Path self, long timeout = 120_000) {
+
+        if( Files.exists(self) )
+            return true
+
+        if( !workDirIsNFS )
+            return false
+
+
+        /*
+         * When the file in a NFS folder in order to avoid false negative
+         * list the content of the parent path to force refresh of NFS metadata
+         * http://stackoverflow.com/questions/3833127/alternative-to-file-exists-in-java
+         * http://superuser.com/questions/422061/how-to-determine-whether-a-directory-is-on-an-nfs-mounted-drive
+         */
+
+        final begin = System.currentTimeMillis()
+        final path = (self.parent ?: '/').toString()
+        while( true ) {
+            final process = Runtime.runtime.exec("ls -la ${path}")
+            final status = process.waitFor()
+            if( log.isTraceEnabled() ) {
+                log.trace "Safe exists listing: ${status} -- path: ${path}\n${Bolts.indent(process.text,'  ')}"
+            }
+            if( status == 0 )
+                break
+            def delta = System.currentTimeMillis() -begin
+            if( delta > timeout )
+                break
+            sleep 2_000
+        }
+
+
+        try {
+            Files.readAttributes(self,BasicFileAttributes)
+            return true
+        }
+        catch( IOException e ) {
+            if( log.isTraceEnabled() ) {
+                log.trace "Cant read file attributes: $self -- Cause: [${e.class.simpleName}] ${e.message}"
+            }
+            return false
+        }
+
     }
 
     /**

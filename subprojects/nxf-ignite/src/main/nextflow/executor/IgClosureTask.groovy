@@ -48,6 +48,8 @@ class IgClosureTask extends IgBaseTask<IgResultData> {
      */
     final byte[] delegateObj
 
+    private transient StagingStrategy stagingStrategy
+
 
     IgClosureTask( TaskRun task, UUID sessionId ) {
         super(task,sessionId)
@@ -55,9 +57,18 @@ class IgClosureTask extends IgBaseTask<IgResultData> {
         this.delegateObj = task.context.dehydrate()
     }
 
+    void beforeExecute() {
+        stagingStrategy = new IgFileStagingStrategy( log: log, task: bean, sessionId: sessionId )
+        stagingStrategy.stage()
+    }
+
+    void afterExecute() {
+        stagingStrategy.unstage()
+    }
+
     @Override
     protected IgResultData execute0() throws IgniteException {
-        log.debug "Running closure for task > ${name}"
+        log.debug "Running closure for task > ${bean.name}"
 
         def loader = getClassLoaderFor(sessionId)
         def delegate = TaskContext.rehydrate(delegateObj,loader)

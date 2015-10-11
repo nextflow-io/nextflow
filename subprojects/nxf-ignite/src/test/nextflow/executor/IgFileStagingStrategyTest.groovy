@@ -20,32 +20,24 @@
 
 package nextflow.executor
 import java.nio.file.Files
-import java.nio.file.Paths
 
-import nextflow.Session
-import nextflow.file.FileHolder
-import nextflow.processor.TaskConfig
-import nextflow.processor.TaskProcessor
-import nextflow.processor.TaskRun
-import nextflow.script.FileInParam
-import nextflow.script.FileOutParam
-import nextflow.script.TokenVar
+import nextflow.processor.TaskBean
 import org.apache.ignite.logger.slf4j.Slf4jLogger
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class IgExecutorTest extends Specification {
+class IgFileStagingStrategyTest extends Specification {
 
 
-    def testCopyToTarget() {
+    def 'should copy files to the target directory'() {
 
         given:
         def targetDir = Files.createTempDirectory('target')
         def scratchDir = Files.createTempDirectory('source')
 
-        def task = [:] as IgBaseTask
+        def strategy = [:] as IgFileStagingStrategy
         scratchDir.resolve('file1').text = 'file 1'
         scratchDir.resolve('file_x_1').text = 'x 1'
         scratchDir.resolve('file_x_2').text = 'x 2'
@@ -58,7 +50,7 @@ class IgExecutorTest extends Specification {
          * copy a single file
          */
         when:
-        task.copyToTargetDir('file1', scratchDir, targetDir)
+        strategy.copyToTargetDir('file1', scratchDir, targetDir)
         then:
         targetDir.resolve('file1').text == 'file 1'
 
@@ -66,7 +58,7 @@ class IgExecutorTest extends Specification {
          * copy multiple files with wildcards
          */
         when:
-        task.copyToTargetDir('file_x*', scratchDir, targetDir)
+        strategy.copyToTargetDir('file_x*', scratchDir, targetDir)
         then:
         targetDir.resolve('file_x_1').text == 'x 1'
         targetDir.resolve('file_x_2').text == 'x 2'
@@ -76,7 +68,7 @@ class IgExecutorTest extends Specification {
          * copy a directory maintaining relative paths
          */
         when:
-        task.copyToTargetDir('dir_a/dir_b', scratchDir, targetDir)
+        strategy.copyToTargetDir('dir_a/dir_b', scratchDir, targetDir)
         then:
         targetDir.resolve('dir_a/dir_b/alpha.txt').text == 'aaa'
         targetDir.resolve('dir_a/dir_b/beta.txt').text == 'bbb'
@@ -87,7 +79,7 @@ class IgExecutorTest extends Specification {
     }
 
 
-    def testGgBashTask() {
+    def 'should stage input files and unstage output files'() {
 
         given:
         def sessionId = UUID.randomUUID()
@@ -100,56 +92,30 @@ class IgExecutorTest extends Specification {
         sourceFile1.text = 'Content for file1'
         sourceFile2.text = 'Content for file2'
 
-        def processor = Mock(TaskProcessor)
-        processor.getProcessEnvironment() >> [ALPHA: 1, BETA:2 ]
-        processor.getSession() >> new Session()
-        processor.getConfig() >> [:]
-
-        def binding = new Binding()
-        def task = new TaskRun(
-                id: 123,
-                name: 'TestRun',
-                workDir: Paths.get('/some/path'),
-                processor: processor,
-                config: new TaskConfig(storeDir: targetPath, shell: '/bin/zsh'),
-                script: 'echo Hello world!')
-        def s1 = new FileInParam(binding, []).bind( new TokenVar('x') )
-        task.setInput(s1, [ new FileHolder(sourceFile1), new FileHolder(sourceFile2) ])
-
-        task.setOutput( new FileOutParam(binding, []).bind('x'), 'file1' )
-        task.setOutput( new FileOutParam(binding, []).bind('y'), 'file2' )
-        task.setOutput( new FileOutParam(binding, []).bind('z'), 'file3' )
+        def task = new TaskBean(
+                inputFiles: [ file1:sourceFile1, file2: sourceFile2 ],
+                outputFiles: ['x','y','z'],
+                targetDir: targetPath
+                )
 
         when:
-        def ggTask = new IgBashTask(task, sessionId)
-        ggTask.log = new Slf4jLogger()
-
+        def ggTask = new IgFileStagingStrategy(log: new Slf4jLogger(), sessionId: sessionId, task: task)
         then:
-        ggTask.taskId == 123
-        ggTask.name == 'TestRun'
-        ggTask.workDir == Paths.get('/some/path')
-        ggTask.targetDir == targetPath
-        ggTask.inputFiles == [ file1:sourceFile1, file2: sourceFile2 ]
-        ggTask.outputFiles == task.getOutputFilesNames()
-
-        ggTask.environment == [ALPHA: 1, BETA:2 ]
-        ggTask.shell == ['/bin/zsh']
-        ggTask.script == 'echo Hello world!'
         ggTask.sessionId == sessionId
 
         when:
         ggTask.stage()
         then:
-        ggTask.scratchDir != null
-        ggTask.scratchDir.resolve('file1').text == sourceFile1.text
-        ggTask.scratchDir.resolve('file2').text == sourceFile2.text
-        Files.isSymbolicLink(ggTask.scratchDir.resolve('file1'))
-        Files.isSymbolicLink(ggTask.scratchDir.resolve('file2'))
+        ggTask.localWorkDir != null
+        ggTask.localWorkDir.resolve('file1').text == sourceFile1.text
+        ggTask.localWorkDir.resolve('file2').text == sourceFile2.text
+        Files.isSymbolicLink(ggTask.localWorkDir.resolve('file1'))
+        Files.isSymbolicLink(ggTask.localWorkDir.resolve('file2'))
 
         when:
-        ggTask.scratchDir.resolve('x').text = 'File x'
-        ggTask.scratchDir.resolve('y').text = 'File y'
-        ggTask.scratchDir.resolve('z').text = 'File z'
+        ggTask.localWorkDir.resolve('x').text = 'File x'
+        ggTask.localWorkDir.resolve('y').text = 'File y'
+        ggTask.localWorkDir.resolve('z').text = 'File z'
         ggTask.unstage()
         then:
         targetPath.exists()
@@ -160,10 +126,9 @@ class IgExecutorTest extends Specification {
         cleanup:
         sourcePath?.deleteDir()
         targetPath?.deleteDir()
-        ggTask?.scratchDir?.deleteDir()
+        ggTask?.localWorkDir?.deleteDir()
 
     }
-
 
 
 }

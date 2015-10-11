@@ -23,6 +23,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
 
 /**
@@ -36,12 +37,9 @@ class CirrusFileCopyStrategy extends SimpleFileCopyStrategy {
 
     Path workDir
 
-    @Delegate
-    private ScriptFileCopyStrategy delegate
-
-    CirrusFileCopyStrategy( TaskRun task ) {
-        this.inputFiles = task.getInputFilesMap()
-        this.outputFiles = task.getOutputFilesNames()
+    CirrusFileCopyStrategy( TaskBean task ) {
+        this.inputFiles = task.getInputFiles()
+        this.outputFiles = task.getOutputFiles()
         this.targetDir = task.getTargetDir()
         this.workDir = task.workDir
     }

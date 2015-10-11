@@ -123,6 +123,13 @@ class FileHelperTest extends Specification {
         uri.scheme == 's3'
 
         when:
+        uri = FileHelper.toPathURI('s3://cbcrg-eu//raw/x_r1.fq')
+        then:
+        uri == new URI('s3:///cbcrg-eu//raw/x_r1.fq')
+        uri.path == '/cbcrg-eu//raw/x_r1.fq'
+        uri.scheme == 's3'
+
+        when:
         uri = FileHelper.toPathURI('dxfs://grape:/data/ggal/ggal_test_1.fq')
         then:
         uri == new URI('dxfs://grape:/data/ggal/ggal_test_1.fq')
@@ -143,6 +150,18 @@ class FileHelperTest extends Specification {
         then:
         uri.scheme == 'file'
         uri.path == '/some/file.txt#abc'
+
+        when:
+        uri = FileHelper.toPathURI('igfs:///work/dir')
+        then:
+        uri.scheme == 'igfs'
+        uri.path == '/work/dir'
+
+        when:
+        uri = FileHelper.toPathURI('igfs://work/dir')
+        then:
+        uri.scheme == 'igfs'
+        uri.path == '/work/dir'
 
     }
 

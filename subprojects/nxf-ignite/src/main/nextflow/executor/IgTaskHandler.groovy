@@ -19,21 +19,22 @@
  */
 
 package nextflow.executor
-
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessException
+import nextflow.file.FileHelper
 import nextflow.processor.TaskContext
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.script.ScriptType
+import nextflow.util.Duration
 import org.apache.ignite.compute.ComputeJobResult
 import org.apache.ignite.lang.IgniteFuture
 import org.apache.ignite.lang.IgniteInClosure
-
 /**
  * A task handler for Ignite  cluster
  *
@@ -42,6 +43,10 @@ import org.apache.ignite.lang.IgniteInClosure
 @Slf4j
 @CompileStatic
 class IgTaskHandler extends TaskHandler {
+
+    final static private Duration READ_TIMEOUT = Duration.of('270sec') // 4.5 minutes
+
+    private long timeout
 
     private IgExecutor executor
 
@@ -52,6 +57,8 @@ class IgTaskHandler extends TaskHandler {
     private Path outputFile
 
     private Path errorFile
+
+    private long begin
 
     /**
      * The result object for this task
@@ -65,6 +72,7 @@ class IgTaskHandler extends TaskHandler {
         handler.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
         handler.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         handler.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
+        handler.timeout = (executor.session?.getExitReadTimeout(executor.name, READ_TIMEOUT) ?: READ_TIMEOUT).toMillis()
         return handler
     }
 
@@ -108,7 +116,7 @@ class IgTaskHandler extends TaskHandler {
     @Override
     boolean checkIfCompleted() {
 
-        if( isRunning() && (future.isCancelled() || (future.isDone() && (!exitFile || exitFile.lastModified()>0)))  ) {
+        if( isRunning() && (future.isCancelled() || (future.isDone() && (!exitFile || readExitStatus()!=null)))  ) {
             status = TaskStatus.COMPLETED
 
             final result = (ComputeJobResult)future.get()
@@ -141,11 +149,97 @@ class IgTaskHandler extends TaskHandler {
         return false
     }
 
+    protected Integer readExitStatus() {
+
+        // read the exit status from the exit file
+        final exitStatus = safeReadExitStatus()
+
+        if( !FileHelper.workDirIsNFS ) {
+            return exitStatus != null ? exitStatus : Integer.MAX_VALUE
+        }
+
+        /*
+         * When working with on a NFS it may happen that the output files exists but
+         * are not visible from the NFS client due to caching and network latencies
+         *
+         * Continue to check until a timeout is reached
+         */
+
+        if( !begin ) {
+            begin = System.currentTimeMillis()
+        }
+
+        def delta = System.currentTimeMillis() - begin
+        if( status == null ) {
+            if( delta>timeout ) {
+                // game-over
+                log.warn "Unable to read command status from: $exitFile after $delta ms"
+                return Integer.MAX_VALUE
+            }
+            log.debug "Command exit file is empty: $exitFile after $delta ms -- Try to wait a while and .. pray."
+            return null
+        }
+
+        // the exit status is not null, before return check also if expected output files are available
+
+        /*
+         * When the file in a NFS folder in order to avoid false negative
+         * list the content of the parent path to force refresh of NFS metadata
+         * http://stackoverflow.com/questions/3833127/alternative-to-file-exists-in-java
+         * http://superuser.com/questions/422061/how-to-determine-whether-a-directory-is-on-an-nfs-mounted-drive
+         */
+        final process = Runtime.runtime.exec("ls -la ${task.targetDir}")
+        final listStatus = process.waitFor()
+
+        if( listStatus>0 ) {
+            log.debug "Can't list command target folder (exit: $listStatus): ${task.targetDir}"
+            if( delta>timeout ) {
+                return Integer.MAX_VALUE
+            }
+            return null
+        }
+
+        if( log.isTraceEnabled() ) {
+            log.trace "List target folder: ${task.targetDir}\n${process.text?.indent('  ')}\n"
+        }
+        // destroy the process
+        process.destroy()
+
+        return exitStatus
+    }
+
+
+    private Integer safeReadExitStatus() {
+
+        /*
+         * read the exit file, it should contain the executed process exit status
+         */
+        def status
+
+        try {
+            status = exitFile.text
+        }
+        catch( NoSuchFileException e )  {
+            return null
+        }
+
+        if( status ) {
+            try {
+                return status.toInteger()
+            }
+            catch( NumberFormatException e ) {
+                log.warn "Unable to parse process exit file: $exitFile -- bad value: '$status'"
+            }
+        }
+
+        return null
+    }
+
+
     @Override
     void kill() {
         future?.cancel()
     }
-
 
     /**
      * @return Whenever is a shell script task

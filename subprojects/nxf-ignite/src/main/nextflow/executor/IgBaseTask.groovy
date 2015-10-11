@@ -18,12 +18,11 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.executor
-import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import nextflow.exception.ProcessException
-import nextflow.file.FileHelper
+import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
 import nextflow.util.KryoHelper
 import nextflow.util.RemoteSession
@@ -65,26 +64,8 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
      * Holds the class attributes in this map. Note: is defined as 'transient' because
      * the map content is serialized as a byte[] and saved to the {@code payload} field
      */
-    private transient Map<String,Object> attrs = [:]
+    protected transient TaskBean bean
 
-    /**
-     * The local scratch dir where the task is actually executed in the remote node.
-     * Note: is declared transient because it is valid only on the remote-side,
-     * thus it do not need to be transported
-     *
-     */
-    protected transient Path scratchDir
-
-    /**
-     * A temporary where all files are cached. The folder is deleted during instance shut-down
-     */
-    private static final Path localCacheDir = FileHelper.createLocalDir()
-
-    protected static getLocalCacheDir() { localCacheDir }
-
-    static {
-        Runtime.getRuntime().addShutdownHook { localCacheDir.deleteDir() }
-    }
 
     /**
      * Initialize the grid gain task wrapper
@@ -93,143 +74,35 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
      * @param The session unique identifier
      */
     protected IgBaseTask( TaskRun task, UUID sessionId ) {
-
         this.sessionId = sessionId
-
-        attrs.taskId = task.id
-        attrs.name = task.name
-        attrs.workDir = task.workDir
-        attrs.targetDir = task.targetDir
-        attrs.scratch = task.scratch
-        attrs.unstageStrategy = task.getProcessor().getConfig().unstageStrategy
-
-        // -- The a mapping of input files and target names
-        attrs.inputFiles = task.getInputFilesMap()
-        // -- the list of expected file names in the scratch dir
-        attrs.outputFiles = task.getOutputFilesNames()
-
-        payload = KryoHelper.serialize(attrs)
+        this.bean = new TaskBean(task)
+        this.payload = KryoHelper.serialize(bean)
     }
 
     /** ONLY FOR TESTING PURPOSE */
     protected IgBaseTask() {}
 
     /**
-     * @return The task unique ID
+     * Template method invoked before the task is executed
      */
-    protected Object getTaskId() { attrs?.taskId }
+    protected void beforeExecute() {
 
-    /**
-     * @return The task descriptive name (only for debugging)
-     */
-    protected String getName() { attrs?.name }
-
-    /**
-     * @return The path where result files have to be copied
-     */
-    protected Path getTargetDir() { (Path)attrs?.targetDir }
-
-    /**
-     * @return The task working directory i.e. the folder containing the scripts files, but
-     * it is not the actual task execution directory
-     */
-    protected Path getWorkDir() { (Path)attrs?.workDir }
-
-    /**
-     * @return The a mapping of input files and target names
-     */
-    Map<String,Path> getInputFiles() { (Map<String,Path>)attrs?.inputFiles }
-
-    /**
-     * @return the list of expected file names in the scratch dir
-     */
-    List<String> getOutputFiles() { (List<String>)attrs?.outputFiles }
-
-    /**
-     * @return The task {@code scratch} configuration value
-     */
-    String getScratch() {
-        def result = attrs?.scratch?.toString()
-        return (result == 'true' || result == 'auto'
-                ? FileHelper.getLocalTempPath().toString()
-                : result)
     }
 
-    String getUnstageStrategy() { attrs?.unstageStrategy }
-
     /**
-     * Copies to the task input files to the execution folder, that is {@code scratchDir}
-     * folder created when this method is invoked
-     *
+     * Template method invoke after the task is executed
      */
-    protected void stage() {
+    protected void afterExecute() {
 
-        // create a local scratch dir
-        scratchDir = FileHelper.createLocalDir()
+    }
 
-        if( !inputFiles )
-            return
+    final protected void deserialize() {
 
-        // move the input files there
-        for( Map.Entry<String,Path> entry : inputFiles.entrySet() ) {
-            final fileName = entry.key
-            final source = entry.value
-            final cached = FileHelper.getLocalCachePath(source,localCacheDir, sessionId)
-            final staged = scratchDir.resolve(fileName)
-            log?.debug "Task ${getName()} > staging path: '${source}' to: '$staged'"
-            Files.createSymbolicLink(staged, cached)
+        if( bean == null && payload ) {
+            bean = (TaskBean)KryoHelper.deserialize(payload)
         }
-    }
-
-
-    /**
-     * Copy back the task output files from the execution directory in the local node storage
-     * to the task {@code targetDir}
-     */
-    protected void unstage() {
-        log?.debug "Unstaging file names: $outputFiles"
-
-        if( !outputFiles )
-            return
-
-        // create a bash script that will copy the out file to the working directory
-        if( !Files.exists(targetDir) )
-            Files.createDirectories(targetDir)
-
-        for( String name : outputFiles ) {
-            try {
-                copyToTargetDir(name, scratchDir, targetDir)
-            }
-            catch( IOException e ) {
-                log.error("Unable to copy result file: $name to target dir", e)
-            }
-        }
-    }
-
-    /**
-     * Copy the file with the specified name from the task execution folder
-     * to the {@code targetDir}
-     *
-     * @param filePattern A file name relative to the {@code scratchDir}.
-     *        It can contain globs wildcards
-     */
-    protected void copyToTargetDir( String filePattern, Path from, Path to ) {
-
-        def type = filePattern.contains('**') ? 'file' : 'any'
-
-        FileHelper.visitFiles( from, filePattern, type: type ) { Path it ->
-            final rel = from.relativize(it)
-            it.copyTo(to.resolve(rel))
-        }
-    }
-
-    protected void deserialize() {
-
-        if( attrs == null && payload )
-            attrs = (Map<String,Object>)KryoHelper.deserialize(payload)
 
     }
-
 
     /**
      * Invoke the task execution. It calls the following methods in this sequence: {@code stage}, {@code execute0} and {@code unstage}
@@ -245,7 +118,7 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
             /*
              * stage the input files in the working are`
              */
-            stage()
+            beforeExecute()
 
             /*
              * execute the task
@@ -255,13 +128,13 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
             /*
              * copy back the result files to the shared area
              */
-            unstage()
+            afterExecute()
 
             // return the exit status eventually
             return result
         }
         catch( Exception e ) {
-            log.error("Cannot execute task > $name", e)
+            log.error("Cannot execute task > $bean.name", e)
             throw new ProcessException(e)
         }
 

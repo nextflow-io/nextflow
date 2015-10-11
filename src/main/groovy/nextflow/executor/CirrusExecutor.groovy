@@ -27,6 +27,7 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.exception.AbortOperationException
+import nextflow.processor.TaskBean
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
@@ -76,8 +77,8 @@ class CirrusExecutor extends AbstractGridExecutor {
         log.debug "Launching process > ${task.name} -- work folder: $folder"
 
         // create the wrapper script
-        final bash = new BashWrapperBuilder(task)
-        bash.copyStrategy = new CirrusFileCopyStrategy(task)
+        final bean = new TaskBean(task)
+        final bash = new BashWrapperBuilder(bean, new CirrusFileCopyStrategy(bean))
         bash.scratch = '$TMPDIR'
         return bash
     }

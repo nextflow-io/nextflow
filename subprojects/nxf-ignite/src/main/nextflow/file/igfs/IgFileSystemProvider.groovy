@@ -197,7 +197,8 @@ class IgFileSystemProvider extends FileSystemProvider {
     @Override
     IgPath getPath(URI uri) {
         assert uri.getScheme() == SCHEME
-        (IgPath)getFileSystem(uri).getPath(uri.getPath());
+        assert uri.path, 'igfs path cannot be empty'
+        (IgPath)getFileSystem(uri).getPath(uri.path);
     }
 
     /**

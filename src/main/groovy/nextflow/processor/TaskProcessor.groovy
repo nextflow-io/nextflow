@@ -19,6 +19,7 @@
  */
 package nextflow.processor
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
@@ -994,7 +995,7 @@ abstract class TaskProcessor {
      * Collects the process 'std output'
      *
      * @param task The executed process instance
-     * @param param The declared {@code StdOutParam} object
+     * @param param The declared {@link StdOutParam} object
      * @param stdout The object holding the task produced std out object
      */
     protected void collectStdOut( TaskRun task, StdOutParam param, def stdout ) {
@@ -1013,19 +1014,19 @@ abstract class TaskProcessor {
 
     protected void collectOutFiles( TaskRun task, FileOutParam param, Path workDir, Map context ) {
 
-        def all = []
-        def fileParam = param as FileOutParam
+        final List<Path> allFiles = []
         // type file parameter can contain a multiple files pattern separating them with a special character
         def entries = param.getFilePatterns(context)
 
         // for each of them collect the produced files
         entries.each { String pattern ->
-            List<Path> result=null
+            List<Path> result = null
             if( FileHelper.isGlobPattern(pattern) ) {
-                result = executor.collectResultFile(workDir, pattern, task.name, param)
+                result = fetchResultFiles(param, pattern, workDir)
                 // filter the inputs
-                if( !fileParam.includeInputs ) {
+                if( !param.includeInputs ) {
                     result = filterByRemovingStagedInputs(task, result)
+                    if( log.isTraceEnabled() )
                     log.trace "Process ${task.name} > after removing staged inputs: ${result}"
                 }
             }
@@ -1040,12 +1041,13 @@ abstract class TaskProcessor {
             if( !result )
                 throw new MissingFileException("Missing output file(s): '$pattern' expected by process: ${task.name}")
 
-            all.addAll(result)
+            allFiles.addAll(result)
         }
 
-        task.setOutput( param, all.size()==1 ? all[0] : all )
+        task.setOutput( param, allFiles.size()==1 ? allFiles[0] : allFiles )
 
     }
+
 
     protected void collectOutValues( TaskRun task, ValueOutParam param, Map ctx ) {
 
@@ -1064,13 +1066,58 @@ abstract class TaskProcessor {
 
     }
 
+    /**
+     * Collect the file(s) with the name specified, produced by the execution
+     *
+     * @param workDir The job working path
+     * @param namePattern The file name, it may include file name wildcards
+     * @return The list of files matching the specified name
+     * @throws MissingFileException when no matching file is found
+     */
+    @PackageScope
+    List<Path> fetchResultFiles( FileOutParam param, String namePattern, Path workDir ) {
+        assert namePattern
+        assert workDir
+
+        List files = []
+        def opts = visitOptions(param, namePattern)
+        // scan to find the file with that name
+        try {
+            FileHelper.visitFiles(opts, workDir, namePattern) { Path it -> files.add(it) }
+        }
+        catch( NoSuchFileException e ) {
+            throw new MissingFileException("Cannot access folder: '$workDir'", e)
+        }
+
+        return files
+    }
+
+    /**
+     * Given a {@link FileOutParam} object create the option map for the
+     * {@link FileHelper#visitFiles(java.util.Map, java.nio.file.Path, java.lang.String, groovy.lang.Closure)} method
+     *
+     * @param param A task {@link FileOutParam}
+     * @param namePattern A file glob pattern
+     * @return A {@link Map} object holding the traverse options for the {@link FileHelper#visitFiles(java.util.Map, java.nio.file.Path, java.lang.String, groovy.lang.Closure)} method
+     */
+    @PackageScope
+    Map visitOptions( FileOutParam param, String namePattern ) {
+        final opts = [:]
+        opts.relative = false
+        opts.hidden = param.hidden ?: namePattern.startsWith('.')
+        opts.followLinks = param.followLinks
+        opts.maxDepth = param.maxDepth
+        opts.type = param.type ? param.type : ( namePattern.contains('**') ? 'file' : 'any' )
+        return opts
+    }
 
     /**
      * Given a list of {@code Path} removes all the hidden file i.e. the ones which names starts with a dot char
      * @param files A list of {@code Path}
      * @return The result list not containing hidden file entries
      */
-    protected List<Path> filterByRemovingHiddenFiles( List<Path> files ) {
+    @PackageScope
+    List<Path> filterByRemovingHiddenFiles( List<Path> files ) {
         files.findAll { !it.getName().startsWith('.') }
     }
 
@@ -1084,13 +1131,15 @@ abstract class TaskProcessor {
      * @param files
      * @return
      */
-    protected List<Path> filterByRemovingStagedInputs( TaskRun task, List<Path> files ) {
+    @PackageScope
+    List<Path> filterByRemovingStagedInputs( TaskRun task, List<Path> files ) {
 
         // get the list of input files
         def List<String> allStaged = task.getStagedInputs()
         files.findAll { !allStaged.contains(it.getName()) }
 
     }
+
 
     /**
      * @return The map holding the shell environment variables for the task to be executed

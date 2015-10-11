@@ -21,6 +21,7 @@
 package nextflow.file.igfs
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
+import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributeView
 import java.nio.file.attribute.BasicFileAttributes
@@ -70,6 +71,14 @@ class IgFileSystemProviderTest extends Specification {
         provider = (IgFileSystemProvider)FileSystemProvider.installedProviders().find { it.scheme == 'igfs' }
         fs = (IgFileSystem)provider.newFileSystem( grid:grid )
 
+    }
+
+    def testNormaliseIgfsPath (){
+        expect:
+        FileHelper.asPath('/some/file') == Paths.get(URI.create('file:///some/file'))
+        FileHelper.asPath('igfs://some/file') == Paths.get(URI.create('igfs:///some/file'))
+        FileHelper.asPath('igfs:///some/file') == Paths.get(URI.create('igfs:///some/file'))
+        FileHelper.asPath('igfs:///some/file').fileSystem.provider().scheme == 'igfs'
     }
 
 

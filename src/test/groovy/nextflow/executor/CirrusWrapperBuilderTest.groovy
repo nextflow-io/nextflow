@@ -19,7 +19,6 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Files
 
 import nextflow.Session
@@ -27,7 +26,6 @@ import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -41,6 +39,7 @@ class CirrusWrapperBuilderTest extends Specification {
         def processor = Mock(TaskProcessor)
         processor.getProcessEnvironment() >> [:]
         processor.getSession() >> new Session()
+        processor.getConfig() >> [:]
         def config = new TaskConfig()
         def task = new TaskRun(workDir: folder, processor: processor, config: config, script: 'echo Hello world!')
 

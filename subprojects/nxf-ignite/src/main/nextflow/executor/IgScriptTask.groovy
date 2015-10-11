@@ -20,101 +20,95 @@
 
 package nextflow.executor
 
+import java.nio.file.FileSystems
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
+import nextflow.file.FileHelper
 import nextflow.processor.TaskRun
 import org.apache.ignite.IgniteException
 import org.apache.ignite.IgniteLogger
 import org.apache.ignite.resources.LoggerResource
-
 /**
+ * Execute a remote script task into a remote Ignite cluster node
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
 class IgScriptTask extends IgBaseTask<Integer>   {
 
-    private static final long serialVersionUID = -1L
-
-    private transient Process process
+    private static final long serialVersionUID = -5552939711667527410L
 
     @LoggerResource
     private transient IgniteLogger log
 
-    /**
-     * The command line to be executed
-     */
-    List<String> shell
+    private transient Process process
 
-    /**
-     * The name of the container to run
-     */
-    String container
+    private transient IgScriptStagingStrategy stageStrategy
 
-    /**
-     * Whenever the process run an *executable* container
-     */
-    boolean executable
+    private transient boolean isRemoteWorkDir
 
-    Map environment
-
-    Object stdin
-
-    String script
+    private transient Path localWorkDir
 
     IgScriptTask( TaskRun task, UUID sessionId ) {
         super(task, sessionId)
-
-        this.stdin = task.stdin
-        this.container = task.container
-        this.executable = task.isContainerExecutable()
-        // note: create a copy of the process environment to avoid concurrent
-        // process executions override each others
-        this.environment = new HashMap( task.processor.getProcessEnvironment() )
-        this.environment.putAll( task.getInputEnvironment() )
-        this.shell = new ArrayList<>(task.config.getShell())
-        this.script = task.script
     }
 
     @Override
-    protected void stage() {
-        // disable in-process staging
+    protected void beforeExecute() {
+        isRemoteWorkDir = bean.workDir.fileSystem != FileSystems.default
+        if( isRemoteWorkDir ) {
+            // when work dir is allocated on a `remote` file system path
+            // the input files need to be copied locally using a staging strategy
+            stageStrategy = new IgScriptStagingStrategy(log: log, task: bean.clone(), sessionId: sessionId)
+            stageStrategy.stage()
+            // note: set staging local dir as task work dir
+            localWorkDir = stageStrategy.localWorkDir
+        }
+        else {
+            localWorkDir = bean.workDir
+        }
     }
 
     @Override
-    protected void unstage() {
-        // disable in-process un-staging
+    protected void afterExecute() {
+        if( stageStrategy ) {
+            stageStrategy.unstage()
+        }
     }
-
 
     @Override
     protected Integer execute0() throws IgniteException {
 
-        def session = getSessionFor(sessionId)
-        if( log.isTraceEnabled() )
-            log.trace "Session config: ${session.config}"
+        def wrapper = new BashWrapperBuilder(bean)
 
+        if( isRemoteWorkDir ) {
+            // set custom copy strategy to turn-off wrapper script level stage/unstage input/output files
+            wrapper.copyStrategy = stageStrategy
+            // important: set the local work dir as script 'workDir'
+            wrapper.workDir = localWorkDir
+            wrapper.scratch = null
+        }
+        else {
+            // set a local scratch directory if needed
+            def scratch = wrapper.scratch?.toString()
+            if( scratch == 'true' || scratch == 'auto' ) {
+                wrapper.scratch = FileHelper.getLocalTempPath().toString()
+            }
+        }
 
-        def wrapper = new BashWrapperBuilder(
-                shell: shell,
-                input: stdin,
-                script: script,
-                scratch: scratch,
-                workDir: workDir,
-                targetDir: targetDir,
-                container: container,
-                environment: environment,
-                copyStrategy: copyStrategy,
-                dockerMount: localCacheDir,
-                dockerConfig: session?.config?.docker,
-                statsEnabled: session.statsEnabled,
-                executable: executable
-        )
-        shell.add( wrapper.build().toString() )
+        // create the shell command line to invoke
+        def job = new ArrayList(bean.shell)
+        job.add( wrapper.build().toString() )
+        // NOTE: the actual command is wrapper by another bash whose stream
+        // are redirected to null. This is important in order to consume the stdout/stderr
+        // of the wrapped job otherwise that output will cause the inner `tee`s hang
+        List cmd = ['/bin/bash','-c', job.join(' ') + ' &> /dev/null']
 
-        log.debug "Running task > name: ${name} - workdir: ${workDir}"
+        log.debug "Running task > name: ${bean.name} - workdir: ${localWorkDir} - remote: ${isRemoteWorkDir}"
         ProcessBuilder builder = new ProcessBuilder()
-                .directory(workDir.toFile())
-                .command(shell)
+                .directory(localWorkDir.toFile())
+                .command(cmd)
                 .redirectErrorStream(true)
 
         // launch and wait
@@ -122,35 +116,25 @@ class IgScriptTask extends IgBaseTask<Integer>   {
         def result = process.waitFor()
 
         // make sure to destroy the process and close the streams
-        try { process.destroy() }
-        catch( Throwable e ) { }
+        process.destroy()
 
-        log.debug "Completed task > $name - exitStatus: $result"
+        log.debug "Completed task > $bean.name - exitStatus: $result"
         // return the exit value
         return result
-    }
-
-    protected ScriptFileCopyStrategy getCopyStrategy() {
-        new SimpleFileCopyStrategy(
-                inputFiles: getInputFiles(),
-                outputFiles: getOutputFiles(),
-                targetDir: getTargetDir(),
-                unstageStrategy: getUnstageStrategy()
-        )
     }
 
     @Override
     void cancel() {
         if( process ) {
-            log.debug "Cancelling process for task > $name"
+            log.debug "Cancelling process for task > $bean.name"
             process.destroy()
         }
         else {
-            log.debug "No process to cancel for task > $name"
+            log.debug "No process to cancel for task > $bean.name"
         }
     }
 
     String toString() {
-        "${getClass().simpleName}[taskId: $taskId; name: $name; workDir: $workDir]"
+        "${getClass().simpleName}[taskId: ${bean?.taskId}; name: ${bean?.name}; workDir: $localWorkDir]"
     }
 }

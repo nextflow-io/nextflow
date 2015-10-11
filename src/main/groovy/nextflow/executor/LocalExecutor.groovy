@@ -132,6 +132,9 @@ class LocalTaskHandler extends TaskHandler {
     def void submit() {
         // the cmd list to launch it
         def job = new ArrayList(BashWrapperBuilder.BASH) << wrapperFile.getName()
+        // NOTE: the actual command is wrapper by another bash whose stream
+        // are redirected to null. This is important in order to consume the stdout/stderr
+        // of the wrapped job otherwise that output will cause the inner `tee`s hang
         List cmd = ['/bin/bash','-c', job.join(' ') + ' &> /dev/null']
         log.trace "Launch cmd line: ${cmd.join(' ')}"
 

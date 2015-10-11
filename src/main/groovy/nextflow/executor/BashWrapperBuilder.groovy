@@ -23,11 +23,11 @@ import java.nio.file.Path
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.ContainerScriptTokens
 import nextflow.util.DockerBuilder
-import nextflow.util.MemoryUnit
 /**
  * Builder to create the BASH script which is used to
  * wrap and launch the user task
@@ -190,105 +190,22 @@ class BashWrapperBuilder {
 
         '''.stripIndent().leftTrim()
 
-    final private TaskRun task
-
-    def scratch
-
-    def input
-
-    Map<String,String> environment
-
-    String headerScript
-
     @Delegate
     ScriptFileCopyStrategy copyStrategy
 
-    String wrapperScript
-
-    String dockerImage
-
-    List<String> moduleNames
-
-    Path workDir
-
-    Path targetDir
-
-    String script
-
-    def shell
-
-    Map dockerConfig
-
-    Path dockerMount
-
-    String dockerCpuset
-
-    MemoryUnit dockerMemory
-
-    private executable
+    @Delegate
+    private TaskBean bean
 
     private runWithDocker
 
-    boolean statsEnabled
-
-    String beforeScript
-
-    String afterScript
-
     BashWrapperBuilder( TaskRun task ) {
-        this.task = task
-
-        // set the input (when available)
-        this.input = task.stdin
-        this.scratch = task.scratch
-        this.workDir = task.workDir
-        this.targetDir = task.targetDir
-
-        // set the environment
-        // note: create a copy of the process environment to avoid concurrent
-        // process executions override each others
-        this.environment = new HashMap( task.processor.getProcessEnvironment() )
-        this.environment.putAll( task.getInputEnvironment() )
-
-        this.moduleNames = task.config.getModule()
-        this.shell = task.config.shell
-        this.script = task.script.toString()
-        this.beforeScript = task.config.beforeScript
-        this.afterScript = task.config.afterScript
-
-        // docker config
-        this.dockerImage = task.container
-        this.dockerConfig = task.getDockerConfig()
-        this.dockerMemory = task.config.getMemory()
-        this.executable = task.isContainerExecutable()
-
-        // stats
-        this.statsEnabled = task.processor?.session?.statsEnabled
+        this(new TaskBean(task))
     }
 
-    BashWrapperBuilder( Map params ) {
-        log.trace "Wrapper params: $params"
 
-        task = null
-        this.shell = params.shell ?: BASH
-        this.script = params.script?.toString()
-        this.input = params.input
-        this.scratch = params.scratch
-        this.workDir = params.workDir
-        this.targetDir = params.targetDir
-        this.environment = params.environment
-        this.headerScript = params.headerScript
-        this.moduleNames = params.moduleNames
-        this.beforeScript = params.beforeScript
-        this.afterScript = params.afterScript
-        this.copyStrategy = params.copyStrategy
-
-        // docker config
-        this.dockerImage = params.container
-        this.dockerConfig = params.dockerConfig ?: Collections.emptyMap()
-        this.dockerMount = params.dockerMount
-        this.statsEnabled = params.statsEnabled
-        this.executable = params.executable
+    BashWrapperBuilder( TaskBean bean, ScriptFileCopyStrategy strategy = null ) {
+        this.bean = bean
+        this.copyStrategy = strategy ?: new SimpleFileCopyStrategy(bean)
     }
 
     /**
@@ -326,10 +243,6 @@ class BashWrapperBuilder {
     Path build() {
         assert workDir, "Missing 'workDir' property in BashWrapperBuilder object"
         assert script, "Missing 'script' property in BashWrapperBuilder object"
-
-        if( !copyStrategy ) {
-            copyStrategy = task ? new SimpleFileCopyStrategy(task) : new SimpleFileCopyStrategy()
-        }
 
         final scriptFile = workDir.resolve(TaskRun.CMD_SCRIPT)
         final inputFile = workDir.resolve(TaskRun.CMD_INFILE)
@@ -578,17 +491,13 @@ class BashWrapperBuilder {
     DockerBuilder createDockerBuilder(Map environment, String changeDir) {
 
         def docker = new DockerBuilder(dockerImage)
-        if( task ) {
-            docker.addMountForInputs( task.getInputFiles() )
-            docker.addMount( task.processor.getSession().workDir )
-            if(!executable) docker.addMount( task.processor.getSession().binDir )
-        }
+        docker.addMountForInputs(inputFiles)
+        docker.addMount(workDir)
+        if( !executable )
+            docker.addMount(binDir)
 
         // set the name
         docker.setName('$NXF_BOXID')
-
-        if( dockerMount )
-            docker.addMount(dockerMount)
 
         if( dockerMemory )
             docker.setMemory(dockerMemory)

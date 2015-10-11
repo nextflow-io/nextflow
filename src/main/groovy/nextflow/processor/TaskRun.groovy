@@ -310,7 +310,7 @@ class TaskRun {
         return "$baseName ($index)"
     }
 
-    def String getScript() {
+    String getScript() {
         if( script instanceof Path ) {
             return script.text
         }
@@ -322,7 +322,7 @@ class TaskRun {
     /**
      * Check whenever there are values to be cached
      */
-    def boolean hasCacheableValues() {
+    boolean hasCacheableValues() {
 
         if( config?.isDynamic() )
             return true
@@ -335,7 +335,7 @@ class TaskRun {
         return false
     }
 
-    def Map<InParam,List<FileHolder>> getInputFiles() {
+    Map<InParam,List<FileHolder>> getInputFiles() {
         (Map<InParam,List<FileHolder>>) getInputsByType( FileInParam )
     }
 
@@ -386,6 +386,7 @@ class TaskRun {
         return result.unique()
     }
 
+
     /**
      * Get the map of *input* objects by the given {@code InParam} type
      *
@@ -405,9 +406,13 @@ class TaskRun {
      * @param types One ore more subclass of {@code InParam}
      * @return An associative array containing all the objects for the specified type
      */
-    def Map<OutParam,Object> getOutputsByType( Class... types ) {
+    public <T extends OutParam> Map<T,Object> getOutputsByType( Class<T>... types ) {
         def result = [:]
-        outputs.findAll() { types.contains(it.key.class) }.each { result << it }
+        outputs.each {
+            if( types.contains(it.key.class) ) {
+                result << it
+            }
+        }
         return result
     }
 

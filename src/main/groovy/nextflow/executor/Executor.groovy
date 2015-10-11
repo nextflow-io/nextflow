@@ -19,18 +19,13 @@
  */
 
 package nextflow.executor
-import java.nio.file.NoSuchFileException
-import java.nio.file.Path
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.exception.MissingFileException
-import nextflow.file.FileHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
-import nextflow.script.FileOutParam
 import nextflow.script.ScriptType
 /**
  * Declares methods have to be implemented by a generic
@@ -105,41 +100,6 @@ abstract class Executor {
      * actions for this task
      */
     abstract TaskHandler createTaskHandler(TaskRun task)
-
-
-    /**
-     * Collect the file(s) with the name specified, produced by the execution
-     *
-     * @param workDir The job working path
-     * @param fileName The file name, it may include file name wildcards
-     * @return The list of files matching the specified name
-     */
-    def collectResultFile( Path workDir, String fileName, String taskName, FileOutParam param ) {
-        assert fileName
-        assert workDir
-
-        List files = []
-        def opts = collectResultOpts(param, fileName)
-        // scan to find the file with that name
-        try {
-            FileHelper.visitFiles(opts, workDir, fileName) { Path it -> files.add(it) }
-        }
-        catch( NoSuchFileException e ) {
-            throw new MissingFileException("Cannot access folder: '$workDir' expected by process: ${taskName}", e)
-        }
-
-        return files
-    }
-
-    protected Map collectResultOpts( FileOutParam param, String fileName ) {
-        final opts = [:]
-        opts.relative = false
-        opts.hidden = param.hidden ?: fileName.startsWith('.')
-        opts.followLinks = param.followLinks
-        opts.maxDepth = param.maxDepth
-        opts.type = param.type ? param.type : ( fileName.contains('**') ? 'file' : 'any' )
-        return opts
-    }
 
 
 }

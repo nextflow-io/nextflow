@@ -23,8 +23,6 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-import nextflow.file.FileHolder
-
 /**
  * Helper methods to handle Docker containers
  *
@@ -88,7 +86,7 @@ class DockerBuilder {
         return this
     }
 
-    DockerBuilder addMountForInputs( Map<?,List<FileHolder>> inputFiles ) {
+    DockerBuilder addMountForInputs( Map<String,Path> inputFiles ) {
 
         mounts.addAll( inputFilesToPaths(inputFiles) )
         return this
@@ -300,15 +298,13 @@ class DockerBuilder {
 
 
     @PackageScope
-    static List<Path> inputFilesToPaths( Map<?,List<FileHolder>> inputFiles ) {
+    static List<Path> inputFilesToPaths( Map<String,Path> inputFiles ) {
 
         def List<Path> files = []
-        inputFiles.each { param, holders ->
+        inputFiles.each { name, storePath ->
 
-            holders.each { FileHolder item ->
-                def path = item.storePath?.getParent()
-                if( path ) files << path
-            }
+            def path = storePath.getParent()
+            if( path ) files << path
 
         }
         return files

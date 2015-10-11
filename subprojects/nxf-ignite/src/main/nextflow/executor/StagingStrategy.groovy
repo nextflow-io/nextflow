@@ -18,26 +18,22 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.file
-
-import java.nio.file.Paths
-
-import spock.lang.Specification
-
+package nextflow.executor
 /**
+ * Declares the operations to stage task input and unstage task outputs
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FileHelperTest2 extends Specification {
+interface StagingStrategy {
 
-    def 'should return a valid path' (){
+    /**
+     * Copy the input files to the task local working directory (scratch).
+     */
+    void stage()
 
-        expect:
-        FileHelper.asPath('/some/file') == Paths.get(URI.create('file:///some/file'))
-        FileHelper.asPath('s3://bucket/some/file') == Paths.get(URI.create('s3:///bucket/some/file'))
-        FileHelper.asPath('s3:///bucket/some/file') == Paths.get(URI.create('s3:///bucket/some/file'))
-        FileHelper.asPath('s3:///bucket/some/file').fileSystem.provider().scheme == 's3'
-    }
-
+    /**
+     * Copy the output files from task local working directory (scratch) to the shared working directory.
+     */
+    void unstage()
 
 }

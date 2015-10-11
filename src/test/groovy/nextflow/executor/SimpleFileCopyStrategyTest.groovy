@@ -19,12 +19,9 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Paths
 
-import nextflow.processor.ProcessConfig
-import nextflow.processor.TaskProcessor
-import nextflow.processor.TaskRun
+import nextflow.processor.TaskBean
 import spock.lang.Specification
 /**
  *
@@ -157,13 +154,7 @@ class SimpleFileCopyStrategyTest extends Specification {
     def 'should return cp script to unstage output files' () {
 
         given:
-        def process = Mock(TaskProcessor)
-        process.getConfig() >> Mock(ProcessConfig)
-
-        def task = Mock(TaskRun)
-        task.getProcessor() >> process
-        task.getOutputFilesNames() >> [ 'simple.txt', 'my/path/file.bam' ]
-        task.getTargetDir() >> Paths.get('/target/work/dir')
+        def task = new TaskBean( outputFiles: [ 'simple.txt', 'my/path/file.bam' ], targetDir: Paths.get('/target/work/dir'))
 
         when:
         def strategy = new SimpleFileCopyStrategy(task)
@@ -181,15 +172,7 @@ class SimpleFileCopyStrategyTest extends Specification {
     def 'should return rsync script to unstage output files' () {
 
         given:
-        def config = new ProcessConfig([unstageStrategy: 'rsync'])
-
-        def process = Mock(TaskProcessor)
-        process.getConfig() >> config
-
-        def task = Mock(TaskRun)
-        task.getProcessor() >> process
-        task.getOutputFilesNames() >> [ 'simple.txt', 'my/path/file.bam' ]
-        task.getTargetDir() >> Paths.get('/target/work/dir')
+        def task = new TaskBean( outputFiles: [ 'simple.txt', 'my/path/file.bam' ], targetDir: Paths.get('/target/work/dir'), unstageStrategy: 'rsync')
 
         when:
         def strategy = new SimpleFileCopyStrategy(task)

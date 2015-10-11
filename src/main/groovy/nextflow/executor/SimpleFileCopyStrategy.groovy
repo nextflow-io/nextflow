@@ -23,10 +23,9 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.processor.TaskRun
-
+import nextflow.processor.TaskBean
 /**
- * Simple file strategy that stages input files creating synmlinks
+ * Simple file strategy that stages input files creating symlinks
  * and copies the output files using the {@code cp} command.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -66,11 +65,12 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         this.outputFiles = []
     }
 
-    SimpleFileCopyStrategy( TaskRun task ) {
-        this.inputFiles = task.getInputFilesMap()
-        this.outputFiles = task.getOutputFilesNames()
-        this.targetDir = task.getTargetDir()
-        this.unstageStrategy = task.getProcessor().getConfig().unstageStrategy
+
+    SimpleFileCopyStrategy( TaskBean bean ) {
+        this.inputFiles = bean.inputFiles
+        this.outputFiles = bean.outputFiles
+        this.targetDir = bean.targetDir
+        this.unstageStrategy = bean.unstageStrategy
     }
 
 

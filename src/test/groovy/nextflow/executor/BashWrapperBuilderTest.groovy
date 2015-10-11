@@ -23,6 +23,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.ContainerScriptTokens
@@ -38,7 +39,7 @@ class BashWrapperBuilderTest extends Specification {
     def 'test change to scratchDir' () {
 
         setup:
-        def builder = [:] as BashWrapperBuilder
+        def builder = new BashWrapperBuilder(new TaskBean())
 
         expect:
         builder.changeToScratchDirectory() == null
@@ -68,17 +69,20 @@ class BashWrapperBuilderTest extends Specification {
 
     def 'test map constructor'() {
 
-        when:
-        def wrapper = new BashWrapperBuilder(
+        given:
+        def bean = new TaskBean(
                 input: 'alpha',
                 scratch: '$var_x',
                 workDir: Paths.get('a'),
                 targetDir: Paths.get('b'),
-                container: 'docker_x',
+                dockerImage: 'docker_x',
                 environment: [a:1, b:2],
                 script: 'echo ciao',
-                shell: 'bash -e'
+                shell: ['bash','-e']
         )
+
+        when:
+        def wrapper = new BashWrapperBuilder(bean)
 
         then:
         wrapper.scratch == '$var_x'
@@ -88,7 +92,7 @@ class BashWrapperBuilderTest extends Specification {
         wrapper.dockerImage == 'docker_x'
         wrapper.environment ==  [a:1, b:2]
         wrapper.script ==  'echo ciao'
-        wrapper.shell == 'bash -e'
+        wrapper.shell == ['bash','-e']
     }
 
 
@@ -101,7 +105,7 @@ class BashWrapperBuilderTest extends Specification {
          * simple bash run
          */
         when:
-        def bash = new BashWrapperBuilder(workDir: folder, script: 'echo Hello world!', headerScript: '#BSUB -x 1\n#BSUB -y 2')
+        def bash = new BashWrapperBuilder([workDir: folder, script: 'echo Hello world!', headerScript: '#BSUB -x 1\n#BSUB -y 2'] as TaskBean )
         bash.build()
 
         then:
@@ -199,7 +203,7 @@ class BashWrapperBuilderTest extends Specification {
          * simple bash run
          */
         when:
-        def bash = new BashWrapperBuilder(workDir: folder, script: 'echo Hello world!', statsEnabled: true)
+        def bash = new BashWrapperBuilder([workDir: folder, script: 'echo Hello world!', statsEnabled: true] as TaskBean)
         bash.build()
 
         then:
@@ -388,7 +392,7 @@ class BashWrapperBuilderTest extends Specification {
          * simple bash run
          */
         when:
-        def bash = new BashWrapperBuilder(workDir: folder, script: 'echo Hello world!', scratch: true, input: 'Ciao ciao')
+        def bash = new BashWrapperBuilder([workDir: folder, script: 'echo Hello world!', scratch: true, input: 'Ciao ciao'] as TaskBean)
         bash.build()
 
         then:
@@ -489,13 +493,13 @@ class BashWrapperBuilderTest extends Specification {
          * simple bash run
          */
         when:
-        def bash = new BashWrapperBuilder(
+        def bash = new BashWrapperBuilder([
                 workDir: folder,
                 script: 'echo Hello world!',
                 scratch: true,
                 input: 'data xyz',
                 statsEnabled: true
-        )
+                ] as TaskBean)
         bash.build()
 
         then:
@@ -703,13 +707,12 @@ class BashWrapperBuilderTest extends Specification {
          * bash run through docker
          */
         when:
-        def bash = new BashWrapperBuilder(
-                name: 'xyz',
+        def bash = new BashWrapperBuilder([
                 workDir: folder,
                 script: 'echo Hello world!',
-                container: 'busybox',
-                dockerMount: Paths.get('/some/path'),
-                dockerConfig: [sudo: true, enabled: true] )
+                dockerImage: 'busybox',
+                dockerConfig: [sudo: true, enabled: true]
+                ] as TaskBean)
         bash.build()
 
         then:
@@ -782,7 +785,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < \$CERR >&2 &
                 tee2=\$!
                 (
-                sudo docker run -i -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID busybox -c '/bin/bash -ue ${folder}/.command.sh'
+                sudo docker run -i -v ${folder}:${folder} -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID busybox -c '/bin/bash -ue ${folder}/.command.sh'
                 ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -805,13 +808,12 @@ class BashWrapperBuilderTest extends Specification {
          * bash run through docker
          */
         when:
-        def bash = new BashWrapperBuilder(
-                name: 'xyz',
+        def bash = new BashWrapperBuilder([
                 workDir: folder,
                 script: 'echo Hello world!',
-                container: 'busybox',
-                dockerMount: Paths.get('/some/path'),
-                dockerConfig: [temp: 'auto', enabled: true] )
+                dockerImage: 'busybox',
+                dockerConfig: [temp: 'auto', enabled: true]
+                ] as TaskBean)
         bash.build()
 
         then:
@@ -884,7 +886,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < \$CERR >&2 &
                 tee2=\$!
                 (
-                docker run -i -v \$(nxf_mktemp):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID busybox -c '/bin/bash -ue ${folder}/.command.sh'
+                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID busybox -c '/bin/bash -ue ${folder}/.command.sh'
                 ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -910,12 +912,12 @@ class BashWrapperBuilderTest extends Specification {
          * bash run through docker
          */
         when:
-        def bash = new BashWrapperBuilder(
+        def bash = new BashWrapperBuilder([
                 workDir: folder,
                 script: 'echo Hello world!',
-                container: 'ubuntu',
-                dockerMount: Paths.get('/some/path'),
-                dockerConfig: [temp: 'auto', enabled: true, remove:false, kill: false] )
+                dockerImage: 'ubuntu',
+                dockerConfig: [temp: 'auto', enabled: true, remove:false, kill: false]
+                ] as TaskBean)
         bash.build()
 
         then:
@@ -988,7 +990,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < \$CERR >&2 &
                 tee2=\$!
                 (
-                docker run -i -v \$(nxf_mktemp):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c '/bin/bash -ue ${folder}/.command.sh'
+                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c '/bin/bash -ue ${folder}/.command.sh'
                 ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1010,12 +1012,12 @@ class BashWrapperBuilderTest extends Specification {
          * bash run through docker
          */
         when:
-        def bash = new BashWrapperBuilder(
+        def bash = new BashWrapperBuilder([
                 workDir: folder,
                 script: 'echo Hello world!',
-                container: 'ubuntu',
-                dockerMount: Paths.get('/some/path'),
-                dockerConfig: [temp: 'auto', enabled: true, remove:false, kill: 'SIGXXX'] )
+                dockerImage: 'ubuntu',
+                dockerConfig: [temp: 'auto', enabled: true, remove:false, kill: 'SIGXXX']
+                ] as TaskBean)
         bash.build()
 
         then:
@@ -1088,7 +1090,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < \$CERR >&2 &
                 tee2=\$!
                 (
-                docker run -i -v \$(nxf_mktemp):/tmp -v /some/path:/some/path -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c '/bin/bash -ue ${folder}/.command.sh'
+                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c '/bin/bash -ue ${folder}/.command.sh'
                 ) >\$COUT 2>\$CERR &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1110,11 +1112,12 @@ class BashWrapperBuilderTest extends Specification {
           * bash run through docker
           */
         when:
-        def bash = new BashWrapperBuilder(
+        def bash = new BashWrapperBuilder([
                 workDir: folder,
                 script: 'echo Hello world!',
-                container: 'sl65',
-                dockerConfig: [enabled: true, fixOwnership: true] )
+                dockerImage: 'sl65',
+                dockerConfig: [enabled: true, fixOwnership: true]
+                ] as TaskBean)
         bash.systemOsName = 'Linux'
         bash.build()
 
@@ -1143,10 +1146,10 @@ class BashWrapperBuilderTest extends Specification {
         task.processor = Mock(TaskProcessor)
         task.processor.getProcessEnvironment() >> [:]
         task.processor.getSession() >> session
+        task.processor.getConfig() >> [:]
 
         when:
         def bash = new BashWrapperBuilder(task)
-        bash.copyStrategy = new SimpleFileCopyStrategy()
         bash.build()
 
         then:
@@ -1240,10 +1243,10 @@ class BashWrapperBuilderTest extends Specification {
         task.processor.getProcessEnvironment() >> [:]
         task.processor.getSession() >> new Session(docker: [registry: 'registry.com'])
         task.processor.getSession().workDir = folder
+        task.processor.getConfig() >> [:]
 
         when:
         def bash = new BashWrapperBuilder(task)
-        bash.copyStrategy = new SimpleFileCopyStrategy()
         bash.build()
 
         then:
@@ -1263,8 +1266,7 @@ class BashWrapperBuilderTest extends Specification {
         def bash
 
         when:
-        bash = [:] as BashWrapperBuilder
-        bash.copyStrategy = new SimpleFileCopyStrategy()
+        bash = new BashWrapperBuilder( new TaskBean() )
         then:
         bash.scriptCleanUp( Paths.get('/my/exit/file'), null ) ==
                     '''
@@ -1311,8 +1313,7 @@ class BashWrapperBuilderTest extends Specification {
 
 
         when:
-        bash = [:] as BashWrapperBuilder
-        bash.copyStrategy = new SimpleFileCopyStrategy()
+        bash = new BashWrapperBuilder(new TaskBean())
         then:
         bash.scriptCleanUp( Paths.get('/my/exit/xxx'), 'docker stop x' ) ==
                 '''
@@ -1366,7 +1367,7 @@ class BashWrapperBuilderTest extends Specification {
 
         when:
         folder = TestHelper.createInMemTempDir()
-        new BashWrapperBuilder( workDir: folder, environment: [ALPHA:1, GAMMA:2], script: 'Hello world' ) .build()
+        new BashWrapperBuilder([ workDir: folder, environment: [ALPHA:1, GAMMA:2], script: 'Hello world' ] as TaskBean ) .build()
 
         then:
         folder.resolve('.command.env').text == '''
@@ -1377,7 +1378,7 @@ class BashWrapperBuilderTest extends Specification {
 
         when:
         folder = TestHelper.createInMemTempDir()
-        new BashWrapperBuilder( workDir: folder, environment: [DELTA:1, OMEGA:2], script: 'Hello world', moduleNames: ['xx','yy'] ) .build()
+        new BashWrapperBuilder([ workDir: folder, environment: [DELTA:1, OMEGA:2], script: 'Hello world', moduleNames: ['xx','yy'] ] as TaskBean ) .build()
 
         then:
         folder.resolve('.command.env').text == '''
@@ -1390,7 +1391,7 @@ class BashWrapperBuilderTest extends Specification {
 
         when:
         folder = TestHelper.createInMemTempDir()
-        new BashWrapperBuilder( workDir: folder, script: 'Hello world', moduleNames: ['ciao','mondo'] ) .build()
+        new BashWrapperBuilder([ workDir: folder, script: 'Hello world', moduleNames: ['ciao','mondo'] ] as TaskBean) .build()
 
         then:
         folder.resolve('.command.env').text == '''
@@ -1411,13 +1412,12 @@ class BashWrapperBuilderTest extends Specification {
          * bash run through docker
          */
         when:
-        def bash = new BashWrapperBuilder(
-                name: 'xyz',
+        def bash = new BashWrapperBuilder([
                 workDir: folder,
                 script: 'echo Hello world!',
                 beforeScript: "init this",
                 afterScript: "cleanup that"
-       )
+                ] as TaskBean)
         bash.build()
 
         then:
@@ -1513,8 +1513,7 @@ class BashWrapperBuilderTest extends Specification {
     def 'should add docker run to shell script' () {
 
         given:
-
-        def bash = [:] as BashWrapperBuilder
+        def bash = new BashWrapperBuilder(new TaskBean())
 
         when:
         def script = '''
