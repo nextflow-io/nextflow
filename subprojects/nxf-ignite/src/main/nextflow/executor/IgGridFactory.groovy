@@ -27,7 +27,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
-import nextflow.util.DaemonConfig
+import nextflow.util.ClusterConfig
 import nextflow.util.Duration
 import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.reflect.MethodUtils
@@ -68,7 +68,7 @@ class IgGridFactory {
     private final String role
 
     // cluster related config
-    private final DaemonConfig daemonConfig
+    private final ClusterConfig daemonConfig
 
     // application config
     private final Map config
@@ -86,7 +86,7 @@ class IgGridFactory {
         log.debug "Configuration properties for role: '$role' -- ${clusterConfig}"
 
         this.role = role
-        this.daemonConfig = new DaemonConfig('ignite', clusterConfig, role == 'worker' ? System.getenv() : null )
+        this.daemonConfig = new ClusterConfig('ignite', clusterConfig, role == 'worker' ? System.getenv() : null )
 
     }
 

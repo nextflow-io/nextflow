@@ -26,12 +26,12 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class DaemonConfigTest extends Specification {
+class ClusterConfigTest extends Specification {
     
     def testGetAttribute() {
 
         when:
-        def cfg = new DaemonConfig('myDaemon', [x:123, y:222, '$myDaemon': [y:333] ] )
+        def cfg = new ClusterConfig('myDaemon', [x:123, y:222, '$myDaemon': [y:333] ] )
         then:
         cfg.getAttribute('x') == 123
         cfg.getAttribute('y') == 333
@@ -40,11 +40,46 @@ class DaemonConfigTest extends Specification {
 
         when:
         def env = [NXF_CLUSTER_Z:'hola', NXF_CLUSTER_P_Q_Z:'hello']
-        cfg = new DaemonConfig('myDaemon', [x:123, y:222, '$myDaemon': [y:333] ], env )
+        cfg = new ClusterConfig('myDaemon', [x:123, y:222, '$myDaemon': [y:333] ], env )
         then:
         cfg.getAttribute('z', 'alpha') == 'hola'
         cfg.getAttribute('p.q.z', null) == 'hello'
 
+    }
+
+    def testGetAttributeWithType() {
+
+        given:
+        def cfg = new ClusterConfig('myDaemon', [alpha:123, beta:'222', gamma: 'false'] )
+
+        when:
+        String str = cfg.getAttribute('alpha')
+        then:
+        str == '123'
+
+        when:
+        Integer num = cfg.getAttribute('alpha')
+        then:
+        num == 123
+
+        when:
+        Integer num_beta = cfg.getAttribute('beta')
+        then:
+        num_beta == 222
+
+        when:
+        boolean flag = cfg.getAttribute('gamma')
+        then:
+        flag == false
+    }
+
+    def testGetAttributeFromEnvironmentVariable() {
+
+        given:
+        def cfg = new ClusterConfig('ignite', null, [NXF_CLUSTER_SHUTDOWN: 'true'] )
+        expect:
+        (boolean)cfg.getAttribute('shutdown') == true
+        cfg.getAttribute('something') == null
     }
 
 
@@ -55,14 +90,14 @@ class DaemonConfigTest extends Specification {
         List<String> addresses
 
         when:
-        config = new DaemonConfig('x', [:])
+        config = new ClusterConfig('x', [:])
         addresses = config.getNetworkInterfaceAddresses()
         then:
         addresses == []
 
 
         when:
-        config = new DaemonConfig('x', [interface: '172.5.1.*,172.5.2.*'])
+        config = new ClusterConfig('x', [interface: '172.5.1.*,172.5.2.*'])
         addresses = config.getNetworkInterfaceAddresses()
         then:
         addresses == ['172.5.1.*','172.5.2.*']
@@ -72,7 +107,7 @@ class DaemonConfigTest extends Specification {
     def testGetNestedNames() {
 
         when:
-        def cfg = new DaemonConfig('none', [x:1, y:2, tcp: [alpha: 'a', beta: 'b', gamma: [uno:1, due: 2]] ])
+        def cfg = new ClusterConfig('none', [x:1, y:2, tcp: [alpha: 'a', beta: 'b', gamma: [uno:1, due: 2]] ])
         then:
         cfg.getAttributesNames().sort() == ['x','y','tcp'].sort()
         cfg.getAttributesNames('tcp') == ['alpha','beta', 'gamma']
@@ -84,7 +119,7 @@ class DaemonConfigTest extends Specification {
     def testNestedValues() {
 
         when:
-        def cfg = new DaemonConfig('none', [x:1, y:2, tcp: [alpha: 'a', beta: 'b', gamma: [uno:1, due: 2]] ])
+        def cfg = new ClusterConfig('none', [x:1, y:2, tcp: [alpha: 'a', beta: 'b', gamma: [uno:1, due: 2]] ])
         then:
         cfg.getAttribute('x') == 1
         cfg.getAttribute('tcp.alpha') == 'a'
@@ -100,7 +135,7 @@ class DaemonConfigTest extends Specification {
     def testEnumValues() {
 
         when:
-        def cfg = new DaemonConfig('none', [x:1, ggfs:[data: [memoryMode: 'ALPHA']] ])
+        def cfg = new ClusterConfig('none', [x:1, ggfs:[data: [memoryMode: 'ALPHA']] ])
         then:
         cfg.getAttribute('ggfs.data.memoryMode') == 'ALPHA'
         cfg.getAttribute('ggfs.data.memoryMode') as FooEnum == FooEnum.ALPHA

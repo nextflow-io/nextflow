@@ -117,9 +117,9 @@ class ConfigHelper {
 }
 
 /**
- * Helper class retrieve daemon configuration properties
+ * Helper class retrieve cluster configuration properties
  */
-class DaemonConfig {
+class ClusterConfig {
 
     final String scope
 
@@ -128,9 +128,8 @@ class DaemonConfig {
     final Map fallbackEnvironment
 
 
-    DaemonConfig( String scope, Map config, Map env = null ) {
+    ClusterConfig( String scope, Map config, Map env = null ) {
         assert scope
-        assert config != null
 
         this.scope = scope
         this.config = config
@@ -156,7 +155,7 @@ class DaemonConfig {
             result = fallbackEnvironment.get(key)
         }
 
-        return (T) result != null ? result : defValue
+        return (result != null ? result : defValue) as T
     }
 
     private Object getAttrValue( String key, map ) {
@@ -193,7 +192,6 @@ class DaemonConfig {
         }
 
     }
-
 
 
     /**
