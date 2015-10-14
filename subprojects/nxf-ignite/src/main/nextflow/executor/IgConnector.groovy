@@ -26,6 +26,7 @@ import nextflow.file.FileHelper
 import nextflow.file.igfs.IgFileSystemProvider
 import nextflow.file.igfs.IgPath
 import nextflow.processor.TaskPollingMonitor
+import nextflow.util.ClusterConfig
 import nextflow.util.Duration
 import nextflow.util.KryoHelper
 import nextflow.util.PathSerializer
@@ -105,7 +106,9 @@ class IgConnector implements DiscoverySpiListener {
         /*
          * shutdown the instance on session termination
          */
-        final shutdownOnComplete = session.config.cluster?.shutdownOnComplete?.toString() == 'true'
+        final config = new ClusterConfig('ignite', session.config.cluster as Map, System.getenv())
+        boolean shutdownOnComplete = config.getAttribute('shutdownOnComplete', false)
+        log.debug "Cluster shutdownOnComplete: $shutdownOnComplete"
         monitor.session.onShutdown {
             if( watcher ) watcher.interrupt()
             if( shutdownOnComplete )

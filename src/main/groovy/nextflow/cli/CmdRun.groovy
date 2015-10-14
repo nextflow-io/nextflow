@@ -124,6 +124,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = '-without-docker', description = 'Disable process execution with Docker', arity = 0)
     boolean withoutDocker
 
+    @Parameter(names = '-with-mpi', hidden = true)
+    boolean withMpi
+
     @Parameter(names = ['-bg'], arity = 0, hidden = true)
     void setBackground(boolean value) {
         launcher.options.background = value

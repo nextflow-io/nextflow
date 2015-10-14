@@ -44,6 +44,8 @@ import nextflow.util.ServiceDiscover
 @Slf4j
 class ProcessFactory {
 
+    static String DEFAULT_EXECUTOR = System.getenv('NXF_EXECUTOR') ?: 'local'
+
     /*
      * Map the executor class to its 'friendly' name
      */
@@ -223,7 +225,7 @@ class ProcessFactory {
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
         // load the executor to be used
-        def execName = getExecutorName(taskConfig) ?: 'local'
+        def execName = getExecutorName(taskConfig) ?: DEFAULT_EXECUTOR
         def execClass = loadExecutorClass(execName)
 
         if( !isTypeSupported(script.type, execClass) ) {
