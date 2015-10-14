@@ -216,7 +216,7 @@ class FileHelper {
     }
 
 
-    final static Path createLocalDir(String prefix = 'nxf') {
+    final static Path createLocalDir(String prefix = 'nxf-') {
         Files.createTempDirectory(localTempBasePath, prefix)
     }
 
