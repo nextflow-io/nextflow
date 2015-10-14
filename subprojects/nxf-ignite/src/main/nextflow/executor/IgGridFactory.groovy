@@ -170,7 +170,6 @@ class IgGridFactory {
             affinityMapper = new IgfsGroupDataBlocksKeyMapper(512)
             backups = daemonConfig.getAttribute('igfs.data.backups', 0) as int
             // configure Off-heap memory
-            // http://atlassian.gridgain.com/wiki/display/GG60/Off-Heap+Memory
             offHeapMaxMemory = daemonConfig.getAttribute('igfs.data.offHeapMaxMemory', 0) as long
             // When storing directly off-heap it throws an exception
             // See http://stackoverflow.com/q/23399264/395921
@@ -215,10 +214,6 @@ class IgGridFactory {
     }
 
 
-    /**
-     * http://atlassian.gridgain.com/wiki/display/GG60/Job+Collision+Resolution
-     * http://atlassian.gridgain.com/wiki/display/GG60/Collision+Resolution+SPI
-     */
     protected collisionConfig( IgniteConfiguration cfg ) {
 
         def slots = daemonConfig.getAttribute('slots', Runtime.getRuntime().availableProcessors() ) as int
@@ -231,22 +226,11 @@ class IgGridFactory {
 
     }
 
-    /**
-     * the *early* load balancing strategy
-     *
-     * http://www.gridgain.com/javadoc/org/gridgain/grid/spi/loadbalancing/adaptive/GridAdaptiveLoadBalancingSpi.html
-     * http://atlassian.gridgain.com/wiki/display/GG60/Load+Balancing+SPI
-     * http://atlassian.gridgain.com/wiki/display/GG60/Load+Balancing
-     */
     protected void balancingConfig( IgniteConfiguration cfg ) {
 
         cfg.setLoadBalancingSpi( new AdaptiveLoadBalancingSpi() )
     }
 
-    /*
-     * http://gridgain.com/javadoc/org/gridgain/grid/spi/discovery/tcp/GridTcpDiscoverySpi.html
-     * http://atlassian.gridgain.com/wiki/display/GG60/Discovery+SPI
-     */
     private discoveryConfig( IgniteConfiguration cfg ) {
 
         def discoverCfg = new TcpDiscoverySpi()
@@ -331,7 +315,7 @@ class IgGridFactory {
 
         }
         else if( join ) {
-            log.warn "GrigGain config > unknown discovery method: $join"
+            log.warn "Ignite config > unknown discovery method: $join"
         }
 
         // check some optional params
