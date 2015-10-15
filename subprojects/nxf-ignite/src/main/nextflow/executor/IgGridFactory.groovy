@@ -19,6 +19,7 @@
  */
 
 package nextflow.executor
+
 import com.amazonaws.auth.BasicAWSCredentials
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -51,7 +52,6 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.s3.TcpDiscoveryS3IpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.sharedfs.TcpDiscoverySharedFsIpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder
 import org.apache.ignite.spi.loadbalancing.adaptive.AdaptiveLoadBalancingSpi
-
 /**
  * Grid factory class. It can be used to create a {@link IgniteConfiguration} or the {@link Ignite} instance directly
  *
@@ -82,12 +82,11 @@ class IgGridFactory {
     IgGridFactory( String role, Map config ) {
         assert role in ['master','worker'], "Parameter 'role' can be either 'master' or 'worker'"
 
-        final clusterConfig = (Map)config.cluster ?: [:]
-        log.debug "Configuration properties for role: '$role' -- ${clusterConfig}"
+        final configMap = (Map)config.cluster ?: [:]
+        log.debug "Configuration properties for role: '$role' -- ${configMap}"
 
         this.role = role
-        this.daemonConfig = new ClusterConfig('ignite', clusterConfig, role == 'worker' ? System.getenv() : null )
-
+        this.daemonConfig = new ClusterConfig('ignite', configMap, System.getenv())
     }
 
     /**
@@ -254,68 +253,70 @@ class IgGridFactory {
         }
 
         // -- try to set the join/discovery mechanism
-        def join = daemonConfig.getAttribute('join') as String
-        if( join == 'multicast' ) {
-            log.debug "Ignite config > default discovery multicast"
-            discoverCfg.setIpFinder( new TcpDiscoveryMulticastIpFinder())
-        }
-        else if( join?.startsWith('multicast:') ) {
-            final finder = new TcpDiscoveryMulticastIpFinder()
-            def address = join.replace('multicast:','')
-            def parts = address.split(':')
-            if( parts.size() ) {
-                log.debug "Ignite config > discovery multicast address: ${parts[0]}"
-                finder.setMulticastGroup(parts[0])
+        def join = daemonConfig.getClusterJoin()
+        if( join ) {
+            if( join == 'multicast' ) {
+                log.debug "Ignite config > default discovery multicast"
+                discoverCfg.setIpFinder( new TcpDiscoveryMulticastIpFinder())
             }
-            if( parts.size()==2 ) {
-                log.debug "Ignite config > discovery multicast port: ${parts[1]}"
-                finder.setMulticastPort(parts[1] as Integer)
+            else if( join.startsWith('multicast:') ) {
+                final finder = new TcpDiscoveryMulticastIpFinder()
+                def address = join.replace('multicast:','')
+                def parts = address.split(':')
+                if( parts.size() ) {
+                    log.debug "Ignite config > discovery multicast group: ${parts[0]}"
+                    finder.setMulticastGroup(parts[0])
+                }
+                if( parts.size()==2 ) {
+                    log.debug "Ignite config > discovery multicast port: ${parts[1]}"
+                    finder.setMulticastPort(parts[1] as Integer)
+                }
+                discoverCfg.setIpFinder(finder)
             }
-            discoverCfg.setIpFinder(finder)
-        }
 
-        else if( join?.startsWith('s3:')) {
-            def credentials = Global.getAwsCredentials(System.getenv(), config)
-            if( !credentials )
-                throw new AbortOperationException("Missing AWS credentials -- Please add AWS access credentials to your environment by defining the variables AWS_ACCESS_KEY and AWS_SECRET_KEY or in your nextflow config file")
+            else if( join.startsWith('s3:')) {
+                def credentials = Global.getAwsCredentials(System.getenv(), config)
+                if( !credentials )
+                    throw new AbortOperationException("Missing AWS credentials -- Please add AWS access credentials to your environment by defining the variables AWS_ACCESS_KEY and AWS_SECRET_KEY or in your nextflow config file")
 
-            def accessKey = credentials[0]
-            def secretKey = credentials[1]
-            def bucket = join.substring(3).trim()
-            if( bucket.startsWith('/'))
-                bucket = bucket.substring(1)
+                def accessKey = credentials[0]
+                def secretKey = credentials[1]
+                def bucket = join.substring(3).trim()
+                if( bucket.startsWith('/'))
+                    bucket = bucket.substring(1)
 
-            log.debug "Ignite config > discovery AWS bucket: $bucket; access: ${accessKey.substring(0,6)}..; ${secretKey.substring(0,6)}.."
-            final finder = new TcpDiscoveryS3IpFinder()
-            finder.setAwsCredentials( new BasicAWSCredentials(accessKey, secretKey) )
-            finder.setBucketName(bucket)
+                log.debug "Ignite config > discovery AWS bucket: $bucket; access: ${accessKey.substring(0,6)}..; ${secretKey.substring(0,6)}.."
+                final finder = new TcpDiscoveryS3IpFinder()
+                finder.setAwsCredentials( new BasicAWSCredentials(accessKey, secretKey) )
+                finder.setBucketName(bucket)
 
-            discoverCfg.setIpFinder(finder)
-        }
-        else if( join?.startsWith('path:') ) {
-            def path = FileHelper.asPath(join.substring(5).trim())
-            if( path.exists() ) {
-                log.debug "Ignite config > discovery path: $path"
+                discoverCfg.setIpFinder(finder)
+            }
+            else if( join.startsWith('path:') ) {
+                def path = FileHelper.asPath(join.substring(5).trim())
+                if( path.exists() ) {
+                    log.debug "Ignite config > discovery path: $path"
+                }
+                else {
+                    log.debug "Ignite config > CREATING discovery path: $path"
+                    path.mkdirs()
+                }
+
+                def finder = new TcpDiscoverySharedFsIpFinder()
+                finder.setPath(path.toString())
+                discoverCfg.setIpFinder(finder)
+            }
+            else if( join.startsWith('ip:') ) {
+                def ips = StringUtils.split(join.substring(3).trim().toString(), ", \n") as List<String>
+                log.debug "Apache Ignite config > discovery IPs: ${ips.join(', ')}"
+                def finder = new TcpDiscoveryVmIpFinder()
+                finder.setAddresses(ips)
+                discoverCfg.setIpFinder(finder)
+
             }
             else {
-                log.debug "Ignite config > CREATING discovery path: $path"
-                path.mkdirs()
+                log.warn "Ignite config > unknown discovery method: $join"
             }
-
-            def finder = new TcpDiscoverySharedFsIpFinder()
-            finder.setPath(path.toString())
-            discoverCfg.setIpFinder(finder)
-        }
-        else if( join?.startsWith('ip:') ) {
-            def ips = StringUtils.split(join.substring(3).trim().toString(), ", \n") as List<String>
-            log.debug "Apache Ignite config > discovery IPs: ${ips.join(', ')}"
-            def finder = new TcpDiscoveryVmIpFinder()
-            finder.setAddresses(ips)
-            discoverCfg.setIpFinder(finder)
-
-        }
-        else if( join ) {
-            log.warn "Ignite config > unknown discovery method: $join"
         }
 
         // check some optional params

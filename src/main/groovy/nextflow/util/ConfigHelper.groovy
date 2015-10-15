@@ -23,6 +23,7 @@ package nextflow.util
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import org.apache.commons.lang.StringUtils
 
@@ -119,6 +120,7 @@ class ConfigHelper {
 /**
  * Helper class retrieve cluster configuration properties
  */
+@Slf4j
 class ClusterConfig {
 
     final String scope
@@ -226,5 +228,40 @@ class ClusterConfig {
         return result
     }
 
+    String getClusterJoin() {
+
+        def result = getAttribute('join')
+
+        def seed = fallbackEnvironment?.NXF_CLUSTER_SEED as String
+        if( !result && seed ) {
+            log.debug "Cluster seed number: ${seed}"
+            result = seedToMulticastAddress(seed)
+        }
+
+        return result
+    }
+
+    @PackageScope
+    static String seedToMulticastAddress( String seed ) {
+        try {
+            int value = Integer.parseInt(seed)
+            if( value<0 || value>= 16777216 ) {
+                log.debug "WARN: cluster seed number out of range [0-16777215]: $value"
+                return null
+            }
+
+            int a = value & 255
+            value = value >>> 8
+            int b = value & 255
+            value = value >>> 8
+            int c = value & 255
+
+            return "multicast:228.${c}.${b}.${a}"
+        }
+        catch( NumberFormatException e ) {
+            log.debug "WARN: Not a valid cluster seed number: $seed"
+            return null
+        }
+    }
 
 }

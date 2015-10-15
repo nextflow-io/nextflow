@@ -21,6 +21,7 @@
 package nextflow.util
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -144,6 +145,42 @@ class ClusterConfigTest extends Specification {
 
     }
 
+    @Unroll
+    def 'should return multicast group address for groupId: #groupId' () {
+        expect:
+        ClusterConfig.seedToMulticastAddress(groupId) == address
+        where:
+        groupId     | address
+        '1'         | 'multicast:228.0.0.1'
+        '255'       | 'multicast:228.0.0.255'
+        '256'       | 'multicast:228.0.1.0'
+        '65535'     | 'multicast:228.0.255.255'
+        '65536'     | 'multicast:228.1.0.0'
+        '65792'     | 'multicast:228.1.1.0'
+        '65793'     | 'multicast:228.1.1.1'
+        '66052'     | 'multicast:228.1.2.4'
+        '16777215'  | 'multicast:228.255.255.255'
+        '16777216'  | null
+
+    }
+
+    def 'should return cluster join' () {
+        when:
+        def cfg = new ClusterConfig('ignite', [join: 'path:/some/dir'])
+        then:
+        cfg.getClusterJoin() == 'path:/some/dir'
+
+        when:
+        cfg = new ClusterConfig('ignite', null, [NXF_CLUSTER_JOIN: 's3://bucket'])
+        then:
+        cfg.getClusterJoin() == 's3://bucket'
+
+        // fallback on NXF_CLUSTER_SEED
+        when:
+        cfg = new ClusterConfig('ignite', null, [NXF_CLUSTER_SEED: '66052'])
+        then:
+        cfg.getClusterJoin() == 'multicast:228.1.2.4'
+    }
 
 
 }
