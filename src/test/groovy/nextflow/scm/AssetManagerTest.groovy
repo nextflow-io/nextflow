@@ -20,6 +20,7 @@
 
 package nextflow.scm
 import nextflow.exception.AbortOperationException
+import org.eclipse.jgit.api.Git
 import org.junit.Rule
 import spock.lang.Requires
 import spock.lang.Specification
@@ -317,5 +318,41 @@ class AssetManagerTest extends Specification {
 
     }
 
+    def 'should create a script file object' () {
+
+        given:
+        def dir = tempDir.root
+        // create the repo dir
+        dir.resolve('main.nf').text = "println 'Hello world'"
+        dir.resolve('nextflow.config').text = 'manifest {  }'
+
+        def init = Git.init()
+        def repo = init.setDirectory( dir.toFile() ).call()
+        repo.add().addFilepattern('.').call()
+        def commit = repo.commit().setAll(true).setMessage('First commit').call()
+        repo.close()
+
+        // append fake remote data
+        dir.resolve('.git/config') << '''
+            [remote "origin"]
+                url = https://github.com/nextflow-io/nextflow.git
+                fetch = +refs/heads/*:refs/remotes/origin/*
+            [branch "master"]
+                remote = origin
+                merge = refs/heads/master
+            '''
+            .stripIndent()
+
+        when:
+        def manager = new AssetManager().setLocalPath(dir.toFile())
+        def script = manager.getScriptFile()
+        then:
+        script.localPath == dir
+        script.commitId == commit.name().substring(0,10)
+        script.revision == 'master'
+        script.parent == dir
+        script.text == "println 'Hello world'"
+        script.repository == 'https://github.com/nextflow-io/nextflow.git'
+    }
 
 }

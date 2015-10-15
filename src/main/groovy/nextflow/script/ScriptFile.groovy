@@ -35,20 +35,44 @@ import nextflow.scm.AssetManager
 @ToString(includeNames = true)
 class ScriptFile {
 
+    /**
+     * Pipeline main script file
+     */
     Path main
 
+    /**
+     * (remote) project repository URL
+     */
     String repository
 
+    /**
+     * The
+     */
     AssetManager.RevisionInfo revisionInfo
 
+    /**
+     * (local) project repository path
+     */
     Path localPath
 
+    /**
+     * @return Directory where the main script file is stored
+     */
     Path getParent() { main?.parent }
 
+    /**
+     * @return Main script file content as a text string
+     */
     String getText() { main?.text }
 
+    /**
+     * @return Repository commitId
+     */
     String getCommitId() { revisionInfo?.commitId }
 
+    /**
+     * @return Repository tag or branch
+     */
     String getRevision() { revisionInfo?.revision }
 
     ScriptFile( File file ) {

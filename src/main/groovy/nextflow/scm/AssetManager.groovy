@@ -240,7 +240,7 @@ class AssetManager {
 
         def result = new ScriptFile(getMainScriptFile())
         result.revisionInfo = getCurrentRevisionAndName()
-        result.repository = getGitRepositoryUrl()
+        result.repository = getGitConfigRemoteUrl()
         result.localPath = localPath.toPath()
 
         return result
@@ -703,13 +703,25 @@ class AssetManager {
         return result ? result.name : null
     }
 
+    /**
+     * Models revision information of a project repository.
+     */
     @Canonical
     static class RevisionInfo {
 
+        /**
+         * Git commit ID
+         */
         String commitId
 
+        /**
+         * Git tab or branch name
+         */
         String revision
 
+        /**
+         * @return A formatted string containing the commitId and revision properties
+         */
         String toString() {
 
             if( !commitId ) {

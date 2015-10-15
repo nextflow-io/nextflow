@@ -19,7 +19,6 @@
  */
 
 package nextflow.script
-
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -28,8 +27,8 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.util.Duration
-
 /**
+ * Models workflow metadata properties and notification handler
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -69,18 +68,48 @@ class WorkflowMetadata {
         owner.session.onShutdown { invokeOnComplete() }
     }
 
-    void onComplete( Closure closure ) {
-        events << closure
+    /**
+     * Implements the following idiom in the pipeline script:
+     * <pre>
+     *     window.onComplete {
+     *         // do something
+     *     }
+     * </pre>
+     *
+     * @param action The action handler
+     */
+    void onComplete( Closure action ) {
+        events << action
     }
 
-    @PackageScope
-    void registerConfigAction( Map config ) {
+    /**
+     * Implements the following idiom in the pipeline script:
+     * <pre>
+     *     window.onComplete = {
+     *         // do something
+     *     }
+     * </pre>
+     *
+     * @param action The action handler
+     */
+    void setOnComplete( Closure action ) {
+        events << action
+    }
+
+    private void registerConfigAction( Map config ) {
         if( !config ) return
         if( config.onComplete instanceof Closure ) {
             events.add( (Closure)config.onComplete )
         }
     }
 
+    /**
+     * This method is required in order to allow the {@code onComplete} closure
+     * defined in the {@code nextflow.config} file to access the {@code workflow}
+     * object.
+     *
+     * @return The workflow object itself.
+     */
     def getWorkflow() { return this }
 
     @PackageScope
@@ -99,6 +128,9 @@ class WorkflowMetadata {
         }
     }
 
+    /**
+     * @return Render the workflow properties
+     */
     String toString() {
         def result = new StringBuilder()
         result << 'repository: ' << repository
