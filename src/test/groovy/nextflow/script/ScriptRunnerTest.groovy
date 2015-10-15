@@ -570,4 +570,45 @@ class ScriptRunnerTest extends Specification {
 
     }
 
+    def 'should fetch containers definition' () {
+
+        String text
+
+        when:
+        text = '''
+                process.container = 'beta'
+                '''
+        then:
+        new ScriptRunner(cfg(text)).fetchContainers() == 'beta'
+
+
+        when:
+        text = '''
+                process {
+                    $proc1 { container = 'alpha' }
+                    $proc2 { container ='beta' }
+                }
+                '''
+        then:
+        new ScriptRunner(cfg(text)).fetchContainers() == ['$proc1': 'alpha', '$proc2': 'beta']
+
+
+        when:
+        text = '''
+                process {
+                    $proc1 { container = 'alpha' }
+                    $proc2 { container ='beta' }
+                }
+
+                process.container = 'gamma'
+                '''
+        then:
+        new ScriptRunner(cfg(text)).fetchContainers() == ['$proc1': 'alpha', '$proc2': 'beta', default: 'gamma']
+    }
+
+
+    static Map cfg(String config) {
+        new ConfigSlurper().parse(config).toMap()
+    }
+
 }

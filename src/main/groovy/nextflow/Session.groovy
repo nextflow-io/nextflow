@@ -214,16 +214,16 @@ class Session implements ISession {
     /**
      * Initialize the session workDir, libDir, baseDir and scriptName variables
      */
-    void init( Path scriptFile ) {
+    void init( Path scriptPath ) {
 
         this.workDir = ((config.workDir ?: 'work') as Path).complete()
         this.setLibDir( config.libDir as String )
 
-        if( scriptFile ) {
+        if( scriptPath ) {
             // the folder that contains the main script
-            this.baseDir = scriptFile.parent
+            this.baseDir = scriptPath.parent
             // set the script name attribute
-            this.scriptName = scriptFile.name
+            this.scriptName = scriptPath.name
         }
 
         this.observers = createObservers()
@@ -473,7 +473,6 @@ class Session implements ISession {
 
         shutdownCallbacks << shutdown
     }
-
 
     @Memoized
     public getExecConfigProp( String execName, String name, Object defValue, Map env = null  ) {

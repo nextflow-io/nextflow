@@ -29,6 +29,7 @@ import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.scm.AssetManager
 import nextflow.config.ConfigBuilder
+import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
 import nextflow.util.Duration
 /**
@@ -158,7 +159,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
         // -- specify the arguments
         def scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
-        def scriptFile = getScriptFile(pipeline).toPath().complete()
+        def scriptFile = getScriptFile(pipeline)
 
         // create the config object
         def config = new ConfigBuilder()
@@ -188,7 +189,7 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
 
-    protected File getScriptFile(String pipelineName) {
+    protected ScriptFile getScriptFile(String pipelineName) {
         assert pipelineName
 
         /*
@@ -202,7 +203,7 @@ class CmdRun extends CmdBase implements HubOptions {
             if( revision )
                 throw new AbortOperationException("Revision option cannot be used running a local pipeline script")
 
-            return file
+            return new ScriptFile(file)
         }
 
         /*
@@ -217,7 +218,7 @@ class CmdRun extends CmdBase implements HubOptions {
             if( revision )
                 throw new AbortOperationException("Revision option cannot be used running a local pipeline script")
             log.info "Launching $script"
-            return script
+            return new ScriptFile(script)
         }
 
         /*
@@ -236,14 +237,15 @@ class CmdRun extends CmdBase implements HubOptions {
         try {
             manager.checkout(revision)
             manager.updateModules()
-            log.info "Launching '${repo}' - revision: ${manager.getCurrentRevisionAndName()}"
+            def scriptFile = manager.getScriptFile()
+            log.info "Launching '${repo}' - revision: ${scriptFile.revisionInfo}"
+            // return the script file
+            return scriptFile
         }
         catch( Exception e ) {
             throw new AbortOperationException("Unknown error accessing pipeline: '$repo' -- Repository may be corrupted: ${manager.localPath}", e)
         }
 
-        // return the script file
-        return manager.getMainScriptFile()
     }
 
 

@@ -19,6 +19,8 @@
  */
 
 package nextflow.scm
+
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -27,6 +29,7 @@ import nextflow.Const
 import nextflow.cli.HubOptions
 import nextflow.config.ComposedConfigSlurper
 import nextflow.exception.AbortOperationException
+import nextflow.script.ScriptFile
 import nextflow.util.IniFile
 import org.eclipse.jgit.api.CreateBranchCommand
 import org.eclipse.jgit.api.Git
@@ -232,6 +235,16 @@ class AssetManager {
     }
 
     File getLocalPath() { localPath }
+
+    ScriptFile getScriptFile() {
+
+        def result = new ScriptFile(getMainScriptFile())
+        result.revisionInfo = getCurrentRevisionAndName()
+        result.repository = getGitRepositoryUrl()
+        result.localPath = localPath.toPath()
+
+        return result
+    }
 
     File getMainScriptFile() {
         if( !localPath.exists() ) {
@@ -483,26 +496,26 @@ class AssetManager {
         names.get( head.objectId ) ?: head.objectId.name()
     }
 
-    String getCurrentRevisionAndName() {
+    RevisionInfo getCurrentRevisionAndName() {
         Ref head = git.getRepository().getRef(Constants.HEAD);
         if( !head )
-            return '(unknown)'
+            return null
 
         if( head.isSymbolic() ) {
-            return "${head.objectId.name()?.substring(0,10)} [${Repository.shortenRefName(head.getTarget().getName())}]"
+            return new RevisionInfo(head.objectId.name()?.substring(0,10), Repository.shortenRefName(head.getTarget().getName()))
         }
 
         if( !head.getObjectId() )
-            return '(unknown)'
+            return null
 
         // try to resolve the the current object it to a tag name
         Map<ObjectId, String> allNames = git.nameRev().addPrefix( "refs/tags/" ).add(head.objectId).call()
         def name = allNames.get( head.objectId )
         if( name ) {
-            return "${head.objectId.name()?.substring(0,10)} [${name}]"
+            return new RevisionInfo(head.objectId.name()?.substring(0,10), name)
         }
         else {
-            return head.objectId.name()?.substring(0,10)
+            return new RevisionInfo(head.objectId.name()?.substring(0,10))
         }
     }
 
@@ -688,5 +701,26 @@ class AssetManager {
         final result = providerConfigs.find { it -> it.domain == server }
 
         return result ? result.name : null
+    }
+
+    @Canonical
+    static class RevisionInfo {
+
+        String commitId
+
+        String revision
+
+        String toString() {
+
+            if( !commitId ) {
+                return '(unknown)'
+            }
+
+            if( revision ) {
+                return "${commitId} [${revision}]"
+            }
+
+            commitId
+        }
     }
 }

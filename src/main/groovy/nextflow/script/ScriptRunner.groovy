@@ -23,7 +23,9 @@ import static nextflow.util.ConfigHelper.parseValue
 
 import java.nio.file.Path
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Channel
 import nextflow.Nextflow
@@ -60,12 +62,12 @@ class ScriptRunner {
     /**
      * The pipeline file (it may be null when it's provided as string)
      */
-    private Path scriptFile
+    private ScriptFile scriptFile
 
     /**
      * The pipeline as a text content
      */
-    private String setScript
+    private String scriptText
 
     /*
      * the script raw output
@@ -76,6 +78,11 @@ class ScriptRunner {
      * The script result
      */
     private def result
+
+    /**
+     * The launcher command line
+     */
+    private String commandLine
 
     /**
      * Instantiate the runner object creating a new session
@@ -92,14 +99,14 @@ class ScriptRunner {
         this.session = session
     }
 
-    def ScriptRunner setScript( Path file ) {
-        this.scriptFile = file
-        this.setScript = file.text
+    def ScriptRunner setScript( ScriptFile script ) {
+        this.scriptFile = script
+        this.scriptText = script.text
         return this
     }
 
     def ScriptRunner setScript( String text ) {
-        this.setScript = text
+        this.scriptText = text
         return this
     }
 
@@ -128,16 +135,16 @@ class ScriptRunner {
      */
 
     def execute( List<String> args = null ) {
-        assert setScript
+        assert scriptText
 
         // init session
-        session.init(scriptFile)
+        session.init(scriptFile?.main)
 
         // start session
         session.start()
         try {
             // parse the script
-            script = parseScript(setScript, args)
+            script = parseScript(scriptText, args)
             // run the code
             run()
         }
@@ -160,13 +167,13 @@ class ScriptRunner {
      * @param args
      */
     def test ( String methodName, List<String> args = null ) {
-        assert setScript
+        assert scriptText
         assert methodName
 
         // init session
-        session.init(scriptFile)
+        session.init(scriptFile.main)
 
-        script = parseScript(setScript, args)
+        script = parseScript(scriptText, args)
         def values = args ? args.collect { parseValue(it) } : null
 
         def methodsToTest
@@ -232,6 +239,8 @@ class ScriptRunner {
         // TODO add test for this property
         session.binding.setVariable( 'baseDir', session.baseDir )
         session.binding.setVariable( 'workDir', session.workDir )
+        if( scriptFile )
+        session.binding.setVariable( 'workflow', new WorkflowMetadata(this) )
 
         // define the imports
         def importCustomizer = new ImportCustomizer()
@@ -310,8 +319,48 @@ class ScriptRunner {
         if( !cli )
             return
         def p = cli.indexOf('nextflow ')
-        if( p != -1 ) cli = 'nextflow ' + cli.substring(p+9)
-        HistoryFile.history.write( session.uniqueId, cli )
+        commandLine = p != -1 ? 'nextflow ' + cli.substring(p+9) : cli
+        HistoryFile.history.write( session.uniqueId, commandLine )
+    }
+
+    @PackageScope
+    ScriptFile getScriptFile() { scriptFile }
+
+    @PackageScope
+    String getCommandLine() { commandLine }
+
+    @CompileDynamic
+    protected fetchContainers() {
+
+        def result = [:]
+        if( session.config.process instanceof Map<String,?> ) {
+
+            /*
+             * look for `container` definition at process level
+             */
+            session.config.process.each { String name, value ->
+                    println "$name: ${value}"
+                if( name.startsWith('$') && value instanceof Map && value.container ) {
+                    result[name]=value.container
+                }
+            }
+
+            /*
+             * default container definition
+             */
+            def container = session.config.process.container
+            if( container ) {
+                if( result ) {
+                    result['default'] = container
+                }
+                else {
+                    result = container
+                }
+            }
+
+        }
+
+        return result
     }
 
     /**
