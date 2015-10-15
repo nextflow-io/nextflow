@@ -68,7 +68,7 @@ class IgGridFactory {
     private final String role
 
     // cluster related config
-    private final ClusterConfig daemonConfig
+    private final ClusterConfig clusterConfig
 
     // application config
     private final Map config
@@ -86,7 +86,7 @@ class IgGridFactory {
         log.debug "Configuration properties for role: '$role' -- ${configMap}"
 
         this.role = role
-        this.daemonConfig = new ClusterConfig('ignite', configMap, System.getenv())
+        this.clusterConfig = new ClusterConfig('ignite', configMap, System.getenv())
     }
 
     /**
@@ -124,7 +124,7 @@ class IgGridFactory {
         cacheConfig(cfg)
         ggfsConfig(cfg)
 
-        final groupName = daemonConfig.getAttribute( 'group', GRID_NAME ) as String
+        final groupName = clusterConfig.getAttribute( 'group', GRID_NAME ) as String
         log.debug "Apache Ignite config > group name: $groupName"
         cfg.setGridName(groupName)
         cfg.setUserAttributes( ROLE: role )
@@ -164,15 +164,15 @@ class IgGridFactory {
             evictionPolicy = new LruEvictionPolicy()
             atomicityMode  = CacheAtomicityMode.TRANSACTIONAL   // note: transactional is mandatory
             //queryIndexEnabled = false
-            writeSynchronizationMode = daemonConfig.getAttribute('igfs.data.writeSynchronizationMode', CacheWriteSynchronizationMode.PRIMARY_SYNC) as CacheWriteSynchronizationMode
+            writeSynchronizationMode = clusterConfig.getAttribute('igfs.data.writeSynchronizationMode', CacheWriteSynchronizationMode.PRIMARY_SYNC) as CacheWriteSynchronizationMode
             //distributionMode = GridCacheDistributionMode.PARTITIONED_ONLY
             affinityMapper = new IgfsGroupDataBlocksKeyMapper(512)
-            backups = daemonConfig.getAttribute('igfs.data.backups', 0) as int
+            backups = clusterConfig.getAttribute('igfs.data.backups', 0) as int
             // configure Off-heap memory
-            offHeapMaxMemory = daemonConfig.getAttribute('igfs.data.offHeapMaxMemory', 0) as long
+            offHeapMaxMemory = clusterConfig.getAttribute('igfs.data.offHeapMaxMemory', 0) as long
             // When storing directly off-heap it throws an exception
             // See http://stackoverflow.com/q/23399264/395921
-            memoryMode = daemonConfig.getAttribute('igfs.data.memoryMode', CacheMemoryMode.ONHEAP_TIERED) as CacheMemoryMode
+            memoryMode = clusterConfig.getAttribute('igfs.data.memoryMode', CacheMemoryMode.ONHEAP_TIERED) as CacheMemoryMode
         }
         cfg.setCacheConfiguration(dataCfg)
 
@@ -204,9 +204,9 @@ class IgGridFactory {
             defaultMode = IgfsMode.PRIMARY
             metaCacheName = 'igfs-meta'
             dataCacheName = 'igfs-data'
-            blockSize = daemonConfig.getAttribute('igfs.blockSize', 128 * 1024) as int
-            perNodeBatchSize = daemonConfig.getAttribute('igfs.perNodeBatchSize', 512) as int
-            perNodeParallelBatchCount = daemonConfig.getAttribute('igfs.perNodeParallelBatchCount', 16) as int
+            blockSize = clusterConfig.getAttribute('igfs.blockSize', 128 * 1024) as int
+            perNodeBatchSize = clusterConfig.getAttribute('igfs.perNodeBatchSize', 512) as int
+            perNodeParallelBatchCount = clusterConfig.getAttribute('igfs.perNodeParallelBatchCount', 16) as int
         }
         cfg.setFileSystemConfiguration(ggfsCfg)
 
@@ -215,7 +215,7 @@ class IgGridFactory {
 
     protected collisionConfig( IgniteConfiguration cfg ) {
 
-        def slots = daemonConfig.getAttribute('slots', Runtime.getRuntime().availableProcessors() ) as int
+        def slots = clusterConfig.getAttribute('slots', Runtime.getRuntime().availableProcessors() ) as int
         def maxActivesJobs = slots * 3
         log.debug "Apache Ignite config > setting slots: $slots -- maxActivesJobs: $maxActivesJobs"
 
@@ -235,7 +235,7 @@ class IgGridFactory {
         def discoverCfg = new TcpDiscoverySpi()
 
         // -- try to set the local address by using the interface configuration
-        final addresses = daemonConfig.getNetworkInterfaceAddresses()
+        final addresses = clusterConfig.getNetworkInterfaceAddresses()
         if( addresses ) {
             final addr = addresses.get(0)
             final indx = addr.indexOf(':')
@@ -253,7 +253,7 @@ class IgGridFactory {
         }
 
         // -- try to set the join/discovery mechanism
-        def join = daemonConfig.getClusterJoin()
+        def join = clusterConfig.getClusterJoin()
         if( join ) {
             if( join == 'multicast' ) {
                 log.debug "Ignite config > default discovery multicast"
@@ -320,7 +320,7 @@ class IgGridFactory {
         }
 
         // check some optional params
-        daemonConfig.getAttributesNames('tcp').each {
+        clusterConfig.getAttributesNames('tcp').each {
             checkAndSet(discoverCfg,'tcp.' + it )
         }
         cfg.setDiscoverySpi( discoverCfg )
@@ -328,7 +328,7 @@ class IgGridFactory {
     }
 
     protected void checkAndSet( def discoverCfg, String name, defValue = null ) {
-        def value = daemonConfig.getAttribute(name, defValue)
+        def value = clusterConfig.getAttribute(name, defValue)
         if( value != null ) {
             def p = name.split(/\./)[-1]
             def x = value instanceof Duration ? value.toMillis() : value
