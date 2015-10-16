@@ -339,7 +339,6 @@ class ScriptRunner {
              * look for `container` definition at process level
              */
             session.config.process.each { String name, value ->
-                    println "$name: ${value}"
                 if( name.startsWith('$') && value instanceof Map && value.container ) {
                     result[name]=value.container
                 }
