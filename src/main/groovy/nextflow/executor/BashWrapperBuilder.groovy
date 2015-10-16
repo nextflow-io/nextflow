@@ -202,7 +202,6 @@ class BashWrapperBuilder {
         this(new TaskBean(task))
     }
 
-
     BashWrapperBuilder( TaskBean bean, ScriptFileCopyStrategy strategy = null ) {
         this.bean = bean
         this.copyStrategy = strategy ?: new SimpleFileCopyStrategy(bean)

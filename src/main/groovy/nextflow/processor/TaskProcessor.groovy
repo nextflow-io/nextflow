@@ -18,6 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.processor
+
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -29,6 +30,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 import ch.grengine.Grengine
 import com.google.common.hash.HashCode
+import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -563,6 +565,7 @@ abstract class TaskProcessor {
 
             // set the exit code in to the task object
             task.exitStatus = task.config.getValidExitStatus()[0]
+            task.cached = true
 
             // -- now bind the results
             finalizeTask0(task)
@@ -630,6 +633,7 @@ abstract class TaskProcessor {
             collectOutputs(task, folder, stdoutFile, ctx)
 
             // set the exit code in to the task object
+            task.cached = true
             task.hash = hash
             task.workDir = folder
             task.stdout = stdoutFile
@@ -677,6 +681,7 @@ abstract class TaskProcessor {
      * @return The {@code ErrorStrategy} applied
      */
     final synchronized protected ErrorStrategy resumeOrDie( TaskRun task, Throwable error ) {
+        if( log.isTraceEnabled() )
         log.trace "Handling unexpected condition for\n  task: $task\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
         try {
@@ -880,6 +885,39 @@ abstract class TaskProcessor {
         result.toString()
     }
 
+    /**
+     * Publish output files to a specified target folder
+     *
+     * @param task The task whose outputs need to be published
+     * @param overwrite When {@code true} any existing file will be overwritten, otherwise the publishing is ignored
+     */
+    @CompileStatic
+    protected void publishOutputs( TaskRun task ) {
+        def publish = task.config.getPublishDir()
+        if( !publish ) {
+            return
+        }
+
+        if( publish.overwrite == null ) {
+            publish.overwrite = !task.cached
+        }
+
+        List<Path> files = []
+        task.getOutputsByType(FileOutParam).each { param, value ->
+            if( value instanceof Path ) {
+                files << ((Path)value)
+            }
+            else if( value instanceof Collection<Path> ) {
+                value.each { Path it -> files << it }
+            }
+            else if( value != null ) {
+                throw new IllegalArgumentException("Unknown output file object [${value.class.name}]: ${value}")
+            }
+        }
+
+
+        publish.apply(files, task.targetDir, task.processor)
+    }
 
 
     /**
@@ -1643,6 +1681,7 @@ abstract class TaskProcessor {
         // -- bind output (files)
         if( task.canBind ) {
             bindOutputs(task)
+            publishOutputs(task)
         }
 
         // increment the number of processes executed
@@ -1654,6 +1693,19 @@ abstract class TaskProcessor {
         sendPoisonPill()
         session.taskDeregister(this)
         processor.terminate()
+    }
+
+    /**
+     * Prints a warning message. This method uses a {@link Memoized} annotation
+     * to avoid to show multiple times the same message when multiple process instances
+     * invoke it.
+     *
+     * @param message The warning message to print
+     */
+    @Memoized
+    def warn( String message ) {
+        log.warn "Process `$name` $message"
+        return null
     }
 
 }

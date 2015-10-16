@@ -152,7 +152,7 @@ class FilesEx {
     }
 
     /**
-     * Copy or a file or a directory content.
+     * Copy a file or a directory content.
      * It mimics the semantic of Linux {@code cp -r <source> <target>} command.
      *
      * @param source The source file or directory

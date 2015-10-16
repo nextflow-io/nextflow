@@ -120,6 +120,11 @@ class TaskRun {
     boolean canBind
 
     /**
+     * Set {@code true} when the task executed is resumed from the cache
+     */
+    boolean cached
+
+    /**
      * Task produced standard output
      */
     def stdout
@@ -619,5 +624,6 @@ class TaskRun {
     protected placeholderChar() {
         (config.placeholder ?: '!') as char
     }
+
 }
 

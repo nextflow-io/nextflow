@@ -22,6 +22,7 @@ package nextflow.processor
 import java.nio.file.Paths
 
 import nextflow.exception.FailedGuardException
+import nextflow.script.BaseScript
 import nextflow.script.TaskClosure
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -404,6 +405,35 @@ class TaskConfigTest extends Specification {
         config.ext.alpha == 'AAAA'
         config.ext.delta == 'dddd'
         config.ext.omega == 'oooo'
+
+    }
+
+
+    def 'should create config object' () {
+
+        setup:
+        def script = Mock(BaseScript)
+        def process = new ProcessConfig(script)
+        PublishDir publish
+
+        when:
+        process.publishDir '/data'
+        publish = process.createTaskConfig().getPublishDir()
+        then:
+        publish.path == Paths.get('/data').complete()
+        publish.pattern == null
+        publish.overwrite == null
+        publish.mode == null
+
+
+        when:
+        process.publishDir '/data', overwrite: false, mode: 'copy', pattern: '*.txt'
+        publish = process.createTaskConfig().getPublishDir()
+        then:
+        publish.path == Paths.get('/data').complete()
+        publish.pattern == '*.txt'
+        publish.overwrite == false
+        publish.mode == PublishDir.Mode.COPY
 
     }
 

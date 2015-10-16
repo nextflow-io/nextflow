@@ -245,4 +245,26 @@ class ProcessConfigTest extends Specification {
 
     }
 
+    def 'should create PublishDir object' () {
+
+        setup:
+        def script = Mock(BaseScript)
+        def config = new ProcessConfig(script)
+
+        when:
+        config.publishDir '/data'
+        then:
+        config.get('publishDir') == '/data'
+
+        when:
+        config.publishDir '/data', mode: 'link', pattern: '*.bam'
+        then:
+        config.get('publishDir') == [[mode: 'link', pattern: '*.bam'], '/data']
+
+        when:
+        config.publishDir path: '/data', mode: 'link', pattern: '*.bam'
+        then:
+        config.get('publishDir') == [path: '/data', mode: 'link', pattern: '*.bam']
+    }
+
 }

@@ -257,6 +257,11 @@ class TaskConfig extends LazyMap {
         return (path as Path).complete()
     }
 
+    PublishDir getPublishDir() {
+        def obj = get('publishDir')
+        obj != null ? PublishDir.create(obj) : null
+    }
+
 
     /**
      * @return Parse the {@code clusterOptions} configuration option and return the entries as a list of values

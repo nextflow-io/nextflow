@@ -1,0 +1,201 @@
+/*
+ * Copyright (c) 2013-2015, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2015, Paolo Di Tommaso and the respective authors.
+ *
+ *   This file is part of 'Nextflow'.
+ *
+ *   Nextflow is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   Nextflow is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package nextflow.processor
+
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.util.concurrent.TimeUnit
+
+import nextflow.file.FileHelper
+import spock.lang.Specification
+
+/**
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+class PublishDirTest extends Specification {
+
+    def 'should create a publish dir obj'() {
+
+        PublishDir publish
+
+        when:
+        publish =  PublishDir.create('/data')
+        then:
+        publish.path == Paths.get('/data')
+
+        when:
+        publish =  PublishDir.create('data')
+        then:
+        publish.path == Paths.get('data').complete()
+
+        when:
+        publish =  PublishDir.create( Paths.get('data') )
+        then:
+        publish.path == Paths.get('data').complete()
+
+        when:
+        publish =  PublishDir.create( [path: '/some/dir', overwrite: true, pattern: '*.bam', mode: 'link'] )
+        then:
+        publish.path == Paths.get('/some/dir')
+        publish.mode == PublishDir.Mode.LINK
+        publish.pattern == '*.bam'
+        publish.overwrite
+
+        when:
+        publish =  PublishDir.create( [path: '/some/data', mode: 'copy'] )
+        then:
+        publish.path == Paths.get('/some/data')
+        publish.mode == PublishDir.Mode.COPY
+        publish.pattern == null
+        publish.overwrite == null
+
+
+        when:
+        publish =  PublishDir.create( [[overwrite: false, pattern: '*.txt', mode: 'copy'], 'this/folder'] )
+        then:
+        publish.path == Paths.get('this/folder').complete()
+        publish.mode == PublishDir.Mode.COPY
+        publish.pattern == '*.txt'
+        publish.overwrite == false
+
+    }
+
+    def 'should create symlinks for output files' () {
+
+        given:
+        def folder = Files.createTempDirectory('nxf')
+        folder.resolve('work-dir').mkdir()
+        folder.resolve('work-dir/file1.txt').text = 'aaa'
+        folder.resolve('work-dir/file2.bam').text = 'bbb'
+        folder.resolve('work-dir/file3.fastq').text = 'ccc'
+        folder.resolve('work-dir/file4.temp').text = 'zzz'
+
+        final publishDir = folder.resolve('pub-dir')
+
+        when:
+        def workDir = folder.resolve('work-dir')
+        def publisher = new PublishDir(path: publishDir)
+        publisher.apply( [workDir.resolve('file1.txt'),workDir.resolve('file2.bam'),workDir.resolve('file3.fastq')], workDir )
+
+        then:
+        publishDir.resolve('file1.txt').exists()
+        publishDir.resolve('file2.bam').exists()
+        publishDir.resolve('file3.fastq').exists()
+        !publishDir.resolve('file3.temp').exists()
+
+        publishDir.resolve('file1.txt').isSymlink()
+        publishDir.resolve('file2.bam').isSymlink()
+        publishDir.resolve('file3.fastq').isSymlink()
+
+
+        when:
+        publishDir.deleteDir()
+        publisher = new PublishDir(path: publishDir, pattern: '*.bam')
+        publisher.apply( [workDir.resolve('file1.txt'),workDir.resolve('file2.bam'),workDir.resolve('file3.fastq')], workDir )
+
+        then:
+        !publishDir.resolve('file1.txt').exists()
+        publishDir.resolve('file2.bam').exists()
+        !publishDir.resolve('file3.fastq').exists()
+        !publishDir.resolve('file3.temp').exists()
+
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
+    def 'should copy output files' () {
+
+        given:
+        def folder = Files.createTempDirectory('nxf')
+        folder.resolve('work-dir').mkdir()
+        folder.resolve('work-dir/file1.txt').text = 'aaa'
+        folder.resolve('work-dir/file2.bam').text = 'bbb'
+        folder.resolve('work-dir/file3.fastq').text = 'ccc'
+        folder.resolve('work-dir/dir-x').mkdir()
+        folder.resolve('work-dir/dir-x').resolve('file.1').text = 'xxx'
+        folder.resolve('work-dir/dir-x').resolve('file.2').text = 'yyy'
+
+        final publishDir = folder.resolve('pub-dir')
+
+        when:
+        def workDir = folder.resolve('work-dir')
+        def publisher = new PublishDir(path: publishDir, mode: 'copy')
+        publisher.apply( [workDir.resolve('file1.txt'), workDir.resolve('file2.bam'), workDir.resolve('dir-x')], workDir)
+
+        PublishDir.executor.shutdown()
+        PublishDir.executor.awaitTermination(5, TimeUnit.SECONDS)
+
+        then:
+        publishDir.resolve('file1.txt').text == 'aaa'
+        publishDir.resolve('file2.bam').text == 'bbb'
+        publishDir.resolve('dir-x').isDirectory()
+        publishDir.resolve('dir-x/file.1').text == 'xxx'
+        publishDir.resolve('dir-x/file.2').text == 'yyy'
+
+        !publishDir.resolve('file3.fastq').exists()
+        !publishDir.resolve('file3.temp').exists()
+
+        !publishDir.resolve('file1.txt').isSymlink()
+        !publishDir.resolve('file2.bam').isSymlink()
+        !publishDir.resolve('file3.fastq').isSymlink()
+        !publishDir.resolve('dir-x').isSymlink()
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
+    def 'should default mode to `symlink`' () {
+
+        given:
+        def processor = [:] as TaskProcessor
+        processor.name = 'foo'
+
+        def sourceDir = Paths.get('/work/dir')
+        def targetDir = Paths.get('/scratch/dir')
+        def publisher = new PublishDir(path: targetDir, sourceDir: sourceDir, )
+
+        when:
+        publisher.validatePublishMode()
+        then:
+        publisher.mode == PublishDir.Mode.SYMLINK
+    }
+
+
+    def 'should change mode to `copy`' () {
+
+        given:
+        def processor = [:] as TaskProcessor
+        processor.name = 'foo'
+
+        def sourceDir = Paths.get('/work/dir')
+        def targetDir = FileHelper.asPath( 's3://bucket/work' )
+        def publisher = new PublishDir(mode:'symlink', path: targetDir, sourceDir: sourceDir, processor: processor)
+
+        when:
+        publisher.validatePublishMode()
+        then:
+        publisher.mode == PublishDir.Mode.COPY
+    }
+}
