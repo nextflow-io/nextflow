@@ -20,6 +20,7 @@
 
 package nextflow.processor
 
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
@@ -94,7 +95,7 @@ class PublishDirTest extends Specification {
         when:
         def workDir = folder.resolve('work-dir')
         def publisher = new PublishDir(path: publishDir)
-        publisher.apply( [workDir.resolve('file1.txt'),workDir.resolve('file2.bam'),workDir.resolve('file3.fastq')], workDir )
+        publisher.apply( [workDir.resolve('file1.txt'),workDir.resolve('file2.bam'),workDir.resolve('file3.fastq')] )
 
         then:
         publishDir.resolve('file1.txt').exists()
@@ -110,7 +111,7 @@ class PublishDirTest extends Specification {
         when:
         publishDir.deleteDir()
         publisher = new PublishDir(path: publishDir, pattern: '*.bam')
-        publisher.apply( [workDir.resolve('file1.txt'),workDir.resolve('file2.bam'),workDir.resolve('file3.fastq')], workDir )
+        publisher.apply( [workDir.resolve('file1.txt'),workDir.resolve('file2.bam'),workDir.resolve('file3.fastq')] )
 
         then:
         !publishDir.resolve('file1.txt').exists()
@@ -141,7 +142,7 @@ class PublishDirTest extends Specification {
         when:
         def workDir = folder.resolve('work-dir')
         def publisher = new PublishDir(path: publishDir, mode: 'copy')
-        publisher.apply( [workDir.resolve('file1.txt'), workDir.resolve('file2.bam'), workDir.resolve('dir-x')], workDir)
+        publisher.apply( [workDir.resolve('file1.txt'), workDir.resolve('file2.bam'), workDir.resolve('dir-x')] )
 
         PublishDir.executor.shutdown()
         PublishDir.executor.awaitTermination(5, TimeUnit.SECONDS)
@@ -172,9 +173,8 @@ class PublishDirTest extends Specification {
         def processor = [:] as TaskProcessor
         processor.name = 'foo'
 
-        def sourceDir = Paths.get('/work/dir')
         def targetDir = Paths.get('/scratch/dir')
-        def publisher = new PublishDir(path: targetDir, sourceDir: sourceDir, )
+        def publisher = new PublishDir(path: targetDir, sourceFileSystem: FileSystems.default)
 
         when:
         publisher.validatePublishMode()
@@ -189,9 +189,8 @@ class PublishDirTest extends Specification {
         def processor = [:] as TaskProcessor
         processor.name = 'foo'
 
-        def sourceDir = Paths.get('/work/dir')
         def targetDir = FileHelper.asPath( 's3://bucket/work' )
-        def publisher = new PublishDir(mode:'symlink', path: targetDir, sourceDir: sourceDir, processor: processor)
+        def publisher = new PublishDir(mode:'symlink', path: targetDir, sourceFileSystem: FileSystems.default)
 
         when:
         publisher.validatePublishMode()

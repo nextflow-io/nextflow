@@ -20,6 +20,7 @@
 
 package nextflow.processor
 import java.nio.file.FileAlreadyExistsException
+import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.PathMatcher
@@ -70,7 +71,7 @@ class PublishDir {
 
     private PathMatcher matcher
 
-    private Path sourceDir
+    private FileSystem sourceFileSystem
 
     private TaskProcessor processor
 
@@ -163,10 +164,14 @@ class PublishDir {
      * @param task The task whose output need to be published
      */
     @CompileStatic
-    void apply( List<Path> files, Path sourceDir, TaskProcessor processor = null ) {
+    void apply( List<Path> files, TaskProcessor processor = null ) {
 
-        this.sourceDir = sourceDir
+        if( !files ) {
+            return
+        }
+
         this.processor = processor
+        this.sourceFileSystem = files[0].fileSystem
 
         createPublishDir()
 
@@ -180,7 +185,7 @@ class PublishDir {
         final inProcess = mode == Mode.LINK || mode == Mode.SYMLINK
 
         if( pattern ) {
-            this.matcher = FileHelper.getPathMatcherFor("glob:${pattern}", sourceDir.fileSystem)
+            this.matcher = FileHelper.getPathMatcherFor("glob:${pattern}", sourceFileSystem)
         }
 
         if( !inProcess ) {
@@ -266,7 +271,7 @@ class PublishDir {
     @PackageScope
     void validatePublishMode() {
 
-        if( sourceDir.fileSystem != path.fileSystem ) {
+        if( sourceFileSystem != path.fileSystem ) {
             if( !mode ) {
                 mode = Mode.COPY
             }
