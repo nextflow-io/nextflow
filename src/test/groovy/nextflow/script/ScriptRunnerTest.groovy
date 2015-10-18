@@ -219,10 +219,8 @@ class ScriptRunnerTest extends Specification {
 
         setup:
         def session = new Session( executor: 'nope' ) {
-            Throwable error
             @Override
             void abort(Throwable cause) {
-                this.error = cause
                 forceTermination()
             }
         }
@@ -240,9 +238,10 @@ class ScriptRunnerTest extends Specification {
         when:
         runner.setScript(script).execute()
         then:
-        session.error instanceof ProcessScriptException
-        session.error.cause instanceof MissingPropertyException
-        session.error.cause.message =~ /Unknown variable 'HELLO' -- .*/
+        session.fault.error instanceof ProcessScriptException
+        session.fault.error.cause instanceof MissingPropertyException
+        session.fault.error.cause.message =~ /Unknown variable 'HELLO' -- .*/
+        session.fault.report =~ /Unknown variable 'HELLO' -- .*/
 
     }
 

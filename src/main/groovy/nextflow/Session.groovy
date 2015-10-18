@@ -33,6 +33,7 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.exception.MissingLibraryException
 import nextflow.processor.TaskDispatcher
 import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
 import nextflow.script.ScriptBinding
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
@@ -48,6 +49,12 @@ import nextflow.util.Duration
 @Slf4j
 @CompileStatic
 class Session implements ISession {
+
+    static class TaskFault {
+        Throwable error
+        String report
+        TaskRun task
+    }
 
     static final String EXTRAE_TRACE_CLASS = 'nextflow.extrae.ExtraeTraceObserver'
 
@@ -111,6 +118,8 @@ class Session implements ISession {
 
     private volatile ExecutorService execService
 
+    private volatile TaskFault fault
+
     private ScriptBinding binding
 
     private ClassLoader classLoader
@@ -124,6 +133,8 @@ class Session implements ISession {
     private boolean statsEnabled
 
     boolean getStatsEnabled() { statsEnabled }
+
+    TaskFault getFault() { fault }
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -424,6 +435,11 @@ class Session implements ISession {
 
         // -- after the first time remove all of them to avoid it's called twice
         shutdownCallbacks.clear()
+    }
+
+    void abort(Throwable cause, TaskRun task, String message) {
+        this.fault = new TaskFault(error: cause, task: task, report: message)
+        abort(cause)
     }
 
     void abort(Throwable cause = null) {

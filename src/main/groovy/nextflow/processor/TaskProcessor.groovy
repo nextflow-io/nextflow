@@ -684,6 +684,7 @@ abstract class TaskProcessor {
         if( log.isTraceEnabled() )
         log.trace "Handling unexpected condition for\n  task: $task\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
+        final message = []
         try {
             // do not recoverable error, just trow it again
             if( error instanceof Error ) throw error
@@ -708,7 +709,6 @@ abstract class TaskProcessor {
                 return ErrorStrategy.TERMINATE
             }
 
-            def message = []
             message << "Error executing process > '${task?.name ?: name}'"
             switch( error ) {
                 case ProcessException:
@@ -729,7 +729,7 @@ abstract class TaskProcessor {
             log.error("Execution aborted due to an unexpected error", e )
         }
 
-        session.abort(error)
+        session.abort(error, task, message.join('\n'))
         return ErrorStrategy.TERMINATE
     }
 
