@@ -25,6 +25,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
+import nextflow.Global
 import nextflow.file.FileHelper
 import spock.lang.Specification
 
@@ -119,7 +120,6 @@ class PublishDirTest extends Specification {
         !publishDir.resolve('file3.fastq').exists()
         !publishDir.resolve('file3.temp').exists()
 
-
         cleanup:
         folder?.deleteDir()
 
@@ -128,6 +128,7 @@ class PublishDirTest extends Specification {
     def 'should copy output files' () {
 
         given:
+        Global.session = null
         def folder = Files.createTempDirectory('nxf')
         folder.resolve('work-dir').mkdir()
         folder.resolve('work-dir/file1.txt').text = 'aaa'
