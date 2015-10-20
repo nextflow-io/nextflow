@@ -1092,6 +1092,7 @@ The directives are:
 * `memory`_
 * `module`_
 * `penv`_
+* `publishDir`_
 * `scratch`_
 * `storeDir`_
 * `tag`_
@@ -1415,14 +1416,14 @@ The ``storeDir`` directive allows you to define a directory that is used as `per
 
 In more detail, it affects the process execution in two main ways:
 
-#. The process is executed only if the files declared in the `output` clause do not exists in directory specified by
+#. The process is executed only if the files declared in the `output` clause do not exist in the directory specified by
    the ``storeDir`` directive. When the files exist the process execution is skipped and these files are used as
    the actual process result.
 
-#. Whenever a process complete successfully the files listed in the `output` declaration block are copied in the directory
+#. Whenever a process is successfully completed the files listed in the `output` declaration block are copied into the directory
    specified by the ``storeDir`` directive.
 
-The following example shows how use the ``storeDir`` directive to create a directory containing a BLAST database
+The following example shows how to use the ``storeDir`` directive to create a directory containing a BLAST database
 for each species specified by an input parameter::
 
   genomes = Channel.fromPath(params.genomes)
@@ -1445,6 +1446,81 @@ for each species specified by an input parameter::
 
   }
 
+
+.. warning:: The ``storeDir`` directive is meant for long term process caching and should not be used to
+    output the files produced by a process to a specific folder or organise result data in `semantic` directory structure.
+    In these cases you may use the `publishDir`_ directive instead.
+
+
+publishDir
+-----------
+
+The ``publishDir`` directive allows you to publish the process output files to a specified folder. For example::
+
+
+    process foo {
+
+        publishDir '/data/chunks'
+
+        output:
+        file 'chunk_*' into letters
+
+        '''
+        printf 'Hola' | split -b 1 - chunk_
+        '''
+    }
+
+
+The above example splits the string ``Hola`` into file chunks of a single byte. When complete the ``chunk_*`` output files
+are published into the ``/data/chunks`` folder.
+
+By default files are published to the target folder creating a *symbolic link* for each process output that links
+the file produced into the process working directory. This behavior can be modified using the ``mode`` parameter.
+
+Table of optional parameters that can be used with the ``publishDir`` directive:
+
+=============== =================
+Name            Description
+=============== =================
+mode            The file publishing method. See the following table for possible values.
+overwrite       When ``true`` any existing file in the specified folder will be overridden (default: ``true`` during normal
+                pipeline execution and ``false`` when pipeline execution is `resumed`).
+pattern         Specifies a `glob`_ file pattern that selects which files to publish from the overall set of output files.
+path            Specifies the directory where files need to be published. **Note**: the syntax ``publishDir '/some/dir'`` is a shortcut for ``publishDir path: '/some/dir'``.
+=============== =================
+
+Table of publish modes:
+
+=============== =================
+ Mode           Description
+=============== =================
+symlink         Creates a `symbolic link` in the published directory for each process output file.
+link            Creates a `hard link` in the published directory for each process output file.
+copy            Copies the output files into the published directory.
+move            Moves the output files into the published directory. **Note**: this is only supposed to be used for a `terminating` process i.e. a process whose output is not consumed by any other downstream process.
+=============== =================
+
+.. note:: The `mode` value needs to be specified as a string literal i.e. enclosed by quote characters. Multiple parameters
+    need to be separated by a colon character. For example:
+
+::
+
+    process foo {
+
+        publishDir '/data/chunks', mode: 'copy', overwrite: false
+
+        output:
+        file 'chunk_*' into letters
+
+        '''
+        printf 'Hola' | split -b 1 - chunk_
+        '''
+    }
+
+
+.. warning:: Files are published into the specified directory in an *asynchronous* manner, thus they may not be available
+  when the producing process is finished. For this reason files published by a process must not be
+  accessed by other downstream processes.
 
 validExitStatus
 -------------------
