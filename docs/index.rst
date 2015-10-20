@@ -25,6 +25,7 @@ Contents:
    gridgain
    tracing
    sharing
+   metadata
    example
 
 
