@@ -40,8 +40,8 @@ class LocalRepositoryProviderTest extends Specification {
         testFolder = Files.createTempDirectory('test').toAbsolutePath()
 
         // create the main project
-        testFolder.resolve('test/pipe').mkdirs()
-        def dir = testFolder.resolve('test/pipe').toFile()
+        testFolder.resolve('project_hello').mkdirs()
+        def dir = testFolder.resolve('project_hello').toFile()
         def init = Git.init()
         def repo = init.setDirectory( dir ).call()
         new File(dir, 'main.nf').text = 'main script'
@@ -58,9 +58,9 @@ class LocalRepositoryProviderTest extends Specification {
 
         given:
         def config = new ProviderConfig('local', [path: testFolder])
-        def manager = new LocalRepositoryProvider('nextflow-io/hello', config)
+        def manager = new LocalRepositoryProvider('project_hello', config)
         expect:
-        manager.getEndpointUrl() == "file:${testFolder}/nextflow-io/hello".toString()
+        manager.getEndpointUrl() == "file:${testFolder}/project_hello".toString()
 
     }
 
@@ -68,24 +68,24 @@ class LocalRepositoryProviderTest extends Specification {
 
         given:
         def config = new ProviderConfig('local', [path: testFolder])
-        def manager = new LocalRepositoryProvider('nextflow-io/hello', config)
+        def manager = new LocalRepositoryProvider('project_hello', config)
         expect:
-        manager.getContentUrl('main.nf') == "file:${testFolder}/nextflow-io/hello/main.nf".toString()
+        manager.getContentUrl('main.nf') == "file:${testFolder}/project_hello/main.nf".toString()
 
     }
 
     def 'should return local clone url'() {
         given:
         def config = new ProviderConfig('local', [path: testFolder])
-        def manager = new LocalRepositoryProvider('nextflow-io/hello', config)
+        def manager = new LocalRepositoryProvider('project_hello', config)
         expect:
-        manager.getCloneUrl() == "file:${testFolder}/nextflow-io/hello/.git".toString()
+        manager.getCloneUrl() == "file:${testFolder}/project_hello/.git".toString()
     }
 
     def 'should read file bytes' () {
         given:
         def config = new ProviderConfig('local', [path: testFolder])
-        def manager = new LocalRepositoryProvider('test/pipe', config)
+        def manager = new LocalRepositoryProvider('project_hello', config)
         expect:
         new String(manager.readBytes('main.nf')) == "main script"
     }

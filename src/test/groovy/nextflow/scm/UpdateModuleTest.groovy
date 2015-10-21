@@ -99,7 +99,7 @@ class UpdateModuleTest extends Specification {
         AssetManager.root = target.toFile()
 
         when:
-        def manager = new AssetManager("file:${baseFolder.resolve('pipe.git')}")
+        def manager = new AssetManager("file:${baseFolder}/pipe_x")
         manager.download()
         manager.updateModules()
 

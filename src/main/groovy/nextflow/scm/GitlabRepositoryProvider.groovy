@@ -41,7 +41,8 @@ class GitlabRepositoryProvider extends RepositoryProvider {
         URLEncoder.encode(project,'utf-8')
     }
 
-    protected void auth( HttpURLConnection connection ) {
+    @Override
+    protected void auth( URLConnection connection ) {
         if(!config.token)
             throw new AbortOperationException("Missing Gitlab private token -- Check file: ${ProviderConfig.SCM_FILE}")
         // set the token in the request header

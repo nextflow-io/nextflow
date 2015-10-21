@@ -51,8 +51,8 @@ class RepositoryProviderTest extends Specification {
         provider.endpointUrl == 'https://bitbucket.org/api/2.0/repositories/project/z'
 
         when:
-        provider = RepositoryProvider.create(new ProviderConfig('local', [path:'/user/data']),'project/w')
+        provider = RepositoryProvider.create(new ProviderConfig('local', [path:'/user/data']),'local/w')
         then:
-        provider.endpointUrl == 'file:/user/data/project/w'
+        provider.endpointUrl == 'file:/user/data/w'
     }
 }
