@@ -299,7 +299,7 @@ class ConfigBuilder {
         }
 
         def message = "Unknown configuration profile: '${profile}'"
-        def choices = names.findBestMatchesFor(profile)
+        def choices = names.closest(profile)
         if( choices ) {
             message += "\n\nDid you mean one of these?\n"
             choices.each { message += "    ${it}\n" }

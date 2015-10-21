@@ -594,7 +594,7 @@ class Bolts {
      * @return The list of options that best matches to the specified example -- return an empty list if none match
      */
     @CompileDynamic
-    static List<String> findBestMatchesFor( Collection<String> options, String sample ) {
+    static List<String> closest(Collection<String> options, String sample ) {
         assert sample
 
         if( !options )

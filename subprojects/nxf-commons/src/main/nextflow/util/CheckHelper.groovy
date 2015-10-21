@@ -101,7 +101,7 @@ class CheckHelper {
 
         for( String key : params.keySet() ) {
             if( !valid.contains(key) ) {
-                def matches = Bolts.findBestMatchesFor(valid,key) ?: valid
+                def matches = Bolts.closest(valid,key) ?: valid
                 def message = "Unknown argument '${key}' for operator '$name'. Did you mean one of these?\n" + matches.collect { "  $it"}.join('\n')
                 throw new IllegalArgumentException(message)
             }

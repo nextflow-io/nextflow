@@ -172,10 +172,10 @@ class BoltsTest extends Specification {
         def salut = ['hello','hola','halo','hey','ciao','bonjour']
 
         expect:
-        salut.findBestMatchesFor('hola') == ['hola']
-        salut.findBestMatchesFor('hol') == ['hola']
-        salut.findBestMatchesFor('cioa') == ['ciao']
-        salut.findBestMatchesFor('helo') == ['hello','halo']
+        salut.closest('hola') == ['hola']
+        salut.closest('hol') == ['hola']
+        salut.closest('cioa') == ['ciao']
+        salut.closest('helo') == ['hello', 'halo']
     }
 
     def 'should check lower case strings' () {
