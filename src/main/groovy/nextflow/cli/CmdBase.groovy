@@ -37,6 +37,6 @@ abstract class CmdBase implements Runnable {
 
     void setLauncher( Launcher value ) { this.launcher = value }
 
-    @Parameter(names='-h', description = 'Print command usage', arity = 0, help = true)
+    @Parameter(names=['-h','-help'], description = 'Print the command usage', arity = 0, help = true)
     boolean help
 }

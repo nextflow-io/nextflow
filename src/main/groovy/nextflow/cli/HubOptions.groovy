@@ -32,7 +32,7 @@ import groovy.transform.CompileStatic
 @CompileStatic
 trait HubOptions {
 
-    @Parameter(names=['-hub'], description = "Service hub where pipeline is hosted")
+    @Parameter(names=['-hub'], description = "Service hub where the project is hosted")
     String hubProvider
 
     @Parameter(names='-user', description = 'Private repository user name')

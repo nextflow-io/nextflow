@@ -34,7 +34,7 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "View a pipeline script")
+@Parameters(commandDescription = "View project script file(s)")
 class CmdView extends CmdBase {
 
     static final NAME = 'view'
@@ -42,7 +42,7 @@ class CmdView extends CmdBase {
     @Override
     String getName() { NAME }
 
-    @Parameter(description = 'pipeline name', required = true)
+    @Parameter(description = 'project name', required = true)
     List<String> args = []
 
     @Parameter(names = '-q', description = 'Hide header line', arity = 0)
@@ -56,7 +56,7 @@ class CmdView extends CmdBase {
 
         def manager = new AssetManager(args[0])
         if( !manager.isLocal() )
-            throw new AbortOperationException("Unknown pipeline name '${args[0]}'")
+            throw new AbortOperationException("Unknown project name `${args[0]}`")
 
         if( all ) {
             if( !quiet )

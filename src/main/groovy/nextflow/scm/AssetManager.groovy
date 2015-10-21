@@ -242,7 +242,7 @@ class AssetManager {
         def last = parts[-1]
         if( last.endsWith('.nf') || last.endsWith('.nxf') ) {
             if( parts.size()==1 )
-                throw new AbortOperationException("Not a valid pipeline name: $name")
+                throw new AbortOperationException("Not a valid project name: $name")
 
             if( parts.size()==2 ) {
                 mainScript = last
@@ -258,7 +258,7 @@ class AssetManager {
             return parts.join('/')
         }
         else if( parts.size()>2 ) {
-            throw new AbortOperationException("Not a valid pipeline name: $name")
+            throw new AbortOperationException("Not a valid project name: $name")
         }
         else {
             name = parts[0]
@@ -322,7 +322,7 @@ class AssetManager {
 
         final config = providerConfigs.find { it.name == providerName }
         if( !config )
-            throw new AbortOperationException("Unknown pipeline repository configuration provider: $providerName")
+            throw new AbortOperationException("Unknown repository configuration provider: $providerName")
 
         RepositoryProvider .create(config, project)
 
@@ -367,13 +367,13 @@ class AssetManager {
 
     File getMainScriptFile() {
         if( !localPath.exists() ) {
-            throw new AbortOperationException("Unknown pipeline folder: $localPath")
+            throw new AbortOperationException("Unknown project folder: $localPath")
         }
 
         def mainScript = getMainScriptName()
         def result = new File(localPath, mainScript)
         if( !result.exists() )
-            throw new AbortOperationException("Missing pipeline script: $result")
+            throw new AbortOperationException("Missing project main script: $result")
 
         return result
     }
@@ -414,7 +414,7 @@ class AssetManager {
             }
         }
         catch( Exception e ) {
-            log.debug "Cannot read pipeline manifest -- Cause: ${e.message}"
+            log.debug "Cannot read project manifest -- Cause: ${e.message}"
         }
         // by default return an empty object
         return result ?: new ConfigObject()
@@ -465,7 +465,7 @@ class AssetManager {
      * @return The list of available pipelines
      */
     static List<String> list() {
-        log.debug "Listing pipelines in folders: $root"
+        log.debug "Listing projects in folder: $root"
 
         def result = []
         if( !root.exists() )
@@ -568,7 +568,7 @@ class AssetManager {
 
         def result = pull.call()
         if(!result.isSuccessful())
-            throw new AbortOperationException("Cannot pull pipeline: '$project ' -- ${result.toString()}")
+            throw new AbortOperationException("Cannot pull project `$project` -- ${result.toString()}")
 
         return result?.mergeResult?.mergeStatus?.toString()
 
@@ -584,10 +584,10 @@ class AssetManager {
 
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
-        log.debug "Clone pipeline $project  -- Using remote URI: ${uri} into: $directory"
+        log.debug "Clone project `$project` -- Using remote URI: ${uri} into: $directory"
 
         if( !uri )
-            throw new AbortOperationException("Cannot find the specified pipeline: $project ")
+            throw new AbortOperationException("Cannot find the specified project: $project")
 
         clone.setURI(uri)
         clone.setDirectory(directory)
@@ -719,7 +719,7 @@ class AssetManager {
         def current = getCurrentRevision()
         if( current != defaultBranch ) {
             if( !revision ) {
-                throw new AbortOperationException("Pipeline '$project ' currently is sticked on revision: $current -- you need to specify explicitly a revision with the option '-r' to use it")
+                throw new AbortOperationException("Project `$project` currently is sticked on revision: $current -- you need to specify explicitly a revision with the option `-r` to use it")
             }
         }
         else if( !revision || revision == current ) {
@@ -729,7 +729,7 @@ class AssetManager {
 
         // verify that is clean
         if( !isClean() )
-            throw new AbortOperationException("$project contains uncommitted changes -- Cannot switch to revision: $revision")
+            throw new AbortOperationException("Project `$project` contains uncommitted changes -- Cannot switch to revision: $revision")
 
         try {
             git.checkout().setName(revision) .call()

@@ -32,15 +32,15 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Download or update a pipeline in the local repository")
+@Parameters(commandDescription = "Download or update a project")
 class CmdPull extends CmdBase implements HubOptions {
 
     static final NAME = 'pull'
 
-    @Parameter(description = 'name of the pipeline to pull', arity = 1)
+    @Parameter(description = 'project name or repository url to pull', arity = 1)
     List<String> args
 
-    @Parameter(names='-all', description = 'Update all installed pipelines', arity = 0)
+    @Parameter(names='-all', description = 'Update all downloaded projects', arity = 0)
     boolean all
 
     @Override

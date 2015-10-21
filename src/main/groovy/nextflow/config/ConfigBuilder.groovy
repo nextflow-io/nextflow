@@ -316,7 +316,7 @@ class ConfigBuilder {
         if( uniqueId == 'last' ) {
             uniqueId = HistoryFile.history.retrieveLastUniqueId()
             if( !uniqueId ) {
-                log.warn "It appears you have never run this pipeline before -- Option `-resume` is ignored"
+                log.warn "It seems you never run this project before -- Option `-resume` is ignored"
             }
         }
 

@@ -28,7 +28,7 @@ import groovy.transform.CompileStatic
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Parameters(commandDescription = "Print usage help for a command")
+@Parameters(commandDescription = "Print the usage help for a command")
 class CmdHelp extends CmdBase {
 
     static final NAME = 'help'

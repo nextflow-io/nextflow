@@ -53,13 +53,13 @@ class CliOptions {
     /**
      * Print out the version number and exit
      */
-    @Parameter(names = ['-v','-version'], description = 'Show the program version')
+    @Parameter(names = ['-v','-version'], description = 'Print the program version')
     boolean version
 
     /**
      * Print out the 'help' and exit
      */
-    @Parameter(names = ['-h'], description = 'Show this help', help = true)
+    @Parameter(names = ['-h'], description = 'Print this help', help = true)
     boolean help
 
     @Parameter(names = ['-q','-quiet'], description = 'Do not print information messages' )
@@ -71,7 +71,7 @@ class CliOptions {
     @DynamicParameter(names = ['-D'], description = 'Set JMV properties' )
     Map<String,String> jvmOpts = [:]
 
-    @Parameter(names = ['-self-update'], description = 'Update nextflow to the latest version', arity = 0)
+    @Parameter(names = ['-self-update'], description = 'Update nextflow to the latest version', arity = 0, hidden = true)
     boolean selfUpdate
 
 }

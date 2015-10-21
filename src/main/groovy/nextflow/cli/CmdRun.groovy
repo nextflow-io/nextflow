@@ -39,7 +39,7 @@ import nextflow.util.Duration
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Launch a pipeline execution")
+@Parameters(commandDescription = "Execute a pipeline project")
 class CmdRun extends CmdBase implements HubOptions {
 
     static class DurationConverter implements IStringConverter<Long> {
@@ -59,7 +59,7 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-cache'], description = 'enable/disable processes caching', arity = 1)
     boolean cacheable = true
 
-    @Parameter(names=['-resume'], description = 'Execute the script using the cached results, useful to continue executions that stopped by an error')
+    @Parameter(names=['-resume'], description = 'Execute the script using the cached results, useful to continue executions that was stopped by an error')
     String resume
 
     @Parameter(names=['-ps','-pool-size'], description = 'Number of threads in the execution pool', hidden = true)
@@ -95,10 +95,10 @@ class CmdRun extends CmdBase implements HubOptions {
     @DynamicParameter(names = ['-executor.'], description = 'Executor(s) options', hidden = true )
     Map<String,String> executorOptions = [:]
 
-    @Parameter(description = 'name of pipeline to run')
+    @Parameter(description = 'project name or repository url')
     List<String> args
 
-    @Parameter(names=['-r','-revision'], description = 'Revision of pipeline to run (either a branch, tag or commit SHA number)')
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
     String revision
 
     @Parameter(names=['-latest'], description = 'Pull latest changes before run')
@@ -149,7 +149,7 @@ class CmdRun extends CmdBase implements HubOptions {
     void run() {
         String pipeline = stdin ? '-' : ( args ? args[0] : null )
         if( !pipeline )
-            throw new AbortOperationException("No pipeline to run was specified")
+            throw new AbortOperationException("No project name was specified")
 
         if( withDocker && withoutDocker )
             throw new AbortOperationException("Command line options `-with-docker` and `-without-docker` cannot be specified at the same time")
@@ -198,10 +198,10 @@ class CmdRun extends CmdBase implements HubOptions {
         if( pipelineName == '-' ) {
             def file = tryReadFromStdin()
             if( !file )
-                throw new AbortOperationException("Cannot pipeline script from stdin")
+                throw new AbortOperationException("Cannot access `stdin` stream")
 
             if( revision )
-                throw new AbortOperationException("Revision option cannot be used running a local pipeline script")
+                throw new AbortOperationException("Revision option cannot be used running a local script")
 
             return new ScriptFile(file)
         }
@@ -216,7 +216,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
         if( script.exists() ) {
             if( revision )
-                throw new AbortOperationException("Revision option cannot be used running a local pipeline script")
+                throw new AbortOperationException("Revision option cannot be used running a script")
             log.info "Launching $script"
             return new ScriptFile(script)
         }
@@ -243,11 +243,10 @@ class CmdRun extends CmdBase implements HubOptions {
             return scriptFile
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Unknown error accessing pipeline: '$repo' -- Repository may be corrupted: ${manager.localPath}", e)
+            throw new AbortOperationException("Unknown error accessing project `$repo` -- Repository may be corrupted: ${manager.localPath}", e)
         }
 
     }
-
 
     static protected File tryReadFromStdin() {
         if( !System.in.available() )

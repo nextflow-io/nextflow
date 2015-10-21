@@ -37,12 +37,12 @@ import nextflow.config.ConfigBuilder
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Print a pipeline configuration")
+@Parameters(commandDescription = "Print a project configuration")
 class CmdConfig extends CmdBase {
 
     static final NAME = 'config'
 
-    @Parameter(description = 'pipeline name')
+    @Parameter(description = 'project name')
     List<String> args = []
 
     @Parameter(names=['-a','-show-profiles'], description = 'Show all configuration profiles')

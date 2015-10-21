@@ -35,12 +35,12 @@ import nextflow.scm.AssetManager
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Parameters(commandDescription = "Show the system runtime information")
+@Parameters(commandDescription = "Print project and system runtime information")
 class CmdInfo extends CmdBase {
 
     static final NAME = 'info'
 
-    @Parameter(description = 'pipeline name')
+    @Parameter(description = 'project name')
     List<String> args
 
     @Parameter(names='-d',description = 'Show detailed information', arity = 0)
@@ -62,7 +62,7 @@ class CmdInfo extends CmdBase {
 
         def manager = new AssetManager(args[0])
         if( !manager.isLocal() )
-            throw new AbortOperationException("Unknown pipeline '${args[0]}'")
+            throw new AbortOperationException("Unknown project `${args[0]}`")
 
         println " project name: ${manager.project}"
         println " repository  : ${manager.repositoryUrl}"

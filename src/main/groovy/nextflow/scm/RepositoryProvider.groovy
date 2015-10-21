@@ -208,7 +208,7 @@ abstract class RepositoryProvider {
                 throw new AbortOperationException("Cannot find '$project' -- Make sure exists a ${name.capitalize()} repository at this address ${getRepositoryUrl()}")
             }
 
-            throw new AbortOperationException("Illegal pipeline repository ${getRepositoryUrl()} -- It must contain a script named '${AssetManager.DEFAULT_MAIN_FILE_NAME}' or a file '${AssetManager.MANIFEST_FILE_NAME}'")
+            throw new AbortOperationException("Not a valid Nextflow project -- The repository `${getRepositoryUrl()}` must contain the script `${AssetManager.DEFAULT_MAIN_FILE_NAME}` or the file `${AssetManager.MANIFEST_FILE_NAME}`")
         }
 
     }
@@ -234,7 +234,7 @@ abstract class RepositoryProvider {
                 return new LocalRepositoryProvider(project, config)
         }
 
-        throw new AbortOperationException("Unkwnon pipeline repository platform: ${config.platform}")
+        throw new AbortOperationException("Unkwnon project repository platform: ${config.platform}")
     }
 
 }

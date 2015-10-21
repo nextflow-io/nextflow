@@ -65,7 +65,7 @@ class ExtraeTraceObserver implements TraceObserver {
     void onFlowStart(Session session) {
 
         String configVar = System.getenv('EXTRAE_CONFIG_FILE')
-        log.debug "Starting pipeline tracing with Extrae - EXTRAE_CONFIG_FILE=$configVar"
+        log.debug "Starting tracing with Extrae - EXTRAE_CONFIG_FILE=$configVar"
         this.session = session
 
         if( !configVar )

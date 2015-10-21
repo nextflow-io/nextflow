@@ -34,12 +34,12 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Delete a locally installed pipeline")
+@Parameters(commandDescription = "Delete the local copy of a project")
 class CmdDrop extends CmdBase {
 
     static final NAME = 'drop'
 
-    @Parameter(required=true, description = 'name of the pipeline to drop')
+    @Parameter(required=true, description = 'name of the project to drop')
     List<String> args
 
     @Parameter(names='-f', description = 'Delete the repository without taking care of local changes')
@@ -59,10 +59,10 @@ class CmdDrop extends CmdBase {
         if( this.force || manager.isClean() ) {
             manager.close()
             if( !manager.localPath.deleteDir() )
-                throw new AbortOperationException("Unable to delete pipeline -- Check access permissions for path: ${manager.localPath}")
+                throw new AbortOperationException("Unable to delete project `${manager.project}` -- Check access permissions for path: ${manager.localPath}")
             return
         }
 
-        throw new AbortOperationException("Repository contains changes not committed -- wont drop it")
+        throw new AbortOperationException("Local project repository contains uncommitted changes -- wont drop it")
     }
 }
