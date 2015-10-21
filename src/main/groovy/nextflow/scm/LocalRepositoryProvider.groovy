@@ -31,6 +31,7 @@ class LocalRepositoryProvider extends RepositoryProvider {
         assert project
         assert config
         assert config.path
+        assert !project.contains('/')
 
         this.project = project
         this.config = config

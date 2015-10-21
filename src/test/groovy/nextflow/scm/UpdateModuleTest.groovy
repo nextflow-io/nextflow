@@ -82,16 +82,19 @@ class UpdateModuleTest extends Specification {
 
         setup:
         // create the main project
-        baseFolder.resolve('pipe').mkdirs()
-        def dir = baseFolder.resolve('pipe').toFile()
+        baseFolder.resolve('pipe_x').mkdirs()
+        def dir = baseFolder.resolve('pipe_x').toFile()
         def init = Git.init()
         def repo = init.setDirectory( dir ).call()
+        // create two git submodules in this repository
         repo.submoduleAdd().setPath('prj_aaa').setURI( baseFolder.resolve('prj_aaa/.git').toString() ).call()
         repo.submoduleAdd().setPath('prj_bbb').setURI( baseFolder.resolve('prj_bbb/.git').toString() ).call()
+        // add the main file and commit all
         new File(dir, 'main.nf').text = 'main script'
         repo.add().addFilepattern('.').call()
         repo.commit().setAll(true).setMessage('First commit').call()
 
+        // set the root folder for the asset manager
         def target = baseFolder.resolve('target')
         AssetManager.root = target.toFile()
 
@@ -101,17 +104,17 @@ class UpdateModuleTest extends Specification {
         manager.updateModules()
 
         then:
-        target.resolve('pipe').exists()
-        target.resolve('pipe/.git').exists()
-        target.resolve('pipe/main.nf').exists()
+        target.resolve('local/pipe_x').exists()
+        target.resolve('local/pipe_x/.git').exists()
+        target.resolve('local/pipe_x/main.nf').exists()
 
-        target.resolve('pipe/prj_aaa').exists()
-        target.resolve('pipe/prj_aaa/file1.txt').text == 'Hello'
-        target.resolve('pipe/prj_aaa/file2.log').text == 'World'
+        target.resolve('local/pipe_x/prj_aaa').exists()
+        target.resolve('local/pipe_x/prj_aaa/file1.txt').text == 'Hello'
+        target.resolve('local/pipe_x/prj_aaa/file2.log').text == 'World'
 
-        target.resolve('pipe/prj_bbb').exists()
-        target.resolve('pipe/prj_bbb/file1.txt').text == 'Ciao'
-        target.resolve('pipe/prj_bbb/file2.log').text == 'Mondo'
+        target.resolve('local/pipe_x/prj_bbb').exists()
+        target.resolve('local/pipe_x/prj_bbb/file1.txt').text == 'Ciao'
+        target.resolve('local/pipe_x/prj_bbb/file2.log').text == 'Mondo'
     }
 
 
@@ -134,17 +137,17 @@ class UpdateModuleTest extends Specification {
         AssetManager.root = target.toFile()
 
         when:
-        def manager = new AssetManager( baseFolder.resolve('pipe_2.git').toString() )
+        def manager = new AssetManager( "file:${baseFolder}/pipe_2" )
         manager.download()
         manager.updateModules()
 
         then:
-        target.resolve('pipe_2').exists()
-        target.resolve('pipe_2/.git').exists()
-        target.resolve('pipe_2/main.nf').exists()
+        target.resolve('local/pipe_2').exists()
+        target.resolve('local/pipe_2/.git').exists()
+        target.resolve('local/pipe_2/main.nf').exists()
 
-        !target.resolve('pipe_2/prj_aaa').exists()
-        !target.resolve('pipe_2/prj_bbb').exists()
+        !target.resolve('local/pipe_2/prj_aaa').exists()
+        !target.resolve('local/pipe_2/prj_bbb').exists()
     }
 
     def 'should selected submodules' () {
@@ -167,22 +170,22 @@ class UpdateModuleTest extends Specification {
         AssetManager.root = target.toFile()
 
         when:
-        def manager = new AssetManager( baseFolder.resolve('pipe_3.git').toString() )
+        def manager = new AssetManager( "file:${baseFolder}/pipe_3" )
         manager.download()
         manager.updateModules()
 
         then:
-        target.resolve('pipe_3').exists()
-        target.resolve('pipe_3/.git').exists()
-        target.resolve('pipe_3/main.nf').exists()
+        target.resolve('local/pipe_3').exists()
+        target.resolve('local/pipe_3/.git').exists()
+        target.resolve('local/pipe_3/main.nf').exists()
 
-        !target.resolve('pipe_3/prj_aaa').exists()
+        !target.resolve('local/pipe_3/prj_aaa').exists()
 
-        target.resolve('pipe_3/prj_bbb').exists()
-        target.resolve('pipe_3/prj_bbb/file1.txt').text == 'Ciao'
+        target.resolve('local/pipe_3/prj_bbb').exists()
+        target.resolve('local/pipe_3/prj_bbb/file1.txt').text == 'Ciao'
 
-        target.resolve('pipe_3/prj_ccc').exists()
-        target.resolve('pipe_3/prj_ccc/file-x.txt').text == 'x'
+        target.resolve('local/pipe_3/prj_ccc').exists()
+        target.resolve('local/pipe_3/prj_ccc/file-x.txt').text == 'x'
 
     }
 

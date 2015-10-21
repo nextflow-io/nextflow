@@ -101,12 +101,14 @@ abstract class RepositoryProvider {
         assert api
 
         log.debug "Request [credentials ${config.getAuthObfuscated() ?: '-'}] -> $api"
-        def connection = new URL(api).openConnection() as HttpURLConnection
+        def connection = new URL(api).openConnection() as URLConnection
         connection.setConnectTimeout(5_000)
 
         auth(connection)
 
-        checkResponse(connection)
+        if( connection instanceof HttpURLConnection ) {
+            checkResponse(connection)
+        }
 
         InputStream content = connection.getInputStream()
         try {
@@ -122,7 +124,7 @@ abstract class RepositoryProvider {
      *
      * @param connection The URL connection object to be authenticated
      */
-    protected void auth( HttpURLConnection connection ) {
+    protected void auth( URLConnection connection ) {
         if( hasCredentials() ) {
             String authString = "${config.user}:${config.password}".bytes.encodeBase64().toString()
             connection.setRequestProperty("Authorization","Basic " + authString)
@@ -208,7 +210,7 @@ abstract class RepositoryProvider {
                 throw new AbortOperationException("Cannot find '$project' -- Make sure exists a ${name.capitalize()} repository at this address ${getRepositoryUrl()}")
             }
 
-            throw new AbortOperationException("Not a valid Nextflow project -- The repository `${getRepositoryUrl()}` must contain the script `${AssetManager.DEFAULT_MAIN_FILE_NAME}` or the file `${AssetManager.MANIFEST_FILE_NAME}`")
+            throw new AbortOperationException("Not a valid Nextflow project -- The repository `${getRepositoryUrl()}` must contain a the script `${AssetManager.DEFAULT_MAIN_FILE_NAME}` or the file `${AssetManager.MANIFEST_FILE_NAME}`")
         }
 
     }
@@ -231,7 +233,9 @@ abstract class RepositoryProvider {
                 return new GitlabRepositoryProvider(project, config)
 
             case 'file':
-                return new LocalRepositoryProvider(project, config)
+                // remove the 'local' prefix for the file provider
+                def localName = project.tokenize('/').last()
+                return new LocalRepositoryProvider(localName, config)
         }
 
         throw new AbortOperationException("Unkwnon project repository platform: ${config.platform}")

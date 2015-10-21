@@ -32,8 +32,15 @@ class GitUrlTest extends Specification {
     @Unroll
     def 'should parse github url: #url' () {
 
-        expect:
-        new GitUrl(url) == new GitUrl(protocol, user, location, project)
+        when:
+        def result = new GitUrl(url)
+        then:
+        result.protocol == protocol
+        result.project == project
+        result.user == user
+        result.project == project
+        result == new GitUrl(protocol, user, location, project)
+
         where:
         url                                             | protocol  | user  | location          | project
         'https://example.com/gitproject.git'            | 'https'   | null  | 'example.com'     | 'gitproject'
@@ -52,7 +59,7 @@ class GitUrlTest extends Specification {
 
     def 'should throw IllegalArgumentException' () {
         when:
-        new GitUrl('https://example.com/gitproject')
+        new GitUrl('foo.com/bar')
         then:
         thrown(IllegalArgumentException)
     }

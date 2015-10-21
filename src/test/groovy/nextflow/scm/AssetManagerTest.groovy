@@ -31,6 +31,36 @@ import test.TemporaryPath
  */
 class AssetManagerTest extends Specification {
 
+    static String GIT_CONFIG_TEXT = '''
+            [remote "origin"]
+                url = https://github.com/nextflow-io/nextflow.git
+                fetch = +refs/heads/*:refs/remotes/origin/*
+            [branch "master"]
+                remote = origin
+                merge = refs/heads/master
+            '''
+            .stripIndent()
+
+
+
+    static final GIT_CONFIG_LONG = '''
+        [core]
+            repositoryformatversion = 0
+            filemode = true
+            bare = false
+            logallrefupdates = true
+            ignorecase = true
+        [remote "origin"]
+            url = git@github.com:nextflow-io/nextflow.git
+            fetch = +refs/heads/*:refs/remotes/origin/*
+        [branch "master"]
+            remote = origin
+            merge = refs/heads/master
+        [submodule "tests"]
+            url = git@github.com:nextflow-io/tests.git
+        '''
+        .stripIndent()
+
     @Rule
     TemporaryPath tempDir = new TemporaryPath()
 
@@ -226,7 +256,7 @@ class AssetManagerTest extends Specification {
     }
 
 
-    def testReadManifest () {
+    def 'should read manifest file' () {
 
         given:
         def config =
@@ -241,6 +271,8 @@ class AssetManagerTest extends Specification {
         def dir = tempDir.getRoot()
         dir.resolve('foo/bar').mkdirs()
         dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
 
         when:
         def holder = new AssetManager()
@@ -253,12 +285,14 @@ class AssetManagerTest extends Specification {
 
     }
 
-    def testReadManifest2 () {
+    def 'should return default main script file' () {
 
         given:
         def dir = tempDir.getRoot()
         dir.resolve('foo/bar').mkdirs()
         dir.resolve('foo/bar/nextflow.config').text = 'empty: 1'
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
 
         when:
         def holder = new AssetManager()
@@ -272,30 +306,12 @@ class AssetManagerTest extends Specification {
 
     }
 
-    static final GIT_CONFIG = '''
-        [core]
-            repositoryformatversion = 0
-            filemode = true
-            bare = false
-            logallrefupdates = true
-            ignorecase = true
-        [remote "origin"]
-            url = git@github.com:nextflow-io/nextflow.git
-            fetch = +refs/heads/*:refs/remotes/origin/*
-        [branch "master"]
-            remote = origin
-            merge = refs/heads/master
-        [submodule "tests"]
-            url = git@github.com:nextflow-io/tests.git
-        '''
-
-
     def 'should parse git config and return the remote url' () {
 
         given:
         def dir = tempDir.root
         dir.resolve('.git').mkdir()
-        dir.resolve('.git/config').text = GIT_CONFIG
+        dir.resolve('.git/config').text = GIT_CONFIG_LONG
 
         when:
         def manager = new AssetManager().setLocalPath(dir.toFile())
@@ -309,7 +325,7 @@ class AssetManagerTest extends Specification {
         given:
         def dir = tempDir.root
         dir.resolve('.git').mkdir()
-        dir.resolve('.git/config').text = GIT_CONFIG
+        dir.resolve('.git/config').text = GIT_CONFIG_LONG
 
         when:
         def manager = new AssetManager().setLocalPath(dir.toFile())
@@ -333,15 +349,7 @@ class AssetManagerTest extends Specification {
         repo.close()
 
         // append fake remote data
-        dir.resolve('.git/config') << '''
-            [remote "origin"]
-                url = https://github.com/nextflow-io/nextflow.git
-                fetch = +refs/heads/*:refs/remotes/origin/*
-            [branch "master"]
-                remote = origin
-                merge = refs/heads/master
-            '''
-            .stripIndent()
+        dir.resolve('.git/config').text = GIT_CONFIG_TEXT
 
         when:
         def manager = new AssetManager().setLocalPath(dir.toFile())
@@ -376,7 +384,7 @@ class AssetManagerTest extends Specification {
 
         when:
         manager = new AssetManager()
-        result = manager.checkForGitUrl('/user/repo/projects/hello.git')
+        result = manager.checkForGitUrl('file:/user/repo/projects/hello.git')
         then:
         result == 'local/hello'
         manager.hub == 'file:/user/repo/projects'

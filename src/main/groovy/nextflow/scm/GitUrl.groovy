@@ -64,7 +64,7 @@ class GitUrl {
     GitUrl( String url ) {
         if( !url ) throw new IllegalArgumentException("Git URL cannot be empty")
 
-        if( url.endsWith('.git') )
+        if( !url.endsWith('.git') )
             url += '.git'
 
         def p = url.indexOf('://')
