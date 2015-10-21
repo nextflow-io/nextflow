@@ -220,12 +220,6 @@ task buildInfo << {
     src = file.text
     src = src.replaceAll(/NXF_VER\=\$\{NXF_VER:-'.*'\}/, 'NXF_VER=\\${NXF_VER:-\'' + version + '\'}')
     file.text = src
-    
-    // docs sync
-    file = new File('docs/sync-doc.sh')
-    src = file.text
-    src = src.replaceAll(/docs\/v[0-9a-zA-Z_\-\.]+\//, "docs/v$version/" as String)
-    file.text = src
 
     // -- update sphynx
     def major = version.split(/\./)[0..1].join('.')
