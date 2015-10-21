@@ -201,25 +201,25 @@ class AssetManagerTest extends Specification {
 
         when:
         def manager = new AssetManager()
-        def repo = manager.createHubProviderFor('github')
+        def repo = manager.createHubProvider('github')
         then:
         repo instanceof GithubRepositoryProvider
 
         when:
         manager = new AssetManager()
-        repo = manager.createHubProviderFor('bitbucket')
+        repo = manager.createHubProvider('bitbucket')
         then:
         repo instanceof BitbucketRepositoryProvider
 
         when:
         manager = new AssetManager()
-        repo = manager.createHubProviderFor('gitlab')
+        repo = manager.createHubProvider('gitlab')
         then:
         repo instanceof GitlabRepositoryProvider
 
         when:
         manager = [:] as AssetManager
-        manager.createHubProviderFor('xxx')
+        manager.createHubProvider('xxx')
         then:
         thrown(AbortOperationException)
 
@@ -353,6 +353,45 @@ class AssetManagerTest extends Specification {
         script.parent == dir
         script.text == "println 'Hello world'"
         script.repository == 'https://github.com/nextflow-io/nextflow.git'
+    }
+
+    def 'should return project name from git url' () {
+
+        AssetManager manager
+        String result
+
+        when:
+        manager = new AssetManager()
+        result = manager.checkForGitUrl('nextflow/pipe')
+        then:
+        result == null
+        manager.hub == null
+
+        when:
+        manager = new AssetManager()
+        result = manager.checkForGitUrl('https://gitlab.com/pditommaso/hello.git')
+        then:
+        result == 'pditommaso/hello'
+        manager.hub == 'gitlab'
+
+        when:
+        manager = new AssetManager()
+        result = manager.checkForGitUrl('/user/repo/projects/hello.git')
+        then:
+        result == 'local/hello'
+        manager.hub == 'file:/user/repo/projects'
+
+        when:
+        manager = new AssetManager()
+        manager.providerConfigs.add( new ProviderConfig('local-scm', [platform: 'github', server: 'http://foo.bar.com']) )
+        result = manager.checkForGitUrl('https://foo.bar.com/project/xyz.git')
+        then:
+        result == 'project/xyz'
+        manager.hub == 'local-scm'
+
+
+
+
     }
 
 }

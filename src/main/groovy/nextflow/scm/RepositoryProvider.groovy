@@ -69,7 +69,7 @@ abstract class RepositoryProvider {
      *
      * @return The repository API url string
      */
-    abstract String getRepoUrl()
+    abstract String getEndpointUrl()
 
     /**
      * The hub service API rul to access a content in the remote repository
@@ -89,7 +89,7 @@ abstract class RepositoryProvider {
     /**
      * @return The project home page e.g. https://github.com/nextflow-io/hello
      */
-    abstract String getHomePage()
+    abstract String getRepositoryUrl()
 
     /**
      * Invoke the API request specified
@@ -202,13 +202,13 @@ abstract class RepositoryProvider {
         catch( IOException e1 ) {
 
             try {
-                invokeAndParseResponse( getRepoUrl() )
+                invokeAndParseResponse( getEndpointUrl() )
             }
             catch( IOException e2 ) {
-                throw new AbortOperationException("Cannot find '$project' -- Make sure exists a ${name.capitalize()} repository at this address ${getHomePage()}")
+                throw new AbortOperationException("Cannot find '$project' -- Make sure exists a ${name.capitalize()} repository at this address ${getRepositoryUrl()}")
             }
 
-            throw new AbortOperationException("Illegal pipeline repository ${getHomePage()} -- It must contain a script named '${AssetManager.DEFAULT_MAIN_FILE_NAME}' or a file '${AssetManager.MANIFEST_FILE_NAME}'")
+            throw new AbortOperationException("Illegal pipeline repository ${getRepositoryUrl()} -- It must contain a script named '${AssetManager.DEFAULT_MAIN_FILE_NAME}' or a file '${AssetManager.MANIFEST_FILE_NAME}'")
         }
 
     }

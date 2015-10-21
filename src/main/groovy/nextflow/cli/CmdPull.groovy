@@ -61,6 +61,7 @@ class CmdPull extends CmdBase implements HubOptions {
             return
         }
 
+        /* only for testing purpose */
         if( root ) {
             AssetManager.root = root
         }

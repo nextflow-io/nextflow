@@ -44,7 +44,7 @@ class GithubRepositoryProviderTest extends Specification {
 
     def testGetHomePage() {
         expect:
-        new GithubRepositoryProvider('nextflow-io/hello').getHomePage() == "https://github.com/nextflow-io/hello"
+        new GithubRepositoryProvider('nextflow-io/hello').getRepositoryUrl() == "https://github.com/nextflow-io/hello"
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})

@@ -19,9 +19,8 @@
  */
 
 package nextflow.cli
-import com.beust.jcommander.IValueValidator
+
 import com.beust.jcommander.Parameter
-import com.beust.jcommander.ParameterException
 import groovy.transform.CompileStatic
 /**
   * Defines the command line parameters for command that need to interact with a pipeline service hub i.e. GitHub or BitBucket
@@ -69,21 +68,6 @@ trait HubOptions {
 
         def p = hubUser.indexOf(':')
         return p != -1 ? hubUser.substring(0,p) : hubUser
-    }
-
-
-    @CompileStatic
-    static class HubValidator implements IValueValidator<String> {
-
-        final static List VALID_HUB = ['github','bitbucket','gitlab']
-
-        @Override
-        void validate(String name, String value) throws ParameterException {
-            if( name != '-hub' ) return
-            if( value in VALID_HUB ) return
-            throw new ParameterException("Not a valid '-hub' provider -- It must be either: ${VALID_HUB.join(', ')}")
-        }
-
     }
 
 }

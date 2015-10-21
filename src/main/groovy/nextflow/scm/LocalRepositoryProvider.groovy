@@ -43,7 +43,7 @@ class LocalRepositoryProvider extends RepositoryProvider {
     String getName() { 'local' }
 
     @Override
-    String getRepoUrl() {
+    String getEndpointUrl() {
         return "file:${new File(path, project)}"
     }
 
@@ -60,7 +60,7 @@ class LocalRepositoryProvider extends RepositoryProvider {
     }
 
     @Override
-    String getHomePage() {
+    String getRepositoryUrl() {
         new File(path, project).toString()
     }
 

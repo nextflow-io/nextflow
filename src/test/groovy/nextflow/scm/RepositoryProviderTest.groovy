@@ -36,23 +36,23 @@ class RepositoryProviderTest extends Specification {
         provider = RepositoryProvider.create(new ProviderConfig('github'),'project/x')
         then:
         provider instanceof GithubRepositoryProvider
-        provider.repoUrl == 'https://api.github.com/repos/project/x'
+        provider.endpointUrl == 'https://api.github.com/repos/project/x'
 
         when:
         provider = RepositoryProvider.create(new ProviderConfig('gitlab'),'project/y')
         then:
         provider instanceof GitlabRepositoryProvider
-        provider.repoUrl == 'https://gitlab.com/api/v3/projects/project%2Fy'
+        provider.endpointUrl == 'https://gitlab.com/api/v3/projects/project%2Fy'
 
         when:
         provider = RepositoryProvider.create(new ProviderConfig('bitbucket'),'project/z')
         then:
         provider instanceof BitbucketRepositoryProvider
-        provider.repoUrl == 'https://bitbucket.org/api/2.0/repositories/project/z'
+        provider.endpointUrl == 'https://bitbucket.org/api/2.0/repositories/project/z'
 
         when:
         provider = RepositoryProvider.create(new ProviderConfig('local', [path:'/user/data']),'project/w')
         then:
-        provider.repoUrl == 'file:/user/data/project/w'
+        provider.endpointUrl == 'file:/user/data/project/w'
     }
 }

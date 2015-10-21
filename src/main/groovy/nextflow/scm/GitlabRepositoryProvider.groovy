@@ -52,12 +52,12 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     String getName() { "GitLab" }
 
     @Override
-    String getRepoUrl() {
+    String getEndpointUrl() {
         return "${config.endpoint}/api/v3/projects/${getProjectName()}"
     }
 
     String getDefaultBranch() {
-        invokeAndParseResponse(getRepoUrl()) ?. default_branch
+        invokeAndParseResponse(getEndpointUrl()) ?. default_branch
     }
 
     /** {@inheritDoc} */
@@ -69,7 +69,7 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getCloneUrl() {
-        Map response = invokeAndParseResponse( getRepoUrl() )
+        Map response = invokeAndParseResponse( getEndpointUrl() )
 
         def result = response.get('http_url_to_repo')
         if( !result )
@@ -80,7 +80,7 @@ class GitlabRepositoryProvider extends RepositoryProvider {
 
     /** {@inheritDoc} */
     @Override
-    String getHomePage() {
+    String getRepositoryUrl() {
         "${config.server}/$project"
     }
 

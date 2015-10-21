@@ -275,7 +275,7 @@ Scope `manifest`
 -----------------
 
 The ``manifest`` configuration scope allows you to define some meta-data information needed when publishing your
-pipeline on GitHub or BitBucket.
+pipeline project on GitHub, BitBucket or GitLab.
 
 The following settings are available:
 
@@ -298,7 +298,7 @@ brackets. For example::
     }
 
 
-To learn how to publish your pipeline on GitHub or BitBucket code repositories read :ref:`sharing-page`
+To learn how to publish your pipeline on GitHub, BitBucket or GitLab code repositories read :ref:`sharing-page`
 documentation page.
 
 .. _config-trace:

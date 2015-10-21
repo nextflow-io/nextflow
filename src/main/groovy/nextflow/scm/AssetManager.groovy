@@ -51,17 +51,17 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 @CompileStatic
 class AssetManager {
 
-    static final String MANIFEST_FILE_NAME = 'nextflow.config'
+    static public final String MANIFEST_FILE_NAME = 'nextflow.config'
 
-    static final String DEFAULT_MAIN_FILE_NAME = 'main.nf'
+    static public final String DEFAULT_MAIN_FILE_NAME = 'main.nf'
 
-    static final String DEFAULT_BRANCH = 'master'
+    static public final String DEFAULT_BRANCH = 'master'
 
-    static final String DEFAULT_ORGANIZATION = System.getenv('NXF_ORG') ?: 'nextflow-io'
+    static public final String DEFAULT_ORGANIZATION = System.getenv('NXF_ORG') ?: 'nextflow-io'
 
-    static final String DEFAULT_HUB = System.getenv('NXF_HUB') ?: 'github'
+    static public final String DEFAULT_HUB = System.getenv('NXF_HUB') ?: 'github'
 
-    static final File DEFAULT_ROOT = System.getenv('NXF_ASSETS') ? new File(System.getenv('NXF_ASSETS')) : Const.APP_HOME_DIR.resolve('assets').toFile()
+    static public final File DEFAULT_ROOT = System.getenv('NXF_ASSETS') ? new File(System.getenv('NXF_ASSETS')) : Const.APP_HOME_DIR.resolve('assets').toFile()
 
     /**
      * The folder all pipelines scripts are installed
@@ -111,52 +111,132 @@ class AssetManager {
         build(pipelineName, config, cliOpts)
     }
 
+    /**
+     * Build the asset manager internal data structure
+     *
+     * @param pipelineName A project name or a project repository Git URL
+     * @param config A {@link Map} holding the configuration properties defined in the {@link ProviderConfig#SCM_FILE} file
+     * @param cliOpts User credentials provided on the command line. See {@link HubOptions} trait
+     * @return The {@link AssetManager} object itself
+     */
     @PackageScope
     AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
         this.project = resolveName(pipelineName)
-        this.localPath = new File(root, project)
+        this.localPath = checkProjectDir(project)
+        this.hub = checkHubProvider(cliOpts)
+        this.provider = createHubProvider(hub)
+        setupCredentials(cliOpts)
+        validateProjectDir()
 
-        if( !hub )
-            this.hub = cliOpts?.getHubProvider()
-        if( !hub )
-            hub = guessHubProviderFromGitConfig()
-        if( !hub )
-            hub = DEFAULT_HUB
+        return this
+    }
 
-        // create the hub provider
-        this.provider = createHubProviderFor(hub)
-
+    /**
+     * Sets the user credentials on the {@link RepositoryProvider} object
+     *
+     * @param cliOpts The user credentials specified on the program command line. See {@code HubOptions}
+     */
+    @PackageScope
+    void setupCredentials( HubOptions cliOpts ) {
         if( cliOpts?.hubUser ) {
             cliOpts.hubProvider = hub
             final user = cliOpts.getHubUser()
             final pwd = cliOpts.getHubPassword()
             provider.setCredentials(user, pwd)
         }
-
-        return this
     }
 
+
+    @PackageScope
+    boolean isValidProjectName( String projectName ) {
+        projectName =~~ /.+\/.+/
+    }
+
+    /**
+     * Verify the project name matcher the expected pattern.
+     * and return the directory where the project is stored locally
+     *
+     * @param projectName A project name matching the pattern {@code owner/project}
+     * @return The project dir {@link File}
+     */
+    @PackageScope
+    File checkProjectDir(String projectName) {
+
+        if( !isValidProjectName(projectName)) {
+            throw new IllegalArgumentException("Not a valid project name: $projectName")
+        }
+
+        new File(root, project)
+    }
+
+    /**
+     * Verifies that the project hub provider eventually specified by the user using the {@code -hub} command
+     * line option or implicitly by entering a repository URL, matches with clone URL of a project already cloned (downloaded).
+     */
+    @PackageScope
+    void validateProjectDir() {
+
+        if( !localPath.exists() ) {
+            return
+        }
+
+        // if project dir exists it must contain the Git config file
+        final configProvider = guessHubProviderFromGitConfig()
+        if( !configProvider ) {
+            log.debug "Too bad! Can't find any provider from git config. Check file: ${localPath}/.git/config"
+            throw new AbortOperationException("Corrupted git repository at path: $localPath")
+        }
+
+        // checks that the selected hub matches with the one defined in the git config file
+        if( hub != configProvider ) {
+            throw new AbortOperationException("A project with name: `$localPath` has been already download from a different provider: `$configProvider`")
+        }
+
+    }
+
+    /**
+     * Find out the "hub provider" (i.e. the platform on which the remote repository is stored
+     * for example: github, bitbucket, etc) and verifies that it is a known provider.
+     *
+     * @param cliOpts The user hub info provider as command line options. See {@link HubOptions}
+     * @return The name of hub name e.g. {@code github}, {@code bitbucket}, etc.
+     */
+    @PackageScope
+    String checkHubProvider( HubOptions cliOpts ) {
+
+        def result = hub
+        if( !result )
+            result = cliOpts?.getHubProvider()
+        if( !result )
+            result = guessHubProviderFromGitConfig()
+        if( !result )
+            result = DEFAULT_HUB
+
+        def providerNames = providerConfigs.collect { it.name }
+        if( !providerNames.contains(result)) {
+            def matches = providerNames.closest(result) ?: providerNames
+            def message = "Unknown repository provider: `$result`'. Did you mean?\n" + matches.collect { "  $it"}.join('\n')
+            throw new AbortOperationException(message)
+        }
+
+        return result
+    }
+
+    /**
+     * Given a project name or a repository URL returns a fully qualified project name.
+     *
+     * @param name A project name or URL e.g. {@code cbcrg/foo} or {@code https://github.com/cbcrg/foo.git}
+     * @return The fully qualified project name e.g. {@code cbcrg/foo}
+     */
     String resolveName( String name ) {
         assert name
 
-        if( name.endsWith('.git') ) {
-            try {
-                def url = new GitUrlParser(name)
-
-                if( url.protocol == 'file' ) {
-                    this.hub = "file:${url.location}"
-                    providerConfigs << new ProviderConfig(this.hub, [path:url.location])
-                }
-
-                return url.project
-            }
-            catch( IllegalArgumentException e ) {
-                log.debug e.message
-            }
-        }
+        def project = checkForGitUrl(name)
+        if( project )
+            return project
 
         String[] parts = name.split('/')
         def last = parts[-1]
@@ -198,8 +278,47 @@ class AssetManager {
 
     String getProject() { project }
 
+    String getHub() { hub }
+
     @PackageScope
-    RepositoryProvider createHubProviderFor(String providerName) {
+    String checkForGitUrl( String repository ) {
+
+        if( repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/')) {
+            try {
+                def url = new GitUrl(repository)
+
+                def result
+                if( url.protocol == 'file' ) {
+                    this.hub = "file:${url.domain}"
+                    providerConfigs << new ProviderConfig(this.hub, [path:url.domain])
+                    result = "local/${url.project}"
+                }
+                else {
+                    // find the provider config for this server
+                    this.hub = providerConfigs.find { it.domain == url.domain } ?.name
+                    result = url.project
+                }
+                log.debug "Repository URL: $repository; Project: $result; Hub provider: $hub"
+
+                return result
+            }
+            catch( IllegalArgumentException e ) {
+                log.debug "Cannot parse Git URL: $repository -- cause: ${e.message}"
+            }
+        }
+
+        return null
+    }
+
+    /**
+     * Creates the RepositoryProvider instance i.e. the object that manages the interaction with
+     * the remote SCM server (e.g. GitHub, GitLab, etc) using the platform provided API
+     *
+     * @param providerName The name of the provider e.g. {@code github}, {@code gitlab}, etc
+     * @return
+     */
+    @PackageScope
+    RepositoryProvider createHubProvider(String providerName) {
 
         final config = providerConfigs.find { it.name == providerName }
         if( !config )
@@ -268,7 +387,11 @@ class AssetManager {
 
     String getHomePage() {
         def manifest = readManifest()
-        manifest.homePage ?: provider.getHomePage()
+        manifest.homePage ?: provider.getRepositoryUrl()
+    }
+
+    String getRepositoryUrl() {
+        provider?.getRepositoryUrl()
     }
 
     String getDefaultBranch() {
@@ -675,7 +798,7 @@ class AssetManager {
         final branch = getDefaultBranch() ?: DEFAULT_BRANCH
         final remote = iniFile.getString("branch \"${branch}\"", "remote", "origin")
         final url = iniFile.getString("remote \"${remote}\"", "url")
-
+        log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: $url"
         return url
     }
 
@@ -685,7 +808,7 @@ class AssetManager {
         if( !url ) return null
 
         try {
-            return new GitUrlParser(url).location
+            return new GitUrl(url).domain
         }
         catch( IllegalArgumentException e) {
             log.debug e.message ?: e.toString()

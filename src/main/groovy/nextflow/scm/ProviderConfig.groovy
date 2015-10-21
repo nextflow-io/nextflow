@@ -34,7 +34,7 @@ import nextflow.exception.ConfigParseException
 class ProviderConfig {
 
     @PackageScope
-    static File SCM_FILE = Const.APP_HOME_DIR.resolve('scm').toFile()
+    static public File SCM_FILE = Const.APP_HOME_DIR.resolve('scm').toFile()
 
     private String name
 

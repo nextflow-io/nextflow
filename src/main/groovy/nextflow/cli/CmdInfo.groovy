@@ -64,10 +64,12 @@ class CmdInfo extends CmdBase {
         if( !manager.isLocal() )
             throw new AbortOperationException("Unknown pipeline '${args[0]}'")
 
-        println " repo name  : ${manager.project}"
-        println " home page  : ${manager.homePage}"
-        println " local path : ${manager.localPath}"
-        println " main script: ${manager.mainScriptName}"
+        println " project name: ${manager.project}"
+        println " repository  : ${manager.repositoryUrl}"
+        println " local path  : ${manager.localPath}"
+        println " main script : ${manager.mainScriptName}"
+        if( manager.homePage && manager.homePage != manager.repositoryUrl )
+        println " home page   : ${manager.homePage}"
         if( manager.description )
         println " description: ${manager.description}"
 

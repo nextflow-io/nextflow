@@ -44,7 +44,7 @@ class BitBucketRepositoryProviderTest extends Specification {
 
     def testGetHomePage() {
         expect:
-        new BitbucketRepositoryProvider('pditommaso/tutorial').getHomePage() == "https://bitbucket.org/pditommaso/tutorial"
+        new BitbucketRepositoryProvider('pditommaso/tutorial').getRepositoryUrl() == "https://bitbucket.org/pditommaso/tutorial"
     }
 
 

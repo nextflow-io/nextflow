@@ -41,7 +41,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     String getName() { "BitBucket" }
 
     @Override
-    String getRepoUrl() {
+    String getEndpointUrl() {
         "${config.endpoint}/api/2.0/repositories/${project}"
     }
 
@@ -60,10 +60,10 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getCloneUrl() {
-        Map response = invokeAndParseResponse( getRepoUrl() )
+        Map response = invokeAndParseResponse( getEndpointUrl() )
 
         if( response?.scm != "git" ){
-            throw new AbortOperationException("Bitbucket repository at ${getHomePage()} is not supporting Git")
+            throw new AbortOperationException("Bitbucket repository at ${getRepositoryUrl()} is not supporting Git")
         }
 
         def result = response?.links?.clone?.find{ it.name == "https" } as Map
@@ -74,7 +74,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     }
 
     @Override
-    String getHomePage() {
+    String getRepositoryUrl() {
         return "${config.server}/$project"
     }
 

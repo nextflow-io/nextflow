@@ -32,14 +32,14 @@ class GitlabRepositoryProviderTest extends Specification {
     def 'should return repo url' () {
 
         expect:
-        new GitlabRepositoryProvider('pditommaso/hello').getRepoUrl() == 'https://gitlab.com/api/v3/projects/pditommaso%2Fhello'
+        new GitlabRepositoryProvider('pditommaso/hello').getEndpointUrl() == 'https://gitlab.com/api/v3/projects/pditommaso%2Fhello'
 
     }
 
     def 'should return project URL' () {
 
         expect:
-        new GitlabRepositoryProvider('pditommaso/hello').getHomePage() == 'https://gitlab.com/pditommaso/hello'
+        new GitlabRepositoryProvider('pditommaso/hello').getRepositoryUrl() == 'https://gitlab.com/pditommaso/hello'
 
     }
 

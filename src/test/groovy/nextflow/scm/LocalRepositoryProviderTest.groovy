@@ -60,7 +60,7 @@ class LocalRepositoryProviderTest extends Specification {
         def config = new ProviderConfig('local', [path: testFolder])
         def manager = new LocalRepositoryProvider('nextflow-io/hello', config)
         expect:
-        manager.getRepoUrl() == "file:${testFolder}/nextflow-io/hello".toString()
+        manager.getEndpointUrl() == "file:${testFolder}/nextflow-io/hello".toString()
 
     }
 

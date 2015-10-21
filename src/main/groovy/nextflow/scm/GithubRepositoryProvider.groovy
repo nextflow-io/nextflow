@@ -42,7 +42,7 @@ final class GithubRepositoryProvider extends RepositoryProvider {
 
     /** {@inheritDoc} */
     @Override
-    String getRepoUrl() {
+    String getEndpointUrl() {
         "${config.endpoint}/repos/${project}"
     }
 
@@ -55,7 +55,7 @@ final class GithubRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getCloneUrl() {
-        Map response = invokeAndParseResponse( getRepoUrl() )
+        Map response = invokeAndParseResponse( getEndpointUrl() )
 
         def result = response.get('clone_url')
         if( !result )
@@ -66,7 +66,7 @@ final class GithubRepositoryProvider extends RepositoryProvider {
 
     /** {@inheritDoc} */
     @Override
-    String getHomePage() {
+    String getRepositoryUrl() {
         "${config.server}/$project"
     }
 

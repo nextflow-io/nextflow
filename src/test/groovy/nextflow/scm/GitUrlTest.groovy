@@ -27,13 +27,13 @@ import spock.lang.Unroll
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class GitUrlParserTest extends Specification {
+class GitUrlTest extends Specification {
 
     @Unroll
     def 'should parse github url: #url' () {
 
         expect:
-        new GitUrlParser(url) == new GitUrlParser(protocol, user, location, project)
+        new GitUrl(url) == new GitUrl(protocol, user, location, project)
         where:
         url                                             | protocol  | user  | location          | project
         'https://example.com/gitproject.git'            | 'https'   | null  | 'example.com'     | 'gitproject'
@@ -49,5 +49,13 @@ class GitUrlParserTest extends Specification {
         '/opt/git/project/.git'                         | 'file'    | null  | '/opt/git'        | 'project'
 
     }
+
+    def 'should throw IllegalArgumentException' () {
+        when:
+        new GitUrl('https://example.com/gitproject')
+        then:
+        thrown(IllegalArgumentException)
+    }
+
 
 }
