@@ -39,6 +39,7 @@ import nextflow.script.TokenVar
 import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
 import spock.lang.Specification
+import spock.lang.Unroll
 import test.TestHelper
 /**
  *
@@ -398,6 +399,7 @@ class TaskProcessorTest extends Specification {
 
     }
 
+    @Unroll
     def 'should return `retry` strategy' () {
 
         given:
@@ -419,15 +421,16 @@ class TaskProcessorTest extends Specification {
         where:
         max_retries | max_errors    |   task_err_count  |  proc_err_count   | strategy
                 1   |        3      |               0   |               0   | ErrorStrategy.RETRY
-                1   |        3      |               1   |               0   | null
+                1   |        3      |               1   |               0   | ErrorStrategy.RETRY
+                1   |        3      |               2   |               0   | null
                 1   |        3      |               0   |               1   | ErrorStrategy.RETRY
                 1   |        3      |               0   |               2   | ErrorStrategy.RETRY
                 1   |        3      |               0   |               3   | null
                 3   |       -1      |               0   |               0   | ErrorStrategy.RETRY
                 3   |       -1      |               1   |               1   | ErrorStrategy.RETRY
                 3   |       -1      |               2   |               2   | ErrorStrategy.RETRY
-                3   |       -1      |               2   |               9   | ErrorStrategy.RETRY
-                3   |       -1      |               3   |               9   | null
+                3   |       -1      |               3   |               9   | ErrorStrategy.RETRY
+                3   |       -1      |               4   |               9   | null
 
     }
 
