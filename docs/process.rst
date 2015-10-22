@@ -1315,7 +1315,7 @@ only one retry is allowed, you can increase this value as shown below::
     launch different execution instances), while the ``maxRetries`` defines the maximum number of times the same process
     execution can be retried in case of an error.
 
-See also: `errorStrategy`_ and `maxErrors`_.
+See also: `errorStrategy`_ `maxErrors`_.
 
 
 module
@@ -1644,7 +1644,7 @@ TB      Terabytes
 .. note:: This directive currently is taken in account only by the :ref:`Cirrus <cirrus-executor>` executor.
 
 
-See also: `cpus`_, `memory`_ `time`_, `queue`_
+See also: `cpus`_, `memory`_ `time`_, `queue`_ and `Dynamic computing resources`_.
 
 .. _process-memory:
 
@@ -1683,7 +1683,7 @@ TB      Terabytes
   and :ref:`DRMAA <drmaa-executor>`
 
 
-See also: `cpus`_, `time`_, `queue`_
+See also: `cpus`_, `time`_, `queue`_ and `Dynamic computing resources`_.
 
 .. _process-time:
 
@@ -1718,7 +1718,7 @@ d       Days
     :ref:`SGE <sge-executor>`, :ref:`LSF <lsf-executor>`, :ref:`SLURM <slurm-executor>`, :ref:`PBS/Torque <pbs-executor>`
     and :ref:`DRMAA <drmaa-executor>`
 
-See also: `cpus`_, `memory`_, `queue`_
+See also: `cpus`_, `memory`_, `queue`_ and `Dynamic computing resources`_.
 
 .. _process-penv:
 
@@ -1852,7 +1852,7 @@ All directives can be assigned to a dynamic value except the following:
 
 
 .. note:: You can retrieve the current value of a dynamic directive in the process script by using the implicit variable ``task``
-  which holds the directive values defined in the current process.
+  which holds the directive values defined in the current process instance.
 
 For example::
 
@@ -1870,3 +1870,37 @@ For example::
       """
     }
 
+
+Dynamic computing resources
+---------------------------
+
+It's very common scenario that different instances of the same process may have a very different needs in terms of
+computing resources. In such situation requesting, for example, an amount of memory too low will cause some tasks to fail,
+instead using an higher limit that fits all the tasks execution could significantly decrease the execution priority of your jobs.
+
+The `Dynamic directives`_ evaluation feature can used to modify the amount of computing resources request in case
+of a process failure and try to re-execute it using an higher limit. For example::
+
+
+    process foo {
+
+        memory { 2.GB * task.attempt }
+        time { 1.hour * task.attempt }
+
+        errorStrategy { task.exitStatus == 140 ? 'retry' : 'terminate' }
+        maxRetries 3
+
+        script:
+        <your job here>
+
+    }
+
+
+In the above example the `memory`_ and execution `time`_ limits are defined dynamically. The first time the process
+is executed the ``task.attempt`` is set to ``1``, thus it will request a two GB of memory and one hour of maximum execution
+time.
+
+If the task execution fail reporting an exit status equals ``140``, the task is re-submitted (otherwise terminates immediately).
+This time the value of ``task.attempt`` is ``2``, thus increasing the amount of the memory to four GB and the time to 2 hours, and so on.
+
+The directory `maxRetries`_ set the maximum number of time the same task can be re-executed

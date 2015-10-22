@@ -689,12 +689,18 @@ abstract class TaskProcessor {
             // do not recoverable error, just trow it again
             if( error instanceof Error ) throw error
 
-            final int taskErrCount = task ? task.failCount++ : 0
-            final int procErrCount = errorCount++
+            final int taskErrCount = task ? ++task.failCount : 0
+            final int procErrCount = ++errorCount
 
             // when is a task level error and the user has chosen to ignore error,
             // just report and error message and DO NOT stop the execution
             if( task && error instanceof ProcessException ) {
+                // expose current task exist status
+                task.config.exitStatus = task.exitStatus
+                task.config.errorCount = procErrCount
+                task.config.retryCount = taskErrCount
+                task.config.attempt = taskErrCount+1
+
                 final strategy = checkErrorStrategy(task, error, taskErrCount, procErrCount)
                 if( strategy )
                     return strategy
@@ -748,7 +754,7 @@ abstract class TaskProcessor {
         if( taskStrategy == ErrorStrategy.RETRY ) {
             final int maxErrors = task.config.getMaxErrors()
             final int maxRetries = task.config.getMaxRetries()
-            if( (procErrCount < maxErrors || maxErrors == -1) && taskErrCount < maxRetries ) {
+            if( (procErrCount < maxErrors || maxErrors == -1) && taskErrCount <= maxRetries ) {
                 session.getExecService().submit({ checkCachedOrLaunchTask( task, task.hash, false, RunType.RETRY ) } as Runnable)
                 return ErrorStrategy.RETRY
             }

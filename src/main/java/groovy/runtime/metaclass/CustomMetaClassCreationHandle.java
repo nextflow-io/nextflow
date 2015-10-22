@@ -58,7 +58,11 @@ public class CustomMetaClassCreationHandle extends MetaClassRegistry.MetaClassCr
     protected MetaClass createNormalMetaClass(Class theClass,MetaClassRegistry registry) {
         MetaClass metaClass = super.createNormalMetaClass( theClass, registry );
 
-        if( isSplitterClass(theClass) ) {
+        if( Number.class.isAssignableFrom(theClass) ) {
+            log.trace("Registering number meta-class for: {}", theClass);
+             return new NumberDelegatingMetaClass(metaClass);
+        }
+        else if (isSplitterClass(theClass)) {
             log.trace("Registering custom meta-class for: {}", theClass);
             return new NextflowDelegatingMetaClass(metaClass);
         }

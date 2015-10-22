@@ -37,7 +37,7 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable {
 
     static private final Pattern FORMAT = ~/([0-9\.]+)\s*(\S)?B?/
 
-    static private final List UNITS = [ "B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB" ]
+    static public final List UNITS = [ "B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB" ]
 
     final static int KB = 1024
 
@@ -55,6 +55,7 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable {
      * @param value The number of bytes it represent
      */
     MemoryUnit( long value ) {
+        assert value>=0, "Memory unit cannot be a negative number"
         this.size = value
     }
 
@@ -108,6 +109,22 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable {
         size >> 30
     }
 
+    def plus( MemoryUnit value )  {
+        return new MemoryUnit( size + value.size )
+    }
+
+    def minus( MemoryUnit value )  {
+        return new MemoryUnit( size - value.size )
+    }
+
+    def multiply( Number value ) {
+        return new MemoryUnit( size * value )
+    }
+
+    def div( Number value ) {
+        return new MemoryUnit( Math.round((double)(size / value)) )
+    }
+
     def String toString() {
         if(size <= 0) {
             return "0"
@@ -121,5 +138,13 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable {
     @Override
     int compareTo(MemoryUnit that) {
         return this.size <=> that.size
+    }
+
+    static of( String value ) {
+        new MemoryUnit(value)
+    }
+
+    static of( long value ) {
+        new MemoryUnit(value)
     }
 }

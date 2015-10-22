@@ -281,6 +281,18 @@ class TaskConfig extends LazyMap {
         }
     }
 
+    Integer getAttempt() {
+        get('attempt') as Integer ?: 1
+    }
+
+    Integer getErrorCount() {
+        get('errorCount') as Integer ?: 0
+    }
+
+    Integer getRetryCount() {
+        get('retryCount') as Integer ?: 0
+    }
+
     /**
      * Get a closure guard condition and evaluate to a boolean result
      *

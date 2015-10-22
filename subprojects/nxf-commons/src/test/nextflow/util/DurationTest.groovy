@@ -131,10 +131,35 @@ class DurationTest extends Specification {
 
     }
 
+    def 'should add time' () {
+
+        expect:
+        new Duration('1 hour') + new Duration('3 hours')  == new Duration('4 hours')
+
+    }
+
+    def 'should subtract time' () {
+
+        expect:
+        new Duration('4 hour') - new Duration('3 hours')  == new Duration('1 hour')
+
+    }
+
+    def 'should multiple time' () {
+        expect:
+        new Duration('2 hour') * 3 == new Duration('6 hours')
+        new Duration('6 hours') * 1.5 == new Duration('9 hours')
+        // `multiply` a number by a MemoryUnit is implemented by `NumberDelegatingMetaClass`
+    }
+
+    def 'should divide time' () {
+        expect:
+        new Duration('6 hour') / 2 == new Duration('3 hours')
+        new Duration('9 hours') / 1.5 == new Duration('6 hours')
+    }
+
 
     def testThrottle() {
-
-        setup:
 
         when:
         int i = 0

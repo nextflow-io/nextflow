@@ -239,6 +239,7 @@ class TaskConfigTest extends Specification {
         new MemoryUnit('1M')    || 1024 * 1024
         new MemoryUnit('5M')    || '5M'
         new MemoryUnit('20G')   || { "$x G" }
+        new MemoryUnit('30G')   || MemoryUnit.of('30G')
 
     }
 
