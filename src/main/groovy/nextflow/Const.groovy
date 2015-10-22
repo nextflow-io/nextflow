@@ -33,42 +33,42 @@ class Const {
     /**
      * The application main package name
      */
-    static final String MAIN_PACKAGE = Const.name.split('\\.')[0]
+    static public final String MAIN_PACKAGE = Const.name.split('\\.')[0]
 
     /**
      * The application main name
      */
-    static final String APP_NAME = MAIN_PACKAGE
+    static public final String APP_NAME = MAIN_PACKAGE
 
     /**
      * The application home folder
      */
-    static final Path APP_HOME_DIR = getHomeDir(APP_NAME)
+    static public final Path APP_HOME_DIR = getHomeDir(APP_NAME)
 
     /**
      * The application version
      */
-    static final String APP_VER = "0.15.4"
+    static public final String APP_VER = "0.15.4"
 
     /**
      * The app build time as linux/unix timestamp
      */
-    static final long APP_TIMESTAMP = 1442930644370
+    static public final long APP_TIMESTAMP = 1442930644370
 
     /**
      * The app build number
      */
-    static final int APP_BUILDNUM = 3110
+    static public final int APP_BUILDNUM = 3110
 
     /**
      * The date time formatter string
      */
-    static final DATETIME_FORMAT = 'dd-MM-yyyy HH:mm'
+    static public final DATETIME_FORMAT = 'dd-MM-yyyy HH:mm'
 
     /**
      * The app build time string relative to UTC timezone
      */
-    static final String APP_TIMESTAMP_UTC = {
+    static public final String APP_TIMESTAMP_UTC = {
 
         def tz = TimeZone.getTimeZone('UTC')
         def fmt = new SimpleDateFormat(DATETIME_FORMAT)
@@ -81,7 +81,7 @@ class Const {
     /**
      * The app build time string relative to local timezone
      */
-    static final String APP_TIMESTAMP_LOCAL = {
+    static public final String APP_TIMESTAMP_LOCAL = {
 
         def tz = TimeZone.getDefault()
         def fmt = new SimpleDateFormat(DATETIME_FORMAT)
