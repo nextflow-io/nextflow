@@ -22,6 +22,7 @@ package nextflow.cli
 
 import java.nio.file.Files
 
+import spock.lang.Requires
 import spock.lang.Specification
 /**
  *
@@ -29,6 +30,7 @@ import spock.lang.Specification
  */
 class CmdPullTest extends Specification {
 
+    @Requires({ System.getenv('NXF_GITHUB_ACCESS_TOKEN') })
     def 'should pull the github repository in the local folder'() {
 
         given:

@@ -21,6 +21,7 @@
 package nextflow.cli
 import java.nio.file.Files
 
+import spock.lang.Requires
 import spock.lang.Specification
 /**
  *
@@ -28,6 +29,7 @@ import spock.lang.Specification
  */
 class CmdCloneTest extends Specification {
 
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testClone() {
 
         given:
