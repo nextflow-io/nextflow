@@ -93,6 +93,7 @@ class Launcher implements ExitCode {
                 new CmdHistory(),
                 new CmdInfo(),
                 new CmdList(),
+                new CmdLs(),
                 new CmdPull(),
                 new CmdRun(),
                 new CmdDrop(),
@@ -300,16 +301,17 @@ class Launcher implements ExitCode {
         }
     }
 
-    protected void printCommands(List<CmdBase> cmds) {
+    protected void printCommands(List<CmdBase> commands) {
         println "\nCommands:"
 
-        def list = new ArrayList<CmdBase>(cmds).findAll { it.name != CmdNode.NAME }
         int len = 0
         def all = new TreeMap<String,String>()
-        list.each {
+        new ArrayList<CmdBase>(commands).each {
             def description = it.getClass().getAnnotation(Parameters)?.commandDescription()
-            all[it.name] = description ?: '-'
-            if( it.name.size()>len ) len = it.name.size()
+            if( description ) {
+                all[it.name] = description
+                if( it.name.size()>len ) len = it.name.size()
+            }
         }
 
         all.each { String name, String desc ->
