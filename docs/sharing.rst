@@ -1,31 +1,32 @@
 .. _sharing-page:
 
-****************************
+****************
 Pipeline sharing
-****************************
+****************
 
-Nextflow seamlessly integrates with `GitHub <http://github.com>`_, `BitBucket <http://bitbucket.org/>`_ [#]_
+Nextflow seamlessly integrates with `BitBucket <http://bitbucket.org/>`_ [#]_, `GitHub <http://github.com>`_,
 and `GitLab <http://gitlab.com>`_ hosted code repositories and sharing platforms. This feature allows you to manage your
-project code in a more consistent manner, or use other people's Nextflow pipelines, published through GitHub/BitBucket/GitLab,
+project code in a more consistent manner or use other people's Nextflow pipelines, published through BitBucket/GitHub/GitLab,
 in a quick and transparent way.
 
 How it works
-=============
+============
 
 When you launch a script execution with Nextflow, it will look for a file with the pipeline name you've specified.
 If that file does not exist, it will look for a public repository with the same name on GitHub (unless otherwise specified).
-If it is found, the repository is automatically downloaded to your computer and the code executed. This repository is
-stored in the Nextflow home directory, by default the ``$HOME/.nextflow`` path, thus it will be reused for any further
-execution.
+If it is found, the repository is automatically downloaded to your computer and executed. This repository is
+stored in the Nextflow home directory, that is by default the ``$HOME/.nextflow`` path, and thus will be reused for any further
+executions.
 
-Run a pipeline
-================
+Running a pipeline
+==================
 
-To launch the execution of a pipeline project hosted in remote code repository you simply need to specify its `qualified` name
-after the ``run`` command or the repository URL. The qualified name is formed by two parts: the `owner` name and the `repository` name separated by a ``/`` character.
+To launch the execution of a pipeline project, hosted in a remote code repository, you simply need to specify its `qualified` name
+or the repository URL after the ``run`` command. The qualified name is formed by two parts: the `owner` name and the
+`repository` name separated by a ``/`` character.
 
-In other words if a Nextflow project is hosted, for example, into a GitHub repository having an address like
-``http://github.com/foo/bar``, It can be executed by entering in your shell terminal the following command::
+In other words if a Nextflow project is hosted, for example, in a GitHub repository at the address
+``http://github.com/foo/bar``, it can be executed by entering the following command in your shell terminal::
 
     nextflow run foo/bar
 
@@ -35,29 +36,31 @@ or using the project URL::
 
 
 .. note:: In the first case, if your project is hosted on a service other than GitHub, you will need to specify this hosting
-    service in the command line by using the ``-hub`` command line option. For example ``-hub bitbucket`` or ``-hub gitlab``.
-    In the second case, i.e., when using the project URL as name, that is not needed.
+    service in the command line by using the ``-hub`` option. For example ``-hub bitbucket`` or ``-hub gitlab``.
+    In the second case, i.e. when using the project URL as name, the ``-hub`` option is not needed.
 
-.. tip:: Private repositories can be accessed by specifying the access credentials by using the ``-user`` command
-  line option, then the program will ask to enter the password interactively.
-
-
-You can try this feature out, by simply entering the following command in your shell terminal::
+You can try this feature out by simply entering the following command in your shell terminal::
 
     nextflow run nextflow-io/hello
 
 It will download a trivial `Hello` example from the repository published at the following address
 http://github.com/nextflow-io/hello and execute it in your computer.
 
-If `owner` part in the pipeline name is omitted, Nextflow will look for a pipeline between the ones you have
-already executed having a name that matches the name specified. If none it's found it will try to download
+If the `owner` part in the pipeline name is omitted, Nextflow will look for a pipeline between the ones you have
+already executed having a name that matches the name specified. If none is found it will try to download
 it using the `organisation` name defined by the environment variable ``NXF_ORG`` (which by default is ``nextflow-io``).
 
-Handle revisions
+
+.. tip:: To access a private repository, specify the access credentials by using the ``-user`` command
+    line option, then the program will ask you to enter the password interactively.
+    Private repositories access credentials can also be defined in the `SCM configuration file`_.
+
+
+Handling revisions
 ==================
 
-Any branch, tag or commit ID defined in a project Git repository can be used to specify a revision, that you want to execute,
-when running your pipeline by adding the ``-r`` option to the run command line. So for example you could enter::
+Any Git branch, tag or commit ID defined in a project repository, can be used to specify the revision that you want to execute
+when launching a pipeline by adding the ``-r`` option to the run command line. So for example you could enter::
 
     nextflow run nextflow-io/hello -r mybranch
 
@@ -66,33 +69,35 @@ or ::
     nextflow run nextflow-io/hello -r v1.1
 
 
-It will execute two different code revisions as specified.
+It will execute two different project revisions corresponding to the Git tag/branch having that names.
 
 Commands to manage projects
-============================
+===========================
 
 The following commands allows you to perform some basic operations that can be used to manage your projects.
 
-.. note:: Anyway Nextflow is not meant to replace functionalities provided by the `Git` tool, you may still need it to create new
+.. note:: Nextflow is not meant to replace functionalities provided by the `Git <https://git-scm.com/>`_ tool. You may still need it to create new
   repositories or commit changes, etc.
 
-List available projects
--------------------------
+Listing available projects
+--------------------------
 
-The ``ls`` command allows you to list all the pipeline projects you have downloaded in your computer. For example::
+The ``list`` command allows you to list all the projects you have downloaded in your computer. For example::
 
-    nextflow ls
+    nextflow list
 
 This prints a list similar to the following one::
 
+    cbcrg/ampa-nf
     cbcrg/piper-nf
     nextflow-io/hello
+    nextflow-io/examples
 
 
-Show project information
---------------------------
+Showing project information
+---------------------------
 
-By using the ``info`` command you can show information from a downloaded pipeline. For example::
+By using the ``info`` command you can show information from a downloaded project. For example::
 
      project name: nextflow-io/hello
      repository  : http://github.com/nextflow-io/hello
@@ -105,32 +110,37 @@ By using the ``info`` command you can show information from a downloaded pipelin
        v1.2 [t]
 
 Starting from the top it shows: 1) the project name; 2) the Git repository URL; 3) the local folder where the
-pipeline has been downloaded; 4) the script that is executed when launched; 5) the list of available
+project has been downloaded; 4) the script that is executed when launched; 5) the list of available
 revisions i.e. branches and tags. Tags are marked with a ``[t]`` on the right, the current checked-out revision is
 marked with a ``*`` on the left.
 
-Pull or update a project
---------------------------
+Pulling or updating a project
+-----------------------------
 
 The ``pull`` command allows you to download a project from a GitHub repository or to update it if
 that repository has already been downloaded. For example::
 
     nextflow pull nextflow-io/examples
 
+Altenatively, you can use the repository URL as the name of the project to pull::
+
+    nextflow pull https://github.com/nextflow-io/examples
+
+
 Downloaded pipeline projects are stored in the folder ``$HOME/.nextflow/assets`` in your computer.
 
 
-View the project code
---------------------------
+Viewing the project code
+-------------------------
 
-The ``view`` command allows you to show quickly the content of a pipeline script you may have downloaded. For example::
+The ``view`` command allows you to quickly show the content of the pipeline script you have downloaded. For example::
 
     nextflow view nextflow-io/hello
 
 By adding the ``-l`` option to the example above it will list the content of the repository.
 
 
-Clone a project into a folder
+Cloning a project into a folder
 -------------------------------
 
 The ``clone`` command allows you to copy a Nextflow pipeline project to a directory of your choice. For example::
@@ -138,12 +148,12 @@ The ``clone`` command allows you to copy a Nextflow pipeline project to a direct
     nextflow clone nextflow-io/hello target-dir
 
 If the destination directory is omitted the specified project is cloned to a directory with the same name as the
-pipeline base name (e.g. hello) in the current folder.
+pipeline base name (e.g. `hello`) in the current folder.
 
 The clone command can be used to inspect or modify the source code of a pipeline project. You can eventually commit and push
 back your changes by using the usual Git/GitHub workflow.
 
-Delete a downloaded project
+Deleting a downloaded project
 -----------------------------
 
 Downloaded pipelines can be deleted by using the ``drop`` command, as shown below::
@@ -154,7 +164,7 @@ SCM configuration file
 =======================
 
 The file ``$HOME/.nextflow/scm`` allows you to centralise the security credentials required to access private project
-repositories on GitHub, Bitbucket and GitLab source code management (`SCM`) platforms or to manage the configuration properties
+repositories on Bitbucket, GitHub and GitLab source code management (`SCM`) platforms or to manage the configuration properties
 of private server installations (of the same platforms).
 
 The configuration properties for each SCM platform are defined inside the ``providers`` section,
@@ -168,7 +178,7 @@ properties for the same provider are grouped together with a common name and del
     }
 
 
-Where `<provider-name>` need to be replaced with one of the "default" server (i.e. ``github``, ``gitlab`` and ``bitbucket``)
+In the above template replace `<provider-name>` with one of the "default" servers (i.e. ``bitbucket``, ``github`` or ``gitlab``)
 or a custom identifier representing a private SCM server installation.
 
 The following configuration properties are supported for each provider configuration:
@@ -177,37 +187,20 @@ The following configuration properties are supported for each provider configura
 Name                Description
 =================== ==============
 user                User name required to access private repositories on the SCM server.
-password            User password required to access private repository on the SCM server.
+password            User password required to access private repositories on the SCM server.
 token               Private API access token (used only when the specified platform is ``gitlab``).
 :sup:`*` platform   SCM platform name, either: ``github``, ``gitlab`` or ``bitbucket``.
 :sup:`*` server     SCM server name including the protocol prefix e.g. ``https://github.com``.
-:sup:`*` endpoint   SCM API `endpoint` URL e.g. ``https://api.github.com`` (default: the same value provided for ``server``).
+:sup:`*` endpoint   SCM API `endpoint` URL e.g. ``https://api.github.com`` (default: the same value specified for ``server``).
 =================== ==============
 
-The attribute marked with a * are only required when defining the configuration of a private SCM servers.
+The attributes marked with a * are only required when defining the configuration of a private SCM server.
 
 
-GitHub credentials
--------------------
+BitBucket credentials
+---------------------
 
-Create an ``github`` entry in the `SCM configuration file`_ specifying your user name and password as shown below::
-
-    providers {
-
-        github {
-            user = 'me'
-            password = 'my-secret'
-        }
-
-    }
-
-.. tip:: You can use use a `Personal API token <https://github.com/blog/1509-personal-api-tokens>`_ in place of your GitHub password.
-
-
-Bitbucket credentials
-----------------------
-
-Create an ``bitbucket`` entry in the `SCM configuration file`_ specifying your the user name and password, as shown below::
+Create a ``bitbucket`` entry in the `SCM configuration file`_ specifying your user name and password, as shown below::
 
     providers {
 
@@ -219,10 +212,28 @@ Create an ``bitbucket`` entry in the `SCM configuration file`_ specifying your t
     }
 
 
+GitHub credentials
+------------------
+
+Create a ``github`` entry in the `SCM configuration file`_ specifying your user name and password as shown below::
+
+    providers {
+
+        github {
+            user = 'me'
+            password = 'my-secret'
+        }
+
+    }
+
+.. tip:: You can use use a `Personal API token <https://github.com/blog/1509-personal-api-tokens>`_ in place of your
+    GitHub password.
+
+
 GitLab credentials
 -------------------
 
-Create an ``bitbucket`` entry in the `SCM configuration file`_ specifying the user name, password and your API access token
+Create a ``gitlab`` entry in the `SCM configuration file`_ specifying the user name, password and your API access token
 that can be found in your GitLab `account page <https://gitlab.com/profile/account>`_ (sign in required). For example::
 
     providers {
@@ -237,63 +248,70 @@ that can be found in your GitLab `account page <https://gitlab.com/profile/accou
 
 
 Private server configuration
-=============================
+============================
 
-Nextflow is able to access repositories hosted on private server installations of the GitHub, Bitbucket and GitLab SCM platforms.
+Nextflow is able to access repositories hosted on private BitBucket, GitHub and GitLab server installations.
 
-In order of being able to use a private SCM server you will need to include the server name and access credentials of your SCM installation
+In order to use a private SCM installation you will need to set the server name and access credentials
 in your `SCM configuration file`_ .
 
-If, for example, the host name of your private GitLab server is ``github.acme.org``, you will need to to add in the
-``$HOME/.nextflow/scm`` file a configuration like the following one::
+If, for example, the host name of your private GitLab server is ``gitlab.acme.org``, you will need to have in the
+``$HOME/.nextflow/scm`` file a configuration like the following::
 
     providers {
 
         mygit {
-            server = 'http://github.acme.org'
-            platform = 'github'
+            server = 'http://gitlab.acme.org'
+            platform = 'gitlab'
             user = 'your-user'
             password = 'your-password'
+            token = 'your-api-token'
         }
 
     }
 
 
-Then you will be able to run/pull project with Nextflow using the following command line::
+Then you will be able to run/pull a project with Nextflow using the following command line::
 
     $ nextflow run foo/bar -hub mygit
 
 Or, in alternative, using the Git clone URL::
 
-    $ nextflow run http://github.acme.org/foo/bar.git
+    $ nextflow run http://gitlab.acme.org/foo/bar.git
 
 
-Publish your pipeline
-======================
+Publishing your pipeline
+========================
 
-In order to publish your Nextflow pipeline to GitHub and allow other people to use it, you simply need to create a
-GitHub repository containing all your project script and data files. If you don't know how to do it, follow this simple tutorial
-that explains how `create a GitHub repository <https://help.github.com/articles/create-a-repo>`_.
+In order to publish your Nextflow pipeline to GitHub (or any other supported platform) and allow other people to use it,
+you only need to create a GitHub repository containing all your project script and data files. If you don't know how to
+do it, follow this simple tutorial that explains how `create a GitHub repository <https://help.github.com/articles/create-a-repo>`_.
 
-Nextflow only requires that main script in your pipeline project is called ``main.nf``. A different name can be
+Nextflow only requires that the main script in your pipeline project is called ``main.nf``. A different name can be
 used by specifying the ``manifest.mainScript`` attribute in the ``nextflow.config`` file that must be
-included to your project. For example::
+included in your project. For example::
 
-  manifest.mainScript = 'my_pipeline_very_long_name.nf'
+  manifest.mainScript = 'my_very_long_script_name.nf'
 
-Learn more about this and other project meta-data information that can be defined in the Nextflow configuration file
-read the :ref:`Manifest <config-manifest>` section in the Nextflow configuration page.
+To learn more about this and other project metadata information, that can be defined in the Nextflow configuration file,
+read the :ref:`Manifest <config-manifest>` section on the Nextflow configuration page.
 
-Once you have uploaded your pipeline project into GitHub (or BitBucket/GitLab) other people can use it by specifying the
-pipeline `qualified` name on the Nextflow run command line. The qualified name is simply the GitHub user name
-(or organisation) plus the repository name.
+Once you have uploaded your pipeline project to GitHub other people can execute it simply
+using the project name or the repository URL.
 
-For the sake of the example if your GitHub account name is ``foo`` and you have uploaded it to a repository named ``bar`` the
-repository URL will be ``http://github.com/foo/bar`` and people will able to run it by entering the command::
+For if your GitHub account name is ``foo`` and you have uploaded a project into a repository named ``bar`` the
+repository URL will be ``http://github.com/foo/bar`` and people will able to download and run it by using either
+the command::
 
-  nextflow run foo/bar
+    nextflow run foo/bar
 
+or
 
+::
+
+    nextflow run http://github.com/foo/bar
+
+See the `Running a pipeline`_ section for more details on how to run Nextflow projects.
 
 Manage dependencies
 =====================

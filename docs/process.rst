@@ -1518,9 +1518,9 @@ move            Moves the output files into the published directory. **Note**: t
     }
 
 
-.. warning:: Files are published into the specified directory in an *asynchronous* manner, thus they may not be available
-  when the producing process is finished. For this reason files published by a process must not be
-  accessed by other downstream processes.
+.. warning:: Files are copied into the specified directory in an *asynchronous* manner, thus they may not be immediately
+  available in the published directory at the end of the process execution. For this reason files published by a process
+  must not be accessed by other downstream processes.
 
 validExitStatus
 -------------------

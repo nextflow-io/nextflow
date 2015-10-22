@@ -58,8 +58,8 @@ Due to the asynchronous nature of Nextflow the termination of a script does not 
 of the running workflow. Thus the information, only available on execution completion, needs to be accessed by
 using an asynchronous handler.
 
-The ``onComplete`` event handler is invoked by the framework when the workflow is complete. It allows one to access the
-worflow termination status and other useful information. For example::
+The ``onComplete`` event handler is invoked by the framework when the workflow execution is completed. It allows one
+to access the workflow termination status and other useful information. For example::
 
     workflow.onComplete {
         println "Pipeline completed at: $workflow.complete"
@@ -72,7 +72,8 @@ Notification message
 ----------------------
 
 Nextflow does not provide a built-in mechanism to send emails or other messages. However the ``mail`` standard Linux
-tool (or an equivalent one) can easily be used to send a notification message when the workflow is completed, as shown below::
+tool (or an equivalent one) can easily be used to send a notification message when the workflow execution is completed,
+as shown below::
 
 
     workflow.onComplete {

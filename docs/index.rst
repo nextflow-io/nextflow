@@ -22,7 +22,7 @@ Contents:
    amazons3
    docker
    dnanexus
-   gridgain
+   ignite
    tracing
    sharing
    metadata
