@@ -3,7 +3,7 @@ set -e
 set -x 
 
 #
-# verify Amazon auth codes are availables
+# verify Amazon auth codes are available
 #
 [[ -z 'AWS_ACCESS_KEY' ]] && { echo 'Missing $AWS_ACCESS_KEY variable'; exit 1; }
 [[ -z 'AWS_SECRET_KEY' ]] && { echo 'Missing $AWS_SECRET_KEY variable'; exit 2; }
@@ -15,7 +15,7 @@ export AWS_SECRET_KEY=$AWS_SECRET_KEY
 EOF
 
 #
-# Lauch docker and pull the container when DOCKER variable is defined
+# Launch docker and pull the container when DOCKER variable is defined
 #
 [[ "$DOCKER_IMAGE" ]] && docker pull $DOCKER_IMAGE
 

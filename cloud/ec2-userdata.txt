@@ -2,7 +2,7 @@
 su - ec2-user << 'EOF'
 export AWS_ACCESS_KEY=<AWS ACCESS KEY>
 export AWS_SECRET_KEY=<AWS SECRET KEY>
-export NXF_PACKAGE=gg
+export NXF_MODE=ignite
 #export NXF_VER=<version>
 #export CONTAINER=<container to pull>
 curl -fsSL https://raw.githubusercontent.com/nextflow-io/nextflow/master/cloud/cloud-boot.sh | bash &> ~ec2-user/boot.log
