@@ -48,11 +48,17 @@ class BitBucketRepositoryProviderTest extends Specification {
     }
 
 
+    @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
     def testReadContent() {
 
+        given:
+        def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
+        def config = new ProviderConfig('bitbucket').setAuth(token)
+
         when:
-        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial')
+        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
         def result = repo.readText('main.nf')
+
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')
 
