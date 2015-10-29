@@ -43,6 +43,8 @@ import groovy.util.logging.Slf4j
 import nextflow.file.FileHelper
 import nextflow.io.ByteBufferBackedInputStream
 import nextflow.util.CharsetHelper
+import nextflow.util.CheckHelper
+
 /**
  * Add utility methods to standard classes {@code File} and {@code Path}
  *
@@ -587,7 +589,7 @@ class FilesEx {
         Files.isRegularFile(self,options)
     }
 
-    def static boolean isSymlink(Path self) {
+    def static boolean isLink(Path self) {
         Files.isSymbolicLink(self)
     }
 
@@ -1333,28 +1335,62 @@ class FilesEx {
 
     }
 
-    static void symlinkTo( Path self, Path existing ) {
-        Files.createSymbolicLink(self, existing)
+    static private LINK_PARAMS = [hard:Boolean, overwrite: Boolean]
+
+    /**
+     * Make a symbolic or a hard file system link
+     *
+     * @param existing The existing file
+     * @param opts
+     *      Optional parameters:
+     *      {@code hard}: when {@code true} create a hard link, otherwise it creates a symbolic link
+     *      {@code overwrite}
+     * @param link The {@link Path} of the link to create
+     */
+    static void mklink( Path existing, Map opts, Path link ) {
+        CheckHelper.checkParams('makeLink', opts, LINK_PARAMS)
+
+        final hard = opts?.hard == true ?: false
+        final overwrite = opts?.overwrite == true ?: false
+
+        try {
+            createLinkImpl(existing, link, hard)
+        }
+        catch( FileAlreadyExistsException e ) {
+            if( !overwrite ) throw e
+            Files.delete(link)
+            createLinkImpl(existing, link, hard)
+        }
     }
 
-    static void symlinkTo( Path self, File existing ) {
-        Files.createSymbolicLink(self, existing.toPath())
+    static private createLinkImpl(Path existing, Path link, boolean hard) {
+        if( hard ) {
+            Files.createLink(link, existing)
+        }
+        else {
+            Files.createSymbolicLink(link, existing)
+        }
     }
 
-    static void symlinkTo( Path self, String existing ) {
-        Files.createSymbolicLink(self, self.getFileSystem().getPath(existing))
+    static void mklink( Path existing, Map opts, File link ) {
+        mklink(existing, opts, link.toPath())
     }
 
-    static void linkTo( Path self, Path existing ) {
-        Files.createLink(self, existing)
+    static void mklink( Path existing, Map opts, String link ) {
+        mklink(existing, opts, existing.getFileSystem().getPath(link))
     }
 
-    static void linkTo( Path self, File existing ) {
-        Files.createLink(self, existing.toPath())
+
+    static void mklink( Path existing, Path link ) {
+        mklink(existing, null, link )
     }
 
-    static void linkTo( Path self, String existing ) {
-        Files.createLink(self, self.getFileSystem().getPath(existing))
+    static void mklink( Path existing, File link ) {
+        mklink(existing, null, link.toPath())
+    }
+
+    static void mklink( Path existing, String link ) {
+        mklink(existing, null, existing.getFileSystem().getPath(link))
     }
 
     /**

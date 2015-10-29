@@ -19,6 +19,8 @@
  */
 
 package nextflow.extension
+
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -191,7 +193,7 @@ class FilesExTest extends Specification {
         folder.resolve('alpha').mkdir()
         folder.resolve('alpha/file_1.txt').text = 'file 1'
         folder.resolve('alpha/file_2.txt').text = 'file 2'
-        folder.resolve('alpha/link_3.txt').symlinkTo(folder.resolve('alpha/file_2.txt'))
+        folder.resolve('alpha/file_2.txt').mklink(folder.resolve('alpha/link_3.txt'))
 
         folder.resolve('alpha/dir2').mkdir()
         folder.resolve('alpha/dir2/file_4').text = 'Hello'
@@ -211,7 +213,7 @@ class FilesExTest extends Specification {
         folder.resolve('beta/alpha/file_2.txt').text == 'file 2'
         folder.resolve('beta/alpha/link_3.txt').text == 'file 2'
         // note: this is coherent with Linux 'cp -r' command i.e. the link target file is copied not the link itself
-        !folder.resolve('beta/alpha/link_3.txt').isSymlink()
+        !folder.resolve('beta/alpha/link_3.txt').isLink()
         folder.resolve('beta/alpha/dir2').isDirectory()
         folder.resolve('beta/alpha/dir2/file_4').text == 'Hello'
         folder.resolve('beta/alpha/dir2/file_5').text == 'Hola'
@@ -231,7 +233,7 @@ class FilesExTest extends Specification {
         folder.resolve('beta/file_2.txt').text == 'file 2'
         folder.resolve('beta/link_3.txt').text == 'file 2'
         // note: this is coherent with 'cp -r' linux command i.e. the link target file is copied not the link itself
-        !folder.resolve('beta/link_3.txt').isSymlink()
+        !folder.resolve('beta/link_3.txt').isLink()
         folder.resolve('beta/dir2').isDirectory()
         folder.resolve('beta/dir2/file_4').text == 'Hello'
         folder.resolve('beta/dir2/file_5').text == 'Hola'
@@ -967,7 +969,7 @@ class FilesExTest extends Specification {
         then:
         // should NOT resolve symbolic link
         folder.resolve('link1').exists()
-        folder.resolve('link1').isSymlink()
+        folder.resolve('link1').isLink()
         FilesEx.complete( folder.resolve('./xxx/../link1') ) == folder.resolve('link1')
 
         cleanup:
@@ -988,4 +990,91 @@ class FilesExTest extends Specification {
     }
 
 
+    def 'should create a symlink' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('file').text = 'Hello'
+
+        when:
+        folder.resolve('file').mklink( folder.resolve('link.txt') )
+        then:
+        folder.resolve('link.txt').text == 'Hello'
+        folder.resolve('link.txt').isLink()
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
+    def 'symlink should overwrite existing file' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('A').text = 'Hello'
+        folder.resolve('B').text = 'Ciao'
+        folder.resolve('C').text = 'Hola'
+
+        when:
+        folder.resolve('A').mklink( folder.resolve('B'), overwrite: true )
+        then:
+        folder.resolve('B').text == 'Hello'
+        folder.resolve('B').isLink()
+
+
+        when:
+        folder.resolve('A').mklink( folder.resolve('C'), overwrite: false )
+        then:
+        thrown(FileAlreadyExistsException)
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
+
+    def 'should create a hard link' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('file').text = 'Hello'
+
+        when:
+        folder.resolve('file').mklink( folder.resolve('link.txt'), hard: true )
+        then:
+        folder.resolve('link.txt').text == 'Hello'
+        !folder.resolve('link.txt').isLink() // this API check if it's a symbolic link, thus should return false
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
+
+    def 'hard link should overwrite existing file' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('A').text = 'Hello'
+        folder.resolve('B').text = 'Ciao'
+        folder.resolve('C').text = 'Hola'
+
+        when:
+        folder.resolve('A').mklink( folder.resolve('B'), overwrite: true, hard: true )
+        then:
+        folder.resolve('B').text == 'Hello'
+        !folder.resolve('B').isLink()
+
+        when:
+        folder.resolve('A').mklink( folder.resolve('C'), overwrite: false, hard: true )
+        then:
+        thrown(FileAlreadyExistsException)
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
 }
+
+

@@ -104,9 +104,9 @@ class PublishDirTest extends Specification {
         publishDir.resolve('file3.fastq').exists()
         !publishDir.resolve('file3.temp').exists()
 
-        publishDir.resolve('file1.txt').isSymlink()
-        publishDir.resolve('file2.bam').isSymlink()
-        publishDir.resolve('file3.fastq').isSymlink()
+        publishDir.resolve('file1.txt').isLink()
+        publishDir.resolve('file2.bam').isLink()
+        publishDir.resolve('file3.fastq').isLink()
 
 
         when:
@@ -158,10 +158,10 @@ class PublishDirTest extends Specification {
         !publishDir.resolve('file3.fastq').exists()
         !publishDir.resolve('file3.temp').exists()
 
-        !publishDir.resolve('file1.txt').isSymlink()
-        !publishDir.resolve('file2.bam').isSymlink()
-        !publishDir.resolve('file3.fastq').isSymlink()
-        !publishDir.resolve('dir-x').isSymlink()
+        !publishDir.resolve('file1.txt').isLink()
+        !publishDir.resolve('file2.bam').isLink()
+        !publishDir.resolve('file3.fastq').isLink()
+        !publishDir.resolve('dir-x').isLink()
 
         cleanup:
         folder?.deleteDir()
