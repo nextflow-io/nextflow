@@ -16,9 +16,9 @@ software.
 .. _ignite-daemon:
 
 Cluster daemon
----------------------
+--------------
 
-In order to setup a cluster you will need to run a cluster daemon on each node that made up your cluster.
+In order to setup a cluster you will need to run a cluster daemon on each node within your cluster.
 If you want to support the :ref:`Docker integration <docker-page>` feature provided by Nextflow, the Docker engine has
 to be installed and must run in each node.
 
@@ -26,33 +26,33 @@ In its simplest form just launch the Nextflow daemon in each cluster node as sho
 
     nextflow node -bg
 
-The command line options ``-bg`` launches the node daemon in the background. The output is stored in the log file ``.node-nextflow.log``. The daemon
+The command line option ``-bg`` launches the node daemon in the background. The output is stored in the log file ``.node-nextflow.log``. The daemon
 process ``PID`` is saved in the file ``.nextflow.pid`` in the same folder.
 
 
 Multicast discovery
-====================
+===================
 
-By default, the Ignite daemon tries to discover the members in the cluster by using the network *multicast* discovery.
+By default, the Ignite daemon tries to discover all members in the cluster by using the network *multicast* discovery.
 Note that NOT all networks support this feature (Amazon EC2 does not).
 
-.. tip::  To check if multicast is available, `iperf <http://sourceforge.net/projects/iperf/>`_ is a useful tool which is available for Windows/\*NIX/OSX.
-  To test multicast open a terminal one 2 machines within the network and run the following in the first terminal
-  ``iperf -s -u -B 228.1.2.4 -i 1`` and ``iperf -c 228.1.2.4 -u -T 32 -t 3 -i 1`` in the other terminal.
+.. tip::  To check if multicast is available in your network, use the `iperf <http://sourceforge.net/projects/iperf/>`_ tool.
+  To test multicast, open a terminal on two machines within the network and run the following command in the first one
+  ``iperf -s -u -B 228.1.2.4 -i 1`` and ``iperf -c 228.1.2.4 -u -T 32 -t 3 -i 1`` on the second.
   If data is being transferred then multicast is working.
 
 
 Ignite uses the multicast group ``228.1.2.4`` and port ``47400`` by default. You can change these values, by using the
 ``cluster.join`` command line option, as shown below::
 
-    nextflow node -bg -cluster.join multicast:224.2.2.3:55701
+    nextflow node -cluster.join multicast:224.2.2.3:55701
 
 
 
-In the case that multicast discovery is not available in your network, you can try one of the following alternative methods:
+In case multicast discovery is not available in your network, you can try one of the following alternative methods:
 
 Shared file system
-====================
+==================
 
 Simply provide a path shared across the cluster by a network file system, as shown below::
 
@@ -62,19 +62,19 @@ Simply provide a path shared across the cluster by a network file system, as sho
 The cluster members will use that path to discover each other.
 
 
-IP address
+IP addresses
 ============
 
-Provide the list of pre-configured IP addresses on the daemon launch command line, for example::
+Provide a list of pre-configured IP addresses on the daemon launch command line, for example::
 
-    nextflow node -bg -cluster.join ip:10.0.2.1,10.0.2.2,10.0.2.4
+    nextflow node -cluster.join ip:10.0.2.1,10.0.2.2,10.0.2.4
 
 AWS S3 bucket
-===============
+=============
 
-Creates an Amazon AWS S3 bucket that will hold the cluster members IP addresses. For example::
+Creates an Amazon AWS S3 bucket that will hold the cluster member's IP addresses. For example::
 
-   nextflow node -bg -cluster.join s3:cluster_bucket
+   nextflow node -cluster.join s3:cluster_bucket
 
 
 
@@ -106,20 +106,19 @@ tcp.maxAckTimeout           Sets maximum timeout for receiving acknowledgement f
 tcp.joinTimeout             Sets join timeout.
 =========================== ================
 
-These options can be specified as command line parameters by pre-pending them the prefix ``-cluster.``, as shown below::
+These options can be specified as command line parameters by adding the prefix ``-cluster.`` to them, as shown below::
 
     nextflow node -bg -cluster.slots 4 -cluster.interface eth0
 
-The same options can be entered in the nextflow configuration file named ``nextflow.config``, as shown below::
+The same options can be entered into the Nextflow :ref:`configuration file<config-page>`, as shown below::
 
+    cluster {
+        join = 'ip:192.168.1.104'
+        interface = 'eth0'
+    }
 
-  cluster {
-    join = 'ip:192.168.1.104'
-    interface = 'eth0'
-  }
-
-Finally daemon options can be provided also as environment variables having the name in upper-case and by pre-pending
-them with the prefix ``NXF_CLUSTER_``, for example::
+Finally daemon options can be provided also as environment variables having the name in upper-case and by adding
+the prefix ``NXF_CLUSTER_`` to them, for example::
 
     export NXF_CLUSTER_JOIN='ip:192.168.1.104'
     export NXF_CLUSTER_INTERFACE='eth0'
@@ -129,31 +128,31 @@ Pipeline execution
 -----------------------
 
 The pipeline should be launched in a `head` node i.e. a cluster node where the Nextflow node daemon is **not** running.
-In order to execute your pipeline in the Ignite cluster you will need to specify to use the Ignite executor,
+In order to execute your pipeline in the Ignite cluster you will need to use the Ignite executor,
 as shown below::
 
-   nextflow run <your pipeline> -process.executor Ignite
+   nextflow run <your pipeline> -process.executor ignite
 
 
-If your network do no support multicast discovery, you will need to specify the `joining` strategy as you did for the
+If your network does no support multicast discovery, you will need to specify the `joining` strategy as you did for the
 cluster daemons. For example, using a shared path::
 
-    nextflow run <your pipeline> -process.executor ignite -cluster.join path:/net/shared/cluster
+    nextflow run <your pipeline> -process.executor ignite -cluster.join path:/net/shared/path
 
 
 
 Execution with MPI
 -------------------
 
-Nextflow is able to deploy and self-configure a Ignite cluster on-demand, taking advantage the Open `MPI <https://en.wikipedia.org/wiki/Message_Passing_Interface>`_
+Nextflow is able to deploy and self-configure an Ignite cluster on demand, taking advantage of the Open `MPI <https://en.wikipedia.org/wiki/Message_Passing_Interface>`_
 standard that is commonly available in grid and supercomputer facilities.
 
-In this scenario a Nextflow workflow needs to be executed as a MPI job. Under the hood Nextflow will launch a `driver`
-process in the first of the nodes allocated by your job request and a Ignite daemon in the remaining nodes.
+In this scenario a Nextflow workflow needs to be executed as an MPI job. Under the hood Nextflow will launch a `driver`
+process in the first of the nodes, allocated by your job request, and an Ignite daemon in the remaining nodes.
 
-In practice you will need a wrapper script to submit a MPI job request to your batch scheduler/resource manager.
-The batch scheduler must reserve the computing nodes in an exclusive manner to avoid to have multiple Ignite daemons
-running on the same node. Nextflow must be launched using the ``mpirun`` utility, as if it were a MPI application,
+In practice you will need a wrapper script to submit an MPI job request to your batch scheduler/resource manager.
+The batch scheduler must reserve the computing nodes in an exclusive manner to avoid having multiple Ignite daemons
+running on the same node. Nextflow must be launched using the ``mpirun`` utility, as if it were an MPI application,
 specifying the ``--pernode`` option.
 
 The following example shows a wrapper script for the `Platform LSF <https://en.wikipedia.org/wiki/Platform_LSF/>`_ resource manager::
@@ -170,11 +169,11 @@ The following example shows a wrapper script for the `Platform LSF <https://en.w
     export NXF_CLUSTER_SEED=$(shuf -i 0-16777216 -n 1)
     mpirun --pernode nextflow run <your-project-name> -with-mpi [pipeline parameters]
 
-It requests 5 nodes (80 processes, with 16 cpus per node). The ``-x`` directive allocate the node in exclusive manner.
-Nextflow needs to be executed using the ``-with-mpi`` command line option. It will automatically use ``ignite`` as executor.
+It requests 5 nodes (80 processes, with 16 cpus per node). The ``-x`` directive allocates the node in an exclusive manner.
+Nextflow needs to be executed using the ``-with-mpi`` command line option. It will automatically use ``ignite`` as the executor.
 
-The variable ``NXF_CLUSTER_SEED`` must contain an integer value (in the range 0-16777216) that will unequivocally identifies
-your cluster instance. In the example it is randomly generated by using the ``shuf`` Linux command.
+The variable ``NXF_CLUSTER_SEED`` must contain an integer value (in the range 0-16777216) that will unequivocally identify
+your cluster instance. In the above example it is randomly generated by using the `shuf <http://linux.die.net/man/1/shuf>`_ Linux tool.
 
 The following example shows a wrapper script for the Sun/`Univa grid engine <https://en.wikipedia.org/wiki/Univa_Grid_Engine>`_::
 
@@ -189,5 +188,5 @@ The following example shows a wrapper script for the Sun/`Univa grid engine <htt
     export NXF_CLUSTER_SEED=$(shuf -i 0-16777216 -n 1)
     mpirun --pernode nextflow run <your-project-name> -with-mpi [pipeline parameters]
 
-As in the previous example it allocates 5 processing nodes. SGE/UGE does not have an option to reserve a node in exclusive
+As in the previous script it allocates 5 processing nodes. SGE/UGE does not have an option to reserve a node in an exclusive
 manner. A common workaround is to request the maximum amount of memory or cpus available in the nodes of your cluster.
