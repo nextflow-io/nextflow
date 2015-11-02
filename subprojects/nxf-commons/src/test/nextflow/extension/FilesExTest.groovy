@@ -1075,6 +1075,47 @@ class FilesExTest extends Specification {
 
     }
 
+    def 'create symlink with default name' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file = Files.createTempFile(Paths.get('.'),'test','txt')
+        file.text = 'Hello'
+        file = Files.move(file,folder.resolve(file.name))
+
+        when:
+        println folder.toString()
+        file.mklink()
+        then:
+        Paths.get(file.name).text == 'Hello'
+        Paths.get(file.name).isLink()
+
+        cleanup:
+        folder.deleteDir()
+        if( file ) Paths.get(file.name).delete()
+    }
+
+
+    def 'create hard link with default name' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file = Files.createTempFile(Paths.get('.'),'test','txt')
+        file.text = 'Hello'
+        file = Files.move(file,folder.resolve(file.name))
+
+        when:
+        println folder.toString()
+        file.mklink(hard: true)
+        then:
+        Paths.get(file.name).text == 'Hello'
+        !Paths.get(file.name).isLink()
+
+        cleanup:
+        folder.deleteDir()
+        if( file ) Paths.get(file.name).delete()
+    }
+
 }
 
 

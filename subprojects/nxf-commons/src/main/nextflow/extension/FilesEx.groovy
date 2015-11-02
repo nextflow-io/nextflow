@@ -1353,6 +1353,9 @@ class FilesEx {
         final hard = opts?.hard == true ?: false
         final overwrite = opts?.overwrite == true ?: false
 
+        if( existing == link )
+            throw new IllegalArgumentException("Cannot create file lin -- Source and target are the same file: $existing")
+
         try {
             createLinkImpl(existing, link, hard)
         }
@@ -1391,6 +1394,10 @@ class FilesEx {
 
     static void mklink( Path existing, String link ) {
         mklink(existing, null, existing.getFileSystem().getPath(link))
+    }
+
+    static void mklink( Path existing, Map opts = null ) {
+        mklink(existing,opts,existing.getFileName())
     }
 
     /**
