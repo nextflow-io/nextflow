@@ -677,7 +677,7 @@ See also: Channel :ref:`channel-path` method.
 
 
 Create directories
--------------------
+------------------
 
 Given a file variable representing a nonexistent directory, like the following::
 
@@ -697,8 +697,28 @@ nonexistent parent directories. For example::
     myDir.mkdirs()
 
 
-Copy files
+Create links
 ------------
+
+Given a file, the method ``mklink`` creates a *file system link* for that file using the path specified as a parameter.
+For example::
+
+  myFile = file('/some/path/file.txt')
+  myFile.mklink('/user/name/link-to-file.txt')
+
+
+Table of optional parameters:
+
+==================  ================
+Method              Description
+==================  ================
+hard                When ``true`` it creates an *hard* link, otherwise it creates a *soft* (aka *symbolic*) link. (default: ``false``).
+overwrite           When ``true`` it overwrite any exiting file with the same name, otherwise it will throws a `FileAlreadyExistsException <http://docs.oracle.com/javase/8/docs/api/java/nio/file/FileAlreadyExistsException.html>`_ (default: ``false``).
+==================  ================
+
+
+Copy files
+----------
 
 The method ``copyTo`` allows you to copy a file into a new file or into a directory, or copy a directory to a new
 directory. Having a file variable ``myFile``, the following example shows how to copy a file into a new file
@@ -730,7 +750,7 @@ If the target path does not exist, it will be created automatically.
 
 
 Move files
-------------
+----------
 
 You can move a file by using the method ``moveTo`` as shown in the example below::
 
@@ -763,7 +783,7 @@ path of the above move operation would be::
 
 
 Rename files
---------------
+------------
 
 You can rename a file or a directory by simply using the ``renameTo`` file method a shown below::
 
@@ -772,7 +792,7 @@ You can rename a file or a directory by simply using the ``renameTo`` file metho
 
 
 Delete files
---------------
+------------
 
 The file method ``delete`` allows you to delete a file or a directory with a given path. It returns the value ``true``
 when the operation is completed  successfully or ``false`` if it fails to delete it. For example::
@@ -788,7 +808,7 @@ when the operation is completed  successfully or ``false`` if it fails to delete
 
 
 Check file attributes
-----------------------
+---------------------
 
 The following methods can be used on a file variable created by using the ``file`` method.
 
@@ -816,7 +836,7 @@ For example, the following line prints a file name and size::
 
 
 Get and modify file permissions
----------------------------------
+-------------------------------
 
 Given a file variable representing any file or a directory, the method
 ``getPermissions`` returns a string of nine characters representing the file permission using the
