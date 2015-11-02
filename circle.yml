@@ -1,4 +1,7 @@
 machine:
+    pre:
+        - echo 'DOCKER_OPTS="-s btrfs -e lxc -D"' | sudo tee -a /etc/default/docker
+        - sudo curl -L -o /usr/bin/docker 'http://s3-external-1.amazonaws.com/circle-downloads/docker-1.6.2-circleci' && sudo chmod 0755 /usr/bin/docker
     java:
         version: oraclejdk8
     services:

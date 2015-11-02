@@ -52,13 +52,13 @@ docker pull cbcrg/ampa-nf
 #
 # MTA-NF
 #
-#git clone https://github.com/cbcrg/mta-nf
-#docker pull cbcrg/mta-nf
-#(
-#  cd mta-nf;
-#  $NXF_CMD run . -with-docker --seq tutorial/small.fa --ntree 5 --msa clustalw 
-#  $NXF_CMD run . -with-docker --seq tutorial/small.fa --ntree 5 --msa clustalw -resume
-#)
+git clone https://github.com/cbcrg/mta-nf
+docker pull cbcrg/mta-nf
+(
+  cd mta-nf;
+  $NXF_CMD run . -with-docker --seq tutorial/small.fa --ntree 5 --msa clustalw
+  $NXF_CMD run . -with-docker --seq tutorial/small.fa --ntree 5 --msa clustalw -resume
+)
 
 #
 # GRAPE-NF
