@@ -27,6 +27,8 @@ extrae_files/**
 errors/
 misc/
 logo/
-cloud/my-*
+cloud/examples-launch
+cloud/launch.sh
+cloud/pipeline-execution-examples
 docker-test
 temp
