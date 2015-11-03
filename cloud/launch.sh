@@ -30,6 +30,10 @@ X_COUNT=${1:-1}
 X_MSG="This is going to launch * $X_COUNT * instance. Is it OK (y/n)?"
 fi
 
+function get_abs_filename() {
+  echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+}
+
 function launch_master() {
 aws ec2 run-instances \
     --image-id "$X_AMI" \
@@ -41,13 +45,15 @@ aws ec2 run-instances \
 }
 
 function launch_nodes() {
+if [[ ! -e $X_USERDATA ]]; then echo "User data file does not exists: $X_USERDATA"; fi
+
 aws ec2 run-instances \
     --image-id "$X_AMI" \
     --instance-type "$X_TYPE" \
     --security-group-ids "$X_SECURITY" \
     --key-name "$X_KEY" \
     --count "$X_COUNT" \
-    --user-data "file:$X_USERDATA"
+    --user-data "file://$X_USERDATA"
 }
 
 

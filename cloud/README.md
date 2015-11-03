@@ -25,7 +25,7 @@ accordingly.
 Quickstart
 ------------
     
-* Use the script `launch.sh` to launch a set of workers: 
+* Use the script `launch.sh` to launch a set of workers, for example: 
  
     $ ./launch 5 
 
@@ -47,5 +47,6 @@ Quickstart
 
     - AWS_ACCESS_KEY=xxx
     - AWS_SECRET_KEY=xxx
+    - NXF_MODE=ignite
     
 * Launch at nextflow pipeline execution     
