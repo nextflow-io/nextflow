@@ -68,6 +68,8 @@ class TaskBean implements Serializable, Cloneable {
 
     MemoryUnit dockerMemory
 
+    Path dockerMount
+
     boolean statsEnabled
 
     String beforeScript

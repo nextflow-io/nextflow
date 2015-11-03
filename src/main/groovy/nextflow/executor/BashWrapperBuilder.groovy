@@ -495,6 +495,9 @@ class BashWrapperBuilder {
         if( !executable )
             docker.addMount(binDir)
 
+        if( dockerMount )
+            docker.addMount(dockerMount)
+
         // set the name
         docker.setName('$NXF_BOXID')
 

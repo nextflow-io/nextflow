@@ -88,6 +88,8 @@ class IgScriptTask extends IgBaseTask<Integer>   {
             // important: set the local work dir as script 'workDir'
             wrapper.workDir = localWorkDir
             wrapper.scratch = null
+            // important add the mount for local cached files
+            wrapper.dockerMount = stageStrategy.localCacheDir
         }
         else {
             // set a local scratch directory if needed
