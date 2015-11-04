@@ -118,8 +118,14 @@ class GitUrl {
             project = url.substring(p)
             if( project.endsWith('.git'))
                 project = project.substring(0,project.size()-4)
-            if( project.startsWith('/') )
-                project = project.substring(1)
+            def projectParts = project.split('/')
+            // last 2 path parts should be considered project
+            // omit the other path parts in front
+            if (projectParts.length > 1)
+                project = projectParts[-2,-1].join('/')
+            else
+                // invalid project ?
+                project = projectParts[-1]
             url = url.substring(0,p)
         }
         // remove the user name
