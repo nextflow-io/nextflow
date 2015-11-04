@@ -480,11 +480,12 @@ task deploy( type: Exec, dependsOn: [clean, pack, deployable.uploadArchives, mak
 /*
  * Tag and upload the release
  */
-task release(type: Exec) {
+task release(type: Exec, dependsOn: pack) {
 
     def launcherFile = file('nextflow').absoluteFile
     def launcherSha1 = file('nextflow.sha1').absoluteFile
     def launcherSha256 = file('nextflow.sha256').absoluteFile
+    def nextflowAllFile = file("$releaseDir/nextflow-${version}-all")
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
@@ -494,6 +495,7 @@ task release(type: Exec) {
     (git tag -a v$version -m 'Tagging version $version [release]' -f && git push origin v$version -f) || exit \$?
     github-release release -u nextflow-io -r nextflow -t v$version --pre-release
     github-release upload -u nextflow-io -r nextflow -t v$version --file ${launcherFile} --name ${launcherFile.name}
+    github-release upload -u nextflow-io -r nextflow -t v$version --file ${nextflowAllFile} --name ${nextflowAllFile.name}
 
     # publish the script as the latest
     export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}
