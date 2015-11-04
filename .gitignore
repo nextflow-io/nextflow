@@ -12,8 +12,8 @@ out/**
 piper/**
 tmp/*
 work/*
-nextflow.eml
-nextflow.iml
+*.eml
+*.iml
 Vagrantfile
 resources/*
 test/*
@@ -21,6 +21,7 @@ tools/*
 docs/_build/
 dx-project/
 ./*.txt
+*.classpath
 cache/
 lib/commons-cli-1.2.jar
 extrae_files/**

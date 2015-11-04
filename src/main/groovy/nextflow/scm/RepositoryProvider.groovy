@@ -46,7 +46,7 @@ abstract class RepositoryProvider {
     protected ProviderConfig config
 
     RepositoryProvider setCredentials(String userName, String password) {
-        config.user = user
+        config.user = userName
         config.password = password
         return this
     }
@@ -231,6 +231,9 @@ abstract class RepositoryProvider {
 
             case 'gitlab':
                 return new GitlabRepositoryProvider(project, config)
+
+            case 'stash':
+                return new StashRepositoryProvider(project, config)
 
             case 'file':
                 // remove the 'local' prefix for the file provider
