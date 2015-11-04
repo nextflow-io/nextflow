@@ -118,10 +118,10 @@ class GitUrl {
             project = url.substring(p)
             if( project.endsWith('.git'))
                 project = project.substring(0,project.size()-4)
-            def projectParts = project.split('/')
+            def projectParts = project.split('/').findAll {!it.isEmpty()}
             // last 2 path parts should be considered project
             // omit the other path parts in front
-            if (projectParts.length > 1)
+            if (projectParts.size() > 1)
                 project = projectParts[-2,-1].join('/')
             else
                 // invalid project ?
