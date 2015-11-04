@@ -71,13 +71,13 @@ class CmdInfo extends CmdBase {
         if( manager.homePage && manager.homePage != manager.repositoryUrl )
         println " home page   : ${manager.homePage}"
         if( manager.description )
-        println " description: ${manager.description}"
+        println " description : ${manager.description}"
 
         def revs = manager.getRevisions(level)
         if( revs.size() == 1 )
-            println " revision   : ${revs[0]}"
+            println " revision    : ${revs[0]}"
         else {
-            println " revisions  : "
+            println " revisions   : "
             revs.each { println " $it" }
         }
     }
