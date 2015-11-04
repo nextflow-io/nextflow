@@ -1,6 +1,23 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.16.0 - 4 Nov 2015
+- Added ability to resubmit task executions changing resource requirements. See #70
+- Added support for private SCM servers and private Gitlab repositories. See #38
+- Added `workflow` metadata and execution `onComplete` notification handler. See #79.
+- Added `publishDir` directive. See #81.
+- Added extension method `mklink` to create file system links.
+- Added Apache Ignite based executor.
+- Removed deprecated GridGain executor.
+- Updated Capsule to version 1.0.1.
+
+0.15.6 - 7 Oct 2015
+- Fixed #78. Command line parsing of parameters does not handle some strings properly.
+- Fixed #80. Command line argument containing a glob pattern is expanded even when escaped or enclosed in quote characters.
+
+0.15.5 - 28 Sep 2015 
+- Fixed #74. Operator "spread" hangs when it is applied to a singleton channel.
+
 0.15.4 - 22 Sep 2015
 - Fixed #72. Adding cache support for `collectFile` operator.
 - Added experimental operator `until`
