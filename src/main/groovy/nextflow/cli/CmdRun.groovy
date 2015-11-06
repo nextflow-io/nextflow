@@ -242,6 +242,9 @@ class CmdRun extends CmdBase implements HubOptions {
             // return the script file
             return scriptFile
         }
+        catch( AbortOperationException e ) {
+            throw e
+        }
         catch( Exception e ) {
             throw new AbortOperationException("Unknown error accessing project `$repo` -- Repository may be corrupted: ${manager.localPath}", e)
         }
