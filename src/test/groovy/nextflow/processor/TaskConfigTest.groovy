@@ -410,7 +410,7 @@ class TaskConfigTest extends Specification {
     }
 
 
-    def 'should create config object' () {
+    def 'should create publishDir object' () {
 
         setup:
         def script = Mock(BaseScript)
@@ -435,6 +435,40 @@ class TaskConfigTest extends Specification {
         publish.pattern == '*.txt'
         publish.overwrite == false
         publish.mode == PublishDir.Mode.COPY
+
+    }
+
+    def 'should create publishDir with local variables' () {
+
+        given:
+        TaskConfig config
+
+        // It is defined using a local variable e.g.
+        // publishDir "$x"
+        when:
+        config = new TaskConfig()
+        config.publishDir = "${-> foo }/${-> bar }"
+        config.setContext( foo: 'hello', bar: 'world' )
+        then:
+        config.getPublishDir() == PublishDir.create('hello/world')
+
+        // It is defined using named parameters
+        // publishDir path: "$x", mode: "$y"
+        when:
+        config = new TaskConfig()
+        config.publishDir = [path: "${-> foo }/${-> bar }", mode: { x }]
+        config.setContext( foo: 'world', bar: 'hello', x: 'copy' )
+        then:
+        config.getPublishDir() == PublishDir.create(path: 'world/hello', mode: 'copy')
+
+        // It is defined using both named parameters and local vars
+        // publishDir "/data/$output", mode: "$x"
+        when:
+        config = new TaskConfig()
+        config.publishDir = [[ mode: { x }], "${-> foo }/${-> bar }"]
+        config.setContext( foo: 'world', bar: 'hello', x: 'copy' )
+        then:
+        config.getPublishDir() == PublishDir.create(path: 'world/hello', mode: 'copy')
 
     }
 

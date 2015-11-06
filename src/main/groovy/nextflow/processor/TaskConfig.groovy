@@ -348,19 +348,35 @@ class LazyMap implements Map<String,Object> {
         putAll(entries)
     }
 
-    protected resolve( String key, value ) {
+    protected resolve( String name, value ) {
+
         if( value instanceof Closure ) {
             def copy = value.cloneWith(binding)
             try {
                 return copy.call()
             }
             catch( MissingPropertyException e ) {
-                if( binding == null ) throw new IllegalStateException("Directive `$key` doesn't support dynamic value (or context not yet initialized)")
+                if( binding == null ) throw new IllegalStateException("Directive `$name` doesn't support dynamic value (or context not yet initialized)")
                 else throw e
             }
         }
+
         else if( value instanceof GString ) {
             return value.cloneWith(binding).toString()
+        }
+
+        else if( value instanceof List ) {
+            def copy = new ArrayList(value.size())
+            for( int i=0; i<value.size(); i++ ) {
+                copy[i] = resolve(name, value.get(i))
+            }
+            return copy
+        }
+
+        else if( value instanceof Map ) {
+            def copy = new LinkedHashMap()
+            (value as Map).each { entry -> copy[entry.key] = resolve(name,entry.value) }
+            return copy
         }
 
         return value

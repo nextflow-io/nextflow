@@ -30,6 +30,7 @@ import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
@@ -45,6 +46,7 @@ import nextflow.file.FileHelper
  */
 @Slf4j
 @ToString
+@EqualsAndHashCode
 class PublishDir {
 
     enum Mode { SYMLINK, LINK, COPY, MOVE }
