@@ -348,10 +348,77 @@ class LazyMap implements Map<String,Object> {
         putAll(entries)
     }
 
+    /**
+     * Resolve a directive *dynamic* value i.e. defined with a closure or lazy string
+     *
+     * @param name The directive name
+     * @param value The value to be resolved
+     * @return The resolved value
+     */
     protected resolve( String name, value ) {
+
+        /*
+         * directive with one value and optional named parameter are converted
+         * to a list object in which the first element is a map holding the named parameters
+         * and the second is the directive value
+         */
+        if( value instanceof List && value.size()==2 && value.get(0) instanceof Map ) {
+            def copy = new ArrayList(value.size())
+            copy[0] = resolveParams(name, value.get(0) as Map)
+            copy[1] = resolveImpl(name, value.get(1))
+            return copy
+        }
+
+        /*
+         * resolve the values in a map object
+         */
+        else if( value instanceof Map ) {
+            return resolveParams(name, value)
+        }
+
+        /*
+         * simple value
+         */
+        else {
+            return resolveImpl(name, value)
+        }
+
+    }
+
+    /**
+     * Resolve directive *dynamic* named params
+     *
+     * @param name The directive name
+     * @param value The map holding the named params
+     * @return A map in which dynamic params are resolved to the actual value
+     */
+    private resolveParams( String name, Map value ) {
+
+        final copy = new LinkedHashMap()
+        final attr = (value as Map)
+        attr.each { entry ->
+            copy[entry.key] = resolveImpl(name, entry.value, true)
+        }
+        return copy
+
+    }
+
+    /**
+     * Resolve a directive dynamic value
+     *
+     * @param name The directive name
+     * @param value The value to be resolved
+     * @param param When {@code true} points that it is a named parameter value, thus closure are only cloned
+     * @return The resolved directive value
+     */
+    private resolveImpl( String name, value, boolean param=false ) {
 
         if( value instanceof Closure ) {
             def copy = value.cloneWith(binding)
+            if( param ) {
+                return copy
+            }
+
             try {
                 return copy.call()
             }
@@ -365,23 +432,8 @@ class LazyMap implements Map<String,Object> {
             return value.cloneWith(binding).toString()
         }
 
-        else if( value instanceof List ) {
-            def copy = new ArrayList(value.size())
-            for( int i=0; i<value.size(); i++ ) {
-                copy[i] = resolve(name, value.get(i))
-            }
-            return copy
-        }
-
-        else if( value instanceof Map ) {
-            def copy = new LinkedHashMap()
-            (value as Map).each { entry -> copy[entry.key] = resolve(name,entry.value) }
-            return copy
-        }
-
         return value
     }
-
 
     /**
      * Override the get method in such a way that {@link Closure} values are resolved against

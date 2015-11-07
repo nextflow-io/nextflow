@@ -456,7 +456,7 @@ class TaskConfigTest extends Specification {
         // publishDir path: "$x", mode: "$y"
         when:
         config = new TaskConfig()
-        config.publishDir = [path: "${-> foo }/${-> bar }", mode: { x }]
+        config.publishDir = [path: "${-> foo }/${-> bar }", mode: "${-> x }"]
         config.setContext( foo: 'world', bar: 'hello', x: 'copy' )
         then:
         config.getPublishDir() == PublishDir.create(path: 'world/hello', mode: 'copy')
@@ -465,10 +465,21 @@ class TaskConfigTest extends Specification {
         // publishDir "/data/$output", mode: "$x"
         when:
         config = new TaskConfig()
-        config.publishDir = [[ mode: { x }], "${-> foo }/${-> bar }"]
+        config.publishDir = [[ mode: "${-> x }"], "${-> foo }/${-> bar }"]
         config.setContext( foo: 'world', bar: 'hello', x: 'copy' )
         then:
         config.getPublishDir() == PublishDir.create(path: 'world/hello', mode: 'copy')
+
+
+        // It is defined using both named parameters and local vars
+        // publishDir { "/data/$output" }, mode: "$x"
+        when:
+        config = new TaskConfig()
+        config.publishDir = [[ mode: "${-> x }"], { "$foo/$bar" }]
+        config.setContext( foo: 'hello', bar: 'world', x: 'copy' )
+        then:
+        config.getPublishDir() == PublishDir.create(path: 'hello/world', mode: 'copy')
+
 
     }
 

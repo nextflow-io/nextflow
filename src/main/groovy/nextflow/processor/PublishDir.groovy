@@ -79,6 +79,9 @@ class PublishDir {
 
     private static ExecutorService executor
 
+    void setPath( Closure obj ) {
+        setPath( obj.call() as Path )
+    }
 
     void setPath( String str ) {
         setPath(str as Path)
