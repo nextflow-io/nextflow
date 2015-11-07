@@ -1,6 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.16.1 - 7 Nov 2015
+- Fixed issue #85. Directive `publishDir` can't access process local variables.
+- Fixed wrong error message when trying to run a project sticked on a specific revision.
+- Fixed `IllegalArgumentException: other must be an instance of com.upplication.s3fs.S3Path` exception when publishing to a S3 path.
+- Fixed indentation in repo info command.
+
 0.16.0 - 4 Nov 2015
 - Added ability to resubmit task executions changing resource requirements. See #70
 - Added support for private SCM servers and private Gitlab repositories. See #38
