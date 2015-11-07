@@ -215,7 +215,7 @@ class PublishDir {
             return
         }
 
-        final destination = path.resolve(name)
+        final destination = path.resolve(name.toString())
         if( inProcess ) {
             processFile(source, destination)
         }
