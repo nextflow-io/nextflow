@@ -157,7 +157,7 @@ class BashWrapperBuilderTest extends Specification {
 
                 on_exit() {
                   exit_status=\${ret:=\$?}
-                  printf \$exit_status > ${folder}/.exitcode
+                  printf \$exit_status > '${folder}/.exitcode'
                   exit \$exit_status
                 }
 
@@ -170,19 +170,19 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_term TERM INT USR1 USR2
 
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
-                touch ${folder}/.command.begin
-                [ -f ${folder}/.command.env ] && source ${folder}/.command.env
+                touch '${folder}/.command.begin'
+                [ -f '${folder}/.command.env' ] && source '${folder}/.command.env'
 
                 set +e
-                COUT=\$PWD/.command.po; mkfifo \$COUT
-                CERR=\$PWD/.command.pe; mkfifo \$CERR
-                tee .command.out < \$COUT &
+                COUT=\$PWD/.command.po; mkfifo "\$COUT"
+                CERR=\$PWD/.command.pe; mkfifo "\$CERR"
+                tee .command.out < "\$COUT" &
                 tee1=\$!
-                tee .command.err < \$CERR >&2 &
+                tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash -ue ${folder}/.command.sh
-                ) >\$COUT 2>\$CERR &
+                /bin/bash -ue '${folder}/.command.sh'
+                ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
@@ -254,7 +254,7 @@ class BashWrapperBuilderTest extends Specification {
 
                 on_exit() {
                   exit_status=\${ret:=\$?}
-                  printf \$exit_status > ${folder}/.exitcode
+                  printf \$exit_status > '${folder}/.exitcode'
                   exit \$exit_status
                 }
 
@@ -267,19 +267,19 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_term TERM INT USR1 USR2
 
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
-                touch ${folder}/.command.begin
-                [ -f ${folder}/.command.env ] && source ${folder}/.command.env
+                touch '${folder}/.command.begin'
+                [ -f '${folder}/.command.env' ] && source '${folder}/.command.env'
 
                 set +e
-                COUT=\$PWD/.command.po; mkfifo \$COUT
-                CERR=\$PWD/.command.pe; mkfifo \$CERR
-                tee .command.out < \$COUT &
+                COUT=\$PWD/.command.po; mkfifo "\$COUT"
+                CERR=\$PWD/.command.pe; mkfifo "\$CERR"
+                tee .command.out < "\$COUT" &
                 tee1=\$!
-                tee .command.err < \$CERR >&2 &
+                tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash ${folder}/.command.run.1
-                ) >\$COUT 2>\$CERR &
+                /bin/bash '${folder}/.command.run.1'
+                ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
@@ -368,7 +368,7 @@ class BashWrapperBuilderTest extends Specification {
                 touch .command.trace
                 start_millis=\$(\$NXF_DATE)
                 (
-                /bin/bash -ue ${folder}/.command.sh
+                /bin/bash -ue '${folder}/.command.sh'
                 ) &
                 pid=\$!
                 nxf_trace "\$pid" .command.trace &
@@ -445,7 +445,7 @@ class BashWrapperBuilderTest extends Specification {
 
                 on_exit() {
                   exit_status=\${ret:=\$?}
-                  printf \$exit_status > ${folder}/.exitcode
+                  printf \$exit_status > '${folder}/.exitcode'
                   exit \$exit_status
                 }
 
@@ -458,25 +458,25 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_term TERM INT USR1 USR2
 
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
-                touch ${folder}/.command.begin
-                [ -f ${folder}/.command.env ] && source ${folder}/.command.env
+                touch '${folder}/.command.begin'
+                [ -f '${folder}/.command.env' ] && source '${folder}/.command.env'
                 NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)" && cd \$NXF_SCRATCH
 
                 set +e
-                COUT=\$PWD/.command.po; mkfifo \$COUT
-                CERR=\$PWD/.command.pe; mkfifo \$CERR
-                tee .command.out < \$COUT &
+                COUT=\$PWD/.command.po; mkfifo "\$COUT"
+                CERR=\$PWD/.command.pe; mkfifo "\$CERR"
+                tee .command.out < "\$COUT" &
                 tee1=\$!
-                tee .command.err < \$CERR >&2 &
+                tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash -ue ${folder}/.command.sh < ${folder}/.command.in
-                ) >\$COUT 2>\$CERR &
+                /bin/bash -ue '${folder}/.command.sh' < '${folder}/.command.in'
+                ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
-                cp .command.out ${folder} || true
-                cp .command.err ${folder} || true
+                cp .command.out '${folder}' || true
+                cp .command.err '${folder}' || true
                 """
                         .stripIndent().leftTrim()
 
@@ -562,7 +562,7 @@ class BashWrapperBuilderTest extends Specification {
 
                 on_exit() {
                   exit_status=\${ret:=\$?}
-                  printf \$exit_status > ${folder}/.exitcode
+                  printf \$exit_status > '${folder}/.exitcode'
                   exit \$exit_status
                 }
 
@@ -575,26 +575,26 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_term TERM INT USR1 USR2
 
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
-                touch ${folder}/.command.begin
-                [ -f ${folder}/.command.env ] && source ${folder}/.command.env
+                touch '${folder}/.command.begin'
+                [ -f '${folder}/.command.env' ] && source '${folder}/.command.env'
                 NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)" && cd \$NXF_SCRATCH
 
                 set +e
-                COUT=\$PWD/.command.po; mkfifo \$COUT
-                CERR=\$PWD/.command.pe; mkfifo \$CERR
-                tee .command.out < \$COUT &
+                COUT=\$PWD/.command.po; mkfifo "\$COUT"
+                CERR=\$PWD/.command.pe; mkfifo "\$CERR"
+                tee .command.out < "\$COUT" &
                 tee1=\$!
-                tee .command.err < \$CERR >&2 &
+                tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash ${folder}/.command.run.1
-                ) >\$COUT 2>\$CERR &
+                /bin/bash '${folder}/.command.run.1'
+                ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
-                cp .command.out ${folder} || true
-                cp .command.err ${folder} || true
-                cp .command.trace ${folder} || true
+                cp .command.out '${folder}' || true
+                cp .command.err '${folder}' || true
+                cp .command.trace '${folder}' || true
                 """
                         .stripIndent().leftTrim()
 
@@ -680,7 +680,7 @@ class BashWrapperBuilderTest extends Specification {
             touch .command.trace
             start_millis=\$(\$NXF_DATE)
             (
-            /bin/bash -ue ${folder}/.command.sh < ${folder}/.command.in
+            /bin/bash -ue '${folder}/.command.sh' < '${folder}/.command.in'
             ) &
             pid=\$!
             nxf_trace "\$pid" .command.trace &
@@ -762,7 +762,7 @@ class BashWrapperBuilderTest extends Specification {
 
                 on_exit() {
                   exit_status=\${ret:=\$?}
-                  printf \$exit_status > ${folder}/.exitcode
+                  printf \$exit_status > '${folder}/.exitcode'
                   exit \$exit_status
                 }
 
@@ -776,18 +776,18 @@ class BashWrapperBuilderTest extends Specification {
 
                 export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
-                touch ${folder}/.command.begin
+                touch '${folder}/.command.begin'
 
                 set +e
-                COUT=\$PWD/.command.po; mkfifo \$COUT
-                CERR=\$PWD/.command.pe; mkfifo \$CERR
-                tee .command.out < \$COUT &
+                COUT=\$PWD/.command.po; mkfifo "\$COUT"
+                CERR=\$PWD/.command.pe; mkfifo "\$CERR"
+                tee .command.out < "\$COUT" &
                 tee1=\$!
-                tee .command.err < \$CERR >&2 &
+                tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                sudo docker run -i -v ${folder}:${folder} -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID busybox -c '/bin/bash -ue ${folder}/.command.sh'
-                ) >\$COUT 2>\$CERR &
+                sudo docker run -i -v '${folder}':'${folder}' -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/bin/bash -ue '${folder}/.command.sh'"
+                ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
@@ -863,7 +863,7 @@ class BashWrapperBuilderTest extends Specification {
 
                 on_exit() {
                   exit_status=\${ret:=\$?}
-                  printf \$exit_status > ${folder}/.exitcode
+                  printf \$exit_status > '${folder}/.exitcode'
                   exit \$exit_status
                 }
 
@@ -877,18 +877,18 @@ class BashWrapperBuilderTest extends Specification {
 
                 export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
-                touch ${folder}/.command.begin
+                touch '${folder}/.command.begin'
 
                 set +e
-                COUT=\$PWD/.command.po; mkfifo \$COUT
-                CERR=\$PWD/.command.pe; mkfifo \$CERR
-                tee .command.out < \$COUT &
+                COUT=\$PWD/.command.po; mkfifo "\$COUT"
+                CERR=\$PWD/.command.pe; mkfifo "\$CERR"
+                tee .command.out < "\$COUT" &
                 tee1=\$!
-                tee .command.err < \$CERR >&2 &
+                tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID busybox -c '/bin/bash -ue ${folder}/.command.sh'
-                ) >\$COUT 2>\$CERR &
+                docker run -i -v \$(nxf_mktemp):/tmp -v '${folder}':'${folder}' -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/bin/bash -ue '${folder}/.command.sh'"
+                ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
@@ -967,7 +967,7 @@ class BashWrapperBuilderTest extends Specification {
 
                 on_exit() {
                   exit_status=\${ret:=\$?}
-                  printf \$exit_status > ${folder}/.exitcode
+                  printf \$exit_status > '${folder}/.exitcode'
                   exit \$exit_status
                 }
 
@@ -981,18 +981,18 @@ class BashWrapperBuilderTest extends Specification {
 
                 export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
-                touch ${folder}/.command.begin
+                touch '${folder}/.command.begin'
 
                 set +e
-                COUT=\$PWD/.command.po; mkfifo \$COUT
-                CERR=\$PWD/.command.pe; mkfifo \$CERR
-                tee .command.out < \$COUT &
+                COUT=\$PWD/.command.po; mkfifo "\$COUT"
+                CERR=\$PWD/.command.pe; mkfifo "\$CERR"
+                tee .command.out < "\$COUT" &
                 tee1=\$!
-                tee .command.err < \$CERR >&2 &
+                tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c '/bin/bash -ue ${folder}/.command.sh'
-                ) >\$COUT 2>\$CERR &
+                docker run -i -v \$(nxf_mktemp):/tmp -v '${folder}':'${folder}' -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c "/bin/bash -ue '${folder}/.command.sh'"
+                ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
@@ -1067,7 +1067,7 @@ class BashWrapperBuilderTest extends Specification {
 
                 on_exit() {
                   exit_status=\${ret:=\$?}
-                  printf \$exit_status > ${folder}/.exitcode
+                  printf \$exit_status > '${folder}/.exitcode'
                   exit \$exit_status
                 }
 
@@ -1081,18 +1081,18 @@ class BashWrapperBuilderTest extends Specification {
 
                 export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
-                touch ${folder}/.command.begin
+                touch '${folder}/.command.begin'
 
                 set +e
-                COUT=\$PWD/.command.po; mkfifo \$COUT
-                CERR=\$PWD/.command.pe; mkfifo \$CERR
-                tee .command.out < \$COUT &
+                COUT=\$PWD/.command.po; mkfifo "\$COUT"
+                CERR=\$PWD/.command.pe; mkfifo "\$CERR"
+                tee .command.out < "\$COUT" &
                 tee1=\$!
-                tee .command.err < \$CERR >&2 &
+                tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c '/bin/bash -ue ${folder}/.command.sh'
-                ) >\$COUT 2>\$CERR &
+                docker run -i -v \$(nxf_mktemp):/tmp -v '${folder}':'${folder}' -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c "/bin/bash -ue '${folder}/.command.sh'"
+                ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
@@ -1171,7 +1171,7 @@ class BashWrapperBuilderTest extends Specification {
 
                 on_exit() {
                   exit_status=\${ret:=\$?}
-                  printf \$exit_status > ${folder}/.exitcode
+                  printf \$exit_status > '${folder}/.exitcode'
                   exit \$exit_status
                 }
 
@@ -1185,18 +1185,18 @@ class BashWrapperBuilderTest extends Specification {
 
                 export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
-                touch ${folder}/.command.begin
+                touch '${folder}/.command.begin'
 
                 set +e
-                COUT=\$PWD/.command.po; mkfifo \$COUT
-                CERR=\$PWD/.command.pe; mkfifo \$CERR
-                tee .command.out < \$COUT &
+                COUT=\$PWD/.command.po; mkfifo "\$COUT"
+                CERR=\$PWD/.command.pe; mkfifo "\$CERR"
+                tee .command.out < "\$COUT" &
                 tee1=\$!
-                tee .command.err < \$CERR >&2 &
+                tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                docker run -i -v ${folder}:${folder} -v /some/data:/some/data -v \$PWD:\$PWD -w \$PWD --entrypoint /bin/bash --name \$NXF_BOXID busybox -c '/bin/bash -ue ${folder}/.command.sh'
-                ) >\$COUT 2>\$CERR &
+                docker run -i -v '${folder}':'${folder}' -v '/some/data':'/some/data' -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/bin/bash -ue '${folder}/.command.sh'"
+                ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
@@ -1266,7 +1266,7 @@ class BashWrapperBuilderTest extends Specification {
                 """
                 #!/bin/bash -ue
                 FOO=bar
-                docker run -i -e "NXF_DEBUG=\${NXF_DEBUG:=0}" -e "FOO=bar" -v $folder:$folder -v \$PWD:\$PWD -w \$PWD --name \$NXF_BOXID docker-io/busybox --fox --baz
+                docker run -i -e "NXF_DEBUG=\${NXF_DEBUG:=0}" -e "FOO=bar" -v '$folder':'$folder' -v "\$PWD":"\$PWD" -w "\$PWD" --name \$NXF_BOXID docker-io/busybox --fox --baz
                 """
                 .stripIndent().leftTrim()
 
@@ -1304,7 +1304,7 @@ class BashWrapperBuilderTest extends Specification {
 
                 on_exit() {
                   exit_status=\${ret:=\$?}
-                  printf \$exit_status > ${folder}/.exitcode
+                  printf \$exit_status > '${folder}/.exitcode'
                   exit \$exit_status
                 }
 
@@ -1318,18 +1318,18 @@ class BashWrapperBuilderTest extends Specification {
 
                 export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
-                touch ${folder}/.command.begin
+                touch '${folder}/.command.begin'
 
                 set +e
-                COUT=\$PWD/.command.po; mkfifo \$COUT
-                CERR=\$PWD/.command.pe; mkfifo \$CERR
-                tee .command.out < \$COUT &
+                COUT=\$PWD/.command.po; mkfifo "\$COUT"
+                CERR=\$PWD/.command.pe; mkfifo "\$CERR"
+                tee .command.out < "\$COUT" &
                 tee1=\$!
-                tee .command.err < \$CERR >&2 &
+                tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash -ue ${folder}/.command.sh
-                ) >\$COUT 2>\$CERR &
+                /bin/bash -ue '${folder}/.command.sh'
+                ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
@@ -1362,7 +1362,7 @@ class BashWrapperBuilderTest extends Specification {
         folder.resolve('.command.sh').text ==
                 """
                 #!/bin/bash -ue
-                docker run -i -v $folder:$folder -v \$PWD:\$PWD -w \$PWD --name \$NXF_BOXID my.registry.com/docker-io/busybox --fox --baz
+                docker run -i -v '$folder':'$folder' -v "\$PWD":"\$PWD" -w "\$PWD" --name \$NXF_BOXID my.registry.com/docker-io/busybox --fox --baz
                 """
                         .stripIndent().leftTrim()
     }
@@ -1403,7 +1403,7 @@ class BashWrapperBuilderTest extends Specification {
 
                     on_exit() {
                       exit_status=${ret:=$?}
-                      printf $exit_status > /my/exit/file
+                      printf $exit_status > '/my/exit/file'
                       exit $exit_status
                     }
 
@@ -1450,7 +1450,7 @@ class BashWrapperBuilderTest extends Specification {
 
                     on_exit() {
                       exit_status=${ret:=$?}
-                      printf $exit_status > /my/exit/xxx
+                      printf $exit_status > '/my/exit/xxx'
                       exit $exit_status
                     }
 
@@ -1572,7 +1572,7 @@ class BashWrapperBuilderTest extends Specification {
 
                 on_exit() {
                   exit_status=\${ret:=\$?}
-                  printf \$exit_status > ${folder}/.exitcode
+                  printf \$exit_status > '${folder}/.exitcode'
                   exit \$exit_status
                 }
 
@@ -1585,21 +1585,21 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_term TERM INT USR1 USR2
 
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
-                touch ${folder}/.command.begin
+                touch '${folder}/.command.begin'
                 # user `beforeScript`
                 init this
-                [ -f ${folder}/.command.env ] && source ${folder}/.command.env
+                [ -f '${folder}/.command.env' ] && source '${folder}/.command.env'
 
                 set +e
-                COUT=\$PWD/.command.po; mkfifo \$COUT
-                CERR=\$PWD/.command.pe; mkfifo \$CERR
-                tee .command.out < \$COUT &
+                COUT=\$PWD/.command.po; mkfifo "\$COUT"
+                CERR=\$PWD/.command.pe; mkfifo "\$CERR"
+                tee .command.out < "\$COUT" &
                 tee1=\$!
-                tee .command.err < \$CERR >&2 &
+                tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash -ue ${folder}/.command.sh
-                ) >\$COUT 2>\$CERR &
+                /bin/bash -ue '${folder}/.command.sh'
+                ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
@@ -1637,7 +1637,7 @@ class BashWrapperBuilderTest extends Specification {
         bash.addContainerRunCommand(tokens, docker) == '''
             #!/bin/bash
             FOO=bar
-            docker run -i -e "FOO=bar" -v $PWD:$PWD -w $PWD busybox --foo --bar
+            docker run -i -e "FOO=bar" -v "$PWD":"$PWD" -w "$PWD" busybox --foo --bar
             do_this
             do_that
             '''
@@ -1650,7 +1650,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         bash.addContainerRunCommand(tokens, docker) == '''
             #!/bin/bash
-            docker run -i -v $PWD:$PWD -w $PWD busybox
+            docker run -i -v "$PWD":"$PWD" -w "$PWD" busybox
             '''
                 .stripIndent().leftTrim()
 

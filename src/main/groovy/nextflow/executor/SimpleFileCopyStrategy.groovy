@@ -131,7 +131,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         log.trace "Unstaging file path: $normalized"
         if( normalized ) {
             result << ""
-            result << "mkdir -p ${targetDir}"
+            result << "mkdir -p '${targetDir}'"
             for( int i=0; i<normalized.size(); i++ ) {
                 final path = normalized[i]
                 final cmd = copyCommand(path, targetDir.toString(), unstageStrategy) + ' || true' // <-- add true to avoid it stops on errors
@@ -158,17 +158,17 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         else if( strategy == 'move' )
             cmd = 'mv -f'
         else if( strategy == 'rsync' )
-            return "rsync -rRl $source $target"
+            return "rsync -rRl $source '$target'"
         else
             throw new IllegalArgumentException("Unknown un-stage strategy: $strategy")
 
         final p = source.lastIndexOf('/')
         if( p<=0 ) {
-            return "$cmd $source $target"
+            return "$cmd $source '$target'"
         }
 
         def path  = new File(target,source.substring(0,p)).toString()
-        return "mkdir -p $path && $cmd $source $path"
+        return "mkdir -p '$path' && $cmd $source '$path'"
     }
 
     /**
@@ -233,7 +233,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     @Override
     String touchFile(Path file) {
-        "touch ${file.toString()}"
+        "touch '${file.toString()}'"
     }
 
     /**
@@ -249,7 +249,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     @Override
     String copyFile(String name, Path target) {
-        "cp ${name} ${target}"
+        "cp ${name} '${target}'"
     }
 
     /**
@@ -257,7 +257,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     @Override
     String exitFile(Path file) {
-        file.toString()
+        "'${file.toString()}'"
     }
 
 }

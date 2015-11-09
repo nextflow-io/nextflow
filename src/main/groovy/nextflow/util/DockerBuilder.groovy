@@ -198,7 +198,7 @@ class DockerBuilder {
 
         // mount the input folders
         result << makeVolumes(mounts)
-        result << ' -w $PWD '
+        result << ' -w "$PWD" '
 
         if( entryPoint )
             result << '--entrypoint ' << entryPoint << ' '
@@ -255,10 +255,10 @@ class DockerBuilder {
         mountPaths.each { trie.add(it) }
 
         def paths = trie.longest()
-        paths.each{ if(it) result << "-v $it:$it " }
+        paths.each{ if(it) result << "-v '$it':'$it' " }
 
         // -- append by default the current path
-        result << '-v $PWD:$PWD'
+        result << '-v "$PWD":"$PWD"'
 
         return result
     }
@@ -277,7 +277,7 @@ class DockerBuilder {
             env = env.toPath()
         }
         if( env instanceof Path ) {
-            result << '-e "BASH_ENV=' << env.toString() << '"'
+            result << '-e "BASH_ENV=\'' << env.toString() << '\'"'
         }
         else if( env instanceof Map ) {
             short index = 0

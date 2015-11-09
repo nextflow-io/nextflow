@@ -361,7 +361,7 @@ class BashWrapperBuilder {
 
         // source the environment
         if( !runWithDocker ) {
-            wrapper << '[ -f '<< fileStr(environmentFile) << ' ]' << ' && source ' << fileStr(environmentFile) << ENDL
+            wrapper << "[ -f '"<< fileStr(environmentFile) << "' ]" << " && source '" << fileStr(environmentFile) << "'" << ENDL
         }
 
         if( changeDir ) {
@@ -377,17 +377,17 @@ class BashWrapperBuilder {
         // execute the command script
         wrapper << '' << ENDL
         wrapper << 'set +e' << ENDL  // <-- note: use loose error checking so that ops after the script command are executed in all cases
-        wrapper << 'COUT=$PWD/.command.po; mkfifo $COUT' << ENDL
-        wrapper << 'CERR=$PWD/.command.pe; mkfifo $CERR' << ENDL
-        wrapper << 'tee '<< TaskRun.CMD_OUTFILE <<' < $COUT &' << ENDL
+        wrapper << 'COUT=$PWD/.command.po; mkfifo "$COUT"' << ENDL
+        wrapper << 'CERR=$PWD/.command.pe; mkfifo "$CERR"' << ENDL
+        wrapper << 'tee '<< TaskRun.CMD_OUTFILE <<' < "$COUT" &' << ENDL
         wrapper << 'tee1=$!' << ENDL
-        wrapper << 'tee '<< TaskRun.CMD_ERRFILE <<' < $CERR >&2 &' << ENDL
+        wrapper << 'tee '<< TaskRun.CMD_ERRFILE <<' < "$CERR" >&2 &' << ENDL
         wrapper << 'tee2=$!' << ENDL
         wrapper << '(' << ENDL
 
         // execute by invoking the command through a Docker container
         if( docker && !executable ) {
-            wrapper << docker.runCommand << " -c '"
+            wrapper << docker.runCommand << " -c \""
         }
 
         /*
@@ -404,8 +404,8 @@ class BashWrapperBuilder {
             stub << 'touch ' << TaskRun.CMD_TRACE << ENDL
             stub << 'start_millis=$($NXF_DATE)'  << ENDL
             stub << '(' << ENDL
-            stub << interpreter << ' ' << fileStr(scriptFile)
-            if( input != null ) stub << ' < ' << fileStr(inputFile)
+            stub << interpreter << " '" << fileStr(scriptFile) << "'"
+            if( input != null ) stub << " < '" << fileStr(inputFile) << "'"
             stub << ENDL
             stub << ') &' << ENDL
             stub << 'pid=$!' << ENDL                     // get the PID of the main job
@@ -419,16 +419,16 @@ class BashWrapperBuilder {
             stubFile.text = stub.toString()
 
             // invoke it from the main script
-            wrapper << '/bin/bash ' << fileStr(stubFile)
-            if( docker && !executable ) wrapper << "'"
+            wrapper << "/bin/bash '" << fileStr(stubFile) << "'"
+            if( docker && !executable ) wrapper << "\""
         }
         else {
-            wrapper << interpreter << ' ' << fileStr(scriptFile)
-            if( docker && !executable ) wrapper << "'"
-            if( input != null ) wrapper << ' < ' << fileStr(inputFile)
+            wrapper << interpreter << " '" << fileStr(scriptFile) << "'"
+            if( docker && !executable ) wrapper << "\""
+            if( input != null ) wrapper << " < '" << fileStr(inputFile) << "'"
         }
         wrapper << ENDL
-        wrapper << ') >$COUT 2>$CERR &' << ENDL
+        wrapper << ') >"$COUT" 2>"$CERR" &' << ENDL
         wrapper << 'pid=$!' << ENDL
         wrapper << 'wait $pid || ret=$?' << ENDL
         wrapper << 'wait $tee1 $tee2' << ENDL

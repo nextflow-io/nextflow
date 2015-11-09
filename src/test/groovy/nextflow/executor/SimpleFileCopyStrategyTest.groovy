@@ -23,6 +23,8 @@ import java.nio.file.Paths
 
 import nextflow.processor.TaskBean
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -95,6 +97,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         strategy.normalizeGlobStarPaths(['file1.txt','path/file2.txt','path/**/file3.txt', 'path/**/file4.txt','**/fa']) == ['file1.txt','path/file2.txt','path','*']
     }
 
+    @Unroll
     def 'should return a valid `cp` command' () {
 
         given:
@@ -104,12 +107,12 @@ class SimpleFileCopyStrategyTest extends Specification {
 
         where:
         source              | target    | result
-        'file.txt'          | '/to/dir' | 'cp -fR file.txt /to/dir'
-        'path_name'         | '/to/dir' | 'cp -fR path_name /to/dir'
-        'input/file.txt'    | '/to/dir' | 'mkdir -p /to/dir/input && cp -fR input/file.txt /to/dir/input'
-        'long/path/name'    | '/to/dir' | 'mkdir -p /to/dir/long/path && cp -fR long/path/name /to/dir/long/path'
-        'path_name/*'       | '/to/dir' | 'mkdir -p /to/dir/path_name && cp -fR path_name/* /to/dir/path_name'
-        'path_name/'        | '/to/dir' | 'mkdir -p /to/dir/path_name && cp -fR path_name/ /to/dir/path_name'
+        'file.txt'          | '/to/dir' | "cp -fR file.txt '/to/dir'"
+        'path_name'         | '/to/dir' | "cp -fR path_name '/to/dir'"
+        'input/file.txt'    | '/to/dir' | "mkdir -p '/to/dir/input' && cp -fR input/file.txt '/to/dir/input'"
+        'long/path/name'    | '/to/dir' | "mkdir -p '/to/dir/long/path' && cp -fR long/path/name '/to/dir/long/path'"
+        'path_name/*'       | '/to/dir' | "mkdir -p '/to/dir/path_name' && cp -fR path_name/* '/to/dir/path_name'"
+        'path_name/'        | '/to/dir' | "mkdir -p '/to/dir/path_name' && cp -fR path_name/ '/to/dir/path_name'"
 
     }
 
@@ -122,13 +125,13 @@ class SimpleFileCopyStrategyTest extends Specification {
 
         where:
         source              | target    | result
-        'file.txt'          | '/to/dir' | 'mv -f file.txt /to/dir'
-        'file.txt'          | '/to/dir' | 'mv -f file.txt /to/dir'
-        'path_name'         | '/to/dir' | 'mv -f path_name /to/dir'
-        'input/file.txt'    | '/to/dir' | 'mkdir -p /to/dir/input && mv -f input/file.txt /to/dir/input'
-        'long/path/name'    | '/to/dir' | 'mkdir -p /to/dir/long/path && mv -f long/path/name /to/dir/long/path'
-        'path_name/*'       | '/to/dir' | 'mkdir -p /to/dir/path_name && mv -f path_name/* /to/dir/path_name'
-        'path_name/'        | '/to/dir' | 'mkdir -p /to/dir/path_name && mv -f path_name/ /to/dir/path_name'
+        'file.txt'          | '/to/dir' | "mv -f file.txt '/to/dir'"
+        'file.txt'          | '/to/dir' | "mv -f file.txt '/to/dir'"
+        'path_name'         | '/to/dir' | "mv -f path_name '/to/dir'"
+        'input/file.txt'    | '/to/dir' | "mkdir -p '/to/dir/input' && mv -f input/file.txt '/to/dir/input'"
+        'long/path/name'    | '/to/dir' | "mkdir -p '/to/dir/long/path' && mv -f long/path/name '/to/dir/long/path'"
+        'path_name/*'       | '/to/dir' | "mkdir -p '/to/dir/path_name' && mv -f path_name/* '/to/dir/path_name'"
+        'path_name/'        | '/to/dir' | "mkdir -p '/to/dir/path_name' && mv -f path_name/ '/to/dir/path_name'"
 
     }
 
@@ -141,13 +144,13 @@ class SimpleFileCopyStrategyTest extends Specification {
 
         where:
         source              | target    | result
-        'file.txt'          | '/to/dir' | 'rsync -rRl file.txt /to/dir'
-        'file.txt'          | '/to/dir' | 'rsync -rRl file.txt /to/dir'
-        'path_name'         | '/to/dir' | 'rsync -rRl path_name /to/dir'
-        'input/file.txt'    | '/to/dir' | 'rsync -rRl input/file.txt /to/dir'
-        'long/path/name'    | '/to/dir' | 'rsync -rRl long/path/name /to/dir'
-        'path_name/*'       | '/to/dir' | 'rsync -rRl path_name/* /to/dir'
-        'path_name/'        | '/to/dir' | 'rsync -rRl path_name/ /to/dir'
+        'file.txt'          | '/to/dir' | "rsync -rRl file.txt '/to/dir'"
+        'file.txt'          | '/to/dir' | "rsync -rRl file.txt '/to/dir'"
+        'path_name'         | '/to/dir' | "rsync -rRl path_name '/to/dir'"
+        'input/file.txt'    | '/to/dir' | "rsync -rRl input/file.txt '/to/dir'"
+        'long/path/name'    | '/to/dir' | "rsync -rRl long/path/name '/to/dir'"
+        'path_name/*'       | '/to/dir' | "rsync -rRl path_name/* '/to/dir'"
+        'path_name/'        | '/to/dir' | "rsync -rRl path_name/ '/to/dir'"
 
     }
 
@@ -161,9 +164,9 @@ class SimpleFileCopyStrategyTest extends Specification {
         def script = strategy.getUnstageOutputFilesScript()
         then:
         script == '''
-                mkdir -p /target/work/dir
-                cp -fR simple.txt /target/work/dir || true
-                mkdir -p /target/work/dir/my/path && cp -fR my/path/file.bam /target/work/dir/my/path || true
+                mkdir -p '/target/work/dir'
+                cp -fR simple.txt '/target/work/dir' || true
+                mkdir -p '/target/work/dir/my/path' && cp -fR my/path/file.bam '/target/work/dir/my/path' || true
                 '''
                 .stripIndent().rightTrim()
 
@@ -179,9 +182,9 @@ class SimpleFileCopyStrategyTest extends Specification {
         def script = strategy.getUnstageOutputFilesScript()
         then:
         script == '''
-                mkdir -p /target/work/dir
-                rsync -rRl simple.txt /target/work/dir || true
-                rsync -rRl my/path/file.bam /target/work/dir || true
+                mkdir -p '/target/work/dir'
+                rsync -rRl simple.txt '/target/work/dir' || true
+                rsync -rRl my/path/file.bam '/target/work/dir' || true
                 '''
                 .stripIndent().rightTrim()
 
