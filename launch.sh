@@ -65,7 +65,7 @@ EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
 # classpath when the application is compiled with gradle
 #
 if [ -e "$base_dir/build/libs" ]; then
-  CLASSPATH=`ls $base_dir/build/libs/* | egrep 'nextflow-[0-9]+\.[0-9]+\.[0-9]+(-.\w+)?.jar$'`
+  CLASSPATH=`ls $base_dir/build/libs/* | egrep 'nextflow-[0-9]+\.[0-9]+\.[0-9]+(-[A-Z0-9]+)?.jar$'`
 
   # -- append runtime libraries
   [[ ! -f "$base_dir/.launch.classpath" ]] && echo "Missing '.launch.classpath' file -- create it by running: ./gradlew exportClasspath" && exit 1
@@ -84,7 +84,7 @@ while [ "$*" != "" ]; do
   if [[ "$1" == '--debug' || "$1" == '--trace' ]]; then
     args+=("$1")
 
-  elif [ $1 == --with-yourkit ]; then 
+  elif [ "$1" == --with-yourkit ]; then 
     JVM_ARGS+=" -agentpath:/Applications/YourKit_Java_Profiler_2014_build_14104.app/bin/mac/libyjpagent.jnilib=onexit=snapshot,tracing,dir=$PWD/snapshot "
   elif [ "$1" == '--with-jrebel' ]; then
     if [ "$JREBEL_HOME" ]; then
