@@ -170,8 +170,9 @@ class CmdRun extends CmdBase implements HubOptions {
                         .toMap()
 
         // -- create a new runner instance
-        def runner = new ScriptRunner(config)
-                            .setScript(scriptFile)
+        final runner = new ScriptRunner(config)
+        runner.script = scriptFile
+        runner.profile = profile
 
         if( this.test ) {
             runner.test(this.test, scriptArgs)

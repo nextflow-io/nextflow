@@ -85,6 +85,11 @@ class ScriptRunner {
     private String commandLine
 
     /**
+     * The used configuration profile
+     */
+    String profile
+
+    /**
      * Instantiate the runner object creating a new session
      */
     def ScriptRunner( ) {

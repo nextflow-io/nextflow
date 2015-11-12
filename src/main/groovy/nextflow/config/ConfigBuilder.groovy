@@ -43,7 +43,7 @@ import nextflow.util.HistoryFile
 @Slf4j
 class ConfigBuilder {
 
-    static final DEFAULT_PROFILE = 'standard'
+    static final public DEFAULT_PROFILE = 'standard'
 
     CliOptions options
 

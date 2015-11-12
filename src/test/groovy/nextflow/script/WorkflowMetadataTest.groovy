@@ -100,6 +100,7 @@ class WorkflowMetadataTest extends Specification {
         metadata.nextflow.version == Const.APP_VER
         metadata.nextflow.build == Const.APP_BUILDNUM
         metadata.nextflow.timestamp == Const.APP_TIMESTAMP_UTC
+        metadata.profile == 'standard'
 
         when:
         metadata.invokeOnComplete()
@@ -108,6 +109,13 @@ class WorkflowMetadataTest extends Specification {
         metadata.complete <= new Date()
         metadata.duration == new Duration( metadata.complete.time - metadata.start.time )
         handlerInvoked == metadata.commandLine
+
+
+        when:
+        runner.profile >> 'foo_profile'
+        metadata = new WorkflowMetadata(runner)
+        then:
+        metadata.profile == 'foo_profile'
 
         cleanup:
         dir?.deleteDir()

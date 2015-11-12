@@ -27,6 +27,7 @@ import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Const
+import nextflow.config.ConfigBuilder
 import nextflow.util.Duration
 /**
  * Models workflow metadata properties and notification handler
@@ -123,6 +124,11 @@ class WorkflowMetadata {
      */
     String errorReport
 
+    /**
+     * The used configuration profile
+     */
+    String profile
+
     final private ScriptRunner owner
 
     final private List<Closure> events = []
@@ -144,6 +150,7 @@ class WorkflowMetadata {
         this.nextflow = [version: Const.APP_VER, build: Const.APP_BUILDNUM, timestamp: Const.APP_TIMESTAMP_UTC]
         this.workDir = owner.session.workDir
         this.launchDir = Paths.get('.').complete()
+        this.profile = owner.profile ?: ConfigBuilder.DEFAULT_PROFILE
 
         // check if there's a onComplete action in the config file
         registerConfigAction(owner.session.config.workflow as Map)
@@ -246,6 +253,7 @@ class WorkflowMetadata {
         result << ', success: ' << success
         result << ', workDir: ' << workDir
         result << ', launchDir: ' << launchDir
+        result << ', profile: ' << profile
         return result.toString()
     }
 

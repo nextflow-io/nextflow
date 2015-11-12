@@ -34,6 +34,7 @@ workDir                     Workflow working directory.
 container                   Docker image used to run workflow tasks. When more than one image is used
                             it returns a map object containing `[process name, image name]` pair entries.
 commandLine                 Command line as entered by the user to launch the workflow execution.
+profile                     Used configuration profile.
 start                       Timestamp of workflow at execution start.
 :sup:`*` complete           Timestamp of workflow when execution is completed.
 :sup:`*` duration           Time elapsed to complete workflow execution.
