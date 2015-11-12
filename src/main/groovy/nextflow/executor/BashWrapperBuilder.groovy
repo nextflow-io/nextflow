@@ -100,6 +100,8 @@ class BashWrapperBuilder {
         on_exit() {
           exit_status=${ret:=$?}
           printf $exit_status > __EXIT_FILE__
+          rm -f "$COUT" || true
+          rm -f "$CERR" || true
           exit $exit_status
         }
 

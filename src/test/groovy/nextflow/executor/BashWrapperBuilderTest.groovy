@@ -164,6 +164,8 @@ class BashWrapperBuilderTest extends Specification {
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > '${folder}/.exitcode'
+                  rm -f "\$COUT" || true
+                  rm -f "\$CERR" || true
                   exit \$exit_status
                 }
 
@@ -266,6 +268,8 @@ class BashWrapperBuilderTest extends Specification {
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > '${folder}/.exitcode'
+                  rm -f "\$COUT" || true
+                  rm -f "\$CERR" || true
                   exit \$exit_status
                 }
 
@@ -464,6 +468,8 @@ class BashWrapperBuilderTest extends Specification {
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > '${folder}/.exitcode'
+                  rm -f "\$COUT" || true
+                  rm -f "\$CERR" || true
                   exit \$exit_status
                 }
 
@@ -583,6 +589,8 @@ class BashWrapperBuilderTest extends Specification {
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > '${folder}/.exitcode'
+                  rm -f "\$COUT" || true
+                  rm -f "\$CERR" || true
                   exit \$exit_status
                 }
 
@@ -785,6 +793,8 @@ class BashWrapperBuilderTest extends Specification {
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > '${folder}/.exitcode'
+                  rm -f "\$COUT" || true
+                  rm -f "\$CERR" || true
                   exit \$exit_status
                 }
 
@@ -888,6 +898,8 @@ class BashWrapperBuilderTest extends Specification {
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > '${folder}/.exitcode'
+                  rm -f "\$COUT" || true
+                  rm -f "\$CERR" || true
                   exit \$exit_status
                 }
 
@@ -994,6 +1006,8 @@ class BashWrapperBuilderTest extends Specification {
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > '${folder}/.exitcode'
+                  rm -f "\$COUT" || true
+                  rm -f "\$CERR" || true
                   exit \$exit_status
                 }
 
@@ -1096,6 +1110,8 @@ class BashWrapperBuilderTest extends Specification {
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > '${folder}/.exitcode'
+                  rm -f "\$COUT" || true
+                  rm -f "\$CERR" || true
                   exit \$exit_status
                 }
 
@@ -1202,6 +1218,8 @@ class BashWrapperBuilderTest extends Specification {
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > '${folder}/.exitcode'
+                  rm -f "\$COUT" || true
+                  rm -f "\$CERR" || true
                   exit \$exit_status
                 }
 
@@ -1337,6 +1355,8 @@ class BashWrapperBuilderTest extends Specification {
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > '${folder}/.exitcode'
+                  rm -f "\$COUT" || true
+                  rm -f "\$CERR" || true
                   exit \$exit_status
                 }
 
@@ -1437,6 +1457,8 @@ class BashWrapperBuilderTest extends Specification {
                     on_exit() {
                       exit_status=${ret:=$?}
                       printf $exit_status > '/my/exit/file'
+                      rm -f "$COUT" || true
+                      rm -f "$CERR" || true
                       exit $exit_status
                     }
 
@@ -1484,6 +1506,8 @@ class BashWrapperBuilderTest extends Specification {
                     on_exit() {
                       exit_status=${ret:=$?}
                       printf $exit_status > '/my/exit/xxx'
+                      rm -f "$COUT" || true
+                      rm -f "$CERR" || true
                       exit $exit_status
                     }
 
@@ -1608,6 +1632,8 @@ class BashWrapperBuilderTest extends Specification {
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > '${folder}/.exitcode'
+                  rm -f "\$COUT" || true
+                  rm -f "\$CERR" || true
                   exit \$exit_status
                 }
 
