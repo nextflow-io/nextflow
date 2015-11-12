@@ -441,18 +441,18 @@ class TaskRun {
         config.scratch
     }
 
-    static final String CMD_LOG = '.command.log'
-    static final String CMD_ENV = '.command.env'
-    static final String CMD_SCRIPT = '.command.sh'
-    static final String CMD_INFILE = '.command.in'
-    static final String CMD_OUTFILE = '.command.out'
-    static final String CMD_ERRFILE = '.command.err'
-    static final String CMD_EXIT = '.exitcode'
-    static final String CMD_START = '.command.begin'
-    static final String CMD_RUN = '.command.run'
-    static final String CMD_STUB = '.command.run.1'
-    static final String CMD_CONTEXT = '.command.val'
-    static final String CMD_TRACE = '.command.trace'
+    static final public String CMD_LOG = '.command.log'
+    static final public String CMD_ENV = '.command.env'
+    static final public String CMD_SCRIPT = '.command.sh'
+    static final public String CMD_INFILE = '.command.in'
+    static final public String CMD_OUTFILE = '.command.out'
+    static final public String CMD_ERRFILE = '.command.err'
+    static final public String CMD_EXIT = '.exitcode'
+    static final public String CMD_START = '.command.begin'
+    static final public String CMD_RUN = '.command.run'
+    static final public String CMD_STUB = '.command.run.1'
+    static final public String CMD_CONTEXT = '.command.val'
+    static final public String CMD_TRACE = '.command.trace'
 
 
 
