@@ -1,4 +1,3 @@
-#!/bin/bash
 #
 #  Copyright (c) 2013-2015, Centre for Genomic Regulation (CRG).
 #  Copyright (c) 2013-2015, Paolo Di Tommaso and the respective authors.
@@ -18,18 +17,25 @@
 #  You should have received a copy of the GNU General Public License
 #  along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
 
-MODULE=${2:-''}
-CONFIG=${1:-'compile'}
+config ?= compile
 
-if [[ $1 == 'help' || $1 == '-h' ]]; then
-  echo Show dependencies for a specific configuration and sub-project
-  echo USAGE: g-deps [configuration] [sub-project]
-  echo 
-  echo Examples:
-  echo ' deps.sh runtime                  --  Show runtime dependencies in main project'
-  echo ' deps.sh testCompile nxf-dnanexus --  Show test dependencies in nxf-dnanexus sub-project' 
-  exit 1 
-fi
+compile:
+	./gradlew -q compile exportClasspath
 
-set -x
-./gradlew -q $MODULE:dependencies --configuration $CONFIG
+clean:
+	./gradlew clean
+
+install:
+	./gradlew localInstall -Plocal-install=true
+
+deps:
+	./gradlew -q ${module}:dependencies --configuration ${config}
+
+deps-all:
+	./gradlew -q dependencyInsight --configuration ${config} --dependency ${module}
+
+refresh:
+	./gradlew --refresh-dependencies ${module}:dependencies --configuration ${config}
+
+test:
+	./gradlew -q ${module}:test --tests ${class}
