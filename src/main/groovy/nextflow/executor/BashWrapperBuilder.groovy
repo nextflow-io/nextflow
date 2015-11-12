@@ -325,6 +325,7 @@ class BashWrapperBuilder {
         if( headerScript )
             wrapper << headerScript << ENDL
 
+        wrapper << '# NEXTFLOW TASK: ' << name << ENDL
         wrapper << 'set -e' << ENDL
         wrapper << 'set -u' << ENDL
         wrapper << 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 2 ]] && set -x' << ENDL << ENDL

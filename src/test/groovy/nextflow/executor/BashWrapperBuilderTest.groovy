@@ -106,7 +106,12 @@ class BashWrapperBuilderTest extends Specification {
          * simple bash run
          */
         when:
-        def bash = new BashWrapperBuilder([workDir: folder, script: 'echo Hello world!', headerScript: '#BSUB -x 1\n#BSUB -y 2'] as TaskBean )
+        def bash = new BashWrapperBuilder([
+                name: 'Hello 1',
+                workDir: folder,
+                script: 'echo Hello world!',
+                headerScript: '#BSUB -x 1\n#BSUB -y 2'
+            ] as TaskBean )
         bash.build()
 
         then:
@@ -126,6 +131,7 @@ class BashWrapperBuilderTest extends Specification {
                 #!/bin/bash
                 #BSUB -x 1
                 #BSUB -y 2
+                # NEXTFLOW TASK: Hello 1
                 set -e
                 set -u
                 NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
@@ -204,7 +210,11 @@ class BashWrapperBuilderTest extends Specification {
          * simple bash run
          */
         when:
-        def bash = new BashWrapperBuilder([workDir: folder, script: 'echo Hello world!', statsEnabled: true] as TaskBean)
+        def bash = new BashWrapperBuilder([
+                name: 'Hello 1',
+                workDir: folder,
+                script: 'echo Hello world!',
+                statsEnabled: true] as TaskBean)
         bash.build()
 
         then:
@@ -223,6 +233,7 @@ class BashWrapperBuilderTest extends Specification {
         folder.resolve('.command.run').text ==
                 """
                 #!/bin/bash
+                # NEXTFLOW TASK: Hello 1
                 set -e
                 set -u
                 NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
@@ -393,7 +404,13 @@ class BashWrapperBuilderTest extends Specification {
          * simple bash run
          */
         when:
-        def bash = new BashWrapperBuilder([workDir: folder, script: 'echo Hello world!', scratch: true, input: 'Ciao ciao'] as TaskBean)
+        def bash = new BashWrapperBuilder([
+                name: 'Hello 1',
+                workDir: folder,
+                script: 'echo Hello world!',
+                scratch: true,
+                input: 'Ciao ciao'
+            ] as TaskBean)
         bash.build()
 
         then:
@@ -414,6 +431,7 @@ class BashWrapperBuilderTest extends Specification {
         folder.resolve('.command.run').text ==
                 """
                 #!/bin/bash
+                # NEXTFLOW TASK: Hello 1
                 set -e
                 set -u
                 NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
@@ -495,6 +513,7 @@ class BashWrapperBuilderTest extends Specification {
          */
         when:
         def bash = new BashWrapperBuilder([
+                name: 'Hello 2',
                 workDir: folder,
                 script: 'echo Hello world!',
                 scratch: true,
@@ -531,6 +550,7 @@ class BashWrapperBuilderTest extends Specification {
         folder.resolve('.command.run').text ==
                 """
                 #!/bin/bash
+                # NEXTFLOW TASK: Hello 2
                 set -e
                 set -u
                 NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
@@ -709,6 +729,7 @@ class BashWrapperBuilderTest extends Specification {
          */
         when:
         def bash = new BashWrapperBuilder([
+                name: 'Hello 3',
                 workDir: folder,
                 script: 'echo Hello world!',
                 dockerImage: 'busybox',
@@ -731,6 +752,7 @@ class BashWrapperBuilderTest extends Specification {
         folder.resolve('.command.run').text ==
                 """
                 #!/bin/bash
+                # NEXTFLOW TASK: Hello 3
                 set -e
                 set -u
                 NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
@@ -810,6 +832,7 @@ class BashWrapperBuilderTest extends Specification {
          */
         when:
         def bash = new BashWrapperBuilder([
+                name: 'Hello 4',
                 workDir: folder,
                 script: 'echo Hello world!',
                 dockerImage: 'busybox',
@@ -832,6 +855,7 @@ class BashWrapperBuilderTest extends Specification {
         folder.resolve('.command.run').text ==
                 """
                 #!/bin/bash
+                # NEXTFLOW TASK: Hello 4
                 set -e
                 set -u
                 NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
@@ -914,6 +938,7 @@ class BashWrapperBuilderTest extends Specification {
          */
         when:
         def bash = new BashWrapperBuilder([
+                name: 'Hello 5',
                 workDir: folder,
                 script: 'echo Hello world!',
                 dockerImage: 'ubuntu',
@@ -936,6 +961,7 @@ class BashWrapperBuilderTest extends Specification {
         folder.resolve('.command.run').text ==
                 """
                 #!/bin/bash
+                # NEXTFLOW TASK: Hello 5
                 set -e
                 set -u
                 NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
@@ -1014,6 +1040,7 @@ class BashWrapperBuilderTest extends Specification {
          */
         when:
         def bash = new BashWrapperBuilder([
+                name: 'Hello 6',
                 workDir: folder,
                 script: 'echo Hello world!',
                 dockerImage: 'ubuntu',
@@ -1036,6 +1063,7 @@ class BashWrapperBuilderTest extends Specification {
         folder.resolve('.command.run').text ==
                 """
                 #!/bin/bash
+                # NEXTFLOW TASK: Hello 6
                 set -e
                 set -u
                 NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
@@ -1117,6 +1145,7 @@ class BashWrapperBuilderTest extends Specification {
          */
         when:
         def bash = new BashWrapperBuilder([
+                name: 'Hello 7',
                 workDir: folder,
                 script: 'echo Hello world!',
                 dockerImage: 'busybox',
@@ -1140,6 +1169,7 @@ class BashWrapperBuilderTest extends Specification {
         folder.resolve('.command.run').text ==
                 """
                 #!/bin/bash
+                # NEXTFLOW TASK: Hello 7
                 set -e
                 set -u
                 NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
@@ -1246,6 +1276,7 @@ class BashWrapperBuilderTest extends Specification {
         def folder = TestHelper.createInMemTempDir()
         def session = new Session(); session.workDir = folder
         def task = new TaskRun(
+                name: 'Hello',
                 script: 'FOO=bar\ndocker-io/busybox --fox --baz',
                 config: [container: true],
                 workDir: folder )
@@ -1273,6 +1304,7 @@ class BashWrapperBuilderTest extends Specification {
         folder.resolve('.command.run').text ==
                 """
                 #!/bin/bash
+                # NEXTFLOW TASK: Hello
                 set -e
                 set -u
                 NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
@@ -1342,6 +1374,7 @@ class BashWrapperBuilderTest extends Specification {
         given:
         def folder = TestHelper.createInMemTempDir()
         def task = new TaskRun(
+                name: 'Hello',
                 script: 'my.registry.com/docker-io/busybox --fox --baz',
                 config: [container: true],
                 workDir: folder )
@@ -1519,6 +1552,7 @@ class BashWrapperBuilderTest extends Specification {
          */
         when:
         def bash = new BashWrapperBuilder([
+                name: 'Hello 9',
                 workDir: folder,
                 script: 'echo Hello world!',
                 beforeScript: "init this",
@@ -1541,6 +1575,7 @@ class BashWrapperBuilderTest extends Specification {
         folder.resolve('.command.run').text ==
                 """
                 #!/bin/bash
+                # NEXTFLOW TASK: Hello 9
                 set -e
                 set -u
                 NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x

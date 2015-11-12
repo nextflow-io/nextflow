@@ -41,7 +41,13 @@ class CirrusWrapperBuilderTest extends Specification {
         processor.getSession() >> new Session()
         processor.getConfig() >> [:]
         def config = new TaskConfig()
-        def task = new TaskRun(workDir: folder, processor: processor, config: config, script: 'echo Hello world!')
+        def task = new TaskRun(
+                name: 'Hello 1',
+                workDir: folder,
+                processor: processor,
+                config: config,
+                script: 'echo Hello world!'
+            )
 
         /*
          * simple bash run
@@ -66,6 +72,7 @@ class CirrusWrapperBuilderTest extends Specification {
         folder.resolve('.command.run').text ==
                 """
                 #!/bin/bash
+                # NEXTFLOW TASK: Hello 1
                 set -e
                 set -u
                 NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
