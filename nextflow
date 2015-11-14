@@ -90,7 +90,10 @@ function install() {
 
 function launch_nextflow() {
     # the launch command line
-    local cmdline="${launcher[@]} ${args[@]}"
+    local cmdline="${launcher[@]} "
+    for x in "${args[@]}"; do
+        cmdline+="'$x' "
+    done
 
     if [[ $NXF_MPIRUN ]]; then
         if [[ -z $OMPI_COMM_WORLD_RANK ]]; then echo_red 'Missing `$OMPI_COMM_WORLD_RANK` variable -- it looks you are not running in a MPI environment'; exit 1; fi
@@ -105,14 +108,14 @@ function launch_nextflow() {
     # start in daemon mode
     elif [[ "$bg" ]]; then
       local pid_file="${NXF_PID_FILE:-.nextflow.pid}"
-      bash -f -c "exec $cmdline" &
+      bash -c "exec $cmdline" &
       disown
       printf $! > "$pid_file"
       exit 0
     fi
 
     # trampoline syntax -- https://github.com/puniverse/capsule/pull/71
-    exec bash -f -c "exec $cmdline"
+    exec bash -c "exec $cmdline"
     exit 1
 }
 
