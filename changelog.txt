@@ -1,6 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.16.2 - 14 Nov 2016 
+- Fixed #87. Include current configuration profile option in the workflow metadata.
+- Fixed #86. Failure if work dir contains one or more blank characters.
+- Fixed #76. Include process name and tag information in process wrapper script.
+
 0.16.1 - 7 Nov 2015
 - Fixed issue #85. Directive `publishDir` can't access process local variables.
 - Fixed wrong error message when trying to run a project sticked on a specific revision.
