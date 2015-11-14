@@ -277,7 +277,7 @@ class DockerBuilder {
             env = env.toPath()
         }
         if( env instanceof Path ) {
-            result << '-e "BASH_ENV=\'' << env.toString() << '\'"'
+            result << '-e "BASH_ENV=' << env.toString() << '"'
         }
         else if( env instanceof Map ) {
             short index = 0

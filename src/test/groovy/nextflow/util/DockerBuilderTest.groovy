@@ -47,8 +47,8 @@ class DockerBuilderTest extends Specification {
         expect:
         DockerBuilder.makeEnv('X=1').toString() == '-e "X=1"'
         DockerBuilder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == '-e "VAR_X=1" -e "VAR_Y=2"'
-        DockerBuilder.makeEnv( Paths.get('/some/file.env') ).toString() == '-e "BASH_ENV=\'/some/file.env\'"'
-        DockerBuilder.makeEnv( new File('/some/file.env') ).toString() == '-e "BASH_ENV=\'/some/file.env\'"'
+        DockerBuilder.makeEnv( Paths.get('/some/file.env') ).toString() == '-e "BASH_ENV=/some/file.env"'
+        DockerBuilder.makeEnv( new File('/some/file.env') ).toString() == '-e "BASH_ENV=/some/file.env"'
     }
 
     def 'test docker run command line'() {
@@ -59,7 +59,7 @@ class DockerBuilderTest extends Specification {
 
         expect:
         new DockerBuilder('fedora').build() == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" fedora'
-        new DockerBuilder('fedora').addEnv(envFile).build() == 'docker run -i -e "BASH_ENV=\'env-file\'" -v "$PWD":"$PWD" -w "$PWD" fedora'
+        new DockerBuilder('fedora').addEnv(envFile).build() == 'docker run -i -e "BASH_ENV=env-file" -v "$PWD":"$PWD" -w "$PWD" fedora'
         new DockerBuilder('ubuntu').params(temp:'/hola').build() == 'docker run -i -v /hola:/tmp -v "$PWD":"$PWD" -w "$PWD" ubuntu'
         new DockerBuilder('busybox').params(sudo: true).build() == 'sudo docker run -i -v "$PWD":"$PWD" -w "$PWD" busybox'
         new DockerBuilder('busybox').params(entry: '/bin/bash').build() == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash busybox'
@@ -72,7 +72,7 @@ class DockerBuilderTest extends Specification {
                 .addEnv(envFile)
                 .addMount(db_file)
                 .addMount(db_file)  // <-- add twice the same to prove that the final string won't contain duplicates
-                .build() == 'docker run -i -e "BASH_ENV=\'env-file\'" -v \'/home/db\':\'/home/db\' -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .build() == 'docker run -i -e "BASH_ENV=env-file" -v \'/home/db\':\'/home/db\' -v "$PWD":"$PWD" -w "$PWD" fedora'
 
     }
 
