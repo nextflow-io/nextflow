@@ -1,7 +1,7 @@
 Cloud boot 
 ============
 
-* The script `launch.sh` to launch a set of EC2 nodes and the master node. 
+* The script `launch.sh` launches a set of EC2 nodes and the master node. 
 
 * The above script uses the `ec2-userdata.txt` to set the environment in the started nodes, including: 
     - AWS_ACCESS_KEY
@@ -9,12 +9,12 @@ Cloud boot
     - NXF_VER
     - DOCKER_IMAGE
     
-* Each EC2 node on start will download and run the script `cloud-boot.sh`. This script do the following: 
-    - Download the Nextflow installer script
-    - Pull the Docker image specified by the `DOCKER_IMAGE` environment variable
-    - Launch the Nextflow daemon in background
+* Each EC2 node on start downloads and runs the script `cloud-boot.sh`. This script does the following: 
+    - Downloads the Nextflow installer script
+    - Pulls the Docker image specified by the `DOCKER_IMAGE` environment variable
+    - Launches the Nextflow daemon in background
     
-* This scripts require a Linux Amazon image having at least the following tools installed:
+* These scripts require a Linux Amazon image with the following tools installed:
     - cloud-init
     - curl 
     - docker 
