@@ -39,3 +39,6 @@ refresh:
 
 test:
 	./gradlew -q ${module}:test --tests ${class}
+
+pack:
+	./gradlew pack

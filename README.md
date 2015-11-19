@@ -200,17 +200,22 @@ the build process is based on the [Gradle](http://www.gradle.org/) build automat
 
 You can compile *Nextflow* by typing the following command in the project home directory on your computer:
 
-    $ ./gradlew compile
+    $ make compile
 
 The very first time you run it, it will automatically download all the libraries required by the build process. 
 It may take some minutes to complete.
 
 When complete, execute the program by using the `launch.sh` script in the project directory.
 
-The self-contained runnable Nextflow package can be created by using the following command:
+The self-contained runnable Nextflow packages can be created by using the following command:
 
-    $ ./gradlew pack
+    $ make pack
 
+In order to install the compiled packages use the following command: 
+
+    $ make install 
+
+Then you will be able to run nextflow using the `nextflow` launcher script in the project root folder. 
 
 Known compilation problems 
 ---------------------------
