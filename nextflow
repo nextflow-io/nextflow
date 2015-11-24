@@ -333,7 +333,9 @@ else
     launcher=($("$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"))
     [[ $? -ne 0 ]] && echo 'Unable to initialize nextflow environment' && exit $?
     mkdir -p ${NXF_LAUNCHER}
-    echo "${launcher[@]}" > "$LAUNCH_FILE"
+    for x in "${launcher[@]}"; do
+    [[ "$x" != "\"-Duser.dir=$PWD\"" ]] && printf "$x " >> "$LAUNCH_FILE"
+    done
 fi
 
 # finally run it
