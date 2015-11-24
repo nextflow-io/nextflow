@@ -563,7 +563,7 @@ class TaskRun {
 
         // Important!
         // when the task is implemented by a script string
-        // Invokes the closure which return the script whit all the variables replaced with the actual values
+        // Invoke the closure which returns the script with all the variables replaced with the actual values
         try {
             def result = code.call()
             if ( result instanceof Path ) {
