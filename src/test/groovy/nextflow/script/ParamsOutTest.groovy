@@ -164,8 +164,8 @@ class ParamsOutTest extends Specification {
               output:
               file "${x}_name" into channel1
               file "${x}_${y}.fa" into channel2
-              file "simple.txt" into channel3
-              file "${z}.txt:${x}.fa" into channel4
+              file "/simple.txt" into channel3
+              file "${z}.txt:/sub-dir/${x}.fa" into channel4
               set "${z}.txt:${x}.fa" into channel5
               set file("${z}.txt:${x}.fa") into channel6
 
@@ -200,14 +200,14 @@ class ParamsOutTest extends Specification {
         out1.outChannel == binding.channel2
         out1.isDynamic()
 
-        out2.name == 'simple.txt'
+        out2.name == '/simple.txt'
         out2.getFilePatterns(ctx) == ['simple.txt']
         out2.outChannel instanceof DataflowQueue
         out2.outChannel == binding.channel3
         !out2.isDynamic()
 
         out3.name == null
-        out3.getFilePatterns(ctx) == ['script_file.txt','hola.fa']
+        out3.getFilePatterns(ctx) == ['script_file.txt','sub-dir/hola.fa']
         out3.outChannel instanceof DataflowQueue
         out3.outChannel == binding.channel4
         out3.isDynamic()

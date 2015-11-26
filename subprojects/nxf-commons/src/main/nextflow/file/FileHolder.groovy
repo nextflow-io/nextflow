@@ -43,7 +43,7 @@ class FileHolder  {
         assert inputFile
         this.sourceObj = inputFile
         this.storePath = inputFile
-        this.stageName = inputFile.getFileName().toString()
+        this.stageName = norm(inputFile.getFileName())
     }
 
     FileHolder( def origin, Path path ) {
@@ -52,13 +52,13 @@ class FileHolder  {
 
         this.sourceObj = origin
         this.storePath = path
-        this.stageName = path.getFileName().toString()
+        this.stageName = norm(path.getFileName())
     }
 
     protected FileHolder( def source, Path store, def stageName ) {
         this.sourceObj = source
         this.storePath = store
-        this.stageName = stageName.toString()
+        this.stageName = norm(stageName)
     }
 
     FileHolder withName( def stageName )  {
@@ -72,4 +72,14 @@ class FileHolder  {
         new FileHolder( path, storePath, target )
     }
 
+    /**
+     * Make sure the stage name does not start with a slash character
+     *
+     * @param path
+     * @return The normalised path
+     */
+    private String norm(path) {
+        def result = path.toString()
+        return result.startsWith('/') ? result.substring(1) : result
+    }
 }

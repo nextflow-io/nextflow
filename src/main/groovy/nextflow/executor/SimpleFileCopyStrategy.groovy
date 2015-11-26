@@ -113,7 +113,13 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * @return The script which will apply the staging for this file in the main script
      */
     String stageInputFile( Path path, String targetName ) {
-        "ln -s '${path.toAbsolutePath()}' '$targetName'"
+        def cmd = ''
+        def p = targetName.lastIndexOf('/')
+        if( p>0 ) {
+            cmd += "mkdir -p '${targetName.substring(0,p)}' && "
+        }
+        cmd += "ln -s '${path.toAbsolutePath()}' '$targetName'"
+        return cmd
     }
 
     /**

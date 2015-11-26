@@ -88,6 +88,10 @@ class IgFileStagingStrategy implements StagingStrategy {
             final source = entry.value
             final cached = FileHelper.getLocalCachePath(source, localCacheDir, sessionId)
             final staged = localWorkDir.resolve(fileName)
+            // create any sub-directory before create the symlink
+            if( fileName.contains('/') ) {
+                Files.createDirectories(staged.parent)
+            }
             log?.debug "Task ${task.name} > staging path: '${source}' to: '$staged'"
             Files.createSymbolicLink(staged, cached)
         }

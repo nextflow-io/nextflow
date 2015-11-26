@@ -72,11 +72,16 @@ class CirrusFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String stageInputFile( Path path, String targetName ) {
-        def op = "es3 -q -v0 --no-stats sync s3:/${path} ."
-        if( path.name != targetName )
-            op += " && mv ${path.name} ${targetName}"
+        def cmd = "es3 -q -v0 --no-stats sync s3:/${path} ."
+        if( path.name != targetName ) {
+            def p = targetName.lastIndexOf('/')
+            if( p>0 ) {
+                cmd += " && mkdir -p '${targetName.substring(0,p)}'"
+            }
+            cmd += " && mv ${path.name} ${targetName}"
+        }
 
-        return op
+        return cmd
     }
 
     /**

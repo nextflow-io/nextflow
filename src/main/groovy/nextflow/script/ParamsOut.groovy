@@ -320,10 +320,14 @@ class FileOutParam extends BaseOutParam implements OutParam {
         // normalize to a string object
         final nameString = entry.toString()
         if( separatorChar && nameString.contains(separatorChar) )
-            return nameString.split(/\${separatorChar}/) as List<String>
+            return nameString.split(/\${separatorChar}/).collect { String it-> clean(it) }
 
-        return [nameString]
+        return [clean(nameString)]
 
+    }
+
+    static private String clean(String path) {
+        return path.startsWith('/') ? path.substring(1) : path
     }
 
     /**

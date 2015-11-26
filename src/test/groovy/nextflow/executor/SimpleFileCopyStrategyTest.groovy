@@ -39,6 +39,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         files['seq_1.fa'] = Paths.get('/home/data/file1')
         files['seq_2.fa'] = Paths.get('/home/data/file2')
         files['seq_3.fa'] = Paths.get('/home/data/file3')
+        files['sub/dir/seq_4.fa']  = Paths.get('/home/data/file4')
 
         when:
         def strategy = new SimpleFileCopyStrategy(inputFiles: files)
@@ -50,11 +51,13 @@ class SimpleFileCopyStrategyTest extends Specification {
         lines[1] == "rm -f 'seq_1.fa'"
         lines[2] == "rm -f 'seq_2.fa'"
         lines[3] == "rm -f 'seq_3.fa'"
-        lines[4] == "ln -s '/home/data/sequences' 'file.txt'"
-        lines[5] == "ln -s '/home/data/file1' 'seq_1.fa'"
-        lines[6] == "ln -s '/home/data/file2' 'seq_2.fa'"
-        lines[7] == "ln -s '/home/data/file3' 'seq_3.fa'"
-        lines.size() == 8
+        lines[4] == "rm -f 'sub/dir/seq_4.fa'"
+        lines[5] == "ln -s '/home/data/sequences' 'file.txt'"
+        lines[6] == "ln -s '/home/data/file1' 'seq_1.fa'"
+        lines[7] == "ln -s '/home/data/file2' 'seq_2.fa'"
+        lines[8] == "ln -s '/home/data/file3' 'seq_3.fa'"
+        lines[9] == "mkdir -p 'sub/dir' && ln -s '/home/data/file4' 'sub/dir/seq_4.fa'"
+        lines.size() == 10
 
 
         when:
