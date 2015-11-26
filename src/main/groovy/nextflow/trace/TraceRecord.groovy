@@ -40,11 +40,11 @@ class TraceRecord {
 
     final private static String DEFAULT_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS"
 
-    final static NA = '-'
+    final public static NA = '-'
 
-    final static List<String> NON_PRIMITIVE_TYPES = ['date','time','perc','mem']
+    final public static List<String> NON_PRIMITIVE_TYPES = ['date','time','perc','mem']
 
-    static final Map<String,String> FIELDS = [
+    final public static Map<String,String> FIELDS = [
             task_id:    'str',
             hash:       'str',
             native_id:  'str',
@@ -83,12 +83,18 @@ class TraceRecord {
             perc: this.&fmtPercent
     ]
 
+    @PackageScope
+    static TimeZone TIMEZONE = null
+
     @Memoized
     static private ThreadLocal<DateFormat> getLocalDateFormat(String fmt) {
+        final tz = TIMEZONE
         return new ThreadLocal<DateFormat>() {
             @Override
             protected DateFormat initialValue() {
-                new SimpleDateFormat(fmt)
+                def result = new SimpleDateFormat(fmt)
+                if(tz) result.setTimeZone(tz)
+                return result
             }
         }
     }

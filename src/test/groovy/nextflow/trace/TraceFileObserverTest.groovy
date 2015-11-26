@@ -38,6 +38,9 @@ class TraceFileObserverTest extends Specification {
 
     final static long MB = 1024 * 1024
 
+    def setupSpec() {
+        TraceRecord.TIMEZONE = TimeZone.getTimeZone('UTC') // note: set the timezone to be sure the time string does not change on CI test servers
+    }
 
     def 'test set fields'() {
 
@@ -184,7 +187,6 @@ class TraceFileObserverTest extends Specification {
         record.wchar = 10_000 * 1024
 
         when:
-        TraceRecord.getDateFormat().setTimeZone(TimeZone.getTimeZone('UTC')) // note: set the timezone to be sure the time string does not change on CI test servers
         def trace = [:] as TraceFileObserver
         def result = trace.render(record).split('\t')
         then:
@@ -202,7 +204,6 @@ class TraceFileObserverTest extends Specification {
         result[11] == '19.5 MB'                 // rchar
         result[12] == '29.3 MB'                 // wchar
 
-
     }
 
     def 'test custom render' () {
@@ -216,7 +217,6 @@ class TraceFileObserverTest extends Specification {
         record.rss = 10 * MB
 
         when:
-        TraceRecord.getDateFormat().setTimeZone(TimeZone.getTimeZone('UTC')) // note: set the timezone to be sure the time string does not change on CI test servers
         def trace = [:] as TraceFileObserver
         trace.setFieldsAndFormats( 'task_id,syscr,syscw,rss,rss:num' )
         def result = trace.render(record).split('\t')
@@ -233,7 +233,6 @@ class TraceFileObserverTest extends Specification {
 
         given:
         final KB = 1024L
-        TraceRecord.getDateFormat().setTimeZone(TimeZone.getTimeZone('UTC')) // note: set the timezone to be sure the time string does not change on CI test servers
 
         final traceText =  '''
                 pid state %cpu %mem vmem rss peak_vmem peak_rss rchar wchar syscr syscw read_bytes write_bytes
