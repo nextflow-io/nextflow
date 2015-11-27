@@ -55,7 +55,7 @@ ext {
 allprojects {
     apply plugin: 'java'
 
-    version = '0.16.3-SNAPSHOT'
+    version = '0.16.333'
     group = 'io.nextflow'
 
     sourceCompatibility = 1.7
@@ -266,14 +266,12 @@ ext.ossrhPassword = hasProperty('ossrhPassword') ? properties.get('ossrhPassword
 ext.ossrhFullName = hasProperty('ossrhFullName') ? properties.get('ossrhFullName') : null
 ext.ossrhEmail = hasProperty('ossrhEmail') ? properties.get('ossrhEmail') : null
 ext.deployable = []
-if( hasProperty('signing.keyId') ) {  // <-- note: to sign and deploy artifacts make sure to have this property in the 'gradle.properties' file
-    ext.deployable << project(':')
-    ext.deployable << project(':nxf-commons')
-    ext.deployable << project(':nxf-extrae')
-    ext.deployable << project(':nxf-ignite')
-    ext.deployable << project(':nxf-console')
-    ext.deployable << project(':nxf-drmaa')
-}
+ext.deployable << project(':')
+ext.deployable << project(':nxf-commons')
+ext.deployable << project(':nxf-extrae')
+ext.deployable << project(':nxf-ignite')
+ext.deployable << project(':nxf-console')
+ext.deployable << project(':nxf-drmaa')
 
 ext.homeDir = System.properties['user.home']
 ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
@@ -600,6 +598,7 @@ if( localFlag ) {
             repositories {
                 mavenDeployer {
                     repository(url: "file://$homeDir/.nextflow/capsule/deps/")
+                    snapshotRepository(url: "file://$homeDir/.nextflow/capsule/deps/")
                 }
             }
         }
