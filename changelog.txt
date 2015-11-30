@@ -1,6 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.16.3 - 30 Nov 2016 
+- Fixed #90. System `user.dir` property is cached causing unexpcted behaviour.
+- Allow directories in a process input file name declaration. See #91.
+- Improved build script for local snapshot deployment.
+- Updated cli-args test.
+
 0.16.2 - 14 Nov 2016 
 - Fixed #87. Include current configuration profile option in the workflow metadata.
 - Fixed #86. Failure if work dir contains one or more blank characters.
