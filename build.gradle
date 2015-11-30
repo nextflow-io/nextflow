@@ -55,7 +55,7 @@ ext {
 allprojects {
     apply plugin: 'java'
 
-    version = '0.16.333'
+    version = '0.16.3-SNAPSHOT'
     group = 'io.nextflow'
 
     sourceCompatibility = 1.7
@@ -342,7 +342,7 @@ task packOne(type: Jar) {
     // enable snapshot dependencies lookup
     if( version.endsWith('-SNAPSHOT') ) {
         manifest.attributes 'Allow-Snapshots': true
-        manifest.attributes 'Repositories': 'https://oss.sonatype.org/content/repositories/snapshots central'
+        manifest.attributes 'Repositories': 'local https://oss.sonatype.org/content/repositories/snapshots central'
     }
 
     /*
@@ -597,8 +597,8 @@ if( localFlag ) {
         uploadArchives {
             repositories {
                 mavenDeployer {
+		    uniqueVersion = false	
                     repository(url: "file://$homeDir/.nextflow/capsule/deps/")
-                    snapshotRepository(url: "file://$homeDir/.nextflow/capsule/deps/")
                 }
             }
         }
