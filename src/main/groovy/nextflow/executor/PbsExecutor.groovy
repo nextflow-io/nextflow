@@ -107,9 +107,7 @@ class PbsExecutor extends AbstractGridExecutor {
 
 
     @PackageScope
-    List<String> killTaskCommand(jobId) {
-        ['qdel', jobId?.toString()]
-    }
+    String getKillCommand() { 'qdel' }
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {

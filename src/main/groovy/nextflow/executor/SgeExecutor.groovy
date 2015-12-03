@@ -126,9 +126,7 @@ class SgeExecutor extends AbstractGridExecutor {
 
 
     @PackageScope
-    List<String> killTaskCommand(jobId) {
-        ['qdel', '-j', jobId?.toString()]
-    }
+    String getKillCommand() { 'qdel' }
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {

@@ -237,7 +237,7 @@ class SgeExecutorTest extends Specification {
         when:
         def executor = [:] as SgeExecutor
         then:
-        executor.killTaskCommand(123) == ['qdel', '-j', '123'] as String[]
+        executor.killTaskCommand(123) == ['qdel', '123']
 
     }
 

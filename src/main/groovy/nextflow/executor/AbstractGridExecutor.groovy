@@ -169,7 +169,7 @@ abstract class AbstractGridExecutor extends Executor {
      *
      * @param jobId The ID of the job to kill
      */
-    final void killTask( def jobId )  {
+    void killTask( def jobId )  {
         new ProcessBuilder(killTaskCommand(jobId)).start()
     }
 
@@ -178,8 +178,19 @@ abstract class AbstractGridExecutor extends Executor {
      * @param jobId The job ID to be kill
      * @return The command line to be used to kill the specified job
      */
-    protected abstract List<String> killTaskCommand(def jobId);
+    protected List<String> killTaskCommand(def jobId) {
+        final result = [ getKillCommand() ]
+        if( jobId instanceof Collection ) {
+            jobId.each { result.add(it.toString()) }
+            log.trace "Kill command: ${result}"
+        }
+        else {
+            result.add(jobId.toString())
+        }
+        return result
+    }
 
+    protected abstract String getKillCommand()
 
     /**
      * Status as returned by the grid engine

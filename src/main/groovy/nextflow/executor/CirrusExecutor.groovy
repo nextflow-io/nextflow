@@ -160,10 +160,7 @@ class CirrusExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    protected List<String> killTaskCommand( jobId ) {
-        assert jobId != null
-        ['kancel', jobId.toString()]
-    }
+    protected String getKillCommand() { 'kancel' }
 
     @Override
     protected List<String> queueStatusCommand( queue ) {

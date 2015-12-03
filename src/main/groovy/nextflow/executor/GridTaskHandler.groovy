@@ -66,6 +66,8 @@ class GridTaskHandler extends TaskHandler {
 
     final static private READ_TIMEOUT = Duration.of('270sec') // 4.5 minutes
 
+    BatchCleanup batch
+
     GridTaskHandler( TaskRun task, AbstractGridExecutor executor ) {
         super(task)
 
@@ -288,7 +290,12 @@ class GridTaskHandler extends TaskHandler {
 
     @Override
     void kill() {
-        executor.killTask(jobId)
+        if( batch ) {
+            batch.collect(executor, jobId)
+        }
+        else {
+            executor.killTask(jobId)
+        }
     }
 
     protected StringBuilder toStringBuilder( StringBuilder builder ) {

@@ -27,6 +27,8 @@ import java.util.concurrent.locks.ReentrantLock
 
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.executor.BatchCleanup
+import nextflow.executor.GridTaskHandler
 import nextflow.util.Duration
 /**
  *
@@ -473,25 +475,32 @@ class TaskPollingMonitor implements TaskMonitor {
 
     }
 
-
     /**
      * Kill all pending jobs when aborting
      */
-
     protected void cleanup () {
         if( !pollingQueue.size() ) return
-        log.warn "Killing pending processes (${pollingQueue.size()})"
+        log.warn "Killing pending tasks (${pollingQueue.size()})"
 
-        int c = 0
+        def batch = new BatchCleanup()
         while( pollingQueue.size() ) {
             TaskHandler handler = pollingQueue.poll()
             try {
-                log.debug "Killing process (${++c}): $handler"
+                if( handler instanceof GridTaskHandler ) {
+                    handler.batch = batch
+                }
                 handler.kill()
             }
             catch( Throwable e ) {
-                log.debug "Failed killing pending process: ${handler} -- cause: ${e.message}"
+                log.debug "Failed to kill pending tasks: ${handler} -- cause: ${e.message}"
             }
+        }
+
+        try {
+            batch.kill()
+        }
+        catch( Throwable e ) {
+            log.debug "Failed to kill pending tasks ${batch} -- cause: ${e.message}"
         }
     }
 }

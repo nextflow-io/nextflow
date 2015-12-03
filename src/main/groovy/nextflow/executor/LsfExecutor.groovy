@@ -122,9 +122,7 @@ class LsfExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    List<String> killTaskCommand( def jobId ) {
-        ['bkill', jobId?.toString() ]
-    }
+    String getKillCommand() { 'bkill' }
 
     @Override
     protected List<String> queueStatusCommand( queue ) {

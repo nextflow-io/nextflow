@@ -39,4 +39,16 @@ class AbstractGridExecutorTest extends Specification {
         exec.getJobNameFor(task) == 'nf-task_90_(foo_bar)'
 
     }
+
+    def 'should return the kill list' () {
+
+        given:
+        def exec = [getKillCommand: { 'qdel' }] as AbstractGridExecutor
+
+        expect:
+        exec.killTaskCommand('10') == ['qdel', '10']
+        exec.killTaskCommand([11,12]) == ['qdel', '11', '12']
+        exec.killTaskCommand([100,200,300]) == ['qdel', '100', '200', '300']
+
+    }
 }

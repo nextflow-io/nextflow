@@ -338,7 +338,7 @@ class CrgExecutorTest extends Specification {
         when:
         def executor = [:] as CrgExecutor
         then:
-        executor.killTaskCommand(123) == ['qdel', '-j', '123'] as String[]
+        executor.killTaskCommand(123) == ['qdel', '123']
 
     }
 

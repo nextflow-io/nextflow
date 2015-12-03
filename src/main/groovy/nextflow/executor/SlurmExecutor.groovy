@@ -102,10 +102,7 @@ class SlurmExecutor extends AbstractGridExecutor {
         throw new IllegalStateException("Invalid SLURM submit response:\n$text\n\n")
     }
 
-
-    protected List<String> killTaskCommand(def jobId) {
-        ['scancel', jobId?.toString() ]
-    }
+    protected String getKillCommand() { 'scancel' }
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
