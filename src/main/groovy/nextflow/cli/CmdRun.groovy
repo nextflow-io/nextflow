@@ -25,12 +25,14 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import groovyx.gpars.GParsConfig
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.scm.AssetManager
 import nextflow.config.ConfigBuilder
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
+import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 /**
  * CLI sub-command RUN
@@ -41,6 +43,11 @@ import nextflow.util.Duration
 @CompileStatic
 @Parameters(commandDescription = "Execute a pipeline project")
 class CmdRun extends CmdBase implements HubOptions {
+
+    static {
+        // installing a custom pool factory for GPars threads
+        GParsConfig.poolFactory = new CustomPoolFactory()
+    }
 
     static class DurationConverter implements IStringConverter<Long> {
         @Override
