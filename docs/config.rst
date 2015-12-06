@@ -189,12 +189,13 @@ The ``executor`` configuration scope allows you to set the optional executor set
 ===================== =====================
 Name                  Description
 ===================== =====================
-name                  The name of the executor to be used e.g. ``local``, ``sge``, etc
+name                  The name of the executor to be used e.g. ``local``, ``sge``, etc.
 queueSize             The number of tasks the executor will handle in a parallel manner (default: ``100``).
 pollInterval          Determines how often a poll occurs to check for a process termination.
-dumpInterval          Determines how often the executor status is written in the application log file (default: ``5min``)
-queueStatInterval     Determines how often the queue status is fetched from the cluster system. This setting is used only by grid executors (default: ``1min``)
-exitReadTimeout       Determines how long the executor waits before return an error status when a process is terminated but the `exit` file does not exist or it is empty. This setting is used only by grid executors (default: ``90sec``)
+dumpInterval          Determines how often the executor status is written in the application log file (default: ``5min``).
+queueStatInterval     Determines how often the queue status is fetched from the cluster system. This setting is used only by grid executors (default: ``1min``).
+exitReadTimeout       Determines how long the executor waits before return an error status when a process is terminated but the `exit` file does not exist or it is empty. This setting is used only by grid executors (default: ``90sec``).
+killBatchSize         Determines the number of jobs that can be `killed` in a single command execution (default: ``100``).
 ===================== =====================
 
 
