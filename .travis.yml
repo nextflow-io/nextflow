@@ -5,5 +5,8 @@ jdk:
 git:
   submodules: false
 env:
-   global:
-   - _JAVA_OPTIONS='-Xverify:none'
+  global:
+  - _JAVA_OPTIONS='-Xverify:none'
+script:
+  - ./gradlew check --debug
+
