@@ -1,43 +1,72 @@
 package nextflow.util
 import groovy.transform.CompileStatic
 import groovyx.gpars.scheduler.Pool
+import groovyx.gpars.scheduler.ResizeablePool
 import groovyx.gpars.util.PoolFactory
 /**
- * A custom pool factory that will create instances of
- * {@link UnboundThreadPool}
+ * A configurable thread pool factory
+ *
+ * See http://niklasschlimm.blogspot.com.es/2012/03/threading-stories-about-robust-thread.html
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
 class CustomPoolFactory implements PoolFactory {
 
+    public final String NXF_POOL_TYPE = 'nxf.pool.type'
+
+    public final String NXF_MAX_THREADS = 'nxf.pool.maxThreads'
+
+    public final String NXF_QUEUE_SIZE = 'nxf.pool.queueSize'
+
     @Override
     Pool createPool() {
-        new UnboundThreadPool(true, retrievePoolSize())
+
+        def type = property(NXF_POOL_TYPE, 'default')
+        switch (type) {
+            case 'default':
+                return new ResizeablePool(true, 1)
+
+            case 'sync':
+                int cpus = Runtime.runtime.availableProcessors()
+                int size = property(NXF_MAX_THREADS, cpus+1) as int
+                return CustomThreadPool.synchronousPool(size)
+
+            case 'bound':
+                int cpus = Runtime.runtime.availableProcessors()
+                int size = property(NXF_MAX_THREADS, cpus+1) as int
+                int queue = property(NXF_QUEUE_SIZE, 1000) as int
+                return CustomThreadPool.boundedPool(size, queue)
+
+            case 'unbound':
+                int cpus = Runtime.runtime.availableProcessors()
+                int size = property(NXF_MAX_THREADS, cpus+1) as int
+                return CustomThreadPool.unboundedPool(size)
+
+            default:
+                throw new IllegalAccessException("Unknown thread pool type: `$type`")
+        }
+
     }
 
     @Override
     Pool createPool(boolean daemon) {
-        new UnboundThreadPool(daemon, retrievePoolSize())
+        throw new UnsupportedOperationException()
     }
 
     @Override
     Pool createPool(int numberOfThreads) {
-        new UnboundThreadPool(true, numberOfThreads)
+        throw new UnsupportedOperationException()
     }
 
     @Override
     Pool createPool(boolean daemon, int numberOfThreads) {
-        new UnboundThreadPool(daemon, numberOfThreads)
+        throw new UnsupportedOperationException()
     }
 
-    static private int retrievePoolSize() {
-        int size = Runtime.getRuntime().availableProcessors() * 8
-        final String poolSizeValue = System.getProperty("gpars.poolsize")
-        if( poolSizeValue && poolSizeValue.isInteger() ) {
-            size = poolSizeValue.toInteger()
-        }
-
-        return size
+    def property( String name, defValue ) {
+        def result = System.getProperty(name)
+        return result ?: defValue
     }
+
 }
