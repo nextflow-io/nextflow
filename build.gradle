@@ -270,17 +270,14 @@ ext.homeDir = System.properties['user.home']
 ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
 ext.releaseDir = "$buildDir/releases"
 ext.s3CmdOpts="--acl public-read --storage-class REDUCED_REDUNDANCY"
-ext.localFlag = !hasProperty('signing.keyId') || hasProperty('local-install')
 
 ext.deployable = []
-if( localFlag ) {
-    ext.deployable << project(':')
-    ext.deployable << project(':nxf-commons')
-    ext.deployable << project(':nxf-extrae')
-    ext.deployable << project(':nxf-ignite')
-    ext.deployable << project(':nxf-console')
-    ext.deployable << project(':nxf-drmaa')
-}
+ext.deployable << project(':')
+ext.deployable << project(':nxf-commons')
+ext.deployable << project(':nxf-extrae')
+ext.deployable << project(':nxf-ignite')
+ext.deployable << project(':nxf-console')
+ext.deployable << project(':nxf-drmaa')
 
 protected error(String message) {
     logger.error message

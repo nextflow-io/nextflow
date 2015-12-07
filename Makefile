@@ -25,8 +25,11 @@ compile:
 clean:
 	./gradlew clean
 
+assemble:
+	./gradlew compile assemble -x signArchives
+    
 install:
-	./gradlew installLauncher install -Dmaven.repo.local=${HOME}/.nextflow/capsule/deps/
+	./gradlew installLauncher install -Dmaven.repo.local=${HOME}/.nextflow/capsule/deps/ -x signArchives
 
 deps:
 	./gradlew -q ${module}:dependencies --configuration ${config}
