@@ -1099,7 +1099,9 @@ class FilesExTest extends Specification {
     def 'create hard link with default name' () {
 
         given:
-        def folder = Files.createTempDirectory('test')
+        // using a local path other Travis-CI reports an error
+        // see https://github.com/travis-ci/travis-ci/issues/5233
+        def folder = Files.createTempDirectory(Paths.get('.'), 'test')
         def file = Files.createTempFile(Paths.get('.'),'test','txt')
         file.text = 'Hello'
         file = Files.move(file,folder.resolve(file.name))
