@@ -16,6 +16,6 @@ test:
         - mkdir "$HOME/.nextflow" && echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
     override:
         - ./gradlew compile assemble
-        - ./gradlew test localInstall && ./integration-tests.sh :
+        - make install && ./integration-tests.sh :
             timeout: 1800
     

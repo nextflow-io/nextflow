@@ -26,7 +26,7 @@ clean:
 	./gradlew clean
 
 install:
-	./gradlew localInstall -Plocal-install=true
+	./gradlew installLauncher install -Dmaven.repo.local=${HOME}/.nextflow/capsule/deps/
 
 deps:
 	./gradlew -q ${module}:dependencies --configuration ${config}
