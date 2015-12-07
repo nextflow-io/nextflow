@@ -7,3 +7,5 @@ git:
 env:
    global:
    - _JAVA_OPTIONS='-Xverify:none'
+script:
+  - ./gradlew check -x signArchives
