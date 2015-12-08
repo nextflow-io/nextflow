@@ -270,6 +270,8 @@ ext.homeDir = System.properties['user.home']
 ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
 ext.releaseDir = "$buildDir/releases"
 ext.s3CmdOpts="--acl public-read --storage-class REDUCED_REDUNDANCY"
+// `signing.keyId` property needs to be defined in the `gradle.properties` file
+ext.enableSignArchives = hasProperty('signing.keyId')
 
 ext.deployable = []
 ext.deployable << project(':')
@@ -657,6 +659,8 @@ configure(deployable) {
             }
         }
     }
+
+    signArchives.onlyIf { enableSignArchives }
 }
 
 // verbose tests logging
