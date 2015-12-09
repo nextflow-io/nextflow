@@ -820,7 +820,7 @@ class AssetManager {
 
     protected String guessHubProviderFromGitConfig() {
 
-        final server = getGitConfigRemoteServer()
+        final server = getGitConfigRemoteServer().split(':').first();
         final result = providerConfigs.find { it -> it.domain == server }
 
         return result ? result.name : null
