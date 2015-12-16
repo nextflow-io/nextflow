@@ -210,7 +210,7 @@ NXF_PATH=$(dirname "$NXF_BIN")
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
 NXF_GRAB=${NXF_GRAB:-''}
 NXF_CLASSPATH=${NXF_CLASSPATH:-''}
-NXF_LAUNCHER=${NXF_HOME}/tmp/launcher/nextflow-${NXF_PACK}_${NXF_VER}
+NXF_LAUNCHER=${TMPDIR:=/tmp}/nextflow-${NXF_PACK}_${NXF_VER}
 NXF_MPIRUN=${NXF_MPIRUN:=''}
 
 if [[ $NXF_MODE == ignite ]]; then
@@ -333,9 +333,11 @@ else
     launcher=($("$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"))
     [[ $? -ne 0 ]] && echo 'Unable to initialize nextflow environment' && exit $?
     mkdir -p ${NXF_LAUNCHER}
+    STR=''
     for x in "${launcher[@]}"; do
-    [[ "$x" != "\"-Duser.dir=$PWD\"" ]] && printf "$x " >> "$LAUNCH_FILE"
+    [[ "$x" != "\"-Duser.dir=$PWD\"" ]] && STR+="$x "
     done
+    printf "$STR">"$LAUNCH_FILE"
 fi
 
 # finally run it
