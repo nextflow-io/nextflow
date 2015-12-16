@@ -209,8 +209,8 @@ class Session implements ISession {
         if( config.env == null ) config.env = [:]
 
         if( !config.poolSize ) {
-            def cpus = Runtime.getRuntime().availableProcessors()
-            config.poolSize = cpus >= 3 ? cpus-1 : 2
+            final cpus = Runtime.getRuntime().availableProcessors()
+            config.poolSize = cpus +1
         }
 
         //set the thread pool size
