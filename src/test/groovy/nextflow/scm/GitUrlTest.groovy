@@ -37,12 +37,12 @@ class GitUrlTest extends Specification {
         then:
         result.protocol == protocol
         result.project == project
+        result.domain == domain
         result.user == user
-        result.project == project
-        result == new GitUrl(protocol, user, location, project)
+        result == new GitUrl(protocol, user, domain, project)
 
         where:
-        url                                             | protocol  | user  | location          | project
+        url                                             | protocol  | user  | domain            | project
         'https://example.com/gitproject.git'            | 'https'   | null  | 'example.com'     | 'gitproject'
         'https://gitlab.com/pditommaso/hello.git'       | 'https'   | null  | 'gitlab.com'      | 'pditommaso/hello'
         'http://github.com/pditommaso/hello.git'        | 'http'    | null  | 'github.com'      | 'pditommaso/hello'

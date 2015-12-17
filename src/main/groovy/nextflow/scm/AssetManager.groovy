@@ -186,7 +186,7 @@ class AssetManager {
         // if project dir exists it must contain the Git config file
         final configProvider = guessHubProviderFromGitConfig()
         if( !configProvider ) {
-            log.debug "Too bad! Can't find any provider from git config. Check file: ${localPath}/.git/config"
+            log.debug "Too bad! Can't find any provider from git config. Check file `${localPath}/.git/config`"
             throw new AbortOperationException("Corrupted git repository at path: $localPath")
         }
 
@@ -802,13 +802,18 @@ class AssetManager {
         return url
     }
 
-    protected String getGitConfigRemoteServer() {
+    protected String getGitConfigRemoteDomain() {
 
-        def url = getGitConfigRemoteUrl()
-        if( !url ) return null
+        def str = getGitConfigRemoteUrl()
+        if( !str ) return null
 
         try {
-            return new GitUrl(url).domain
+            final url = new GitUrl(str)
+            if( url.protocol == 'file' ) {
+                final hub = "file:${url.domain}"
+                providerConfigs << new ProviderConfig(hub, [path:url.domain])
+            }
+            return url.domain
         }
         catch( IllegalArgumentException e) {
             log.debug e.message ?: e.toString()
@@ -820,7 +825,7 @@ class AssetManager {
 
     protected String guessHubProviderFromGitConfig() {
 
-        final server = getGitConfigRemoteServer()
+        final server = getGitConfigRemoteDomain()
         final result = providerConfigs.find { it -> it.domain == server }
 
         return result ? result.name : null

@@ -330,7 +330,7 @@ class AssetManagerTest extends Specification {
         when:
         def manager = new AssetManager().setLocalPath(dir.toFile())
         then:
-        manager.getGitConfigRemoteServer() == 'github.com'
+        manager.getGitConfigRemoteDomain() == 'github.com'
 
     }
 
