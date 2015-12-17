@@ -102,8 +102,8 @@ class IgScriptTask extends IgBaseTask<Integer>   {
         // create the shell command line to invoke
         def job = new ArrayList(bean.shell)
         job.add( wrapper.build().toString() )
-        // NOTE: the actual command is wrapper by another bash whose stream
-        // are redirected to null. This is important in order to consume the stdout/stderr
+        // NOTE: the actual command is wrapped by another bash whose streams
+        // are redirected to null. This is important  to consume the stdout/stderr
         // of the wrapped job otherwise that output will cause the inner `tee`s hang
         List cmd = ['/bin/bash','-c', job.join(' ') + ' &> /dev/null']
 
