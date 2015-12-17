@@ -385,7 +385,7 @@ class TaskRun {
         def result = []
 
         getOutputsByType(FileOutParam).keySet().each { FileOutParam param ->
-            result.addAll( param.getFilePatterns(context) )
+            result.addAll( param.getFilePatterns(context, workDir) )
         }
 
         return result.unique()

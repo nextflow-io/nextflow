@@ -189,25 +189,25 @@ class ParamsOutTest extends Specification {
         process.config.getOutputs().size() == 6
 
         out0.name == null
-        out0.getFilePatterns(ctx) == ['hola_name']
+        out0.getFilePatterns(ctx,null) == ['hola_name']
         out0.outChannel instanceof DataflowQueue
         out0.outChannel == binding.channel1
         out0.isDynamic()
 
         out1.name == null
-        out1.getFilePatterns(ctx) == ['hola_99.fa']
+        out1.getFilePatterns(ctx,null) == ['hola_99.fa']
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.channel2
         out1.isDynamic()
 
         out2.name == '/simple.txt'
-        out2.getFilePatterns(ctx) == ['simple.txt']
+        out2.getFilePatterns(ctx,null) == ['simple.txt']
         out2.outChannel instanceof DataflowQueue
         out2.outChannel == binding.channel3
         !out2.isDynamic()
 
         out3.name == null
-        out3.getFilePatterns(ctx) == ['script_file.txt','sub-dir/hola.fa']
+        out3.getFilePatterns(ctx,null) == ['script_file.txt','sub-dir/hola.fa']
         out3.outChannel instanceof DataflowQueue
         out3.outChannel == binding.channel4
         out3.isDynamic()
@@ -216,14 +216,14 @@ class ParamsOutTest extends Specification {
         out4.outChannel instanceof DataflowQueue
         out4.outChannel == binding.channel5
         out4.inner[0] instanceof FileOutParam
-        (out4.inner[0] as FileOutParam) .getFilePatterns(ctx) == ['script_file.txt','hola.fa']
+        (out4.inner[0] as FileOutParam) .getFilePatterns(ctx,null) == ['script_file.txt','hola.fa']
         (out4.inner[0] as FileOutParam) .isDynamic()
 
         out5.name == 'setoutparam<5>'
         out5.outChannel instanceof DataflowQueue
         out5.outChannel == binding.channel6
         out5.inner[0] instanceof FileOutParam
-        (out5.inner[0] as FileOutParam) .getFilePatterns(ctx) == ['script_file.txt','hola.fa']
+        (out5.inner[0] as FileOutParam) .getFilePatterns(ctx,null) == ['script_file.txt','hola.fa']
         (out5.inner[0] as FileOutParam) .isDynamic()
 
     }
@@ -256,21 +256,21 @@ class ParamsOutTest extends Specification {
 
         then:
         out1.name == 'x'
-        out1.getFilePatterns(binding) == ['hola']
+        out1.getFilePatterns(binding,null) == ['hola']
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.x
 
         out2.name == null
-        out2.getFilePatterns(binding) == ['hola_2']
+        out2.getFilePatterns(binding,null) == ['hola_2']
         out2.outChannel instanceof DataflowQueue
         out2.outChannel == binding.q
 
         out3.inner[0] instanceof FileOutParam
         (out3.inner[0] as FileOutParam).name == 'z'
-        (out3.inner[0] as FileOutParam).getFilePatterns(binding) == ['hola_z']
+        (out3.inner[0] as FileOutParam).getFilePatterns(binding,null) == ['hola_z']
 
         out4.name == 'u'
-        out4.getFilePatterns(binding) == ['u']
+        out4.getFilePatterns(binding,null) == ['u']
         out4.outChannel instanceof DataflowQueue
         out4.outChannel == binding.u
     }
@@ -325,13 +325,13 @@ class ParamsOutTest extends Specification {
 
         then:
         out1.name == null
-        out1.getFilePatterns(binding) == ['hola_name']
+        out1.getFilePatterns(binding,null) == ['hola_name']
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.channel1
         out1.isDynamic()
 
         out2.name == null
-        out2.getFilePatterns(binding) == ['hello_99.fa']
+        out2.getFilePatterns(binding,null) == ['hello_99.fa']
         out2.outChannel instanceof DataflowQueue
         out2.outChannel == binding.channel2
         out2.isDynamic()
@@ -339,7 +339,7 @@ class ParamsOutTest extends Specification {
         out3.outChannel instanceof DataflowQueue
         out3.outChannel == binding.channel3
         out3.inner[0] instanceof FileOutParam
-        (out3.inner[0] as FileOutParam) .getFilePatterns(binding) == ['script_file.txt']
+        (out3.inner[0] as FileOutParam) .getFilePatterns(binding,null) == ['script_file.txt']
         (out3.inner[0] as FileOutParam) .isDynamic()
 
     }

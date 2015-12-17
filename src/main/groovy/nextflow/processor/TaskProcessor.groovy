@@ -1060,7 +1060,7 @@ abstract class TaskProcessor {
 
         final List<Path> allFiles = []
         // type file parameter can contain a multiple files pattern separating them with a special character
-        def entries = param.getFilePatterns(context)
+        def entries = param.getFilePatterns(context, task.workDir)
 
         // for each of them collect the produced files
         entries.each { String pattern ->

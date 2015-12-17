@@ -27,6 +27,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.exception.IllegalFileException
 import nextflow.processor.ProcessConfig
 /**
  * Model a process generic input parameter
@@ -291,7 +292,7 @@ class FileOutParam extends BaseOutParam implements OutParam {
         super.bind(obj)
     }
 
-    List<String> getFilePatterns(Map context) {
+    List<String> getFilePatterns(Map context, Path workDir) {
 
         def entry = null
         if( dynamicObj ) {
@@ -315,7 +316,7 @@ class FileOutParam extends BaseOutParam implements OutParam {
             return []
 
         if( entry instanceof Path )
-            return [ entry.getFileName().toString() ]
+            return [ relativizeName(entry, workDir) ]
 
         // normalize to a string object
         final nameString = entry.toString()
@@ -326,8 +327,25 @@ class FileOutParam extends BaseOutParam implements OutParam {
 
     }
 
-    static private String clean(String path) {
-        return path.startsWith('/') ? path.substring(1) : path
+    @PackageScope
+    static String clean(String path) {
+        while (path.startsWith('/') ) {
+            path = path.substring(1)
+        }
+        return path
+    }
+
+    @PackageScope
+    static String relativizeName(Path path, Path workDir) {
+        if( path.isAbsolute() ) {
+            if( !path.startsWith(workDir) ) {
+                throw new IllegalFileException("File `$path` is out of the scope of process working dir: $workDir")
+            }
+
+            return path.subpath(workDir.getNameCount(), path.getNameCount()).toString()
+        }
+
+        return path.toString()
     }
 
     /**
