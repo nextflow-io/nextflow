@@ -210,7 +210,7 @@ NXF_PATH=$(dirname "$NXF_BIN")
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
 NXF_GRAB=${NXF_GRAB:-''}
 NXF_CLASSPATH=${NXF_CLASSPATH:-''}
-NXF_LAUNCHER=${TMPDIR:=/tmp}/nextflow-${NXF_PACK}_${NXF_VER}
+NXF_LAUNCHER=${TMPDIR:=/tmp}/nxf-launcher-${NXF_PACK}-${NXF_VER}
 NXF_MPIRUN=${NXF_MPIRUN:=''}
 
 if [[ $NXF_MODE == ignite ]]; then
