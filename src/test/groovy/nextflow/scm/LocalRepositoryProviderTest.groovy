@@ -90,5 +90,24 @@ class LocalRepositoryProviderTest extends Specification {
         new String(manager.readBytes('main.nf')) == "main script"
     }
 
+    def 'should read file from bare repository' () {
+
+        given:
+        def source = Git.open(new File("${testFolder}/project_hello"))
+        def cloneDir = new File("$testFolder/bare_repo")
+        Git
+                .cloneRepository()
+                .setBare(true)
+                .setURI("file:${testFolder}/project_hello")
+                .setDirectory(cloneDir)
+                .call()
+
+        def config = new ProviderConfig('local', [path: testFolder])
+        def manager = new LocalRepositoryProvider('bare_repo', config)
+        expect:
+        new String(manager.readBytes('main.nf')) == "main script"
+
+    }
+
 
 }

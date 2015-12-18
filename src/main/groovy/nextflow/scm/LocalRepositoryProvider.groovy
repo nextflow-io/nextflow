@@ -20,6 +20,10 @@
 
 package nextflow.scm
 
+import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.Constants
+import org.eclipse.jgit.revwalk.RevWalk
+import org.eclipse.jgit.treewalk.TreeWalk
 /**
  * Local storage asset provider
  *
@@ -65,8 +69,42 @@ class LocalRepositoryProvider extends RepositoryProvider {
         new File(path, project).toString()
     }
 
+
+
     @Override
     protected byte[] readBytes(String path) {
-        return new File(new File(this.path, project), path).readBytes()
+        //return new File(new File(this.path, project), path).readBytes()
+
+        def git = Git.open(new File(this.path, project))
+
+        try {
+            def repo = git.getRepository()
+
+            def lastCommitId = repo.resolve(Constants.HEAD)
+            def revWalk = new RevWalk(repo)
+            def commit = revWalk.parseCommit(lastCommitId)
+            def tree= commit.getTree()
+
+            def treeWalk = TreeWalk.forPath(repo, path, tree)
+
+            def id = treeWalk.getObjectId(0)
+            def loader = repo.open(id)
+
+            def source = loader.openStream()
+            def result = new ByteArrayOutputStream()
+            int ch
+            while( (ch=source.read()) != -1 ) {
+                result.write(ch)
+            }
+            result.close()
+            source.close()
+
+            return result.toByteArray()
+        }
+        finally {
+            git.close()
+        }
     }
+
+
 }
