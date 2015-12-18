@@ -50,6 +50,7 @@ JVM_ARGS+=" -noverify -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
 ## flight recorded -- http://docs.oracle.com/javacomponents/jmc-5-4/jfr-runtime-guide/run.htm
 ##JVM_ARGS+=" -XX:+UnlockCommercialFeatures -XX:+FlightRecorder -XX:StartFlightRecording=duration=60s,filename=myrecording.jfr"
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
+NXF_OPTS=${NXF_OPTS:-}
 EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
 NXF_CLI="$0 $@"
 export NXF_CLI
@@ -118,4 +119,4 @@ if [ "$DEBUG" != '' ]; then
 fi
 
 # Launch the APP
-exec java $JVM_ARGS $DEBUG -cp "$CLASSPATH" "$MAIN_CLASS" "${args[@]}"
+exec java $JVM_ARGS $DEBUG $NXF_OPTS -cp "$CLASSPATH" "$MAIN_CLASS" "${args[@]}"
