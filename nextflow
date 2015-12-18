@@ -133,7 +133,7 @@ if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
 fi
 
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
-NXF_VER=${NXF_VER:-'0.16.4'}
+NXF_VER=${NXF_VER:-'0.16.5'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_ASSETS=${NXF_ASSETS:-$NXF_HOME/assets}
 NXF_CLI="$0 $@"
@@ -221,7 +221,7 @@ if [[ $NXF_MODE == ignite ]]; then
 fi
 
 # Determine the path to this file
-if [[ $NXF_PACK = 'all' ]]; then
+if [[ $NXF_PACK = all ]]; then
     NXF_BIN=$(which "$0" 2>/dev/null)
     [ $? -gt 0 -a -f "$0" ] && NXF_BIN="./$0"
 fi
