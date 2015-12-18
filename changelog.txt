@@ -1,6 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.16.5 - 18 Dec 2015
+- Fixed race condition when creating cached launcher class path file
+- Fixed `run` for local repositories
+- Enhanced output file handling #91
+- Set thread pool size to avail cpus +1
+- Removed config object from remote session that was causing a serialization issue
+- Upgraded Slf4j to version 1.7.13
+
 0.16.4 - 6 Dec 2015
 - Use batch strategy to kill pending cluster jobs on termination #93
 - Added support for Git Large File Storage (LFS) extension #82
