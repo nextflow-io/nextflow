@@ -183,7 +183,7 @@ class IgTaskHandler extends TaskHandler {
         // the exit status is not null, before return check also if expected output files are available
 
         /*
-         * When the file in a NFS folder in order to avoid false negative
+         * When the file is in a NFS folder in order to avoid false negative
          * list the content of the parent path to force refresh of NFS metadata
          * http://stackoverflow.com/questions/3833127/alternative-to-file-exists-in-java
          * http://superuser.com/questions/422061/how-to-determine-whether-a-directory-is-on-an-nfs-mounted-drive
