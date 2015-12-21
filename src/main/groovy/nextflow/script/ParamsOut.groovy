@@ -316,14 +316,15 @@ class FileOutParam extends BaseOutParam implements OutParam {
             return []
 
         if( entry instanceof Path )
-            return [ relativizeName(entry, workDir) ]
+            return [ relativize(entry, workDir) ]
 
         // normalize to a string object
         final nameString = entry.toString()
-        if( separatorChar && nameString.contains(separatorChar) )
-            return nameString.split(/\${separatorChar}/).collect { String it-> clean(it) }
+        if( separatorChar && nameString.contains(separatorChar) ) {
+            return nameString.split(/\${separatorChar}/).collect { String it-> relativize(it, workDir) }
+        }
 
-        return [clean(nameString)]
+        return [relativize(nameString, workDir)]
 
     }
 
@@ -336,16 +337,32 @@ class FileOutParam extends BaseOutParam implements OutParam {
     }
 
     @PackageScope
-    static String relativizeName(Path path, Path workDir) {
-        if( path.isAbsolute() ) {
-            if( !path.startsWith(workDir) ) {
-                throw new IllegalFileException("File `$path` is out of the scope of process working dir: $workDir")
-            }
+    static String relativize(String path, Path workDir) {
+        if( !path.startsWith('/') )
+            return path
 
-            return path.subpath(workDir.getNameCount(), path.getNameCount()).toString()
-        }
+        final dir = workDir.toString()
+        if( !path.startsWith(dir) )
+            throw new IllegalFileException("File `$path` is out of the scope of process working dir: $workDir")
 
-        return path.toString()
+        if( path.length()-dir.length()<2 )
+            throw new IllegalFileException("Missing output file name")
+
+        return path.substring(dir.size()+1)
+    }
+
+    @PackageScope
+    static String relativize(Path path, Path workDir) {
+        if( !path.isAbsolute() )
+            return path.toString()
+
+        if( !path.startsWith(workDir) )
+            throw new IllegalFileException("File `$path` is out of the scope of process working dir: $workDir")
+
+        if( path.nameCount == workDir.nameCount )
+            throw new IllegalFileException("Missing output file name")
+
+        return path.subpath(workDir.getNameCount(), path.getNameCount()).toString()
     }
 
     /**
