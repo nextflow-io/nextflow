@@ -129,6 +129,16 @@ class WorkflowMetadata {
      */
     String profile
 
+    /**
+     * The current sessionId
+     */
+    UUID sessionId
+
+    /**
+     * Returns ``true`` whenever the current instance is resumed from a previous execution
+     */
+    boolean resume
+
     final private ScriptRunner owner
 
     final private List<Closure> events = []
@@ -151,6 +161,8 @@ class WorkflowMetadata {
         this.workDir = owner.session.workDir
         this.launchDir = Paths.get('.').complete()
         this.profile = owner.profile ?: ConfigBuilder.DEFAULT_PROFILE
+        this.sessionId = owner.session.uniqueId
+        this.resume = owner.session.resumeMode
 
         // check if there's a onComplete action in the config file
         registerConfigAction(owner.session.config.workflow as Map)

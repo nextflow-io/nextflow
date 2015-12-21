@@ -101,6 +101,8 @@ class WorkflowMetadataTest extends Specification {
         metadata.nextflow.build == Const.APP_BUILDNUM
         metadata.nextflow.timestamp == Const.APP_TIMESTAMP_UTC
         metadata.profile == 'standard'
+        metadata.sessionId == session.uniqueId
+        !metadata.resume
 
         when:
         metadata.invokeOnComplete()

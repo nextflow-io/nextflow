@@ -35,11 +35,13 @@ container                   Docker image used to run workflow tasks. When more t
                             it returns a map object containing `[process name, image name]` pair entries.
 commandLine                 Command line as entered by the user to launch the workflow execution.
 profile                     Used configuration profile.
+sessionId                   Unique identifier (UUID) associated to current execution.
+resume                      Returns ``true`` whenever the current instance is resumed from a previous execution.
 start                       Timestamp of workflow at execution start.
 :sup:`*` complete           Timestamp of workflow when execution is completed.
 :sup:`*` duration           Time elapsed to complete workflow execution.
 :sup:`*` success            Reports if the execution completed successfully.
-:sup:`*` exitStatus         The exit status of the task that caused the workflow execution to fail.
+:sup:`*` exitStatus         Exit status of the task that caused the workflow execution to fail.
 :sup:`*` errorMessage       Error message of the task that caused the workflow execution to fail.
 :sup:`*` errorReport        Detailed error of the task that caused the workflow execution to fail.
 nextflow.version            Nextflow runtime version number.
