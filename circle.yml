@@ -17,5 +17,5 @@ test:
     override:
         - make assemble
         - make install && ./integration-tests.sh :
-            timeout: 1800
+            timeout: 2400
     
