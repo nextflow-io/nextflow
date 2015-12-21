@@ -28,6 +28,7 @@ import java.nio.file.Path
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessSubmitException
+import nextflow.file.FileHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
@@ -171,6 +172,11 @@ class GridTaskHandler extends TaskHandler {
      */
     protected Integer readExitStatus() {
 
+        String workDirList = null
+        if( exitTimestampMillis1 && FileHelper.workDirIsNFS ) {
+            workDirList = listDirectory(task.workDir)
+        }
+
         /*
          * when the file does not exist return null, to force the monitor to continue to wait
          */
@@ -202,10 +208,15 @@ class GridTaskHandler extends TaskHandler {
                 return null
             }
 
-            log.debug "Failed to get exist status for process ${this} -- exitStatusReadTimeoutMillis: $exitStatusReadTimeoutMillis; delta: $delta"
-
+            def errMessage = []
+            errMessage << "Failed to get exist status for process ${this} -- exitStatusReadTimeoutMillis: $exitStatusReadTimeoutMillis; delta: $delta"
             // -- dump current queue stats
-            log.debug "Current queue status:\n" + executor.dumpQueueStatus()
+            errMessage << "Current queue status:"
+            errMessage << executor.dumpQueueStatus()?.indent('> ')
+            // -- dump directory listing
+            errMessage << "Content of workDir: ${task.workDir}"
+            errMessage << workDirList?.indent('> ')
+            log.debug errMessage.join('\n')
 
             return Integer.MAX_VALUE
         }
@@ -318,5 +329,36 @@ class GridTaskHandler extends TaskHandler {
         def trace = super.getTraceRecord()
         trace.native_id = jobId
         return trace
+    }
+
+
+    /*
+     * When the file is in a NFS folder in order to avoid false negative
+     * list the content of the parent path to force refresh of NFS metadata
+     * http://stackoverflow.com/questions/3833127/alternative-to-file-exists-in-java
+     * http://superuser.com/questions/422061/how-to-determine-whether-a-directory-is-on-an-nfs-mounted-drive
+     */
+    private String listDirectory(Path path) {
+
+        String result = null
+        Process process = null
+        try {
+            process = Runtime.runtime.exec("ls -la ${path}")
+            def listStatus = process.waitFor()
+            if( listStatus>0 ) {
+                log.debug "Can't list folder: ${path} -- Exit status: $listStatus"
+            }
+            else {
+                result = process.text
+            }
+        }
+        catch( IOException e ) {
+            log.debug "Can't list folder: $path -- Cause: ${e.message ?: e.toString()}"
+        }
+        finally {
+            process?.destroy()
+        }
+
+        return result
     }
 }
