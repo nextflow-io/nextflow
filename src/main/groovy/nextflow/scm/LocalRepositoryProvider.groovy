@@ -61,7 +61,8 @@ class LocalRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getCloneUrl() {
-        return "file:${new File(path, project)}/.git"
+        final root = new File(path, project)
+        return new File(root,'.git').isDirectory() ? "file:${root}/.git" : "file:${root}"
     }
 
     @Override
@@ -70,23 +71,19 @@ class LocalRepositoryProvider extends RepositoryProvider {
     }
 
 
-
     @Override
     protected byte[] readBytes(String path) {
-        //return new File(new File(this.path, project), path).readBytes()
 
-        def git = Git.open(new File(this.path, project))
-
+        final git = Git.open(new File(this.path, project))
         try {
-            def repo = git.getRepository()
+            final repo = git.getRepository()
 
             def lastCommitId = repo.resolve(Constants.HEAD)
             def revWalk = new RevWalk(repo)
             def commit = revWalk.parseCommit(lastCommitId)
-            def tree= commit.getTree()
+            def tree = commit.getTree()
 
             def treeWalk = TreeWalk.forPath(repo, path, tree)
-
             def id = treeWalk.getObjectId(0)
             def loader = repo.open(id)
 
@@ -98,6 +95,7 @@ class LocalRepositoryProvider extends RepositoryProvider {
             }
             result.close()
             source.close()
+            treeWalk.close()
 
             return result.toByteArray()
         }

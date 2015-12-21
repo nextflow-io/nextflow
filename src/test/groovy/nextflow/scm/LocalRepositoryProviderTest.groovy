@@ -45,8 +45,8 @@ class LocalRepositoryProviderTest extends Specification {
         def init = Git.init()
         def repo = init.setDirectory( dir ).call()
         new File(dir, 'main.nf').text = 'main script'
-        repo.add().addFilepattern('*').call()
-        repo.commit().setAll(true).setMessage('First commit').call()
+        repo.add().addFilepattern('main.nf').call()
+        repo.commit().setMessage('First commit').call()
 
     }
 
@@ -82,6 +82,24 @@ class LocalRepositoryProviderTest extends Specification {
         manager.getCloneUrl() == "file:${testFolder}/project_hello/.git".toString()
     }
 
+    def 'should return local clone url for bare repo'() {
+
+        given:
+        def cloneDir = new File("$testFolder/bare_repo")
+        Git
+                .cloneRepository()
+                .setBare(true)
+                .setURI("file:${testFolder}/project_hello")
+                .setDirectory(cloneDir)
+                .call()
+
+        def config = new ProviderConfig('local', [path: testFolder])
+        def manager = new LocalRepositoryProvider('bare_repo', config)
+
+        expect:
+        manager.getCloneUrl() == "file:${testFolder}/bare_repo".toString()
+    }
+
     def 'should read file bytes' () {
         given:
         def config = new ProviderConfig('local', [path: testFolder])
@@ -93,7 +111,6 @@ class LocalRepositoryProviderTest extends Specification {
     def 'should read file from bare repository' () {
 
         given:
-        def source = Git.open(new File("${testFolder}/project_hello"))
         def cloneDir = new File("$testFolder/bare_repo")
         Git
                 .cloneRepository()
