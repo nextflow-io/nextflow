@@ -34,10 +34,10 @@ class PbsExecutorTest extends Specification {
 
     def testGetCommandLine() {
 
-        when:
+        given:
         def executor = [:] as PbsExecutor
-        then:
-        executor.getSubmitCommandLine(Mock(TaskRun), Paths.get('(/some/path/script.sh') ) == ['qsub', 'script.sh']
+        expect:
+        executor.getSubmitCommandLine(Mock(TaskRun), Paths.get('/some/path/script.sh') ) == ['qsub', 'script.sh']
 
     }
 
@@ -168,20 +168,21 @@ class PbsExecutorTest extends Specification {
 
     def testParseJobId() {
 
-        when:
+        given:
         def executor = [:] as PbsExecutor
-        def textToParse = '\n10.host\n'
-        then:
-        executor.parseJobId(textToParse) == '10.host'
+
+        expect:
+        executor.parseJobId('\n10.host\n') == '10'
+        executor.parseJobId('1584288.biocluster.igb.illinois.edu') == '1584288'
     }
 
 
     def testKillTaskCommand() {
 
-        when:
+        given:
         def executor = [:] as PbsExecutor
-        then:
-        executor.killTaskCommand('100.hostname') == ['qdel', '100.hostname'] as String[]
+        expect:
+        executor.killTaskCommand('100') == ['qdel', '100'] as String[]
 
     }
 
@@ -206,12 +207,12 @@ class PbsExecutorTest extends Specification {
         def result = executor.parseQueueStatus(text)
         then:
         result.size() == 6
-        result['12.localhost'] == AbstractGridExecutor.QueueStatus.DONE
-        result['13.localhost'] == AbstractGridExecutor.QueueStatus.RUNNING
-        result['14.localhost'] == AbstractGridExecutor.QueueStatus.PENDING
-        result['15.localhost'] == AbstractGridExecutor.QueueStatus.HOLD
-        result['16.localhost'] == AbstractGridExecutor.QueueStatus.UNKNOWN
-        result['17.localhost'] == AbstractGridExecutor.QueueStatus.HOLD
+        result['12'] == AbstractGridExecutor.QueueStatus.DONE
+        result['13'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['14'] == AbstractGridExecutor.QueueStatus.PENDING
+        result['15'] == AbstractGridExecutor.QueueStatus.HOLD
+        result['16'] == AbstractGridExecutor.QueueStatus.UNKNOWN
+        result['17'] == AbstractGridExecutor.QueueStatus.HOLD
 
     }
 

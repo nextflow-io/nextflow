@@ -99,8 +99,9 @@ class PbsExecutor extends AbstractGridExecutor {
     def parseJobId( String text ) {
         // return always the last line
         def result = text?.trim()
-        if( result )
-            return result
+        if( result ) {
+            return result.tokenize('.').get(0)
+        }
 
         throw new IllegalStateException("Invalid PBS/Torque submit response:\n$text\n\n")
     }
@@ -134,7 +135,7 @@ class PbsExecutor extends AbstractGridExecutor {
             if( index< 2 ) return
             def cols = row.split(/\s+/)
             if( cols.size()>5 ) {
-                result.put( cols[0], DECODE_STATUS[cols[4]] ?: AbstractGridExecutor.QueueStatus.UNKNOWN )
+                result.put( parseJobId(cols[0]), DECODE_STATUS[cols[4]] ?: AbstractGridExecutor.QueueStatus.UNKNOWN )
             }
         }
 
