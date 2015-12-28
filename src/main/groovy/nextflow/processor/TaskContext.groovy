@@ -167,7 +167,13 @@ class TaskContext implements Map<String,Object> {
      */
     def void save( Path contextFile ) {
         try {
-            KryoHelper.serialize(holder,contextFile)
+            def map = holder
+            if( map.get(TaskProcessor.TASK_CONFIG) instanceof TaskConfig ) {
+                map = new LinkedHashMap<String, Object>(holder)
+                map.remove(TaskProcessor.TASK_CONFIG)
+            }
+
+            KryoHelper.serialize(map,contextFile)
         }
         catch( Exception e ) {
             log.warn "Cannot serialize context map. Cause: ${e.cause} -- Resume will not work on this process"

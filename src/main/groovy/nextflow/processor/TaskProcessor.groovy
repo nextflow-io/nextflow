@@ -87,7 +87,7 @@ abstract class TaskProcessor {
         RunType(String str) { message=str };
     }
 
-    static final protected String TASK_CONFIG = 'task'
+    static final public String TASK_CONFIG = 'task'
 
     /**
      * Global count of all task instances
@@ -1647,8 +1647,6 @@ abstract class TaskProcessor {
             // only the 'cache' is active and
             if( isCacheable() && task.hasCacheableValues() && task.context != null ) {
                 def target = task.workDir.resolve(TaskRun.CMD_CONTEXT)
-                if( task.context.get(TASK_CONFIG) instanceof TaskConfig )
-                    task.context.remove(TASK_CONFIG)
                 task.context.save(target)
             }
 
