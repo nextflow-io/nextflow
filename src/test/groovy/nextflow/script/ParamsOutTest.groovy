@@ -100,11 +100,52 @@ class ParamsOutTest extends Specification {
         out5.outChannel instanceof DataflowQueue
         binding.containsKey('z')
 
-//        when:
-//        out0.getVal([:])
-//        then:
-//        thrown(MissingValueException)
+    }
 
+    def testIntoMultipleChannels() {
+
+        given:
+        def text = '''
+            process foo {
+              output:
+              val one into a
+              val two into p, q
+              file 'three' into b
+              file 'four'  into x,y,z
+              return ''
+            }
+            '''
+
+        def binding = [:]
+
+        when:
+        def process = parseAndReturnProcess(text, binding)
+        def out0 = (ValueOutParam)process.config.getOutputs().get(0)
+        def out1 = (ValueOutParam)process.config.getOutputs().get(1)
+        def out2 = (FileOutParam)process.config.getOutputs().get(2)
+        def out3 = (FileOutParam)process.config.getOutputs().get(3)
+
+        then:
+        process.config.getOutputs().size() == 4
+
+        out0.name == 'one'
+        out0.getOutChannels().size()==1
+        out0.getOutChannels().get(0) instanceof DataflowQueue
+
+        out1.name == 'two'
+        out1.getOutChannels().size()==2
+        out1.getOutChannels().get(0) instanceof DataflowQueue
+        out1.getOutChannels().get(1) instanceof DataflowQueue
+
+        out2.name == 'three'
+        out2.getOutChannels().size()==1
+        out2.getOutChannels().get(0) instanceof DataflowQueue
+
+        out3.name == 'four'
+        out3.getOutChannels().size()==3
+        out3.getOutChannels().get(0) instanceof DataflowQueue
+        out3.getOutChannels().get(1) instanceof DataflowQueue
+        out3.getOutChannels().get(2) instanceof DataflowQueue
     }
 
     def testFileOutParams() {
@@ -239,66 +280,53 @@ class ParamsOutTest extends Specification {
               file "$y" into q
               set file(z) into p
               file u
+              file "$v"
+              file 'w'
 
               return ''
             }
             '''
 
-        def binding = [ x: 'hola', y:'hola_2', z: 'hola_z' ]
+        def binding = [ x: 'hola', y:'hola_2', z: 'hola_z', v:'file_v' ]
         def process = parseAndReturnProcess(text, binding)
 
         when:
-        FileOutParam out1 = process.config.getOutputs().get(0)
-        FileOutParam out2 = process.config.getOutputs().get(1)
-        SetOutParam out3 = process.config.getOutputs().get(2)
-        FileOutParam out4 = process.config.getOutputs().get(3)
-
-
-        then:
-        out1.name == 'x'
-        out1.getFilePatterns(binding,null) == ['hola']
-        out1.outChannel instanceof DataflowQueue
-        out1.outChannel == binding.x
-
-        out2.name == null
-        out2.getFilePatterns(binding,null) == ['hola_2']
-        out2.outChannel instanceof DataflowQueue
-        out2.outChannel == binding.q
-
-        out3.inner[0] instanceof FileOutParam
-        (out3.inner[0] as FileOutParam).name == 'z'
-        (out3.inner[0] as FileOutParam).getFilePatterns(binding,null) == ['hola_z']
-
-        out4.name == 'u'
-        out4.getFilePatterns(binding,null) == ['u']
-        out4.outChannel instanceof DataflowQueue
-        out4.outChannel == binding.u
-    }
-
-    def testFileOutWithGString3 () {
-
-        setup:
-        def text = '''
-
-            process hola {
-              output:
-              file "$x"
-
-              return ''
-            }
-            '''
-
-        def binding = [:]
-        def process = parseAndReturnProcess(text, binding)
-
-        when:
-        FileOutParam out1 = process.config.getOutputs().get(0)
-        def x = out1.outChannel
+        FileOutParam out0 = process.config.getOutputs().get(0)
+        FileOutParam out1 = process.config.getOutputs().get(1)
+        SetOutParam out2 = process.config.getOutputs().get(2)
+        FileOutParam out3 = process.config.getOutputs().get(3)
+        FileOutParam out4 = process.config.getOutputs().get(4)
+        FileOutParam out5 = process.config.getOutputs().get(5)
 
         then:
-        thrown(IllegalArgumentException)
+        out0.name == 'x'
+        out0.getFilePatterns(binding,null) == ['hola']
+        out0.getOutChannels().get(0) instanceof DataflowQueue
+        out0.getOutChannels().get(0) == binding.x
 
+        out1.name == null
+        out1.getFilePatterns(binding,null) == ['hola_2']
+        out1.getOutChannels().get(0) instanceof DataflowQueue
+        out1.getOutChannels().get(0) == binding.q
+
+        out2.inner[0] instanceof FileOutParam
+        (out2.inner[0] as FileOutParam).name == 'z'
+        (out2.inner[0] as FileOutParam).getFilePatterns(binding,null) == ['hola_z']
+
+        out3.name == 'u'
+        out3.getFilePatterns(binding,null) == ['u']
+        out3.getOutChannels().get(0) instanceof DataflowQueue
+        out3.getOutChannels().get(0) == binding.u
+
+        out4.name == null
+        out4.getFilePatterns(binding,null) == ['file_v']
+        out4.getOutChannels().size()==0
+
+        out5.name == 'w'
+        out5.getFilePatterns(binding,null) == ['w']
+        out5.getOutChannels().get(0) == binding.w
     }
+
 
     def testFileOutWithClosure() {
 

@@ -19,7 +19,6 @@
  */
 
 package nextflow.script
-
 import java.nio.file.Path
 
 import groovy.transform.InheritConstructors
@@ -60,6 +59,8 @@ interface OutParam {
      */
     DataflowWriteChannel getOutChannel()
 
+    List<DataflowWriteChannel> getOutChannels()
+
     short getIndex()
 
     Mode getMode()
@@ -93,7 +94,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     protected intoObj
 
-    private outChannel
+    private List<DataflowWriteChannel> outChannels = []
 
     protected OutParam.Mode mode = BasicMode.standard
 
@@ -109,22 +110,36 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     }
 
     void lazyInit() {
-        def target
-        if( intoObj instanceof TokenVar )
-            target = intoObj.name
 
-        else if( intoObj != null )
-            target = intoObj
+        if( intoObj instanceof TokenVar[] ) {
+            intoObj.each { lazyInitImpl(it) }
+        }
+        else if( intoObj != null ) {
+            lazyInitImpl(intoObj)
+        }
+        else if( nameObj instanceof String ) {
+            lazyInitImpl(nameObj)
+        }
 
-        else if( nameObj instanceof String )
-            target = nameObj
-
-        else
-            throw new IllegalArgumentException("Missing 'into' in output param declaration")
-
-        // define the output channel
-        outChannel = outputValToChannel(target, DataflowQueue)
     }
+
+    @PackageScope
+    void lazyInitImpl( def target ) {
+
+        def channel = null
+        if( target instanceof TokenVar ) {
+            channel = outputValToChannel(target.name, DataflowQueue)
+        }
+        else if( target != null ) {
+            channel = outputValToChannel(target, DataflowQueue)
+        }
+
+        if( channel ) {
+            outChannels.add(channel)
+        }
+
+    }
+
 
     @PackageScope
     BaseOutParam bind( def obj ) {
@@ -142,9 +157,20 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         return this
     }
 
+    BaseOutParam into( TokenVar... vars ) {
+        intoObj = vars
+        return this
+    }
+
+    @Deprecated
     DataflowWriteChannel getOutChannel() {
         init()
-        return outChannel
+        return outChannels ? outChannels.get(0) : null
+    }
+
+    List<DataflowWriteChannel> getOutChannels() {
+        init()
+        return outChannels
     }
 
     def String getName() {
@@ -508,7 +534,9 @@ class OutputsList implements List<OutParam> {
     private List<OutParam> target = new LinkedList<>()
 
     List<DataflowWriteChannel> getChannels() {
-        target.collect { OutParam it -> it.getOutChannel() }
+        final List<DataflowWriteChannel> result = []
+        target.each { OutParam it -> result.addAll(it.getOutChannels()) }
+        return result
     }
 
     List<String> getNames() { target *. name }

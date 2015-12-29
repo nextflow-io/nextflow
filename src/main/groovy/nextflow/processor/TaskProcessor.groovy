@@ -860,22 +860,16 @@ abstract class TaskProcessor {
      * Send a poison pill over all the outputs channel
      */
     final protected synchronized void sendPoisonPill() {
+        log.trace "<$name> Sending a poison pill(s)"
 
-        config.getOutputs().each { param ->
-            def channel = param.outChannel
+        config.getOutputs().getChannels().each { channel ->
 
             if( channel instanceof DataflowQueue ) {
-                log.trace "<$name> Sending a poisong pill for $param"
                 channel.bind( PoisonPill.instance )
             }
             else if( channel instanceof DataflowStreamWriteAdapter ) {
-                log.trace "<$name> Sending a poisong pill for $param"
                 channel.bind( PoisonPill.instance )
             }
-            else {
-                log.trace "<$name> Poison pill is not sent over $param channel"
-            }
-
         }
     }
 
@@ -947,7 +941,7 @@ abstract class TaskProcessor {
             case FileOutParam:
             case ValueOutParam:
                 log.trace "Process $name > collecting out param: ${param} = $value"
-                tuples[param.index].add( value )
+                tuples[param.index].add(value)
                 break
 
             default:
@@ -989,12 +983,12 @@ abstract class TaskProcessor {
         }
     }
 
-    protected void bindOutParam( OutParam param, def values ) {
+    protected void bindOutParam( OutParam param, List values ) {
         if( log.isTraceEnabled() )
             log.trace "<$name> Binding param $param with $values"
 
         def x = values.size() == 1 ? values[0] : values
-        processor.bindOutput( param.index, x )
+        param.getOutChannels().each { it.bind(x) }
     }
 
     protected void collectOutputs( TaskRun task ) {
