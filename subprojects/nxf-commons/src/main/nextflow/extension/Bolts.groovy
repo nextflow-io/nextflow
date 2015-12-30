@@ -573,7 +573,7 @@ class Bolts {
 
         def values = new Object[ self.valueCount ]
 
-        // clone the gstring changing setting the delegate for each closure argument
+        // clone the gstring setting the delegate for each closure argument
         for( int i=0; i<self.valueCount; i++ ) {
             values[i] = ( self.values[i] instanceof Closure
                     ? cloneWith(self.values[i] as Closure, binding)
