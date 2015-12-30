@@ -100,7 +100,7 @@ class PbsExecutor extends AbstractGridExecutor {
         // return always the last line
         def result = text?.trim()
         if( result ) {
-            return result.tokenize('.').get(0)
+            return result
         }
 
         throw new IllegalStateException("Invalid PBS/Torque submit response:\n$text\n\n")
@@ -112,11 +112,9 @@ class PbsExecutor extends AbstractGridExecutor {
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-        def result = ['qstat']
-        if( queue )
-            result << queue.toString()
-
-        return result
+        String cmd = 'qstat -f -1'
+        if( queue ) cmd += ' ' + queue
+        return ['sh','-c', "$cmd | egrep '(Job Id:|job_state =)'"]
     }
 
     static private Map DECODE_STATUS = [
@@ -130,17 +128,28 @@ class PbsExecutor extends AbstractGridExecutor {
     @Override
     protected Map<?, QueueStatus> parseQueueStatus(String text) {
 
-        def result = [:]
-        text?.eachLine{ String row, int index ->
-            if( index< 2 ) return
-            def cols = row.split(/\s+/)
-            if( cols.size()>5 ) {
-                result.put( parseJobId(cols[0]), DECODE_STATUS[cols[4]] ?: AbstractGridExecutor.QueueStatus.UNKNOWN )
+        final JOB_ID = 'Job Id:'
+        final JOB_STATUS = 'job_state ='
+        final result = [:]
+
+        String id = null
+        String status = null
+        text.eachLine { line ->
+            if( line.startsWith(JOB_ID) ) {
+                id = fetchValue(JOB_ID, line)
             }
+            else if( id ) {
+                status = fetchValue(JOB_STATUS, line)
+            }
+            result.put( id, DECODE_STATUS[status] ?: AbstractGridExecutor.QueueStatus.UNKNOWN )
         }
 
         return result
     }
 
+    static String fetchValue( String prefix, String line ) {
+        final p = line.indexOf(prefix)
+        return p!=-1 ? line.substring(p+prefix.size()).trim() : null
+    }
 
 }

@@ -172,8 +172,8 @@ class PbsExecutorTest extends Specification {
         def executor = [:] as PbsExecutor
 
         expect:
-        executor.parseJobId('\n10.host\n') == '10'
-        executor.parseJobId('1584288.biocluster.igb.illinois.edu') == '1584288'
+        executor.parseJobId('\n10.localhost\n') == '10.localhost'
+        executor.parseJobId('1584288.biocluster.igb.illinois.edu') == '1584288.biocluster.igb.illinois.edu'
     }
 
 
@@ -182,7 +182,7 @@ class PbsExecutorTest extends Specification {
         given:
         def executor = [:] as PbsExecutor
         expect:
-        executor.killTaskCommand('100') == ['qdel', '100'] as String[]
+        executor.killTaskCommand('100.localhost') == ['qdel', '100.localhost']
 
     }
 
@@ -192,28 +192,48 @@ class PbsExecutorTest extends Specification {
         def executor = [:] as PbsExecutor
         def text =
                 """
-        Job id                    Name             User            Time Use S Queue
-        ------------------------- ---------------- --------------- -------- - -----
-        12.localhost              test.sh          vagrant                0 C batch
-        13.localhost              test.sh          vagrant                0 R batch
-        14.localhost              test.sh          vagrant                0 Q batch
-        15.localhost              test.sh          vagrant                0 S batch
-        16.localhost              test.sh          vagrant                0 E batch
-        17.localhost              test.sh          vagrant                0 H batch
-        """.stripIndent().trim()
+                Job Id: 12.localhost
+                    job_state = C
+                Job Id: 13.localhost
+                    job_state = R
+                Job Id: 14.localhost
+                    job_state = Q
+                Job Id: 15.localhost
+                    job_state = S
+                Job Id: 16.localhost
+                    job_state = E
+                Job Id: 17.localhost
+                    job_state = H
 
+                """.stripIndent().trim()
 
         when:
         def result = executor.parseQueueStatus(text)
         then:
         result.size() == 6
-        result['12'] == AbstractGridExecutor.QueueStatus.DONE
-        result['13'] == AbstractGridExecutor.QueueStatus.RUNNING
-        result['14'] == AbstractGridExecutor.QueueStatus.PENDING
-        result['15'] == AbstractGridExecutor.QueueStatus.HOLD
-        result['16'] == AbstractGridExecutor.QueueStatus.UNKNOWN
-        result['17'] == AbstractGridExecutor.QueueStatus.HOLD
+        result['12.localhost'] == AbstractGridExecutor.QueueStatus.DONE
+        result['13.localhost'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['14.localhost'] == AbstractGridExecutor.QueueStatus.PENDING
+        result['15.localhost'] == AbstractGridExecutor.QueueStatus.HOLD
+        result['16.localhost'] == AbstractGridExecutor.QueueStatus.UNKNOWN
+        result['17.localhost'] == AbstractGridExecutor.QueueStatus.HOLD
 
+    }
+
+    def 'should fetch the value' () {
+        expect:
+        PbsExecutor.fetchValue('Job Id:', 'Job Id:1234') == '1234'
+        PbsExecutor.fetchValue('Job Id:', 'Job Id: 1234 ') == '1234'
+        PbsExecutor.fetchValue('Job Id:', '  Job Id:  1234') == '1234'
+    }
+
+    def 'should return qstat command line' () {
+        given:
+        def executor = [:] as PbsExecutor
+
+        expect:
+        executor.queueStatusCommand(null) == ['sh','-c', "qstat -f -1 | egrep '(Job Id:|job_state =)'"]
+        executor.queueStatusCommand('xxx') == ['sh','-c', "qstat -f -1 xxx | egrep '(Job Id:|job_state =)'"]
     }
 
 }
