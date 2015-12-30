@@ -19,14 +19,12 @@
  */
 
 package nextflow.scm
-
 import java.nio.file.Files
 import java.nio.file.Path
 
 import org.eclipse.jgit.api.Git
 import spock.lang.Shared
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -36,7 +34,7 @@ class LocalRepositoryProviderTest extends Specification {
     @Shared
     Path testFolder
 
-    def setupSpec() {
+    def setup() {
         testFolder = Files.createTempDirectory('test').toAbsolutePath()
 
         // create the main project
@@ -50,7 +48,7 @@ class LocalRepositoryProviderTest extends Specification {
 
     }
 
-    def cleanupSpec() {
+    def cleanup() {
         testFolder?.deleteDir()
     }
 
@@ -111,6 +109,7 @@ class LocalRepositoryProviderTest extends Specification {
     def 'should read file from bare repository' () {
 
         given:
+        println testFolder
         def cloneDir = new File("$testFolder/bare_repo")
         Git
                 .cloneRepository()
