@@ -118,7 +118,7 @@ class TraceFileObserver implements TraceObserver {
     TraceFileObserver setFieldsAndFormats( value ) {
         List<String> entries
         if( value instanceof String ) {
-            entries = value.split(/,/) as List<String>
+            entries = value.tokenize(', ')
         }
         else if( value instanceof List ) {
             entries = (List)value
