@@ -71,7 +71,8 @@ class TraceRecord {
             syscr:      'num',      // -- /proc/$pid/io
             syscw:      'num',      // -- /proc/$pid/io
             read_bytes: 'mem',      // -- /proc/$pid/io
-            write_bytes:'mem'       // -- /proc/$pid/io
+            write_bytes:'mem',      // -- /proc/$pid/io
+            attempt:    'num'
     ]
 
     static Map<String,Closure<String>> FORMATTER = [

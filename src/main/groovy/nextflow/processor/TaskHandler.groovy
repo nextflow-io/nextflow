@@ -145,6 +145,7 @@ public abstract class TaskHandler {
         record.tag = task.config.tag
         record.module = task.config.module
         record.container = task.container
+        record.attempt = task.config.attempt
 
         if( isCompleted() ) {
             if( completeTimeMillis ) {
