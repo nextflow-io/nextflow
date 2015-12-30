@@ -27,7 +27,10 @@ clean:
 
 assemble:
 	./gradlew compile assemble
-    
+
+check:
+	./gradlew check
+
 install:
 	./gradlew installLauncher install -Dmaven.repo.local=${HOME}/.nextflow/capsule/deps/ -x signArchives
 
@@ -41,7 +44,11 @@ refresh:
 	./gradlew --refresh-dependencies ${module}:dependencies --configuration ${config}
 
 test:
+ifndef class
+	./gradlew -q ${module}:test
+else
 	./gradlew -q ${module}:test --tests ${class}
+endif
 
 pack:
 	./gradlew pack
