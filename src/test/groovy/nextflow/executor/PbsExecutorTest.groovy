@@ -234,6 +234,7 @@ class PbsExecutorTest extends Specification {
         expect:
         executor.queueStatusCommand(null) == ['sh','-c', "qstat -f -1 | egrep '(Job Id:|job_state =)'"]
         executor.queueStatusCommand('xxx') == ['sh','-c', "qstat -f -1 xxx | egrep '(Job Id:|job_state =)'"]
+        executor.queueStatusCommand('xxx').each { assert it instanceof String }
     }
 
 }

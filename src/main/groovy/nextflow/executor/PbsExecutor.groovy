@@ -114,7 +114,7 @@ class PbsExecutor extends AbstractGridExecutor {
     protected List<String> queueStatusCommand(Object queue) {
         String cmd = 'qstat -f -1'
         if( queue ) cmd += ' ' + queue
-        return ['sh','-c', "$cmd | egrep '(Job Id:|job_state =)'"]
+        return ['sh','-c', "$cmd | egrep '(Job Id:|job_state =)'".toString()]
     }
 
     static private Map DECODE_STATUS = [
