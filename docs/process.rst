@@ -762,10 +762,10 @@ It can be defined at most one output block and it can contain one or more output
 The output block follows the syntax shown below::
 
     output:
-      <output qualifier> <output name> [into <target channel>] [attribute [,..]]
+      <output qualifier> <output name> [into <target channel>[,channel,..]] [attribute [,..]]
 
 Output definitions start by an output `qualifier` and the output `name`, followed by the keyword ``into`` and
-the actual channel over which outputs are sent. Finally some optional attributes can be specified.
+one or more channels over which outputs are sent. Finally some optional attributes can be specified.
 
 .. note:: When the output name is the same as the channel name, the ``into`` part of the declaration can be omitted.
 
