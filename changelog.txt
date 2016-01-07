@@ -1,6 +1,16 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.17.0 - 7 Jan 2016
+- Fixed PBS/Torque executor does not parse correctly job IDs #96
+- Fixed issue when `TraceFileObsever` tries to access task context metadata on task completion #98
+- Fixed support for Git local bare repositories #95
+- Fixed single quotes in file names result in script error #99
+- Added workflow.sessionId and workflow.resume attributes #94
+- Added output into multiple channels #97
+- Added `attempt` field to execution tracing
+- Do not allow output clause to reference files outside the process working directory (see #91)
+
 0.16.5 - 18 Dec 2015
 - Fixed race condition when creating cached launcher class path file
 - Fixed `run` for local repositories
