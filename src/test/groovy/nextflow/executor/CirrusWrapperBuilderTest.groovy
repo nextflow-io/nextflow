@@ -126,7 +126,7 @@ class CirrusWrapperBuilderTest extends Specification {
                 es3 test s3:/${folder}/.command.run.1 && es3 cat s3:/${folder}/.command.run.1 > .command.run.1
 
                 es3 touch s3:/${folder}/.command.begin
-                [ -f '.command.env' ] && source '.command.env'
+                [ -f .command.env ] && source .command.env
                 NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)" && cd \$NXF_SCRATCH
 
                 set +e
@@ -137,7 +137,7 @@ class CirrusWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash -ue '.command.sh'
+                /bin/bash -ue .command.sh
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?

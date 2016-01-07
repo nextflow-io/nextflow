@@ -34,11 +34,14 @@ class DockerBuilderTest extends Specification {
         setup:
         def files =  [Paths.get('/folder/data'),  Paths.get('/folder/db'), Paths.get('/folder/db') ]
         def real = [ Paths.get('/user/yo/nextflow/bin'), Paths.get('/user/yo/nextflow/work'), Paths.get('/db/pdb/local/data') ]
+        def quotes =  [ Paths.get('/folder with blanks/A'), Paths.get('/folder with blanks/B') ]
 
         expect:
         DockerBuilder.makeVolumes([]).toString() == '-v "$PWD":"$PWD"'
-        DockerBuilder.makeVolumes(files).toString() == '-v \'/folder\':\'/folder\' -v "$PWD":"$PWD"'
-        DockerBuilder.makeVolumes(real).toString()  == '-v \'/user/yo/nextflow\':\'/user/yo/nextflow\' -v \'/db/pdb/local/data\':\'/db/pdb/local/data\' -v "$PWD":"$PWD"'
+        DockerBuilder.makeVolumes(files).toString() == '-v /folder:/folder -v "$PWD":"$PWD"'
+        DockerBuilder.makeVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v "$PWD":"$PWD"'
+        DockerBuilder.makeVolumes(quotes).toString() == '-v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v "$PWD":"$PWD"'
+
     }
 
 
@@ -54,12 +57,12 @@ class DockerBuilderTest extends Specification {
     def 'test docker run command line'() {
 
         setup:
-        def envFile = Paths.get('env-file')
+        def envFile = Paths.get('/data/env file')
         def db_file = Paths.get('/home/db')
 
         expect:
         new DockerBuilder('fedora').build() == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" fedora'
-        new DockerBuilder('fedora').addEnv(envFile).build() == 'docker run -i -e "BASH_ENV=env-file" -v "$PWD":"$PWD" -w "$PWD" fedora'
+        new DockerBuilder('fedora').addEnv(envFile).build() == 'docker run -i -e "BASH_ENV=/data/env\\ file" -v "$PWD":"$PWD" -w "$PWD" fedora'
         new DockerBuilder('ubuntu').params(temp:'/hola').build() == 'docker run -i -v /hola:/tmp -v "$PWD":"$PWD" -w "$PWD" ubuntu'
         new DockerBuilder('busybox').params(sudo: true).build() == 'sudo docker run -i -v "$PWD":"$PWD" -w "$PWD" busybox'
         new DockerBuilder('busybox').params(entry: '/bin/bash').build() == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash busybox'
@@ -72,7 +75,7 @@ class DockerBuilderTest extends Specification {
                 .addEnv(envFile)
                 .addMount(db_file)
                 .addMount(db_file)  // <-- add twice the same to prove that the final string won't contain duplicates
-                .build() == 'docker run -i -e "BASH_ENV=env-file" -v \'/home/db\':\'/home/db\' -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .build() == 'docker run -i -e "BASH_ENV=/data/env\\ file" -v /home/db:/home/db -v "$PWD":"$PWD" -w "$PWD" fedora'
 
     }
 

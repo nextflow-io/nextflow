@@ -24,6 +24,8 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskBean
+import nextflow.util.Escape
+
 /**
  * Simple file strategy that stages input files creating symlinks
  * and copies the output files using the {@code cp} command.
@@ -89,7 +91,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         inputFiles.each { stageName, storePath ->
 
             // delete all previous files with the same name
-            delete << "rm -f '${stageName}'"
+            delete << "rm -f ${Escape.path(stageName)}"
 
             // link them
             links << stageInputFile( storePath, stageName )
@@ -116,9 +118,9 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         def cmd = ''
         def p = targetName.lastIndexOf('/')
         if( p>0 ) {
-            cmd += "mkdir -p '${targetName.substring(0,p)}' && "
+            cmd += "mkdir -p ${Escape.path(targetName.substring(0,p))} && "
         }
-        cmd += "ln -s '${path.toAbsolutePath()}' '$targetName'"
+        cmd += "ln -s ${Escape.path(path.toAbsolutePath())} ${Escape.path(targetName)}"
         return cmd
     }
 
@@ -137,7 +139,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         log.trace "Unstaging file path: $normalized"
         if( normalized ) {
             result << ""
-            result << "mkdir -p '${targetDir}'"
+            result << "mkdir -p ${Escape.path(targetDir)}"
             for( int i=0; i<normalized.size(); i++ ) {
                 final path = normalized[i]
                 final cmd = copyCommand(path, targetDir.toString(), unstageStrategy) + ' || true' // <-- add true to avoid it stops on errors
@@ -164,17 +166,17 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         else if( strategy == 'move' )
             cmd = 'mv -f'
         else if( strategy == 'rsync' )
-            return "rsync -rRl $source '$target'"
+            return "rsync -rRl ${Escape.path(source)} ${Escape.path(target)}"
         else
             throw new IllegalArgumentException("Unknown un-stage strategy: $strategy")
 
         final p = source.lastIndexOf('/')
         if( p<=0 ) {
-            return "$cmd $source '$target'"
+            return "$cmd ${Escape.path(source)} ${Escape.path(target)}"
         }
 
         def path  = new File(target,source.substring(0,p)).toString()
-        return "mkdir -p '$path' && $cmd $source '$path'"
+        return "mkdir -p ${Escape.path(path)} && $cmd ${Escape.path(source)} ${Escape.path(path)}"
     }
 
     /**
@@ -239,7 +241,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     @Override
     String touchFile(Path file) {
-        "touch '${file.toString()}'"
+        "touch ${Escape.path(file)}"
     }
 
     /**
@@ -247,7 +249,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     @Override
     String fileStr(Path file) {
-        file.toString()
+        Escape.path(file)
     }
 
     /**
@@ -255,7 +257,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     @Override
     String copyFile(String name, Path target) {
-        "cp ${name} '${target}'"
+        "cp ${Escape.path(name)} ${Escape.path(target)}"
     }
 
     /**
@@ -263,7 +265,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     @Override
     String exitFile(Path file) {
-        "'${file.toString()}'"
+        Escape.path(file)
     }
 
 }

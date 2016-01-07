@@ -255,7 +255,7 @@ class DockerBuilder {
         mountPaths.each { trie.add(it) }
 
         def paths = trie.longest()
-        paths.each{ if(it) result << "-v '$it':'$it' " }
+        paths.each{ if(it) result << "-v ${Escape.path(it)}:${Escape.path(it)} " }
 
         // -- append by default the current path
         result << '-v "$PWD":"$PWD"'
@@ -277,7 +277,7 @@ class DockerBuilder {
             env = env.toPath()
         }
         if( env instanceof Path ) {
-            result << '-e "BASH_ENV=' << env.toString() << '"'
+            result << '-e "BASH_ENV=' << Escape.path(env) << '"'
         }
         else if( env instanceof Map ) {
             short index = 0

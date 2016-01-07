@@ -364,7 +364,7 @@ class BashWrapperBuilder {
 
         // source the environment
         if( !runWithDocker ) {
-            wrapper << "[ -f '"<< fileStr(environmentFile) << "' ]" << " && source '" << fileStr(environmentFile) << "'" << ENDL
+            wrapper << "[ -f "<< fileStr(environmentFile) << " ]" << " && source " << fileStr(environmentFile) << ENDL
         }
 
         if( changeDir ) {
@@ -407,8 +407,8 @@ class BashWrapperBuilder {
             stub << 'touch ' << TaskRun.CMD_TRACE << ENDL
             stub << 'start_millis=$($NXF_DATE)'  << ENDL
             stub << '(' << ENDL
-            stub << interpreter << " '" << fileStr(scriptFile) << "'"
-            if( input != null ) stub << " < '" << fileStr(inputFile) << "'"
+            stub << interpreter << " " << fileStr(scriptFile)
+            if( input != null ) stub << " < " << fileStr(inputFile)
             stub << ENDL
             stub << ') &' << ENDL
             stub << 'pid=$!' << ENDL                     // get the PID of the main job
@@ -422,13 +422,13 @@ class BashWrapperBuilder {
             stubFile.text = stub.toString()
 
             // invoke it from the main script
-            wrapper << "/bin/bash '" << fileStr(stubFile) << "'"
+            wrapper << "/bin/bash " << fileStr(stubFile)
             if( docker && !executable ) wrapper << "\""
         }
         else {
-            wrapper << interpreter << " '" << fileStr(scriptFile) << "'"
+            wrapper << interpreter << " " << fileStr(scriptFile)
             if( docker && !executable ) wrapper << "\""
-            if( input != null ) wrapper << " < '" << fileStr(inputFile) << "'"
+            if( input != null ) wrapper << " < " << fileStr(inputFile)
         }
         wrapper << ENDL
         wrapper << ') >"$COUT" 2>"$CERR" &' << ENDL
