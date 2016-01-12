@@ -555,7 +555,7 @@ class TaskRun {
         this.code.setResolveStrategy(Closure.DELEGATE_ONLY)
 
         // -- set the task source
-        // note: this may be overwritten when a template file used
+        // note: this may be overwritten when a template file is used
         this.source = body.source
 
         if( body.type != ScriptType.SCRIPTLET )
