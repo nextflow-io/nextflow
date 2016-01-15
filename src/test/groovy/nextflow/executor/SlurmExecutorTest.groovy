@@ -85,6 +85,18 @@ class SlurmExecutorTest extends Specification {
 
         when:
         task.config = new TaskConfig()
+        task.config.queue = 'delta'
+        then:
+        executor.getHeaders(task) == '''
+                #SBATCH -D /work/path
+                #SBATCH -J nf-the_task_name
+                #SBATCH -o /work/path/.command.log
+                #SBATCH -p delta
+                '''
+                .stripIndent().leftTrim()
+
+        when:
+        task.config = new TaskConfig()
         task.config.time = '1m'
         then:
         executor.getHeaders(task) == '''
@@ -188,7 +200,6 @@ class SlurmExecutorTest extends Specification {
         then:
         exec.queueStatusCommand(null) == ['squeue','-h','-o','%i %t']
         exec.queueStatusCommand('xxx') == ['squeue','-h','-o','%i %t']
-
 
     }
 }

@@ -59,6 +59,11 @@ class SlurmExecutor extends AbstractGridExecutor {
             result << '--mem' << task.config.getMemory().toMega().toString()
         }
 
+        // the requested partition (a.k.a queue) name
+        if( task.config.queue ) {
+            result << '-p' << (task.config.queue.toString())
+        }
+
         // -- at the end append the command script wrapped file name
         if( task.config.clusterOptions ) {
             result << task.config.clusterOptions.toString() << ''

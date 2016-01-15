@@ -1610,7 +1610,7 @@ Multiple queues can be specified by separating their names with a comma for exam
 
 
 .. note:: This directive is taken in account only by the following executors: :ref:`SGE <sge-executor>`,
-  :ref:`LSF <lsf-executor>`, :ref:`PBS/Torque <pbs-executor>` and :ref:`DRMAA <drmaa-executor>`
+  :ref:`LSF <lsf-executor>`, :ref:`SLURM <slurm-executor>`, :ref:`PBS/Torque <pbs-executor>` and :ref:`DRMAA <drmaa-executor>`
 
 .. _process-disk:
 

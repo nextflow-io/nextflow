@@ -92,10 +92,13 @@ To enable the SLURM executor simply set to ``process.executor`` property to ``sl
 The amount of resources requested by each job submission is defined by the following process directives:
 
 * :ref:`process-cpus`
+* :ref:`process-queue`
 * :ref:`process-time`
 * :ref:`process-memory`
 * :ref:`process-clusterOptions`
 
+.. note:: SLURM `partitions` can be considered jobs queues. Nextflow allows to set partitions by using the above ``queue``
+    directive.
 
 .. _pbs-executor:
 
