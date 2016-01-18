@@ -18,7 +18,6 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.processor
-
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -48,6 +47,7 @@ import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
+import nextflow.exception.ProcessScriptException
 import nextflow.executor.Executor
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
@@ -750,12 +750,25 @@ abstract class TaskProcessor {
             return ErrorStrategy.IGNORE
         }
 
+        if( error instanceof ProcessScriptException ) {
+            // retry is not allowed when the script cannot be compiled
+            return null
+        }
+
         // RETRY strategy -- check that process do not exceed 'maxError' and the task do not exceed 'maxRetries'
         if( taskStrategy == ErrorStrategy.RETRY ) {
             final int maxErrors = task.config.getMaxErrors()
             final int maxRetries = task.config.getMaxRetries()
             if( (procErrCount < maxErrors || maxErrors == -1) && taskErrCount <= maxRetries ) {
-                session.getExecService().submit({ checkCachedOrLaunchTask( task, task.hash, false, RunType.RETRY ) } as Runnable)
+                session.getExecService().submit({
+                    try {
+                        checkCachedOrLaunchTask( task, task.hash, false, RunType.RETRY )
+                    }
+                    catch( Throwable e ) {
+                        log.error "Unable to re-submit task `${task.name}`"
+                        session.abort(e)
+                    }
+                } as Runnable)
                 return ErrorStrategy.RETRY
             }
         }
