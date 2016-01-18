@@ -68,7 +68,12 @@ class TaskPollingMonitor implements TaskMonitor {
     /**
      * A lock object used to access in a synchronous manner the polling queue
      */
-    private Lock mutex
+    private Lock tasksQueueLock
+
+    /**
+     * A lock object used to signal the completion of a task execution
+     */
+    private Lock taskCompleteLock
 
     /**
      * A condition that signal when at least a complete task is available
@@ -170,7 +175,7 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     protected int capacityInc( int slots = 1 ) {
         def result = 0
-        mutex.withLock {
+        tasksQueueLock.withLock {
             result = capacity += slots
             notFull.signal()
         }
@@ -187,7 +192,7 @@ class TaskPollingMonitor implements TaskMonitor {
     protected int capacityDec( int slots = 1 ) {
 
         def result = 0
-        mutex.withLock {
+        tasksQueueLock.withLock {
             result = capacity -= slots
         }
 
@@ -209,7 +214,7 @@ class TaskPollingMonitor implements TaskMonitor {
         // more entries than the specified 'capacity'
         //
         boolean done = false
-        mutex.withLock(true) {
+        tasksQueueLock.withLock(true) {
 
             while ( pollingQueue.size() >= capacity )
                 notFull.await();
@@ -242,8 +247,7 @@ class TaskPollingMonitor implements TaskMonitor {
             return false
         }
 
-        log.trace "Dropping task handler: $handler"
-        mutex.withLock {
+        tasksQueueLock.withLock {
             if( pollingQueue.remove(handler) ) {
                 notFull.signal()
                 return true
@@ -264,9 +268,11 @@ class TaskPollingMonitor implements TaskMonitor {
         session.barrier.register(this)
 
         // creates the lock and condition
-        this.mutex = new ReentrantLock()
-        this.notFull = mutex.newCondition()
-        this.taskComplete = mutex.newCondition()
+        this.tasksQueueLock = new ReentrantLock()
+        this.notFull = tasksQueueLock.newCondition()
+
+        this.taskCompleteLock = new ReentrantLock()
+        this.taskComplete = taskCompleteLock.newCondition()
 
         // remove pending tasks on termination
         session.onShutdown { this.cleanup() }
@@ -326,7 +332,7 @@ class TaskPollingMonitor implements TaskMonitor {
         if( delta <= 0 )
             return
 
-        mutex.withLock {
+        taskCompleteLock.withLock {
             taskComplete.await( delta, TimeUnit.MILLISECONDS )
         }
     }
@@ -335,7 +341,7 @@ class TaskPollingMonitor implements TaskMonitor {
      * Signal that a task has been completed
      */
     void signal() {
-        mutex.withLock {
+        taskCompleteLock.withLock {
             taskComplete.signal()
         }
     }
