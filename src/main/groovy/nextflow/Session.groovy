@@ -103,6 +103,8 @@ class Session implements ISession {
      */
     List<Path> libDir
 
+    private Path binDir
+
     /**
      * The unique identifier of this session
      */
@@ -232,9 +234,9 @@ class Session implements ISession {
 
         if( scriptPath ) {
             // the folder that contains the main script
-            this.baseDir = scriptPath.parent
+            this.setBaseDir(scriptPath.parent)
             // set the script name attribute
-            this.scriptName = scriptPath.name
+            this.setScriptName(scriptPath.name)
         }
 
         this.observers = createObservers()
@@ -346,22 +348,21 @@ class Session implements ISession {
      * The folder where script binaries file are located, by default the folder 'bin'
      * in the script base directory
      */
-    @Memoized
-    def Path getBinDir() {
-        if( !baseDir ) {
-            log.debug "Script base directory is null";
-            return null
-        }
-
-        def path = baseDir.resolve('bin')
-        if( !path.exists() || !path.isDirectory() ) {
-            log.debug "Script base path does not exist or is not a directory: ${path}"
-            return null
-        }
-
-        return path
+    Path getBinDir() {
+        binDir
     }
 
+    void setBaseDir( Path baseDir ) {
+        this.baseDir = baseDir
+
+        def path = baseDir.resolve('bin')
+        if( path.exists() && path.isDirectory() ) {
+            this.binDir = path
+        }
+        else {
+            log.debug "Script base path does not exist or is not a directory: ${path}"
+        }
+    }
 
     def void setLibDir( String str ) {
 

@@ -414,7 +414,7 @@ class AssetManager {
             }
         }
         catch( Exception e ) {
-            log.debug "Cannot read project manifest -- Cause: ${e.message}"
+            log.trace "Cannot read project manifest -- Cause: ${e.message}"
         }
         // by default return an empty object
         return result ?: new ConfigObject()
