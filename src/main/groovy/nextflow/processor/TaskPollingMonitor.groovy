@@ -253,35 +253,6 @@ class TaskPollingMonitor implements TaskMonitor {
         }
     }
 
-    /**
-     * Get a queued {@code TaskHandler} by the {@code TaskRun#id}
-     *
-     * @param taskId
-     * @return
-     */
-    TaskHandler getTaskHandlerById( final taskId ) {
-        pollingQueue.find { handler -> handler.task.id == taskId }
-    }
-
-    /**
-     * Find all {@code TaskHandler} in the specified status
-     *
-     * @param status The status of the required task handlers
-     * @return The list of {@code TaskHandler} win the specified {@code TaskHandler.Status}, or an empty list if not tashs are found.
-     */
-    TaskHandler getTaskHandlerByStatus( final TaskStatus status ) {
-        pollingQueue.find { handler -> handler.status == status }
-    }
-
-    /**
-     * Find all the task handlers that matches the specified closure
-     * @param closure
-     * @return
-     */
-    List<TaskHandler> findTaskHandlers( Closure closure = null ) {
-        closure ? pollingQueue.findAll(closure) : pollingQueue.findAll()
-    }
-
 
     /**
      * Launch the monitoring thread
