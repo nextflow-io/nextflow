@@ -30,9 +30,9 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class CharSequenceCollector implements CollectorStrategy {
 
-    private static char[] CHAR_ARRAY = new char[0]
+    private static final int INITIAL_SIZE = 1024 * 1024
 
-    private LinkedList<String> holder = new LinkedList<String>()
+    private StringBuilder holder = new StringBuilder(INITIAL_SIZE)
 
     private long count
 
@@ -43,18 +43,18 @@ class CharSequenceCollector implements CollectorStrategy {
 
         def str = record.toString()
         count += str.length()
-        holder.add(str)
+        holder.append(str)
     }
 
     @Override
     boolean hasChunk() {
-        return !holder.isEmpty()
+        return holder.length()>0
     }
 
     @Override
     void next() {
         count = 0
-        holder.clear()
+        holder.setLength(0)
     }
 
     @Override
@@ -67,28 +67,6 @@ class CharSequenceCollector implements CollectorStrategy {
         if( count > Integer.MAX_VALUE )
             throw new IllegalArgumentException("String cannot contain more than ${Integer.MAX_VALUE} characters -- Your string needs ${count} characters")
 
-        int offset = 0
-        char[] content = new char[count]
-
-        for( int i=0; i<holder.size(); i++ ) {
-            final str = holder.get(i)
-            final len = str.length()
-            str.getChars(0,len, content, offset)
-            offset += len
-        }
-
-
-        try {
-            // use package private constructor to avoid to avoid to create a copy
-            // of the buffer character array
-            def constructor = String.class.getDeclaredConstructor(CHAR_ARRAY.class, boolean.class)
-            constructor.setAccessible(true)
-            constructor.newInstance(content, Boolean.TRUE)
-        }
-        catch( NoSuchMethodException e ) {
-            // the above private constructor is not available is not available in all 1.7 runtime versions
-            // fallback to the standard String constructor
-            return new String(content)
-        }
+        holder.toString()
     }
 }
