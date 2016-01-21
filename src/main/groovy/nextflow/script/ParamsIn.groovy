@@ -171,7 +171,7 @@ abstract class BaseParam {
             }
             else {
                 if( channel == null ) {
-                    log.debug "output > channel unknown: $local -- creating a new instance"
+                    log.trace "Creating new output channel > $local"
                 }
                 else {
                     log.warn "Duplicate output channel name: '$channel' in the script context -- it's worth to rename it to avoid possible conflicts"
