@@ -1,6 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.17.1 - 21 Jan 2016
+- Fixed splitText performance issue #102
+- Fixed execution hang when a process script block report and error and retry error strategy is set
+- Added support for partition to SLURM executor #101
+- Use a dedicated reentrant lock to handle task completion event
+
 0.17.0 - 7 Jan 2016
 - Fixed PBS/Torque executor does not parse correctly job IDs #96
 - Fixed issue when `TraceFileObsever` tries to access task context metadata on task completion #98
