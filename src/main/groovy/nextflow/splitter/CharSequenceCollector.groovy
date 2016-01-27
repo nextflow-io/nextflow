@@ -30,7 +30,7 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class CharSequenceCollector implements CollectorStrategy {
 
-    private static final int INITIAL_SIZE = 1024 * 1024
+    private static final int INITIAL_SIZE = 10 * 1024 * 1024
 
     private StringBuilder holder = new StringBuilder(INITIAL_SIZE)
 
