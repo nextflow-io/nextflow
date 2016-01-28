@@ -407,13 +407,14 @@ class Session implements ISession {
 
     void destroy() {
         log.trace "Session > destroying"
-        cleanUp()
-        log.trace "Session > after cleanup"
 
         if( !aborted ) {
             allProcessors *. join()
             log.trace "Session > after processors join"
         }
+
+        cleanUp()
+        log.trace "Session > after cleanup"
 
         execService.shutdown()
         log.trace "Session > executor shutdown"
