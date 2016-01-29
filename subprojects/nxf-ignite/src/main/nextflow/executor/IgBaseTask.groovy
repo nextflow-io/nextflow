@@ -21,6 +21,7 @@ package nextflow.executor
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import nextflow.collision.IgComputeResources
 import nextflow.exception.ProcessException
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
@@ -50,6 +51,11 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
     private transient Ignite grid
 
     /**
+     * Requested computational resources
+     */
+    IgComputeResources resources
+
+    /**
      * The client session identifier, it is required in order to access to
      * remote class-path
      */
@@ -77,6 +83,7 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
         this.sessionId = sessionId
         this.bean = new TaskBean(task)
         this.payload = KryoHelper.serialize(bean)
+        this.resources = new IgComputeResources(task)
     }
 
     /** ONLY FOR TESTING PURPOSE */

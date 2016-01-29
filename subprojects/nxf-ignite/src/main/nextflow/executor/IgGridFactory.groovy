@@ -19,13 +19,13 @@
  */
 
 package nextflow.executor
-
 import com.amazonaws.auth.BasicAWSCredentials
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.Global
 import nextflow.Session
+import nextflow.collision.CustomStealingCollisionSpi
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.util.ClusterConfig
@@ -45,7 +45,6 @@ import org.apache.ignite.configuration.IgniteConfiguration
 import org.apache.ignite.igfs.IgfsGroupDataBlocksKeyMapper
 import org.apache.ignite.igfs.IgfsMode
 import org.apache.ignite.logger.slf4j.Slf4jLogger
-import org.apache.ignite.spi.collision.jobstealing.JobStealingCollisionSpi
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi
 import org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.s3.TcpDiscoveryS3IpFinder
@@ -215,17 +214,8 @@ class IgGridFactory {
 
 
     protected collisionConfig( IgniteConfiguration cfg ) {
-
-        def slots = clusterConfig.getAttribute('slots', Runtime.getRuntime().availableProcessors() ) as int
-        def maxActivesJobs = slots * 3
-        log.debug "Apache Ignite config > setting slots: $slots -- maxActivesJobs: $maxActivesJobs"
-
-        def strategy = new JobStealingCollisionSpi()
-        strategy.setActiveJobsThreshold( maxActivesJobs )
-        cfg.setCollisionSpi( strategy )
-        // JobStealingCollisionSpi needs to be used along with JobStealingFailoverSpi
+        cfg.setCollisionSpi( new CustomStealingCollisionSpi() )
         cfg.setFailoverSpi( new JobStealingFailoverSpi() )
-
     }
 
     protected void balancingConfig( IgniteConfiguration cfg ) {
