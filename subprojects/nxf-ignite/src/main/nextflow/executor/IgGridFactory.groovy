@@ -51,6 +51,7 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMultic
 import org.apache.ignite.spi.discovery.tcp.ipfinder.s3.TcpDiscoveryS3IpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.sharedfs.TcpDiscoverySharedFsIpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder
+import org.apache.ignite.spi.failover.jobstealing.JobStealingFailoverSpi
 import org.apache.ignite.spi.loadbalancing.adaptive.AdaptiveLoadBalancingSpi
 /**
  * Grid factory class. It can be used to create a {@link IgniteConfiguration} or the {@link Ignite} instance directly
@@ -122,7 +123,7 @@ class IgGridFactory {
         discoveryConfig(cfg)
         balancingConfig(cfg)
         cacheConfig(cfg)
-        ggfsConfig(cfg)
+        fileSystemConfig(cfg)
 
         final groupName = clusterConfig.getAttribute( 'group', GRID_NAME ) as String
         log.debug "Apache Ignite config > group name: $groupName"
@@ -196,7 +197,7 @@ class IgGridFactory {
     /*
      * igfs configuration
      */
-    protected void ggfsConfig( IgniteConfiguration cfg ) {
+    protected void fileSystemConfig( IgniteConfiguration cfg ) {
 
         def ggfsCfg = new FileSystemConfiguration()
         ggfsCfg.with {
@@ -222,6 +223,8 @@ class IgGridFactory {
         def strategy = new JobStealingCollisionSpi()
         strategy.setActiveJobsThreshold( maxActivesJobs )
         cfg.setCollisionSpi( strategy )
+        // JobStealingCollisionSpi needs to be used along with JobStealingFailoverSpi
+        cfg.setFailoverSpi( new JobStealingFailoverSpi() )
 
     }
 
