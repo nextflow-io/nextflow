@@ -266,7 +266,7 @@ class SessionTest extends Specification {
         observer = result[0] as TraceFileObserver
         then:
         result.size() == 1
-        observer.tracePath == Paths.get('trace.csv').complete()
+        observer.tracePath == Paths.get('trace.txt').complete()
         observer.separator == '\t'
         observer.fields == ['task_id','name','exit','vmem']
 

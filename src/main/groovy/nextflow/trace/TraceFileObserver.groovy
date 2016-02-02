@@ -41,7 +41,7 @@ import nextflow.processor.TaskProcessor
 @CompileStatic
 class TraceFileObserver implements TraceObserver {
 
-    static final String DEF_FILE_NAME = 'trace.csv'
+    static final String DEF_FILE_NAME = 'trace.txt'
 
     /**
      * The list of fields included in the trace report
