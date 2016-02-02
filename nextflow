@@ -210,8 +210,9 @@ NXF_PATH=$(dirname "$NXF_BIN")
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
 NXF_GRAB=${NXF_GRAB:-''}
 NXF_CLASSPATH=${NXF_CLASSPATH:-''}
-NXF_LAUNCHER=${TMPDIR:=/tmp}/nxf-launcher-${NXF_PACK}-${NXF_VER}
 NXF_MPIRUN=${NXF_MPIRUN:=''}
+NXF_HOST=${HOSTNAME:-localhost}
+[[ $NXF_LAUNCHER ]] || NXF_LAUNCHER=${NXF_HOME}/tmp/launcher/nextflow-${NXF_PACK}_${NXF_VER}/${NXF_HOST}
 
 if [[ $NXF_MODE == ignite ]]; then
     # Fix JDK bug when there's a limit on the OS virtual memory
