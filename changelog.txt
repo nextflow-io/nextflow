@@ -1,6 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0 17.2 - 2 Feb 2016 
+- Fixed Channel.subscribe is invoked after the Workflow.onComplete handler #105
+- Changed default trace file name to `trace.txt` #106
+- Changed launcher classpath cache file under user home
+- Added JobStealingFailoverSpi to Ignite executor
+- Update JGit to version 4.2.0
+
 0.17.1 - 21 Jan 2016
 - Fixed splitText performance issue #102
 - Fixed execution hang when a process script block report and error and retry error strategy is set
