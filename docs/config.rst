@@ -316,7 +316,7 @@ Name                Description
 ================== ================
 enabled             When ``true`` turns on the generation of the execution trace report file (default: ``false``).
 fields              Comma separated list of fields to be included in the report. The available fields are listed at :ref:`this page <trace-fields>`
-file                Trace file name (default: ``trace.csv``).
+file                Trace file name (default: ``trace.txt``).
 sep                 Character used to separate values in each row (default: ``\t``).
 raw                 When ``true`` turns on raw number report generation i.e. date and time are reported as milliseconds and memory as number of bytes
 ================== ================
@@ -326,7 +326,7 @@ brackets. For example::
 
     trace {
         enabled = true
-        file = 'pipeline_trace.csv'
+        file = 'pipeline_trace.txt'
         fields = 'task_id,name,status,exit,realtime,%cpu,rss'
     }
 

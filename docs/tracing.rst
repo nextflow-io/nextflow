@@ -24,7 +24,7 @@ For example::
 
   nextflow run <pipeline name> -with-trace
 
-It will create a file named ``trace.csv`` in the current directory. The content looks like the above example:
+It will create a file named ``trace.txt`` in the current directory. The content looks like the above example:
 
 ======= ========= ========= =============== =========== ======== ======================= =========== =========== ======= =========== =========== =========== ===========
 task_id hash      native_id   name          status      exit     submit                  duration    walltime    %cpu    rss         vmem        rchar       wchar
