@@ -44,12 +44,14 @@ class TaskHandlerTest extends Specification {
         def folder = TestHelper.createInMemTempDir()
         folder.resolve( TaskRun.CMD_TRACE ).text = traceText
 
+        def task = new TaskRun(id: 100, workDir: folder, name:'task1', exitStatus: 127, config: [tag: 'seq_x', container: 'ubuntu']  )
+        task.metaClass.getHashLog = { "5d5d7ds" }
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session()
+        task.processor.getName() >> 'TheProcessName'
+
         def handler = [:] as TaskHandler
-        handler.task = new TaskRun(id: 100, workDir: folder, name:'task1', exitStatus: 127, config: [tag: 'seq_x', container: 'ubuntu']  )
-        handler.task.metaClass.getHashLog = { "5d5d7ds" }
-        handler.task.processor = Mock(TaskProcessor)
-        handler.task.processor.getSession() >> new Session()
-        handler.task.processor.getName() >> 'TheProcessName'
+        handler.task = task
         handler.status = TaskStatus.COMPLETED
         handler.submitTimeMillis = 1000
         handler.startTimeMillis = 1500
@@ -59,7 +61,7 @@ class TaskHandlerTest extends Specification {
 
         then:
         trace.task_id == 100
-        trace.status == TaskStatus.COMPLETED
+        trace.status == 'COMPLETED'
         trace.hash == '5d5d7ds'
         trace.name == 'task1'
         trace.exit == 127
@@ -87,6 +89,27 @@ class TaskHandlerTest extends Specification {
         trace.get('vmem', null ) == '10.8 MB'
         trace.get('peak_rss', null ) == '2.2 MB'
         trace.get('peak_vmem', null ) == '20.6 MB'
+
+        when:
+        handler = [:] as TaskHandler
+        handler.status = TaskStatus.COMPLETED
+        handler.submitTimeMillis = 1000
+        handler.startTimeMillis = 1500
+        handler.task = task.clone()
+        handler.task.failed = true
+        then:
+        handler.getTraceRecord().status == 'FAILED'
+
+
+        when:
+        handler = [:] as TaskHandler
+        handler.status = TaskStatus.COMPLETED
+        handler.submitTimeMillis = 1000
+        handler.startTimeMillis = 1500
+        handler.task = task.clone()
+        handler.task.aborted = true
+        then:
+        handler.getTraceRecord().status == 'ABORTED'
 
     }
 

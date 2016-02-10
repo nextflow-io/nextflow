@@ -672,6 +672,8 @@ abstract class TaskProcessor {
     final protected boolean handleException( Throwable error, TaskRun task = null ) {
         log.trace "Handling error: $error -- task: $task"
         def (strategy, fault) = resumeOrDie( task, error )
+        if (fault) { session.abort(fault) }
+
         strategy == ErrorStrategy.TERMINATE
     }
 

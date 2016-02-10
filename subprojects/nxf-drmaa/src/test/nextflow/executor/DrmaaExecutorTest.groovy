@@ -139,7 +139,7 @@ class DrmaaExecutorTest extends Specification {
         expected.name = 'hello (1)'
         expected.process = 'hello'
         expected.tag = 'seq1'
-        expected.status = TaskStatus.SUBMITTED
+        expected.status = TaskStatus.SUBMITTED.toString()
         expected.exit = 99
         expected.submit = 1406264935000
         expected.start = 1406265009000

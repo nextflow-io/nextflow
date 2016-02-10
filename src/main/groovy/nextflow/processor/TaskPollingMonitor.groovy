@@ -366,9 +366,7 @@ class TaskPollingMonitor implements TaskMonitor {
         }
         finally {
             dispatcher.notifyError(handler, error)
-            if( strategy == ErrorStrategy.TERMINATE && fault ) {
-                session.abort(fault)
-            }
+            if (fault) { session.abort(fault) }
         }
     }
 
@@ -398,9 +396,8 @@ class TaskPollingMonitor implements TaskMonitor {
 
             // notify task completion
             dispatcher.notifyComplete(handler)
-
-            if( fault )
-                session.abort(fault)
+            // abort the execution in case of task failure
+            if (fault) { session.abort(fault) }
         }
 
     }
