@@ -86,10 +86,6 @@ class TaskPollingMonitor implements TaskMonitor {
 
     private int capacity
 
-    private Queue<Closure> eventsQueue
-
-    private Queue<Closure> listenersQueue
-
     /**
      * Create the task polling monitor with the provided named parameters object.
      * <p>
@@ -116,8 +112,6 @@ class TaskPollingMonitor implements TaskMonitor {
         this.capacity = (params.capacity ?: 0) as int
 
         this.pollingQueue = new ConcurrentLinkedQueue<>()
-        this.eventsQueue = new ConcurrentLinkedQueue<>()
-        this.listenersQueue = new ConcurrentLinkedQueue<>()
     }
 
 
@@ -208,7 +202,6 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     @Override
     void put(TaskHandler handler) {
-
         //
         // This guarantee that the 'pollingQueue' does not contain
         // more entries than the specified 'capacity'
@@ -300,13 +293,8 @@ class TaskPollingMonitor implements TaskMonitor {
             long time = System.currentTimeMillis()
             log.trace "Scheduler queue size: ${pollingQueue.size()}"
 
-            // process all scheduled events
-            processEvents()
-
             // check all running tasks for termination
             checkAllTasks()
-
-            processListeners()
 
             if( (session.isTerminated() && pollingQueue.size() == 0) || session.isAborted() ) {
                 break
@@ -367,53 +355,6 @@ class TaskPollingMonitor implements TaskMonitor {
             }
         }
 
-    }
-
-    /**
-     * Applies and consumes all the queued events
-     */
-    final protected processEvents() {
-
-        Iterator<Closure> itr = eventsQueue.iterator()
-        while( itr.hasNext() ) {
-            Closure event = itr.next()
-            try {
-                event.call()
-            }
-            finally {
-                itr.remove()
-            }
-        }
-
-    }
-
-    /**
-     * Process all registered monitor listeners
-     *
-     * See #register
-     */
-    final protected processListeners() {
-
-        for( Closure closure : listenersQueue ) {
-            try {
-                closure.call(this)
-            }
-            catch( Exception e ) {
-                log.error "Error processing monitor listener", e
-            }
-        }
-
-    }
-
-    /**
-     * Add a new listener to the task monitor
-     *
-     * @param listener
-     * @return
-     */
-    final void register( Closure listener ) {
-        if( !listener ) return
-        listenersQueue << listener
     }
 
 
