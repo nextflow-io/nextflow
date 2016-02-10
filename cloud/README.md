@@ -27,21 +27,21 @@ Quickstart
     
 * Use the script `launch.sh` to launch a set of workers, for example: 
  
-    $ ./launch 5 
+        $ ./launch 5 
 
 * Check the node availability listing the content of the bucket `nxf-cluster` with the command: 
     
-    $ aws s3 ls s3://nxf-cluster
+        $ aws s3 ls s3://nxf-cluster
        
 * Launch the master node:
 
-    $ ./launch.sh master
+        $ ./launch.sh master
       
 * SSH into the master node
 
 * Install nextflow with this command
 
-    $ curl -fsSL http://get.nextflow.io | bash
+        $ curl -fsSL http://get.nextflow.io | bash
 
 * Define the AWS environment variables in the master 
 
