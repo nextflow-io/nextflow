@@ -38,12 +38,18 @@ import nextflow.util.MemoryUnit
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class TaskConfig extends LazyMap {
+class TaskConfig extends LazyMap implements Cloneable {
 
     TaskConfig() { }
 
     TaskConfig( Map<String,Object> entries ) {
         super(entries)
+    }
+
+    TaskConfig clone() {
+        def copy = (TaskConfig)super.clone()
+        copy.target = new HashMap<>(this.target)
+        return copy
     }
 
     /**
@@ -331,7 +337,7 @@ class LazyMap implements Map<String,Object> {
 
     /** The target map holding the values */
     @Delegate
-    final protected Map<String,Object> target
+    protected Map<String,Object> target
 
     /** The context map against which dynamic properties are resolved */
     protected Map binding

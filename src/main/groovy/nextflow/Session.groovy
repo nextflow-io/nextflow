@@ -32,8 +32,8 @@ import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.exception.MissingLibraryException
 import nextflow.processor.TaskDispatcher
+import nextflow.processor.TaskFault
 import nextflow.processor.TaskProcessor
-import nextflow.processor.TaskRun
 import nextflow.script.ScriptBinding
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
@@ -49,12 +49,6 @@ import nextflow.util.Duration
 @Slf4j
 @CompileStatic
 class Session implements ISession {
-
-    static class TaskFault {
-        Throwable error
-        String report
-        TaskRun task
-    }
 
     static final String EXTRAE_TRACE_CLASS = 'nextflow.extrae.ExtraeTraceObserver'
 
@@ -317,7 +311,6 @@ class Session implements ISession {
             def trace = observers.get(i)
             log.debug "Registering observer: ${trace.class.name}"
             dispatcher.register(trace)
-            onShutdown { trace.onFlowComplete() }
         }
 
         // register shut-down cleanup hooks
@@ -431,17 +424,29 @@ class Session implements ISession {
                 hook.call()
             }
             catch( Exception e ) {
-                log.debug "Failed executing shutdown hook: $hook", e
+                log.debug "Failed to execute shutdown hook: $hook", e
             }
         }
 
         // -- after the first time remove all of them to avoid it's called twice
         shutdownCallbacks.clear()
+
+        // -- invoke observers completion handlers
+        for( int i=0; i<observers.size(); i++ ) {
+            def trace = observers.get(i)
+            try {
+                trace.onFlowComplete()
+            }
+            catch( Exception e ) {
+                log.debug "Failed to invoke observer completion handler: $trace", e
+            }
+        }
     }
 
-    void abort(Throwable cause, TaskRun task, String message) {
-        this.fault = new TaskFault(error: cause, task: task, report: message)
-        abort(cause)
+    void abort(TaskFault fault) {
+        if( aborted ) return
+        this.fault = fault
+        abort(fault.error)
     }
 
     void abort(Throwable cause = null) {

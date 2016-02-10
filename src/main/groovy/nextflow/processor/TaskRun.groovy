@@ -48,7 +48,7 @@ import nextflow.util.DockerBuilder
  */
 
 @Slf4j
-class TaskRun {
+class TaskRun implements Cloneable {
 
     /**
      * Task unique id
@@ -291,9 +291,17 @@ class TaskRun {
      */
     def volatile boolean failed
 
+    def volatile boolean aborted
+
     def TaskConfig config
 
     def TaskContext context
+
+    TaskRun clone() {
+        final copy = (TaskRun)super.clone()
+        copy.config = config.clone()
+        return copy
+    }
 
     String getName() {
         if( name )

@@ -129,13 +129,19 @@ public abstract class TaskHandler {
         return "TaskHandler[${builder.toString()}]"
     }
 
+    String getStatusString() {
+        if( task.failed ) return 'FAILED'
+        if( task.aborted ) return 'ABORTED'
+        return this.status.toString()
+    }
+
     /**
      * @return An {@link TraceRecord} instance holding task runtime information
      */
     TraceRecord getTraceRecord() {
         def record = new TraceRecord()
         record.task_id = task.id
-        record.status = task.failed ? 'FAILED' : this.status
+        record.status = getStatusString()
         record.hash = task.hashLog
         record.name = task.name
         record.exit = task.exitStatus

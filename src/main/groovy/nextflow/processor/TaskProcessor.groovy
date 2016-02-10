@@ -671,16 +671,20 @@ abstract class TaskProcessor {
      */
     final protected boolean handleException( Throwable error, TaskRun task = null ) {
         log.trace "Handling error: $error -- task: $task"
-        resumeOrDie( task, error ) == ErrorStrategy.TERMINATE
+        def (strategy, fault) = resumeOrDie( task, error )
+        strategy == ErrorStrategy.TERMINATE
     }
 
     /**
-     *
      * @param task The {@code TaskRun} instance that raised an error
      * @param error The error object
-     * @return The {@code ErrorStrategy} applied
+     * @return
+     *      A pair representing the task error handling strategy as following:
+     *      - the first element is a value of {@link ErrorStrategy}
+     *      - the second element is an instance of {@TaskFault} representing the cause of the error (only when
+     *        the first element == {@ErrorStrategy.TERMINATE} otherwise is {@code null)
      */
-    final synchronized protected ErrorStrategy resumeOrDie( TaskRun task, Throwable error ) {
+    final synchronized protected List resumeOrDie( TaskRun task, Throwable error ) {
         if( log.isTraceEnabled() )
         log.trace "Handling unexpected condition for\n  task: $task\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
@@ -699,11 +703,10 @@ abstract class TaskProcessor {
                 task.config.exitStatus = task.exitStatus
                 task.config.errorCount = procErrCount
                 task.config.retryCount = taskErrCount
-                task.config.attempt = taskErrCount+1
 
                 final strategy = checkErrorStrategy(task, error, taskErrCount, procErrCount)
                 if( strategy )
-                    return strategy
+                    return [strategy, null]
             }
 
             // mark the task as failed
@@ -712,7 +715,7 @@ abstract class TaskProcessor {
 
             // MAKE sure the error is showed only the very first time across all processes
             if( errorShown.getAndSet(true) ) {
-                return ErrorStrategy.TERMINATE
+                return [ErrorStrategy.TERMINATE, null]
             }
 
             message << "Error executing process > '${task?.name ?: name}'"
@@ -735,8 +738,8 @@ abstract class TaskProcessor {
             log.error("Execution aborted due to an unexpected error", e )
         }
 
-        session.abort(error, task, message.join('\n'))
-        return ErrorStrategy.TERMINATE
+        final fault = new TaskFault(error: error, task: task, report: message.join('\n'))
+        return [ErrorStrategy.TERMINATE, fault]
     }
 
     protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, int taskErrCount, int procErrCount ) {
@@ -759,13 +762,19 @@ abstract class TaskProcessor {
         if( taskStrategy == ErrorStrategy.RETRY ) {
             final int maxErrors = task.config.getMaxErrors()
             final int maxRetries = task.config.getMaxRetries()
+
             if( (procErrCount < maxErrors || maxErrors == -1) && taskErrCount <= maxRetries ) {
+                // clone the task and set failed the original instance
+                final taskCopy = task.clone()
+                taskCopy.config.attempt = taskErrCount+1
+                task.failed = true
+
                 session.getExecService().submit({
                     try {
-                        checkCachedOrLaunchTask( task, task.hash, false, RunType.RETRY )
+                        checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false, RunType.RETRY )
                     }
                     catch( Throwable e ) {
-                        log.error "Unable to re-submit task `${task.name}`"
+                        log.error "Unable to re-submit task `${taskCopy.name}`"
                         session.abort(e)
                     }
                 } as Runnable)
@@ -1629,11 +1638,12 @@ abstract class TaskProcessor {
      * @param task The {@code TaskRun} instance to finalize
      */
     @PackageScope
-    final void finalizeTask( TaskRun task ) {
+    final TaskFault finalizeTask( TaskRun task ) {
         if( log.isTraceEnabled() )
             log.trace "finalizing process > ${task.name} -- $task"
 
         def strategy = null
+        def fault = null
         try {
             if( task.type == ScriptType.SCRIPTLET ) {
                 if( task.exitStatus == Integer.MAX_VALUE )
@@ -1659,12 +1669,14 @@ abstract class TaskProcessor {
 
         }
         catch ( Throwable error ) {
-            strategy = resumeOrDie(task, error)
+            (strategy, fault) = resumeOrDie(task, error)
         }
 
         // -- finalize the task
         if( strategy != ErrorStrategy.RETRY )
             finalizeTask0(task)
+
+        return fault
     }
 
     /**

@@ -21,6 +21,7 @@
 package nextflow.processor
 
 /**
+ * Defines possible task statuses
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

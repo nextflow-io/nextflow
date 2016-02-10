@@ -314,6 +314,10 @@ class TaskPollingMonitor implements TaskMonitor {
 
             await(time)
 
+            if( session.isAborted() ) {
+                break
+            }
+
             // dump this line every two minutes
             dumpInterval.throttle(true) {
                 log.debug "!! executor $name > tasks to be completed: ${pollingQueue.size()} -- first: ${pollingQueue.peek()}"
@@ -414,11 +418,16 @@ class TaskPollingMonitor implements TaskMonitor {
 
 
     final protected void handleException( TaskHandler handler, Throwable error ) {
+        def strategy = null
+        def fault = null
         try {
-            handler.task.processor.resumeOrDie(handler?.task, error)
+            (strategy, fault) = handler.task.processor.resumeOrDie(handler?.task, error)
         }
         finally {
             dispatcher.notifyError(handler, error)
+            if( strategy == ErrorStrategy.TERMINATE && fault ) {
+                session.abort(fault)
+            }
         }
     }
 
@@ -442,12 +451,15 @@ class TaskPollingMonitor implements TaskMonitor {
             drop(handler)
 
             // finalize the tasks execution
-            handler.task.processor.finalizeTask(handler.task)
+            final fault = handler.task.processor.finalizeTask(handler.task)
             // trigger the count down latch when it is a blocking task
             handler.latch?.countDown()
 
-            // finalize the tasks execution
+            // notify task completion
             dispatcher.notifyComplete(handler)
+
+            if( fault )
+                session.abort(fault)
         }
 
     }
@@ -461,6 +473,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
         def batch = new BatchCleanup()
         while( pollingQueue.size() ) {
+
             TaskHandler handler = pollingQueue.poll()
             try {
                 if( handler instanceof GridTaskHandler ) {
@@ -471,6 +484,10 @@ class TaskPollingMonitor implements TaskMonitor {
             catch( Throwable e ) {
                 log.debug "Failed to kill pending tasks: ${handler} -- cause: ${e.message}"
             }
+
+            // notify task completion
+            handler.task.aborted = true
+            dispatcher.notifyComplete(handler)
         }
 
         try {
