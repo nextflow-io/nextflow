@@ -49,6 +49,7 @@ class TaskHandlerTest extends Specification {
         task.processor = Mock(TaskProcessor)
         task.processor.getSession() >> new Session()
         task.processor.getName() >> 'TheProcessName'
+        task.context = new TaskContext(Mock(Script), [:], 'none')
 
         def handler = [:] as TaskHandler
         handler.task = task
