@@ -67,7 +67,7 @@ class TaskConfig extends LazyMap implements Cloneable {
         if( target.ext instanceof LazyMap )
             (target.ext as LazyMap).binding = context
 
-        // set the this object in the task context  in order to allow task properties to be resolved in process script
+        // set the this object in the task context in order to allow task properties to be resolved in process script
         context.put(TASK_CONFIG, this)
 
         return this
