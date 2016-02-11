@@ -54,7 +54,7 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     /**
      * Assign the context map for dynamic evaluation of task config properties
-     * @param context The context binding object
+     * @param context A {@link TaskContext} object that holds the task evaluation context
      * @return The {@code TaskConfig} instance itself
      */
     TaskConfig setContext( Map context ) {

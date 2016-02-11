@@ -126,5 +126,28 @@ class TaskContextTest extends Specification {
 
     }
 
+    def 'should clone the context' () {
+        given:
+        def holder = [:]
+        def context = new TaskContext(Mock(Script), holder, 'proc_1')
+
+        when:
+        context.xxx = 1
+        then:
+        // both the `context` and the `holder` have the same `xxx` property
+        context.xxx == 1
+        holder.xxx == 1
+
+        when:
+        def copy = context.clone()
+        copy.yyy = 2
+        then:
+        // the `yyy` is not set the holder from where the `copy` context has been cloned
+        copy.xxx == 1
+        copy.yyy == 2
+        holder.yyy == null
+
+    }
+
 
 }

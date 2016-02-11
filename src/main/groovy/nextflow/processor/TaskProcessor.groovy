@@ -706,9 +706,13 @@ abstract class TaskProcessor {
                 task.config.errorCount = procErrCount
                 task.config.retryCount = taskErrCount
 
-                final strategy = checkErrorStrategy(task, error, taskErrCount, procErrCount)
-                if( strategy )
+                // invoke `checkErrorStrategy` passing a copy of the task because the `attempt` attribute need to be modified
+                final strategy = checkErrorStrategy(task.clone(), error, taskErrCount, procErrCount)
+                if( strategy ) {
+                    task.failed = true
                     return [strategy, null]
+                }
+
             }
 
             // mark the task as failed
@@ -745,13 +749,14 @@ abstract class TaskProcessor {
     }
 
     protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, int taskErrCount, int procErrCount ) {
-
-        final taskStrategy = task?.config?.getErrorStrategy()
+        // increment the attempt number before evaluate
+        // the `errorStrategy` property
+        task.config.attempt = taskErrCount+1
+        final taskStrategy = task.config.getErrorStrategy()
 
         // IGNORE strategy -- just continue
         if( taskStrategy == ErrorStrategy.IGNORE ) {
             log.warn "Error running process > ${error.getMessage()} -- error is ignored"
-            task.failed = true
             return ErrorStrategy.IGNORE
         }
 
@@ -766,17 +771,12 @@ abstract class TaskProcessor {
             final int maxRetries = task.config.getMaxRetries()
 
             if( (procErrCount < maxErrors || maxErrors == -1) && taskErrCount <= maxRetries ) {
-                // clone the task and set failed the original instance
-                final taskCopy = task.clone()
-                taskCopy.config.attempt = taskErrCount+1
-                task.failed = true
-
                 session.getExecService().submit({
                     try {
-                        checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false, RunType.RETRY )
+                        checkCachedOrLaunchTask( task, task.hash, false, RunType.RETRY )
                     }
                     catch( Throwable e ) {
-                        log.error "Unable to re-submit task `${taskCopy.name}`"
+                        log.error "Unable to re-submit task `${task.name}`"
                         session.abort(e)
                     }
                 } as Runnable)

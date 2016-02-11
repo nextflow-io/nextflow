@@ -38,10 +38,10 @@ import nextflow.util.KryoHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class TaskContext implements Map<String,Object> {
+class TaskContext implements Map<String,Object>, Cloneable {
 
     @Delegate
-    final private Map<String,Object> holder
+    private Map<String,Object> holder
 
     /**
      * Used to show the override warning message only the very first time
@@ -97,10 +97,20 @@ class TaskContext implements Map<String,Object> {
     /** ONLY FOR TEST PURPOSE -- do not use */
     protected TaskContext() { }
 
+    TaskContext clone() {
+        def copy = (TaskContext)super.clone()
+        copy.setHolder( (Map)holder.clone() )
+        return copy
+    }
+
     /**
      * @return The inner map holding the process variables
      */
-    public Map getHolder() { holder }
+    public Map<String,Object> getHolder() { holder }
+
+    private void setHolder( Map<String,Object> holder ) {
+        this.holder = holder
+    }
 
     /**
      * @return The script instance to which this map reference i.e. the main script object

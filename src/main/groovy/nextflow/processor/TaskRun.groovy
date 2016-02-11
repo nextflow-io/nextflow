@@ -298,9 +298,11 @@ class TaskRun implements Cloneable {
     def TaskContext context
 
     TaskRun clone() {
-        final copy = (TaskRun)super.clone()
-        copy.config = config.clone()
-        return copy
+        final taskClone = (TaskRun)super.clone()
+        taskClone.context = context.clone()
+        taskClone.config = config.clone()
+        taskClone.config.setContext(taskClone.context)
+        return taskClone
     }
 
     String getName() {
