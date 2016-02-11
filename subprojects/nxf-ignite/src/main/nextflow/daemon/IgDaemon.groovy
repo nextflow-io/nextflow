@@ -21,7 +21,6 @@
 package nextflow.daemon
 
 import groovy.util.logging.Slf4j
-import nextflow.executor.IgGridFactory
 import nextflow.executor.ServiceName
 import nextflow.file.FileHelper
 import nextflow.file.igfs.IgFileSystemProvider
@@ -54,7 +53,7 @@ class IgDaemon implements DaemonLauncher {
         /*
          * Launch grid instance
          */
-        grid = new IgGridFactory('worker', config).start()
+        grid = new IgGridFactory(IgGridFactory.ROLE_WORKER, config).start()
 
         /*
          * configure the file system

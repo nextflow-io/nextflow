@@ -110,11 +110,11 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable {
     }
 
     def plus( MemoryUnit value )  {
-        return new MemoryUnit( size + value.size )
+        return value != null ? new MemoryUnit( size + value.size ) : this
     }
 
     def minus( MemoryUnit value )  {
-        return new MemoryUnit( size - value.size )
+        return value != null ? new MemoryUnit( size - value.size ) : this
     }
 
     def multiply( Number value ) {

@@ -18,14 +18,12 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.executor
-
+package nextflow.daemon
 import com.amazonaws.auth.BasicAWSCredentials
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.Global
-import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.util.ClusterConfig
@@ -45,7 +43,6 @@ import org.apache.ignite.configuration.IgniteConfiguration
 import org.apache.ignite.igfs.IgfsGroupDataBlocksKeyMapper
 import org.apache.ignite.igfs.IgfsMode
 import org.apache.ignite.logger.slf4j.Slf4jLogger
-import org.apache.ignite.spi.collision.jobstealing.JobStealingCollisionSpi
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi
 import org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.s3.TcpDiscoveryS3IpFinder
@@ -62,11 +59,17 @@ import org.apache.ignite.spi.loadbalancing.adaptive.AdaptiveLoadBalancingSpi
 @CompileStatic
 class IgGridFactory {
 
-    static final String SESSIONS_CACHE = 'allSessions'
+    static final public String SESSIONS_CACHE = 'allSessions'
 
-    static final GRID_NAME = Const.APP_NAME
+    static final public String GRID_NAME = Const.APP_NAME
 
-    private final String role
+    static final public String NODE_ROLE = 'ROLE'
+
+    static final public String ROLE_MASTER = 'master'
+
+    static final public String ROLE_WORKER = 'worker'
+
+    final private String role
 
     // cluster related config
     private final ClusterConfig clusterConfig
@@ -81,7 +84,7 @@ class IgGridFactory {
      * @param config a {@code Map} holding the configuration properties to be used
      */
     IgGridFactory( String role, Map config ) {
-        assert role in ['master','worker'], "Parameter 'role' can be either 'master' or 'worker'"
+        assert role in [ROLE_MASTER, ROLE_WORKER], "Parameter 'role' can be either `$ROLE_MASTER` or `$ROLE_WORKER`"
 
         final configMap = (Map)config.cluster ?: [:]
         log.debug "Configuration properties for role: '$role' -- ${configMap}"
@@ -90,13 +93,6 @@ class IgGridFactory {
         this.clusterConfig = new ClusterConfig('ignite', configMap, System.getenv())
     }
 
-    /**
-     * Creates a grid factory object by using the given {@link Session} object.
-     * @param session
-     */
-    IgGridFactory( Session session ) {
-        this('master', session.config ?: [:])
-    }
 
     /**
      * Creates teh config object and starts a Ignite instance
@@ -128,7 +124,7 @@ class IgGridFactory {
         final groupName = clusterConfig.getAttribute( 'group', GRID_NAME ) as String
         log.debug "Apache Ignite config > group name: $groupName"
         cfg.setGridName(groupName)
-        cfg.setUserAttributes( ROLE: role )
+        cfg.setUserAttributes( (NODE_ROLE): role )
         cfg.setGridLogger( new Slf4jLogger() )
 
 //        final addresses = config.getNetworkInterfaceAddresses()
@@ -215,17 +211,8 @@ class IgGridFactory {
 
 
     protected collisionConfig( IgniteConfiguration cfg ) {
-
-        def slots = clusterConfig.getAttribute('slots', Runtime.getRuntime().availableProcessors() ) as int
-        def maxActivesJobs = slots * 3
-        log.debug "Apache Ignite config > setting slots: $slots -- maxActivesJobs: $maxActivesJobs"
-
-        def strategy = new JobStealingCollisionSpi()
-        strategy.setActiveJobsThreshold( maxActivesJobs )
-        cfg.setCollisionSpi( strategy )
-        // JobStealingCollisionSpi needs to be used along with JobStealingFailoverSpi
+        cfg.setCollisionSpi( new CustomStealingCollisionSpi() )
         cfg.setFailoverSpi( new JobStealingFailoverSpi() )
-
     }
 
     protected void balancingConfig( IgniteConfiguration cfg ) {
