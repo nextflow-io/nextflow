@@ -1,10 +1,13 @@
-package nextflow.collision
+package nextflow.daemon
 import java.lang.management.ManagementFactory
 
+import com.sun.management.OperatingSystemMXBean
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.executor.IgBaseTask
+import nextflow.file.FileHelper
 import nextflow.util.MemoryUnit
+import org.apache.ignite.Ignition
 import org.apache.ignite.logger.slf4j.Slf4jLogger
 import org.apache.ignite.spi.IgniteSpiAdapter
 import org.apache.ignite.spi.IgniteSpiException
@@ -24,13 +27,19 @@ import org.jetbrains.annotations.Nullable
 @CompileStatic
 class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSpi, CustomStealingCollisionSpiMBean {
 
-    private String hostName
+    private String fHostName
 
-    private int availCpus
+    private int fAvailCpus
 
-    private MemoryUnit availMemory
+    private MemoryUnit fAvailMemory
 
     private JobStealingCollisionSpi delegate
+
+    private String fRole
+
+    private OperatingSystemMXBean fBean
+
+    private boolean resourcesLogged
 
     CustomStealingCollisionSpi() {
         delegate = new JobStealingCollisionSpi()
@@ -41,27 +50,78 @@ class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSp
         field.set(delegate, new Slf4jLogger().getLogger(JobStealingCollisionSpi))
     }
 
+    private OperatingSystemMXBean getSystemMXBean() {
+        if( !fBean ) {
+            fBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()
+        }
+        return fBean
+    }
+
     @Override
     String getHostName() {
-        return hostName
+        if( fHostName ) {
+            return fHostName
+        }
+
+        fHostName = System.getenv('HOSTNAME') ?: 'localhost'
     }
 
     @Override
     int getAvailCpus() {
-        return availCpus
+        if( fAvailCpus ) {
+            return fAvailCpus
+        }
+
+        fAvailCpus = getSystemMXBean().getAvailableProcessors()
+        if( getRole() == IgGridFactory.ROLE_MASTER ) {
+            // reserve some CPUs for nextflow/ignite scheduling activity on the master node
+            if( fAvailCpus > 8 ) {
+                fAvailCpus -= 2
+            }
+            else if( fAvailCpus > 3 ) {
+                fAvailCpus -= 1
+            }
+        }
+        return fAvailCpus
     }
 
     @Override
     MemoryUnit getAvailMemory() {
-        return availMemory
+        if( fAvailMemory ) {
+            return fAvailMemory
+        }
+
+        fAvailMemory = new MemoryUnit(getSystemMXBean().getTotalPhysicalMemorySize())
+    }
+
+    private String getRole() {
+        if( fRole ) {
+            return fRole
+        }
+
+        fRole = Ignition.ignite(IgGridFactory.GRID_NAME).cluster().localNode().attribute(IgGridFactory.NODE_ROLE)
+        log.trace "Local node role `$fRole`"
+        return fRole
+    }
+
+    private logResources() {
+        if( !resourcesLogged ) {
+            resourcesLogged = true
+            log.debug "Computing resources for node: `$hostName` [${getRole()}] > cpus: ${availCpus}; mem: ${availMemory}; free disk: ${freeDisk} (${FileHelper.getLocalTempPath()})"
+        }
+    }
+
+    private MemoryUnit getFreeDisk() {
+        final free = FileHelper.getLocalTempPath().toFile().getFreeSpace()
+        new MemoryUnit(free)
     }
 
     @Override
     void onCollision(CollisionContext ctx) {
 
-        final bean = (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()
-        final freeMemory = new MemoryUnit(bean.freePhysicalMemorySize)
+        logResources()
 
+        final freeMemory = new MemoryUnit(getSystemMXBean().freePhysicalMemorySize)
         final activeJobs = ctx.activeJobs().size()
         final waitingJobs = ctx.waitingJobs().size()
 
@@ -95,6 +155,11 @@ class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSp
                 jobCtx.cancel()
             }
 
+            if( task.resources.disk > freeDisk ) {
+                if(log.isTraceEnabled()) log.trace "Task rejected - it requires more disk storage than the available one: ${task.resources.disk} (${freeDisk}) "
+                jobCtx.cancel()
+            }
+
             if( task.resources.cpus > freeCpus ) return
             if( task.resources.memory > freeMemory ) return
 
@@ -122,11 +187,6 @@ class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSp
     /** {@inheritDoc} */
     @Override
     void spiStart(String gridName) throws IgniteSpiException {
-
-        final bean = (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()
-        this.availCpus = bean.availableProcessors
-        this.availMemory = new MemoryUnit(bean.totalPhysicalMemorySize)
-        this.hostName = System.getenv('HOSTNAME') ?: 'localhost'
 
         // Start SPI start stopwatch.
         startStopwatch();

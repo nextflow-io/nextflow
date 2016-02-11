@@ -42,12 +42,11 @@ import java.nio.file.spi.FileSystemProvider
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.executor.IgGridFactory
+import nextflow.daemon.IgGridFactory
 import nextflow.util.OnlyCloseChannel
 import org.apache.ignite.Ignite
 import org.apache.ignite.IgniteFileSystem
 import org.apache.ignite.Ignition
-
 /**
  * Implements an Ignite file system provider complaint with JSR203 a.k.a. NIO2
  *
@@ -142,12 +141,11 @@ class IgFileSystemProvider extends FileSystemProvider {
 
         def grid = env.get('grid')
         if( !grid ) {
-            if( env.containsKey('session') ) {
-                return new IgGridFactory( env.session as Session ).start()
-            }
-            else {
-                return Ignition.ignite()
-            }
+            final session = env.session as Session
+            if( !session )
+                throw new IllegalStateException("Missing `session` object -- Cannot instantiate Ignite grid instance")
+            final factory = new IgGridFactory(IgGridFactory.ROLE_MASTER, session.config ?: [:])
+            return factory.start()
         }
 
         if( grid instanceof String )

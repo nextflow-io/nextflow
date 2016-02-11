@@ -21,7 +21,8 @@ package nextflow.executor
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import nextflow.collision.IgComputeResources
+import nextflow.daemon.IgComputeResources
+import nextflow.daemon.IgGridFactory
 import nextflow.exception.ProcessException
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun

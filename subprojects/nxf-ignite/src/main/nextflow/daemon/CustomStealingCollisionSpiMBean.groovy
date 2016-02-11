@@ -1,4 +1,4 @@
-package nextflow.collision
+package nextflow.daemon
 
 import groovy.transform.CompileStatic
 import nextflow.util.MemoryUnit
@@ -6,6 +6,7 @@ import org.apache.ignite.mxbean.MXBeanDescription
 import org.apache.ignite.spi.IgniteSpiManagementMBean
 
 /**
+ * MBean interface required to expose SPI properties in the Ignite config console
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -20,6 +21,5 @@ interface CustomStealingCollisionSpiMBean extends IgniteSpiManagementMBean {
 
     @MXBeanDescription("Total memory available")
     MemoryUnit getAvailMemory()
-
 
 }

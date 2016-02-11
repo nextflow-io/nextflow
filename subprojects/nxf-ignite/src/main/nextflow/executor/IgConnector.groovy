@@ -22,6 +22,7 @@ package nextflow.executor
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.daemon.IgGridFactory
 import nextflow.file.FileHelper
 import nextflow.file.igfs.IgFileSystemProvider
 import nextflow.file.igfs.IgPath
@@ -158,12 +159,12 @@ class IgConnector implements DiscoverySpiListener {
     }
 
     def ClusterGroup getCluster() {
-        def result = grid.cluster().forAttribute("ROLE", "worker")
+        def result = grid.cluster().forNodes( grid.cluster().nodes() )
         return result
     }
 
     IgniteCompute compute() {
-        grid.compute(getCluster())
+        grid.compute()
     }
 
     /**

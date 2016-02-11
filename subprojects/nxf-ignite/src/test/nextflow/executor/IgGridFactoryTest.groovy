@@ -1,4 +1,6 @@
 package nextflow.executor
+
+import nextflow.daemon.IgGridFactory
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi
 import spock.lang.Specification
 /*

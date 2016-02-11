@@ -1,4 +1,4 @@
-package nextflow.collision
+package nextflow.daemon
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
@@ -8,6 +8,7 @@ import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 
 /**
+ * Model the computing resources required by a task
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
