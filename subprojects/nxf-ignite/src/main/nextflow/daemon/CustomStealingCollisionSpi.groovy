@@ -10,9 +10,12 @@ import nextflow.util.MemoryUnit
 import org.apache.ignite.Ignition
 import org.apache.ignite.logger.slf4j.Slf4jLogger
 import org.apache.ignite.spi.IgniteSpiAdapter
+import org.apache.ignite.spi.IgniteSpiConsistencyChecked
 import org.apache.ignite.spi.IgniteSpiException
+import org.apache.ignite.spi.IgniteSpiMultipleInstancesSupport
 import org.apache.ignite.spi.collision.CollisionContext
 import org.apache.ignite.spi.collision.CollisionExternalListener
+import org.apache.ignite.spi.collision.CollisionJobContext
 import org.apache.ignite.spi.collision.CollisionSpi
 import org.apache.ignite.spi.collision.jobstealing.JobStealingCollisionSpi
 import org.jetbrains.annotations.Nullable
@@ -25,6 +28,8 @@ import org.jetbrains.annotations.Nullable
  */
 @Slf4j
 @CompileStatic
+@IgniteSpiMultipleInstancesSupport(true)
+@IgniteSpiConsistencyChecked(optional = true)
 class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSpi, CustomStealingCollisionSpiMBean {
 
     private String fHostName
@@ -40,6 +45,19 @@ class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSp
     private OperatingSystemMXBean fBean
 
     private boolean resourcesLogged
+
+    private int activeJobs
+
+    private int waitingJobs
+
+    private MemoryUnit freeMemory
+
+    private int freeCpus
+
+    /**
+     * The max number of *generic* jobs
+     */
+    private static final int MAX_RUNNING_JOBS = 10
 
     CustomStealingCollisionSpi() {
         delegate = new JobStealingCollisionSpi()
@@ -57,6 +75,9 @@ class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSp
         return fBean
     }
 
+    /**
+     * @return The node actual hostname
+     */
     @Override
     String getHostName() {
         if( fHostName ) {
@@ -66,6 +87,9 @@ class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSp
         fHostName = System.getenv('HOSTNAME') ?: 'localhost'
     }
 
+    /**
+     * @return The number of CPUs available
+     */
     @Override
     int getAvailCpus() {
         if( fAvailCpus ) {
@@ -85,6 +109,9 @@ class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSp
         return fAvailCpus
     }
 
+    /**
+     * @return The total memory available
+     */
     @Override
     MemoryUnit getAvailMemory() {
         if( fAvailMemory ) {
@@ -94,6 +121,9 @@ class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSp
         fAvailMemory = new MemoryUnit(getSystemMXBean().getTotalPhysicalMemorySize())
     }
 
+    /**
+     * @return The {@link IgGridFactory#NODE_ROLE} attribute, either MASTER or WORKER
+     */
     private String getRole() {
         if( fRole ) {
             return fRole
@@ -104,6 +134,9 @@ class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSp
         return fRole
     }
 
+    /*
+     * Log the node computing resources just one time
+     */
     private logResources() {
         if( !resourcesLogged ) {
             resourcesLogged = true
@@ -111,31 +144,49 @@ class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSp
         }
     }
 
+    /**
+     * @return The actual free space in the node local storage
+     */
     private MemoryUnit getFreeDisk() {
         final free = FileHelper.getLocalTempPath().toFile().getFreeSpace()
         new MemoryUnit(free)
     }
 
+    /**
+     * Implements the custom job collision strategy
+     *
+     * @param ctx The {@link CollisionContext} instance
+     */
     @Override
     void onCollision(CollisionContext ctx) {
 
         logResources()
 
-        final freeMemory = new MemoryUnit(getSystemMXBean().freePhysicalMemorySize)
-        final activeJobs = ctx.activeJobs().size()
-        final waitingJobs = ctx.waitingJobs().size()
+        freeMemory = new MemoryUnit(getSystemMXBean().freePhysicalMemorySize)
+        activeJobs = ctx.activeJobs().size()
+        waitingJobs = ctx.waitingJobs().size()
 
         /*
-         * get the count of used and free cpus
+         * get the count of used cpus by tasks and generic jobs
          */
         int busyCpus = 0
-        ctx
-            .activeJobs()
-            .findAll{ it.job instanceof IgBaseTask }
-            .collect { (IgBaseTask)it.job }
-            .each { IgBaseTask job -> busyCpus += job.resources.cpus }
+        int runningJobs = 0
+        ctx .activeJobs() .each { jobCtx ->
 
-        final freeCpus = availCpus>busyCpus ? availCpus-busyCpus : 0
+            if( jobCtx.job instanceof IgBaseTask ) {
+                // count the number of used cpus
+                final task = (IgBaseTask)jobCtx.job
+                busyCpus += task.resources.cpus
+            }
+            else {
+                // count the number of *generic* jobs (not IgBaseTask) running
+                runningJobs ++
+            }
+
+        }
+
+        // find out the actual free cpus
+        freeCpus = availCpus>busyCpus ? availCpus-busyCpus : 0
 
         if( log.isTraceEnabled() ) {
             log.trace "Node `$hostName` resources > cpus: $availCpus ($freeCpus) - mem: $availMemory ($freeMemory) - active: $activeJobs - waiting: $waitingJobs"
@@ -143,40 +194,56 @@ class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSp
 
         // activate waiting jobs that match avail resources
         ctx .waitingJobs() .each { jobCtx ->
-            def task = (IgBaseTask)jobCtx.job
 
-            if( task.resources.cpus > availCpus ) {
-                if(log.isTraceEnabled()) log.trace "Task rejected - it requires more cpus than the available ones: ${task.resources.cpus} (${availCpus}) "
-                jobCtx.cancel()
+            if( jobCtx.job instanceof IgBaseTask ) {
+                activateTask(jobCtx, ctx)
             }
-
-            if( task.resources.memory > availMemory ) {
-                if(log.isTraceEnabled()) log.trace "Task rejected - it requires more memory than the available one: ${task.resources.memory} (${availMemory}) "
-                jobCtx.cancel()
-            }
-
-            if( task.resources.disk > freeDisk ) {
-                if(log.isTraceEnabled()) log.trace "Task rejected - it requires more disk storage than the available one: ${task.resources.disk} (${freeDisk}) "
-                jobCtx.cancel()
-            }
-
-            if( task.resources.cpus > freeCpus ) return
-            if( task.resources.memory > freeMemory ) return
-
-            if( jobCtx.activate() ) {
-                freeCpus -= task.resources.cpus
-                freeMemory -= task.resources.memory
-                if( log.isTraceEnabled() )
-                    log.trace "Activated task > $task -- pending ${ctx.waitingJobs().size()} (was ${waitingJobs}) - active ${ctx.activeJobs().size()} (was $activeJobs)"
-            }
-            else if(log.isTraceEnabled())  {
-                log.trace "Failed to activate task > $task"
+            else if( runningJobs < MAX_RUNNING_JOBS && jobCtx.activate() ) {
+                runningJobs ++
             }
 
         }
 
         // fallback on the job stealing strategy
         delegate.onCollision(ctx)
+    }
+
+    /**
+     * Activate a pending task if resource constraints are satisfied
+     *
+     * @param jobCtx The job context
+     * @param ctx The collision context
+     */
+    private void activateTask( CollisionJobContext jobCtx, CollisionContext ctx ) {
+        final task = (IgBaseTask)jobCtx.job
+
+        if( task.resources.cpus > availCpus ) {
+            if(log.isTraceEnabled()) log.trace "Task rejected - it requires more cpus than the available ones: ${task.resources.cpus} (${availCpus}) "
+            jobCtx.cancel()
+        }
+
+        if( task.resources.memory > availMemory ) {
+            if(log.isTraceEnabled()) log.trace "Task rejected - it requires more memory than the available one: ${task.resources.memory} (${availMemory}) "
+            jobCtx.cancel()
+        }
+
+        if( task.resources.disk > freeDisk ) {
+            if(log.isTraceEnabled()) log.trace "Task rejected - it requires more disk storage than the available one: ${task.resources.disk} (${freeDisk}) "
+            jobCtx.cancel()
+        }
+
+        if( task.resources.cpus > freeCpus ) return
+        if( task.resources.memory > freeMemory ) return
+
+        if( jobCtx.activate() ) {
+            freeCpus -= task.resources.cpus
+            freeMemory -= task.resources.memory
+            if( log.isTraceEnabled() )
+                log.trace "Activated task > $task -- pending ${ctx.waitingJobs().size()} (was ${waitingJobs}) - active ${ctx.activeJobs().size()} (was $activeJobs)"
+        }
+        else if(log.isTraceEnabled())  {
+            log.trace "Failed to activate task > $task"
+        }
     }
 
     @Override
