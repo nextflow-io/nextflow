@@ -202,6 +202,7 @@ class LoggerHelper {
             result.encoder = createEncoder()
             result.setContext(loggerContext)
             result.setTriggeringPolicy(new RollOnStartupPolicy())
+            result.triggeringPolicy.start()
             result.start()
         }
 
