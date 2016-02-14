@@ -671,22 +671,26 @@ abstract class TaskProcessor {
      */
     final protected boolean handleException( Throwable error, TaskRun task = null ) {
         log.trace "Handling error: $error -- task: $task"
-        def (strategy, fault) = resumeOrDie( task, error )
-        if (fault) { session.abort(fault) }
+        def strategy = resumeOrDie(task, error)
 
-        strategy == ErrorStrategy.TERMINATE
+        if (strategy instanceof TaskFault) {
+            session.abort(strategy)
+            // when a `TaskFault` is returned a `TERMINATE` is implicit, thus return `true`
+            return true
+        }
+
+        return strategy == ErrorStrategy.TERMINATE
     }
 
     /**
      * @param task The {@code TaskRun} instance that raised an error
      * @param error The error object
      * @return
-     *      A pair representing the task error handling strategy as following:
-     *      - the first element is a value of {@link ErrorStrategy}
-     *      - the second element is an instance of {@TaskFault} representing the cause of the error (only when
-     *        the first element == {@ErrorStrategy.TERMINATE} otherwise is {@code null)
+     *      Either a value of value of {@link ErrorStrategy} representing the error strategy chosen
+     *      or an instance of {@TaskFault} representing the cause of the error (that implicitly means
+     *      a {@link ErrorStrategy#TERMINATE})
      */
-    final synchronized protected List resumeOrDie( TaskRun task, Throwable error ) {
+    final synchronized protected resumeOrDie( TaskRun task, Throwable error ) {
         if( log.isTraceEnabled() )
         log.trace "Handling unexpected condition for\n  task: $task\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
@@ -710,7 +714,7 @@ abstract class TaskProcessor {
                 final strategy = checkErrorStrategy(task.clone(), error, taskErrCount, procErrCount)
                 if( strategy ) {
                     task.failed = true
-                    return [strategy, null]
+                    return strategy
                 }
 
             }
@@ -721,7 +725,7 @@ abstract class TaskProcessor {
 
             // MAKE sure the error is showed only the very first time across all processes
             if( errorShown.getAndSet(true) ) {
-                return [ErrorStrategy.TERMINATE, null]
+                return ErrorStrategy.TERMINATE
             }
 
             message << "Error executing process > '${task?.name ?: name}'"
@@ -744,8 +748,7 @@ abstract class TaskProcessor {
             log.error("Execution aborted due to an unexpected error", e )
         }
 
-        final fault = new TaskFault(error: error, task: task, report: message.join('\n'))
-        return [ErrorStrategy.TERMINATE, fault]
+        return new TaskFault(error: error, task: task, report: message.join('\n'))
     }
 
     protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, int taskErrCount, int procErrCount ) {
@@ -1640,11 +1643,10 @@ abstract class TaskProcessor {
      * @param task The {@code TaskRun} instance to finalize
      */
     @PackageScope
-    final TaskFault finalizeTask( TaskRun task ) {
+    final finalizeTask( TaskRun task ) {
         if( log.isTraceEnabled() )
             log.trace "finalizing process > ${task.name} -- $task"
 
-        def strategy = null
         def fault = null
         try {
             if( task.type == ScriptType.SCRIPTLET ) {
@@ -1671,11 +1673,11 @@ abstract class TaskProcessor {
 
         }
         catch ( Throwable error ) {
-            (strategy, fault) = resumeOrDie(task, error)
+            fault = resumeOrDie(task, error)
         }
 
         // -- finalize the task
-        if( strategy != ErrorStrategy.RETRY )
+        if( fault != ErrorStrategy.RETRY )
             finalizeTask0(task)
 
         return fault

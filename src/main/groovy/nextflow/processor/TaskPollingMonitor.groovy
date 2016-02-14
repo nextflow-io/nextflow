@@ -359,14 +359,16 @@ class TaskPollingMonitor implements TaskMonitor {
 
 
     final protected void handleException( TaskHandler handler, Throwable error ) {
-        def strategy = null
         def fault = null
         try {
-            (strategy, fault) = handler.task.processor.resumeOrDie(handler?.task, error)
+            fault = handler.task.processor.resumeOrDie(handler?.task, error)
         }
         finally {
             dispatcher.notifyError(handler, error)
-            if (fault) { session.abort(fault) }
+            // abort the session if a task task was returned
+            if (fault instanceof TaskFault) {
+                session.abort(fault)
+            }
         }
     }
 
@@ -397,7 +399,9 @@ class TaskPollingMonitor implements TaskMonitor {
             // notify task completion
             dispatcher.notifyComplete(handler)
             // abort the execution in case of task failure
-            if (fault) { session.abort(fault) }
+            if (fault instanceof TaskFault) {
+                session.abort((TaskFault)fault)
+            }
         }
 
     }
