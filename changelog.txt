@@ -1,7 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0 17.2 - 2 Feb 2016 
+0.17.3 - 18 Feb 2016 
+- Fixed task status in the trace file when execution is retried #107
+- Improved Ignite scheduling and node resources allocation
+- Upgraded Logback to version 1.1.5 
+- Upgraded Slf4j to version 1.7.16
+
+0.17.2 - 2 Feb 2016 
 - Fixed Channel.subscribe is invoked after the Workflow.onComplete handler #105
 - Changed default trace file name to `trace.txt` #106
 - Changed launcher classpath cache file under user home
