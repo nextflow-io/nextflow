@@ -2,16 +2,10 @@ Cloud boot
 ============
 
 * The script `launch.sh` launches a set of EC2 nodes and the master node. 
-
-* The above script uses the `ec2-userdata.txt` to set the environment in the started nodes, including: 
-    - AWS_ACCESS_KEY
-    - AWS_SECRET_KEY
-    - NXF_VER
-    - DOCKER_IMAGE
     
 * Each EC2 node on start downloads and runs the script `cloud-boot.sh`. This script does the following: 
     - Downloads the Nextflow installer script
-    - Pulls the Docker image specified by the `DOCKER_IMAGE` environment variable
+    - Pulls the Docker image specified by the `DOCKER_IMAGE` environment variable (multiple images by using a blank character separated list).
     - Launches the Nextflow daemon in background
     
 * These scripts require a Linux Amazon image with the following tools installed:
@@ -24,6 +18,17 @@ accordingly.
     
 Quickstart
 ------------
+    
+* Define your configuration details setting properly the variables in the `launch.sh` script, in particular: 
+    
+    - AWS_ACCESS_KEY_ID=...
+    - AWS_SECRET_ACCESS_KEY=...
+    - X_AMI=<image ID eg. ami-f71a7f80>
+    - X_TYPE=<instance type e.g. m3.xlarge>
+    - X_SECURITY=<security group e.g sg-72b74a05>
+    - X_KEY=<security key name>
+    - X_BUCKET=<s3 bucket where nodes share their IPs in order to discover each other>
+  
     
 * Use the script `launch.sh` to launch a set of workers, for example: 
  
@@ -39,14 +44,5 @@ Quickstart
       
 * SSH into the master node
 
-* Install nextflow with this command
-
-        $ curl -fsSL http://get.nextflow.io | bash
-
-* Define the AWS environment variables in the master 
-
-    - AWS_ACCESS_KEY=xxx
-    - AWS_SECRET_KEY=xxx
-    - NXF_MODE=ignite
     
 * Launch at nextflow pipeline execution     
