@@ -50,7 +50,7 @@ class IgExecutor extends Executor {
     IgConnector connector
 
     /**
-     * Initialize the executor by getting a reference to the Hazelcast connector
+     * Initialize the executor by getting a reference to the Ignite connector
      */
     def void init() {
         super.init()
