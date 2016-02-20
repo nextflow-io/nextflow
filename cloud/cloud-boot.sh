@@ -15,6 +15,14 @@ export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 EOF
 
 #
+# set instance name
+#
+instance="$(curl -s http://169.254.169.254/latest/meta-data/instance-id)"
+zone="$(curl -s 169.254.169.254/latest/meta-data/placement/availability-zone)"
+region="${zone::-1}"
+aws ec2 --region "$region" create-tags --resources "$instance" --tags "Key=Name,Value=$NXF_ROLE"
+
+#
 # mount instance storage
 #
 if [[ $X_TYPE == r3.* && $X_DEVICE && $X_MOUNT ]]; then
@@ -35,6 +43,8 @@ if [[ $DOCKER_VERSION ]]; then
 sudo service docker stop
 sudo wget https://get.docker.com/builds/Linux/x86_64/docker-${DOCKER_VERSION} -q -O /usr/bin/docker
 sudo chmod +x /usr/bin/docker
+# see https://github.com/docker/docker/issues/18113
+sudo rm -rf /var/lib/docker/network/files/local-kv.db
 sudo service docker start
 fi
 
