@@ -17,6 +17,9 @@ set -u
 #X_ZONE=eu-west-1c
 #X_PRICE=0.125
 
+# boot storage size
+#X_STORAGE
+
 # only required to mount instance storage
 #X_DEVICE=/dev/xvdc
 #X_MOUNT=/mnt/scratch
@@ -39,22 +42,28 @@ echo "Security group: $X_SECURITY"
 echo "Security key  : $X_KEY"
 echo "S3 join bucket: $X_BUCKET"
 
-
 set +u
+echo "Root storage  : $X_STORAGE GB"
 
-if [[ $2 == '--spot' ]]; then 
+if [[ $3 == '--spot' ]]; then
   X_SPOT=true 
-  X_PRICE=${3:-$X_PRICE}
+  X_PRICE=${4:-$X_PRICE}
   [[ ! $X_PRICE ]] && echo "ERROR -- Spot instance bid price need to be specified" && exit
 echo "Avail zone    : $X_ZONE"
 echo "Spot price    : $X_PRICE"
 fi 
 
 if [[ $1 == master ]]; then
-X_MSG="This is going to launch the MASTER node. Is it OK (y/n)?"
+    X_MSG="This is going to launch the MASTER node. Is it OK (y/n)?"
+    X_COUNT=1
+elif [[ $1 == cluster ]]; then
+    X_COUNT=${2:-1}
+    X_MSG="This is going to launch * $X_COUNT * instances. Is it OK (y/n)?"
+elif [[ $1 == node ]]; then
+    X_COUNT=${2:-1}
+    X_MSG="This is going to launch * $X_COUNT * instances. Is it OK (y/n)?"
 else
-X_COUNT=${1:-1}
-X_MSG="This is going to launch * $X_COUNT * instance. Is it OK (y/n)?"
+    echo "ERROR -- Unknown command: $1" && exit 1
 fi
 
 function get_abs_filename() {
@@ -88,10 +97,54 @@ EndOfString
 
 }
 
+function getRootDevice() {
+  local ami=$1
+  local size=$2
+
+  local str="$(aws ec2 describe-images --image-ids $ami --query 'Images[*].{ID:BlockDeviceMappings}' --output text)"
+  local device=$(echo "$str" | grep ID | cut -f 2)
+  local delete=$(echo "$str" | grep EBS | cut -f 2 | tr '[:upper:]' '[:lower:]')
+  local encryp=$(echo "$str" | grep EBS | cut -f 3 | tr '[:upper:]' '[:lower:]')
+  local snapsh=$(echo "$str" | grep EBS | cut -f 4)
+  local type=$(echo "$str" | grep EBS | cut -f 6)
+
+cat << EndOfString
+{
+    "DeviceName": "$device",
+    "Ebs": {
+        "DeleteOnTermination": $delete,
+        "SnapshotId": "$snapsh",
+        "VolumeSize": $size,
+        "VolumeType": "$type",
+        "Encrypted": $encryp
+    }
+}
+EndOfString
+
+}
+
+function getDeviceMapping() {
+
+if [[ $X_DEVICE ]]; then
+cat << EndOfString
+{
+    "DeviceName": "$X_DEVICE",
+    "VirtualName": "ephemeral0"
+}
+EndOfString
+fi
+
+if [[ $X_STORAGE ]]; then
+[[ $X_DEVICE ]] && echo ","
+getRootDevice $X_AMI $X_STORAGE
+fi
+
+}
+
 #
 # launch EC2 on-request instances
 #
-function launchInstances() {
+function runInstances() {
 
     local role=$1
     local count=$2
@@ -107,9 +160,8 @@ function launchInstances() {
     cli+=(--key-name); cli+=("$X_KEY")
     cli+=(--user-data); cli+=("$(cloudInit $role)")
 
-    if [[ $X_DEVICE ]]; then
-    local mapping="[{\"DeviceName\": \"$X_DEVICE\",\"VirtualName\": \"ephemeral0\"}]"
-    cli+=(--block-device-mappings); cli+=("$mapping")
+    if [[ $X_DEVICE || $X_STORAGE ]]; then
+    cli+=(--block-device-mappings); cli+=("[$(getDeviceMapping)]")
     fi
 
     "${cli[@]}"
@@ -117,26 +169,15 @@ function launchInstances() {
 }
 
 #
-# Launches the master node
-# 
-function launch_master() {
-    launchInstances master 1
-}
-
-#
-# Launches on-request instances
-# 
-function launch_nodes() {
-    launchInstances worker $X_COUNT
-}
-
-#
 # Launches spot instances
 # 
-function launch_spot() {
+function runSpot() {
 
-if [[ $X_DEVICE ]]; then
-local mapping="\"BlockDeviceMappings\": [{\"DeviceName\": \"$X_DEVICE\",\"VirtualName\": \"ephemeral0\"}], "
+local role=$1
+local count=$2
+
+if [[ $X_DEVICE || $X_STORAGE ]]; then
+local mapping="\"BlockDeviceMappings\": [$(getDeviceMapping)], "
 fi
 
 TMPFILE=$(mktemp)
@@ -146,7 +187,7 @@ cat >$TMPFILE <<EOF
   "KeyName": "$X_KEY",
   "SecurityGroupIds": [ "$X_SECURITY" ],
   "InstanceType": "$X_TYPE",
-  "UserData": "$(cloudInit worker | base64)", $mapping
+  "UserData": "$(cloudInit $role | base64)", $mapping
   "Placement": {
     "AvailabilityZone": "$X_ZONE"
   }
@@ -155,23 +196,59 @@ EOF
     
 aws ec2 request-spot-instances \
   --spot-price "$X_PRICE" \
-  --instance-count "$X_COUNT" \
+  --instance-count "$count" \
   --launch-specification "file://$TMPFILE"  
 
 }
 
+
+#
+# launch a cluster i.e. master + nodes
+#
+function launch_cluster() {
+  local x=$(($X_COUNT-1))
+
+  if [[ $X_SPOT ]]; then
+    runSpot master 1
+    runSpot worker $x
+  else
+    runInstances master 1
+    runInstances worker $x
+  fi
+}
+
+
+#
+# Launches the master node
+#
+function launch_master() {
+    runInstances master 1
+}
+
+#
+# Launches on-request instances
+#
+function launch_nodes() {
+  if [[ $X_SPOT ]]; then
+    runSpot worker $X_COUNT
+  else
+    runInstances worker $X_COUNT
+  fi
+}
 
 # Confirmation
 read -p "$X_MSG " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then echo ABORTED; exit 1; fi
 
-if [[ $1 == master ]]; then
-launch_master
+if [[ $1 == cluster ]]; then
+    # clean-up S3 bucket holding IP nodes to join
+    aws s3 rm "s3://$X_BUCKET/" --recursive
+    launch_cluster
+elif [[ $1 == master ]]; then
+    launch_master
 else
-# empty the cluster bucket
-aws s3 rm "s3://$X_BUCKET/" --recursive
-[[ $X_SPOT ]] && launch_spot || launch_nodes
+    launch_nodes
 fi
 
 

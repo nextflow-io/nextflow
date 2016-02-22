@@ -71,6 +71,9 @@ fi
 curl -fsSL http://www.nextflow.io/releases/${version}/nextflow  > $HOME/nextflow
 chmod +x $HOME/nextflow
 
+# pull the nextflow pipeline repo
+[[ $NXF_PULL ]] && $HOME/nextflow pull "$NXF_PULL"
+
 # launch the nextflow daemon
 if [[ $NXF_ROLE != master ]]; then 
   bash -x $HOME/nextflow node -bg -cluster.join "s3:$AWS_S3BUCKET" -cluster.interface eth0
@@ -79,5 +82,3 @@ fi
 # save the environment for debugging 
 env | sort > boot.env
 
-# pull the nextflow pipeline repo
-[[ $NXF_PULL ]] && $HOME/nextflow pull "$NXF_PULL" 
