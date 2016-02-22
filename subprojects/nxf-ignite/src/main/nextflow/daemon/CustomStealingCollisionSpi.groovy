@@ -217,17 +217,17 @@ class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSp
         final task = (IgBaseTask)jobCtx.job
 
         if( task.resources.cpus > availCpus ) {
-            if(log.isTraceEnabled()) log.trace "Task rejected - it requires more cpus than the available ones: ${task.resources.cpus} (${availCpus}) "
+            log.debug "Task cancelled > $task -- Not enough cpus - requested: ${task.resources.cpus}; avail: ${availCpus}"
             jobCtx.cancel()
         }
 
         if( task.resources.memory > availMemory ) {
-            if(log.isTraceEnabled()) log.trace "Task rejected - it requires more memory than the available one: ${task.resources.memory} (${availMemory}) "
+            log.debug "Task cancelled > $task -- Not enough memory - requested: ${task.resources.memory}; avail: ${availMemory}"
             jobCtx.cancel()
         }
 
         if( task.resources.disk > freeDisk ) {
-            if(log.isTraceEnabled()) log.trace "Task rejected - it requires more disk storage than the available one: ${task.resources.disk} (${freeDisk}) "
+            log.debug "Task cancelled > $task -- Not enough disk storage - requested: ${task.resources.disk}; avail: ${freeDisk}"
             jobCtx.cancel()
         }
 
@@ -238,7 +238,7 @@ class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSp
             freeCpus -= task.resources.cpus
             freeMemory -= task.resources.memory
             if( log.isTraceEnabled() )
-                log.trace "Activated task > $task -- pending ${ctx.waitingJobs().size()} (was ${waitingJobs}) - active ${ctx.activeJobs().size()} (was $activeJobs)"
+                log.trace "Activated task > $task -- Pending; ${ctx.waitingJobs().size()} (was: ${waitingJobs}) - active: ${ctx.activeJobs().size()} (was: $activeJobs)"
         }
         else if(log.isTraceEnabled())  {
             log.trace "Failed to activate task > $task"
