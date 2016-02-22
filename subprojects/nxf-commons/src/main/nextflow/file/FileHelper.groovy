@@ -439,6 +439,8 @@ class FileHelper {
             if( config ) {
                 result.putAll(config)
             }
+
+            registerUploaderShutdown()
         }
         else {
             assert Global.session, "Session is not available -- make sure to call this after Session object has been created"
@@ -447,6 +449,19 @@ class FileHelper {
         return result
     }
 
+    static private registerUploaderShutdown() {
+        Global.onShutdown {
+            try {
+                Class uploader = Class.forName('com.upplication.s3fs.S3OutputStream')
+                def shutdown = uploader.getDeclaredMethod('shutdownExecutor')
+                shutdown.invoke(null)
+                log.debug "AWS S3 uploader shutdown"
+            }
+            catch( Exception e ) {
+                log.warn "Failed to shutdown AWS S3 uploader", e
+            }
+        }
+    }
 
     /**
      *  Caches File system providers

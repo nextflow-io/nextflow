@@ -22,6 +22,8 @@ package nextflow
 
 import java.nio.file.Files
 
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
  *
@@ -60,6 +62,43 @@ class GlobalTest extends Specification {
         cleanup:
         file?.delete()
 
+    }
+
+    def 'should normalize aws config' () {
+
+        given:
+        def config = [uploadMaxThreads: 5, uploadChunkSize: 1000, uploadStorageClass: 'STANDARD' ]
+        when:
+        def norm = Global.normalizeAwsClientConfig(config)
+        then:
+        norm.upload_storage_class == 'STANDARD'
+        norm.upload_chunk_size == '1000'
+        norm.upload_max_threads == '5'
+
+        when:
+        config.uploadChunkSize = '10MB'
+        then:
+        Global.normalizeAwsClientConfig(config).upload_chunk_size == '10485760'
+
+        when:
+        config.uploadChunkSize = '1024'
+        then:
+        Global.normalizeAwsClientConfig(config).upload_chunk_size == '1024'
+
+        when:
+        config.uploadChunkSize = new MemoryUnit('2 MB')
+        then:
+        Global.normalizeAwsClientConfig(config).upload_chunk_size == '2097152'
+
+        when:
+        config.uploadRetrySleep = '10 sec'
+        then:
+        Global.normalizeAwsClientConfig(config).upload_retry_sleep == '10000'
+
+        when:
+        config.uploadRetrySleep = Duration.of('5 sec')
+        then:
+        Global.normalizeAwsClientConfig(config).upload_retry_sleep == '5000'
     }
 
 

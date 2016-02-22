@@ -24,7 +24,9 @@ import java.nio.file.Paths
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.util.Duration
 import nextflow.util.IniFile
+import nextflow.util.MemoryUnit
 import org.apache.commons.lang.StringUtils
 /**
  * Hold global variables
@@ -140,12 +142,35 @@ class Global {
      * @return A map object containing the AWS client configuration properties
      */
     static protected Map normalizeAwsClientConfig(Map<String,?> client) {
+
+        normalizeMemUnit(client, 'uploadChunkSize');
+        normalizeDuration(client, 'uploadRetrySleep');
+
+
         def result = [:]
         client.each { String name, value ->
             def newKey = name.isCamelCase() ? StringUtils.splitByCharacterTypeCamelCase(name).join('_').toLowerCase() : name
             result.put(newKey,value?.toString())
         }
         return result
+    }
+
+    static void normalizeMemUnit(Map<String,?> client, String key) {
+        if( client.get(key) instanceof String ) {
+            client.put(key, MemoryUnit.of((String)client.get(key)))
+        }
+        if( client.get(key) instanceof MemoryUnit ) {
+            client.put(key, ((MemoryUnit)client.get(key)).toBytes())
+        }
+    }
+
+    static void normalizeDuration(Map<String,?> client, String key)  {
+        if( client.get(key) instanceof String ) {
+            client.put(key, Duration.of((String)client.get(key)))
+        }
+        if( client.get(key) instanceof Duration ) {
+            client.put(key, ((Duration)client.get(key)).toMillis())
+        }
     }
 
     /**
