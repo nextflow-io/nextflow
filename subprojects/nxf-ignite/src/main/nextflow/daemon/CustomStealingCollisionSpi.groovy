@@ -62,7 +62,6 @@ class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSp
     CustomStealingCollisionSpi() {
         delegate = new JobStealingCollisionSpi()
         delegate.setActiveJobsThreshold(0)
-        delegate.setWaitJobsThreshold(5)
         def field = JobStealingCollisionSpi.getDeclaredField('log')
         field.setAccessible(true)
         field.set(delegate, new Slf4jLogger().getLogger(JobStealingCollisionSpi))
