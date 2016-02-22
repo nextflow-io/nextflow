@@ -133,7 +133,7 @@ if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
 fi
 
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
-NXF_VER=${NXF_VER:-'0.17.3'}
+NXF_VER=${NXF_VER:-'0.17.4-SNAPSHOT'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_ASSETS=${NXF_ASSETS:-$NXF_HOME/assets}
 NXF_CLI="$0 $@"
@@ -292,6 +292,7 @@ fi
 [[ "$NXF_CLASSPATH" ]] && export NXF_CLASSPATH
 [[ "$NXF_GRAB" ]] && export NXF_GRAB
 [[ "$COLUMNS" ]] && export COLUMNS
+[[ "$NXF_TEMP" ]] && JAVA_OPTS+=" -Djava.io.tmpdir=$NXF_TEMP"
 [[ "${jvmopts[@]}" ]] && JAVA_OPTS+=" ${jvmopts[@]}"
 # use drip to speedup startup time -- https://github.com/ninjudd/drip
 [[ "$NXF_DRIP" ]] && export DRIP_INIT='' && export DRIP_INIT_CLASS='nextflow.cli.DripMain'
