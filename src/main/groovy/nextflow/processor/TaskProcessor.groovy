@@ -1332,6 +1332,12 @@ abstract class TaskProcessor {
             return files
         }
 
+        if( name.endsWith('/*') ) {
+            final p = name.lastIndexOf('/')
+            final dir = name.substring(0,p)
+            return files.collect { it.withName("${dir}/${it.storePath.name}") }
+        }
+
         // no wildcards in the file name
         else if( !name.contains('*') && !name.contains('?') ) {
             /*

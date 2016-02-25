@@ -234,11 +234,24 @@ class TaskProcessorTest extends Specification {
         list1 *. stageName == ['a']
         list2 *. stageName == ['x','y','z']
 
+        when:
+        list1 = processor.expandWildcards('dir1/*', [FileHolder.get('a')])
+        list2 = processor.expandWildcards('dir2/*', [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
+        then:
+        list1 *. stageName == ['dir1/a']
+        list2 *. stageName == ['dir2/x','dir2/y','dir2/z']
+
+        when:
+        list1 = processor.expandWildcards('/dir/file*.fa', [FileHolder.get('x')])
+        list2 = processor.expandWildcards('dir/file_*.fa', [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
+        then:
+        list1 *. stageName == ['dir/file.fa']
+        list2 *. stageName == ['dir/file_1.fa', 'dir/file_2.fa', 'dir/file_3.fa']
 
     }
 
 
-    def 'shold stage path'() {
+    def 'should stage path'() {
 
         when:
         def p1 = Paths.get('/home/data/source.file')
