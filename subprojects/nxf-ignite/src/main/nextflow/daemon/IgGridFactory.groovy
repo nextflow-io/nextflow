@@ -26,6 +26,8 @@ import nextflow.Const
 import nextflow.Global
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
+import nextflow.scheduler.JobBalancerSpi
+import nextflow.scheduler.JobSchedulerSpi
 import nextflow.util.ClusterConfig
 import nextflow.util.Duration
 import org.apache.commons.lang.StringUtils
@@ -49,7 +51,6 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.s3.TcpDiscoveryS3IpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.sharedfs.TcpDiscoverySharedFsIpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder
 import org.apache.ignite.spi.failover.jobstealing.JobStealingFailoverSpi
-import org.apache.ignite.spi.loadbalancing.adaptive.AdaptiveLoadBalancingSpi
 /**
  * Grid factory class. It can be used to create a {@link IgniteConfiguration} or the {@link Ignite} instance directly
  *
@@ -60,6 +61,8 @@ import org.apache.ignite.spi.loadbalancing.adaptive.AdaptiveLoadBalancingSpi
 class IgGridFactory {
 
     static final public String SESSIONS_CACHE = 'allSessions'
+
+    static final public String RESOURCE_CACHE = 'resourceCache'
 
     static final public String GRID_NAME = Const.APP_NAME
 
@@ -185,8 +188,17 @@ class IgGridFactory {
             //queryIndexEnabled = false
         }
 
+        /*
+         * set scheduler resources cache
+         */
+        def resCfg = new CacheConfiguration()
+        resCfg.with {
+            name = RESOURCE_CACHE
+            cacheMode = CacheMode.REPLICATED
+        }
 
-        cfg.setCacheConfiguration(sessionCfg, metaCfg, dataCfg)
+        cfg.setCacheConfiguration(sessionCfg, metaCfg, dataCfg, resCfg)
+
     }
 
 
@@ -211,13 +223,13 @@ class IgGridFactory {
 
 
     protected collisionConfig( IgniteConfiguration cfg ) {
-        cfg.setCollisionSpi( new CustomStealingCollisionSpi() )
+        cfg.setCollisionSpi( new JobSchedulerSpi() )
         cfg.setFailoverSpi( new JobStealingFailoverSpi() )
     }
 
     protected void balancingConfig( IgniteConfiguration cfg ) {
 
-        cfg.setLoadBalancingSpi( new AdaptiveLoadBalancingSpi() )
+        cfg.setLoadBalancingSpi( new JobBalancerSpi() )
     }
 
     private discoveryConfig( IgniteConfiguration cfg ) {
