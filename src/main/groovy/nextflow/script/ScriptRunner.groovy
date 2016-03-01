@@ -23,6 +23,7 @@ import static nextflow.util.ConfigHelper.parseValue
 
 import java.nio.file.Path
 
+import com.google.common.hash.Hashing
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -281,15 +282,23 @@ class ScriptRunner {
         // run and wait for termination
         BaseScript result
         def groovy = new GroovyShell(gcl, session.binding, config)
-        if( session.scriptName )
-            result = groovy.parse(scriptText, session.scriptName) as BaseScript
-        else
-            result = groovy.parse(scriptText) as BaseScript
+        result = groovy.parse(scriptText, createUniqueName()) as BaseScript
 
         session.onShutdown { targetDir.deleteDir() }
         return result
     }
 
+    protected String createUniqueName() {
+        def hash = Hashing
+                .murmur3_32()
+                .newHasher()
+                .putUnencodedChars(scriptText)
+                .hash()
+
+        def result = "script_nf_${hash}"
+        log.trace "Script name: $result"
+        return result
+    }
 
     /**
      * Launch the Nextflow script execution
