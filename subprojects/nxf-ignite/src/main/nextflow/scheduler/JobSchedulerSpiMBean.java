@@ -18,7 +18,6 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -36,18 +35,19 @@
  * limitations under the License.
  */
 
-package nextflow.scheduler
+package nextflow.scheduler;
 
-import groovy.transform.CompileStatic
-import org.apache.ignite.mxbean.MXBeanDescription
-import org.apache.ignite.spi.IgniteSpiManagementMBean
+import java.io.Serializable;
+import java.util.Map;
+
+import org.apache.ignite.mxbean.MXBeanDescription;
+import org.apache.ignite.spi.IgniteSpiManagementMBean;
 
 /**
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * Management bean interface for {@link JobSchedulerSpi}
  */
-@CompileStatic
 @MXBeanDescription("MBean for job stealing based collision SPI.")
-interface JobSchedulerSpiMBean extends IgniteSpiManagementMBean {
+public interface JobSchedulerSpiMBean extends IgniteSpiManagementMBean {
     /**
      * Gets current number of jobs to be stolen. This is outstanding
      * requests number.

@@ -27,6 +27,7 @@ import nextflow.Global
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.scheduler.JobBalancerSpi
+import nextflow.scheduler.JobFailoverSpi
 import nextflow.scheduler.JobSchedulerSpi
 import nextflow.util.ClusterConfig
 import nextflow.util.Duration
@@ -50,7 +51,6 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMultic
 import org.apache.ignite.spi.discovery.tcp.ipfinder.s3.TcpDiscoveryS3IpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.sharedfs.TcpDiscoverySharedFsIpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder
-import org.apache.ignite.spi.failover.jobstealing.JobStealingFailoverSpi
 /**
  * Grid factory class. It can be used to create a {@link IgniteConfiguration} or the {@link Ignite} instance directly
  *
@@ -118,9 +118,8 @@ class IgGridFactory {
         System.setProperty('IGNITE_NO_ASCII', 'true')
 
         IgniteConfiguration cfg = new IgniteConfiguration()
-        collisionConfig(cfg)
+        schedulerConfig(cfg)
         discoveryConfig(cfg)
-        balancingConfig(cfg)
         cacheConfig(cfg)
         fileSystemConfig(cfg)
 
@@ -221,15 +220,28 @@ class IgGridFactory {
 
     }
 
+    protected schedulerConfig( IgniteConfiguration cfg ) {
 
-    protected collisionConfig( IgniteConfiguration cfg ) {
-        cfg.setCollisionSpi( new JobSchedulerSpi() )
-        cfg.setFailoverSpi( new JobStealingFailoverSpi() )
-    }
+        // -- config scheduler
+        final scheduler = new JobSchedulerSpi()
+        scheduler.with {
+            stealingEnabled = clusterConfig.getAttribute('stealingEnabled', true) as boolean
+            waitJobsThreshold = clusterConfig.getAttribute('waitJobsThreshold', DFLT_WAIT_JOBS_THRESHOLD) as int
+            maximumStealingAttempts = clusterConfig.getAttribute('maxStealingAttempts', DFLT_MAX_STEALING_ATTEMPTS) as int
+        }
+        cfg.setCollisionSpi(scheduler)
 
-    protected void balancingConfig( IgniteConfiguration cfg ) {
+        // -- config failover
+        final failover= new JobFailoverSpi()
+        failover.with {
+            maximumFailoverAttempts = clusterConfig.getAttribute('maxFailoverAttempts', DFLT_MAX_FAILOVER_ATTEMPTS) as int
+        }
+        cfg.setFailoverSpi(failover)
 
-        cfg.setLoadBalancingSpi( new JobBalancerSpi() )
+        // -- config load balancer
+        final balancer = new JobBalancerSpi()
+        cfg.setLoadBalancingSpi(balancer)
+
     }
 
     private discoveryConfig( IgniteConfiguration cfg ) {

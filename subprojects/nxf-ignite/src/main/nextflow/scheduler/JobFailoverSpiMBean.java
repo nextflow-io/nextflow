@@ -34,17 +34,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package nextflow.scheduler;
 
-package nextflow.scheduler
-
-import groovy.transform.CompileStatic
-import org.apache.ignite.mxbean.MXBeanDescription
-import org.apache.ignite.spi.IgniteSpiManagementMBean
+import org.apache.ignite.mxbean.MXBeanDescription;
+import org.apache.ignite.spi.IgniteSpiManagementMBean;
 
 /**
- * Management bean interface for {@link JobBalancerSpi}
+ * Management bean for {@link JobFailoverSpi}.
  */
-@CompileStatic
-@MXBeanDescription("MBean that provides access to job load balancing SPI configuration.")
-interface JobBalancerSpiMBean extends IgniteSpiManagementMBean {
+@MXBeanDescription("MBean that provides access to job stealing failover SPI configuration.")
+public interface JobFailoverSpiMBean extends IgniteSpiManagementMBean {
+    /**
+     * Gets maximum number of attempts to execute a failed job on another node.
+     * If job gets stolen and thief node exists then it is not considered as
+     * failed job.
+     * If not specified, {@link org.apache.ignite.spi.failover.jobstealing.JobStealingFailoverSpi#DFLT_MAX_FAILOVER_ATTEMPTS} value will be used.
+     *
+     * @return Maximum number of attempts to execute a failed job on another node.
+     */
+    @MXBeanDescription("Maximum number of attempts to execute a failed job on another node.")
+    public int getMaximumFailoverAttempts();
+
+    /**
+     * Get total number of jobs that were failed over including stolen ones.
+     *
+     * @return Total number of failed over jobs.
+     */
+    @MXBeanDescription("Total number of jobs that were failed over including stolen ones.")
+    public int getTotalFailedOverJobsCount();
+
+    /**
+     * Get total number of jobs that were stolen.
+     *
+     * @return Total number of stolen jobs.
+     */
+    @MXBeanDescription("Total number of jobs that were stolen.")
+    public int getTotalStolenJobsCount();
 }

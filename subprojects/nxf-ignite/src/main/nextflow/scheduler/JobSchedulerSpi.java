@@ -43,6 +43,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 
 import java.io.Serializable;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -80,14 +81,24 @@ import org.apache.ignite.spi.collision.CollisionExternalListener;
 import org.apache.ignite.spi.collision.CollisionJobContext;
 import org.apache.ignite.spi.collision.CollisionSpi;
 import org.apache.ignite.spi.collision.jobstealing.JobStealingDisabled;
+import org.apache.ignite.spi.collision.jobstealing.JobStealingRequest;
 import org.jsr166.ConcurrentHashMap8;
 import org.jsr166.ConcurrentLinkedDeque8;
 
+/**
+ * Implements the scheduling strategy for nextflow job. This code is largely based
+ * on standard {@link org.apache.ignite.spi.collision.jobstealing.JobStealingCollisionSpi}.
+ *
+ * The main difference is that it handlers properly resources request declared at process
+ * level such as cpus, memory and disk storage requirements
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
 @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
 @IgniteSpiMultipleInstancesSupport(true)
 @IgniteSpiConsistencyChecked(optional = true)
-public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
-        JobSchedulerSpiMBean {
+public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi, JobSchedulerSpiMBean {
+
     /** Maximum number of attempts to steal job by another node (default is {@code 5}). */
     public static final int DFLT_MAX_STEALING_ATTEMPTS = 5;
 
@@ -337,15 +348,17 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
 
         // Ack parameters.
         if (log.isDebugEnabled()) {
-            log.debug(configInfo("activeJobsThreshold", activeJobsThreshold));
+            //log.debug(configInfo("activeJobsThreshold", activeJobsThreshold));
             log.debug(configInfo("waitJobsThreshold", waitJobsThreshold));
             log.debug(configInfo("messageExpireTime", msgExpireTime));
             log.debug(configInfo("maxStealingAttempts", maxStealingAttempts));
         }
 
+        registerMBean(gridName, this, JobSchedulerSpiMBean.class);
+
         // Ack start.
-        if (log.isDebugEnabled())
-            log.debug(startInfo());
+        if (log.isTraceEnabled())
+            log.trace(startInfo());
     }
 
     /** {@inheritDoc} */
@@ -353,8 +366,8 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
         unregisterMBean();
 
         // Ack ok stop.
-        if (log.isDebugEnabled())
-            log.debug(stopInfo());
+        if (log.isTraceEnabled())
+            log.trace(stopInfo());
     }
 
     /** {@inheritDoc} */
@@ -443,16 +456,20 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
                 iter.remove();
         }
 
+        /*
+         * Receive a job steal request and add it to the `stealReqs` counter
+         */
         spiCtx.addMessageListener(
                 msgLsnr = new GridMessageListener() {
                     @Override public void onMessage(UUID nodeId, Object msg) {
+                        if( log.isTraceEnabled() )
+                            log.trace("Receiving stealing message: " + msg);
+
                         MessageInfo info = rcvMsgMap.get(nodeId);
-                        log.debug("Receiving stealing message: " + info);
 
                         if (info == null) {
-                            if (log.isDebugEnabled())
-                                log.debug("Ignoring message steal request as discovery event has not yet been received " +
-                                        "for node: " + nodeId);
+                            if (log.isTraceEnabled())
+                                log.trace("Ignoring message steal request as discovery event has not yet been received for node: " + nodeId);
 
                             return;
                         }
@@ -460,18 +477,19 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
                         int stealReqs0;
 
                         synchronized (info) {
-                            JobStealMessage req = (JobStealMessage)msg;
+                            JobStealingRequest req = (JobStealingRequest)msg;
 
                             // Increment total number of steal requests.
                             // Note that it is critical to increment total
                             // number of steal requests before resetting message info.
-                            stealReqs0 = stealReqs.addAndGet(req.delta() - info.jobsToSteal());
+                            int delta = requestDelta(req);
+                            stealReqs0 = stealReqs.addAndGet(delta - info.jobsToSteal());
 
-                            info.reset(req.delta());
+                            info.reset(delta);
                         }
 
-                        if (log.isDebugEnabled())
-                            log.debug("Received steal request [nodeId=" + nodeId + ", msg=" + msg + ", stealReqs=" + stealReqs0 + ']');
+                        if (log.isTraceEnabled())
+                            log.trace("Received steal request [nodeId=" + nodeId + ", msg=" + msg + ", stealReqs=" + stealReqs0 + ']');
 
                         CollisionExternalListener tmp = extLsnr;
 
@@ -510,8 +528,8 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
 
         // No point of stealing jobs if some jobs were rejected.
         if (rejected > 0) {
-            if (log.isDebugEnabled())
-                log.debug("Total count of rejected jobs: " + rejected);
+            if (log.isTraceEnabled())
+                log.trace("Total count of rejected jobs: " + rejected);
 
             return;
         }
@@ -536,7 +554,8 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
 
         int activeSize = res.getActiveJobs().size();
         int waitSize = res.getWaitingJobs().size();
-        log.debug(String.format("Scheduler jobs > active: %s - pending: %s - steal-reqs: %s", activeSize, waitSize, stealReqs.get()));
+        if( log.isTraceEnabled() )
+            log.trace(String.format("Scheduler jobs > active: %s - pending: %s - steal-reqs: %s", activeSize, waitSize, stealReqs.get()));
 
         waitingNum = res.getWaitingJobs().size();
         runningNum = activeSize;
@@ -566,7 +585,7 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
             }
 
             /*
-             * check for stealing requests and offer jobs by cancelling them
+             * check for stealing requests and offer jobs by rejecting (cancel) them
              */
             else if (stealReqs.get() > 0) {
                 if (waitCtx.getJob().getClass().isAnnotationPresent(JobStealingDisabled.class))
@@ -580,9 +599,8 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
                 if (stealingCnt != null) {
                     // If job exceeded failover threshold, skip it.
                     if (stealingCnt >= maxStealingAttempts) {
-                        if (log.isDebugEnabled())
-                            log.debug("Waiting job exceeded stealing attempts and won't be rejected " +
-                                    "(will try other jobs on waiting list): " + waitCtx);
+                        if (log.isTraceEnabled())
+                            log.trace("Waiting job exceeded stealing attempts and won't be rejected (will try other jobs on waiting list): " + waitCtx);
 
                         continue;
                     }
@@ -593,8 +611,8 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
                 // Check if allowed to reject job.
                 int jobsToReject = waitPriJobs.size() - activated - rejected - waitJobsThreshold;
 
-                if (log.isDebugEnabled())
-                    log.debug("Jobs to reject count [jobsToReject=" + jobsToReject + ", waitCtx=" + waitCtx + ']');
+                if (log.isTraceEnabled())
+                    log.trace("Jobs to reject count [jobsToReject=" + jobsToReject + ", waitCtx=" + waitCtx + ']');
 
                 if (jobsToReject <= 0)
                     break;
@@ -624,7 +642,6 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
 
                     synchronized (info) {
                         int jobsAsked = info.jobsToSteal();
-
                         assert jobsAsked >= 0;
 
                         // Skip nodes that have not asked for jobs to steal.
@@ -636,30 +653,29 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
                         if (info.expired()) {
                             // Subtract expired messages.
                             stealReqs.addAndGet(-info.jobsToSteal());
-
                             info.reset(0);
-
                             continue;
                         }
 
-                        // Check that waiting job has thief node in topology.
-                        boolean found = false;
-
-                        for (UUID id : waitCtx.getTaskSession().getTopology()) {
-                            if (id.equals(nodeId)) {
-                                found = true;
-
-                                break;
-                            }
-                        }
-
-                        if (!found) {
-                            if (log.isDebugEnabled())
-                                log.debug("Thief node does not belong to task topology [thief=" + nodeId +
-                                        ", task=" + waitCtx.getTaskSession() + ']');
-
-                            continue;
-                        }
+// -- disable this check due issue https://issues.apache.org/jira/browse/IGNITE-1267
+//                        // Check that waiting job has thief node in topology.
+//                        boolean found = false;
+//
+//                        for (UUID id : waitCtx.getTaskSession().getTopology()) {
+//                            if (id.equals(nodeId)) {
+//                                found = true;
+//
+//                                break;
+//                            }
+//                        }
+//
+//                        if (!found) {
+//                            if (log.isDebugEnabled())
+//                                log.debug("Thief node does not belong to task topology [thief=" + nodeId +
+//                                        ", task=" + waitCtx.getTaskSession() + ']');
+//
+//                            continue;
+//                        }
 
                         if (stealReqs.get() <= 0)
                             break;
@@ -675,9 +691,8 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
                                 waitCtx.getJobContext().setAttribute(STEALING_ATTEMPT_COUNT_ATTR, stealingCnt + 1);
                                 waitCtx.getJobContext().setAttribute(STEALING_PRIORITY_ATTR, pri + 1);
 
-                                if (log.isDebugEnabled())
-                                    log.debug("Will try to reject job due to steal request [ctx=" + waitCtx +
-                                            ", thief=" + nodeId + ']');
+                                if (log.isTraceEnabled())
+                                    log.trace("Will try to reject job due to steal request [ctx=" + waitCtx + ", thief=" + nodeId + ']');
 
                                 int i = stealReqs.decrementAndGet();
 
@@ -686,13 +701,12 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
 
                                     info.reset(jobsAsked - 1);
 
-                                    if (log.isDebugEnabled())
-                                        log.debug("Rejected job due to steal request [ctx=" + waitCtx +
-                                                ", nodeId=" + nodeId + ']');
+                                    if (log.isTraceEnabled())
+                                        log.trace("Rejected job due to steal request [ctx=" + waitCtx + ", nodeId=" + nodeId + ']');
                                 }
                                 else {
-                                    if (log.isDebugEnabled())
-                                        log.debug("Failed to reject job [i=" + i + ']');
+                                    if (log.isTraceEnabled())
+                                        log.trace("Failed to reject job [i=" + i + ']');
 
                                     waitCtx.getJobContext().setAttribute(THIEF_NODE_ATTR, null);
                                     waitCtx.getJobContext().setAttribute(STEALING_ATTEMPT_COUNT_ATTR, stealingCnt);
@@ -803,8 +817,8 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
         Collection<CollisionJobContext> activeJobs = res.getActiveJobs();
         int jobsToSteal = max - (waitJobs.size() + activeJobs.size());
 
-        if (log.isDebugEnabled())
-            log.debug("Total number of jobs to be stolen: " + jobsToSteal);
+        if (log.isTraceEnabled())
+            log.trace("Total number of jobs to be stolen: " + jobsToSteal);
 
         if (jobsToSteal > 0) {
             int jobsLeft = jobsToSteal;
@@ -822,8 +836,8 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
                 // Remote node does not have attributes - do not steal from it.
                 if (!F.isEmpty(stealAttrs) &&
                         (next.attributes() == null || !U.containsAll(next.attributes(), stealAttrs))) {
-                    if (log.isDebugEnabled())
-                        log.debug("Skip node as it does not have all attributes: " + next.id());
+                    if (log.isTraceEnabled())
+                        log.trace("Skip node as it does not have all attributes: " + next.id());
 
                     continue;
                 }
@@ -834,8 +848,8 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
                     MessageInfo msgInfo = sndMsgMap.get(next.id());
 
                     if (msgInfo == null) {
-                        if (log.isDebugEnabled())
-                            log.debug("Failed to find message info for node: " + next.id());
+                        if (log.isTraceEnabled())
+                            log.trace("Failed to find message info for node: " + next.id());
 
                         // Node left topology or SPI has not received message for it.
                         continue;
@@ -854,8 +868,8 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
 
                     delta = next.metrics().getCurrentWaitingJobs() - waitThreshold;
 
-                    if (log.isDebugEnabled())
-                        log.debug("Maximum number of jobs to steal from node [jobsToSteal=" + delta + ", node=" + next.id() + ']');
+                    if (log.isTraceEnabled())
+                        log.trace("Maximum number of jobs to steal from node [jobsToSteal=" + delta + ", node=" + next.id() + ']');
 
                     // Nothing to steal from this node.
                     if (delta <= 0)
@@ -879,8 +893,9 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
 
                     // Send request to remote node to steal jobs.
                     // Message is a plain integer represented by 'delta'.
-                    log.debug("Sending message to steal " + delta + " jobs");
-                    getSpiContext().send(next, new JobStealMessage(delta), JOB_STEALING_COMM_TOPIC);
+                    if( log.isTraceEnabled() )
+                        log.trace("Sending message to steal " + delta + " jobs");
+                    getSpiContext().send(next, newStealRequest(delta), JOB_STEALING_COMM_TOPIC);
                 }
                 catch (IgniteSpiException e) {
                     U.error(log, "Failed to send job stealing message to node: " + next, e);
@@ -910,6 +925,40 @@ public class JobSchedulerSpi extends IgniteSpiAdapter implements CollisionSpi,
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(JobSchedulerSpi.class, this);
+    }
+
+    /**
+     * Creates a new instance of {@link JobStealingRequest} setting the delta value
+     * properly. This hack is required because the `delta` field is declared private.
+     *
+     * @param value The request delta value
+     * @return A new instance of {@link JobStealingRequest}
+     */
+    private JobStealingRequest newStealRequest(int value) {
+        JobStealingRequest req = new JobStealingRequest();
+        try {
+            Field delta = JobStealingRequest.class.getDeclaredField("delta");
+            delta.setAccessible(true);
+            delta.set(req, value);
+            return req;
+        }
+        catch( Exception e ) {
+            throw new IllegalStateException("Cannot create steal request", e);
+        }
+    }
+
+    /**
+     * This hack is required because the `delta` field is declared private.
+     */
+    private int requestDelta(JobStealingRequest req) {
+        try {
+            Field delta = JobStealingRequest.class.getDeclaredField("delta");
+            delta.setAccessible(true);
+            return (Integer)delta.get(req);
+        }
+        catch( Exception e ) {
+            throw new IllegalStateException("Cannot access steal request delta", e);
+        }
     }
 
     /**

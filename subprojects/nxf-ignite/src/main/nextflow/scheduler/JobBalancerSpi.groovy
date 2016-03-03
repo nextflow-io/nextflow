@@ -54,6 +54,9 @@ import org.apache.ignite.spi.IgniteSpiMultipleInstancesSupport
 import org.apache.ignite.spi.loadbalancing.LoadBalancingSpi
 import org.jetbrains.annotations.Nullable
 
+/**
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
 @CompileStatic
 @IgniteSpiMultipleInstancesSupport(true)
 @IgniteSpiConsistencyChecked(optional = true)
@@ -101,13 +104,15 @@ public class JobBalancerSpi extends IgniteSpiAdapter implements LoadBalancingSpi
             def res = (ResourceContext)getSpiContext().get(IgGridFactory.RESOURCE_CACHE, node.id())
 
             if( job instanceof IgBaseTask && res ) {
-                log.debug "Balancer checking node: ${node.id()}  > resources provided: $res -- resourced requested: ${job.resources}"
+                if( log.isTraceEnabled() )
+                    log.trace "Balancer checking node: ${node.id()}  > resources provided: $res -- resourced requested: ${job.resources}"
 
                 if( job.resources.cpus > res.freeCpus ) continue
                 if( job.resources.memory && job.resources.memory > res.freeMemory ) continue
                 if( job.resources.disk && job.resources.disk > res.freeDisk ) continue
 
-                log.debug "Balancer picked node: ${node.id()}"
+                if( log.isTraceEnabled() )
+                    log.trace "Balancer picked node: ${node.id()}"
                 return node
             }
 
@@ -115,7 +120,8 @@ public class JobBalancerSpi extends IgniteSpiAdapter implements LoadBalancingSpi
         }
 
         ClusterNode node = top.get(RAND.nextInt(top.size()))
-        log.debug "Balancer cannot determine balanced node -- picked a random one > $node"
+        if( log.isTraceEnabled() )
+            log.trace "Balancer cannot determine balanced node -- picked a random one > $node"
         return node
     }
 
