@@ -486,6 +486,32 @@ class CrgExecutorTest extends Specification {
             #$ -soft -l docker_images=*;foo;*
 
             cpuset=${cpuset:=''}
+            [[ $SGE_BINDING ]] && cpuset="--cpuset-cpus $(echo $SGE_BINDING | sed 's/ /,/g')"
+            '''
+                .stripIndent().leftTrim()
+
+
+        when:
+        task.config.container = 'foo'
+        task.processor = Mock(TaskProcessor)
+        task.processor.getProcessEnvironment() >> [:]
+        task.processor.getSession() >> new Session(docker: [enabled: true, legacy: true])
+        task.processor.getConfig() >> [:]
+
+        builder = executor.createBashWrapperBuilder(task)
+        then:
+        builder.headerScript == '''
+            #$ -wd /some/dir
+            #$ -N nf-the-name
+            #$ -o /some/dir/.command.log
+            #$ -j y
+            #$ -terse
+            #$ -V
+            #$ -notify
+            #$ -binding env linear:1
+            #$ -soft -l docker_images=*;foo;*
+
+            cpuset=${cpuset:=''}
             [[ $SGE_BINDING ]] && cpuset="--cpuset $(echo $SGE_BINDING | sed 's/ /,/g')"
             '''
                 .stripIndent().leftTrim()

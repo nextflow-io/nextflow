@@ -71,6 +71,8 @@ class DockerBuilder {
 
     private kill = true
 
+    private boolean legacy
+
     DockerBuilder( String name ) {
         this.image = name
     }
@@ -121,6 +123,9 @@ class DockerBuilder {
 
         if( params.containsKey('kill') )
             this.kill = params.kill
+
+        if( params.containsKey('legacy') )
+            this.legacy = params.legacy?.toString() == 'true'
 
         return this
     }
@@ -176,8 +181,12 @@ class DockerBuilder {
 
         result << 'run -i '
 
-        if( cpus )
-            result << "--cpuset ${cpus} "
+        if( cpus ) {
+            if( legacy )
+                result << "--cpuset ${cpus} "
+            else
+                result << "--cpuset-cpus ${cpus} "
+        }
 
         if( memory )
             result << "--memory ${memory} "
