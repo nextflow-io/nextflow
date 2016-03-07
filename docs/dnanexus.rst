@@ -17,7 +17,7 @@ installed in your computer.
 Moreover, since extra runtime packages are required by Nextflow to enable it to run in the cloud, you will need to download
 the full Nextflow source tree in your computer. You can do this by using the following `git` command::
 
-   git clone https://github.com/paoloditommaso/nextflow.git
+   git clone https://github.com/nextflow-io/nextflow.git
 
 
 App packing
