@@ -288,6 +288,10 @@ class ScriptRunner {
         return result
     }
 
+    /**
+     * Creates a unique name for the main script class in order to avoid collision
+     * with the implicit and user variables
+     */
     protected String createUniqueName() {
         def hash = Hashing
                 .murmur3_32()
@@ -295,9 +299,7 @@ class ScriptRunner {
                 .putUnencodedChars(scriptText)
                 .hash()
 
-        def result = "script_nf_${hash}"
-        log.trace "Script name: $result"
-        return result
+        return "\$nf_script_${hash}"
     }
 
     /**
