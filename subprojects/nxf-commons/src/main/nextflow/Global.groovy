@@ -119,6 +119,29 @@ class Global {
 
     }
 
+    static String getAwsRegion(Map env=null, Map config=null) {
+        if( env==null ) env = System.getenv()
+        if( config==null ) config = this.config
+
+        // check nxf config file
+        if( config && config.aws instanceof Map ) {
+            def region = ((Map)config.aws).region
+            if( region )
+                return region.toString()
+        }
+
+        if( env && env.AWS_REGION )  {
+            return env.AWS_REGION.toString()
+        }
+
+        def home = Paths.get(System.properties.get('user.home') as String)
+        def file = home.resolve('.aws/config')
+        if( !file.exists() ) return null
+
+        def ini = new IniFile(file)
+        return ini.section('default').region
+    }
+
     static List<String> getAwsCredentials(Map env) {
         getAwsCredentials(env, config)
     }

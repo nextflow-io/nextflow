@@ -435,12 +435,18 @@ class FileHelper {
                 result.secret_key = credentials[1]
             }
 
+            // AWS region
+            final region = Global.getAwsRegion()
+            if( region ) result.region = region
+
+            // -- remaining client config options
             def config = Global.getAwsClientConfig()
             if( config ) {
                 result.putAll(config)
             }
 
             registerUploaderShutdown()
+            log.debug "AWS S3 config details: ${dumpAwsConfig(result)}"
         }
         else {
             assert Global.session, "Session is not available -- make sure to call this after Session object has been created"
@@ -461,6 +467,15 @@ class FileHelper {
                 log.warn "Failed to shutdown AWS S3 uploader", e
             }
         }
+    static private String dumpAwsConfig( Map config ) {
+        def result = new HashMap(config)
+        if( result.containsKey('access_key') )
+            result.access_key = "${config.access_key.toString().substring(0,6)}.."
+
+        if( result.containsKey('secret_key') )
+            result.secret_key = "${config.secret_key.toString().substring(0,6)}.."
+
+        return result.toString()
     }
 
     /**
