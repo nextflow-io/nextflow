@@ -56,13 +56,13 @@ class FileHelper {
 
     static final private Path localTempBasePath
 
-    static final Pattern GLOB_CURLY_BRACKETS = Pattern.compile(/(.*)(\{.+,.+\})(.*)/)
+    static final public Pattern GLOB_CURLY_BRACKETS = Pattern.compile(/(.*)(\{.+,.+\})(.*)/)
 
-    static final Pattern GLOB_SQUARE_BRACKETS = Pattern.compile(/(.*)(\[.+\])(.*)/)
+    static final public Pattern GLOB_SQUARE_BRACKETS = Pattern.compile(/(.*)(\[.+\])(.*)/)
 
     static private Random rndGen = new Random()
 
-    static final char[] ALPHA = ('a'..'z') as char[]
+    static final public char[] ALPHA = ('a'..'z') as char[]
 
     static {
         def temp = System.getenv('NXF_TEMP')
