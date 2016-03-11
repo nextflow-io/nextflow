@@ -206,7 +206,7 @@ class Session implements ISession {
 
         if( !config.poolSize ) {
             final cpus = Runtime.getRuntime().availableProcessors()
-            config.poolSize = cpus +1
+            config.poolSize = cpus==1 ? 2 : cpus
         }
 
         //set the thread pool size
