@@ -453,13 +453,13 @@ class FileHelper {
         return result
     }
 
-    static private String dumpAwsConfig( Map config ) {
+    static private String dumpAwsConfig( Map<String,String> config ) {
         def result = new HashMap(config)
-        if( result.containsKey('access_key') )
-            result.access_key = "${config.access_key.toString().substring(0,6)}.."
+        if( config.access_key && config.access_key.size()>6 )
+            result.access_key = "${config.access_key.substring(0,6)}.."
 
-        if( result.containsKey('secret_key') )
-            result.secret_key = "${config.secret_key.toString().substring(0,6)}.."
+        if( config.secret_key && config.secret_key.size()>6 )
+            result.secret_key = "${config.secret_key.substring(0,6)}.."
 
         return result.toString()
     }
