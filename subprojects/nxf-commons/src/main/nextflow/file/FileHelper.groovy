@@ -300,7 +300,6 @@ class FileHelper {
         // normalise 's3' path
         if( str.startsWith('s3://') && str[5]!='/' ) {
             str = "s3:///${str.substring(5)}"
-
         }
         // normalise 'igfs' path
         else if( str.startsWith('igfs://') && str[7]!='/' ) {
@@ -445,7 +444,6 @@ class FileHelper {
                 result.putAll(config)
             }
 
-            registerUploaderShutdown()
             log.debug "AWS S3 config details: ${dumpAwsConfig(result)}"
         }
         else {
@@ -455,18 +453,6 @@ class FileHelper {
         return result
     }
 
-    static private registerUploaderShutdown() {
-        Global.onShutdown {
-            try {
-                Class uploader = Class.forName('com.upplication.s3fs.S3OutputStream')
-                def shutdown = uploader.getDeclaredMethod('shutdownExecutor')
-                shutdown.invoke(null)
-                log.debug "AWS S3 uploader shutdown"
-            }
-            catch( Exception e ) {
-                log.warn "Failed to shutdown AWS S3 uploader", e
-            }
-        }
     static private String dumpAwsConfig( Map config ) {
         def result = new HashMap(config)
         if( result.containsKey('access_key') )

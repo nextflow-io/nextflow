@@ -19,11 +19,14 @@
  */
 
 package nextflow
+
+import java.lang.reflect.Method
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
+import com.upplication.s3fs.S3OutputStream
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -111,6 +114,8 @@ class Session implements ISession {
     private volatile boolean aborted
 
     private volatile boolean terminated
+
+    private volatile boolean cleanedUp
 
     private volatile ExecutorService execService
 
@@ -415,7 +420,9 @@ class Session implements ISession {
         log.debug "Session destroyed"
     }
 
-    final protected void cleanUp() {
+    final protected synchronized void cleanUp() {
+
+        if( cleanedUp ) return
 
         log.trace "Shutdown: $shutdownCallbacks"
         List<Closure<Void>> all = new ArrayList<>(shutdownCallbacks)
@@ -431,6 +438,9 @@ class Session implements ISession {
         // -- after the first time remove all of them to avoid it's called twice
         shutdownCallbacks.clear()
 
+        // -- shutdown s3 uploader
+        shutdownS3Uploader()
+
         // -- invoke observers completion handlers
         for( int i=0; i<observers.size(); i++ ) {
             def trace = observers.get(i)
@@ -441,6 +451,9 @@ class Session implements ISession {
                 log.debug "Failed to invoke observer completion handler: $trace", e
             }
         }
+
+        // -- set as cleaned
+        cleanedUp = true
     }
 
     void abort(TaskFault fault) {
@@ -568,6 +581,19 @@ class Session implements ISession {
     @Memoized
     public Duration getQueueStatInterval( String execName, Duration defValue = Duration.of('1min') ) {
         getExecConfigProp(execName, 'queueStatInterval', defValue) as Duration
+    }
+
+    static private void shutdownS3Uploader() {
+        if( classWasLoaded('com.upplication.s3fs.S3OutputStream') ) {
+            log.info "AWS S3 uploader shutdown"
+            S3OutputStream.shutdownExecutor()
+        }
+    }
+
+    static private boolean classWasLoaded(String className) {
+        Method find = ClassLoader.class.getDeclaredMethod("findLoadedClass", [String.class] as Class[] );
+        find.setAccessible(true)
+        return find.invoke(ClassLoader.getSystemClassLoader(), className)
     }
 
 
