@@ -17,6 +17,12 @@
 #  You should have received a copy of the GNU General Public License
 #  along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
 
+
+#
+# add parameters to the command line as `param=value` for example:
+# make deps config=runtime
+# 
+
 config ?= compile
 
 compile:
