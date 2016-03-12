@@ -117,8 +117,8 @@ dependencies {
     compile "org.slf4j:jcl-over-slf4j:1.7.16"
     compile "org.slf4j:jul-to-slf4j:1.7.16"
     compile "org.slf4j:log4j-over-slf4j:1.7.16"
-    compile "ch.qos.logback:logback-classic:1.1.5"
-    compile "ch.qos.logback:logback-core:1.1.5"
+    compile "ch.qos.logback:logback-classic:1.1.6"
+    compile "ch.qos.logback:logback-core:1.1.6"
     compile "org.codehaus.gpars:gpars:1.2.1"
     compile("ch.grengine:grengine:1.0.3") { exclude group: 'org.codehaus.groovy', module: 'groovy-all' }
     compile "commons-lang:commons-lang:2.6"
