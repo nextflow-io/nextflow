@@ -20,6 +20,7 @@
 
 package nextflow.config
 import ch.grengine.Grengine
+import com.google.common.hash.Hashing
 import groovy.transform.PackageScope
 import nextflow.file.FileHelper
 import org.codehaus.groovy.control.CompilerConfiguration
@@ -151,6 +152,26 @@ class ComposedConfigSlurper {
     }
 
     /**
+     * Creates a unique name for the config class in order to avoid collision
+     * with top level configuration scopes
+     *
+     * @param text
+     * @return
+     */
+    private String createUniqueName(String text) {
+        def hash = Hashing
+                .murmur3_32()
+                .newHasher()
+                .putUnencodedChars(text)
+                .hash()
+        return "\$nf_config_$hash"
+    }
+
+    private Script loadScript(String text)  {
+        (Script)grengine.load(text, createUniqueName(text)).newInstance()
+    }
+
+    /**
      * Parses a ConfigObject instances from an instance of java.util.Properties
      * @param The java.util.Properties instance
      */
@@ -197,17 +218,8 @@ class ComposedConfigSlurper {
      *
      * @see ComposedConfigSlurper#parse(groovy.lang.Script)
      */
-    ConfigObject parse(String script) {
-        return parse(grengine.load(script))
-    }
-
-    /**
-     * Create a new instance of the given script class and parse a configuration object from it
-     *
-     * @see ComposedConfigSlurper#parse(groovy.lang.Script)
-     */
-    ConfigObject parse(Class scriptClass) {
-        return parse((Script)scriptClass.newInstance())
+    ConfigObject parse(String text) {
+        return parse(loadScript(text))
     }
 
     /**
@@ -223,15 +235,15 @@ class ComposedConfigSlurper {
     /**
      * Parses a Script represented by the given URL into a ConfigObject
      *
-     * @param scriptLocation The location of the script to parse
+     * @param location The location of the script to parse
      * @return The ConfigObject instance
      */
-    ConfigObject parse(URL scriptLocation) {
-        return parse((Script)grengine.load(scriptLocation).newInstance(), scriptLocation)
+    ConfigObject parse(URL location) {
+        return parse(loadScript(location.text), location)
     }
 
-    ConfigObject parse(File scriptFile) {
-        return parse((Script)grengine.load(scriptFile).newInstance(), scriptFile.toURI().toURL())
+    ConfigObject parse(File file) {
+        return parse(loadScript(file.text), file.toURI().toURL())
     }
 
     /**

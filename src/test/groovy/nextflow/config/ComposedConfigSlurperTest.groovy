@@ -402,4 +402,19 @@ class ComposedConfigSlurperTest extends Specification {
         thrown(NoSuchFileException)
 
     }
+
+    def 'should parse file named as a top config scope' () {
+        given:
+        def folder = File.createTempDir()
+        def configFile = new File(folder, 'XXX.config')
+        configFile.text = 'XXX.enabled = true'
+
+        when:
+        new ComposedConfigSlurper().parse(configFile)
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        folder?.deleteDir()
+    }
 }
