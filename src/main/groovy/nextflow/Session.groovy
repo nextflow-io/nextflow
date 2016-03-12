@@ -19,10 +19,10 @@
  */
 
 package nextflow
-
 import java.lang.reflect.Method
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -115,8 +115,6 @@ class Session implements ISession {
 
     private volatile boolean terminated
 
-    private volatile boolean cleanedUp
-
     private volatile ExecutorService execService
 
     private volatile TaskFault fault
@@ -125,11 +123,11 @@ class Session implements ISession {
 
     private ClassLoader classLoader
 
-    private List<Closure<Void>> shutdownCallbacks = []
+    private Queue<Closure<Void>> shutdownCallbacks = new ConcurrentLinkedQueue<>()
 
     private int poolSize
 
-    private List<TraceObserver> observers = []
+    private Queue<TraceObserver> observers
 
     private boolean statsEnabled
 
@@ -249,8 +247,8 @@ class Session implements ISession {
      * @return A list of {@link TraceObserver} objects or an empty list
      */
     @PackageScope
-    List createObservers() {
-        def result = []
+    Queue createObservers() {
+        def result = new ConcurrentLinkedQueue()
 
         createTraceFileObserver(result)
         createTimelineObserver(result)
@@ -262,7 +260,7 @@ class Session implements ISession {
     /**
      * create the Extrae trace observer
      */
-    protected void createExtraeObserver(List result) {
+    protected void createExtraeObserver(Collection<TraceObserver> result) {
         Boolean isEnabled = config.navigate('extrae.enabled') as Boolean
         if( isEnabled ) {
             try {
@@ -277,7 +275,7 @@ class Session implements ISession {
     /**
      * Create timeline report file observer
      */
-    protected void createTimelineObserver(List result) {
+    protected void createTimelineObserver(Collection<TraceObserver> result) {
         Boolean isEnabled = config.navigate('timeline.enabled') as Boolean
         if( isEnabled ) {
             String fileName = config.navigate('timeline.file')
@@ -291,7 +289,7 @@ class Session implements ISession {
     /*
      * create the execution trace observer
      */
-    protected void createTraceFileObserver(List result) {
+    protected void createTraceFileObserver(Collection<TraceObserver> result) {
         Boolean isEnabled = config.navigate('trace.enabled') as Boolean
         if( isEnabled ) {
             String fileName = config.navigate('trace.file')
@@ -312,8 +310,7 @@ class Session implements ISession {
          * - register all of them in the dispatcher class
          * - register the onComplete event
          */
-        for( int i=0; i<observers.size(); i++ ) {
-            def trace = observers.get(i)
+        observers.each { trace ->
             log.debug "Registering observer: ${trace.class.name}"
             dispatcher.register(trace)
         }
@@ -415,45 +412,41 @@ class Session implements ISession {
         log.trace "Session > after cleanup"
 
         execService.shutdown()
-        log.trace "Session > executor shutdown"
         execService = null
+        log.trace "Session > executor shutdown"
+
+        // -- shutdown s3 uploader
+        shutdownS3Uploader()
+
         log.debug "Session destroyed"
     }
 
-    final protected synchronized void cleanUp() {
-
-        if( cleanedUp ) return
+    final protected void cleanUp() {
 
         log.trace "Shutdown: $shutdownCallbacks"
-        List<Closure<Void>> all = new ArrayList<>(shutdownCallbacks)
-        for( def hook : all ) {
+        while( shutdownCallbacks.size() ) {
+            def hook = shutdownCallbacks.poll()
             try {
-                hook.call()
+                if( hook )
+                    hook.call()
             }
             catch( Exception e ) {
                 log.debug "Failed to execute shutdown hook: $hook", e
             }
         }
 
-        // -- after the first time remove all of them to avoid it's called twice
-        shutdownCallbacks.clear()
-
-        // -- shutdown s3 uploader
-        shutdownS3Uploader()
-
         // -- invoke observers completion handlers
-        for( int i=0; i<observers.size(); i++ ) {
-            def trace = observers.get(i)
+        while( observers.size() ) {
+            def trace = observers.poll()
             try {
-                trace.onFlowComplete()
+                if( trace )
+                    trace.onFlowComplete()
             }
             catch( Exception e ) {
                 log.debug "Failed to invoke observer completion handler: $trace", e
             }
         }
 
-        // -- set as cleaned
-        cleanedUp = true
     }
 
     void abort(TaskFault fault) {
@@ -585,7 +578,7 @@ class Session implements ISession {
 
     static private void shutdownS3Uploader() {
         if( classWasLoaded('com.upplication.s3fs.S3OutputStream') ) {
-            log.info "AWS S3 uploader shutdown"
+            log.debug "AWS S3 uploader shutdown"
             S3OutputStream.shutdownExecutor()
         }
     }

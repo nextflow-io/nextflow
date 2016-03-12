@@ -302,7 +302,10 @@ class PublishDir {
             // register the shutdown on termination
             def session = Global.session as Session
             if( session ) {
-                session.onShutdown { executor.shutdown() }
+                session.onShutdown {
+                    executor.shutdown()
+                    executor.awaitTermination(36,TimeUnit.HOURS)
+                }
             }
         }
     }
