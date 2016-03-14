@@ -20,6 +20,7 @@
 
 package nextflow.util
 import static nextflow.Const.MAIN_PACKAGE
+import static nextflow.Const.S3_UPLOADER_CLASS
 
 import java.lang.reflect.Field
 import java.nio.file.NoSuchFileException
@@ -51,6 +52,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessException
 import nextflow.file.FileHelper
 import org.apache.commons.lang.exception.ExceptionUtils
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
  * Helper class to setup the logging subsystem
@@ -75,6 +77,10 @@ class LoggerHelper {
     private Map<String,Level> packages = [:]
 
     private LoggerContext loggerContext
+
+    private ConsoleAppender consoleAppender
+
+    private FileAppender fileAppender
 
     LoggerHelper setRolling( boolean value ) {
         this.rolling = value
@@ -105,8 +111,8 @@ class LoggerHelper {
         logFileName = opts.logFile
 
         final boolean quiet = opts.quiet
-        final List<String> debugConf = opts.debug
-        final List<String> traceConf = opts.trace
+        final List<String> debugConf = opts.debug ?: new ArrayList<String>()
+        final List<String> traceConf = opts.trace ?: new ArrayList<String>()
 
         // Reset all the logger
         final root = loggerContext.getLogger('ROOT')
@@ -114,14 +120,20 @@ class LoggerHelper {
 
         // -- define the console appender
         packages[MAIN_PACKAGE] = quiet ? Level.WARN : Level.INFO
-        debugConf?.each { packages[it] = Level.DEBUG }
-        traceConf?.each { packages[it] = Level.TRACE }
+
+        // -- add the S3 uploader by default
+        if( !debugConf.contains(S3_UPLOADER_CLASS) && !traceConf.contains(S3_UPLOADER_CLASS) ) {
+            debugConf << S3_UPLOADER_CLASS
+        }
+
+        debugConf.each { packages[it] = Level.DEBUG }
+        traceConf.each { packages[it] = Level.TRACE }
 
         // -- the console appender
-        final consoleAppender = createConsoleAppender()
+        this.consoleAppender = createConsoleAppender()
 
         // -- the file appender
-        FileAppender fileAppender = rolling ? createRollingAppender() : createFileAppender()
+        this.fileAppender = rolling ? createRollingAppender() : createFileAppender()
 
         // -- configure the ROOT logger
         root.setLevel(Level.INFO)
@@ -131,39 +143,34 @@ class LoggerHelper {
             root.addAppender(consoleAppender)
 
         // -- main package logger
-        def mainLevel = packages[MAIN_PACKAGE]
-        def logger = loggerContext.getLogger(MAIN_PACKAGE)
-        logger.setLevel( mainLevel == Level.TRACE ? Level.TRACE : Level.DEBUG )
+        def mainLevel = packages[MAIN_PACKAGE] == Level.TRACE ? Level.TRACE : Level.DEBUG
+        def logger = createLogger(MAIN_PACKAGE, mainLevel)
+
+        // -- set AWS lib level to WARN to reduce noise in the log file
+        final AWS = 'com.amazonaws'
+        if( !debugConf.contains(AWS) && !traceConf.contains(AWS)) {
+            createLogger(AWS, Level.WARN)
+        }
+
+        // -- debug packages specified by the user
+        debugConf.each { String clazz -> createLogger(clazz, Level.DEBUG) }
+        // -- trace packages specified by the user
+        traceConf.each { String clazz -> createLogger(clazz, Level.TRACE) }
+
+        if(!consoleAppender)
+            logger.debug "Console appender: disabled"
+    }
+
+    protected Logger createLogger(String clazz, Level level ) {
+        def logger = loggerContext.getLogger( clazz )
+        logger.setLevel(level)
         logger.setAdditive(false)
         if( fileAppender )
             logger.addAppender(fileAppender)
         if( consoleAppender )
             logger.addAppender(consoleAppender)
 
-        // -- debug packages specified by the user
-        debugConf?.each { String clazz ->
-            logger = loggerContext.getLogger( clazz )
-            logger.setLevel(Level.DEBUG)
-            logger.setAdditive(false)
-            if( fileAppender )
-                logger.addAppender(fileAppender)
-            if( consoleAppender )
-                logger.addAppender(consoleAppender)
-        }
-
-        // -- trace packages specified by the user
-        traceConf?.each { String clazz ->
-            logger = loggerContext.getLogger( clazz )
-            logger.setLevel(Level.TRACE)
-            logger.setAdditive(false)
-            if( fileAppender )
-                logger.addAppender(fileAppender)
-            if( consoleAppender )
-                logger.addAppender(consoleAppender)
-        }
-
-        if(!consoleAppender)
-            logger.debug "Console appender: disabled"
+        return logger
     }
 
     protected ConsoleAppender createConsoleAppender() {
@@ -171,7 +178,7 @@ class LoggerHelper {
         final ConsoleAppender result = daemon && opts.isBackground() ? null : new ConsoleAppender()
         if( result )  {
 
-            final filter = new LoggerPackageFilter( packages )
+            final filter = new ConsoleLoggerFilter( packages )
             filter.setContext(loggerContext)
             filter.start()
 
@@ -260,12 +267,12 @@ class LoggerHelper {
     /*
      * Filters the logging event based on the level assigned to a specific 'package'
      */
-    static class LoggerPackageFilter extends Filter<ILoggingEvent> {
+    static class ConsoleLoggerFilter extends Filter<ILoggingEvent> {
 
-        Map<String,Level> packages
+        Set<Map.Entry<String,Level>> packages
 
-        LoggerPackageFilter( Map<String,Level> packages )  {
-            this.packages = packages
+        ConsoleLoggerFilter( Map<String,Level> packages )  {
+            this.packages = packages.entrySet()
         }
 
         @Override
@@ -277,8 +284,8 @@ class LoggerHelper {
 
             def logger = event.getLoggerName()
             def level = event.getLevel()
-            for( Map.Entry<String,Level> entry : packages.entrySet() ) {
-                if ( logger.startsWith( entry.key ) && level.isGreaterOrEqual(entry.value) ) {
+            for( Map.Entry<String,Level> entry : packages ) {
+                if ( logger.startsWith( entry.key ) && level.isGreaterOrEqual(Level.INFO) && level.isGreaterOrEqual(entry.value) ) {
                     return FilterReply.NEUTRAL
                 }
             }

@@ -19,12 +19,10 @@
  */
 
 package nextflow.extrae
-
 import java.nio.file.Files
 
-import nextflow.Session
+import nextflow.Const
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -52,7 +50,7 @@ class ExtraeTraceObserverTest extends Specification {
     def testLoadClass() {
 
         when:
-        def x = Class.forName(Session.EXTRAE_TRACE_CLASS).newInstance()
+        def x = Class.forName(Const.EXTRAE_TRACE_CLASS).newInstance()
         then:
         x instanceof ExtraeTraceObserver
 

@@ -44,6 +44,10 @@ import nextflow.trace.TraceObserver
 import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
+
+import static nextflow.Const.S3_UPLOADER_CLASS
+import static nextflow.Const.EXTRAE_TRACE_CLASS
+
 /**
  * Holds the information on the current execution
  *
@@ -52,8 +56,6 @@ import nextflow.util.Duration
 @Slf4j
 @CompileStatic
 class Session implements ISession {
-
-    static final String EXTRAE_TRACE_CLASS = 'nextflow.extrae.ExtraeTraceObserver'
 
     /**
      * Keep a list of all processor created
@@ -577,7 +579,7 @@ class Session implements ISession {
     }
 
     static private void shutdownS3Uploader() {
-        if( classWasLoaded('com.upplication.s3fs.S3OutputStream') ) {
+        if( classWasLoaded(S3_UPLOADER_CLASS) ) {
             log.debug "AWS S3 uploader shutdown"
             S3OutputStream.shutdownExecutor()
         }

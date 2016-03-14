@@ -48,17 +48,17 @@ class Const {
     /**
      * The application version
      */
-    static public final String APP_VER = "0.17.3"
+    static public final String APP_VER = "0.17.4-SNAPSHOT"
 
     /**
      * The app build time as linux/unix timestamp
      */
-    static public final long APP_TIMESTAMP = 1455793244542
+    static public final long APP_TIMESTAMP = 1457953610532
 
     /**
      * The app build number
      */
-    static public final int APP_BUILDNUM = 3495
+    static public final int APP_BUILDNUM = 3591
 
     /**
      * The date time formatter string
@@ -117,7 +117,7 @@ class Const {
     /*
      * The application 'logo'
      */
-    static final String SPLASH =
+    static public final String SPLASH =
 
 """
       N E X T F L O W
@@ -126,5 +126,8 @@ class Const {
       http://nextflow.io
 """
 
+    static public final String EXTRAE_TRACE_CLASS = 'nextflow.extrae.ExtraeTraceObserver'
+
+    static public final String S3_UPLOADER_CLASS = 'com.upplication.s3fs.S3OutputStream'
 
 }
