@@ -757,15 +757,15 @@ abstract class TaskProcessor {
         task.config.attempt = taskErrCount+1
         final taskStrategy = task.config.getErrorStrategy()
 
+        if( error instanceof ProcessScriptException ) {
+            // retry is not allowed when the script cannot be compiled
+            return null
+        }
+
         // IGNORE strategy -- just continue
         if( taskStrategy == ErrorStrategy.IGNORE ) {
             log.warn "Error running process > ${error.getMessage()} -- error is ignored"
             return ErrorStrategy.IGNORE
-        }
-
-        if( error instanceof ProcessScriptException ) {
-            // retry is not allowed when the script cannot be compiled
-            return null
         }
 
         // RETRY strategy -- check that process do not exceed 'maxError' and the task do not exceed 'maxRetries'
