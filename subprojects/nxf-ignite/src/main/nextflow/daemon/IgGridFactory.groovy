@@ -26,6 +26,9 @@ import nextflow.Const
 import nextflow.Global
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
+import nextflow.scheduler.JobBalancerSpi
+import nextflow.scheduler.JobFailoverSpi
+import nextflow.scheduler.JobSchedulerSpi
 import nextflow.util.ClusterConfig
 import nextflow.util.Duration
 import org.apache.commons.lang.StringUtils
@@ -48,8 +51,6 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMultic
 import org.apache.ignite.spi.discovery.tcp.ipfinder.s3.TcpDiscoveryS3IpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.sharedfs.TcpDiscoverySharedFsIpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder
-import org.apache.ignite.spi.failover.jobstealing.JobStealingFailoverSpi
-import org.apache.ignite.spi.loadbalancing.adaptive.AdaptiveLoadBalancingSpi
 /**
  * Grid factory class. It can be used to create a {@link IgniteConfiguration} or the {@link Ignite} instance directly
  *
@@ -60,6 +61,8 @@ import org.apache.ignite.spi.loadbalancing.adaptive.AdaptiveLoadBalancingSpi
 class IgGridFactory {
 
     static final public String SESSIONS_CACHE = 'allSessions'
+
+    static final public String RESOURCE_CACHE = 'resourceCache'
 
     static final public String GRID_NAME = Const.APP_NAME
 
@@ -115,9 +118,8 @@ class IgGridFactory {
         System.setProperty('IGNITE_NO_ASCII', 'true')
 
         IgniteConfiguration cfg = new IgniteConfiguration()
-        collisionConfig(cfg)
+        schedulerConfig(cfg)
         discoveryConfig(cfg)
-        balancingConfig(cfg)
         cacheConfig(cfg)
         fileSystemConfig(cfg)
 
@@ -185,8 +187,17 @@ class IgGridFactory {
             //queryIndexEnabled = false
         }
 
+        /*
+         * set scheduler resources cache
+         */
+        def resCfg = new CacheConfiguration()
+        resCfg.with {
+            name = RESOURCE_CACHE
+            cacheMode = CacheMode.REPLICATED
+        }
 
-        cfg.setCacheConfiguration(sessionCfg, metaCfg, dataCfg)
+        cfg.setCacheConfiguration(sessionCfg, metaCfg, dataCfg, resCfg)
+
     }
 
 
@@ -209,15 +220,28 @@ class IgGridFactory {
 
     }
 
+    protected schedulerConfig( IgniteConfiguration cfg ) {
 
-    protected collisionConfig( IgniteConfiguration cfg ) {
-        cfg.setCollisionSpi( new CustomStealingCollisionSpi() )
-        cfg.setFailoverSpi( new JobStealingFailoverSpi() )
-    }
+        // -- config scheduler
+        final scheduler = new JobSchedulerSpi()
+        scheduler.with {
+            stealingEnabled = clusterConfig.getAttribute('stealingEnabled', true) as boolean
+            waitJobsThreshold = clusterConfig.getAttribute('waitJobsThreshold', DFLT_WAIT_JOBS_THRESHOLD) as int
+            maximumStealingAttempts = clusterConfig.getAttribute('maxStealingAttempts', DFLT_MAX_STEALING_ATTEMPTS) as int
+        }
+        cfg.setCollisionSpi(scheduler)
 
-    protected void balancingConfig( IgniteConfiguration cfg ) {
+        // -- config failover
+        final failover= new JobFailoverSpi()
+        failover.with {
+            maximumFailoverAttempts = clusterConfig.getAttribute('maxFailoverAttempts', DFLT_MAX_FAILOVER_ATTEMPTS) as int
+        }
+        cfg.setFailoverSpi(failover)
 
-        cfg.setLoadBalancingSpi( new AdaptiveLoadBalancingSpi() )
+        // -- config load balancer
+        final balancer = new JobBalancerSpi()
+        cfg.setLoadBalancingSpi(balancer)
+
     }
 
     private discoveryConfig( IgniteConfiguration cfg ) {

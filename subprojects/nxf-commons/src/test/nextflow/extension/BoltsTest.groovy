@@ -23,6 +23,7 @@ package nextflow.extension
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import groovy.util.logging.Slf4j
 import nextflow.util.Duration
 import spock.lang.Specification
 /**
@@ -205,5 +206,6 @@ class BoltsTest extends Specification {
         !'aaaa'.isAllUpperCase()
         !'1A11A1A'.isAllUpperCase()
     }
+
 
 }

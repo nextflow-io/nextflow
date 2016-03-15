@@ -40,6 +40,7 @@ import org.apache.ignite.cluster.ClusterNode
 import org.apache.ignite.events.EventType
 import org.apache.ignite.lang.IgniteRunnable
 import org.apache.ignite.resources.IgniteInstanceResource
+import org.apache.ignite.spi.collision.jobstealing.JobStealingDisabled
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage
 import org.apache.ignite.spi.discovery.DiscoverySpiListener
 import org.jetbrains.annotations.Nullable
@@ -131,7 +132,7 @@ class IgConnector implements DiscoverySpiListener {
 
             float xFactor = 1.4
             int slots = cluster.metrics().getTotalCpus()
-            log.debug "Cluster metrics >> slots: $slots"
+            log.debug1 "Cluster metrics >> slots: $slots", throttle: '5min'
             int value = (slots * xFactor) + 1
             monitor.capacitySet(value)
 
@@ -148,7 +149,7 @@ class IgConnector implements DiscoverySpiListener {
                 }
 
                 slots = cluster.metrics().getTotalCpus()
-                log.debug "Cluster metrics >> cpus: $slots"
+                log.debug1 "Cluster metrics >> slots: $slots", throttle: '5min'
                 value = (slots * xFactor) + 1
                 monitor.capacitySet(value)
             }
@@ -202,6 +203,7 @@ class IgConnector implements DiscoverySpiListener {
     /**
      * Runnable task used to kill remote node on shut-down
      */
+    @JobStealingDisabled
     static class PoisonPill implements IgniteRunnable {
 
         @IgniteInstanceResource
