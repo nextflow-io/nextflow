@@ -19,7 +19,6 @@
  */
 
 package nextflow.scheduler
-
 import java.lang.management.ManagementFactory
 
 import com.sun.management.OperatingSystemMXBean
@@ -33,7 +32,6 @@ import nextflow.util.MemoryUnit
 import org.apache.ignite.Ignition
 import org.apache.ignite.spi.collision.CollisionContext
 import org.apache.ignite.spi.collision.CollisionJobContext
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -112,11 +110,10 @@ class ResourceContext implements Serializable {
      * @return The node actual hostname
      */
     String getHostName() {
-        if( _hostName ) {
-            return _hostName
+        if( !_hostName ) {
+            _hostName = System.getenv('HOSTNAME') ?: 'localhost'
         }
-
-        _hostName = System.getenv('HOSTNAME') ?: 'localhost'
+        return _hostName
     }
 
 
@@ -124,23 +121,19 @@ class ResourceContext implements Serializable {
      * @return The total memory available
      */
     MemoryUnit getAvailMemory() {
-        if( _availMemory ) {
-            return _availMemory
+        if( !_availMemory ) {
+            _availMemory = new MemoryUnit(getSystemMXBean().getTotalPhysicalMemorySize())
         }
-
-        _availMemory = new MemoryUnit(getSystemMXBean().getTotalPhysicalMemorySize())
+        return _availMemory
     }
 
     /**
      * @return The {@link IgGridFactory#NODE_ROLE} attribute, either MASTER or WORKER
      */
     private String getRole() {
-        if( _role ) {
-            return _role
+        if( !_role ) {
+            _role = Ignition.ignite(IgGridFactory.GRID_NAME).cluster().localNode().attribute(IgGridFactory.NODE_ROLE)
         }
-
-        _role = Ignition.ignite(IgGridFactory.GRID_NAME).cluster().localNode().attribute(IgGridFactory.NODE_ROLE)
-        log.trace "Local node role `$_role`"
         return _role
     }
 
@@ -190,44 +183,52 @@ class ResourceContext implements Serializable {
 
     Collection<CollisionJobContext> getWaitingJobs() { waitingJobs }
 
+    /**
+     * Determine if a task can be activated depending the computing resources requested and
+     * the ones available.
+     *
+     * @param jobCtx
+     * @return
+     */
     boolean canActivate( CollisionJobContext jobCtx )  {
-        if( !(jobCtx.job instanceof IgBaseTask) ) {
-            return true
-        }
+        if( jobCtx.job instanceof IgBaseTask ) {
+            final task = (IgBaseTask)jobCtx.job
 
-        final task = (IgBaseTask)jobCtx.job
+            if( task.resources.disk > freeDisk ) {
+                log.debug1("Task waiting for disk storage > $task -- requested: ${task.resources.disk}; free: ${freeDisk}", throttle: '1min')
+                return false
+            }
 
-        if( task.resources.disk > freeDisk ) {
-            log.trace "Task waiting for disk storage > $task -- request: ${task.resources.disk}; free: ${freeDisk}"
-            return false
-        }
+            if( task.resources.cpus > freeCpus ) {
+                log.debug1("Task waiting for cpus > $task -- requested: ${task.resources.cpus}; free: ${freeCpus}", throttle: '1min')
+                return false
+            }
 
-        if( task.resources.cpus > freeCpus ) {
-            log.trace "Task waiting for cpus > $task -- request: ${task.resources.cpus}; free: ${freeCpus}"
-            return false
-        }
-
-        if( task.resources.memory > freeMemory ) {
-            log.trace "Task waiting for memory > $task -- request: ${task.resources.memory}; free: ${freeMemory}"
-            return false
+            if( task.resources.memory > freeMemory ) {
+                log.debug1("Task waiting for memory > $task -- requested: ${task.resources.memory}; free: ${freeMemory}", throttle: '1min')
+                return false
+            }
         }
 
         return true
     }
 
+    /**
+     * Consume the job resources
+     *
+     * @param jobCtx
+     */
     void consumeTaskResource( CollisionJobContext jobCtx ) {
         final task = (IgBaseTask)jobCtx.job
 
         freeCpus -= task.resources.cpus
         freeMemory -= task.resources.memory
-        if( log.isTraceEnabled() )
-            log.trace "Task activated > $task -- Pending; ${waitingJobs.size()} (was: ${waitingCount}) - active: ${activeJobs.size()} (was: $activeCount)"
-
+        log.trace1("Task activated > $task -- Pending; ${waitingJobs.size()} (was: ${waitingCount}) - active: ${activeJobs.size()} (was: $activeCount)")
     }
 
     @Override
     String toString() {
-        "cpus > avail: ${availCpus} free: ${freeCpus} - mem > avail: ${availMemory} free: $freeMemory} - disk > free: ${freeDisk}"
+        "cpus > tot: ${availCpus} free: ${freeCpus} - mem > tot: ${availMemory} free: $freeMemory} - disk > free: ${freeDisk}"
     }
 
 }

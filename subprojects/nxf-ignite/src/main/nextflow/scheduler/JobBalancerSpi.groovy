@@ -40,19 +40,19 @@ package nextflow.scheduler
 import groovy.transform.CompileStatic
 import nextflow.daemon.IgGridFactory
 import nextflow.executor.IgBaseTask
-import org.apache.ignite.IgniteLogger
 import org.apache.ignite.cluster.ClusterNode
 import org.apache.ignite.compute.ComputeJob
 import org.apache.ignite.compute.ComputeTaskSession
 import org.apache.ignite.internal.util.typedef.internal.A
 import org.apache.ignite.internal.util.typedef.internal.S
-import org.apache.ignite.resources.LoggerResource
 import org.apache.ignite.spi.IgniteSpiAdapter
 import org.apache.ignite.spi.IgniteSpiConsistencyChecked
 import org.apache.ignite.spi.IgniteSpiException
 import org.apache.ignite.spi.IgniteSpiMultipleInstancesSupport
 import org.apache.ignite.spi.loadbalancing.LoadBalancingSpi
 import org.jetbrains.annotations.Nullable
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -62,12 +62,10 @@ import org.jetbrains.annotations.Nullable
 @IgniteSpiConsistencyChecked(optional = true)
 public class JobBalancerSpi extends IgniteSpiAdapter implements LoadBalancingSpi, JobBalancerSpiMBean {
 
+    private static final Logger log = LoggerFactory.getLogger(JobBalancerSpi)
+
     /** Random number generator. */
     private static final Random RAND = new Random();
-
-    /** Grid logger. */
-    @LoggerResource
-    private IgniteLogger log;
 
     /** {@inheritDoc} */
     @Override public void spiStart(@Nullable String gridName) throws IgniteSpiException {
@@ -76,8 +74,7 @@ public class JobBalancerSpi extends IgniteSpiAdapter implements LoadBalancingSpi
         registerMBean(gridName, this, JobBalancerSpiMBean.class);
 
         // Ack ok start.
-        if (log.isDebugEnabled())
-            log.debug(startInfo());
+        log.debug1(startInfo());
     }
 
     /** {@inheritDoc} */
@@ -85,8 +82,7 @@ public class JobBalancerSpi extends IgniteSpiAdapter implements LoadBalancingSpi
         unregisterMBean();
 
         // Ack ok stop.
-        if (log.isDebugEnabled())
-            log.debug(stopInfo());
+        log.debug1(stopInfo());
     }
 
 
@@ -104,15 +100,13 @@ public class JobBalancerSpi extends IgniteSpiAdapter implements LoadBalancingSpi
             def res = (ResourceContext)getSpiContext().get(IgGridFactory.RESOURCE_CACHE, node.id())
 
             if( job instanceof IgBaseTask && res ) {
-                if( log.isTraceEnabled() )
-                    log.trace "Balancer checking node: ${node.id()}  > resources provided: $res -- resourced requested: ${job.resources}"
+                log.trace1 "Balancer checking node: ${node.id()}  > resources provided: $res -- resourced requested: ${job.resources}"
 
                 if( job.resources.cpus > res.freeCpus ) continue
                 if( job.resources.memory && job.resources.memory > res.freeMemory ) continue
                 if( job.resources.disk && job.resources.disk > res.freeDisk ) continue
 
-                if( log.isTraceEnabled() )
-                    log.trace "Balancer picked node: ${node.id()}"
+                log.trace1 "Balancer picked node: ${node.id()}"
                 return node
             }
 
@@ -120,8 +114,7 @@ public class JobBalancerSpi extends IgniteSpiAdapter implements LoadBalancingSpi
         }
 
         ClusterNode node = top.get(RAND.nextInt(top.size()))
-        if( log.isTraceEnabled() )
-            log.trace "Balancer cannot determine balanced node -- picked a random one > $node"
+        log.trace1 "Balancer cannot determine a balanced node -- picked a random one > $node"
         return node
     }
 

@@ -132,7 +132,7 @@ class IgConnector implements DiscoverySpiListener {
 
             float xFactor = 1.4
             int slots = cluster.metrics().getTotalCpus()
-            log.debug "Cluster metrics >> slots: $slots"
+            log.debug1 "Cluster metrics >> slots: $slots", throttle: '5min'
             int value = (slots * xFactor) + 1
             monitor.capacitySet(value)
 
@@ -149,7 +149,7 @@ class IgConnector implements DiscoverySpiListener {
                 }
 
                 slots = cluster.metrics().getTotalCpus()
-                log.debug "Cluster metrics >> cpus: $slots"
+                log.debug1 "Cluster metrics >> slots: $slots", throttle: '5min'
                 value = (slots * xFactor) + 1
                 monitor.capacitySet(value)
             }

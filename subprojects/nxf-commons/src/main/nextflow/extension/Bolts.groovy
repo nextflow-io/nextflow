@@ -25,15 +25,19 @@ import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 import java.util.regex.Pattern
 
+import com.google.common.cache.Cache
+import com.google.common.cache.CacheBuilder
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import nextflow.file.FileHelper
+import nextflow.util.CheckHelper
 import nextflow.util.Duration
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.codehaus.groovy.runtime.GStringImpl
 import org.codehaus.groovy.runtime.ResourceGroovyMethods
 import org.codehaus.groovy.runtime.StringGroovyMethods
+import org.slf4j.Logger
 
 /**
  * Generic extensions
@@ -624,4 +628,128 @@ class Bolts {
 
         return result
     }
+
+    private static HashMap<String,Long> LOGGER_CACHE = new LinkedHashMap<String,Long>() {
+        protected boolean removeEldestEntry(Map.Entry<String, Long> eldest) {
+            return size() > 100_000
+        }
+    }
+
+    static private checkLogCache( Object msg, Map params, Closure action ) {
+
+        // -- check if this message has already been printed
+        final String str = msg.toString()
+        final Throwable error = params?.causedBy as Throwable
+        final Duration throttle = params?.throttle as Duration
+
+        if( throttle ) {
+            long now = System.currentTimeMillis()
+            Long ts = LOGGER_CACHE.get(str)
+            if( ts && now - ts <= throttle.toMillis() ) {
+                return
+            }
+            LOGGER_CACHE.put(str, now)
+        }
+
+        action.call(str, error)
+    }
+
+    private static Map<String,?> LOGGER_PARAMS = [ causedBy: Throwable, throttle: [String, Number, Duration]  ]
+
+
+    /**
+     * Append a `trace` level entry in the application log.
+     *
+     * @param log
+     *          The {@link Logger} object
+     * @param params
+     *          Optional named parameters
+     *          - `causedBy`: A {@link Throwable} object that raised the error
+     *          - `throttle`: When specified suppress identical logs within the specified time {@link Duration}
+     * @param msg
+     *          The message to print
+     *
+     */
+    static void trace1(Logger log, Map params=null, Object msg ) {
+        CheckHelper.checkParams('trace1', params, LOGGER_PARAMS)
+        if( !log.isTraceEnabled() || msg==null ) return
+        checkLogCache(msg,params) { String str, Throwable t -> t ? log.trace(str,t) : log.trace(str) }
+    }
+
+    /**
+     * Append a `debug` level entry in the application log.
+     *
+     * @param log
+     *          The {@link Logger} object
+     * @param params
+     *          Optional named parameters
+     *          - `causedBy`: A {@link Throwable} object that raised the error
+     *          - `throttle`: When specified suppress identical logs within the specified time {@link Duration}
+     * @param msg
+     *          The message to print
+     *
+     */
+    static void debug1(Logger log, Map params=null, Object msg ) {
+        CheckHelper.checkParams('debug1', params, LOGGER_PARAMS)
+        if( !log.isDebugEnabled() || msg==null ) return
+        checkLogCache(msg,params) { String str, Throwable t -> t ? log.debug(str,t) : log.debug(str) }
+    }
+
+    /**
+     * Append a `info` level entry in the application log.
+     *
+     * @param log
+     *          The {@link Logger} object
+     * @param params
+     *          Optional named parameters
+     *          - `causedBy`: A {@link Throwable} object that raised the error
+     *          - `throttle`: When specified suppress identical logs within the specified time {@link Duration}
+     * @param msg
+     *          The message to print
+     *
+     */
+    static void info1(Logger log, Map params=null, Object msg ) {
+        CheckHelper.checkParams('info1', params, LOGGER_PARAMS)
+        if( !log.isInfoEnabled() || msg==null ) return
+        checkLogCache(msg,params) { String str, Throwable t -> t ? log.info(str,t) : log.info(str) }
+    }
+
+    /**
+     * Append a `warn` level entry in the application log.
+     *
+     * @param log
+     *          The {@link Logger} object
+     * @param params
+     *          Optional named parameters
+     *          - `causedBy`: A {@link Throwable} object that raised the error
+     *          - `throttle`: When specified suppress identical logs within the specified time {@link Duration}
+     * @param msg
+     *          The message to print
+     *
+     */
+    static void warn1(Logger log, Map params=null, Object msg ) {
+        CheckHelper.checkParams('warn1', params, LOGGER_PARAMS)
+        if( !log.isWarnEnabled() || msg==null ) return
+        checkLogCache(msg,params) { String str, Throwable t -> t ? log.warn(str,t) : log.warn(str) }
+    }
+
+    /**
+     * Append a `error` level entry in the application log.
+     *
+     * @param log
+     *          The {@link Logger} object
+     * @param params
+     *          Optional named parameters
+     *          - `causedBy`: A {@link Throwable} object that raised the error
+     *          - `throttle`: When specified suppress identical logs within the specified time {@link Duration}
+     * @param msg
+     *          The message to print
+     *
+     */
+    static void error1(Logger log, Map params=null, Object msg ) {
+        CheckHelper.checkParams('error1', params, LOGGER_PARAMS)
+        if( !log.isErrorEnabled() || msg==null ) return
+        checkLogCache(msg,params) { String str, Throwable t -> t ? log.error(str,t) : log.error(str) }
+    }
+
 }
