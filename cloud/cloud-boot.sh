@@ -14,6 +14,9 @@ export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 EOF
 
+[[ $NXF_VER ]] && echo "export NXF_VER='$NXF_VER'" >> $HOME/.bash_profile
+[[ $NXF_OPTS ]] && echo "export NXF_OPTS='$NXF_OPTS'" >> $HOME/.bash_profile
+
 #
 # set instance name
 #

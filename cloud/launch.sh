@@ -27,6 +27,7 @@ set -u
 # nextflow details
 #NXF_VER=0.17.3
 #NXF_MODE=ignite
+#NXF_OPTS='-Xms512M -Xmx2G'
 #NXF_PULL=<github repo to pull>
 
 # docker containers to pull on start
@@ -49,9 +50,12 @@ if [[ $3 == '--spot' ]]; then
   X_SPOT=true 
   X_PRICE=${4:-$X_PRICE}
   [[ ! $X_PRICE ]] && echo "ERROR -- Spot instance bid price need to be specified" && exit
+echo "Instance type : **SPOT**"
 echo "Avail zone    : $X_ZONE"
 echo "Spot price    : $X_PRICE"
-fi 
+else
+echo "Instance type : **ON-DEMAND**"
+fi
 
 if [[ $1 == master ]]; then
     X_MSG="This is going to launch the MASTER node. Is it OK (y/n)?"
@@ -79,18 +83,19 @@ local role=$1
 cat << EndOfString
 #!/bin/bash
 su - ec2-user << 'EOF'
-export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-export AWS_S3BUCKET=$AWS_S3BUCKET
-export DOCKER_IMAGE=$DOCKER_IMAGE
-export DOCKER_VERSION=${DOCKER_VERSION}
-export NXF_VER=$NXF_VER
+export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
+export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
+export AWS_S3BUCKET="$AWS_S3BUCKET"
+export DOCKER_IMAGE="$DOCKER_IMAGE"
+export DOCKER_VERSION="${DOCKER_VERSION}"
+export NXF_VER="$NXF_VER"
 export NXF_MODE=ignite
-export NXF_PULL=$NXF_PULL
-export NXF_ROLE=$role
-export X_TYPE=$X_TYPE
-export X_MOUNT=$X_MOUNT
-export X_DEVICE=$X_DEVICE
+export NXF_OPTS="$NXF_OPTS"
+export NXF_PULL="$NXF_PULL"
+export NXF_ROLE="$role"
+export X_TYPE="$X_TYPE"
+export X_MOUNT="$X_MOUNT"
+export X_DEVICE="$X_DEVICE"
 curl -fsSL https://raw.githubusercontent.com/nextflow-io/nextflow/master/cloud/cloud-boot.sh | bash &> ~ec2-user/boot.log
 EOF
 EndOfString
@@ -104,7 +109,6 @@ function getRootDevice() {
   local str="$(aws ec2 describe-images --image-ids $ami --query 'Images[*].{ID:BlockDeviceMappings}' --output text)"
   local device=$(echo "$str" | grep ID | cut -f 2)
   local delete=$(echo "$str" | grep EBS | cut -f 2 | tr '[:upper:]' '[:lower:]')
-  local encryp=$(echo "$str" | grep EBS | cut -f 3 | tr '[:upper:]' '[:lower:]')
   local snapsh=$(echo "$str" | grep EBS | cut -f 4)
   local type=$(echo "$str" | grep EBS | cut -f 6)
 
@@ -115,8 +119,7 @@ cat << EndOfString
         "DeleteOnTermination": $delete,
         "SnapshotId": "$snapsh",
         "VolumeSize": $size,
-        "VolumeType": "$type",
-        "Encrypted": $encryp
+        "VolumeType": "$type"
     }
 }
 EndOfString
@@ -210,10 +213,10 @@ function launch_cluster() {
 
   if [[ $X_SPOT ]]; then
     runSpot master 1
-    runSpot worker $x
+    (( $x > 0 )) && runSpot worker $x
   else
     runInstances master 1
-    runInstances worker $x
+    (( $x > 0 )) && runInstances worker $x
   fi
 }
 
