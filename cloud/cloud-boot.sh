@@ -16,6 +16,7 @@ EOF
 
 [[ $NXF_VER ]] && echo "export NXF_VER='$NXF_VER'" >> $HOME/.bash_profile
 [[ $NXF_OPTS ]] && echo "export NXF_OPTS='$NXF_OPTS'" >> $HOME/.bash_profile
+[[ $NXF_TRACE ]] && echo "export NXF_TRACE='$NXF_TRACE'" >> $HOME/.bash_profile
 
 #
 # set instance name

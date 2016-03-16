@@ -112,7 +112,7 @@ class LoggerHelper {
 
         final boolean quiet = opts.quiet
         final List<String> debugConf = opts.debug ?: new ArrayList<String>()
-        final List<String> traceConf = opts.trace ?: new ArrayList<String>()
+        final List<String> traceConf = opts.trace ?: ( System.getenv('NXF_TRACE')?.tokenize(', ') ?: new ArrayList<String>())
 
         // Reset all the logger
         final root = loggerContext.getLogger('ROOT')

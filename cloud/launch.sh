@@ -93,6 +93,7 @@ export NXF_MODE=ignite
 export NXF_OPTS="$NXF_OPTS"
 export NXF_PULL="$NXF_PULL"
 export NXF_ROLE="$role"
+export NXF_TRACE="$NXF_TRACE"
 export X_TYPE="$X_TYPE"
 export X_MOUNT="$X_MOUNT"
 export X_DEVICE="$X_DEVICE"
