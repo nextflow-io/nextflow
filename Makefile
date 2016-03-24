@@ -47,7 +47,7 @@ deps-all:
 	./gradlew -q dependencyInsight --configuration ${config} --dependency ${module}
 
 refresh:
-	./gradlew --refresh-dependencies ${module}:dependencies --configuration ${config}
+	./gradlew --refresh-dependencies 
 
 test:
 ifndef class
