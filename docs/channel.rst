@@ -141,7 +141,7 @@ This example creates a channel and emits as many ``Path`` items as there are fil
 For example::
 
     files = Channel.fromPath( 'data/**.fa' )
-    moreFiles = Channel.fromPath( 'data/**/.fa' )
+    moreFiles = Channel.fromPath( 'data/**/*.fa' )
     pairFiles = Channel.fromPath( 'data/file_{1,2}.fq' )
 
 The first line returns a channel emitting the files ending with the suffix ``.fa`` in the ``data`` folder `and` recursively
