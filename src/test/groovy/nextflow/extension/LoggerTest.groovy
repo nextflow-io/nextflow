@@ -46,18 +46,6 @@ class LoggerTest extends Specification {
         capture.toString().readLines().findAll { it.endsWith('Hello world 2') }.size() ==1
     }
 
-    def 'should print all lines'() {
-
-        when:
-        Dummy.log.debug1("Hello world")
-        Dummy.log.debug1("Hello world")
-        Dummy.log.debug1("Hello world")
-        Dummy.log.debug1("Hello world")
-
-        then:
-        capture.toString().readLines().findAll { it.endsWith('Hello world') }.size() ==4
-    }
-
 
     @Slf4j
     static class Dummy {
