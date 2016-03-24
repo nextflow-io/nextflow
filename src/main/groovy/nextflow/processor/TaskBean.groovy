@@ -36,8 +36,6 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class TaskBean implements Serializable, Cloneable {
 
-    String taskId
-
     String name
 
     def input
@@ -97,7 +95,6 @@ class TaskBean implements Serializable, Cloneable {
 
     TaskBean(TaskRun task) {
 
-        this.taskId = task.id
         this.name = task.name
 
         // set the input (when available)

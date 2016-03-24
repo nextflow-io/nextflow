@@ -68,11 +68,15 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
     private byte[] payload
 
     /**
+     * Task unique identifier
+     */
+    private taskId
+
+    /**
      * Holds the class attributes in this map. Note: is defined as 'transient' because
      * the map content is serialized as a byte[] and saved to the {@code payload} field
      */
     protected transient TaskBean bean
-
 
     /**
      * Initialize the grid gain task wrapper
@@ -82,6 +86,7 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
      */
     protected IgBaseTask( TaskRun task, UUID sessionId ) {
         this.sessionId = sessionId
+        this.taskId = task.id
         this.bean = new TaskBean(task)
         this.payload = KryoHelper.serialize(bean)
         this.resources = new JobComputeResources(task)
@@ -184,6 +189,13 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
             throw new IllegalStateException("Missing session object for id: $sessionId")
 
         return session
+    }
+
+    def getTaskId() { taskId }
+
+    @Override
+    String toString() {
+        "${getClass().simpleName}[taskId: ${taskId}]"
     }
 
     /**

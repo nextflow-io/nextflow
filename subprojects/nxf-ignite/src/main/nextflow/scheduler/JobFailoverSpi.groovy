@@ -34,38 +34,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.scheduler;
+package nextflow.scheduler
 
-import static nextflow.scheduler.JobSchedulerSpi.THIEF_NODE_ATTR;
+import static nextflow.scheduler.JobSchedulerSpi.THIEF_NODE_ATTR
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.resources.LoggerResource;
-import org.apache.ignite.spi.IgniteSpiAdapter;
-import org.apache.ignite.spi.IgniteSpiConfiguration;
-import org.apache.ignite.spi.IgniteSpiConsistencyChecked;
-import org.apache.ignite.spi.IgniteSpiException;
-import org.apache.ignite.spi.IgniteSpiMultipleInstancesSupport;
-import org.apache.ignite.spi.failover.FailoverContext;
-import org.apache.ignite.spi.failover.FailoverSpi;
-
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import org.apache.ignite.IgniteException
+import org.apache.ignite.cluster.ClusterNode
+import org.apache.ignite.internal.util.typedef.F
+import org.apache.ignite.internal.util.typedef.internal.S
+import org.apache.ignite.internal.util.typedef.internal.U
+import org.apache.ignite.spi.IgniteSpiAdapter
+import org.apache.ignite.spi.IgniteSpiConfiguration
+import org.apache.ignite.spi.IgniteSpiConsistencyChecked
+import org.apache.ignite.spi.IgniteSpiException
+import org.apache.ignite.spi.IgniteSpiMultipleInstancesSupport
+import org.apache.ignite.spi.failover.FailoverContext
+import org.apache.ignite.spi.failover.FailoverSpi
 /**
  * Implements the jobs failover strategy used by the nextflow scheduler.
  * This is basically a clone of the standard {@link org.apache.ignite.spi.failover.jobstealing.JobStealingFailoverSpi}
  * with the exception that patch the issue https://issues.apache.org/jira/browse/IGNITE-1267
  * allowing nodes not in the job topology to steal it.
  */
+@Slf4j
+@CompileStatic
 @IgniteSpiMultipleInstancesSupport(true)
 @IgniteSpiConsistencyChecked(optional = true)
 public class JobFailoverSpi extends IgniteSpiAdapter implements FailoverSpi,
@@ -92,10 +86,6 @@ public class JobFailoverSpi extends IgniteSpiAdapter implements FailoverSpi,
 
     /** Maximum failover attempts job context attribute name. */
     private static final String MAX_FAILOVER_ATTEMPT_ATTR = "gg:failover:maxattempts";
-
-    /** Injected grid logger. */
-    @LoggerResource
-    private IgniteLogger log;
 
     /** Maximum number of attempts to execute a failed job on another node. */
     private int maxFailoverAttempts = DFLT_MAX_FAILOVER_ATTEMPTS;
@@ -175,28 +165,24 @@ public class JobFailoverSpi extends IgniteSpiAdapter implements FailoverSpi,
         assert top != null;
 
         if (top.isEmpty()) {
-            U.warn(log, "Received empty subgrid and is forced to fail.");
+            log.warn "Received empty subgrid and is forced to fail."
 
             // Nowhere to failover to.
             return null;
         }
 
-        Integer failoverCnt = ctx.getJobResult().getJobContext().getAttribute(FAILOVER_ATTEMPT_COUNT_ATTR);
+        def failoverCnt = (Integer)ctx.getJobResult().getJobContext().getAttribute(FAILOVER_ATTEMPT_COUNT_ATTR);
 
         if (failoverCnt == null)
             failoverCnt = 0;
 
         if (failoverCnt > maxFailoverAttempts) {
-            U.error(log, "Failover count exceeded maximum failover attempts parameter [failedJob=" +
-                    ctx.getJobResult().getJob() + ", maxFailoverAttempts=" + maxFailoverAttempts + ']');
-
+            log.error("Failover count exceeded maximum failover attempts parameter [failedJob=${ctx.getJobResult().getJob()}, maxFailoverAttempts=$maxFailoverAttempts]")
             return null;
         }
 
         if (failoverCnt == maxFailoverAttempts) {
-            U.warn(log, "Job failover failed because number of maximum failover attempts is exceeded [failedJob=" +
-                    ctx.getJobResult().getJob() + ", maxFailoverAttempts=" + maxFailoverAttempts + ']');
-
+            log.warn("Job failover failed because number of maximum failover attempts is exceeded [failedJob=${ctx.getJobResult().getJob()}, maxFailoverAttempts=$maxFailoverAttempts]")
             return null;
         }
 
@@ -204,7 +190,7 @@ public class JobFailoverSpi extends IgniteSpiAdapter implements FailoverSpi,
             ClusterNode thief = null;
             boolean isNodeFailed = false;
 
-            UUID thiefId = ctx.getJobResult().getJobContext().getAttribute(THIEF_NODE_ATTR);
+            def thiefId = (UUID)ctx.getJobResult().getJobContext().getAttribute(THIEF_NODE_ATTR);
 
             if (thiefId != null) {
                 // Clear attribute.
@@ -215,10 +201,8 @@ public class JobFailoverSpi extends IgniteSpiAdapter implements FailoverSpi,
                 if (thief != null) {
                     // If sender != receiver.
                     if (thief.equals(ctx.getJobResult().getNode())) {
-                        U.error(log, "Job stealer node is equal to job node (will fail-over using load-balancing): " + thief.id());
-
+                        log.error("Job stealer node is equal to job node (will fail-over using load-balancing): " + thief.id())
                         isNodeFailed = true;
-
                         thief = null;
                     }
 // -- disable this check due issue https://issues.apache.org/jira/browse/IGNITE-1267
@@ -235,7 +219,7 @@ public class JobFailoverSpi extends IgniteSpiAdapter implements FailoverSpi,
                 else {
                     isNodeFailed = true;
 
-                    U.warn(log, "Thief node left grid (will fail-over using load balancing): " + thiefId);
+                    log.warn("Thief node left grid (will fail-over using load balancing): " + thiefId)
                 }
             }
             else
@@ -244,7 +228,7 @@ public class JobFailoverSpi extends IgniteSpiAdapter implements FailoverSpi,
             // If job was not stolen or stolen node is not part of topology,
             // then failover the regular way.
             if (thief == null) {
-                Collection<UUID> failedNodes = ctx.getJobResult().getJobContext().getAttribute(FAILED_NODE_LIST_ATTR);
+                def failedNodes = (Collection<UUID>)ctx.getJobResult().getJobContext().getAttribute(FAILED_NODE_LIST_ATTR);
 
                 if (failedNodes == null)
                     failedNodes = U.newHashSet(1);
@@ -265,8 +249,7 @@ public class JobFailoverSpi extends IgniteSpiAdapter implements FailoverSpi,
                 }
 
                 if (newTop.isEmpty()) {
-                    U.warn(log, "Received topology with only nodes that job had failed on (forced to fail) [failedNodes=" + failedNodes + ']');
-
+                    log.warn("Received topology with only nodes that job had failed on (forced to fail) [failedNodes=" + failedNodes + "]")
                     // Nowhere to failover to.
                     return null;
                 }
@@ -274,7 +257,7 @@ public class JobFailoverSpi extends IgniteSpiAdapter implements FailoverSpi,
                 thief = ctx.getBalancedNode(newTop);
 
                 if (thief == null)
-                    U.warn(log, "Load balancer returned null node for topology: " + newTop);
+                    log.warn("Load balancer returned null node for topology: " + newTop)
             }
 
             if (isNodeFailed)
@@ -289,29 +272,24 @@ public class JobFailoverSpi extends IgniteSpiAdapter implements FailoverSpi,
                 totalFailedOverJobs++;
 
                 if (isNodeFailed) {
-                    U.warn(log, "Failed over job to a new node [newNode=" + thief.id() +
+                    log.warn("Failed over job to a new node [newNode=" + thief.id() +
                             ", oldNode=" + ctx.getJobResult().getNode().id() +
-                            ", sesId=" + ctx.getTaskSession().getId() +
                             ", job=" + ctx.getJobResult().getJob() +
-                            ", jobCtx=" + ctx.getJobResult().getJobContext() +
-                            ", task=" + ctx.getTaskSession().getTaskName() + ']');
+                            ", ctx=" + ctx.getJobResult().getJobContext() + "]")
                 }
                 else {
                     totalStolenJobs++;
-                    if (log.isDebugEnabled())
-                        log.debug("Stealing job to a new node [newNode=" + thief.id() +
+                    log.debug("Job stolen [newNode=" + thief.id() +
                                 ", oldNode=" + ctx.getJobResult().getNode().id() +
-                                ", sesId=" + ctx.getTaskSession().getId() +
                                 ", job=" + ctx.getJobResult().getJob() +
-                                ", jobCtx=" + ctx.getJobResult().getJobContext() +
-                                ", task=" + ctx.getTaskSession().getTaskName() + ']');
+                                ", ctx=" + ctx.getJobResult().getJobContext() + "]")
                 }
             }
 
             return thief;
         }
         catch (IgniteException e) {
-            U.error(log, "Failed to get next balanced node for failover: " + ctx, e);
+            log.error("Failed to get next balanced node for failover: " + ctx, e);
 
             return null;
         }

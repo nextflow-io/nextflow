@@ -75,7 +75,6 @@ class TaskBeanTest extends Specification {
         def bean = new TaskBean(task)
 
         then:
-        bean.taskId == '123'
         bean.name == 'Hello'
         bean.input == 'input from stdin'
         bean.scratch == '/tmp/x'
@@ -107,7 +106,6 @@ class TaskBeanTest extends Specification {
 
         given:
         def task = new TaskBean(
-                taskId: '123',
                 name: 'Hello',
                 environment: [A: 'Alpha', B: 'Beta'],
                 moduleNames: ['x','y'],
@@ -119,7 +117,6 @@ class TaskBeanTest extends Specification {
         def copy = task.clone()
 
         then:
-        copy.taskId == task.taskId
         copy.name == task.name
         copy.environment == task.environment
         copy.moduleNames == task.moduleNames

@@ -228,6 +228,7 @@ class IgGridFactory {
             stealingEnabled = clusterConfig.getAttribute('stealingEnabled', true) as boolean
             waitJobsThreshold = clusterConfig.getAttribute('waitJobsThreshold', DFLT_WAIT_JOBS_THRESHOLD) as int
             maximumStealingAttempts = clusterConfig.getAttribute('maxStealingAttempts', DFLT_MAX_STEALING_ATTEMPTS) as int
+            maximumStealingExpireTime = clusterConfig.getAttribute('maxStealingExpireTime', DFLT_MAX_STEALING_EXPIRE_TIME) as Duration
         }
         cfg.setCollisionSpi(scheduler)
 

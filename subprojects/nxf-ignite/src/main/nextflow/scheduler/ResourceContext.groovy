@@ -22,9 +22,12 @@ package nextflow.scheduler
 import java.lang.management.ManagementFactory
 
 import com.sun.management.OperatingSystemMXBean
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.daemon.IgGridFactory
 import nextflow.executor.IgBaseTask
 import nextflow.file.FileHelper
@@ -42,23 +45,19 @@ class ResourceContext implements Serializable {
 
     static private transient OperatingSystemMXBean _bean
 
-    private String _role
-
-    private String _hostName
-
-    private int _availCpus
-
-    private MemoryUnit _availMemory
-
     private transient Collection<CollisionJobContext> activeJobs
 
     private transient Collection<CollisionJobContext> waitingJobs
+
+    private transient String message
 
     private int activeCount
 
     private int waitingCount
 
     private MemoryUnit freeMemory
+
+    private MemoryUnit freeDisk
 
     private int freeCpus
 
@@ -80,7 +79,8 @@ class ResourceContext implements Serializable {
         this.waitingJobs = waitingJobs;
         this.waitingCount = waitingJobs.size()
 
-        this.freeMemory = new MemoryUnit(getSystemMXBean().freePhysicalMemorySize)
+        this.freeDisk = getAvailDisk()
+        this.freeMemory = getAvailMemory()
         this.freeCpus = getAvailCpus()
 
         activeJobs.each { jobCtx ->
@@ -89,6 +89,7 @@ class ResourceContext implements Serializable {
                 // count the number of used cpus
                 final task = (IgBaseTask)jobCtx.job
                 freeCpus -= task.resources.cpus
+                freeMemory -=  task.resources.memory
             }
 
         }
@@ -109,54 +110,47 @@ class ResourceContext implements Serializable {
     /**
      * @return The node actual hostname
      */
+    @Memoized
     String getHostName() {
-        if( !_hostName ) {
-            _hostName = System.getenv('HOSTNAME') ?: 'localhost'
-        }
-        return _hostName
+        System.getenv('HOSTNAME') ?: 'localhost'
     }
 
 
     /**
      * @return The total memory available
      */
+    @Memoized
     MemoryUnit getAvailMemory() {
-        if( !_availMemory ) {
-            _availMemory = new MemoryUnit(getSystemMXBean().getTotalPhysicalMemorySize())
-        }
-        return _availMemory
+        new MemoryUnit(getSystemMXBean().getTotalPhysicalMemorySize())
     }
 
     /**
      * @return The {@link IgGridFactory#NODE_ROLE} attribute, either MASTER or WORKER
      */
-    private String getRole() {
-        if( !_role ) {
-            _role = Ignition.ignite(IgGridFactory.GRID_NAME).cluster().localNode().attribute(IgGridFactory.NODE_ROLE)
-        }
-        return _role
+    @Memoized
+    String getRole() {
+        Ignition.ignite(IgGridFactory.GRID_NAME).cluster().localNode().attribute(IgGridFactory.NODE_ROLE)
     }
 
 
     /**
      * @return The number of CPUs available
      */
+    @Memoized
     int getAvailCpus() {
-        if( _availCpus ) {
-            return _availCpus
-        }
 
-        _availCpus = getSystemMXBean().getAvailableProcessors()
+        final int result = getSystemMXBean().getAvailableProcessors()
         if( getRole() == IgGridFactory.ROLE_MASTER ) {
             // reserve some CPUs for nextflow/ignite scheduling activity on the master node
-            if( _availCpus > 8 ) {
-                _availCpus -= 2
-            }
-            else if( _availCpus > 3 ) {
-                _availCpus -= 1
-            }
+            result -= getMasterMinCpus()
         }
-        return _availCpus
+        log.trace1 "Avail cpus: $result"
+        return result
+    }
+
+    @CompileDynamic
+    private int getMasterMinCpus() {
+        Global.session?.config?.cluster?.masterNodeMinCpus ?: 0
     }
 
     int getBusyCpus() {
@@ -171,10 +165,14 @@ class ResourceContext implements Serializable {
         freeMemory
     }
 
+    MemoryUnit getFreeDisk() {
+        freeDisk
+    }
+
     /**
      * @return The actual free space in the node local storage
      */
-    MemoryUnit getFreeDisk() {
+    MemoryUnit getAvailDisk() {
         final free = FileHelper.getLocalTempPath().toFile().getFreeSpace()
         new MemoryUnit(free)
     }
@@ -182,6 +180,10 @@ class ResourceContext implements Serializable {
     Collection<CollisionJobContext> getActiveJobs() { activeJobs }
 
     Collection<CollisionJobContext> getWaitingJobs() { waitingJobs }
+
+    String getMessage() {
+        message
+    }
 
     /**
      * Determine if a task can be activated depending the computing resources requested and
@@ -194,18 +196,18 @@ class ResourceContext implements Serializable {
         if( jobCtx.job instanceof IgBaseTask ) {
             final task = (IgBaseTask)jobCtx.job
 
-            if( task.resources.disk > freeDisk ) {
-                log.debug1("Task waiting for disk storage > $task -- requested: ${task.resources.disk}; free: ${freeDisk}", throttle: '1min')
-                return false
-            }
-
             if( task.resources.cpus > freeCpus ) {
-                log.debug1("Task waiting for cpus > $task -- requested: ${task.resources.cpus}; free: ${freeCpus}", throttle: '1min')
+                this.message = "task `$task.taskId` exceed avail cpus > requested: ${task.resources.cpus}; free: ${freeCpus}"
                 return false
             }
 
             if( task.resources.memory > freeMemory ) {
-                log.debug1("Task waiting for memory > $task -- requested: ${task.resources.memory}; free: ${freeMemory}", throttle: '1min')
+                this.message = "task `$task.taskId` exceed avail memory > requested: ${task.resources.memory}; free: ${freeMemory}"
+                return false
+            }
+
+            if( task.resources.disk > freeDisk ) {
+                this.message = "task `$task.taskId` exceed avail storage > requested: ${task.resources.disk}; free: ${freeDisk}"
                 return false
             }
         }
@@ -219,16 +221,23 @@ class ResourceContext implements Serializable {
      * @param jobCtx
      */
     void consumeTaskResource( CollisionJobContext jobCtx ) {
-        final task = (IgBaseTask)jobCtx.job
 
-        freeCpus -= task.resources.cpus
-        freeMemory -= task.resources.memory
-        log.trace1("Task activated > $task -- Pending; ${waitingJobs.size()} (was: ${waitingCount}) - active: ${activeJobs.size()} (was: $activeCount)")
+        if( jobCtx.getJob() instanceof IgBaseTask ) {
+            final task = (IgBaseTask) jobCtx.job
+            freeCpus -= task.resources.cpus
+            freeMemory -= task.resources.memory
+            freeDisk -= task.resources.disk
+        }
+        else {
+            freeCpus -= 1
+        }
+
+        log.trace1("Task activated > ${jobCtx.job} -- Jobs pending: ${waitingJobs.size()} (was: ${waitingCount}) - active: ${activeJobs.size()} (was: $activeCount)")
     }
 
     @Override
     String toString() {
-        "cpus > tot: ${availCpus} free: ${freeCpus} - mem > tot: ${availMemory} free: $freeMemory} - disk > free: ${freeDisk}"
+        "cpus > tot: ${availCpus} free: ${freeCpus} - memory > tot: ${availMemory} free: $freeMemory} - disk > free: ${freeDisk}"
     }
 
 }

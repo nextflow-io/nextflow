@@ -100,7 +100,7 @@ public class JobBalancerSpi extends IgniteSpiAdapter implements LoadBalancingSpi
             def res = (ResourceContext)getSpiContext().get(IgGridFactory.RESOURCE_CACHE, node.id())
 
             if( job instanceof IgBaseTask && res ) {
-                log.trace1 "Balancer checking node: ${node.id()}  > resources provided: $res -- resourced requested: ${job.resources}"
+                log.trace1 "Balancer checking node: ${node.id()}  -- Resources provided: $res -- Resources requested: ${job.resources}"
 
                 if( job.resources.cpus > res.freeCpus ) continue
                 if( job.resources.memory && job.resources.memory > res.freeMemory ) continue
@@ -114,7 +114,7 @@ public class JobBalancerSpi extends IgniteSpiAdapter implements LoadBalancingSpi
         }
 
         ClusterNode node = top.get(RAND.nextInt(top.size()))
-        log.trace1 "Balancer cannot determine a balanced node -- picked a random one > $node"
+        log.trace1 "Balancer cannot determine a balanced node -- A random one was picked > $node"
         return node
     }
 

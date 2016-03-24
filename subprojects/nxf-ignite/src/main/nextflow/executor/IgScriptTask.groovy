@@ -137,6 +137,6 @@ class IgScriptTask extends IgBaseTask<Integer>   {
     }
 
     String toString() {
-        "${getClass().simpleName}[taskId: ${bean?.taskId}; name: ${bean?.name}; workDir: $localWorkDir]"
+        "${getClass().simpleName}[taskId: ${getTaskId()}; name: ${bean?.name}; workDir: $localWorkDir]"
     }
 }
