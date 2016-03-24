@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2015, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2015, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2016, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2016, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -48,17 +48,17 @@ class Const {
     /**
      * The application version
      */
-    static public final String APP_VER = "0.17.4-SNAPSHOT"
+    static public final String APP_VER = "0.18.0-SNAPSHOT"
 
     /**
      * The app build time as linux/unix timestamp
      */
-    static public final long APP_TIMESTAMP = 1457953610532
+    static public final long APP_TIMESTAMP = 1458854993229
 
     /**
      * The app build number
      */
-    static public final int APP_BUILDNUM = 3591
+    static public final int APP_BUILDNUM = 3621
 
     /**
      * The date time formatter string

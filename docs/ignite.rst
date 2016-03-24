@@ -91,8 +91,11 @@ join                        IP address(es) of one more more cluster nodes to whi
 group                       Cluster name of which this node makes part. It allows to create separate clusters. Default: ``nextflow``
 slots                       Number of slots this damon node provides i.e. of process that can execute in parallel. By it is equal to the number of CPU cores.
 interface                   Network interfaces that Ignite has to use. It can be the interface IP address or name.
-config.file                 The file path of the Ignite configuration file (optional)
-config.url                  the url of the Ignite configuration file (optional)
+stealingEnabled             (default: `true`)
+maxStealingAttempts         (default: `5`)
+maxStealingExpireTime       (default: `5 min`)
+maxFailoverAttempts         (default: `5`)
+waitJobsThreshold           (default: `0`)
 tcp.localAddress            Sets local host IP address.
 tcp.localPort               Sets local port to listen to.
 tcp.localPortRange          Range for local ports.
@@ -165,6 +168,7 @@ The following example shows a wrapper script for the `Platform LSF <https://en.w
     #BSUB -W 02:00
     #BSUB -x
     #BSUB -n 80
+    #BSUB -M 10240
     #BSUB -R "span[ptile=16]"
     export NXF_CLUSTER_SEED=$(shuf -i 0-16777216 -n 1)
     mpirun --pernode nextflow run <your-project-name> -with-mpi [pipeline parameters]
@@ -181,7 +185,7 @@ The following example shows a wrapper script for the Sun/`Univa grid engine <htt
     #$ -cwd
     #$ -j y
     #$ -o <output file name>
-    #$ -l virtual_free=120G
+    #$ -l virtual_free=10G
     #$ -q <queue name>
     #$ -N <job name>
     #$ -pe ompi 5

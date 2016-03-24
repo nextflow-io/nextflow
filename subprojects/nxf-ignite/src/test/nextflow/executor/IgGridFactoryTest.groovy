@@ -1,11 +1,6 @@
-package nextflow.executor
-
-import nextflow.daemon.IgGridFactory
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi
-import spock.lang.Specification
 /*
- * Copyright (c) 2013-2015, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2015, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2016, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2016, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -23,6 +18,11 @@ import spock.lang.Specification
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+package nextflow.executor
+
+import nextflow.daemon.IgGridFactory
+import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>

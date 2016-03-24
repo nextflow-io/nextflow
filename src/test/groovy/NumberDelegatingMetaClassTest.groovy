@@ -1,10 +1,6 @@
-import nextflow.util.Duration
-import nextflow.util.MemoryUnit
-import spock.lang.Specification
-
 /*
- * Copyright (c) 2013-2015, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2015, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2016, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2016, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -21,6 +17,10 @@ import spock.lang.Specification
  *   You should have received a copy of the GNU General Public License
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
+import spock.lang.Specification
 
 /**
  *

@@ -1,6 +1,21 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.18.0
+- Fixed Input file names staged into a subdirectory are not expanded properly #111
+- Set `java.io.tmpdir` to the same path as `NXF_TEMP`
+- Added support for AWS S3 multipart uploads #112
+- Fixed Main script class name collides with variable names in global scope #113
+- Added `legacy` option to docker configuration properties.
+  Added support for `--cpuset-cpus` Docker command line option. See #115
+- Added `region` option to AWS S3 config properties #116
+- Set poolSize as the number of avail cpus
+- Fixed config file having a name as a top level config options raise a MissingPropertyException #117
+- Updated Logback to version 1.1.6
+- Fixed Process script errors should not be ignored #119
+- Added `NXF_TRACE` to enable application trace logging
+- Fixed timeline margin for long labels - fix #120
+
 0.17.3 - 18 Feb 2016 
 - Fixed task status in the trace file when execution is retried #107
 - Improved Ignite scheduling and node resources allocation
