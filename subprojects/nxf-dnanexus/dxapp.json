@@ -1,6 +1,6 @@
 {
   "name": "nextflow",
-  "title": "Nextflow pipelines framework",
+  "title": "Nextflow framework",
   "summary": "Executes nextflow pipelines in DnaNexus",
   "dxapi": "1.0.0",
   "access": {"project": "CONTRIBUTE"},
