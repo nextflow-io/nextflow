@@ -24,6 +24,7 @@ import static nextflow.util.ConfigHelper.parseValue
 
 import java.nio.file.Path
 
+import com.google.common.hash.Hashing
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -248,6 +249,9 @@ class ScriptRunner {
         if( scriptFile )
         session.binding.setVariable( 'workflow', new WorkflowMetadata(this) )
 
+        // generate an unique class name
+        session.scriptClassName = generateClassName(scriptText)
+
         // define the imports
         def importCustomizer = new ImportCustomizer()
         importCustomizer.addImports( StringUtils.name, groovy.transform.Field.name )
@@ -286,6 +290,20 @@ class ScriptRunner {
 
         session.onShutdown { targetDir.deleteDir() }
         return result
+    }
+
+    /**
+     * Creates a unique name for the main script class in order to avoid collision
+     * with the implicit and user variables
+     */
+    @PackageScope String generateClassName(String text) {
+        def hash = Hashing
+                .murmur3_32()
+                .newHasher()
+                .putUnencodedChars(text)
+                .hash()
+
+        return "_nf_script_${hash}"
     }
 
     /**

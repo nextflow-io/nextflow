@@ -19,6 +19,10 @@
  */
 
 package nextflow
+
+import static nextflow.Const.EXTRAE_TRACE_CLASS
+import static nextflow.Const.S3_UPLOADER_CLASS
+
 import java.lang.reflect.Method
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -26,7 +30,6 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-import com.google.common.hash.Hashing
 import com.upplication.s3fs.S3OutputStream
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -45,10 +48,6 @@ import nextflow.trace.TraceObserver
 import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
-
-import static nextflow.Const.S3_UPLOADER_CLASS
-import static nextflow.Const.EXTRAE_TRACE_CLASS
-
 /**
  * Holds the information on the current execution
  *
@@ -242,25 +241,10 @@ class Session implements ISession {
             this.setBaseDir(scriptPath.parent)
             // set the script name attribute
             this.setScriptName(scriptPath.name)
-            this.setScriptClassName(generateClassName(scriptPath))
         }
 
         this.observers = createObservers()
         this.statsEnabled = observers.size()>0
-    }
-
-    /**
-     * Creates a unique name for the main script class in order to avoid collision
-     * with the implicit and user variables
-     */
-    @PackageScope String generateClassName(Path file) {
-        def hash = Hashing
-                .murmur3_32()
-                .newHasher()
-                .putUnencodedChars(file.text)
-                .hash()
-
-        return "_nf_script_${hash}"
     }
 
     /**
