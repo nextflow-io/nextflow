@@ -164,7 +164,7 @@ class ComposedConfigSlurper {
                 .newHasher()
                 .putUnencodedChars(text)
                 .hash()
-        return "\$nf_config_$hash"
+        return "_nf_config_$hash"
     }
 
     private Script loadScript(String text)  {
