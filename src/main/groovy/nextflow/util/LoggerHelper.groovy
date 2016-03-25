@@ -311,8 +311,7 @@ class LoggerHelper {
                             ? (event.getThrowableProxy() as ThrowableProxy).throwable
                             : null) as Throwable
 
-                def script = ((Session)Global.session)?.scriptName
-                appendFormattedMessage(event, error, script, buffer)
+                appendFormattedMessage(buffer, event, error, (Session)Global.session)
             }
             else {
                 buffer
@@ -329,11 +328,14 @@ class LoggerHelper {
     /**
      * Find out the script line where the error has thrown
      */
-    static void appendFormattedMessage( ILoggingEvent event, Throwable fail, String scriptName, StringBuilder buffer ) {
+    static void appendFormattedMessage( StringBuilder buffer, ILoggingEvent event, Throwable fail, Session session) {
 
+        final scriptName = session?.scriptName
+        final className = session?.scriptClassName
         final message = event.getFormattedMessage()
         final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException
-        List error = fail ? findErrorLine(fail, scriptName) : null
+        List error = fail ? findErrorLine(fail, className) : null
+        final normalize = { String str -> str ?. replace("${className}.", '')}
 
         // error string is not shown for abort operation
         if( !quiet ) {
@@ -346,13 +348,13 @@ class LoggerHelper {
             buffer.append("Not such variable: ${name}")
         }
         else if( fail instanceof NoSuchFileException ) {
-            buffer.append("Not such file: ${fail.message}")
+            buffer.append("Not such file: ${normalize(fail.message)}")
         }
         else if( message && !message.startsWith('@') ) {
-            buffer.append(message)
+            buffer.append(normalize(message))
         }
         else if( fail ) {
-            buffer.append( fail.message ?: "Unexpected error [${fail.class.simpleName}]" )
+            buffer.append( normalize(fail.message) ?: "Unexpected error [${fail.class.simpleName}]" )
         }
         else {
             buffer.append("Unexpected error")
@@ -362,7 +364,7 @@ class LoggerHelper {
 
         // extra formatting
         if( error ) {
-            buffer.append(" -- Check script '${error[0]}' at line: ${error[1]} or see '${logFileName}' file for more details")
+            buffer.append(" -- Check script '${scriptName}' at line: ${error[1]} or see '${logFileName}' file for more details")
             buffer.append(CoreConstants.LINE_SEPARATOR)
         }
         else if( logFileName && !quiet ) {
