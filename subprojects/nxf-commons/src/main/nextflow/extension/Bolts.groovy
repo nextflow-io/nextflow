@@ -752,4 +752,15 @@ class Bolts {
         checkLogCache(msg,params) { String str, Throwable t -> t ? log.error(str,t) : log.error(str) }
     }
 
+    static void trace(Logger log, Object msg) {
+        if( log.isTraceEnabled() ) {
+            log.trace(msg.toString())
+        }
+    }
+
+    static void trace(Logger log, Object msg, Throwable e) {
+        if( log.isTraceEnabled() ) {
+            log.trace(msg.toString(),e)
+        }
+    }
 }
