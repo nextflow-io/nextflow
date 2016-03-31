@@ -19,6 +19,11 @@
  */
 
 package nextflow.executor
+
+import static nextflow.processor.TaskStatus.COMPLETED
+import static nextflow.processor.TaskStatus.RUNNING
+import static nextflow.processor.TaskStatus.SUBMITTED
+
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -29,7 +34,6 @@ import nextflow.file.FileHelper
 import nextflow.processor.TaskContext
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
-import nextflow.processor.TaskStatus
 import nextflow.script.ScriptType
 import nextflow.util.Duration
 import org.apache.ignite.compute.ComputeJobResult
@@ -52,6 +56,8 @@ class IgTaskHandler extends TaskHandler {
 
     private ScriptType type
 
+    private Path startFile
+
     private Path exitFile
 
     private Path outputFile
@@ -63,12 +69,13 @@ class IgTaskHandler extends TaskHandler {
     /**
      * The result object for this task
      */
-    private IgniteFuture future
+    private volatile IgniteFuture future
 
     static IgTaskHandler createScriptHandler( TaskRun task, IgExecutor executor ) {
         def handler = new IgTaskHandler(task)
         handler.executor = executor
         handler.type = ScriptType.SCRIPTLET
+        handler.startFile = task.workDir.resolve(TaskRun.CMD_START)
         handler.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
         handler.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         handler.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
@@ -98,26 +105,36 @@ class IgTaskHandler extends TaskHandler {
         future.listen( { executor.getTaskMonitor().signal(); } as IgniteInClosure )
 
         // mark as submitted -- transition to STARTED has to be managed by the scheduler
-        status = TaskStatus.SUBMITTED
-        log.trace "Task $task > Submitted"
+        status = SUBMITTED
+        log.trace "Task SUBMITTED > $task"
     }
 
     @Override
     boolean checkIfRunning() {
-        if( isSubmitted() && future ) {
-            log.trace "Task ${task} > RUNNING"
-            status = TaskStatus.RUNNING
+        if( isSubmitted() && isStarted() ) {
+            log.trace "Task RUNNING > ${task}"
+            status = RUNNING
             return true
         }
 
         return false
     }
 
+    private boolean isStarted() {
+
+        if( !future )
+            return false
+
+        // startFile is not given for native groovy tasks, thus just return true
+        // otherwise check the `lastModified` timestamp is greater than zero
+        return !startFile || startFile.lastModified()
+    }
+
     @Override
     boolean checkIfCompleted() {
 
         if( isRunning() && (future.isCancelled() || (future.isDone() && (!exitFile || readExitStatus()!=null)))  ) {
-            status = TaskStatus.COMPLETED
+            status = COMPLETED
 
             final result = (ComputeJobResult)future.get()
             if( result.getException() ) {
@@ -142,7 +159,7 @@ class IgTaskHandler extends TaskHandler {
                 task.context = new TaskContext( task.processor, data.context )
             }
 
-            log.trace "Task ${task} > DONE"
+            log.trace "Task DONE > ${task}"
             return true
         }
 
