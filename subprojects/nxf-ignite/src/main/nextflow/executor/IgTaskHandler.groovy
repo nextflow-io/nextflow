@@ -99,7 +99,7 @@ class IgTaskHandler extends TaskHandler {
 
         // submit to a Ignite node for execution
         final sessionId = task.processor.session.uniqueId
-        final remoteTask = ( type == ScriptType.SCRIPTLET ) ? new IgScriptTask(task,sessionId) : new IgClosureTask(task,sessionId)
+        final remoteTask = type == ScriptType.SCRIPTLET ? new IgScriptTask(task,sessionId) : new IgClosureTask(task,sessionId)
         future = executor.execute( remoteTask )
 
         future.listen( { executor.getTaskMonitor().signal(); } as IgniteInClosure )

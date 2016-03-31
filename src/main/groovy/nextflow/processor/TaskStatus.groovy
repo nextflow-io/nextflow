@@ -25,4 +25,9 @@ package nextflow.processor
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-enum TaskStatus { NEW, SUBMITTED, RUNNING, COMPLETED }
+enum TaskStatus {
+    NEW,
+    SUBMITTED,
+    RUNNING,
+    COMPLETED
+}

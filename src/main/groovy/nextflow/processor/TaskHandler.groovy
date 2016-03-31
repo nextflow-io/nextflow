@@ -20,6 +20,8 @@
 
 package nextflow.processor
 
+import static nextflow.processor.TaskStatus.*
+
 import java.nio.file.NoSuchFileException
 import java.util.concurrent.CountDownLatch
 
@@ -58,7 +60,7 @@ public abstract class TaskHandler {
     /**
      * Task current status
      */
-    volatile TaskStatus status = TaskStatus.NEW
+    volatile TaskStatus status = NEW
 
     CountDownLatch latch
 
@@ -105,20 +107,20 @@ public abstract class TaskHandler {
         // change the status
         this.status = status
         switch( status ) {
-            case TaskStatus.SUBMITTED: submitTimeMillis = System.currentTimeMillis(); break
-            case TaskStatus.RUNNING: startTimeMillis = System.currentTimeMillis(); break
-            case TaskStatus.COMPLETED: completeTimeMillis = System.currentTimeMillis(); break
+            case SUBMITTED: submitTimeMillis = System.currentTimeMillis(); break
+            case RUNNING: startTimeMillis = System.currentTimeMillis(); break
+            case COMPLETED: completeTimeMillis = System.currentTimeMillis(); break
         }
 
     }
 
-    boolean isNew() { return status == TaskStatus.NEW }
+    boolean isNew() { return status == NEW }
 
-    boolean isSubmitted() { return status == TaskStatus.SUBMITTED }
+    boolean isSubmitted() { return status == SUBMITTED }
 
-    boolean isRunning() { return status == TaskStatus.RUNNING }
+    boolean isRunning() { return status == RUNNING }
 
-    boolean isCompleted()  { return status == TaskStatus.COMPLETED  }
+    boolean isCompleted()  { return status == COMPLETED  }
 
     protected StringBuilder toStringBuilder(StringBuilder builder) {
         builder << "id: ${task.id}; name: ${task.name}; status: $status; exit: ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}; workDir: ${task.workDir}"
