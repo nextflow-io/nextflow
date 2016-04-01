@@ -19,10 +19,10 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import nextflow.Session
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -48,6 +48,7 @@ class LsfExecutorTest extends Specification {
         setup:
         // LSF executor
         def executor = [:] as LsfExecutor
+        executor.session = new Session()
 
         // mock process
         def proc = Mock(TaskProcessor)
@@ -211,6 +212,63 @@ class LsfExecutorTest extends Specification {
                 #BSUB -W 60:05
                 #BSUB -M 2048
                 #BSUB -R "rusage[mem=2048]"
+                #BSUB -J nf-mapping_hola
+                '''
+                .stripIndent().leftTrim()
+
+    }
+
+    def testPerJobMemLimit() {
+        setup:
+        // mock process
+        def proc = Mock(TaskProcessor)
+        // process name
+        proc.getName() >> 'task'
+
+        // task object
+        def task = new TaskRun()
+        task.processor = proc
+        task.workDir = Paths.get('/scratch')
+        task.name = 'mapping hola'
+
+        // config
+        task.config = new TaskConfig()
+        task.config.queue = 'bsc_ls'
+        task.config.cpus = 4
+        task.config.memory = '8GB'
+
+        when:
+        // LSF executor
+        def executor = [:] as LsfExecutor
+        executor.session = new Session()
+
+        then:
+        executor.getHeaders(task) == '''
+                #BSUB -cwd /scratch
+                #BSUB -o /scratch/.command.log
+                #BSUB -q bsc_ls
+                #BSUB -n 4
+                #BSUB -R "span[hosts=1]"
+                #BSUB -M 2048
+                #BSUB -R "rusage[mem=2048]"
+                #BSUB -J nf-mapping_hola
+                '''
+                .stripIndent().leftTrim()
+
+        when:
+        // LSF executor
+        executor = [:] as LsfExecutor
+        executor.session = new Session([executor: [perJobMemLimit: true]])
+
+        then:
+        executor.getHeaders(task) == '''
+                #BSUB -cwd /scratch
+                #BSUB -o /scratch/.command.log
+                #BSUB -q bsc_ls
+                #BSUB -n 4
+                #BSUB -R "span[hosts=1]"
+                #BSUB -M 8192
+                #BSUB -R "rusage[mem=8192]"
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()

@@ -29,6 +29,7 @@ import nextflow.util.MemoryUnit
  * See
  * http://en.wikipedia.org/wiki/Platform_LSF
  * https://doc.zih.tu-dresden.de/hpc-wiki/bin/view/Compendium/PlatformLSF
+ * https://www.ibm.com/support/knowledgecenter/SSETD4/product_welcome_lsf.html
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -63,8 +64,11 @@ class LsfExecutor extends AbstractGridExecutor {
 
         if( task.config.getMemory() ) {
             def mem = task.config.getMemory()
-            // LSF specify per-process (per-core) memory limit (in MB)
-            if( task.config.cpus > 1 ) {
+            // LSF mem limit can be both per-process and per-job
+            // depending a system configuration setting -- see https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_job_memlimit.5.dita
+            // When per-process is used (default) the amount of requested memory
+            // is divided by the number of used cpus (processes)
+            if( task.config.cpus > 1 && !perJobMemLimit ) {
                 long bytes = mem.toBytes().intdiv(task.config.cpus as int)
                 mem = new MemoryUnit(bytes)
             }
@@ -82,6 +86,9 @@ class LsfExecutor extends AbstractGridExecutor {
         return result
     }
 
+    protected boolean isPerJobMemLimit() {
+        session.getExecConfigProp(name, 'perJobMemLimit', false)
+    }
 
     /**
      * The command line to submit this job
