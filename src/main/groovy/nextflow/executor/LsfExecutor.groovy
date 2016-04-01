@@ -70,6 +70,7 @@ class LsfExecutor extends AbstractGridExecutor {
             }
             // convert to MB
             result << '-M' << String.valueOf(mem.toMega())
+            result << '-R' << "rusage[mem=${mem.toMega()}]"
         }
 
         // -- the job name
