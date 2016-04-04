@@ -23,6 +23,7 @@ import java.nio.file.Path
 
 import nextflow.processor.TaskRun
 import nextflow.util.MemoryUnit
+
 /**
  * Processor for LSF resource manager (DRAFT)
  *
@@ -70,10 +71,12 @@ class LsfExecutor extends AbstractGridExecutor {
             // is divided by the number of used cpus (processes)
             if( task.config.cpus > 1 && !perJobMemLimit ) {
                 long bytes = mem.toBytes().intdiv(task.config.cpus as int)
-                mem = new MemoryUnit(bytes)
+                result << '-M' << String.valueOf(MemoryUnit.of(bytes).toMega())
             }
-            // convert to MB
-            result << '-M' << String.valueOf(mem.toMega())
+            else {
+                result << '-M' << String.valueOf(mem.toMega())
+            }
+
             result << '-R' << "rusage[mem=${mem.toMega()}]"
         }
 
