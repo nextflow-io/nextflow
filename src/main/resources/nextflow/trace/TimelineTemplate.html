@@ -149,6 +149,7 @@ function render() {
     .margin({left:getLabelMargin(), right:100, top:0, bottom:0})
     .tickFormat( getTickFormat() )
     .rowSeperators('#f5f5f5')
+    .showTimeAxisTick()
     ;
   var svg = d3.select("#timeline").append("svg").attr("width", width).datum(data).call(chart);
 }
