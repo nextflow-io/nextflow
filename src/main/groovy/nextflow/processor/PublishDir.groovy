@@ -283,7 +283,7 @@ class PublishDir {
             else if( mode == Mode.SYMLINK || mode == Mode.LINK ) {
                 mode = Mode.COPY
                 if( processor )
-                    processor.warn("cannot use mode `${mode.toString().toLowerCase()}` to publish files to path: $path -- Using mode `copy` instead")
+                    processor.warn("Cannot use mode `${mode.toString().toLowerCase()}` to publish files to path: $path -- Using mode `copy` instead")
             }
         }
 
