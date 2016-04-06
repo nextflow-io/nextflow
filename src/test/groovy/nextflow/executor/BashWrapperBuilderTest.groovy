@@ -27,8 +27,8 @@ import nextflow.Session
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import nextflow.util.ContainerScriptTokens
-import nextflow.util.DockerBuilder
+import nextflow.container.ContainerScriptTokens
+import nextflow.container.DockerBuilder
 import spock.lang.Specification
 import test.TestHelper
 /**
@@ -76,7 +76,7 @@ class BashWrapperBuilderTest extends Specification {
                 scratch: '$var_x',
                 workDir: Paths.get('a'),
                 targetDir: Paths.get('b'),
-                dockerImage: 'docker_x',
+                containerImage: 'docker_x',
                 environment: [a:1, b:2],
                 script: 'echo ciao',
                 shell: ['bash','-e']
@@ -90,7 +90,7 @@ class BashWrapperBuilderTest extends Specification {
         wrapper.input == 'alpha'
         wrapper.workDir == Paths.get('a')
         wrapper.targetDir == Paths.get('b')
-        wrapper.dockerImage == 'docker_x'
+        wrapper.containerImage == 'docker_x'
         wrapper.environment ==  [a:1, b:2]
         wrapper.script ==  'echo ciao'
         wrapper.shell == ['bash','-e']
@@ -740,7 +740,7 @@ class BashWrapperBuilderTest extends Specification {
                 name: 'Hello 3',
                 workDir: folder,
                 script: 'echo Hello world!',
-                dockerImage: 'busybox',
+                containerImage: 'busybox',
                 dockerConfig: [sudo: true, enabled: true]
                 ] as TaskBean)
         bash.build()
@@ -845,7 +845,7 @@ class BashWrapperBuilderTest extends Specification {
                 name: 'Hello 4',
                 workDir: folder,
                 script: 'echo Hello world!',
-                dockerImage: 'busybox',
+                containerImage: 'busybox',
                 dockerConfig: [temp: 'auto', enabled: true]
                 ] as TaskBean)
         bash.build()
@@ -953,7 +953,7 @@ class BashWrapperBuilderTest extends Specification {
                 name: 'Hello 5',
                 workDir: folder,
                 script: 'echo Hello world!',
-                dockerImage: 'ubuntu',
+                containerImage: 'ubuntu',
                 dockerConfig: [temp: 'auto', enabled: true, remove:false, kill: false]
                 ] as TaskBean)
         bash.build()
@@ -1057,7 +1057,7 @@ class BashWrapperBuilderTest extends Specification {
                 name: 'Hello 6',
                 workDir: folder,
                 script: 'echo Hello world!',
-                dockerImage: 'ubuntu',
+                containerImage: 'ubuntu',
                 dockerConfig: [temp: 'auto', enabled: true, remove:false, kill: 'SIGXXX']
                 ] as TaskBean)
         bash.build()
@@ -1164,7 +1164,7 @@ class BashWrapperBuilderTest extends Specification {
                 name: 'Hello 7',
                 workDir: folder,
                 script: 'echo Hello world!',
-                dockerImage: 'busybox',
+                containerImage: 'busybox',
                 dockerMount: '/folder with blanks' as Path,
                 dockerConfig: [enabled: true]
         ] as TaskBean)
@@ -1269,7 +1269,7 @@ class BashWrapperBuilderTest extends Specification {
         def bash = new BashWrapperBuilder([
                 workDir: folder,
                 script: 'echo Hello world!',
-                dockerImage: 'sl65',
+                containerImage: 'sl65',
                 dockerConfig: [enabled: true, fixOwnership: true]
                 ] as TaskBean)
         bash.systemOsName = 'Linux'
@@ -1677,45 +1677,5 @@ class BashWrapperBuilderTest extends Specification {
     }
 
 
-    def 'should add docker run to shell script' () {
-
-        given:
-        def bash = new BashWrapperBuilder(new TaskBean())
-
-        when:
-        def script = '''
-            #!/bin/bash
-            FOO=bar
-            busybox --foo --bar
-            do_this
-            do_that
-            '''
-        def tokens = ContainerScriptTokens.parse(script)
-        def docker = new DockerBuilder('busybox').addEnv(tokens.variables)
-        docker.build()
-
-        then:
-        bash.addContainerRunCommand(tokens, docker) == '''
-            #!/bin/bash
-            FOO=bar
-            docker run -i -e "FOO=bar" -v "$PWD":"$PWD" -w "$PWD" busybox --foo --bar
-            do_this
-            do_that
-            '''
-            .stripIndent().leftTrim()
-
-        when:
-        tokens = ContainerScriptTokens.parse('#!/bin/bash\nbusybox')
-        docker = new DockerBuilder('busybox')
-        docker.build()
-        then:
-        bash.addContainerRunCommand(tokens, docker) == '''
-            #!/bin/bash
-            docker run -i -v "$PWD":"$PWD" -w "$PWD" busybox
-            '''
-                .stripIndent().leftTrim()
-
-
-    }
 
 }

@@ -18,8 +18,9 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.util
+package nextflow.container
 
+import nextflow.container.ContainerScriptTokens
 import spock.lang.Specification
 
 /**

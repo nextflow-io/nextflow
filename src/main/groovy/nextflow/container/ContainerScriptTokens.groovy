@@ -18,7 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.util
+package nextflow.container
 import groovy.transform.Canonical
 /**
  * Hold container definition parsed in a shell script
@@ -39,8 +39,8 @@ class ContainerScriptTokens {
     List<String> lines
 
     /**
-     * Parse a shell script retuning a triple which container the docker image,
-     * line on which the docker image has been defined and any environment variable
+     * Parse a shell script retuning a triple which contains the docker image,
+     * the line on which the docker image has been defined and any environment variable
      * eventually defined before the image definition
      * @param str A shell script to parse
      * @return

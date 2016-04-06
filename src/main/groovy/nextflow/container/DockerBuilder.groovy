@@ -18,18 +18,22 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.util
+package nextflow.container
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import nextflow.util.Escape
+import nextflow.util.MemoryUnit
+import nextflow.util.PathTrie
+
 /**
  * Helper methods to handle Docker containers
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class DockerBuilder {
+class DockerBuilder implements ContainerBuilder {
 
     final String image
 
@@ -94,6 +98,7 @@ class DockerBuilder {
         return this
     }
 
+    @Override
     DockerBuilder params( Map params ) {
         if( !params ) return this
 
@@ -168,7 +173,8 @@ class DockerBuilder {
         return this
     }
 
-    String build(StringBuilder result = new StringBuilder()) {
+    @Override
+    String build(StringBuilder result) {
         assert image
 
         if( sudo )
@@ -328,11 +334,13 @@ class DockerBuilder {
     /**
      * @return The command string to remove a container
      */
+    @Override
     String getRemoveCommand() { removeCommand }
 
     /**
      * @return The command string to kill a running container
      */
+    @Override
     String getKillCommand() { killCommand }
 
 
@@ -345,7 +353,7 @@ class DockerBuilder {
         image.contains('.') || image.contains(':')
     }
 
-    static String normalizeDockerImageName( String imageName, Map dockerConf ) {
+    static String normalizeImageName( String imageName, Map dockerConf ) {
 
         if( !imageName )
             return null
