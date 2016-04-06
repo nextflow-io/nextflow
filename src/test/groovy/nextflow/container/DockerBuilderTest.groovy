@@ -18,9 +18,10 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.util
+package nextflow.container
 import java.nio.file.Paths
 
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
  *
@@ -162,7 +163,7 @@ class DockerBuilderTest extends Specification {
     def 'test normalize docker image name' () {
 
         expect:
-        DockerBuilder.normalizeDockerImageName(image, [registry: registry]) == expected
+        DockerBuilder.normalizeImageName(image, [registry: registry]) == expected
 
         where:
         image                       | registry  | expected
@@ -176,6 +177,44 @@ class DockerBuilderTest extends Specification {
 
     }
 
+
+    def 'should add docker run to shell script' () {
+
+        when:
+        def script = '''
+            #!/bin/bash
+            FOO=bar
+            busybox --foo --bar
+            do_this
+            do_that
+            '''
+        def tokens = ContainerScriptTokens.parse(script)
+        def docker = new DockerBuilder('busybox').addEnv(tokens.variables)
+        docker.build()
+
+        then:
+        docker.addContainerRunCommand(tokens) == '''
+            #!/bin/bash
+            FOO=bar
+            docker run -i -e "FOO=bar" -v "$PWD":"$PWD" -w "$PWD" busybox --foo --bar
+            do_this
+            do_that
+            '''
+                .stripIndent().leftTrim()
+
+        when:
+        tokens = ContainerScriptTokens.parse('#!/bin/bash\nbusybox')
+        docker = new DockerBuilder('busybox')
+        docker.build()
+        then:
+        docker.addContainerRunCommand(tokens) == '''
+            #!/bin/bash
+            docker run -i -v "$PWD":"$PWD" -w "$PWD" busybox
+            '''
+                .stripIndent().leftTrim()
+
+
+    }
 
 
 }

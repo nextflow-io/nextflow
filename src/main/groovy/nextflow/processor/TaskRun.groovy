@@ -39,8 +39,10 @@ import nextflow.script.ScriptType
 import nextflow.script.StdInParam
 import nextflow.script.TaskBody
 import nextflow.script.ValueOutParam
-import nextflow.util.ContainerScriptTokens
-import nextflow.util.DockerBuilder
+import nextflow.container.ContainerScriptTokens
+import nextflow.container.DockerBuilder
+import nextflow.container.ShifterBuilder
+
 /**
  * Models a task instance
  *
@@ -508,7 +510,13 @@ class TaskRun implements Cloneable {
         else {
             imageName = config.container as String
         }
-        DockerBuilder.normalizeDockerImageName(imageName, getDockerConfig())
+
+        if( getShifterConfig().enabled ) {
+            ShifterBuilder.normalizeImageName(imageName, getShifterConfig())
+        }
+        else {
+            DockerBuilder.normalizeImageName(imageName, getDockerConfig())
+        }
     }
 
     /**
@@ -516,6 +524,11 @@ class TaskRun implements Cloneable {
      */
     Map getDockerConfig() {
         def result = processor.getSession().config?.docker as Map
+        result != null ? result : Collections.emptyMap()
+    }
+
+    Map getShifterConfig() {
+        def result = processor.getSession().config?.shifter as Map
         result != null ? result : Collections.emptyMap()
     }
 

@@ -88,7 +88,7 @@ class TaskBeanTest extends Specification {
         bean.beforeScript == 'before do this'
         bean.afterScript == 'after do that'
 
-        bean.dockerImage == 'busybox:latest'
+        bean.containerImage == 'busybox:latest'
         bean.dockerConfig == [docker: true, registry: 'x']
         bean.dockerMemory == new MemoryUnit('1GB')
         bean.executable

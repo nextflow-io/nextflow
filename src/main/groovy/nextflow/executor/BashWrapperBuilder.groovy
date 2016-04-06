@@ -26,8 +26,11 @@ import groovy.util.logging.Slf4j
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import nextflow.util.ContainerScriptTokens
-import nextflow.util.DockerBuilder
+import nextflow.container.ContainerBuilder
+import nextflow.container.ContainerScriptTokens
+import nextflow.container.DockerBuilder
+import nextflow.container.ShifterBuilder
+
 /**
  * Builder to create the BASH script which is used to
  * wrap and launch the user task
@@ -198,7 +201,11 @@ class BashWrapperBuilder {
     @Delegate
     private TaskBean bean
 
-    private runWithDocker
+    private boolean runWithContainer
+
+    private boolean isDockerEnabled
+
+    private boolean isShifterEnabled
 
     BashWrapperBuilder( TaskRun task ) {
         this(new TaskBean(task))
@@ -254,7 +261,9 @@ class BashWrapperBuilder {
         final stubFile = workDir.resolve(TaskRun.CMD_STUB)
 
         // set true when running with docker
-        runWithDocker = dockerImage && (executable || dockerConfig.enabled?.toString() == 'true')
+        isDockerEnabled = dockerConfig?.enabled?.toString() == 'true'
+        isShifterEnabled = shifterConfig?.enabled?.toString() == 'true'
+        runWithContainer = this.containerImage && (executable || isDockerEnabled || isShifterEnabled)
 
         /*
          * save the input when required
@@ -294,13 +303,13 @@ class BashWrapperBuilder {
         /*
          * create the docker command if required
          */
-        DockerBuilder docker = runWithDocker ? createDockerBuilder(environment,changeDir) : null
+        def containerBuilder = runWithContainer ? createContainerBuilder(environment,changeDir) : null
 
         /*
          * save the script file
          */
         if( scriptTokens ) {
-            taskScript = addContainerRunCommand( scriptTokens, docker )
+            taskScript = containerBuilder.addContainerRunCommand(scriptTokens)
         }
         scriptFile.text = taskScript
 
@@ -332,9 +341,10 @@ class BashWrapperBuilder {
         wrapper << 'set -u' << ENDL
         wrapper << 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 2 ]] && set -x' << ENDL << ENDL
 
-        if( runWithDocker ) {
+        if( runWithContainer ) {
+            containerBuilder.appendHelpers(wrapper)
             // append the process - or - container kill command
-            wrapper << scriptCleanUp(exitedFile, docker.killCommand) << ENDL
+            wrapper << scriptCleanUp(exitedFile, containerBuilder.killCommand) << ENDL
             // create a random string id to be used an container name
             wrapper << 'export NXF_BOXID="nxf-$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"' << ENDL
             // append to script file chown command to change `root` owner of files created by docker
@@ -363,7 +373,7 @@ class BashWrapperBuilder {
         }
 
         // source the environment
-        if( !runWithDocker ) {
+        if( !runWithContainer ) {
             wrapper << "[ -f "<< fileStr(environmentFile) << " ]" << " && source " << fileStr(environmentFile) << ENDL
         }
 
@@ -389,8 +399,8 @@ class BashWrapperBuilder {
         wrapper << '(' << ENDL
 
         // execute by invoking the command through a Docker container
-        if( docker && !executable ) {
-            wrapper << docker.runCommand << " -c \""
+        if( containerBuilder && !executable ) {
+            containerBuilder.appendRunCommand(wrapper) << " -c \""
         }
 
         /*
@@ -423,11 +433,11 @@ class BashWrapperBuilder {
 
             // invoke it from the main script
             wrapper << "/bin/bash " << fileStr(stubFile)
-            if( docker && !executable ) wrapper << "\""
+            if( containerBuilder && !executable ) wrapper << "\""
         }
         else {
             wrapper << interpreter << " " << fileStr(scriptFile)
-            if( docker && !executable ) wrapper << "\""
+            if( containerBuilder && !executable ) wrapper << "\""
             if( input != null ) wrapper << " < " << fileStr(inputFile)
         }
         wrapper << ENDL
@@ -439,9 +449,9 @@ class BashWrapperBuilder {
         /*
          * docker clean-up
          */
-        if( docker?.removeCommand ) {
+        if( containerBuilder?.removeCommand ) {
             // remove the container in this way because 'docker run --rm'  fail in some cases -- see https://groups.google.com/d/msg/docker-user/0Ayim0wv2Ls/-mZ-ymGwg8EJ
-            wrapper << docker.removeCommand << ' &>/dev/null &' << ENDL
+            wrapper << containerBuilder.removeCommand << ' &>/dev/null &' << ENDL
         }
 
         /*
@@ -482,6 +492,30 @@ class BashWrapperBuilder {
                 .replace('__KILL_CMD__', dockerKill ?: '[[ "$pid" ]] && nxf_kill $pid')
     }
 
+    ContainerBuilder createContainerBuilder(Map environment, String changeDir) {
+
+        if( isShifterEnabled )
+            return createShifterBuilder(environment, changeDir)
+        else
+            return createDockerBuilder(environment, changeDir)
+    }
+
+    @PackageScope
+    ShifterBuilder createShifterBuilder(Map environment, String changeDir) {
+        def builder = new ShifterBuilder(this.containerImage)
+
+        // set up run docker params
+        builder.params(dockerConfig)
+
+        // override the docker entry point the image is NOT defined as executable
+        if( !executable )
+            builder.params(entry: '/bin/bash')
+
+        builder.build()
+        return builder
+    }
+
+
     /**
      * Build a {@link DockerBuilder} object to handle Docker commands
      *
@@ -492,84 +526,63 @@ class BashWrapperBuilder {
     @PackageScope
     DockerBuilder createDockerBuilder(Map environment, String changeDir) {
 
-        def docker = new DockerBuilder(dockerImage)
-        docker.addMountForInputs(inputFiles)
-        docker.addMount(workDir)
+        def builder = new DockerBuilder(this.containerImage)
+        builder.addMountForInputs(inputFiles)
+        builder.addMount(workDir)
         if( !executable )
-            docker.addMount(binDir)
+            builder.addMount(binDir)
 
         if( dockerMount )
-            docker.addMount(dockerMount)
+            builder.addMount(dockerMount)
 
         // set the name
-        docker.setName('$NXF_BOXID')
+        builder.setName('$NXF_BOXID')
 
         if( dockerMemory )
-            docker.setMemory(dockerMemory)
+            builder.setMemory(dockerMemory)
 
         if( dockerCpuset )
-            docker.addRunOptions(dockerCpuset)
+            builder.addRunOptions(dockerCpuset)
 
         // set the environment
         if( environment ) {
             // export the nextflow script debug variable
-            docker.addEnv( 'NXF_DEBUG=${NXF_DEBUG:=0}')
+            builder.addEnv( 'NXF_DEBUG=${NXF_DEBUG:=0}')
 
             // add the user owner variable in order to patch root owned files problem
             if( dockerConfig.fixOwnership )
-                docker.addEnv( 'NXF_OWNER=$(id -u):$(id -g)' )
+                builder.addEnv( 'NXF_OWNER=$(id -u):$(id -g)' )
 
             if( executable ) {
                 // PATH variable cannot be extended in an executable container
                 // make sure to not include it to avoid to override the container PATH
                 environment.remove('PATH')
-                docker.addEnv( environment )
+                builder.addEnv( environment )
             }
             else
-                docker.addEnv( workDir.resolve(TaskRun.CMD_ENV) )
+                builder.addEnv( workDir.resolve(TaskRun.CMD_ENV) )
 
         }
 
         // set up run docker params
-        docker.params(dockerConfig)
+        builder.params(dockerConfig)
 
         // extra rule for the 'auto' temp dir temp dir
         def temp = dockerConfig.temp?.toString()
         if( temp == 'auto' || temp == 'true' ) {
-            docker.setTemp( changeDir ? '$NXF_SCRATCH' : '$(nxf_mktemp)' )
+            builder.setTemp( changeDir ? '$NXF_SCRATCH' : '$(nxf_mktemp)' )
         }
 
         if( dockerConfig.containsKey('kill') )
-            docker.params(kill: dockerConfig.kill)
+            builder.params(kill: dockerConfig.kill)
 
         // override the docker entry point the image is NOT defined as executable
         if( !executable )
-            docker.params(entry: '/bin/bash')
+            builder.params(entry: '/bin/bash')
 
-        docker.build()
-        return docker
+        builder.build()
+        return builder
     }
 
 
-
-    /**
-     * Given a normalised shell script (starting with a she-bang line)
-     * replace the first token on the first line with a docker run command
-     *
-     * @param script
-     * @param docker
-     * @return
-     */
-    String addContainerRunCommand( ContainerScriptTokens script, DockerBuilder docker ) {
-
-        final result = new ArrayList<String>(script.lines)
-        final i = script.index
-        final main = result[i].trim()
-        final p = main.indexOf(' ')
-        result[i] = ( p != -1
-                    ? docker.runCommand + main.substring(p)
-                    : docker.runCommand )
-        result.add('')
-        return result.join('\n')
-    }
 }

@@ -48,7 +48,7 @@ class TaskBean implements Serializable, Cloneable {
 
     String wrapperScript
 
-    String dockerImage
+    String containerImage
 
     List<String> moduleNames
 
@@ -61,6 +61,8 @@ class TaskBean implements Serializable, Cloneable {
     List<String> shell
 
     Map dockerConfig
+
+    Map shifterConfig
 
     String dockerCpuset
 
@@ -115,11 +117,12 @@ class TaskBean implements Serializable, Cloneable {
         this.beforeScript = task.config.beforeScript
         this.afterScript = task.config.afterScript
 
-        // docker config
-        this.dockerImage = task.getContainer()
+        // container config
+        this.containerImage = task.getContainer()
         this.dockerConfig = task.getDockerConfig()
         this.dockerMemory = task.config.getMemory()
         this.executable = task.isContainerExecutable()
+        this.shifterConfig = task.getShifterConfig()
 
         // stats
         this.statsEnabled = task.getProcessor().getSession().statsEnabled
