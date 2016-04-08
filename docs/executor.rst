@@ -72,6 +72,15 @@ The amount of resources requested by each job submission is defined by the follo
 * :ref:`process-memory`
 * :ref:`process-clusterOptions`
 
+.. note::
+
+    LSF supports both *per-core* and *per-job* memory limit. Nextflow assumes that LSF works in the
+    *per-core* memory limits mode, thus it divides the requested :ref:`process-memory` by the number of requested :ref:`process-cpus`.
+
+    This is not required when LSF is configured to work in *per-job* memory limit mode. You will need to specified that
+    adding the option ``perJobMemLimit`` in :ref:`config-executor` in the Nextflow configuration file.
+
+    See also the `Platform LSF documentation <https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_job_memlimit.5.dita>`_.
 
 
 .. _slurm-executor:

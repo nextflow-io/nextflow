@@ -180,6 +180,7 @@ When using the curly brackets notation, the above can be written as shown below:
   }
 
 
+.. _config-executor:
 
 Scope `executor`
 ------------------
@@ -196,6 +197,7 @@ dumpInterval          Determines how often the executor status is written in the
 queueStatInterval     Determines how often the queue status is fetched from the cluster system. This setting is used only by grid executors (default: ``1min``).
 exitReadTimeout       Determines how long the executor waits before return an error status when a process is terminated but the `exit` file does not exist or it is empty. This setting is used only by grid executors (default: ``90sec``).
 killBatchSize         Determines the number of jobs that can be `killed` in a single command execution (default: ``100``).
+perJobMemLimit        Specifies Platform LSF *per-job* memory limit mode. See :ref:`lsf-executor`.
 ===================== =====================
 
 
