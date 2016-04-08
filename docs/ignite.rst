@@ -91,11 +91,6 @@ join                        IP address(es) of one more more cluster nodes to whi
 group                       Cluster name of which this node makes part. It allows to create separate clusters. Default: ``nextflow``
 slots                       Number of slots this damon node provides i.e. of process that can execute in parallel. By it is equal to the number of CPU cores.
 interface                   Network interfaces that Ignite has to use. It can be the interface IP address or name.
-stealingEnabled             (default: `true`)
-maxStealingAttempts         (default: `5`)
-maxStealingExpireTime       (default: `5 min`)
-maxFailoverAttempts         (default: `5`)
-waitJobsThreshold           (default: `0`)
 tcp.localAddress            Sets local host IP address.
 tcp.localPort               Sets local port to listen to.
 tcp.localPortRange          Range for local ports.
@@ -108,6 +103,12 @@ tcp.ackTimeout              Sets timeout for receiving acknowledgement for sent 
 tcp.maxAckTimeout           Sets maximum timeout for receiving acknowledgement for sent message.
 tcp.joinTimeout             Sets join timeout.
 =========================== ================
+
+.. stealingEnabled             (default: `true`)
+.. maxStealingAttempts         (default: `5`)
+.. maxStealingExpireTime       (default: `5 min`)
+.. maxFailoverAttempts         (default: `5`)
+.. waitJobsThreshold           (default: `0`)
 
 These options can be specified as command line parameters by adding the prefix ``-cluster.`` to them, as shown below::
 
