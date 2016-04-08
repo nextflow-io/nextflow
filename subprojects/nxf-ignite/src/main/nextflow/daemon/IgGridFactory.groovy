@@ -51,6 +51,9 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMultic
 import org.apache.ignite.spi.discovery.tcp.ipfinder.s3.TcpDiscoveryS3IpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.sharedfs.TcpDiscoverySharedFsIpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder
+import org.apache.ignite.spi.failover.jobstealing.JobStealingFailoverSpi
+import org.apache.ignite.spi.loadbalancing.adaptive.AdaptiveLoadBalancingSpi
+
 /**
  * Grid factory class. It can be used to create a {@link IgniteConfiguration} or the {@link Ignite} instance directly
  *
@@ -79,6 +82,8 @@ class IgGridFactory {
 
     // application config
     private final Map config
+
+    private boolean experimental
 
     /**
      * Create a grid factory object for the given role and configuration params
@@ -145,12 +150,15 @@ class IgGridFactory {
      */
     protected void cacheConfig( IgniteConfiguration cfg ) {
 
+        List<CacheConfiguration> configs = []
+
         def sessionCfg = new CacheConfiguration()
         sessionCfg.with {
             name = SESSIONS_CACHE
             startSize = 64
             offHeapMaxMemory = 0
         }
+        configs << sessionCfg
 
         /*
          * set the data cache for this ggfs
@@ -173,7 +181,7 @@ class IgGridFactory {
             // See http://stackoverflow.com/q/23399264/395921
             memoryMode = clusterConfig.getAttribute('igfs.data.memoryMode', CacheMemoryMode.ONHEAP_TIERED) as CacheMemoryMode
         }
-        cfg.setCacheConfiguration(dataCfg)
+        configs << dataCfg
 
         /*
          * set the meta cache for this igfs
@@ -186,17 +194,22 @@ class IgGridFactory {
             writeSynchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC
             //queryIndexEnabled = false
         }
+        configs << metaCfg
 
         /*
          * set scheduler resources cache
          */
-        def resCfg = new CacheConfiguration()
-        resCfg.with {
-            name = RESOURCE_CACHE
-            cacheMode = CacheMode.REPLICATED
+        if( experimental ) {
+            def resCfg = new CacheConfiguration()
+            resCfg.with {
+                name = RESOURCE_CACHE
+                cacheMode = CacheMode.REPLICATED
+            }
+            configs << resCfg
         }
 
-        cfg.setCacheConfiguration(sessionCfg, metaCfg, dataCfg, resCfg)
+
+        cfg.setCacheConfiguration( configs as CacheConfiguration[] )
 
     }
 
@@ -221,6 +234,28 @@ class IgGridFactory {
     }
 
     protected schedulerConfig( IgniteConfiguration cfg ) {
+
+        experimental = clusterConfig.getAttribute('experimental') as boolean
+
+        if( experimental ) {
+            log.debug "Enabled experimental scheduler work-stealing"
+            experimentalWorkStealing(cfg)
+        }
+        else {
+            customWorkStealing(cfg)
+        }
+
+    }
+
+    protected customWorkStealing( IgniteConfiguration cfg )  {
+
+        cfg.setCollisionSpi( new CustomStealingCollisionSpi() )
+        cfg.setFailoverSpi( new JobStealingFailoverSpi() )
+        cfg.setLoadBalancingSpi( new AdaptiveLoadBalancingSpi() )
+
+    }
+
+    protected experimentalWorkStealing( IgniteConfiguration cfg ) {
 
         // -- config scheduler
         final scheduler = new JobSchedulerSpi()
