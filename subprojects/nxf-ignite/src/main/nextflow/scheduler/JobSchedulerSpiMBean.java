@@ -183,7 +183,7 @@ public interface JobSchedulerSpiMBean extends IgniteSpiManagementMBean {
 
     /**
      * Gets maximum number of attempts to steal job by another node.
-     * If not specified, {@link org.apache.ignite.spi.collision.jobstealing.JobStealingCollisionSpi#DFLT_MAX_STEALING_ATTEMPTS}
+     * If not specified, {@link JobSchedulerSpi#DFLT_MAX_STEALING_ATTEMPTS}
      * value will be used.
      *
      * @return Maximum number of attempts to steal job by another node.
@@ -193,7 +193,7 @@ public interface JobSchedulerSpiMBean extends IgniteSpiManagementMBean {
 
     /**
      * Gets maximum number of attempts to steal job by another node.
-     * If not specified, {@link org.apache.ignite.spi.collision.jobstealing.JobStealingCollisionSpi#DFLT_MAX_STEALING_ATTEMPTS}
+     * If not specified, {@link JobSchedulerSpi#DFLT_MAX_STEALING_ATTEMPTS}
      * value will be used.
      *
      * @param maximumStealingAttempts Maximum number of attempts to steal job by another node.
