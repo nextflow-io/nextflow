@@ -24,6 +24,7 @@ import nextflow.Session
 import nextflow.executor.CirrusExecutor
 import nextflow.executor.CrgExecutor
 import nextflow.executor.Executor
+import nextflow.executor.CondorExecutor
 import nextflow.executor.LocalExecutor
 import nextflow.executor.LsfExecutor
 import nextflow.executor.NopeExecutor
@@ -60,6 +61,7 @@ class ProcessFactory {
             'slurm': SlurmExecutor,
             'crg': CrgExecutor,
             'bsc': LsfExecutor,
+            'condor': CondorExecutor,
             'cirrus': CirrusExecutor
     ]
 

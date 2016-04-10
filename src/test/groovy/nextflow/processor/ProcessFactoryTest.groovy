@@ -21,6 +21,7 @@
 package nextflow.processor
 
 import nextflow.Session
+import nextflow.executor.CondorExecutor
 import nextflow.executor.Executor
 import nextflow.executor.ServiceName
 import nextflow.executor.LocalExecutor
@@ -46,6 +47,7 @@ class ProcessFactoryTest extends Specification {
         factory.loadExecutorClass('local') == LocalExecutor
         factory.loadExecutorClass('sge') == SgeExecutor
         factory.loadExecutorClass('oge') == SgeExecutor
+        factory.loadExecutorClass('condor') == CondorExecutor
         factory.loadExecutorClass('x') == XExecutor  // <-- this is loaded by the name
 
         when:
