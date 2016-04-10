@@ -48,7 +48,7 @@ public interface JobFailoverSpiMBean extends IgniteSpiManagementMBean {
      * Gets maximum number of attempts to execute a failed job on another node.
      * If job gets stolen and thief node exists then it is not considered as
      * failed job.
-     * If not specified, {@link org.apache.ignite.spi.failover.jobstealing.JobStealingFailoverSpi#DFLT_MAX_FAILOVER_ATTEMPTS} value will be used.
+     * If not specified, {@link JobFailoverSpi#DFLT_MAX_FAILOVER_ATTEMPTS} value will be used.
      *
      * @return Maximum number of attempts to execute a failed job on another node.
      */
