@@ -15,8 +15,8 @@ or the cloud by simply changing the executor definition in the Nextflow configur
 
 .. _local-executor:
 
-Local executor
-===============
+Local
+=====
 
 The `local` executor is used by default. It runs the pipeline processes in the computer where Nextflow
 is launched. The processes are parallelised by spawning multiple `threads` and by taking advantage of multi-cores
@@ -28,8 +28,8 @@ switching to a cluster facility when you need to run it on production data.
 
 .. _sge-executor:
 
-SGE executor
-=============
+SGE
+===
 
 The `SGE` executor allows you to run your pipeline script by using a `Sun Grid Engine <http://en.wikipedia.org/wiki/Oracle_Grid_Engine>`_
 cluster or a compatible platform (`Open Grid Engine <http://gridscheduler.sourceforge.net/>`_, `Univa Grid Engine <http://www.univa.com/products/grid-engine.php>`_, etc).
@@ -52,8 +52,8 @@ The amount of resources requested by each job submission is defined by the follo
 
 .. _lsf-executor:
 
-LSF executor
-==============
+LSF
+===
 
 The `LSF` executor allows you to run your pipeline script by using a `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ cluster.
 
@@ -85,8 +85,8 @@ The amount of resources requested by each job submission is defined by the follo
 
 .. _slurm-executor:
 
-SLURM executor
-================
+SLURM
+=====
 
 
 The `SLURM` executor allows you to run your pipeline script by using the `SLURM <https://computing.llnl.gov/linux/slurm/>`_ resource manager.
@@ -111,8 +111,8 @@ The amount of resources requested by each job submission is defined by the follo
 
 .. _pbs-executor:
 
-PBS/Torque executor
-====================
+PBS/Torque
+==========
 
 The `PBS` executor allows you to run your pipeline script by using a resource manager belonging to the `PBS/Torque <http://en.wikipedia.org/wiki/Portable_Batch_System>`_ family of batch schedulers.
 
@@ -132,11 +132,35 @@ The amount of resources requested by each job submission is defined by the follo
 * :ref:`process-memory`
 * :ref:`process-clusterOptions`
 
+.. _condor-executor:
+
+HTCondor
+========
+
+The `HTCondor` executor allows you to run your pipeline script by using the `HTCondor <https://research.cs.wisc.edu/htcondor/>`_ resource manager.
+
+.. warning:: This is an incubating feature. It may change in future Nextflow releases.
+
+Nextflow manages each process as a separate job that is submitted to the cluster by using the ``condor_submit`` command.
+
+Being so, the pipeline must be launched from a node where the ``condor_submit`` command is available, that is, in a common usage
+scenario, the cluster `head` node.
+
+To enable the HTCondor executor simply set to ``process.executor`` property to ``condor`` value in the ``nextflow.config`` file.
+
+The amount of resources requested by each job submission is defined by the following process directives:
+
+* :ref:`process-cpus`
+* :ref:`process-time`
+* :ref:`process-memory`
+* :ref:`process-disk`
+* :ref:`process-clusterOptions`
+
 
 .. _drmaa-executor:
 
-DRMAA executor
-====================
+DRMAA
+=====
 
 The `DRMAA` executor allows you to execute a Nextflow pipeline by using a grid engine that implements the
 Java binding for the `DRMAA <http://www.drmaa.org>`_ interface api (version 1).
@@ -176,12 +200,12 @@ The amount of resources requested by each job submission is defined by the follo
 
 .. _cirrus-executor:
 
-ClusterK Cirrus
-=================
+Cirrus
+======
+
+.. warning:: ClusterK cloud platform is not available any more.
 
 The `Cirrus` executor allows you to run your pipeline in the `ClusterK <http://clusterk.com>`_ cloud platform.
-
-.. warning:: This is an incubating feature. It may change in future Nextflow releases.
 
 Nextflow manages each process execution as a separate task that is submitted to the cloud scheduler by using
 the ``ksub`` command provided along with the ClusterK platform.
@@ -204,7 +228,7 @@ The amount of resources requested by each task submission is defined by the foll
 .. _dnanexus-executor:
 
 DNAnexus
-=========
+========
 
 The `DNAnexus` executor allows you to run your pipeline in the `DNAnexus <http://dnanexus.com/>`_ cloud platform.
 
@@ -230,7 +254,24 @@ executing the required job. For example::
 The list of instance types, that can be used for this property, is available in the `Run Specification
 <https://wiki.dnanexus.com/API-Specification-v1.0.0/IO-and-Run-Specifications#Run-Specification>`_ page.
 
+.. _ignite-executor:
 
+Ignite
+======
+
+The `Ignite` executor allows you to run a pipeline by using the `Apache Ignite <https://ignite.apache.org/>`_ clustering
+technology that is embedded with the Nextflow runtime.
+
+To enable this executor set the property ``process.executor = 'ignite'`` in the ``nextflow.config`` file.
+
+The amount of resources requested by each task submission is defined by the following process directives:
+
+* :ref:`process-cpus`
+* :ref:`process-disk`
+* :ref:`process-memory`
+
+Read the :ref:`ignite-page` section in this documentation to learn how to configure Nextflow to deploy and run an
+Ignite cluster in your infrastructure.
 
 
 

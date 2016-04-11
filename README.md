@@ -140,10 +140,12 @@ manager without modifying it.
 
 Currently the following clusters are supported: 
   
-  + Oracle Grid Engine (SGE)
-  + Platform LSF
+  + Open Grid Engine (SGE)
+  + Univa Grid Engine
+  + IBM Platform LSF
   + Linux SLURM
   + PBS/Torque
+  + HTCondor (experimental)
 
 
 By default processes are parallelized by spanning multiple threads in the machine where the pipeline is launched.

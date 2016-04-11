@@ -1,6 +1,10 @@
+.. _getstart-page:
+
 *******************
 Get started
 *******************
+
+.. _getstart-requirement:
 
 Requirements
 ============
@@ -13,6 +17,7 @@ Windows systems may be supported using a POSIX compatibility layer like `Cygwin 
 in alternative installing it into a Linux VM using a virtualization software like `VirtualBox <http://www.virtualbox.org>`_
 or `VMware <http://www.vmware.com/>`_.
 
+.. _getstart-install:
 
 Installation
 ============
@@ -31,6 +36,8 @@ It only needs two easy steps:
 .. tip:: In the case you don't have ``wget`` installed you can use the ``curl`` utility instead by entering
    the following command: ``curl -fsSL get.nextflow.io | bash``
 
+
+.. _getstart-first:
 
 Your first script
 ==================
@@ -108,9 +115,10 @@ Thus, it is perfectly possible that you get the final result printed out in a di
   also the prefix of the directories where each process is executed. You can inspect the files produced by them
   changing to the directory ``$PWD/work`` and using that numbers to find the process specific execution path.
 
+.. _getstart-resume:
 
 Modify and resume
-------------------
+-----------------
 
 Nextflow keep track of all the processes executed in your pipeline. If you modify some parts of your script,
 only the processes that are actually changed will be re-executed. The execution of the processes that are not changed
@@ -157,6 +165,8 @@ its results are retried from the cache. Instead the second one is executed as ex
 .. tip:: The pipeline results are cached by default in the directory ``$PWD/work``. Depending your script this folder
   can take of lot of disk space. If your are sure you won't resume your pipeline execution, clean this folder periodically.
 
+.. _getstart-params:
+
 Pipeline parameters
 --------------------
 
@@ -179,10 +189,6 @@ will look like as the following::
     [7d/3561b6] Submitted process > convertToUpper (1)
     odnu
     m aloH
-
-
-
-
 
 
 
