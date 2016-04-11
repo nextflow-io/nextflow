@@ -1,13 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.18.0
+0.18.0 - 11 Apr 2016
 - Added `legacy` option to docker configuration properties.
   Added support for `--cpuset-cpus` Docker command line option. See #115
 - Added `region` option to AWS S3 config properties #116
 - Added support for AWS S3 multipart uploads #112
 - Added `NXF_TRACE` to enable application trace logging
-- Added experimental support for Shifter containers 
+- Added experimental support for Shifter containers
+- Added experimental support for HTCondor scheduler
 - Fixed Input file names staged into a subdirectory are not expanded properly #111
 - Fixed Main script class name collides with variable names in global scope #113
 - Fixed config file having a name as a top level config options raise a MissingPropertyException #117
@@ -17,11 +18,13 @@ NEXTFLOW CHANGE-LOG
 - Fixed Allow for a per-job memory limit for LSF executor #123
 - Fixed Memory reservation should not be divided by the number of cpus #124
 - Fixed Mixed content errors if timeline.html served over HTTPS #127
+- Fixed Nextflow won't start if a proxy URL env variable contains a trailing slash #109
 - Set poolSize as the number of avail cpus
 - Set `java.io.tmpdir` to the same path as `NXF_TEMP`
 - Updated Apache Ignite to version 1.5.0
 - Updated Logback to version 1.1.6
 - Updated Slf4j to version 1.7.21
+- Updated JGit to version 4.3.0.201604071810-r
 
 0.17.3 - 18 Feb 2016 
 - Fixed task status in the trace file when execution is retried #107
