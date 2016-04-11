@@ -93,7 +93,7 @@ The following HPC and cloud platforms are supported:
 * `Linux SLURM <https://computing.llnl.gov/linux/slurm/>`_
 * `PBS Works <http://www.pbsworks.com/gridengine/>`_
 * `Torque <http://www.adaptivecomputing.com/products/open-source/torque/>`_
-* `ClusterK <http://clusterk.com/>`_
+* `HTCondor <https://research.cs.wisc.edu/htcondor/>`_
 * `DNAnexus <http://www.dnanexus.com>`_
 
 

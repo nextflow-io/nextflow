@@ -785,7 +785,7 @@ set         Lets to send multiple values over the same output channel.
 
 
 Output values
--------------------------
+-------------
 
 The ``val`` qualifier allows to output a `value` defined in the script context. In a common usage scenario,
 this is a value which has been defined in the `input` declaration block, as shown in the following example::
@@ -831,7 +831,7 @@ value expressions. For example::
 
 
 Output files
------------------
+------------
 
 The ``file`` qualifier allows to output one or more files, produced by the process, over the specified channel.
 For example::
@@ -863,7 +863,7 @@ be able to receive it.
 .. TODO explain Path object
 
 Multiple output files
------------------------
+---------------------
 
 When an output file name contains a ``*`` or ``?`` wildcard character it is interpreted as a `glob`_ path matcher.
 This allows to *capture* multiple files into a list object and output them as a sole emission. For example::
@@ -929,7 +929,7 @@ Read more about glob syntax at the following link `What is a glob?`_
 .. _process-dynoutname:
 
 Dynamic output file names
------------------------------
+-------------------------
 
 When an output file name needs to be expressed dynamically, it is possible to define it using a dynamic evaluated
 string which references values defined in the input declaration block or in the script global context.
@@ -969,7 +969,7 @@ on the actual value of the ``x`` input.
 .. _process-stdout:
 
 Output 'stdout' special file
--------------------------------
+----------------------------
 
 The ``stdout`` qualifier allows to `capture` the `stdout` output of the executed process and send it over
 the channel specified in the output parameter declaration. For example::
@@ -989,7 +989,7 @@ the channel specified in the output parameter declaration. For example::
 .. _process-set:
 
 Output 'set' of values
---------------------------
+----------------------
 
 The ``set`` qualifier allows to send multiple values into a single channel. This feature is useful
 when you need to `group together` the results of multiple executions of the same process, as shown in the following
@@ -1101,10 +1101,11 @@ The directives are:
 
 
 cache
----------
+-----
 
-The ``cache`` directive allows you to store the process results to a local cache. Any following attempt to execute
-the process along with the same inputs will cause the process execution to be skipped, producing the stored data as
+The ``cache`` directive allows you to store the process results to a local cache. When the `cached` is enabled *and*
+the pipeline is launched with the :ref:`resume <getstart-resume>` option, any following attempt to execute the process,
+along with the same inputs, will cause the process execution to be skipped, producing the stored data as
 the actual results.
 
 The caching feature generates a unique `key` by indexing the process script and inputs. This key is used
@@ -1132,7 +1133,7 @@ Value                 Description
 ===================== =================
 
 container
-__________
+_________
 
 The ``container`` directive allows you to execute the process script in a `Docker <http://docker.io>`_ container.
 
@@ -1162,7 +1163,7 @@ Simply replace in the above script ``dockerbox:tag`` with the Docker image name 
 
 
 echo
------
+----
 
 By default the `stdout` produced by the commands executed in all processes is ignored.
 Setting the ``echo`` directive to ``true`` you can forward the process `stdout` to the current top
@@ -1185,7 +1186,7 @@ Without specifying ``echo true`` you won't see the ``Hello`` string printed out 
 
 
 errorStrategy
---------------
+-------------
 
 The ``errorStrategy`` directive allows you to define how an error condition is managed by the process. By default when
 an error status is returned by the executed script, the process stops immediately. This in turn forces the entire pipeline
@@ -1220,7 +1221,7 @@ returning an error condition. For example::
 The number of times a failing process is re-executed is defined by the `maxRetries`_ and `maxErrors`_ directives.
 
 executor
----------
+--------
 
 The `executor` defines the underlying system where processes are executed. By default a process uses the executor
 defined globally in the ``nextflow.config`` file.
@@ -1236,6 +1237,7 @@ Name            Executor
 ``lsf``        The process is executed via the `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ job scheduler.
 ``slurm``      The process is executed via the SLURM job scheduler.
 ``pbs``        The process is executed via the `PBS/Torque <http://en.wikipedia.org/wiki/Portable_Batch_System>`_ job scheduler.
+``condor``     The process is executed via the `HTCondor <https://research.cs.wisc.edu/htcondor/>`_ job scheduler.
 ``dnanexus``   The process is executed into the `DNAnexus <http://www.dnanexus.com/>`_ cloud.
 ============== ==================
 
@@ -1257,7 +1259,7 @@ The following example shows how to set the process's executor::
 
 
 maxErrors
-----------
+---------
 
 The ``maxErrors`` directive allows you to specify the maximum number of times a process can fail when using the ``Retry`` `error strategy`.
 By default this value is set to ``3``, you can change to a different value as show in the example below::
@@ -1275,7 +1277,7 @@ See also: `errorStrategy`_ and `maxRetries`_.
 
 
 maxForks
----------
+--------
 
 The ``maxForks`` directive allows you to define the maximum number of process instances that can be executed in parallel.
 By default this value is equals to the number of CPU cores available minus 1.
@@ -1294,7 +1296,7 @@ If you want to execute a process in a sequential manner, set this directive to o
 
 
 maxRetries
------------
+----------
 
 The ``maxRetries`` directive allows you to define the maximum number of times a process instance can be
 re-submitted in case of failure. This value is applied only when using the ``retry`` `error strategy`. By default
@@ -1319,7 +1321,7 @@ See also: `errorStrategy`_ `maxErrors`_.
 
 
 module
---------
+------
 
 `Modules <http://modules.sourceforge.net/>`_ is a package manager that allows you to dynamically configure
 your execution environment and easily switch between multiple versions of the same software tool.
@@ -1354,7 +1356,7 @@ can be specified in a single ``module`` directive by separating all the module n
 
 
 scratch
---------
+-------
 
 The ``scratch`` directive allows you to execute the process in a temporary folder that is local to the execution node.
 
@@ -1410,7 +1412,7 @@ ram-disk    Creates a scratch folder in the RAM disk ``/dev/shm/`` (experimental
 =========== ==================
 
 storeDir
----------
+--------
 
 The ``storeDir`` directive allows you to define a directory that is used as `permanent` cache for your process results.
 
@@ -1453,7 +1455,7 @@ for each species specified by an input parameter::
 
 
 publishDir
------------
+----------
 
 The ``publishDir`` directive allows you to publish the process output files to a specified folder. For example::
 
@@ -1523,7 +1525,7 @@ move            Moves the output files into the published directory. **Note**: t
   must not be accessed by other downstream processes.
 
 validExitStatus
--------------------
+---------------
 
 A process is terminated when the executed command returns an error exit status. By default any error status
 other than ``0`` is interpreted as an error condition.
@@ -1551,7 +1553,7 @@ the ``validExitStatus`` directive.
 .. _process-cpus:
 
 cpus
--------
+----
 
 The ``cpus`` directive allows you to define the number of (logical) CPU required by the process' task.
 For example::
@@ -1570,9 +1572,7 @@ For example::
 This directive is required for tasks that execute multi-process or multi-threaded commands/tools and it is meant
 to reserve enough CPUs when a pipeline task is executed through a cluster resource manager.
 
-.. note:: Currently it is supported only by the following grid based executors:
-    :ref:`SGE <sge-executor>`, :ref:`LSF <lsf-executor>`, :ref:`SLURM <slurm-executor>`,
-    :ref:`PBS/Torque <pbs-executor>` and :ref:`DRMAA <drmaa-executor>`.
+.. note:: This setting is not supported by the :ref:`local-executor` executor.
 
 
 See also: `penv`_, `memory`_, `time`_, `queue`_, `maxForks`_
@@ -1580,7 +1580,7 @@ See also: `penv`_, `memory`_, `time`_, `queue`_, `maxForks`_
 .. _process-queue:
 
 queue
---------
+-----
 
 The ``queue`` directory allows you to set the `queue` where jobs are scheduled when using a grid based executor
 in your pipeline. For example::
@@ -1609,13 +1609,13 @@ Multiple queues can be specified by separating their names with a comma for exam
     }
 
 
-.. note:: This directive is taken in account only by the following executors: :ref:`SGE <sge-executor>`,
-  :ref:`LSF <lsf-executor>`, :ref:`SLURM <slurm-executor>`, :ref:`PBS/Torque <pbs-executor>` and :ref:`DRMAA <drmaa-executor>`
+.. note:: This directive is taken in account only by the following executors: :ref:`sge-executor`, :ref:`lsf-executor`,
+  :ref:`slurm-executor`, :ref:`pbs-executor` and :ref:`drmaa-executor` executors.
 
 .. _process-disk:
 
 disk
-------
+----
 
 The ``disk`` directive allows you to define how much local disk storage the process is allowed to use. For example::
 
@@ -1641,7 +1641,8 @@ GB      Gigabytes
 TB      Terabytes
 ======= =============
 
-.. note:: This directive currently is taken in account only by the :ref:`Cirrus <cirrus-executor>` executor.
+.. note:: This directive currently is taken in account only by the :ref:`ignite-executor`
+  and the :ref:`condor-executor` executors.
 
 
 See also: `cpus`_, `memory`_ `time`_, `queue`_ and `Dynamic computing resources`_.
@@ -1649,7 +1650,7 @@ See also: `cpus`_, `memory`_ `time`_, `queue`_ and `Dynamic computing resources`
 .. _process-memory:
 
 memory
---------
+------
 
 The ``memory`` directive allows you to define how much memory the process is allowed to use. For example::
 
@@ -1678,9 +1679,7 @@ TB      Terabytes
 
 .. This setting is equivalent to set the ``qsub -l virtual_free=<mem>`` command line option.
 
-.. note:: This directive is taken in account only when using one of the following grid based executors:
-  :ref:`SGE <sge-executor>`, :ref:`LSF <lsf-executor>`, :ref:`SLURM <slurm-executor>`, :ref:`PBS/Torque <pbs-executor>`
-  and :ref:`DRMAA <drmaa-executor>`
+.. note:: This directive is not supported by the :ref:`local-executor` executor.
 
 
 See also: `cpus`_, `time`_, `queue`_ and `Dynamic computing resources`_.
@@ -1688,7 +1687,7 @@ See also: `cpus`_, `time`_, `queue`_ and `Dynamic computing resources`_.
 .. _process-time:
 
 time
---------
+----
 
 The ``time`` directive allows you to define how long a process is allowed to run. For example::
 
@@ -1715,15 +1714,15 @@ d       Days
 ======= =============
 
 .. note:: This directive is taken in account only when using one of the following grid based executors:
-    :ref:`SGE <sge-executor>`, :ref:`LSF <lsf-executor>`, :ref:`SLURM <slurm-executor>`, :ref:`PBS/Torque <pbs-executor>`
-    and :ref:`DRMAA <drmaa-executor>`
+    :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor`,
+    :ref:`condor-executor` and :ref:`drmaa-executor` executors.
 
 See also: `cpus`_, `memory`_, `queue`_ and `Dynamic computing resources`_.
 
 .. _process-penv:
 
 penv
--------
+----
 
 The ``penv`` directive  allows you to define the `parallel environment` to be used when submitting a parallel task to the
 :ref:`SGE <sge-executor>` resource manager. For example::
@@ -1742,7 +1741,7 @@ The ``penv`` directive  allows you to define the `parallel environment` to be us
 This configuration depends on the parallel environment provided by your grid engine installation. Refer to your
 cluster documentation or contact your admin to lean more about this.
 
-.. note:: This setting is available only for the :ref:`SGE grid executor <sge-executor>`.
+.. note:: This setting is available when using the :ref:`sge-executor` executor.
 
 See also: `cpus`_, `memory`_, `time`_
 
@@ -1750,19 +1749,19 @@ See also: `cpus`_, `memory`_, `time`_
 .. _process-clusterOptions:
 
 clusterOptions
-----------------
+--------------
 
 The ``clusterOptions`` directive allows to use any `native` configuration option accepted by your cluster submit command.
 You can use it to request non-standard resources or use settings that are specific to your cluster and not supported
 out of the box by Nextflow.
 
 .. note:: This directive is taken in account only when using a grid based executor:
-  :ref:`SGE <sge-executor>`, :ref:`LSF <lsf-executor>`, :ref:`SLURM <slurm-executor>`, :ref:`PBS/Torque <pbs-executor>`
-  and :ref:`DRMAA <drmaa-executor>`
+  :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor`,
+  :ref:`condor-executor` and :ref:`drmaa-executor` executors.
 
 
 tag
------
+---
 
 The ``tag`` directive allows you to associate each process executions with a custom label, so that it will be easier
 to identify them in the log file or in the trace execution report. For example::
@@ -1788,7 +1787,7 @@ The above snippet will print a log similar to the following one, where process n
 See also :ref:`Trace execution report <trace-report>`
 
 beforeScript
--------------
+------------
 
 The ``beforeScript`` directive allows you to execute a custom (BASH) snippet *before* the main process script is run.
 This may be useful to initialise the underlying cluster environment or for other custom initialisation.
@@ -1807,20 +1806,20 @@ For example::
 
 
 afterScript
--------------
+-----------
 
 The ``afterScript`` directive allows you to execute a custom (BASH) snippet immediately *after* the main process has run.
 This may be useful to clean up your staging area.
 
 ext
-----
+---
 
 The ``ext`` is a special directive used as *namespace* for user custom configuration properties that can be defined at
 process level. This can be useful for advanced configuration options.
 
 
 Dynamic directives
--------------------
+------------------
 
 A directive can be assigned *dynamically*, during the process execution, so that its actual value can be evaluated
 depending on the value of one, or more, process' input values.
@@ -1903,4 +1902,4 @@ time.
 If the task execution fail reporting an exit status equals ``140``, the task is re-submitted (otherwise terminates immediately).
 This time the value of ``task.attempt`` is ``2``, thus increasing the amount of the memory to four GB and the time to 2 hours, and so on.
 
-The directory `maxRetries`_ set the maximum number of time the same task can be re-executed
+The directory `maxRetries`_ set the maximum number of time the same task can be re-executed.
