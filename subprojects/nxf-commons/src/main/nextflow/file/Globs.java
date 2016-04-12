@@ -20,11 +20,6 @@
 
 package nextflow.file;
 
-/**
- * NOTE: This source has been included under the GPL "Fair Use" clause.
- * http://www.gnu.org/licenses/gpl-faq.html#GPLFairUse
- */
-
 
 /*
  * Copyright (c) 2008, 2009, Oracle and/or its affiliates. All rights reserved.
