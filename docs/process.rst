@@ -1103,7 +1103,7 @@ The directives are:
 cache
 -----
 
-The ``cache`` directive allows you to store the process results to a local cache. When the `cached` is enabled *and*
+The ``cache`` directive allows you to store the process results to a local cache. When the cache is enabled *and*
 the pipeline is launched with the :ref:`resume <getstart-resume>` option, any following attempt to execute the process,
 along with the same inputs, will cause the process execution to be skipped, producing the stored data as
 the actual results.

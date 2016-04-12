@@ -223,7 +223,7 @@ Known compilation problems
 ---------------------------
 
 Nextflow can be compiled with both JDK 7 or JDK 8. However when compiling with the later you **won't** be able
-to run it on a Java 7. The Java compiler used by the build process can be choose by setting the
+to run it on Java 7. The Java compiler used by the build process can be choose by setting the
 `JAVA_HOME` environment variable accordingly. 
  
 
