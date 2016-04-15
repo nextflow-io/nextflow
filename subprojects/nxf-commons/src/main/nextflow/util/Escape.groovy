@@ -32,7 +32,7 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class Escape {
 
-    private static List<String> SPECIAL_CHARS = ["'", '"', ' ', '(', ')', '\\']
+    private static List<String> SPECIAL_CHARS = ["'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`']
 
     static String path(String val) {
         def copy = new StringBuilder(val.size() +10)
