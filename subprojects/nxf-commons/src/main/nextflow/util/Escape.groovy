@@ -32,14 +32,18 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class Escape {
 
-    private static String QUOTE = "'"
-
-    private static String DOUBLE_QUOTE = '"'
-
-    private static String BLANK = " "
+    private static List<String> SPECIAL_CHARS = ["'", '"', ' ', '(', ')', '\\']
 
     static String path(String val) {
-        val.replace(QUOTE,'\\'+QUOTE).replace(BLANK,'\\'+BLANK).replace(DOUBLE_QUOTE, '\\'+DOUBLE_QUOTE)
+        def copy = new StringBuilder(val.size() +10)
+        for( int i=0; i<val.size(); i++) {
+            def p = SPECIAL_CHARS.indexOf(val[i])
+            if( p != -1 ) {
+                copy.append('\\')
+            }
+            copy.append(val[i])
+        }
+        return copy.toString()
     }
 
     static String path(Path val) {

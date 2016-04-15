@@ -35,6 +35,8 @@ class EscapeTest extends Specification {
         Escape.path(Paths.get('hello.txt')) == "hello.txt"
         Escape.path(Paths.get("hello'3.txt")) == "hello\\'3.txt"
         Escape.path(Paths.get("hello'3.txt")).size() == "hello'3.txt".size()+1
+        Escape.path(Paths.get("hello(3).txt")) == "hello\\(3\\).txt"
+        Escape.path(Paths.get("hello\\3.txt")) == "hello\\\\3.txt"
         Escape.path(Paths.get("/some'5/data'3/with/quote's/file's.txt")) == "/some\\'5/data\\'3/with/quote\\'s/file\\'s.txt"
     }
 
