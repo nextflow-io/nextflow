@@ -5,6 +5,7 @@ set -u
 #
 # DEFINE the following variables
 #
+
 #AWS_ACCESS_KEY_ID=xxx
 #AWS_SECRET_ACCESS_KEY=yyy
 #X_AMI=<image ID eg. ami-f71a7f80>
@@ -31,10 +32,10 @@ set -u
 #NXF_PULL=<github repo to pull>
 
 # docker containers to pull on start
-#DOCKER_IMAGE="grape/contig:rgcrg-0.1 grape/quantification:flux-1.6.1 grape/inferexp:rseqc-2.3.9 grape/mapping:gem-1.7.1"
+#DOCKER_IMAGE="busybox"
 
 # docker runtime to be used
-#DOCKER_VERSION=1.10.1
+#DOCKER_VERSION=1.10.3
 
 # Print the current status
 echo "AMI           : $X_AMI"
