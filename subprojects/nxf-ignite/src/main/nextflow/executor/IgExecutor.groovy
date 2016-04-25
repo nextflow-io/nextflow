@@ -52,7 +52,7 @@ class IgExecutor extends Executor {
     /**
      * Initialize the executor by getting a reference to the Ignite connector
      */
-    def void init() {
+    void init() {
         super.init()
         connector = IgConnector.create(taskMonitor)
     }
@@ -87,19 +87,29 @@ class IgExecutor extends Executor {
         (TaskPollingMonitor)super.getTaskMonitor()
     }
 
-
+    @PackageScope
     IgniteFuture call( IgniteCallable command ) {
         final compute = connector.compute().withAsync()
         compute.call(command)
         return compute.future()
     }
 
+    @PackageScope
     IgniteFuture execute( ComputeJob task ) {
         final compute = connector.compute().withAsync()
         compute.execute( new IgniteTaskWrapper(task), null)
         compute.future()
     }
 
+    @PackageScope
+    boolean checkTaskStarted( taskId ) {
+        connector.runningTasks.containsKey(taskId)
+    }
+
+    @PackageScope
+    void removeTaskCompleted( taskId ) {
+        connector.runningTasks.remove(taskId)
+    }
 
     /**
      * An adapter for Ignite compute task

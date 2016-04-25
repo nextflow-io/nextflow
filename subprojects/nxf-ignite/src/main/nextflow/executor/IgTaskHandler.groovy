@@ -19,7 +19,6 @@
  */
 
 package nextflow.executor
-
 import static nextflow.processor.TaskStatus.COMPLETED
 import static nextflow.processor.TaskStatus.RUNNING
 import static nextflow.processor.TaskStatus.SUBMITTED
@@ -56,8 +55,6 @@ class IgTaskHandler extends TaskHandler {
 
     private ScriptType type
 
-    private Path startFile
-
     private Path exitFile
 
     private Path outputFile
@@ -75,7 +72,6 @@ class IgTaskHandler extends TaskHandler {
         def handler = new IgTaskHandler(task)
         handler.executor = executor
         handler.type = ScriptType.SCRIPTLET
-        handler.startFile = task.workDir.resolve(TaskRun.CMD_START)
         handler.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
         handler.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         handler.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
@@ -125,16 +121,16 @@ class IgTaskHandler extends TaskHandler {
         if( !future )
             return false
 
-        // startFile is not given for native groovy tasks, thus just return true
-        // otherwise check the `lastModified` timestamp is greater than zero
-        return !startFile || startFile.lastModified()
+        return executor.checkTaskStarted(task.id)
     }
 
     @Override
     boolean checkIfCompleted() {
 
         if( isRunning() && (future.isCancelled() || (future.isDone() && (!exitFile || readExitStatus()!=null)))  ) {
+            log.trace "Task DONE > ${task}"
             status = COMPLETED
+            executor.removeTaskCompleted(task.id)
 
             final result = (ComputeJobResult)future.get()
             if( result.getException() ) {
@@ -158,8 +154,6 @@ class IgTaskHandler extends TaskHandler {
                 task.stdout = data.value
                 task.context = new TaskContext( task.processor, data.context )
             }
-
-            log.trace "Task DONE > ${task}"
             return true
         }
 

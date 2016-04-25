@@ -118,6 +118,14 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
     }
 
     /**
+     * Notify that the task execution has started
+     */
+    private void notifyStart() {
+        def master = grid.cluster().forAttribute(IgGridFactory.NODE_ROLE, IgGridFactory.ROLE_MASTER)
+        grid.message(master).send(IgConnector.TOPIC_EVT_TASKS, taskId)
+    }
+
+    /**
      * Invoke the task execution. It calls the following methods in this sequence: {@code stage}, {@code execute0} and {@code unstage}
      *
      * @return The {@code execute0} result value
@@ -126,6 +134,7 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
     @Override
     final T call() throws Exception {
         try {
+            notifyStart()
             deserialize()
 
             /*

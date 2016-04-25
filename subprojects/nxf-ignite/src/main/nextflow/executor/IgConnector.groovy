@@ -19,7 +19,11 @@
  */
 
 package nextflow.executor
+
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.Memoized
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.daemon.IgGridFactory
@@ -38,6 +42,7 @@ import org.apache.ignite.IgniteCompute
 import org.apache.ignite.cluster.ClusterGroup
 import org.apache.ignite.cluster.ClusterNode
 import org.apache.ignite.events.EventType
+import org.apache.ignite.lang.IgniteBiPredicate
 import org.apache.ignite.lang.IgniteRunnable
 import org.apache.ignite.resources.IgniteInstanceResource
 import org.apache.ignite.spi.collision.jobstealing.JobStealingDisabled
@@ -51,6 +56,8 @@ import org.jetbrains.annotations.Nullable
  */
 @Slf4j
 class IgConnector implements DiscoverySpiListener {
+
+    final public static String TOPIC_EVT_TASKS = 'nextflow.task.event'
 
     @Memoized
     static IgConnector create(TaskPollingMonitor monitor) {
@@ -67,12 +74,18 @@ class IgConnector implements DiscoverySpiListener {
 
     private Thread watcher
 
+    @PackageScope final Map<Object,Long> runningTasks = new ConcurrentHashMap<>()
+
     private IgConnector(TaskPollingMonitor monitor) {
         log.debug "Create Ignite master node"
         this.monitor = monitor
         this.session = monitor.session
 
+        // initialise the connector
         initialize()
+
+        // create task observer
+        registerTasksObserver()
     }
 
     /**
@@ -120,6 +133,24 @@ class IgConnector implements DiscoverySpiListener {
             // close the current instance
             grid.close()
         }
+
+    }
+
+    /**
+     * Registers a even listener that is triggered when a remote task execution has started
+     *
+     * See {@link IgBaseTask#notifyStart()}
+     */
+    private void registerTasksObserver() {
+
+        grid.message().localListen(TOPIC_EVT_TASKS, new IgniteBiPredicate<UUID, Object>() {
+            @Override public boolean apply(UUID nodeId, Object taskId) {
+                if( log.isTraceEnabled() )
+                    log.trace("Received task start message [taskId=${taskId}, from=${nodeId}]");
+                runningTasks.put(taskId, System.currentTimeMillis())
+                return true; // Return true to continue listening.
+            }
+        })
     }
 
     /**
