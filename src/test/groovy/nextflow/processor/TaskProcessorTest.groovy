@@ -21,6 +21,7 @@
 package nextflow.processor
 import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ExecutorService
 
@@ -448,6 +449,11 @@ class TaskProcessorTest extends Specification {
     }
 
 
+    private List<String> fetchResultFiles(TaskProcessor processor, FileOutParam param, String namePattern, Path folder ) {
+        processor
+                .fetchResultFiles(param, namePattern, folder)
+                .collect { Path it -> folder.relativize(it).toString() }
+    }
 
     def 'should return the list of output files'() {
 
@@ -469,83 +475,83 @@ class TaskProcessorTest extends Specification {
         def processor = [:] as TaskProcessor
 
         when:
-        result = processor.fetchResultFiles(Mock(FileOutParam), '*.fa', folder )
+        result = fetchResultFiles(processor, Mock(FileOutParam), '*.fa', folder )
         then:
-        result.collect { it.name }  == ['file2.fa']
+        result == ['file2.fa']
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
         param.type('file')
-        result = processor.fetchResultFiles(param, '*.fa', folder)
+        result = fetchResultFiles(processor, param, '*.fa', folder)
         then:
-        result.collect { it.name }  == ['file2.fa']
+        result  == ['file2.fa']
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
         param.type('dir')
-        result = processor.fetchResultFiles(param, '*.fa', folder)
+        result = fetchResultFiles(processor, param, '*.fa', folder)
         then:
         result == []
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        result = processor.fetchResultFiles(param, '**.fa', folder)
+        result = fetchResultFiles(processor, param, '**.fa', folder)
         then:
-        result.collect { it.name }.sort()  == ['file2.fa','file4.fa','file4.fa']
+        result == ['dir1/dir2/file4.fa', 'dir_link/dir2/file4.fa', 'file2.fa']
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
         param.followLinks(false)
-        result = processor.fetchResultFiles(param, '**.fa', folder)
+        result = fetchResultFiles(processor, param, '**.fa', folder)
         then:
-        result.collect { it.name }.sort()  == ['file2.fa','file4.fa']
+        result == ['dir1/dir2/file4.fa', 'file2.fa']
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
         param.maxDepth(1)
-        result = processor.fetchResultFiles(param, '**.fa', folder)
+        result = fetchResultFiles(processor, param, '**.fa', folder)
         then:
-        result.collect { it.name }.sort()  == ['file2.fa']
+        result == ['file2.fa']
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        result = processor.fetchResultFiles(param, '*', folder)
+        result = fetchResultFiles(processor, param, '*', folder)
         then:
-        result.collect { it.name }.sort()  == ['dir1', 'dir_link', 'file1.txt', 'file2.fa']
+        result == ['dir1', 'dir_link', 'file1.txt', 'file2.fa']
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
         param.type('dir')
-        result = processor.fetchResultFiles(param, '*', folder)
+        result = fetchResultFiles(processor, param, '*', folder)
         then:
-        result.collect { it.name }.sort()  == ['dir1', 'dir_link']
+        result == ['dir1', 'dir_link']
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
         param.type('file')
-        result = processor.fetchResultFiles(param, '*', folder)
+        result = fetchResultFiles(processor, param, '*', folder)
         then:
-        result.collect { it.name }.sort()  == ['file1.txt', 'file2.fa']
+        result == ['file1.txt', 'file2.fa']
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
         param.type('file')
         param.hidden(true)
-        result = processor.fetchResultFiles(param, '*', folder)
+        result = fetchResultFiles(processor, param, '*', folder)
         then:
-        result.collect { it.name }.sort()  == ['.hidden.fa', 'file1.txt', 'file2.fa']
+        result == ['.hidden.fa', 'file1.txt', 'file2.fa']
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        result = processor.fetchResultFiles(param,'.*', folder)
+        result = fetchResultFiles(processor, param,'.*', folder)
         then:
-        result.collect { it.name }.sort()  == ['.hidden.fa']
+        result == ['.hidden.fa']
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        result = processor.fetchResultFiles(param,'file{1,2}.{txt,fa}', folder)
+        result = fetchResultFiles(processor, param,'file{1,2}.{txt,fa}', folder)
         then:
-        result.collect { it.name }.sort() == ['file1.txt', 'file2.fa']
+        result == ['file1.txt', 'file2.fa']
 
         cleanup:
         folder?.deleteDir()

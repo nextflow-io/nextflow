@@ -1136,7 +1136,7 @@ abstract class TaskProcessor {
      *
      * @param workDir The job working path
      * @param namePattern The file name, it may include file name wildcards
-     * @return The list of files matching the specified name
+     * @return The list of files matching the specified name in lexicographical order
      * @throws MissingFileException when no matching file is found
      */
     @PackageScope
@@ -1154,7 +1154,7 @@ abstract class TaskProcessor {
             throw new MissingFileException("Cannot access folder: '$workDir'", e)
         }
 
-        return files
+        return files.sort()
     }
 
     /**
