@@ -7,14 +7,17 @@ Cloud boot
     - Downloads the Nextflow installer script
     - Pulls the Docker image specified by the `DOCKER_IMAGE` environment variable (multiple images by using a blank character separated list).
     - Launches the Nextflow daemon in background
+    - Tag the instance with a `master`/`worker` label
     
-* These scripts require a Linux Amazon image with the following tools installed:
+* It requires a Linux Amazon image with the following tools installed:
     - cloud-init
     - curl 
     - docker 
+    - java se 7 or 8
     
 NOTE: if you use an AMI other than Amazon Linux, change the user name `ec2-user` in the script `cloud-boot.sh` 
 accordingly. 
+    
     
 Quickstart
 ------------
@@ -30,19 +33,14 @@ Quickstart
     - X_BUCKET=<s3 bucket where nodes share their IPs in order to discover each other>
   
     
-* Use the script `launch.sh` to launch a set of workers, for example: 
+* Use the script `launch.sh` to setup the cluster, for example: 
  
-        $ ./launch 5 
-
-* Check the node availability listing the content of the bucket `nxf-cluster` with the command: 
-    
-        $ aws s3 ls s3://nxf-cluster
+        $ ./launch cluster 10 
        
-* Launch the master node:
+* Add new worker nodes with the `node` command. For example:
 
-        $ ./launch.sh master
+        $ ./launch.sh node 5 
       
 * SSH into the master node
 
-    
 * Launch at nextflow pipeline execution     
