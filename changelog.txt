@@ -1,6 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.18.1 - 26 Apr 2016 
+- Fixed Input files containing a parenthesis in the path are not staged properly #133.
+- Fixed Process execution hangs when using Ignite executor with a foreign work path #136.
+- Fixed Sort output files in lexicographical order #137.
+- Added `false` as `sort` option in the `collectFile` operator.
+
 0.18.0 - 11 Apr 2016
 - Added `legacy` option to docker configuration properties.
   Added support for `--cpuset-cpus` Docker command line option. See #115
