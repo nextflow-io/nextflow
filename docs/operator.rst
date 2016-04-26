@@ -1279,6 +1279,7 @@ can be specified:
 =============== ========================
 Sort            Description
 =============== ========================
+false           Disable content sorting. Entries are appended as they are produced.
 true            Order the content by the entries natural ordering i.e. numerical for number, lexicographic for string, etc. See http://docs.oracle.com/javase/tutorial/collections/interfaces/order.html
 index           Order the content by the incremental index number assigned to each entry while they are collected.
 hash            Order the content by the hash number associated to each entry (default)
