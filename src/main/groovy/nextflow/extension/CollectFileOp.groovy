@@ -198,7 +198,7 @@ class CollectFileOp {
     protected FileCollector createFileCollector() {
 
         // when sorting is not required 'none' use unsorted collector
-        if( params?.sort == 'none' ) {
+        if( params?.sort == 'none' || params?.sort == false ) {
             collector = new SimpleFileCollector()
         }
         else {
