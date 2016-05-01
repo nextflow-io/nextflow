@@ -214,10 +214,10 @@ class ProcessFactory {
 
         options?.each { String key, value -> taskConfig.setProperty(key,value)}
 
-        // Invoke the code block, which will return the script closure to the executed
-        // As side effect will set all the properties declaration in the 'taskConfig' object
-        // Note: the config object is wrapped by a TaskConfigWrapper because it is required
-        // to raise a MissingPropertyException when some values is missing, so that the Closure
+        // Invoke the code block which will return the script closure to the executed.
+        // As side effect will set all the property declarations in the 'taskConfig' object.
+        // Note: the config object is wrapped by a TaskConfigWrapper because it is needed
+        // to raise a MissingPropertyException when some values are missing, thus the closure
         // will try to fallback on the owner object
         def script = taskConfig
                 .throwExceptionOnMissingProperty(true)
