@@ -83,8 +83,10 @@ function install() {
     bash $1 -download || exit $?
     echo ''
     echo -e $'Nextflow installation completed. Please note:'
-    echo -e $'- the executable file \'nextflow\' has been created in the folder:' $(dirname $1)
-    echo -e $'- you may complete the installation copying it to directory in your $PATH'
+    echo -e $'- the executable file `nextflow` has been created in the folder:' $(dirname $1)
+    if [[ ! "$PATH" =~ (^|:)"$(dirname $1)"(:|$) ]]; then
+    echo -e $'- you may complete the installation by moving it to a directory in your $PATH'
+    fi
     echo ''
 }
 
