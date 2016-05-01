@@ -313,4 +313,9 @@ class ProcessConfig implements Map<String,Object> {
         return copy
     }
 
+    ProcessConfig errorStrategy( value ) {
+        configProperties.put('errorStrategy', value)
+        return this
+    }
+
 }
