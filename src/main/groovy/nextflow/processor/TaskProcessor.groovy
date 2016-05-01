@@ -446,6 +446,7 @@ abstract class TaskProcessor {
         )
 
         // setup config
+        task.config.index = task.index
         task.config.process = task.processor.name
         task.config.executor = task.processor.executor.name
 
@@ -1446,7 +1447,6 @@ abstract class TaskProcessor {
     final protected int makeTaskContextStage1( TaskRun task, Map secondPass, List values ) {
 
         final contextMap = task.context
-        final firstRun = task.index == 1
         int count = 0
 
         task.inputs.keySet().each { InParam param ->
