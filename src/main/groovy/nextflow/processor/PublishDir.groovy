@@ -233,7 +233,7 @@ class PublishDir {
         }
         catch( FileAlreadyExistsException e ) {
             if( overwrite ) {
-                Files.delete(destination)
+                FilesEx.deleteDir(destination)
                 processFileImpl(source, destination)
             }
         }
@@ -245,7 +245,7 @@ class PublishDir {
             Files.createSymbolicLink(destination, source)
         }
         else if( mode == Mode.LINK ) {
-            Files.createLink(destination, source)
+            FilesEx.mklink(source, [hard:true], destination)
         }
         else if( mode == Mode.MOVE ) {
             FilesEx.moveTo(source, destination)
