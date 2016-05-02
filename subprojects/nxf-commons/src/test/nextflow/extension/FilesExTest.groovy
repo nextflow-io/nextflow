@@ -1075,6 +1075,46 @@ class FilesExTest extends Specification {
 
     }
 
+    def 'hard link for a directory should link the directory content' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def source = Files.createDirectory(folder.resolve('source'))
+        source.resolve('A').text = 'file a'
+        source.resolve('B').text = 'file b'
+        source.resolve('dir1').mkdir()
+        source.resolve('dir1/P').text = 'file p'
+        source.resolve('dir1/Q').text = 'file q'
+        source.resolve('dir1/dir2').mkdir()
+        source.resolve('dir1/dir2/X').text = 'file x'
+        source.resolve('dir1/dir2/dir3').mkdir()
+        source.resolve('dir1/dir2/dir3/Z').text = 'file z'
+        def target = folder.resolve('target')
+
+        when:
+        source.mklink( target, hard: true )
+        then:
+        target.isDirectory()
+        target.resolve('A').text == 'file a'
+        target.resolve('B').text == 'file b'
+        target.resolve('dir1').isDirectory()
+        target.resolve('dir1/P').text == 'file p'
+        target.resolve('dir1/Q').text == 'file q'
+        target.resolve('dir1/dir2').isDirectory()
+        target.resolve('dir1/dir2/X').text == 'file x'
+        target.resolve('dir1/dir2/dir3').isDirectory()
+        target.resolve('dir1/dir2/dir3/Z').text == 'file z'
+
+        when:
+        target.deleteDir()
+        then:
+        source.resolve('A').exists()
+        source.resolve('B').exists()
+        source.resolve('dir1').exists()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'create symlink with default name' () {
 
         given:

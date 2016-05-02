@@ -24,6 +24,7 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.FileAlreadyExistsException
+import java.nio.file.FileSystemException
 import java.nio.file.FileVisitOption
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
@@ -1366,9 +1367,24 @@ class FilesEx {
         }
     }
 
-    static private createLinkImpl(Path existing, Path link, boolean hard) {
+    static private void createLinkImpl(Path existing, Path link, boolean hard) {
         if( hard ) {
-            Files.createLink(link, existing)
+            try {
+                Files.createLink(link, existing)
+            }
+            catch( FileSystemException e ) {
+                if( !Files.isDirectory(existing) ) {
+                    throw e
+                }
+
+                // create the target link as a directory
+                Files.createDirectory(link)
+
+                // then create a link for each entry in the `existing` folder
+                existing
+                        .listFiles()
+                        .each { file -> createLinkImpl( file, link.resolve(file.getFileName()), true) }
+            }
         }
         else {
             Files.createSymbolicLink(link, existing)
