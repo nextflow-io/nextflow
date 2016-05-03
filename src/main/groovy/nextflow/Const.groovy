@@ -48,17 +48,17 @@ class Const {
     /**
      * The application version
      */
-    static public final String APP_VER = "0.18.1"
+    static public final String APP_VER = "0.18.2"
 
     /**
      * The app build time as linux/unix timestamp
      */
-    static public final long APP_TIMESTAMP = 1461666026211
+    static public final long APP_TIMESTAMP = 1462269644454
 
     /**
      * The app build number
      */
-    static public final int APP_BUILDNUM = 3699
+    static public final int APP_BUILDNUM = 3711
 
     /**
      * The date time formatter string
