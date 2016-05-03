@@ -1349,13 +1349,13 @@ class FilesEx {
      * @param link The {@link Path} of the link to create
      */
     static void mklink( Path existing, Map opts, Path link ) {
-        CheckHelper.checkParams('makeLink', opts, LINK_PARAMS)
+        CheckHelper.checkParams('mklink', opts, LINK_PARAMS)
 
         final hard = opts?.hard == true ?: false
         final overwrite = opts?.overwrite == true ?: false
 
         if( existing == link )
-            throw new IllegalArgumentException("Cannot create file lin -- Source and target are the same file: $existing")
+            throw new IllegalArgumentException("Cannot create file link -- Source and target are the same file: $existing")
 
         try {
             createLinkImpl(existing, link, hard)
@@ -1398,7 +1398,6 @@ class FilesEx {
     static void mklink( Path existing, Map opts, String link ) {
         mklink(existing, opts, existing.getFileSystem().getPath(link))
     }
-
 
     static void mklink( Path existing, Path link ) {
         mklink(existing, null, link )

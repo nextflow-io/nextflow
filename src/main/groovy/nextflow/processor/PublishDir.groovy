@@ -251,7 +251,7 @@ class PublishDir {
             FilesEx.moveTo(source, destination)
         }
         else if( mode == Mode.COPY ) {
-            FilesEx.copyTo(source, destination )
+            FilesEx.copyTo(source, destination)
         }
         else {
             throw new IllegalArgumentException("Unknown file publish mode: ${mode}")
