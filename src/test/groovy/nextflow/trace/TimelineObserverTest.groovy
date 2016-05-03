@@ -324,7 +324,7 @@ function getTickFormat() {
   }
 }
 
-function getLabelMargin(scale=0.85) {
+function getLabelMargin(scale) {
     $('<span class="labelSpan" style="display: none"></span>').appendTo('body');
 
     var labelMargin = 0
@@ -346,7 +346,7 @@ function render() {
   var width = $(window).width();
   var chart = d3.timeline()
     .stack() // toggles graph stacking
-    .margin({left:getLabelMargin(), right:100, top:0, bottom:0})
+    .margin({left:getLabelMargin(0.85), right:100, top:0, bottom:0})
     .tickFormat( getTickFormat() )
     .rowSeperators('#f5f5f5')
     .showTimeAxisTick()
