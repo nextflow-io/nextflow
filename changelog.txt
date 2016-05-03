@@ -1,6 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.18.2 - 3 May 2016 
+- Fixed Variable task.exitStatus throws an exception when comparing it to an integer value #142
+- Fixed PublishDir does not handle hard linking of directories #126
+- Added `index` implicit variable to the `task` execution context #139
+- Improved installer messages
+- Updated Gradle runtime to version 2.13
+
 0.18.1 - 26 Apr 2016 
 - Fixed Input files containing a parenthesis in the path are not staged properly #133.
 - Fixed Process execution hangs when using Ignite executor with a foreign work path #136.
