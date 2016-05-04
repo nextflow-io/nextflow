@@ -72,15 +72,18 @@ function get() {
     fi
 }
 
-function install() {
-    if [ "$(uname)" = 'Darwin' ]; then tmpfile=$(mktemp $PWD/XXXXX) || exit $?
-    else tmpfile=$(mktemp -t XXXXX -p $PWD) || exit $?
+function make_temp() {
+    if [ "$(uname)" = 'Darwin' ]; then mktemp $PWD/nxf-tmp.XXXXX || exit $?
+    else mktemp -t nxf-tmp.XXXXX -p $PWD || exit $?
     fi
+}
 
+function install() {
+    local tmpfile=$(make_temp)
     get "http://www.nextflow.io/releases/latest/nextflow" "$tmpfile" "$1" || exit $?
-    mv $tmpfile $1 || exit $?
-    chmod +x $1 || exit $?
-    bash $1 -download || exit $?
+    mv "$tmpfile" "$1" || exit $?
+    chmod +x "$1" || exit $?
+    bash "$1" -download || exit $?
     echo ''
     echo -e $'Nextflow installation completed. Please note:'
     echo -e $'- the executable file `nextflow` has been created in the folder:' $(dirname $1)
@@ -258,8 +261,10 @@ fi
 # Verify nextflow jar is available
 if [ ! -f "$NXF_BIN" ]; then
     [ -f "$NXF_PATH" ] && rm "$NXF_PATH"
-    mkdir -p $NXF_PATH || exit $?
-    get "$NXF_URL" "$NXF_BIN"
+    mkdir -p "$NXF_PATH" || exit $?
+    tmpfile=$(make_temp)
+    get "$NXF_URL" "$tmpfile"
+    mv "$tmpfile" "$NXF_BIN"
 fi
 
 check=".+:.+:.+"
