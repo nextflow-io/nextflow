@@ -56,7 +56,7 @@ function get() {
         exit 1
     fi
 
-    printf "Downloading nextflow dependencies. It may require some seconds, please wait .. "
+    printf "Downloading nextflow dependencies. It may require a few seconds, please wait .. "
     $GET; status=$?
     printf "\r\033[K"
     if [ $status -ne 0 ]; then
