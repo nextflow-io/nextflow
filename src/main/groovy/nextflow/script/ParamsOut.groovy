@@ -498,13 +498,6 @@ class SetOutParam extends BaseOutParam {
         return this
     }
 
-    def void lazyInit() {
-        if( intoObj == null )
-            throw new IllegalStateException("Missing 'into' channel in output parameter declaration")
-
-        super.lazyInit()
-    }
-
     protected <T extends BaseOutParam> T create(Class<T> type) {
         type.newInstance(binding,inner,index)
     }

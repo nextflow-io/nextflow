@@ -154,9 +154,12 @@ class ScriptRunner {
             script = parseScript(scriptText, args)
             // run the code
             run()
-        }
-        finally {
+            // await termination
             terminate()
+        }
+        catch (Exception e) {
+            session.abort(e)
+            throw e
         }
 
         if( session.aborted ) {
