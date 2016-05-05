@@ -619,6 +619,42 @@ class ParamsOutTest extends Specification {
 
     }
 
+    def testSetOutWithoutInto() {
+
+        setup:
+        def text = '''
+            process hola {
+              output:
+              set val(X), file('Y')
+
+              return ''
+            }
+            '''
+
+        def binding = [:]
+        def process = parseAndReturnProcess(text, binding)
+
+        when:
+        SetOutParam out0 = process.config.getOutputs().get(0)
+
+        then:
+        process.config.getOutputs().size() == 1
+
+        // first set
+        out0.getOutChannels().size()==0
+
+        out0.inner[0] instanceof ValueOutParam
+        out0.inner[0].name == 'X'
+        out0.inner[0].index == 0
+        out0.inner[0].mapIndex == 0
+
+        out0.inner[1] instanceof FileOutParam
+        out0.inner[1].name == 'Y'
+        out0.inner[1].index == 0
+        out0.inner[1].mapIndex == 1
+
+    }
+
     def testStdOut() {
 
         setup:

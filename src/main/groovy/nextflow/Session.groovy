@@ -463,6 +463,7 @@ class Session implements ISession {
     }
 
     void abort(Throwable cause = null) {
+        if( aborted ) return
         log.debug "Session aborted -- Cause: ${cause}"
         aborted = true
         dispatcher.signal()
