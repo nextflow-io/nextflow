@@ -81,14 +81,10 @@ class TimelineObserver implements TraceObserver {
         renderHtml()
     }
 
-    @Override
-    void onFlowError(Throwable error) { }
 
     @Override
     void onProcessCreate(TaskProcessor process) { }
 
-    @Override
-    void onProcessDestroy(TaskProcessor process) { }
 
     /**
      * This method is invoked before a process run is going to be submitted
@@ -132,10 +128,6 @@ class TimelineObserver implements TraceObserver {
             records[ record.taskId ] = record
         }
     }
-
-    @Override
-    void onProcessError(TaskHandler handler, Throwable error) { }
-
 
     final private String REPLACE_STR = '/*REPLACE_WITH_TIMELINE_DATA*/'
 

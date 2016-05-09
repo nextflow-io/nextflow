@@ -35,6 +35,10 @@ import spock.lang.Timeout
  */
 class DataflowExtensionsTest extends Specification {
 
+    def setupSpec() {
+        new Session()
+    }
+
     def testHandlerNames() {
 
         when:

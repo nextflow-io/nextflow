@@ -56,11 +56,11 @@ class ConcatOp {
     }
 
 
-    private static append( DataflowWriteChannel result, List<DataflowReadChannel> channels, int index ) {
+    private static void append( DataflowWriteChannel result, List<DataflowReadChannel> channels, int index ) {
         def current = channels[index++]
         def next = index < channels.size() ? channels[index] : null
 
-        DataflowExtensions.subscribe (current, [
+        DataflowExtensions.subscribeImpl (current, [
                 onNext: { result.bind(it) },
                 onComplete: {
                     if(next) append(result, channels, index)

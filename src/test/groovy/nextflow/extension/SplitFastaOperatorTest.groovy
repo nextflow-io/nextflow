@@ -20,6 +20,7 @@
 
 package nextflow.extension
 import nextflow.Channel
+import nextflow.Session
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Timeout
@@ -30,6 +31,10 @@ import spock.lang.Timeout
  */
 @Timeout(10)
 class SplitFastaOperatorTest extends Specification {
+
+    def setupSpec() {
+        new Session()
+    }
 
     @Shared
     def fasta1 = """\

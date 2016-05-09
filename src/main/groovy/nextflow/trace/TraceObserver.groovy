@@ -42,23 +42,10 @@ interface TraceObserver {
      */
     void onFlowComplete()
 
-    /**
-     * TODO This method is invoked when an error is raised
-     *
-     * @param error
-     */
-    void onFlowError(Throwable error)
-
     /*
      * Invoked when the process is created.
      */
     void onProcessCreate( TaskProcessor process )
-
-    /**
-     * Invoked when the process has terminated and is going to be destroy
-     * @param process
-     */
-    void onProcessDestroy( TaskProcessor process )
 
     /**
      * This method is invoked before a process run is going to be submitted
@@ -77,13 +64,6 @@ interface TraceObserver {
      * @param handler
      */
     void onProcessComplete(TaskHandler handler)
-
-    /**
-     * This method is when a process run raises an error
-     * @param handler
-     * @param error
-     */
-    void onProcessError(TaskHandler handler, Throwable error)
 
 
 }

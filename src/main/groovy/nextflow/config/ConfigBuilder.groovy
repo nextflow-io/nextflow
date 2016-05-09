@@ -385,6 +385,15 @@ class ConfigBuilder {
                 config.timeline.file = cmdRun.withTimeline
         }
 
+        // -- sets DAG report options
+        if( cmdRun.withDag ) {
+            if( !(config.dag instanceof Map) )
+                config.dag = [:]
+            config.dag.enabled = true
+            if( !config.dag.file )
+                config.dag.file = cmdRun.withDag
+        }
+
         // -- sets extrae profiling options
         if( cmdRun.withExtrae ) {
             if( !(config.extrae instanceof Map) )

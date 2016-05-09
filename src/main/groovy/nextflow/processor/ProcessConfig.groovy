@@ -25,6 +25,8 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.executor.BashWrapperBuilder
 import nextflow.script.BaseScript
+import nextflow.script.DefaultInParam
+import nextflow.script.DefaultOutParam
 import nextflow.script.EachInParam
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
@@ -253,11 +255,11 @@ class ProcessConfig implements Map<String,Object> {
      * provided by the user for the current task
      */
     def void fakeInput() {
-        new ValueInParam(this).from(true).bind('$')
+        new DefaultInParam(this)
     }
 
     def void fakeOutput( target ) {
-        new StdOutParam(this).bind('-').into(target)
+        new DefaultOutParam(this,target)
     }
 
 

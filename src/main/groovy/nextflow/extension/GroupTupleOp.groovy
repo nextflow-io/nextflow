@@ -215,7 +215,7 @@ class GroupTupleOp {
         /*
          * apply the logic the the source channel
          */
-        channel.subscribe(onNext: this.&collect, onComplete: this.&finalise)
+        channel.subscribeImpl(onNext: this.&collect, onComplete: this.&finalise)
 
         /*
          * return the target channel

@@ -224,7 +224,7 @@ class TaskPollingMonitor implements TaskMonitor {
         }
 
         if( done )
-            dispatcher.notifySubmit(handler)
+            session.notifyTaskSubmit(handler)
     }
 
     /**
@@ -383,7 +383,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
         // check if it is started
         if( handler.checkIfRunning() ) {
-            dispatcher.notifyStart(handler)
+            session.notifyTaskStart(handler)
         }
 
         // check if it is terminated
@@ -397,7 +397,7 @@ class TaskPollingMonitor implements TaskMonitor {
             handler.latch?.countDown()
 
             // notify task completion
-            dispatcher.notifyComplete(handler)
+            session.notifyTaskComplete(handler)
             // abort the execution in case of task failure
             if (fault instanceof TaskFault) {
                 session.abort((TaskFault)fault)
@@ -429,7 +429,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
             // notify task completion
             handler.task.aborted = true
-            dispatcher.notifyComplete(handler)
+            session.notifyTaskComplete(handler)
         }
 
         try {

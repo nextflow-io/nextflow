@@ -55,7 +55,7 @@ public class CustomMetaClassCreationHandle extends MetaClassRegistry.MetaClassCr
 
     static final Logger log = LoggerFactory.getLogger(CustomMetaClassCreationHandle.class);
 
-    protected MetaClass createNormalMetaClass(Class theClass,MetaClassRegistry registry) {
+    protected MetaClass createNormalMetaClass(Class theClass, MetaClassRegistry registry) {
         MetaClass metaClass = super.createNormalMetaClass( theClass, registry );
 
         if( Number.class.isAssignableFrom(theClass) ) {
