@@ -1,6 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.18.3 - 9 May 2016
+- Fixed Timeline report no longer works in Safari #143
+- Fixed Invalid or corrupt jarfile if your CTRL-C initial run of nextflow #145
+- Fixed Pipeline execution hangs when the into declaration is not provided #146
+
 0.18.2 - 3 May 2016 
 - Fixed Variable task.exitStatus throws an exception when comparing it to an integer value #142
 - Fixed PublishDir does not handle hard linking of directories #126
