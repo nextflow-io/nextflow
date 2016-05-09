@@ -19,7 +19,6 @@
  */
 
 package nextflow
-
 import static nextflow.Const.EXTRAE_TRACE_CLASS
 import static nextflow.Const.S3_UPLOADER_CLASS
 
@@ -37,9 +36,12 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
+import nextflow.dag.DAG
+import nextflow.dag.GraphRender
 import nextflow.exception.MissingLibraryException
 import nextflow.processor.TaskDispatcher
 import nextflow.processor.TaskFault
+import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 import nextflow.script.ScriptBinding
 import nextflow.trace.TimelineObserver
@@ -113,6 +115,8 @@ class Session implements ISession {
      * The unique identifier of this session
      */
     private UUID uniqueId
+
+    private DAG dag
 
     private Barrier processesBarrier = new Barrier()
 
@@ -226,6 +230,7 @@ class Session implements ISession {
         // create the task dispatcher instance
         this.dispatcher = new TaskDispatcher(this)
 
+        this.dag = new DAG(session:this)
     }
 
     /**
@@ -260,6 +265,7 @@ class Session implements ISession {
         createTraceFileObserver(result)
         createTimelineObserver(result)
         createExtraeObserver(result)
+        createDagObserver(result)
 
         return result
     }
@@ -293,6 +299,19 @@ class Session implements ISession {
         }
     }
 
+    protected void createDagObserver(Collection<TraceObserver> result) {
+        Boolean isEnabled = config.navigate('dag.enabled') as Boolean
+        if( isEnabled ) {
+            String fileName = config.navigate('dag.file')
+            if( !fileName ) fileName = GraphRender.DEF_FILE_NAME
+            def traceFile = (fileName as Path).complete()
+            def observer = new GraphRender(traceFile)
+//            config.navigate('dag.showLabels')
+//            config.navigate('dag.showOperators')
+            result << observer
+        }
+    }
+
     /*
      * create the execution trace observer
      */
@@ -307,20 +326,11 @@ class Session implements ISession {
             config.navigate('trace.sep') { observer.separator = it }
             config.navigate('trace.fields') { observer.setFieldsAndFormats(it) }
             result << observer
-        }
+    }
     }
 
     def Session start() {
         log.debug "Session start invoked"
-
-        /*
-         * - register all of them in the dispatcher class
-         * - register the onComplete event
-         */
-        observers.each { trace ->
-            log.debug "Registering observer: ${trace.class.name}"
-            dispatcher.register(trace)
-        }
 
         // register shut-down cleanup hooks
         Global.onShutdown { cleanUp() }
@@ -486,29 +496,81 @@ class Session implements ISession {
 
     boolean isAborted() { aborted }
 
-    def void taskRegister(TaskProcessor process) {
+    void processRegister(TaskProcessor process) {
         log.debug ">>> barrier register (process: ${process.name})"
         processesBarrier.register(process)
-        for( TraceObserver it : observers ) { it.onProcessCreate(process) }
     }
 
-    def void taskDeregister(TaskProcessor process) {
+    void processDeregister(TaskProcessor process) {
         log.debug "<<< barrier arrive (process: ${process.name})"
-        for( TraceObserver it : observers ) { it.onProcessDestroy(process) }
         processesBarrier.arrive(process)
     }
 
-    def ExecutorService getExecService() { execService }
+    DAG getDag() { this.dag }
+
+    ExecutorService getExecService() { execService }
 
     /**
      * Register a shutdown hook to close services when the session terminates
      * @param Closure
      */
-    def void onShutdown( Closure shutdown ) {
+    void onShutdown( Closure shutdown ) {
         if( !shutdown )
             return
 
         shutdownCallbacks << shutdown
+    }
+
+    void notifyProcessCreate(TaskProcessor process) {
+        for( TraceObserver it : observers ) {
+            it.onProcessCreate(process)
+        }
+    }
+
+
+    /**
+     * Notifies that a task has been submitted
+     */
+    void notifyTaskSubmit( TaskHandler handler ) {
+        for( TraceObserver it : observers ) {
+            try {
+                it.onProcessSubmit(handler)
+            }
+            catch( Exception e ) {
+                log.error(e.getMessage(), e)
+            }
+        }
+    }
+
+    /**
+     * Notifies task start event
+     */
+    void notifyTaskStart( TaskHandler handler ) {
+        for( TraceObserver it : observers ) {
+            try {
+                it.onProcessStart(handler)
+            }
+            catch( Exception e ) {
+                log.error(e.getMessage(), e)
+            }
+        }
+    }
+
+    /**
+     * Notifies task termination event
+     *
+     * @param handler
+     */
+    void notifyTaskComplete( TaskHandler handler ) {
+        // notify the event to the observers
+        for( TraceObserver it : observers ) {
+            try {
+                it.onProcessComplete(handler)
+            }
+            catch( Exception e ) {
+                log.error(e.getMessage(), e)
+            }
+        }
     }
 
     @Memoized

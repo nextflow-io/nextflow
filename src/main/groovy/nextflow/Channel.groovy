@@ -56,12 +56,16 @@ class Channel  {
 
     static NullObject VOID = NullObject.getNullObject()
 
+    static private Session session = Global.session as Session
+
     /**
      * Create an new channel
      *
      * @return The channel instance
      */
-    static <T> DataflowChannel<T> create() { new DataflowQueue() }
+    static <T> DataflowChannel<T> create() {
+        new DataflowQueue()
+    }
 
     /**
      * Create a empty channel i.e. only emits a STOP signal
@@ -71,6 +75,7 @@ class Channel  {
     static <T> DataflowChannel<T> empty() {
         def result = new DataflowQueue()
         result.bind(STOP)
+        session.dag.addSourceNode('empty', result)
         return result
     }
 
@@ -80,7 +85,11 @@ class Channel  {
      * @param items
      * @return
      */
-    static DataflowChannel from( Collection items ) { Nextflow.channel(items) }
+    static DataflowChannel from( Collection items ) {
+        final result = Nextflow.channel(items)
+        session.dag.addSourceNode('from', result)
+        return result
+    }
 
     /**
      * Creates a channel sending the items in the collection over it
@@ -89,7 +98,11 @@ class Channel  {
      * @return
      */
 
-    static DataflowChannel from( Object... items ) { Nextflow.channel(items) }
+    static DataflowChannel from( Object... items ) {
+        final result = Nextflow.channel(items)
+        session.dag.addSourceNode('from', result)
+        return result
+    }
 
     /**
      * Convert an object into a *channel* variable that emits that object
@@ -99,7 +112,13 @@ class Channel  {
      */
     @Deprecated
     static DataflowVariable just( obj = null ) {
-        value(obj)
+        log.warn "The operator `just` is deprecated -- Use `value` instead."
+
+        def result = new DataflowVariable()
+        if( obj != null ) result.bind(obj)
+
+        session.dag.addSourceNode('just', result)
+        return result
     }
 
     static DataflowVariable value( obj = null ) {
@@ -107,6 +126,7 @@ class Channel  {
         def result = new DataflowVariable()
         if( obj != null ) result.bind(obj)
 
+        session.dag.addSourceNode('value', result)
         return result
     }
 
@@ -118,8 +138,10 @@ class Channel  {
      */
     static DataflowChannel interval(String duration) {
 
-        interval( duration, { index -> index })
+        final result = interval( duration, { index -> index })
 
+        session.dag.addSourceNode('interval', result)
+        return result
     }
 
     /**
@@ -135,12 +157,12 @@ class Channel  {
 
         def millis = Duration.of(duration).toMillis()
         def timer = new Timer()
-        def channel = create()
+        def result = create()
         long index = 0
 
         def task = {
             def value = closure.call(index++)
-            channel << value
+            result << value
             if( value == STOP ) {
                 timer.cancel()
             }
@@ -148,7 +170,8 @@ class Channel  {
 
         timer.schedule( task as TimerTask, millis )
 
-        return channel
+        session.dag.addSourceNode('interval', result)
+        return result
     }
 
     static DataflowChannel<Path> fromPath( Map options = null, filePattern ) {
@@ -187,7 +210,10 @@ class Channel  {
         // split the folder and the pattern
         def ( String folder, String pattern ) = FileHelper.getFolderAndPattern(filePattern)
 
-        pathImpl('glob', folder, pattern, options, fs)
+        def result = pathImpl('glob', folder, pattern, options, fs)
+
+        session.dag.addSourceNode('fromPath', result)
+        return result
     }
 
     @Deprecated
@@ -350,7 +376,10 @@ class Channel  {
         // split the folder and the pattern
         def ( String folder, String pattern, String scheme ) = FileHelper.getFolderAndPattern(filePattern.toString())
         def fs = FileHelper.fileSystemForScheme(scheme)
-        watchImpl( 'regex', folder, pattern, false, events, fs )
+        def result = watchImpl( 'regex', folder, pattern, false, events, fs )
+
+        session.dag.addSourceNode('watchPath', result)
+        return result
     }
 
     /**
@@ -372,13 +401,19 @@ class Channel  {
     static DataflowChannel<Path> watchPath( String filePattern, String events = 'create' ) {
         def ( String folder, String pattern, String scheme ) = FileHelper.getFolderAndPattern(filePattern)
         def fs = FileHelper.fileSystemForScheme(scheme)
-        watchImpl('glob', folder, pattern, pattern.startsWith('*'), events, fs)
+        def result = watchImpl('glob', folder, pattern, pattern.startsWith('*'), events, fs)
+
+        session.dag.addSourceNode('watchPath', result)
+        return result
     }
 
     static DataflowChannel<Path> watchPath( Path path, String events = 'create' ) {
         def fs = path.getFileSystem()
         def ( String folder, String pattern ) = FileHelper.getFolderAndPattern(path.toString())
-        watchImpl('glob', folder, pattern, pattern.startsWith('*'), events, fs)
+        def result = watchImpl('glob', folder, pattern, pattern.startsWith('*'), events, fs)
+
+        session.dag.addSourceNode('watchPath', result)
+        return result
     }
 
 

@@ -25,6 +25,8 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
+import nextflow.Global
+import nextflow.Session
 import nextflow.extension.DataflowExtensions
 /**
  * Factory class for splitter objects
@@ -37,6 +39,7 @@ import nextflow.extension.DataflowExtensions
 @CompileStatic
 class SplitterFactory {
 
+    static private Session session = Global.session as Session
 
     /**
      * Creates a splitter object by specifying the strategy name
@@ -113,7 +116,9 @@ class SplitterFactory {
         if( method == 'split' ) {
             // when the  target obj is a channel use call
             if( obj instanceof DataflowReadChannel ) {
-                splitOverChannel( obj, splitter, opt )
+                def outbound = splitOverChannel( obj, splitter, opt )
+                session.dag.addOperatorNode(methodName, obj, outbound)
+                return outbound
             }
             // invokes the splitter
             else {
@@ -127,7 +132,9 @@ class SplitterFactory {
         else {
             // when the  target obj is a channel use call
             if( obj instanceof DataflowReadChannel ) {
-                countOverChannel( obj, splitter, opt )
+                def outbound = countOverChannel( obj, splitter, opt )
+                session.dag.addOperatorNode(methodName, obj, outbound)
+                return outbound
             }
             // invokes the splitter
             else {
@@ -168,7 +175,7 @@ class SplitterFactory {
         // set the splitter strategy options
         strategy.options(opts)
 
-        DataflowExtensions.subscribe ( source, [
+        DataflowExtensions.subscribeImpl ( source, [
                 onNext: { entry -> strategy.target(entry).apply() },
                 onComplete: { resultChannel << Channel.STOP }
         ] )
@@ -203,7 +210,7 @@ class SplitterFactory {
             strategy.target(entry).apply()
         }
 
-        DataflowExtensions.subscribe ( source, [onNext: splitEntry, onComplete: { result.bind(count) }] )
+        DataflowExtensions.subscribeImpl ( source, [onNext: splitEntry, onComplete: { result.bind(count) }] )
 
         // return the resulting channel
         return result

@@ -105,11 +105,6 @@ class ExtraeTraceObserver implements TraceObserver {
             log.info 'Hint: now you can generate the Paraver trace file by using the following command\n  ${EXTRAE_HOME}/bin/mpi2prv -task-view -f TRACE.mpits -o <file name.prv>\n'
     }
 
-    @Override
-    void onFlowError(Throwable error) {
-
-    }
-
     /*
      * Invoked when the process is created.
      */
@@ -118,10 +113,6 @@ class ExtraeTraceObserver implements TraceObserver {
         tasksMap.put( process.id, process.name )
     }
 
-    @Override
-    void onProcessDestroy(TaskProcessor process) {
-
-    }
 
     @Override
     void onProcessSubmit(TaskHandler handler) {
@@ -170,10 +161,6 @@ class ExtraeTraceObserver implements TraceObserver {
 
     }
 
-    @Override
-    void onProcessError(TaskHandler handler, Throwable error) {
-
-    }
 
     /**
      * Extract the configuration file embedded in the distribution JAR and copy into the

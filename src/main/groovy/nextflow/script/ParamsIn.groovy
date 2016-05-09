@@ -562,6 +562,15 @@ class SetInParam extends BaseInParam {
 
 }
 
+final class DefaultInParam extends ValueInParam {
+
+    DefaultInParam(ProcessConfig config) {
+        super(config)
+        from(true)
+        bind('$')
+    }
+}
+
 
 /**
  * Container to hold all process outputs

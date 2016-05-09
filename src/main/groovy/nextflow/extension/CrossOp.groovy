@@ -62,8 +62,8 @@ class CrossOp {
         final count = 2
         final stopCount = new AtomicInteger(count)
 
-        DataflowExtensions.subscribe( source, crossHandlers(state, count, 0, result, mapper, stopCount ) )
-        DataflowExtensions.subscribe( target, crossHandlers(state, count, 1, result, mapper, stopCount ) )
+        DataflowExtensions.subscribeImpl( source, crossHandlers(state, count, 0, result, mapper, stopCount ) )
+        DataflowExtensions.subscribeImpl( target, crossHandlers(state, count, 1, result, mapper, stopCount ) )
 
         return result
     }

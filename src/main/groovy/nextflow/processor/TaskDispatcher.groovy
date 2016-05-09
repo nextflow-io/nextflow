@@ -24,7 +24,6 @@ import java.util.concurrent.CountDownLatch
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.executor.Executor
-import nextflow.trace.TraceObserver
 /**
  * Monitor tasks execution for completion notifying their results
  *
@@ -45,11 +44,6 @@ class TaskDispatcher {
     final private Map<Class<? extends Executor>, TaskMonitor> monitors = [:]
 
     private volatile boolean started
-
-    /*
-     * A list of {@link TraceObserver} instances to which notify process events
-     */
-    private List<TraceObserver> observers = []
 
     /**
      * Dispatcher constructor
@@ -165,94 +159,6 @@ class TaskDispatcher {
             log.trace "Process ${task} > complete"
         }
     }
-
-    /**
-     * Notifies that a task has been submitted
-     */
-    public void notifySubmit( TaskHandler handler ) {
-        for( TraceObserver it : observers ) {
-            try {
-                it.onProcessSubmit(handler)
-            }
-            catch( Exception e ) {
-                log.error(e.getMessage(), e)
-            }
-        }
-    }
-
-    /**
-     * Notifies task start event
-     */
-    public void notifyStart( TaskHandler handler ) {
-        for( TraceObserver it : observers ) {
-            try {
-                it.onProcessStart(handler)
-            }
-            catch( Exception e ) {
-                log.error(e.getMessage(), e)
-            }
-        }
-    }
-
-    /**
-     * Notifies task termination event
-     *
-     * @param handler
-     */
-    public void notifyComplete( TaskHandler handler ) {
-        // notify the event to the observers
-        for( TraceObserver it : observers ) {
-            try {
-                it.onProcessComplete(handler)
-            }
-            catch( Exception e ) {
-                log.error(e.getMessage(), e)
-            }
-        }
-    }
-
-    /**
-     * Notify a task failure
-     *
-     * @param handler
-     * @param e
-     */
-    public void notifyError( TaskHandler handler, Throwable error ) {
-        for( TraceObserver it : observers ) {
-            try {
-                it.onProcessError(handler,error)
-            }
-            catch( Exception e ) {
-                log.error(e.getMessage(), e)
-            }
-        }
-    }
-
-    /**
-     * Register a {@link TraceObserver} instance to which process event will be notified
-     *
-     * @param obj An object implement {@link TraceObserver} trait
-     */
-    def void register( TraceObserver obj ) {
-        // just return if it's a null object
-        // or it is already contained in the list
-        if( !obj || observers.contains(obj))
-            return
-
-        // append this obj to the observer list
-        observers << obj
-    }
-
-    /**
-     * Un-register an observer object from the list of registered observers
-     *
-     * @param obj An object implement {@link TraceObserver} trait
-     */
-    def void unregister( TraceObserver obj ) {
-        if( !obj ) return
-        observers.remove(obj)
-    }
-
 
 }
 

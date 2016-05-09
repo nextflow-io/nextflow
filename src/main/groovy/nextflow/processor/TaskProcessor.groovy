@@ -304,7 +304,7 @@ abstract class TaskProcessor {
          * - even though the output may be empty, let return the stdout as output by default
          */
         if ( config.getOutputs().size() == 0 ) {
-            def dummy =  allScalarValues ? Nextflow.variable() : Nextflow.channel()
+            def dummy = allScalarValues ? Nextflow.variable() : Nextflow.channel()
             config.fakeOutput(dummy)
         }
 
@@ -326,10 +326,12 @@ abstract class TaskProcessor {
         // register the processor
         // note: register the task *before* creating (and starting the dataflow operator) in order
         // a race condition on the processes barrier - this fix issue #43
-        session.taskRegister(this)
+        session.processRegister(this)
 
         // create the underlying dataflow operator
         createOperator()
+
+        session.notifyProcessCreate(this)
 
         /*
          * When there is a single output channel, return let returns that item
@@ -1724,7 +1726,7 @@ abstract class TaskProcessor {
     protected void terminateProcess() {
         log.debug "<${name}> Sending poison pills and terminating process"
         sendPoisonPill()
-        session.taskDeregister(this)
+        session.processDeregister(this)
         processor.terminate()
     }
 

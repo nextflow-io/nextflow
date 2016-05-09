@@ -73,8 +73,8 @@ class PhaseOp {
         final stopCount = new AtomicInteger(count)
         final remainder = opts.remainder ? opts.remainder as boolean : false
 
-        DataflowExtensions.subscribe( source, phaseHandler(state, count, 0, result, mapper, stopCount, remainder) )
-        DataflowExtensions.subscribe( target, phaseHandler(state, count, 1, result, mapper, stopCount, remainder) )
+        DataflowExtensions.subscribeImpl( source, phaseHandler(state, count, 0, result, mapper, stopCount, remainder) )
+        DataflowExtensions.subscribeImpl( target, phaseHandler(state, count, 1, result, mapper, stopCount, remainder) )
         return result
     }
 

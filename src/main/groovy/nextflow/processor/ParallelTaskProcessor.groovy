@@ -116,6 +116,10 @@ class ParallelTaskProcessor extends TaskProcessor {
          */
         def params = [inputs: opInputs, outputs: opOutputs, maxForks: maxForks, listeners: [new TaskProcessorInterceptor()] ]
         session.allProcessors << (processor = new DataflowOperator(group, params, wrapper))
+
+        // notify the creation of a new vertex the execution DAG
+        session.dag.addProcessNode(name, config.getInputs(), config.getOutputs())
+
         // fix issue #41
         processor.start()
 

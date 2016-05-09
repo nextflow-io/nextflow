@@ -221,20 +221,12 @@ class TraceFileObserver implements TraceObserver {
         traceFile.close()
     }
 
-    @Override
-    void onFlowError(Throwable error) {
-
-    }
 
     @Override
     void onProcessCreate(TaskProcessor process) {
 
     }
 
-    @Override
-    void onProcessDestroy(TaskProcessor process) {
-
-    }
 
     /**
      * This method is invoked before a process run is going to be submitted
@@ -274,11 +266,6 @@ class TraceFileObserver implements TraceObserver {
 
         // save to the file
         writer.send { PrintWriter it -> it.println(render(record)); it.flush() }
-    }
-
-    @Override
-    void onProcessError(TaskHandler handler, Throwable error) {
-
     }
 
     /**

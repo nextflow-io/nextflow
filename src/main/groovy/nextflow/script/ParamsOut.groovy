@@ -518,6 +518,15 @@ class SetOutParam extends BaseOutParam {
     }
 }
 
+final class DefaultOutParam extends StdOutParam {
+
+    DefaultOutParam( ProcessConfig config, target ) {
+        super(config)
+        bind('-')
+        into(target)
+    }
+}
+
 /**
  * Container to hold all process outputs
  */
