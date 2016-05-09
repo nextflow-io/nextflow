@@ -126,7 +126,7 @@ dependencies {
     compile "com.google.code.findbugs:jsr305:1.3.9"
     compile("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
     compile('org.iq80.leveldb:leveldb:0.7')
-    compile('org.eclipse.jgit:org.eclipse.jgit:4.3.0.201604071810-r') { exclude group: 'commons-logging', module: 'commons-logging' }
+    compile('org.eclipse.jgit:org.eclipse.jgit:4.3.1.201605051710-r') { exclude group: 'commons-logging', module: 'commons-logging' }
     compile('io.nextflow:nxf-s3fs:1.0.0') {
         exclude group: 'commons-logging', module: 'commons-logging'
         exclude group: 'org.apache.tika', module: 'tika-core'
