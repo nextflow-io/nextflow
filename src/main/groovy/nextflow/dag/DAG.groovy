@@ -243,18 +243,12 @@ class DAG {
         result ?: (session ? resolveChannelName( session.getBinding().getVariables(), handler.instance ) : null )
     }
 
-    String render() {
+    void normalize() {
         normalizeMissingVertices()
         if( session )
             resolveEdgeNames(session.getBinding().getVariables())
         else
             log.debug "Missing session object -- Cannot normalize edge names"
-
-        def result = []
-        result << "digraph graphname {"
-        edges.each { edge -> result << edge.render()  }
-        result << "}"
-        return result.join('\n')
     }
 
 
@@ -301,60 +295,6 @@ class DAG {
          */
         String getName() { "p${getOrder()}" }
 
-        /**
-         * Render the DAG using the Graphviz DOT format
-         * See http://www.graphviz.org/content/dot-language
-         *
-         * @return A string representing the DAG in the DOT notation
-         */
-        String render() {
-
-            List attrs = []
-
-            switch (type) {
-                case Type.NODE:
-                    attrs << "shape=point"
-                    if (label) {
-                        attrs << "label=\"\""
-                        attrs << "xlabel=\"$label\""
-                    }
-                    break
-
-                case Type.ORIGIN:
-                    attrs << "shape=point"
-                    attrs << "label=\"\""
-                    attrs << "fixedsize=true"
-                    attrs << "width=0.1"
-                    if( label ) {
-                        attrs << "xlabel=\"$label\""
-                    }
-                    break
-
-                case Type.OPERATOR:
-                    attrs << "shape=circle"
-                    attrs << "label=\"\""
-                    attrs << "fixedsize=true"
-                    attrs << "width=0.1"
-                    if( label ) {
-                        attrs << "xlabel=\"$label\""
-                    }
-                    break
-
-                case Type.PROCESS:
-                    if( label )
-                        attrs << "label=\"$label\""
-                    break
-
-                default:
-                    attrs << "shape=none"
-                    if( label )
-                        attrs << "label=\"$label\""
-            }
-
-
-            return attrs ? "${getName()} [${attrs.join(',')}];" : nul
-        }
-
     }
 
     /**
@@ -384,23 +324,6 @@ class DAG {
          * A descriptive label
          */
         String label
-
-
-        String render() {
-            assert from != null || to != null
-
-            String A = from.render()
-            String B = to.render()
-
-            def result = new StringBuilder()
-            if( A ) result << A << '\n'
-            if( B ) result << B << '\n'
-            result << "${from.name} -> ${to.name}"
-            if( label ) {
-                result << " [label=\"${label}\"]"
-            }
-            result << ";\n"
-        }
 
     }
 
