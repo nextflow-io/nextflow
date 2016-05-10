@@ -1,41 +1,25 @@
 package nextflow.dag
 
-import groovy.transform.PackageScope
-import groovy.transform.ToString
-import nextflow.Session
-
+import groovy.transform.CompileStatic
+import java.nio.file.Path
 
 /**
- *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Mike Smoot <mes@aescon.com>
  */
-class CytoscapeJsRenderer {
+class CytoscapeJsRenderer implements DagRenderer {
 
     /**
-     * Render the DAG in HTML using Cytoscape.js
-     * See http://js.cytoscape.org
-     *
-     * @return A string representing the DAG in
-     *         HTML rendered using Cytoscape.js.
+     * Render the DAG in Cytoscape.js compatibile
+     * JSON to the specified file.
+     * See http://js.cytoscape.org for more info.
      */
-    static String render(DAG dag) {
-        String tmplPage = readTemplate()
-        String network = renderNetwork(dag)
-        return tmplPage.replaceAll(~/\/\* REPLACE_WITH_NETWORK_DATA \*\//, network)
+    @Override
+    void renderDocument(DAG dag, Path file) {
+        file.text = renderNetwork(dag)
     }
 
-    private static String readTemplate() {
-        StringWriter writer = new StringWriter();
-        def res = CytoscapeJsRenderer.class.getResourceAsStream('cytoscape.js.dag.template.html')
-        int ch
-        while( (ch=res.read()) != -1 ) {
-            writer.append(ch as char);
-        }
-        writer.toString();
-    }
-
-    private static String renderNetwork(DAG dag) {
+    static String renderNetwork(DAG dag) {
         def result = []
         result << "elements: {"
 
