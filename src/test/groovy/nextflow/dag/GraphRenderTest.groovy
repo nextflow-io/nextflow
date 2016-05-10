@@ -131,6 +131,30 @@ class GraphRenderTest extends Specification {
         result.contains("label: 'Process 2'")
     }
 
+    def 'should write an htm file' () {
+        given:
+        def htm = Files.createTempFile('nxf-','.htm')
+        def gr = new GraphRender(htm)
+        gr.dag = test_dag
+
+        when:
+        gr.onFlowComplete()
+
+        then:
+        def result = htm.text
+
+        // is htm
+        result.contains('<html>')
+        result.contains('</html>')
+        result.contains('<svg')
+
+        // contains some of the expected javascript
+        result.contains("label: 'Source'")
+        result.contains("label: 'Process 1'")
+        result.contains("label: 'Filter'")
+        result.contains("label: 'Process 2'")
+    }
+
     def 'should write an svg file' () {
         given:
         def svg = Files.createTempFile('nxf-','.svg')

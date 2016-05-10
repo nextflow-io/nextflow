@@ -28,6 +28,7 @@ class GraphRender implements TraceObserver {
                                                    'pdf' : new GraphVizRenderer('pdf'),
                                                    'svg' : new GraphVizRenderer('svg'),
                                                    'dot' : new DotRenderer(),
+                                                   'htm' : new DagreD3Renderer(),
                                                    'html': new CytoscapeHtmlRenderer(),
                                                    'json': new CytoscapeJsRenderer() ]
 
