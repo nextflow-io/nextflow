@@ -169,11 +169,11 @@ class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSp
      * @param ctx The {@link CollisionContext} instance
      */
     @Override
-    void onCollision(CollisionContext ctx) {
+    synchronized void onCollision(CollisionContext ctx) {
 
         logResources()
 
-        freeMemory = new MemoryUnit(getSystemMXBean().freePhysicalMemorySize)
+        freeMemory = getAvailMemory()
         activeJobs = ctx.activeJobs().size()
         waitingJobs = ctx.waitingJobs().size()
 
@@ -188,6 +188,7 @@ class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSp
                 // count the number of used cpus
                 final task = (IgBaseTask)jobCtx.job
                 busyCpus += task.resources.cpus
+                freeMemory -= task.resources.memory
             }
             else {
                 // count the number of *generic* jobs (not IgBaseTask) running
