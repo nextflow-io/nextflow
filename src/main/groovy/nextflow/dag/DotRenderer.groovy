@@ -1,30 +1,32 @@
 package nextflow.dag
 
-import groovy.transform.PackageScope
-import groovy.transform.ToString
-import nextflow.Session
+import groovy.transform.CompileStatic
+import java.nio.file.Path
 
 /**
- *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Mike Smoot <mes@aescon.com>
  */
-class DotRenderer {
+class DotRenderer implements DagRenderer {
 
     /**
      * Render the DAG using the Graphviz DOT format
+     * to the specified file.
      * See http://www.graphviz.org/content/dot-language
-     *
-     * @return A string representing the DAG in the DOT notation
+     * for more info.
      */
-    static String render(DAG dag) {
+    @Override
+    void renderDocument(DAG dag, Path file) {
+        file.text = renderNetwork(dag)
+    }
+
+    static String renderNetwork(DAG dag) {
         def result = []
         result << "digraph graphname {"
         dag.edges.each { edge -> result << renderEdge( edge ) }
         result << "}"
         return result.join('\n')
     }
-
 
     private static String renderVertex(vertex) {
 
