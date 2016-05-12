@@ -1,6 +1,8 @@
 package nextflow.dag
 
 import groovyx.gpars.dataflow.DataflowChannel
+import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowVariable
 import spock.lang.Specification
 /**
  *
@@ -100,24 +102,59 @@ class DAGTest extends Specification {
         dag.edges[2].from == v2
         dag.edges[2].to == null
 
+    }
+
+    def 'should throw an exception when the same variable is used multiple times' () {
+
+        given:
+        def dag = new DAG()
+        def ch1 = new DataflowQueue()
+        def ch2 = new DataflowQueue()
 
         when:
-        dag.addVertex(
-                DAG.Type.PROCESS,
-                'Process 3',
-                [ new DAG.ChannelHandler(instance: ch1, label: 'Channel 1') ],
-                null )
+        dag.addVertex( DAG.Type.PROCESS, 'Process 1', [ new DAG.ChannelHandler(instance: ch1) ], null )
+        dag.addVertex( DAG.Type.PROCESS, 'Process 2', [ new DAG.ChannelHandler(instance: ch1) ], null )
+
         then:
         thrown( MultipleInputChannelException )
 
         when:
-        dag.addVertex(
-                DAG.Type.PROCESS,
-                'Process 4',
-                null,
-                [new DAG.ChannelHandler(instance: ch2)] )
+        dag.addVertex( DAG.Type.PROCESS, 'Process 3', null, [ new DAG.ChannelHandler(instance: ch2) ] )
+        dag.addVertex( DAG.Type.PROCESS, 'Process 4', null, [ new DAG.ChannelHandler(instance: ch2) ] )
         then:
         thrown( MultipleOutputChannelException )
+
+    }
+
+    def 'should not throw an exception with multiple dataflow input variables' () {
+        given:
+        def dag = new DAG()
+        def ch1 = new DataflowVariable()
+        def ch2 = new DataflowVariable()
+
+        when:
+        dag.addVertex( DAG.Type.PROCESS, 'Process 1', [ new DAG.ChannelHandler(instance: ch1) ], null )
+        dag.addVertex( DAG.Type.PROCESS, 'Process 2', [ new DAG.ChannelHandler(instance: ch1) ], null )
+        then:
+        dag.vertices.size()==3
+        dag.edges.size()==2
+        dag.vertices[0].type == DAG.Type.ORIGIN
+        // the two edges are the same channel
+        dag.edges[0].instance.is ch1
+        dag.edges[1].instance.is ch1
+        // the two edges share the same origin
+        dag.edges[0].from == dag.edges[1].from
+        dag.edges[0].from == dag.vertices[0]
+        // and end-up to two different vertices
+        dag.edges[0].to == dag.vertices[1]
+        dag.edges[1].to == dag.vertices[2]
+
+        when:
+        dag.addVertex( DAG.Type.PROCESS, 'Process 3', null, [ new DAG.ChannelHandler(instance: ch2) ] )
+        dag.addVertex( DAG.Type.PROCESS, 'Process 4', null, [ new DAG.ChannelHandler(instance: ch2) ])
+        then:
+        thrown(MultipleOutputChannelException)
+
     }
 
     def 'should add missing vertices' () {

@@ -29,6 +29,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 
 /**
+ * Implements the {@link DataflowExtensions#cross} operator logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

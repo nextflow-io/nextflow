@@ -41,7 +41,6 @@ import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowEventListener
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
-import groovyx.gpars.dataflow.operator.SeparationClosure
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
@@ -59,7 +58,7 @@ import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 @Slf4j
 class DataflowExtensions {
 
-    private static Session session = Global.getSession() as Session
+    private static Session getSession() { Global.getSession() as Session }
 
     /**
      * INTERNAL ONLY API
@@ -86,7 +85,7 @@ class DataflowExtensions {
         @Override
         public boolean onException(final DataflowProcessor processor, final Throwable e) {
             DataflowExtensions.log.error("@unknown", e)
-            session?.abort(e)
+            session.abort(e)
             return true;
         }
     }
@@ -99,7 +98,8 @@ class DataflowExtensions {
      * @param params The map holding inputs, outputs channels and other parameters
      * @param code The closure to be executed by the operator
      */
-    static private DataflowProcessor newOperator( Map params, Closure code ) {
+    @PackageScope
+    static DataflowProcessor newOperator( Map params, Closure code ) {
 
         // -- add a default error listener
         if( !params.containsKey('listeners') ) {
@@ -124,7 +124,8 @@ class DataflowExtensions {
      * @param outputs The list of list output {@code DataflowWriteChannel}s
      * @param code The closure to be executed by the operator
      */
-    static private DataflowProcessor newOperator( List inputs, List outputs, Closure code ) {
+    @PackageScope
+    static DataflowProcessor newOperator( List inputs, List outputs, Closure code ) {
         newOperator( inputs: inputs, outputs: outputs, code )
     }
 
@@ -137,7 +138,8 @@ class DataflowExtensions {
      * @param output An instance of {@code DataflowWriteChannel} representing the output channel
      * @param code The closure to be executed by the operator
      */
-    static private DataflowProcessor newOperator( DataflowReadChannel input, DataflowWriteChannel output, Closure code ) {
+    @PackageScope
+    static DataflowProcessor newOperator( DataflowReadChannel input, DataflowWriteChannel output, Closure code ) {
        newOperator(input, output, DEF_ERROR_LISTENER, code )
     }
 
@@ -151,7 +153,8 @@ class DataflowExtensions {
      * @param listener An instance of {@code DataflowEventListener} listening to operator's events
      * @param code The closure to be executed by the operator
      */
-    static private DataflowProcessor newOperator( DataflowReadChannel input, DataflowWriteChannel output, DataflowEventListener listener, Closure code ) {
+    @PackageScope
+    static DataflowProcessor newOperator( DataflowReadChannel input, DataflowWriteChannel output, DataflowEventListener listener, Closure code ) {
 
         if( !listener )
             listener = DEF_ERROR_LISTENER
@@ -175,7 +178,8 @@ class DataflowExtensions {
      * @param source
      * @return
      */
-    static private final <V> DataflowChannel<V> newChannelBy(DataflowReadChannel<?> source) {
+    @PackageScope
+    static <V> DataflowChannel<V> newChannelBy(DataflowReadChannel<?> source) {
 
         switch( source ) {
             case DataflowExpression:
@@ -264,7 +268,7 @@ class DataflowExtensions {
                 error = true
                 if( !events.onError ) {
                     DataflowExtensions.log.error("@unknown", e)
-                    session?.abort(e)
+                    session.abort(e)
                 }
                 else {
                     events.onError.call(e)
@@ -389,7 +393,7 @@ class DataflowExtensions {
             @Override
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
                 DataflowExtensions.log.error("@unknown", e)
-                session?.abort(e)
+                session.abort(e)
                 return true;
             }
         }
@@ -515,7 +519,7 @@ class DataflowExtensions {
 
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
                 DataflowExtensions.log.error("@unknown", e)
-                session?.abort(e)
+                session.abort(e)
                 return true;
             }
         }
@@ -763,7 +767,7 @@ class DataflowExtensions {
 
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
                 DataflowExtensions.log.error("@unknown", e)
-                session?.abort(e)
+                session.abort(e)
                 return true;
             }
         }
@@ -1192,7 +1196,7 @@ class DataflowExtensions {
             @Override
             public boolean onException(final DataflowProcessor processor, final Throwable e) {
                 DataflowExtensions.log.error("@unknown", e)
-                session?.abort(e)
+                session.abort(e)
                 return true;
             }
         }
@@ -1229,7 +1233,7 @@ class DataflowExtensions {
 
                 public boolean onException(final DataflowProcessor processor, final Throwable e) {
                     DataflowExtensions.log.error("@unknown", e)
-                    session?.abort(e)
+                    session.abort(e)
                     return true;
                 }
             }
@@ -1357,7 +1361,7 @@ class DataflowExtensions {
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
                 DataflowExtensions.log.error("@unknown", e)
-                session?.abort(e)
+                session.abort(e)
                 return true
             }
         }
@@ -1427,7 +1431,7 @@ class DataflowExtensions {
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
                 DataflowExtensions.log.error("@unknown", e)
-                session?.abort(e)
+                session.abort(e)
                 return true
             }
         }
@@ -1600,73 +1604,45 @@ class DataflowExtensions {
      * with the corresponding position index.
      *
      * @param source The source channel
-     * @param targets An open array of target channels
+     * @param outputs An open array of target channels
      */
-    static final void separate( DataflowReadChannel source, final DataflowWriteChannel... targets ) {
-        assert source != null
-        assert targets != null
-
-        final size = targets.size()
-        int count = 0
-        Closure<List<Object>> mapper = { it ->
-            def tuple = it instanceof List ? it : [it]
-            if( tuple.size() == size )
-                return tuple
-
-            else {
-                if( count++ == 0 )
-                    log.warn "The target channels number ($size) for the 'into' operator do not match the items number (${tuple.size()}) of the receveid tuple: $tuple"
-
-                def result = new ArrayList(size)
-                for( int i=0; i<size; i++ ) {
-                    result[i] = i < tuple.size() ? tuple[i] : null
-                }
-                return result
-            }
-        }
-
-        source.separate( targets as List<DataflowWriteChannel>, mapper )
-        session.dag.addOperatorNode('separate', source, targets)
+    static void separate( DataflowReadChannel source, final DataflowWriteChannel... outputs ) {
+        new SeparateOp(source, outputs as List<DataflowWriteChannel>).apply()
+        session.dag.addOperatorNode('separate', source, outputs)
     }
 
+    static void separate(final DataflowReadChannel source, final List<DataflowWriteChannel<?>> outputs) {
+        new SeparateOp(source, outputs).apply()
+        session.dag.addOperatorNode('separate', source, outputs)
+    }
 
+    static void separate(final DataflowReadChannel source, final List<DataflowWriteChannel<?>> outputs, final Closure<List<Object>> code) {
+        new SeparateOp(source, outputs, code).apply()
+        session.dag.addOperatorNode('separate', source, outputs)
+    }
 
     static public final List<DataflowReadChannel> separate( final DataflowReadChannel source, int n ) {
-        def targets = new DataflowQueue[n]
-        for( int i=0; i<n; i++ )
-            targets[i] = new DataflowQueue()
-
-        separate(source, targets)
-        return targets
+        def outputs = new SeparateOp(source, n).apply()
+        session.dag.addOperatorNode('separate', source, outputs)
+        return outputs
     }
 
     static public final List<DataflowReadChannel> separate( final DataflowReadChannel source, int n, Closure mapper  ) {
-        def targets = []
-        for( int i=0; i<n; i++ )
-            targets.add(new DataflowQueue())
-
-        newOperator([source], targets, new SeparationClosure(mapper))
-        session.dag.addOperatorNode('separate', source, targets)
-        return targets
+        def outputs = new SeparateOp(source, n, mapper).apply()
+        session.dag.addOperatorNode('separate', source, outputs)
+        return outputs
     }
 
 
     static final void into( DataflowReadChannel source, final DataflowWriteChannel... targets ) {
-        assert source != null
-        assert targets != null
-
-        into0(source, targets as List)
+        new IntoOp(source, targets as List<DataflowWriteChannel>).apply()
         session.dag.addOperatorNode('into', source, targets)
     }
 
     static public final List<DataflowReadChannel> into( final DataflowReadChannel source, int n ) {
-        def targets = new ArrayList(n)
-        for( int i=0; i<n; i++ )
-            targets << new DataflowQueue()
-
-        into0(source, targets as List)
-        session.dag.addOperatorNode('into', source, targets)
-        return targets
+        def outputs = new IntoOp(source,n).apply().getOutputs()
+        session.dag.addOperatorNode('into', source, outputs)
+        return outputs
     }
 
     /**
@@ -1684,46 +1660,11 @@ class DataflowExtensions {
      * @param holder A closure that defines one or more variable names into which source items are copied.
      */
     static void into( DataflowReadChannel source, Closure holder ) {
-        final names = CaptureProperties.capture(holder)
-        final binding = Global.session.binding
-
-        def targets = []
-        names.each { identifier ->
-            def channel = newChannelBy(source)
-            targets.add(channel)
-            binding.setVariable(identifier, channel)
-        }
-
-        into0(source,targets)
-        session.dag.addOperatorNode('into', source, targets)
+        def outputs = new IntoOp(source,holder).apply().getOutputs()
+        session.dag.addOperatorNode('into', source, outputs)
     }
 
-    static private void into0( DataflowReadChannel source, List<DataflowWriteChannel> targets ) {
 
-        final stopOnFirst = source instanceof DataflowExpression
-        final listener = new DataflowEventAdapter() {
-            @Override
-            void afterRun(DataflowProcessor processor, List<Object> messages) {
-                if( !stopOnFirst ) return
-                processor.terminate()
-                targets.findAll { !(it instanceof DataflowExpression) }.each { it.bind(Channel.STOP) }
-            }
-
-            @Override
-            public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                DataflowExtensions.log.error("@unknown", e)
-                session?.abort(e)
-                return true;
-            }
-        }
-
-        final params = [:]
-        params.inputs = [source]
-        params.outputs = targets
-        params.listeners = [listener]
-
-        newOperator(params, new ChainWithClosure(new CopyChannelsClosure()))
-    }
 
     /**
      * Implements a tap that create implicitly a new dataflow variable in the global script context.
@@ -1739,24 +1680,16 @@ class DataflowExtensions {
      * @param holder The closure defining the new variable name
      * @return The tap resulting dataflow channel
      */
-    static DataflowReadChannel tap( DataflowReadChannel source, Closure holder ) {
-        final name = CaptureProperties.capture(holder)
-        if( !name )
-            throw new IllegalArgumentException("Missing target channel on `tap` operator")
+    static DataflowReadChannel tap( final DataflowReadChannel source, final Closure holder ) {
+        def tap = new TapOp(source, holder).apply()
+        session.dag.addOperatorNode('tap', source, tap.outputs)
+        return (DataflowReadChannel)tap.result
+    }
 
-        if( name.size()>1 )
-            throw new IllegalArgumentException("Operator `tap` does not allow more than one target channel")
-
-        final target = newChannelBy(source)
-        final binding = Global.session.binding
-        if( binding.hasVariable(name[0]) ) {
-            log.warn "A variable named '${name[0]}' already exists in script global context -- Consider renaming it "
-        }
-        binding.setVariable(name[0], target)
-        final result = source.tap(target)
-
-        session.dag.addOperatorNode('tap', source, [target, result])
-        return result
+    static DataflowReadChannel tap( final DataflowReadChannel source, final DataflowWriteChannel target ) {
+        def tap = new TapOp(source, target).apply()
+        session.dag.addOperatorNode('tap', source, tap.outputs)
+        return (DataflowReadChannel)tap.result
     }
 
     /**
@@ -1911,6 +1844,29 @@ class DataflowExtensions {
             log.warn "Operation `close` can only be applied to a queue channel"
         }
         return source
+    }
+
+    static <T> void choice(final DataflowReadChannel source, final List<DataflowWriteChannel<T>> outputs, final Closure<Integer> code) {
+        new ChoiceOp(source,outputs,code).apply()
+        session.dag.addOperatorNode('choice', source, outputs)
+    }
+
+    static <V> DataflowReadChannel<V> merge(final DataflowReadChannel<V> source, final DataflowReadChannel<V> other, final Closure<V> closure) {
+        final result = newChannelBy(source)
+        final inputs = [source, other]
+        newOperator(inputs, [result], new ChainWithClosure(closure))
+        session.dag.addOperatorNode('merge', inputs, result)
+        return result;
+    }
+
+    static <V> DataflowReadChannel<V> merge(final DataflowReadChannel source, final List<DataflowReadChannel<Object>> others, final Closure<V> closure) {
+        final result = newChannelBy(source)
+        final List<DataflowReadChannel<?>> inputs = new ArrayList<DataflowReadChannel<?>>(1 + others.size())
+        inputs.add(source);
+        inputs.addAll(others);
+        newOperator(inputs, [result], new ChainWithClosure(closure));
+        session.dag.addOperatorNode('merge', inputs, result)
+        return result;
     }
 
 }

@@ -19,7 +19,6 @@
  */
 
 package nextflow.extension
-
 import java.nio.file.Paths
 
 import groovyx.gpars.dataflow.DataflowQueue
@@ -28,7 +27,6 @@ import nextflow.Channel
 import nextflow.Session
 import spock.lang.Specification
 import spock.lang.Timeout
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -402,101 +400,6 @@ class DataflowExtensionsTest extends Specification {
         Channel.value('x').last().val == 'x'
     }
 
-    def testInto() {
-        when:
-        def result = Channel.from(1,2,3,4)
-        def (ch1, ch2) = result.into(2)
-
-        then:
-        ch1.val == 1
-        ch1.val == 2
-        ch1.val == 3
-        ch1.val == 4
-        ch1.val == Channel.STOP
-
-        ch2.val == 1
-        ch2.val == 2
-        ch2.val == 3
-        ch2.val == 4
-        ch2.val == Channel.STOP
-    }
-
-    def testInto2() {
-        when:
-        def result = Channel.from('a','b',[1,2])
-        def ch1 = Channel.create()
-        def ch2 = Channel.create()
-        def ch3 = Channel.create()
-        result.into(ch1, ch2, ch3)
-
-        then:
-        ch1.val == 'a'
-        ch1.val == 'b'
-        ch1.val == [1,2]
-        ch1.val == Channel.STOP
-
-        ch2.val == 'a'
-        ch2.val == 'b'
-        ch2.val == [1,2]
-        ch2.val == Channel.STOP
-
-        ch3.val == 'a'
-        ch3.val == 'b'
-        ch3.val == [1,2]
-        ch3.val == Channel.STOP
-    }
-
-    @Timeout(1)
-    def testIntoWithSingleton() {
-
-        when:
-        def result = Channel.create()
-        Channel.value('Hello').into(result)
-        then:
-        result.val == 'Hello'
-        result.val == Channel.STOP
-
-    }
-
-    def 'should create new dataflow variables and forward item to them'  () {
-
-        given:
-        def session = new Session()
-
-        when:
-        Channel.from(10,2,30).into { alpha; gamma }
-        then:
-        session.binding.alpha.val == 10
-        session.binding.alpha.val == 2
-        session.binding.alpha.val == 30
-        session.binding.alpha.val == Channel.STOP
-
-        session.binding.gamma.val == 10
-        session.binding.gamma.val == 2
-        session.binding.gamma.val == 30
-        session.binding.gamma.val == Channel.STOP
-
-    }
-
-    def 'should `tap` item to a new channel' () {
-        given:
-        def session = new Session()
-
-        when:
-        def result = Channel.from( 4,7,9 ) .tap { first }.map { it+1 }
-        then:
-        session.binding.first.val == 4
-        session.binding.first.val == 7
-        session.binding.first.val == 9
-        session.binding.first.val == Channel.STOP
-
-        result.val == 5
-        result.val == 8
-        result.val == 10
-        result.val == Channel.STOP
-
-    }
-
 
     def testMin() {
 
@@ -675,108 +578,6 @@ class DataflowExtensionsTest extends Specification {
     }
 
 
-    def testSeparate() {
-
-        when:
-        def str = 'abcdef'
-        def (ch1, ch2) = Channel.from(0..3).separate(2) { [it, str[it]] }
-        then:
-        ch1.val == 0
-        ch1.val == 1
-        ch1.val == 2
-        ch1.val == 3
-        ch1.val == Channel.STOP
-
-        ch2.val == 'a'
-        ch2.val == 'b'
-        ch2.val == 'c'
-        ch2.val == 'd'
-        ch2.val == Channel.STOP
-    }
-
-
-    def testSeparate2() {
-
-
-        when:
-        def str2 = 'abcdef'
-        def (ch3, ch4) = Channel.from(0..3).map { [it, it+1] } .separate(2)
-        then:
-        ch3.val == 0
-        ch3.val == 1
-        ch3.val == 2
-        ch3.val == 3
-        ch3.val == Channel.STOP
-
-        ch4.val == 1
-        ch4.val == 2
-        ch4.val == 3
-        ch4.val == 4
-        ch4.val == Channel.STOP
-
-    }
-
-    def testSeparate3() {
-
-        when:
-        def s1 = Channel.create()
-        def s2 = Channel.create()
-        def s3 = Channel.create()
-
-        Channel.from(1,2,3,4)
-                .separate([s1,s2,s3]) { item -> [item+1, item*item, item-1] }
-
-        then:
-        s1.val == 2
-        s1.val == 3
-        s1.val == 4
-        s1.val == 5
-        s1.val == Channel.STOP
-        s2.val == 1
-        s2.val == 4
-        s2.val == 9
-        s2.val == 16
-        s2.val == Channel.STOP
-        s3.val == 0
-        s3.val == 1
-        s3.val == 2
-        s3.val == 3
-        s3.val == Channel.STOP
-
-    }
-
-
-    def testSeparate4() {
-        when:
-        def x = Channel.create()
-        def y = Channel.create()
-        def source = Channel.from([1,2], ['a','b'], ['p','q'])
-        source.separate(x,y)
-        then:
-        x.val == 1
-        x.val == 'a'
-        x.val == 'p'
-        x.val == Channel.STOP
-        y.val == 2
-        y.val == 'b'
-        y.val == 'q'
-        y.val == Channel.STOP
-
-        when:
-        def x2 = Channel.create()
-        def y2 = Channel.create()
-        def source2 = Channel.from([1,2], ['a','c','b'], 'z')
-        source2.separate(x2,y2)
-        then:
-        x2.val == 1
-        x2.val == 'a'
-        x2.val == 'z'
-        x2.val == Channel.STOP
-        y2.val == 2
-        y2.val == 'c'
-        y2.val == null
-        y2.val == Channel.STOP
-    }
 
     def testSpread() {
 
@@ -1438,40 +1239,6 @@ class DataflowExtensionsTest extends Specification {
         s3.val == 3
         s3.val == Channel.STOP
 
-    }
-
-    def testDataflowChoiceWithOpenArray() {
-
-        when:
-        def source = Channel.from 'Hello world', 'Hola', 'Hello John'
-        def queue1 = Channel.create()
-        def queue2 = Channel.create()
-
-        source.choice( queue1, queue2 ) { a -> a =~ /^Hello.*/ ? 0 : 1 }
-
-        then:
-        queue1.val == 'Hello world'
-        queue1.val == 'Hello John'
-        queue1.val == Channel.STOP
-        queue2.val == 'Hola'
-        queue2.val == Channel.STOP
-
-    }
-
-    def testDataflowMergeWithOpenArray() {
-
-        when:
-        def alpha = Channel.from(1, 3, 5);
-        def beta = Channel.from(2, 4, 6);
-        def delta = Channel.from(7,8,1);
-
-        def result = alpha.merge( beta, delta ) { a,b,c -> [a,b,c] }
-
-        then:
-        result.val == [1,2,7]
-        result.val == [3,4,8]
-        result.val == [5,6,1]
-        result.val == Channel.STOP
     }
 
 

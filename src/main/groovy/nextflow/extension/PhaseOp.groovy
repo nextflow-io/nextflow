@@ -30,7 +30,7 @@ import nextflow.Channel
 import nextflow.util.CheckHelper
 
 /**
- * Implements {@link DataflowExtensions#phase(groovyx.gpars.dataflow.DataflowReadChannel, groovyx.gpars.dataflow.DataflowReadChannel)} operator logic
+ * Implements {@link DataflowExtensions#phase} operator logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

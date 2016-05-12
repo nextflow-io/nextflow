@@ -3,6 +3,7 @@ import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowChannel
+import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Session
 import nextflow.script.DefaultInParam
 import nextflow.script.DefaultOutParam
@@ -48,6 +49,8 @@ class DAG {
 
     @PackageScope
     List<Edge> getEdges() { edges }
+
+    boolean isEmpty() { edges.size()==0 && vertices.size()==0 }
 
     /**
      *  Creates a new vertex in the DAG representing a computing `process`
@@ -128,11 +131,22 @@ class DAG {
     private void inbound( Vertex vertex, ChannelHandler entering )  {
 
         def edge = findEdge(entering.instance)
+
         if( !edge ) {
             edges << new Edge(instance: entering.instance, to: vertex, label: entering.label)
         }
         else if( edge.to == null ) {
             edge.to = vertex
+        }
+        else if( entering.instance instanceof DataflowExpression ) {
+            if( !edge.from ) {
+                edge.from = new Vertex(Type.ORIGIN);
+                int p = vertices.indexOf(edge.to)
+                if(p!=-1) vertices.add(p,edge.from)
+                else vertices.add(edge.from)
+            }
+            def fork = new Edge(instance: entering.instance, from: edge.from, to: vertex, label: entering.label)
+            edges << fork
         }
         else {
             final name = getChannelName(entering)
@@ -194,7 +208,7 @@ class DAG {
 
     @PackageScope
     Edge findEdge( DataflowChannel channel ) {
-        return edges.find { edge -> edge.instance.is(channel) }
+        edges.find { edge -> edge.instance.is(channel) }
     }
 
     @PackageScope
@@ -263,7 +277,7 @@ class DAG {
      *
      * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
      */
-    @ToString
+    @ToString(includeNames = true, includes = 'label,type', includePackage=false)
     @PackageScope
     class Vertex {
 
@@ -363,6 +377,7 @@ class DAG {
      * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
      */
     @PackageScope
+    @ToString(includeNames = true, includes = 'label,from,to', includePackage=false)
     class Edge {
 
         /**
@@ -407,7 +422,7 @@ class DAG {
     /**
      * A simple wrapper object to handle a channel and the associated label
      */
-    @ToString
+    @ToString(includeNames = true, includes = 'label', includePackage=false)
     static class ChannelHandler {
 
         /**
