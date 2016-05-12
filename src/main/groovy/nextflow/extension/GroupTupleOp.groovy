@@ -28,7 +28,7 @@ import nextflow.util.CacheHelper
 import nextflow.util.CheckHelper
 
 /**
- *  Implements `groupTuple` operator logic
+ *  Implements {@link DataflowExtensions#groupTuple} operator logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -37,11 +37,6 @@ class GroupTupleOp {
     static private Map GROUP_TUPLE_PARAMS = [ by: [Integer, List], sort: [Boolean, 'true','natural','deep','hash',Closure,Comparator], size: Integer, remainder: Boolean ]
 
     static private List<Integer> GROUP_DEFAULT_INDEX = [0]
-
-    /**
-     * The user named parameters
-     */
-    private Map params
 
     /**
      * Comparator used to sort tuple entries (when required)

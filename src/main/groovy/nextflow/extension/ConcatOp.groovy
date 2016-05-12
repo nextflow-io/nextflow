@@ -27,6 +27,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 
 /**
+ * Implements the {@link DataflowExtensions#concat} operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

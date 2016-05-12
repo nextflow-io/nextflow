@@ -52,9 +52,9 @@ import org.codehaus.groovy.runtime.NullObject
 @Slf4j
 class Channel  {
 
-    static ControlMessage STOP = PoisonPill.getInstance()
+    static public ControlMessage STOP = PoisonPill.getInstance()
 
-    static NullObject VOID = NullObject.getNullObject()
+    static public NullObject VOID = NullObject.getNullObject()
 
     static private Session session = Global.session as Session
 
@@ -113,20 +113,14 @@ class Channel  {
     @Deprecated
     static DataflowVariable just( obj = null ) {
         log.warn "The operator `just` is deprecated -- Use `value` instead."
-
         def result = new DataflowVariable()
         if( obj != null ) result.bind(obj)
-
-        session.dag.addSourceNode('just', result)
         return result
     }
 
     static DataflowVariable value( obj = null ) {
-
         def result = new DataflowVariable()
         if( obj != null ) result.bind(obj)
-
-        session.dag.addSourceNode('value', result)
         return result
     }
 
