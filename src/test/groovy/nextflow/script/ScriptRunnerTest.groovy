@@ -292,23 +292,23 @@ class ScriptRunnerTest extends Specification {
 
     def 'test process name options' ( ) {
 
-        setup:
+        given:
         // -- this represent the configuration file
         def config = '''
             executor = 'nope'
 
-            process.delta = '333'
-            process.$hola.beta = '222'
-            process.$hola.gamma = '555'
+            process.memory = '333'
+            process.$hola.cpus = '222'
+            process.$hola.time = '555'
 
-            process.$ciao.beta = '999'
+            process.$ciao.cpus = '999'
 
             '''
 
         def script = '''
             process hola {
-              alpha 1
-              beta 2
+              penv 1
+              cpus 2
 
               input:
               val x
@@ -324,30 +324,30 @@ class ScriptRunnerTest extends Specification {
 
         then:
         process.config instanceof ProcessConfig
-        process.config.alpha == 1
-        process.config.beta == '222'  // !! this value is overridden by the one in the config file
-        process.config.delta == '333'
-        process.config.gamma == '555'
+        process.config.penv == 1
+        process.config.cpus == '222'  // !! this value is overridden by the one in the config file
+        process.config.memory == '333'
+        process.config.time == '555'
 
     }
 
     def 'test process name options 2'( ) {
 
-        setup:
+        given:
         // -- this represent the configuration file
         def config = '''
             executor = 'nope'
 
             process {
-                delta = '333'
+                memory = '333'
 
                 $hola {
-                    beta = '222'
-                    gamma = '555'
+                    cpus = '222'
+                    time = '555'
                 }
 
                 $ciao {
-                    beta = '999'
+                    cpus = '999'
                 }
             }
 
@@ -356,8 +356,8 @@ class ScriptRunnerTest extends Specification {
 
         def script = '''
             process hola {
-              alpha 1
-              beta 2
+              penv 1
+              cpus 2
 
               input:
               val x
@@ -373,10 +373,10 @@ class ScriptRunnerTest extends Specification {
 
         then:
         process.config instanceof ProcessConfig
-        process.config.alpha == 1
-        process.config.beta == '222'  // !! this value is overridden by the one in the config file
-        process.config.delta == '333'
-        process.config.gamma == '555'
+        process.config.penv == 1
+        process.config.cpus == '222'  // !! this value is overridden by the one in the config file
+        process.config.memory == '333'
+        process.config.time == '555'
 
     }
 

@@ -23,6 +23,7 @@ import static nextflow.util.CacheHelper.HashMode
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.exception.IllegalDirectiveException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.script.BaseScript
 import nextflow.script.DefaultInParam
@@ -53,6 +54,44 @@ class ProcessConfig implements Map<String,Object> {
     static final transient BOOL_YES = ['true','yes','on']
 
     static final transient BOOL_NO = ['false','no','off']
+
+    static final DIRECTIVES = [
+            'afterScript',
+            'beforeScript',
+            'echo',
+            'cache',
+            'cpus',
+            'container',
+            'clusterOptions',
+            'disk',
+            'echo',
+            'errorStrategy',
+            'executor',
+            'ext',
+            'instanceType',
+            'queue',
+            'maxErrors',
+            'maxForks',
+            'maxRetries',
+            'memory',
+            'module',
+            'penv',
+            'publishDir',
+            'scratch',
+            'shell',
+            'storeDir',
+            'tag',
+            'time',
+            'validExitStatus',
+            // input-output qualifiers
+            'file',
+            'set',
+            'val',
+            'each',
+            'env',
+            'stdin',
+            'stdout'
+    ]
 
     @Delegate
     protected final Map<String,Object> configProperties
@@ -117,7 +156,24 @@ class ProcessConfig implements Map<String,Object> {
         return this
     }
 
+    private void checkName(String name) {
+        if( DIRECTIVES.contains(name) ) {
+            return
+        }
+
+        String message = "Unknown process directive: `$name`"
+        def alternatives = DIRECTIVES.closest(name)
+        if( alternatives.size()==1 ) {
+            message += '\n\nDid you mean of these?'
+            alternatives.each {
+                message += "\n        $it"
+            }
+        }
+        throw new IllegalDirectiveException(message)
+    }
+
     def methodMissing( String name, def args ) {
+        checkName(name)
 
         if( args instanceof Object[] ) {
             if( args.size()==1 ) {

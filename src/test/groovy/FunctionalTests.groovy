@@ -94,6 +94,7 @@ class FunctionalTests extends Specification {
         setup:
         def configStr = '''
              process {
+                dummyField = 99
                 executor = 'nope'
                 echo = true
                 shell = 'zsh'
@@ -111,8 +112,6 @@ class FunctionalTests extends Specification {
             process taskHello {
                 echo true
                 maxForks 11
-                dummyField 99
-
                 ''
             }
 

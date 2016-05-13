@@ -194,13 +194,13 @@ class ProcessFactory {
         }
 
         // -- the config object
-        def taskConfig = new ProcessConfig(owner, importantAttributes)
+        def processConfig = new ProcessConfig(owner, importantAttributes)
 
         // -- set 'default' properties defined in the configuration file in the 'process' section
         if( config.process instanceof Map ) {
             config.process .each { String key, value ->
                 if( key.startsWith('$')) return
-                taskConfig.put(key,value)
+                processConfig.put(key,value)
             }
         }
 
@@ -212,22 +212,22 @@ class ProcessFactory {
          * }
          */
 
-        options?.each { String key, value -> taskConfig.setProperty(key,value)}
+        options?.each { String key, value -> processConfig.setProperty(key,value)}
 
         // Invoke the code block which will return the script closure to the executed.
         // As side effect will set all the property declarations in the 'taskConfig' object.
         // Note: the config object is wrapped by a TaskConfigWrapper because it is needed
         // to raise a MissingPropertyException when some values are missing, thus the closure
         // will try to fallback on the owner object
-        def script = taskConfig
+        def script = processConfig
                 .throwExceptionOnMissingProperty(true)
                 .with ( body ) as TaskBody
-        taskConfig.throwExceptionOnMissingProperty(false)
+        processConfig.throwExceptionOnMissingProperty(false)
         if ( !script )
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
         // load the executor to be used
-        def execName = getExecutorName(taskConfig) ?: DEFAULT_EXECUTOR
+        def execName = getExecutorName(processConfig) ?: DEFAULT_EXECUTOR
         def execClass = loadExecutorClass(execName)
 
         if( !isTypeSupported(script.type, execClass) ) {
@@ -243,7 +243,7 @@ class ProcessFactory {
         execObj.init()
 
         // create processor class
-        newTaskProcessor( name, execObj, session, owner, taskConfig, script )
+        newTaskProcessor( name, execObj, session, owner, processConfig, script )
     }
 
     /**
