@@ -285,7 +285,7 @@ fi
 [[ "$cmd" == "node" && ! "$NXF_MODE" ]] && NXF_MODE='ignite'
 
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}
-JAVA_OPTS="-noverify -Dcapsule.trampoline -Dcapsule.java.cmd=$JAVA_CMD"
+JAVA_OPTS="-Dfile.encoding=UTF-8 -noverify -Dcapsule.trampoline -Dcapsule.java.cmd=$JAVA_CMD"
 if [[ $cmd == console ]]; then bg=1;
 else JAVA_OPTS+=" -Djava.awt.headless=true"
 fi
