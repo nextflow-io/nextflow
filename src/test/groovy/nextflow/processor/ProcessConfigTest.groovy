@@ -21,6 +21,7 @@
 package nextflow.processor
 import static nextflow.util.CacheHelper.HashMode
 
+import nextflow.exception.IllegalDirectiveException
 import nextflow.script.BaseScript
 import nextflow.script.FileInParam
 import nextflow.script.StdInParam
@@ -56,27 +57,27 @@ class ProcessConfigTest extends Specification {
 
         // setting property using method without brackets
         when:
-        config.hola 'val 1'
+        config.tag = 'val 1'
         then:
-        config.hola == 'val 1'
+        config.tag == 'val 1'
 
         // setting list values
         when:
-        config.hola 1,2,3
+        config.tag 1,2,3
         then:
-        config.hola == [1,2,3]
+        config.tag == [1,2,3]
 
         // setting named parameters attribute
         when:
-        config.hola field1:'val1', field2: 'val2'
+        config.tag field1:'val1', field2: 'val2'
         then:
-        config.hola == [field1:'val1', field2: 'val2']
+        config.tag == [field1:'val1', field2: 'val2']
 
         // generic value assigned like a 'plain' property
         when:
-        config.hola = 99
+        config.tag = 99
         then:
-        config.hola == 99
+        config.tag == 99
 
         // maxDuration property
         when:
@@ -265,6 +266,27 @@ class ProcessConfigTest extends Specification {
         config.publishDir path: '/data', mode: 'link', pattern: '*.bam'
         then:
         config.get('publishDir') == [path: '/data', mode: 'link', pattern: '*.bam']
+    }
+
+    def 'should throw InvalidDirectiveException'() {
+
+        given:
+        def script = Mock(BaseScript)
+        def config = new ProcessConfig(script)
+
+        when:
+        config.hello 'world'
+
+        then:
+        def e = thrown(IllegalDirectiveException)
+        e.message ==
+                '''
+                Unknown process directive: `hello`
+
+                Did you mean of these?
+                        shell
+                '''
+                .stripIndent().trim()
     }
 
 }
