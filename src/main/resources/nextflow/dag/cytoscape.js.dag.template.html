@@ -1,4 +1,3 @@
-<!DOCTYPE>
 <!--
   ~ Copyright (c) 2013-2016, Centre for Genomic Regulation (CRG).
   ~ Copyright (c) 2013-2016, Paolo Di Tommaso and the respective authors.
@@ -26,10 +25,13 @@
 
         <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1">
 
-        <script src="http://code.jquery.com/jquery-2.0.3.min.js"></script>
-        <script src="http://cytoscape.github.io/cytoscape.js/api/cytoscape.js-latest/cytoscape.min.js"></script>
-        <script src="https://cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
-        <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-dagre/1.1.2/cytoscape-dagre.js"></script>
+        <script type="text/javascript">
+        var prot = (("https:" == document.location.protocol) ? "https://" : "http://");
+        document.write(unescape("%3Cscript src='" + prot + "code.jquery.com/jquery-2.0.3.min.js' type='text/javascript' %3E%3C/script%3E"));
+        document.write(unescape("%3Cscript src='" + prot + "https://cdnjs.cloudflare.com/ajax/libs/cytoscape/2.6.12/cytoscape.min.js' type='text/javascript' %3E%3C/script%3E"));
+        document.write(unescape("%3Cscript src='" + prot + "cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js' type='text/javascript' %3E%3C/script%3E"));
+        document.write(unescape("%3Cscript src='" + prot + "cdn.rawgit.com/cytoscape/cytoscape.js-dagre/1.1.2/cytoscape-dagre.js' type='text/javascript' %3E%3C/script%3E"));
+        </script>
 
         <style>
             body {
@@ -107,29 +109,6 @@
 
 /* REPLACE_WITH_NETWORK_DATA */
 
-/* this is example data that documents what the network data should look like
-                    elements: {
-                        nodes: [
-                            { data: { id: 'p0', },                    classes: 'ORIGIN' },
-                            { data: { id: 'p1', label: 'txt_to_csv'}, classes: 'PROCESS' },
-                            { data: { id: 'p2', label: 'csv_to_tsv'}, classes: 'PROCESS' },
-                            { data: { id: 'p3', label: 'filter'},     classes: 'OPERATOR'  },
-                            { data: { id: 'p4', label: 'tsv_to_psv'}, classes: 'PROCESS' },
-                            { data: { id: 'p5', label: 'toList'},     classes: 'OPERATOR'  },
-                            { data: { id: 'p6', label: 'merge'},      classes: 'PROCESS' },
-                            { data: { id: 'p7', },                    classes: 'TERMINATION' }
-                        ],
-                        edges: [
-                            { data: { source: 'p1', target: 'p2', label: 'csv_files'} },
-                            { data: { source: 'p0', target: 'p1', label: 'text_files'} },
-                            { data: { source: 'p2', target: 'p3', label: 'tsv_files'} },
-                            { data: { source: 'p3', target: 'p4'} },
-                            { data: { source: 'p4', target: 'p5', label: 'psv_files'} },
-                            { data: { source: 'p5', target: 'p6'} },
-                            { data: { source: 'p6', target: 'p7', label: 'result'} }
-                        ]
-                    },
-*/
                 });
 
             });

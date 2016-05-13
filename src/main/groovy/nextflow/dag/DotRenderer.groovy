@@ -1,4 +1,3 @@
-package nextflow.dag
 /*
  * Copyright (c) 2013-2016, Centre for Genomic Regulation (CRG).
  * Copyright (c) 2013-2016, Paolo Di Tommaso and the respective authors.
@@ -19,31 +18,46 @@ package nextflow.dag
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import groovy.transform.CompileStatic
+package nextflow.dag
 import java.nio.file.Path
 
+import groovy.transform.PackageScope
+
 /**
+ * Render the DAG using the Graphviz DOT format
+ * to the specified file.
+ * See http://www.graphviz.org/content/dot-language
+ * for more info.
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Mike Smoot <mes@aescon.com>
  */
 class DotRenderer implements DagRenderer {
 
+    private String name
+
     /**
-     * Render the DAG using the Graphviz DOT format
-     * to the specified file.
-     * See http://www.graphviz.org/content/dot-language
-     * for more info.
+     * Create a render instance
+     *
+     * @param name The graph name used in the DOT format
      */
+    DotRenderer( String name ) {
+        this.name = normalise(name)
+    }
+
+    @PackageScope
+    static String normalise(String str) { str.replaceAll(/[^0-9_A-Za-z]/,'') }
+
     @Override
     void renderDocument(DAG dag, Path file) {
         file.text = renderNetwork(dag)
     }
 
-    static String renderNetwork(DAG dag) {
+    String renderNetwork(DAG dag) {
         def result = []
-        result << "digraph graphname {"
+        result << "digraph $name {"
         dag.edges.each { edge -> result << renderEdge( edge ) }
-        result << "}"
+        result << "}\n"
         return result.join('\n')
     }
 

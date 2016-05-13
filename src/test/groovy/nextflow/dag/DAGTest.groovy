@@ -1,3 +1,23 @@
+/*
+ * Copyright (c) 2013-2016, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2016, Paolo Di Tommaso and the respective authors.
+ *
+ *   This file is part of 'Nextflow'.
+ *
+ *   Nextflow is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   Nextflow is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package nextflow.dag
 
 import groovyx.gpars.dataflow.DataflowChannel
@@ -38,16 +58,16 @@ class DAGTest extends Specification {
         def ch2 = Mock(DataflowChannel)
         def ch3 = Mock(DataflowChannel)
 
-        def v1=null
-        def v2=null
+        def v1
+        def v2
 
         def dag = new DAG()
         when:
         dag.addVertex(
                 DAG.Type.PROCESS,
                 'Process 1',
-                [ new DAG.ChannelHandler(instance: ch1, label: 'Channel 1') ],
-                [ new DAG.ChannelHandler(instance: ch2, label: 'Channel 2') ] )
+                [ new DAG.ChannelHandler(channel: ch1, label: 'Channel 1') ],
+                [ new DAG.ChannelHandler(channel: ch2, label: 'Channel 2') ] )
 
         v1 = dag.vertices[0]
 
@@ -59,12 +79,12 @@ class DAGTest extends Specification {
         dag.edges.size() == 2
 
         dag.edges[0].label == 'Channel 1'
-        dag.edges[0].instance .is ch1
+        dag.edges[0].channel .is ch1
         dag.edges[0].from == null
         dag.edges[0].to == v1
 
         dag.edges[1].label == 'Channel 2'
-        dag.edges[1].instance .is ch2
+        dag.edges[1].channel .is ch2
         dag.edges[1].from == v1
         dag.edges[1].to == null
 
@@ -72,8 +92,8 @@ class DAGTest extends Specification {
         dag.addVertex(
                 DAG.Type.PROCESS,
                 'Process 2',
-                [ new DAG.ChannelHandler(instance: ch2) ],
-                [ new DAG.ChannelHandler(instance: ch3, label: 'Channel 3') ] )
+                [ new DAG.ChannelHandler(channel: ch2) ],
+                [ new DAG.ChannelHandler(channel: ch3, label: 'Channel 3') ] )
 
         v1 = dag.vertices[0]
         v2 = dag.vertices[1]
@@ -88,17 +108,17 @@ class DAGTest extends Specification {
         dag.edges.size() == 3
 
         dag.edges[0].label == 'Channel 1'
-        dag.edges[0].instance .is ch1
+        dag.edges[0].channel .is ch1
         dag.edges[0].from == null
         dag.edges[0].to == v1
 
         dag.edges[1].label == 'Channel 2'
-        dag.edges[1].instance .is ch2
+        dag.edges[1].channel .is ch2
         dag.edges[1].from == v1
         dag.edges[1].to == v2
 
         dag.edges[2].label == 'Channel 3'
-        dag.edges[2].instance .is ch3
+        dag.edges[2].channel .is ch3
         dag.edges[2].from == v2
         dag.edges[2].to == null
 
@@ -112,15 +132,15 @@ class DAGTest extends Specification {
         def ch2 = new DataflowQueue()
 
         when:
-        dag.addVertex( DAG.Type.PROCESS, 'Process 1', [ new DAG.ChannelHandler(instance: ch1) ], null )
-        dag.addVertex( DAG.Type.PROCESS, 'Process 2', [ new DAG.ChannelHandler(instance: ch1) ], null )
+        dag.addVertex( DAG.Type.PROCESS, 'Process 1', [ new DAG.ChannelHandler(channel: ch1) ], null )
+        dag.addVertex( DAG.Type.PROCESS, 'Process 2', [ new DAG.ChannelHandler(channel: ch1) ], null )
 
         then:
         thrown( MultipleInputChannelException )
 
         when:
-        dag.addVertex( DAG.Type.PROCESS, 'Process 3', null, [ new DAG.ChannelHandler(instance: ch2) ] )
-        dag.addVertex( DAG.Type.PROCESS, 'Process 4', null, [ new DAG.ChannelHandler(instance: ch2) ] )
+        dag.addVertex( DAG.Type.PROCESS, 'Process 3', null, [ new DAG.ChannelHandler(channel: ch2) ] )
+        dag.addVertex( DAG.Type.PROCESS, 'Process 4', null, [ new DAG.ChannelHandler(channel: ch2) ] )
         then:
         thrown( MultipleOutputChannelException )
 
@@ -133,15 +153,15 @@ class DAGTest extends Specification {
         def ch2 = new DataflowVariable()
 
         when:
-        dag.addVertex( DAG.Type.PROCESS, 'Process 1', [ new DAG.ChannelHandler(instance: ch1) ], null )
-        dag.addVertex( DAG.Type.PROCESS, 'Process 2', [ new DAG.ChannelHandler(instance: ch1) ], null )
+        dag.addVertex( DAG.Type.PROCESS, 'Process 1', [ new DAG.ChannelHandler(channel: ch1) ], null )
+        dag.addVertex( DAG.Type.PROCESS, 'Process 2', [ new DAG.ChannelHandler(channel: ch1) ], null )
         then:
         dag.vertices.size()==3
         dag.edges.size()==2
         dag.vertices[0].type == DAG.Type.ORIGIN
         // the two edges are the same channel
-        dag.edges[0].instance.is ch1
-        dag.edges[1].instance.is ch1
+        dag.edges[0].channel.is ch1
+        dag.edges[1].channel.is ch1
         // the two edges share the same origin
         dag.edges[0].from == dag.edges[1].from
         dag.edges[0].from == dag.vertices[0]
@@ -150,8 +170,8 @@ class DAGTest extends Specification {
         dag.edges[1].to == dag.vertices[2]
 
         when:
-        dag.addVertex( DAG.Type.PROCESS, 'Process 3', null, [ new DAG.ChannelHandler(instance: ch2) ] )
-        dag.addVertex( DAG.Type.PROCESS, 'Process 4', null, [ new DAG.ChannelHandler(instance: ch2) ])
+        dag.addVertex( DAG.Type.PROCESS, 'Process 3', null, [ new DAG.ChannelHandler(channel: ch2) ] )
+        dag.addVertex( DAG.Type.PROCESS, 'Process 4', null, [ new DAG.ChannelHandler(channel: ch2) ])
         then:
         thrown(MultipleOutputChannelException)
 
@@ -170,14 +190,14 @@ class DAGTest extends Specification {
         dag.addVertex(
                 DAG.Type.PROCESS,
                 'Process 1',
-                [ new DAG.ChannelHandler(instance: ch1, label: 'Channel 1') ],
-                [ new DAG.ChannelHandler(instance: ch2, label: 'Channel 2') ] )
+                [ new DAG.ChannelHandler(channel: ch1, label: 'Channel 1') ],
+                [ new DAG.ChannelHandler(channel: ch2, label: 'Channel 2') ] )
 
         dag.addVertex(
                 DAG.Type.PROCESS,
                 'Process 2',
-                [ new DAG.ChannelHandler(instance: ch2) ],
-                [ new DAG.ChannelHandler(instance: ch3, label: 'Channel 3') ] )
+                [ new DAG.ChannelHandler(channel: ch2) ],
+                [ new DAG.ChannelHandler(channel: ch3, label: 'Channel 3') ] )
 
         def p0 = dag.vertices.get(0)
         def p1 = dag.vertices.get(1)
@@ -231,8 +251,8 @@ class DAGTest extends Specification {
         dag.addVertex(
                 DAG.Type.PROCESS,
                 'Process 1',
-                [ new DAG.ChannelHandler(instance: ch1, label: 'Channel 1') ],
-                [ new DAG.ChannelHandler(instance: ch2, label: 'Channel 2') ] )
+                [ new DAG.ChannelHandler(channel: ch1, label: 'Channel 1') ],
+                [ new DAG.ChannelHandler(channel: ch2, label: 'Channel 2') ] )
 
 
         when:

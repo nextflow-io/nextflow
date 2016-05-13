@@ -1,4 +1,3 @@
-package nextflow.dag
 /*
  * Copyright (c) 2013-2016, Centre for Genomic Regulation (CRG).
  * Copyright (c) 2013-2016, Paolo Di Tommaso and the respective authors.
@@ -19,20 +18,19 @@ package nextflow.dag
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import groovy.transform.CompileStatic
+package nextflow.dag
 import java.nio.file.Path
 
 /**
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * Render the DAG in HTML using Cytoscape.js
+ * to the specified file.
+ * See http://js.cytoscape.org for more info.
+ *
+ *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Mike Smoot <mes@aescon.com>
  */
 class CytoscapeHtmlRenderer implements DagRenderer {
 
-    /**
-     * Render the DAG in HTML using Cytoscape.js
-     * to the specified file.
-     * See http://js.cytoscape.org for more info.
-     */
     @Override
     void renderDocument(DAG dag, Path file) {
         String tmplPage = readTemplate()
@@ -42,7 +40,7 @@ class CytoscapeHtmlRenderer implements DagRenderer {
 
     private String readTemplate() {
         StringWriter writer = new StringWriter();
-        def res = CytoscapeJsRenderer.class.getResourceAsStream('cytoscape.js.dag.template.html')
+        def res = CytoscapeHtmlRenderer.class.getResourceAsStream('cytoscape.js.dag.template.html')
         int ch
         while( (ch=res.read()) != -1 ) {
             writer.append(ch as char);

@@ -19,22 +19,23 @@
  */
 
 package nextflow.dag
-
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import java.nio.file.Path
 import java.nio.file.Files
+import java.nio.file.Path
 
+import groovy.util.logging.Slf4j
 /**
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Mike Smoot <mes@aescon.com>
  */
 @Slf4j
-class GraphVizRenderer implements DagRenderer {
+class GraphvizRenderer implements DagRenderer {
 
-    private final String format
+    private String format
 
-    GraphVizRenderer(String format) {
+    private String name
+
+    GraphvizRenderer(String name, String format) {
+        this.name = name
         this.format = format
     }
 
@@ -47,7 +48,7 @@ class GraphVizRenderer implements DagRenderer {
     void renderDocument(DAG dag, Path file) {
         def temp = Files.createTempFile('nxf-','.dot')
         // save the DAG as `dot` to a temp file
-        temp.text = DotRenderer.renderNetwork(dag)
+        temp.text = new DotRenderer(name).renderNetwork(dag)
 
         final cmd = "command -v dot &>/dev/null || exit 128 && dot -T${format} ${temp} > ${file}"
         final exitStatus = ["bash","-c", cmd].execute().waitFor()

@@ -23,6 +23,7 @@ import groovy.transform.ToString
 import nextflow.dag.DAG.ChannelHandler
 import nextflow.dag.DAG.Vertex
 /**
+ * Exception thrown when the same channel is declared as input more than one time.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

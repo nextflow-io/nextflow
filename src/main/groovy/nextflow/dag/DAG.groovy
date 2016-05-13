@@ -34,7 +34,7 @@ import nextflow.script.OutputsList
 import nextflow.script.SetInParam
 import nextflow.script.SetOutParam
 /**
- * Model the direct acyclic graph of a pipeline execution.
+ * Model a direct acyclic graph of the pipeline execution.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -84,7 +84,6 @@ class DAG {
         assert inputs
         assert outputs
         addVertex( Type.PROCESS, label, normalizeInputs(inputs), normalizeOutputs(outputs))
-
     }
 
     /**
@@ -150,24 +149,31 @@ class DAG {
 
     private void inbound( Vertex vertex, ChannelHandler entering )  {
 
-        def edge = findEdge(entering.instance)
+        // look for an existing edge for the given dataflow channel
+        def edge = findEdge(entering.channel)
 
+        // if does not exist just create it
         if( !edge ) {
-            edges << new Edge(instance: entering.instance, to: vertex, label: entering.label)
+            edges << new Edge(channel: entering.channel, to: vertex, label: entering.label)
         }
+        // link the edge to given `edge`
         else if( edge.to == null ) {
             edge.to = vertex
         }
-        else if( entering.instance instanceof DataflowExpression ) {
+        // handle the special case for dataflow variable
+        // this kind of channel can be used more than one time as an input
+        else if( entering.channel instanceof DataflowExpression ) {
             if( !edge.from ) {
                 edge.from = new Vertex(Type.ORIGIN);
                 int p = vertices.indexOf(edge.to)
                 if(p!=-1) vertices.add(p,edge.from)
                 else vertices.add(edge.from)
             }
-            def fork = new Edge(instance: entering.instance, from: edge.from, to: vertex, label: entering.label)
+            def fork = new Edge(channel: entering.channel, from: edge.from, to: vertex, label: entering.label)
             edges << fork
         }
+        // the same channel - apart the above case - cannot be used multiple times as an input
+        // thus throws an exception
         else {
             final name = getChannelName(entering)
             throw new MultipleInputChannelException(name, entering, vertex, edge.to)
@@ -176,13 +182,16 @@ class DAG {
 
     private void outbound( Vertex vertex, ChannelHandler leaving) {
 
-        final edge = findEdge(leaving.instance)
+        // look for an existing edge for the given dataflow channel
+        final edge = findEdge(leaving.channel)
         if( !edge ) {
-            edges << new Edge(instance: leaving.instance, from: vertex, label: leaving.label)
+            edges << new Edge(channel: leaving.channel, from: vertex, label: leaving.label)
         }
         else if( edge.from == null ) {
             edge.from = vertex
         }
+        // the same channel cannot be used multiple times as an output
+        // thus throws an exception
         else {
             final name = getChannelName(leaving)
             throw new MultipleOutputChannelException(name, leaving, vertex, edge.to)
@@ -194,7 +203,7 @@ class DAG {
 
         inputs
                 .findAll { !( it instanceof DefaultInParam)  }
-                .collect { InParam p -> new ChannelHandler(instance: (DataflowChannel)p.inChannel, label: p instanceof SetInParam ? null : p.name) }
+                .collect { InParam p -> new ChannelHandler(channel: (DataflowChannel)p.inChannel, label: p instanceof SetInParam ? null : p.name) }
 
     }
 
@@ -204,7 +213,7 @@ class DAG {
         outputs.each { OutParam p ->
             if( p instanceof DefaultOutParam ) return
             p.outChannels.each {
-                result << new ChannelHandler(instance: (DataflowChannel)it, label: p instanceof SetOutParam ? null : p.name)
+                result << new ChannelHandler(channel: (DataflowChannel)it, label: p instanceof SetOutParam ? null : p.name)
             }
         }
 
@@ -216,10 +225,10 @@ class DAG {
             Collections.emptyList()
         }
         else if( entry instanceof DataflowChannel ) {
-            [ new ChannelHandler(instance: entry) ]
+            [ new ChannelHandler(channel: entry) ]
         }
         else if( entry instanceof Collection || entry instanceof Object[] ) {
-            entry.collect { new ChannelHandler(instance: (DataflowChannel)it) }
+            entry.collect { new ChannelHandler(channel: (DataflowChannel)it) }
         }
         else {
             throw new IllegalArgumentException("Not a valid channel type: [${entry.class.name}]")
@@ -228,7 +237,7 @@ class DAG {
 
     @PackageScope
     Edge findEdge( DataflowChannel channel ) {
-        edges.find { edge -> edge.instance.is(channel) }
+        edges.find { edge -> edge.channel.is(channel) }
     }
 
     @PackageScope
@@ -259,7 +268,7 @@ class DAG {
     @PackageScope
     void resolveEdgeNames(Map map) {
         edges.each { Edge edge ->
-            def name = resolveChannelName(map, edge.instance)
+            def name = resolveChannelName(map, edge.channel)
             if( name ) edge.label = name
         }
     }
@@ -274,7 +283,7 @@ class DAG {
     @PackageScope
     String getChannelName( ChannelHandler handler ) {
         def result = handler.label
-        result ?: (session ? resolveChannelName( session.getBinding().getVariables(), handler.instance ) : null )
+        result ?: (session ? resolveChannelName( session.getBinding().getVariables(), handler.channel ) : null )
     }
 
     void normalize() {
@@ -343,15 +352,15 @@ class DAG {
         /**
          * The {@link groovyx.gpars.dataflow.DataflowChannel} that originated this graph edge
          */
-        DataflowChannel instance
+        DataflowChannel channel
 
         /**
-         * The vertex from where the edge starts
+         * The vertex *from* where the edge starts
          */
         Vertex from
 
         /**
-         * The vertex to where the edge ends
+         * The vertex *to* where the edge ends
          */
         Vertex to
 
@@ -371,7 +380,7 @@ class DAG {
         /**
          * The {@link groovyx.gpars.dataflow.DataflowChannel} that originated this graph edge
          */
-        DataflowChannel instance
+        DataflowChannel channel
 
         /**
          * The edge label

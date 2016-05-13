@@ -18,43 +18,47 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.dag
-
-import java.nio.file.Files
+package nextflow.trace
 import java.nio.file.Path
 
-import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.dag.CytoscapeHtmlRenderer
+import nextflow.dag.DAG
+import nextflow.dag.DagRenderer
+import nextflow.dag.DotRenderer
+import nextflow.dag.GraphvizRenderer
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
-import nextflow.trace.TraceObserver
-
 /**
+ * Render the DAG document on pipeline completion using the
+ * format specified by the user
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-//@CompileStatic
-class GraphRender implements TraceObserver {
+class GraphObserver implements TraceObserver {
 
-    static final String DEF_FILE_NAME = 'dag.dot'
+    static public final String DEF_FILE_NAME = 'dag.dot'
 
     private Path file
 
     private DAG dag
 
-    private Map<String, DagRenderer> renderers = [ 'png' : new GraphVizRenderer('png'),
-                                                   'pdf' : new GraphVizRenderer('pdf'),
-                                                   'svg' : new GraphVizRenderer('svg'),
-                                                   'dot' : new DotRenderer(),
-                                                   'htm' : new DagreD3Renderer(),
-                                                   'html': new CytoscapeHtmlRenderer(),
-                                                   'json': new CytoscapeJsRenderer() ]
+    private String name
 
+    private String format
 
-    GraphRender( Path file ) {
+    String getFormat() { format }
+
+    String getName() { name }
+
+    GraphObserver( Path file ) {
+        assert file
         this.file = file
+        this.name = file.baseName
+        this.format = file.getExtension().toLowerCase() ?: 'dot'
     }
 
     @Override
@@ -64,9 +68,22 @@ class GraphRender implements TraceObserver {
 
     @Override
     void onFlowComplete() {
+        // -- normalise the DAG
         dag.normalize()
-        final format = (file.getExtension() ?: 'dot').toLowerCase()
-        renderers.get(format, new ErrorRenderer()).renderDocument(dag, file)
+        // -- render it to a file
+        createRender().renderDocument(dag,file)
+    }
+
+    @PackageScope
+    DagRenderer createRender() {
+        if( format == 'dot' )
+            new DotRenderer(name)
+
+        else if( format == 'html' )
+            new CytoscapeHtmlRenderer()
+
+        else
+            new GraphvizRenderer(name, format)
     }
 
 

@@ -37,7 +37,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.dag.DAG
-import nextflow.dag.GraphRender
+import nextflow.trace.GraphObserver
 import nextflow.exception.MissingLibraryException
 import nextflow.processor.TaskDispatcher
 import nextflow.processor.TaskFault
@@ -303,11 +303,9 @@ class Session implements ISession {
         Boolean isEnabled = config.navigate('dag.enabled') as Boolean
         if( isEnabled ) {
             String fileName = config.navigate('dag.file')
-            if( !fileName ) fileName = GraphRender.DEF_FILE_NAME
+            if( !fileName ) fileName = GraphObserver.DEF_FILE_NAME
             def traceFile = (fileName as Path).complete()
-            def observer = new GraphRender(traceFile)
-//            config.navigate('dag.showLabels')
-//            config.navigate('dag.showOperators')
+            def observer = new GraphObserver(traceFile)
             result << observer
         }
     }
