@@ -2,6 +2,9 @@ language: groovy
 jdk:
   - oraclejdk7
   - oraclejdk8
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get -qq -y install graphviz
 git:
   submodules: false
 env:

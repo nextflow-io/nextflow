@@ -39,7 +39,7 @@ import nextflow.ExitCode
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
-import nextflow.dag.GraphRender
+import nextflow.trace.GraphObserver
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.util.LoggerHelper
@@ -213,7 +213,7 @@ class Launcher implements ExitCode {
             }
 
             else if( current == '-with-dag' && (i==args.size() || args[i].startsWith('-'))) {
-                normalized << GraphRender.DEF_FILE_NAME
+                normalized << GraphObserver.DEF_FILE_NAME
             }
 
             else if( current == '-with-docker' && (i==args.size() || args[i].startsWith('-'))) {

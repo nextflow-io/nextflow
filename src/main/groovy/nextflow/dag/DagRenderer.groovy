@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2013-2016, Centre for Genomic Regulation (CRG).
  * Copyright (c) 2013-2016, Paolo Di Tommaso and the respective authors.
@@ -23,6 +22,8 @@ package nextflow.dag
 import java.nio.file.Path
 
 /**
+ * Base interface to render a graph document
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Mike Smoot <mes@aescon.com>
  */

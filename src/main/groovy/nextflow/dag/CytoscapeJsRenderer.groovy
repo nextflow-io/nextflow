@@ -1,4 +1,3 @@
-package nextflow.dag
 /*
  * Copyright (c) 2013-2016, Centre for Genomic Regulation (CRG).
  * Copyright (c) 2013-2016, Paolo Di Tommaso and the respective authors.
@@ -19,20 +18,19 @@ package nextflow.dag
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import groovy.transform.CompileStatic
+package nextflow.dag
 import java.nio.file.Path
 
 /**
+ * Render the DAG in Cytoscape.js compatible
+ * JSON to the specified file.
+ * See http://js.cytoscape.org for more info.
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Mike Smoot <mes@aescon.com>
  */
 class CytoscapeJsRenderer implements DagRenderer {
 
-    /**
-     * Render the DAG in Cytoscape.js compatibile
-     * JSON to the specified file.
-     * See http://js.cytoscape.org for more info.
-     */
     @Override
     void renderDocument(DAG dag, Path file) {
         file.text = renderNetwork(dag)

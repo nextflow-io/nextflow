@@ -20,6 +20,8 @@
 
 package nextflow.dag
 /**
+ * Exception raised then the same channel is declared as output more
+ * than one time
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

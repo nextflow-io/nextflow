@@ -25,6 +25,7 @@ import java.nio.file.Path
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
+import groovy.transform.Memoized
 import nextflow.processor.TaskContext
 
 /**
@@ -81,6 +82,11 @@ class TestHelper {
 
         return new TaskContext(script, local, name)
 
+    }
+
+    @Memoized
+    static boolean graphvizInstalled() {
+        ["bash","-c","command -v dot &>/dev/null"].execute().waitFor() == 0
     }
 
 }
