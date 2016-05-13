@@ -37,6 +37,10 @@ import test.TemporaryPath
  */
 class ChannelTest extends Specification {
 
+    def setupSpec() {
+        new Session()
+    }
+
 
     def testSingleFile() {
 
@@ -87,6 +91,12 @@ class ChannelTest extends Specification {
         then:
         result == [ 'file4.txt', 'file5.txt', 'file66.txt' ]
 
+        when:
+        result = Channel
+                .fromPath("$folder/{alpha,}.txt")
+                .toSortedList().getVal().collect { it -> it.name }
+        then:
+        result == [ 'alpha.txt']
 
     }
 

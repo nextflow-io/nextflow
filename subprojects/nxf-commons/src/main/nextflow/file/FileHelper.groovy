@@ -56,7 +56,7 @@ class FileHelper {
 
     static final private Path localTempBasePath
 
-    static final public Pattern GLOB_CURLY_BRACKETS = Pattern.compile(/(.*)(\{.+,.+\})(.*)/)
+    static final public Pattern GLOB_CURLY_BRACKETS = Pattern.compile(/(.*)(\{.+,.*\})(.*)/)
 
     static final public Pattern GLOB_SQUARE_BRACKETS = Pattern.compile(/(.*)(\[.+\])(.*)/)
 
