@@ -525,6 +525,7 @@ class FileHelperTest extends Specification {
         'hola[a]'   | true
         'hola[a-z]' | true
         'hola{a,b}' | true
+        'hola{a,}'  | true
         'hola{}'    | false
         'hola{a}'   | false
         'hola[]'    | false
