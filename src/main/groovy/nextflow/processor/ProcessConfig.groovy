@@ -157,9 +157,8 @@ class ProcessConfig implements Map<String,Object> {
     }
 
     private void checkName(String name) {
-        if( DIRECTIVES.contains(name) ) {
-            return
-        }
+        if( DIRECTIVES.contains(name) ) return
+        if( name == 'when' ) return
 
         String message = "Unknown process directive: `$name`"
         def alternatives = DIRECTIVES.closest(name)
