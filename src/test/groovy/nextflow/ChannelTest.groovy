@@ -96,8 +96,21 @@ class ChannelTest extends Specification {
                 .fromPath("$folder/{alpha,}.txt")
                 .toSortedList().getVal().collect { it -> it.name }
         then:
-        result == [ 'alpha.txt']
+        result == ['alpha.txt']
 
+        when:
+        result = Channel
+                .fromPath("$folder/{,beta}.txt")
+                .toSortedList().getVal().collect { it -> it.name }
+        then:
+        result == ['beta.txt']
+
+        when:
+        result = Channel
+                .fromPath("$folder/alpha.txt{,}")
+                .toSortedList().getVal().collect { it -> it.name }
+        then:
+        result == ['alpha.txt']
     }
 
 
