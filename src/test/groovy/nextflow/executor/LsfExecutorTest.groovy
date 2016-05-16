@@ -72,7 +72,6 @@ class LsfExecutorTest extends Specification {
 
         then:
         executor.getHeaders(task) == '''
-                #BSUB -cwd /scratch
                 #BSUB -o /scratch/.command.log
                 #BSUB -q bsc_ls
                 #BSUB -n 2
@@ -93,7 +92,6 @@ class LsfExecutorTest extends Specification {
         task.config.cpus = 1
         then:
         executor.getHeaders(task) == '''
-                #BSUB -cwd /scratch
                 #BSUB -o /scratch/.command.log
                 #BSUB -q alpha
                 #BSUB -J nf-mapping_hola
@@ -109,7 +107,6 @@ class LsfExecutorTest extends Specification {
         task.config.memory = '10MB'
         then:
         executor.getHeaders(task) == '''
-                #BSUB -cwd /scratch
                 #BSUB -o /scratch/.command.log
                 #BSUB -q alpha
                 #BSUB -W 00:01
@@ -128,7 +125,6 @@ class LsfExecutorTest extends Specification {
         task.config.memory = '200MB'
         then:
         executor.getHeaders(task) == '''
-                #BSUB -cwd /scratch
                 #BSUB -o /scratch/.command.log
                 #BSUB -q gamma
                 #BSUB -W 04:00
@@ -146,7 +142,6 @@ class LsfExecutorTest extends Specification {
         task.config.memory = '2GB'
         then:
         executor.getHeaders(task) == '''
-                #BSUB -cwd /scratch
                 #BSUB -o /scratch/.command.log
                 #BSUB -q gamma
                 #BSUB -n 4
@@ -165,7 +160,6 @@ class LsfExecutorTest extends Specification {
         task.config.time = '1d'
         then:
         executor.getHeaders(task) == '''
-                #BSUB -cwd /scratch
                 #BSUB -o /scratch/.command.log
                 #BSUB -q gamma
                 #BSUB -n 4
@@ -186,7 +180,6 @@ class LsfExecutorTest extends Specification {
         task.config.time = '2d'
         then:
         executor.getHeaders(task) == '''
-                #BSUB -cwd /scratch
                 #BSUB -o /scratch/.command.log
                 #BSUB -q gamma
                 #BSUB -n 8
@@ -206,7 +199,6 @@ class LsfExecutorTest extends Specification {
         task.config.time = '2d 12h 5m'
         then:
         executor.getHeaders(task) == '''
-                #BSUB -cwd /scratch
                 #BSUB -o /scratch/.command.log
                 #BSUB -q delta
                 #BSUB -W 60:05
@@ -244,7 +236,6 @@ class LsfExecutorTest extends Specification {
 
         then:
         executor.getHeaders(task) == '''
-                #BSUB -cwd /scratch
                 #BSUB -o /scratch/.command.log
                 #BSUB -q bsc_ls
                 #BSUB -n 4
@@ -262,7 +253,6 @@ class LsfExecutorTest extends Specification {
 
         then:
         executor.getHeaders(task) == '''
-                #BSUB -cwd /scratch
                 #BSUB -o /scratch/.command.log
                 #BSUB -q bsc_ls
                 #BSUB -n 4
