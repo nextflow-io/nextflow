@@ -345,10 +345,10 @@ class LoggerHelper {
         // add the log message
         if( fail instanceof MissingPropertyException ) {
             def name = fail.property ?: getDetailMessage(fail)
-            buffer.append("Not such variable: ${name}")
+            buffer.append("No such variable: ${name}")
         }
         else if( fail instanceof NoSuchFileException ) {
-            buffer.append("Not such file: ${normalize(fail.message)}")
+            buffer.append("No such file: ${normalize(fail.message)}")
         }
         else if( message && !message.startsWith('@') ) {
             buffer.append(normalize(message))
