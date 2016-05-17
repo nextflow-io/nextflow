@@ -43,6 +43,11 @@ class CmdPull extends CmdBase implements HubOptions {
     @Parameter(names='-all', description = 'Update all downloaded projects', arity = 0)
     boolean all
 
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
+    String revision
+
+
+
     @Override
     final String getName() { NAME }
 
@@ -70,13 +75,13 @@ class CmdPull extends CmdBase implements HubOptions {
             log.info "Checking $it ..."
             def manager = new AssetManager(it, this)
 
-            def result = manager.download()
+            def result = manager.download(revision)
             manager.updateModules()
 
-            if( !result )
-                log.info " done"
-            else
-                log.info " $result"
+            def scriptFile = manager.getScriptFile()
+            String message = !result ? " done" : " $result"
+            message += " - revision: ${scriptFile.revisionInfo}"
+            log.info message
         }
 
     }

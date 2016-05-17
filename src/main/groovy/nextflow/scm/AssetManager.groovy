@@ -528,6 +528,10 @@ class AssetManager {
             if( provider.hasCredentials() )
                 clone.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
 
+            if( revision ) {
+                clone.setBranch(revision)
+            }
+
             clone
                 .setURI(getGitRepositoryUrl())
                 .setDirectory(localPath)
