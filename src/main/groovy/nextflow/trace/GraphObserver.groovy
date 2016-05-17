@@ -56,6 +56,7 @@ class GraphObserver implements TraceObserver {
 
     GraphObserver( Path file ) {
         assert file
+        file.rollFile()
         this.file = file
         this.name = file.baseName
         this.format = file.getExtension().toLowerCase() ?: 'dot'
