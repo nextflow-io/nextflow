@@ -19,6 +19,8 @@ For a detailed description of the Groovy programming language, references these 
 
 Below you can find a crash course in the most important language constructs used in the Nextflow scripting language.
 
+.. warning:: Nextflow uses ``UTF-8`` as default file character encoding for source and application files. Make sure
+  to use the ``UTF-8`` encoding when editing Nextflow scripts with your favourite text editor.
 
 Language basics
 ==================
