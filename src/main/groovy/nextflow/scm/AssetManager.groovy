@@ -747,13 +747,19 @@ class AssetManager {
 
     protected Ref checkoutRemoteBranch( String revision ) {
 
-        git.fetch().call()
-        git.checkout()
-                .setCreateBranch(true)
-                .setName(revision)
-                .setUpstreamMode(CreateBranchCommand.SetupUpstreamMode.TRACK)
-                .setStartPoint("origin/" + revision)
-                .call()
+        try {
+            git.fetch().call()
+            git.checkout()
+                    .setCreateBranch(true)
+                    .setName(revision)
+                    .setUpstreamMode(CreateBranchCommand.SetupUpstreamMode.TRACK)
+                    .setStartPoint("origin/" + revision)
+                    .call()
+        }
+        catch (RefNotFoundException e) {
+            throw new AbortOperationException("Cannot find revision `$revision` -- Make sure that it exists in the remote repository `$repositoryUrl`", e)
+        }
+
     }
 
     public void updateModules() {
