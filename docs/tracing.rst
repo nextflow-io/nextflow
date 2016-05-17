@@ -101,6 +101,42 @@ Trace report layout and other configuration settings can be specified by using t
 Please read :ref:`Trace scope <config-trace>` section to learn more about it.
 
 
+DAG visualisation
+=================
+
+A Nextflow pipeline is implicitly modelled by a direct acyclic graph (DAG). The vertices in the graph represent
+the pipeline processes and operators, while the edges represent the data connections (i.e. channels) between them.
+
+The pipeline execution DAG can be outputted by adding the ``-with-dag`` option to the run command line.
+It creates a file named ``dag.dot`` containing a textual representation of the pipeline execution graph
+in the `DOT format <http://www.graphviz.org/content/dot-language>`_.
+
+The execution DAG can be rendered in a different format by specifying the an output file name with the format
+corresponding extension. For example::
+
+    nextflow run <script-name> -with-dag flowchart.png
+
+
+List of supported file formats:
+
+============ ====================
+Extension     File format
+============ ====================
+dot           Graphviz DOT file
+html          HTML file
+pdf           PDF file (*)
+png           PNG file (*)
+svg           SVG file (*)
+============ ====================
+
+.. warning:: The file formats marked with a `*` require the `Graphviz <http://www.graphviz.org>`_ tool installed
+  in your computer.
+
+The DAG produced by Nextflow for the `Shootstrap <https://github.com/cbcrg/shootstrap/>`_ pipeline:
+
+.. image:: images/dag.png
+
+
 
 Extrae integration
 ====================
