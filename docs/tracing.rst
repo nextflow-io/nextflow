@@ -1,8 +1,8 @@
 .. _perfanalysis-page:
 
-*********************
-Performance Analysis
-*********************
+***********************
+Tracing & visualisation
+***********************
 
 Nextflow can produce an execution tracing report that provides some information for a basic performance analysis
 of a pipeline execution. A more advanced analysis is possible by using the `Extrae` and `Paraver` tools integrated with Nextflow.
@@ -11,7 +11,7 @@ of a pipeline execution. A more advanced analysis is possible by using the `Extr
 .. _trace-report:
 
 Execution report
-===================
+================
 
 Nextflow creates an execution tracing file that contains some useful information about each process executed in your pipeline
 script, including: submission time, start time, completion time, cpu and memory used.
@@ -101,6 +101,33 @@ Trace report layout and other configuration settings can be specified by using t
 Please read :ref:`Trace scope <config-trace>` section to learn more about it.
 
 
+Timeline report
+===============
+
+Nextflow can render a HTML timeline of all processes executed in your pipeline. An example of the timeline
+report is shown below:
+
+.. image:: images/timeline.png
+
+
+Each bar represent a process run in the pipeline execution. The bar length represents the task duration time (wall-time).
+The colored area in each bar represents the real execution time. The grey area on the *left* of the colored one represents
+the task scheduling wait time. The grey area on the *right* of the colored one represents the task termination time
+(clean-up and file un-staging).
+
+For each bar are reported two numbers, respectively the task duration time and the virtual memory size peak.
+
+Since each process can spawn many tasks, colors are used to identify the tasks belonging to the same process.
+
+
+To enable the creation of the timeline report add the ``-with-timeline`` command line option when launching the pipeline
+execution. For example::
+
+  nextflow run <pipeline name> -with-timeline
+
+The report file name can be specified as an optional parameter.
+
+
 DAG visualisation
 =================
 
@@ -139,7 +166,7 @@ The DAG produced by Nextflow for the `Shootstrap <https://github.com/cbcrg/shoot
 
 
 Extrae integration
-====================
+==================
 
 
 Nextflow integrates the support for `Extrae`_ a library for performance tracing. Trace files
@@ -174,7 +201,7 @@ commands::
 It may change depending your Linux distribution and the available package installer tool.
 
 Installation
---------------
+------------
 
 Download the Extrae 2.5.0 at this link http://www.nextflow.io/misc/extrae-2.5.0.tar.gz
 
@@ -200,7 +227,7 @@ environment profile file::
 
 
 Profile your pipeline
------------------------
+---------------------
 
 In order to use the Extrae tracing simply add the option ``-with-extrae`` to your Nextflow
 launch command line, for example::
@@ -217,7 +244,7 @@ Converts this file to the Paraver format by using the following command::
 
 
 Analysis with Paraver
------------------------
+---------------------
 
 If do not have Paraver installed, you need to download and install it in your computer.
 You can download it from this page: http://www.bsc.es/performance_tools/downloads
@@ -235,7 +262,7 @@ Please refers the `Paraver`_ documentation for information about it.
 
 
 Advanced configuration
--------------------------
+----------------------
 
 In order to fine control the Extra tracing you can provide a custom Extrae
 configuration file by specifying its location by using the environment
@@ -243,8 +270,7 @@ variable ``EXTRAE_CONFIG_FILE``.
 
 Read the `Extrae`_ documentation for more information about it.
 
-
-
 .. _Barcelona Supercomputing Center: http://www.bsc.es
 .. _Paraver: http://www.bsc.es/computer-sciences/performance-tools/paraver
 .. _Extrae: http://www.bsc.es/computer-sciences/extrae
+
