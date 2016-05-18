@@ -104,42 +104,42 @@ Please read :ref:`Trace scope <config-trace>` section to learn more about it.
 Timeline report
 ===============
 
-Nextflow can render a HTML timeline of all processes executed in your pipeline. An example of the timeline
+Nextflow can render an HTML timeline for all processes executed in your pipeline. An example of the timeline
 report is shown below:
 
 .. image:: images/timeline.png
 
 
-Each bar represent a process run in the pipeline execution. The bar length represents the task duration time (wall-time).
-The colored area in each bar represents the real execution time. The grey area on the *left* of the colored one represents
-the task scheduling wait time. The grey area on the *right* of the colored one represents the task termination time
+Each bar represents a process run in the pipeline execution. The bar length represents the task duration time (wall-time).
+The colored area in each bar represents the real execution time. The grey area to the *left* of the colored area represents
+the task scheduling wait time. The grey area to the *right* of the colored area represents the task termination time
 (clean-up and file un-staging).
 
-For each bar are reported two numbers, respectively the task duration time and the virtual memory size peak.
+Each bar displays two numbers: the task duration time and the virtual memory size peak.
 
-Since each process can spawn many tasks, colors are used to identify the tasks belonging to the same process.
+As each process can spawn many tasks, colors are used to identify those tasks belonging to the same process.
 
 
 To enable the creation of the timeline report add the ``-with-timeline`` command line option when launching the pipeline
 execution. For example::
 
-  nextflow run <pipeline name> -with-timeline
+  nextflow run <pipeline name> -with-timeline [file name]
 
-The report file name can be specified as an optional parameter.
+The report file name can be specified as an optional parameter following the timeline option.
 
 
 DAG visualisation
 =================
 
 A Nextflow pipeline is implicitly modelled by a direct acyclic graph (DAG). The vertices in the graph represent
-the pipeline processes and operators, while the edges represent the data connections (i.e. channels) between them.
+the pipeline's processes and operators, while the edges represent the data connections (i.e. channels) between them.
 
 The pipeline execution DAG can be outputted by adding the ``-with-dag`` option to the run command line.
 It creates a file named ``dag.dot`` containing a textual representation of the pipeline execution graph
 in the `DOT format <http://www.graphviz.org/content/dot-language>`_.
 
-The execution DAG can be rendered in a different format by specifying the an output file name with the format
-corresponding extension. For example::
+The execution DAG can be rendered in a different format by specifying an output file name which has an extension
+corresponding to the required format. For example::
 
     nextflow run <script-name> -with-dag flowchart.png
 

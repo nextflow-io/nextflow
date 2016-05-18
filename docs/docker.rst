@@ -27,7 +27,7 @@ How it works
 You won't need to modify your Nextflow script in order to run it with Docker. Simply specify the Docker image from
 where the containers are started by using the ``-with-docker`` command line option. For example::
 
-  nextflow run <your script> -with-docker <docker image>
+  nextflow run <your script> -with-docker [docker image]
 
 Every time your script launches a process execution, Nextflow will run it into a Docker container created by using the
 specified image. In practice Nextflow will automatically wrap your processes and run them by executing the ``docker run``
