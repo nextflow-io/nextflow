@@ -144,7 +144,7 @@ class DataflowExtensionsTest extends Specification {
         when:
         def count = 0
         def done = false
-        Channel.just(1).subscribe onNext:  { count++ }, onComplete: { done = true }
+        Channel.value(1).subscribe onNext:  { count++ }, onComplete: { done = true }
         sleep 100
         then:
         done
@@ -723,7 +723,7 @@ class DataflowExtensionsTest extends Specification {
         r4.val == Channel.STOP
 
         when:
-        def r5 = Channel.just( [1,2,3] ).flatten()
+        def r5 = Channel.value( [1,2,3] ).flatten()
         then:
         r5.val == 1
         r5.val == 2
@@ -921,7 +921,7 @@ class DataflowExtensionsTest extends Specification {
         when:
         def c1 = Channel.from( 1,2,3 )
         def c2 = Channel.from( 'a','b' )
-        def c3 = Channel.just( 'z' )
+        def c3 = Channel.value( 'z' )
         def result = c1.mix(c2,c3).toList().val
 
         then:

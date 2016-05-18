@@ -1179,8 +1179,8 @@ class DataflowExtensions {
         switch(other) {
             case DataflowQueue: inputs = ((DataflowQueue) other).toList(); break
             case DataflowExpression: inputs = other; break
-            case Collection: inputs = Channel.just(other); break
-            case (Object[]): inputs = Channel.just(other as List); break
+            case Collection: inputs = Channel.value(other); break
+            case (Object[]): inputs = Channel.value(other as List); break
             default: throw new IllegalArgumentException("Not a valid argument for 'spread' operator [${other?.class?.simpleName}]: ${other} -- Use a Collection or a channel instead. ")
         }
 
