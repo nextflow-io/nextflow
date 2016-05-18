@@ -33,8 +33,8 @@ class EachInParamTest extends Specification {
 
         given:
         def channel = Channel.from(1,2,3,5)
-        def value = Channel.just('a')
-        def list = Channel.just([4,5,6])
+        def value = Channel.value('a')
+        def list = Channel.value([4,5,6])
 
         expect:
         EachInParam.normalizeToVariable(1).getVal() == [1]
