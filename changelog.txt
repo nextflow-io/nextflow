@@ -1,6 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.19.1 - 19 May 2016 
+- Fixed Spread operator is using deprecated `just` operator #159
+- Fixed Invalid call to `notifyError` method
+- Fixed Invalid URL in citoscape.js DAG template 
+- Improved documentation
+
 0.19.0 - 18 May 2016 
 - Added Pipeline execution DAG #147
 - Added support for OpenLava batch scheduler #152
