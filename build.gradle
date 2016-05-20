@@ -496,6 +496,7 @@ task release(type: Exec, dependsOn: pack) {
     # tag the release
     git push || exit \$?
     (git tag -a v$version -m 'Tagging version $version [release]' -f && git push origin v$version -f) || exit \$?
+    sleep 1
     github-release release -u nextflow-io -r nextflow -t v$version --pre-release
     github-release upload -u nextflow-io -r nextflow -t v$version --file ${launcherFile} --name ${launcherFile.name}
     github-release upload -u nextflow-io -r nextflow -t v$version --file ${nextflowAllFile} --name ${nextflowAllFile.name}
