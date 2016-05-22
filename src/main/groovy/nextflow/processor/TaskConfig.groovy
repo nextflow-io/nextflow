@@ -40,7 +40,9 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class TaskConfig extends LazyMap implements Cloneable {
 
-    TaskConfig() { }
+    private transient Map cache = [:]
+
+    TaskConfig() {  }
 
     TaskConfig( Map<String,Object> entries ) {
         super(entries)
@@ -49,7 +51,12 @@ class TaskConfig extends LazyMap implements Cloneable {
     TaskConfig clone() {
         def copy = (TaskConfig)super.clone()
         copy.target = new HashMap<>(this.target)
+        copy.newCache()
         return copy
+    }
+
+    private void newCache() {
+        cache = [:]
     }
 
     /**
@@ -62,6 +69,9 @@ class TaskConfig extends LazyMap implements Cloneable {
 
         // set the binding context for this map
         this.binding = context
+
+        // clear cache to force re-compute dynamic entries
+        this.cache.clear()
 
         // set the binding context for 'ext' map
         if( target.ext instanceof LazyMap )
@@ -83,18 +93,28 @@ class TaskConfig extends LazyMap implements Cloneable {
     }
 
     def get( String key ) {
-        if( key != 'ext' ) {
-            return super.get(key)
-        }
+        if( cache.containsKey(key) )
+            return cache.get(key)
 
-        if( !target.containsKey('ext') ) {
-            target.ext = new LazyMap()
+        def result
+        if( key == 'ext' ) {
+            if( target.containsKey(key) )
+                result = target.get(key)
+            else {
+                result = new LazyMap()
+                target.put(key, result)
+            }
         }
+        else
+            result = super.get(key)
 
-        return target.ext
+        cache.put(key,result)
+        return result
     }
 
     Object put( String key, Object value ) {
+        if( cache != null )
+            cache.remove(key)
         if( key == 'module' && value instanceof List ) {
             // 'module' directive can be defined as a list of dynamic values
             value.each { if (it instanceof Closure) dynamic |= true }

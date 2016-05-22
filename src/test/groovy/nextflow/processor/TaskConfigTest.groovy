@@ -483,4 +483,29 @@ class TaskConfigTest extends Specification {
 
     }
 
+    def 'should invoke dynamic cpus property only when cloning the config object' () {
+
+        given:
+        def config = new TaskConfig()
+
+        when:
+        int count = 0
+        config.cpus = { ++count }
+        then:
+        config.getCpus() == 1
+        config.getCpus() == 1
+
+        when:
+        config = config.clone()
+        then:
+        config.getCpus() == 2
+        config.getCpus() == 2
+
+        when:
+        config = config.clone()
+        then:
+        config.getCpus() == 3
+        config.getCpus() == 3
+    }
+
 }

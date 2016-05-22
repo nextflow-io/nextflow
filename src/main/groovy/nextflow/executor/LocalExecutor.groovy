@@ -19,7 +19,6 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Path
 import java.util.concurrent.Callable
 import java.util.concurrent.Future
@@ -27,14 +26,13 @@ import java.util.concurrent.Future
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.processor.LocalPollingMonitor
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
-import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.script.ScriptType
 import nextflow.trace.TraceRecord
-import nextflow.util.Duration
 import nextflow.util.PosixProcess
 /**
  * Executes the specified task on the locally exploiting the underlying Java thread pool
@@ -49,7 +47,7 @@ class LocalExecutor extends Executor {
     @Override
     protected TaskMonitor createTaskMonitor() {
 
-        return TaskPollingMonitor.create(session, name, session.poolSize, Duration.of('100ms'))
+        return LocalPollingMonitor.create(session, name)
 
     }
 

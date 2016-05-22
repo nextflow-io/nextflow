@@ -23,7 +23,7 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Session
-import nextflow.exception.ProcessScriptException
+import nextflow.exception.ProcessNotRecoverableException
 import nextflow.processor.ProcessConfig
 import spock.lang.Specification
 import test.TestParser
@@ -238,7 +238,7 @@ class ScriptRunnerTest extends Specification {
         when:
         runner.setScript(script).execute()
         then:
-        session.fault.error instanceof ProcessScriptException
+        session.fault.error instanceof ProcessNotRecoverableException
         session.fault.error.cause instanceof MissingPropertyException
         session.fault.error.cause.message =~ /Unknown variable 'HELLO' -- .*/
         session.fault.report =~ /Unknown variable 'HELLO' -- .*/
