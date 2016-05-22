@@ -47,7 +47,7 @@ import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
-import nextflow.exception.ProcessScriptException
+import nextflow.exception.ProcessNotRecoverableException
 import nextflow.executor.Executor
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
@@ -760,7 +760,7 @@ abstract class TaskProcessor {
         task.config.attempt = taskErrCount+1
         final taskStrategy = task.config.getErrorStrategy()
 
-        if( error instanceof ProcessScriptException ) {
+        if( error instanceof ProcessNotRecoverableException ) {
             // retry is not allowed when the script cannot be compiled
             return null
         }

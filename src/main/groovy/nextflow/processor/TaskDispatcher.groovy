@@ -151,7 +151,7 @@ class TaskDispatcher {
          * Note: queue is implemented as a fixed size blocking queue, when
          * there's not space *put* operation will block until, some other tasks finish
          */
-        monitor.put(handler)
+        monitor.schedule(handler)
         log.info "[${task.hashLog}] $submitMessage > ${task.name}"
         if( handler && handler.latch ) {
             log.trace "Process ${task} > blocking"

@@ -351,7 +351,6 @@ class Session implements ISession {
         return this
     }
 
-    @PackageScope
     Barrier getBarrier() { monitorsBarrier }
 
     /**

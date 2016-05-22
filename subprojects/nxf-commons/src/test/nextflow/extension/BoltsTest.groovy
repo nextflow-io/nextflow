@@ -19,12 +19,11 @@
  */
 
 package nextflow.extension
-
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import groovy.util.logging.Slf4j
 import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
  *
@@ -88,6 +87,16 @@ class BoltsTest extends Specification {
         new File('/path/to/file') as Path == Paths.get('/path/to/file')
 
 
+    }
+
+    def testAsMemoryUnit() {
+        given:
+        def x = 5
+
+        expect:
+        1024 as MemoryUnit == MemoryUnit.of('1 KB')
+        '10 GB' as MemoryUnit == MemoryUnit.of('10 GB')
+        "$x MB" as MemoryUnit == MemoryUnit.of('5 MB')
     }
 
     def testConfigToMap  () {

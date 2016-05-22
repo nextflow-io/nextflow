@@ -32,6 +32,7 @@ import groovy.transform.CompileStatic
 import nextflow.file.FileHelper
 import nextflow.util.CheckHelper
 import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.codehaus.groovy.runtime.GStringImpl
@@ -343,6 +344,9 @@ class Bolts {
         else if( Path.isAssignableFrom(type) ) {
             return FileHelper.asPath(self)
         }
+        else if( type == MemoryUnit ) {
+            return new MemoryUnit(self)
+        }
 
         StringGroovyMethods.asType(self, type);
     }
@@ -361,6 +365,9 @@ class Bolts {
         else if( Path.isAssignableFrom(type) ) {
             return FileHelper.asPath(self)
         }
+        else if( type == MemoryUnit ) {
+            return new MemoryUnit(self.toString())
+        }
 
         StringGroovyMethods.asType(self, type);
     }
@@ -376,7 +383,9 @@ class Bolts {
         if( type == Duration ) {
             return new Duration(self.longValue())
         }
-
+        if( type == MemoryUnit ) {
+            return new MemoryUnit(self.longValue())
+        }
         DefaultGroovyMethods.asType(self, type);
     }
 

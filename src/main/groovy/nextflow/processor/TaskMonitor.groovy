@@ -21,13 +21,14 @@
 package nextflow.processor
 
 /**
+ * Declares the methods for scheduling and handling tasks
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 interface TaskMonitor {
 
     /**
-     * Put a {@code TaskHandler} instance into the queue of tasks to be processed.
+     * Schedule a {@code TaskHandler} instance adding it to the queue of tasks to be processed.
      * Subclasses provide concrete logic to manage them.
      *
      * Note: depending the task scheduling implementation this operation may be blocking
@@ -35,20 +36,20 @@ interface TaskMonitor {
      *
      * @param handler {@code TaskHandler} instance
      */
-    def void put(TaskHandler handler)
+    void schedule(TaskHandler handler)
 
     /**
-     * Remove the {@code TaskHandler} instance from the queue of tasks ro be processed
+     * Remove the {@code TaskHandler} instance from the queue of tasks to be processed
      *
      * @param handler A not null {@code TaskHandler} instance
      */
-    def boolean drop(TaskHandler handler)
+    boolean evict(TaskHandler handler)
 
     /**
      * Start the monitoring activity for the queued tasks
      * @return The instance itself, useful to chain methods invocation
      */
-    def TaskMonitor start()
+    TaskMonitor start()
 
     /**
      * Notify when a task terminates

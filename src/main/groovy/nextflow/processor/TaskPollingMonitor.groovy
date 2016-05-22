@@ -25,6 +25,7 @@ import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.executor.BatchCleanup
@@ -38,6 +39,7 @@ import nextflow.util.Duration
  */
 
 @Slf4j
+@CompileStatic
 class TaskPollingMonitor implements TaskMonitor {
 
     /**
@@ -98,7 +100,7 @@ class TaskPollingMonitor implements TaskMonitor {
      *
      * @param params
      */
-    TaskPollingMonitor( Map params ) {
+    protected TaskPollingMonitor( Map params ) {
         assert params
         assert params.session instanceof Session
         assert params.name != null
@@ -113,6 +115,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
         this.pollingQueue = new ConcurrentLinkedQueue<>()
     }
+
 
 
     static TaskPollingMonitor create( Session session, String name, int defQueueSize, Duration defPollInterval ) {
@@ -194,33 +197,69 @@ class TaskPollingMonitor implements TaskMonitor {
         return result
     }
 
-
     /**
-     * Add a new task handler to queue tasks queue
+     * Defines the strategy determining if a task can be submitted for execution.
      *
      * @param handler
+     *      A {@link TaskHandler} for a task to be submitted
+     * @return
+     *      {@code true} if the task satisfies the resource requirements and scheduling strategy implemented
+     *      by the polling monitor
+     */
+    protected boolean canSubmit(TaskHandler handler) {
+        pollingQueue.size() < capacity
+    }
+
+    /**
+     * Submits the specified task for execution adding it to the queue of scheduled tasks
+     *
+     * @param handler
+     *      A {@link TaskHandler} instance representing the task to be submitted for execution
+     */
+    protected void submit(TaskHandler handler) {
+        // submit the job execution -- throws a ProcessException when submit operation fail
+        handler.submit()
+        // note: add the 'handler' into the polling queue *after* the submit operation,
+        // this guarantees that in the queue are only jobs successfully submitted
+        pollingQueue.add(handler)
+    }
+
+    /**
+     * Remove a task from task the scheduling queue
+     *
+     * @param handler
+     *      A {@link TaskHandler} instance
+     * @return
+     *      {@code true} if the task was removed successfully from the tasks polling queue,
+     *      {@code false} otherwise
+     */
+    protected boolean remove(TaskHandler handler) {
+        pollingQueue.remove(handler)
+    }
+
+    /**
+     * Schedule a new task for execution
+     *
+     * @param handler
+     *      A {@link TaskHandler} representing the task to be submitted for execution
      */
     @Override
-    void put(TaskHandler handler) {
+    void schedule(TaskHandler handler) {
         //
         // This guarantee that the 'pollingQueue' does not contain
         // more entries than the specified 'capacity'
         //
-        boolean done = false
-        tasksQueueLock.withLock(true) {
+        boolean done = tasksQueueLock.withLock(true) {
 
-            while ( pollingQueue.size() >= capacity )
+            while ( !canSubmit(handler) )
                 notFull.await();
 
             if( !session.isTerminated()) {
-                // submit the job execution -- throws a ProcessException when submit operation fail
-                handler.submit()
-                // note: add the 'handler' into the polling queue *after* the submit operation,
-                // this guarantees that in the queue are only jobs successfully submitted
-                pollingQueue.add(handler)
-                done = true
+                submit(handler)
+                return true
             }
 
+            return false
         }
 
         if( done )
@@ -228,20 +267,22 @@ class TaskPollingMonitor implements TaskMonitor {
     }
 
     /**
-     * Remove a task from the processing tasks queue
+     * Evicts a task from the processing tasks queue
      *
-     * @param handler A {@code HzTaskHandler} instance
+     * @param handler
+     *      A {@link TaskHandler} instance
      * @return
+     *      {@code true} when the specified task was successfully removed from polling queue,
+     *      {@code false} otherwise
      */
     @Override
-    boolean drop(TaskHandler handler) {
+    boolean evict(TaskHandler handler) {
         if( !handler ) {
-            log.debug "Unknown task handler to drop: $handler"
             return false
         }
 
         tasksQueueLock.withLock {
-            if( pollingQueue.remove(handler) ) {
+            if( remove(handler) ) {
                 notFull.signal()
                 return true
             }
@@ -254,9 +295,11 @@ class TaskPollingMonitor implements TaskMonitor {
     /**
      * Launch the monitoring thread
      *
-     * @return The monitor object itself
+     * @return
+     *      The monitor object itself
      */
-    def TaskMonitor start() {
+    @Override
+    TaskMonitor start() {
         log.debug ">>> barrier register (monitor: ${this.name})"
         session.barrier.register(this)
 
@@ -317,7 +360,8 @@ class TaskPollingMonitor implements TaskMonitor {
     /**
      * Await for one or more tasks to be processed
      *
-     * @param time The wait timeout in millis
+     * @param time
+     *      The wait timeout in millis
      */
     protected void await( long time ) {
         def delta = this.pollIntervalMillis - (System.currentTimeMillis() - time)
@@ -332,6 +376,7 @@ class TaskPollingMonitor implements TaskMonitor {
     /**
      * Signal that a task has been completed
      */
+    @Override
     void signal() {
         taskCompleteLock.withLock {
             taskComplete.signal()
@@ -340,9 +385,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
 
     /**
-     * Check and update the queue tasks status
-     *
-     * @param collection The collections of tasks to check
+     * Check and update the status of queued tasks
      */
     protected void checkAllTasks() {
 
@@ -375,7 +418,8 @@ class TaskPollingMonitor implements TaskMonitor {
     /**
      * Check the status of the given task
      *
-     * @param handler The {@code TaskHandler} instance of the task to check
+     * @param handler
+     *      The {@link TaskHandler} instance of the task to check
      */
     protected void checkTaskStatus( TaskHandler handler ) {
         assert handler
@@ -388,7 +432,7 @@ class TaskPollingMonitor implements TaskMonitor {
         // check if it is terminated
         if( handler.checkIfCompleted()  ) {
             // since completed *remove* the task from the processing queue
-            drop(handler)
+            evict(handler)
 
             // finalize the tasks execution
             final fault = handler.task.processor.finalizeTask(handler.task)
@@ -406,9 +450,9 @@ class TaskPollingMonitor implements TaskMonitor {
     }
 
     /**
-     * Kill all pending jobs when aborting
+     * Kill all pending jobs when current execution session is aborted
      */
-    protected void cleanup () {
+    protected void cleanup() {
         if( !pollingQueue.size() ) return
         log.warn "Killing pending tasks (${pollingQueue.size()})"
 
@@ -418,7 +462,7 @@ class TaskPollingMonitor implements TaskMonitor {
             TaskHandler handler = pollingQueue.poll()
             try {
                 if( handler instanceof GridTaskHandler ) {
-                    handler.batch = batch
+                    ((GridTaskHandler)handler).batch = batch
                 }
                 handler.kill()
             }

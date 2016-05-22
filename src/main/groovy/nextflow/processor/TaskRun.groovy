@@ -28,7 +28,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessMissingTemplateException
-import nextflow.exception.ProcessScriptException
+import nextflow.exception.ProcessNotRecoverableException
 import nextflow.file.FileHolder
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
@@ -605,7 +605,7 @@ class TaskRun implements Cloneable {
             throw e
         }
         catch( Throwable e ) {
-            throw new ProcessScriptException("Process `$name` script contains error(s)", e)
+            throw new ProcessNotRecoverableException("Process `$name` script contains error(s)", e)
         }
 
     }

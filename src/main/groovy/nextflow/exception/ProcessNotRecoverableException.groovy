@@ -23,11 +23,14 @@ package nextflow.exception
 import groovy.transform.InheritConstructors
 
 /**
- * Thrown when the process script cannot be retrieved
+ * Exception thrown when a process contains an error
+ * not recoverable e.g. script compilation error, invalid
+ * resource request, etc.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
 @InheritConstructors
-class ProcessScriptException extends ProcessException {
+class ProcessNotRecoverableException extends ProcessException {
+
 }
