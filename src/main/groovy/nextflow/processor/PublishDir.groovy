@@ -21,9 +21,12 @@
 package nextflow.processor
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.PathMatcher
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
@@ -232,10 +235,45 @@ class PublishDir {
             processFileImpl(source, destination)
         }
         catch( FileAlreadyExistsException e ) {
-            if( overwrite ) {
-                FilesEx.deleteDir(destination)
+            if( !overwrite )
+                return
+
+            if( deletePath(destination) )
                 processFileImpl(source, destination)
+            else
+                log.warn "Failed to overwrite path: $destination"
+        }
+    }
+
+    static private boolean deletePath( Path path ) {
+        def attr = FilesEx.readAttributes(path)
+        if( !attr )
+            return true
+
+        try {
+            // if it's not a dir just delete the file
+            if( !attr.isDirectory() ) {
+                Files.delete(path)
+                return true
             }
+
+            Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                    Files.delete(file)
+                    FileVisitResult.CONTINUE
+                }
+
+                public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
+                    Files.delete(dir)
+                    FileVisitResult.CONTINUE
+                }
+
+            })
+            return true
+        }
+        catch( IOException e ) {
+            return false
         }
     }
 
