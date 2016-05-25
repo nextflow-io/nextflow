@@ -42,12 +42,12 @@ class BashWrapperBuilder {
 
     static final private ENDL = '\n'
 
-    static final List<String> BASH
+    static final public List<String> BASH
 
     static private level = 0
 
     @PackageScope
-    static String systemOsName = System.getProperty('os.name')
+    static public String systemOsName = System.getProperty('os.name')
 
     static {
         /*
@@ -74,6 +74,7 @@ class BashWrapperBuilder {
      * http://mywiki.wooledge.org/SignalTrap
      * http://mywiki.wooledge.org/ProcessManagement
      */
+    @PackageScope
     static final String SCRIPT_CLEANUP = '''
         nxf_env() {
             echo '============= task environment ============='
@@ -122,6 +123,7 @@ class BashWrapperBuilder {
     // resources record:
     // 1    2      3     4     5      5    6       7      8      9      10     11     12          13           14
     // PID, STATE, %CPU, %MEM, VSIZE, RSS; VmPeak, VmHWM; RCHAR, WCHAR, syscr, syscw, READ_BYTES, WRITE_BYTES, CANCEL_W_BYTES
+    @PackageScope
     static final String SCRIPT_TRACE = '''
         nxf_tree() {
             declare -a ALL_CHILD
@@ -194,6 +196,24 @@ class BashWrapperBuilder {
         }
 
         '''.stripIndent().leftTrim()
+
+    @PackageScope
+    static final String MODULE_LOAD = '''
+        nxf_module_load(){
+          local mod=$1
+          local ver=$2
+          local new_module="$mod/$ver"
+          if [[ ! $(module list 2>&1 | grep -o "$new_module") ]]; then
+            old_module=$(module list 2>&1 | grep -Eo "$mod\\/[^\\( \\n]+" || true)
+            if [[ $old_module ]]; then
+              module switch $old_module $new_module
+            else
+              module load $new_module
+            fi
+          fi
+        }
+
+        '''.stripIndent().trim()
 
     @Delegate
     ScriptFileCopyStrategy copyStrategy
@@ -275,8 +295,11 @@ class BashWrapperBuilder {
         /*
          * add modules to the environment file
          */
-        moduleNames?.each { String name ->
-            environmentFile << "module load $name" << ENDL
+        if( moduleNames ) {
+            environmentFile << MODULE_LOAD << ENDL << ENDL
+            moduleNames.each {
+                environmentFile << moduleLoad(it) << ENDL
+            }
         }
 
         /*
@@ -584,5 +607,8 @@ class BashWrapperBuilder {
         return builder
     }
 
+    String moduleLoad(String name) {
+        "nxf_module_load ${name.tokenize('/').join(' ')}"
+    }
 
 }
