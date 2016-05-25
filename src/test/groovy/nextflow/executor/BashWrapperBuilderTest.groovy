@@ -27,8 +27,6 @@ import nextflow.Session
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import nextflow.container.ContainerScriptTokens
-import nextflow.container.DockerBuilder
 import spock.lang.Specification
 import test.TestHelper
 /**
@@ -1541,12 +1539,26 @@ class BashWrapperBuilderTest extends Specification {
 
         when:
         folder = TestHelper.createInMemTempDir()
-        new BashWrapperBuilder([ workDir: folder, environment: [DELTA:1, OMEGA:2], script: 'Hello world', moduleNames: ['xx','yy'] ] as TaskBean ) .build()
+        new BashWrapperBuilder([ workDir: folder, environment: [DELTA:1, OMEGA:2], script: 'Hello world', moduleNames: ['xx/1.2','yy/3.4'] ] as TaskBean ) .build()
 
         then:
         folder.resolve('.command.env').text == '''
-                    module load xx
-                    module load yy
+                    nxf_module_load(){
+                      local mod=$1
+                      local ver=$2
+                      local new_module="$mod/$ver"
+                      if [[ ! $(module list 2>&1 | grep -o "$new_module") ]]; then
+                        old_module=$(module list 2>&1 | grep -Eo "$mod\\/[^\\( \\n]+" || true)
+                        if [[ $old_module ]]; then
+                          module switch $old_module $new_module
+                        else
+                          module load $new_module
+                        fi
+                      fi
+                    }
+
+                    nxf_module_load xx 1.2
+                    nxf_module_load yy 3.4
                     export DELTA="1"
                     export OMEGA="2"
                     '''
@@ -1554,12 +1566,26 @@ class BashWrapperBuilderTest extends Specification {
 
         when:
         folder = TestHelper.createInMemTempDir()
-        new BashWrapperBuilder([ workDir: folder, script: 'Hello world', moduleNames: ['ciao','mondo'] ] as TaskBean) .build()
+        new BashWrapperBuilder([ workDir: folder, script: 'Hello world', moduleNames: ['ciao/1','mondo/2'] ] as TaskBean) .build()
 
         then:
         folder.resolve('.command.env').text == '''
-                    module load ciao
-                    module load mondo
+                    nxf_module_load(){
+                      local mod=$1
+                      local ver=$2
+                      local new_module="$mod/$ver"
+                      if [[ ! $(module list 2>&1 | grep -o "$new_module") ]]; then
+                        old_module=$(module list 2>&1 | grep -Eo "$mod\\/[^\\( \\n]+" || true)
+                        if [[ $old_module ]]; then
+                          module switch $old_module $new_module
+                        else
+                          module load $new_module
+                        fi
+                      fi
+                    }
+
+                    nxf_module_load ciao 1
+                    nxf_module_load mondo 2
                     '''
                 .stripIndent().leftTrim()
 
