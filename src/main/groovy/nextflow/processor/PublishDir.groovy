@@ -223,9 +223,25 @@ class PublishDir {
             processFile(source, destination)
         }
         else {
-            executor.submit({ processFile(source, destination) } as Runnable)
+            executor.submit({ safeProcessFile(source, destination) } as Runnable)
         }
 
+    }
+
+    @CompileStatic
+    protected void safeProcessFile(Path source, Path destination) {
+        try {
+            processFile(source, destination)
+        }
+        catch( Throwable e ) {
+            log.error """
+                Unxpected condition while publishing file:
+                  mode  : ${mode.toString().toLowerCase()}
+                  source: $source
+                  target: ${destination.toUri()}
+                  cause : ${e.toString()}""".stripIndent().trim(), e
+            (Global.session as Session).abort(e)
+        }
     }
 
     @CompileStatic
@@ -238,42 +254,8 @@ class PublishDir {
             if( !overwrite )
                 return
 
-            if( deletePath(destination) )
-                processFileImpl(source, destination)
-            else
-                log.warn "Failed to overwrite path: $destination"
-        }
-    }
-
-    static private boolean deletePath( Path path ) {
-        def attr = FilesEx.readAttributes(path)
-        if( !attr )
-            return true
-
-        try {
-            // if it's not a dir just delete the file
-            if( !attr.isDirectory() ) {
-                Files.delete(path)
-                return true
-            }
-
-            Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
-
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                    Files.delete(file)
-                    FileVisitResult.CONTINUE
-                }
-
-                public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
-                    Files.delete(dir)
-                    FileVisitResult.CONTINUE
-                }
-
-            })
-            return true
-        }
-        catch( IOException e ) {
-            return false
+            FileHelper.deletePath(destination)
+            processFileImpl(source, destination)
         }
     }
 
