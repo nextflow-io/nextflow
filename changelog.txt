@@ -1,6 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.19.2 - 26 May 2016
+- Fixed Module load problem #161
+- Fixed PublishDir does not overwrite symlinks #163
+- Fixed Implement resource accounting for local executor #162
+- Fixed PublishDir fail to move the output directory when the target is a S3 path #160
+
 0.19.1 - 19 May 2016 
 - Fixed Spread operator is using deprecated `just` operator #159
 - Fixed Invalid call to `notifyError` method
