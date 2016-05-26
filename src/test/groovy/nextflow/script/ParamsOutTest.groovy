@@ -22,13 +22,26 @@ package nextflow.script
 import static test.TestParser.parseAndReturnProcess
 
 import groovyx.gpars.dataflow.DataflowQueue
+import nextflow.processor.TaskContext
 import spock.lang.Specification
-import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ParamsOutTest extends Specification {
+
+    static private createTaskContext(Map binding, Map local=[:], String name='process_name') {
+        def script = new Script() {
+            @Override
+            Object run() { return null; }
+        }
+
+        script.setBinding(new Binding(binding))
+
+        return new TaskContext(script, local, name)
+
+    }
+
 
 
     // ==============================================================
@@ -757,10 +770,10 @@ class ParamsOutTest extends Specification {
         when:
         param.target = new TokenVar('x')
         then:
-        param.resolve(TestHelper.createTaskContext([x:'foo'])) == 'foo'
+        param.resolve(createTaskContext([x:'foo'])) == 'foo'
 
         when:
-        param.resolve(TestHelper.createTaskContext([z:'foo']))
+        param.resolve(createTaskContext([z:'foo']))
         then:
         def error = thrown(MissingPropertyException)
         error.property == 'x'
@@ -772,10 +785,10 @@ class ParamsOutTest extends Specification {
         when:
         param.target = { str }
         then:
-        param.resolve( TestHelper.createTaskContext([str:'foo']) ) == 'foo'
+        param.resolve( createTaskContext([str:'foo']) ) == 'foo'
 
         when:
-        param.resolve(TestHelper.createTaskContext([:]))
+        param.resolve(createTaskContext([:]))
         then:
         error = thrown(MissingPropertyException)
         error.property == 'str'
@@ -787,10 +800,10 @@ class ParamsOutTest extends Specification {
         when:
         param.target = "${->params.data}"
         then:
-        param.resolve( TestHelper.createTaskContext([params:[data:99]]) ) == '99'
+        param.resolve( createTaskContext([params:[data:99]]) ) == '99'
 
         when:
-        param.resolve(TestHelper.createTaskContext([:]))
+        param.resolve(createTaskContext([:]))
         then:
         error = thrown(MissingPropertyException)
         error.property == 'params'
