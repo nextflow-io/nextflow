@@ -19,15 +19,12 @@
  */
 
 package test
-
 import java.nio.file.Files
 import java.nio.file.Path
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import groovy.transform.Memoized
-import nextflow.processor.TaskContext
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -69,19 +66,6 @@ class TestHelper {
         Path tmp = fs.getPath("/tmp");
         tmp.mkdir()
         Files.createTempDirectory(tmp, 'test').resolve(name)
-    }
-
-
-    static createTaskContext(Map binding, Map local=[:], String name='process_name') {
-        def script = new Script() {
-            @Override
-            Object run() { return null; }
-        }
-
-        script.setBinding(new Binding(binding))
-
-        return new TaskContext(script, local, name)
-
     }
 
     @Memoized

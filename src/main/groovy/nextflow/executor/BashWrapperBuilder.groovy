@@ -490,7 +490,7 @@ class BashWrapperBuilder {
             wrapper << unstagingScript << ENDL
 
         if( changeDir && statsEnabled )
-            wrapper << copyFile(TaskRun.CMD_TRACE,  workDir) << ' || true' << ENDL
+            wrapper << copyFile(TaskRun.CMD_TRACE, workDir) << ' || true' << ENDL
 
         if( afterScript ) {
             wrapper << '# user `afterScript`' << ENDL
