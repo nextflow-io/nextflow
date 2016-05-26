@@ -19,7 +19,9 @@
  */
 
 package nextflow.file
+
 import java.lang.reflect.Field
+import java.nio.file.CopyOption
 import java.nio.file.FileSystem
 import java.nio.file.FileSystemNotFoundException
 import java.nio.file.FileSystems
@@ -822,6 +824,93 @@ class FileHelper {
         ( !scheme
                 ? FileSystems.getDefault()
                 : getOrCreateFileSystemFor(scheme) )
+    }
+
+    /**
+     * Move a path to a target destination. It handles file or directory both to a local
+     * or to a foreign file system
+     *
+     * @param source The source path
+     * @param target The target path
+     * @param options The copy options
+     * @return The resulting target path
+     * @throws IOException
+     */
+    static Path movePath(Path source, Path target, CopyOption... options)
+            throws IOException
+    {
+        FileSystemProvider provider = source.fileSystem.provider()
+        if (target.fileSystem.provider().is(provider)) {
+            // same provider
+            provider.move(source, target, options);
+        }
+        else {
+            // different providers
+            CopyMoveHelper.moveToForeignTarget(source, target, options);
+        }
+        return target;
+    }
+
+    /**
+     * Move a path to a target destination. It handles file or directory both to a local
+     * or to a foreign file system.
+     *
+     * @param source
+     * @param target
+     * @param options
+     * @return
+     * @throws IOException
+     */
+    static Path copyPath(Path source, Path target, CopyOption... options)
+            throws IOException
+    {
+        FileSystemProvider provider = source.fileSystem.provider()
+        if (target.fileSystem.provider().is(provider)) {
+            // same provider
+            if( Files.isDirectory(source) ) {
+                CopyMoveHelper.copyDirectory(source, target, options)
+            }
+            else {
+                provider.copy(source, target, options);
+            }
+        }
+        else {
+            // different providers
+            CopyMoveHelper.copyToForeignTarget(source, target, options);
+        }
+        return target;
+    }
+
+    /**
+     * Delete a path or a directory. If the directory is not empty
+     * delete all the content of the directory
+     *
+     * @param path
+     */
+    static void deletePath( Path path ) {
+        def attr = FilesEx.readAttributes(path)
+        if( !attr )
+            return
+
+        // if it's not a dir just delete the file
+        if( !attr.isDirectory() ) {
+            Files.delete(path)
+            return
+        }
+
+        Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                Files.delete(file)
+                FileVisitResult.CONTINUE
+            }
+
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
+                Files.delete(dir)
+                FileVisitResult.CONTINUE
+            }
+
+        })
     }
 
 

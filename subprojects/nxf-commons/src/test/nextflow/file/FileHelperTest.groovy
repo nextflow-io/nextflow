@@ -19,19 +19,33 @@
  */
 
 package nextflow.file
+
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 
+import com.google.common.jimfs.Configuration
+import com.google.common.jimfs.Jimfs
 import nextflow.Global
 import nextflow.ISession
 import spock.lang.Specification
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class FileHelperTest extends Specification {
+
+    static private fs = Jimfs.newFileSystem(Configuration.unix());
+
+    static Path createInMemTempDir() {
+        Path tmp = fs.getPath("/tmp");
+        tmp.mkdir()
+        Files.createTempDirectory(tmp, 'test')
+    }
 
     def 'should return a Path object' () {
 
@@ -532,5 +546,180 @@ class FileHelperTest extends Specification {
         'hola[]'    | false
 
     }
+
+
+    def 'should copy file path to foreign file system' () {
+
+        given:
+        def target = createInMemTempDir()
+        def source = Files.createTempDirectory('test')
+        def file = source.resolve('file.txt')
+        def copy = target.resolve('copy.txt')
+        file.text = 'Hello world'
+
+        when:
+        FileHelper.copyPath(file, copy)
+        then:
+        copy.text == 'Hello world'
+        file.exists()
+
+        when:
+        FileHelper.copyPath(file, copy)
+        then:
+        thrown(FileAlreadyExistsException)
+
+        when:
+        file.text = 'Hi there'
+        FileHelper.copyPath(file, copy, StandardCopyOption.REPLACE_EXISTING)
+        then:
+        copy.text == 'Hi there'
+        file.exists()
+
+        cleanup:
+        source.deleteDir()
+
+    }
+
+    def 'should copy dir path to foreign file system' () {
+
+        given:
+        def root = Files.createTempDirectory('test')
+        def source = root.resolve('source')
+        def target = createInMemTempDir().resolve('copy')
+
+        new FileTreeBuilder(root.toFile())
+                .dir('source') {
+                    file('file_1','alpha')
+                    file('file_2','beta')
+                    dir('dir1')  {
+                        file('file_3', 'delta')
+                    }
+                    dir('dir2') {
+                        file('file_4', 'gamma')
+                        dir('dir3') {
+                            file('file_5', 'omega')
+                        }
+                    }
+                }
+
+        when:
+        FileHelper.copyPath(source, target)
+        then:
+        target.isDirectory()
+        target.resolve('file_1').text == 'alpha'
+        target.resolve('file_2').text == 'beta'
+        target.resolve('dir1/file_3').text == 'delta'
+        target.resolve('dir2/file_4').text == 'gamma'
+        target.resolve('dir2/dir3/file_5').text == 'omega'
+        source.exists()
+
+        when:
+        target = root.resolve('copy')
+        FileHelper.copyPath(source, target)
+        then:
+        target.isDirectory()
+        target.resolve('file_1').text == 'alpha'
+        target.resolve('file_2').text == 'beta'
+        target.resolve('dir1/file_3').text == 'delta'
+        target.resolve('dir2/file_4').text == 'gamma'
+        target.resolve('dir2/dir3/file_5').text == 'omega'
+        source.exists()
+
+        root?.deleteDir()
+    }
+
+    def 'should move file path to foreign file system' () {
+
+        given:
+        def target = createInMemTempDir()
+        def source = Files.createTempDirectory('test')
+        def file = source.resolve('file.txt')
+        def copy = target.resolve('copy.txt')
+        file.text = 'Hello world'
+
+        when:
+        FileHelper.movePath(file, copy)
+        then:
+        copy.text == 'Hello world'
+        !file.exists()
+
+    }
+
+    def 'should move dir path to foreign file system' () {
+
+        given:
+        def root = Files.createTempDirectory('test')
+        def source = root.resolve('source')
+        def target = createInMemTempDir().resolve('copy')
+
+        new FileTreeBuilder(root.toFile())
+                .dir('source') {
+                    file('file_1','alpha')
+                    file('file_2','beta')
+                    dir('dir1')  {
+                        file('file_3', 'delta')
+                    }
+                    dir('dir2') {
+                        file('file_4', 'gamma')
+                        dir('dir3') {
+                            file('file_5', 'omega')
+                        }
+                    }
+        }
+
+        when:
+        FileHelper.movePath(source, target)
+        then:
+        target.isDirectory()
+        target.resolve('file_1').text == 'alpha'
+        target.resolve('file_2').text == 'beta'
+        target.resolve('dir1/file_3').text == 'delta'
+        target.resolve('dir2/file_4').text == 'gamma'
+        target.resolve('dir2/dir3/file_5').text == 'omega'
+        !source.exists()
+
+        cleanup:
+        root?.deleteDir()
+
+    }
+
+    def 'should move dir path to local file system' () {
+
+        given:
+        def root = Files.createTempDirectory('test')
+        def source = root.resolve('source')
+        def target = root.resolve('copy')
+
+        new FileTreeBuilder(root.toFile())
+                .dir('source') {
+                    file('file_1','alpha')
+                    file('file_2','beta')
+                    dir('dir1')  {
+                        file('file_3', 'delta')
+                    }
+                    dir('dir2') {
+                        file('file_4', 'gamma')
+                        dir('dir3') {
+                            file('file_5', 'omega')
+                        }
+                    }
+        }
+
+        when:
+        FileHelper.movePath(source, target)
+        then:
+        target.isDirectory()
+        target.resolve('file_1').text == 'alpha'
+        target.resolve('file_2').text == 'beta'
+        target.resolve('dir1/file_3').text == 'delta'
+        target.resolve('dir2/file_4').text == 'gamma'
+        target.resolve('dir2/dir3/file_5').text == 'omega'
+        !source.exists()
+
+        cleanup:
+        root?.deleteDir()
+
+    }
+
 
 }
