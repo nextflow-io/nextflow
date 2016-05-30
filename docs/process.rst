@@ -1572,9 +1572,6 @@ For example::
 This directive is required for tasks that execute multi-process or multi-threaded commands/tools and it is meant
 to reserve enough CPUs when a pipeline task is executed through a cluster resource manager.
 
-.. note:: This setting is not supported by the :ref:`local-executor` executor.
-
-
 See also: `penv`_, `memory`_, `time`_, `queue`_, `maxForks`_
 
 .. _process-queue:
@@ -1678,9 +1675,6 @@ TB      Terabytes
 ======= =============
 
 .. This setting is equivalent to set the ``qsub -l virtual_free=<mem>`` command line option.
-
-.. note:: This directive is not supported by the :ref:`local-executor` executor.
-
 
 See also: `cpus`_, `time`_, `queue`_ and `Dynamic computing resources`_.
 
