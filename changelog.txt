@@ -1,6 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.19.3 - 31 May 2016
+- Fixed Local executor does not run an job when host cpus == 1 #166
+
 0.19.2 - 26 May 2016
 - Fixed Module load problem #161
 - Fixed PublishDir does not overwrite symlinks #163
