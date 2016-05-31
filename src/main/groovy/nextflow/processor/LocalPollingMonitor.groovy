@@ -83,7 +83,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         final int cpus = configCpus(session,name)
         final long memory = configMem(session,name)
 
-        log.debug "Creating local task monitor for executor '$name' > cpus: $cpus; memory: $memory; pollInterval: $pollInterval; dumpInterval: $dumpInterval"
+        log.debug "Creating local task monitor for executor '$name' > cpus: $cpus; memory: ${new MemoryUnit(memory)}; pollInterval: $pollInterval; dumpInterval: $dumpInterval"
 
         new LocalPollingMonitor(
                 name: name,
@@ -123,7 +123,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      *      The amount of memory (bytes) requested to execute the specified task
      */
     private static long mem(TaskHandler handler) {
-        handler.task.getConfig()?.getMemory()?.toBytes() ?: 0
+        handler.task.getConfig()?.getMemory()?.toBytes() ?: 1
     }
 
     /**
@@ -150,7 +150,11 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         if( taskMemory>maxMemory)
             throw new ProcessNotRecoverableException("Process requirement exceed available memory -- req: ${new MemoryUnit(taskMemory)}; avail: ${new MemoryUnit(maxMemory)}")
 
-        taskCpus < availCpus && taskMemory < availMemory
+        final result = taskCpus <= availCpus && taskMemory <= availMemory
+        if( !result && log.isTraceEnabled( ) ) {
+            log.trace "Task `${handler.task.name}` cannot be scheduled -- taskCpus: $taskCpus <= availCpus: $availCpus && taskMemory: ${new MemoryUnit(taskMemory)} <= availMemory: ${new MemoryUnit(availMemory)}"
+        }
+        return result
     }
 
     /**
