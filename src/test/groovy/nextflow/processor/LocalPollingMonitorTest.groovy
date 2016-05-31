@@ -98,6 +98,38 @@ class LocalPollingMonitorTest extends Specification {
 
     }
 
+    def 'validate canSubmit method for one cpus' () {
+
+        given:
+        def _20_GB = MemoryUnit.of('20GB').toBytes()
+        def session = new Session()
+        def monitor = new LocalPollingMonitor(
+                cpus: 1,
+                memory: _20_GB,
+                session: session,
+                name: 'local',
+                pollInterval: 100
+        )
+
+        def task = new TaskRun()
+        task.config = new TaskConfig(cpus: 1, memory: MemoryUnit.of('8GB'))
+        def handler = Mock(TaskHandler)
+        handler.getTask() >> { task }
+
+        when:
+        true
+        then:
+        monitor.canSubmit(handler)
+        monitor.availCpus == 1
+
+        when:
+        monitor.submit(handler)
+        then:
+        !monitor.canSubmit(handler)
+        monitor.availCpus == 0
+
+    }
+
     def 'should throw an exception for missing cpus' () {
 
         given:
