@@ -36,15 +36,15 @@ class MultipleOutputChannelException extends Exception {
 
     DAG.Vertex existing
 
-    MultipleOutputChannelException( String name, DAG.ChannelHandler channel, DAG.Vertex duplicate, DAG.Vertex existing) {
-        super()
+    MultipleOutputChannelException( String name, DAG.ChannelHandler channel, DAG.Vertex duplicate, DAG.Vertex existing ) {
+        super(message(name,duplicate,existing))
         this.name = name
         this.channel = channel
         this.duplicate = duplicate
         this.existing = existing
     }
 
-    String getMessage() {
+    private static message( String name, DAG.Vertex duplicate, DAG.Vertex existing ) {
         if( !name ) {
             return 'Channels cannot be used as output in more than one process or operator'
         }
@@ -60,5 +60,4 @@ class MultipleOutputChannelException extends Exception {
             message += " and another operator"
         return message
     }
-
 }

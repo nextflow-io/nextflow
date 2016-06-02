@@ -38,15 +38,16 @@ class MultipleInputChannelException extends Exception {
 
     Vertex existing
 
-    MultipleInputChannelException( String name, ChannelHandler channel, Vertex duplicate, Vertex existing) {
-        super()
+    MultipleInputChannelException( String name, ChannelHandler channel, Vertex duplicate, Vertex existing ) {
+        super(message(name,duplicate,existing))
         this.name = name
         this.channel = channel
         this.duplicate = duplicate
         this.existing = existing
     }
 
-    String getMessage() {
+
+    private static String message(String name, Vertex duplicate, Vertex existing) {
         if( !name ) {
             return 'Channels cannot be used as input in more than one process or operator'
         }
