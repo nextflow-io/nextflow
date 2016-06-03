@@ -19,8 +19,8 @@
  */
 
 package nextflow.dag
+import groovy.transform.PackageScope
 import groovy.transform.ToString
-import nextflow.dag.DAG.ChannelHandler
 import nextflow.dag.DAG.Vertex
 /**
  * Exception thrown when the same channel is declared as input more than one time.
@@ -30,36 +30,24 @@ import nextflow.dag.DAG.Vertex
 @ToString(includeNames = true)
 class MultipleInputChannelException extends Exception {
 
-    String name
-
-    ChannelHandler channel
-
-    Vertex duplicate
-
-    Vertex existing
-
-    MultipleInputChannelException( String name, ChannelHandler channel, Vertex duplicate, Vertex existing) {
-        super()
-        this.name = name
-        this.channel = channel
-        this.duplicate = duplicate
-        this.existing = existing
+    MultipleInputChannelException( String name, Vertex duplicate, Vertex existing ) {
+        super(message(name,duplicate,existing))
     }
 
-    String getMessage() {
+    @PackageScope
+    static String message(String name, Vertex duplicate, Vertex existing) {
         if( !name ) {
             return 'Channels cannot be used as input in more than one process or operator'
         }
 
-        if( duplicate.type != DAG.Type.PROCESS ) {
+        if( !duplicate || duplicate.type != DAG.Type.PROCESS ) {
             return "Channel `$name` has been used as an input by more than a process or an operator"
         }
 
         String message = "Channel `$name` has been used twice as an input by process `${duplicate.label}`"
-        if( existing.type == DAG.Type.PROCESS )
-            message += " and process `${existing.label}`"
-        else
-            message += " and another operator"
+        if( existing != duplicate ) {
+            message += existing?.type == DAG.Type.PROCESS ? " and process `${existing.label}`" : " and another operator"
+        }
         return message
     }
 
