@@ -31,25 +31,28 @@ Quick start
 Nextflow does not require any installation procedure, just download the distribution package by copying and pasting
 this command in your terminal:
 
-    wget -qO- get.nextflow.io | bash
+```bash
+wget -qO- get.nextflow.io | bash
+```
 
 It creates the ``nextflow`` executable file in the current directory. You may want to move it to a folder accessible from your ``$PATH``.
 
 Create a file named `hello.nf` with the following content and copy it to the path where you downloaded the Nextflow package.
 
-    process sayHello {
-    
-        """
-        printf 'Hello world! \n'
-        """
-    }
+```groovy
+process sayHello {
 
-
+    """
+    printf 'Hello world! \n'
+    """
+}
+```
 
 Launch the above example by typing the following command on your terminal console:
 
-    ./nextflow run -process.echo true hello.nf
-
+```bash
+./nextflow run -process.echo true hello.nf
+```
 
 Congratulations! You have just run your first program with Nextflow.
 
@@ -61,38 +64,38 @@ Let's see a more real example: execute a BLAST search, get the top 10 hits, extr
 
 Copy the following example into a file named `pipeline.nf` .
 
+```groovy
+params.query = "$HOME/sample.fa"
+params.db = "$HOME/tools/blast-db/pdb/pdb"
 
-    params.query = "$HOME/sample.fa"
-    params.db = "$HOME/tools/blast-db/pdb/pdb"
+process blast {
+    output:
+     file top_hits
 
-    process blast {
-        output:
-         file top_hits
+    """
+    blastp -query ${params.query} -db ${params.db} -outfmt 6 \
+    | head -n 10 \
+    | cut -f 2 > top_hits
+    """
+}
 
-        """
-        blastp -query ${params.query} -db ${params.db} -outfmt 6 \
-        | head -n 10 \
-        | cut -f 2 > top_hits
-        """
-    }
+process extract {
+    input:
+     file top_hits
+    output:
+     file sequences
 
-    process extract {
-        input:
-         file top_hits
-        output:
-         file sequences
+    "blastdbcmd -db ${params.db} -entry_batch $top_hits > sequences"
+}
 
-        "blastdbcmd -db ${params.db} -entry_batch $top_hits > sequences"
-    }
+process align {
+    input:
+     file sequences
+    echo true
 
-    process align {
-        input:
-         file sequences
-        echo true
-
-        "t_coffee $sequences 2>&- | tee align_result"
-    }
-
+    "t_coffee $sequences 2>&- | tee align_result"
+}
+```
 
 The `input` and `output` declarations in each process, define what it is expecting to receive as input and what file(s)
 are going to be produced as output.
@@ -101,7 +104,9 @@ Since the two variables `query` and `db` are prefixed by the `params` qualifier,
 when the script is launched, by simply adding them on the Nextflow command line and prefixing them with the `--` characters.
 For example:
 
-    $ ./nextflow run pipeline.nf --db=/path/to/blast/db --query=/path/to/query.fasta
+```bash
+./nextflow run pipeline.nf --db=/path/to/blast/db --query=/path/to/query.fasta
+```
 
 
 Mixing scripting languages
@@ -111,25 +116,26 @@ Processes in your pipeline can be written in any scripting language supported by
 other than Linux BASH (e.g. Perl, Python, Ruby, R, etc), simply start your process script with the corresponding
 <a href='http://en.wikipedia.org/wiki/Shebang_(Unix)' target='_bank'>shebang</a> declaration. For example:
 
-    process perlStuff {
+```groovy
+process perlStuff {
 
-        """
-        #!/usr/bin/env perl
+    """
+    #!/usr/bin/env perl
 
-        print 'Hi there!' . '\n';
-        """
-    }
+    print 'Hi there!' . '\n';
+    """
+}
 
-    process pyStuff {
-        """
-        #!/usr/bin/env python
+process pyStuff {
+    """
+    #!/usr/bin/env python
 
-        x = 'Hello'
-        y = 'world!'
-        print "%s - %s" % (x,y)
-        """
-    }
-
+    x = 'Hello'
+    y = 'world!'
+    print "%s - %s" % (x,y)
+    """
+}
+```
 
 Cluster Resource Managers support
 ---------------------------------
@@ -153,10 +159,12 @@ By default processes are parallelized by spanning multiple threads in the machin
 To submit the execution to a SGE cluster create a file named `nextflow.config`, in the directory
 where the pipeline is going to be launched, with the following content: 
 
-    process {
-      executor='sge'
-      queue='<your execution queue>'
-    }
+```groovy
+process {
+  executor='sge'
+  queue='<your execution queue>'
+}
+```
 
 In doing that, processes will be executed as SGE jobs by using the `qsub` command, and so your pipeline will behave like any 
 other SGE job script, with the benefit that *Nextflow* will automatically and transparently manage the processes 
@@ -175,14 +183,18 @@ and [Amazon S3](http://aws.amazon.com/s3/) storage.
 To run your pipeline script in the ClusterK cloud you will only need to add the following settings in the 
 `nextflow.config` configuration file: 
 
-    process {
-      executor = 'cirrus'
-      queue = '<ClusterK queue name>'
-    }
+```groovy
+process {
+  executor = 'cirrus'
+  queue = '<ClusterK queue name>'
+}
+```
 
 When launching the pipeline execution provide a S3 bucket as the pipeline working directory, for example: 
 
-    nextflow run my_script.nf -w s3://my_s3_bucket/work/path
+```bash
+nextflow run my_script.nf -w s3://my_s3_bucket/work/path
+```
 
 
 Required dependencies
@@ -202,7 +214,9 @@ the build process is based on the [Gradle](http://www.gradle.org/) build automat
 
 You can compile *Nextflow* by typing the following command in the project home directory on your computer:
 
-    $ make compile
+```bash
+make compile
+```
 
 The very first time you run it, it will automatically download all the libraries required by the build process. 
 It may take some minutes to complete.
@@ -211,11 +225,15 @@ When complete, execute the program by using the `launch.sh` script in the projec
 
 The self-contained runnable Nextflow packages can be created by using the following command:
 
-    $ make pack
+```bash
+make pack
+```
 
 In order to install the compiled packages use the following command: 
 
-    $ make install 
+```bash
+make install
+```
 
 Then you will be able to run nextflow using the `nextflow` launcher script in the project root folder. 
 
@@ -240,7 +258,9 @@ this is due to a bug affecting the following Java JDK:
 Upgrade to a newer JDK to avoid to this issue. Alternatively a possible workaround is to define the following variable
 in your environment:
 
-    _JAVA_OPTIONS='-Xverify:none'
+```bash
+_JAVA_OPTIONS='-Xverify:none'
+```
 
 Read more at these links:
 
