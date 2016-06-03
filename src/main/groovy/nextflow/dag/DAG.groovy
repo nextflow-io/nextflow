@@ -176,7 +176,7 @@ class DAG {
         // thus throws an exception
         else {
             final name = getChannelName(entering)
-            throw new MultipleInputChannelException(name, entering, vertex, edge.to)
+            throw new MultipleInputChannelException(name, vertex, edge.to)
         }
     }
 
@@ -194,7 +194,7 @@ class DAG {
         // thus throws an exception
         else {
             final name = getChannelName(leaving)
-            throw new MultipleOutputChannelException(name, leaving, vertex, edge.to)
+            throw new MultipleOutputChannelException(name, vertex, edge.from)
         }
 
     }

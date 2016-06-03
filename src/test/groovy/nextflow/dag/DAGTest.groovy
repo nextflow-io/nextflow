@@ -136,13 +136,15 @@ class DAGTest extends Specification {
         dag.addVertex( DAG.Type.PROCESS, 'Process 2', [ new DAG.ChannelHandler(channel: ch1) ], null )
 
         then:
-        thrown( MultipleInputChannelException )
+        def e1=thrown( MultipleInputChannelException )
+        e1.message == 'Channels cannot be used as input in more than one process or operator'
 
         when:
         dag.addVertex( DAG.Type.PROCESS, 'Process 3', null, [ new DAG.ChannelHandler(channel: ch2) ] )
         dag.addVertex( DAG.Type.PROCESS, 'Process 4', null, [ new DAG.ChannelHandler(channel: ch2) ] )
         then:
-        thrown( MultipleOutputChannelException )
+        def e2=thrown( MultipleOutputChannelException )
+        e2.message == 'Channels cannot be used as output in more than one process or operator'
 
     }
 
@@ -173,7 +175,8 @@ class DAGTest extends Specification {
         dag.addVertex( DAG.Type.PROCESS, 'Process 3', null, [ new DAG.ChannelHandler(channel: ch2) ] )
         dag.addVertex( DAG.Type.PROCESS, 'Process 4', null, [ new DAG.ChannelHandler(channel: ch2) ])
         then:
-        thrown(MultipleOutputChannelException)
+        def e=thrown(MultipleOutputChannelException)
+        e.message == 'Channels cannot be used as output in more than one process or operator'
 
     }
 
