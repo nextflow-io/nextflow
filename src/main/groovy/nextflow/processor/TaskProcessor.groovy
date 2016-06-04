@@ -489,7 +489,7 @@ abstract class TaskProcessor {
      *
      */
 
-    final protected boolean checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache, RunType runType ) {
+    final protected boolean checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache ) {
 
         int tries = 0
         while( true ) {
@@ -518,7 +518,7 @@ abstract class TaskProcessor {
                 continue
 
             // submit task for execution
-            submitTask( task, runType, hash, folder )
+            submitTask( task, hash, folder )
             return true
         }
 
@@ -674,15 +674,15 @@ abstract class TaskProcessor {
      */
     final protected boolean handleException( Throwable error, TaskRun task = null ) {
         log.trace "Handling error: $error -- task: $task"
-        def strategy = resumeOrDie(task, error)
+        def fault = resumeOrDie(task, error)
 
-        if (strategy instanceof TaskFault) {
-            session.abort(strategy)
+        if (fault instanceof TaskFault) {
+            session.fault(fault)
             // when a `TaskFault` is returned a `TERMINATE` is implicit, thus return `true`
             return true
         }
 
-        return strategy == ErrorStrategy.TERMINATE
+        return fault == ErrorStrategy.TERMINATE || fault == ErrorStrategy.FINISH
     }
 
     /**
@@ -697,16 +697,18 @@ abstract class TaskProcessor {
         if( log.isTraceEnabled() )
         log.trace "Handling unexpected condition for\n  task: $task\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
+        ErrorStrategy errorStrategy = null
         final message = []
         try {
-            // do not recoverable error, just trow it again
+            // -- do not recoverable error, just re-throw it
             if( error instanceof Error ) throw error
 
+            errorStrategy = task.config.getErrorStrategy()
             final int taskErrCount = task ? ++task.failCount : 0
             final int procErrCount = ++errorCount
 
-            // when is a task level error and the user has chosen to ignore error,
-            // just report and error message and DO NOT stop the execution
+            // -- when is a task level error and the user has chosen to ignore error,
+            //    just report and error message and DO NOT stop the execution
             if( task && error instanceof ProcessException ) {
                 // expose current task exist status
                 task.config.exitStatus = task.exitStatus
@@ -714,7 +716,8 @@ abstract class TaskProcessor {
                 task.config.retryCount = taskErrCount
 
                 // invoke `checkErrorStrategy` passing a copy of the task because the `attempt` attribute need to be modified
-                final strategy = checkErrorStrategy(task.clone(), error, taskErrCount, procErrCount)
+                final copy = task.clone()
+                final strategy = checkErrorStrategy(copy, error, taskErrCount, procErrCount)
                 if( strategy ) {
                     task.failed = true
                     return strategy
@@ -722,13 +725,13 @@ abstract class TaskProcessor {
 
             }
 
-            // mark the task as failed
+            // -- mark the task as failed
             if( task )
                 task.failed = true
 
-            // MAKE sure the error is showed only the very first time across all processes
+            // -- make sure the error is showed only the very first time across all processes
             if( errorShown.getAndSet(true) ) {
-                return ErrorStrategy.TERMINATE
+                return errorStrategy
             }
 
             message << "Error executing process > '${task?.name ?: name}'"
@@ -745,18 +748,20 @@ abstract class TaskProcessor {
                     message << formatErrorCause(error)
             }
             log.error message.join('\n'), error
+
         }
         catch( Throwable e ) {
             // no recoverable error
             log.error("Execution aborted due to an unexpected error", e )
         }
 
-        return new TaskFault(error: error, task: task, report: message.join('\n'))
+        return new TaskFault(error: error, task: task, report: message.join('\n'), strategy: errorStrategy)
     }
 
     protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, int taskErrCount, int procErrCount ) {
         // increment the attempt number before evaluate
         // the `errorStrategy` property
+        task.runType = RunType.RETRY
         task.config.attempt = taskErrCount+1
         final taskStrategy = task.config.getErrorStrategy()
 
@@ -779,7 +784,7 @@ abstract class TaskProcessor {
             if( (procErrCount < maxErrors || maxErrors == -1) && taskErrCount <= maxRetries ) {
                 session.getExecService().submit({
                     try {
-                        checkCachedOrLaunchTask( task, task.hash, false, RunType.RETRY )
+                        checkCachedOrLaunchTask( task, task.hash, false )
                     }
                     catch( Throwable e ) {
                         log.error "Unable to re-submit task `${task.name}`"
@@ -1615,14 +1620,14 @@ abstract class TaskProcessor {
      * @param script The script string to be execute, e.g. a BASH script
      * @return {@code TaskDef}
      */
-    final protected void submitTask( TaskRun task, RunType runType, HashCode hash, Path folder ) {
+    final protected void submitTask( TaskRun task, HashCode hash, Path folder ) {
         if( log.isTraceEnabled() )
             log.trace "[${task.name}] actual run folder: ${task.workDir}"
 
         makeTaskContextStage3(task, hash, folder)
 
         // add the task to the collection of running tasks
-        session.dispatcher.submit(task, blocking, runType.message)
+        session.dispatcher.submit(task, blocking)
 
     }
 

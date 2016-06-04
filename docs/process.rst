@@ -1185,12 +1185,26 @@ For example::
 Without specifying ``echo true`` you won't see the ``Hello`` string printed out when executing the above example.
 
 
+.. _process-page-error-strategy:
+
 errorStrategy
 -------------
 
 The ``errorStrategy`` directive allows you to define how an error condition is managed by the process. By default when
 an error status is returned by the executed script, the process stops immediately. This in turn forces the entire pipeline
 to terminate.
+
+Table of available error strategies:
+
+============== ==================
+Name            Executor
+============== ==================
+``terminate``   Terminates the execution as soon as an error condition is reported. Pending jobs are killed (default)
+``finish``      Initiates an orderly pipeline shutdown when an error condition is raised, waiting the completion of any submitted job.
+``ignore``      Ignores processes execution errors.
+``retry``       Re-submit for execution a process returning an error condition.
+============== ==================
+
 
 When setting the ``errorStrategy`` directive to ``ignore`` the process doesn't stop on an error condition,
 it just reports a message notifying you of the error event.
@@ -1207,7 +1221,7 @@ For example::
 .. tip:: By definition a command script fails when it ends with a non-zero exit status. To change this behavior
   see `validExitStatus`_.
 
-Alternatively, you can specify the ``retry`` `error strategy`, which allows you to re-submit for execution a process
+The ``retry`` `error strategy`, allows you to re-submit for execution a process
 returning an error condition. For example::
 
     process retryIfFail {
@@ -1219,6 +1233,8 @@ returning an error condition. For example::
 
 
 The number of times a failing process is re-executed is defined by the `maxRetries`_ and `maxErrors`_ directives.
+
+
 
 executor
 --------

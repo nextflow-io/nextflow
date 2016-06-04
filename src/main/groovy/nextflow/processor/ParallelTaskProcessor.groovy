@@ -214,7 +214,7 @@ class ParallelTaskProcessor extends TaskProcessor {
             return
 
         def hash = createTaskHashKey(task)
-        checkCachedOrLaunchTask(task, hash, resumable, TaskProcessor.RunType.SUBMIT)
+        checkCachedOrLaunchTask(task, hash, resumable)
     }
 
 
@@ -285,6 +285,7 @@ class ParallelTaskProcessor extends TaskProcessor {
          * @return
          */
         public boolean onException(final DataflowProcessor processor, final Throwable error) {
+            // return `true` to terminate the dataflow processor
             handleException( error, currentTask.get() )
         }
 

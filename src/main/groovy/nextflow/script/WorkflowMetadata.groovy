@@ -141,7 +141,9 @@ class WorkflowMetadata {
 
     final private ScriptRunner owner
 
-    final private List<Closure> events = []
+    final private List<Closure> onCompleteActions = []
+
+    final private List<Closure> onErrorActions = []
 
     /**
      * Initialise the available workflow properties
@@ -167,12 +169,13 @@ class WorkflowMetadata {
         // check if there's a onComplete action in the config file
         registerConfigAction(owner.session.config.workflow as Map)
         owner.session.onShutdown { invokeOnComplete() }
+        owner.session.onError( this.&invokeOnError )
     }
 
     /**
      * Implements the following idiom in the pipeline script:
      * <pre>
-     *     window.onComplete {
+     *     workflow.onComplete {
      *         // do something
      *     }
      * </pre>
@@ -185,13 +188,13 @@ class WorkflowMetadata {
         clone.delegate = owner.session.binding.variables
         clone.resolveStrategy = Closure.DELEGATE_ONLY
 
-        events.add(clone)
+        onCompleteActions.add(clone)
     }
 
     /**
      * Implements the following idiom in the pipeline script:
      * <pre>
-     *     window.onComplete = {
+     *     workflow.onComplete = {
      *         // do something
      *     }
      * </pre>
@@ -199,7 +202,40 @@ class WorkflowMetadata {
      * @param action The action handler
      */
     void setOnComplete( Closure action ) {
-        events << action
+        onCompleteActions << action
+    }
+
+    /**
+     * Implements the following idiom in the pipeline script:
+     * <pre>
+     *     workflow.onError {
+     *         // do something
+     *     }
+     * </pre>
+     * @param action
+     */
+    void onError( Closure action ) {
+
+        final clone = (Closure)action.clone()
+        clone.delegate = owner.session.binding.variables
+        clone.resolveStrategy = Closure.DELEGATE_ONLY
+
+        onErrorActions.add(clone)
+    }
+
+
+    /**
+     * Implements the following idiom in the pipeline script:
+     * <pre>
+     *     workflow.onError = {
+     *         // do something
+     *     }
+     * </pre>
+     *
+     * @param action The action handler
+     */
+    void setOnError( Closure action ) {
+        onErrorActions << action
     }
 
     /**
@@ -209,20 +245,17 @@ class WorkflowMetadata {
      */
     private void registerConfigAction( Map workflowConfig ) {
         if( !workflowConfig ) return
+        // -- register `onComplete`
         if( workflowConfig.onComplete instanceof Closure ) {
             onComplete( (Closure)workflowConfig.onComplete )
         }
+        // -- register `onError`
+        if( workflowConfig.onError instanceof Closure ) {
+            onError( (Closure)workflowConfig.onError )
+        }
     }
 
-    /**
-     * Invoke the execution of the `onComplete` event handler(s)
-     */
-    @PackageScope
-    void invokeOnComplete() {
-        this.complete = new Date()
-        this.duration = Duration.of( complete.time - start.time )
-        this.success = !owner.session.aborted
-
+    private void setErrorAttributes() {
         if( owner.session.fault ) {
             errorReport = owner.session.fault.report
             def task = owner.session.fault.task
@@ -236,13 +269,38 @@ class WorkflowMetadata {
         else {
             exitStatus = 0
         }
+    }
 
-        events.each { Closure action ->
+    /**
+     * Invoke the execution of the `onComplete` event handler(s)
+     */
+    @PackageScope
+    void invokeOnComplete() {
+        this.complete = new Date()
+        this.duration = Duration.of( complete.time - start.time )
+        this.success = !(owner.session.aborted || owner.session.cancelled)
+
+        setErrorAttributes()
+
+        onCompleteActions.each { Closure action ->
             try {
                 action.call()
             }
             catch (Exception e) {
                 log.error("Failed to invoke `workflow.onComplete` event handler", e)
+            }
+        }
+    }
+
+    void invokeOnError(trace) {
+        this.success = false
+        setErrorAttributes()
+        onErrorActions.each { Closure action ->
+            try {
+                action.call(trace)
+            }
+            catch (Exception e) {
+                log.error("Failed to invoke `workflow.onError` event handler", e)
             }
         }
     }
