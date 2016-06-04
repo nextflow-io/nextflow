@@ -131,7 +131,7 @@ class TaskDispatcher {
      *
      * @param task A {@code TaskRun} instance
      */
-    void submit( TaskRun task, boolean awaitTermination, String submitMessage ) {
+    void submit( TaskRun task, boolean awaitTermination ) {
         log.trace "Scheduling process: ${task}"
 
         if( session.isTerminated() ) {
@@ -152,7 +152,6 @@ class TaskDispatcher {
          * there's not space *put* operation will block until, some other tasks finish
          */
         monitor.schedule(handler)
-        log.info "[${task.hashLog}] $submitMessage > ${task.name}"
         if( handler && handler.latch ) {
             log.trace "Process ${task} > blocking"
             handler.latch.await()

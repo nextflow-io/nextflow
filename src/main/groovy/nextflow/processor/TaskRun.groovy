@@ -299,6 +299,8 @@ class TaskRun implements Cloneable {
 
     def TaskContext context
 
+    TaskProcessor.RunType runType = TaskProcessor.RunType.SUBMIT
+
     TaskRun clone() {
         final taskClone = (TaskRun)super.clone()
         taskClone.context = context.clone()

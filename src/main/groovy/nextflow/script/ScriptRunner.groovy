@@ -162,7 +162,7 @@ class ScriptRunner {
             throw e
         }
 
-        if( session.aborted ) {
+        if( session.aborted || session.cancelled ) {
             throw new AbortRunException()
         }
 

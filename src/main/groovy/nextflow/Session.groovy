@@ -37,6 +37,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.dag.DAG
+import nextflow.processor.ErrorStrategy
 import nextflow.trace.GraphObserver
 import nextflow.exception.MissingLibraryException
 import nextflow.processor.TaskDispatcher
@@ -122,6 +123,8 @@ class Session implements ISession {
 
     private Barrier monitorsBarrier = new Barrier()
 
+    private volatile boolean cancelled
+
     private volatile boolean aborted
 
     private volatile boolean terminated
@@ -139,6 +142,8 @@ class Session implements ISession {
     private int poolSize
 
     private Queue<TraceObserver> observers
+
+    private Closure errorAction
 
     private boolean statsEnabled
 
@@ -463,22 +468,53 @@ class Session implements ISession {
 
     }
 
-    void abort(TaskFault fault) {
-        if( aborted ) return
+    /**
+     * Halt the pipeline execution choosing exiting immediately or completing current
+     * pending task depending the chosen {@link ErrorStrategy}
+     *
+     * @param fault A {@link TaskFault} instance representing the error that caused the pipeline to stop
+     */
+    void fault(TaskFault fault, TaskHandler handler=null) {
+        if( this.fault ) { return }
         this.fault = fault
-        abort(fault.error)
+
+        if( fault.strategy == ErrorStrategy.FINISH ) {
+            cancel(handler)
+        }
+        else {
+            abort(fault.error)
+        }
     }
 
+    /**
+     * Cancel the pipeline execution waiting for the current running tasks to complete
+     */
+    @PackageScope
+    void cancel(TaskHandler handler) {
+        log.info "Execution cancelled -- Finishing pending tasks before exit"
+        cancelled = true
+        notifyError(handler)
+        dispatcher.signal()
+        allProcessors *. terminate()
+    }
+
+    /**
+     * Terminate the pipeline execution killing all running tasks
+     *
+     * @param cause A {@link Throwable} instance representing the execution that caused the pipeline execution to abort
+     */
     void abort(Throwable cause = null) {
         if( aborted ) return
         log.debug "Session aborted -- Cause: ${cause}"
         aborted = true
+        notifyError(null)
         dispatcher.signal()
         processesBarrier.forceTermination()
         monitorsBarrier.forceTermination()
         allProcessors *. terminate()
     }
 
+    @PackageScope
     void forceTermination() {
         terminated = true
         processesBarrier.forceTermination()
@@ -492,6 +528,8 @@ class Session implements ISession {
     boolean isTerminated() { terminated }
 
     boolean isAborted() { aborted }
+
+    boolean isCancelled() { cancelled }
 
     void processRegister(TaskProcessor process) {
         log.debug ">>> barrier register (process: ${process.name})"
@@ -520,7 +558,12 @@ class Session implements ISession {
 
     void notifyProcessCreate(TaskProcessor process) {
         for( TraceObserver it : observers ) {
-            it.onProcessCreate(process)
+            try {
+                it.onProcessCreate(process)
+            }
+            catch( Exception e ) {
+                log.debug(e.getMessage(), e)
+            }
         }
     }
 
@@ -529,12 +572,14 @@ class Session implements ISession {
      * Notifies that a task has been submitted
      */
     void notifyTaskSubmit( TaskHandler handler ) {
+        final task = handler.task
+        log.info "[${task.hashLog}] ${task.runType.message} > ${task.name}"
         for( TraceObserver it : observers ) {
             try {
                 it.onProcessSubmit(handler)
             }
             catch( Exception e ) {
-                log.error(e.getMessage(), e)
+                log.debug(e.getMessage(), e)
             }
         }
     }
@@ -548,7 +593,7 @@ class Session implements ISession {
                 it.onProcessStart(handler)
             }
             catch( Exception e ) {
-                log.error(e.getMessage(), e)
+                log.debug(e.getMessage(), e)
             }
         }
     }
@@ -565,10 +610,35 @@ class Session implements ISession {
                 it.onProcessComplete(handler)
             }
             catch( Exception e ) {
-                log.error(e.getMessage(), e)
+                log.debug(e.getMessage(), e)
             }
         }
     }
+
+
+    /**
+     * Notify a task failure
+     *
+     * @param handler
+     * @param e
+     */
+    void notifyError( TaskHandler handler ) {
+        try {
+            errorAction.call( handler?.getTraceRecord() )
+        }
+        catch( Throwable e ) {
+            log.debug(e.getMessage(), e)
+        }
+    }
+
+    /**
+     * Define the error event handler
+     * @param action
+     */
+    void onError( Closure action ) {
+        errorAction = action
+    }
+
 
     @Memoized
     public getExecConfigProp( String execName, String name, Object defValue, Map env = null  ) {

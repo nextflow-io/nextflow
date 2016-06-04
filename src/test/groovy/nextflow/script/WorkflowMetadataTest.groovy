@@ -124,7 +124,7 @@ class WorkflowMetadataTest extends Specification {
     }
 
 
-    def 'should access workflow an script variables' () {
+    def 'should access workflow script variables onComplete' () {
 
         given:
         def dir = Files.createTempDirectory('test')
@@ -167,6 +167,58 @@ class WorkflowMetadataTest extends Specification {
         result3 == 1
         result4 == null
         result5 == null
+
+        cleanup:
+        dir?.deleteDir()
+
+    }
+
+    def 'should access workflow script variables onError' () {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+        dir.resolve('main.nf').text = "println 'Hello world'"
+        def script = new ScriptFile(dir.resolve('main.nf').toFile())
+
+        def session = new Session()
+
+        def runner = Mock(ScriptRunner)
+        runner.getScriptFile() >> script
+        runner.fetchContainers() >> 'busybox/latest'
+        runner.commandLine >> 'nextflow run -this -that'
+        runner.session >> session
+
+        when:
+        def metadata = new WorkflowMetadata(runner)
+        session.binding.setVariable('value_a', 1)
+        session.binding.setVariable('value_b', 2)
+        session.binding.setVariable('workflow', metadata)
+
+        def result1
+        def result2
+        def result3
+        def result4
+        def result5
+        def result6
+
+        def handler = {
+            result1 = workflow.commandLine   // workflow property
+            result2 = workflow      // workflow object itself
+            result3 = value_a       // variable in the session binding
+            result4 = events        // workflow private field, should not be accessed
+            result5 = xyz           // unknown field, should return null
+            result6 = workflow.success
+        }
+        metadata.onError(handler)
+        metadata.invokeOnError()
+
+        then:
+        result1 == metadata.commandLine
+        result2 == metadata
+        result3 == 1
+        result4 == null
+        result5 == null
+        result6 == false
 
         cleanup:
         dir?.deleteDir()

@@ -32,4 +32,5 @@ class TaskFault {
     Throwable error
     String report
     TaskRun task
+    ErrorStrategy strategy
 }
