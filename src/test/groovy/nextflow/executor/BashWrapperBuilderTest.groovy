@@ -156,7 +156,9 @@ class BashWrapperBuilderTest extends Specification {
 
                 function nxf_mktemp() {
                     local base=\${1:-/tmp}
-                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
+                    if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                    else TMPDIR="\$base"; mktemp -d -t nxf.XXXXXXXXXX
+                    fi
                 }
 
                 on_exit() {
@@ -260,7 +262,9 @@ class BashWrapperBuilderTest extends Specification {
 
                 function nxf_mktemp() {
                     local base=\${1:-/tmp}
-                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
+                    if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                    else TMPDIR="\$base"; mktemp -d -t nxf.XXXXXXXXXX
+                    fi
                 }
 
                 on_exit() {
@@ -460,7 +464,9 @@ class BashWrapperBuilderTest extends Specification {
 
                 function nxf_mktemp() {
                     local base=\${1:-/tmp}
-                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
+                    if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                    else TMPDIR="\$base"; mktemp -d -t nxf.XXXXXXXXXX
+                    fi
                 }
 
                 on_exit() {
@@ -581,7 +587,9 @@ class BashWrapperBuilderTest extends Specification {
 
                 function nxf_mktemp() {
                     local base=\${1:-/tmp}
-                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
+                    if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                    else TMPDIR="\$base"; mktemp -d -t nxf.XXXXXXXXXX
+                    fi
                 }
 
                 on_exit() {
@@ -785,7 +793,9 @@ class BashWrapperBuilderTest extends Specification {
 
                 function nxf_mktemp() {
                     local base=\${1:-/tmp}
-                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
+                    if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                    else TMPDIR="\$base"; mktemp -d -t nxf.XXXXXXXXXX
+                    fi
                 }
 
                 on_exit() {
@@ -890,7 +900,9 @@ class BashWrapperBuilderTest extends Specification {
 
                 function nxf_mktemp() {
                     local base=\${1:-/tmp}
-                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
+                    if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                    else TMPDIR="\$base"; mktemp -d -t nxf.XXXXXXXXXX
+                    fi
                 }
 
                 on_exit() {
@@ -998,7 +1010,9 @@ class BashWrapperBuilderTest extends Specification {
 
                 function nxf_mktemp() {
                     local base=\${1:-/tmp}
-                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
+                    if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                    else TMPDIR="\$base"; mktemp -d -t nxf.XXXXXXXXXX
+                    fi
                 }
 
                 on_exit() {
@@ -1102,7 +1116,9 @@ class BashWrapperBuilderTest extends Specification {
 
                 function nxf_mktemp() {
                     local base=\${1:-/tmp}
-                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
+                    if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                    else TMPDIR="\$base"; mktemp -d -t nxf.XXXXXXXXXX
+                    fi
                 }
 
                 on_exit() {
@@ -1210,7 +1226,9 @@ class BashWrapperBuilderTest extends Specification {
 
                 function nxf_mktemp() {
                     local base=\${1:-/tmp}
-                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
+                    if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                    else TMPDIR="\$base"; mktemp -d -t nxf.XXXXXXXXXX
+                    fi
                 }
 
                 on_exit() {
@@ -1347,7 +1365,9 @@ class BashWrapperBuilderTest extends Specification {
 
                 function nxf_mktemp() {
                     local base=\${1:-/tmp}
-                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
+                    if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                    else TMPDIR="\$base"; mktemp -d -t nxf.XXXXXXXXXX
+                    fi
                 }
 
                 on_exit() {
@@ -1449,7 +1469,9 @@ class BashWrapperBuilderTest extends Specification {
 
                     function nxf_mktemp() {
                         local base=\${1:-/tmp}
-                        [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
+                        if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                        else TMPDIR="\$base"; mktemp -d -t nxf.XXXXXXXXXX
+                        fi
                     }
 
                     on_exit() {
@@ -1498,7 +1520,9 @@ class BashWrapperBuilderTest extends Specification {
 
                     function nxf_mktemp() {
                         local base=\${1:-/tmp}
-                        [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
+                        if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                        else TMPDIR="\$base"; mktemp -d -t nxf.XXXXXXXXXX
+                        fi
                     }
 
                     on_exit() {
@@ -1652,7 +1676,9 @@ class BashWrapperBuilderTest extends Specification {
 
                 function nxf_mktemp() {
                     local base=\${1:-/tmp}
-                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
+                    if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                    else TMPDIR="\$base"; mktemp -d -t nxf.XXXXXXXXXX
+                    fi
                 }
 
                 on_exit() {
