@@ -223,7 +223,8 @@ class LocalTaskHandler extends TaskHandler {
     @Override
     void kill() {
         log.trace("Killing process with pid: ${process.pid}")
-        new ProcessBuilder('kill', process.pid.toString()).redirectErrorStream(true).start()
+        def pid = process.pid.toString()
+        new ProcessBuilder('bash', '-c', "kill -TERM \$(ps -e -o ppid= -o pid= | sed -n 's/^\\s*$pid //p')" ).redirectErrorStream(true).start()
     }
 
     /**
