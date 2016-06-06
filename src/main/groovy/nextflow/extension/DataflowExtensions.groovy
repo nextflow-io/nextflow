@@ -346,23 +346,7 @@ class DataflowExtensions {
         assert source != null
         assert closure
 
-        final stopOnFirst = source instanceof DataflowExpression
-        DataflowReadChannel<V> target = newChannelBy(source);
-        newOperator(source, target) { it ->
-
-            def result = closure.call(it)
-            def proc = ((DataflowProcessor) getDelegate())
-
-            // bind the result value
-            if (result != Channel.VOID)
-                proc.bindOutput(result)
-
-            // when the `map` operator is applied to a dataflow flow variable
-            // terminate the processor after the first emission -- Issue #44
-            if( result == Channel.STOP || stopOnFirst )
-                proc.terminate()
-
-        }
+        def target = new MapOp(source, closure).apply()
 
         session.dag.addOperatorNode('map', source, target)
         return target;

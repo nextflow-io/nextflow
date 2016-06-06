@@ -41,6 +41,8 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.ControlMessage
 import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.extension.GroupTupleOp
+import nextflow.extension.MapOp
 import nextflow.file.FileHelper
 import nextflow.util.Duration
 import org.codehaus.groovy.runtime.NullObject
@@ -75,7 +77,7 @@ class Channel  {
     static <T> DataflowChannel<T> empty() {
         def result = new DataflowQueue()
         result.bind(STOP)
-        session.dag.addSourceNode('empty', result)
+        session.dag.addSourceNode('Channel.empty', result)
         return result
     }
 
@@ -87,7 +89,7 @@ class Channel  {
      */
     static DataflowChannel from( Collection items ) {
         final result = Nextflow.channel(items)
-        session.dag.addSourceNode('from', result)
+        session.dag.addSourceNode('Channel.from', result)
         return result
     }
 
@@ -100,7 +102,7 @@ class Channel  {
 
     static DataflowChannel from( Object... items ) {
         final result = Nextflow.channel(items)
-        session.dag.addSourceNode('from', result)
+        session.dag.addSourceNode('Channel.from', result)
         return result
     }
 
@@ -134,7 +136,7 @@ class Channel  {
 
         final result = interval( duration, { index -> index })
 
-        session.dag.addSourceNode('interval', result)
+        session.dag.addSourceNode('Channel.interval', result)
         return result
     }
 
@@ -164,24 +166,35 @@ class Channel  {
 
         timer.schedule( task as TimerTask, millis )
 
-        session.dag.addSourceNode('interval', result)
+        session.dag.addSourceNode('Channel.interval', result)
         return result
     }
 
-    static DataflowChannel<Path> fromPath( Map options = null, filePattern ) {
+    static DataflowChannel<Path> fromPath( Map opts = null, filePattern ) {
+        assert filePattern
+        // verify that the 'type' parameter has a valid value
+        checkParams( 'path', opts, VALID_PATH_PARAMS )
+
+        def result = fromPath0(opts,filePattern)
+        session.dag.addSourceNode('Channel.fromPath', result)
+        return result
+    }
+
+    static private DataflowChannel<Path> fromPath0( Map options, filePattern ) {
         assert filePattern
 
         if( filePattern instanceof Pattern )
-            fromPath(options, filePattern)
+            return fromPathWithPattern(options, filePattern)
 
-        else if( filePattern instanceof Path )
-            fromPath(options, filePattern)
+        if( filePattern instanceof Path )
+            return fromPathWithMap(options, filePattern)
 
         else
-            fromPath(options, filePattern.toString() as Path)
+            return fromPathWithMap(options, filePattern.toString() as Path)
+
     }
 
-    static DataflowChannel<Path> fromPath( Map opts = null, Pattern filePattern ) {
+    static private DataflowChannel<Path> fromPathWithPattern( Map opts = null, Pattern filePattern ) {
         assert filePattern
 
         // split the folder and the pattern
@@ -191,22 +204,20 @@ class Channel  {
     }
 
 
-    static DataflowChannel<Path> fromPath( Map options = null, Path path ) {
+    static private DataflowChannel<Path> fromPathWithMap( Map opts = null, Path path ) {
         assert path
 
         final fs = path.getFileSystem()
         def filePattern = path.toString()
 
         if( !FileHelper.isGlobPattern(filePattern)) {
-            return from( path.complete() )
+            return Nextflow.channel( path.complete() )
         }
 
         // split the folder and the pattern
         def ( String folder, String pattern ) = FileHelper.getFolderAndPattern(filePattern)
 
-        def result = pathImpl('glob', folder, pattern, options, fs)
-
-        session.dag.addSourceNode('fromPath', result)
+        def result = pathImpl('glob', folder, pattern, opts, fs)
         return result
     }
 
@@ -217,7 +228,8 @@ class Channel  {
             type:['file','dir','any'],
             followLinks: [false, true],
             hidden: [false, true],
-            maxDepth: Integer
+            maxDepth: Integer,
+            exists: [false, true]
             ]
 
     /**
@@ -232,9 +244,6 @@ class Channel  {
     static private DataflowChannel<Path> pathImpl( String syntax, String folder, String pattern, Map opts, FileSystem fs )  {
         assert syntax in ['regex','glob']
         log.debug "files for syntax: $syntax; folder: $folder; pattern: $pattern; options: ${opts}"
-
-        // verify that the 'type' parameter has a valid value
-        checkParams( 'path', opts, VALID_PATH_PARAMS )
 
         // now apply glob file search
         final path = fs.getPath(folder).complete()
@@ -354,7 +363,7 @@ class Channel  {
         def fs = FileHelper.fileSystemForScheme(scheme)
         def result = watchImpl( 'regex', folder, pattern, false, events, fs )
 
-        session.dag.addSourceNode('watchPath', result)
+        session.dag.addSourceNode('Channel.watchPath', result)
         return result
     }
 
@@ -379,7 +388,7 @@ class Channel  {
         def fs = FileHelper.fileSystemForScheme(scheme)
         def result = watchImpl('glob', folder, pattern, pattern.startsWith('*'), events, fs)
 
-        session.dag.addSourceNode('watchPath', result)
+        session.dag.addSourceNode('Channel.watchPath', result)
         return result
     }
 
@@ -388,7 +397,7 @@ class Channel  {
         def ( String folder, String pattern ) = FileHelper.getFolderAndPattern(path.toString())
         def result = watchImpl('glob', folder, pattern, pattern.startsWith('*'), events, fs)
 
-        session.dag.addSourceNode('watchPath', result)
+        session.dag.addSourceNode('Channel.watchPath', result)
         return result
     }
 
@@ -423,6 +432,105 @@ class Channel  {
 
         result as WatchEvent.Kind<Path>[]
 
+    }
+
+
+    static DataflowChannel fromFilePairs(Map options = null, filePattern) {
+        def closure = { Path path -> readPrefix(path,filePattern) }
+        fromFilePairs(options, filePattern, closure)
+    }
+
+    static DataflowChannel fromFilePairs(Map options = null, filePattern, Closure grouping) {
+        assert filePattern != null
+        assert grouping != null
+
+        // -- a channel from the path
+        def fromOpts = fetchParams(VALID_PATH_PARAMS, options)
+        def files = fromPath0(fromOpts,filePattern)
+
+        // -- map the files to a tuple like ( ID, filePath )
+        def mapper = { path ->
+            def prefix = grouping.call(path)
+            return [ prefix, path ]
+        }
+        def mapChannel = new MapOp(files, mapper).apply()
+
+        // -- result the files having the same ID
+        def size = (options?.size ?: 2)
+        def groupOpts = [sort: true, size: size]
+        def groupChannel = new GroupTupleOp(groupOpts, mapChannel).apply()
+
+        // -- flat the group resulting tuples
+        DataflowChannel result
+        if( options?.flat == true )  {
+            def makeFlat = {  id, List items ->
+                def tuple = new ArrayList(items.size()+1);
+                tuple.add(id)
+                tuple.addAll(items)
+                return tuple
+            }
+            result = new MapOp(groupChannel,makeFlat).apply()
+        }
+        else {
+            result = groupChannel
+        }
+
+        session.dag.addSourceNode('Channel.fromFilePairs', result)
+        return result
+    }
+
+    static private Map fetchParams( Map valid, Map actual ) {
+        if( actual==null ) return null
+        def result = [:]
+        def keys = valid.keySet()
+        keys.each {
+            if( actual.containsKey(it) ) result.put(it, actual.get(it))
+        }
+
+        return result
+    }
+
+    /*
+     * Helper function, given a file Path
+     * returns the file name region matching a specified glob pattern
+     * starting from the beginning of the name up to last matching group.
+     *
+     * For example:
+     *   readPrefix('/some/data/file_alpha_1.fa', 'file*_1.fa' )
+     *
+     * Returns:
+     *   'file_alpha'
+     */
+    @PackageScope
+    static String readPrefix( Path actual, template ) {
+
+        final fileName = actual.getFileName().toString()
+
+        def filePattern = template.toString()
+        int p = filePattern.lastIndexOf('/')
+        if( p != -1 ) filePattern = filePattern.substring(p+1)
+        if( !filePattern.contains('*') && !filePattern.contains('?') )
+            filePattern = '*' + filePattern
+
+        def regex = filePattern
+                .replace('.','\\.')
+                .replace('*','(.*)')
+                .replace('?','(.?)')
+                .replace('{','(?:')
+                .replace('}',')')
+                .replace(',','|')
+
+        def matcher = (fileName =~ /$regex/)
+        if( matcher.matches() ) {
+            def end = matcher.end(matcher.groupCount() )
+            def prefix = fileName.substring(0,end)
+            while(prefix.endsWith('-') || prefix.endsWith('_') || prefix.endsWith('.') )
+                prefix=prefix[0..-2]
+
+            return prefix
+        }
+
+        return null
     }
 
 }
