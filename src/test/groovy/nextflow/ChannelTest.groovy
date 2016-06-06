@@ -30,6 +30,7 @@ import java.nio.file.Paths
 import org.junit.Rule
 import spock.lang.Specification
 import test.TemporaryPath
+import test.TestHelper
 
 /**
  *
@@ -331,7 +332,7 @@ class ChannelTest extends Specification {
     def 'should group files with the same prefix' () {
 
         setup:
-        def folder = tempDir.root
+        def folder = TestHelper.createInMemTempDir()
         def a1 = Files.createFile(folder.resolve('alpha_1.fa'))
         def a2 = Files.createFile(folder.resolve('alpha_2.fa'))
         def b1 = Files.createFile(folder.resolve('beta_1.fa'))
@@ -340,7 +341,7 @@ class ChannelTest extends Specification {
         def d2 = Files.createFile(folder.resolve('delta_2.fa'))
 
         when:
-        def pairs = Channel.fromFilePairs("$folder/*_{1,2}.fa")
+        def pairs = Channel.fromFilePairs(folder.resolve("*_{1,2}.fa"))
         then:
         pairs.val == ['alpha', [a1, a2]]
         pairs.val == ['beta', [b1, b2]]
@@ -348,7 +349,7 @@ class ChannelTest extends Specification {
         pairs.val == Channel.STOP
 
         when:
-        pairs = Channel.fromFilePairs("$folder/*_{1,2}.fa" , flat: true)
+        pairs = Channel.fromFilePairs(folder.resolve("*_{1,2}.fa") , flat: true)
         then:
         pairs.val == ['alpha', a1, a2]
         pairs.val == ['beta', b1, b2]
@@ -359,7 +360,7 @@ class ChannelTest extends Specification {
     def 'should group files with the same prefix and setting size' () {
 
         setup:
-        def folder = tempDir.root
+        def folder = TestHelper.createInMemTempDir()
         def a1 = Files.createFile(folder.resolve('alpha_1.fa'))
         def a2 = Files.createFile(folder.resolve('alpha_2.fa'))
         def a3 = Files.createFile(folder.resolve('alpha_3.fa'))
@@ -374,7 +375,8 @@ class ChannelTest extends Specification {
         def d4 = Files.createFile(folder.resolve('delta_4.fa'))
 
         when:
-        def pairs = Channel.fromFilePairs("$folder/*_{1,2,3}.fa") // default size == 2
+        // default size == 2
+        def pairs = Channel.fromFilePairs(folder.resolve("*_{1,2,3}.fa"))
         then:
         pairs.val == ['alpha', [a1, a2]]
         pairs.val == ['beta', [b1, b2]]
@@ -382,7 +384,7 @@ class ChannelTest extends Specification {
         pairs.val == Channel.STOP
 
         when:
-        pairs = Channel.fromFilePairs("$folder/*_{1,2,3,4}.fa", size: 3)
+        pairs = Channel.fromFilePairs(folder.resolve("*_{1,2,3,4}.fa"), size: 3)
         then:
         pairs.val == ['alpha', [a1, a2, a3]]
         pairs.val == ['beta', [b1, b2, b3]]
@@ -390,13 +392,12 @@ class ChannelTest extends Specification {
         pairs.val == Channel.STOP
 
         when:
-        pairs = Channel.fromFilePairs("$folder/*_{1,2,3,4}.fa", size: -1)
+        pairs = Channel.fromFilePairs(folder.resolve("*_{1,2,3,4}.fa"), size: -1)
         then:
         pairs.val == ['alpha', [a1, a2, a3]]
         pairs.val == ['beta', [b1, b2, b3]]
         pairs.val == ['delta', [d1, d2, d3, d4]]
         pairs.val == Channel.STOP
-
 
     }
 
