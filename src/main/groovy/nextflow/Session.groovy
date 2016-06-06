@@ -623,6 +623,9 @@ class Session implements ISession {
      * @param e
      */
     void notifyError( TaskHandler handler ) {
+        if( !errorAction )
+            return
+
         try {
             errorAction.call( handler?.getTraceRecord() )
         }
