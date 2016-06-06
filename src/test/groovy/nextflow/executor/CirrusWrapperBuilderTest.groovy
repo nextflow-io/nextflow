@@ -107,8 +107,9 @@ class CirrusWrapperBuilderTest extends Specification {
                 on_exit() {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > .exitcode && es3 -q -v 0 --no-stats sync .exitcode s3:/${folder} || true
-                  rm -f "\$COUT" || true
-                  rm -f "\$CERR" || true
+                  set +u
+                  [[ "\$COUT" ]] && rm -f "\$COUT" || true
+                  [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   exit \$exit_status
                 }
 
