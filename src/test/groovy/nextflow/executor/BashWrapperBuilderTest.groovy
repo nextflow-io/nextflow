@@ -1581,11 +1581,12 @@ class BashWrapperBuilderTest extends Specification {
         folder.resolve('.command.env').text == '''
                     nxf_module_load(){
                       local mod=$1
-                      local ver=$2
-                      local new_module="$mod/$ver"
+                      local ver=${2:-}
+                      local new_module="$mod"; [[ $ver ]] && new_module+="/$ver"
+
                       if [[ ! $(module list 2>&1 | grep -o "$new_module") ]]; then
                         old_module=$(module list 2>&1 | grep -Eo "$mod\\/[^\\( \\n]+" || true)
-                        if [[ $old_module ]]; then
+                        if [[ $ver && $old_module ]]; then
                           module switch $old_module $new_module
                         else
                           module load $new_module
@@ -1602,17 +1603,18 @@ class BashWrapperBuilderTest extends Specification {
 
         when:
         folder = TestHelper.createInMemTempDir()
-        new BashWrapperBuilder([ workDir: folder, script: 'Hello world', moduleNames: ['ciao/1','mondo/2'] ] as TaskBean) .build()
+        new BashWrapperBuilder([ workDir: folder, script: 'Hello world', moduleNames: ['ciao/1','mondo/2', 'bioinfo-tools'] ] as TaskBean) .build()
 
         then:
         folder.resolve('.command.env').text == '''
                     nxf_module_load(){
                       local mod=$1
-                      local ver=$2
-                      local new_module="$mod/$ver"
+                      local ver=${2:-}
+                      local new_module="$mod"; [[ $ver ]] && new_module+="/$ver"
+
                       if [[ ! $(module list 2>&1 | grep -o "$new_module") ]]; then
                         old_module=$(module list 2>&1 | grep -Eo "$mod\\/[^\\( \\n]+" || true)
-                        if [[ $old_module ]]; then
+                        if [[ $ver && $old_module ]]; then
                           module switch $old_module $new_module
                         else
                           module load $new_module
@@ -1622,6 +1624,7 @@ class BashWrapperBuilderTest extends Specification {
 
                     nxf_module_load ciao 1
                     nxf_module_load mondo 2
+                    nxf_module_load bioinfo-tools
                     '''
                 .stripIndent().leftTrim()
 

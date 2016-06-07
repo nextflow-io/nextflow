@@ -204,11 +204,12 @@ class BashWrapperBuilder {
     static final String MODULE_LOAD = '''
         nxf_module_load(){
           local mod=$1
-          local ver=$2
-          local new_module="$mod/$ver"
+          local ver=${2:-}
+          local new_module="$mod"; [[ $ver ]] && new_module+="/$ver"
+
           if [[ ! $(module list 2>&1 | grep -o "$new_module") ]]; then
             old_module=$(module list 2>&1 | grep -Eo "$mod\\/[^\\( \\n]+" || true)
-            if [[ $old_module ]]; then
+            if [[ $ver && $old_module ]]; then
               module switch $old_module $new_module
             else
               module load $new_module
