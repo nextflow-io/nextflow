@@ -102,7 +102,7 @@ class IgFileSystem extends FileSystem {
 
     @Override
     Iterable<Path> getRootDirectories() {
-        ImmutableList.of( new IgPath(this, IgPath.PATH_SEPARATOR) )
+        ImmutableList.of((Path) new IgPath(this, IgPath.PATH_SEPARATOR) )
     }
 
     @Override

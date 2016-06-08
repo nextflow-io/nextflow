@@ -45,7 +45,7 @@ class StringSplitter extends AbstractTextSplitter {
      * accepted parameter names, the values the valid values for each of them.
      */
     @Override
-    protected Map<String,?> validOptions() {
+    protected Map<String,Object> validOptions() {
         def result = super.validOptions()
         result.ignoreNewLine = Boolean
         return result

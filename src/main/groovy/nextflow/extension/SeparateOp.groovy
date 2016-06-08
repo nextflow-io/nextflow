@@ -90,7 +90,7 @@ class SeparateOp {
         return result
     }
 
-    List<DataflowReadChannel> apply() {
+    List<DataflowQueue> apply() {
         if( !mapper )
             mapper = createDefaultMapper(outputs.size())
 
