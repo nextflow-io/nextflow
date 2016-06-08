@@ -296,7 +296,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      * @return A map representing the valid options for the splitter. The map keys define the
      * accepted parameter names, the values the valid values for each of them.
      */
-    protected Map<String,?> validOptions() {
+    protected Map<String,Object> validOptions() {
         [
                 each: Closure,
                 by: Integer,
