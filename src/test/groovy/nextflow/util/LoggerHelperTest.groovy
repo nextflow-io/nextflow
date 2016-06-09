@@ -51,4 +51,26 @@ class LoggerHelperTest extends Specification {
 
     }
 
+    def 'should format error message' () {
+
+        given:
+        def message =
+                """
+                startup failed:
+                _nf_script_c9a99616: 3: Unknown process block definition: `outpu` @ line 3, column 4.
+                stdout() into (A,B,C)
+                """
+                .stripIndent().leftTrim()
+
+
+        expect:
+        LoggerHelper.formatStartupErrorMessage(message) ==
+                """
+                Unknown process block definition: `outpu` @ line 3, column 4.
+                stdout() into (A,B,C)
+                """
+                .stripIndent().leftTrim()
+    }
+
+
 }

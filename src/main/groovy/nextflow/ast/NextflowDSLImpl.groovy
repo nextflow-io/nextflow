@@ -223,8 +223,14 @@ public class NextflowDSLImpl implements ASTTransformation {
                         break
 
                     default:
-                        fixLazyGString(stm)
+                        if(currentLabel) {
+                            def line = stm.getLineNumber()
+                            def coln = stm.getColumnNumber()
+                            unit.addError(new SyntaxException("Invalid process block definition -- Unknown keyword `$currentLabel`",line,coln))
+                            return
+                        }
 
+                        fixLazyGString(stm)
                 }
             }
 
