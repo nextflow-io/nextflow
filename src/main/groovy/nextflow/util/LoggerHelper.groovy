@@ -62,6 +62,8 @@ import org.slf4j.LoggerFactory
 @CompileStatic
 class LoggerHelper {
 
+    static private String STARTUP_ERROR = 'startup failed:\n'
+
     static private String logFileName
 
     private CliOptions opts
@@ -350,6 +352,9 @@ class LoggerHelper {
         else if( fail instanceof NoSuchFileException ) {
             buffer.append("No such file: ${normalize(fail.message)}")
         }
+        else if( message && message.startsWith(STARTUP_ERROR))  {
+            buffer.append(formatStartupErrorMessage(message))
+        }
         else if( message && !message.startsWith('@') ) {
             buffer.append(normalize(message))
         }
@@ -372,6 +377,11 @@ class LoggerHelper {
             buffer.append(CoreConstants.LINE_SEPARATOR)
         }
 
+    }
+
+    @PackageScope
+    static String formatStartupErrorMessage( String message ) {
+        message.replace(STARTUP_ERROR,'').replaceFirst(/^_nf_script_[a-z0-9]+: *[0-9]+: */,'')
     }
 
     static String getDetailMessage(Throwable error) {
