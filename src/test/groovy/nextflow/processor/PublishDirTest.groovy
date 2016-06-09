@@ -91,12 +91,18 @@ class PublishDirTest extends Specification {
         folder.resolve('work-dir/file3.fastq').text = 'ccc'
         folder.resolve('work-dir/file4.temp').text = 'zzz'
 
+        final workDir = folder.resolve('work-dir')
         final publishDir = folder.resolve('pub-dir')
+        final task = new TaskRun(workDir: workDir)
 
         when:
-        def workDir = folder.resolve('work-dir')
+        def outputs =  [
+                workDir.resolve('file1.txt'),
+                workDir.resolve('file2.bam'),
+                workDir.resolve('file3.fastq')
+        ]
         def publisher = new PublishDir(path: publishDir)
-        publisher.apply( [workDir.resolve('file1.txt'),workDir.resolve('file2.bam'),workDir.resolve('file3.fastq')] )
+        publisher.apply(outputs, task )
 
         then:
         publishDir.resolve('file1.txt').exists()
@@ -110,9 +116,14 @@ class PublishDirTest extends Specification {
 
 
         when:
+        outputs = [
+                workDir.resolve('file1.txt'),
+                workDir.resolve('file2.bam'),
+                workDir.resolve('file3.fastq')
+        ]
         publishDir.deleteDir()
         publisher = new PublishDir(path: publishDir, pattern: '*.bam')
-        publisher.apply( [workDir.resolve('file1.txt'),workDir.resolve('file2.bam'),workDir.resolve('file3.fastq')] )
+        publisher.apply( outputs, task )
 
         then:
         !publishDir.resolve('file1.txt').exists()
@@ -137,13 +148,23 @@ class PublishDirTest extends Specification {
         folder.resolve('work-dir/dir-x').mkdir()
         folder.resolve('work-dir/dir-x').resolve('file.1').text = 'xxx'
         folder.resolve('work-dir/dir-x').resolve('file.2').text = 'yyy'
+        folder.resolve('work-dir/dir-y').mkdir()
+        folder.resolve('work-dir/dir-y').resolve('file.3').text = '333'
+        folder.resolve('work-dir/dir-y').resolve('file.4').text = '444'
 
+        final workDir = folder.resolve('work-dir')
         final publishDir = folder.resolve('pub-dir')
+        final task = new TaskRun(workDir: workDir)
 
         when:
-        def workDir = folder.resolve('work-dir')
+        def outputs = [
+                workDir.resolve('file1.txt'),
+                workDir.resolve('file2.bam'),
+                workDir.resolve('dir-x'),
+                workDir.resolve('dir-y/file.3')
+        ]
         def publisher = new PublishDir(path: publishDir, mode: 'copy')
-        publisher.apply( [workDir.resolve('file1.txt'), workDir.resolve('file2.bam'), workDir.resolve('dir-x')] )
+        publisher.apply( outputs, task )
 
         PublishDir.executor.shutdown()
         PublishDir.executor.awaitTermination(5, TimeUnit.SECONDS)
@@ -154,9 +175,11 @@ class PublishDirTest extends Specification {
         publishDir.resolve('dir-x').isDirectory()
         publishDir.resolve('dir-x/file.1').text == 'xxx'
         publishDir.resolve('dir-x/file.2').text == 'yyy'
+        publishDir.resolve('dir-y/file.3').text == '333'
 
         !publishDir.resolve('file3.fastq').exists()
         !publishDir.resolve('file3.temp').exists()
+        !publishDir.resolve('dir-y/file.4').exists()
 
         !publishDir.resolve('file1.txt').isLink()
         !publishDir.resolve('file2.bam').isLink()
@@ -165,6 +188,51 @@ class PublishDirTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+
+    }
+
+    def 'should apply saveAs closure' () {
+
+        given:
+        def folder = Files.createTempDirectory('nxf')
+        folder.resolve('work-dir').mkdir()
+        folder.resolve('pub-dir1').mkdir()
+        folder.resolve('pub-dir2').mkdir()
+        folder.resolve('work-dir/file1.txt').text = 'aaa'
+        folder.resolve('work-dir/file2.bam').text = 'bbb'
+        folder.resolve('work-dir/file3.fastq').text = 'ccc'
+        folder.resolve('work-dir/file4.temp').text = 'zzz'
+
+        final workDir = folder.resolve('work-dir')
+        final target1 = folder.resolve('pub-dir1')
+        final target2 = folder.resolve('pub-dir2')
+        final task = new TaskRun(workDir: workDir)
+
+        when:
+        def outputs = [
+                workDir.resolve('file1.txt'),
+                workDir.resolve('file2.bam'),
+                workDir.resolve('file3.fastq'),
+                workDir.resolve('file4.temp')
+        ]
+        def rule = { String it ->
+            if( it == 'file1.txt' ) return 'file_one.txt'
+            if( it !='file4.temp' ) return target2.resolve(it)
+            return null
+        }
+        def publisher = new PublishDir(path: target1, saveAs: rule )
+        publisher.apply( outputs, task )
+
+        then:
+        target1.resolve('file_one.txt').text == 'aaa'
+        target2.resolve('file2.bam').text == 'bbb'
+        target2.resolve('file3.fastq').text == 'ccc'
+        !target1.resolve('file4.temp').exists()
+        !target2.resolve('file4.temp').exists()
+        workDir.resolve('file4.temp').exists()
+
+        cleanup:
+        folder.deleteDir()
 
     }
 

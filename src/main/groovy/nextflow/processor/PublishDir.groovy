@@ -21,12 +21,9 @@
 package nextflow.processor
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
-import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.PathMatcher
-import java.nio.file.SimpleFileVisitor
-import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
@@ -54,6 +51,8 @@ class PublishDir {
 
     enum Mode { SYMLINK, LINK, COPY, MOVE }
 
+    private Map<Path,Boolean> makeCache = new HashMap<>()
+
     /**
      * The target path where create the links or copy the output files
      */
@@ -74,11 +73,18 @@ class PublishDir {
      */
     String pattern
 
+    /**
+     * SaveAs closure. Allows the dynamically definition of published file names
+     */
+    Closure saveAs
+
     private PathMatcher matcher
 
     private FileSystem sourceFileSystem
 
     private TaskProcessor processor
+
+    private Path sourceDir
 
     private static ExecutorService executor
 
@@ -150,9 +156,8 @@ class PublishDir {
         assert map
 
         def result = new PublishDir()
-        if( map.path ) {
+        if( map.path )
             result.path = map.path
-        }
 
         if( map.mode )
             result.mode = map.mode
@@ -163,6 +168,9 @@ class PublishDir {
         if( map.overwrite != null )
             result.overwrite = map.overwrite
 
+        if( map.saveAs )
+            result.saveAs = map.saveAs
+
         return result
     }
 
@@ -172,14 +180,15 @@ class PublishDir {
      * @param task The task whose output need to be published
      */
     @CompileStatic
-    void apply( List<Path> files, TaskProcessor processor = null ) {
+    void apply( List<Path> files, TaskRun task ) {
 
         if( !files ) {
             return
         }
 
-        this.processor = processor
-        this.sourceFileSystem = files[0].fileSystem
+        this.processor = task.processor
+        this.sourceDir = task.workDir
+        this.sourceFileSystem = sourceDir.fileSystem
 
         createPublishDir()
 
@@ -212,13 +221,18 @@ class PublishDir {
     @CompileStatic
     protected void apply( Path source, boolean inProcess ) {
 
-        final name = source.getFileName()
-        if( matcher && !matcher.matches(name) ) {
+        def target = sourceDir.relativize(source)
+        if( matcher && !matcher.matches(target) ) {
             // skip not matching file
             return
         }
 
-        final destination = path.resolve(name.toString())
+        if( saveAs && !(target=saveAs.call(target.toString()))) {
+            // skip this file
+            return
+        }
+
+        final destination = resolveDestination(target)
         if( inProcess ) {
             processFile(source, destination)
         }
@@ -226,6 +240,25 @@ class PublishDir {
             executor.submit({ safeProcessFile(source, destination) } as Runnable)
         }
 
+    }
+
+    @CompileStatic
+    protected Path resolveDestination(target) {
+
+        if( target instanceof Path ) {
+            if( target.isAbsolute() ) {
+                return (Path)target
+            }
+            // note: convert to a string to avoid `ProviderMismatchException` when the
+            // destination `path` is not a unix file system
+            return path.resolve(target.toString())
+        }
+
+        if( target instanceof CharSequence ) {
+            return path.resolve(target.toString())
+        }
+
+        throw new IllegalArgumentException("Not a valid publish target path: `$target` [${target?.class?.name}]")
     }
 
     @CompileStatic
@@ -247,6 +280,9 @@ class PublishDir {
     @CompileStatic
     protected void processFile( Path source, Path destination ) {
 
+        // create target dirs if required
+        makeDirs(destination.parent)
+
         try {
             processFileImpl(source, destination)
         }
@@ -261,6 +297,9 @@ class PublishDir {
 
     @CompileStatic
     protected void processFileImpl( Path source, Path destination ) {
+        if( log.isTraceEnabled())
+            log.trace "publishing file: $source -[$mode]-> $destination"
+
         if( !mode || mode == Mode.SYMLINK ) {
             Files.createSymbolicLink(destination, source)
         }
@@ -280,11 +319,22 @@ class PublishDir {
 
     @CompileStatic
     private void createPublishDir() {
+        makeDirs(this.path)
+    }
+
+    @CompileStatic
+    private void makeDirs(Path dir) {
+        if( !dir || makeCache.containsKey(dir) )
+            return
+
         try {
-            Files.createDirectories(this.path)
+            Files.createDirectories(dir)
         }
         catch( FileAlreadyExistsException e ) {
             // ignore
+        }
+        finally {
+            makeCache.put(dir,true)
         }
     }
 

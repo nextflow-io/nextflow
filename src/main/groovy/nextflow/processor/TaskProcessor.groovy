@@ -951,7 +951,7 @@ abstract class TaskProcessor {
         }
 
 
-        publish.apply(files, task.processor)
+        publish.apply(files, task)
     }
 
 
