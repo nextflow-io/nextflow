@@ -1,6 +1,17 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.20.0 - 8 Jun 2016 
+- Added fromFilePairs channel factory method
+- Added `finish` error strategy #158
+- Added ability to change the name and the save path of published files #178
+- Added a syntax validation check for process blocks keywords #177
+- Fixed It's not possible to specify environment modules w/o a version number #174
+- Fixed Local process kill signal is not propagated to children processes #172
+- Fixed scratchDir is overwritten by TMPDIR #171
+- Removed deprecated `Channel.path` methods
+- Ignore missing COUT and CERR variables
+
 0.19.4 - 3 Jun 2016
 - Fixed Exception is thrown while reporting an invalid output declaration #170
 

@@ -1333,7 +1333,7 @@ only one retry is allowed, you can increase this value as shown below::
     launch different execution instances), while the ``maxRetries`` defines the maximum number of times the same process
     execution can be retried in case of an error.
 
-See also: `errorStrategy`_ `maxErrors`_.
+See also: `errorStrategy`_ and `maxErrors`_.
 
 
 module
@@ -1505,6 +1505,9 @@ overwrite       When ``true`` any existing file in the specified folder will be 
                 pipeline execution and ``false`` when pipeline execution is `resumed`).
 pattern         Specifies a `glob`_ file pattern that selects which files to publish from the overall set of output files.
 path            Specifies the directory where files need to be published. **Note**: the syntax ``publishDir '/some/dir'`` is a shortcut for ``publishDir path: '/some/dir'``.
+saveAs          A closure which, given the name of the file being published, returns the actual file name or a full path where the file is required to be stored.
+                This can be used to rename or change the destination directory of the published files dynamically by using
+                a custom strategy.
 =============== =================
 
 Table of publish modes:
