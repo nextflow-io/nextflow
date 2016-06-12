@@ -610,4 +610,26 @@ class ScriptRunnerTest extends Specification {
         new ConfigSlurper().parse(config).toMap()
     }
 
+
+    def 'should define directive with a negative value' () {
+
+        when:
+        def script = '''
+            X = 10
+            process taskHello {
+                maxRetries -1
+                maxErrors -X
+                ''
+            }
+            '''
+        def runner = new ScriptRunner([executor:'nope'])
+        runner.setScript(script).execute()
+        def processor = runner.scriptObj.taskProcessor
+
+        then:
+        processor.config.maxRetries == -1
+        processor.config.maxErrors == -10
+
+    }
+
 }

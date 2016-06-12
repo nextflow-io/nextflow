@@ -36,6 +36,7 @@ import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
+import org.codehaus.groovy.ast.expr.BinaryExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.ConstructorCallExpression
@@ -45,6 +46,7 @@ import org.codehaus.groovy.ast.expr.MapExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
 import org.codehaus.groovy.ast.expr.TupleExpression
+import org.codehaus.groovy.ast.expr.UnaryMinusExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
@@ -53,6 +55,7 @@ import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.syntax.SyntaxException
+import org.codehaus.groovy.syntax.Types
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
 /**
@@ -231,6 +234,7 @@ public class NextflowDSLImpl implements ASTTransformation {
                         }
 
                         fixLazyGString(stm)
+                        fixDirectiveWithNegativeValue(stm)  // Fixes #180
                 }
             }
 
@@ -387,6 +391,29 @@ public class NextflowDSLImpl implements ASTTransformation {
     protected void fixLazyGString( Statement stm ) {
         if( stm instanceof ExpressionStatement && stm.getExpression() instanceof MethodCallExpression ) {
             makeGStringLazyVisitor.visitExpressionStatement(stm)
+        }
+    }
+
+    protected void fixDirectiveWithNegativeValue( Statement stm ) {
+        if( stm instanceof ExpressionStatement && stm.getExpression() instanceof BinaryExpression ) {
+            def binary = (BinaryExpression)stm.getExpression()
+            if(!(binary.leftExpression instanceof VariableExpression))
+                return
+            if( binary.operation.type != Types.MINUS )
+                return
+
+            // -- transform the binary expression into a method call expression
+            //    where the left expression represents the method name to invoke
+            def methodName = ((VariableExpression)binary.leftExpression).name
+
+            // -- wrap the value into a minus operator
+            def value = (Expression)new UnaryMinusExpression( binary.rightExpression )
+            def args = new ArgumentListExpression( [value] )
+
+            // -- create the method call expression and replace it to the binary expression
+            def call = new MethodCallExpression(new VariableExpression('this'), methodName, args)
+            stm.setExpression(call)
+
         }
     }
 
