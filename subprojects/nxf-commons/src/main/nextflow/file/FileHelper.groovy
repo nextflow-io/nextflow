@@ -816,7 +816,7 @@ class FileHelper {
             pattern = filePattern
         }
 
-        return [ folder, pattern, scheme ]
+        return [ folder, pattern, scheme ] as List<String>
     }
 
 

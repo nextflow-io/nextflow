@@ -38,7 +38,7 @@ class IniFile {
 
     private Pattern fSection = Pattern.compile( "\\s*\\[([^]]*)\\]\\s*" );
     private Pattern fKeyValue = Pattern.compile( "\\s*([^=]*)=(.*)" );
-    private Map< String, Map< String, String >> fEntries = new HashMap<>();
+    private Map<String, Map<String, String>> fEntries = new HashMap<>();
 
     private Path fFile;
 
@@ -153,7 +153,7 @@ class IniFile {
 
     Map<String,String> section(String section) {
         def result = fEntries.get(section)
-        return result != null ? Collections.unmodifiableMap(result) : [:]
+        return result != null ? Collections.unmodifiableMap(result) : Collections.<String,String>emptyMap()
     }
 
     def propertyMissing(String name) {
