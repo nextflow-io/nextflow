@@ -182,7 +182,7 @@ class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSp
          */
         int busyCpus = 0
         int runningJobs = 0
-        ctx .activeJobs() .each { jobCtx ->
+        for( CollisionJobContext jobCtx : ctx .activeJobs() ) {
 
             if( jobCtx.job instanceof IgBaseTask ) {
                 // count the number of used cpus
@@ -205,7 +205,7 @@ class CustomStealingCollisionSpi extends IgniteSpiAdapter implements CollisionSp
         }
 
         // activate waiting jobs that match avail resources
-        ctx .waitingJobs() .each { jobCtx ->
+        for( CollisionJobContext jobCtx : ctx .waitingJobs() ) {
 
             if( jobCtx.job instanceof IgBaseTask ) {
                 activateTask(jobCtx, ctx)
