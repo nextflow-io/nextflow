@@ -22,11 +22,11 @@ class ShifterBuilder implements ContainerBuilder {
           local image=$1
           local STATUS=$(shifter_img lookup $image)
           if [[ $STATUS != READY && $STATUS != '' ]]; then
-           STATUS=$(shifter_img pull $image)
-           while [[ $STATUS != READY && $STATUS != FAILURE && $STATUS != '' ]]; do
-             sleep 5
-             STATUS=$(shifter_img pull $image)
-           done
+            STATUS=$(shifter_img pull $image)
+            while [[ $STATUS != READY && $STATUS != FAILURE && $STATUS != '' ]]; do
+              sleep 5
+              STATUS=$(shifter_img pull $image)
+            done
           fi
 
           [[ $STATUS == FAILURE || $STATUS == '' ]] && echo "Shifter failed to pull image \\`$image\\`" >&2  && exit 1
