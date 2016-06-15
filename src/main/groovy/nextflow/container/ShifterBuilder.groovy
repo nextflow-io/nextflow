@@ -1,5 +1,10 @@
 package nextflow.container
 
+import groovy.transform.PackageScope
+import nextflow.util.Escape
+
+import java.nio.file.Path
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -47,6 +52,10 @@ class ShifterBuilder implements ContainerBuilder {
     @Override
     String build(StringBuilder result) {
         assert image
+
+        for( def entry : env ) {
+            result << makeEnv(entry) << ' '
+        }
 
         result << 'shifter '
 
@@ -106,5 +115,38 @@ class ShifterBuilder implements ContainerBuilder {
         }
 
         return !imageName.startsWith("docker:") ? "docker:$imageName" : "$imageName:latest"
+    }
+
+    /**
+     * Get the env command line option for the give environment definition
+     *
+     * @param env
+     * @param result
+     * @return
+     */
+    @PackageScope
+    static CharSequence makeEnv( env, StringBuilder result = new StringBuilder() ) {
+        // append the environment configuration
+        if( env instanceof File ) {
+            env = env.toPath()
+        }
+        if( env instanceof Path ) {
+            result << 'BASH_ENV="' << Escape.path(env) << '"'
+        }
+        else if( env instanceof Map ) {
+            short index = 0
+            for( Map.Entry entry : env.entrySet() ) {
+                if( index++ ) result << ' '
+                result << ("${entry.key}=${entry.value}")
+            }
+        }
+        else if( env instanceof String && env.contains('=') ) {
+            result << env
+        }
+        else if( env ) {
+            throw new IllegalArgumentException("Not a valid Shifter environment value: $env [${env.class.name}]")
+        }
+
+        return result
     }
 }

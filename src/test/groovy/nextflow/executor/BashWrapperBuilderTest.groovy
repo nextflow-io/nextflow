@@ -1744,6 +1744,133 @@ class BashWrapperBuilderTest extends Specification {
 
     }
 
+    def 'test bash wrapper with shifter'() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        /*
+         * bash run through docker
+         */
+        when:
+        def bash = new BashWrapperBuilder([
+                name: 'Hello 1',
+                workDir: folder,
+                script: 'echo Hello world!',
+                containerImage: 'docker:ubuntu:latest',
+                environment: [PATH: '/path/to/bin'],
+                shifterConfig: [enabled: true],
+                dockerConfig: [:]
+        ] as TaskBean)
+        bash.build()
+
+        then:
+        Files.exists(folder.resolve('.command.sh'))
+        Files.exists(folder.resolve('.command.run'))
+
+        folder.resolve('.command.sh').text ==
+                '''
+                #!/bin/bash -ue
+                echo Hello world!
+                '''
+                        .stripIndent().leftTrim()
+
+
+        folder.resolve('.command.run').text ==
+                """
+                #!/bin/bash
+                # NEXTFLOW TASK: Hello 1
+                set -e
+                set -u
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
+
+
+                function shifter_img() {
+                  local cmd=\$1
+                  local image=\$2
+                  shifterimg -v \$cmd \$image |  awk -F: '\$0~/status/{gsub("[\\", ]","",\$2);print \$2}'
+                }
+
+                function shifter_pull() {
+                  local image=\$1
+                  local STATUS=\$(shifter_img lookup \$image)
+                  if [[ \$STATUS != READY && \$STATUS != '' ]]; then
+                    STATUS=\$(shifter_img pull \$image)
+                    while [[ \$STATUS != READY && \$STATUS != FAILURE && \$STATUS != '' ]]; do
+                      sleep 5
+                      STATUS=\$(shifter_img pull \$image)
+                    done
+                  fi
+
+                  [[ \$STATUS == FAILURE || \$STATUS == '' ]] && echo "Shifter failed to pull image \\`\$image\\`" >&2  && exit 1
+                }
+
+                nxf_env() {
+                    echo '============= task environment ============='
+                    env | sort | sed "s/\\(.*\\)AWS\\(.*\\)=\\(.\\{6\\}\\).*/\\1AWS\\2=\\3xxxxxxxxxxxxx/"
+                    echo '============= task output =================='
+                }
+
+                nxf_kill() {
+                    declare -a ALL_CHILD
+                    while read P PP;do
+                        ALL_CHILD[\$PP]+=" \$P"
+                    done < <(ps -e -o pid= -o ppid=)
+
+                    walk() {
+                        [[ \$1 != \$\$ ]] && kill \$1 2>/dev/null || true
+                        for i in \${ALL_CHILD[\$1]:=}; do walk \$i; done
+                    }
+
+                    walk \$1
+                }
+
+                function nxf_mktemp() {
+                    local base=\${1:-/tmp}
+                    [[ \$(uname) = Darwin ]] && mktemp -d \$base/nxf.XXXXXXXXXX || mktemp -d -t nxf.XXXXXXXXXX -p \$base
+                }
+
+                on_exit() {
+                  exit_status=\${ret:=\$?}
+                  printf \$exit_status > ${folder}/.exitcode
+                  rm -f "\$COUT" || true
+                  rm -f "\$CERR" || true
+                  exit \$exit_status
+                }
+
+                on_term() {
+                    set +e
+                    [[ "\$pid" ]] && nxf_kill \$pid
+                }
+
+                trap on_exit EXIT
+                trap on_term TERM INT USR1 USR2
+
+                export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
+                [[ \$NXF_DEBUG > 0 ]] && nxf_env
+                touch ${folder}/.command.begin
+
+                set +e
+                COUT=\$PWD/.command.po; mkfifo "\$COUT"
+                CERR=\$PWD/.command.pe; mkfifo "\$CERR"
+                tee .command.out < "\$COUT" &
+                tee1=\$!
+                tee .command.err < "\$CERR" >&2 &
+                tee2=\$!
+                (
+                shifter_pull docker:ubuntu:latest
+                BASH_ENV=\"${folder}/.command.env\" shifter --image docker:ubuntu:latest /bin/bash -c "/bin/bash -ue ${folder}/.command.sh"
+                ) >"\$COUT" 2>"\$CERR" &
+                pid=\$!
+                wait \$pid || ret=\$?
+                wait \$tee1 \$tee2
+                """
+                        .stripIndent().leftTrim()
+
+
+        cleanup:
+        folder?.deleteDir()
+    }
 
 
 }
