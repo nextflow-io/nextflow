@@ -37,8 +37,6 @@ class DockerBuilder implements ContainerBuilder {
 
     final String image
 
-    final List env = []
-
     List<Path> mounts = []
 
     private boolean sudo
@@ -79,11 +77,6 @@ class DockerBuilder implements ContainerBuilder {
 
     DockerBuilder( String name ) {
         this.image = name
-    }
-
-    DockerBuilder addEnv( entry ) {
-        env.add(entry)
-        return this
     }
 
     DockerBuilder addMount( Path path ) {

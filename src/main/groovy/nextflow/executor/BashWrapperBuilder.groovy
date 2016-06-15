@@ -531,10 +531,23 @@ class BashWrapperBuilder {
     ShifterBuilder createShifterBuilder(Map environment, String changeDir) {
         def builder = new ShifterBuilder(this.containerImage)
 
-        // set up run docker params
-        builder.params(dockerConfig)
+        // set up run shifter params
+        builder.params(shifterConfig)
 
-        // override the docker entry point the image is NOT defined as executable
+        // set the environment
+        if( environment ) {
+            if( executable ) {
+                // PATH variable cannot be extended in an executable container
+                // make sure to not include it to avoid to override the container PATH
+                environment.remove('PATH')
+                builder.addEnv( environment )
+            }
+            else
+                builder.addEnv( workDir.resolve(TaskRun.CMD_ENV) )
+
+        }
+
+        // override the shifter entry point if the image is NOT defined as executable
         if( !executable )
             builder.params(entry: '/bin/bash')
 

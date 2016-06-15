@@ -5,6 +5,8 @@ package nextflow.container
  */
 trait ContainerBuilder {
 
+    final List env = []
+
     abstract ContainerBuilder params( Map config )
 
     abstract String build(StringBuilder result)
@@ -25,6 +27,11 @@ trait ContainerBuilder {
 
     String build() {
         build(new StringBuilder())
+    }
+
+    ContainerBuilder addEnv( entry ) {
+        env.add(entry)
+        return this
     }
 
     /**
