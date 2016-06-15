@@ -18,6 +18,7 @@ Vagrantfile
 resources/*
 test/*
 tools/*
+other
 docs/_build/
 dx-project/
 ./*.txt
