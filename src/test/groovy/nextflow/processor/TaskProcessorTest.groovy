@@ -427,7 +427,7 @@ class TaskProcessorTest extends Specification {
         proc.session = session
 
         when:
-        task = new TaskRun()
+        task = new TaskRun(context: new TaskContext(holder: [:]))
         task.config = new TaskConfig(errorStrategy:'retry', maxErrors: max_errors, maxRetries: max_retries )
         then:
         proc.checkErrorStrategy(task, error, task_err_count , proc_err_count) == strategy

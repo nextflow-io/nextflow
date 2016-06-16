@@ -697,13 +697,12 @@ abstract class TaskProcessor {
         if( log.isTraceEnabled() )
         log.trace "Handling unexpected condition for\n  task: $task\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
-        ErrorStrategy errorStrategy = null
+        ErrorStrategy errorStrategy = ErrorStrategy.TERMINATE
         final message = []
         try {
             // -- do not recoverable error, just re-throw it
             if( error instanceof Error ) throw error
 
-            errorStrategy = task.config.getErrorStrategy()
             final int taskErrCount = task ? ++task.failCount : 0
             final int procErrCount = ++errorCount
 
@@ -715,12 +714,10 @@ abstract class TaskProcessor {
                 task.config.errorCount = procErrCount
                 task.config.retryCount = taskErrCount
 
-                // invoke `checkErrorStrategy` passing a copy of the task because the `attempt` attribute need to be modified
-                final copy = task.clone()
-                final strategy = checkErrorStrategy(copy, error, taskErrCount, procErrCount)
-                if( strategy ) {
+                errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount)
+                if( errorStrategy ) {
                     task.failed = true
-                    return strategy
+                    return errorStrategy
                 }
 
             }
@@ -758,36 +755,36 @@ abstract class TaskProcessor {
         return new TaskFault(error: error, task: task, report: message.join('\n'), strategy: errorStrategy)
     }
 
-    protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, int taskErrCount, int procErrCount ) {
-        // increment the attempt number before evaluate
-        // the `errorStrategy` property
-        task.runType = RunType.RETRY
-        task.config.attempt = taskErrCount+1
-        final taskStrategy = task.config.getErrorStrategy()
+    protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, final int taskErrCount, final int procErrCount ) {
 
+        // retry is not allowed when the script cannot be compiled or similar errors
         if( error instanceof ProcessNotRecoverableException ) {
-            // retry is not allowed when the script cannot be compiled
             return null
         }
 
+        final errorStrategy = task.config.getErrorStrategy()
+
         // IGNORE strategy -- just continue
-        if( taskStrategy == ErrorStrategy.IGNORE ) {
+        if( errorStrategy == ErrorStrategy.IGNORE ) {
             log.warn "Error running process > ${error.getMessage()} -- error is ignored"
             return ErrorStrategy.IGNORE
         }
 
         // RETRY strategy -- check that process do not exceed 'maxError' and the task do not exceed 'maxRetries'
-        if( taskStrategy == ErrorStrategy.RETRY ) {
+        if( errorStrategy == ErrorStrategy.RETRY ) {
             final int maxErrors = task.config.getMaxErrors()
             final int maxRetries = task.config.getMaxRetries()
 
             if( (procErrCount < maxErrors || maxErrors == -1) && taskErrCount <= maxRetries ) {
+                final taskCopy = task.clone()
                 session.getExecService().submit({
                     try {
-                        checkCachedOrLaunchTask( task, task.hash, false )
+                        taskCopy.config.attempt = taskErrCount+1
+                        taskCopy.runType = RunType.RETRY
+                        checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
                     }
                     catch( Throwable e ) {
-                        log.error "Unable to re-submit task `${task.name}`"
+                        log.error "Unable to re-submit task `${taskCopy.name}`"
                         session.abort(e)
                     }
                 } as Runnable)
