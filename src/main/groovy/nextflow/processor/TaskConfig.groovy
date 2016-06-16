@@ -166,7 +166,7 @@ class TaskConfig extends LazyMap implements Cloneable {
             return (ErrorStrategy)strategy
 
         if( strategy == null )
-            return null
+            return ErrorStrategy.TERMINATE
 
         throw new IllegalArgumentException("Not a valid `ErrorStrategy` value: ${strategy}")
     }

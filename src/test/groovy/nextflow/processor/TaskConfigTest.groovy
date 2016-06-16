@@ -66,7 +66,7 @@ class TaskConfigTest extends Specification {
 
         where:
         strategy                    | map
-        null                        | [:]
+        ErrorStrategy.TERMINATE     | [:]
         ErrorStrategy.TERMINATE     | [errorStrategy: 'terminate']
         ErrorStrategy.TERMINATE     | [errorStrategy: 'TERMINATE']
         ErrorStrategy.IGNORE        | [errorStrategy: 'ignore']
@@ -88,7 +88,7 @@ class TaskConfigTest extends Specification {
 
         where:
         expect                      | value
-        null                        | null
+        ErrorStrategy.TERMINATE     | null
         ErrorStrategy.TERMINATE     | 'terminate'
         ErrorStrategy.TERMINATE     | 'TERMINATE'
         ErrorStrategy.IGNORE        | 'ignore'
@@ -96,6 +96,7 @@ class TaskConfigTest extends Specification {
         ErrorStrategy.RETRY         | 'retry'
         ErrorStrategy.RETRY         | 'Retry'
         ErrorStrategy.RETRY         | { x == 1 ? 'retry' : 'ignore' }
+        ErrorStrategy.FINISH        | 'finish'
 
     }
 

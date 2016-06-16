@@ -715,11 +715,10 @@ abstract class TaskProcessor {
                 task.config.retryCount = taskErrCount
 
                 errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount)
-                if( errorStrategy ) {
+                if( errorStrategy.soft ) {
                     task.failed = true
                     return errorStrategy
                 }
-
             }
 
             // -- mark the task as failed
@@ -757,12 +756,12 @@ abstract class TaskProcessor {
 
     protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, final int taskErrCount, final int procErrCount ) {
 
+        final errorStrategy = task.config.getErrorStrategy()
+
         // retry is not allowed when the script cannot be compiled or similar errors
         if( error instanceof ProcessNotRecoverableException ) {
-            return null
+            return !errorStrategy.soft ? errorStrategy : ErrorStrategy.TERMINATE
         }
-
-        final errorStrategy = task.config.getErrorStrategy()
 
         // IGNORE strategy -- just continue
         if( errorStrategy == ErrorStrategy.IGNORE ) {
@@ -790,9 +789,11 @@ abstract class TaskProcessor {
                 } as Runnable)
                 return ErrorStrategy.RETRY
             }
+
+            return ErrorStrategy.TERMINATE
         }
 
-        return null
+        return errorStrategy
     }
 
     final protected formatGuardError( List message, FailedGuardException error, TaskRun task ) {
