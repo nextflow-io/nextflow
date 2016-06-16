@@ -30,6 +30,7 @@ import nextflow.Global
 import nextflow.ISession
 import nextflow.Session
 import nextflow.exception.ProcessException
+import nextflow.exception.ProcessNotRecoverableException
 import nextflow.executor.NopeExecutor
 import nextflow.file.FileHolder
 import nextflow.script.BaseScript
@@ -403,13 +404,45 @@ class TaskProcessorTest extends Specification {
         task = new TaskRun()
         task.config = new TaskConfig()
         then:
-        proc.checkErrorStrategy(task, error, 1,1) == null
+        proc.checkErrorStrategy(task, error, 1,1) == ErrorStrategy.TERMINATE
 
         when:
         task = new TaskRun()
         task.config = new TaskConfig(errorStrategy: 'ignore')
         then:
         proc.checkErrorStrategy(task, error, 10, 10) == ErrorStrategy.IGNORE
+
+        when:
+        task = new TaskRun()
+        task.config = new TaskConfig(errorStrategy: 'finish')
+        then:
+        proc.checkErrorStrategy(task, error, 1, 1) == ErrorStrategy.FINISH
+
+    }
+
+    def 'should return TERMINATE or FINISH error strategy`' () {
+        given:
+        def task
+        def proc = [:] as TaskProcessor
+        def error = Mock(ProcessNotRecoverableException)
+
+        when:
+        task = new TaskRun()
+        task.config = new TaskConfig(errorStrategy: 'retry')
+        then:
+        proc.checkErrorStrategy(task, error, 1, 1) == ErrorStrategy.TERMINATE
+
+        when:
+        task = new TaskRun()
+        task.config = new TaskConfig(errorStrategy: 'ignore')
+        then:
+        proc.checkErrorStrategy(task, error, 1, 1) == ErrorStrategy.TERMINATE
+
+        when:
+        task = new TaskRun()
+        task.config = new TaskConfig(errorStrategy: 'finish')
+        then:
+        proc.checkErrorStrategy(task, error, 1, 1) == ErrorStrategy.FINISH
 
     }
 
@@ -436,15 +469,15 @@ class TaskProcessorTest extends Specification {
         max_retries | max_errors    |   task_err_count  |  proc_err_count   | strategy
                 1   |        3      |               0   |               0   | ErrorStrategy.RETRY
                 1   |        3      |               1   |               0   | ErrorStrategy.RETRY
-                1   |        3      |               2   |               0   | null
+                1   |        3      |               2   |               0   | ErrorStrategy.TERMINATE
                 1   |        3      |               0   |               1   | ErrorStrategy.RETRY
                 1   |        3      |               0   |               2   | ErrorStrategy.RETRY
-                1   |        3      |               0   |               3   | null
+                1   |        3      |               0   |               3   | ErrorStrategy.TERMINATE
                 3   |       -1      |               0   |               0   | ErrorStrategy.RETRY
                 3   |       -1      |               1   |               1   | ErrorStrategy.RETRY
                 3   |       -1      |               2   |               2   | ErrorStrategy.RETRY
                 3   |       -1      |               3   |               9   | ErrorStrategy.RETRY
-                3   |       -1      |               4   |               9   | null
+                3   |       -1      |               4   |               9   | ErrorStrategy.TERMINATE
 
     }
 
