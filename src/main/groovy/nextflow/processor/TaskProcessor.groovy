@@ -312,7 +312,8 @@ abstract class TaskProcessor {
         state = new Agent<>(new StateObj(allScalarValues,name))
         state.addListener { StateObj old, StateObj obj ->
             try {
-                log.trace "<$name> Process state changed to: $obj"
+                if( log.isTraceEnabled() )
+                    log.trace "<$name> Process state changed to: $obj -- finished: ${obj.isFinished()}"
                 if( !terminated && obj.isFinished() ) {
                     terminateProcess()
                     terminated = true
