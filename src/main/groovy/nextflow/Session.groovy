@@ -495,6 +495,7 @@ class Session implements ISession {
         cancelled = true
         notifyError(handler)
         dispatcher.signal()
+        processesBarrier.forceTermination()
         allProcessors *. terminate()
     }
 
