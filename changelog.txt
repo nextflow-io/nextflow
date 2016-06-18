@@ -1,6 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.20.1 - 18 Jun 2016 
+- Fixed Directives do not accept a negative numeric value #180
+- Fixed Dynamic errorStrategy is not evaluated correctly #183
+- Fixed Pipeline hangs when error strategy is used and an upstream process fail
+- Added environment to ContainerBuilder and implement environment export for Shifter containers
+- Updated Groovy runtime to version 2.4.7
+
 0.20.0 - 8 Jun 2016 
 - Added fromFilePairs channel factory method
 - Added `finish` error strategy #158
