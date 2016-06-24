@@ -342,12 +342,18 @@ else
     # otherwise run the capsule and get the result classpath in the 'launcher' and save it to a file
     launcher=($("$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"))
     [[ $? -ne 0 ]] && echo 'Unable to initialize nextflow environment' && exit $?
-    mkdir -p ${NXF_LAUNCHER}
-    STR=''
-    for x in "${launcher[@]}"; do
-    [[ "$x" != "\"-Duser.dir=$PWD\"" ]] && STR+="$x "
-    done
-    printf "$STR">"$LAUNCH_FILE"
+
+    # Don't spit errors if can't create the LAUNCH_FILE
+    if mkdir -p ${NXF_LAUNCHER} 2>/dev/null; then
+        STR=''
+        for x in "${launcher[@]}"; do
+        [[ "$x" != "\"-Duser.dir=$PWD\"" ]] && STR+="$x "
+        done
+        printf "$STR">"$LAUNCH_FILE"
+    else
+        echo_yellow "Warning: Couldn't create cached classpath file. Maybe NXF_HOME is not writable?"
+    fi
+
 fi
 
 # finally run it
