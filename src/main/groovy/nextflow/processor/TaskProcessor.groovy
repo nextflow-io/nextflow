@@ -621,7 +621,7 @@ abstract class TaskProcessor {
             try {
                 ctx = TaskContext.read(this, ctxFile)
             }
-            catch( IOException e ) {
+            catch( Exception e ) {
                 log.trace "[$task.name] Context map can't be read: $ctxFile -- return false -- Cause: ${e.message}"
                 return false
             }
