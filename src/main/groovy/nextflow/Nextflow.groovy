@@ -70,13 +70,10 @@ class Nextflow {
     static DataflowQueue channel( Collection values = null ) {
 
         final channel = new DataflowQueue()
-        if ( values )  {
-            // bind e
+        if ( values != null )  {
+            // bind all the items in the provided collection
             values.each { channel.bind(it)  }
-
-            // since queue is 'finite' close it by a poison pill
-            // so the operator will stop on when all values in the queue are consumed
-            // (otherwise it will wait forever for a new entry)
+            // bind a stop signal to 'terminate' the channel
             channel << Channel.STOP
         }
 
