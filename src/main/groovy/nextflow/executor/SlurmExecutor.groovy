@@ -96,7 +96,7 @@ class SlurmExecutor extends AbstractGridExecutor {
      */
     @Override
     def parseJobId(String text) {
-        def pattern = ~ /Submitted batch job (\d+)|^(\d+)$/
+        def pattern = ~ /Submitted batch job (\d+)/
         for( String line : text.readLines() ) {
             def m = pattern.matcher(line)
             if( m.matches() ) {
