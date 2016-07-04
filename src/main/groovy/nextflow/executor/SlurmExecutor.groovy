@@ -104,6 +104,10 @@ class SlurmExecutor extends AbstractGridExecutor {
             }
         }
 
+        // customised `sbatch` command can return only the jobid
+        if( text.isLong() )
+            return text
+
         throw new IllegalStateException("Invalid SLURM submit response:\n$text\n\n")
     }
 
