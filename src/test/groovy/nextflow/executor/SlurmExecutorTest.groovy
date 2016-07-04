@@ -33,10 +33,18 @@ class SlurmExecutorTest extends Specification {
 
     def testParseJob() {
 
-        when:
+        given:
         def exec = [:] as SlurmExecutor
-        then:
+
+        expect:
         exec.parseJobId('Submitted batch job 10') == '10'
+        exec.parseJobId('Submitted batch job 20') == '20'
+        exec.parseJobId('30') == '30'
+
+        when:
+        exec.parseJobId('Something else 10')
+        then:
+        thrown(IllegalStateException)
 
     }
 
