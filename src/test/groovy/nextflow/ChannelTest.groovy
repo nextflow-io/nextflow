@@ -27,6 +27,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import groovyx.gpars.dataflow.DataflowQueue
 import org.junit.Rule
 import spock.lang.Specification
 import test.TemporaryPath
@@ -42,6 +43,35 @@ class ChannelTest extends Specification {
         new Session()
     }
 
+    def testFrom() {
+        given:
+        DataflowQueue result
+
+        when:
+        result = Channel.from('hola')
+        then:
+        result.val == 'hola'
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.from('alpha','delta')
+        then:
+        result.val == 'alpha'
+        result.val == 'delta'
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.from(['alpha','delta'])
+        then:
+        result.val == 'alpha'
+        result.val == 'delta'
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.from([])
+        then:
+        result.val == Channel.STOP
+    }
 
     def testSingleFile() {
 
