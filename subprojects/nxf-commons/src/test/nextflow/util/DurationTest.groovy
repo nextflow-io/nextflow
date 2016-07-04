@@ -71,6 +71,11 @@ class DurationTest extends Specification {
         new Duration('live_in_3d')
         then:
         thrown(IllegalArgumentException)
+
+        when:
+        new Duration('/path/to/samples/2016-06-05_21:04:05/sample.bam')
+        then:
+        thrown(IllegalArgumentException)
     }
 
     def 'should parse multi unit time format'() {

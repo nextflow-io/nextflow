@@ -38,7 +38,7 @@ class Duration implements Comparable<Duration>, Serializable {
 
     static private final FORMAT = ~/^(\d+)\s*([a-zA-Z]+)/
 
-    static private final LEGACY = ~/(\d{1,2}):(\d{1,2}):(\d{1,2})/
+    static private final LEGACY = ~/^(\d{1,2}):(\d{1,2}):(\d{1,2})$/
 
     static private final List<String> MILLIS = ['ms','milli','millis']
 
