@@ -114,7 +114,7 @@ class SlurmExecutor extends AbstractGridExecutor {
         if( queue )
             log.debug "SLURM executor does not support queue parameter on queue status"
 
-        return ['squeue','-h','-o','%i %t']
+        return ['squeue','-h','-o','%i %t', '-t', 'all']
     }
 
     /*
