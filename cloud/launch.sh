@@ -25,6 +25,10 @@ set -u
 #X_DEVICE=/dev/xvdc
 #X_MOUNT=/mnt/scratch
 
+# EFS file system
+#X_EFS_ID=fs-xxx
+X_EFS_MOUNT=/mnt/efs
+
 # nextflow details
 #NXF_VER=0.17.3
 #NXF_MODE=ignite
@@ -98,6 +102,8 @@ export NXF_TRACE="$NXF_TRACE"
 export X_TYPE="$X_TYPE"
 export X_MOUNT="$X_MOUNT"
 export X_DEVICE="$X_DEVICE"
+export X_EFS_ID="$X_EFS_ID"
+export X_EFS_MOUNT="$X_EFS_MOUNT"
 curl -fsSL https://raw.githubusercontent.com/nextflow-io/nextflow/master/cloud/cloud-boot.sh | bash &> ~ec2-user/boot.log
 EOF
 EndOfString

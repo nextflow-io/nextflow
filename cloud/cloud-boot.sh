@@ -41,7 +41,19 @@ echo "export NXF_TEMP=$X_MOUNT" >> $HOME/.bash_profile
 fi
 
 #
-# Update docker
+# EFS mount
+# (NOTE: on Ubuntu use `sudo apt-get install nfs-common`)
+#
+if [[ $X_EFS_ID && $X_EFS_MOUNT ]]; then
+sudo yum install -y nfs-utils
+sudo mkdir -p $X_EFS_MOUNT
+sudo mount -t nfs4 -o nfsvers=4.1 $(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone).${X_EFS_ID}.efs.${region}.amazonaws.com:/ $X_EFS_MOUNT
+sudo chown -R ec2-user:ec2-user $X_EFS_MOUNT
+sudo chmod 775 $X_EFS_MOUNT
+fi
+
+#
+# Update docker (see https://get.docker.com/builds/ for details)
 #
 if [[ $DOCKER_VERSION ]]; then
 sudo service docker stop
