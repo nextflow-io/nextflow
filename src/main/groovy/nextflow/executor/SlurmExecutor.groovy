@@ -129,7 +129,7 @@ class SlurmExecutor extends AbstractGridExecutor {
 
     /*
      *  Maps SLURM job status to nextflow status
-     *  see https://computing.llnl.gov/linux/slurm/squeue.html#SECTION_JOB%20STATE%20CODES
+     *  see http://slurm.schedmd.com/squeue.html#SECTION_JOB-STATE-CODES
      */
     static private Map STATUS_MAP = [
             'PD': QueueStatus.PENDING,  // (pending)
@@ -142,7 +142,9 @@ class SlurmExecutor extends AbstractGridExecutor {
             'TO': QueueStatus.ERROR,    // (timeout),
             'NF': QueueStatus.ERROR,    // (node failure)
             'S': QueueStatus.HOLD,      // (job suspended)
+            'ST': QueueStatus.HOLD,     // (stopped)
             'PR': QueueStatus.ERROR,    // (Job terminated due to preemption)
+            'BF': QueueStatus.ERROR,    // (boot fail, Job terminated due to launch failure)
     ]
 
     @Override
