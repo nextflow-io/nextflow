@@ -265,14 +265,22 @@ abstract class AbstractGridExecutor extends Executor {
 
         // -- fetch the queue status
         fQueueStatus = (Map<Object,QueueStatus>)queueInterval.throttle(null) { getQueueStatus(queue) }
-        if( fQueueStatus == null ) // no data is returned, so return true
+        if( fQueueStatus == null ) { // no data is returned, so return true
+            log.trace "Queue status map is null -- return true"
             return true
+        }
 
-        if( !fQueueStatus.containsKey(jobId) )
+        if( log.isTraceEnabled() )
+            log.trace "Queue status:\n" + dumpQueueStatus()
+
+        if( !fQueueStatus.containsKey(jobId) ) {
+            log.trace "Queue status map does not contain jobId: `$jobId`"
             return false
+        }
 
-        return fQueueStatus[jobId] == QueueStatus.RUNNING || fQueueStatus[jobId] == QueueStatus.HOLD
-
+        final result = fQueueStatus[jobId] == QueueStatus.RUNNING || fQueueStatus[jobId] == QueueStatus.HOLD
+        log.trace "JobId `$jobId` active status: $result"
+        return result
     }
 
     protected String wrapHeader( String str ) { str }
