@@ -13,6 +13,7 @@ set -u
 #X_SECURITY=<security group e.g sg-72b74a05>
 #X_KEY=<security key name>
 #X_BUCKET=<s3 bucket where nodes share their IPs in order to discover each other>
+#X_SUBNET=<vpc subnet id>
 
 # only for spot instances
 #X_ZONE=eu-west-1c
@@ -171,6 +172,10 @@ function runInstances() {
     cli+=(--key-name); cli+=("$X_KEY")
     cli+=(--user-data); cli+=("$(cloudInit $role)")
 
+    if [[ $X_SUBNET ]]; then
+    cli+=(--subnet-id); cli+=("$X_SUBNET")
+    fi
+
     if [[ $X_DEVICE || $X_STORAGE ]]; then
     cli+=(--block-device-mappings); cli+=("[$(getDeviceMapping)]")
     fi
@@ -191,12 +196,16 @@ if [[ $X_DEVICE || $X_STORAGE ]]; then
 local mapping="\"BlockDeviceMappings\": [$(getDeviceMapping)], "
 fi
 
+if [[ $X_SUBNET ]]; then
+local subnet="\"SubnetId\": \"$X_SUBNET\", "
+fi
+
 TMPFILE=$(mktemp)
 cat >$TMPFILE <<EOF 
 {
   "ImageId": "$X_AMI",
   "KeyName": "$X_KEY",
-  "SecurityGroupIds": [ "$X_SECURITY" ],
+  "SecurityGroupIds": [ "$X_SECURITY" ], $subnet
   "InstanceType": "$X_TYPE",
   "UserData": "$(cloudInit $role | base64)", $mapping
   "Placement": {
