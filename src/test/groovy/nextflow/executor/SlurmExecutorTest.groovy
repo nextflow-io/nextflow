@@ -204,10 +204,12 @@ class SlurmExecutorTest extends Specification {
 
     def testQueueStatusCommand() {
         when:
+        def usr = System.getProperty('user.name')
         def exec = [:] as SlurmExecutor
         then:
-        exec.queueStatusCommand(null) == ['squeue','-h','-o','%i %t','-t','all']
-        exec.queueStatusCommand('xxx') == ['squeue','-h','-o','%i %t','-t','all']
+        usr
+        exec.queueStatusCommand(null) == ['squeue','-h','-o','%i %t','-t','all','-u', usr]
+        exec.queueStatusCommand('xxx') == ['squeue','-h','-o','%i %t','-t','all','-u', usr]
 
     }
 }

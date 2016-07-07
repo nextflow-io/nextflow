@@ -115,10 +115,16 @@ class SlurmExecutor extends AbstractGridExecutor {
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-        if( queue )
-            log.debug "SLURM executor does not support queue parameter on queue status"
 
-        return ['squeue','-h','-o','%i %t', '-t', 'all']
+        final result = ['squeue','-h','-o','%i %t', '-t', 'all']
+
+        final user = System.getProperty('user.name')
+        if( user )
+            result << '-u' << user
+        else
+            log.debug "Cannot retrieve current user"
+
+        return result
     }
 
     /*
