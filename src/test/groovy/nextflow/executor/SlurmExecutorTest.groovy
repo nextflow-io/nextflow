@@ -40,6 +40,8 @@ class SlurmExecutorTest extends Specification {
         exec.parseJobId('Submitted batch job 10') == '10'
         exec.parseJobId('Submitted batch job 20') == '20'
         exec.parseJobId('30') == '30'
+        exec.parseJobId('40\n') == '40'
+        exec.parseJobId('\n50') == '50'
 
         when:
         exec.parseJobId('Something else 10')
