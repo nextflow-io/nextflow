@@ -20,9 +20,9 @@
 
 package nextflow.executor
 
+import nextflow.Session
 import nextflow.processor.TaskRun
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -50,5 +50,43 @@ class AbstractGridExecutorTest extends Specification {
         exec.killTaskCommand([11,12]) == ['qdel', '11', '12']
         exec.killTaskCommand([100,200,300]) == ['qdel', '100', '200', '300']
 
+    }
+
+    def 'should return a custom job name'() {
+
+        given:
+        def exec = [:] as AbstractGridExecutor
+        exec.session = [:] as Session
+        exec.session.config = [:]
+
+        expect:
+        exec.resolveCustomJobName(Mock(TaskRun)) == null
+
+        when:
+        exec.session = [:] as Session
+        exec.session.config = [ executor: [jobName: { task.name.replace(' ','_') }  ] ]
+        then:
+        exec.resolveCustomJobName(new TaskRun(config: [name: 'hello world'])) == 'hello_world'
+
+    }
+
+    def 'should return job submit name' () {
+
+        given:
+        def exec = [:] as AbstractGridExecutor
+        exec.session = [:] as Session
+        exec.session.config = [:]
+
+        final taskName = 'Hello world'
+        final taskRun = new TaskRun(name: taskName, config: [name: taskName])
+
+        expect:
+        exec.getJobNameFor(taskRun) == 'nf-Hello_world'
+
+        when:
+        exec.session = [:] as Session
+        exec.session.config = [ executor: [jobName: { task.name.replace(' ','_') }  ] ]
+        then:
+        exec.getJobNameFor(taskRun) == 'Hello_world'
     }
 }
