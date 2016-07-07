@@ -178,9 +178,9 @@ class TaskContext implements Map<String,Object>, Cloneable {
     def void save( Path contextFile ) {
         try {
             def map = holder
-            if( map.get(TaskProcessor.TASK_CONFIG) instanceof TaskConfig ) {
+            if( map.get(TaskProcessor.TASK_CONTEXT_PROPERTY_NAME) instanceof TaskConfig ) {
                 map = new LinkedHashMap<String, Object>(holder)
-                map.remove(TaskProcessor.TASK_CONFIG)
+                map.remove(TaskProcessor.TASK_CONTEXT_PROPERTY_NAME)
             }
 
             KryoHelper.serialize(map,contextFile)

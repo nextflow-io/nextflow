@@ -26,6 +26,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import org.apache.commons.lang.StringUtils
@@ -132,6 +133,13 @@ abstract class AbstractGridExecutor extends Executor {
      * @return A string that represent to submit job name
      */
     protected String getJobNameFor(TaskRun task) {
+
+        // -- check for a custom `jobName` defined in the nextflow config file
+        def customName = resolveCustomJobName(task)
+        if( customName )
+            return customName
+
+        // -- if not available fallback on the custom naming strategy
         final BLANK = ' ' as char
         final COLON = ':' as char
         final result = new StringBuilder("nf-")
@@ -141,6 +149,28 @@ abstract class AbstractGridExecutor extends Executor {
             result.append( ch == BLANK || ch == COLON ? '_' : ch )
         }
         result.toString()
+    }
+
+    /**
+     * Resolve the `jobName` property defined in the nextflow config file
+     *
+     * @param task
+     * @return
+     */
+    @PackageScope
+    String resolveCustomJobName(TaskRun task) {
+        try {
+            def custom = (Closure)session.getExecConfigProp(name, 'jobName', null)
+            if( !custom )
+                return null
+
+            def ctx = [ (TaskProcessor.TASK_CONTEXT_PROPERTY_NAME): task.config ]
+            custom.cloneWith(ctx).call()?.toString()
+        }
+        catch( Exception e ) {
+            log.debug "Unable to resolve job custom name", e
+            return null
+        }
     }
 
     /**

@@ -87,7 +87,7 @@ abstract class TaskProcessor {
         RunType(String str) { message=str };
     }
 
-    static final public String TASK_CONFIG = 'task'
+    static final public String TASK_CONTEXT_PROPERTY_NAME = 'task'
 
     /**
      * Global count of all task instances
@@ -1518,6 +1518,8 @@ abstract class TaskProcessor {
         task.hash = hash
         task.workDir = folder
         task.config.workDir = folder
+        task.config.hash = hash.toString()
+        task.config.name = task.getName()
 
     }
 

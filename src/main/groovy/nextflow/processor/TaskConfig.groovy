@@ -19,7 +19,7 @@
  */
 
 package nextflow.processor
-import static nextflow.processor.TaskProcessor.TASK_CONFIG
+import static nextflow.processor.TaskProcessor.TASK_CONTEXT_PROPERTY_NAME
 
 import java.nio.file.Path
 
@@ -78,7 +78,7 @@ class TaskConfig extends LazyMap implements Cloneable {
             (target.ext as LazyMap).binding = context
 
         // set the this object in the task context in order to allow task properties to be resolved in process script
-        context.put(TASK_CONFIG, this)
+        context.put(TASK_CONTEXT_PROPERTY_NAME, this)
 
         return this
     }
