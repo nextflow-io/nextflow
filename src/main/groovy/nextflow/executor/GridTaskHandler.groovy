@@ -180,8 +180,14 @@ class GridTaskHandler extends TaskHandler {
         /*
          * when the file does not exist return null, to force the monitor to continue to wait
          */
-        def exitAttrs
+        def exitAttrs = null
         if( !exitFile || !(exitAttrs=exitFile.readAttributes()) || !exitAttrs.lastModifiedTime()?.toMillis() ) {
+            if( log.isTraceEnabled() ) {
+                if( !exitFile )
+                    log.trace "JobId `$jobId` exit file is null"
+                else
+                    log.trace "JobId `$jobId` exit file: $exitFile - lastModified: ${exitAttrs?.lastModifiedTime()} - size: ${exitAttrs?.size()}"
+            }
             // -- fetch the job status before return a result
             final active = executor.checkActiveStatus(jobId, queue)
 
@@ -199,7 +205,7 @@ class GridTaskHandler extends TaskHandler {
             // -- if the job is not active, something is going wrong
             //  * before returning an error code make (due to NFS latency) the file status could be in a incoherent state
             if( !exitTimestampMillis1 ) {
-                log.debug "Exit file does not exist and the job is not running for task: $this -- Try to wait before kill it"
+                log.trace "Exit file does not exist for and the job is not running for task: $this -- Try to wait before kill it"
                 exitTimestampMillis1 = System.currentTimeMillis()
             }
 
