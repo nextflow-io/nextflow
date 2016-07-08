@@ -415,7 +415,8 @@ abstract class TaskProcessor {
     final protected Closure createCallbackWrapper( int n, Closure method ) {
 
         final args = []
-        n.times { args << "__p$it" }
+        for( int i=0; i<n; i++ )
+            args << "__p$i"
 
         final str = " { ${args.join(',')} -> callback([ ${args.join(',')} ]) }"
         final binding = new Binding( ['callback': method] )
