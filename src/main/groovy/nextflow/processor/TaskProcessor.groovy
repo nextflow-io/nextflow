@@ -621,8 +621,8 @@ abstract class TaskProcessor {
             try {
                 ctx = TaskContext.read(this, ctxFile)
             }
-            catch( Exception e ) {
-                log.trace "[$task.name] Context map can't be read: $ctxFile -- return false -- Cause: ${e.message}"
+            catch( Throwable e ) {
+                log.warn1("[$task.name] Unable to resume cached task -- See log file for details", causedBy: e)
                 return false
             }
         }
