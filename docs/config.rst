@@ -198,6 +198,7 @@ queueStatInterval     Determines how often the queue status is fetched from the 
 exitReadTimeout       Determines how long the executor waits before return an error status when a process is terminated but the `exit` file does not exist or it is empty. This setting is used only by grid executors (default: ``90sec``).
 killBatchSize         Determines the number of jobs that can be `killed` in a single command execution (default: ``100``).
 perJobMemLimit        Specifies Platform LSF *per-job* memory limit mode. See :ref:`lsf-executor`.
+jobName               Determines the name of jobs submitted to the underlying cluster executor e.g. ``executor.jobName = { "$task.name - $task.hash" }`` .
 ===================== =====================
 
 
