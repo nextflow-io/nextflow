@@ -337,18 +337,29 @@ class FileHelper {
         if( path.getFileSystem() != FileSystems.getDefault() )
             return false
 
+        final type = getPathFsType(path)
+        def result = type == 'nfs'
+        log.debug "NFS path ($result): $path"
+        return result
+    }
+
+    @Memoized
+    static String getPathFsType(Path path)  {
+        final os = System.getProperty('os.name')
+        if( os != 'Linux' )
+            return os
+
         final process = Runtime.runtime.exec("stat -f -c %T ${path}")
         final status = process.waitFor()
         final text = process.text?.trim()
         process.destroy()
+
         if( status ) {
             log.debug "Can't check if specified path is NFS ($status): $path\n${Bolts.indent(text,'  ')}"
-            return false
+            return null
         }
 
-        def result = text == 'nfs'
-        log.debug "NFS path ($result): $path"
-        return result
+        return text
     }
 
     /**
