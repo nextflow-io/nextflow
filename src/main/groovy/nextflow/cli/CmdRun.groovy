@@ -45,7 +45,7 @@ import nextflow.util.Duration
 class CmdRun extends CmdBase implements HubOptions {
 
     static {
-        // installing a custom pool factory for GPars threads
+        // install the custom pool factory for GPars threads
         GParsConfig.poolFactory = new CustomPoolFactory()
     }
 
