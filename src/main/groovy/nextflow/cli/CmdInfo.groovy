@@ -24,10 +24,12 @@ import java.nio.file.spi.FileSystemProvider
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
+import com.sun.management.OperatingSystemMXBean
 import groovy.transform.CompileStatic
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.scm.AssetManager
+import nextflow.util.MemoryUnit
 
 /**
  * CLI sub-command INFO
@@ -102,8 +104,11 @@ class CmdInfo extends CmdBase {
         result << BLANK << "Runtime: Groovy ${GroovySystem.getVersion()} on ${System.getProperty('java.vm.name')} ${props['java.runtime.version']}" << NEWLINE
         result << BLANK << "Encoding: ${System.getProperty('file.encoding')} (${System.getProperty('sun.jnu.encoding')})" << NEWLINE
 
-        if( printProc )
+        if( printProc ) {
+            def OS = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()
             result << BLANK << "Process: ${ManagementFactory.getRuntimeMXBean().getName()} " << getLocalAddress() << NEWLINE
+            result << BLANK << "CPUs: ${OS.availableProcessors} - Mem: ${new MemoryUnit(OS.totalPhysicalMemorySize)} (${new MemoryUnit(OS.freePhysicalMemorySize)}) - Swap: ${new MemoryUnit(OS.totalSwapSpaceSize)} (${new MemoryUnit(OS.freeSwapSpaceSize)})"
+        }
 
         if( level == 0  )
             return result.toString()

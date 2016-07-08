@@ -37,6 +37,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.dag.DAG
+import nextflow.file.FileHelper
 import nextflow.processor.ErrorStrategy
 import nextflow.trace.GraphObserver
 import nextflow.exception.MissingLibraryException
@@ -245,6 +246,8 @@ class Session implements ISession {
 
         this.workDir = ((config.workDir ?: 'work') as Path).complete()
         this.setLibDir( config.libDir as String )
+
+        log.debug "Work-dir: ${workDir} [${FileHelper.getPathFsType(workDir)}]"
 
         if( scriptPath ) {
             // the folder that contains the main script
