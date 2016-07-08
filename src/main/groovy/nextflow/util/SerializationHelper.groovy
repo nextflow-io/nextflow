@@ -23,6 +23,8 @@ import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
@@ -34,6 +36,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.file.FileHelper
 import org.codehaus.groovy.runtime.GStringImpl
+import org.objenesis.instantiator.ObjectInstantiator
+
 /**
  * Helper class to get a {@code Kryo} object ready to be used
  */
@@ -52,6 +56,7 @@ class KryoHelper {
         serializers.put( UUID, UUIDSerializer )
         serializers.put( File, FileSerializer )
         serializers.put( S3Path, PathSerializer )
+        serializers.put( Pattern, PatternSerializer )
 
         threadLocal = new ThreadLocal<Kryo>() {
             @Override
@@ -84,6 +89,8 @@ class KryoHelper {
      */
     static private Kryo newInstance() {
         def kryo = new Kryo()
+        kryo.setInstantiatorStrategy( InstantiationStrategy.instance )
+
         // special serializers
         UnmodifiableCollectionsSerializer.registerSerializers(kryo)
 
@@ -192,6 +199,36 @@ class KryoHelper {
 
 }
 
+/**
+ * Kryo throws an IllegalAccessError when deserializing a {@link Matcher} object,
+ * thus implements a custom instantiator object
+ */
+@Singleton
+@CompileStatic
+class MatcherInstantiator implements ObjectInstantiator {
+
+    @Override
+    Object newInstance() {
+        def c = Matcher.getDeclaredConstructor()
+        c.setAccessible(true)
+        c.newInstance()
+    }
+}
+
+@Singleton
+@CompileStatic
+class InstantiationStrategy extends Kryo.DefaultInstantiatorStrategy {
+
+    @Override
+    public ObjectInstantiator newInstantiatorOf (final Class type) {
+        if( type == Matcher ) {
+            MatcherInstantiator.instance
+        }
+        else {
+            super.newInstantiatorOf(type)
+        }
+    }
+}
 
 /**
  * A Kryo serializer to handler a {@code Path} object
@@ -262,7 +299,6 @@ class GStringSerializer extends Serializer<GString> {
 }
 
 
-
 @Slf4j
 @CompileStatic
 class URLSerializer extends Serializer<URL> {
@@ -325,3 +361,36 @@ class FileSerializer extends Serializer<File> {
 }
 
 
+/**
+ * The {@link Pattern} class does not have default constructor as required by Kryo,
+ * but implements the {@link Serializable} interface, thus use the default serialization
+ * mechanism to store the pattern as a byte array
+ */
+@CompileStatic
+class PatternSerializer extends Serializer<Pattern> {
+
+    @Override
+    void write(Kryo kryo, Output output, Pattern object) {
+
+        def buffer = new ByteArrayOutputStream()
+        ObjectOutputStream oos = new ObjectOutputStream(buffer)
+        oos.writeObject(object)
+        oos.close()
+
+        def bytes = buffer.toByteArray()
+        output.writeInt(bytes.length)
+        output.write(bytes)
+    }
+
+    @Override
+    Pattern read(Kryo kryo, Input input, Class<Pattern> type) {
+
+        def len = input.readInt()
+        def buffer = new byte[len]
+        input.read(buffer)
+
+        ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(buffer))
+        return (Pattern) ois.readObject()
+
+    }
+}
