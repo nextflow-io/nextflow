@@ -241,6 +241,8 @@ class FileOutParam extends BaseOutParam implements OutParam {
 
     private Closure<String> dynamicObj
 
+    private String filePattern
+
     String getSeparatorChar() { separatorChar }
 
     boolean getHidden() { includeHidden }
@@ -314,8 +316,11 @@ class FileOutParam extends BaseOutParam implements OutParam {
             return this
         }
 
-        // fallback on super class
-        super.bind(obj)
+        if( obj instanceof TokenVar )
+            this.nameObj = obj.name
+
+        this.filePattern = obj.toString()
+        return this
     }
 
     List<String> getFilePatterns(Map context, Path workDir) {
@@ -335,7 +340,7 @@ class FileOutParam extends BaseOutParam implements OutParam {
             }
         }
         else {
-            entry = nameObj
+            entry = filePattern
         }
 
         if( !entry )
@@ -353,6 +358,8 @@ class FileOutParam extends BaseOutParam implements OutParam {
         return [relativize(nameString, workDir)]
 
     }
+
+    @PackageScope String getFilePattern() { filePattern }
 
     @PackageScope
     static String clean(String path) {
@@ -488,7 +495,7 @@ class SetOutParam extends BaseOutParam {
                 create(FileOutParam).bind(item)
 
             else if( item instanceof TokenFileCall )
-                // note that 'filePattern' can be a string or a Gstring
+                // note that 'filePattern' can be a string or a GString
                 create(FileOutParam).bind(item.target)
 
             else
