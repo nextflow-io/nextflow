@@ -249,7 +249,7 @@ class TaskPollingMonitor implements TaskMonitor {
         // This guarantee that the 'pollingQueue' does not contain
         // more entries than the specified 'capacity'
         //
-        boolean done = tasksQueueLock.withLock(true) {
+        boolean done = tasksQueueLock.withLock() {
 
             while ( !canSubmit(handler) )
                 notFull.await();
