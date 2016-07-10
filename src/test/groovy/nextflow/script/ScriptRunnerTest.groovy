@@ -632,4 +632,29 @@ class ScriptRunnerTest extends Specification {
 
     }
 
+
+    def 'should not thrown duplicate channel exception' () {
+
+        when:
+        def script = '''
+
+            process foo {
+              output: file '*.pdf'
+              'touch x.pdf'
+            }
+
+            process bar {
+              output: file '*.pdf'
+              'touch x.pdf'
+            }
+                        '''
+        def runner = new ScriptRunner([executor:'nope'])
+        runner.setScript(script).execute()
+
+        then:
+        noExceptionThrown()
+
+    }
+
+
 }
