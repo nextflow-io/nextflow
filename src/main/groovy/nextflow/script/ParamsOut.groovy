@@ -316,9 +316,6 @@ class FileOutParam extends BaseOutParam implements OutParam {
             return this
         }
 
-        if( obj instanceof TokenVar )
-            this.nameObj = obj.name
-
         this.filePattern = obj.toString()
         return this
     }

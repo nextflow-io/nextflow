@@ -26,6 +26,7 @@ import nextflow.script.BaseScript
 import nextflow.script.FileInParam
 import nextflow.script.StdInParam
 import nextflow.script.StdOutParam
+import nextflow.script.TokenVar
 import nextflow.script.ValueInParam
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -181,19 +182,19 @@ class ProcessConfigTest extends Specification {
 
         when:
         config._out_stdout()
-        config._out_file('file1.fa').into('ch1')
-        config._out_file('file2.fa').into('ch2')
-        config._out_file('file3.fa').into('ch3')
+        config._out_file(new TokenVar('file1')).into('ch1')
+        config._out_file(new TokenVar('file2')).into('ch2')
+        config._out_file(new TokenVar('file3')).into('ch3')
 
         then:
         config.outputs.size() == 4
-        config.outputs.names == ['-', 'file1.fa', 'file2.fa', 'file3.fa']
+        config.outputs.names == ['-', 'file1', 'file2', 'file3']
         config.outputs.ofType(StdOutParam).size() == 1
 
         config.outputs[0] instanceof StdOutParam
-        config.outputs[1].name == 'file1.fa'
-        config.outputs[2].name == 'file2.fa'
-        config.outputs[3].name == 'file3.fa'
+        config.outputs[1].name == 'file1'
+        config.outputs[2].name == 'file2'
+        config.outputs[3].name == 'file3'
 
     }
 
