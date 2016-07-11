@@ -70,6 +70,6 @@ class BarrierTest extends Specification {
         def elapsed = System.currentTimeMillis() - begin
 
         then:
-        elapsed>=100 && elapsed<200
+        elapsed>=100 && elapsed<500
     }
 }
