@@ -52,20 +52,19 @@ class StateObj implements Serializable, Cloneable {
      */
     void incSubmitted() {
         if( poisoned )
-            throw new IllegalStateException("Cannot receive more message after Poison-Pill has arrived")
-
-        submitted++
+            log.debug "Oops.. Cannot process more messages after Poison-Pill was received"
+        else
+            submitted++
     }
 
     /**
      * Increment the number of completed tasks
      */
     void incCompleted() {
-        if( completed < submitted )
-            completed++
-
-        else
-            throw new IllegalStateException("Processed messages ($submitted) cannot overcome received messages ($submitted)")
+        if( completed >= submitted ) {
+            log.debug "Oops.. Processed messages ($submitted) should not overcome received messages ($submitted) count"
+        }
+        completed++
     }
 
     void poison() {
