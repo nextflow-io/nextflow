@@ -93,8 +93,8 @@ class TaskRunTest extends Specification {
         files.keySet()[0] instanceof FileOutParam
         files.keySet()[1] instanceof FileOutParam
 
-        files.keySet()[0].name == 'x'
-        files.keySet()[1].name == 'y'
+        files.keySet()[0].filePattern == 'x'
+        files.keySet()[1].filePattern == 'y'
 
         files.values()[0] == 'file1'
         files.values()[1] == 'file2'
