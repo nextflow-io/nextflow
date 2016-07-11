@@ -226,7 +226,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         @Override
         public List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
             log.trace "<${name}> Before run -- messages: ${messages}"
-            // this counter increment must be here, otherwise it is not coherent
+            // the counter must be incremented here, otherwise it won't be consistent
             state.update { StateObj it -> it.incSubmitted() }
             return messages;
         }
