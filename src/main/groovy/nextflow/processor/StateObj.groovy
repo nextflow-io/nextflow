@@ -39,11 +39,9 @@ class StateObj implements Serializable, Cloneable {
     private int submitted
     private int completed
     private boolean poisoned
-    private boolean allScalarValues
     private String name
 
-    StateObj( boolean allScalarValues = false, String name = null ) {
-        this.allScalarValues = allScalarValues
+    StateObj( String name = null ) {
         this.name = name
     }
 
@@ -73,7 +71,7 @@ class StateObj implements Serializable, Cloneable {
     }
 
     boolean isFinished() {
-        (allScalarValues || poisoned) && (submitted == completed)
+        poisoned && (submitted == completed)
     }
 
     StateObj clone() {
@@ -81,13 +79,12 @@ class StateObj implements Serializable, Cloneable {
         result.submitted = this.submitted
         result.completed = this.completed
         result.poisoned = this.poisoned
-        result.allScalarValues = this.allScalarValues
         result.name = this.name
         return result
     }
 
     String toString() {
-        "${getClass().simpleName}[submitted: $submitted; completed: $completed; poisoned: $poisoned; allScalar: $allScalarValues]"
+        "${getClass().simpleName}[submitted: $submitted; completed: $completed; poisoned: $poisoned ]"
     }
 
 }

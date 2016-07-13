@@ -168,6 +168,8 @@ abstract class TaskProcessor {
      */
     protected volatile boolean terminated
 
+    protected volatile boolean stopAfterFirstRun
+
     /**
      * Whenever the process execution is required to be blocking in order to handle
      * shared object in a thread safe manner
@@ -286,30 +288,26 @@ abstract class TaskProcessor {
         if ( !taskBody )
             throw new IllegalStateException("Missing task body for process `$name`")
 
-        /*
-         * Normalize the input channels:
-         * - at least one input channel have to be provided,
-         *   if missing create an dummy 'input' set to true
+        /**
+         * Verify if this process run only one time
          */
-        log.trace "TaskConfig: ${config}"
-        if( config.getInputs().size() == 0 ) {
-            config.fakeInput()
-        }
+        stopAfterFirstRun = config.getInputs().allScalarInputs()
 
-        final boolean hasEachParams = config.getInputs().any { it instanceof EachInParam }
-        final boolean allScalarValues = config.getInputs().allScalarInputs() && !hasEachParams
+        /*
+         * Normalize input channels
+         */
+        config.fakeInput()
 
         /*
          * Normalize the output
          * - even though the output may be empty, let return the stdout as output by default
          */
         if ( config.getOutputs().size() == 0 ) {
-            def dummy = allScalarValues ? Nextflow.variable() : Nextflow.channel()
-            config.fakeOutput(dummy)
+            config.fakeOutput()
         }
 
         // the state agent
-        state = new Agent<>(new StateObj(allScalarValues,name))
+        state = new Agent<>(new StateObj(name))
         state.addListener { StateObj old, StateObj obj ->
             try {
                 if( log.isTraceEnabled() )
@@ -728,7 +726,7 @@ abstract class TaskProcessor {
                 task.failed = true
 
             // -- make sure the error is showed only the very first time across all processes
-            if( errorShown.getAndSet(true) ) {
+            if( errorShown.getAndSet(true) || session.aborted ) {
                 return errorStrategy
             }
 
@@ -1734,7 +1732,6 @@ abstract class TaskProcessor {
         log.debug "<${name}> Sending poison pills and terminating process"
         sendPoisonPill()
         session.processDeregister(this)
-        processor.terminate()
     }
 
     /**
