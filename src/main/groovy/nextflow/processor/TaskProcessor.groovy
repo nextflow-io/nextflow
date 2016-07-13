@@ -168,7 +168,9 @@ abstract class TaskProcessor {
      */
     protected volatile boolean terminated
 
-    protected volatile boolean stopAfterFirstRun
+    protected boolean allScalarValues
+
+    protected boolean hasEachParams
 
     /**
      * Whenever the process execution is required to be blocking in order to handle
@@ -291,7 +293,8 @@ abstract class TaskProcessor {
         /**
          * Verify if this process run only one time
          */
-        stopAfterFirstRun = config.getInputs().allScalarInputs()
+        allScalarValues = config.getInputs().allScalarInputs()
+        hasEachParams = config.getInputs().any { it instanceof EachInParam }
 
         /*
          * Normalize input channels
