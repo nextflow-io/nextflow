@@ -20,7 +20,6 @@
 
 package nextflow.script
 import groovyx.gpars.dataflow.DataflowQueue
-import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Session
 import nextflow.exception.ProcessNotRecoverableException
@@ -54,7 +53,7 @@ class ScriptRunnerTest extends Specification {
 
         // when no outputs are specified, the 'stdout' is the default output
         then:
-        runner.result instanceof DataflowVariable
+        runner.result instanceof DataflowQueue
         runner.result.val == "echo Hello world"
 
     }

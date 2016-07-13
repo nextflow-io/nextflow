@@ -19,6 +19,7 @@
  */
 
 package nextflow.processor
+
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
@@ -28,7 +29,6 @@ import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
-import nextflow.Channel
 import nextflow.script.EachInParam
 /**
  * Defines the parallel tasks execution logic
@@ -49,10 +49,6 @@ class ParallelTaskProcessor extends TaskProcessor {
     protected void createOperator() {
 
         def opInputs = new ArrayList(config.getInputs().getChannels())
-        def opOutputs = new ArrayList(config.getOutputs().getChannels())
-
-        // append the shared obj to the input list
-        def allScalar = config.getInputs().allScalarInputs()
 
         /*
          * check if there are some iterators declaration
@@ -77,20 +73,31 @@ class ParallelTaskProcessor extends TaskProcessor {
             log.debug "Creating *combiner* operator for each param(s) at index(es): ${iteratorIndexes}"
 
             final size = opInputs.size()
+
+            // the iterator operator needs to executed just one time
+            // thus add a dataflow queue binding a single value and then a stop signal
+            def termination = new DataflowQueue<>()
+            termination << Boolean.TRUE << PoisonPill.instance
+            opInputs[ size-1 ] = termination
+
             // the script implementing the iterating process
             final forwarder = createForwardWrapper(size, iteratorIndexes)
             // the channel forwarding the data from the *iterator* process to the target task
             final linkingChannels = new ArrayList(size)
-            size.times { linkingChannels[it] = new DataflowQueue() }
+            // don't care about the last channel, being the control channel it doesn't bring real values
+            (size-1).times { linkingChannels[it] = new DataflowQueue() }
 
             // instantiate the iteration process
-            def params = [inputs: opInputs, outputs: linkingChannels, maxForks: 1, listeners: [new IteratorProcessInterceptor(allScalarValues: allScalar)]]
+            def params = [inputs: opInputs, outputs: linkingChannels, maxForks: 1, listeners: [new IteratorProcessInterceptor()]]
             session.allProcessors << (processor = new DataflowOperator(group, params, forwarder))
             // fix issue #41
             processor.start()
 
             // set as next inputs the result channels of the iteration process
-            opInputs = linkingChannels
+            // adding the 'control' channel removed previously
+            opInputs = new ArrayList(size)
+            opInputs.addAll( linkingChannels )
+            opInputs.add( config.getInputs().getChannels().last() )
         }
 
 
@@ -114,7 +121,9 @@ class ParallelTaskProcessor extends TaskProcessor {
         /*
          * finally create the operator
          */
-        def params = [inputs: opInputs, outputs: opOutputs, maxForks: maxForks, listeners: [new TaskProcessorInterceptor()] ]
+        // note: do not specify the output channels in the operator declaration
+        // this allows us to manage them independently from the operator life-cycle
+        def params = [inputs: opInputs, maxForks: maxForks, listeners: [new TaskProcessorInterceptor()] ]
         session.allProcessors << (processor = new DataflowOperator(group, params, wrapper))
 
         // notify the creation of a new vertex the execution DAG
@@ -161,7 +170,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         final str =
             """
             { ${args.join(',')} ->
-                def out = [ ${args.join(',')} ]
+                def out = [ ${args[0..-2].join(',')} ]
                 def itr = [ ${indexes.collect { 'x'+it }.join(',')} ]
                 def cmb = itr.combinations()
                 for( entries in cmb ) {
@@ -246,6 +255,19 @@ class ParallelTaskProcessor extends TaskProcessor {
                 log.trace "<${taskName}> Message arrived -- ${channelName} => ${message}"
             }
 
+            // the last channel it's always a fake dataflow queue used to control the process termination
+            final inputs = processor.actor.inputs
+            final len = inputs.size()
+            final last = (inputs.get(len-1) as DataflowQueue)
+            if( len == 1 || stopAfterFirstRun ) {
+                // -- kill itself
+                last.bind(PoisonPill.instance)
+            }
+            else if( index == 0 ) {
+                // -- keep things rolling
+                last.bind(Boolean.TRUE)
+            }
+
             return message;
         }
 
@@ -257,17 +279,19 @@ class ParallelTaskProcessor extends TaskProcessor {
                 log.trace "<${taskName}> Control message arrived ${channelName} => ${message}"
             }
 
+            final inputs = processor.actor.inputs
+            final len = inputs.size()
+            final last = (inputs.get(len-1) as DataflowQueue)
+            if( index == 0 && len>1 && message instanceof PoisonPill ) {
+                last.bind(PoisonPill.instance)
+            }
+
             if( message == PoisonPill.instance ) {
                 log.debug "<${name}> Poison pill arrived"
                 state.update { StateObj it -> it.poison() }
+            }
 
-                // this control message avoid to stop the operator and
-                // propagate the PoisonPill to the downstream processes
-                return StopQuietly.instance
-            }
-            else {
-                return message;
-            }
+            return message;
         }
 
         @Override
@@ -296,8 +320,6 @@ class ParallelTaskProcessor extends TaskProcessor {
      */
     class IteratorProcessInterceptor extends DataflowEventAdapter {
 
-        boolean allScalarValues
-
         @Override
         public boolean onException(final DataflowProcessor processor, final Throwable e) {
             log.error "* process '$name' > error on internal iteration process", e
@@ -308,6 +330,7 @@ class ParallelTaskProcessor extends TaskProcessor {
         public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
             if( log.isTraceEnabled() )
                 log.trace "* process '$name' > message arrived for iterator '${config.getInputs().names[index]}' with value: '$message'"
+
             return message;
         }
 
@@ -323,25 +346,22 @@ class ParallelTaskProcessor extends TaskProcessor {
         public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
             if( log.isTraceEnabled() )
                 log.trace "* process '$name' > control message arrived for iterator '${config.getInputs().names[index]}'"
+
             return message;
         }
 
         @Override
         public void afterRun(final DataflowProcessor processor, final List<Object> messages) {
             if( log.isTraceEnabled() )
-                log.trace "* process '$name' > after run on internal iteration process -- allScalarValues: $allScalarValues"
+                log.trace "* process '$name' > after run on internal iteration process"
 
-            if( allScalarValues )
-                processor.terminate()
         }
 
         @Override
         public void afterStop(final DataflowProcessor processor) {
             if( log.isTraceEnabled() )
-                log.trace "* process '$name' > after stop on internal iteration process -- allScalarValues: $allScalarValues"
+                log.trace "* process '$name' > after stop on internal iteration process"
 
-            if( allScalarValues )
-                processor.bindAllOutputs(Channel.STOP)
         }
     }
 

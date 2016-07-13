@@ -252,8 +252,6 @@ class ProcessFactory {
      * @param taskConfig
      */
     private getExecutorName(ProcessConfig taskConfig) {
-        log.trace ">> taskConfig $taskConfig"
-
         // create the processor object
         def result = taskConfig.executor?.toString()
 

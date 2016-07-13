@@ -524,10 +524,10 @@ class SetOutParam extends BaseOutParam {
 
 final class DefaultOutParam extends StdOutParam {
 
-    DefaultOutParam( ProcessConfig config, target ) {
+    DefaultOutParam( ProcessConfig config ) {
         super(config)
         bind('-')
-        into(target)
+        into(new DataflowQueue())
     }
 }
 

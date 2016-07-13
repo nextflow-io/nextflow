@@ -313,8 +313,8 @@ class ProcessConfig implements Map<String,Object> {
         new DefaultInParam(this)
     }
 
-    def void fakeOutput( target ) {
-        new DefaultOutParam(this,target)
+    def void fakeOutput() {
+        new DefaultOutParam(this)
     }
 
 
