@@ -19,12 +19,11 @@
  */
 
 package nextflow.processor
-
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
-import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
@@ -72,30 +71,33 @@ class ParallelTaskProcessor extends TaskProcessor {
         if( iteratorIndexes ) {
             log.debug "Creating *combiner* operator for each param(s) at index(es): ${iteratorIndexes}"
 
-            final size = opInputs.size()
+            // don't care about the last channel, being the control channel it doesn't bring real values
+            final size = opInputs.size()-1
 
             // the iterator operator needs to executed just one time
             // thus add a dataflow queue binding a single value and then a stop signal
             def termination = new DataflowQueue<>()
-            termination << Boolean.TRUE << PoisonPill.instance
-            opInputs[ size-1 ] = termination
+            termination << Boolean.TRUE
+            opInputs[size] = termination
+
+            // the channel forwarding the data from the *iterator* process to the target task
+            final linkingChannels = new ArrayList(size)
+            size.times { linkingChannels[it] = new DataflowQueue() }
 
             // the script implementing the iterating process
             final forwarder = createForwardWrapper(size, iteratorIndexes)
-            // the channel forwarding the data from the *iterator* process to the target task
-            final linkingChannels = new ArrayList(size)
-            // don't care about the last channel, being the control channel it doesn't bring real values
-            (size-1).times { linkingChannels[it] = new DataflowQueue() }
 
             // instantiate the iteration process
-            def params = [inputs: opInputs, outputs: linkingChannels, maxForks: 1, listeners: [new IteratorProcessInterceptor()]]
+            def stopAfterFirstRun = allScalarValues
+            def interceptor = new BaseProcessInterceptor(opInputs, stopAfterFirstRun)
+            def params = [inputs: opInputs, outputs: linkingChannels, maxForks: 1, listeners: [interceptor]]
             session.allProcessors << (processor = new DataflowOperator(group, params, forwarder))
             // fix issue #41
             processor.start()
 
             // set as next inputs the result channels of the iteration process
             // adding the 'control' channel removed previously
-            opInputs = new ArrayList(size)
+            opInputs = new ArrayList(size+1)
             opInputs.addAll( linkingChannels )
             opInputs.add( config.getInputs().getChannels().last() )
         }
@@ -123,7 +125,9 @@ class ParallelTaskProcessor extends TaskProcessor {
          */
         // note: do not specify the output channels in the operator declaration
         // this allows us to manage them independently from the operator life-cycle
-        def params = [inputs: opInputs, maxForks: maxForks, listeners: [new TaskProcessorInterceptor()] ]
+        def stopAfterFirstRun = allScalarValues && !hasEachParams
+        def interceptor = new TaskProcessorInterceptor(opInputs, stopAfterFirstRun)
+        def params = [inputs: opInputs, maxForks: maxForks, listeners: [interceptor] ]
         session.allProcessors << (processor = new DataflowOperator(group, params, wrapper))
 
         // notify the creation of a new vertex the execution DAG
@@ -141,10 +145,13 @@ class ParallelTaskProcessor extends TaskProcessor {
      * @param indexes The list of indexes which identify the position of iterators in the input channels
      * @return The closure implementing the iteration/forwarding logic
      */
-    protected createForwardWrapper( int numOfInputs, List indexes ) {
+    protected createForwardWrapper( int len, List indexes ) {
 
         final args = []
-        numOfInputs.times { args << "x$it" }
+        (len+1).times { args << "x$it" }
+
+        final outs = []
+        len.times { outs << "x$it" }
 
         /*
          * Explaining the following closure:
@@ -170,12 +177,12 @@ class ParallelTaskProcessor extends TaskProcessor {
         final str =
             """
             { ${args.join(',')} ->
-                def out = [ ${args[0..-2].join(',')} ]
+                def out = [ ${outs.join(',')} ]
                 def itr = [ ${indexes.collect { 'x'+it }.join(',')} ]
                 def cmb = itr.combinations()
                 for( entries in cmb ) {
                     def count = 0
-                    n.times { i->
+                    ${len}.times { i->
                         if( i in indexes ) { out[i] = entries[count++] }
                     }
                     bindAllOutputValues( *out )
@@ -183,7 +190,8 @@ class ParallelTaskProcessor extends TaskProcessor {
             }
             """
 
-        final Binding binding = new Binding( indexes: indexes, n: numOfInputs )
+
+        final Binding binding = new Binding( indexes: indexes )
         final result = (Closure)grengine.run(str, binding)
         return result
 
@@ -230,7 +238,11 @@ class ParallelTaskProcessor extends TaskProcessor {
     /**
      *  Intercept dataflow process events
      */
-    class TaskProcessorInterceptor extends DataflowEventAdapter {
+    class TaskProcessorInterceptor extends BaseProcessInterceptor {
+
+        TaskProcessorInterceptor(List<DataflowChannel> inputs, boolean stop) {
+            super(inputs, stop)
+        }
 
         @Override
         public List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
@@ -255,20 +267,7 @@ class ParallelTaskProcessor extends TaskProcessor {
                 log.trace "<${taskName}> Message arrived -- ${channelName} => ${message}"
             }
 
-            // the last channel it's always a fake dataflow queue used to control the process termination
-            final inputs = processor.actor.inputs
-            final len = inputs.size()
-            final last = (inputs.get(len-1) as DataflowQueue)
-            if( len == 1 || stopAfterFirstRun ) {
-                // -- kill itself
-                last.bind(PoisonPill.instance)
-            }
-            else if( index == 0 ) {
-                // -- keep things rolling
-                last.bind(Boolean.TRUE)
-            }
-
-            return message;
+            super.messageArrived(processor, channel, index, message)
         }
 
         @Override
@@ -279,19 +278,14 @@ class ParallelTaskProcessor extends TaskProcessor {
                 log.trace "<${taskName}> Control message arrived ${channelName} => ${message}"
             }
 
-            final inputs = processor.actor.inputs
-            final len = inputs.size()
-            final last = (inputs.get(len-1) as DataflowQueue)
-            if( index == 0 && len>1 && message instanceof PoisonPill ) {
-                last.bind(PoisonPill.instance)
-            }
+            super.controlMessageArrived(processor, channel, index, message)
 
             if( message == PoisonPill.instance ) {
                 log.debug "<${name}> Poison pill arrived"
                 state.update { StateObj it -> it.poison() }
             }
 
-            return message;
+            return message
         }
 
         @Override
@@ -318,51 +312,40 @@ class ParallelTaskProcessor extends TaskProcessor {
     /*
      * logger class for the *iterator* processor
      */
-    class IteratorProcessInterceptor extends DataflowEventAdapter {
+    class BaseProcessInterceptor extends DataflowEventAdapter {
 
-        @Override
-        public boolean onException(final DataflowProcessor processor, final Throwable e) {
-            log.error "* process '$name' > error on internal iteration process", e
-            return true;
+        final List<DataflowChannel> inputs
+
+        final boolean stopAfterFirstRun
+
+        final int len
+
+        final DataflowQueue control
+
+        final int first
+
+        BaseProcessInterceptor( List<DataflowChannel> inputs, boolean stop ) {
+            this.inputs = new ArrayList<>(inputs)
+            this.stopAfterFirstRun = stop
+            this.len = inputs.size()
+            this.control = (DataflowQueue)inputs.get(len-1)
+            this.first = inputs.findIndexOf { it instanceof DataflowQueue }
         }
 
         @Override
         public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            if( log.isTraceEnabled() )
-                log.trace "* process '$name' > message arrived for iterator '${config.getInputs().names[index]}' with value: '$message'"
+            if( len == 1 || stopAfterFirstRun ) {
+                // -- kill itself
+                control.bind(PoisonPill.instance)
+            }
+            else if( index == first ) {
+                // -- keep things rolling
+                control.bind(Boolean.TRUE)
+            }
 
             return message;
         }
 
-        @Override
-        public Object messageSentOut(final DataflowProcessor processor, final DataflowWriteChannel<Object> channel, final int index, final Object message) {
-            if( log.isTraceEnabled() )
-                log.trace "* process '$name' > message forwarded for iterator '${config.getInputs().names[index]}' with value: '$message'"
-            return message;
-        }
-
-
-        @Override
-        public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            if( log.isTraceEnabled() )
-                log.trace "* process '$name' > control message arrived for iterator '${config.getInputs().names[index]}'"
-
-            return message;
-        }
-
-        @Override
-        public void afterRun(final DataflowProcessor processor, final List<Object> messages) {
-            if( log.isTraceEnabled() )
-                log.trace "* process '$name' > after run on internal iteration process"
-
-        }
-
-        @Override
-        public void afterStop(final DataflowProcessor processor) {
-            if( log.isTraceEnabled() )
-                log.trace "* process '$name' > after stop on internal iteration process"
-
-        }
     }
 
 
