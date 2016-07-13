@@ -100,7 +100,7 @@ class ProcessFactory {
      * @return An instance of {@link TaskProcessor}
      */
     protected TaskProcessor newTaskProcessor( String name, Executor executor, Session session, BaseScript script, ProcessConfig config, TaskBody taskBody ) {
-        new ParallelTaskProcessor(name, executor, session, script, config, taskBody)
+        new TaskProcessor(name, executor, session, script, config, taskBody)
     }
 
     /**
