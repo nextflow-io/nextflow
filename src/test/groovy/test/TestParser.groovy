@@ -25,10 +25,8 @@ import groovy.transform.InheritConstructors
 import nextflow.Channel
 import nextflow.Nextflow
 import nextflow.Session
-
 import nextflow.ast.NextflowDSL
 import nextflow.executor.Executor
-import nextflow.processor.ParallelTaskProcessor
 import nextflow.processor.ProcessConfig
 import nextflow.processor.ProcessFactory
 import nextflow.processor.TaskProcessor
@@ -109,7 +107,7 @@ class TestParser {
     }
 
     @InheritConstructors
-    static class MockTaskProcessor extends ParallelTaskProcessor {
+    static class MockTaskProcessor extends TaskProcessor {
         @Override
         def run () { }
     }
