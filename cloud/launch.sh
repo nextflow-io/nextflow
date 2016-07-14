@@ -51,6 +51,8 @@ echo "S3 join bucket: $X_BUCKET"
 
 set +u
 echo "Root storage  : $X_STORAGE GB"
+echo "EFS ID        : ${X_EFS_ID:--}"
+echo "EFS mount     : ${X_EFS_MOUNT:--} "
 
 if [[ $3 == '--spot' ]]; then
   X_SPOT=true 
@@ -86,9 +88,41 @@ function get_abs_filename() {
 function cloudInit() {
 
 local role=$1
-cat << EndOfString
+
+#
+# create the cloud boothook file
+#
+local boothook=$(mktemp)
+
+if [[ $X_EFS_ID && $X_EFS_MOUNT ]]; then
+cat <<EndOfString >>$boothook
+zone="\$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)"
+region="\${zone::-1}"
+yum install -y nfs-utils
+mkdir -p $X_EFS_MOUNT
+mount -t nfs4 -o nfsvers=4.1 \${zone}.${X_EFS_ID}.efs.\${region}.amazonaws.com:/ $X_EFS_MOUNT
+chown ec2-user:ec2-user $X_EFS_MOUNT
+chmod 775 $X_EFS_MOUNT
+EndOfString
+fi
+
+if [[ $X_TYPE == r3.* && $X_DEVICE && $X_MOUNT ]]; then
+cat <<EndOfString >>$boothook
+mkfs.ext4 -E nodiscard $X_DEVICE
+mkdir -p $X_MOUNT
+mount -o discard $X_DEVICE $X_MOUNT
+chown -R ec2-user:ec2-user $X_MOUNT
+chmod 775 $X_MOUNT
+EndOfString
+fi
+
+#
+# create the script-shell  file
+#
+local scriptschell=$(mktemp)
+cat <<EndOfString >> $scriptschell
 #!/bin/bash
-su - ec2-user << 'EOF'
+su - ec2-user << 'EndOfScript'
 export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
 export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
 export AWS_S3BUCKET="$AWS_S3BUCKET"
@@ -105,9 +139,20 @@ export X_MOUNT="$X_MOUNT"
 export X_DEVICE="$X_DEVICE"
 export X_EFS_ID="$X_EFS_ID"
 export X_EFS_MOUNT="$X_EFS_MOUNT"
-curl -fsSL https://raw.githubusercontent.com/nextflow-io/nextflow/master/cloud/cloud-boot.sh | bash &> ~ec2-user/boot.log
-EOF
+(
+$(cat ./cloud-boot.sh)
+) &> ~ec2-user/boot.log
+EndOfScript
 EndOfString
+
+#
+# combine the two file as mime-multipart content user-data
+#
+if [[ -s $boothook ]]; then
+  ./mimetext.py $scriptschell:x-shellscript $boothook:cloud-boothook
+else
+  ./mimetext.py $scriptschell:x-shellscript
+fi
 
 }
 
