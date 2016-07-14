@@ -6,6 +6,8 @@ set -u
 # DEFINE the following variables
 #
 
+#X_RUN=<unique id of the execution>
+
 #AWS_ACCESS_KEY_ID=xxx
 #AWS_SECRET_ACCESS_KEY=yyy
 #X_AMI=<image ID eg. ami-f71a7f80>
@@ -43,6 +45,7 @@ X_EFS_MOUNT=/mnt/efs
 #DOCKER_VERSION=1.10.3
 
 # Print the current status
+echo "Run           : $X_RUN"
 echo "AMI           : $X_AMI"
 echo "Instance type : $X_TYPE"
 echo "Security group: $X_SECURITY"
@@ -139,6 +142,7 @@ export X_MOUNT="$X_MOUNT"
 export X_DEVICE="$X_DEVICE"
 export X_EFS_ID="$X_EFS_ID"
 export X_EFS_MOUNT="$X_EFS_MOUNT"
+export X_RUN="$X_RUN"
 (
 $(cat ./cloud-boot.sh)
 ) &> ~ec2-user/boot.log
