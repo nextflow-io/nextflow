@@ -1,6 +1,20 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.21.0-RC1 - 14 Jul 2016
+- Fixed Ability to customize job name submitted to the scheduler #140
+- Fixed Duplicate output error when no channel specified #182
+- Fixed File paths containing a timestamp are parsed as a Duration object #185
+- Fixed ClosedByInterruptException is thrown randomly #188 
+- Fixed Pipeline hangs when `Channel.from` argument is an empty list #189
+- Fixed Handle customised sbatch returning the jobid by itself #190 
+- Fixed LocalExecutor can randomly hang with no running task #191
+- Fixed Missing flag in SLURM `squeue` call #193
+- Fixed Process script declaring a regexp expression results in a IllegalAccessException #199
+- Merged Silence mkdir error if NXF_HOME not writable #187
+- Added `ST` and `BF` queue statuses to SLURM executor
+- Improved logging information
+
 0.20.1 - 18 Jun 2016 
 - Fixed Directives do not accept a negative numeric value #180
 - Fixed Dynamic errorStrategy is not evaluated correctly #183
