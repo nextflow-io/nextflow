@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 set -e
 set -x 
 
@@ -29,29 +28,10 @@ aws ec2 --region "$region" create-tags --resources "$instance" --tags "Key=Name,
 #
 # mount instance storage
 #
-if [[ $X_TYPE == r3.* && $X_DEVICE && $X_MOUNT ]]; then
-sudo mkfs.ext4 -E nodiscard $X_DEVICE
-sudo mkdir -p $X_MOUNT
-sudo mount -o discard $X_DEVICE $X_MOUNT
-sudo chown -R ec2-user:ec2-user $X_MOUNT
-sudo chmod 775 $X_MOUNT
+if [[ $X_DEVICE && $X_MOUNT ]]; then
 # set nextflow scratch path to the mounted storage
 export NXF_TEMP=$X_MOUNT
 echo "export NXF_TEMP=$X_MOUNT" >> $HOME/.bash_profile
-fi
-
-#
-# EFS mount
-# (NOTE: on Ubuntu use `sudo apt-get install nfs-common`)
-#
-if [[ $X_EFS_ID && $X_EFS_MOUNT ]]; then
-sudo yum install -y nfs-utils
-sudo mkdir -p $X_EFS_MOUNT
-sudo mount -t nfs4 -o nfsvers=4.1 $(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone).${X_EFS_ID}.efs.${region}.amazonaws.com:/ $X_EFS_MOUNT
-sudo chown -R ec2-user:ec2-user $X_EFS_MOUNT
-sudo chmod 775 $X_EFS_MOUNT
-# restart the docker daemon otherwise it won't see the NFS mounts (!!!)
-sleep 5 && sudo service docker start
 fi
 
 #
@@ -93,10 +73,12 @@ chmod +x $HOME/nextflow
 [[ $NXF_PULL ]] && $HOME/nextflow pull "$NXF_PULL"
 
 # launch the nextflow daemon
-if [[ $NXF_ROLE != master ]]; then 
+if [[ $NXF_ROLE == worker ]]; then
   bash -x $HOME/nextflow node -bg -cluster.join "s3:$AWS_S3BUCKET" -cluster.interface eth0
-fi 
+fi
 
 # save the environment for debugging 
 env | sort > boot.env
 
+# just a marker file
+touch .READY
