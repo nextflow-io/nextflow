@@ -24,6 +24,7 @@ instance="$(curl -s http://169.254.169.254/latest/meta-data/instance-id)"
 zone="$(curl -s 169.254.169.254/latest/meta-data/placement/availability-zone)"
 region="${zone::-1}"
 aws ec2 --region "$region" create-tags --resources "$instance" --tags "Key=Name,Value=$NXF_ROLE"
+aws ec2 --region "$region" create-tags --resources "$instance" --tags "Key=Cluster,Value=$X_RUN"
 
 #
 # mount instance storage
@@ -73,8 +74,27 @@ chmod +x $HOME/nextflow
 [[ $NXF_PULL ]] && $HOME/nextflow pull "$NXF_PULL"
 
 # launch the nextflow daemon
+cluster_join="s3:$AWS_S3BUCKET"
+cluster_work="s3://<your-bucket/work>"
+if [[ $X_EFS_ID && $X_EFS_MOUNT ]]; then
+  [[ $X_RUN ]] && cluster_join="path:$X_EFS_MOUNT/cluster/$X_RUN"
+  cluster_work=$X_EFS_MOUNT/work
+fi
+
 if [[ $NXF_ROLE == worker ]]; then
-  bash -x $HOME/nextflow node -bg -cluster.join "s3:$AWS_S3BUCKET" -cluster.interface eth0
+  bash -x $HOME/nextflow node -bg -cluster.join "$cluster_join" -cluster.interface eth0
+else
+cat <<EOF >> $HOME/README
+#
+# Launch the pipeline execution by using the following command
+#
+./nextflow run cbcrg/kallisto-nf \
+  -process.executor ignite \
+  -cluster.join $cluster_join \
+  -cluster.interface=eth0  \
+  -work-dir ${cluster_work} \
+  -with-docker
+EOF
 fi
 
 # save the environment for debugging 
