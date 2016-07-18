@@ -30,7 +30,7 @@ set -u
 
 # EFS file system
 #X_EFS_ID=fs-xxx
-X_EFS_MOUNT=/mnt/efs
+#X_EFS_MOUNT=/mnt/efs
 
 # nextflow details
 #NXF_VER=0.17.3

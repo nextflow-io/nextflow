@@ -1,5 +1,4 @@
-Cloud boot 
-============
+# Cloud boot 
 
 * The script `launch.sh` launches a set of EC2 nodes and the master node. 
     
@@ -7,7 +6,9 @@ Cloud boot
     - Downloads the Nextflow installer script
     - Pulls the Docker image specified by the `DOCKER_IMAGE` environment variable (multiple images by using a blank character separated list).
     - Launches the Nextflow daemon in background
-    - Tag the instance with a `master`/`worker` label
+    - Tag EC2 instances with a `master`/`worker` label
+    - Mount instance ephemeral storage 
+    - Mount [EFS](https://aws.amazon.com/efs/) storage 
     
 * It requires a Linux Amazon image with the following tools installed:
     - cloud-init
@@ -19,8 +20,7 @@ NOTE: if you use an AMI other than Amazon Linux, change the user name `ec2-user`
 accordingly. 
     
     
-Quickstart
-------------
+## Quickstart
     
 * Define your configuration details setting properly the variables in the `launch.sh` script, in particular: 
     
