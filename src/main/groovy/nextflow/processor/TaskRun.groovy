@@ -385,14 +385,9 @@ class TaskRun implements Cloneable {
     }
 
     /**
-     * It is made of two parts:
-     *
-     * 1) Look at the {@code nextflow.script.FileOutParam} which name is the expected
+     * Look at the {@code nextflow.script.FileOutParam} which name is the expected
      *  output name
      *
-     * 2) It looks shared file parameters, that being so are also output parameters
-     *  The problem here is that we need the real file name as it has been staged in
-     *  process execution folder.
      */
     @Memoized
     def List<String> getOutputFilesNames() {
