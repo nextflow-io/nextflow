@@ -68,7 +68,7 @@ class CliOptions {
     @Parameter(names = ['-bg'], description = 'Execute nextflow in background', arity = 0)
     boolean background
 
-    @DynamicParameter(names = ['-D'], description = 'Set JMV properties' )
+    @DynamicParameter(names = ['-D'], description = 'Set JVM properties' )
     Map<String,String> jvmOpts = [:]
 
     @Parameter(names = ['-self-update'], description = 'Update nextflow to the latest version', arity = 0, hidden = true)

@@ -280,7 +280,7 @@ class LauncherTest extends Specification {
         capture.toString() == '''
             Options:
               -D
-                 Set JMV properties
+                 Set JVM properties
               -c, -config
                  Add the specified file to configuration set
               -log
@@ -313,7 +313,7 @@ class LauncherTest extends Specification {
         @Parameter(names=['-c','-config'], description = 'Add the specified file to configuration set')
         String opt2
 
-        @DynamicParameter(names = ['-D'], description = 'Set JMV properties' )
+        @DynamicParameter(names = ['-D'], description = 'Set JVM properties' )
         Map opt3
 
         @Parameter(names=['hidden'], hidden = true)
