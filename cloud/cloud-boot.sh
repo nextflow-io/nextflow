@@ -88,7 +88,7 @@ cat <<EOF >> $HOME/README
 #
 # Launch the pipeline execution by using the following command
 #
-./nextflow run cbcrg/kallisto-nf \
+./nextflow run ${NXF_PULL:-<your-pipeline>} \
   -process.executor ignite \
   -cluster.join $cluster_join \
   -cluster.interface=eth0  \
@@ -101,4 +101,4 @@ fi
 env | sort > boot.env
 
 # just a marker file
-touch .READY
+touch READY
