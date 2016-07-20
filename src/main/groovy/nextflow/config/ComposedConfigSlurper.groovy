@@ -88,6 +88,7 @@ class ComposedConfigSlurper {
     private static final ENVIRONMENTS_METHOD = 'environments'
     Grengine grengine
     private Map bindingVars = [:]
+    private Map paramVars = [:]
 
     private final Map<String, String> conditionValues = [:]
     private final Stack<Map<String, ConfigObject>> conditionalBlocks = new Stack<Map<String,ConfigObject>>()
@@ -150,6 +151,12 @@ class ComposedConfigSlurper {
         this.bindingVars = vars
         return this
     }
+
+    ComposedConfigSlurper setParams(Map vars) {
+        this.paramVars = vars
+        return this
+    }
+
 
     /**
      * Creates a unique name for the config class in order to avoid collision
@@ -285,6 +292,9 @@ class ComposedConfigSlurper {
                     result = new ConfigObject()
                     assignName.call(name, result)
                 }
+            }
+            if( name=='params' && result instanceof Map && paramVars ) {
+                result.putAll(paramVars)
             }
             result
         }

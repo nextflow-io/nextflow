@@ -242,6 +242,9 @@ class ConfigBuilder {
         final slurper = new ComposedConfigSlurper()
         ConfigObject result = slurper.parse('env{}; session{}; params{}; process{}; executor{} ')
 
+        if( cmdRun?.params )
+            slurper.setParams(cmdRun.parsedParams)
+
         // add the user specified environment to the session env
         env.sort().each { name, value -> result.env.put(name,value) }
 
@@ -403,9 +406,8 @@ class ConfigBuilder {
 
 
         // -- add the command line parameters to the 'taskConfig' object
-        cmdRun.params?.each { name, value ->
-            config.params.put(name, parseValue(value))
-        }
+        if( cmdRun?.params )
+            config.params.putAll( cmdRun.parsedParams )
 
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution
