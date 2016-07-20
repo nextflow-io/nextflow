@@ -32,6 +32,7 @@ import nextflow.scm.AssetManager
 import nextflow.config.ConfigBuilder
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
+import nextflow.util.ConfigHelper
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 /**
@@ -277,5 +278,14 @@ class CmdRun extends CmdBase implements HubOptions {
         return result
     }
 
+    Map getParsedParams() {
+        if( !params )
+            Collections.emptyMap()
+        def result = [:]
+        params.each { key, value ->
+            result.put( key, ConfigHelper.parseValue(value) )
+        }
+        return result
+    }
 
 }

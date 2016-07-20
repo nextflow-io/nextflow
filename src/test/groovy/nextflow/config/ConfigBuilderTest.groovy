@@ -107,7 +107,8 @@ class ConfigBuilderTest extends Specification {
         def text1 = '''
         task { field1 = 1; field2 = 'hola'; }
         env { alpha = 'a1'; beta  = 'b1'; HOME="$HOME:/some/path"; }
-        params { demo = 1   }
+        params { demo = 1  }
+        params.test = 2
         '''
 
 
@@ -121,6 +122,7 @@ class ConfigBuilderTest extends Specification {
         config1.env.PATH == '/local/bin'
         config1.env.'dot.key.name' == 'any text'
 
+        config1.params.test == 2
         config1.params.demo == 1
 
     }
@@ -132,6 +134,7 @@ class ConfigBuilderTest extends Specification {
         builder.baseDir = Paths.get('/base/path')
 
         def text = '''
+        params.p = "$baseDir/1"
         params {
             q = "$baseDir/2"
         }
@@ -140,10 +143,188 @@ class ConfigBuilderTest extends Specification {
         when:
         def cfg = builder.buildConfig0([:], [text])
         then:
+        cfg.params.p == '/base/path/1'
         cfg.params.q == '/base/path/2'
 
     }
 
+    def 'CLI params should override the ones defined in the config file' () {
+        setup:
+        def file = Files.createTempFile('test',null)
+        file.text = '''
+        params {
+          alpha = 'x'
+        }
+        params.beta = 'y'
+        params.delta = 'Foo'
+        params.gamma = params.alpha
+        params {
+            omega = 'Bar'
+        }
+
+        process {
+          publishDir = [path: params.alpha]
+        }
+        '''
+        when:
+        def opt = new CliOptions()
+        def run = new CmdRun(params: [alpha: 'Hello', beta: 'World', omega: 'Last'])
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([file])
+
+        then:
+        result.params.alpha == 'Hello'  // <-- params defined as CLI options override the ones in the config file
+        result.params.beta == 'World'   // <--   as above
+        result.params.gamma == 'Hello'  // <--   as above
+        result.params.omega == 'Last'
+        result.params.delta == 'Foo'
+        result.process.publishDir == [path: 'Hello']
+
+        cleanup:
+        file?.delete()
+    }
+
+    def 'CLI params should override the ones in one or more config files' () {
+        given:
+        def folder = File.createTempDir()
+        def configMain = new File(folder,'nextflow.config').absoluteFile
+        def snippet1 = new File(folder,'config1.txt').absoluteFile
+        def snippet2 = new File(folder,'config2.txt').absoluteFile
+
+
+        configMain.text = """
+        process.name = 'alpha'
+        params.one = 'a'
+        params.xxx = 'x'
+        includeConfig "$snippet1"
+        """
+
+        snippet1.text = """
+        params.two = 'b'
+        params.yyy = 'y'
+
+        process.cpus = 4
+        process.memory = '8GB'
+
+        includeConfig("$snippet2")
+        """
+
+        snippet2.text = '''
+        params.three = 'c'
+        params.zzz = 'z'
+
+        process { disk = '1TB' }
+        process.resources.foo = 1
+        process.resources.bar = 2
+        '''
+
+        when:
+        def opt = new CliOptions()
+        def run = new CmdRun(params: [one: '1', two: 'dos', three: 'tres'])
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([configMain.toPath()])
+
+        then:
+        config.params.one == 1
+        config.params.two == 'dos'
+        config.params.three == 'tres'
+        config.process.name == 'alpha'
+        config.params.xxx == 'x'
+        config.params.yyy == 'y'
+        config.params.zzz == 'z'
+
+        config.process.cpus == 4
+        config.process.memory == '8GB'
+        config.process.disk == '1TB'
+        config.process.resources.foo == 1
+        config.process.resources.bar == 2
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'CLI params should overrides the ones in one or more profiles ' () {
+
+        setup:
+        def file = Files.createTempFile('test',null)
+        file.text = '''
+        params.alpha = 'a'
+        params.beta = 'b'
+        params.delta = 'Foo'
+        params.gamma = params.alpha
+
+        params {
+            genomes {
+                'GRCh37' {
+                  bed12   = '/data/genes.bed'
+                  bismark = '/data/BismarkIndex'
+                  bowtie  = '/data/genome'
+                }
+            }
+        }
+
+        profiles {
+          first {
+            params.alpha = 'Alpha'
+            params.omega = 'Omega'
+            params.gamma = 'First'
+            process.name = 'Bar'
+          }
+
+          second {
+            params.alpha = 'xxx'
+            params.gamma = 'Second'
+            process {
+                publishDir = [path: params.alpha]
+            }
+          }
+
+        }
+
+        '''
+
+
+        when:
+        def opt = new CliOptions()
+        def run = new CmdRun(params: [alpha: 'AAA', beta: 'BBB'])
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([file])
+        then:
+        config.params.alpha == 'AAA'
+        config.params.beta == 'BBB'
+        config.params.delta == 'Foo'
+        config.params.gamma == 'AAA'
+        config.params.genomes.GRCh37.bed12 == '/data/genes.bed'
+        config.params.genomes.GRCh37.bismark == '/data/BismarkIndex'
+        config.params.genomes.GRCh37.bowtie  == '/data/genome'
+
+        when:
+        opt = new CliOptions()
+        run = new CmdRun(params: [alpha: 'AAA', beta: 'BBB'], profile: 'first')
+        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([file])
+        then:
+        config.params.alpha == 'AAA'
+        config.params.beta == 'BBB'
+        config.params.delta == 'Foo'
+        config.params.gamma == 'First'
+        config.process.name == 'Bar'
+        config.params.genomes.GRCh37.bed12 == '/data/genes.bed'
+        config.params.genomes.GRCh37.bismark == '/data/BismarkIndex'
+        config.params.genomes.GRCh37.bowtie  == '/data/genome'
+
+
+        when:
+        opt = new CliOptions()
+        run = new CmdRun(params: [alpha: 'AAA', beta: 'BBB', genomes: 'xxx'], profile: 'second')
+        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([file])
+        then:
+        config.params.alpha == 'AAA'
+        config.params.beta == 'BBB'
+        config.params.delta == 'Foo'
+        config.params.gamma == 'Second'
+        config.params.genomes == 'xxx'
+        config.process.publishDir == [path: 'AAA']
+
+        cleanup:
+        file?.delete()
+    }
 
     def 'valid config files' () {
 
