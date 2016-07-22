@@ -105,6 +105,13 @@ class AbstractTextSplitterTest extends Specification {
         result.name == 'file.fa'
         result.toString().startsWith( folder.toString() )
 
+        when:
+        splitter = [:] as AbstractTextSplitter
+        splitter.sourceFile = Paths.get('/some/file.fasta.gz')
+        splitter.options(file: true)
+        result = splitter.createCollector()
+        then:
+        result != null
     }
 
 }
