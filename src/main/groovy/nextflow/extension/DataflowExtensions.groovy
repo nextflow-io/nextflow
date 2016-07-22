@@ -22,6 +22,7 @@ package nextflow.extension
 import static java.util.Arrays.asList
 import static nextflow.util.CheckHelper.checkParams
 
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.PackageScope
@@ -1124,7 +1125,7 @@ class DataflowExtensions {
     static public final DataflowReadChannel route( final DataflowReadChannel source, final Closure mapper = DEFAULT_MAPPING_CLOSURE ) {
         assert !(source instanceof DataflowExpression)
 
-        def allChannels = [:]
+        def allChannels = new ConcurrentHashMap()
         DataflowQueue target = new DataflowQueue()
 
         source.subscribeImpl (
