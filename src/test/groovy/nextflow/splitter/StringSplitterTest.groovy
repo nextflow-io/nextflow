@@ -66,5 +66,11 @@ class StringSplitterTest extends Specification {
 
     }
 
+    def testSplitStringByOne () {
+
+        expect:
+        new StringSplitter().options(by: 1).target('ABC') .list() == ['A','B','C']
+
+    }
 
 }

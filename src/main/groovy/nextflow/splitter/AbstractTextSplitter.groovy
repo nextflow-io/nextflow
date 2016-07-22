@@ -73,9 +73,6 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
         if( fileMode && recordMode )
             throw new AbortOperationException("Parameters `file` and `record` conflict on operator: $operatorName")
 
-        if( fileMode && count == 1 )
-            throw new AbortOperationException("Parameter `file` requires a split size grater than 1 for operator: $operatorName")
-
         return this
     }
 
@@ -152,6 +149,10 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
 
     private long itemsCount
 
+    protected boolean isCollectorEnabled() {
+        return (count > 1 || fileMode)
+    }
+
     /**
      * Process the object to split
      *
@@ -202,10 +203,8 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
     protected processChunk( record ) {
 
         def result = null
-        if( count == 1 ) {
-            result = invokeEachClosure(closure, record)
-        }
-        else {
+
+        if ( isCollectorEnabled() ) {
             // -- append to the list buffer
             collector.add(record)
 
@@ -215,6 +214,9 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
                 collector.next()
                 blockCount = 0
             }
+        }
+        else {
+            result = invokeEachClosure(closure, record)
         }
 
         return result
@@ -226,7 +228,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
      */
     protected CollectorStrategy createCollector() {
 
-        if( count<=1 )
+        if( !isCollectorEnabled() )
             return null
 
         if( recordMode )
