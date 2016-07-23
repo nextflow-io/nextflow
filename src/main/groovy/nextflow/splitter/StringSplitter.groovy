@@ -52,7 +52,7 @@ class StringSplitter extends AbstractTextSplitter {
     }
 
     protected CollectorStrategy createCollector() {
-        count > 1 ? new CharSequenceCollector() : null
+        isCollectorEnabled() ? new CharSequenceCollector() : null
     }
 
     @Override
