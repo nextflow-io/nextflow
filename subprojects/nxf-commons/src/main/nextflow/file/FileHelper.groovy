@@ -364,7 +364,7 @@ class FileHelper {
 
     /**
      * @return
-     *      {@code true} when the current session working directory is a MFS mounted path
+     *      {@code true} when the current session working directory is a NFS mounted path
      *      {@code false otherwise}
      */
     static boolean getWorkDirIsNFS() {
