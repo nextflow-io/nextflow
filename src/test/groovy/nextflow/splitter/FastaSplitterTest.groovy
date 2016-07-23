@@ -257,6 +257,50 @@ class FastaSplitterTest extends Specification {
                         .stripIndent().leftTrim()
     }
 
+    def testSplitToFileByOne() {
+
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def fasta = '''
+            >1aboA
+            NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
+            NYITPVN
+            >1ycsB
+            KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
+            VPRNLLGLYP
+            >1pht
+            GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
+            WLNGYNETTGERGDFPGTYVEYIGRKKISP
+            '''
+                .stripIndent().leftTrim()
+
+        when:
+        def result = new FastaSplitter().options(file: folder).target(fasta).list()
+        then:
+        result.size() == 3
+        result[0].text ==
+            '''
+            >1aboA
+            NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
+            NYITPVN
+            '''
+                    .stripIndent().leftTrim()
+
+        result[1].text == '''
+            >1ycsB
+            KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
+            VPRNLLGLYP
+            '''
+                .stripIndent().leftTrim()
+
+        result[2].text == '''
+            >1pht
+            GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
+            WLNGYNETTGERGDFPGTYVEYIGRKKISP
+            '''
+                        .stripIndent().leftTrim()
+    }
+
 
     def testSplitRecordBy2() {
 
