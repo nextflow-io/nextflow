@@ -735,7 +735,6 @@ strip       Removes leading and trailing blanks from values (default: ``false``)
 skip        Number of lines since the file beginning to ignore when parsing the CSV content.
 limit       Limits the number of retrieved records to the specified value.
 decompress  When ``true`` decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
-file        When ``true`` saves each split to a file. Use a string instead of ``true`` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in oder to save the split files into the specified folder.
 elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
 =========== ============================
 

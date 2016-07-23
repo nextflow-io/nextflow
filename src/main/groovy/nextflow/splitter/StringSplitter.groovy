@@ -51,9 +51,6 @@ class StringSplitter extends AbstractTextSplitter {
         return result
     }
 
-    protected CollectorStrategy createCollector() {
-        isCollectorEnabled() ? new CharSequenceCollector() : null
-    }
 
     @Override
     protected fetchRecord(BufferedReader targetObject) {

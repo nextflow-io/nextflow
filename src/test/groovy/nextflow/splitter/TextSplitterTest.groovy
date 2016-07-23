@@ -291,5 +291,14 @@ class TextSplitterTest extends Specification {
 
     }
 
+    def testRecordModeNotWorking() {
+
+        when:
+        new TextSplitter().options(record:true)
+        then:
+        thrown(IllegalArgumentException)
+
+    }
+
 
 }

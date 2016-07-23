@@ -39,6 +39,13 @@ class FastaSplitter extends AbstractTextSplitter {
 
     static private Pattern PATTERN_FASTA_DESC = ~/^\S+\s+(.*)/
 
+    @Override
+    protected Map<String,Object> validOptions() {
+        def result = super.validOptions()
+        result.record = [ Boolean, Map ]
+        return result
+    }
+
     /**
      * Parse a {@code CharSequence} as a FASTA formatted text, retuning a {@code Map} object
      * containing the fields as specified by the @{code record} parameter.
