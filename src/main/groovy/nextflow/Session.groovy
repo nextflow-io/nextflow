@@ -37,6 +37,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.dag.DAG
+import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.processor.ErrorStrategy
 import nextflow.trace.GraphObserver
@@ -247,6 +248,7 @@ class Session implements ISession {
         this.workDir = ((config.workDir ?: 'work') as Path).complete()
         this.setLibDir( config.libDir as String )
 
+        if(!workDir.mkdirs()) throw new AbortOperationException("Cannot create work-dir: $workDir -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
         log.debug "Work-dir: ${workDir} [${FileHelper.getPathFsType(workDir)}]"
 
         if( scriptPath ) {
