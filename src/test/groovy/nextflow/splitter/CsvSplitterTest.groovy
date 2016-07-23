@@ -174,4 +174,22 @@ class CsvSplitterTest extends Specification {
 
     }
 
+    def testIllegalRecordMode() {
+
+        when:
+        new CsvSplitter().options(record:true)
+        then:
+        thrown(IllegalArgumentException)
+
+    }
+
+    def testIllegalFileMode() {
+
+        when:
+        new CsvSplitter().options(file:true)
+        then:
+        thrown(IllegalArgumentException)
+
+    }
+
 }

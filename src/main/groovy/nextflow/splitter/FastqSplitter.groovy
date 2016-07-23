@@ -39,6 +39,13 @@ class FastqSplitter extends AbstractTextSplitter {
 
     private boolean processQualityField
 
+    @Override
+    protected Map<String,Object> validOptions() {
+        def result = super.validOptions()
+        result.record = [ Boolean, Map ]
+        return result
+    }
+
     static Map recordToMap( String l1, String l2, String l3, String l4, Map fields ) {
         def result = [:]
 

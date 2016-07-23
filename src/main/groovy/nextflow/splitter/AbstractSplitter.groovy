@@ -301,7 +301,6 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
                 each: Closure,
                 by: Integer,
                 into: [ Collection, DataflowQueue ],
-                record: [ Boolean, Map ],
                 autoClose: Boolean,
                 limit: Integer,
                 elem: Integer,
