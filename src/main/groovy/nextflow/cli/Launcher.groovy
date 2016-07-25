@@ -142,7 +142,7 @@ class Launcher implements ExitCode {
         if( !options.logFile ) {
             if( isDaemon() )
                 options.logFile = '.node-nextflow.log'
-            else if( command instanceof CmdRun )
+            else if( command instanceof CmdRun || options.debug || options.trace )
                 options.logFile = ".nextflow.log"
         }
     }
