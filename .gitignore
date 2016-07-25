@@ -2,7 +2,8 @@
 .gradle/**
 .*.log*
 .vagrant/*
-.nextflow.history
+.cache/*
+.nextflow.*
 .node-nextflow*
 build/**
 lib/commons-cli-1.2.jar
