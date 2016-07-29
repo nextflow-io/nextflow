@@ -41,6 +41,7 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.ControlMessage
 import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.exception.AbortOperationException
 import nextflow.extension.GroupTupleOp
 import nextflow.extension.MapOp
 import nextflow.file.FileHelper
@@ -171,7 +172,8 @@ class Channel  {
     }
 
     static DataflowChannel<Path> fromPath( Map opts = null, filePattern ) {
-        assert filePattern
+        if( !filePattern ) throw new AbortOperationException("Missing `fromPath` parameter")
+
         // verify that the 'type' parameter has a valid value
         checkParams( 'path', opts, VALID_PATH_PARAMS )
 
@@ -181,7 +183,6 @@ class Channel  {
     }
 
     static private DataflowChannel<Path> fromPath0( Map options, filePattern ) {
-        assert filePattern
 
         if( filePattern instanceof Pattern )
             return fromPathWithPattern(options, filePattern)
@@ -441,8 +442,8 @@ class Channel  {
     }
 
     static DataflowChannel fromFilePairs(Map options = null, filePattern, Closure grouping) {
-        assert filePattern != null
-        assert grouping != null
+        if( !filePattern ) throw new AbortOperationException("Missing `fromFilePairs` parameter")
+        if( !grouping ) throw new AbortOperationException("Missing `fromFilePairs` grouping parameter")
 
         // -- a channel from the path
         def fromOpts = fetchParams(VALID_PATH_PARAMS, options)
