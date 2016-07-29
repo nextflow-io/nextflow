@@ -1,8 +1,8 @@
 .. _channel-page:
 
-**********
+********
 Channels
-**********
+********
 
 Nextflow is based on the Dataflow programming model in which processes communicate through channels.
 
@@ -27,15 +27,15 @@ The available factory methods are:
 * `create`_
 * `empty`_
 * `from`_
-* `just`_
-* `value`_
 * `fromPath`_
+* `fromFilePairs`_
+* `value`_
 * `watchPath`_
 
 .. _channel-create:
 
 create
----------
+------
 
 Creates a new `channel` by using the ``create`` method, as shown below::
 
@@ -45,9 +45,9 @@ Creates a new `channel` by using the ``create`` method, as shown below::
 .. _channel-from:
 
 from
--------
+----
 
-The from method allows you to create a channel emitting any sequence of values that are specified as the method argument,
+The ``from`` method allows you to create a channel emitting any sequence of values that are specified as the method argument,
 for example::
 
     ch = Channel.from( 1, 3, 5, 7 )
@@ -90,7 +90,7 @@ creates a channel emitting three entries each of which is a list containing two 
 .. _channel-value:
 
 value
--------
+-----
 
 This method creates a dataflow `variable` that is a channel to which one entry, at most, can be bound. An optional
 not ``null`` value can be specified as a parameters, which is bound to the newly created channel. For example::
@@ -103,14 +103,6 @@ not ``null`` value can be specified as a parameters, which is bound to the newly
 
 The first line in the example creates an 'empty' variable. The second line creates a channel and binds a string to it.
 Finally the last one creates a channel and binds a list object to it that will be emitted as a sole emission.
-
-.. _channel-just:
-
-just
------
-
-A synonym for `value`_ method.
-
 
 .. _channel-path:
 
@@ -183,12 +175,60 @@ followLinks     When ``true`` it follows symbolic links during directories tree 
 =============== ===================
 
 
+.. _channel-filepairs:
+
+fromFilePairs
+-------------
+
+The ``fromFilePairs`` method creates a channel emitting the file pairs matching a `glob`_ pattern provided by the user.
+The matching files are emitted as tuples in which the first element is the grouping key of the matching
+pair and the second element is the list of files (sorted in lexicographical order). For example::
+
+    Channel
+        .fromFilePairs('/my/data/SRR*_{1,2}.fastq')
+        .println()
+
+It will produce an output similar to the following::
+
+    [SRR493366, [/my/data/SRR493366_1.fastq, /my/data/SRR493366_2.fastq]]
+    [SRR493367, [/my/data/SRR493367_1.fastq, /my/data/SRR493367_2.fastq]]
+    [SRR493368, [/my/data/SRR493368_1.fastq, /my/data/SRR493368_2.fastq]]
+    [SRR493369, [/my/data/SRR493369_1.fastq, /my/data/SRR493369_2.fastq]]
+    [SRR493370, [/my/data/SRR493370_1.fastq, /my/data/SRR493370_2.fastq]]
+    [SRR493371, [/my/data/SRR493371_1.fastq, /my/data/SRR493371_2.fastq]]
+
+
+.. note::
+    The glob pattern must contain at least a star wildcard character.
+
+Alternatively it is possible to implement a custom file pair grouping strategy providing a closure which,
+given the current file as parameter, returns the grouping key.
+For example::
+
+    Channel
+        .fromFilePairs('/some/data/*', size: -1) { file -> file.extension }
+        .println { ext, files -> "Files with the extension $ext are $files" }
+
+
+Table of optional parameters available:
+
+=============== ===================
+Name            Description
+=============== ===================
+type            Type of paths returned, either ``file``, ``dir`` or ``any`` (default: ``file``)
+hidden          When ``true`` includes hidden files in the resulting paths (default: ``false``)
+maxDepth        Maximum number of directory levels to visit (default: `no limit`)
+followLinks     When ``true`` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: ``true``)
+size            Defines the number of files each emitted item is expected to hold (default: 2). Set to ``-1`` for any.
+flat            When ``true`` the matching files are produced as sole elements in the emitted tuples (default: ``false``).
+=============== ===================
+
 .. _channel-watch:
 
 watchPath
------------
+---------
 
-The ``watchPath`` factory method watches a folder for one or more files matching a specified pattern. As soon as
+The ``watchPath`` method watches a folder for one or more files matching a specified pattern. As soon as
 there is a file that meets the specified condition, it is emitted over the channel that is returned by the ``watchPath``
 method. The condition on files to watch can be specified by using ``*`` or ``?`` wildcard characters i.e. by specifying
 a `glob`_ path matching criteria.
@@ -227,7 +267,7 @@ See also: `fromPath`_ factory method.
 .. _channel-empty:
 
 empty
------------
+-----
 
 The ``empty`` factory method, by definition, creates a channel that doesn't emit any value.
 
@@ -262,7 +302,7 @@ an identical result as the previous one::
 
 
 Observing events
-=================
+================
 
 
 .. _channel-subscribe:
@@ -309,7 +349,7 @@ Read :ref:`script-closure` paragraph to learn more about `closure` feature.
 
 
 onNext, onComplete, and onError
---------------------------------
+-------------------------------
 
 The ``subscribe()`` method may accept one or more of the following event handlers:
 
