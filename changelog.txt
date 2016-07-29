@@ -1,6 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.21.1 - 29 July 2016 
+- Fixed NFS work dir is not detected correctly #206 
+- Fixed `splitFasta` operator with the file parameter will not split into single fasta files #181
+- Enable log file for commands when debug or trace option is specified 
+- Added validation checks to `fromPath` and `fromFilePairs` methods
+
 0.21.0 - 20 July 2016
 - Fixed Command line params do not override params defined in the nextflow.config file #202
 
