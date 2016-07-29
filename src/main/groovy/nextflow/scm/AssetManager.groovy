@@ -521,7 +521,8 @@ class AssetManager {
             // make sure it contains a valid repository
             checkValidRemoteRepo()
 
-            log.debug "Pulling $project -- Using remote clone url: ${getGitRepositoryUrl()}"
+            final cloneURL = getGitRepositoryUrl()
+            log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
 
             // clone it
             def clone = Git.cloneRepository()
@@ -533,12 +534,12 @@ class AssetManager {
             }
 
             clone
-                .setURI(getGitRepositoryUrl())
+                .setURI(cloneURL)
                 .setDirectory(localPath)
                 .call()
 
             // return status message
-            return "downloaded from ${gitRepositoryUrl}"
+            return "downloaded from ${cloneURL}"
         }
 
 
