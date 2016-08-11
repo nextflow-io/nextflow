@@ -42,7 +42,6 @@ class PbsExecutor extends AbstractGridExecutor {
     protected List<String> getDirectives( TaskRun task, List<String> result ) {
         assert result !=null
 
-        result << '-d' << task.workDir.toString()
         result << '-N' << getJobNameFor(task)
         result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()
         result << '-j' << 'oe'
@@ -73,6 +72,13 @@ class PbsExecutor extends AbstractGridExecutor {
             result << task.config.clusterOptions.toString() << ''
         }
 
+        return result
+    }
+
+    @Override
+    String getHeaders( TaskRun task ) {
+        String result = super.getHeaders(task)
+        result += "cd ${task.workDir}\n"
         return result
     }
 

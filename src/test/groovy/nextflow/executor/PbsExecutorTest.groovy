@@ -59,11 +59,11 @@ class PbsExecutorTest extends Specification {
         task.config = new TaskConfig()
         then:
         executor.getHeaders(task) == '''
-                #PBS -d /work/dir
                 #PBS -N nf-the_task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
                 #PBS -V
+                cd /work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -74,13 +74,13 @@ class PbsExecutorTest extends Specification {
         task.config.time = '1m'
         then:
         executor.getHeaders(task) == '''
-                #PBS -d /work/dir
                 #PBS -N nf-the_task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
                 #PBS -V
                 #PBS -q alpha
                 #PBS -l walltime=00:01:00
+                cd /work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -92,7 +92,6 @@ class PbsExecutorTest extends Specification {
         task.config.memory = '1m'
         then:
         executor.getHeaders(task) == '''
-                #PBS -d /work/dir
                 #PBS -N nf-the_task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
@@ -100,6 +99,7 @@ class PbsExecutorTest extends Specification {
                 #PBS -q alpha
                 #PBS -l walltime=00:01:00
                 #PBS -l mem=1mb
+                cd /work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -113,7 +113,6 @@ class PbsExecutorTest extends Specification {
         task.config.cpus = 2
         then:
         executor.getHeaders(task) == '''
-                #PBS -d /work/dir
                 #PBS -N nf-the_task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
@@ -122,6 +121,7 @@ class PbsExecutorTest extends Specification {
                 #PBS -l nodes=1:ppn=2
                 #PBS -l walltime=00:10:00
                 #PBS -l mem=5mb
+                cd /work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -133,7 +133,6 @@ class PbsExecutorTest extends Specification {
         task.config.cpus = 8
         then:
         executor.getHeaders(task) == '''
-                #PBS -d /work/dir
                 #PBS -N nf-the_task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
@@ -142,6 +141,7 @@ class PbsExecutorTest extends Specification {
                 #PBS -l nodes=1:ppn=8
                 #PBS -l walltime=24:00:00
                 #PBS -l mem=1gb
+                cd /work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -152,7 +152,6 @@ class PbsExecutorTest extends Specification {
         task.config.memory = '2g'
         then:
         executor.getHeaders(task) == '''
-                #PBS -d /work/dir
                 #PBS -N nf-the_task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
@@ -160,6 +159,7 @@ class PbsExecutorTest extends Specification {
                 #PBS -q delta
                 #PBS -l walltime=54:10:00
                 #PBS -l mem=2gb
+                cd /work/dir
                 '''
                 .stripIndent().leftTrim()
 
