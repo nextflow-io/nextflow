@@ -21,8 +21,11 @@
 package nextflow.script
 import static test.TestParser.parseAndReturnProcess
 
+import java.nio.file.Path
+
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.processor.TaskContext
+import nextflow.util.BlankSeparatedList
 import spock.lang.Specification
 /**
  *
@@ -278,6 +281,37 @@ class ParamsOutTest extends Specification {
         out5.inner[0] instanceof FileOutParam
         (out5.inner[0] as FileOutParam) .getFilePatterns(ctx,null) == ['script_file.txt','hola.fa']
         (out5.inner[0] as FileOutParam) .isDynamic()
+
+    }
+
+    def testFileOutFileCollection () {
+
+        given:
+        def text = '''
+
+            process hola {
+              output:
+              file(x) into channel1
+              set file(y) into channel2
+
+              return ''
+            }
+            '''
+
+        def binding = [:]
+        def process = parseAndReturnProcess(text, binding)
+
+        def list_x = new BlankSeparatedList(['a.txt' as Path, 'b.txt' as Path, 'c.txt' as Path])
+        def list_y = ['one.txt' as Path, 'two.txt' as Path, 'three.txt' as Path]
+        def ctx = [x: list_x, y: list_y]
+
+        when:
+        FileOutParam out0 = process.config.getOutputs().get(0)
+        SetOutParam out1 = process.config.getOutputs().get(1)
+
+        then:
+        out0.getFilePatterns(ctx,null) == ['a.txt', 'b.txt', 'c.txt' ]
+        out1.inner[0].getFilePatterns(ctx,null) == ['one.txt', 'two.txt', 'three.txt']
 
     }
 
