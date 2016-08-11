@@ -75,6 +75,8 @@ import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
+
+import static nextflow.processor.ErrorStrategy.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -883,7 +885,7 @@ class TaskProcessor {
             return true
         }
 
-        return fault == ErrorStrategy.TERMINATE || fault == ErrorStrategy.FINISH
+        return fault == TERMINATE || fault == FINISH
     }
 
     /**
@@ -917,6 +919,10 @@ class TaskProcessor {
 
                 errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount)
                 if( errorStrategy.soft ) {
+                    def msg = error.getMessage()
+                    if( errorStrategy == IGNORE) msg += " -- Error is ignored"
+                    else if( errorStrategy == RETRY ) msg += " -- Execution is re-tried ($taskErrCount)"
+                    log.warn msg
                     task.failed = true
                     return errorStrategy
                 }
@@ -966,7 +972,6 @@ class TaskProcessor {
 
         // IGNORE strategy -- just continue
         if( errorStrategy == ErrorStrategy.IGNORE ) {
-            log.warn "Error running process > ${error.getMessage()} -- error is ignored"
             return ErrorStrategy.IGNORE
         }
 
@@ -981,6 +986,7 @@ class TaskProcessor {
                     try {
                         taskCopy.config.attempt = taskErrCount+1
                         taskCopy.runType = RunType.RETRY
+                        taskCopy.error = null
                         checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
                     }
                     catch( Throwable e ) {
@@ -1311,7 +1317,7 @@ class TaskProcessor {
             }
 
             if( !result )
-                throw new MissingFileException("Missing output file(s): '$pattern' expected by process: ${task.name}")
+                throw new MissingFileException("Missing output file(s) `$pattern` expected by process `${task.name}`")
 
             allFiles.addAll(result)
         }
@@ -1865,15 +1871,15 @@ class TaskProcessor {
         try {
             if( task.type == ScriptType.SCRIPTLET ) {
                 if( task.exitStatus == Integer.MAX_VALUE )
-                    throw new ProcessFailedException("Process '${task.name}' terminated for an unknown reason -- Likely it has been terminated by the external system")
+                    throw new ProcessFailedException("Process `${task.name}` terminated for an unknown reason -- Likely it has been terminated by the external system")
 
                 if ( !task.isSuccess() )
-                    throw new ProcessFailedException("Process '${task.name}' terminated with an error exit status")
+                    throw new ProcessFailedException("Process `${task.name}` terminated with an error exit status (${task.exitStatus})")
             }
 
             // -- verify task exist status
             if( task.error )
-                throw new ProcessFailedException("Process '${task.name}' failed", task.error)
+                throw new ProcessFailedException("Process `${task.name}` failed", task.error)
 
             // -- if it's OK collect results and finalize
             collectOutputs(task)
