@@ -28,6 +28,8 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.exception.IllegalFileException
 import nextflow.processor.ProcessConfig
+import nextflow.util.BlankSeparatedList
+
 /**
  * Model a process generic input parameter
  *
@@ -345,6 +347,11 @@ class FileOutParam extends BaseOutParam implements OutParam {
 
         if( entry instanceof Path )
             return [ relativize(entry, workDir) ]
+
+        // handle a collection of files
+        if( entry instanceof BlankSeparatedList || entry instanceof List ) {
+            return entry.collect { relativize(it.toString(), workDir) }
+        }
 
         // normalize to a string object
         final nameString = entry.toString()
