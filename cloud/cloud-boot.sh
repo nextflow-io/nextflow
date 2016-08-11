@@ -83,18 +83,6 @@ fi
 
 if [[ $NXF_ROLE == worker ]]; then
   bash -x $HOME/nextflow node -bg -cluster.join "$cluster_join" -cluster.interface eth0
-else
-cat <<EOF >> $HOME/README
-#
-# Launch the pipeline execution by using the following command
-#
-./nextflow run ${NXF_PULL:-<your-pipeline>} \
-  -process.executor ignite \
-  -cluster.join $cluster_join \
-  -cluster.interface=eth0  \
-  -work-dir ${cluster_work} \
-  -with-docker
-EOF
 fi
 
 # save the environment for debugging 
