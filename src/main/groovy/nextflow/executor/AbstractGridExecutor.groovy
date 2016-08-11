@@ -160,7 +160,7 @@ abstract class AbstractGridExecutor extends Executor {
     @PackageScope
     String resolveCustomJobName(TaskRun task) {
         try {
-            def custom = (Closure)session.getExecConfigProp(name, 'jobName', null)
+            def custom = (Closure)session?.getExecConfigProp(name, 'jobName', null)
             if( !custom )
                 return null
 
