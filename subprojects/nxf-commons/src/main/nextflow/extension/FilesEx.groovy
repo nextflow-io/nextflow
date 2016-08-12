@@ -1306,7 +1306,7 @@ class FilesEx {
      *      {@code overwrite}
      * @param link The {@link Path} of the link to create
      */
-    static void mklink( Path existing, Map opts, Path link ) {
+    static Path mklink( Path existing, Map opts, Path link ) {
         CheckHelper.checkParams('mklink', opts, LINK_PARAMS)
 
         final hard = opts?.hard == true ?: false
@@ -1323,6 +1323,8 @@ class FilesEx {
             Files.delete(link)
             createLinkImpl(existing, link, hard)
         }
+
+        return link
     }
 
     static private void createLinkImpl(Path existing, Path link, boolean hard) {
@@ -1349,27 +1351,27 @@ class FilesEx {
         }
     }
 
-    static void mklink( Path existing, Map opts, File link ) {
+    static Path mklink( Path existing, Map opts, File link ) {
         mklink(existing, opts, link.toPath())
     }
 
-    static void mklink( Path existing, Map opts, String link ) {
+    static Path mklink( Path existing, Map opts, String link ) {
         mklink(existing, opts, existing.getFileSystem().getPath(link))
     }
 
-    static void mklink( Path existing, Path link ) {
+    static Path mklink( Path existing, Path link ) {
         mklink(existing, null, link )
     }
 
-    static void mklink( Path existing, File link ) {
+    static Path mklink( Path existing, File link ) {
         mklink(existing, null, link.toPath())
     }
 
-    static void mklink( Path existing, String link ) {
+    static Path mklink( Path existing, String link ) {
         mklink(existing, null, existing.getFileSystem().getPath(link))
     }
 
-    static void mklink( Path existing, Map opts = null ) {
+    static Path mklink( Path existing, Map opts = null ) {
         mklink(existing,opts,existing.getFileName())
     }
 
