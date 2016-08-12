@@ -78,6 +78,7 @@ class ScriptFile {
     ScriptFile( File file ) {
         assert file
         main = file.toPath().complete()
+        localPath = main.parent
     }
 
 }
