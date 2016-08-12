@@ -1,6 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.21.2 - 12 Aug 2016 
+- Fixed PBS professional batch scheduler submission error #209
+- Fixed Reference to a collection of files is not resolved properly in the output section #214
+- Improved failed and ignored processes reporting
+- Fixed null workflow.projectDir when launching a script file
+- Do no output link file when `followLinks` option is disabled
+
 0.21.1 - 29 July 2016 
 - Fixed NFS work dir is not detected correctly #206 
 - Fixed `splitFasta` operator with the file parameter will not split into single fasta files #181
