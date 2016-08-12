@@ -145,6 +145,7 @@ class NextflowTest extends Specification {
 
         folder.resolve('file1.txt').text = 'file 1'
         folder.resolve('file2.fa').text = 'file 2'
+        Files.createSymbolicLink( folder.resolve('file_link.fa'), folder.resolve('file2.fa'))
         folder.resolve('dir1').mkdir()
         folder.resolve('dir1').resolve('file3.txt').text = 'file 3'
         folder.resolve('dir1').resolve('dir2').mkdirs()
@@ -154,7 +155,7 @@ class NextflowTest extends Specification {
         when:
         def result = Nextflow.files("$folder/**.fa", relative: true)
         then:
-        result.collect { it.toString() } .sort() == ['dir1/dir2/file4.fa', 'dir_link/dir2/file4.fa', 'file2.fa']
+        result.collect { it.toString() } .sort() == ['dir1/dir2/file4.fa', 'dir_link/dir2/file4.fa', 'file2.fa', 'file_link.fa']
 
         when:
         result = Nextflow.files("$folder/**.fa", relative: true, followLinks: false)
@@ -164,7 +165,7 @@ class NextflowTest extends Specification {
         when:
         result = Nextflow.files("$folder/**.fa", relative: true, maxDepth: 1)
         then:
-        result.collect { it.toString() } .sort() == ['file2.fa']
+        result.collect { it.toString() } .sort() == ['file2.fa', 'file_link.fa']
 
         when:
         result = Nextflow.files("$folder/**", relative: true, type:'file')
@@ -174,7 +175,8 @@ class NextflowTest extends Specification {
                                                      'dir_link/dir2/file4.fa',
                                                      'dir_link/file3.txt',
                                                      'file1.txt',
-                                                     'file2.fa']
+                                                     'file2.fa',
+                                                     'file_link.fa']
 
         when:
         result = Nextflow.files("$folder/**", relative: true, type:'file', followLinks: false)
