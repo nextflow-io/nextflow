@@ -22,6 +22,7 @@ package nextflow.extension
 
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import spock.lang.Specification
@@ -1156,6 +1157,32 @@ class FilesExTest extends Specification {
         cleanup:
         folder.deleteDir()
         if( file ) Paths.get(file.name).delete()
+    }
+
+
+    def testExists() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        when:
+        Path file_a = folder.resolve('a.txt'); file_a.text = 'Hello world'
+        then:
+        file_a.exists()
+        file_a.isFile()
+        !file_a.isLink()
+        Files.isRegularFile(file_a)
+
+        when:
+        Path file_b = file_a.mklink("$folder/b.txt")
+        then:
+        file_b.exists()
+        file_b.isLink()
+        Files.isRegularFile(file_b)
+
+        cleanup:
+        folder?.deleteDir()
+
     }
 
 }
