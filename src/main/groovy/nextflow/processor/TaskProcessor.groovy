@@ -19,6 +19,7 @@
  */
 package nextflow.processor
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -1310,7 +1311,8 @@ class TaskProcessor {
             }
             else {
                 def file = workDir.resolve(pattern)
-                if( file.exists() )
+                def exists = param.followLinks ? file.exists() : file.exists(LinkOption.NOFOLLOW_LINKS)
+                if( exists )
                     result = [file]
                 else
                     log.debug "Process `${task.name}` is unable to find [${file.class.simpleName}]: `$file` (pattern: `$pattern`)"
