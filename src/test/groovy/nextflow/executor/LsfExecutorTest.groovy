@@ -265,6 +265,51 @@ class LsfExecutorTest extends Specification {
 
     }
 
+    def testWorkDirWithBlanks() {
+
+        setup:
+        // LSF executor
+        def executor = Spy(LsfExecutor)
+        executor.session = new Session()
+
+        // mock process
+        def proc = Mock(TaskProcessor)
+        // process name
+        proc.getName() >> 'task'
+
+        // task object
+        def task = new TaskRun()
+        task.processor = proc
+        task.workDir = Paths.get('/scratch/some data/path')
+        task.name = 'mapping hola'
+
+        when:
+        task.config = new TaskConfig()
+        // config
+        task.config.queue = 'bsc_ls'
+        task.config.clusterOptions = "-x 1 -R \"span[ptile=2]\""
+        task.config.cpus = '2'
+        task.config.time = '1h 30min'
+        task.config.memory = '8GB'
+
+
+        then:
+        executor.getHeaders(task) == '''
+                #BSUB -o "/scratch/some data/path/.command.log"
+                #BSUB -q bsc_ls
+                #BSUB -n 2
+                #BSUB -R "span[hosts=1]"
+                #BSUB -W 01:30
+                #BSUB -M 4096
+                #BSUB -R "rusage[mem=8192]"
+                #BSUB -J nf-mapping_hola
+                #BSUB -x 1
+                #BSUB -R "span[ptile=2]"
+                '''
+                .stripIndent().leftTrim()
+
+
+    }
 
     def testParseJobId() {
 

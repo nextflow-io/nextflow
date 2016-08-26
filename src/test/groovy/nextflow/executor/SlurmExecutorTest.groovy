@@ -173,6 +173,34 @@ class SlurmExecutorTest extends Specification {
                 .stripIndent().leftTrim()
     }
 
+    def testWorkDirWithBlanks() {
+
+        setup:
+        // LSF executor
+        def executor = Spy(SlurmExecutor)
+
+        // mock process
+        def proc = Mock(TaskProcessor)
+
+        // task object
+        def task = new TaskRun()
+        task.processor = proc
+        task.workDir = Paths.get('/work/some data/path')
+        task.name = 'the task name'
+
+        when:
+        task.index = 21
+        task.config = new TaskConfig()
+        then:
+        executor.getHeaders(task) == '''
+                #SBATCH -D "/work/some\\ data/path"
+                #SBATCH -J nf-the_task_name
+                #SBATCH -o "/work/some\\ data/path/.command.log"
+                '''
+                .stripIndent().leftTrim()
+
+    }
+
 
     def testQstatCommand() {
 

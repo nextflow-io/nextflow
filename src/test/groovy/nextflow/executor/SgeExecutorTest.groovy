@@ -49,7 +49,6 @@ class SgeExecutorTest extends Specification {
         // mock process
         def proc = Mock(TaskProcessor)
 
-        // LSF executor
         def executor = [:] as SgeExecutor
         def task = new TaskRun()
         task.processor = proc
@@ -215,6 +214,40 @@ class SgeExecutorTest extends Specification {
 
     }
 
+    def testWorkDirWithBlanks() {
+
+        given:
+        def config
+        // mock process
+        def proc = Mock(TaskProcessor)
+
+        def executor = [:] as SgeExecutor
+        def task = new TaskRun()
+        task.processor = proc
+        task.workDir = Paths.get('/work/dir with/blanks')
+        task.name = 'the task name'
+
+        when:
+
+        // config
+        config = task.config = new TaskConfig()
+        config.queue = 'my-queue'
+        config.name = 'task'
+
+        then:
+        executor.getHeaders(task) == '''
+                #$ -wd "/work/dir with/blanks"
+                #$ -N nf-the_task_name
+                #$ -o "/work/dir with/blanks/.command.log"
+                #$ -j y
+                #$ -terse
+                #$ -V
+                #$ -notify
+                #$ -q my-queue
+                '''
+                .stripIndent().leftTrim()
+
+    }
 
     def testParseJobId() {
 

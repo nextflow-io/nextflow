@@ -165,6 +165,34 @@ class PbsExecutorTest extends Specification {
 
     }
 
+    def WorkDirWithBlanks() {
+
+        setup:
+        def executor = Spy(PbsExecutor)
+
+        // mock process
+        def proc = Mock(TaskProcessor)
+
+        // task object
+        def task = new TaskRun()
+        task.processor = proc
+        task.workDir = Paths.get('/work/dir 1')
+        task.name = 'the task name'
+
+        when:
+        task.config = new TaskConfig()
+        then:
+        executor.getHeaders(task) == '''
+                #PBS -N nf-the_task_name
+                #PBS -o "/work/dir\\ 1/.command.log"
+                #PBS -j oe
+                #PBS -V
+                cd "/work/dir\\ 1"
+                '''
+                .stripIndent().leftTrim()
+
+    }
+
 
     def testParseJobId() {
 
