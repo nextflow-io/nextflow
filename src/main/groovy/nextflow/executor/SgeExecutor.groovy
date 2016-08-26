@@ -39,9 +39,9 @@ class SgeExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        result << '-wd' << task.workDir.toString()
+        result << '-wd' << quote(task.workDir)
         result << '-N' << getJobNameFor(task)
-        result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()
+        result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
         result << '-j' << 'y'
         result << '-terse' << ''    // note: directive need to be returned as pairs
         result << '-V' << ''        // for this reason an empty string value is added for flag options
@@ -158,5 +158,15 @@ class SgeExecutor extends AbstractGridExecutor {
 
         return result
     }
+
+    @Override
+    String quote(Path path) {
+        // note: SGE does not recognize `\` escape character in the
+        // in the path defined as `#$` directives
+        // just double-quote paths containing blanks
+        def str = path.toString()
+        str.indexOf(' ') != -1 ? "\"$str\"" : str
+    }
+
 
 }

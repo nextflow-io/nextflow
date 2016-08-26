@@ -43,9 +43,9 @@ class SlurmExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        result << '-D' << task.workDir.toString()
+        result << '-D' << quote(task.workDir)
         result << '-J' << getJobNameFor(task)
-        result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()           // -o OUTFILE and no -e option => stdout and stderr merged to stdout/OUTFILE
+        result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))     // -o OUTFILE and no -e option => stdout and stderr merged to stdout/OUTFILE
 
         if( task.config.cpus > 1 ) {
             result << '-c' << task.config.cpus.toString()

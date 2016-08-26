@@ -23,7 +23,6 @@ import java.nio.file.Path
 
 import nextflow.processor.TaskRun
 import nextflow.util.MemoryUnit
-
 /**
  * Processor for LSF resource manager (DRAFT)
  *

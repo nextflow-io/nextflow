@@ -43,7 +43,7 @@ class PbsExecutor extends AbstractGridExecutor {
         assert result !=null
 
         result << '-N' << getJobNameFor(task)
-        result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()
+        result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
         result << '-j' << 'oe'
         result << '-V' << ''
 
@@ -78,7 +78,7 @@ class PbsExecutor extends AbstractGridExecutor {
     @Override
     String getHeaders( TaskRun task ) {
         String result = super.getHeaders(task)
-        result += "cd ${task.workDir}\n"
+        result += "cd ${quote(task.workDir)}\n"
         return result
     }
 

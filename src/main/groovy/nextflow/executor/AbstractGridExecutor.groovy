@@ -29,6 +29,7 @@ import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
+import nextflow.util.Escape
 import org.apache.commons.lang.StringUtils
 /**
  * Generic task processor executing a task through a grid facility
@@ -315,6 +316,9 @@ abstract class AbstractGridExecutor extends Executor {
 
     protected String wrapHeader( String str ) { str }
 
-
+    protected String quote(Path path) {
+        def str = Escape.path(path)
+        path.toString() != str ? "\"$str\"" : str
+    }
 }
 
