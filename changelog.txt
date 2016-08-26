@@ -1,6 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.21.3 - 26 Aug 2016 
+- Fixed Spaces in work directory path stops slurm from accepting the job #128
+
 0.21.2 - 12 Aug 2016 
 - Fixed PBS professional batch scheduler submission error #209
 - Fixed Reference to a collection of files is not resolved properly in the output section #214
