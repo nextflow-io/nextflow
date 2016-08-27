@@ -2,7 +2,7 @@ NEXTFLOW CHANGE-LOG
 ===================
 
 0.21.3 - 26 Aug 2016 
-- Fixed Spaces in work directory path stops slurm from accepting the job #128
+- Fixed Spaces in work directory path stops slurm from accepting the job #218
 
 0.21.2 - 12 Aug 2016 
 - Fixed PBS professional batch scheduler submission error #209
