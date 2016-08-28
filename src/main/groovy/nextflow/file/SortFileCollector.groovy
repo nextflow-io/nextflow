@@ -282,7 +282,7 @@ class SortFileCollector extends FileCollector implements Closeable {
             return null
 
         Hasher hasher = cacheable ? CacheHelper.hasher( hashKeys, CacheHelper.HashMode.STANDARD ) : null
-        if( hasher && log.isTraceEnabled() ) {
+        if( hasher ) {
             log.trace "  hasher: ${CacheHelper.hasher( hashKeys, CacheHelper.HashMode.STANDARD ) } \n"
         }
 
@@ -307,9 +307,7 @@ class SortFileCollector extends FileCollector implements Closeable {
 
             if( hasher ) {
                 hasher = CacheHelper.hasher(hasher, entry.hash, CacheHelper.HashMode.STANDARD)
-                if( log.isTraceEnabled() ) {
-                    log.trace "  index: $entry.index - ${CacheHelper.hasher(entry.hash).hash()} \n"
-                }
+                log.trace "  index: $entry.index - ${CacheHelper.hasher(entry.hash).hash()} \n"
             }
 
         }

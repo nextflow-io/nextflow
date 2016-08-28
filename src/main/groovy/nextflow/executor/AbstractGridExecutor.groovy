@@ -237,7 +237,6 @@ abstract class AbstractGridExecutor extends Executor {
         if( !cmd ) return null
 
         try {
-            if(log.isTraceEnabled())
             log.trace "Getting grid queue status: ${cmd.join(' ')}"
 
             def process = new ProcessBuilder(cmd).start()
@@ -245,7 +244,6 @@ abstract class AbstractGridExecutor extends Executor {
             process.waitForOrKill( 10 * 1000 )
             def exit = process.exitValue()
 
-            if(log.isTraceEnabled())
             log.trace "${name.toUpperCase()} status result > exit: $exit\n$result\n"
 
             return ( exit == 0 ) ? parseQueueStatus( result ) : null
@@ -301,8 +299,7 @@ abstract class AbstractGridExecutor extends Executor {
             return true
         }
 
-        if( log.isTraceEnabled() )
-            log.trace "Queue status:\n" + dumpQueueStatus()
+        log.trace "Queue status:\n" + dumpQueueStatus()
 
         if( !fQueueStatus.containsKey(jobId) ) {
             log.trace "Queue status map does not contain jobId: `$jobId`"

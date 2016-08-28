@@ -20,7 +20,6 @@
 
 package nextflow.script
 import groovy.transform.PackageScope
-import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
 import nextflow.processor.ProcessFactory
@@ -30,7 +29,6 @@ import nextflow.processor.TaskProcessor
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
 abstract class BaseScript extends Script {
 
     protected BaseScript() { }

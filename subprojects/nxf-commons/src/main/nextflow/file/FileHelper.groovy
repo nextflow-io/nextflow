@@ -401,9 +401,8 @@ class FileHelper {
         while( true ) {
             final process = Runtime.runtime.exec("ls -la ${path}")
             final status = process.waitFor()
-            if( log.isTraceEnabled() ) {
-                log.trace "Safe exists listing: ${status} -- path: ${path}\n${Bolts.indent(process.text,'  ')}"
-            }
+            log.trace "Safe exists listing: ${status} -- path: ${path}\n${Bolts.indent(process.text,'  ')}"
+
             if( status == 0 )
                 break
             def delta = System.currentTimeMillis() -begin
@@ -418,9 +417,7 @@ class FileHelper {
             return true
         }
         catch( IOException e ) {
-            if( log.isTraceEnabled() ) {
-                log.trace "Cant read file attributes: $self -- Cause: [${e.class.simpleName}] ${e.message}"
-            }
+            log.trace "Cant read file attributes: $self -- Cause: [${e.class.simpleName}] ${e.message}"
             return false
         }
 
@@ -739,8 +736,7 @@ class FileHelper {
             @Override
             public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) throws IOException {
                 int depth = path.nameCount - folder.nameCount
-                if( log.isTraceEnabled() )
-                    log.trace "visit dir ($depth) > $path; includeDir: $includeDir; matches: ${matcher.matches(path)}; isDir: ${attrs.isDirectory()}"
+                log.trace "visit dir ($depth) > $path; includeDir: $includeDir; matches: ${matcher.matches(path)}; isDir: ${attrs.isDirectory()}"
 
                 if (includeDir && matcher.matches(path) && attrs.isDirectory() && (includeHidden || !isHidden(path))) {
                     def result = relative ? folder.relativize(path) : path
@@ -752,8 +748,7 @@ class FileHelper {
 
             @Override
             public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
-                if( log.isTraceEnabled() )
-                    log.trace "visit file > $path; includeFile: $includeFile; matches: ${matcher.matches(path)}; isRegularFile: ${attrs.isRegularFile()}"
+                log.trace "visit file > $path; includeFile: $includeFile; matches: ${matcher.matches(path)}; isRegularFile: ${attrs.isRegularFile()}"
 
                 if (includeFile && matcher.matches(path) && attrs.isRegularFile() && (includeHidden || !isHidden(path))) {
                     def result = relative ? folder.relativize(path) : path

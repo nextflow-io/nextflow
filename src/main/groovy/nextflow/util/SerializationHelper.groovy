@@ -244,8 +244,7 @@ class PathSerializer extends Serializer<Path> {
     void write(Kryo kryo, Output output, Path target) {
         final scheme = target.getFileSystem().provider().getScheme()
         final path = target.toString()
-        if( log.isTraceEnabled() )
-            log.trace "Path serialization > scheme: $scheme; path: $path"
+        log.trace "Path serialization > scheme: $scheme; path: $path"
 
         output.writeString(scheme)
         output.writeString(path)
@@ -255,8 +254,7 @@ class PathSerializer extends Serializer<Path> {
     Path  read(Kryo kryo, Input input, Class<Path> type) {
         final scheme = input.readString()
         final path = input.readString()
-        if( log.isTraceEnabled() )
-            log.trace "Path de-serialization > scheme: $scheme; path: $path"
+        log.trace "Path de-serialization > scheme: $scheme; path: $path"
 
         if( "file".equalsIgnoreCase(scheme) ) {
             return FileSystems.getDefault().getPath(path)
@@ -282,8 +280,7 @@ class GStringSerializer extends Serializer<GString> {
 
     @Override
     void write(Kryo kryo, Output stream, GString object) {
-        if( log.isTraceEnabled() )
-            log.trace "GString serialization: values: ${object?.getValues()} - strings: ${object?.getStrings()}"
+        log.trace "GString serialization: values: ${object?.getValues()} - strings: ${object?.getStrings()}"
         kryo.writeObject( stream, object.getValues() )
         kryo.writeObject( stream, object.getStrings() )
     }
@@ -292,8 +289,7 @@ class GStringSerializer extends Serializer<GString> {
     GString read(Kryo kryo, Input stream, Class<GString> type) {
         Object[] values = kryo.readObject(stream, OBJ_ARRAY_CLASS)
         String[] strings = kryo.readObject(stream, STR_ARRAY_CLASS)
-        if( log.isTraceEnabled() )
-            log.trace "GString de-serialize: values: ${values} - strings: ${strings}"
+        log.trace "GString de-serialize: values: ${values} - strings: ${strings}"
         new GStringImpl(values, strings)
     }
 }
@@ -305,15 +301,13 @@ class URLSerializer extends Serializer<URL> {
 
     @Override
     void write(Kryo kryo, Output output, URL url) {
-        if( log.isTraceEnabled() )
-            log.trace "URL serialization > $url"
+        log.trace "URL serialization > $url"
         output.writeString(url.toString())
     }
 
     @Override
     URL read(Kryo kryo, Input input, Class<URL> type) {
-        if( log.isTraceEnabled() )
-            log.trace "URL de-serialization"
+        log.trace "URL de-serialization"
         return new URL(input.readString())
     }
 }
@@ -324,16 +318,14 @@ class UUIDSerializer extends Serializer<UUID> {
 
     @Override
     void write(Kryo kryo, Output output, UUID obj) {
-        if( log.isTraceEnabled() )
-            log.trace "UUID serialization > $obj"
+        log.trace "UUID serialization > $obj"
         output.writeLong( obj.mostSignificantBits )
         output.writeLong( obj.leastSignificantBits )
     }
 
     @Override
     UUID read(Kryo kryo, Input input, Class<UUID> type) {
-        if( log.isTraceEnabled() )
-            log.trace "UUID de-serialization"
+        log.trace "UUID de-serialization"
         long mostBits = input.readLong()
         long leastBits = input.readLong()
         return new UUID(mostBits, leastBits)
@@ -347,15 +339,13 @@ class FileSerializer extends Serializer<File> {
 
     @Override
     void write(Kryo kryo, Output output, File file) {
-        if( log.isTraceEnabled() )
-            log.trace "File serialization > $file"
+        log.trace "File serialization > $file"
         output.writeString(file.toString())
     }
 
     @Override
     File read(Kryo kryo, Input input, Class<File> type) {
-        if( log.isTraceEnabled() )
-            log.trace "File de-serialization"
+        log.trace "File de-serialization"
         return new File(input.readString())
     }
 }

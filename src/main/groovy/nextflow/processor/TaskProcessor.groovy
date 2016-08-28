@@ -325,8 +325,7 @@ class TaskProcessor {
         state = new Agent<>(new StateObj(name))
         state.addListener { StateObj old, StateObj obj ->
             try {
-                if( log.isTraceEnabled() )
-                    log.trace "<$name> Process state changed to: $obj -- finished: ${obj.isFinished()}"
+                log.trace "<$name> Process state changed to: $obj -- finished: ${obj.isFinished()}"
                 if( !terminated && obj.isFinished() ) {
                     terminateProcess()
                     terminated = true
@@ -525,8 +524,7 @@ class TaskProcessor {
 
         // create and initialize the task instance to be executed
         final List values = args instanceof List ? args : [args]
-        if( log.isTraceEnabled() )
-            log.trace "Setup new process > $name"
+        log.trace "Setup new process > $name"
 
         // -- create the task run instance
         final task = createTaskRun()
@@ -898,7 +896,6 @@ class TaskProcessor {
      *      a {@link ErrorStrategy#TERMINATE})
      */
     final synchronized protected resumeOrDie( TaskRun task, Throwable error ) {
-        if( log.isTraceEnabled() )
         log.trace "Handling unexpected condition for\n  task: $task\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
         ErrorStrategy errorStrategy = ErrorStrategy.TERMINATE
@@ -1225,8 +1222,7 @@ class TaskProcessor {
     }
 
     protected void bindOutParam( OutParam param, List values ) {
-        if( log.isTraceEnabled() )
-            log.trace "<$name> Binding param $param with $values"
+        log.trace "<$name> Binding param $param with $values"
 
         def x = values.size() == 1 ? values[0] : values
         param.getOutChannels().each { it.bind(x) }
@@ -1242,8 +1238,7 @@ class TaskProcessor {
      * @param task
      */
     final protected void collectOutputs( TaskRun task, Path workDir, def stdout, Map context ) {
-        if( log.isTraceEnabled() )
-            log.trace "<$name> collecting output: ${task.outputs}"
+        log.trace "<$name> collecting output: ${task.outputs}"
 
         task.outputs.keySet().each { OutParam param ->
 
@@ -1305,7 +1300,6 @@ class TaskProcessor {
                 // filter the inputs
                 if( !param.includeInputs ) {
                     result = filterByRemovingStagedInputs(task, result)
-                    if( log.isTraceEnabled() )
                     log.trace "Process ${task.name} > after removing staged inputs: ${result}"
                 }
             }
@@ -1337,8 +1331,7 @@ class TaskProcessor {
             // set into the output set
             task.setOutput(param,val)
             // trace the result
-            if( log.isTraceEnabled() )
-                log.trace "Collecting param: ${param.name}; value: ${val}"
+            log.trace "Collecting param: ${param.name}; value: ${val}"
         }
         catch( MissingPropertyException e ) {
             throw new MissingValueException("Missing value declared as output parameter: ${e.property}")
@@ -1763,8 +1756,7 @@ class TaskProcessor {
             buffer.append( "  ${CacheHelper.hasher(item, mode).hash()} [${item?.class?.name}] $item \n")
         }
 
-        if( log.isTraceEnabled() )
-            log.trace(buffer.toString())
+        log.trace(buffer.toString())
     }
 
     final protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
@@ -1806,7 +1798,6 @@ class TaskProcessor {
                 }
                 catch( MissingPropertyException | NullPointerException e ) {
                     value = null
-                    if( log.isTraceEnabled() )
                     log.trace "Process `${processName}` cannot access global variable `$varName` -- Cause: ${e.message}"
                 }
 
@@ -1830,8 +1821,7 @@ class TaskProcessor {
      * @return {@code TaskDef}
      */
     final protected void submitTask( TaskRun task, HashCode hash, Path folder ) {
-        if( log.isTraceEnabled() )
-            log.trace "[${task.name}] actual run folder: ${task.workDir}"
+        log.trace "[${task.name}] actual run folder: ${task.workDir}"
 
         makeTaskContextStage3(task, hash, folder)
 
@@ -1866,8 +1856,7 @@ class TaskProcessor {
      */
     @PackageScope
     final finalizeTask( TaskRun task ) {
-        if( log.isTraceEnabled() )
-            log.trace "finalizing process > ${task.name} -- $task"
+        log.trace "finalizing process > ${task.name} -- $task"
 
         def fault = null
         try {
@@ -1924,8 +1913,7 @@ class TaskProcessor {
      * @param producedFiles The map of files to be bind the outputs
      */
     private void finalizeTask0( TaskRun task ) {
-        if( log.isTraceEnabled() )
-            log.trace "Finalize process > ${task.name}"
+        log.trace "Finalize process > ${task.name}"
 
         // -- bind output (files)
         if( task.canBind ) {

@@ -297,8 +297,7 @@ class PublishDir {
 
     @CompileStatic
     protected void processFileImpl( Path source, Path destination ) {
-        if( log.isTraceEnabled())
-            log.trace "publishing file: $source -[$mode]-> $destination"
+        log.trace "publishing file: $source -[$mode]-> $destination"
 
         if( !mode || mode == Mode.SYMLINK ) {
             Files.createSymbolicLink(destination, source)

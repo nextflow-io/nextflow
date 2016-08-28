@@ -166,7 +166,6 @@ public abstract class TaskHandler {
                 // note: this may be override run time provided by the trace file (3rd line)
                 if( startTimeMillis ) {
                     record.realtime = completeTimeMillis - startTimeMillis
-                    if(log.isTraceEnabled())
                     log.trace "task stats: ${task.name}; start: ${startTimeMillis}; complete: ${completeTimeMillis}; realtime: ${completeTimeMillis - startTimeMillis} [${record.realtime}]; "
                 }
             }

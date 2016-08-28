@@ -384,9 +384,7 @@ class Launcher implements ExitCode {
             // launch the command
             command.run()
 
-            if( log.isTraceEnabled() ) {
-                log.trace "Exit\n" + dumpThreads()
-            }
+            log.trace "Exit\n" + dumpThreads()
         }
 
         catch( AbortRunException e ) {

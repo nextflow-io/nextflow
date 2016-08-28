@@ -116,9 +116,7 @@ class TaskTemplateEngine extends TemplateEngine {
 
             // -- parse the template reader and create script string
             String script = parse(reader);
-            if( log.isTraceEnabled() ) {
-                log.trace "\n-- script source --\n${script}\n-- script end --\n"
-            }
+            log.trace "\n-- script source --\n${script}\n-- script end --\n"
 
             // -- finally create the Script object
             try {
