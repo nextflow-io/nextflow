@@ -210,9 +210,7 @@ class IgTaskHandler extends TaskHandler {
             return null
         }
 
-        if( log.isTraceEnabled() ) {
-            log.trace "List target folder: ${task.targetDir}\n${process.text?.indent('  ')}\n"
-        }
+        log.trace "List target folder: ${task.targetDir}\n${process.text?.indent('  ')}\n"
         // destroy the process
         process.destroy()
 

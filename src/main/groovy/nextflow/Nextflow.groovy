@@ -19,12 +19,10 @@
  */
 
 package nextflow
-
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
-import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.exception.ProcessNotRecoverableException
@@ -34,15 +32,21 @@ import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.util.ArrayTuple
 import nextflow.util.CacheHelper
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 /**
  * Defines the main methods imported by default in the script scope
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
 class Nextflow {
 
-    static private final Random random = new Random()
+    // note: groovy `Slf4j` annotation causes a bizarre issue
+    // https://issues.apache.org/jira/browse/GROOVY-7371
+    // declare public so that can be accessed from the user script
+    public static final Logger log = LoggerFactory.getLogger(Nextflow)
+
+    private static final Random random = new Random()
 
     /**
      * Create a {@code DataflowVariable} binding it to the specified value
