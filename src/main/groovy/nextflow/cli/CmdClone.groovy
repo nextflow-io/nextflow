@@ -35,7 +35,7 @@ import nextflow.scm.AssetManager
 @Parameters(commandDescription = "Clone a project into a folder")
 class CmdClone extends CmdBase implements HubOptions {
 
-    static final NAME = 'clone'
+    static final public NAME = 'clone'
 
     @Parameter(required=true, description = 'name of the project to clone')
     List<String> args

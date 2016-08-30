@@ -47,6 +47,7 @@ import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
 import nextflow.Nextflow
 import nextflow.Session
+import nextflow.cloud.CloudSpotTerminationException
 import nextflow.exception.FailedGuardException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
@@ -101,11 +102,6 @@ class TaskProcessor {
      * Keeps track of the task instance executed by the current thread
      */
     protected final ThreadLocal<TaskRun> currentTask = new ThreadLocal<>()
-
-    /**
-     * Global count of all task instances
-     */
-    static final protected allCount = new AtomicInteger()
 
     /**
      * Unique task index number (run)
@@ -636,13 +632,13 @@ class TaskProcessor {
      *
      * @return The new newly created {@code TaskRun}
      */
+
     final protected TaskRun createTaskRun() {
         log.trace "Creating a new process > $name"
 
-        def id = allCount.incrementAndGet()
         def index = indexCount.incrementAndGet()
         def task = new TaskRun(
-                id: id,
+                id: TaskId.next(),
                 index: index,
                 processor: this,
                 type: scriptType,
@@ -920,6 +916,16 @@ class TaskProcessor {
             // -- do not recoverable error, just re-throw it
             if( error instanceof Error ) throw error
 
+            // -- retry without increasing the error counts
+            if( error.cause instanceof CloudSpotTerminationException ) {
+                log.warn "${error.message} -- Execution is re-tried"
+                final taskCopy = task.makeCopy()
+                taskCopy.runType = RunType.RETRY
+                session.getExecService().submit { checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false ) }
+                task.failed = true
+                return RETRY
+            }
+
             final int taskErrCount = task ? ++task.failCount : 0
             final int procErrCount = ++errorCount
 
@@ -964,8 +970,10 @@ class TaskProcessor {
                 default:
                     message << formatErrorCause(error)
             }
-            log.error message.join('\n'), error
-
+            if( log.isTraceEnabled() )
+                log.error(message.join('\n'), error)
+            else
+                log.error(message.join('\n'))
         }
         catch( Throwable e ) {
             // no recoverable error
@@ -995,7 +1003,7 @@ class TaskProcessor {
             final int maxRetries = task.config.getMaxRetries()
 
             if( (procErrCount < maxErrors || maxErrors == -1) && taskErrCount <= maxRetries ) {
-                final taskCopy = task.clone()
+                final taskCopy = task.makeCopy()
                 session.getExecService().submit({
                     try {
                         taskCopy.config.attempt = taskErrCount+1
@@ -1876,6 +1884,10 @@ class TaskProcessor {
 
         def fault = null
         try {
+            // -- verify task exist status
+            if( task.error )
+                throw new ProcessFailedException("Process `${task.name}` failed", task.error)
+
             if( task.type == ScriptType.SCRIPTLET ) {
                 if( task.exitStatus == Integer.MAX_VALUE )
                     throw new ProcessFailedException("Process `${task.name}` terminated for an unknown reason -- Likely it has been terminated by the external system")
@@ -1883,10 +1895,6 @@ class TaskProcessor {
                 if ( !task.isSuccess() )
                     throw new ProcessFailedException("Process `${task.name}` terminated with an error exit status (${task.exitStatus})")
             }
-
-            // -- verify task exist status
-            if( task.error )
-                throw new ProcessFailedException("Process `${task.name}` failed", task.error)
 
             // -- if it's OK collect results and finalize
             collectOutputs(task)

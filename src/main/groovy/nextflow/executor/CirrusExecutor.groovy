@@ -32,6 +32,8 @@ import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
+import nextflow.util.ServiceName
+
 /**
  * Executor for ClusterK Cirrus scheduler
  *

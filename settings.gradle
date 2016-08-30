@@ -21,7 +21,6 @@
 include 'my-capsule'
 include 'nxf-commons'
 include 'nxf-dnanexus'
-include 'nxf-extrae'
 include 'nxf-console'
 include 'nxf-drmaa'
 include 'nxf-ignite'

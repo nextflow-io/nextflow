@@ -60,7 +60,7 @@ class CmdRun extends CmdBase implements HubOptions {
         }
     }
 
-    static final NAME = 'run'
+    static final public NAME = 'run'
 
     @Parameter(names=['-name'], description = 'Assign a mnemonic name to the a pipeline run')
     String runName

@@ -31,7 +31,7 @@ import nextflow.trace.TraceRecord
  * Actions to handle the underlying job running the user task.
  *
  * <p>
- * Note this model the job in the execution facility (i.e. grid, cloud, etc)
+ * Note this types the job in the execution facility (i.e. grid, cloud, etc)
  * NOT the *logical* user task
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>

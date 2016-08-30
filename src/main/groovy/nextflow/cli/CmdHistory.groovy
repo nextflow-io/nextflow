@@ -33,7 +33,7 @@ import nextflow.util.HistoryFile
 @CompileStatic
 class CmdHistory extends CmdBase {
 
-    static final NAME = 'history'
+    static final public NAME = 'history'
 
     @Override
     final String getName() { NAME }

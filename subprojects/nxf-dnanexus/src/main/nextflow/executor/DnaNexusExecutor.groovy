@@ -39,6 +39,8 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.KryoHelper
+import nextflow.util.ServiceName
+
 /**
  * Executes script.nf indicated in dxapp.sh in the DnaNexus environment
  *

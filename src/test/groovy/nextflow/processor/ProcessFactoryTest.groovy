@@ -23,7 +23,7 @@ package nextflow.processor
 import nextflow.Session
 import nextflow.executor.CondorExecutor
 import nextflow.executor.Executor
-import nextflow.executor.ServiceName
+import nextflow.util.ServiceName
 import nextflow.executor.LocalExecutor
 import nextflow.executor.NopeExecutor
 import nextflow.executor.SgeExecutor

@@ -92,6 +92,7 @@ class Launcher implements ExitCode {
         allCommands = (List<CmdBase>)[
                 new CmdClean(),
                 new CmdClone(),
+                new CmdCloud(),
                 new CmdHistory(),
                 new CmdInfo(),
                 new CmdList(),
@@ -261,6 +262,10 @@ class Launcher implements ExitCode {
         !x.startsWith('-') || x.isNumber()      // if not start with `-` or is a number -> value true
     }
 
+    CmdBase findCommand( String cmdName ) {
+        allCommands.find { it.name == cmdName }
+    }
+
     /**
      * Print the usage string for the given command - or -
      * the main program usage string if not command is specified
@@ -353,6 +358,25 @@ class Launcher implements ExitCode {
         return this
     }
 
+    protected void checkForHelp() {
+        if( options.help || !command || command.help ) {
+            if( command instanceof UsageAware ) {
+                (command as UsageAware).usage()
+                // reset command to null to skip default execution
+                command = null
+                return
+            }
+
+            // replace the current command with the `help` command
+            def target = command?.name
+            command = allCommands.find { it instanceof CmdHelp }
+            if( target ) {
+                (command as CmdHelp).args = [target]
+            }
+        }
+
+    }
+
     /**
      * Launch the pipeline execution
      */
@@ -376,15 +400,10 @@ class Launcher implements ExitCode {
             }
 
             // -- print out the program help, then exit
-            if( options.help || !command || command.help ) {
-                def target = command?.name
-                command = allCommands.find { it instanceof CmdHelp }
-                if( target )
-                    (command as CmdHelp).args = [target]
-            }
+            checkForHelp()
 
             // launch the command
-            command.run()
+            command?.run()
 
             log.trace "Exit\n" + dumpThreads()
         }
@@ -394,7 +413,8 @@ class Launcher implements ExitCode {
         }
 
         catch ( AbortOperationException e ) {
-            System.err.println e.getMessage() ?: e.toString()
+            def message = e.getMessage()
+            if( message ) System.err.println(message)
             log.debug ("Operation aborted", e.cause ?: e)
             System.exit(COMMAND_ERROR)
         }

@@ -24,11 +24,10 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.Global
+import nextflow.cloud.CloudDriverFactory
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
-import nextflow.scheduler.JobBalancerSpi
-import nextflow.scheduler.JobFailoverSpi
-import nextflow.scheduler.JobSchedulerSpi
+import nextflow.scheduler.Protocol
 import nextflow.util.ClusterConfig
 import nextflow.util.Duration
 import org.apache.commons.lang.StringUtils
@@ -51,8 +50,10 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMultic
 import org.apache.ignite.spi.discovery.tcp.ipfinder.s3.TcpDiscoveryS3IpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.sharedfs.TcpDiscoverySharedFsIpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder
-import org.apache.ignite.spi.failover.jobstealing.JobStealingFailoverSpi
-import org.apache.ignite.spi.loadbalancing.adaptive.AdaptiveLoadBalancingSpi
+
+
+import static nextflow.Const.ROLE_MASTER
+import static nextflow.Const.ROLE_WORKER
 
 /**
  * Grid factory class. It can be used to create a {@link IgniteConfiguration} or the {@link Ignite} instance directly
@@ -65,15 +66,9 @@ class IgGridFactory {
 
     static final public String SESSIONS_CACHE = 'allSessions'
 
-    static final public String RESOURCE_CACHE = 'resourceCache'
-
     static final public String GRID_NAME = Const.APP_NAME
 
     static final public String NODE_ROLE = 'ROLE'
-
-    static final public String ROLE_MASTER = 'master'
-
-    static final public String ROLE_WORKER = 'worker'
 
     final private String role
 
@@ -83,7 +78,13 @@ class IgGridFactory {
     // application config
     private final Map config
 
-    private boolean experimental
+    static private IgGridFactory singleton
+
+    static Ignite ignite() { Ignition.ignite(GRID_NAME) }
+
+    static IgGridFactory instance() { singleton }
+
+    ClusterConfig getClusterConfig() { clusterConfig }
 
     /**
      * Create a grid factory object for the given role and configuration params
@@ -93,12 +94,13 @@ class IgGridFactory {
      */
     IgGridFactory( String role, Map config ) {
         assert role in [ROLE_MASTER, ROLE_WORKER], "Parameter 'role' can be either `$ROLE_MASTER` or `$ROLE_WORKER`"
+        singleton = this
 
         final configMap = (Map)config.cluster ?: [:]
         log.debug "Configuration properties for role: '$role' -- ${configMap}"
 
         this.role = role
-        this.clusterConfig = new ClusterConfig('ignite', configMap, System.getenv())
+        this.clusterConfig = new ClusterConfig(configMap, 'ignite', System.getenv())
     }
 
 
@@ -121,9 +123,9 @@ class IgGridFactory {
 
         System.setProperty('IGNITE_UPDATE_NOTIFIER','false')
         System.setProperty('IGNITE_NO_ASCII', 'true')
+        System.setProperty('IGNITE_NO_SHUTDOWN_HOOK', 'true')
 
         IgniteConfiguration cfg = new IgniteConfiguration()
-        schedulerConfig(cfg)
         discoveryConfig(cfg)
         cacheConfig(cfg)
         fileSystemConfig(cfg)
@@ -134,10 +136,8 @@ class IgGridFactory {
         cfg.setUserAttributes( (NODE_ROLE): role )
         cfg.setGridLogger( new Slf4jLogger() )
 
-//        final addresses = config.getNetworkInterfaceAddresses()
-//        if( addresses ) {
-//            cfg.setLocalHost( addresses.get(0) )
-//        }
+        def freq = clusterConfig.getAttribute('metricsLogFrequency', Duration.of('5 min')) as Duration
+        cfg.setMetricsLogFrequency(freq.toMillis())
 
         // this is not really used -- just set to avoid it complaining
         cfg.setWorkDirectory( FileHelper.getLocalTempPath().resolve('ignite').toString() )
@@ -199,18 +199,12 @@ class IgGridFactory {
         /*
          * set scheduler resources cache
          */
-        if( experimental ) {
-            def resCfg = new CacheConfiguration()
-            resCfg.with {
-                name = RESOURCE_CACHE
-                cacheMode = CacheMode.REPLICATED
-            }
-            configs << resCfg
-        }
-
+        def schedulerCacheCfg = new CacheConfiguration()
+        schedulerCacheCfg.name = Protocol.PENDING_TASKS_CACHE
+        schedulerCacheCfg.cacheMode = CacheMode.REPLICATED
+        configs << schedulerCacheCfg
 
         cfg.setCacheConfiguration( configs as CacheConfiguration[] )
-
     }
 
 
@@ -233,52 +227,6 @@ class IgGridFactory {
 
     }
 
-    protected schedulerConfig( IgniteConfiguration cfg ) {
-
-        experimental = clusterConfig.getAttribute('experimental') as boolean
-
-        if( experimental ) {
-            log.debug "Enabled experimental scheduler work-stealing"
-            experimentalWorkStealing(cfg)
-        }
-        else {
-            customWorkStealing(cfg)
-        }
-
-    }
-
-    protected customWorkStealing( IgniteConfiguration cfg )  {
-
-        cfg.setCollisionSpi( new CustomStealingCollisionSpi() )
-        cfg.setFailoverSpi( new JobStealingFailoverSpi() )
-        cfg.setLoadBalancingSpi( new AdaptiveLoadBalancingSpi() )
-
-    }
-
-    protected experimentalWorkStealing( IgniteConfiguration cfg ) {
-
-        // -- config scheduler
-        final scheduler = new JobSchedulerSpi()
-        scheduler.with {
-            stealingEnabled = clusterConfig.getAttribute('stealingEnabled', true) as boolean
-            waitJobsThreshold = clusterConfig.getAttribute('waitJobsThreshold', DFLT_WAIT_JOBS_THRESHOLD) as int
-            maximumStealingAttempts = clusterConfig.getAttribute('maxStealingAttempts', DFLT_MAX_STEALING_ATTEMPTS) as int
-            maximumStealingExpireTime = clusterConfig.getAttribute('maxStealingExpireTime', DFLT_MAX_STEALING_EXPIRE_TIME) as Duration
-        }
-        cfg.setCollisionSpi(scheduler)
-
-        // -- config failover
-        final failover= new JobFailoverSpi()
-        failover.with {
-            maximumFailoverAttempts = clusterConfig.getAttribute('maxFailoverAttempts', DFLT_MAX_FAILOVER_ATTEMPTS) as int
-        }
-        cfg.setFailoverSpi(failover)
-
-        // -- config load balancer
-        final balancer = new JobBalancerSpi()
-        cfg.setLoadBalancingSpi(balancer)
-
-    }
 
     private discoveryConfig( IgniteConfiguration cfg ) {
 
@@ -364,17 +312,59 @@ class IgGridFactory {
                 discoverCfg.setIpFinder(finder)
 
             }
+            else if( join.startsWith('cloud:') ) {
+                final parts = join.tokenize(':')
+                log.debug "Apache Ignite config > cloud provider: ${join}"
+                final String driverName = parts[1]
+                final String clusterName = parts[2]
+                final ips = findCloudIpAddresses(driverName, clusterName)
+                log.debug "Apache Ignite config > joining IPs: ${ips.join(', ')}"
+                def finder = new TcpDiscoveryVmIpFinder()
+                finder.setShared(true)
+                finder.setAddresses(ips)
+                discoverCfg.setIpFinder(finder)
+            }
             else {
                 log.warn "Ignite config > unknown discovery method: $join"
             }
         }
 
         // check some optional params
-        clusterConfig.getAttributesNames('tcp').each {
+        clusterConfig.getAttributeNames('tcp').each {
             checkAndSet(discoverCfg,'tcp.' + it )
         }
         cfg.setDiscoverySpi( discoverCfg )
 
+    }
+
+    private String getLocalAddress() {
+        try {
+            return InetAddress.getLocalHost().getHostAddress()
+        }
+        catch( IOException e ) {
+            log.debug "Oops.. Cannot find local address", e
+            return null
+        }
+
+    }
+
+    private List<String> findCloudIpAddresses(String driverName, String clusterName) {
+        List<String> result
+        final localAddress = getLocalAddress()
+
+        def begin = System.currentTimeMillis()
+        while( true ) {
+            result = CloudDriverFactory.get(driverName).listPrivateIPs(clusterName)
+            // try to find at lest another IP address other than the local host address
+            def notFound = !result || (result.size()==1 && result.contains(localAddress))
+            if( notFound && System.currentTimeMillis()-begin<5_000) {
+                sleep 100
+                continue
+            }
+            break
+        }
+
+        return result ?: [localAddress]
     }
 
     protected void checkAndSet( def discoverCfg, String name, defValue = null ) {

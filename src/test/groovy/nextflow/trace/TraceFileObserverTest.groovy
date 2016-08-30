@@ -24,6 +24,7 @@ import java.nio.file.Files
 import nextflow.Session
 import nextflow.executor.NopeTaskHandler
 import nextflow.processor.TaskConfig
+import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -97,7 +98,7 @@ class TraceFileObserverTest extends Specification {
         def file = testFolder.resolve('trace')
 
         // the handler
-        def task = new TaskRun(id:111, name:'simple_task', hash: CacheHelper.hasher(1).hash(), config: new TaskConfig())
+        def task = new TaskRun(id:TaskId.of(111), name:'simple_task', hash: CacheHelper.hasher(1).hash(), config: new TaskConfig())
         task.processor = Mock(TaskProcessor)
         task.processor.getSession() >> new Session()
         task.processor.getName() >> 'x'
@@ -111,28 +112,28 @@ class TraceFileObserverTest extends Specification {
         when:
         observer.onFlowStart(null)
         then:
-        observer.current == [:]
+        observer.current.isEmpty()
 
         when:
         handler.status = TaskStatus.SUBMITTED
         observer.onProcessSubmit( handler )
-        def record = observer.current.get(111)
+        def record = observer.current.get(TaskId.of(111))
         then:
         observer.separator == '\t'
-        record.taskId == 111
+        record.taskId == 111L
         record.name == 'simple_task'
         record.submit >= now
         record.start == 0
-        observer.current.containsKey(111)
+        observer.current.containsKey(TaskId.of(111))
 
         when:
         sleep 50
         handler.status = TaskStatus.RUNNING
         observer.onProcessStart( handler )
-        record = observer.current.get(111)
+        record = observer.current.get(TaskId.of(111))
         then:
         record.start >= record.submit
-        observer.current.containsKey(111)
+        observer.current.containsKey(TaskId.of(111))
 
         when:
         sleep 50
@@ -140,7 +141,7 @@ class TraceFileObserverTest extends Specification {
         handler.task.exitStatus = 127
         observer.onProcessComplete(handler)
         then:
-        !(observer.current.containsKey(111))
+        !(observer.current.containsKey(TaskId.of(111)))
 
         when:
         record = handler.getTraceRecord()

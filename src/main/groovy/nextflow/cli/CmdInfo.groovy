@@ -40,7 +40,7 @@ import nextflow.util.MemoryUnit
 @Parameters(commandDescription = "Print project and system runtime information")
 class CmdInfo extends CmdBase {
 
-    static final NAME = 'info'
+    static final public NAME = 'info'
 
     @Parameter(description = 'project name')
     List<String> args

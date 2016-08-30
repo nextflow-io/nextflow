@@ -37,7 +37,7 @@ import nextflow.scm.AssetManager
 @Parameters(commandDescription = "Delete the local copy of a project")
 class CmdDrop extends CmdBase {
 
-    static final NAME = 'drop'
+    static final public NAME = 'drop'
 
     @Parameter(required=true, description = 'name of the project to drop')
     List<String> args

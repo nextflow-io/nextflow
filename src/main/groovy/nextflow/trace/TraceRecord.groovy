@@ -26,6 +26,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskId
 import nextflow.util.Duration
 import nextflow.util.KryoHelper
 import nextflow.util.MemoryUnit
@@ -334,7 +335,7 @@ class TraceRecord implements Serializable {
         }
     }
 
-    def getTaskId() { get('task_id') }
+    TaskId getTaskId() { (TaskId)get('task_id') }
 
     String getWorkDir() { get('workdir') }
 

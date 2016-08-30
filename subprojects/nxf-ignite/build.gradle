@@ -30,9 +30,10 @@ sourceSets {
 
 dependencies {
     compile project(':')
-    compile ('org.apache.ignite:ignite-core:1.5.0.final')
-    compile ('org.apache.ignite:ignite-slf4j:1.5.0.final')
-    compile ('org.apache.ignite:ignite-aws:1.5.0.final') {
+
+    compile ('org.apache.ignite:ignite-core:1.6.0')
+    compile ('org.apache.ignite:ignite-slf4j:1.6.0')
+    compile ('org.apache.ignite:ignite-aws:1.6.0') {
         exclude group: 'com.amazonaws', module: 'aws-java-sdk'
     }
     runtime ('com.amazonaws:aws-java-sdk-s3:1.10.29') {

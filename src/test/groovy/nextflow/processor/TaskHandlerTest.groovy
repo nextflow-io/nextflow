@@ -44,7 +44,7 @@ class TaskHandlerTest extends Specification {
         def folder = TestHelper.createInMemTempDir()
         folder.resolve( TaskRun.CMD_TRACE ).text = traceText
 
-        def task = new TaskRun(id: 100, workDir: folder, name:'task1', exitStatus: 127, config: [tag: 'seq_x', container: 'ubuntu']  )
+        def task = new TaskRun(id: new TaskId(100), workDir: folder, name:'task1', exitStatus: 127, config: [tag: 'seq_x', container: 'ubuntu']  )
         task.metaClass.getHashLog = { "5d5d7ds" }
         task.processor = Mock(TaskProcessor)
         task.processor.getSession() >> new Session()

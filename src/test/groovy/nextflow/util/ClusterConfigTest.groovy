@@ -32,7 +32,7 @@ class ClusterConfigTest extends Specification {
     def testGetAttribute() {
 
         when:
-        def cfg = new ClusterConfig('myDaemon', [x:123, y:222, '$myDaemon': [y:333] ] )
+        def cfg = new ClusterConfig([x:123, y:222, '$myDaemon': [y:333] ], 'myDaemon')
         then:
         cfg.getAttribute('x') == 123
         cfg.getAttribute('y') == 333
@@ -41,7 +41,7 @@ class ClusterConfigTest extends Specification {
 
         when:
         def env = [NXF_CLUSTER_Z:'hola', NXF_CLUSTER_P_Q_Z:'hello']
-        cfg = new ClusterConfig('myDaemon', [x:123, y:222, '$myDaemon': [y:333] ], env )
+        cfg = new ClusterConfig([x:123, y:222, '$myDaemon': [y:333] ], 'myDaemon',  env )
         then:
         cfg.getAttribute('z', 'alpha') == 'hola'
         cfg.getAttribute('p.q.z', null) == 'hello'
@@ -51,7 +51,7 @@ class ClusterConfigTest extends Specification {
     def testGetAttributeWithType() {
 
         given:
-        def cfg = new ClusterConfig('myDaemon', [alpha:123, beta:'222', gamma: 'false'] )
+        def cfg = new ClusterConfig([alpha:123, beta:'222', gamma: 'false'], 'myDaemon', )
 
         when:
         String str = cfg.getAttribute('alpha')
@@ -77,7 +77,7 @@ class ClusterConfigTest extends Specification {
     def testGetAttributeFromEnvironmentVariable() {
 
         given:
-        def cfg = new ClusterConfig('ignite', null, [NXF_CLUSTER_SHUTDOWN: 'true'] )
+        def cfg = new ClusterConfig(null, 'ignite', [NXF_CLUSTER_SHUTDOWN: 'true'] )
         expect:
         (boolean)cfg.getAttribute('shutdown') == true
         cfg.getAttribute('something') == null
@@ -91,14 +91,14 @@ class ClusterConfigTest extends Specification {
         List<String> addresses
 
         when:
-        config = new ClusterConfig('x', [:])
+        config = new ClusterConfig([:])
         addresses = config.getNetworkInterfaceAddresses()
         then:
         addresses == []
 
 
         when:
-        config = new ClusterConfig('x', [interface: '172.5.1.*,172.5.2.*'])
+        config = new ClusterConfig([interface: '172.5.1.*,172.5.2.*'])
         addresses = config.getNetworkInterfaceAddresses()
         then:
         addresses == ['172.5.1.*','172.5.2.*']
@@ -108,11 +108,11 @@ class ClusterConfigTest extends Specification {
     def testGetNestedNames() {
 
         when:
-        def cfg = new ClusterConfig('none', [x:1, y:2, tcp: [alpha: 'a', beta: 'b', gamma: [uno:1, due: 2]] ])
+        def cfg = new ClusterConfig([x:1, y:2, tcp: [alpha: 'a', beta: 'b', gamma: [uno:1, due: 2]] ])
         then:
-        cfg.getAttributesNames().sort() == ['x','y','tcp'].sort()
-        cfg.getAttributesNames('tcp') == ['alpha','beta', 'gamma']
-        cfg.getAttributesNames('tcp.gamma') == ['uno','due']
+        cfg.getAttributeNames() == ['x','y','tcp'] as Set
+        cfg.getAttributeNames('tcp') == ['alpha','beta', 'gamma'] as Set
+        cfg.getAttributeNames('tcp.gamma') == ['uno','due'] as Set
 
     }
 
@@ -120,7 +120,7 @@ class ClusterConfigTest extends Specification {
     def testNestedValues() {
 
         when:
-        def cfg = new ClusterConfig('none', [x:1, y:2, tcp: [alpha: 'a', beta: 'b', gamma: [uno:1, due: 2]] ])
+        def cfg = new ClusterConfig([x:1, y:2, tcp: [alpha: 'a', beta: 'b', gamma: [uno:1, due: 2]] ])
         then:
         cfg.getAttribute('x') == 1
         cfg.getAttribute('tcp.alpha') == 'a'
@@ -136,7 +136,7 @@ class ClusterConfigTest extends Specification {
     def testEnumValues() {
 
         when:
-        def cfg = new ClusterConfig('none', [x:1, ggfs:[data: [memoryMode: 'ALPHA']] ])
+        def cfg = new ClusterConfig([x:1, ggfs:[data: [memoryMode: 'ALPHA']] ])
         then:
         cfg.getAttribute('ggfs.data.memoryMode') == 'ALPHA'
         cfg.getAttribute('ggfs.data.memoryMode') as FooEnum == FooEnum.ALPHA
@@ -166,18 +166,18 @@ class ClusterConfigTest extends Specification {
 
     def 'should return cluster join' () {
         when:
-        def cfg = new ClusterConfig('ignite', [join: 'path:/some/dir'])
+        def cfg = new ClusterConfig([join: 'path:/some/dir'])
         then:
         cfg.getClusterJoin() == 'path:/some/dir'
 
         when:
-        cfg = new ClusterConfig('ignite', null, [NXF_CLUSTER_JOIN: 's3://bucket'])
+        cfg = new ClusterConfig(null, 'ignite', [NXF_CLUSTER_JOIN: 's3://bucket'])
         then:
         cfg.getClusterJoin() == 's3://bucket'
 
         // fallback on NXF_CLUSTER_SEED
         when:
-        cfg = new ClusterConfig('ignite', null, [NXF_CLUSTER_SEED: '66052'])
+        cfg = new ClusterConfig(null, 'ignite', [NXF_CLUSTER_SEED: '66052'])
         then:
         cfg.getClusterJoin() == 'multicast:228.1.2.4'
     }

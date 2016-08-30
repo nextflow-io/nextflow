@@ -29,7 +29,7 @@ import nextflow.executor.LocalExecutor
 import nextflow.executor.LsfExecutor
 import nextflow.executor.NopeExecutor
 import nextflow.executor.PbsExecutor
-import nextflow.executor.ServiceName
+import nextflow.util.ServiceName
 import nextflow.executor.SgeExecutor
 import nextflow.executor.SlurmExecutor
 import nextflow.executor.SupportedScriptTypes

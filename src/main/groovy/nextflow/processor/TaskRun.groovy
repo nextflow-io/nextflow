@@ -57,7 +57,7 @@ class TaskRun implements Cloneable {
     /**
      * Task unique id
      */
-    def id
+    TaskId id
 
     /**
      * Task index within its execution group
@@ -67,12 +67,12 @@ class TaskRun implements Cloneable {
     /**
      * Task name
      */
-    def String name
+    String name
 
     /**
      * The unique hash code associated to this task
      */
-    def HashCode hash
+    HashCode hash
 
     /*
      * The processor that creates this 'task'
@@ -90,7 +90,7 @@ class TaskRun implements Cloneable {
     Map<OutParam,Object> outputs = [:]
 
 
-    def void setInput( InParam param, Object value = null ) {
+    void setInput( InParam param, Object value = null ) {
         assert param
 
         inputs[param] = value
@@ -102,7 +102,7 @@ class TaskRun implements Cloneable {
         }
     }
 
-    def void setOutput( OutParam param, Object value = null ) {
+    void setOutput( OutParam param, Object value = null ) {
         assert param
         outputs[param] = value
     }
@@ -141,7 +141,7 @@ class TaskRun implements Cloneable {
     /**
      * @return The task produced stdout result as string
      */
-    def String getStdout() {
+    String getStdout() {
 
         if( stdout instanceof Path ) {
             try {
@@ -159,7 +159,7 @@ class TaskRun implements Cloneable {
         return null
     }
 
-    def String getStderr() {
+    String getStderr() {
 
         if( stderr instanceof Path ) {
             try {
@@ -288,18 +288,18 @@ class TaskRun implements Cloneable {
     /**
      * The number of times the execution of the task has failed
      */
-    def volatile int failCount
+    volatile int failCount
 
     /**
      * Mark the task as failed
      */
-    def volatile boolean failed
+    volatile boolean failed
 
-    def volatile boolean aborted
+    volatile boolean aborted
 
-    def TaskConfig config
+    TaskConfig config
 
-    def TaskContext context
+    TaskContext context
 
     TaskProcessor.RunType runType = TaskProcessor.RunType.SUBMIT
 
@@ -309,6 +309,15 @@ class TaskRun implements Cloneable {
         taskClone.config = config.clone()
         taskClone.config.setContext(taskClone.context)
         return taskClone
+    }
+
+    TaskRun makeCopy() {
+        def copy = this.clone()
+        // -- reset the error condition (if any)
+        copy.id = TaskId.next()
+        copy.error = null
+        copy.exitStatus = Integer.MAX_VALUE
+        return copy
     }
 
     String getName() {
@@ -392,7 +401,7 @@ class TaskRun implements Cloneable {
      *
      */
     @Memoized
-    def List<String> getOutputFilesNames() {
+    List<String> getOutputFilesNames() {
         def result = []
 
         getOutputsByType(FileOutParam).keySet().each { FileOutParam param ->
@@ -422,7 +431,7 @@ class TaskRun implements Cloneable {
      * @param types One ore more subclass of {@code InParam}
      * @return An associative array containing all the objects for the specified type
      */
-    public <T extends OutParam> Map<T,Object> getOutputsByType( Class<T>... types ) {
+    def <T extends OutParam> Map<T,Object> getOutputsByType( Class<T>... types ) {
         def result = [:]
         outputs.each {
             if( types.contains(it.key.class) ) {

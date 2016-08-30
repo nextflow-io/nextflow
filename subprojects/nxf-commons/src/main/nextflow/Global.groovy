@@ -115,7 +115,7 @@ class Global {
 
         def home = Paths.get(System.properties.get('user.home') as String)
         def files = [ home.resolve('.aws/credentials'), home.resolve('.aws/config') ]
-        getAwsCredentials0(env,config, files)
+        getAwsCredentials0(env, config, files)
 
     }
 
@@ -130,8 +130,8 @@ class Global {
                 return region.toString()
         }
 
-        if( env && env.AWS_REGION )  {
-            return env.AWS_REGION.toString()
+        if( env && env.AWS_DEFAULT_REGION )  {
+            return env.AWS_DEFAULT_REGION.toString()
         }
 
         def home = Paths.get(System.properties.get('user.home') as String)

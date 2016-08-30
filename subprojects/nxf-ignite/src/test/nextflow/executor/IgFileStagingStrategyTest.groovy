@@ -22,7 +22,6 @@ package nextflow.executor
 import java.nio.file.Files
 
 import nextflow.processor.TaskBean
-import org.apache.ignite.logger.slf4j.Slf4jLogger
 import spock.lang.Specification
 /**
  *
@@ -99,7 +98,7 @@ class IgFileStagingStrategyTest extends Specification {
                 )
 
         when:
-        def ggTask = new IgFileStagingStrategy(log: new Slf4jLogger(), sessionId: sessionId, task: task)
+        def ggTask = new IgFileStagingStrategy(sessionId: sessionId, task: task)
         then:
         ggTask.sessionId == sessionId
 

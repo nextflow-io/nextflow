@@ -24,14 +24,15 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 import nextflow.file.FileHelper
 import nextflow.processor.TaskBean
-import org.apache.ignite.IgniteLogger
 /**
  * Implements file staging strategy for a Ignite task.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class IgFileStagingStrategy implements StagingStrategy {
 
@@ -44,11 +45,6 @@ class IgFileStagingStrategy implements StagingStrategy {
      * Session unique-id
      */
     protected UUID sessionId
-
-    /**
-     * Ignite provided logger
-     */
-    protected IgniteLogger log
 
     /**
      * The local scratch dir where the task is actually executed in the remote node.

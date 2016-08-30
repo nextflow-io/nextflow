@@ -35,7 +35,7 @@ import nextflow.scm.AssetManager
 @Parameters(commandDescription = "List all downloaded projects")
 class CmdList extends CmdBase {
 
-    static final NAME = 'list'
+    static final public NAME = 'list'
 
     @Override
     final String getName() { NAME }
