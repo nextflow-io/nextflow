@@ -332,10 +332,10 @@ class ScriptRunner {
     /**
      * @param cli The launcher command line string
      */
-    void verifyAndTrackHistory(String cli) {
+    void verifyAndTrackHistory(String cli, String name) {
 
         // -- when resume, make sure the session id exists in the executions history
-        if( session.resumeMode && !HistoryFile.history.findUniqueId(session.uniqueId.toString())) {
+        if( session.resumeMode && !HistoryFile.DEFAULT.checkExistsById(session.uniqueId.toString())) {
             throw new AbortOperationException("Can't find a run with the specified id: ${session.uniqueId} -- Execution can't be resumed")
         }
 
@@ -343,8 +343,9 @@ class ScriptRunner {
             return
         def p = cli.indexOf('nextflow ')
         commandLine = p != -1 ? 'nextflow ' + cli.substring(p+9) : cli
-        HistoryFile.history.write( session.uniqueId, commandLine )
+        HistoryFile.DEFAULT.write( name, session.uniqueId, commandLine )
     }
+
 
     @PackageScope
     ScriptFile getScriptFile() { scriptFile }

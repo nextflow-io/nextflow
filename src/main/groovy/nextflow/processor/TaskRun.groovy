@@ -19,6 +19,8 @@
  */
 
 package nextflow.processor
+
+import java.nio.file.FileSystems
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -450,6 +452,11 @@ class TaskRun implements Cloneable {
         config.scratch
     }
 
+    String getWorkDirStr() {
+        if( !workDir ) return null
+        workDir.fileSystem == FileSystems.default ? workDir.toString() : workDir.toUri().toString()
+    }
+
     static final public String CMD_LOG = '.command.log'
     static final public String CMD_ENV = '.command.env'
     static final public String CMD_SCRIPT = '.command.sh'
@@ -460,15 +467,11 @@ class TaskRun implements Cloneable {
     static final public String CMD_START = '.command.begin'
     static final public String CMD_RUN = '.command.run'
     static final public String CMD_STUB = '.command.run.1'
-    static final public String CMD_CONTEXT = '.command.val'
     static final public String CMD_TRACE = '.command.trace'
 
 
-
     String toString( ) {
-
         "id: $id; name: $name; type: $type; status: $exitStatus; error: $error; workDirectory: $workDir"
-
     }
 
 

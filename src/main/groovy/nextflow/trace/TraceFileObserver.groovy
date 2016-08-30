@@ -268,6 +268,12 @@ class TraceFileObserver implements TraceObserver {
         writer.send { PrintWriter it -> it.println(render(record)); it.flush() }
     }
 
+    @Override
+    void onProcessCached(TaskHandler handler) {
+        // save to the file
+        writer.send { PrintWriter it -> it.println(render( handler.getTraceRecord() )); it.flush() }
+    }
+
     /**
      * Render a {@link TraceRecord} object to a string
      *

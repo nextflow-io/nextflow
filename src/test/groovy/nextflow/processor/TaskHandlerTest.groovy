@@ -84,12 +84,12 @@ class TaskHandlerTest extends Specification {
         trace.write_bytes == 30
 
         // check get method
-        trace.get('%cpu', null) == '1.0%'
-        trace.get('%mem', null) == '2.0%'
-        trace.get('rss', null ) == '1.2 MB'
-        trace.get('vmem', null ) == '10.8 MB'
-        trace.get('peak_rss', null ) == '2.2 MB'
-        trace.get('peak_vmem', null ) == '20.6 MB'
+        trace.getFmtStr('%cpu') == '1.0%'
+        trace.getFmtStr('%mem') == '2.0%'
+        trace.getFmtStr('rss') == '1.2 MB'
+        trace.getFmtStr('vmem') == '10.8 MB'
+        trace.getFmtStr('peak_rss') == '2.2 MB'
+        trace.getFmtStr('peak_vmem') == '20.6 MB'
 
         when:
         handler = [:] as TaskHandler

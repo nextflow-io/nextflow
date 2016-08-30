@@ -36,7 +36,7 @@ import org.apache.commons.lang.time.DurationFormatUtils
 @EqualsAndHashCode(includes = 'durationInMillis')
 class Duration implements Comparable<Duration>, Serializable {
 
-    static private final FORMAT = ~/^(\d+)\s*([a-zA-Z]+)/
+    static private final FORMAT = ~/^(\d+\.?\d*)\s*([a-zA-Z]+)/
 
     static private final LEGACY = ~/^(\d{1,2}):(\d{1,2}):(\d{1,2})$/
 
@@ -149,7 +149,7 @@ class Duration implements Comparable<Duration>, Serializable {
                 def digit = groups[1]
                 def unit = groups[2]
 
-                result += convert( digit.toInteger(), unit )
+                result += convert( digit.toFloat(), unit )
                 str = str.substring(all.length()).trim()
                 continue
             }
@@ -170,22 +170,22 @@ class Duration implements Comparable<Duration>, Serializable {
      * @param unit A valid duration unit e.g. {@code d}, {@code d}, {@code h}, {@code hour}, etc
      * @return The duration in millisecond
      */
-    private long convert( int digit, String unit ) {
+    private long convert( float digit, String unit ) {
 
         if( unit in MILLIS ) {
-            return digit
+            return Math.round(digit)
         }
         if ( unit in SECONDS ) {
-            return TimeUnit.SECONDS.toMillis(digit)
+            return Math.round(digit * 1_000)
         }
         if ( unit in MINUTES ) {
-            return TimeUnit.MINUTES.toMillis(digit)
+            return Math.round(digit * 60 * 1_000)
         }
         if ( unit in HOURS ) {
-            return TimeUnit.HOURS.toMillis(digit)
+            return Math.round(digit * 60 * 60 * 1_000)
         }
         if ( unit in DAYS ) {
-            return TimeUnit.DAYS.toMillis(digit)
+            return Math.round(digit * 24 * 60 * 60 * 1_000)
         }
 
         throw new IllegalStateException()

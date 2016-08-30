@@ -19,7 +19,7 @@
  */
 
 package nextflow.processor
-import java.nio.file.Files
+
 import java.nio.file.Paths
 
 import nextflow.script.TaskBody
@@ -37,7 +37,6 @@ class TaskContextTest extends Specification {
 
         setup:
         def taskConfig = new ProcessConfig([:])
-        def file = Files.createTempFile('test.ctx',null)
         def processor = [:] as TaskProcessor
         processor.metaClass.getTaskConfig = { taskConfig }
         processor.metaClass.getTaskBody = { new TaskBody(null,'source') }
@@ -53,8 +52,8 @@ class TaskContextTest extends Specification {
         map.context = [uno: 1, due: 'str', tre: "$str"]
 
         when:
-        map.save(file)
-        def result = TaskContext.read(processor, file)
+        def buffer = map.serialize()
+        def result = TaskContext.deserialize(processor, buffer)
 
         then:
         result.size() == 8
@@ -70,8 +69,6 @@ class TaskContextTest extends Specification {
         result.getHolder() instanceof Map
         result.getHolder().get('alpha') == 1
 
-        cleanup:
-        file.delete()
 
     }
 

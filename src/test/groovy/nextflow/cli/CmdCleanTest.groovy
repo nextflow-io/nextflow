@@ -20,27 +20,14 @@
 
 package nextflow.cli
 
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.util.HistoryFile
+import spock.lang.Specification
+
 /**
- * CLI sub-command HISTORY
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@Deprecated
-@CompileStatic
-class CmdHistory extends CmdBase {
+class CmdCleanTest extends Specification {
 
-    static final NAME = 'history'
 
-    @Override
-    final String getName() { NAME }
 
-    @Override
-    void run() {
-        log.info "Command `history` has been deprecated -- Use `log` instead"
-        HistoryFile.DEFAULT.print()
-    }
 }

@@ -102,6 +102,7 @@ class WorkflowMetadataTest extends Specification {
         metadata.nextflow.timestamp == Const.APP_TIMESTAMP_UTC
         metadata.profile == 'standard'
         metadata.sessionId == session.uniqueId
+        metadata.runName == session.runName
         !metadata.resume
 
         when:

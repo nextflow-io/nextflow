@@ -155,6 +155,10 @@ public abstract class TaskHandler {
         record.container = task.container
         record.attempt = task.config.attempt
 
+        record.script = task.getScript()
+        record.scratch = task.getScratch()
+        record.workdir = task.getWorkDirStr()
+
         if( isCompleted() ) {
             if( completeTimeMillis ) {
                 // completion timestamp

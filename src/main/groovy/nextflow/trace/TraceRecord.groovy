@@ -27,6 +27,7 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.util.Duration
+import nextflow.util.KryoHelper
 import nextflow.util.MemoryUnit
 /**
   * This object represent holds the information of a single process run,
@@ -36,7 +37,17 @@ import nextflow.util.MemoryUnit
   */
 @Slf4j
 @CompileStatic
-class TraceRecord {
+class TraceRecord implements Serializable {
+
+    public static String WORKDIR = 'folder'
+
+    public TraceRecord() {
+        this.store = [:]
+    }
+
+    private TraceRecord(Map store) {
+        this.store = store
+    }
 
     final private static String DEFAULT_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS"
 
@@ -72,10 +83,13 @@ class TraceRecord {
             syscw:      'num',      // -- /proc/$pid/io
             read_bytes: 'mem',      // -- /proc/$pid/io
             write_bytes:'mem',      // -- /proc/$pid/io
-            attempt:    'num'
+            attempt:    'num',
+            workdir:    'str',
+            script:     'str',
+            scratch:    'str'
     ]
 
-    static Map<String,Closure<String>> FORMATTER = [
+    static public Map<String,Closure<String>> FORMATTER = [
             str: this.&fmtString,
             num: this.&fmtNumber,
             date: this.&fmtDate,
@@ -224,7 +238,7 @@ class TraceRecord {
 
 
     @PackageScope
-    Map<String,Object> store = [:]
+    Map<String,Object> store
 
     @Memoized
     def Set<String> keySet() {
@@ -285,7 +299,7 @@ class TraceRecord {
      * @param converter A converter string
      * @return A string value formatted according the specified converter
      */
-    String get( String name, String converter ) {
+    String getFmtStr( String name, String converter = null ) {
         assert name
         def val = store.get(name)
 
@@ -322,6 +336,8 @@ class TraceRecord {
 
     def getTaskId() { get('task_id') }
 
+    String getWorkDir() { get('workdir') }
+
     /**
      * Render the specified list of fields to a single string value
      *
@@ -335,7 +351,7 @@ class TraceRecord {
         for( int i=0; i<fields.size(); i++ ) {
             String name = fields[i]
             String format = i<formats?.size() ? formats[i] : null
-            result << (get(name, format) ?: NA)
+            result << (getFmtStr(name, format) ?: NA)
         }
 
         return result.join(separator)
@@ -420,6 +436,22 @@ class TraceRecord {
     @Override
     int hashCode() {
         store.hashCode()
+    }
+
+    byte[] serialize() {
+        KryoHelper.serialize(store)
+    }
+
+    static TraceRecord deserialize(byte[] buffer) {
+        Map map = (Map)KryoHelper.deserialize(buffer)
+        new TraceRecord(map)
+    }
+
+    TraceRecord setCached(boolean value) {
+        if( value ) {
+            store.status = 'CACHED'
+        }
+        return this
     }
 
 }

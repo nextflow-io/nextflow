@@ -161,6 +161,9 @@ class ExtraeTraceObserver implements TraceObserver {
 
     }
 
+    void onProcessCached( TaskHandler handler ) {
+        //onProcessComplete(handler)
+    }
 
     /**
      * Extract the configuration file embedded in the distribution JAR and copy into the
