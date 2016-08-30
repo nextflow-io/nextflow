@@ -132,6 +132,8 @@ class DrmaaExecutorTest extends Specification {
     def testHandlerGetTrace() {
 
         given:
+        def workDir = Files.createTempDirectory('test')
+
         def expected = new TraceRecord()
         expected.task_id = 30
         expected.native_id = '2000'
@@ -146,8 +148,9 @@ class DrmaaExecutorTest extends Specification {
         expected.module = []
         expected.container = null
         expected.attempt = 1
-
-        def workDir = Files.createTempDirectory('test')
+        expected.workdir = workDir.toString()
+        expected.script = null
+        expected.scratch = null
 
         def task = [:] as TaskRun
         task.id = 30

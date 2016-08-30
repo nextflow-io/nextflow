@@ -18,29 +18,32 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.cli
+package nextflow.util
 
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.util.HistoryFile
+import spock.lang.Specification
+import spock.lang.Timeout
+
 /**
- * CLI sub-command HISTORY
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@Deprecated
-@CompileStatic
-class CmdHistory extends CmdBase {
+class NameGeneratorTest extends Specification {
 
-    static final NAME = 'history'
+    def 'should return a random name' () {
+        when:
+        def (adj, name)= NameGenerator.next().tokenize('_')
+        then:
+        NameGenerator.ADJECTIVES.contains(adj)
+        NameGenerator.NAMES.contains(name)
 
-    @Override
-    final String getName() { NAME }
+    }
 
-    @Override
-    void run() {
-        log.info "Command `history` has been deprecated -- Use `log` instead"
-        HistoryFile.DEFAULT.print()
+    @Timeout(1)
+    def 'should not generate a random name except the specified one' () {
+        when:
+        def name = NameGenerator.next('evil_pike')
+        then:
+        name
+        name != 'evil_pike'
     }
 }

@@ -86,6 +86,12 @@ class DurationTest extends Specification {
         Duration.of('2d 3h 4m').toMillis() ==  2 * DAY + 3 * HOUR + 4 * MIN
     }
 
+    def 'should parse float time' () {
+        expect:
+        Duration.of('10.5 s').toMillis() == 10_500
+        Duration.of('10.5 m').toSeconds() == 630
+    }
+
     def 'should parse legacy time format string' () {
 
         expect:

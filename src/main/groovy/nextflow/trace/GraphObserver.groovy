@@ -109,4 +109,8 @@ class GraphObserver implements TraceObserver {
 
     }
 
+    @Override
+    void onProcessCached(TaskHandler handler) {
+
+    }
 }

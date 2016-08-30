@@ -65,5 +65,10 @@ interface TraceObserver {
      */
     void onProcessComplete(TaskHandler handler)
 
+    /**
+     * method invoked when a task execution is skipped because a cached result is found
+     * @param handler
+     */
+    void onProcessCached(TaskHandler handler)
 
 }

@@ -169,13 +169,8 @@ class TaskContext implements Map<String,Object>, Cloneable {
         holder.put(property, newValue)
     }
 
-    /**
-     * The the delegate object to the file specified. It takes care to converts {@code Path} objects
-     * (that are not serializable) to objects of type {@code SafePath}
-     *
-     * @param contextFile The file where store the {@code DelegateMap} instance
-     */
-    def void save( Path contextFile ) {
+
+    def byte[] serialize() {
         try {
             def map = holder
             if( map.get(TaskProcessor.TASK_CONTEXT_PROPERTY_NAME) instanceof TaskConfig ) {
@@ -183,12 +178,18 @@ class TaskContext implements Map<String,Object>, Cloneable {
                 map.remove(TaskProcessor.TASK_CONTEXT_PROPERTY_NAME)
             }
 
-            KryoHelper.serialize(map,contextFile)
+            return KryoHelper.serialize(map)
         }
         catch( Exception e ) {
             log.warn "Cannot serialize context map. Cause: ${e.cause} -- Resume will not work on this process"
             log.debug "Failed to serialize delegate map items: ${dumpMap(holder)}", e
+            return null
         }
+    }
+
+    static TaskContext deserialize(TaskProcessor processor, byte[] buffer) {
+        def map = (Map)KryoHelper.deserialize(buffer)
+        new TaskContext(processor, map)
     }
 
 
@@ -200,21 +201,6 @@ class TaskContext implements Map<String,Object>, Cloneable {
         result << "]"
         return result.join('\n')
     }
-
-    /**
-     * Read the context map from the file specified
-     *
-     * @param processor The current {@code TaskProcessor}
-     * @param contextFile The file used to store the context map
-     * @return A new {@code DelegateMap} instance holding the values read from map file
-     */
-    static TaskContext read( TaskProcessor processor, Path contextFile ) {
-
-        def map = (Map)KryoHelper.deserialize(contextFile)
-        new TaskContext(processor, map)
-
-    }
-
 
     /**
      * Serialize the {@code DelegateMap} instance to a byte array

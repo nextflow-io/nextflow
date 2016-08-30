@@ -35,6 +35,7 @@ container                   Docker image used to run workflow tasks. When more t
                             it returns a map object containing `[process name, image name]` pair entries.
 commandLine                 Command line as entered by the user to launch the workflow execution.
 profile                     Used configuration profile.
+runName                     Mnemonic name assigned to this execution instance.
 sessionId                   Unique identifier (UUID) associated to current execution.
 resume                      Returns ``true`` whenever the current instance is resumed from a previous execution.
 start                       Timestamp of workflow at execution start.

@@ -1,6 +1,7 @@
 .idea/**
 .gradle/**
 .*.log*
+.cache/*
 .vagrant/*
 .cache/*
 .nextflow.*

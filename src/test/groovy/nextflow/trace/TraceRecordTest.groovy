@@ -44,7 +44,7 @@ class TraceRecordTest extends Specification {
         record.rss = '1024'
 
         expect:
-        record.get(name, converter) == expected
+        record.getFmtStr(name, converter) == expected
 
         where:
         name        | converter | expected

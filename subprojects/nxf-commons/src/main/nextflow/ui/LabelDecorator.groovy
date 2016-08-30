@@ -18,29 +18,14 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.cli
+package nextflow.ui
 
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.util.HistoryFile
+
 /**
- * CLI sub-command HISTORY
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * A generic decorator for {@code TextLabel} class
  */
-@Slf4j
-@Deprecated
-@CompileStatic
-class CmdHistory extends CmdBase {
+interface LabelDecorator {
 
-    static final NAME = 'history'
+    String apply( TextLabel label, String value )
 
-    @Override
-    final String getName() { NAME }
-
-    @Override
-    void run() {
-        log.info "Command `history` has been deprecated -- Use `log` instead"
-        HistoryFile.DEFAULT.print()
-    }
 }

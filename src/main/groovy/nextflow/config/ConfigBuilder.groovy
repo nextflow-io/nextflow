@@ -19,7 +19,6 @@
  */
 
 package nextflow.config
-
 import static nextflow.util.ConfigHelper.parseValue
 
 import java.nio.file.Path
@@ -317,7 +316,7 @@ class ConfigBuilder {
             return null
 
         if( uniqueId == 'last' ) {
-            uniqueId = HistoryFile.history.retrieveLastUniqueId()
+            uniqueId = HistoryFile.DEFAULT.getLast()?.sessionId
             if( !uniqueId ) {
                 log.warn "It seems you never run this project before -- Option `-resume` is ignored"
             }
@@ -331,6 +330,10 @@ class ConfigBuilder {
 
         // -- set config options
         config.cacheable = cmdRun.cacheable
+
+        // -- set the run name
+        if( cmdRun.runName )
+            config.runName = cmdRun.runName
 
         // -- sets the working directory
         if( cmdRun.workDir )

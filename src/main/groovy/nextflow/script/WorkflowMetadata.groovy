@@ -40,6 +40,11 @@ import nextflow.util.Duration
 class WorkflowMetadata {
 
     /**
+     * Run name
+     */
+    String runName
+
+    /**
      * Project repository Git remote URL
      */
     String repository
@@ -165,6 +170,7 @@ class WorkflowMetadata {
         this.profile = owner.profile ?: ConfigBuilder.DEFAULT_PROFILE
         this.sessionId = owner.session.uniqueId
         this.resume = owner.session.resumeMode
+        this.runName = owner.session.runName
 
         // check if there's a onComplete action in the config file
         registerConfigAction(owner.session.config.workflow as Map)
