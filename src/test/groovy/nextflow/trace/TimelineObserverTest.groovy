@@ -24,6 +24,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskId
 import spock.lang.Specification
 import test.TestHelper
 
@@ -100,12 +101,12 @@ class TimelineObserverTest extends Specification {
         given:
         def now = 1429821425141
         def r1 = new TraceRecord()
-        r1.task_id = '1'
+        r1.task_id = TaskId.of(1)
         r1.name = 'foo'
         r1.process = 'alpha'
 
         def r2 = new TraceRecord()
-        r2.task_id = '2'
+        r2.task_id = TaskId.of(2)
         r2.name = 'bar'
         r2.submit = now
         r2.start = now + 100
@@ -115,7 +116,7 @@ class TimelineObserverTest extends Specification {
         r2.process = 'alpha'
 
         def r3 = new TraceRecord()
-        r3.task_id = '3'
+        r3.task_id = TaskId.of(3)
         r3.name = 'baz'
         r3.submit = now
         r3.start = now + 200
@@ -125,15 +126,15 @@ class TimelineObserverTest extends Specification {
         r3.process = 'beta'
 
         def h1 = Mock(TaskHandler)
-        h1.getTask() >> [id: '1']
+        h1.getTask() >> [id: TaskId.of(1)]
         h1.getTraceRecord() >> r1
 
         def h2 = Mock(TaskHandler)
-        h2.getTask() >> [id: '2']
+        h2.getTask() >> [id: TaskId.of(2)]
         h2.getTraceRecord() >> r2
 
         def h3 = Mock(TaskHandler)
-        h3.getTask() >> [id: '3']
+        h3.getTask() >> [id: TaskId.of(3)]
         h3.getTraceRecord() >> r3
 
         when:
@@ -142,9 +143,9 @@ class TimelineObserverTest extends Specification {
         observer.onProcessComplete(h2)
         observer.onProcessComplete(h3)
         then:
-        observer.records['1'] == r1
-        observer.records['2'] == r2
-        observer.records['3'] == r3
+        observer.records[TaskId.of(1)] == r1
+        observer.records[TaskId.of(2)] == r2
+        observer.records[TaskId.of(3)] == r3
 
     }
 

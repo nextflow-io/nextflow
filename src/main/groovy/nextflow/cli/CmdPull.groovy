@@ -35,7 +35,7 @@ import nextflow.scm.AssetManager
 @Parameters(commandDescription = "Download or update a project")
 class CmdPull extends CmdBase implements HubOptions {
 
-    static final NAME = 'pull'
+    static final public NAME = 'pull'
 
     @Parameter(description = 'project name or repository url to pull', arity = 1)
     List<String> args

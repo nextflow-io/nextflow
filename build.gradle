@@ -99,7 +99,6 @@ allprojects {
 
 configurations {
     capsule
-    extrae
     //provided
     drmaa.extendsFrom runtime
     dnanexus.extendsFrom runtime
@@ -130,7 +129,11 @@ dependencies {
     compile('io.nextflow:nxf-s3fs:1.0.0') {
         exclude group: 'commons-logging', module: 'commons-logging'
         exclude group: 'org.apache.tika', module: 'tika-core'
+        exclude group: 'com.amazonaws', module: 'aws-java-sdk-s3'
     }
+    compile ('com.amazonaws:aws-java-sdk-s3:1.11.25') { exclude group: 'commons-logging', module: 'commons-logging' }
+    compile ('com.amazonaws:aws-java-sdk-ec2:1.11.25') { exclude group: 'commons-logging', module: 'commons-logging' }
+    compile ('javax.mail:mail:1.4.7')
 
     // include Ivy at runtime in order to have Grape @Grab work correctly
     runtime "org.apache.ivy:ivy:2.3.0"
@@ -141,9 +144,6 @@ dependencies {
 
     // Capsule manages the fat jar building process
     capsule(project(':my-capsule'))
-
-    // Extrae tracing sub-module
-    extrae(project(':nxf-extrae')) { transitive = false }
 
     // DnaNexus build dependencies
     dnanexus(project(':nxf-dnanexus')) {
@@ -276,7 +276,6 @@ ext.enableSignArchives = hasProperty('signing.keyId')
 ext.deployable = []
 ext.deployable << project(':')
 ext.deployable << project(':nxf-commons')
-ext.deployable << project(':nxf-extrae')
 ext.deployable << project(':nxf-ignite')
 ext.deployable << project(':nxf-console')
 ext.deployable << project(':nxf-drmaa')
@@ -329,7 +328,7 @@ task packOne(type: Jar) {
     from (configurations.capsule.collect { zipTree(it) })
 
     // main manifest attributes
-    def deps = resolveDeps('runtime', "io.nextflow:nxf-extrae:${version}")
+    def deps = resolveDeps('runtime')
 
     manifest.attributes(
                 'Main-Class'        : 'CapsuleLoader',
@@ -363,7 +362,7 @@ task packOne(type: Jar) {
     /*
      * `drmaa` dependencies
      */
-    deps = resolveDeps('drmaa', "io.nextflow:nxf-extrae:${version}")
+    deps = resolveDeps('drmaa')
     manifest.attributes('Dependencies': deps, 'drmaa')
 
     doLast {
@@ -379,7 +378,6 @@ task packAll(type: Jar) {
 
     from jar // embed our application jar
     from (configurations.ignite)
-    from (configurations.extrae) // add the extrae module
     from (configurations.capsule.collect { zipTree(it) })
 
     manifest.attributes( 'Main-Class'        : 'CapsuleLoader',
@@ -569,10 +567,10 @@ task dnanexus(dependsOn: packDx) {
  * Save the runtime classpath
  */
 task exportClasspath {
-    dependsOn configurations.ignite, configurations.extrae, configurations.console
+    dependsOn configurations.ignite, configurations.console
 
     def home = System.getProperty('user.home')
-    def all = configurations.ignite + configurations.extrae + configurations.console
+    def all = configurations.ignite + configurations.console
     def libs = all.collect { File file -> /* println file.canonicalPath.replace(home, '$HOME'); */ file.canonicalPath;  }
     new File('.launch.classpath').text = libs.join(':')
 }

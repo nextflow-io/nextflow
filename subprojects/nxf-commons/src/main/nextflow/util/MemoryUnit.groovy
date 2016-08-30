@@ -33,13 +33,13 @@ import groovy.transform.EqualsAndHashCode
  */
 @CompileStatic
 @EqualsAndHashCode(includes = 'size')
-class MemoryUnit implements Comparable<MemoryUnit>, Serializable {
+class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
 
-    static private final Pattern FORMAT = ~/([0-9\.]+)\s*(\S)?B?/
+    final static public MemoryUnit ZERO = new MemoryUnit(0)
 
-    static public final List UNITS = [ "B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB" ]
+    final static private Pattern FORMAT = ~/([0-9\.]+)\s*(\S)?B?/
 
-    final static int KB = 1024
+    final static public List UNITS = [ "B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB" ]
 
     final long size
 

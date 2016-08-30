@@ -28,16 +28,12 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.exception.ProcessException
 import nextflow.file.FileHelper
 import nextflow.processor.TaskContext
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.script.ScriptType
 import nextflow.util.Duration
-import org.apache.ignite.compute.ComputeJobResult
-import org.apache.ignite.lang.IgniteFuture
-import org.apache.ignite.lang.IgniteInClosure
 /**
  * A task handler for Ignite  cluster
  *
@@ -62,11 +58,6 @@ class IgTaskHandler extends TaskHandler {
     private Path errorFile
 
     private long begin
-
-    /**
-     * The result object for this task
-     */
-    private volatile IgniteFuture future
 
     static IgTaskHandler createScriptHandler( TaskRun task, IgExecutor executor ) {
         def handler = new IgTaskHandler(task)
@@ -96,9 +87,7 @@ class IgTaskHandler extends TaskHandler {
         // submit to a Ignite node for execution
         final sessionId = task.processor.session.uniqueId
         final remoteTask = type == ScriptType.SCRIPTLET ? new IgScriptTask(task,sessionId) : new IgClosureTask(task,sessionId)
-        future = executor.execute( remoteTask )
-
-        future.listen( { executor.getTaskMonitor().signal(); } as IgniteInClosure )
+        executor.execute( remoteTask )
 
         // mark as submitted -- transition to STARTED has to be managed by the scheduler
         status = SUBMITTED
@@ -117,40 +106,35 @@ class IgTaskHandler extends TaskHandler {
     }
 
     private boolean isStarted() {
-
-        if( !future )
-            return false
-
-        return executor.checkTaskStarted(task.id)
+        executor.checkTaskStarted(task.id)
     }
 
     @Override
     boolean checkIfCompleted() {
 
-        if( isRunning() && (future.isCancelled() || (future.isDone() && (!exitFile || readExitStatus()!=null)))  ) {
+        if( isRunning() && executor.checkTaskCompleted(task.id) && (!exitFile || readExitStatus()!=null) ) {
             log.trace "Task DONE > ${task}"
             status = COMPLETED
-            executor.removeTaskCompleted(task.id)
+            final holder = executor.removeTaskCompleted(task.id)
 
-            final result = (ComputeJobResult)future.get()
-            if( result.getException() ) {
-                task.error = result.getException()
+            if( holder.error ) {
+                task.error = holder.error
                 return true
             }
-
-            if( result.isCancelled() ) {
-                task.error = ProcessException.CANCELLED_ERROR
-                return true
-            }
+//
+//            if( result.isCancelled() ) {
+//                task.error = ProcessException.CANCELLED_ERROR
+//                return true
+//            }
 
             // -- the task output depend by the kind of the task executed
             if( isScriptlet() ) {
                 task.stdout = outputFile
                 task.stderr = errorFile
-                task.exitStatus = result.getData() as Integer
+                task.exitStatus = holder.result as Integer
             }
             else {
-                def data = result.getData() as IgResultData
+                def data = holder.result as IgResultData
                 task.stdout = data.value
                 task.context = new TaskContext( task.processor, data.context )
             }
@@ -247,7 +231,7 @@ class IgTaskHandler extends TaskHandler {
 
     @Override
     void kill() {
-        future?.cancel()
+        executor.cancelTask(task.id)
     }
 
     /**

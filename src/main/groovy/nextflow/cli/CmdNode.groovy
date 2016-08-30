@@ -26,7 +26,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.config.ConfigBuilder
 import nextflow.daemon.DaemonLauncher
-import nextflow.executor.ServiceName
+import nextflow.util.ServiceName
 import nextflow.util.ServiceDiscover
 /**
  * CLI-command NODE
@@ -37,7 +37,7 @@ import nextflow.util.ServiceDiscover
 @Parameters
 class CmdNode extends CmdBase {
 
-    static final NAME = 'node'
+    static final public NAME = 'node'
 
     @Override
     final String getName() { NAME }

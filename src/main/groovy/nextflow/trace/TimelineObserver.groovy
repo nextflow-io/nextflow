@@ -28,6 +28,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
 import nextflow.util.Duration
 import org.apache.commons.lang.StringEscapeUtils
@@ -45,7 +46,7 @@ class TimelineObserver implements TraceObserver {
     /**
      * Holds the the start time for tasks started/submitted but not yet completed
      */
-    final private Map<Object,TraceRecord> records = new LinkedHashMap<>()
+    final private Map<TaskId,TraceRecord> records = new LinkedHashMap<>()
 
     /*
      * Holds an unique index color for each process group

@@ -40,7 +40,7 @@ import nextflow.config.ConfigBuilder
 @Parameters(commandDescription = "Print a project configuration")
 class CmdConfig extends CmdBase {
 
-    static final NAME = 'config'
+    static final public NAME = 'config'
 
     @Parameter(description = 'project name')
     List<String> args = []

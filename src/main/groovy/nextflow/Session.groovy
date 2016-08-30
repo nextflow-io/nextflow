@@ -19,7 +19,7 @@
  */
 
 package nextflow
-import static nextflow.Const.EXTRAE_TRACE_CLASS
+
 import static nextflow.Const.S3_UPLOADER_CLASS
 
 import java.lang.reflect.Method
@@ -39,6 +39,7 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.dag.DAG
 import nextflow.exception.AbortOperationException
 import nextflow.exception.MissingLibraryException
+import nextflow.trace.ExtraeTraceObserver
 import nextflow.file.FileHelper
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskDispatcher
@@ -306,7 +307,7 @@ class Session implements ISession {
         Boolean isEnabled = config.navigate('extrae.enabled') as Boolean
         if( isEnabled ) {
             try {
-                result << (TraceObserver)Class.forName(EXTRAE_TRACE_CLASS).newInstance()
+                result << new ExtraeTraceObserver()
             }
             catch( Exception e ) {
                 log.warn("Unable to load Extrae profiler",e)

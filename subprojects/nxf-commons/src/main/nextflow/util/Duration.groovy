@@ -34,7 +34,7 @@ import org.apache.commons.lang.time.DurationFormatUtils
 @Slf4j
 @CompileStatic
 @EqualsAndHashCode(includes = 'durationInMillis')
-class Duration implements Comparable<Duration>, Serializable {
+class Duration implements Comparable<Duration>, Serializable, Cloneable {
 
     static private final FORMAT = ~/^(\d+\.?\d*)\s*([a-zA-Z]+)/
 
@@ -116,7 +116,7 @@ class Duration implements Comparable<Duration>, Serializable {
     /**
      * Parse a duration string in legacy format i.e. hh:mm:ss
      *
-     * @param str The string to be parsed e.g. {@code 05:10:30} (5 hours, 10 mins, 30 seconds)
+     * @param str The string to be parsed e.g. {@code 05:10:30} (5 hours, 10 min, 30 seconds)
      * @return The duration in millisecond
      */
     private long parseLegacy( String str ) {
@@ -219,20 +219,40 @@ class Duration implements Comparable<Duration>, Serializable {
         durationInMillis
     }
 
+    long getMillis() {
+        durationInMillis
+    }
+
     long toSeconds() {
         TimeUnit.MILLISECONDS.toSeconds(durationInMillis)
+    }
+
+    long getSeconds() {
+        toSeconds()
     }
 
     long toMinutes() {
         TimeUnit.MILLISECONDS.toMinutes(durationInMillis)
     }
 
+    long getMinutes() {
+        toMinutes()
+    }
+
     long toHours() {
         TimeUnit.MILLISECONDS.toHours(durationInMillis)
     }
 
+    long getHours() {
+        toHours()
+    }
+
     long toDays() {
         TimeUnit.MILLISECONDS.toDays(durationInMillis)
+    }
+
+    long getDays() {
+        toDays()
     }
 
     /**

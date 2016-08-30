@@ -18,43 +18,32 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.executor
-import java.nio.file.Path
+
+import java.nio.channels.ClosedByInterruptException
 
 import groovy.transform.CompileStatic
-import nextflow.scheduler.JobComputeResources
-import nextflow.daemon.IgGridFactory
+import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessException
 import nextflow.processor.TaskBean
+import nextflow.processor.TaskId
 import nextflow.processor.TaskRun
+import nextflow.scheduler.Protocol.TaskResources
 import nextflow.util.KryoHelper
-import nextflow.util.RemoteSession
-import org.apache.ignite.Ignite
-import org.apache.ignite.IgniteCache
-import org.apache.ignite.IgniteLogger
 import org.apache.ignite.compute.ComputeJob
 import org.apache.ignite.lang.IgniteCallable
-import org.apache.ignite.resources.IgniteInstanceResource
-import org.apache.ignite.resources.LoggerResource
 /**
  * Models a task executed remotely in a Ignite cluster node
  *
  * @param < T > The type of the value returned by the {@code #call} method
  */
+@Slf4j
 @CompileStatic
 abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
-
-    static final Map<UUID,GroovyClassLoader> classLoaderCache = new HashMap()
-
-    @LoggerResource
-    private transient IgniteLogger log
-
-    @IgniteInstanceResource
-    private transient Ignite grid
 
     /**
      * Requested computational resources
      */
-    JobComputeResources resources
+    TaskResources resources
 
     /**
      * The client session identifier, it is required in order to access to
@@ -70,7 +59,7 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
     /**
      * Task unique identifier
      */
-    private taskId
+    private TaskId taskId
 
     /**
      * Holds the class attributes in this map. Note: is defined as 'transient' because
@@ -89,7 +78,7 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
         this.taskId = task.id
         this.bean = new TaskBean(task)
         this.payload = KryoHelper.serialize(bean)
-        this.resources = new JobComputeResources(task)
+        this.resources = new TaskResources(task)
     }
 
     /** ONLY FOR TESTING PURPOSE */
@@ -117,13 +106,6 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
 
     }
 
-    /**
-     * Notify that the task execution has started
-     */
-    private void notifyStart() {
-        def master = grid.cluster().forAttribute(IgGridFactory.NODE_ROLE, IgGridFactory.ROLE_MASTER)
-        grid.message(master).send(IgConnector.TOPIC_EVT_TASKS, taskId)
-    }
 
     /**
      * Invoke the task execution. It calls the following methods in this sequence: {@code stage}, {@code execute0} and {@code unstage}
@@ -134,7 +116,6 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
     @Override
     final T call() throws Exception {
         try {
-            notifyStart()
             deserialize()
 
             /*
@@ -155,7 +136,10 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
             // return the exit status eventually
             return result
         }
-        catch( Exception e ) {
+        catch( InterruptedException | ClosedByInterruptException e ) {
+            throw e
+        }
+        catch( Throwable e ) {
             log.error("Cannot execute task > $bean.name", e)
             throw new ProcessException(e)
         }
@@ -178,62 +162,23 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
      */
     protected abstract T execute0()
 
-    /**
-     * Lookup the {@link RemoteSession} object for the given session ID
-     *
-     * @param sessionId The remote session ID
-     * @param grid The current {@link Ignite} instance
-     * @return The associated {@link RemoteSession} object for the specified session ID
-     * @throws IllegalStateException when no session is found for the specified session ID
-     */
-    protected RemoteSession getSessionFor( UUID sessionId ) {
-        assert sessionId
-        IgniteCache<UUID, RemoteSession> allSessions = grid.cache( IgGridFactory.SESSIONS_CACHE )
+    TaskId getTaskId() { taskId }
 
-        if( !allSessions )
-            throw new IllegalStateException('Missing session cache object')
-
-        def session = allSessions.get(sessionId)
-        if( !session )
-            throw new IllegalStateException("Missing session object for id: $sessionId")
-
-        return session
+    @Override
+    boolean equals( Object obj ) {
+        if( obj.class != this.class ) return false
+        final that = (IgBaseTask)obj
+        return this.taskId == that.taskId
     }
 
-    def getTaskId() { taskId }
+    @Override
+    int hashCode() {
+        taskId.hashCode()
+    }
 
     @Override
     String toString() {
-        "${getClass().simpleName}[taskId: ${taskId}]"
+        "${getClass().simpleName}[taskId=${taskId}]"
     }
 
-    /**
-     * Create a {@link ClassLoader} object for the specified session ID
-     *
-     * @param sessionId
-     * @param grid
-     * @return
-     */
-    protected ClassLoader getClassLoaderFor( UUID sessionId ) {
-        assert sessionId
-
-        classLoaderCache.getOrCreate(sessionId) {
-
-            final allSessions = (IgniteCache<UUID, RemoteSession>)grid.cache( IgGridFactory.SESSIONS_CACHE )
-            if( !allSessions )
-                throw new IllegalStateException('Missing session cache object')
-
-            final session = allSessions.get(sessionId)
-            if( !session )
-                throw new IllegalStateException("Missing session object for id: $sessionId")
-
-            final result = new GroovyClassLoader()
-            session.classpath.each { Path file ->
-                log.debug "Adding to classpath: $file"
-                result.addClasspath(file.toAbsolutePath().toString())
-            }
-
-            return result
-        }
-    }
 }

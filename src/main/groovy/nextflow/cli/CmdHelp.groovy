@@ -31,7 +31,7 @@ import groovy.transform.CompileStatic
 @Parameters(commandDescription = "Print the usage help for a command")
 class CmdHelp extends CmdBase {
 
-    static final NAME = 'help'
+    static final public NAME = 'help'
 
     @Override
     final String getName() { NAME }
@@ -39,8 +39,19 @@ class CmdHelp extends CmdBase {
     @Parameter(description = 'command name', arity = 1)
     List<String> args
 
+    private UsageAware getUsage( List<String> args ) {
+        def result = args ? launcher.findCommand(args[0]) : null
+        result instanceof UsageAware ? result as UsageAware: null
+    }
+
     @Override
     void run() {
-        launcher.usage(args ? args[0] : null)
+        def cmd = getUsage(args)
+        if( cmd ) {
+            cmd.usage(args.size()>1 ? args[1..-1] : Collections.<String>emptyList())
+        }
+        else {
+            launcher.usage(args ? args[0] : null)
+        }
     }
 }

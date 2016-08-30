@@ -19,24 +19,30 @@
  */
 
 package nextflow.executor
+
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.daemon.IgGridFactory
 import nextflow.processor.TaskContext
 import nextflow.processor.TaskRun
 import nextflow.util.InputStreamDeserializer
+import nextflow.util.RemoteSession
 import org.apache.commons.lang.SerializationUtils
+import org.apache.ignite.IgniteCache
 import org.apache.ignite.IgniteException
-import org.apache.ignite.IgniteLogger
-import org.apache.ignite.resources.LoggerResource
 /**
  * Execute a groovy closure task in a remote Ignite node
  */
+@Slf4j
 @CompileStatic
 class IgClosureTask extends IgBaseTask<IgResultData> {
 
     private static final long serialVersionUID = 5515528753549263068L
 
-    @LoggerResource
-    private transient IgniteLogger log
+    static final Map<UUID,GroovyClassLoader> classLoaderCache = new HashMap()
+
 
     /**
      * The task closure serialized as a byte array
@@ -58,7 +64,7 @@ class IgClosureTask extends IgBaseTask<IgResultData> {
     }
 
     void beforeExecute() {
-        stagingStrategy = new IgFileStagingStrategy( log: log, task: bean, sessionId: sessionId )
+        stagingStrategy = new IgFileStagingStrategy( task: bean, sessionId: sessionId )
         stagingStrategy.stage()
     }
 
@@ -81,6 +87,37 @@ class IgClosureTask extends IgBaseTask<IgResultData> {
     @Override
     void cancel() {
 
+    }
+
+
+    /**
+     * Create a {@link ClassLoader} object for the specified session ID
+     *
+     * @param sessionId
+     * @param grid
+     * @return
+     */
+    static protected ClassLoader getClassLoaderFor( UUID sessionId ) {
+        assert sessionId
+
+        (ClassLoader)classLoaderCache.getOrCreate(sessionId) {
+
+            final allSessions = (IgniteCache<UUID, RemoteSession>)IgGridFactory.ignite().cache( IgGridFactory.SESSIONS_CACHE )
+            if( !allSessions )
+                throw new IllegalStateException('Missing session cache object')
+
+            final session = allSessions.get(sessionId)
+            if( !session )
+                throw new IllegalStateException("Missing session object for id: $sessionId")
+
+            final result = new GroovyClassLoader()
+            session.classpath.each { Path file ->
+                log.debug "Adding to classpath: $file"
+                result.addClasspath(file.toAbsolutePath().toString())
+            }
+
+            return result
+        }
     }
 
 }

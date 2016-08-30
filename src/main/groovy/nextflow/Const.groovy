@@ -63,7 +63,7 @@ class Const {
     /**
      * The date time formatter string
      */
-    static public final DATETIME_FORMAT = 'dd-MM-yyyy HH:mm'
+    static public final String DATETIME_FORMAT = 'dd-MM-yyyy HH:mm'
 
     /**
      * The app build time string relative to UTC timezone
@@ -126,8 +126,10 @@ class Const {
       http://nextflow.io
 """
 
-    static public final String EXTRAE_TRACE_CLASS = 'nextflow.extrae.ExtraeTraceObserver'
-
     static public final String S3_UPLOADER_CLASS = 'com.upplication.s3fs.S3OutputStream'
+
+    static public final String ROLE_WORKER = 'worker'
+
+    static public final String ROLE_MASTER = 'master'
 
 }
