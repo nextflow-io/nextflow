@@ -52,6 +52,7 @@ import com.amazonaws.util.Base64
 import com.amazonaws.waiters.WaiterParameters
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Global
@@ -630,6 +631,7 @@ class AmazonCloudDriver implements CloudDriver {
      * @return The {@link CloudInstanceType} instance for the given instance
      * @throws IllegalArgumentException If the the specified instance type is unknown
      */
+    @Memoized
     CloudInstanceType describeInstanceType( String instanceType ) {
         def result = new AmazonPriceReader(region).instanceTypeTable.get(instanceType)
         if( !result )

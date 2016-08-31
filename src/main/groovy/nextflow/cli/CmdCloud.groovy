@@ -39,8 +39,9 @@ import nextflow.cloud.types.CloudInstanceStatus
 import nextflow.cloud.types.CloudSpotPrice
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
+import nextflow.ui.TableBuilder
+import nextflow.ui.TextLabel
 import nextflow.util.SysHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -209,11 +210,18 @@ class CmdCloud extends CmdBase implements UsageAware {
      * @param instanceIds The list of instance IDs to be shown
      */
     protected void printWorkerInstances( List<String> instanceIds ) {
+        def builder = new TableBuilder()
+
         // -- show the available nodes
         driver.eachInstanceWithIds(instanceIds) { item ->
-            println "  ${item.id}\t${item.publicDnsName}\t${item.role}"
+            builder << '  '
+            builder << item.id
+            builder << item.publicDnsName
+            builder << item.state
+            builder.closeRow()
         }
-        println ""
+
+        println builder.toString() + '\n'
     }
 
     /**
@@ -410,10 +418,21 @@ class CmdCloud extends CmdBase implements UsageAware {
 
         private printClusterMembers(String clusterName) {
             def tags = [:]; tags[TAG_CLUSTER_NAME] = clusterName
+            def builder = new TableBuilder()
+                .head('INSTANCE ID')
+                .head('PUBLIC NAME')
+                .head('STATUS')
+                .head('ROLE')
 
             driver.eachInstanceWithTags(tags) { CloudInstance item ->
-                println "  ${item.id}\t${item.publicDnsName}\t${item.role}"
+                builder << item.id
+                builder << item.publicDnsName
+                builder << item.state
+                builder << item.role
+                builder.closeRow()
             }
+
+            println builder.toString()
         }
 
         private printAvailableClusterNames() {
@@ -531,25 +550,26 @@ class CmdCloud extends CmdBase implements UsageAware {
         void apply(String none) {
             final all = CmdCloud.this.all
             final history = CmdCloud.this.history
-            final filter = CmdCloud.this.filter
+            final filter = history ? "type=='$history'" : CmdCloud.this.filter
             final sort = CmdCloud.this.sort ?: 'price'
             final Script filterScript = filter ? new Grengine().create("{ -> $filter }") : null
+            log.debug "Spot-price: filter=`$profile`; sort=`$sort`; all=$all; history=`$history`"
 
             def allPrices = new ArrayList<Map>()
             driver.eachSpotPrice { CloudSpotPrice entry ->
 
-                def id = entry.type
-                def type = driver.describeInstanceType(id)
+                def type = driver.describeInstanceType(entry.type)
 
                 def record = [
                         type: entry.type,
                         zone: entry.zone,
                         price: entry.price as float,
-                        cpuprice: Math.round((entry.price as float) * 10_000 / type.cpus) / 10_000,
+                        pricecpu: Math.round((entry.price as float) * 10_000 / type.cpus) / 10_000,
                         description: entry.description,
                         cpus:  type.cpus,
                         mem: type.memory,
                         disk: type.disk,
+                        numOfDisks: type.numOfDisks,
                         time: entry.timestamp
                 ]
 
@@ -564,33 +584,35 @@ class CmdCloud extends CmdBase implements UsageAware {
                     allPrices << record
                 }
             }
+            log.debug "Found spot-price records: ${allPrices.size()}"
 
 
             if( all ) {
                 printAll(allPrices, sort)
             }
             else if( history ) {
-                printHistory(allPrices, history)
+                printHistory(allPrices)
             }
             else {
                 printCheapest(allPrices, sort)
             }
         }
 
-        private Comparator<Map> comparatorFor( String sort, List<Map> records ) {
+        private Comparator<Map> compareBy( String sort, List<Map> records=null ) {
 
             if( !sort ) return null
-            if( !records ) return null
 
             // -- multi-column comparator
             def fields = sort.tokenize(', ');
 
             // validate fields
-            def allFields = records[0].keySet()
-            def copy = new ArrayList<>(fields)
-            copy.removeAll(allFields)
-            if( copy ) {
-                throw new AbortOperationException("Not a valid sort field(s): ${copy.join(',')}")
+            if( records ) {
+                def allFields = records[0].keySet()
+                def copy = new ArrayList<>(fields)
+                copy.removeAll(allFields)
+                if( copy ) {
+                    throw new AbortOperationException("Not a valid sort field(s): ${copy.join(',')}")
+                }
             }
 
             return { Map o1, Map o2 ->
@@ -606,62 +628,117 @@ class CmdCloud extends CmdBase implements UsageAware {
 
         private void printAll(List<Map> allPrices, String sort) {
 
-            def prices = sort ? allPrices.sort(false,comparatorFor(sort, allPrices)) : allPrices
+            def prices = sort ? allPrices.sort(false,compareBy(sort, allPrices)) : allPrices
+
+            def table = new TableBuilder()
+                    .head('TYPE')
+                    .head('PRICE')
+                    .head('PRICE/CPU')
+                    .head('ZONE')
+                    .head('DESCRIPTION')
+                    .head('CPUS')
+                    .head('MEMORY', TextLabel.Align.RIGHT)
+                    .head('DISK')
+                    .head('TIMESTAMP')
 
             // show
             prices.each { entry ->
-                println "$entry.type, $entry.price, $entry.cpuprice, $entry.zone, $entry.description, $entry.cpus, $entry.mem, $entry.disk, ${SysHelper.fmtDate((Date)entry.time)}"
+                table << entry.type
+                table << String.format("%.4f", entry.price)
+                table << String.format("%.4f", entry.pricecpu)
+                table << entry.zone
+                table << entry.description
+                table << entry.cpus
+                table << entry.mem
+                table << (entry.disk ? "${entry.numOfDisks} x ${entry.disk}" : '-')
+                table << SysHelper.fmtDate((Date)entry.time)
+                table.closeRow()
             }
+
+            println table.toString()
         }
 
         private void printCheapest(List<Map> allPrices, String sort) {
+
             def filter = new HashMap<String,Map>()
-            allPrices.each { record ->
-                final id = (String)record.type // <-- instance type ID
+            def itr = allPrices.sort(false,compareBy('type,time', allPrices)).iterator()
+            while( itr.hasNext() ) {
+                def rec = itr.next()
+                //println rec
 
-                if( !filter.containsKey(id))
-                    filter[id] = record
+                final id = (String)rec.type
+                final prev = filter[id]
+                if( !prev ) {
+                    filter[id] = rec
+                    continue
+                }
 
-                else {
-                    def prev = filter[id]
-                    if( prev.zone == record.zone ) {
-                        // keep the cheapest for the same zone
-                        if( prev.price > record.price ) {
-                            filter[id] = record
-                        }
-                    }
-                    else {
-                        // keep the most recent one
-                        if( prev.time < record.time ) {
-                            filter[id] = record
-                        }
-                    }
+                if( rec.zone == prev.zone) {
+                    // it's a most recent rec update it, take it
+                    filter[id] = rec
+                }
+                else if( rec.price < prev.price ) {
+                    // it's a cheapest price in a different zone, take it
+                    filter[id] = rec
                 }
             }
 
+            // order with the sorting criteria provided by the user
+            def prices = sort ? filter.values().sort(false,compareBy(sort,allPrices)) : filter.values()
 
-            def prices = sort ? filter.values().sort(false,comparatorFor(sort,allPrices)) : filter.values()
+            // render the table
+            def table = new TableBuilder()
+                    .head('TYPE')
+                    .head('PRICE')
+                    .head('PRICE/CPU')
+                    .head('ZONE')
+                    .head('DESCRIPTION')
+                    .head('CPUS')
+                    .head('MEMORY', TextLabel.Align.RIGHT)
+                    .head('DISK')
 
             // show
             prices.each { entry ->
-                println "$entry.type, $entry.price, $entry.cpuprice, $entry.zone, $entry.description, $entry.cpus, $entry.mem, $entry.disk"
+                table << entry.type
+                table << String.format("%.4f", entry.price)
+                table << String.format("%.4f", entry.pricecpu)
+                table << entry.zone
+                table << entry.description
+                table << entry.cpus
+                table << entry.mem
+                table << (entry.disk ? "${entry.numOfDisks} x ${entry.disk}" : '-')
+                table.closeRow()
             }
+
+            println table.toString()
         }
 
-        private void printHistory(List<Map> allPrices, String instanceType) {
+        private void printHistory(List<Map> allPrices) {
 
-            def prices = allPrices.findAll { Map record -> record.type == instanceType }
+            allPrices.sort(true, compareBy('zone,time',allPrices))
 
-            prices.sort(true, comparatorFor('zone,time',allPrices))
+            def table = new TableBuilder()
+                    .head('ZONE')
+                    .head('TIMESTAMP')
+                    .head('PRICE')
+                    .head('PRICE/CPU')
 
             def z = null
-            prices.each { entry ->
+            allPrices.each { entry ->
                 if( z != entry.zone ) {
                     z = entry.zone
-                    println "> $z"
+                    table << z
+                    table.closeRow()
                 }
-                println "  $entry.type, $entry.price, $entry.cpuprice, $entry.description, $entry.cpus, $entry.mem, $entry.disk, ${SysHelper.fmtDate((Date)entry.time)}"
+
+                table << ''
+                table << SysHelper.fmtDate((Date)entry.time)
+                table << String.format("%.4f", entry.price)
+                table << String.format("%.4f", entry.pricecpu)
+                table.closeRow()
             }
+
+            println table.toString()
         }
 
         @Override

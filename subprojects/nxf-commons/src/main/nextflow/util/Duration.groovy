@@ -332,6 +332,10 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         return new Duration( Math.round((double)(durationInMillis / value)) )
     }
 
+    boolean asBoolean() {
+        return durationInMillis != 0
+    }
+
 
     @Override
     int compareTo(Duration that) {

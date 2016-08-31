@@ -299,17 +299,22 @@ class Scheduler {
      *
      */
     void schedule( IgBaseTask... tasks ) {
-        log.debug "+++ Scheduling tasks: taskId=${tasks.collect{ IgBaseTask it -> it.taskId }.join(', ')}"
 
-        for( int i=0; i<tasks.size(); i++ ) {
-            final it = tasks[0]
-            // append to the queue of pending tasks
-            pendingTasks.put(it.getTaskId(), it)
-            scheduledTasks.put(it.getTaskId(), new TaskHolder(it))
+        messageQueue << {
+
+            log.debug "+++ Scheduling tasks: taskId=${tasks.collect{ IgBaseTask t -> t.taskId }.join(',')}"
+
+            for( int i=0; i<tasks.size(); i++ ) {
+                final task = tasks[0]
+                // before add table of scheduled tasks
+                scheduledTasks.put(task.getTaskId(), new TaskHolder(task))
+                // after append to the queue of pending tasks -- this will trigger the execution on remote workers
+                pendingTasks.put(task.getTaskId(), task)
+            }
+
+            // notify workers a new task is available
+            notifyTaskAvail()
         }
-
-        // notify workers a new task is available
-        notifyTaskAvail()
     }
 
     /**
@@ -358,12 +363,12 @@ class Scheduler {
      */
     private void onTaskStart(UUID sender, TaskStart message) {
 
-        def holder = scheduledTasks[message.taskId]
+        def holder = scheduledTasks.get(message.taskId)
         if( holder ) {
             log.debug "+++ Task started: $message [${hostName(sender)}] $sender"
-            scheduledTasks[message.taskId] = holder.withStart(sender)
+            holder.withStart(sender)
             // -- reset the idle attribute, if any
-            def node = workerNodes[sender]
+            def node = workerNodes.get(sender)
             if( node ) {
                 node.idleTimestamp = 0
             }
@@ -372,7 +377,7 @@ class Scheduler {
             }
         }
         else {
-            log.debug "+++ Oops.. Task started is unknown -- [${hostName(sender)}] $message"
+            log.debug "+++ Oops.. Started task is unknown -- [${hostName(sender)}] $message"
         }
     }
 
@@ -383,7 +388,7 @@ class Scheduler {
      */
     private void onTaskComplete(UUID sender, TaskComplete message) {
 
-        def holder = scheduledTasks[message.taskId]
+        def holder = scheduledTasks.get(message.taskId)
         if( holder ) {
             log.debug "+++ Task complete: $message [${hostName(sender)}] $sender"
             completedTasks.put(message.taskId, holder.withComplete(message))

@@ -141,4 +141,10 @@ class MemoryUnitTest extends Specification {
         new MemoryUnit('5GB') - new MemoryUnit('2GB') == new MemoryUnit('3GB')
     }
 
+    def 'should validate groovy truth' () {
+        expect:
+        !new MemoryUnit(0)
+        new MemoryUnit(1)
+    }
+
 }
