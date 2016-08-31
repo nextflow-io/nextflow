@@ -169,6 +169,11 @@ class DurationTest extends Specification {
         new Duration('9 hours') / 1.5 == new Duration('6 hours')
     }
 
+    def 'should validate groovy truth' () {
+        expect:
+        !new Duration(0)
+        new Duration(1)
+    }
 
     def testThrottle() {
 

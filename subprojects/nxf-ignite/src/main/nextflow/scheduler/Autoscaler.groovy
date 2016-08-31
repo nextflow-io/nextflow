@@ -89,14 +89,17 @@ class Autoscaler implements Closeable {
         this.workerNodes = nodes
         this.scheduledTasks = tasks
 
-        // -- init the cloud driver
-        def driverName = driverName ?: CloudDriverFactory.getDefaultDriverName()
-        if( !driverName )
-            throw new IllegalStateException("No cloud driver name has been specified")
+        if( enabled ) {
+            // -- init the cloud driver
+            def driverName = driverName ?: CloudDriverFactory.getDefaultDriverName()
+            if( !driverName )
+                throw new IllegalStateException("No cloud driver name has been specified")
 
-        driver = CloudDriverFactory.get(driverName)
-        if( !driver ) throw new IllegalStateException('Cannot load cloud driver: `$driverName`')
-        driver.validate(scalerConfig)
+            driver = CloudDriverFactory.get(driverName)
+            if( !driver ) throw new IllegalStateException('Cannot load cloud driver: `$driverName`')
+            driver.validate(scalerConfig)
+        }
+
 
         // --
         this.watchdog = Executors.newScheduledThreadPool(1)

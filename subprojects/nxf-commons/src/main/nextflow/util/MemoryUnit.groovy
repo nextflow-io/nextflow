@@ -147,4 +147,8 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
     static of( long value ) {
         new MemoryUnit(value)
     }
+
+    boolean asBoolean() {
+        return size != 0
+    }
 }

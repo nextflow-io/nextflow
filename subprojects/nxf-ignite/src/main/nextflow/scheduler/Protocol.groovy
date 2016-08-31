@@ -177,25 +177,23 @@ interface Protocol {
         }
 
         TaskHolder withStart( UUID worker ) {
-            def result = (TaskHolder)this.clone()
-            result.worker = worker
-            result.started = true
-            result.startTimestamp = System.currentTimeMillis()
-            return result
+            this.worker = worker
+            this.started = true
+            this.startTimestamp = System.currentTimeMillis()
+            return this
         }
 
         TaskHolder withComplete( TaskComplete message ) {
             assert worker
             assert started
 
-            def result = (TaskHolder)this.clone()
-            result.completed = true
+            this.completed = true
             if( message.error )
-                result.error = message.error
+                this.error = message.error
             else
-                result.result = message.result
+                this.result = message.result
 
-            return result
+            return this
         }
 
         String toString() {
