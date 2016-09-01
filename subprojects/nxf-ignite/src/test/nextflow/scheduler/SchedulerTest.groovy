@@ -89,7 +89,7 @@ class SchedulerTest extends Specification {
         scheduler.isRunning()
 
         when:
-        scheduler.schedule(task)
+        scheduler.schedule0(task)
         then:
         1 * pendingTasks.put(task.getTaskId(), task)
         1 * messaging.send(TOPIC_AGENT_EVENTS, Protocol.TaskAvail.INSTANCE)

@@ -305,21 +305,22 @@ class Scheduler {
      */
     void schedule( IgBaseTask... tasks ) {
 
-        messageQueue << {
+        messageQueue << { schedule0(tasks) }
+    }
 
-            log.debug "+++ Scheduling tasks: taskId=${tasks.collect{ IgBaseTask t -> t.taskId }.join(',')}"
+    private void schedule0(IgBaseTask... tasks ) {
+        log.debug "+++ Scheduling tasks: taskId=${tasks.collect{ IgBaseTask t -> t.taskId }.join(',')}"
 
-            for( int i=0; i<tasks.size(); i++ ) {
-                final task = tasks[0]
-                // before add table of scheduled tasks
-                scheduledTasks.put(task.getTaskId(), new TaskHolder(task))
-                // after append to the queue of pending tasks -- this will trigger the execution on remote workers
-                pendingTasks.put(task.getTaskId(), task)
-            }
-
-            // notify workers a new task is available
-            notifyTaskAvail()
+        for( int i=0; i<tasks.size(); i++ ) {
+            final task = tasks[0]
+            // before add table of scheduled tasks
+            scheduledTasks.put(task.getTaskId(), new TaskHolder(task))
+            // after append to the queue of pending tasks -- this will trigger the execution on remote workers
+            pendingTasks.put(task.getTaskId(), task)
         }
+
+        // notify workers a new task is available
+        notifyTaskAvail()
     }
 
     /**
