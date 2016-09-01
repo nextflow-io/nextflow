@@ -174,29 +174,6 @@ Alternatively the same declaration can be defined in the file `$HOME/.nextflow/c
 the global *Nextflow* configuration.
 
 
-Cloud support
--------------
-
-Nextflow provides build-in support for [ClusterK](https://clusterk.com/) cloud platform
-and [Amazon S3](http://aws.amazon.com/s3/) storage. 
-
-To run your pipeline script in the ClusterK cloud you will only need to add the following settings in the 
-`nextflow.config` configuration file: 
-
-```groovy
-process {
-  executor = 'cirrus'
-  queue = '<ClusterK queue name>'
-}
-```
-
-When launching the pipeline execution provide a S3 bucket as the pipeline working directory, for example: 
-
-```bash
-nextflow run my_script.nf -w s3://my_s3_bucket/work/path
-```
-
-
 Required dependencies
 ---------------------
 
