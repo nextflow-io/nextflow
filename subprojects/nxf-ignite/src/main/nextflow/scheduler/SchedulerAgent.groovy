@@ -45,7 +45,6 @@ import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import nextflow.cloud.CloudDriver
 import nextflow.cloud.CloudDriverFactory
-import nextflow.cloud.CloudSpotTerminationException
 import nextflow.daemon.IgGridFactory
 import nextflow.executor.IgBaseTask
 import nextflow.processor.TaskId
@@ -161,12 +160,6 @@ class SchedulerAgent implements Closeable {
                 catch( RejectedExecutionException e ) {
                     log.debug "=== Task execution rejected -- ${e.message ?: e}"
                 }
-                catch( CloudSpotTerminationException e ) {
-                    log.debug "=== Detected spot termination notice: $e.termination -- Starting shutdown"
-                    stopped = true
-                    abortPendingTasks(e)
-                    close(true)
-                }
                 catch( Exception e ) {
                     log.error "=== Unexpected scheduler agent error", e
                 }
@@ -178,14 +171,13 @@ class SchedulerAgent implements Closeable {
             }
         }
 
-        private void abortPendingTasks(Exception e) {
+        private void abortPendingTasks() {
             if( runningTasks ) {
-                log.debug "=== aborting pending tasks: taskId=${runningTasks.keySet().join(",") ?: 'n/a'}"
+                log.debug "=== aborting pending tasks: taskId=${runningTasks.keySet().join(",") ?: '-'}"
 
                 def itr = runningTasks.values().iterator()
                 while( itr.hasNext() ) {
                     RunHolder holder = itr.next()
-                    holder.exception = e
                     holder.future.cancel(true)
                 }
             }
@@ -194,17 +186,20 @@ class SchedulerAgent implements Closeable {
 
         private void checkSpotTermination() {
             def termination = driver?.getLocalTerminationNotice()
-            if( termination )
-                throw new CloudSpotTerminationException(termination)
+            if( termination || (simulateSpotTermination && runningTasks)) {
+                log.debug "=== Detected spot termination notice: $termination -- Starting shutdown"
+                abortPendingTasks()
+                notifyNodeRetired(termination ?: 'fake-spot-termination')
+                stopped = true
+                close(true)
+            }
 
-            if( simulateSpotTermination && runningTasks )
-                throw new CloudSpotTerminationException('fake-termination')
         }
 
         private void resetState() {
 
             if( runningTasks ) {
-                log.debug "=== Cancelling running tasks: taskId=${runningTasks.keySet().join(', ') ?: 'n/a'}"
+                log.debug "=== Cancelling running tasks: taskId=${runningTasks.keySet().join(', ') ?: '-'}"
                 def itr = runningTasks.values().iterator()
                 while( itr.hasNext() ) {
                     RunHolder holder = itr.next()
@@ -343,14 +338,7 @@ class SchedulerAgent implements Closeable {
                 notifyComplete(task, result)
             }
             catch( InterruptedException | ClosedByInterruptException e ) {
-                def holder = runningTasks[task.taskId]
-                if( holder?.exception ) {
-                    log.debug "=== Task execution was interrupted: taskId=${task.taskId} -- Cause: $holder.exception"
-                    notifyErrorAsync(task, holder.exception)
-                }
-                else {
-                    log.debug "=== Task execution was interrupted: taskId=${task.taskId} -- Message: ${e.message ?: e}"
-                }
+                log.debug "=== Task execution was interrupted: taskId=${task.taskId} -- Message: ${e.message ?: e}"
             }
             catch( Throwable error ) {
                 notifyError(task, error)
@@ -412,7 +400,6 @@ class SchedulerAgent implements Closeable {
     @TupleConstructor
     private static class RunHolder {
         Future future
-        volatile Exception exception
     }
 
     /**
@@ -617,6 +604,11 @@ class SchedulerAgent implements Closeable {
             return
         }
 
+        if( closed ) {
+            log.debug "=== Shutdown in progress -- Wont send message: [${message.getClass().getSimpleName()}] $message"
+            return
+        }
+
         try {
             final master = ignite .cluster() .forNodeId(masterId)
             ignite .message(master) .sendOrdered(topic, message, 0)
@@ -637,6 +629,10 @@ class SchedulerAgent implements Closeable {
     @PackageScope void notifyNodeStart() {
         def data = NodeData.create(config, ignite)
         sendMessageToMaster(TOPIC_SCHEDULER_EVENTS, data)
+    }
+
+    @PackageScope void notifyNodeRetired(String termination) {
+        sendMessageToMaster(TOPIC_SCHEDULER_EVENTS, new Protocol.NodeRetired(termination))
     }
 
     /**
@@ -700,25 +696,24 @@ class SchedulerAgent implements Closeable {
      * Shutdown the scheduler agent
      */
     synchronized void close(boolean shutdownIgnite = false) {
-        log.debug "=== Scheduler agent shutting down"
         if( closed ) return
+        log.debug "=== Scheduler agent shutting down"
+        closed = true
 
-        // -- shutdown executor
+        // -- shutdown executor & agent processor
         executor.shutdownNow()
         processor.shutdown()
 
-        // -- shutdown the ignite instance
         if( !shutdownIgnite )
             return
 
+        // -- shutdown the ignite instance
         Thread.start {
-            print "Cleaning up .. "
+            print "Cleaning up.. "
             sleep 3_000;    // give a few seconds to send pending messages
             ignite.close()
             println "Done."
         }
-
-        closed = true
     }
 
 

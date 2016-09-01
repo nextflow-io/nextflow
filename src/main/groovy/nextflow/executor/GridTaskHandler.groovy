@@ -174,7 +174,13 @@ class GridTaskHandler extends TaskHandler {
 
         String workDirList = null
         if( exitTimestampMillis1 && FileHelper.workDirIsNFS ) {
-            workDirList = listDirectory(task.workDir)
+            /*
+             * When the file is in a NFS folder in order to avoid false negative
+             * list the content of the parent path to force refresh of NFS metadata
+             * http://stackoverflow.com/questions/3833127/alternative-to-file-exists-in-java
+             * http://superuser.com/questions/422061/how-to-determine-whether-a-directory-is-on-an-nfs-mounted-drive
+             */
+            workDirList = FileHelper.listDirectory(task.workDir)
         }
 
         /*
@@ -338,33 +344,5 @@ class GridTaskHandler extends TaskHandler {
     }
 
 
-    /*
-     * When the file is in a NFS folder in order to avoid false negative
-     * list the content of the parent path to force refresh of NFS metadata
-     * http://stackoverflow.com/questions/3833127/alternative-to-file-exists-in-java
-     * http://superuser.com/questions/422061/how-to-determine-whether-a-directory-is-on-an-nfs-mounted-drive
-     */
-    private String listDirectory(Path path) {
 
-        String result = null
-        Process process = null
-        try {
-            process = Runtime.runtime.exec("ls -la ${path}")
-            def listStatus = process.waitFor()
-            if( listStatus>0 ) {
-                log.debug "Can't list folder: ${path} -- Exit status: $listStatus"
-            }
-            else {
-                result = process.text
-            }
-        }
-        catch( IOException e ) {
-            log.debug "Can't list folder: $path -- Cause: ${e.message ?: e.toString()}"
-        }
-        finally {
-            process?.destroy()
-        }
-
-        return result
-    }
 }

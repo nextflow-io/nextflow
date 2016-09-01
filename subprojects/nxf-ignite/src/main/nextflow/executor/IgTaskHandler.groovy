@@ -112,7 +112,13 @@ class IgTaskHandler extends TaskHandler {
     @Override
     boolean checkIfCompleted() {
 
-        if( isRunning() && executor.checkTaskCompleted(task.id) && (!exitFile || readExitStatus()!=null) ) {
+        if( isRunning() && executor.checkTaskCompleted(task.id) ) {
+
+            if( !executor.checkTaskFailed(task.id) && exitFile && readExitStatus()==null ) {
+                // continue to wait for a valid exit status
+                return false
+            }
+
             log.trace "Task DONE > ${task}"
             status = COMPLETED
             final holder = executor.removeTaskCompleted(task.id)
@@ -121,11 +127,6 @@ class IgTaskHandler extends TaskHandler {
                 task.error = holder.error
                 return true
             }
-//
-//            if( result.isCancelled() ) {
-//                task.error = ProcessException.CANCELLED_ERROR
-//                return true
-//            }
 
             // -- the task output depend by the kind of the task executed
             if( isScriptlet() ) {
@@ -146,11 +147,27 @@ class IgTaskHandler extends TaskHandler {
 
     protected Integer readExitStatus() {
 
+        String workDirList = null
+        if( !begin ) {
+            begin = System.currentTimeMillis()
+        }
+        else {
+            /*
+             * When the file is in a NFS folder in order to avoid false negative
+             * list the content of the parent path to force refresh of NFS metadata
+             * http://stackoverflow.com/questions/3833127/alternative-to-file-exists-in-java
+             * http://superuser.com/questions/422061/how-to-determine-whether-a-directory-is-on-an-nfs-mounted-drive
+             */
+            workDirList = FileHelper.listDirectory(task.workDir)
+        }
+
         // read the exit status from the exit file
         final exitStatus = safeReadExitStatus()
+        if( exitStatus != null )
+            return exitStatus
 
         if( !FileHelper.workDirIsNFS ) {
-            return exitStatus != null ? exitStatus : Integer.MAX_VALUE
+            return Integer.MAX_VALUE
         }
 
         /*
@@ -160,45 +177,24 @@ class IgTaskHandler extends TaskHandler {
          * Continue to check until a timeout is reached
          */
 
-        if( !begin ) {
-            begin = System.currentTimeMillis()
-        }
-
         def delta = System.currentTimeMillis() - begin
-        if( status == null ) {
-            if( delta>timeout ) {
-                // game-over
-                log.warn "Unable to read command status from: $exitFile after $delta ms"
-                return Integer.MAX_VALUE
-            }
-            log.debug "Command exit file is empty: $exitFile after $delta ms -- Try to wait a while and .. pray."
-            return null
+        if( delta > timeout ) {
+            // game-over
+            def errMessage = []
+            errMessage << "Failed to get exist status for process ${this} -- exit-status-read-timeout=${Duration.of(timeout)}; delta=${Duration.of(delta)}"
+            // -- dump current queue stats
+            errMessage << "Current queue status:"
+            errMessage << executor.dumpQueueStatus()?.indent('> ')
+            // -- dump directory listing
+            errMessage << "Content of workDir: ${task.workDir}"
+            errMessage << workDirList?.indent('> ')
+            log.debug errMessage.join('\n')
+
+            return Integer.MAX_VALUE
         }
 
-        // the exit status is not null, before return check also if expected output files are available
-
-        /*
-         * When the file is in a NFS folder in order to avoid false negative
-         * list the content of the parent path to force refresh of NFS metadata
-         * http://stackoverflow.com/questions/3833127/alternative-to-file-exists-in-java
-         * http://superuser.com/questions/422061/how-to-determine-whether-a-directory-is-on-an-nfs-mounted-drive
-         */
-        final process = Runtime.runtime.exec("ls -la ${task.targetDir}")
-        final listStatus = process.waitFor()
-
-        if( listStatus>0 ) {
-            log.debug "Can't list command target folder (exit: $listStatus): ${task.targetDir}"
-            if( delta>timeout ) {
-                return Integer.MAX_VALUE
-            }
-            return null
-        }
-
-        log.trace "List target folder: ${task.targetDir}\n${process.text?.indent('  ')}\n"
-        // destroy the process
-        process.destroy()
-
-        return exitStatus
+        log.debug "Command exit file is empty: $exitFile after ${Duration.of(delta)} -- Try to wait a while and .. pray."
+        return null
     }
 
 
@@ -216,7 +212,7 @@ class IgTaskHandler extends TaskHandler {
             return null
         }
 
-        if( status ) {
+        if( status != null ) {
             try {
                 return status.toInteger()
             }

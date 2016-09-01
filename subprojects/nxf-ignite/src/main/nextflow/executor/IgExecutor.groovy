@@ -26,19 +26,10 @@ import nextflow.processor.TaskId
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
+import nextflow.scheduler.Protocol.TaskHolder
 import nextflow.script.ScriptType
 import nextflow.util.Duration
 import nextflow.util.ServiceName
-import org.apache.ignite.IgniteException
-import org.apache.ignite.cluster.ClusterNode
-import org.apache.ignite.compute.ComputeJob
-import org.apache.ignite.compute.ComputeLoadBalancer
-import org.apache.ignite.compute.ComputeTaskAdapter
-import org.apache.ignite.resources.LoadBalancerResource
-import org.jetbrains.annotations.Nullable
-
-import nextflow.scheduler.Protocol.TaskHolder
-
 /**
  * A Nextflow executor based on Ignite services
  *
@@ -105,6 +96,10 @@ class IgExecutor extends Executor {
         connector.checkTaskCompleted(taskId)
     }
 
+    boolean checkTaskFailed( TaskId taskId ) {
+        connector.checkTaskFailed(taskId)
+    }
+
     @PackageScope
     TaskHolder removeTaskCompleted( TaskId taskId ) {
         connector.removeTaskCompleted(taskId)
@@ -115,34 +110,8 @@ class IgExecutor extends Executor {
         connector.cancelTask(taskId)
     }
 
-    /**
-     * An adapter for Ignite compute task
-     *
-     */
-    static class IgniteTaskWrapper extends ComputeTaskAdapter  {
-
-        // Inject load balancer.
-        @LoadBalancerResource
-        transient ComputeLoadBalancer balancer
-
-        private ComputeJob theJob
-
-        IgniteTaskWrapper( ComputeJob job ) {
-            this.theJob = job
-        }
-
-        @Override
-        Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> nodes, @Nullable Object arg) throws IgniteException {
-
-            Map<ComputeJob, ClusterNode> jobUnit = [:]
-            jobUnit.put(theJob, balancer.getBalancedNode(theJob, null))
-            return jobUnit
-        }
-
-        @Override
-        Object reduce(List list) throws IgniteException {
-            return list.get(0)
-        }
+    String dumpQueueStatus() {
+        connector.dumpScheduledTasksStatus()
     }
 
 }

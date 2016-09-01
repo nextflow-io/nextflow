@@ -910,7 +910,7 @@ class TaskProcessor {
     final synchronized protected resumeOrDie( TaskRun task, Throwable error ) {
         log.trace "Handling unexpected condition for\n  task: $task\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
-        ErrorStrategy errorStrategy = ErrorStrategy.TERMINATE
+        ErrorStrategy errorStrategy = TERMINATE
         final message = []
         try {
             // -- do not recoverable error, just re-throw it
@@ -918,7 +918,7 @@ class TaskProcessor {
 
             // -- retry without increasing the error counts
             if( error.cause instanceof CloudSpotTerminationException ) {
-                log.warn "${error.message} -- Execution is re-tried"
+                log.warn "${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
                 final taskCopy = task.makeCopy()
                 taskCopy.runType = RunType.RETRY
                 session.getExecService().submit { checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false ) }
@@ -941,7 +941,7 @@ class TaskProcessor {
                 if( errorStrategy.soft ) {
                     def msg = error.getMessage()
                     if( errorStrategy == IGNORE) msg += " -- Error is ignored"
-                    else if( errorStrategy == RETRY ) msg += " -- Execution is re-tried ($taskErrCount)"
+                    else if( errorStrategy == RETRY ) msg += " -- Execution is retried ($taskErrCount)"
                     log.warn msg
                     task.failed = true
                     return errorStrategy

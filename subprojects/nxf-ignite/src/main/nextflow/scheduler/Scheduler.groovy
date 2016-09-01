@@ -30,6 +30,7 @@ import java.util.concurrent.LinkedBlockingQueue
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import nextflow.cloud.CloudSpotTerminationException
 import nextflow.daemon.IgGridFactory
 import nextflow.executor.IgBaseTask
 import nextflow.processor.TaskId
@@ -42,6 +43,7 @@ import nextflow.scheduler.Protocol.TaskCancel
 import nextflow.scheduler.Protocol.TaskComplete
 import nextflow.scheduler.Protocol.TaskHolder
 import nextflow.scheduler.Protocol.TaskStart
+import nextflow.scheduler.Protocol.NodeRetired
 import org.apache.ignite.Ignite
 import org.apache.ignite.IgniteCache
 import org.apache.ignite.IgniteInterruptedException
@@ -225,6 +227,9 @@ class Scheduler {
                 else if( message instanceof NodeIdle ) {
                     onNodeIdle(sender, message)
                 }
+                else if( message instanceof NodeRetired ) {
+                    onNodeRetired(sender, message)
+                }
                 else {
                     throw new IllegalArgumentException("Unknown worker message: $message")
                 }
@@ -355,6 +360,7 @@ class Scheduler {
         log.debug "+++ Node idle: [${hostName(sender)}] not working for ${node.idle()}"
     }
 
+
     /**
      * Handler invoked when a {@link TaskStart} is received
      *
@@ -408,8 +414,8 @@ class Scheduler {
      * @param nodeId The id of the cluster node that has left the cluster
      */
     private void onNodeFailed(UUID nodeId) {
-        log.debug "+++ Node Failed: [${hostName(nodeId)}] $nodeId"
-        removeRunningTaskOnNode(nodeId)
+        log.debug "+++ Node failed: [${hostName(nodeId)}] $nodeId"
+        removeRunningTaskOnNode(nodeId,'failed')
         workerNodes.remove(nodeId)
     }
 
@@ -421,11 +427,23 @@ class Scheduler {
      */
     private void onNodeLeft(UUID nodeId) {
         log.debug "+++ Node left: [${hostName(nodeId)}] $nodeId"
-        removeRunningTaskOnNode(nodeId)
+        removeRunningTaskOnNode(nodeId,'leaving')
         workerNodes.remove(nodeId)
     }
 
-    private void removeRunningTaskOnNode(UUID nodeId) {
+    /**
+     * Method handler invoked when a cluster node received a spot/preemptive termination
+     * noticed e.g. it is going to be retired by the provide and terminated in a few seconds
+     *
+     * @param nodeId
+     */
+    private void onNodeRetired(UUID nodeId, NodeRetired message) {
+        log.debug "+++ Node retired: [${hostName(nodeId)}] $nodeId -- $message"
+        removeRunningTaskOnNode(nodeId, 'retired')
+        workerNodes.remove(nodeId)
+    }
+
+    private void removeRunningTaskOnNode(UUID nodeId, String reason) {
         // -- finds all tasks whose worker id matches the specified `nodeId`
         def tasks = (List<IgBaseTask>)scheduledTasks
                 .values()
@@ -433,15 +451,19 @@ class Scheduler {
 
         // -- reschedule matching tasks for execution
         if( !tasks ) {
+            log.debug "+++ No pending task on $reason node: [${hostName(nodeId)}]"
             return
         }
 
-        log.debug "+++ Dropping tasks on failing node: [${hostName(nodeId)}] taskId=${tasks.collect{ it.taskId }.join(', ') ?: 'n/a'}"
+        log.debug "+++ Dropping tasks on $reason node: [${hostName(nodeId)}] taskId=${tasks.collect{ it.taskId }.join(', ') ?: 'n/a'}"
         def itr = tasks.iterator()
         while( itr.hasNext() ) {
             def task = itr.next()
             // -- simulate an error message
-            def failure = TaskComplete.error(task, new RuntimeException("Task aborted due to failure on node: [${hostName(nodeId)}]"))
+            def cause = (reason=='retired'
+                        ? new CloudSpotTerminationException("Computing node was retired: [${hostName(nodeId)}]")
+                        : new RuntimeException("Task aborted due to failure on node: [${hostName(nodeId)}]") )
+            def failure = TaskComplete.error(task, cause)
             onTaskComplete(nodeId, failure)
         }
     }
@@ -464,6 +486,10 @@ class Scheduler {
      */
     boolean checkTaskCompleted( TaskId taskId ) {
         completedTasks.containsKey(taskId)
+    }
+
+    boolean checkTaskFailed( TaskId taskId ) {
+        completedTasks.get(taskId)?.error != null
     }
 
     /**
@@ -510,6 +536,15 @@ class Scheduler {
         def result = completedTasks.get(taskId)
         completedTasks.remove(taskId)
         return result
+    }
+
+    String dumpScheduledTasksStatus() {
+        def result = new StringBuilder()
+        def itr = scheduledTasks.values().iterator()
+        while( itr.hasNext() ) {
+            result << itr.next().toString()
+        }
+        return result.toString()
     }
 
     /**
