@@ -1,6 +1,16 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.22.0.RC1 - 1 Sep 2016 
+- Fixed Implement clean up command #19
+- Fixed Trace file should include cached tasks #114
+- Added ability to log each command run #108
+- Added new `cloud` command 
+- Added AWS EFS support 
+- Added AWS Spot instance error fail-over 
+- Added support cloud auto scaling  
+- Added Ignite job-stealing distributed scheduler 
+
 0.21.3 - 26 Aug 2016 
 - Fixed Spaces in work directory path stops slurm from accepting the job #218
 
