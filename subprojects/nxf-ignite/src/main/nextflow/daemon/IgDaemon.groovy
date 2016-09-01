@@ -19,6 +19,8 @@
  */
 
 package nextflow.daemon
+import static nextflow.Const.ROLE_WORKER
+
 import groovy.util.logging.Slf4j
 import nextflow.file.FileHelper
 import nextflow.file.igfs.IgFileSystemProvider
@@ -27,9 +29,6 @@ import nextflow.scheduler.SchedulerAgent
 import nextflow.util.KryoHelper
 import nextflow.util.PathSerializer
 import nextflow.util.ServiceName
-
-import static nextflow.Const.ROLE_WORKER
-
 /**
  * Launch the Ignite daemon
  *
@@ -65,9 +64,14 @@ class IgDaemon implements DaemonLauncher {
          * Scheduler agent
          */
         final agent = new SchedulerAgent(grid, factory.clusterConfig).run()
-//
-//        final sh = { log.info "Stopping daemon .."; agent.close(true) } as SignalHandler
-//        Signal.handle(new Signal("HUP"), sh);
+
+        Runtime.runtime.addShutdownHook {
+            log.info "System shutdown -- Stopping daemon..";
+            agent.close(true)
+        }
+
+//        final sh = { log.info "Got signal: $it -- Stopping daemon.."; agent.close(true) } as SignalHandler
+//        //Signal.handle(new Signal("HUP"), sh);
 //        Signal.handle(new Signal("INT"), sh);
 //        Signal.handle(new Signal("TERM"), sh);
 

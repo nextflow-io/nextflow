@@ -919,5 +919,28 @@ class FileHelper {
         })
     }
 
+    static String listDirectory(Path path) {
+
+        String result = null
+        Process process = null
+        try {
+            process = Runtime.runtime.exec("ls -la ${path}")
+            def listStatus = process.waitFor()
+            if( listStatus>0 ) {
+                log.debug "Can't list folder: ${path} -- Exit status: $listStatus"
+            }
+            else {
+                result = process.text
+            }
+        }
+        catch( IOException e ) {
+            log.debug "Can't list folder: $path -- Cause: ${e.message ?: e.toString()}"
+        }
+        finally {
+            process?.destroy()
+        }
+
+        return result
+    }
 
 }

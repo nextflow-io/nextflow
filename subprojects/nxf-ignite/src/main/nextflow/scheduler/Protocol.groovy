@@ -64,6 +64,22 @@ interface Protocol {
     }
 
     /**
+     * Event send from the agent to the scheduler to notify that
+     * an instance received a spot/preemptive termination notice
+     */
+    @Canonical
+    @CompileStatic
+    class NodeRetired implements Cloneable, Serializable {
+
+        String termination
+
+        String toString() {
+            return "termination-notice=$termination"
+        }
+    }
+
+
+    /**
      * Message send to all cluster node to notify that a new task has been submitted
      * for execution
      *
@@ -159,13 +175,31 @@ interface Protocol {
 
         long startTimestamp
 
-        def result
-
-        Throwable error
-
         boolean started
 
         boolean completed
+
+        /**
+         * Note mark this field as `volatile` because it is accessed by other threads.
+         *
+         * An alternative implementation would required to define this immutable and
+         * have the method {@link #withComplete(nextflow.scheduler.Protocol.TaskComplete)} to create
+         * a copy of this object
+         *
+         * {@link nextflow.executor.IgTaskHandler#checkIfCompleted()}
+         */
+        volatile Object result
+
+        /**
+         * Note mark this field as `volatile` because it is accessed by other threads.
+         *
+         * An alternative implementation would required to define this immutable and
+         * have the method {@link #withComplete(nextflow.scheduler.Protocol.TaskComplete)} to create
+         * a copy of this object
+         *
+         * {@link nextflow.executor.IgExecutor#checkTaskFailed(nextflow.processor.TaskId)}
+         */
+        volatile Throwable error
 
         protected TaskHolder() {
 
@@ -184,8 +218,8 @@ interface Protocol {
         }
 
         TaskHolder withComplete( TaskComplete message ) {
-            assert worker
-            assert started
+            if(!worker) throw new IllegalStateException("Illegal task completion state: `worker` is null -- $this")
+            if(!started) throw new IllegalStateException("Illegal task completion state: not started -- $this")
 
             this.completed = true
             if( message.error )
