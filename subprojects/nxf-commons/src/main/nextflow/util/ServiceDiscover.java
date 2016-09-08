@@ -21,7 +21,7 @@
 package nextflow.util;
 
 /**
- * Same as Java {@code ServiceLoader} but return service classes instead of instances
+ * Same as Java {@code ServiceLoader} but return a service class instead of an instance
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
