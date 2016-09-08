@@ -88,9 +88,17 @@ class AmazonCloudDriver implements CloudDriver {
 
     @CompileDynamic
     AmazonCloudDriver() {
-        config = Global.config
-        (accessKey, secretKey) = Global.getAwsCredentials()
-        region = Global.getAwsRegion()
+        this.config = Global.config
+        // -- get the aws credentials
+        def credentials = Global.getAwsCredentials()
+        if( !credentials )
+            throw new AbortOperationException('Missing AWS access and secret keys -- Make sure to define in your system environment the following variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`')
+        this.accessKey = credentials[0]
+        this.secretKey = credentials[1]
+        // -- get the aws default region
+        this.region = Global.getAwsRegion()
+        if( !region )
+            throw new AbortOperationException('Missing AWS region -- Make sure to deifne in your system environment the variable `AWS_DEFAULT_REGION`')
     }
 
     @CompileDynamic
