@@ -304,11 +304,11 @@ class Scheduler {
      *
      */
     void schedule( IgBaseTask... tasks ) {
-
         messageQueue << { schedule0(tasks) }
     }
 
-    private void schedule0(IgBaseTask... tasks ) {
+    private void schedule0( IgBaseTask... tasks ) {
+
         log.debug "+++ Scheduling tasks: taskId=${tasks.collect{ IgBaseTask t -> t.taskId }.join(',')}"
 
         for( int i=0; i<tasks.size(); i++ ) {
@@ -339,7 +339,7 @@ class Scheduler {
     private void onNodeStart(UUID sender, NodeData message) {
         assert sender == message.nodeId
         workerNodes[sender] = message
-        autoscaler?.onNodeStart(sender, message)
+        autoscaler?.onNodeStart(message)
         // note: log *after* updating the `workerNodes` map otherwise `hostName` will report a null
         log.debug "+++ Node joined the cluster: [${hostName(sender)}] $sender"
     }

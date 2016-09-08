@@ -46,8 +46,19 @@ import org.apache.ignite.Ignite
 @Slf4j
 class Autoscaler implements Closeable {
 
+    /**
+     * The cloud driver name e.g. `aws`
+     */
+    private String driverName
+
+    /**
+     * The reference to the cloud driver
+     */
     private CloudDriver driver
 
+    /**
+     * The reference to the underlying Ignite clusetr
+     */
     private Ignite ignite
 
     /**
@@ -55,22 +66,39 @@ class Autoscaler implements Closeable {
      */
     private Map<UUID, NodeData> workerNodes
 
+    /**
+     * Map of scheduled tasks not yet completed
+     */
     private Map<TaskId,TaskHolder> scheduledTasks
 
     private ScheduledExecutorService watchdog
 
+    /**
+     * The auto-scaler configuration object
+     */
     private CloudConfig.Autoscale scalerConfig
 
-    private String driverName
-
+    /**
+     * Whenever the auto-scaling is enabled
+     */
     private volatile boolean enabled
 
+    /**
+     * The list of remaining instances requested by the auto-scaler
+     * pending to join the cluster
+     */
     private volatile Queue<String> pendingInstanceIds
 
     private Map<List,Byte> canRunTaskCache = new HashMap<>()
 
     private long waitingTimestamp
 
+    /**
+     * Creates the auto-scaler object
+     *
+     * @param ignite Reference to the underlying {@link Ignite} cluster
+     * @param config A {@link CloudConfig} object holding the cloud configuration
+     */
     Autoscaler(Ignite ignite, CloudConfig config) {
         this.ignite = ignite
         this.scalerConfig = config.getAutoscale()
@@ -79,18 +107,24 @@ class Autoscaler implements Closeable {
         log.debug "### Auto-scaling enabled: $enabled"
     }
 
+    /**
+     * ONLY FOR TESTING PURPOSE
+     */
     protected Autoscaler() { }
 
     /**
      * Initialize the auto-scaling policy
+     *
+     * @param nodes The map holding the current cluster topology
+     * @param tasks The map of scheduled tasks
      */
     protected void init(Map<UUID,NodeData> nodes, Map<TaskId,TaskHolder> tasks) {
 
         this.workerNodes = nodes
         this.scheduledTasks = tasks
 
+        // -- init the cloud driver
         if( enabled ) {
-            // -- init the cloud driver
             def driverName = driverName ?: CloudDriverFactory.getDefaultDriverName()
             if( !driverName )
                 throw new IllegalStateException("No cloud driver name has been specified")
@@ -100,37 +134,47 @@ class Autoscaler implements Closeable {
             driver.validate(scalerConfig)
         }
 
-
         // --
         this.watchdog = Executors.newScheduledThreadPool(1)
-        this.watchdog.scheduleWithFixedDelay(this.&clusterWatchdog as Runnable, 1, 60, TimeUnit.SECONDS)
-
+        this.watchdog.scheduleWithFixedDelay(this.&clusterWatchdog as Runnable, 1, 1, TimeUnit.MINUTES)
     }
 
+    /**
+     * Method invoked when a new node join the cluster. If it's an
+     * instance requested by the auto-scaler, remove its ID from the list on
+     * pending instances to be launched. Once no more instances and pending
+     * it re-enable the auto-scaler
+     *
+     * @param data A {@link NodeData} object representing the new node
+     */
     @PackageScope
-    void onNodeStart(UUID sender, NodeData data) {
+    void onNodeStart(NodeData data) {
         if( !pendingInstanceIds )
             // nothing to do
             return
 
         def found = pendingInstanceIds.remove(data.instanceId)
         if( found ) {
-            log.debug "### Autoscale node joined the cluster [${data.hostName}] instance-id=$data.instanceId; node-id=$sender -- Still missing ${pendingInstanceIds.size()} instances"
+            log.debug "### Autoscale node joined the cluster [${data.hostName}] instance-id=$data.instanceId -- Still missing ${pendingInstanceIds.size()} instances"
             if( pendingInstanceIds.isEmpty() ) {
                 enabled = true
             }
         }
     }
 
+    /**
+     * Implements the auto-scaler main tasks. This method is invoked periodically every minute
+     */
     @PackageScope
     void clusterWatchdog() {
         try {
             checkClusterSize()
             checkStarvingTasks()
             checkIdleNodes()
+            checkPendingInstances()
         }
         catch (InterruptedException e) {
-            log.debug "Shutting down in progress [InterruptedException]"
+            log.debug "Shutdown in progress [InterruptedException]"
         }
         catch( Throwable e ) {
             log.debug "### Oops.. Something went wrong", e
@@ -345,6 +389,9 @@ class Autoscaler implements Closeable {
         return result
     }
 
+    /**
+     * @return The ID of the local cluster node
+     */
     @PackageScope getLocalNodeId() {
         ignite.cluster().localNode().id()
     }
@@ -441,6 +488,17 @@ class Autoscaler implements Closeable {
         return killList
     }
 
+    /**
+     * Verifies periodically the status of pending instances requested
+     * by the auto-scaler
+     */
+    @PackageScope void checkPendingInstances() {
+        //TODO
+    }
+
+    /**
+     * Shutdown the auto-scaler thread
+     */
     @Override
     void close() throws IOException {
         watchdog.shutdownNow()

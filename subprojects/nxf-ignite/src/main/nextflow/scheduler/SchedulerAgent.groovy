@@ -38,7 +38,6 @@ import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.transform.TupleConstructor
@@ -110,7 +109,7 @@ class SchedulerAgent implements Closeable {
     }
 
     @CompileStatic
-    private class Processor extends Thread {
+    private class AgentProcessor extends Thread {
 
         private Lock checkpoint = new ReentrantLock()
 
@@ -120,13 +119,13 @@ class SchedulerAgent implements Closeable {
 
         private volatile boolean stopped
 
-        private BlockingQueue<Closure> messageQueue = new LinkedBlockingQueue<>()
+        private BlockingQueue<Closure> eventsQueue = new LinkedBlockingQueue<>()
 
         private long idleTimestamp
 
         private long _1_min = Duration.of('1 min').toMillis()
 
-        Processor() {
+        AgentProcessor() {
             this.name = 'scheduler-agent'
         }
 
@@ -135,12 +134,20 @@ class SchedulerAgent implements Closeable {
             this.current = new Resources(config)
             log.debug "=== Agent resources: $current"
 
-            while( !stopped ) {
+            while( true ) {
                 try {
                     if( masterId ) {
-                        processMessages()
+                        // process any pending events
+                        processEvents()
+                        // check for spot/preemptive termination
                         checkSpotTermination()
-                        if( processPendingTasks(current) ) continue
+                        // process any pending task
+                        if( processPendingTasks(current) )
+                            continue
+                        // if got a stop event just exit
+                        else if( stopped )
+                            break
+                        // check if this node is doing nothing
                         checkIfIdle()
                         // wait for new messages
                         checkpoint.withLock {
@@ -151,6 +158,8 @@ class SchedulerAgent implements Closeable {
                         resetState()
                         waitForMasterNodeToJoin()
                     }
+                    else
+                        break
 
                 }
                 catch( InterruptedException e ) {
@@ -165,23 +174,19 @@ class SchedulerAgent implements Closeable {
                 }
             }
 
-            // consume latest messages
-            while( messageQueue ) {
-                processMessages()
-            }
         }
 
         private void abortPendingTasks() {
-            if( runningTasks ) {
-                log.debug "=== aborting pending tasks: taskId=${runningTasks.keySet().join(",") ?: '-'}"
-
-                def itr = runningTasks.values().iterator()
-                while( itr.hasNext() ) {
-                    RunHolder holder = itr.next()
-                    holder.future.cancel(true)
-                }
+            if( !runningTasks ) {
+                return
             }
 
+            log.debug "=== aborting pending tasks: taskId=${runningTasks.keySet().join(",") ?: '-'}"
+            def itr = runningTasks.values().iterator()
+            while( itr.hasNext() ) {
+                RunHolder holder = itr.next()
+                holder.future.cancel(true)
+            }
         }
 
         private void checkSpotTermination() {
@@ -193,7 +198,6 @@ class SchedulerAgent implements Closeable {
                 stopped = true
                 close(true)
             }
-
         }
 
         private void resetState() {
@@ -213,7 +217,7 @@ class SchedulerAgent implements Closeable {
 
             current = new Resources(config)
             log.debug "=== Agent resources after reset: $current"
-            messageQueue.clear()
+            eventsQueue.clear()
             idleTimestamp = 0
         }
 
@@ -245,22 +249,21 @@ class SchedulerAgent implements Closeable {
         }
 
         void sendMessage( Closure closure ) {
-            messageQueue << closure
+            eventsQueue << closure
             newMessage()
         }
 
         /**
-         * Process the messages added to the {@link #messageQueue} queue
+         * Process the messages added to the {@link #eventsQueue} queue
          *
          * @param res
          */
-        void processMessages() {
-            def Closure msg
-            while( (msg=messageQueue.poll()) ) {
+        void processEvents() {
+            Closure msg
+            while( (msg=eventsQueue.poll()) && !stopped ) {
                 msg.call()
             }
         }
-
 
         int processPendingTasks( Resources avail ) {
             def tasks = pendingTasks
@@ -270,7 +273,7 @@ class SchedulerAgent implements Closeable {
 
             def count=0
             def itr = tasks.iterator()
-            while( itr.hasNext() && avail.cpus && avail.memory ) {
+            while( itr.hasNext() && avail.cpus && avail.memory && !stopped ) {
                 count++
                 final it = itr.next()
                 final res = it.resources
@@ -287,7 +290,7 @@ class SchedulerAgent implements Closeable {
 
                     // -- send to the executor
                     try {
-                        runningTasks[it.taskId] = new RunHolder(executor.submit( runTask(it) ))
+                        runningTasks[it.taskId] = new RunHolder(taskExecutor.submit( runTask(it) ))
                     }
                     catch (RejectedExecutionException e) {
                         rollbackResources(it)
@@ -307,20 +310,21 @@ class SchedulerAgent implements Closeable {
 
         boolean canRun( IgBaseTask it, Resources avail ) {
 
-            final res = it.resources
+            final req = it.resources
+            log.debug "Check avail resources: taskId=${it.taskId}; req=$req; avail=[$avail]"
 
-            if( res.cpus && res.cpus > avail.cpus ) {
-                log.debug "=== Cannot execute task: taskId=${it.taskId} -- CPUs request exceed available (req=${res.cpus}; avail=${avail.cpus})"
+            if( req.cpus && req.cpus > avail.cpus ) {
+                log.debug "=== Cannot execute task: taskId=${it.taskId} -- CPUs request exceed available (req=${req.cpus}; avail=${avail.cpus})"
                 return false
             }
 
-            if( res.memory && res.memory > avail.memory ) {
-                log.debug "=== Cannot execute task: taskId=${it.taskId} -- Memory request exceed available (req=${res.memory}; avail=${avail.memory})"
+            if( req.memory && req.memory > avail.memory ) {
+                log.debug "=== Cannot execute task: taskId=${it.taskId} -- Memory request exceed available (req=${req.memory}; avail=${avail.memory})"
                 return false
             }
 
-            if( res.disk && res.disk > avail.disk ) {
-                log.debug "=== Cannot execute task: taskId=${it.taskId} -- Disk request exceed available (req=${res.disk}; avail=${avail.disk})"
+            if( req.disk && req.disk > avail.disk ) {
+                log.debug "=== Cannot execute task: taskId=${it.taskId} -- Disk request exceed available (req=${req.disk}; avail=${avail.disk})"
                 return false
             }
 
@@ -351,11 +355,6 @@ class SchedulerAgent implements Closeable {
                 sendMessage({ owner.rollbackResources(task) })
             }
 
-        }
-
-        @CompileDynamic
-        void notifyErrorAsync( IgBaseTask task, Exception e) {
-            Thread.start { notifyError(task,e) }
         }
 
         /**
@@ -405,7 +404,7 @@ class SchedulerAgent implements Closeable {
     /**
      * The underlying executor service
      */
-    private ExecutorService executor
+    private ExecutorService taskExecutor
 
     /**
      * Distributed cached of all tasks waiting to be processed
@@ -427,7 +426,7 @@ class SchedulerAgent implements Closeable {
      */
     private ClusterConfig config
 
-    private Processor processor
+    private AgentProcessor eventProcessor
 
     private Resources total
 
@@ -449,10 +448,10 @@ class SchedulerAgent implements Closeable {
         this.config = config
         this.ignite = ignite
         this.pendingTasks = ignite.cache(PENDING_TASKS_CACHE)
-        this.executor = Executors.newFixedThreadPool(SysHelper.getAvailCpus())
+        this.taskExecutor = Executors.newFixedThreadPool(SysHelper.getAvailCpus())
         this.total = new Resources(config)
         this.driver = getCloudDriver(config)
-        this.processor = new Processor()
+        this.eventProcessor = new AgentProcessor()
         this.simulateSpotTermination = config.getAttribute('simulateSpotTermination') as boolean
 
         // -- register events to listen to
@@ -484,7 +483,7 @@ class SchedulerAgent implements Closeable {
         return { UUID uuid, Object message ->
 
             if( message instanceof TaskAvail ) {
-                processor.newMessage()
+                eventProcessor.newMessage()
             }
             else if( message  instanceof TaskCancel ) {
                 onCancelTask(message)
@@ -539,7 +538,7 @@ class SchedulerAgent implements Closeable {
         if( nodeId == masterId ) {
             log.debug "=== Master node failed: nodeId=$nodeId"
             masterId = null
-            processor.newMessage()
+            eventProcessor.newMessage()
         }
     }
 
@@ -547,7 +546,7 @@ class SchedulerAgent implements Closeable {
         if( nodeId == masterId ) {
             log.debug "=== Master node left: nodeId=$nodeId"
             masterId = null
-            processor.newMessage()
+            eventProcessor.newMessage()
         }
     }
 
@@ -586,7 +585,7 @@ class SchedulerAgent implements Closeable {
      * @return The {@link SchedulerAgent} instance itself
      */
     SchedulerAgent run() {
-        processor.start()
+        eventProcessor.start()
         return this
     }
 
@@ -701,8 +700,8 @@ class SchedulerAgent implements Closeable {
         closed = true
 
         // -- shutdown executor & agent processor
-        executor.shutdownNow()
-        processor.shutdown()
+        taskExecutor.shutdownNow()
+        eventProcessor.shutdown()
 
         if( !shutdownIgnite )
             return

@@ -47,14 +47,23 @@ interface Protocol {
 
     static final String TOPIC_AGENT_EVENTS = 'nextflow.events.agent'
 
+    /**
+     * Message sent to notify that a computing node is idle
+     */
     @Canonical
     @CompileStatic
     class NodeIdle implements Serializable, Cloneable {
 
+        /**
+         * Timestamp when the node entered in the `idle` status
+         */
         long idleTimestamp
 
     }
 
+    /**
+     * Message sent from the scheduler to notify the cluster shutdown
+     */
     @CompileStatic
     class NodeShutdown implements Cloneable, Serializable {
 
@@ -160,6 +169,7 @@ interface Protocol {
 
 
     /**
+     * Holds the metadata of a scheduled task
      *
      * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
      */
@@ -167,17 +177,23 @@ interface Protocol {
     @CompileStatic
     class TaskHolder implements Serializable, Cloneable {
 
+        /**
+         * The actual task object
+         */
         IgBaseTask task
 
-        UUID worker
+        /**
+         * The ID of the node where the task is running
+         */
+        volatile UUID worker
 
-        long submitTimestamp
+        volatile long submitTimestamp
 
-        long startTimestamp
+        volatile long startTimestamp
 
-        boolean started
+        volatile boolean started
 
-        boolean completed
+        volatile boolean completed
 
         /**
          * Note mark this field as `volatile` because it is accessed by other threads.
