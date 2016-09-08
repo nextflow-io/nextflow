@@ -19,7 +19,6 @@
  */
 
 package nextflow
-
 import static nextflow.Const.S3_UPLOADER_CLASS
 
 import java.lang.reflect.Method
@@ -39,7 +38,7 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.dag.DAG
 import nextflow.exception.AbortOperationException
 import nextflow.exception.MissingLibraryException
-import nextflow.trace.ExtraeTraceObserver
+import nextflow.exception.AbortSignalException
 import nextflow.file.FileHelper
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskDispatcher
@@ -47,6 +46,7 @@ import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 import nextflow.script.ScriptBinding
+import nextflow.trace.ExtraeTraceObserver
 import nextflow.trace.GraphObserver
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
@@ -54,7 +54,10 @@ import nextflow.trace.TraceObserver
 import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
+import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
+import sun.misc.Signal
+import sun.misc.SignalHandler
 
 /**
  * Holds the information on the current execution
@@ -361,7 +364,11 @@ class Session implements ISession {
         log.debug "Session start invoked"
 
         // register shut-down cleanup hooks
-        Global.onShutdown { cleanUp() }
+        final handler = { Signal sig -> abort(new AbortSignalException(sig)) } as SignalHandler
+        Signal.handle( new Signal("INT"), handler )
+        Signal.handle( new Signal("TERM"), handler )
+        Signal.handle( new Signal("HUP"), handler )
+
         // create tasks executor
         execService = Executors.newFixedThreadPool(poolSize)
         // signal start to tasks dispatcher
@@ -445,31 +452,34 @@ class Session implements ISession {
     }
 
     void destroy() {
-        log.trace "Session > destroying"
+        try {
+            log.trace "Session > destroying"
+            if( !aborted ) {
+                allProcessors *. join()
+                log.trace "Session > after processors join"
+            }
 
-        if( !aborted ) {
-            allProcessors *. join()
-            log.trace "Session > after processors join"
+            cleanUp()
+            log.trace "Session > after cleanup"
+
+            execService.shutdown()
+            execService = null
+            log.trace "Session > executor shutdown"
+
+            // -- close db
+            cache?.close()
+
+            // -- shutdown s3 uploader
+            shutdownS3Uploader()
         }
-
-        cleanUp()
-        log.trace "Session > after cleanup"
-
-        execService.shutdown()
-        execService = null
-        log.trace "Session > executor shutdown"
-
-        // -- close db
-        cache?.close()
-
-        // -- shutdown s3 uploader
-        shutdownS3Uploader()
-
-        log.debug "Session destroyed"
+        finally {
+            // -- update the history file
+            HistoryFile.DEFAULT.update(runName,isSuccess())
+            log.debug "Session destroyed"
+        }
     }
 
     final protected void cleanUp() {
-
         log.trace "Shutdown: $shutdownCallbacks"
         while( shutdownCallbacks.size() ) {
             def hook = shutdownCallbacks.poll()
@@ -494,6 +504,8 @@ class Session implements ISession {
             }
         }
 
+        // -- global
+        Global.cleanUp()
     }
 
     /**
@@ -534,7 +546,7 @@ class Session implements ISession {
      */
     void abort(Throwable cause = null) {
         if( aborted ) return
-        log.debug "Session aborted -- Cause: ${cause}"
+        log.debug "Session aborted -- Cause: ${cause?.message ?: cause ?: '-'}"
         aborted = true
         notifyError(null)
         dispatcher.signal()
@@ -559,6 +571,8 @@ class Session implements ISession {
     boolean isAborted() { aborted }
 
     boolean isCancelled() { cancelled }
+
+    boolean isSuccess() { !aborted && !cancelled }
 
     void processRegister(TaskProcessor process) {
         log.debug ">>> barrier register (process: ${process.name})"

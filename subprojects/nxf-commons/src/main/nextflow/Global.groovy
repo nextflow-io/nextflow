@@ -205,9 +205,9 @@ class Global {
         hooks.add(callback)
     }
 
-    static final List<Closure> hooks = []
+    static final private List<Closure> hooks = []
 
-    static private synchronized cleanUp() {
+    static synchronized cleanUp() {
         for( Closure c : hooks ) {
             try {
                 c.call()
@@ -217,15 +217,5 @@ class Global {
             }
         }
     }
-
-    /*
-     * Global shutdown hook
-     */
-    static {
-        Runtime.getRuntime().addShutdownHook {
-            cleanUp()
-        }
-    }
-
 
 }

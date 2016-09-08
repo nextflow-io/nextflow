@@ -201,15 +201,8 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- add this run to the local history
         runner.verifyAndTrackHistory(launcher.cliString, runName)
 
-        try {
-            // -- run it!
-            runner.execute(scriptArgs)
-            HistoryFile.DEFAULT.update(runName,true)
-        }
-        catch( Throwable e ) {
-            HistoryFile.DEFAULT.update(runName,false)
-            throw e
-        }
+        // -- run it!
+        runner.execute(scriptArgs)
     }
 
     private void checkRunName() {

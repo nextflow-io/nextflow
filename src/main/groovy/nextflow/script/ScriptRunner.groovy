@@ -157,12 +157,12 @@ class ScriptRunner {
             // await termination
             terminate()
         }
-        catch (Exception e) {
+        catch (Throwable e) {
             session.abort(e)
             throw e
         }
 
-        if( session.aborted || session.cancelled ) {
+        if( !session.success ) {
             throw new AbortRunException()
         }
 
