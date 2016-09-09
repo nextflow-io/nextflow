@@ -459,6 +459,7 @@ NXF_PID_FILE        Name of the file where the process PID is saved when Nextflo
 NXF_WORK            Directory where working files are stored (usually your *scratch* directory)
 NXF_TEMP            Directory where temporary files are stored
 NXF_DEBUG           Defines scripts debugging level: ``1`` dump task environment variables in the task log file; ``2`` enables command script execution tracing; ``3`` enables command wrapper execution tracing.
+NXF_EXECUTOR        Defines the default process executor e.g. `sge`
 JAVA_HOME           Path location of the Java VM installation used to run Nextflow.
 JAVA_CMD            Path location of the Java binary command used to launch  Nextflow.
 HTTP_PROXY          Defines the HTTP proxy server
