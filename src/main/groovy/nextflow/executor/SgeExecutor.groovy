@@ -21,7 +21,6 @@
 package nextflow.executor
 import java.nio.file.Path
 
-import groovy.transform.PackageScope
 import nextflow.processor.TaskRun
 /**
  * Execute a task script by running it on the SGE/OGE cluster
@@ -124,9 +123,8 @@ class SgeExecutor extends AbstractGridExecutor {
         throw new IllegalStateException("Invalid SGE submit response:\n$text\n\n")
     }
 
-
-    @PackageScope
-    String getKillCommand() { 'qdel' }
+    @Override
+    protected List<String> getKillCommand() { ['qdel'] }
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {

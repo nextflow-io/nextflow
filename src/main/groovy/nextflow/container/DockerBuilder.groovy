@@ -265,7 +265,7 @@ class DockerBuilder implements ContainerBuilder {
         def paths = trie.longest()
         paths.each{ if(it) result << "-v ${Escape.path(it)}:${Escape.path(it)} " }
 
-        // -- append by default the current path
+        // -- append by default the current path -- this is needed when `scratch` is set to true
         result << '-v "$PWD":"$PWD"'
 
         return result

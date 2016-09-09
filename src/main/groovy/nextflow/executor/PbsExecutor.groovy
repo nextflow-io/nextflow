@@ -21,7 +21,6 @@
 package nextflow.executor
 import java.nio.file.Path
 
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 /**
@@ -112,9 +111,8 @@ class PbsExecutor extends AbstractGridExecutor {
         throw new IllegalStateException("Invalid PBS/Torque submit response:\n$text\n\n")
     }
 
-
-    @PackageScope
-    String getKillCommand() { 'qdel' }
+    @Override
+    protected List<String> getKillCommand() { ['qdel'] }
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {

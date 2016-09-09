@@ -43,6 +43,7 @@ import nextflow.util.ServiceName
  */
 
 @Slf4j
+@Deprecated
 @ServiceName('cirrus')
 class CirrusExecutor extends AbstractGridExecutor {
 
@@ -162,7 +163,7 @@ class CirrusExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    protected String getKillCommand() { 'kancel' }
+    protected List<String> getKillCommand() { ['kancel'] }
 
     @Override
     protected List<String> queueStatusCommand( queue ) {

@@ -131,7 +131,7 @@ class LsfExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    String getKillCommand() { 'bkill' }
+    protected List<String> getKillCommand() { ['bkill'] }
 
     @Override
     protected List<String> queueStatusCommand( queue ) {

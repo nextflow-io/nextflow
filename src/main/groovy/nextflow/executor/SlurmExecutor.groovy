@@ -112,7 +112,8 @@ class SlurmExecutor extends AbstractGridExecutor {
         throw new IllegalStateException("Invalid SLURM submit response:\n$text\n\n")
     }
 
-    protected String getKillCommand() { 'scancel' }
+    @Override
+    protected List<String> getKillCommand() { ['scancel'] }
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {

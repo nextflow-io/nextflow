@@ -160,7 +160,7 @@ class CondorExecutorTest extends Specification {
         def executor = [:] as CondorExecutor
 
         expect:
-        executor.getKillCommand() == 'condor_rm'
+        executor.getKillCommand() == ['condor_rm']
 
     }
 
