@@ -90,7 +90,14 @@ trait CacheBase {
         }
 
         // -- get the session ID from the command line if specified or retrieve from
-        history.findByIdOrName(args ? args[0] : 'last')
+        if( !args )
+            return history.findByIdOrName('last')
+
+        def result = []
+        for( String name : args ) {
+            result.addAll(history.findByIdOrName(name))
+        }
+        return result
     }
 
 

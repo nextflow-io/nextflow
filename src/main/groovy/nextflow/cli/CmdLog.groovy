@@ -53,7 +53,7 @@ class CmdLog extends CmdBase implements CacheBase {
     static {
         ALL_FIELDS = []
         ALL_FIELDS.addAll( TraceRecord.FIELDS.keySet() )
-        ALL_FIELDS << 'stdour'
+        ALL_FIELDS << 'stdout'
         ALL_FIELDS << 'stderr'
         ALL_FIELDS << 'log'
         ALL_FIELDS << 'env'
@@ -85,6 +85,9 @@ class CmdLog extends CmdBase implements CacheBase {
 
     @Parameter(names='-but', description = 'Show log entries of all runs except the specified one')
     String but
+
+    @Parameter(names=['-q','-quiet'], description = 'Show only run names', arity = 0)
+    boolean quiet
 
     @Parameter
     List<String> args
@@ -150,13 +153,12 @@ class CmdLog extends CmdBase implements CacheBase {
 
         // -- show the current history and exit
         if( showHistory ) {
-            printHistory()
+            quiet ? printQuiet() : printHistory()
             return
         }
 
         // -- main
         listIds().each { entry ->
-
 
             cacheFor(entry)
                         .openForRead()
@@ -209,6 +211,10 @@ class CmdLog extends CmdBase implements CacheBase {
         }
 
         println table.toString()
+    }
+
+    private void printQuiet() {
+        history.eachRow { List row -> println(row[2]) }
     }
 
     /**
