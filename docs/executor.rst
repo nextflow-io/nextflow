@@ -198,33 +198,6 @@ The amount of resources requested by each job submission is defined by the follo
 * :ref:`process-clusterOptions`
 
 
-.. _cirrus-executor:
-
-Cirrus
-======
-
-.. warning:: ClusterK cloud platform is not available any more.
-
-The `Cirrus` executor allows you to run your pipeline in the `ClusterK <http://clusterk.com>`_ cloud platform.
-
-Nextflow manages each process execution as a separate task that is submitted to the cloud scheduler by using
-the ``ksub`` command provided along with the ClusterK platform.
-
-Thus, the pipeline must be launched from a node where the ``ksub`` command is available, that is, in a common usage
-scenario, an AWS EC2 instance where ClusterK tools have been installed.
-
-To enable the Cirrus executor simply set the property ``process.executor = 'cirrus'`` in the ``nextflow.config`` file.
-
-The amount of resources requested by each task submission is defined by the following process directives:
-
-* :ref:`process-cpus`
-* :ref:`process-disk`
-* :ref:`process-queue`
-* :ref:`process-time`
-* :ref:`process-memory`
-* :ref:`process-clusterOptions`
-
-
 .. _dnanexus-executor:
 
 DNAnexus
