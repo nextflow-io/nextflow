@@ -43,7 +43,7 @@ class AbstractGridExecutorTest extends Specification {
     def 'should return the kill list' () {
 
         given:
-        def exec = [getKillCommand: { 'qdel' }] as AbstractGridExecutor
+        def exec = [getKillCommand: { ['qdel'] }] as AbstractGridExecutor
 
         expect:
         exec.killTaskCommand('10') == ['qdel', '10']

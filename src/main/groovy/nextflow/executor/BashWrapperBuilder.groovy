@@ -268,6 +268,19 @@ class BashWrapperBuilder {
     }
 
     /**
+     * Setup container related variables
+     */
+    protected boolean containerInit() {
+        isDockerEnabled = dockerConfig?.enabled?.toString() == 'true'
+        isShifterEnabled = shifterConfig?.enabled?.toString() == 'true'
+        containerImage && (executable || isDockerEnabled || isShifterEnabled)
+    }
+
+    protected boolean fixOwnership() {
+        systemOsName == 'Linux' && dockerConfig?.fixOwnership && containerInit() && isDockerEnabled // <-- note: only for docker (shifter is not affected)
+    }
+
+    /**
      * Build up the BASH wrapper script file which will launch the user provided script
      * @return The {@code Path} of the created wrapper script
      */
@@ -284,10 +297,8 @@ class BashWrapperBuilder {
         final wrapperFile = workDir.resolve(TaskRun.CMD_RUN)
         final stubFile = workDir.resolve(TaskRun.CMD_STUB)
 
-        // set true when running with docker
-        isDockerEnabled = dockerConfig?.enabled?.toString() == 'true'
-        isShifterEnabled = shifterConfig?.enabled?.toString() == 'true'
-        runWithContainer = this.containerImage && (executable || isDockerEnabled || isShifterEnabled)
+        // set true when running with through a container engine
+        runWithContainer = containerInit()
 
         /*
          * save the input when required
@@ -374,14 +385,16 @@ class BashWrapperBuilder {
             wrapper << scriptCleanUp(exitedFile, containerBuilder.killCommand) << ENDL
             // create a random string id to be used an container name
             wrapper << 'export NXF_BOXID="nxf-$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"' << ENDL
-            // append to script file chown command to change `root` owner of files created by docker
-            // note: this is not required when running docker in OSX through boo2docker because it manage correctly files ownership
-            if( systemOsName == 'Linux' && dockerConfig.fixOwnership )
-            scriptFile << "\n# patch root ownership problem of files created with docker\n[ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*} || true\n"
         }
         else {
             wrapper << scriptCleanUp(exitedFile) << ENDL
         }
+
+        // append to script file chown command to change `root` owner of files created by docker
+        // note: this is not required when running docker in OSX through boo2docker because it manage correctly files ownership
+        if( this.fixOwnership() )
+            scriptFile << "\n# patch root ownership problem of files created with docker\n[ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*} || true\n"
+
 
         // -- print the current environment when debug is enabled
         wrapper << '[[ $NXF_DEBUG > 0 ]] && nxf_env' << ENDL
@@ -400,6 +413,8 @@ class BashWrapperBuilder {
         }
 
         // source the environment
+        // note: skip this when it's a containerized task because in that case
+        //  the environment is provided using container specific options
         if( !runWithContainer ) {
             wrapper << "[ -f "<< fileStr(environmentFile) << " ]" << " && source " << fileStr(environmentFile) << ENDL
         }

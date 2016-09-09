@@ -25,6 +25,7 @@ import nextflow.executor.CirrusExecutor
 import nextflow.executor.CrgExecutor
 import nextflow.executor.Executor
 import nextflow.executor.CondorExecutor
+import nextflow.executor.KubernetesExecutor
 import nextflow.executor.LocalExecutor
 import nextflow.executor.LsfExecutor
 import nextflow.executor.NopeExecutor
@@ -62,7 +63,8 @@ class ProcessFactory {
             'crg': CrgExecutor,
             'bsc': LsfExecutor,
             'condor': CondorExecutor,
-            'cirrus': CirrusExecutor
+            'cirrus': CirrusExecutor,
+            'k8s': KubernetesExecutor
     ]
 
     private final Session session

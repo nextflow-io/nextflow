@@ -102,8 +102,8 @@ class CondorExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    protected String getKillCommand() {
-        'condor_rm'
+    protected List<String> getKillCommand() {
+        ['condor_rm']
     }
 
     @Override
