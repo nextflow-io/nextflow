@@ -98,7 +98,7 @@ class AmazonCloudDriver implements CloudDriver {
         // -- get the aws default region
         this.region = Global.getAwsRegion()
         if( !region )
-            throw new AbortOperationException('Missing AWS region -- Make sure to deifne in your system environment the variable `AWS_DEFAULT_REGION`')
+            throw new AbortOperationException('Missing AWS region -- Make sure to define in your system environment the variable `AWS_DEFAULT_REGION`')
     }
 
     @CompileDynamic
