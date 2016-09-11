@@ -198,7 +198,7 @@ class AmazonCloudDriverTest extends Specification {
 
         given:
         def config = [
-                aws: [accessKey: 'xxx', secretKey: 'yyy'],
+                aws: [accessKey: 'xxx', secretKey: 'yyy', region: 'eu-west-1'],
                 cloud: [
                 imageId: 'ami-123',
                 instanceType: 'r3.abc',
@@ -322,7 +322,7 @@ class AmazonCloudDriverTest extends Specification {
     def 'should include docker pull line' () {
         given:
         def config = [
-                aws: [accessKey: 'xxx', secretKey: 'yyy'],
+                aws: [accessKey: 'xxx', secretKey: 'yyy', region: 'eu-west-1'],
                 cloud: [
                         imageId: 'ami-123',
                         instanceType: 'r3.abc',
