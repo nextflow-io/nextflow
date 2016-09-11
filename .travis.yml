@@ -5,17 +5,11 @@ jdk:
 before_install:
 - sudo apt-get -qq update
 - sudo apt-get -qq -y install graphviz
+- sudo pip install awscli
 git:
   submodules: false
 env:
   global:
   - _JAVA_OPTIONS='-Xverify:none'
-deploy:
-  provider: s3
-  access_key_id: AKIAJQG7TVL6IJ2NOX3Q
-  secret_access_key:
-    secure: PRWWEL2sF+AyCFD2ijuTvM/PBL97U9xc9tO+fFosYT2KIHW0ysyuLenb73qf2lMjr+vCX97T7e2dC9vwLSz8OPJ19w7HdFmtvx3PkUynyGu18W5RbIG7f7pxqniJpFk9JlAGJUCVKlM9m4lRXaIAN4IVzBwl0eHm5NnViAX6C30=
-  bucket: www.nextflow.io
-  local-dir: build/reports/tests
-  upload-dir: reports/tests/travis
-  acl: public_read
+after_script:
+- bash pub-tests.sh build/reports/tests/ travis
