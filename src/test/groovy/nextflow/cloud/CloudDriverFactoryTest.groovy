@@ -44,6 +44,6 @@ class CloudDriverFactoryTest extends Specification {
 
     def 'should return the driver instance' () {
         expect:
-        CloudDriverFactory.get('fake') instanceof FakeCloudDriver
+        CloudDriverFactory.getDriver('fake') instanceof FakeCloudDriver
     }
 }

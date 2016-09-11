@@ -354,7 +354,7 @@ class IgGridFactory {
 
         def begin = System.currentTimeMillis()
         while( true ) {
-            result = CloudDriverFactory.get(driverName).listPrivateIPs(clusterName)
+            result = CloudDriverFactory.getDriver(driverName).listPrivateIPs(clusterName)
             // try to find at lest another IP address other than the local host address
             def notFound = !result || (result.size()==1 && result.contains(localAddress))
             if( notFound && System.currentTimeMillis()-begin<5_000) {

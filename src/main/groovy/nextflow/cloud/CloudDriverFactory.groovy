@@ -78,7 +78,7 @@ class CloudDriverFactory {
      * @return The cloud driver instance for the given name
      * @throws IllegalArgumentException if the driven with the specified name does not exist
      */
-    static CloudDriver get(String name) {
+    static CloudDriver getDriver(String name) {
         def result = loadDrivers().get(name)
         if( !result ) throw new IllegalArgumentException("Unknown cloud driver name: `$name`")
         return result.newInstance()
