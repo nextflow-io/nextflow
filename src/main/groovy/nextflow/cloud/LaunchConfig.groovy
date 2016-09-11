@@ -116,7 +116,7 @@ class LaunchConfig extends CascadingConfig<String,Object> {
 
     @ConfigField
     String getSharedStorageMount() {
-        getAttribute('sharedStorageMount')
+        getAttribute('sharedStorageMount') ?: '/mnt/efs'
     }
 
     @ConfigField
