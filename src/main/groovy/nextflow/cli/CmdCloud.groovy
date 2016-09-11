@@ -43,6 +43,7 @@ import nextflow.ui.TableBuilder
 import nextflow.ui.TextLabel
 import nextflow.util.SysHelper
 /**
+ * Implements the `cloud` command
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -210,18 +211,13 @@ class CmdCloud extends CmdBase implements UsageAware {
      * @param instanceIds The list of instance IDs to be shown
      */
     protected void printWorkerInstances( List<String> instanceIds ) {
-        def builder = new TableBuilder()
 
         // -- show the available nodes
         driver.eachInstanceWithIds(instanceIds) { item ->
-            builder << '  '
-            builder << item.id
-            builder << item.publicDnsName
-            builder << item.state
-            builder.closeRow()
+            println "  ${item.id}\t  ${item.publicDnsName}"
         }
 
-        println builder.toString() + '\n'
+        println ''
     }
 
     /**
