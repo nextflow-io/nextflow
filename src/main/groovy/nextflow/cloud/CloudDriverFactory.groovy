@@ -23,6 +23,7 @@ package nextflow.cloud
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.util.ServiceDiscover
 import nextflow.util.ServiceName
 
 /**
@@ -38,13 +39,12 @@ class CloudDriverFactory {
      * @return The map of cloud drivers available on the current class path
      */
     @Memoized
-    static Map<String,CloudDriver> loadDrivers() {
+    static Map<String,Class<CloudDriver>> loadDrivers() {
 
-        def result = new HashMap<String,CloudDriver>()
-        ServiceLoader.load(CloudDriver).iterator().each { CloudDriver driver ->
-            final clazz = driver.getClass()
-            final name = nameForClass(clazz)
-            log.debug "Discovered cloud driver: `$name` [${clazz.getName()}]"
+        def result = new HashMap<String,Class<CloudDriver>>()
+        ServiceDiscover.load(CloudDriver).iterator().each { Class<CloudDriver> driver ->
+            final name = nameForClass(driver)
+            log.debug "Discovered cloud driver: `$name` [${driver.getName()}]"
             result.put(name, driver)
         }
 
@@ -81,7 +81,7 @@ class CloudDriverFactory {
     static CloudDriver get(String name) {
         def result = loadDrivers().get(name)
         if( !result ) throw new IllegalArgumentException("Unknown cloud driver name: `$name`")
-        return result
+        return result.newInstance()
     }
 
 }

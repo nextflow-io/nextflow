@@ -33,7 +33,7 @@ class CloudDriverFactoryTest extends Specification {
         def found = CloudDriverFactory.loadDrivers()
         then:
         found.size()>0
-        found.fake.class == FakeCloudDriver.class
+        found.fake == FakeCloudDriver.class
 
     }
 
