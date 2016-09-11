@@ -59,7 +59,8 @@ class Channel  {
 
     static public NullObject VOID = NullObject.getNullObject()
 
-    static private Session session = Global.session as Session
+    @Lazy
+    static private Session session = { Global.session as Session }()
 
     /**
      * Create an new channel

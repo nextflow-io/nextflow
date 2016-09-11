@@ -39,7 +39,8 @@ import nextflow.extension.DataflowExtensions
 @CompileStatic
 class SplitterFactory {
 
-    static private Session session = Global.session as Session
+    @Lazy
+    static private Session session = { Global.session as Session } ()
 
     /**
      * Creates a splitter object by specifying the strategy name
