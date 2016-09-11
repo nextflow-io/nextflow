@@ -150,7 +150,7 @@ class CmdCloud extends CmdBase implements UsageAware {
                 .build()
 
         Global.setConfig(config)
-        this.driver = CloudDriverFactory.get(driverName)
+        this.driver = CloudDriverFactory.getDriver(driverName)
     }
 
     /**

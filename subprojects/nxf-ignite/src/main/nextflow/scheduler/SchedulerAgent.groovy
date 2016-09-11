@@ -501,7 +501,7 @@ class SchedulerAgent implements Closeable {
     private CloudDriver getCloudDriver( ClusterConfig config ) {
         final driverName = config.getCloudDriverName()
         try {
-            return config.isCloudCluster() ? CloudDriverFactory.get(driverName) : null
+            return config.isCloudCluster() ? CloudDriverFactory.getDriver(driverName) : null
         }
         catch( Exception e ) {
             log.error "=== Can't load cloud driver: `$driverName`", e

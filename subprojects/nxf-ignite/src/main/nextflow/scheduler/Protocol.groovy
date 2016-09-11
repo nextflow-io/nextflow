@@ -380,7 +380,7 @@ interface Protocol {
 
         private static String getCloudInstanceId(String driverName) {
             try {
-                return driverName ? CloudDriverFactory.get(driverName).getLocalInstanceId() : null
+                return driverName ? CloudDriverFactory.getDriver(driverName).getLocalInstanceId() : null
             }
             catch( Exception e ){
                 log.debug "Oops.. Cannot retrieve the instance-id for this node -- May it is not a cloud instance?"
