@@ -29,6 +29,9 @@ import nextflow.scheduler.SchedulerAgent
 import nextflow.util.KryoHelper
 import nextflow.util.PathSerializer
 import nextflow.util.ServiceName
+import sun.misc.Signal
+import sun.misc.SignalHandler
+
 /**
  * Launch the Ignite daemon
  *
@@ -65,15 +68,10 @@ class IgDaemon implements DaemonLauncher {
          */
         final agent = new SchedulerAgent(grid, factory.clusterConfig).run()
 
-        Runtime.runtime.addShutdownHook {
-            log.info "System shutdown -- Stopping daemon..";
-            agent.close(true)
-        }
-
-//        final sh = { log.info "Got signal: $it -- Stopping daemon.."; agent.close(true) } as SignalHandler
-//        //Signal.handle(new Signal("HUP"), sh);
-//        Signal.handle(new Signal("INT"), sh);
-//        Signal.handle(new Signal("TERM"), sh);
+        final handler = { log.info "System terminated -- Stopping daemon.."; agent.close(true) } as SignalHandler
+        Signal.handle(new Signal("INT"), handler);
+        Signal.handle(new Signal("TERM"), handler);
+        Signal.handle(new Signal("HUP"), handler);
 
     }
 

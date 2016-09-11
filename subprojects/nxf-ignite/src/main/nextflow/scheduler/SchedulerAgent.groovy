@@ -134,7 +134,7 @@ class SchedulerAgent implements Closeable {
             this.current = new Resources(config)
             log.debug "=== Agent resources: $current"
 
-            while( true ) {
+            while( !stopped ) {
                 try {
                     if( masterId ) {
                         // process any pending events
@@ -158,8 +158,6 @@ class SchedulerAgent implements Closeable {
                         resetState()
                         waitForMasterNodeToJoin()
                     }
-                    else
-                        break
 
                 }
                 catch( InterruptedException e ) {
@@ -223,7 +221,7 @@ class SchedulerAgent implements Closeable {
 
         private void waitForMasterNodeToJoin() {
             int c=0
-            while( !masterId ) {
+            while( !masterId && !stopped ) {
                 if ( c++ % 60 == 0 ) {
                     log.debug "=== Waiting for master node to join.."
                 }
