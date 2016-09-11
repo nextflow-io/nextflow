@@ -125,6 +125,10 @@ class SchedulerAgent implements Closeable {
 
         private long _1_min = Duration.of('1 min').toMillis()
 
+        private long errorTimestamp
+
+        private int errorCount
+
         AgentProcessor() {
             this.name = 'scheduler-agent'
         }
@@ -246,7 +250,7 @@ class SchedulerAgent implements Closeable {
             }
         }
 
-        void sendMessage( Closure closure ) {
+        void async( Closure closure ) {
             eventsQueue << closure
             newMessage()
         }
@@ -264,11 +268,24 @@ class SchedulerAgent implements Closeable {
         }
 
         int processPendingTasks( Resources avail ) {
+
+            // -- introduce a penalty on error burst
+            if( errorTimestamp ) {
+                def delta = System.currentTimeMillis() - errorTimestamp
+                def penalty = Math.round(Math.pow(errorCount, 2) * 1000)
+                if( delta < penalty ) {
+                    log.debug "=== Error burst prevention: errorCount=$errorCount; penalty=${Duration.of(penalty)}; delta=${Duration.of(delta)}"
+                    return 0
+                }
+            }
+
+            // -- find candidate tasks to be executed
             def tasks = pendingTasks
                     .query(new ScanQuery<TaskId,IgBaseTask>(new MatchingResources(avail)))
                     .getAll()
                     .collect { it -> it.value }
 
+            // -- try to acquire tasks to run
             def count=0
             def itr = tasks.iterator()
             while( itr.hasNext() && avail.cpus && avail.memory && !stopped ) {
@@ -291,7 +308,7 @@ class SchedulerAgent implements Closeable {
                         runningTasks[it.taskId] = new RunHolder(taskExecutor.submit( runTask(it) ))
                     }
                     catch (RejectedExecutionException e) {
-                        rollbackResources(it)
+                        rollbackResources(it, true)
                         throw e
                     }
 
@@ -309,7 +326,7 @@ class SchedulerAgent implements Closeable {
         boolean canRun( IgBaseTask it, Resources avail ) {
 
             final req = it.resources
-            log.debug "Check avail resources: taskId=${it.taskId}; req=$req; avail=[$avail]"
+            log.trace "Check avail resources: taskId=${it.taskId}; req=[$req]; avail=[$avail]"
 
             if( req.cpus && req.cpus > avail.cpus ) {
                 log.debug "=== Cannot execute task: taskId=${it.taskId} -- CPUs request exceed available (req=${req.cpus}; avail=${avail.cpus})"
@@ -335,35 +352,41 @@ class SchedulerAgent implements Closeable {
 
         void runTask0( IgBaseTask task ) {
 
+            boolean error
             try {
                 def result = task.call()
                 notifyComplete(task, result)
+                error = result instanceof Integer && ((int)result) > 0
             }
             catch( InterruptedException | ClosedByInterruptException e ) {
                 log.debug "=== Task execution was interrupted: taskId=${task.taskId} -- Message: ${e.message ?: e}"
+                error = true
             }
-            catch( Throwable error ) {
-                notifyError(task, error)
+            catch( Throwable e ) {
+                notifyError(task, e)
+                error = true
             }
             finally {
                 // Note: since this method is run concurrently by an executor service
                 // invoke the `restoreResources` method by using the message to the owning thread
                 // In this way it not necessary to apply an expensive synchronisation
                 // logic when increasing/decreasing resources amount
-                sendMessage({ owner.rollbackResources(task) })
+                async{ owner.rollbackResources(task, error) }
             }
 
         }
+
 
         /**
          * Restore the resources "consumed" by the task
          *
          * @param task The {@link IgBaseTask} that used some resources to be restored
          */
-        void rollbackResources(IgBaseTask task) {
+        void rollbackResources(IgBaseTask task, boolean errorFlag) {
             final used = task.resources
             final taskId = task.taskId
 
+            // -- update pending resources
             if( runningTasks.containsKey(taskId)) {
                 runningTasks.remove(taskId)
                 // restore resources
@@ -377,6 +400,19 @@ class SchedulerAgent implements Closeable {
                     idleTimestamp = System.currentTimeMillis()
                 }
             }
+
+            // -- update error counter
+            if( errorFlag ) {
+                if( errorCount++ == 0 ) {
+                    errorTimestamp = System.currentTimeMillis()
+                }
+            }
+            else {
+                errorCount = 0
+                errorTimestamp = 0
+            }
+            log.trace "=== Errors: flag=$errorFlag; count=$errorCount; timestamp=$errorTimestamp"
+
         }
 
         void checkIfIdle() {
