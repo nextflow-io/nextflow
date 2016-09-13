@@ -183,7 +183,6 @@ class CmdRun extends CmdBase implements HubOptions {
                         .setCmdRun(this)
                         .setBaseDir(scriptFile.parent)
                         .build()
-                        .toMap()
 
         // -- create a new runner instance
         final runner = new ScriptRunner(config)

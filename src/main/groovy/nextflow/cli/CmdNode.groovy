@@ -71,7 +71,6 @@ class CmdNode extends CmdBase {
                             .setOptions(launcher.options)
                             .setCmdNode(this)
                             .build()
-                            .toMap()
 
         DaemonLauncher instance
         if( name ) {

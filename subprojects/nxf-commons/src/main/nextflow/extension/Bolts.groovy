@@ -467,6 +467,21 @@ class Bolts {
         (Map)normalize0((Map)config)
     }
 
+    static ConfigObject toConfigObject(Map self) {
+
+        def result = new ConfigObject()
+        self.each { key, value ->
+            if( value instanceof Map ) {
+                result.put( key, toConfigObject((Map)value) )
+            }
+            else {
+                result.put( key, value )
+            }
+        }
+
+        return result
+    }
+
     static private normalize0( config ) {
 
         if( config instanceof Map ) {
