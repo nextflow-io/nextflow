@@ -349,6 +349,7 @@ to specify your bucket credentials. For example::
     aws {
         accessKey = '<YOUR S3 ACCESS KEY>'
         secretKey = '<YOUR S3 SECRET KEY>'
+        region = '<REGION IDENTIFIER>'
     }
 
 Click the following link to lean more about `AWS Security Credentials <http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html>`_.

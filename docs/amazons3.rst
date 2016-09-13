@@ -44,8 +44,9 @@ The AWS access and secret keys can be specified by using the ``aws`` section in 
 file as shown below::
 
   aws {
-    accessKey = 'Your AWS access key'
-    secretKey = 'Your AWS secret key'
+    accessKey = '<Your AWS access key>'
+    secretKey = '<Your AWS secret key>'
+    region = '<AWS region identifier>'
   }
 
 
