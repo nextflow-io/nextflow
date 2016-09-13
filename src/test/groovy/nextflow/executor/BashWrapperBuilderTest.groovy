@@ -836,7 +836,7 @@ class BashWrapperBuilderTest extends Specification {
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
-                sudo docker rm \$NXF_BOXID &>/dev/null &
+                sudo docker rm \$NXF_BOXID &>/dev/null || true
                 """
                         .stripIndent().leftTrim()
 
@@ -944,7 +944,7 @@ class BashWrapperBuilderTest extends Specification {
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
-                docker rm \$NXF_BOXID &>/dev/null &
+                docker rm \$NXF_BOXID &>/dev/null || true
                 """
                         .stripIndent().leftTrim()
 
@@ -1273,7 +1273,7 @@ class BashWrapperBuilderTest extends Specification {
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
-                docker rm \$NXF_BOXID &>/dev/null &
+                docker rm \$NXF_BOXID &>/dev/null || true
                 """
                         .stripIndent().leftTrim()
 
@@ -1413,7 +1413,7 @@ class BashWrapperBuilderTest extends Specification {
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
-                docker rm \$NXF_BOXID &>/dev/null &
+                docker rm \$NXF_BOXID &>/dev/null || true
                 """
                         .stripIndent().leftTrim()
     }

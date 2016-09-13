@@ -493,7 +493,7 @@ class BashWrapperBuilder {
          */
         if( containerBuilder?.removeCommand ) {
             // remove the container in this way because 'docker run --rm'  fail in some cases -- see https://groups.google.com/d/msg/docker-user/0Ayim0wv2Ls/-mZ-ymGwg8EJ
-            wrapper << containerBuilder.removeCommand << ' &>/dev/null &' << ENDL
+            wrapper << containerBuilder.removeCommand << ' &>/dev/null || true' << ENDL
         }
 
         /*
