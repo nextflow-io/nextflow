@@ -200,6 +200,34 @@ class ChannelTest extends Specification {
 
     }
 
+    def testEscapeGlob() {
+
+        setup:
+        def folder = tempDir.root
+        def file1 = Files.createFile(folder.resolve('file1.txt'))
+        def file2 = Files.createFile(folder.resolve('file*.txt'))
+        def file3 = Files.createFile(folder.resolve('file?.txt'))
+        def sub1 = Files.createDirectories(folder.resolve('sub[a-b]'))
+        def file5 = Files.createFile(sub1.resolve('file5.log'))
+        def file6 = Files.createFile(sub1.resolve('file6.txt'))
+
+        when:
+        def result = Channel.fromPath("$folder/file\\*.txt").toSortedList().getVal()
+        then:
+        result == [file2]
+
+        when:
+        result = Channel.fromPath("$folder/file*.txt", glob: false).toSortedList().getVal()
+        then:
+        result == [file2]
+
+        when:
+        result = Channel.fromPath("$folder/sub\\[a-b\\]/file*").toSortedList().getVal()
+        then:
+        result == [file5,file6]
+
+    }
+
 
 
     def testStringEvents() {
@@ -431,14 +459,6 @@ class ChannelTest extends Specification {
 
     }
 
-
-//    def 'should throw exeception' () {
-//        when:
-//        Channel.empty().ifEmpty { throw new FileNotFoundException() }
-//        sleep 100
-//        then:
-//        thrown(FileNotFoundException)
-//    }
 
 
 }

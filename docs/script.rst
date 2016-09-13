@@ -424,7 +424,7 @@ given a file path string. For example::
 The ``file`` method can reference either `files` or `directories` depending on what the string path is locating in the
 file system.
 
-When using a wildcard character i.e. ``*`` or ``?`` the argument is interpreted as a `glob`_ path matcher
+When using wildcard characters i.e. ``*``, ``?``, ``[]`` and ``{}`` the argument is interpreted as a `glob`_ path matcher
 and the ``file`` method returns a list object holding the path of files
 whose name matches the specified pattern, or an empty list if no match is found. For example::
 
@@ -442,6 +442,7 @@ The list of available options is shown below:
 =============== ===================
 Name            Description
 =============== ===================
+glob            When ``true`` interprets characters ``*``, ``?``, ``[[]]`` and ``{}`` as glob wildcards, otherwise handles them as normal characters (default: ``true``)
 type            Type of paths returned, either ``file``, ``dir`` or ``any`` (default: ``file``)
 hidden          When ``true`` includes hidden files in the resulting paths (default: ``false``)
 maxDepth        Maximum number of directory levels to visit (default: `no limit`)

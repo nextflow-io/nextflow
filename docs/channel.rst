@@ -168,6 +168,7 @@ and directory starting with a ``a`` prefix.
 =============== ===================
 Name            Description
 =============== ===================
+glob            When ``true`` interprets characters ``*``, ``?``, ``[[]]`` and ``{}`` as glob wildcards, otherwise handles them as normal characters (default: ``true``)
 type            Type of paths returned, either ``file``, ``dir`` or ``any`` (default: ``file``)
 hidden          When ``true`` includes hidden files in the resulting paths (default: ``false``)
 maxDepth        Maximum number of directory levels to visit (default: `no limit`)

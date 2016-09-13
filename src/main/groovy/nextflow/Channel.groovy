@@ -45,6 +45,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.extension.GroupTupleOp
 import nextflow.extension.MapOp
 import nextflow.file.FileHelper
+import nextflow.file.FilePatternSplitter
 import nextflow.util.Duration
 import org.codehaus.groovy.runtime.NullObject
 /**
@@ -178,7 +179,7 @@ class Channel  {
         // verify that the 'type' parameter has a valid value
         checkParams( 'path', opts, VALID_PATH_PARAMS )
 
-        def result = fromPath0(opts,filePattern)
+        final result = fromPath0(opts, filePattern)
         session.dag.addSourceNode('Channel.fromPath', result)
         return result
     }
@@ -188,11 +189,8 @@ class Channel  {
         if( filePattern instanceof Pattern )
             return fromPathWithPattern(options, filePattern)
 
-        if( filePattern instanceof Path )
-            return fromPathWithMap(options, filePattern)
-
         else
-            return fromPathWithMap(options, filePattern.toString() as Path)
+            return fromPathWithMap(options, filePattern )
 
     }
 
@@ -200,26 +198,42 @@ class Channel  {
         assert filePattern
 
         // split the folder and the pattern
-        def ( String folder, String pattern, String scheme ) = FileHelper.getFolderAndPattern(filePattern.toString())
-        def fs = FileHelper.fileSystemForScheme(scheme)
-        pathImpl( 'regex', folder, pattern, opts, fs )
+        final splitter = FilePatternSplitter.regex().parse(filePattern.toString())
+        final fs = FileHelper.fileSystemForScheme(splitter.scheme)
+        pathImpl( 'regex', splitter.parent, splitter.fileName, opts, fs )
     }
 
 
-    static private DataflowChannel<Path> fromPathWithMap( Map opts = null, Path path ) {
-        assert path
+    static private DataflowChannel<Path> fromPathWithMap( Map opts = null, filePattern ) {
 
-        final fs = path.getFileSystem()
-        def filePattern = path.toString()
-
-        if( !FileHelper.isGlobPattern(filePattern)) {
-            return Nextflow.channel( path.complete() )
+        def glob = opts?.containsKey('glob') ? opts.glob as boolean : true
+        if( !glob ) {
+            def result = ( filePattern instanceof Path
+                    ? filePattern.complete()
+                    : FileHelper.asPath(filePattern.toString()).complete())
+            return Nextflow.channel(result)
         }
 
-        // split the folder and the pattern
-        def ( String folder, String pattern ) = FileHelper.getFolderAndPattern(filePattern)
+        FileSystem fs = null
+        String path
+        if( filePattern instanceof Path ) {
+            fs = filePattern.getFileSystem()
+            path = filePattern.toString()
+        }
+        else {
+            path = filePattern.toString()
+        }
 
-        def result = pathImpl('glob', folder, pattern, opts, fs)
+        def splitter = FilePatternSplitter.glob().parse(path)
+        if( !fs ) fs = FileHelper.fileSystemForScheme(splitter.scheme)
+
+        if( !splitter.isPattern() ) {
+            return Nextflow.channel( fs.getPath( splitter.strip(path) ).complete() )
+        }
+
+        final folder = splitter.parent
+        final pattern = splitter.fileName
+        final result = pathImpl('glob', folder, pattern, opts, fs)
         return result
     }
 
@@ -231,7 +245,8 @@ class Channel  {
             followLinks: [false, true],
             hidden: [false, true],
             maxDepth: Integer,
-            exists: [false, true]
+            exists: [false, true],
+            glob: [false,true]
             ]
 
     /**
@@ -361,9 +376,9 @@ class Channel  {
     static DataflowChannel<Path> watchPath( Pattern filePattern, String events = 'create' ) {
         assert filePattern
         // split the folder and the pattern
-        def ( String folder, String pattern, String scheme ) = FileHelper.getFolderAndPattern(filePattern.toString())
-        def fs = FileHelper.fileSystemForScheme(scheme)
-        def result = watchImpl( 'regex', folder, pattern, false, events, fs )
+        final splitter = FilePatternSplitter.regex().parse(filePattern.toString())
+        def fs = FileHelper.fileSystemForScheme(splitter.scheme)
+        def result = watchImpl( 'regex', splitter.parent, splitter.fileName, false, events, fs )
 
         session.dag.addSourceNode('Channel.watchPath', result)
         return result
@@ -386,8 +401,11 @@ class Channel  {
      *
      */
     static DataflowChannel<Path> watchPath( String filePattern, String events = 'create' ) {
-        def ( String folder, String pattern, String scheme ) = FileHelper.getFolderAndPattern(filePattern)
-        def fs = FileHelper.fileSystemForScheme(scheme)
+
+        final splitter = FilePatternSplitter.regex().parse(filePattern.toString())
+        final fs = FileHelper.fileSystemForScheme(splitter.scheme)
+        final folder = splitter.parent
+        final pattern = splitter.fileName
         def result = watchImpl('glob', folder, pattern, pattern.startsWith('*'), events, fs)
 
         session.dag.addSourceNode('Channel.watchPath', result)
@@ -395,9 +413,11 @@ class Channel  {
     }
 
     static DataflowChannel<Path> watchPath( Path path, String events = 'create' ) {
-        def fs = path.getFileSystem()
-        def ( String folder, String pattern ) = FileHelper.getFolderAndPattern(path.toString())
-        def result = watchImpl('glob', folder, pattern, pattern.startsWith('*'), events, fs)
+        final fs = path.getFileSystem()
+        final splitter = FilePatternSplitter.regex().parse(path.toString())
+        final folder = splitter.parent
+        final pattern = splitter.fileName
+        final result = watchImpl('glob', folder, pattern, pattern.startsWith('*'), events, fs)
 
         session.dag.addSourceNode('Channel.watchPath', result)
         return result
