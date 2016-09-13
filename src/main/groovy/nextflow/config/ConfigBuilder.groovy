@@ -467,7 +467,7 @@ class ConfigBuilder {
     /**
      * @return A the application options hold in a {@code ConfigObject} instance
      */
-    ConfigObject build() {
+    Map build() {
 
         // -- configuration file(s)
         def configFiles = validateConfigFiles(options?.config)
@@ -476,16 +476,8 @@ class ConfigBuilder {
         if( cmdRun )
             configRunOptions(config, cmdRun)
 
-        return config
+        return config.toMap()
     }
 
-    /**
-     * @param options The command line {@link CliOptions} object
-     * @param currentPath The current working path where the file `nextflow.config` is eventually located
-     * @return The resulting config {@link ConfigObject} object
-     */
-    static ConfigObject defaultConfig() {
-        new ConfigBuilder() .build()
-    }
 
 }

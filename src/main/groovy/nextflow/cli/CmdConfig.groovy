@@ -71,7 +71,7 @@ class CmdConfig extends CmdBase {
                 .build()
 
         PrintWriter stdout = new PrintWriter(System.out,true);
-        config.writeTo( stdout )
+        config.toConfigObject().writeTo( stdout )
     }
 
 

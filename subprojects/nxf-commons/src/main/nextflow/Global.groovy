@@ -84,8 +84,11 @@ class Global {
             a = ((Map)config.aws).accessKey
             b = ((Map)config.aws).secretKey
 
-            if( a && b )
+            if( a && b ) {
+                log.debug "Using AWS credentials defined in nextflow config file"
                 return [a, b]
+            }
+
         }
 
         // as define by amazon doc
