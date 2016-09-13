@@ -88,8 +88,11 @@ class WorkflowMetadataTest extends Specification {
         def metadata = new WorkflowMetadata(runner)
         session.binding.setVariable('workflow',metadata)
         then:
+        metadata.scriptId == '0e44b16bdeb8ef9f4d8aadcf520e717d'
+        metadata.scriptFile == manager.scriptFile.main
+        metadata.scriptName == 'main.nf'
         metadata.repository == 'https://github.com/nextflow-io/nextflow.git'
-        metadata.commitId == commit.name().substring(0,10)
+        metadata.commitId == commit.name()
         metadata.revision == 'master'
         metadata.container == 'busybox/latest'
         metadata.projectDir == dir

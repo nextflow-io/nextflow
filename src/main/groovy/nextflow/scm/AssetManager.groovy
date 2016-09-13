@@ -630,7 +630,7 @@ class AssetManager {
             return null
 
         if( head.isSymbolic() ) {
-            return new RevisionInfo(head.objectId.name()?.substring(0,10), Repository.shortenRefName(head.getTarget().getName()))
+            return new RevisionInfo(head.objectId.name(), Repository.shortenRefName(head.getTarget().getName()))
         }
 
         if( !head.getObjectId() )
@@ -640,10 +640,10 @@ class AssetManager {
         Map<ObjectId, String> allNames = git.nameRev().addPrefix( "refs/tags/" ).add(head.objectId).call()
         def name = allNames.get( head.objectId )
         if( name ) {
-            return new RevisionInfo(head.objectId.name()?.substring(0,10), name)
+            return new RevisionInfo(head.objectId.name(), name)
         }
         else {
-            return new RevisionInfo(head.objectId.name()?.substring(0,10))
+            return new RevisionInfo(head.objectId.name())
         }
     }
 
@@ -868,7 +868,7 @@ class AssetManager {
             }
 
             if( revision ) {
-                return "${commitId} [${revision}]"
+                return "${commitId.substring(0,10)} [${revision}]"
             }
 
             commitId

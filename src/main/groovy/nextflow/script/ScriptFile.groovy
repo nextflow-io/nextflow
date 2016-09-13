@@ -25,6 +25,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
 import nextflow.scm.AssetManager
+import nextflow.util.CacheHelper
 
 /**
  * Runnable pipeline script file
@@ -66,9 +67,15 @@ class ScriptFile {
     String getText() { main?.text }
 
     /**
-     * @return Repository commitId
+     * @return The repository commitId
      */
-    String getCommitId() { revisionInfo?.commitId }
+    String getCommitId() {
+        revisionInfo?.commitId
+    }
+
+    String getScriptId() {
+        main ? CacheHelper.hasher(main.text).hash().toString() : null
+    }
 
     /**
      * @return Repository tag or branch

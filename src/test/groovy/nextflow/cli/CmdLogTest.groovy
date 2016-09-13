@@ -93,7 +93,7 @@ class CmdLogTest extends Specification {
         cache.close()
 
         def history = new HistoryFile(folder.resolve(HistoryFile.FILE_NAME))
-        history.write(runName,uuid,'run')
+        history.write(runName,uuid,'b3d3aca8eb','run')
 
         when:
         def log = new CmdLog(basePath: folder, args: [runName])
@@ -159,7 +159,7 @@ class CmdLogTest extends Specification {
         cache.close()
 
         def history = new HistoryFile(folder.resolve(HistoryFile.FILE_NAME))
-        history.write(runName,uuid,'run')
+        history.write(runName,uuid,'b3d3aca8eb','run')
 
 
         when:

@@ -25,6 +25,9 @@ The following table lists the properties that can be accessed on the ``workflow`
 =========================== ===========================
 Name                        Description
 =========================== ===========================
+scriptId                    Project main script unique hash ID.
+scriptName                  Project main script file name.
+scriptFile                  Project main script file path.
 repository                  Project repository Git remote URL.
 commitId                    Git commit ID of the executed workflow repository.
 revision                    Git branch/tag of the executed workflow repository.

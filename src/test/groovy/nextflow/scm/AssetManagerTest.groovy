@@ -356,7 +356,7 @@ class AssetManagerTest extends Specification {
         def script = manager.getScriptFile()
         then:
         script.localPath == dir
-        script.commitId == commit.name().substring(0,10)
+        script.commitId == commit.name()
         script.revision == 'master'
         script.parent == dir
         script.text == "println 'Hello world'"

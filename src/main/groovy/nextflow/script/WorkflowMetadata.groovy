@@ -45,6 +45,21 @@ class WorkflowMetadata {
     String runName
 
     /**
+     * The script unique hash key
+     */
+    String scriptId
+
+    /**
+     * The main script file path
+     */
+    Path scriptFile
+
+    /**
+     * The main script name
+     */
+    String scriptName
+
+    /**
      * Project repository Git remote URL
      */
     String repository
@@ -157,6 +172,9 @@ class WorkflowMetadata {
      */
     WorkflowMetadata( ScriptRunner owner ) {
         this.owner = owner
+        this.scriptId = owner.scriptFile.scriptId
+        this.scriptFile = owner.scriptFile.main
+        this.scriptName = owner.scriptFile.main?.fileName
         this.repository = owner.scriptFile.repository
         this.commitId = owner.scriptFile.commitId
         this.revision = owner.scriptFile.revision

@@ -246,8 +246,9 @@ class CmdRun extends CmdBase implements HubOptions {
         if( script.exists() ) {
             if( revision )
                 throw new AbortOperationException("Revision option cannot be used running a script")
-            log.info "Launching $script [$runName]"
-            return new ScriptFile(script)
+            def result = new ScriptFile(script)
+            log.info "Launching `$script` [$runName] - revision: ${result.getScriptId()?.substring(0,10)}"
+            return result
         }
 
         /*
@@ -267,7 +268,7 @@ class CmdRun extends CmdBase implements HubOptions {
             manager.checkout(revision)
             manager.updateModules()
             def scriptFile = manager.getScriptFile()
-            log.info "Launching '$repo' [$runName] - revision: ${scriptFile.revisionInfo}"
+            log.info "Launching `$repo` [$runName] - revision: ${scriptFile.revisionInfo}"
             // return the script file
             return scriptFile
         }

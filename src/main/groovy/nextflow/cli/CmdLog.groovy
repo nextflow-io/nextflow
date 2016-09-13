@@ -203,10 +203,12 @@ class CmdLog extends CmdBase implements CacheBase {
                     .head('DURATION')
                     .head('RUN NAME')
                     .head('STATUS')
+                    .head('REVISION ID')
                     .head('SESSION ID')
                     .head('COMMAND')
 
-        history.eachRow { List row ->
+        history.eachRow { List<String> row ->
+            row[4] = row[4].size()>10 ? row[4].substring(0,10) : row[4]
             table.append(row)
         }
 
