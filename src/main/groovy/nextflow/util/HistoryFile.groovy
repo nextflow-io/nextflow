@@ -60,14 +60,14 @@ class HistoryFile extends File {
         super(file.toString())
     }
 
-    void write( String name, UUID key, args, Date date = null ) {
+    void write( String name, UUID key, String revisionId, args, Date date = null ) {
         assert key
         assert args != null
 
         withFileLock {
             def timestamp = date ?: new Date()
             def value = args instanceof Collection ? args.join(' ') : args
-            this << new Record(timestamp: timestamp, runName: name, sessionId: key, command: value).toString() << '\n'
+            this << new Record(timestamp: timestamp, runName: name, revisionId: revisionId, sessionId: key, command: value).toString() << '\n'
         }
     }
 
@@ -355,6 +355,7 @@ class HistoryFile extends File {
         Duration duration
         String runName
         String status
+        String revisionId
         UUID sessionId
         String command
 
@@ -371,11 +372,12 @@ class HistoryFile extends File {
         protected Record() {}
 
         List<String> toList() {
-            def line = new ArrayList<String>(5)
+            def line = new ArrayList<String>(7)
             line << (timestamp ? TIMESTAMP_FMT.format(timestamp) : '-')
             line << (duration ? duration.toString() : '-')
             line << (runName ?: '-')
             line << (status ?: '-')
+            line << (revisionId ?: '-')
             line << (sessionId.toString())
             line << (command ?: '-')
         }
@@ -390,15 +392,16 @@ class HistoryFile extends File {
             if( cols.size() == 2 )
                 return new Record(cols[0])
 
-            if( cols.size()==6 ) {
+            if( cols.size()==7 ) {
 
                 return new Record(
                         timestamp: TIMESTAMP_FMT.parse(cols[0]),
                         duration: cols[1] && cols[1] != '-' ? Duration.of(cols[1]) : null,
                         runName: cols[2],
                         status: cols[3] && cols[3] != '-' ? cols[3] : null,
-                        sessionId: UUID.fromString(cols[4]),
-                        command: cols[5]
+                        revisionId: cols[4],
+                        sessionId: UUID.fromString(cols[5]),
+                        command: cols[6]
                 )
             }
 

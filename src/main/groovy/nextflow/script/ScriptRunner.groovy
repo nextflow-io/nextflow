@@ -343,7 +343,8 @@ class ScriptRunner {
             return
         def p = cli.indexOf('nextflow ')
         commandLine = p != -1 ? 'nextflow ' + cli.substring(p+9) : cli
-        HistoryFile.DEFAULT.write( name, session.uniqueId, commandLine )
+        def revisionId = scriptFile.commitId ?: scriptFile.scriptId
+        HistoryFile.DEFAULT.write( name, session.uniqueId, revisionId, commandLine )
     }
 
 
