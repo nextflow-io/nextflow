@@ -173,6 +173,49 @@ synchronisation, file(s) staging/un-staging, etc.
 Alternatively the same declaration can be defined in the file `$HOME/.nextflow/config`, which is supposed to hold 
 the global *Nextflow* configuration.
 
+Cloud support
+-------------
+
+Nextflow supports out of the box Amazon AWS cloud allowing you to setup a computing cluster, deploy and 
+run your pipeline in the AWS infrastructure in a few commands.
+
+The cloud configuration settings need to be specified in the `nextflow.config` file as shown below: 
+
+    cloud {
+          imageId = 'ami-43f49030'
+          instanceType = 't2.micro'
+          subnetId = 'subnet-05222a43'
+          sharedStorageId = 'fs-1803efd1'
+          spotPrice = 0.04 
+    }
+
+    aws {
+        accessKey = 'xxx'
+        secretKey = 'yyy'
+        region = 'eu-west-1
+    }
+    
+    
+Replace the settings in the above example with values of your choice. The attribute `sharedStorageId` is optional, 
+when provided the [Amazon EFS](https://aws.amazon.com/efs/) file system is automatically mounted in the configured 
+cloud environment. The `spotPrice` attribute allows you to use [EC2 Spot instances](https://aws.amazon.com/ec2/spot/) 
+in place of regular on-request instances, bidding for the specified price.
+ 
+The settings in the `aws` block can be omitted, in that case Nextflow will use the AWS credentials defined in 
+your environment, using the standard AWS variables and configuration files. 
+
+Once defined the configuration of your cloud environment, run the following command in the folder where the file 
+`nextflow.config` was created: 
+
+    nextflow cloud create my-cluster -c <num-of-nodes>
+    
+The string `my-cluster` identifies the cluster instance. Replace it with a name of your choice. 
+Finally replace `num-of-nodes` with the actual number of instances that will made-up the cluster.
+WARNING: you will be charged accordingly the type and the number of instances chosen.
+
+Once the cluster deployment completes, SSH in the master node following the instruction that will be printed. Then 
+you will be able to run your Nextflow pipeline as usual. 
+    
 
 Required dependencies
 ---------------------
