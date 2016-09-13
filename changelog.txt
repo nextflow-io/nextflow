@@ -1,6 +1,19 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.22.0.RC2 - 12 Sep 2016 
+- Fixed File name containing glob wildcards cannot be captured in the process output #219
+- Fixed Work dir containing glob wildcards are not supported #194
+- Added `revision id` to execution log
+- Added `scriptId`, `scriptFile` and `scriptName` attributes to workflow metadata object 
+- Added time delay penalty on error burst to prevent failing node to drain all pending jobs
+- Load classes without creating an instance of each cloud driver
+- Improved AWS driver missing credentials error report
+- Merged experimental Kubernetes support
+- Improved clean and log command
+- Added EFS default mount path
+- Refactored daemon shutdown
+
 0.22.0.RC1 - 1 Sep 2016 
 - Fixed Implement clean up command #19
 - Fixed Trace file should include cached tasks #114
