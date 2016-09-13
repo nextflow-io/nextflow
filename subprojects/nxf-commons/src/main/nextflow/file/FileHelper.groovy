@@ -58,10 +58,6 @@ class FileHelper {
 
     static final private Path localTempBasePath
 
-    static final public Pattern GLOB_CURLY_BRACKETS = Pattern.compile(/(.*)(\{.*,.*\})(.*)/)
-
-    static final public Pattern GLOB_SQUARE_BRACKETS = Pattern.compile(/(.*)(\[.+\])(.*)/)
-
     static private Random rndGen = new Random()
 
     static final public char[] ALPHA = ('a'..'z') as char[]
@@ -616,23 +612,6 @@ class FileHelper {
         }
     }
 
-    /**
-     * Whenever the specified string is a glob file pattern
-     *
-     * @link  http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
-     *
-     * @param filePattern
-     * @return
-     */
-    static isGlobPattern( String filePattern ) {
-        assert filePattern
-        boolean glob  = false
-        glob |= filePattern.contains('*')
-        glob |= filePattern.contains('?')
-        glob |= GLOB_SQUARE_BRACKETS.matcher(filePattern).matches()
-        return glob || GLOB_CURLY_BRACKETS.matcher(filePattern).matches()
-    }
-
 
     /**
      * Returns a {@code PathMatcher} that performs match operations on the
@@ -728,18 +707,19 @@ class FileHelper {
         final syntax = options?.syntax ?: 'glob'
         final relative = options?.relative == true
 
-        final matcher = getPathMatcherFor("$syntax:${folder.resolve(filePattern)}", folder.fileSystem)
+        final matcher = getPathMatcherFor("$syntax:${filePattern}", folder.fileSystem)
         final singleParam = action.getMaximumNumberOfParameters() == 1
 
         Files.walkFileTree(folder, walkOptions, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
 
             @Override
-            public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) throws IOException {
-                int depth = path.nameCount - folder.nameCount
-                log.trace "visit dir ($depth) > $path; includeDir: $includeDir; matches: ${matcher.matches(path)}; isDir: ${attrs.isDirectory()}"
+            public FileVisitResult preVisitDirectory(Path fullPath, BasicFileAttributes attrs) throws IOException {
+                final int depth = fullPath.nameCount - folder.nameCount
+                final path = folder.relativize(fullPath)
+                log.trace "visitFiles > dir=$path; depth=$depth; includeDir=$includeDir; matches=${matcher.matches(path)}; isDir=${attrs.isDirectory()}"
 
-                if (includeDir && matcher.matches(path) && attrs.isDirectory() && (includeHidden || !isHidden(path))) {
-                    def result = relative ? folder.relativize(path) : path
+                if (depth>0 && includeDir && matcher.matches(path) && attrs.isDirectory() && (includeHidden || !isHidden(fullPath))) {
+                    def result = relative ? path : fullPath
                     singleParam ? action.call(result) : action.call(result,attrs)
                 }
 
@@ -747,11 +727,12 @@ class FileHelper {
             }
 
             @Override
-            public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
-                log.trace "visit file > $path; includeFile: $includeFile; matches: ${matcher.matches(path)}; isRegularFile: ${attrs.isRegularFile()}"
+            public FileVisitResult visitFile(Path fullPath, BasicFileAttributes attrs) throws IOException {
+                final path = folder.relativize(fullPath)
+                log.trace "visitFiles > file=$path; includeFile=$includeFile; matches=${matcher.matches(path)}; isRegularFile=${attrs.isRegularFile()}"
 
-                if (includeFile && matcher.matches(path) && attrs.isRegularFile() && (includeHidden || !isHidden(path))) {
-                    def result = relative ? folder.relativize(path) : path
+                if (includeFile && matcher.matches(path) && attrs.isRegularFile() && (includeHidden || !isHidden(fullPath))) {
+                    def result = relative ? path : fullPath
                     singleParam ? action.call(result) : action.call(result,attrs)
                 }
 
@@ -780,49 +761,6 @@ class FileHelper {
             return filePattern.split('/').findAll { it }.size()-1
 
         return 0
-    }
-
-
-
-    static List<String> getFolderAndPattern( String filePattern ) {
-
-        def scheme = null;
-        int i = filePattern.indexOf('://')
-        if( i != -1 ) {
-            scheme = filePattern.substring(0, i)
-            filePattern = filePattern.substring(i+3)
-        }
-
-        def folder
-        def pattern
-        def matcher
-        int p = filePattern.indexOf('*')
-        if( p != -1 ) {
-            i = filePattern.substring(0,p).lastIndexOf('/')
-        }
-        else if( (matcher=FileHelper.GLOB_CURLY_BRACKETS.matcher(filePattern)).matches() ) {
-            def prefix = matcher.group(1)
-            if( prefix ) {
-                i = prefix.contains('/') ? prefix.lastIndexOf('/') : -1
-            }
-            else {
-                i = matcher.start(2) -1
-            }
-        }
-        else {
-            i = filePattern.lastIndexOf('/')
-        }
-
-        if( i != -1 ) {
-            folder = filePattern.substring(0,i+1)
-            pattern = filePattern.substring(i+1)
-        }
-        else {
-            folder = './'
-            pattern = filePattern
-        }
-
-        return [ folder, pattern, scheme ] as List<String>
     }
 
 

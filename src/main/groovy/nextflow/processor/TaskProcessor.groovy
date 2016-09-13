@@ -58,6 +58,7 @@ import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
+import nextflow.file.FilePatternSplitter
 import nextflow.script.BaseScript
 import nextflow.script.BasicMode
 import nextflow.script.EachInParam
@@ -1317,10 +1318,12 @@ class TaskProcessor {
         def entries = param.getFilePatterns(context, task.workDir)
 
         // for each of them collect the produced files
-        entries.each { String pattern ->
+        entries.each { String filePattern ->
             List<Path> result = null
-            if( FileHelper.isGlobPattern(pattern) ) {
-                result = fetchResultFiles(param, pattern, workDir)
+
+            def splitter = param.glob ? FilePatternSplitter.glob().parse(filePattern) : null
+            if( splitter?.isPattern() ) {
+                result = fetchResultFiles(param, filePattern, workDir)
                 // filter the inputs
                 if( !param.includeInputs ) {
                     result = filterByRemovingStagedInputs(task, result)
@@ -1328,16 +1331,17 @@ class TaskProcessor {
                 }
             }
             else {
-                def file = workDir.resolve(pattern)
+                def path = param.glob ? splitter.strip(filePattern) : filePattern
+                def file = workDir.resolve(path)
                 def exists = param.followLinks ? file.exists() : file.exists(LinkOption.NOFOLLOW_LINKS)
                 if( exists )
                     result = [file]
                 else
-                    log.debug "Process `${task.name}` is unable to find [${file.class.simpleName}]: `$file` (pattern: `$pattern`)"
+                    log.debug "Process `${task.name}` is unable to find [${file.class.simpleName}]: `$file` (pattern: `$filePattern`)"
             }
 
             if( !result )
-                throw new MissingFileException("Missing output file(s) `$pattern` expected by process `${task.name}`")
+                throw new MissingFileException("Missing output file(s) `$filePattern` expected by process `${task.name}`")
 
             allFiles.addAll(result)
         }

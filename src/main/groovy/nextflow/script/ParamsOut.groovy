@@ -27,9 +27,9 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.exception.IllegalFileException
+import nextflow.file.FilePatternSplitter
 import nextflow.processor.ProcessConfig
 import nextflow.util.BlankSeparatedList
-
 /**
  * Model a process generic input parameter
  *
@@ -204,7 +204,9 @@ class FileOutParam extends BaseOutParam implements OutParam {
     /**
      * ONLY FOR TESTING DO NOT USE
      */
-    protected FileOutParam(Map params) { }
+    protected FileOutParam(Map params) {
+        super(new Binding(), [])
+    }
 
     /**
      * The character used to separate multiple names (pattern) in the output specification
@@ -239,6 +241,8 @@ class FileOutParam extends BaseOutParam implements OutParam {
      */
     protected boolean followLinks = true
 
+    protected boolean glob = true
+
     private GString gstring
 
     private Closure<String> dynamicObj
@@ -256,6 +260,8 @@ class FileOutParam extends BaseOutParam implements OutParam {
     Integer getMaxDepth() { maxDepth }
 
     boolean getFollowLinks() { followLinks }
+
+    boolean getGlob() { glob }
 
 
     /**
@@ -296,6 +302,11 @@ class FileOutParam extends BaseOutParam implements OutParam {
 
     FileOutParam followLinks( boolean value ) {
         followLinks = value
+        return this
+    }
+
+    FileOutParam glob( boolean value ) {
+        glob = value
         return this
     }
 
@@ -374,7 +385,7 @@ class FileOutParam extends BaseOutParam implements OutParam {
     }
 
     @PackageScope
-    static String relativize(String path, Path workDir) {
+    String relativize(String path, Path workDir) {
         if( !path.startsWith('/') )
             return path
 
@@ -389,9 +400,9 @@ class FileOutParam extends BaseOutParam implements OutParam {
     }
 
     @PackageScope
-    static String relativize(Path path, Path workDir) {
+    String relativize(Path path, Path workDir) {
         if( !path.isAbsolute() )
-            return path.toString()
+            return glob ? FilePatternSplitter.GLOB.escape(path) : path
 
         if( !path.startsWith(workDir) )
             throw new IllegalFileException("File `$path` is out of the scope of process working dir: $workDir")
@@ -399,7 +410,8 @@ class FileOutParam extends BaseOutParam implements OutParam {
         if( path.nameCount == workDir.nameCount )
             throw new IllegalFileException("Missing output file name")
 
-        return path.subpath(workDir.getNameCount(), path.getNameCount()).toString()
+        final rel = path.subpath(workDir.getNameCount(), path.getNameCount())
+        return glob ? FilePatternSplitter.GLOB.escape(rel) : rel
     }
 
     /**

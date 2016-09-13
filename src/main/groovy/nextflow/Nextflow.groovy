@@ -19,6 +19,8 @@
  */
 
 package nextflow
+
+import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -28,6 +30,7 @@ import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.exception.ProcessNotRecoverableException
 import nextflow.exception.StopSplitIterationException
 import nextflow.file.FileHelper
+import nextflow.file.FilePatternSplitter
 import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.util.ArrayTuple
@@ -97,9 +100,12 @@ class Nextflow {
         return channel(items as List)
     }
 
-    static private fileNamePattern( String path, Map opts, java.nio.file.FileSystem fs ) {
+    static private fileNamePattern( FilePatternSplitter splitter, Map opts, FileSystem fs ) {
 
-        def ( String folder, String pattern, String scheme ) = FileHelper.getFolderAndPattern(path)
+        final scheme = splitter.scheme
+        final folder = splitter.parent
+        final pattern = splitter.fileName
+
         if( !fs )
             fs = FileHelper.fileSystemForScheme(scheme)
 
@@ -117,24 +123,52 @@ class Nextflow {
 
     }
 
+    /**
+     * Get one or more file object given the specified path or glob pattern.
+     *
+     * @param options
+     *      A map holding one or more of the following options:
+     *      - type: Type of paths returned, either `file`, `dir` or `any` (default: `file`)
+     *      - hidden: When `true` includes hidden files in the resulting paths (default: `false`)
+     *      - maxDepth: Maximum number of directory levels to visit (default: no limit)
+     *      - followLinks: When `true` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: `true`)
+     *
+     * @param path A file path eventually including a glob pattern e.g. /some/path/file*.txt
+     * @return An instance of {@link Path} when a single file is matched or a list of {@link Path}s
+     */
     static file( Map options = null, def path ) {
         assert path
 
         if( path == null )
             return null
 
-        final isPath = path instanceof Path
-        final str = path.toString()
-        final fs = isPath ? path.getFileSystem() : null
+        def glob = options?.containsKey('glob') ? options.glob as boolean : true
+        if( !glob ) {
+            return ( path instanceof Path
+                    ? path.complete()
+                    : FileHelper.asPath(path.toString()).complete())
+        }
+
 
         // if it isn't a glob pattern simply return it a normalized absolute Path object
-        if( !FileHelper.isGlobPattern(str) ) {
-            if( !isPath ) path = FileHelper.asPath(str)
-            return path.complete()
+        def splitter = FilePatternSplitter.glob().parse(path.toString())
+        if( !splitter.isPattern() ) {
+            def normalised = splitter.strip(path.toString())
+            if( path instanceof Path )  {
+                return path.fileSystem.getPath(normalised).complete()
+            }
+            else {
+                return FileHelper.asPath(normalised).complete()
+            }
+        }
+
+        FileSystem fs = null
+        if( path instanceof Path ) {
+            fs = path.getFileSystem()
         }
 
         // revolve the glob pattern returning all matches
-        return fileNamePattern(path.toString(), options, fs)
+        return fileNamePattern(splitter, options, fs)
     }
 
     static files( Map options=null, def path ) {

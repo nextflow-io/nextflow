@@ -19,7 +19,6 @@
  */
 
 package nextflow.file
-
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
@@ -32,7 +31,6 @@ import com.google.common.jimfs.Jimfs
 import nextflow.Global
 import nextflow.ISession
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -464,6 +462,77 @@ class FileHelperTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'visit files in a base path with glob characters' () {
+        given:
+        def folder = Files.createTempDirectory('test[a-b]')
+        folder.resolve('file1.txt').text = 'file 1'
+        folder.resolve('file2.fa').text = 'file 2'
+
+        when:
+        def result = []
+        FileHelper.visitFiles(folder, 'file*', relative: true) { result << it.toString() }
+        then:
+        result.sort() == ['file1.txt', 'file2.fa']
+
+        cleanup:
+        folder.deleteDir()
+    }
+
+    def 'match files containing glob characters' () {
+        given:
+        def folder = Files.createTempDirectory('test[a-b]')
+        folder.resolve('file*.txt').text = 'file 1'
+        folder.resolve('file?.fa').text = 'file 2'
+        folder.resolve('file{a,b}.fa').text = 'file 3'
+        folder.resolve('file[a-b].fa').text = 'file 4'
+
+        when:
+        def result = []
+        FileHelper.visitFiles(folder, 'x*', relative: true) { result << it.toString() }
+        then:
+        result.sort() == []
+
+        when:
+        result = []
+        FileHelper.visitFiles(folder, 'file\\*.txt', relative: true) { result << it.toString() }
+        then:
+        result.sort() == ['file*.txt']
+
+        when:
+        result = []
+        FileHelper.visitFiles(folder, 'file\\?.fa', relative: true) { result << it.toString() }
+        then:
+        result.sort() == ['file?.fa']
+
+        when:
+        result = []
+        FileHelper.visitFiles(folder, 'file\\{a,b\\}.fa', relative: true) { result << it.toString() }
+        then:
+        result.sort() == ['file{a,b}.fa']
+
+        when:
+        result = []
+        FileHelper.visitFiles(folder, 'file\\[a-b\\].fa', relative: true) { result << it.toString() }
+        then:
+        result.sort() == ['file[a-b].fa']
+
+        when:
+        result = []
+        FileHelper.visitFiles(folder, 'file*.fa', relative: true) { result << it.toString() }
+        then:
+        result.sort() == ['file?.fa','file[a-b].fa','file{a,b}.fa']
+
+        when:
+        result = []
+        FileHelper.visitFiles(folder, 'file\\[*\\].fa', relative: true) { result << it.toString() }
+        then:
+        result.sort() == [ 'file[a-b].fa' ]
+
+
+        cleanup:
+        folder.deleteDir()
+    }
+
     def 'get max depth'() {
         expect:
         FileHelper.getMaxDepth(1,null) == 1
@@ -479,35 +548,6 @@ class FileHelperTest extends Specification {
         FileHelper.getMaxDepth(null,'a/**') == Integer.MAX_VALUE
     }
 
-    def 'get path and pattern' () {
-
-        expect:
-        FileHelper.getFolderAndPattern( '/some/file/name.txt' ) == ['/some/file/', 'name.txt', null]
-        FileHelper.getFolderAndPattern( '/some/file/na*.txt' ) == ['/some/file/', 'na*.txt', null]
-        FileHelper.getFolderAndPattern( '/some/file/na??.txt' ) == ['/some/file/', 'na??.txt', null]
-        FileHelper.getFolderAndPattern( '/some/file/*.txt' ) == ['/some/file/', '*.txt', null]
-        FileHelper.getFolderAndPattern( '/some/file/?.txt' ) == ['/some/file/', '?.txt', null]
-        FileHelper.getFolderAndPattern( '/some/file/*' ) == ['/some/file/', '*', null]
-        FileHelper.getFolderAndPattern( '/some/file/' ) == ['/some/file/', '', null]
-        FileHelper.getFolderAndPattern( 'path/filename.txt' ) == ['path/', 'filename.txt', null]
-        FileHelper.getFolderAndPattern( 'filename.txt' ) == ['./', 'filename.txt', null]
-        FileHelper.getFolderAndPattern( './file.txt' ) == ['./', 'file.txt', null]
-
-        FileHelper.getFolderAndPattern( '/some/file/**/*.txt' ) == ['/some/file/', '**/*.txt', null]
-
-        FileHelper.getFolderAndPattern( 'dxfs:///some/file/**/*.txt' ) == ['/some/file/', '**/*.txt', 'dxfs']
-        FileHelper.getFolderAndPattern( 'dxfs://some/file/**/*.txt' ) == ['some/file/', '**/*.txt', 'dxfs']
-        FileHelper.getFolderAndPattern( 'dxfs://*.txt' ) == ['./', '*.txt', 'dxfs']
-        FileHelper.getFolderAndPattern( 'dxfs:///*.txt' ) == ['/', '*.txt', 'dxfs']
-        FileHelper.getFolderAndPattern( 'dxfs:///**/*.txt' ) == ['/', '**/*.txt', 'dxfs']
-
-        FileHelper.getFolderAndPattern( 'file{a,b}') == ['./', 'file{a,b}', null]
-        FileHelper.getFolderAndPattern( 'test/data/file{a,b}') == ['test/data/', 'file{a,b}', null]
-        FileHelper.getFolderAndPattern( 'test/{file1,file2}') == ['test/', '{file1,file2}', null]
-        FileHelper.getFolderAndPattern( '{file1,file2}') == ['./', '{file1,file2}', null]
-        FileHelper.getFolderAndPattern( '{test/file1,data/file2}') == ['./', '{test/file1,data/file2}', null]
-        FileHelper.getFolderAndPattern( 'data/{p/file1,q/file2}') == ['data/', '{p/file1,q/file2}', null]
-    }
 
     def 'no such file'() {
 
@@ -515,35 +555,6 @@ class FileHelperTest extends Specification {
         FileHelper.visitFiles(Paths.get('/some/missing/path'),'*', { return it })
         then:
         thrown(NoSuchFileException)
-
-    }
-
-    def 'test isGlobPattern' () {
-
-        expect:
-        FileHelper.isGlobPattern(pattern) == result
-
-        where:
-        pattern     | result
-        'hola'      | false
-        '1-2-3'     | false
-        'hello.txt' | false
-        'hello{x'   | false
-        'hello[x'   | false
-        'hello(a)'  | false
-        'some/path' | false
-        '*'         | true
-        'hola*'     | true
-        'hola?'     | true
-        '?'         | true
-        'hola[a]'   | true
-        'hola[a-z]' | true
-        'hola{a,b}' | true
-        'hola{a,}'  | true
-        'hola{,a}'  | true
-        'hola{,}'   | true
-        'hola{a}'   | false
-        'hola[]'    | false
 
     }
 

@@ -234,4 +234,49 @@ class NextflowTest extends Specification {
     }
 
 
+    def 'should match file with glob pattern' () {
+
+        given:
+        def root = Files.createTempDirectory('test')
+        def file1 = root.resolve('file-*.txt')
+        def file2 = root.resolve('file-?.txt')
+        def file3 = root.resolve('file[a-b].txt')
+        def file4 = root.resolve('file{a,b}.txt')
+        def filea = root.resolve('filea.txt')
+        def fileb = root.resolve('fileb.txt')
+
+        when:
+        file3.text = 'Hello'
+        file4.text = 'World'
+        file1.text = 'Star'
+        file2.text = 'Mark'
+        filea.text = 'aaa'
+        fileb.text = 'bbb'
+
+        then:
+        file1.exists()
+        file2.exists()
+        file3.exists()
+        file4.exists()
+        filea.exists()
+        fileb.exists()
+        file1.name == 'file-*.txt'
+        file2.name == 'file-?.txt'
+        file3.name == 'file[a-b].txt'
+        file4.name == 'file{a,b}.txt'
+
+        expect:
+        Nextflow.file(root.resolve('file-\\*.txt')) == file1
+        Nextflow.file(root.resolve('file-\\?.txt')) == file2
+        Nextflow.file(root.resolve('file-*')) *. name .sort() == ['file-*.txt', 'file-?.txt']
+        Nextflow.file(root.resolve('file[a-b].*')) *. name .sort() == ['filea.txt', 'fileb.txt']
+
+        Nextflow.file(root.resolve('file-*.txt'), glob: false) == file1
+        Nextflow.file("$root/file-*.txt", glob: false) == file1
+
+        cleanup:
+        root?.deleteDir()
+    }
+
+
 }

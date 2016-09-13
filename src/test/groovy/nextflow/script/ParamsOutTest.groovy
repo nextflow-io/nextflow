@@ -436,6 +436,7 @@ class ParamsOutTest extends Specification {
               file x hidden false into ch
               file x followLinks true into ch
               file x type 'dir' into ch
+              file x glob false into ch
 
               return ''
             }
@@ -453,6 +454,7 @@ class ParamsOutTest extends Specification {
         FileOutParam out6 = process.config.getOutputs().get(6)
         FileOutParam out7 = process.config.getOutputs().get(7)
         FileOutParam out8 = process.config.getOutputs().get(8)
+        FileOutParam out9 = process.config.getOutputs().get(9)
 
         then:
         out0.maxDepth == null
@@ -460,6 +462,7 @@ class ParamsOutTest extends Specification {
         out0.followLinks
         out0.type == null
         out0.separatorChar == ':'
+        out0.glob
 
         out1.maxDepth == 5
         out2.hidden
@@ -469,6 +472,7 @@ class ParamsOutTest extends Specification {
         !out6.hidden
         out7.followLinks
         out8.type == 'dir'
+        out9.glob == false
 
     }
 
