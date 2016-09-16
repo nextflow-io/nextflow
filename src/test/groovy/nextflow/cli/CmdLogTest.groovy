@@ -50,6 +50,7 @@ class CmdLogTest extends Specification {
 
         setup:
         final folder = Files.createTempDirectory('test')
+        folder.resolve('.nextflow').mkdir()
         final uuid = UUID.randomUUID()
         final runName = 'test_1'
 
@@ -116,6 +117,7 @@ class CmdLogTest extends Specification {
 
         setup:
         final folder = Files.createTempDirectory('test')
+        folder.resolve('.nextflow').mkdir()
         final uuid = UUID.randomUUID()
         final runName = 'test_1'
 

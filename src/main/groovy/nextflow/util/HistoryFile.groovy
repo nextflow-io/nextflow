@@ -37,9 +37,10 @@ import nextflow.exception.AbortOperationException
 @Slf4j
 class HistoryFile extends File {
 
-    public static final String FILE_NAME = '.nextflow.history'
+    public static final String FILE_NAME = '.nextflow/history'
 
-    public static final HistoryFile DEFAULT = new HistoryFile()
+    @Lazy
+    public static final HistoryFile DEFAULT = { def f=new HistoryFile(); f.parentFile?.mkdirs(); return f } ()
 
     private static final DateFormat TIMESTAMP_FMT = new SimpleDateFormat('yyyy-MM-dd HH:mm:ss')
 
