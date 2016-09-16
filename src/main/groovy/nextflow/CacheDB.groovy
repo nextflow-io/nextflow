@@ -85,8 +85,8 @@ class CacheDB implements Closeable {
         this.KEY_SIZE = CacheHelper.hasher('x').hash().asBytes().size()
         this.uniqueId = uniqueId
         this.runName = runName
-        this.baseDir = home ?: Paths.get('.').toAbsolutePath()
-        this.dataDir = baseDir.resolve(".cache/$uniqueId")
+        this.baseDir = home ?: Paths.get('.nextflow').toAbsolutePath()
+        this.dataDir = baseDir.resolve("cache/$uniqueId")
         this.indexFile = dataDir.resolve("index.$runName")
         this.writer = new Agent()
     }

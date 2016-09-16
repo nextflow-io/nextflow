@@ -67,8 +67,8 @@ class CacheDBTest extends Specification {
         when:
         cache.open()
         then:
-        folder.resolve(".cache/$uuid/db").exists()
-        folder.resolve(".cache/$uuid/index.$runName").exists()
+        folder.resolve("cache/$uuid/db").exists()
+        folder.resolve("cache/$uuid/index.$runName").exists()
 
         when:
         def trace = new TraceRecord([task_id: 1, process: 'foo', exit: 0])
