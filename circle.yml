@@ -3,6 +3,8 @@ machine:
         version: oraclejdk8
     services:
         - docker
+    environment:
+        GRADLE_OPTS: -Dorg.gradle.daemon=false
 
 checkout:
     post:
