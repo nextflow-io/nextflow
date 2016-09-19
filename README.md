@@ -176,8 +176,8 @@ the global *Nextflow* configuration.
 Cloud support
 -------------
 
-Nextflow supports out of the box Amazon AWS cloud allowing you to setup a computing cluster, deploy and 
-run your pipeline in the AWS infrastructure in a few commands.
+Nextflow provides out of the box support for the Amazon AWS cloud allowing you to setup a computing cluster,
+deploy it and run your pipeline in the AWS infrastructure in a few commands.
 
 The cloud configuration settings need to be specified in the `nextflow.config` file as shown below: 
 
@@ -192,7 +192,7 @@ The cloud configuration settings need to be specified in the `nextflow.config` f
     aws {
         accessKey = 'xxx'
         secretKey = 'yyy'
-        region = 'eu-west-1
+        region = 'eu-west-1'
     }
     
     
@@ -215,6 +215,8 @@ WARNING: you will be charged accordingly the type and the number of instances ch
 
 Once the cluster deployment completes, SSH in the master node following the instruction that will be printed. Then 
 you will be able to run your Nextflow pipeline as usual. 
+
+
     
 
 Required dependencies
