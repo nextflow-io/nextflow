@@ -1,6 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.22.0 - 19 Sep 2016
+- Fixed queue-size attribute for local executor
+- Fixed Kubernetes pod id parse issue
+- Move `.nextflow.history` and `.cache` files under `.nextflow` directory
+
 0.22.0.RC2 - 12 Sep 2016 
 - Fixed File name containing glob wildcards cannot be captured in the process output #219
 - Fixed Work dir containing glob wildcards are not supported #194
