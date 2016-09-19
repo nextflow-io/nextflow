@@ -28,6 +28,18 @@ class KubernetesExecutorTest extends Specification {
         executor.killTaskCommand(['nxf-123', 'nxf-xyz', 'nxf-7ad']) == ['kubectl', 'delete', 'pod', 'nxf-123', 'nxf-xyz', 'nxf-7ad']
     }
 
+    def 'should parse pod id' () {
+
+        given:
+        def executor = [:] as KubernetesExecutor
+
+        expect:
+        executor.parseJobId('pod/alpha') == 'alpha'
+        executor.parseJobId('pod/beta\n') == 'beta'
+        executor.parseJobId('\npod/delta\n\n') == 'delta'
+
+    }
+
     def 'should return the status command'() {
 
         setup:
@@ -297,6 +309,8 @@ class KubernetesExecutorTest extends Specification {
         nxf-0e38534bbd7efdb27d301b03528f1de6         0/1       Running            0          14h
         nxf-15083267fa92ca622458d282bf37be08         0/1       Completed          0          16h
         nxf-dac99ec6a954b6399c1144cfde833c3c         0/1       Error              0          16h
+        nxf-6616a1d64e10d1e4c96634d11480806d         0/1       ImagePullBackOff   0          16h
+        nxf-51d26a5f028a7ac951a4265b8288d360         0/1       ErrImagePull       0          16h
         '''
                 .stripIndent().leftTrim()
 
@@ -309,7 +323,9 @@ class KubernetesExecutorTest extends Specification {
         status['nxf-0e38534bbd7efdb27d301b03528f1de6'] == AbstractGridExecutor.QueueStatus.RUNNING
         status['nxf-15083267fa92ca622458d282bf37be08'] == AbstractGridExecutor.QueueStatus.DONE
         status['nxf-dac99ec6a954b6399c1144cfde833c3c'] == AbstractGridExecutor.QueueStatus.ERROR
-        status.size() == 4
+        status['nxf-6616a1d64e10d1e4c96634d11480806d'] == AbstractGridExecutor.QueueStatus.ERROR
+        status['nxf-51d26a5f028a7ac951a4265b8288d360'] == AbstractGridExecutor.QueueStatus.ERROR
+        status.size() == 6
 
     }
 

@@ -67,7 +67,9 @@ class KubernetesExecutor extends AbstractGridExecutor {
     }
 
     /**
-     * @param task A {@link TaskRun} instance that need to be submited for execution
+     * Define the Kubernates job execution command line
+     *
+     * @param task A {@link TaskRun} instance that need to be submitted for execution
      * @param scriptFile (not used)
      * @return the command line to submit the task execution
      */
@@ -83,8 +85,9 @@ class KubernetesExecutor extends AbstractGridExecutor {
      */
     @Override
     def parseJobId(String text) {
-        if( text.startsWith('pod/') ) {
-            return text.substring(4)
+        final str = text.trim()
+        if( str?.startsWith('pod/') ) {
+            return str.substring(4)
         }
         throw new IllegalStateException("Not a valid Kubernates job id: `$text`")
     }
@@ -102,8 +105,11 @@ class KubernetesExecutor extends AbstractGridExecutor {
     static private Map DECODE_STATUS = [
             'Pending': QueueStatus.PENDING,
             'Running': QueueStatus.RUNNING,
+            'Completed': QueueStatus.DONE,
             'Error': QueueStatus.ERROR,
-            'Completed': QueueStatus.DONE
+            'ContainerCannotRun': QueueStatus.ERROR,
+            'ErrImagePull': QueueStatus.ERROR,
+            'ImagePullBackOff': QueueStatus.ERROR,
     ]
 
     static private final K8S_JOB_ID = ~/^(nxf-[0-9a-f]{32})/
