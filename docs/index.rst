@@ -19,9 +19,10 @@ Contents:
    operator
    executor
    config
+   awscloud
    amazons3
-   docker
    dnanexus
+   docker
    ignite
    tracing
    sharing
