@@ -97,7 +97,17 @@ class LocalPollingMonitor extends TaskPollingMonitor {
 
     @PackageScope
     static int configCpus(Session session, String name) {
-        session.getExecConfigProp(name, 'cpus', OS.getAvailableProcessors()) as int
+        int cpus = session.getExecConfigProp(name, 'cpus', 0) as int
+        int size = session.getQueueSize(name, 0)
+        if( size ) {
+            if( cpus ) log.warn "Executor `cpus` setting is overridden by `queue-size` option"
+            cpus = size
+        }
+
+        if( !cpus )
+            cpus = OS.getAvailableProcessors()
+
+        return cpus
     }
 
     @PackageScope
