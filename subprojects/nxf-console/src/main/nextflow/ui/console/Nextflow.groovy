@@ -90,7 +90,6 @@ class Nextflow extends Console {
                         .setOptions( new CliOptions() )
                         .setBaseDir(Paths.get('.'))
                         .build()
-                        .toMap()
 
         return new ScriptBinding(config)
     }
