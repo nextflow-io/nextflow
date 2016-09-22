@@ -359,7 +359,7 @@ class TaskProcessorTest extends Specification {
         holder = processor.normalizeInputToFile(localFile,null)
         then:
         holder.sourceObj == localFile
-        holder.storePath == localFile
+        holder.storePath == localFile.toRealPath()
         holder.stageName == localFile.getFileName().toString()
 
         /*
