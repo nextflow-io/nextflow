@@ -46,7 +46,7 @@ import nextflow.util.ServiceDiscover
 @Slf4j
 class ProcessFactory {
 
-    static String DEFAULT_EXECUTOR = System.getenv('NXF_EXECUTOR') ?: 'local'
+    static public String DEFAULT_EXECUTOR = System.getenv('NXF_EXECUTOR') ?: 'local'
 
     /*
      * Map the executor class to its 'friendly' name
