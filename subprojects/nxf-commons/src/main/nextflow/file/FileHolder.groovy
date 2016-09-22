@@ -25,9 +25,12 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.transform.ToString
+import groovy.util.logging.Slf4j
+
 /**
  * Implements a special {@code Path} used to stage files in the work area
  */
+@Slf4j
 @ToString(includePackage = false, includeNames = true)
 @EqualsAndHashCode
 @CompileStatic
@@ -42,7 +45,7 @@ class FileHolder  {
     FileHolder( Path inputFile ) {
         assert inputFile
         this.sourceObj = inputFile
-        this.storePath = inputFile
+        this.storePath = real(inputFile)
         this.stageName = norm(inputFile.getFileName())
     }
 
@@ -78,8 +81,18 @@ class FileHolder  {
      * @param path
      * @return The normalised path
      */
-    private String norm(path) {
+    static private String norm(path) {
         def result = path.toString()
         return result.startsWith('/') ? result.substring(1) : result
+    }
+
+    static private Path real( Path path ) {
+        try {
+            return path.toRealPath()
+        }
+        catch( Exception e ) {
+            log.trace "Unable to get real path for: $path"
+            return path
+        }
     }
 }
