@@ -107,6 +107,7 @@ class KubernetesExecutor extends AbstractGridExecutor {
             'Running': QueueStatus.RUNNING,
             'Completed': QueueStatus.DONE,
             'Error': QueueStatus.ERROR,
+            'ContainerCreating': QueueStatus.RUNNING,
             'ContainerCannotRun': QueueStatus.ERROR,
             'ErrImagePull': QueueStatus.ERROR,
             'ImagePullBackOff': QueueStatus.ERROR,
