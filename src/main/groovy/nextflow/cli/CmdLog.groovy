@@ -34,6 +34,9 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskTemplateEngine
 import nextflow.trace.TraceRecord
 import nextflow.ui.TableBuilder
+
+import static nextflow.cli.CmdHelper.fixEqualsOp
+
 /**
  * Implements the `log` command to print tasks runtime information of an execute pipeline
  *
@@ -121,7 +124,7 @@ class CmdLog extends CmdBase implements CacheBase {
         // initialise filter engine
         //
         if( filterStr ) {
-            filterScript = new Grengine().create("{ it -> $filterStr }")
+            filterScript = new Grengine().create("{ it -> ${fixEqualsOp(filterStr)} }")
         }
 
         //

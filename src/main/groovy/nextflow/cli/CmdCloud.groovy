@@ -42,6 +42,8 @@ import nextflow.exception.AbortOperationException
 import nextflow.ui.TableBuilder
 import nextflow.ui.TextLabel
 import nextflow.util.SysHelper
+import static nextflow.cli.CmdHelper.fixEqualsOp
+
 /**
  * Implements the `cloud` command
  *
@@ -546,7 +548,7 @@ class CmdCloud extends CmdBase implements UsageAware {
         void apply(String none) {
             final all = CmdCloud.this.all
             final history = CmdCloud.this.history
-            final filter = history ? "type=='$history'" : CmdCloud.this.filter
+            final filter = history ? "type=='$history'" : fixEqualsOp(CmdCloud.this.filter)
             final sort = CmdCloud.this.sort ?: 'price'
             final Script filterScript = filter ? new Grengine().create("{ -> $filter }") : null
             log.debug "Spot-price: filter=`$profile`; sort=`$sort`; all=$all; history=`$history`"
