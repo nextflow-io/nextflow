@@ -52,7 +52,7 @@ class CmdLog extends CmdBase implements CacheBase {
 
     static {
         ALL_FIELDS = []
-        ALL_FIELDS.addAll( TraceRecord.FIELDS.keySet() )
+        ALL_FIELDS.addAll( TraceRecord.FIELDS.keySet().collect { it.startsWith('%') ? 'p'+it.substring(1) : it } )
         ALL_FIELDS << 'stdout'
         ALL_FIELDS << 'stderr'
         ALL_FIELDS << 'log'
@@ -260,6 +260,12 @@ class CmdLog extends CmdBase implements CacheBase {
                 return fetch(getWorkDir().resolve(TaskRun.CMD_ENV))
             }
 
+            if( key == 'pcpu' )
+                return record.getFmtStr('%cpu')
+
+            if( key == 'pmem' )
+                return record.getFmtStr('%mem')
+
             return record.getFmtStr(normaliseKey(key))
         }
 
@@ -269,6 +275,13 @@ class CmdLog extends CmdBase implements CacheBase {
         }
 
         Object getVariable(String name) {
+
+            if( name == 'pcpu' )
+                return record.store.get('%cpu')
+
+            if( name == 'pmem' )
+                return record.store.get('%mem')
+
             if( record.containsKey(name) )
                 return record.store.get(name)
 
