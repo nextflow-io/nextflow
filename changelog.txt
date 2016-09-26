@@ -1,6 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.22.1 - 26 Sep 2016 
+- Fixed Nested symlinks are not resolved by Docker container mounts #222
+- Fixed Nextflow execution log fail to get field starting with '%' #223
+- Fixed Nextflow console launcher 
+- Added `ContainerCreation` status to K8S executor
+- Expand `=` to `==` in filter expressions to avoid misleading results
+
 0.22.0 - 19 Sep 2016
 - Fixed queue-size attribute for local executor
 - Fixed Kubernetes pod id parse issue
