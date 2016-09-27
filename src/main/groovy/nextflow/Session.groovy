@@ -474,7 +474,9 @@ class Session implements ISession {
         }
         finally {
             // -- update the history file
-            HistoryFile.DEFAULT.update(runName,isSuccess())
+            if( HistoryFile.DEFAULT.exists() ) {
+                HistoryFile.DEFAULT.update(runName,isSuccess())
+            }
             log.debug "Session destroyed"
         }
     }
