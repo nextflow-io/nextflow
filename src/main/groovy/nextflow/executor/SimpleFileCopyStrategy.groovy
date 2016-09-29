@@ -162,7 +162,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
 
         def cmd
         if( strategy == 'copy' || !strategy )
-            cmd = 'cp -fR'
+            cmd = 'cp -fRL'
         else if( strategy == 'move' )
             cmd = 'mv -f'
         else if( strategy == 'rsync' )

@@ -110,13 +110,13 @@ class SimpleFileCopyStrategyTest extends Specification {
 
         where:
         source              | target    | result
-        'file.txt'          | '/to/dir' | "cp -fR file.txt /to/dir"
-        "file'3.txt"        | '/to dir' | "cp -fR file\\'3.txt /to\\ dir"
-        'path_name'         | '/to/dir' | "cp -fR path_name /to/dir"
-        'input/file.txt'    | '/to/dir' | "mkdir -p /to/dir/input && cp -fR input/file.txt /to/dir/input"
-        'long/path/name'    | '/to/dir' | "mkdir -p /to/dir/long/path && cp -fR long/path/name /to/dir/long/path"
-        'path_name/*'       | '/to/dir' | "mkdir -p /to/dir/path_name && cp -fR path_name/* /to/dir/path_name"
-        'path_name/'        | '/to/dir' | "mkdir -p /to/dir/path_name && cp -fR path_name/ /to/dir/path_name"
+        'file.txt'          | '/to/dir' | "cp -fRL file.txt /to/dir"
+        "file'3.txt"        | '/to dir' | "cp -fRL file\\'3.txt /to\\ dir"
+        'path_name'         | '/to/dir' | "cp -fRL path_name /to/dir"
+        'input/file.txt'    | '/to/dir' | "mkdir -p /to/dir/input && cp -fRL input/file.txt /to/dir/input"
+        'long/path/name'    | '/to/dir' | "mkdir -p /to/dir/long/path && cp -fRL long/path/name /to/dir/long/path"
+        'path_name/*'       | '/to/dir' | "mkdir -p /to/dir/path_name && cp -fRL path_name/* /to/dir/path_name"
+        'path_name/'        | '/to/dir' | "mkdir -p /to/dir/path_name && cp -fRL path_name/ /to/dir/path_name"
 
     }
 
@@ -169,8 +169,8 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 mkdir -p /target/work\\ dir
-                cp -fR simple.txt /target/work\\ dir || true
-                mkdir -p /target/work\\ dir/my/path && cp -fR my/path/file.bam /target/work\\ dir/my/path || true
+                cp -fRL simple.txt /target/work\\ dir || true
+                mkdir -p /target/work\\ dir/my/path && cp -fRL my/path/file.bam /target/work\\ dir/my/path || true
                 '''
                 .stripIndent().rightTrim()
 
