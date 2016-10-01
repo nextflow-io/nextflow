@@ -94,6 +94,13 @@ class ProcessConfigTest extends Specification {
         config.memory == '2GB'
         config.createTaskConfig().memory == new MemoryUnit('2GB')
 
+        when:
+        config.stageInMode 'copy'
+        config.stageOutMode 'move'
+        then:
+        config.stageInMode == 'copy'
+        config.stageOutMode == 'move'
+
     }
 
     def 'should parse properties'() {

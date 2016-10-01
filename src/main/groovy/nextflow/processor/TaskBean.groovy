@@ -82,7 +82,9 @@ class TaskBean implements Serializable, Cloneable {
 
     List<String> outputFiles
 
-    String unstageStrategy
+    String stageInMode
+
+    String stageOutMode
 
     Path sharedDir
 
@@ -131,7 +133,8 @@ class TaskBean implements Serializable, Cloneable {
         this.outputFiles = task.getOutputFilesNames()
         this.sharedDir = task.getProcessor().getSession().getWorkDir()
         this.binDir = task.getProcessor().getSession().getBinDir()
-        this.unstageStrategy = task.getProcessor().getConfig().unstageStrategy
+        this.stageInMode = task.getProcessor().getConfig().stageInMode
+        this.stageOutMode = task.getProcessor().getConfig().stageOutMode
 
     }
 
