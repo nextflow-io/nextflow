@@ -1094,6 +1094,8 @@ The directives are:
 * `penv`_
 * `publishDir`_
 * `scratch`_
+* `stageInMode`_
+* `stageOutMode`_
 * `storeDir`_
 * `tag`_
 * `time`_
@@ -1829,6 +1831,36 @@ ext
 
 The ``ext`` is a special directive used as *namespace* for user custom configuration properties that can be defined at
 process level. This can be useful for advanced configuration options.
+
+stageInMode
+-----------
+
+The ``stageInMode`` directive defines how input files are staged-in to the process work directory. The following values
+are allowed:
+
+======= ==================
+Value   Description
+======= ==================
+copy    Input files are staged in the process work directory by creating a copy.
+link    Input files are staged in the process work directory by creating an (hard) link for each of them.
+symlink Input files are staged in the process work directory by creating an symlink for each of them (default).
+======= ==================
+
+stageOutMode
+------------
+
+The ``stageOutMode`` directive defines how output files are staged-out from the scratch directory to the process work
+directory. The following values are allowed:
+
+======= ==================
+Value   Description
+======= ==================
+copy    Output files are copied from the scratch directory to the work directory.
+move    Output files are moved from the scratch directory to the work directory.
+rsync   Output files are copied from the scratch directory to the work directory by using the ``rsync`` utility.
+======= ==================
+
+See also: `scratch`_.
 
 
 Dynamic directives
