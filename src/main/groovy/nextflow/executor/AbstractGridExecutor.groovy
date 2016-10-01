@@ -42,6 +42,10 @@ abstract class AbstractGridExecutor extends Executor {
 
     protected Duration queueInterval
 
+    private final static char BLANK_CHAR = ' ' as char
+    private final static char COLON_CHAR = ':' as char
+    private final static char DOT_CHAR = '.' as char
+
     /**
      * Initialize the executor class
      */
@@ -141,13 +145,12 @@ abstract class AbstractGridExecutor extends Executor {
             return customName
 
         // -- if not available fallback on the custom naming strategy
-        final BLANK = ' ' as char
-        final COLON = ':' as char
+
         final result = new StringBuilder("nf-")
         final name = task.getName()
         for( int i=0; i<name.size(); i++ ) {
-            def ch = name.charAt(i)
-            result.append( ch == BLANK || ch == COLON ? '_' : ch )
+            final ch = name.charAt(i)
+            result.append( ch == BLANK_CHAR || ch == COLON_CHAR ? "_" : ch )
         }
         result.toString()
     }

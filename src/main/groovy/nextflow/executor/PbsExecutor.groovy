@@ -89,7 +89,9 @@ class PbsExecutor extends AbstractGridExecutor {
      * @return A list representing the submit command line
      */
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
-        [ 'qsub', scriptFile.getName() ]
+        // in some PBS implementation the submit command will fail if the script name starts with a dot eg `.command.run`
+        // add the `-N <job name>` to fix this -- see issue #228
+        [ 'qsub', '-N', getJobNameFor(task), scriptFile.getName() ]
     }
 
     protected String getHeaderToken() { '#PBS' }

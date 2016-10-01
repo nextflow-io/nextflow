@@ -36,8 +36,10 @@ class PbsExecutorTest extends Specification {
 
         given:
         def executor = [:] as PbsExecutor
+        def task = Mock(TaskRun); task.getName() >> 'hello world'
+
         expect:
-        executor.getSubmitCommandLine(Mock(TaskRun), Paths.get('/some/path/script.sh') ) == ['qsub', 'script.sh']
+        executor.getSubmitCommandLine(task, Paths.get('/some/path/script.sh') ) == ['qsub', '-N', 'nf-hello_world', 'script.sh']
 
     }
 
