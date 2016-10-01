@@ -90,7 +90,9 @@ class ProcessConfig implements Map<String,Object> {
             'each',
             'env',
             'stdin',
-            'stdout'
+            'stdout',
+            'stageInMode',
+            'stageOutMode'
     ]
 
     @Delegate

@@ -52,9 +52,14 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     Path targetDir
 
     /**
-     * Specify how output files need to ne copied to the target path
+     * Specify how output files are copied to the target path
      */
-    String unstageStrategy
+    String stageoutMode
+
+    /**
+     * Specifies how input files are copied to the work path
+     */
+    String stageinMode
 
     /**
      * File names separator
@@ -72,7 +77,8 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         this.inputFiles = bean.inputFiles
         this.outputFiles = bean.outputFiles
         this.targetDir = bean.targetDir
-        this.unstageStrategy = bean.unstageStrategy
+        this.stageinMode = bean.stageInMode
+        this.stageoutMode = bean.stageOutMode
     }
 
 
@@ -120,7 +126,8 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         if( p>0 ) {
             cmd += "mkdir -p ${Escape.path(targetName.substring(0,p))} && "
         }
-        cmd += "ln -s ${Escape.path(path.toAbsolutePath())} ${Escape.path(targetName)}"
+        cmd += stageInCommand(path.toAbsolutePath().toString(), targetName, stageinMode)
+
         return cmd
     }
 
@@ -142,12 +149,26 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
             result << "mkdir -p ${Escape.path(targetDir)}"
             for( int i=0; i<normalized.size(); i++ ) {
                 final path = normalized[i]
-                final cmd = copyCommand(path, targetDir.toString(), unstageStrategy) + ' || true' // <-- add true to avoid it stops on errors
+                final cmd = stageOutCommand(path, targetDir.toString(), stageoutMode) + ' || true' // <-- add true to avoid it stops on errors
                 result << cmd
             }
         }
 
         return result.join(separatorChar)
+    }
+
+    protected String stageInCommand( String source, String target, String mode ) {
+
+        if( mode == 'symlink' || !mode )
+            return "ln -s ${Escape.path(source)} ${Escape.path(target)}"
+
+        if( mode == 'link' )
+            return "ln ${Escape.path(source)} ${Escape.path(target)}"
+
+        if( mode == 'copy' || !mode )
+            return "cp -fRL ${Escape.path(source)} ${Escape.path(target)}"
+
+        throw new IllegalArgumentException("Unknown stage-in strategy: $mode")
     }
 
     /**
@@ -158,17 +179,17 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * @param move When {@code true} use unix {@code mv} instead of {@code cp}
      * @return A shell copy or move command string
      */
-    protected String copyCommand( String source, String target, String strategy = null) {
+    protected String stageOutCommand( String source, String target, String mode = null) {
 
         def cmd
-        if( strategy == 'copy' || !strategy )
+        if( mode == 'copy' || !mode )
             cmd = 'cp -fRL'
-        else if( strategy == 'move' )
+        else if( mode == 'move' )
             cmd = 'mv -f'
-        else if( strategy == 'rsync' )
+        else if( mode == 'rsync' )
             return "rsync -rRl ${Escape.path(source)} ${Escape.path(target)}"
         else
-            throw new IllegalArgumentException("Unknown un-stage strategy: $strategy")
+            throw new IllegalArgumentException("Unknown stage-out strategy: $mode")
 
         final p = source.lastIndexOf('/')
         if( p<=0 ) {

@@ -41,7 +41,7 @@ class TaskBeanTest extends Specification {
         session.getBinDir() >> Paths.get('/bin/dir')
 
         def process = Mock(TaskProcessor)
-        process.getConfig() >> ([unstageStrategy: 'rsync'] as ProcessConfig)
+        process.getConfig() >> ([stageInMode: 'link', stageOutMode: 'rsync'] as ProcessConfig)
         process.getProcessEnvironment() >> [alpha: 'one', beta: 'two']
         process.getSession() >> session
 
@@ -98,7 +98,8 @@ class TaskBeanTest extends Specification {
         bean.outputFiles ==  [ 'simple.txt', 'my/path/file.bam' ]
         bean.workDir == Paths.get('/work/dir')
         bean.binDir == Paths.get('/bin/dir')
-        bean.unstageStrategy == 'rsync'
+        bean.stageInMode == 'link'
+        bean.stageOutMode == 'rsync'
 
     }
 
