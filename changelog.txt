@@ -1,6 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.22.2 - 3 Oct 2016 
+- Fixed Copy input files to scratch directory #197
+- Fixed PBS qsub fails when the job name starts with a dot #228
+- Fixed issue when staging-out a symlink output file
+- Fixed log warning when running a script in the console
+
 0.22.1 - 26 Sep 2016 
 - Fixed Nested symlinks are not resolved by Docker container mounts #222
 - Fixed Nextflow execution log fail to get field starting with '%' #223
