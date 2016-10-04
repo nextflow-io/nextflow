@@ -127,11 +127,11 @@ function launch_nextflow() {
 }
 
 # check if NXF_NXF_LAUNCHDIR is writable
-if [[ -w "$NXF_HOME" ]] ; then
+if [ -w "$NXF_HOME" ] ; then
     NXF_LAUNCHBASE=${NXF_HOME}
-#elif [[ -w "$PWD" ]] ; then
+#elif [ -w "$PWD" ] ; then
 #    NXF_LAUNCHBASE=${PWD}
-elif [[ "$NXF_TEMP" && -w "$NXF_TEMP" ]] ; then
+elif [[ "$NXF_TEMP" ]] && [ -w "$NXF_TEMP" ] ; then
     NXF_LAUNCHBASE=${NXF_TEMP}
 else
     echo "Cannot write to NXF_HOME, set NXF_TEMP to a writable directory"
