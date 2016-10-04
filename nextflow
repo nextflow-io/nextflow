@@ -73,7 +73,7 @@ function get() {
 }
 
 function make_temp() {
-    TEMPDIR=${NXF_TEMP:-PWD}
+    TEMPDIR=${NXF_TEMP:-$PWD}
     if [ "$(uname)" = 'Darwin' ]; then mktemp $TEMPDIR/nxf-tmp.XXXXX || exit $?
     else mktemp -t nxf-tmp.XXXXX -p $TEMPDIR || exit $?
     fi
@@ -81,7 +81,8 @@ function make_temp() {
 
 function install() {
     local tmpfile=$(make_temp)
-    get "http://www.nextflow.io/releases/latest/nextflow" "$tmpfile" "$1" || exit $?
+    #get "http://www.nextflow.io/releases/latest/nextflow" "$tmpfile" "$1" || exit $?
+    get "https://raw.githubusercontent.com/douglasgscofield/nextflow/master/nextflow" "$tmpfile" "$1" || exit $?
     mv "$tmpfile" "$1" || exit $?
     chmod +x "$1" || exit $?
     bash "$1" -download || exit $?
@@ -124,6 +125,18 @@ function launch_nextflow() {
     exec bash -c "exec $cmdline"
     exit 1
 }
+
+# check if NXF_NXF_LAUNCHDIR is writable
+if [[ -w "$NXF_HOME" ]] ; then
+    NXF_LAUNCHBASE=${NXF_HOME}
+elif [[ -w "$PWD" ]] ; then
+    NXF_LAUNCHBASE=${PWD}
+elif [[ "$NXF_TEMP" && -w "$NXF_TEMP" ]] ; then
+    NXF_LAUNCHBASE=${NXF_TEMP}
+else
+    echo "Cannot write to both NXF_HOME and current directory, set NXF_TEMP to a writable directory"
+    exit 1
+fi
 
 # check self-install
 if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
@@ -218,7 +231,8 @@ NXF_GRAB=${NXF_GRAB:-''}
 NXF_CLASSPATH=${NXF_CLASSPATH:-''}
 NXF_MPIRUN=${NXF_MPIRUN:=''}
 NXF_HOST=${HOSTNAME:-localhost}
-[[ $NXF_LAUNCHER ]] || NXF_LAUNCHER=${NXF_HOME}/tmp/launcher/nextflow-${NXF_PACK}_${NXF_VER}/${NXF_HOST}
+#[[ $NXF_LAUNCHER ]] || NXF_LAUNCHER=${NXF_HOME}/tmp/launcher/nextflow-${NXF_PACK}_${NXF_VER}/${NXF_HOST}
+[[ $NXF_LAUNCHER ]] || NXF_LAUNCHER=${NXF_LAUNCHBASE}/tmp/launcher/nextflow-${NXF_PACK}_${NXF_VER}/${NXF_HOST}
 
 if [[ $NXF_MODE == ignite ]]; then
     # Fix JDK bug when there's a limit on the OS virtual memory
