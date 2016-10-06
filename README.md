@@ -330,7 +330,7 @@ Build servers
 License
 -------
 
-The *Nextflow* framework source code is released under the GNU GPL3 License.
+The *Nextflow* framework is released under the GNU GPLv3 License.
 
 Citations
 ----------
