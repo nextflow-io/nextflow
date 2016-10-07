@@ -46,7 +46,7 @@ class AmazonPriceReaderTest extends Specification {
 
         where:
         e_type      | e_cpus | e_mem    | e_disk    | e_num
-        't2.nano'   | 1      | '512 MB' | '0'       | 0
+        't2.micro'  | 1      | '1 GB'   | '0'       | 0
         't2.medium' | 2      | '4 GB'   | '0'       | 0
         'm4.xlarge' | 4      | '16 GB'  | '0'       | 0
         'm3.xlarge' | 4      | '15 GB'  | '40 GB'   | 2
