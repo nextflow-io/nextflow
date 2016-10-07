@@ -122,7 +122,7 @@ class DAG {
     @PackageScope
     void addVertex( Type type, String label, List<ChannelHandler> inbounds, List<ChannelHandler> outbounds ) {
 
-        def vertex = createVertex( type, label)
+        def vertex = createVertex( type, label )
 
         inbounds?.each { ChannelHandler channel ->
             inbound( vertex, channel )

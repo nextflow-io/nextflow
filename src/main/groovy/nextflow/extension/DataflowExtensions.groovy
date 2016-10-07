@@ -470,7 +470,8 @@ class DataflowExtensions {
      * @param closure
      * @return
      */
-    static private <V> DataflowProcessor reduceImpl(final DataflowReadChannel<?> channel, final DataflowVariable result, def seed, final Closure<V> closure) {
+    @PackageScope
+    static <V> DataflowProcessor reduceImpl(final DataflowReadChannel<?> channel, final DataflowVariable result, def seed, final Closure<V> closure) {
 
         // the *accumulator* value
         def accum = seed
@@ -790,8 +791,7 @@ class DataflowExtensions {
      * @return A list holding all the items send over the channel
      */
     static public final <V> DataflowReadChannel<V> toList(final DataflowReadChannel<V> source) {
-        final target = new DataflowVariable()
-        reduceImpl(source, target, []) { list, item -> list << item }
+        final target = ToListOp.apply(source)
         session.dag.addOperatorNode('toList', source, target)
         return target
     }
@@ -1162,7 +1162,7 @@ class DataflowExtensions {
 
         def inputs
         switch(other) {
-            case DataflowQueue: inputs = ((DataflowQueue) other).toList(); break
+            case DataflowQueue: inputs = ToListOp.apply((DataflowQueue)other); break
             case DataflowExpression: inputs = other; break
             case Collection: inputs = Channel.value(other); break
             case (Object[]): inputs = Channel.value(other as List); break
@@ -1198,7 +1198,10 @@ class DataflowExtensions {
                     .each{ Collection it -> proc.bindOutput(it.flatten())  }
         }
 
-        session.dag.addOperatorNode('spread', source, target)
+        def sources = new ArrayList(2)
+        sources.add ( source )
+        sources.add ( other instanceof DataflowChannel ? other : inputs  )
+        session.dag.addOperatorNode('spread', sources, target)
         return target
     }
 
