@@ -480,7 +480,7 @@ class AmazonCloudDriverTest extends Specification {
 
 
     @Unroll
-    def 'should get instance type description' () {
+    def 'should get instance type description #type' () {
 
         given:
         def driver = Spy(AmazonCloudDriver)
