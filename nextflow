@@ -239,7 +239,6 @@ NXF_GRAB=${NXF_GRAB:-''}
 NXF_CLASSPATH=${NXF_CLASSPATH:-''}
 NXF_MPIRUN=${NXF_MPIRUN:=''}
 NXF_HOST=${HOSTNAME:-localhost}
-#[[ $NXF_LAUNCHER ]] || NXF_LAUNCHER=${NXF_HOME}/tmp/launcher/nextflow-${NXF_PACK}_${NXF_VER}/${NXF_HOST}
 [[ $NXF_LAUNCHER ]] || NXF_LAUNCHER=${NXF_LAUNCHBASE}/tmp/launcher/nextflow-${NXF_PACK}_${NXF_VER}/${NXF_HOST}
 
 if [[ $NXF_MODE == ignite ]]; then
@@ -374,7 +373,7 @@ else
         done
         printf "$STR">"$LAUNCH_FILE"
     else
-        echo_yellow "Warning: Couldn't create cached classpath folder: $NXF_LAUNCHER -- Maybe NXF_HOME is not writable?"
+        echo_yellow "Warning: Couldn't create cached classpath folder: $NXF_LAUNCHER -- Maybe NXF_HOME is not writable or NXF_LAUNCHBASE should be used?"
     fi
 
 fi
