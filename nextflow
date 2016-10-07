@@ -126,15 +126,23 @@ function launch_nextflow() {
     exit 1
 }
 
-# check if NXF_NXF_LAUNCHDIR is writable
-if [ -w "$NXF_HOME" ] ; then
+# find base directory to use for launchers: NXF_LAUNCHBASE > NXF_HOME > NXF_TEMP > error
+if [ ! -z "$NXF_LAUNCHBASE" ] ; then
+    if [ ! -d "$NXF_LAUNCHBASE" ] || [ ! -w "$NXF_LAUNCHBASE" ] ; then
+        echo 'Please note:'
+        echo "- If NXF_LAUNCHBASE is set, it must be a writable directory"
+        echo ''
+        exit 1
+    fi
+elif [ -w "$NXF_HOME" ] ; then
     NXF_LAUNCHBASE=${NXF_HOME}
-#elif [ -w "$PWD" ] ; then
-#    NXF_LAUNCHBASE=${PWD}
-elif [[ "$NXF_TEMP" ]] && [ -w "$NXF_TEMP" ] ; then
+elif [ ! -z "$NXF_TEMP"  ] && [ -d "$NXF_TEMP" ] && [ -w "$NXF_TEMP" ] ; then
     NXF_LAUNCHBASE=${NXF_TEMP}
 else
-    echo "Cannot write to NXF_HOME, set NXF_TEMP to a writable directory"
+    echo 'Please note:'
+    echo "- NXF_LAUNCHBASE could not be set to a writable directory. Please set NXF_LAUNCHBASE,"
+    echo "- or ensure that NXF_HOME is writable, or set NXF_TEMP to a writable directory."
+    echo ''
     exit 1
 fi
 
