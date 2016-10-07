@@ -19,7 +19,6 @@
  */
 
 package nextflow.script
-
 import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.transform.ToString
@@ -31,7 +30,7 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Nextflow
-import nextflow.extension.DataflowExtensions
+import nextflow.extension.ToListOp
 import nextflow.processor.ProcessConfig
 /**
  * Base class for input/output parameters
@@ -503,7 +502,7 @@ class EachInParam extends BaseInParam {
             return channel.getVal()
         }
         else {
-            return DataflowExtensions.toList(channel).getVal()
+            return ToListOp.apply(channel).getVal()
         }
 
     }
