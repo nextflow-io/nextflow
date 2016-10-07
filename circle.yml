@@ -6,6 +6,10 @@ machine:
     environment:
         GRADLE_OPTS: -Dorg.gradle.daemon=false
 
+dependencies:
+    cache_directories:
+        - "~/.nextflow/aws"
+
 checkout:
     post:
         - git submodule update --init
