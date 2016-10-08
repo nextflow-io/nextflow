@@ -57,13 +57,13 @@ class PbsExecutorTest extends Specification {
         def task = new TaskRun()
         task.processor = proc
         task.workDir = Paths.get('/work/dir')
-        task.name = 'the task name'
+        task.name = 'task name'
 
         when:
         task.config = new TaskConfig()
         then:
         executor.getHeaders(task) == '''
-                #PBS -N nf-the_task_name
+                #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
                 #PBS -V
@@ -78,7 +78,7 @@ class PbsExecutorTest extends Specification {
         task.config.time = '1m'
         then:
         executor.getHeaders(task) == '''
-                #PBS -N nf-the_task_name
+                #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
                 #PBS -V
@@ -96,7 +96,7 @@ class PbsExecutorTest extends Specification {
         task.config.memory = '1m'
         then:
         executor.getHeaders(task) == '''
-                #PBS -N nf-the_task_name
+                #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
                 #PBS -V
@@ -117,7 +117,7 @@ class PbsExecutorTest extends Specification {
         task.config.cpus = 2
         then:
         executor.getHeaders(task) == '''
-                #PBS -N nf-the_task_name
+                #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
                 #PBS -V
@@ -137,7 +137,7 @@ class PbsExecutorTest extends Specification {
         task.config.cpus = 8
         then:
         executor.getHeaders(task) == '''
-                #PBS -N nf-the_task_name
+                #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
                 #PBS -V
@@ -156,7 +156,7 @@ class PbsExecutorTest extends Specification {
         task.config.memory = '2g'
         then:
         executor.getHeaders(task) == '''
-                #PBS -N nf-the_task_name
+                #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
                 #PBS -V
@@ -181,13 +181,13 @@ class PbsExecutorTest extends Specification {
         def task = new TaskRun()
         task.processor = proc
         task.workDir = Paths.get('/work/dir 1')
-        task.name = 'the task name'
+        task.name = 'task name'
 
         when:
         task.config = new TaskConfig()
         then:
         executor.getHeaders(task) == '''
-                #PBS -N nf-the_task_name
+                #PBS -N nf-task_name
                 #PBS -o "/work/dir\\ 1/.command.log"
                 #PBS -j oe
                 #PBS -V
