@@ -81,6 +81,12 @@ class PbsExecutor extends AbstractGridExecutor {
         return result
     }
 
+    @Override
+    String getJobNameFor( TaskRun task ) {
+        // PBS does not allow more than 15 characters for the job name string
+        def result = super.getJobNameFor(task)
+        result && result.size()>15 ? result.substring(0,15) : result
+    }
     /**
      * The command line to submit this job
      *

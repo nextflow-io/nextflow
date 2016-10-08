@@ -26,6 +26,8 @@ import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -195,6 +197,24 @@ class PbsExecutorTest extends Specification {
 
     }
 
+    @Unroll
+    def 'should return valid job name given #name'() {
+        given:
+        def executor = [:] as PbsExecutor
+        def task = Mock(TaskRun)
+        task.getName() >> name
+
+        expect:
+        executor.getJobNameFor(task) == expected
+        executor.getJobNameFor(task).size() <= 15
+
+        where:
+        name        | expected
+        'hello'     | 'nf-hello'
+        '12 45'     | 'nf-12_45'
+        'very-long-task-name-taking-more-than-15-chars' | 'nf-very-long-ta'
+
+    }
 
     def testParseJobId() {
 
