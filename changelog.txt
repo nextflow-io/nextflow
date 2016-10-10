@@ -1,6 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.22.3 - 11 Oct 2016 
+- Fixed PBS qsub fails when the job name is longer than 15 chars #228
+- Fixed Spread operator doesn't connect channels in DAG #231 
+- Added Cleanup scratch dir upon process completion #230
+- Added Check for missing instance type description 
+
 0.22.2 - 3 Oct 2016 
 - Fixed Copy input files to scratch directory #197
 - Fixed PBS qsub fails when the job name starts with a dot #228
