@@ -109,7 +109,7 @@ class BashWrapperBuilder {
           set +u
           [[ "$COUT" ]] && rm -f "$COUT" || true
           [[ "$CERR" ]] && rm -f "$CERR" || true
-          exit $exit_status
+          __EXIT_CMD__
         }
 
         on_term() {
@@ -243,7 +243,7 @@ class BashWrapperBuilder {
     /**
      * @return The bash script fragment to change to the 'scratch' directory if it has been specified in the task configuration
      */
-    protected String changeToScratchDirectory() {
+    protected String getScratchDirectoryCommand() {
 
         // convert to string for safety
         final scratchStr = scratch?.toString()
@@ -326,7 +326,7 @@ class BashWrapperBuilder {
         }
 
         // whenever it has to change to the scratch directory
-        final changeDir = changeToScratchDirectory()
+        final changeDir = getScratchDirectoryCommand()
 
         /*
          * process the task script
@@ -382,12 +382,12 @@ class BashWrapperBuilder {
         if( runWithContainer ) {
             containerBuilder.appendHelpers(wrapper)
             // append the process - or - container kill command
-            wrapper << scriptCleanUp(exitedFile, containerBuilder.killCommand) << ENDL
+            wrapper << scriptCleanUp(exitedFile, changeDir, containerBuilder) << ENDL
             // create a random string id to be used an container name
             wrapper << 'export NXF_BOXID="nxf-$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"' << ENDL
         }
         else {
-            wrapper << scriptCleanUp(exitedFile) << ENDL
+            wrapper << scriptCleanUp(exitedFile, changeDir, null) << ENDL
         }
 
         // append to script file chown command to change `root` owner of files created by docker
@@ -489,14 +489,6 @@ class BashWrapperBuilder {
         wrapper << 'wait $tee1 $tee2' << ENDL
 
         /*
-         * docker clean-up
-         */
-        if( containerBuilder?.removeCommand ) {
-            // remove the container in this way because 'docker run --rm'  fail in some cases -- see https://groups.google.com/d/msg/docker-user/0Ayim0wv2Ls/-mZ-ymGwg8EJ
-            wrapper << containerBuilder.removeCommand << ' &>/dev/null || true' << ENDL
-        }
-
-        /*
          * un-stage output files
          */
         if( changeDir ) {
@@ -528,10 +520,25 @@ class BashWrapperBuilder {
      * @return The script string to be included the in main launcher script
      */
     @PackageScope
-    String scriptCleanUp( Path file, String dockerKill = null ) {
+    String scriptCleanUp( Path file, String scratch, ContainerBuilder builder ) {
+
+        final killCommand = builder?.getKillCommand() ?: '[[ "$pid" ]] && nxf_kill $pid'
+
+        final script = []
+        // finally cleanup the scratch dir
+        if( scratch && cleanup != false ) {
+            script << (!builder ? 'rm -rf $NXF_SCRATCH || true' : '(sudo -n true && sudo rm -rf $NXF_SCRATCH || rm -rf $NXF_SCRATCH)&>/dev/null || true')
+        }
+        // remove the container in this way because 'docker run --rm'  fail in some cases -- see https://groups.google.com/d/msg/docker-user/0Ayim0wv2Ls/-mZ-ymGwg8EJ
+        if( builder?.removeCommand ) {
+            script << "${builder.removeCommand} &>/dev/null || true"
+        }
+        script << 'exit $exit_status'
+
         SCRIPT_CLEANUP
                 .replace('__EXIT_FILE__', exitFile(file))
-                .replace('__KILL_CMD__', dockerKill ?: '[[ "$pid" ]] && nxf_kill $pid')
+                .replace('__KILL_CMD__', killCommand)
+                .replace('__EXIT_CMD__', script.join('\n  '))
     }
 
     ContainerBuilder createContainerBuilder(Map environment, String changeDir) {

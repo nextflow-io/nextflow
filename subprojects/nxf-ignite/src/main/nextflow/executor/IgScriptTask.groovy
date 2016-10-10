@@ -70,7 +70,14 @@ class IgScriptTask extends IgBaseTask<Integer>   {
     protected void afterExecute() {
         if( stageStrategy ) {
             stageStrategy.unstage()
+            cleanupLocalWorkDir()
         }
+    }
+
+    protected void cleanupLocalWorkDir() {
+        if( bean.cleanup == false ) return
+        def cmd = ['bash','-c',"(sudo -n true && sudo rm -rf $localWorkDir || rm -rf $localWorkDir)&>/dev/null"]
+        cmd.execute().waitFor()
     }
 
     @Override

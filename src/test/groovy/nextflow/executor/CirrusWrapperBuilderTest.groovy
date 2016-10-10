@@ -110,6 +110,7 @@ class CirrusWrapperBuilderTest extends Specification {
                   set +u
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
+                  rm -rf \$NXF_SCRATCH || true
                   exit \$exit_status
                 }
 
