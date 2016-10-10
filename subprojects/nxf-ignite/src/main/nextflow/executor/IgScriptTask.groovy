@@ -76,8 +76,14 @@ class IgScriptTask extends IgBaseTask<Integer>   {
 
     protected void cleanupLocalWorkDir() {
         if( bean.cleanup == false ) return
-        def cmd = ['bash','-c',"(sudo -n true && sudo rm -rf $localWorkDir || rm -rf $localWorkDir)&>/dev/null"]
-        cmd.execute().waitFor()
+        try {
+            final cmd = ['bash','-c',"(sudo -n true && sudo rm -rf '$localWorkDir' || rm -rf '$localWorkDir')&>/dev/null"]
+            final status = cmd.execute().waitFor()
+            if( status ) log.debug "Can't cleanup path: $localWorkDir"
+        }
+        catch (Exception e) {
+            log.debug "Error while cleaning-up path: $localWorkDir -- Cause: ${e.message ?: e}"
+        }
     }
 
     @Override
