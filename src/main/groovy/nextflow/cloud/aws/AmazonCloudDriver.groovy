@@ -594,6 +594,8 @@ class AmazonCloudDriver implements CloudDriver {
     void validate(LaunchConfig config) {
         if( !config.imageId ) throw new IllegalArgumentException("Missing mandatory cloud `imageId` setting")
         if( !config.instanceType ) throw new IllegalStateException("Missing mandatory cloud `instanceType` setting")
+
+        describeInstanceType(config.instanceType)
     }
 
     @Override

@@ -20,8 +20,14 @@
 
 package nextflow.cloud.aws
 
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.nio.file.attribute.FileTime
+
+import nextflow.util.Duration
 import spock.lang.Specification
 import spock.lang.Unroll
+import test.TestHelper
 
 /**
  *
@@ -86,7 +92,50 @@ class AmazonPriceReaderTest extends Specification {
         result[23] == '4 GiB'
 
 
-
     }
 
+    def 'should validate path evict' ( ) {
+        given:
+        def parser = new AmazonPriceReader('eu-west-1')
+        def now = System.currentTimeMillis()
+        def _30secs = Duration.of('30 sec')
+
+        def path1 = Files.createFile(TestHelper.createInMemTempFile('test'))
+        Files.setLastModifiedTime(path1, FileTime.fromMillis(now - 60_000));
+
+        def path2 = Files.createFile(TestHelper.createInMemTempFile('test'))
+        Files.setLastModifiedTime(path2, FileTime.fromMillis(now - 10_000));
+
+
+        expect:
+        parser.evict(path1, _30secs, now)
+        !path1.exists()
+
+        !parser.evict(path2, _30secs, now)
+        path2.exists()
+    }
+
+
+    def 'should validate exit and not expire method' () {
+        given:
+        def parser = new AmazonPriceReader('eu-west-1')
+        def now = System.currentTimeMillis()
+
+        def path1 = Files.createFile(TestHelper.createInMemTempFile('test'))
+        Files.setLastModifiedTime(path1, FileTime.fromMillis(now));
+
+        def path2 = Files.createFile(TestHelper.createInMemTempFile('test'))
+        Files.setLastModifiedTime(path2, FileTime.fromMillis(now - AmazonPriceReader.CACHE_MAX_DAYS * 24 * 60 * 60 * 1000 * 2));
+
+        expect:
+        parser.existsAndNotExpired(path1)
+        path1.exists()
+
+        !parser.existsAndNotExpired(path2)
+        !path2.exists()
+
+        !parser.existsAndNotExpired(Paths.get('unknown'))
+        !path2.exists()
+
+    }
 }
