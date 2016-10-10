@@ -592,10 +592,14 @@ class AmazonCloudDriver implements CloudDriver {
     }
 
     void validate(LaunchConfig config) {
-        if( !config.imageId ) throw new IllegalArgumentException("Missing mandatory cloud `imageId` setting")
-        if( !config.instanceType ) throw new IllegalStateException("Missing mandatory cloud `instanceType` setting")
+        if( !config.imageId )
+            throw new IllegalArgumentException("Missing mandatory cloud `imageId` setting")
 
-        describeInstanceType(config.instanceType)
+        if( !config.instanceType )
+            throw new IllegalStateException("Missing mandatory cloud `instanceType` setting")
+
+        if( !describeInstanceType(config.instanceType) )
+            throw new IllegalArgumentException("Unknown EC2 instance type: ${config.instanceType}")
     }
 
     @Override
@@ -638,15 +642,13 @@ class AmazonCloudDriver implements CloudDriver {
      * Describe an instance type by the given type
      *
      * @param instanceType The instance type ID e.g. m3.2xlarge
-     * @return The {@link CloudInstanceType} instance for the given instance
-     * @throws IllegalArgumentException If the the specified instance type is unknown
+     * @return
+     *      The {@link CloudInstanceType} instance for the given
+     *      instance or {@code null} if no record is found for the given instance type
      */
     @Memoized
     CloudInstanceType describeInstanceType( String instanceType ) {
-        def result = new AmazonPriceReader(region).instanceTypeTable.get(instanceType)
-        if( !result )
-            throw new IllegalArgumentException("Unknown EC2 instance type: `$instanceType`")
-        return result
+        new AmazonPriceReader(region).getInstanceType(instanceType)
     }
 
 }
