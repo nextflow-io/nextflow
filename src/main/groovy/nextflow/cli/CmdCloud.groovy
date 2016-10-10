@@ -34,6 +34,7 @@ import nextflow.Global
 import nextflow.cloud.CloudConfig
 import nextflow.cloud.CloudDriver
 import nextflow.cloud.CloudDriverFactory
+import nextflow.cloud.aws.AmazonPriceReader
 import nextflow.cloud.types.CloudInstance
 import nextflow.cloud.types.CloudInstanceStatus
 import nextflow.cloud.types.CloudSpotPrice
@@ -556,7 +557,14 @@ class CmdCloud extends CmdBase implements UsageAware {
             def allPrices = new ArrayList<Map>()
             driver.eachSpotPrice { CloudSpotPrice entry ->
 
-                def type = driver.describeInstanceType(entry.type)
+                def type
+                try {
+                    type = driver.describeInstanceType(entry.type)
+                }
+                catch( Exception e ) {
+                    log.warn1 "Unknown instance type: `${entry.type}` -- Try to clean-up AWS types cache folder: ${AmazonPriceReader.CACHE_FOLDER}"
+                    return
+                }
 
                 def record = [
                         type: entry.type,

@@ -27,11 +27,11 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudInstanceType
 import nextflow.util.Duration
 import nextflow.util.KryoHelper
 import nextflow.util.MemoryUnit
-
 /**
  * Download and parse Amazon AWS cloud price CSV file
  *
@@ -39,12 +39,13 @@ import nextflow.util.MemoryUnit
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class AmazonPriceReader {
 
     final static public String ENDPOINT = 'https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/index.csv'
 
-    final static private int CACHE_MAX_DAYS = 7
+    final static public int CACHE_MAX_DAYS = 7
 
     final static private int colPricePerUnit = 9
     final static private int colCurrency = 10
@@ -77,7 +78,11 @@ class AmazonPriceReader {
         REGIONS.'sa-east-1' = "South America (Sao Paulo)"
     }
 
-    private Map<String,CloudInstanceType> TABLE
+    private Map<String,CloudInstanceType> TYPES_CACHE
+
+    private final Path EC2_TYPES_FILE
+
+    private final Path EC2_PRICING_FILE
 
     private String region
 
@@ -85,25 +90,27 @@ class AmazonPriceReader {
         this.region = region
         if( !REGIONS.keySet().contains(region) )
             throw new IllegalArgumentException("Unknown AWS region: `$region`")
+        EC2_PRICING_FILE = CACHE_FOLDER.resolve('ec2-pricing.csv')
+        EC2_TYPES_FILE = CACHE_FOLDER.resolve("ec2-instance-types-${region}.bin")
     }
 
     @Lazy
-    private Path CACHE_FOLDER = {
+    static public Path CACHE_FOLDER = {
         def result = APP_HOME_DIR.resolve('aws')
         result.mkdirs()
         return result
     }()
 
     synchronized Map<String,CloudInstanceType> getInstanceTypeTable() {
-        if( TABLE == null ) {
-            TABLE = getCachedTable()
+        if( TYPES_CACHE == null ) {
+            TYPES_CACHE = getCachedTable()
         }
-        return TABLE
+        return TYPES_CACHE
     }
 
     private Map<String,CloudInstanceType> getCachedTable() {
 
-        def path = CACHE_FOLDER.resolve("ec2-instance-types-${region}.bin")
+        def path = EC2_TYPES_FILE
         if( existsAndNotExpired(path)) {
             return (Map<String,CloudInstanceType>)KryoHelper.deserialize(path)
         }
@@ -115,17 +122,22 @@ class AmazonPriceReader {
 
     private boolean existsAndNotExpired( Path path ) {
         if( !path.exists() ) return false
-        final age = Duration.of( System.currentTimeMillis()-path.lastModified() )
-        final expired = age.toDays() > CACHE_MAX_DAYS
-        if( expired ) {
-            path.delete()
-            return false
+        !evict(path, Duration.of("$CACHE_MAX_DAYS day"))
+    }
+
+    private boolean evict( Path path, Duration maxAge, long now = System.currentTimeMillis() ) {
+        if( path.exists() ) {
+            final age = Duration.of(now-path.lastModified())
+            if( age > maxAge ) {
+                path.delete()
+                return true
+            }
         }
-        return true
+        return false
     }
 
     synchronized private Path cachedUrl(String url) {
-        def priceFile = CACHE_FOLDER.resolve('ec2-pricing.csv')
+        def priceFile = EC2_PRICING_FILE
         if( existsAndNotExpired(priceFile) ) {
             return priceFile
         }
