@@ -24,6 +24,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.container.DockerBuilder
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -41,27 +42,27 @@ class BashWrapperBuilderTest extends Specification {
         def builder = new BashWrapperBuilder(new TaskBean())
 
         expect:
-        builder.changeToScratchDirectory() == null
+        builder.getScratchDirectoryCommand() == null
 
         when:
         builder.scratch = true
         then:
-        builder.changeToScratchDirectory() == 'NXF_SCRATCH="$(set +u; nxf_mktemp $TMPDIR)" && cd $NXF_SCRATCH'
+        builder.getScratchDirectoryCommand() == 'NXF_SCRATCH="$(set +u; nxf_mktemp $TMPDIR)" && cd $NXF_SCRATCH'
 
         when:
         builder.scratch = '$SOME_DIR'
         then:
-        builder.changeToScratchDirectory() == 'NXF_SCRATCH="$(set +u; nxf_mktemp $SOME_DIR)" && cd $NXF_SCRATCH'
+        builder.getScratchDirectoryCommand() == 'NXF_SCRATCH="$(set +u; nxf_mktemp $SOME_DIR)" && cd $NXF_SCRATCH'
 
         when:
         builder.scratch = '/my/temp'
         then:
-        builder.changeToScratchDirectory() == 'NXF_SCRATCH="$(set +u; nxf_mktemp /my/temp)" && cd $NXF_SCRATCH'
+        builder.getScratchDirectoryCommand() == 'NXF_SCRATCH="$(set +u; nxf_mktemp /my/temp)" && cd $NXF_SCRATCH'
 
         when:
         builder.scratch = 'ram-disk'
         then:
-        builder.changeToScratchDirectory() == 'NXF_SCRATCH="$(nxf_mktemp /dev/shm/)" && cd $NXF_SCRATCH'
+        builder.getScratchDirectoryCommand() == 'NXF_SCRATCH="$(nxf_mktemp /dev/shm/)" && cd $NXF_SCRATCH'
 
     }
 
@@ -477,6 +478,7 @@ class BashWrapperBuilderTest extends Specification {
                   set +u
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
+                  rm -rf \$NXF_SCRATCH || true
                   exit \$exit_status
                 }
 
@@ -601,6 +603,7 @@ class BashWrapperBuilderTest extends Specification {
                   set +u
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
+                  rm -rf \$NXF_SCRATCH || true
                   exit \$exit_status
                 }
 
@@ -808,6 +811,7 @@ class BashWrapperBuilderTest extends Specification {
                   set +u
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
+                  sudo docker rm \$NXF_BOXID &>/dev/null || true
                   exit \$exit_status
                 }
 
@@ -836,7 +840,6 @@ class BashWrapperBuilderTest extends Specification {
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
-                sudo docker rm \$NXF_BOXID &>/dev/null || true
                 """
                         .stripIndent().leftTrim()
 
@@ -916,6 +919,7 @@ class BashWrapperBuilderTest extends Specification {
                   set +u
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
+                  docker rm \$NXF_BOXID &>/dev/null || true
                   exit \$exit_status
                 }
 
@@ -944,7 +948,6 @@ class BashWrapperBuilderTest extends Specification {
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
-                docker rm \$NXF_BOXID &>/dev/null || true
                 """
                         .stripIndent().leftTrim()
 
@@ -1245,6 +1248,7 @@ class BashWrapperBuilderTest extends Specification {
                   set +u
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
+                  docker rm \$NXF_BOXID &>/dev/null || true
                   exit \$exit_status
                 }
 
@@ -1273,7 +1277,119 @@ class BashWrapperBuilderTest extends Specification {
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
-                docker rm \$NXF_BOXID &>/dev/null || true
+                """
+                        .stripIndent().leftTrim()
+
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'test bash wrapper with docker and scratch dir' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        /*
+         * bash run through docker
+         */
+        when:
+        def bash = new BashWrapperBuilder([
+                name: 'Hello 3',
+                workDir: folder,
+                scratch: true,
+                script: 'echo Hello world!',
+                containerImage: 'busybox',
+                dockerConfig: [sudo: true, enabled: true]
+        ] as TaskBean)
+        bash.build()
+
+        then:
+        Files.exists(folder.resolve('.command.sh'))
+        Files.exists(folder.resolve('.command.run'))
+
+        folder.resolve('.command.sh').text ==
+                '''
+                #!/bin/bash -ue
+                echo Hello world!
+                '''
+                        .stripIndent().leftTrim()
+
+
+        folder.resolve('.command.run').text ==
+                """
+                #!/bin/bash
+                # NEXTFLOW TASK: Hello 3
+                set -e
+                set -u
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
+
+                nxf_env() {
+                    echo '============= task environment ============='
+                    env | sort | sed "s/\\(.*\\)AWS\\(.*\\)=\\(.\\{6\\}\\).*/\\1AWS\\2=\\3xxxxxxxxxxxxx/"
+                    echo '============= task output =================='
+                }
+
+                nxf_kill() {
+                    declare -a ALL_CHILD
+                    while read P PP;do
+                        ALL_CHILD[\$PP]+=" \$P"
+                    done < <(ps -e -o pid= -o ppid=)
+
+                    walk() {
+                        [[ \$1 != \$\$ ]] && kill \$1 2>/dev/null || true
+                        for i in \${ALL_CHILD[\$1]:=}; do walk \$i; done
+                    }
+
+                    walk \$1
+                }
+
+                function nxf_mktemp() {
+                    local base=\${1:-/tmp}
+                    if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                    else TMPDIR="\$base" mktemp -d -t nxf.XXXXXXXXXX
+                    fi
+                }
+
+                on_exit() {
+                  exit_status=\${ret:=\$?}
+                  printf \$exit_status > ${folder}/.exitcode
+                  set +u
+                  [[ "\$COUT" ]] && rm -f "\$COUT" || true
+                  [[ "\$CERR" ]] && rm -f "\$CERR" || true
+                  (sudo -n true && sudo rm -rf \$NXF_SCRATCH || rm -rf \$NXF_SCRATCH)&>/dev/null || true
+                  sudo docker rm \$NXF_BOXID &>/dev/null || true
+                  exit \$exit_status
+                }
+
+                on_term() {
+                    set +e
+                    sudo docker kill \$NXF_BOXID
+                }
+
+                trap on_exit EXIT
+                trap on_term TERM INT USR1 USR2
+
+                export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
+                [[ \$NXF_DEBUG > 0 ]] && nxf_env
+                touch ${folder}/.command.begin
+                NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)" && cd \$NXF_SCRATCH
+
+                set +e
+                COUT=\$PWD/.command.po; mkfifo "\$COUT"
+                CERR=\$PWD/.command.pe; mkfifo "\$CERR"
+                tee .command.out < "\$COUT" &
+                tee1=\$!
+                tee .command.err < "\$CERR" >&2 &
+                tee2=\$!
+                (
+                sudo docker run -i -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/bin/bash -ue ${folder}/.command.sh"
+                ) >"\$COUT" 2>"\$CERR" &
+                pid=\$!
+                wait \$pid || ret=\$?
+                wait \$tee1 \$tee2
+                cp .command.out ${folder} || true
+                cp .command.err ${folder} || true
                 """
                         .stripIndent().leftTrim()
 
@@ -1385,6 +1501,7 @@ class BashWrapperBuilderTest extends Specification {
                   set +u
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
+                  docker rm \$NXF_BOXID &>/dev/null || true
                   exit \$exit_status
                 }
 
@@ -1413,7 +1530,6 @@ class BashWrapperBuilderTest extends Specification {
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
-                docker rm \$NXF_BOXID &>/dev/null || true
                 """
                         .stripIndent().leftTrim()
     }
@@ -1455,7 +1571,7 @@ class BashWrapperBuilderTest extends Specification {
         when:
         bash = new BashWrapperBuilder( new TaskBean() )
         then:
-        bash.scriptCleanUp( Paths.get("/my/exit/file's"), null ) ==
+        bash.scriptCleanUp( Paths.get("/my/exit/file's"), 'NXF_SCRATCH=xx', null ) ==
                     '''
                     nxf_env() {
                         echo '============= task environment ============='
@@ -1490,6 +1606,7 @@ class BashWrapperBuilderTest extends Specification {
                       set +u
                       [[ "\$COUT" ]] && rm -f "\$COUT" || true
                       [[ "\$CERR" ]] && rm -f "\$CERR" || true
+                      rm -rf $NXF_SCRATCH || true
                       exit $exit_status
                     }
 
@@ -1505,9 +1622,12 @@ class BashWrapperBuilderTest extends Specification {
 
 
         when:
+        def builder = Mock(DockerBuilder)
+        builder.getRemoveCommand() >> 'docker rm x'
+        builder.getKillCommand() >> 'docker kill x'
         bash = new BashWrapperBuilder(new TaskBean())
         then:
-        bash.scriptCleanUp( Paths.get('/my/exit/xxx'), 'docker stop x' ) ==
+        bash.scriptCleanUp( Paths.get('/my/exit/xxx'), null, builder ) ==
                 '''
                     nxf_env() {
                         echo '============= task environment ============='
@@ -1542,12 +1662,70 @@ class BashWrapperBuilderTest extends Specification {
                       set +u
                       [[ "\$COUT" ]] && rm -f "\$COUT" || true
                       [[ "\$CERR" ]] && rm -f "\$CERR" || true
+                      docker rm x &>/dev/null || true
                       exit $exit_status
                     }
 
                     on_term() {
                         set +e
-                        docker stop x
+                        docker kill x
+                    }
+
+                    trap on_exit EXIT
+                    trap on_term TERM INT USR1 USR2
+                    '''
+                        .stripIndent().leftTrim()
+
+
+        when:
+        builder = Mock(DockerBuilder)
+        builder.getRemoveCommand() >> 'docker rm x'
+        builder.getKillCommand() >> 'docker kill x'
+        bash = new BashWrapperBuilder(new TaskBean())
+        then:
+        bash.scriptCleanUp( Paths.get('/my/exit/xxx'), 'NXF_SCRATCH=xxx', builder ) ==
+                '''
+                    nxf_env() {
+                        echo '============= task environment ============='
+                        env | sort | sed "s/\\(.*\\)AWS\\(.*\\)=\\(.\\{6\\}\\).*/\\1AWS\\2=\\3xxxxxxxxxxxxx/"
+                        echo '============= task output =================='
+                    }
+
+                    nxf_kill() {
+                        declare -a ALL_CHILD
+                        while read P PP;do
+                            ALL_CHILD[$PP]+=" $P"
+                        done < <(ps -e -o pid= -o ppid=)
+
+                        walk() {
+                            [[ $1 != $$ ]] && kill $1 2>/dev/null || true
+                            for i in ${ALL_CHILD[$1]:=}; do walk $i; done
+                        }
+
+                        walk $1
+                    }
+
+                    function nxf_mktemp() {
+                        local base=\${1:-/tmp}
+                        if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                        else TMPDIR="\$base" mktemp -d -t nxf.XXXXXXXXXX
+                        fi
+                    }
+
+                    on_exit() {
+                      exit_status=${ret:=$?}
+                      printf $exit_status > /my/exit/xxx
+                      set +u
+                      [[ "\$COUT" ]] && rm -f "\$COUT" || true
+                      [[ "\$CERR" ]] && rm -f "\$CERR" || true
+                      (sudo -n true && sudo rm -rf $NXF_SCRATCH || rm -rf $NXF_SCRATCH)&>/dev/null || true
+                      docker rm x &>/dev/null || true
+                      exit $exit_status
+                    }
+
+                    on_term() {
+                        set +e
+                        docker kill x
                     }
 
                     trap on_exit EXIT

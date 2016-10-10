@@ -90,6 +90,8 @@ class TaskBean implements Serializable, Cloneable {
 
     Path binDir
 
+    def cleanup
+
     @PackageScope
     TaskBean() {
         shell = BashWrapperBuilder.BASH
@@ -118,6 +120,7 @@ class TaskBean implements Serializable, Cloneable {
         this.script = task.getScript()
         this.beforeScript = task.config.beforeScript
         this.afterScript = task.config.afterScript
+        this.cleanup = task.config.cleanup
 
         // container config
         this.containerImage = task.getContainer()
