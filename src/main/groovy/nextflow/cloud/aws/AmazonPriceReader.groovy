@@ -45,7 +45,7 @@ class AmazonPriceReader {
 
     final static public String ENDPOINT = 'https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/index.csv'
 
-    final static public int CACHE_MAX_DAYS = 7
+    final static private int CACHE_MAX_DAYS = 7
 
     final static private int colPricePerUnit = 9
     final static private int colCurrency = 10
@@ -78,11 +78,7 @@ class AmazonPriceReader {
         REGIONS.'sa-east-1' = "South America (Sao Paulo)"
     }
 
-    private Map<String,CloudInstanceType> TYPES_CACHE
-
-    private final Path EC2_TYPES_FILE
-
-    private final Path EC2_PRICING_FILE
+    private Map<String,CloudInstanceType> TABLE
 
     private String region
 
@@ -90,32 +86,34 @@ class AmazonPriceReader {
         this.region = region
         if( !REGIONS.keySet().contains(region) )
             throw new IllegalArgumentException("Unknown AWS region: `$region`")
-        EC2_PRICING_FILE = CACHE_FOLDER.resolve('ec2-pricing.csv')
-        EC2_TYPES_FILE = CACHE_FOLDER.resolve("ec2-instance-types-${region}.bin")
+    }
+
+    CloudInstanceType getInstanceType( String typeId ) {
+        return getInstanceTypeTable().get(typeId)
     }
 
     @Lazy
-    static public Path CACHE_FOLDER = {
+    private Path CACHE_FOLDER = {
         def result = APP_HOME_DIR.resolve('aws')
         result.mkdirs()
         return result
     }()
 
-    synchronized Map<String,CloudInstanceType> getInstanceTypeTable() {
-        if( TYPES_CACHE == null ) {
-            TYPES_CACHE = getCachedTable()
+    private synchronized Map<String,CloudInstanceType> getInstanceTypeTable() {
+        if( TABLE == null ) {
+            TABLE = getCachedTable()
         }
-        return TYPES_CACHE
+        return TABLE
     }
 
     private Map<String,CloudInstanceType> getCachedTable() {
 
-        def path = EC2_TYPES_FILE
+        final path = CACHE_FOLDER.resolve("ec2-instance-types-${region}.bin")
         if( existsAndNotExpired(path)) {
             return (Map<String,CloudInstanceType>)KryoHelper.deserialize(path)
         }
 
-        def result = parse(ENDPOINT)
+        final result = parse(ENDPOINT)
         KryoHelper.serialize(result, path)
         return result
     }
@@ -137,7 +135,7 @@ class AmazonPriceReader {
     }
 
     synchronized private Path cachedUrl(String url) {
-        def priceFile = EC2_PRICING_FILE
+        def priceFile = CACHE_FOLDER.resolve('ec2-pricing.csv')
         if( existsAndNotExpired(priceFile) ) {
             return priceFile
         }

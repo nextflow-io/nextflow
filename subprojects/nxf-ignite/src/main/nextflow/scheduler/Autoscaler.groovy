@@ -269,6 +269,11 @@ class Autoscaler implements Closeable {
     @PackageScope
     void requestNewCpus( int cpus ) {
         def type = driver.describeInstanceType(scalerConfig.instanceType)
+        if( !type ) {
+            log.warn "### Can't find a instance type description: ${scalerConfig.instanceType}"
+            return
+        }
+
         def nodeNeeded = (int)Math.ceil( cpus / type.cpus )
         def currentSize = getClusterSize()
         def maxSize = scalerConfig.getMaxInstances()
@@ -320,12 +325,17 @@ class Autoscaler implements Closeable {
 
         // -- make sure that tasks can be fulfilled by the new instance
         def total = driver.describeInstanceType(instanceType)
+        if( !total ) {
+            log.warn "### Unknown instance type: $instanceType"
+            return false
+        }
+
         if( req.cpus > total.cpus ) {
-            log.warn("Task (id=${taskId}) exceed the number of CPUs provided by autoscaling instance type: ${instanceType} -- req: ${req.cpus}; provided: ${total.cpus}")
+            log.warn("### Task (id=${taskId}) exceed the number of CPUs provided by autoscaling instance type: ${instanceType} -- req: ${req.cpus}; provided: ${total.cpus}")
             return false
         }
         if( req.memory && req.memory > total.memory ) {
-            log.warn("Task (id=${taskId}) exceed the amount of memory provided by autoscaling instance type: ${instanceType} -- req: ${req.memory}; provided: ${total.memory}")
+            log.warn("### Task (id=${taskId}) exceed the amount of memory provided by autoscaling instance type: ${instanceType} -- req: ${req.memory}; provided: ${total.memory}")
             return false
         }
 
@@ -381,7 +391,7 @@ class Autoscaler implements Closeable {
         }
 
         if( overflow ) {
-            log.warn "Task (id=${taskId}) requests an amount of resources not available in any node in the current cluster topology -- CPUs: ${req.cpus}; memory: ${req.memory?:'-'}"
+            log.warn "### Task (id=${taskId}) requests an amount of resources not available in any node in the current cluster topology -- CPUs: ${req.cpus}; memory: ${req.memory?:'-'}"
         }
 
         byte result = fulfil ? 1 : ( overflow ? 2 : 0 )
