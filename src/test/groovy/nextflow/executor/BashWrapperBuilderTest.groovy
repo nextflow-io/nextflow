@@ -1357,7 +1357,7 @@ class BashWrapperBuilderTest extends Specification {
                   set +u
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
-                  (sudo -n true && sudo rm -rf \$NXF_SCRATCH || rm -rf \$NXF_SCRATCH)&>/dev/null || true
+                  (sudo -n true && sudo rm -rf "\$NXF_SCRATCH" || rm -rf "\$NXF_SCRATCH")&>/dev/null || true
                   sudo docker rm \$NXF_BOXID &>/dev/null || true
                   exit \$exit_status
                 }
@@ -1718,7 +1718,7 @@ class BashWrapperBuilderTest extends Specification {
                       set +u
                       [[ "\$COUT" ]] && rm -f "\$COUT" || true
                       [[ "\$CERR" ]] && rm -f "\$CERR" || true
-                      (sudo -n true && sudo rm -rf $NXF_SCRATCH || rm -rf $NXF_SCRATCH)&>/dev/null || true
+                      (sudo -n true && sudo rm -rf "$NXF_SCRATCH" || rm -rf "$NXF_SCRATCH")&>/dev/null || true
                       docker rm x &>/dev/null || true
                       exit $exit_status
                     }
