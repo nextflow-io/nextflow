@@ -139,7 +139,9 @@ class Global {
 
         def home = Paths.get(System.properties.get('user.home') as String)
         def file = home.resolve('.aws/config')
-        if( !file.exists() ) return null
+        if( !file.exists() ) {
+            return null
+        }
 
         def ini = new IniFile(file)
         return ini.section('default').region
