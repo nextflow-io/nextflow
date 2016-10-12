@@ -106,7 +106,7 @@ class CmdCloud extends CmdBase implements UsageAware {
 
     CmdCloud() {
         commands << new CreateCluster()
-        commands << new GrowCluster()
+        commands << new JoinCluster()
         commands << new ListNodes()
         commands << new SpotPrices()
         commands << new Shutdown()
@@ -469,7 +469,7 @@ class CmdCloud extends CmdBase implements UsageAware {
         @Override
         String getName() { 'create' }
 
-        String getShortcut() { null }
+        String getShortcut() { 'c' }
 
         @Override
         void apply(String clusterName) {
@@ -506,12 +506,12 @@ class CmdCloud extends CmdBase implements UsageAware {
     /**
      * Implements the cloud `launch-nodes` sub-command
      */
-    class GrowCluster implements SubCmd {
+    class JoinCluster implements SubCmd {
 
         @Override
-        String getName() { return 'grow' }
+        String getName() { return 'join' }
 
-        String getShortcut() { 'ln' }
+        String getShortcut() { 'j' }
 
         @Override
         void apply(String clusterName) {
