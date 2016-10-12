@@ -1191,10 +1191,13 @@ class TaskProcessor {
 
         // -- creates the map of all tuple values to bind
         Map<Short,List> tuples = [:]
-        config.getOutputs().each { OutParam p -> tuples.put(p.index,[]) }
+        for( OutParam param : config.getOutputs() ) {
+            tuples.put(param.index, [])
+        }
 
         // -- collects the values to bind
-        task.outputs.each { OutParam param, value ->
+        for( OutParam param: task.outputs.keySet() ){
+            def value = task.outputs.get(param)
 
             switch( param ) {
             case StdOutParam:
@@ -1202,6 +1205,9 @@ class TaskProcessor {
                 value = value instanceof Path ? value.text : value?.toString()
 
             case FileOutParam:
+                if( !value && param instanceof FileOutParam && param.optional  )
+                    break
+
             case ValueOutParam:
                 log.trace "Process $name > collecting out param: ${param} = $value"
                 tuples[param.index].add(value)
@@ -1213,7 +1219,7 @@ class TaskProcessor {
         }
 
         // -- bind out the collected values
-        config.getOutputs().each { param ->
+        for( OutParam param : config.getOutputs() ) {
             def list = tuples[param.index]
             if( list == null ) throw new IllegalStateException()
 
@@ -1239,7 +1245,6 @@ class TaskProcessor {
                 throw new IllegalStateException("Unknown bind output parameter type: ${param}")
         }
 
-
         // -- finally prints out the task output when 'echo' is true
         if( task.config.echo ) {
             task.echoStdout()
@@ -1248,6 +1253,9 @@ class TaskProcessor {
 
     protected void bindOutParam( OutParam param, List values ) {
         log.trace "<$name> Binding param $param with $values"
+
+        if( !values && param instanceof FileOutParam && param.optional )
+            return
 
         def x = values.size() == 1 ? values[0] : values
         param.getOutChannels().each { it.bind(x) }
@@ -1340,10 +1348,11 @@ class TaskProcessor {
                     log.debug "Process `${task.name}` is unable to find [${file.class.simpleName}]: `$file` (pattern: `$filePattern`)"
             }
 
-            if( !result )
-                throw new MissingFileException("Missing output file(s) `$filePattern` expected by process `${task.name}`")
+            if( result )
+                allFiles.addAll(result)
 
-            allFiles.addAll(result)
+            else if( !param.optional )
+                throw new MissingFileException("Missing output file(s) `$filePattern` expected by process `${task.name}`")
         }
 
         task.setOutput( param, allFiles.size()==1 ? allFiles[0] : allFiles )
