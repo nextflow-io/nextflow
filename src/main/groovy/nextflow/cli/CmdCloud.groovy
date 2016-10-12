@@ -94,6 +94,9 @@ class CmdCloud extends CmdBase implements UsageAware {
     @Parameter(names='-all', description = 'Print all prices and availability zones', arity = 0)
     boolean all
 
+    @Parameter(names=['-r','-region'], description = 'The region to use. Overrides config/env settings.')
+    String region
+
     @Parameter
     List<String> args
 
@@ -151,7 +154,7 @@ class CmdCloud extends CmdBase implements UsageAware {
                 .build()
 
         Global.setConfig(config)
-        this.driver = CloudDriverFactory.getDriver(driverName)
+        this.driver = CloudDriverFactory.getDriver(driverName, [region: this.region])
     }
 
     /**
@@ -389,6 +392,7 @@ class CmdCloud extends CmdBase implements UsageAware {
         addField('imageId', result)
         addField('instanceType', result)
         addField('spotPrice', result)
+        addField('region', result)
     }
 
     /**
@@ -451,6 +455,8 @@ class CmdCloud extends CmdBase implements UsageAware {
         void usage(List<String> result) {
             result << 'List cloud cluster node(s)'
             result << "Usage: nextflow cloud $name <cluster name> [options]".toString()
+            result << ''
+            addField('region', result)
             result << ''
         }
     }
@@ -752,6 +758,7 @@ class CmdCloud extends CmdBase implements UsageAware {
             addField('filter', result)
             addField('history', result)
             addField('sort', result)
+            addField('region', result)
             result << ''
         }
     }
@@ -787,6 +794,9 @@ class CmdCloud extends CmdBase implements UsageAware {
         void usage(List<String> result) {
             result << 'Shutdown a running cluster the cloud'
             result << "Usage: nextflow cloud $name <cluster name> [options]".toString()
+            result << ''
+            result << 'Options:'
+            addField('region', result)
             result << ''
         }
     }

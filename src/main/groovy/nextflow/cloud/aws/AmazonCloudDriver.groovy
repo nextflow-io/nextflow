@@ -78,32 +78,40 @@ class AmazonCloudDriver implements CloudDriver {
 
     AmazonEC2Client ec2client
 
-    private Map config
-
     private String accessKey
 
     private String secretKey
 
     private String region
 
-    @CompileDynamic
     AmazonCloudDriver() {
-        this.config = Global.config
-        // -- get the aws credentials
-        def credentials = Global.getAwsCredentials()
-        if( !credentials )
-            throw new AbortOperationException('Missing AWS access and secret keys -- Make sure to define in your system environment the following variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`')
-        this.accessKey = credentials[0]
-        this.secretKey = credentials[1]
-        // -- get the aws default region
-        this.region = Global.getAwsRegion()
-        if( !region )
-            throw new AbortOperationException('Missing AWS region -- Make sure to define in your system environment the variable `AWS_DEFAULT_REGION`')
+        this(Collections.emptyMap())
     }
 
     @CompileDynamic
+    AmazonCloudDriver(Map config) {
+        // -- get the aws credentials
+        if( config.accessKey && config.secretKey ) {
+            this.accessKey = config.accessKey
+            this.secretKey = config.secretKey
+        }
+        else {
+            def credentials = Global.getAwsCredentials()
+            if( !credentials )
+                throw new AbortOperationException('Missing AWS access and secret keys -- Make sure to define in your system environment the following variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`')
+            this.accessKey = credentials[0]
+            this.secretKey = credentials[1]
+        }
+
+        // -- get the aws default region
+        this.region = config.region ?: Global.getAwsRegion()
+        if( !this.region )
+            throw new AbortOperationException('Missing AWS region -- Make sure to define in your system environment the variable `AWS_DEFAULT_REGION`')
+    }
+
+    /** only for testing purpose */
+    @CompileDynamic
     protected AmazonCloudDriver( Map config, AmazonEC2Client client ) {
-        this.config = config
         (accessKey, secretKey) = Global.getAwsCredentials(null, config)
         this.region = Global.getAwsRegion(null, config)
         this.ec2client = client
