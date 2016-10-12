@@ -61,6 +61,8 @@ class AmazonPriceReaderTest extends Specification {
 
     }
 
+
+
     def 'should parse a csv line' () {
 
         given:
@@ -78,19 +80,19 @@ class AmazonPriceReaderTest extends Specification {
         fields.size() == 6
 
         when:
-        def line ='"6QB2UH376KYJD6MB","6QCMYABX3D","6QB2UH376KYJD6MB.6QCMYABX3D.6YS6EN2CT7","Reserved","USD 0.0 per Red Hat Enterprise Linux (Amazon VPC), t2.medium instance-hour (or partial hour)","2015-04-30","0","Inf","Hrs","0.0000000000","USD","1yr","All Upfront","Compute Instance","AmazonEC2","Asia Pacific (Sydney)","AWS Region","t2.medium",,"General purpose","2","Intel Xeon Family","Up to 3.3 GHz","4 GiB","EBS only","Low to Moderate","32-bit or 64-bit",,,,,,,,"Shared",,"RHEL","No License required",,,,,,,,"APS2-BoxUsage:t2.medium","RunInstances:0010",,,,,,,,,,,,,,,"NA","Intel AVX; Intel Turbo",'
+        def line = '"6QB2UH376KYJD6MB","6QCMYABX3D","6QB2UH376KYJD6MB.6QCMYABX3D.6YS6EN2CT7","Reserved","USD 0.0 per Red Hat Enterprise Linux (Amazon VPC), t2.medium instance-hour (or partial hour)","2015-04-30","0","Inf","Hrs","0.0000000000","USD","1yr","All Upfront","standard","Compute Instance","AmazonEC2","Asia Pacific (Sydney)","AWS Region","t2.medium",,"General purpose","2","Intel Xeon Family","Up to 3.3 GHz","4 GiB","EBS only","Low to Moderate","32-bit or 64-bit",,,,,,,,"Shared",,"RHEL","No License required",,,,,,,,"APS2-BoxUsage:t2.medium","RunInstances:0010",,,,,,,,,,,,,,,"NA","Intel AVX; Intel Turbo",'
         def result = parser.parseCsvLine(line)
         then:
-        result.size()==64
+        result.size()==65
         result[0] == '6QB2UH376KYJD6MB'
-        result[9] == '0.0000000000'
-        result[10] == 'USD'
-        result[13] == 'Compute Instance'
-        result[14] == 'AmazonEC2'
-        result[17] == 't2.medium'
-        result[20] == '2'
-        result[23] == '4 GiB'
-
+        result[AmazonPriceReader.colPricePerUnit] == '0.0000000000'
+        result[AmazonPriceReader.colCurrency] == 'USD'
+        result[AmazonPriceReader.colProdFamily] == 'Compute Instance'
+        result[AmazonPriceReader.colServiceCode] == 'AmazonEC2'
+        result[AmazonPriceReader.colInstanceType] == 't2.medium'
+        result[AmazonPriceReader.colCpu] == '2'
+        result[AmazonPriceReader.colMem] == '4 GiB'
+        result[AmazonPriceReader.colLocation]  == "Asia Pacific (Sydney)"
 
     }
 

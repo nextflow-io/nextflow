@@ -49,15 +49,15 @@ class AmazonPriceReader {
 
     final static private int colPricePerUnit = 9
     final static private int colCurrency = 10
-    final static private int colProdFamily = 13 // it must be `Compute Instance`
-    final static private int colServiceCode = 14 // it must be `AmazonEC2`
-    final static private int colLocation = 15 //
-    final static private int colInstanceType = 17
-    final static private int colCurrentGen = 18
-    final static private int colCpu = 20
-    final static private int colMem = 23
-    final static private int colStorage = 24
-    final static private int colOS = 36
+    final static private int colProdFamily = 14 // it must be `Compute Instance`
+    final static private int colServiceCode = 15 // it must be `AmazonEC2`
+    final static private int colLocation = 16 //
+    final static private int colInstanceType = 18
+    final static private int colCurrentGen = 19
+    final static private int colCpu = 21
+    final static private int colMem = 24
+    final static private int colStorage = 25
+    final static private int colOS = 37
 
     final static private char DOUBLE_QUOTE = '"' as char
     final static private char COMMA = ',' as char
