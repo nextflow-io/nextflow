@@ -243,6 +243,8 @@ class FileOutParam extends BaseOutParam implements OutParam {
 
     protected boolean glob = true
 
+    protected boolean optional
+
     private GString gstring
 
     private Closure<String> dynamicObj
@@ -262,6 +264,8 @@ class FileOutParam extends BaseOutParam implements OutParam {
     boolean getFollowLinks() { followLinks }
 
     boolean getGlob() { glob }
+
+    boolean getOptional() { optional }
 
 
     /**
@@ -310,6 +314,10 @@ class FileOutParam extends BaseOutParam implements OutParam {
         return this
     }
 
+    FileOutParam optional( boolean value ) {
+        this.optional = value
+        return this
+    }
 
     BaseOutParam bind( obj ) {
 
