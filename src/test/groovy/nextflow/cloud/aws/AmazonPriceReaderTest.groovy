@@ -35,11 +35,21 @@ import test.TestHelper
  */
 class AmazonPriceReaderTest extends Specification {
 
+    static String REGION = 'eu-west-1'
+
+    def setupSpec() {
+        // delete the the pricing cached file
+        def home = System.getProperty('user.home')
+        def cache = Paths.get("$home/.nextflow/aws")
+        cache.deleteDir()
+    }
+
+
     @Unroll
     def 'parse price api #e_type' () {
 
         given:
-        def result = new AmazonPriceReader('eu-west-1').parse(AmazonPriceReader.ENDPOINT)
+        def result = new AmazonPriceReader(REGION).parse(AmazonPriceReader.ENDPOINT)
 
         expect:
         with(result.get(e_type)) {
