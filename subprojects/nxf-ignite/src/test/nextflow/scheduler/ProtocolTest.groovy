@@ -62,8 +62,8 @@ class ProtocolTest extends Specification {
         def res2 = new Resources(new ClusterConfig([:], 'master'))
         then:
         res2.cpus == SysHelper.getAvailCpus()
-        res2.memory == SysHelper.getAvailMemory()
-        res2.disk == SysHelper.getAvailDisk()
+        res2.memory.toGiga() == SysHelper.getAvailMemory().toGiga()
+        res2.disk.toGiga() == SysHelper.getAvailDisk().toGiga()
 
     }
 
