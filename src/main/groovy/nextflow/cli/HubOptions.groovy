@@ -25,8 +25,8 @@ import groovy.transform.CompileStatic
 /**
   * Defines the command line parameters for command that need to interact with a pipeline service hub i.e. GitHub or BitBucket
   *
-  * Author Maria Chatzou
-  * Author Paolo Di Tommaso
+  * @author Maria Chatzou
+  * @author Paolo Di Tommaso
   */
 
 @CompileStatic

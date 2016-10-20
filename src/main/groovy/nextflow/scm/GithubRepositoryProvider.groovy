@@ -25,8 +25,8 @@ import groovy.transform.CompileStatic
 /**
  * Implements a repository provider for GitHub service
  *
- * Author Maria Chatzou
- * Author Paolo Di Tommaso
+ * @author Maria Chatzou
+ * @author Paolo Di Tommaso
  */
 @CompileStatic
 final class GithubRepositoryProvider extends RepositoryProvider {
