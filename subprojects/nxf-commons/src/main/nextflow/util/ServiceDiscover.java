@@ -21,7 +21,10 @@
 package nextflow.util;
 
 /**
- * Same as Java {@code ServiceLoader} but return a service class instead of an instance
+ * Same as Java {@link java.util.ServiceLoader} but return a service class instead of an instance
+ *
+ * NOTE: This source has been included under the GPL "Fair Use" clause.
+ * http://www.gnu.org/licenses/gpl-faq.html#GPLFairUse
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -40,6 +43,30 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.ServiceConfigurationError;
 
+/*
+ * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
+ * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ */
 
 /**
  * A simple service-provider loading facility.

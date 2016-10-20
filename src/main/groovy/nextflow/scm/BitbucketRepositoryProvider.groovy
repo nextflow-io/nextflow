@@ -25,8 +25,8 @@ import nextflow.exception.AbortOperationException
 /**
  * Implements a repository provider for the BitBucket service
  *
- * Author Maria Chatzou
- * Author Paolo Di Tommaso
+ * @author Maria Chatzou
+ * @author Paolo Di Tommaso
  */
 @Slf4j
 final class BitbucketRepositoryProvider extends RepositoryProvider {

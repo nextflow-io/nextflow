@@ -28,8 +28,8 @@ import nextflow.exception.AbortOperationException
  *
  * Base class for a generic source repository provider
  *
- * Author Maria Chatzou
- * Author Paolo Di Tommaso
+ * @author Maria Chatzou
+ * @author Paolo Di Tommaso
  */
 @Slf4j
 @CompileStatic

@@ -35,7 +35,7 @@ import nextflow.processor.ProcessConfig
 /**
  * Base class for input/output parameters
  *
- * @author Paolo DI Tommaso <paolo.ditommaso@gmail.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 abstract class BaseParam {
