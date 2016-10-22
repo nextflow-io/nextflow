@@ -73,8 +73,9 @@ function get() {
 }
 
 function make_temp() {
-    if [ "$(uname)" = 'Darwin' ]; then mktemp $PWD/nxf-tmp.XXXXX || exit $?
-    else mktemp -t nxf-tmp.XXXXX -p $PWD || exit $?
+    local base=${NXF_TEMP:=$PWD}
+    if [ "$(uname)" = 'Darwin' ]; then mktemp ${base}/nxf-tmp.XXXXX || exit $?
+    else mktemp -t nxf-tmp.XXXXX -p ${base} || exit $?
     fi
 }
 
