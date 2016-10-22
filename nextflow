@@ -73,14 +73,16 @@ function get() {
 }
 
 function make_temp() {
-    if [ "$(uname)" = 'Darwin' ]; then mktemp $PWD/nxf-tmp.XXXXX || exit $?
-    else mktemp -t nxf-tmp.XXXXX -p $PWD || exit $?
+    TEMPDIR=${NXF_TEMP:-$PWD}
+    if [ "$(uname)" = 'Darwin' ]; then mktemp $TEMPDIR/nxf-tmp.XXXXX || exit $?
+    else mktemp -t nxf-tmp.XXXXX -p $TEMPDIR || exit $?
     fi
 }
 
 function install() {
     local tmpfile=$(make_temp)
-    get "http://www.nextflow.io/releases/latest/nextflow" "$tmpfile" "$1" || exit $?
+    #get "http://www.nextflow.io/releases/latest/nextflow" "$tmpfile" "$1" || exit $?
+    get "https://raw.githubusercontent.com/douglasgscofield/nextflow/master/nextflow" "$tmpfile" "$1" || exit $?
     mv "$tmpfile" "$1" || exit $?
     chmod +x "$1" || exit $?
     bash "$1" -download || exit $?
@@ -123,6 +125,26 @@ function launch_nextflow() {
     exec bash -c "exec $cmdline"
     exit 1
 }
+
+# find base directory to use for launchers: NXF_LAUNCHBASE > NXF_HOME > NXF_TEMP > error
+if [ ! -z "$NXF_LAUNCHBASE" ] ; then
+    if [ ! -d "$NXF_LAUNCHBASE" ] || [ ! -w "$NXF_LAUNCHBASE" ] ; then
+        echo 'Please note:'
+        echo "- If NXF_LAUNCHBASE is set, it must be a writable directory"
+        echo ''
+        exit 1
+    fi
+elif [ -w "$NXF_HOME" ] ; then
+    NXF_LAUNCHBASE=${NXF_HOME}
+elif [ ! -z "$NXF_TEMP"  ] && [ -d "$NXF_TEMP" ] && [ -w "$NXF_TEMP" ] ; then
+    NXF_LAUNCHBASE=${NXF_TEMP}
+else
+    echo 'Please note:'
+    echo "- NXF_LAUNCHBASE could not be set to a writable directory. Please set NXF_LAUNCHBASE,"
+    echo "- or ensure that NXF_HOME is writable, or set NXF_TEMP to a writable directory."
+    echo ''
+    exit 1
+fi
 
 # check self-install
 if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
@@ -217,7 +239,7 @@ NXF_GRAB=${NXF_GRAB:-''}
 NXF_CLASSPATH=${NXF_CLASSPATH:-''}
 NXF_MPIRUN=${NXF_MPIRUN:=''}
 NXF_HOST=${HOSTNAME:-localhost}
-[[ $NXF_LAUNCHER ]] || NXF_LAUNCHER=${NXF_HOME}/tmp/launcher/nextflow-${NXF_PACK}_${NXF_VER}/${NXF_HOST}
+[[ $NXF_LAUNCHER ]] || NXF_LAUNCHER=${NXF_LAUNCHBASE}/tmp/launcher/nextflow-${NXF_PACK}_${NXF_VER}/${NXF_HOST}
 
 if [[ $NXF_MODE == ignite ]]; then
     # Fix JDK bug when there's a limit on the OS virtual memory
@@ -351,7 +373,7 @@ else
         done
         printf "$STR">"$LAUNCH_FILE"
     else
-        echo_yellow "Warning: Couldn't create cached classpath folder: $NXF_LAUNCHER -- Maybe NXF_HOME is not writable?"
+        echo_yellow "Warning: Couldn't create cached classpath folder: $NXF_LAUNCHER -- Maybe NXF_HOME is not writable or NXF_LAUNCHBASE should be used?"
     fi
 
 fi
