@@ -190,7 +190,7 @@ class Channel  {
             return fromPathWithPattern(options, filePattern)
 
         else
-            return fromPathWithMap(options, filePattern )
+            return fromPathWithMap(options, filePattern as Path)
 
     }
 
@@ -204,7 +204,7 @@ class Channel  {
     }
 
 
-    static private DataflowChannel<Path> fromPathWithMap( Map opts = null, filePattern ) {
+    static private DataflowChannel<Path> fromPathWithMap( Map opts = null, Path filePattern ) {
 
         def glob = opts?.containsKey('glob') ? opts.glob as boolean : true
         if( !glob ) {
@@ -214,18 +214,9 @@ class Channel  {
             return Nextflow.channel(result)
         }
 
-        FileSystem fs = null
-        String path
-        if( filePattern instanceof Path ) {
-            fs = filePattern.getFileSystem()
-            path = filePattern.toString()
-        }
-        else {
-            path = filePattern.toString()
-        }
-
-        def splitter = FilePatternSplitter.glob().parse(path)
-        if( !fs ) fs = FileHelper.fileSystemForScheme(splitter.scheme)
+        final fs = filePattern.getFileSystem()
+        final path = filePattern.toString()
+        final splitter = FilePatternSplitter.glob().parse(path)
 
         if( !splitter.isPattern() ) {
             return Nextflow.channel( fs.getPath( splitter.strip(path) ).complete() )
