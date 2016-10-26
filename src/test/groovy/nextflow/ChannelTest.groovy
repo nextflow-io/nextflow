@@ -323,6 +323,14 @@ class ChannelTest extends Specification {
     }
 
 
+    def testFromPathS3() {
+
+        when:
+        Channel.fromPath('s3://bucket/some/data.txt')
+        then:
+        noExceptionThrown()
+    }
+
     def testFromPathWithLinks() {
 
         setup:
