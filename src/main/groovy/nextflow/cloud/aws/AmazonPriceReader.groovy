@@ -140,6 +140,7 @@ class AmazonPriceReader {
             return priceFile
         }
 
+        log.info "Fetching EC2 prices -- It can take a few seconds depending your internet connection"
         // download the file
         def _in = new URL(url).openStream()
         try {
