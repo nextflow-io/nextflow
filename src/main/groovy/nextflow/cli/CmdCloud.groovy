@@ -246,6 +246,9 @@ class CmdCloud extends CmdBase implements UsageAware {
      * @return The SSH command string
      */
     protected String getSshCommand(CloudConfig cfg, String address) {
+        if( !address )
+            throw new IllegalStateException("Missing instance public DNS name")
+
         String key
         if( cfg.keyName ) {
             key = "<path to ${cfg.keyName} key file>"
