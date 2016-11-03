@@ -173,7 +173,7 @@ abstract class BaseParam {
                     log.trace "Creating new output channel > $local"
                 }
                 else {
-                    log.warn "Duplicate output channel name: '$channel' in the script context -- it's worth to rename it to avoid possible conflicts"
+                    log.warn "Output channel `$local` overrides another variable with the same name declared in the script context -- Rename it to avoid possible conflicts"
                 }
 
                 // instantiate the new channel
