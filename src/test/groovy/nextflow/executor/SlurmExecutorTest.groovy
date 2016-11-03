@@ -90,6 +90,7 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH -D /work/path
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o /work/path/.command.log
+                #SBATCH --no-requeue
                 '''
                 .stripIndent().leftTrim()
 
@@ -101,6 +102,7 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH -D /work/path
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o /work/path/.command.log
+                #SBATCH --no-requeue
                 #SBATCH -p delta
                 '''
                 .stripIndent().leftTrim()
@@ -113,6 +115,7 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH -D /work/path
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o /work/path/.command.log
+                #SBATCH --no-requeue
                 #SBATCH -t 00:01:00
                 '''
                 .stripIndent().leftTrim()
@@ -128,6 +131,7 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH -D /work/path
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o /work/path/.command.log
+                #SBATCH --no-requeue
                 #SBATCH -t 01:00:00
                 #SBATCH --mem 50
                 #SBATCH -a 1
@@ -146,6 +150,7 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH -D /work/path
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o /work/path/.command.log
+                #SBATCH --no-requeue
                 #SBATCH -c 2
                 #SBATCH -t 02:00:00
                 #SBATCH --mem 200
@@ -165,6 +170,7 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH -D /work/path
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o /work/path/.command.log
+                #SBATCH --no-requeue
                 #SBATCH -c 8
                 #SBATCH -t 51:00:00
                 #SBATCH --mem 3072
@@ -196,6 +202,7 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH -D "/work/some\\ data/path"
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o "/work/some\\ data/path/.command.log"
+                #SBATCH --no-requeue
                 '''
                 .stripIndent().leftTrim()
 
