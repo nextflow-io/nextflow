@@ -46,6 +46,7 @@ class SlurmExecutor extends AbstractGridExecutor {
         result << '-D' << quote(task.workDir)
         result << '-J' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))     // -o OUTFILE and no -e option => stdout and stderr merged to stdout/OUTFILE
+        result << '--no-requeue' << '' // note: directive need to be returned as pairs
 
         if( task.config.cpus > 1 ) {
             result << '-c' << task.config.cpus.toString()
