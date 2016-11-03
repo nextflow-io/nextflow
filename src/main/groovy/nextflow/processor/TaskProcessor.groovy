@@ -1013,14 +1013,14 @@ class TaskProcessor {
                         checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
                     }
                     catch( Throwable e ) {
-                        log.error "Unable to re-submit task `${taskCopy.name}`"
+                        log.error("Unable to re-submit task `${taskCopy.name}`", e)
                         session.abort(e)
                     }
                 } as Runnable)
-                return ErrorStrategy.RETRY
+                return RETRY
             }
 
-            return ErrorStrategy.TERMINATE
+            return TERMINATE
         }
 
         return errorStrategy
