@@ -1,6 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.22.4 - 4 Nov 2016 
+- Added `—no-requeue` flag to SLURM job submission 
+- Report log content when a wrapper script execution fail #213
+- Improved error message when cache DB cannot be created
+- Logging error track trace on task re-submit failure
+- Fixed Channel.fromPath throws an exception when the argument is a S3 path
+- Modified `make_temp` so that uses `NXF_TEMP` when defined
+
 0.22.3 - 12 Oct 2016 
 - Fixed PBS qsub fails when the job name is longer than 15 chars #228
 - Fixed Spread operator doesn't connect channels in DAG #231 
