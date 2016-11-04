@@ -31,8 +31,8 @@ Quick start
 Nextflow does not require any installation procedure, just download the distribution package by copying and pasting
 this command in your terminal:
 
-```bash
-wget -qO- get.nextflow.io | bash
+```
+curl -fsSL get.nextflow.io | bash
 ```
 
 It creates the ``nextflow`` executable file in the current directory. You may want to move it to a folder accessible from your ``$PATH``.
