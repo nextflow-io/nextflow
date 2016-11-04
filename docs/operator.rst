@@ -755,7 +755,8 @@ each::
         .splitFasta( by: 10 )
         .subscribe { print it }
 
-
+.. warning:: By default chunks are kept in memory. When splitting big files specify the parameter ``file: true`` to save the
+  chunks into files in order to not incur in a ``OutOfMemoryException``. See the available parameter table below for details.
 
 A second version of the ``splitFasta`` operator allows you to split a FASTA content into record objects, instead
 of text chunks. A record object contains a set of fields that let you access and manipulate the FASTA sequence
@@ -823,6 +824,9 @@ sequences each::
         .splitFastq( by: 10 )
         .subscribe { print it }
 
+
+.. warning:: By default chunks are kept in memory. When splitting big files specify the parameter ``file: true`` to save the
+  chunks into files in order to not incur in a ``OutOfMemoryException``. See the available parameter table below for details.
 
 
 A second version of the ``splitFastq`` operator allows you to split a FASTQ formatted content into record objects,
