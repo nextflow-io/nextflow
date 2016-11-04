@@ -1947,4 +1947,4 @@ time.
 If the task execution fail reporting an exit status equals ``140``, the task is re-submitted (otherwise terminates immediately).
 This time the value of ``task.attempt`` is ``2``, thus increasing the amount of the memory to four GB and the time to 2 hours, and so on.
 
-The directory `maxRetries`_ set the maximum number of time the same task can be re-executed.
+The directive `maxRetries`_ set the maximum number of time the same task can be re-executed.
