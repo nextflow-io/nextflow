@@ -1080,6 +1080,16 @@ class TaskProcessor {
                     message << "  ${task.workDir ? it.replace(task.workDir.toString()+'/','') : it }"
                 }
             }
+            // - this is likely a task wrapper issue
+            else if( task.exitStatus != 0 ) {
+                lines = task.dumpLogFile(max)
+                if( lines ) {
+                    message << "\nCommand wrapper:"
+                    lines.each {
+                        message << "  ${task.workDir ? it.replace(task.workDir.toString()+'/','') : it }"
+                    }
+                }
+            }
 
         }
         else {
