@@ -232,6 +232,16 @@ class TaskRun implements Cloneable {
         }
     }
 
+    List<String> dumpLogFile(int n = 50) {
+        try {
+            return dumpObject(workDir.resolve(CMD_LOG),n)
+        }
+        catch( Exception e ) {
+            log.debug "Unable to dump error of process '$name' -- Cause: ${e}"
+            return []
+        }
+    }
+
 
     protected List<String> dumpObject( obj, int max ) {
         List result = null
