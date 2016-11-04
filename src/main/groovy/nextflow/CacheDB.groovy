@@ -95,7 +95,13 @@ class CacheDB implements Closeable {
         // make sure the db path exists
         dataDir.mkdirs()
         // open a LevelDB instance
-        db = Iq80DBFactory.factory.open(dataDir.resolve('db').toFile(), new Options().createIfMissing(true))
+        final file=dataDir.resolve('db').toFile()
+        try {
+            db = Iq80DBFactory.factory.open(file, new Options().createIfMissing(true))
+        }
+        catch( Exception e ) {
+            throw new IOException("Can't create cache DB: $file")
+        }
     }
 
     /**
