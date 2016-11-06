@@ -157,6 +157,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-profile'], description = 'Choose a configuration profile')
     String profile
 
+    @Parameter(names=['-dump-hashes'], description = 'Dump task hash keys for debugging purpose')
+    boolean dumpHashes
+
     @Override
     final String getName() { NAME }
 

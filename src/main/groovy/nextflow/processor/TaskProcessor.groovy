@@ -1789,7 +1789,7 @@ class TaskProcessor {
 
         final mode = config.getHashMode()
         final hash = CacheHelper.hasher(keys, mode).hash()
-        if( log.isTraceEnabled() ) {
+        if( session.dumpHashes ) {
             traceInputsHashes(task, keys, mode, hash)
         }
         return hash
@@ -1803,7 +1803,7 @@ class TaskProcessor {
             buffer.append( "  ${CacheHelper.hasher(item, mode).hash()} [${item?.class?.name}] $item \n")
         }
 
-        log.trace(buffer.toString())
+        log.info(buffer.toString())
     }
 
     final protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
