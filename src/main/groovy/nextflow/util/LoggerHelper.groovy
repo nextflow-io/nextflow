@@ -271,10 +271,14 @@ class LoggerHelper {
      */
     static class ConsoleLoggerFilter extends Filter<ILoggingEvent> {
 
-        Set<Map.Entry<String,Level>> packages
+        private final Map<String,Level> allLevels
+        private final Set<String> packages
+        private final int len
 
-        ConsoleLoggerFilter( Map<String,Level> packages )  {
-            this.packages = packages.entrySet()
+        ConsoleLoggerFilter( Map<String,Level> levels )  {
+            this.allLevels = levels
+            this.packages = levels.keySet()
+            this.len = packages.size()
         }
 
         @Override
@@ -286,8 +290,9 @@ class LoggerHelper {
 
             def logger = event.getLoggerName()
             def level = event.getLevel()
-            for( Map.Entry<String,Level> entry : packages ) {
-                if ( logger.startsWith( entry.key ) && level.isGreaterOrEqual(Level.INFO) && level.isGreaterOrEqual(entry.value) ) {
+            for( int i=0; i<len; i++ ) {
+                final key=packages[i]
+                if ( logger.startsWith(key) && level.isGreaterOrEqual(Level.INFO) && level.isGreaterOrEqual(allLevels[key]) ) {
                     return FilterReply.NEUTRAL
                 }
             }
@@ -394,7 +399,6 @@ class LoggerHelper {
             return field.get(error)
         }
         catch( Throwable e ) {
-            //
             return null
         }
     }
