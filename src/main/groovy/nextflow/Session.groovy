@@ -164,6 +164,10 @@ class Session implements ISession {
 
     boolean getStatsEnabled() { statsEnabled }
 
+    private boolean dumpHashes
+
+    boolean getDumpHashes() { dumpHashes }
+
     TaskFault getFault() { fault }
 
     /**
@@ -219,6 +223,7 @@ class Session implements ISession {
 
         this.binding = binding
         this.config = binding.config
+        this.dumpHashes = config.dumpHashes
 
         // -- poor man session object dependency injection
         Global.setSession(this)

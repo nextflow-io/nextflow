@@ -361,6 +361,10 @@ class ConfigBuilder {
         if( config.isSet('resume') )
             config.resume = normalizeResumeId(config.resume as String)
 
+        // -- sets `dumpKeys` option
+        if( cmdRun.dumpHashes )
+            config.dumpHashes = cmdRun.dumpHashes
+
         // -- other configuration parameters
         if( cmdRun.poolSize ) {
             config.poolSize = cmdRun.poolSize
