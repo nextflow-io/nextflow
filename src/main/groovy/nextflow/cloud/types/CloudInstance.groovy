@@ -71,4 +71,15 @@ class CloudInstance implements Serializable, Cloneable {
      */
     String clusterName
 
+    /**
+     * @return The instance public address, falling back on the private when the public is not available
+     */
+    String getAddress() {
+        publicDnsName ?: publicIpAddress ?: privateDnsName ?: privateIpAddress
+    }
+
+    boolean hasPublicAddress() {
+        publicDnsName || publicIpAddress
+    }
+
 }
