@@ -371,7 +371,7 @@ class AmazonCloudDriverTest extends Specification {
         snippet ==  '''
                     zone="$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)"
                     region="${zone::-1}"
-                    yum install -y nfs-utils
+                    command -v nfsstat >/dev/null 2>&1 || yum install -y nfs-utils || apt-get -y install nfs-common
                     mkdir -p /mnt/scratch
                     mount -t nfs4 -o nfsvers=4.1 ${zone}./dev/xyz.efs.${region}.amazonaws.com:/ /mnt/scratch
                     chown ubuntu:ubuntu /mnt/scratch

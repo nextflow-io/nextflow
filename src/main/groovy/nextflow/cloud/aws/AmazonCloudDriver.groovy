@@ -158,7 +158,7 @@ class AmazonCloudDriver implements CloudDriver {
         """\
         zone="\$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)"
         region="\${zone::-1}"
-        yum install -y nfs-utils
+        command -v nfsstat >/dev/null 2>&1 || yum install -y nfs-utils || apt-get -y install nfs-common
         mkdir -p $fileSystemMount
         mount -t nfs4 -o nfsvers=4.1 \${zone}.${fileSystemId}.efs.\${region}.amazonaws.com:/ $fileSystemMount
         chown ${userName}:${userName} $fileSystemMount
