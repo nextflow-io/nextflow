@@ -218,7 +218,7 @@ class CmdCloud extends CmdBase implements UsageAware {
 
         // -- show the available nodes
         driver.eachInstanceWithIds(instanceIds) { item ->
-            println "  ${item.id}\t  ${item.publicDnsName}"
+            println "  ${item.id}\t  ${item.address}"
         }
 
         println ''
@@ -233,7 +233,7 @@ class CmdCloud extends CmdBase implements UsageAware {
     protected void printMasterInstance( String instanceId, CloudConfig cloudConfig ) {
         // -- notify that's ready
         driver.eachInstanceWithIds([instanceId]) { CloudInstance it ->
-            println "Login in the master node using the following command: \n  ${getSshCommand(cloudConfig, it.publicDnsName)}"
+            println "Login in the master node using the following command: \n  ${getSshCommand(cloudConfig, it.address)}"
         }
         println ""
     }
@@ -424,13 +424,13 @@ class CmdCloud extends CmdBase implements UsageAware {
             def tags = [:]; tags[TAG_CLUSTER_NAME] = clusterName
             def builder = new TableBuilder()
                 .head('INSTANCE ID')
-                .head('PUBLIC NAME')
+                .head('ADDRESS')
                 .head('STATUS')
                 .head('ROLE')
 
             driver.eachInstanceWithTags(tags) { CloudInstance item ->
                 builder << item.id
-                builder << item.publicDnsName
+                builder << item.address
                 builder << item.state
                 builder << item.role
                 builder.closeRow()
