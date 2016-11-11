@@ -267,6 +267,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
         super(binding,holder,ownerIndex)
     }
 
+    abstract String getTypeName()
 
     /**
      * Lazy parameter initializer.
@@ -324,7 +325,17 @@ abstract class BaseInParam extends BaseParam implements InParam {
         return this
     }
 
+    private void checkFrom(obj) {
+        if( obj != null ) return
+        def message = 'A process input `from` clause evaluates to null'
+        def name = bindObject instanceof TokenVar ? bindObject.name : null
+        if( name )
+            message += " -- Invalid declaration `${getTypeName()} $name`"
+        throw new IllegalArgumentException(message)
+    }
+
     BaseInParam from( def obj ) {
+        checkFrom(obj)
         fromObject = obj
         return this
     }
@@ -357,6 +368,8 @@ abstract class BaseInParam extends BaseParam implements InParam {
 class FileInParam extends BaseInParam  {
 
     protected filePattern
+
+    @Override String getTypeName() { 'file' }
 
     /**
      * Define the file name
@@ -437,15 +450,16 @@ class FileInParam extends BaseInParam  {
  */
 @InheritConstructors
 class EnvInParam extends BaseInParam {
-
-
+    @Override String getTypeName() { 'env' }
 }
 
 /**
  *  Represents a process *value* input parameter
  */
 @InheritConstructors
-class ValueInParam extends BaseInParam { }
+class ValueInParam extends BaseInParam {
+    @Override String getTypeName() { 'val' }
+}
 
 /**
  *  Represents a process *stdin* input parameter
@@ -456,6 +470,7 @@ class StdInParam extends BaseInParam {
 
     String getName() { '-' }
 
+    @Override String getTypeName() { 'stdin' }
 }
 
 /**
@@ -464,6 +479,8 @@ class StdInParam extends BaseInParam {
 @InheritConstructors
 @Slf4j
 class EachInParam extends BaseInParam {
+
+    @Override String getTypeName() { 'each' }
 
     @Override
     protected DataflowReadChannel inputValToChannel( value ) {
@@ -514,6 +531,8 @@ class SetInParam extends BaseInParam {
 
     final List<InParam> inner = []
 
+    @Override String getTypeName() { 'set' }
+
     String getName() { '__$'+this.toString() }
 
     SetInParam bind( Object... obj ) {
@@ -562,6 +581,8 @@ class SetInParam extends BaseInParam {
 }
 
 final class DefaultInParam extends ValueInParam {
+
+    @Override String getTypeName() { 'default' }
 
     DefaultInParam(ProcessConfig config) {
         super(config)
