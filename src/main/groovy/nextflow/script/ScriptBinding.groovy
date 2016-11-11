@@ -149,6 +149,12 @@ class ScriptBinding extends Binding {
             copy.each { entry -> this.put(entry.key, entry.value) }
         }
 
+        @Override
+        Object get(Object key) {
+            if( !target.containsKey(key) ) throw new MissingPropertyException("params.$key")
+            return target.get(key)
+        }
+
         /**
          * A name-value pair to the map object
          *
