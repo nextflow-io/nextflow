@@ -95,12 +95,14 @@ class TaskBodyTest extends Specification {
                 alpha = 1
                 params.beta = 2
                 params.zeta = new Foo()
+                params.gamma = [:]
+                params.hola = 'Ciao'
                 delta = new Foo()
                 x = 'alpha'
 
                 process simpleTask  {
                     input:
-                    val x from 1
+                    val x from 'hola'
 
                     """
                     echo ${alpha}
