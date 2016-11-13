@@ -51,11 +51,11 @@ import nextflow.util.ReadOnlyMap
 @Slf4j
 class ProcessConfig implements Map<String,Object> {
 
-    static final transient BOOL_YES = ['true','yes','on']
+    static final public transient BOOL_YES = ['true','yes','on']
 
-    static final transient BOOL_NO = ['false','no','off']
+    static final public transient BOOL_NO = ['false','no','off']
 
-    static final DIRECTIVES = [
+    static final public List<String> DIRECTIVES = [
             'afterScript',
             'beforeScript',
             'echo',
