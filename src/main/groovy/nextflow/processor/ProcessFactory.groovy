@@ -202,6 +202,10 @@ class ProcessFactory {
         if( config.process instanceof Map ) {
             config.process .each { String key, value ->
                 if( key.startsWith('$')) return
+                if( !ProcessConfig.DIRECTIVES.contains(key) )
+                    log.warn "Configuration for directive `$key` for process `$name`"
+                if( key == 'params' ) // <-- patch issue #242
+                    return
                 processConfig.put(key,value)
             }
         }
