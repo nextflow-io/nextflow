@@ -958,6 +958,7 @@ class TaskProcessor {
                 return errorStrategy
             }
 
+            def dumpStackTrace = log.isTraceEnabled()
             message << "Error executing process > '${task?.name ?: name}'"
             switch( error ) {
                 case ProcessException:
@@ -970,8 +971,9 @@ class TaskProcessor {
 
                 default:
                     message << formatErrorCause(error)
+                    dumpStackTrace = true
             }
-            if( log.isTraceEnabled() )
+            if( dumpStackTrace )
                 log.error(message.join('\n'), error)
             else
                 log.error(message.join('\n'))
