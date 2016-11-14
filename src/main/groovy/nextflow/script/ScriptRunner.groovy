@@ -327,6 +327,7 @@ class ScriptRunner {
         session.await()
         normalizeOutput()
         session.destroy()
+        log.debug "> Execution complete -- Goodbye"
     }
 
     /**
