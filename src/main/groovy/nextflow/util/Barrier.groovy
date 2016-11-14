@@ -125,4 +125,6 @@ class Barrier {
             condition.signal()
         }
     }
+
+    int size() { parties.size() }
 }
