@@ -523,11 +523,11 @@ class Channel  {
         int p = filePattern.lastIndexOf('/')
         if( p != -1 )
             filePattern = filePattern.substring(p+1)
-        if( !filePattern.contains('*') && !filePattern.contains('?') && !filePattern.contains('{') )
-            filePattern = '*' + filePattern
 
-        int q = filePattern.indexOf('{')
-        if( q == -1 ) q = filePattern.indexOf('[')
+        final indexOfWildcards = filePattern.findIndexOf { it=='*' || it=='?' }
+        final indexOfBrackets = filePattern.findIndexOf { it=='{' || it=='[' }
+        if( indexOfWildcards==-1 && indexOfBrackets==-1 )
+            filePattern = '*' + filePattern
 
         def regex = filePattern
                 .replace('.','\\.')
@@ -540,7 +540,7 @@ class Channel  {
         def matcher = (fileName =~ /$regex/)
         if( matcher.matches() ) {
             def c=matcher.groupCount()
-            def end = c ? matcher.end(c) : ( q != -1 ? q : fileName.size() )
+            def end = c ? matcher.end(c) : ( indexOfBrackets != -1 ? indexOfBrackets : fileName.size() )
             def prefix = fileName.substring(0,end)
             while(prefix.endsWith('-') || prefix.endsWith('_') || prefix.endsWith('.') )
                 prefix=prefix[0..-2]
