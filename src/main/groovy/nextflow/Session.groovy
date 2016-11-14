@@ -450,10 +450,10 @@ class Session implements ISession {
     void await() {
         log.debug "Session await"
         processesBarrier.awaitCompletion()
-        log.debug "Session await > processes completed"
+        log.debug "Session await > all process finished"
         terminated = true
         monitorsBarrier.awaitCompletion()
-        log.debug "Session await > done"
+        log.debug "Session await > all barriers passed"
     }
 
     void destroy() {
@@ -482,7 +482,7 @@ class Session implements ISession {
             if( HistoryFile.DEFAULT.exists() ) {
                 HistoryFile.DEFAULT.update(runName,isSuccess())
             }
-            log.debug "Session destroyed"
+            log.trace "Session destroyed"
         }
     }
 
