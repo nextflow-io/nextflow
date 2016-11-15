@@ -82,14 +82,16 @@ class LocalPollingMonitor extends TaskPollingMonitor {
 
         final int cpus = configCpus(session,name)
         final long memory = configMem(session,name)
+        final int size = session.getQueueSize(name, OS.getAvailableProcessors())
 
-        log.debug "Creating local task monitor for executor '$name' > cpus: $cpus; memory: ${new MemoryUnit(memory)}; pollInterval: $pollInterval; dumpInterval: $dumpInterval"
+        log.debug "Creating local task monitor for executor '$name' > cpus=$cpus; memory=${new MemoryUnit(memory)}; capacity=$size; pollInterval=$pollInterval; dumpInterval=$dumpInterval"
 
         new LocalPollingMonitor(
                 name: name,
                 cpus: cpus,
                 memory: memory,
                 session: session,
+                capacity: size,
                 pollInterval: pollInterval,
                 dumpInterval: dumpInterval,
         )
@@ -98,11 +100,6 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     @PackageScope
     static int configCpus(Session session, String name) {
         int cpus = session.getExecConfigProp(name, 'cpus', 0) as int
-        int size = session.getQueueSize(name, 0)
-        if( size ) {
-            if( cpus ) log.warn "Executor `cpus` setting is overridden by `queue-size` option"
-            cpus = size
-        }
 
         if( !cpus )
             cpus = OS.getAvailableProcessors()
@@ -152,6 +149,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      */
     @Override
     protected boolean canSubmit(TaskHandler handler) {
+
         final taskCpus = cpus(handler)
         if( taskCpus>maxCpus )
             throw new ProcessNotRecoverableException("Process requirement exceed available CPUs -- req: $taskCpus; avail: $maxCpus")
@@ -160,7 +158,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         if( taskMemory>maxMemory)
             throw new ProcessNotRecoverableException("Process requirement exceed available memory -- req: ${new MemoryUnit(taskMemory)}; avail: ${new MemoryUnit(maxMemory)}")
 
-        final result = taskCpus <= availCpus && taskMemory <= availMemory
+        final result = super.canSubmit(handler) && taskCpus <= availCpus && taskMemory <= availMemory
         if( !result && log.isTraceEnabled( ) ) {
             log.trace "Task `${handler.task.name}` cannot be scheduled -- taskCpus: $taskCpus <= availCpus: $availCpus && taskMemory: ${new MemoryUnit(taskMemory)} <= availMemory: ${new MemoryUnit(availMemory)}"
         }
