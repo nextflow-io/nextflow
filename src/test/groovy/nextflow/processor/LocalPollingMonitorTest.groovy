@@ -65,6 +65,7 @@ class LocalPollingMonitorTest extends Specification {
         def session = new Session()
         def monitor = new LocalPollingMonitor(
                 cpus: 10,
+                capacity: 10,
                 memory: _20_GB,
                 session: session,
                 name: 'local',
@@ -105,6 +106,7 @@ class LocalPollingMonitorTest extends Specification {
         def session = new Session()
         def monitor = new LocalPollingMonitor(
                 cpus: 1,
+                capacity: 1,
                 memory: _20_GB,
                 session: session,
                 name: 'local',
