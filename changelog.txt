@@ -1,6 +1,17 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.22.5 - 17 Nov 2016
+- Fixed QueueSize=1 doesn't handle multi-cpu processes #246
+- Fixed Accessing to a not defined script params should raise an error #243
+- Fixed An input channel evaluating to null results in a misleading error message #242
+- Fixed Use of publicDnsName should failover to IP if no name is available #240
+- Fixed Use of yum in cloud boothook may cause problems #239
+- Fixed Execution hang when an operator invokes the `exit` function and no processes have run
+- Fixed fromFilePairs does not match patterns containing curly brackets w/o a star wild character
+- Added `-dump-hashes` command line option to print task key hash keys #211
+- Improved logging 
+
 0.22.4 - 4 Nov 2016 
 - Added `—no-requeue` flag to SLURM job submission 
 - Report log content when a wrapper script execution fail #213
