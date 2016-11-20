@@ -1,5 +1,5 @@
 {# TEMPLATE VAR SETTINGS #}
-{%- set url_root = pathto('', 1) %}
+{%- set url_root = 'https://www.nextflow.io/docs/latest/index.html' %}
 {%- if url_root == '#' %}{% set url_root = '' %}{% endif %}
 {%- if not embedded and docstitle %}
   {%- set titlesuffix = " &mdash; "|safe + docstitle|e %}
