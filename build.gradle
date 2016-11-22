@@ -199,7 +199,7 @@ compileGroovy {
 /*
  * Update the build timestamp in the source source file
  */
-task buildInfo << {
+task buildInfo { doLast {
 
     def file = new File('./src/main/groovy/nextflow/Const.groovy')
     def buildNum = 0
@@ -228,7 +228,7 @@ task buildInfo << {
     src = src.replaceAll(/version *= *'[0-9a-zA-Z_\-\.]+'/, "version = '$major'" as String)
     src = src.replaceAll(/release *= *'[0-9a-zA-Z_\-\.]+'/, "release = '$version'" as String)
     file.text = src
-}
+}}
 
 String bytesToHex(byte[] bytes) {
     StringBuffer result = new StringBuffer();
@@ -236,7 +236,7 @@ String bytesToHex(byte[] bytes) {
     return result.toString();
 }
 
-task makeSha1 << {
+task makeSha1 { doLast {
     byte[] digest
     String  str = file('nextflow').text
     // create sha1
@@ -245,7 +245,7 @@ task makeSha1 << {
     // create sha-256
     digest = java.security.MessageDigest.getInstance("SHA-256").digest(str.getBytes())
     file('nextflow.sha256').text = bytesToHex(digest) + '\n'
-}
+}}
 
 /*
  * Compile sources and copies all libs to target directory
