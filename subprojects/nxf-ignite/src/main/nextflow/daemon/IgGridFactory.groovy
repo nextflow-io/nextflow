@@ -100,7 +100,7 @@ class IgGridFactory {
         log.debug "Configuration properties for role: '$role' -- ${configMap}"
 
         this.role = role
-        this.clusterConfig = new ClusterConfig(configMap, 'ignite', System.getenv())
+        this.clusterConfig = new ClusterConfig(configMap, role, System.getenv())
     }
 
 
