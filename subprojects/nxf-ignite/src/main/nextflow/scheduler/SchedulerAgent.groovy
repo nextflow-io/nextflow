@@ -136,7 +136,7 @@ class SchedulerAgent implements Closeable {
         @Override
         void run() {
             this.current = new Resources(config)
-            log.debug "=== Agent resources: $current"
+            log.debug "=== Scheduler agent resources: $current"
 
             while( !stopped ) {
                 try {
@@ -165,11 +165,11 @@ class SchedulerAgent implements Closeable {
 
                 }
                 catch( InterruptedException e ) {
-                    log.debug("=== Message processor interrupted")
+                    log.trace "=== Message processor interrupted"
                     stopped = true
                 }
                 catch( RejectedExecutionException e ) {
-                    log.debug "=== Task execution rejected -- ${e.message ?: e}"
+                    log.trace "=== Task execution rejected -- ${e.message ?: e}"
                 }
                 catch( Exception e ) {
                     log.error "=== Unexpected scheduler agent error", e
@@ -205,7 +205,7 @@ class SchedulerAgent implements Closeable {
         private void resetState() {
 
             if( runningTasks ) {
-                log.debug "=== Cancelling running tasks: taskId=${runningTasks.keySet().join(', ') ?: '-'}"
+                log.trace "=== Cancelling running tasks: taskId=${runningTasks.keySet().join(', ') ?: '-'}"
                 def itr = runningTasks.values().iterator()
                 while( itr.hasNext() ) {
                     RunHolder holder = itr.next()
@@ -218,7 +218,7 @@ class SchedulerAgent implements Closeable {
             pendingTasks.clear()
 
             current = new Resources(config)
-            log.debug "=== Agent resources after reset: $current"
+            log.trace "=== Agent resources after reset: $current"
             eventsQueue.clear()
             idleTimestamp = 0
         }
@@ -297,7 +297,7 @@ class SchedulerAgent implements Closeable {
                     continue
 
                 if( pendingTasks.getAndRemove(it.taskId) ) {
-                    log.debug "=== Picked task up: taskId=${it.taskId}"
+                    log.trace "=== Picked task up: taskId=${it.taskId}"
                     // -- decrement resources
                     avail.cpus -= res.cpus
                     avail.memory -= res.memory
@@ -329,17 +329,17 @@ class SchedulerAgent implements Closeable {
             log.trace "Check avail resources: taskId=${it.taskId}; req=[$req]; avail=[$avail]"
 
             if( req.cpus && req.cpus > avail.cpus ) {
-                log.debug "=== Cannot execute task: taskId=${it.taskId} -- CPUs request exceed available (req=${req.cpus}; avail=${avail.cpus})"
+                log.trace "=== Cannot execute task: taskId=${it.taskId} -- CPUs request exceed available (req=${req.cpus}; avail=${avail.cpus})"
                 return false
             }
 
             if( req.memory && req.memory > avail.memory ) {
-                log.debug "=== Cannot execute task: taskId=${it.taskId} -- Memory request exceed available (req=${req.memory}; avail=${avail.memory})"
+                log.trace "=== Cannot execute task: taskId=${it.taskId} -- Memory request exceed available (req=${req.memory}; avail=${avail.memory})"
                 return false
             }
 
             if( req.disk && req.disk > avail.disk ) {
-                log.debug "=== Cannot execute task: taskId=${it.taskId} -- Disk request exceed available (req=${req.disk}; avail=${avail.disk})"
+                log.trace "=== Cannot execute task: taskId=${it.taskId} -- Disk request exceed available (req=${req.disk}; avail=${avail.disk})"
                 return false
             }
 
@@ -359,7 +359,7 @@ class SchedulerAgent implements Closeable {
                 error = result instanceof Integer && ((int)result) > 0
             }
             catch( InterruptedException | ClosedByInterruptException e ) {
-                log.debug "=== Task execution was interrupted: taskId=${task.taskId} -- Message: ${e.message ?: e}"
+                log.trace "=== Task execution was interrupted: taskId=${task.taskId} -- Message: ${e.message ?: e}"
                 error = true
             }
             catch( Throwable e ) {
@@ -393,7 +393,7 @@ class SchedulerAgent implements Closeable {
                 current.cpus += used.cpus
                 current.memory += used.memory
                 current.disk = SysHelper.getAvailDisk()
-                log.debug "=== Resources after task execution: taskId=$taskId; $current"
+                log.trace "=== Resources after task execution: taskId=$taskId; $current"
 
                 // track the time when enter in idle state
                 if( current.cpus == total.cpus ) {
@@ -676,7 +676,7 @@ class SchedulerAgent implements Closeable {
      */
     @PackageScope void notifyComplete(IgBaseTask task, result) {
         try {
-            log.debug "=== Notify task complete: taskId=${task.taskId}; result=$result"
+            log.trace "=== Notify task complete: taskId=${task.taskId}; result=$result"
             final payload = TaskComplete.create(task, result)
             sendMessageToMaster(TOPIC_SCHEDULER_EVENTS, payload)
         }
@@ -694,7 +694,7 @@ class SchedulerAgent implements Closeable {
     @PackageScope void notifyError(IgBaseTask task, Throwable error) {
         try {
             final taskId = task.taskId
-            log.debug "=== Notify task complete [error]: taskId=${taskId}; error=$error"
+            log.trace "=== Notify task complete [error]: taskId=${taskId}; error=$error"
             final payload = TaskComplete.error(task, error)
             sendMessageToMaster(TOPIC_SCHEDULER_EVENTS, payload)
         }
@@ -704,7 +704,7 @@ class SchedulerAgent implements Closeable {
     }
 
     @PackageScope void notifyNodeIdle(long last) {
-        log.debug "=== Notify node idle"
+        log.trace "=== Notify node idle"
         sendMessageToMaster(TOPIC_SCHEDULER_EVENTS, new NodeIdle(last))
     }
 
@@ -717,11 +717,11 @@ class SchedulerAgent implements Closeable {
     @PackageScope void onCancelTask( TaskCancel message ) {
         def holder = runningTasks.get(message.taskId)
         if( holder ) {
-            log.debug "=== Cancelling task: taskId=${message.taskId}"
+            log.trace "=== Cancelling task: taskId=${message.taskId}"
             holder.future.cancel(true)
         }
         else {
-            log.debug "=== Unable to find task to cancel: taskId=${message.taskId}"
+            log.trace "=== Unable to find task to cancel: taskId=${message.taskId}"
         }
     }
 
