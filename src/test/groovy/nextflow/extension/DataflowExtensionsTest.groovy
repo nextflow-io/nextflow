@@ -441,6 +441,9 @@ class DataflowExtensionsTest extends Specification {
         Channel.from(4,1,7,5).count().val == 4
         Channel.from(4,1,7,1,1).count(1).val == 3
         Channel.from('a','c','c','q','b').count ( ~/c/ ) .val == 2
+        Channel.value(5).count().val == 1
+        Channel.value(5).count(5).val == 1
+        Channel.value(5).count(6).val == 0
     }
 
     def testCountBy() {
