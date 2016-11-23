@@ -309,7 +309,7 @@ class Scheduler {
 
     private void schedule0( IgBaseTask... tasks ) {
 
-        log.debug "+++ Scheduling tasks: taskId=${tasks.collect{ IgBaseTask t -> t.taskId }.join(',')}"
+        log.trace "+++ Scheduling tasks: taskId=${tasks.collect{ IgBaseTask t -> t.taskId }.join(',')}"
 
         for( int i=0; i<tasks.size(); i++ ) {
             final task = tasks[0]
@@ -372,7 +372,7 @@ class Scheduler {
 
         def holder = scheduledTasks.get(message.taskId)
         if( holder ) {
-            log.debug "+++ Task started: $message [${hostName(sender)}] $sender"
+            log.trace "+++ Task started: $message [${hostName(sender)}] $sender"
             holder.withStart(sender)
             // -- reset the idle attribute, if any
             def node = workerNodes.get(sender)
@@ -397,7 +397,7 @@ class Scheduler {
 
         def holder = scheduledTasks.get(message.taskId)
         if( holder ) {
-            log.debug "+++ Task complete: $message [${hostName(sender)}] $sender"
+            log.trace "+++ Task complete: $message [${hostName(sender)}] $sender"
             completedTasks.put(message.taskId, holder.withComplete(message))
             scheduledTasks.remove(message.taskId)
             // -- notify that a task has completed
@@ -452,11 +452,11 @@ class Scheduler {
 
         // -- reschedule matching tasks for execution
         if( !tasks ) {
-            log.debug "+++ No pending task on $reason node: [${hostName(nodeId)}]"
+            log.trace "+++ No pending task on $reason node: [${hostName(nodeId)}]"
             return
         }
 
-        log.debug "+++ Dropping tasks on $reason node: [${hostName(nodeId)}] taskId=${tasks.collect{ it.taskId }.join(', ') ?: 'n/a'}"
+        log.trace "+++ Dropping tasks on $reason node: [${hostName(nodeId)}] taskId=${tasks.collect{ it.taskId }.join(', ') ?: 'n/a'}"
         def itr = tasks.iterator()
         while( itr.hasNext() ) {
             def task = itr.next()
@@ -502,7 +502,7 @@ class Scheduler {
 
         messageQueue << {
 
-            log.debug "+++ Cancelling task: taskId=${taskId}"
+            log.trace "+++ Cancelling task: taskId=${taskId}"
             boolean removed = false
             try {
                  removed = pendingTasks.remove(taskId)
@@ -522,7 +522,7 @@ class Scheduler {
             }
 
             if( !removed && !holder ) {
-                log.debug "+++ Oops.. Unable to cancel task: taskId=${taskId}"
+                log.trace "+++ Oops.. Unable to cancel task: taskId=${taskId}"
             }
         }
     }
