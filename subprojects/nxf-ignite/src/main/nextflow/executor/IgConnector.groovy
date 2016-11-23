@@ -22,6 +22,7 @@ package nextflow.executor
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.Const
 import nextflow.Session
 import nextflow.cloud.CloudConfig
 import nextflow.daemon.IgGridFactory
@@ -105,7 +106,7 @@ class IgConnector {
         /*
          * shutdown the instance on session termination
          */
-        final clusterConfig = new ClusterConfig(session.config.cluster as Map, 'ignite', System.getenv())
+        final clusterConfig = new ClusterConfig(session.config.cluster as Map, Const.ROLE_MASTER, System.getenv())
         boolean shutdownCluster = clusterConfig.getAttribute('shutdownOnComplete', false) as boolean
         log.debug "Cluster shutdownOnComplete: $shutdownCluster"
         monitor.session.onShutdown {

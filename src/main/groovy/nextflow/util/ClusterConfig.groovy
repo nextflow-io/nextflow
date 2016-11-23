@@ -54,8 +54,8 @@ class ClusterConfig  {
 
     def <T> T getAttribute( String name, defValue ) {
         def result
-        if( scope && config instanceof Map && config['$'+scope] instanceof Map ) {
-            result = getAttributeValue0( "\$${scope}.$name", config )
+        if( scope && config instanceof Map && config[scope] instanceof Map ) {
+            result = getAttributeValue0( "${scope}.$name", config )
         }
 
         if( result != null )

@@ -32,7 +32,7 @@ class ClusterConfigTest extends Specification {
     def testGetAttribute() {
 
         when:
-        def cfg = new ClusterConfig([x:123, y:222, '$myDaemon': [y:333] ], 'myDaemon')
+        def cfg = new ClusterConfig([x:123, y:222, 'master': [y:333] ], 'master')
         then:
         cfg.getAttribute('x') == 123
         cfg.getAttribute('y') == 333
@@ -41,17 +41,18 @@ class ClusterConfigTest extends Specification {
 
         when:
         def env = [NXF_CLUSTER_Z:'hola', NXF_CLUSTER_P_Q_Z:'hello']
-        cfg = new ClusterConfig([x:123, y:222, '$myDaemon': [y:333] ], 'myDaemon',  env )
+        cfg = new ClusterConfig([x:123, y:222, 'master': [y:333] ], 'master',  env )
         then:
         cfg.getAttribute('z', 'alpha') == 'hola'
         cfg.getAttribute('p.q.z', null) == 'hello'
+        cfg.getAttribute('y') == 333
 
     }
 
     def testGetAttributeWithType() {
 
         given:
-        def cfg = new ClusterConfig([alpha:123, beta:'222', gamma: 'false'], 'myDaemon', )
+        def cfg = new ClusterConfig([alpha:123, beta:'222', gamma: 'false'], 'myDaemon' )
 
         when:
         String str = cfg.getAttribute('alpha')
