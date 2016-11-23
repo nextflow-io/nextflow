@@ -32,62 +32,122 @@ class DockerBuilderTest extends Specification {
 
     def 'test docker mounts'() {
 
-        setup:
+        given:
+        def builder = [:] as DockerBuilder
         def files =  [Paths.get('/folder/data'),  Paths.get('/folder/db'), Paths.get('/folder/db') ]
         def real = [ Paths.get('/user/yo/nextflow/bin'), Paths.get('/user/yo/nextflow/work'), Paths.get('/db/pdb/local/data') ]
         def quotes =  [ Paths.get('/folder with blanks/A'), Paths.get('/folder with blanks/B') ]
 
         expect:
-        DockerBuilder.makeVolumes([]).toString() == '-v "$PWD":"$PWD"'
-        DockerBuilder.makeVolumes(files).toString() == '-v /folder:/folder -v "$PWD":"$PWD"'
-        DockerBuilder.makeVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v "$PWD":"$PWD"'
-        DockerBuilder.makeVolumes(quotes).toString() == '-v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v "$PWD":"$PWD"'
+        builder.makeVolumes([]).toString() == '-v "$PWD":"$PWD"'
+        builder.makeVolumes(files).toString() == '-v /folder:/folder -v "$PWD":"$PWD"'
+        builder.makeVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v "$PWD":"$PWD"'
+        builder.makeVolumes(quotes).toString() == '-v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v "$PWD":"$PWD"'
 
     }
 
 
     def 'test docker env'() {
 
+        given:
+        def builder = [:] as DockerBuilder
+
         expect:
-        DockerBuilder.makeEnv('X=1').toString() == '-e "X=1"'
-        DockerBuilder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == '-e "VAR_X=1" -e "VAR_Y=2"'
-        DockerBuilder.makeEnv( Paths.get('/some/file.env') ).toString() == '-e "BASH_ENV=/some/file.env"'
-        DockerBuilder.makeEnv( new File('/some/file.env') ).toString() == '-e "BASH_ENV=/some/file.env"'
+        builder.makeEnv('X=1').toString() == '-e "X=1"'
+        builder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == '-e "VAR_X=1" -e "VAR_Y=2"'
+        builder.makeEnv( Paths.get('/some/file.env') ).toString() == '-e "BASH_ENV=/some/file.env"'
+        builder.makeEnv( new File('/some/file.env') ).toString() == '-e "BASH_ENV=/some/file.env"'
     }
 
-    def 'test docker run command line'() {
+    def 'test docker create command line'() {
 
         setup:
         def envFile = Paths.get('/data/env file')
         def db_file = Paths.get('/home/db')
 
         expect:
-        new DockerBuilder('fedora').build() == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" fedora'
-        new DockerBuilder('fedora').addEnv(envFile).build() == 'docker run -i -e "BASH_ENV=/data/env\\ file" -v "$PWD":"$PWD" -w "$PWD" fedora'
-        new DockerBuilder('ubuntu').params(temp:'/hola').build() == 'docker run -i -v /hola:/tmp -v "$PWD":"$PWD" -w "$PWD" ubuntu'
-        new DockerBuilder('busybox').params(sudo: true).build() == 'sudo docker run -i -v "$PWD":"$PWD" -w "$PWD" busybox'
-        new DockerBuilder('busybox').params(entry: '/bin/bash').build() == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash busybox'
-        new DockerBuilder('busybox').params(runOptions: '-x --zeta').build() == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" -x --zeta busybox'
-        new DockerBuilder('busybox').params(userEmulation:true).build() == 'docker run -i -u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME -v "$PWD":"$PWD" -w "$PWD" busybox'
-        new DockerBuilder('busybox').setName('hola').build() == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --name hola busybox'
-        new DockerBuilder('busybox').params(engineOptions: '--tlsverify --tlscert="/path/to/my/cert"').build() == 'docker --tlsverify --tlscert="/path/to/my/cert" run -i -v "$PWD":"$PWD" -w "$PWD" busybox'
+        new DockerBuilder('fedora')
+                .build()
+                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" fedora'
+
+        new DockerBuilder('fedora')
+                .addEnv(envFile)
+                .build()
+                .runCommand == 'docker run -i -e "BASH_ENV=/data/env\\ file" -v "$PWD":"$PWD" -w "$PWD" fedora'
+
+        new DockerBuilder('ubuntu')
+                .params(temp:'/hola')
+                .build()
+                .runCommand == 'docker run -i -v /hola:/tmp -v "$PWD":"$PWD" -w "$PWD" ubuntu'
+
+        new DockerBuilder('busybox')
+                .params(sudo: true)
+                .build()
+                .runCommand == 'sudo docker run -i -v "$PWD":"$PWD" -w "$PWD" busybox'
+
+        new DockerBuilder('busybox')
+                .params(entry: '/bin/bash')
+                .build()
+                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash busybox'
+
+        new DockerBuilder('busybox')
+                .params(runOptions: '-x --zeta')
+                .build()
+                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" -x --zeta busybox'
+
+        new DockerBuilder('busybox')
+                .params(userEmulation:true)
+                .build()
+                .runCommand == 'docker run -i -u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME -v "$PWD":"$PWD" -w "$PWD" busybox'
+
+        new DockerBuilder('busybox')
+                .setName('hola')
+                .build()
+                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --name hola busybox'
+
+        new DockerBuilder('busybox')
+                .params(engineOptions: '--tlsverify --tlscert="/path/to/my/cert"')
+                .build()
+                .runCommand == 'docker --tlsverify --tlscert="/path/to/my/cert" run -i -v "$PWD":"$PWD" -w "$PWD" busybox'
 
         new DockerBuilder('fedora')
                 .addEnv(envFile)
                 .addMount(db_file)
                 .addMount(db_file)  // <-- add twice the same to prove that the final string won't contain duplicates
-                .build() == 'docker run -i -e "BASH_ENV=/data/env\\ file" -v /home/db:/home/db -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .build()
+                .runCommand == 'docker run -i -e "BASH_ENV=/data/env\\ file" -v /home/db:/home/db -v "$PWD":"$PWD" -w "$PWD" fedora'
 
     }
 
     def 'test memory and cpuset' () {
 
         expect:
-        new DockerBuilder('fedora').setCpus('1,2').build() == 'docker run -i --cpuset-cpus 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
-        new DockerBuilder('fedora').params(legacy:true).setCpus('1,2').build() == 'docker run -i --cpuset 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
-        new DockerBuilder('fedora').setMemory('10g').build() == 'docker run -i --memory 10g -v "$PWD":"$PWD" -w "$PWD" fedora'
-        new DockerBuilder('fedora').setMemory(new MemoryUnit('100M')).build() == 'docker run -i --memory 100m -v "$PWD":"$PWD" -w "$PWD" fedora'
-        new DockerBuilder('fedora').setCpus('1-3').setMemory(new MemoryUnit('100M')).build() == 'docker run -i --cpuset-cpus 1-3 --memory 100m -v "$PWD":"$PWD" -w "$PWD" fedora'
+        new DockerBuilder('fedora')
+                .setCpus('1,2')
+                .build()
+                .runCommand == 'docker run -i --cpuset-cpus 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
+
+        new DockerBuilder('fedora')
+                .params(legacy:true)
+                .setCpus('1,2')
+                .build()
+                .runCommand == 'docker run -i --cpuset 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
+
+        new DockerBuilder('fedora')
+                .setMemory('10g')
+                .build()
+                .runCommand == 'docker run -i --memory 10g -v "$PWD":"$PWD" -w "$PWD" fedora'
+
+        new DockerBuilder('fedora')
+                .setMemory(new MemoryUnit('100M'))
+                .build()
+                .runCommand == 'docker run -i --memory 100m -v "$PWD":"$PWD" -w "$PWD" fedora'
+
+        new DockerBuilder('fedora')
+                .setCpus('1-3')
+                .setMemory(new MemoryUnit('100M'))
+                .build()
+                .runCommand == 'docker run -i --cpuset-cpus 1-3 --memory 100m -v "$PWD":"$PWD" -w "$PWD" fedora'
 
     }
 
@@ -110,39 +170,34 @@ class DockerBuilderTest extends Specification {
     def 'test get commands'() {
 
         when:
-        def docker =  new DockerBuilder('busybox').setName('c1')
+        def docker =  new DockerBuilder('busybox').setName('c1').build()
         then:
-        docker.build() == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --name c1 busybox'
         docker.runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --name c1 busybox'
         docker.removeCommand == 'docker rm c1'
         docker.killCommand == 'docker kill c1'
 
         when:
-        docker =  new DockerBuilder('busybox').setName('c2').params(sudo: true, remove: true)
+        docker =  new DockerBuilder('busybox').setName('c2').params(sudo: true, remove: true).build()
         then:
-        docker.build() == 'sudo docker run -i -v "$PWD":"$PWD" -w "$PWD" --name c2 busybox'
         docker.runCommand == 'sudo docker run -i -v "$PWD":"$PWD" -w "$PWD" --name c2 busybox'
         docker.removeCommand == 'sudo docker rm c2'
         docker.killCommand == 'sudo docker kill c2'
 
 
         when:
-        docker =  new DockerBuilder('busybox').setName('c3').params(remove: true)
+        docker =  new DockerBuilder('busybox').setName('c3').params(remove: true).build()
         then:
-        docker.build() == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --name c3 busybox'
         docker.runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --name c3 busybox'
         docker.removeCommand == 'docker rm c3'
         docker.killCommand == 'docker kill c3'
 
         when:
-        docker =  new DockerBuilder('busybox').setName('c4').params(kill: 'SIGKILL')
-        docker.build()
+        docker =  new DockerBuilder('busybox').setName('c4').params(kill: 'SIGKILL').build()
         then:
         docker.killCommand == 'docker kill -s SIGKILL c4'
 
         when:
-        docker =  new DockerBuilder('busybox').setName('c5').params(kill: false,remove: false)
-        docker.build()
+        docker =  new DockerBuilder('busybox').setName('c5').params(kill: false,remove: false).build()
         then:
         docker.killCommand == null
         docker.removeCommand == null

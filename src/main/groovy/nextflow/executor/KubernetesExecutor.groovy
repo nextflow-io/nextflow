@@ -171,7 +171,7 @@ class KubernetesExecutor extends AbstractGridExecutor {
 
         @Override
         protected boolean fixOwnership() {
-            dockerConfig.fixOwnership
+            containerConfig.fixOwnership
         }
 
         /**

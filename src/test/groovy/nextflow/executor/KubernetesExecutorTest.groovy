@@ -344,7 +344,7 @@ class KubernetesExecutorTest extends Specification {
                          workDir: folder,
                          script: 'echo Hello world!',
                          containerImage: 'sl65',
-                         dockerConfig: [fixOwnership: true]
+                         containerConfig: [fixOwnership: true]
                  ]  as TaskBean
          )
         bash.taskHash = 'abc123'

@@ -23,14 +23,15 @@ import java.nio.file.Path
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.processor.TaskBean
-import nextflow.processor.TaskProcessor
-import nextflow.processor.TaskRun
 import nextflow.container.ContainerBuilder
 import nextflow.container.ContainerScriptTokens
 import nextflow.container.DockerBuilder
 import nextflow.container.ShifterBuilder
-
+import nextflow.container.SingularityBuilder
+import nextflow.container.UdockerBuilder
+import nextflow.processor.TaskBean
+import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
 /**
  * Builder to create the BASH script which is used to
  * wrap and launch the user task
@@ -159,7 +160,7 @@ class BashWrapperBuilder {
             local tot=\'\'
             if [[ "$data" ]]; then
               tot=$(awk '{ t3+=($3*10); t4+=($4*10); t5+=$5; t6+=$6; t7+=$7; t8+=$8; t9+=$9; t10+=$10; t11+=$11; t12+=$12; t13+=$13; t14+=$14 } END { printf "%d 0 %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f\\n", NR,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14 }' <<< "$data")
-              printf "$tot\\n"
+              printf "$tot\\n" || true
             fi
         }
 
@@ -227,9 +228,7 @@ class BashWrapperBuilder {
 
     private boolean runWithContainer
 
-    private boolean isDockerEnabled
-
-    private boolean isShifterEnabled
+    private boolean isContainerEnabled
 
     BashWrapperBuilder( TaskRun task ) {
         this(new TaskBean(task))
@@ -271,13 +270,11 @@ class BashWrapperBuilder {
      * Setup container related variables
      */
     protected boolean containerInit() {
-        isDockerEnabled = dockerConfig?.enabled?.toString() == 'true'
-        isShifterEnabled = shifterConfig?.enabled?.toString() == 'true'
-        containerImage && (executable || isDockerEnabled || isShifterEnabled)
+        containerImage && (executable || containerConfig.isEnabled())
     }
 
     protected boolean fixOwnership() {
-        systemOsName == 'Linux' && dockerConfig?.fixOwnership && containerInit() && isDockerEnabled // <-- note: only for docker (shifter is not affected)
+        systemOsName == 'Linux' && containerConfig?.fixOwnership && containerInit() && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
     }
 
     /**
@@ -443,6 +440,9 @@ class BashWrapperBuilder {
         // execute by invoking the command through a Docker container
         if( containerBuilder && !executable ) {
             containerBuilder.appendRunCommand(wrapper) << " -c \""
+            if( containerBuilder instanceof SingularityBuilder ) {
+                wrapper << 'cd $PWD; ' << containerBuilder.getEnvExports()
+            }
         }
 
         /*
@@ -468,7 +468,7 @@ class BashWrapperBuilder {
             stub << 'mon=$!' << ENDL                     // get the pid of the monitor process
             stub << 'wait $pid || ret=$?' << ENDL        // wait for main job completion and get its exit status
             stub << 'end_millis=$($NXF_DATE)' << ENDL    // get the ending time
-            stub << 'kill $mon || wait $mon' << ENDL     // kill the monitor and wait for its ending
+            stub << 'nxf_kill $mon || wait $mon' << ENDL     // kill the monitor and wait for its ending
             stub << 'echo $((end_millis-start_millis)) >> ' << TaskRun.CMD_TRACE << ENDL
             // save to file
             stubFile.text = stub.toString()
@@ -522,59 +522,27 @@ class BashWrapperBuilder {
     @PackageScope
     String scriptCleanUp( Path file, String scratch, ContainerBuilder builder ) {
 
-        final killCommand = builder?.getKillCommand() ?: '[[ "$pid" ]] && nxf_kill $pid'
-
         final script = []
-        // finally cleanup the scratch dir
+
+        // -- the kill command
+        final killCommand = builder?.getKillCommand() ?: '[[ "$pid" ]] && nxf_kill $pid'
+        // -- cleanup the scratch dir
         if( scratch && cleanup != false ) {
             script << (!builder ? 'rm -rf $NXF_SCRATCH || true' : '(sudo -n true && sudo rm -rf "$NXF_SCRATCH" || rm -rf "$NXF_SCRATCH")&>/dev/null || true')
         }
-        // remove the container in this way because 'docker run --rm'  fail in some cases -- see https://groups.google.com/d/msg/docker-user/0Ayim0wv2Ls/-mZ-ymGwg8EJ
-        if( builder?.removeCommand ) {
-            script << "${builder.removeCommand} &>/dev/null || true"
+        // -- remove the container in this way because 'docker run --rm'  fail in some cases -- see https://groups.google.com/d/msg/docker-user/0Ayim0wv2Ls/-mZ-ymGwg8EJ
+        final remove = builder?.getRemoveCommand()
+        if( remove ) {
+            script << "${remove} &>/dev/null || true"
         }
+        // -- return the exit code
         script << 'exit $exit_status'
 
+        // -- finally compose the script
         SCRIPT_CLEANUP
                 .replace('__EXIT_FILE__', exitFile(file))
                 .replace('__KILL_CMD__', killCommand)
                 .replace('__EXIT_CMD__', script.join('\n  '))
-    }
-
-    ContainerBuilder createContainerBuilder(Map environment, String changeDir) {
-
-        if( isShifterEnabled )
-            return createShifterBuilder(environment, changeDir)
-        else
-            return createDockerBuilder(environment, changeDir)
-    }
-
-    @PackageScope
-    ShifterBuilder createShifterBuilder(Map environment, String changeDir) {
-        def builder = new ShifterBuilder(this.containerImage)
-
-        // set up run shifter params
-        builder.params(shifterConfig)
-
-        // set the environment
-        if( environment ) {
-            if( executable ) {
-                // PATH variable cannot be extended in an executable container
-                // make sure to not include it to avoid to override the container PATH
-                environment.remove('PATH')
-                builder.addEnv( environment )
-            }
-            else
-                builder.addEnv( workDir.resolve(TaskRun.CMD_ENV) )
-
-        }
-
-        // override the shifter entry point if the image is NOT defined as executable
-        if( !executable )
-            builder.params(entry: '/bin/bash')
-
-        builder.build()
-        return builder
     }
 
 
@@ -586,25 +554,45 @@ class BashWrapperBuilder {
      * @return A {@link DockerBuilder} instance
      */
     @PackageScope
-    DockerBuilder createDockerBuilder(Map environment, String changeDir) {
+    ContainerBuilder createContainerBuilder(Map environment, String changeDir) {
 
-        def builder = new DockerBuilder(this.containerImage)
+        final engine = containerConfig.getEngine()
+        ContainerBuilder builder
+
+        /*
+         * create a builder instance given the container engine
+         */
+        if( engine == 'docker' )
+            builder = new DockerBuilder(containerImage)
+        else if( engine == 'singularity' )
+            builder = new SingularityBuilder(containerImage)
+        else if( engine == 'udocker' )
+            builder = new UdockerBuilder(containerImage)
+        else if( engine == 'shifter' )
+            builder = new ShifterBuilder(containerImage)
+        else
+            throw new IllegalArgumentException("Unknown container engine: $engine")
+
+
+        /*
+         * initialise the builder
+         */
         builder.addMountForInputs(inputFiles)
         builder.addMount(workDir)
         if( !executable )
             builder.addMount(binDir)
 
-        if( dockerMount )
-            builder.addMount(dockerMount)
+        if(this.containerMount)
+            builder.addMount(containerMount)
 
         // set the name
         builder.setName('$NXF_BOXID')
 
-        if( dockerMemory )
-            builder.setMemory(dockerMemory)
+        if(this.containerMemory)
+            builder.setMemory(containerMemory)
 
-        if( dockerCpuset )
-            builder.addRunOptions(dockerCpuset)
+        if(this.containerCpuset)
+            builder.addRunOptions(containerCpuset)
 
         // set the environment
         if( environment ) {
@@ -612,7 +600,7 @@ class BashWrapperBuilder {
             builder.addEnv( 'NXF_DEBUG=${NXF_DEBUG:=0}')
 
             // add the user owner variable in order to patch root owned files problem
-            if( dockerConfig.fixOwnership )
+            if( containerConfig.fixOwnership )
                 builder.addEnv( 'NXF_OWNER=$(id -u):$(id -g)' )
 
             if( executable ) {
@@ -627,16 +615,16 @@ class BashWrapperBuilder {
         }
 
         // set up run docker params
-        builder.params(dockerConfig)
+        builder.params(containerConfig)
 
         // extra rule for the 'auto' temp dir temp dir
-        def temp = dockerConfig.temp?.toString()
+        def temp = containerConfig.temp?.toString()
         if( temp == 'auto' || temp == 'true' ) {
             builder.setTemp( changeDir ? '$NXF_SCRATCH' : '$(nxf_mktemp)' )
         }
 
-        if( dockerConfig.containsKey('kill') )
-            builder.params(kill: dockerConfig.kill)
+        if( containerConfig.containsKey('kill') )
+            builder.params(kill: containerConfig.kill)
 
         // override the docker entry point the image is NOT defined as executable
         if( !executable )

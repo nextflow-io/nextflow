@@ -423,25 +423,36 @@ class ConfigBuilder {
         }
 
         if( cmdRun.withDocker ) {
-            log.debug "Enabling execution in Docker container as requested by cli option `-with-docker ${cmdRun.withDocker}`"
-            if( !config.containsKey('docker') )
-                config.docker = [:]
-            if( !(config.docker instanceof Map) )
-                throw new AbortOperationException("Invalid `docker` definition in the config file")
-
-            config.docker.enabled = true
-            if( cmdRun.withDocker != '-' ) {
-                // this is supposed to be a docker image name
-                config.process.container = cmdRun.withDocker
-            }
-            else if( config.docker.image ) {
-                config.process.container = config.docker.image
-            }
-
-            if( !hasContainerDirective(config.process) )
-                throw new AbortOperationException("You have requested to run with Docker but no image were specified")
-
+            configContainer(config, 'docker', cmdRun.withDocker)
         }
+
+        if( cmdRun.withSingularity ) {
+            configContainer(config, 'singularity', cmdRun.withSingularity)
+        }
+    }
+
+    private void configContainer(ConfigObject config, String engine, def cli) {
+        log.debug "Enabling execution in ${engine.capitalize()} container as requested by cli option `-with-$engine ${cmdRun.withDocker}`"
+
+        if( !config.containsKey(engine) )
+            config.put(engine, [:])
+
+        if( !(config.get(engine) instanceof Map) )
+            throw new AbortOperationException("Invalid `$engine` definition in the config file")
+
+        def containerConfig = (Map)config.get(engine)
+        containerConfig.enabled = true
+        if( cli != '-' ) {
+            // this is supposed to be a docker image name
+            config.process.container = cli
+        }
+        else if( containerConfig.image ) {
+            config.process.container = containerConfig.image
+        }
+
+        if( !hasContainerDirective(config.process) )
+            throw new AbortOperationException("You have requested to run with ${engine.capitalize()} but no image were specified")
+
     }
 
     /**

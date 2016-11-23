@@ -30,26 +30,45 @@ class ShifterBuilderTest extends Specification {
 
     def 'test shifter env'() {
 
+        given:
+        def builder = new ShifterBuilder('x')
+
         expect:
-        ShifterBuilder.makeEnv('X=1').toString() == 'X=1'
-        ShifterBuilder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == 'VAR_X=1 VAR_Y=2'
-        ShifterBuilder.makeEnv( Paths.get('/some/file.env') ).toString() == 'BASH_ENV="/some/file.env"'
-        ShifterBuilder.makeEnv( new File('/some/file.env') ).toString() == 'BASH_ENV="/some/file.env"'
+        builder.makeEnv('X=1').toString() == 'X=1'
+        builder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == 'VAR_X=1 VAR_Y=2'
+        builder.makeEnv( Paths.get('/some/file.env') ).toString() == 'BASH_ENV="/some/file.env"'
+        builder.makeEnv( new File('/some/file.env') ).toString() == 'BASH_ENV="/some/file.env"'
     }
 
     def 'should build the shifter run command' () {
 
         expect:
-        new ShifterBuilder('busybox').build() == 'shifter --image busybox'
-        new ShifterBuilder('busybox').params(verbose: true).build() == 'shifter --verbose --image busybox'
-        new ShifterBuilder('ubuntu:latest').params(entry: '/bin/bash').build() == 'shifter --image ubuntu:latest /bin/bash'
-        new ShifterBuilder('ubuntu').params(entry: '/bin/bash')
-                                    .addEnv(Paths.get("/data/env_file"))
-                                    .build() == 'BASH_ENV="/data/env_file" shifter --image ubuntu /bin/bash'
-        new ShifterBuilder('fedora').params(entry: '/bin/bash')
-                                    .addEnv([VAR_X:1, VAR_Y:2])
-                                    .addEnv("VAR_Z=3")
-                                    .build() == 'VAR_X=1 VAR_Y=2 VAR_Z=3 shifter --image fedora /bin/bash'
+        new ShifterBuilder('busybox')
+                .build()
+                .runCommand == 'shifter --image busybox'
+
+        new ShifterBuilder('busybox')
+                .params(verbose: true)
+                .build()
+                .runCommand == 'shifter --verbose --image busybox'
+
+        new ShifterBuilder('ubuntu:latest')
+                .params(entry: '/bin/bash')
+                .build()
+                .runCommand == 'shifter --image ubuntu:latest /bin/bash'
+
+        new ShifterBuilder('ubuntu')
+                .params(entry: '/bin/bash')
+                .addEnv(Paths.get("/data/env_file"))
+                .build()
+                .runCommand == 'BASH_ENV="/data/env_file" shifter --image ubuntu /bin/bash'
+
+        new ShifterBuilder('fedora')
+                .params(entry: '/bin/bash')
+                .addEnv([VAR_X:1, VAR_Y:2])
+                .addEnv("VAR_Z=3")
+                .build()
+                .runCommand == 'VAR_X=1 VAR_Y=2 VAR_Z=3 shifter --image fedora /bin/bash'
 
     }
 
