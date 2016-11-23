@@ -19,35 +19,18 @@
  */
 
 package nextflow.container
-import java.nio.file.Path
-
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
-import nextflow.util.Escape
-import nextflow.util.MemoryUnit
-import nextflow.util.PathTrie
-
 /**
  * Helper methods to handle Docker containers
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class DockerBuilder implements ContainerBuilder {
-
-    final String image
-
-    List<Path> mounts = []
+class DockerBuilder extends ContainerBuilder {
 
     private boolean sudo
 
-    private List<String> options = []
-
-    private List<String> engineOptions = []
-
     private boolean remove = true
-
-    private String temp
 
     private boolean userEmulation
 
@@ -67,28 +50,12 @@ class DockerBuilder implements ContainerBuilder {
 
     private String killCommand
 
-    private String cpus
-
-    private String memory
-
     private kill = true
 
     private boolean legacy
 
     DockerBuilder( String name ) {
         this.image = name
-    }
-
-    DockerBuilder addMount( Path path ) {
-        if( path )
-            mounts.add(path)
-        return this
-    }
-
-    DockerBuilder addMountForInputs( Map<String,Path> inputFiles ) {
-
-        mounts.addAll( inputFilesToPaths(inputFiles) )
-        return this
     }
 
     @Override
@@ -128,46 +95,14 @@ class DockerBuilder implements ContainerBuilder {
         return this
     }
 
-    DockerBuilder setTemp( String value ) {
-        this.temp = value
-        return this
-    }
-
+    @Override
     DockerBuilder setName( String name ) {
         this.name = name
         return this
     }
 
-    DockerBuilder setCpus( String value ) {
-        this.cpus = value
-        return this
-    }
-
-    DockerBuilder setMemory( value ) {
-        if( value instanceof MemoryUnit )
-            this.memory = "${value.toMega()}m"
-
-        else if( value instanceof String )
-            this.memory = value
-
-        else
-            throw new IllegalArgumentException("Not a supported memory value")
-
-        return this
-    }
-
-    DockerBuilder addRunOptions(String str) {
-        options.add(str)
-        return this
-    }
-
-    DockerBuilder addEngineOptions(String str) {
-        engineOptions.add(str)
-        return this
-    }
-
     @Override
-    String build(StringBuilder result) {
+    DockerBuilder build(StringBuilder result) {
         assert image
 
         if( sudo )
@@ -211,8 +146,8 @@ class DockerBuilder implements ContainerBuilder {
         if( entryPoint )
             result << '--entrypoint ' << entryPoint << ' '
 
-        if( options )
-            result << options.join(' ') << ' '
+        if( runOptions )
+            result << runOptions.join(' ') << ' '
 
         // the name is after the user option so it has precedence over any options provided by the user
         if( name )
@@ -243,81 +178,9 @@ class DockerBuilder implements ContainerBuilder {
         }
 
 
-        return runCommand
+        return this
     }
 
-
-    /**
-     * Get the volumes command line options for the given list of input files
-     *
-     * @param mountPaths
-     * @param binDir
-     * @param result
-     * @return
-     */
-    @PackageScope
-    static CharSequence makeVolumes(List<Path> mountPaths, StringBuilder result = new StringBuilder() ) {
-
-        // find the longest commons paths and mount only them
-        def trie = new PathTrie()
-        mountPaths.each { trie.add(it) }
-
-        def paths = trie.longest()
-        paths.each{ if(it) result << "-v ${Escape.path(it)}:${Escape.path(it)} " }
-
-        // -- append by default the current path -- this is needed when `scratch` is set to true
-        result << '-v "$PWD":"$PWD"'
-
-        return result
-    }
-
-    /**
-     * Get the env command line option for the give environment definition
-     *
-     * @param env
-     * @param result
-     * @return
-     */
-    @PackageScope
-    static CharSequence makeEnv( env, StringBuilder result = new StringBuilder() ) {
-        // append the environment configuration
-        if( env instanceof File ) {
-            env = env.toPath()
-        }
-        if( env instanceof Path ) {
-            result << '-e "BASH_ENV=' << Escape.path(env) << '"'
-        }
-        else if( env instanceof Map ) {
-            short index = 0
-            for( Map.Entry entry : env.entrySet() ) {
-                if( index++ ) result << ' '
-                result << ("-e \"${entry.key}=${entry.value}\"")
-            }
-        }
-        else if( env instanceof String && env.contains('=') ) {
-            result << '-e "' << env << '"'
-        }
-        else if( env ) {
-            throw new IllegalArgumentException("Not a valid Docker environment value: $env [${env.class.name}]")
-        }
-
-        return result
-    }
-
-
-    @PackageScope
-    static List<Path> inputFilesToPaths( Map<String,Path> inputFiles ) {
-
-        def List<Path> files = []
-        inputFiles.each { name, storePath ->
-
-            def path = storePath.getParent()
-            if( path ) files << path
-
-        }
-        return files
-
-    }
 
     /**
      * @return The command string to run a container from Docker image
@@ -346,12 +209,12 @@ class DockerBuilder implements ContainerBuilder {
         image.contains('.') || image.contains(':')
     }
 
-    static String normalizeImageName( String imageName, Map dockerConf ) {
+    static String normalizeImageName( String imageName, Map containerConf ) {
 
         if( !imageName )
             return null
 
-        String reg = dockerConf?.registry
+        String reg = containerConf?.registry
         if( !reg )
             return imageName
 

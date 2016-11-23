@@ -24,6 +24,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.container.ContainerConfig
 import nextflow.container.DockerBuilder
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
@@ -344,7 +345,7 @@ class BashWrapperBuilderTest extends Specification {
                     local tot=''
                     if [[ "\$data" ]]; then
                       tot=\$(awk '{ t3+=(\$3*10); t4+=(\$4*10); t5+=\$5; t6+=\$6; t7+=\$7; t8+=\$8; t9+=\$9; t10+=\$10; t11+=\$11; t12+=\$12; t13+=\$13; t14+=\$14 } END { printf "%d 0 %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f\\n", NR,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14 }' <<< "\$data")
-                      printf "\$tot\\n"
+                      printf "\$tot\\n" || true
                     fi
                 }
 
@@ -395,7 +396,7 @@ class BashWrapperBuilderTest extends Specification {
                 mon=\$!
                 wait \$pid || ret=\$?
                 end_millis=\$(\$NXF_DATE)
-                kill \$mon || wait \$mon
+                nxf_kill \$mon || wait \$mon
                 echo \$((end_millis-start_millis)) >> .command.trace
                 """
                     .stripIndent().leftTrim()
@@ -677,7 +678,7 @@ class BashWrapperBuilderTest extends Specification {
                 local tot=''
                 if [[ "\$data" ]]; then
                   tot=\$(awk '{ t3+=(\$3*10); t4+=(\$4*10); t5+=\$5; t6+=\$6; t7+=\$7; t8+=\$8; t9+=\$9; t10+=\$10; t11+=\$11; t12+=\$12; t13+=\$13; t14+=\$14 } END { printf "%d 0 %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f\\n", NR,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14 }' <<< "\$data")
-                  printf "\$tot\\n"
+                  printf "\$tot\\n" || true
                 fi
             }
 
@@ -728,7 +729,7 @@ class BashWrapperBuilderTest extends Specification {
             mon=\$!
             wait \$pid || ret=\$?
             end_millis=\$(\$NXF_DATE)
-            kill \$mon || wait \$mon
+            nxf_kill \$mon || wait \$mon
             echo \$((end_millis-start_millis)) >> .command.trace
             """
                     .stripIndent().leftTrim()
@@ -754,7 +755,7 @@ class BashWrapperBuilderTest extends Specification {
                 workDir: folder,
                 script: 'echo Hello world!',
                 containerImage: 'busybox',
-                dockerConfig: [sudo: true, enabled: true]
+                containerConfig: [engine: 'docker', sudo: true, enabled: true]
                 ] as TaskBean)
         bash.build()
 
@@ -862,7 +863,7 @@ class BashWrapperBuilderTest extends Specification {
                 workDir: folder,
                 script: 'echo Hello world!',
                 containerImage: 'busybox',
-                dockerConfig: [temp: 'auto', enabled: true]
+                containerConfig: [engine: 'docker', temp: 'auto', enabled: true]
                 ] as TaskBean)
         bash.build()
 
@@ -973,7 +974,7 @@ class BashWrapperBuilderTest extends Specification {
                 workDir: folder,
                 script: 'echo Hello world!',
                 containerImage: 'ubuntu',
-                dockerConfig: [temp: 'auto', enabled: true, remove:false, kill: false]
+                containerConfig: [engine: 'docker', temp: 'auto', enabled: true, remove:false, kill: false]
                 ] as TaskBean)
         bash.build()
 
@@ -1080,7 +1081,7 @@ class BashWrapperBuilderTest extends Specification {
                 workDir: folder,
                 script: 'echo Hello world!',
                 containerImage: 'ubuntu',
-                dockerConfig: [temp: 'auto', enabled: true, remove:false, kill: 'SIGXXX']
+                containerConfig: [engine: 'docker', temp: 'auto', enabled: true, remove:false, kill: 'SIGXXX']
                 ] as TaskBean)
         bash.build()
 
@@ -1190,8 +1191,8 @@ class BashWrapperBuilderTest extends Specification {
                 workDir: folder,
                 script: 'echo Hello world!',
                 containerImage: 'busybox',
-                dockerMount: '/folder with blanks' as Path,
-                dockerConfig: [enabled: true]
+                containerMount: '/folder with blanks' as Path,
+                containerConfig: [engine: 'docker', enabled: true]
         ] as TaskBean)
         bash.build()
 
@@ -1300,7 +1301,7 @@ class BashWrapperBuilderTest extends Specification {
                 scratch: true,
                 script: 'echo Hello world!',
                 containerImage: 'busybox',
-                dockerConfig: [sudo: true, enabled: true]
+                containerConfig: [engine: 'docker', sudo: true, enabled: true]
         ] as TaskBean)
         bash.build()
 
@@ -1411,7 +1412,7 @@ class BashWrapperBuilderTest extends Specification {
                 workDir: folder,
                 script: 'echo Hello world!',
                 containerImage: 'sl65',
-                dockerConfig: [enabled: true, fixOwnership: true]
+                containerConfig: [enabled: true, fixOwnership: true, engine: 'docker'] as ContainerConfig
                 ] as TaskBean)
         bash.systemOsName = 'Linux'
         bash.build()
@@ -1937,8 +1938,7 @@ class BashWrapperBuilderTest extends Specification {
                 script: 'echo Hello world!',
                 containerImage: 'docker:ubuntu:latest',
                 environment: [PATH: '/path/to/bin'],
-                shifterConfig: [enabled: true],
-                dockerConfig: [:]
+                containerConfig: [enabled: true, engine: 'shifter'] as ContainerConfig
         ] as TaskBean)
         bash.build()
 
@@ -2040,7 +2040,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee2=\$!
                 (
                 shifter_pull docker:ubuntu:latest
-                BASH_ENV=\"${folder}/.command.env\" shifter --image docker:ubuntu:latest /bin/bash -c "/bin/bash -ue ${folder}/.command.sh"
+                NXF_DEBUG=\${NXF_DEBUG:=0} BASH_ENV=\"${folder}/.command.env\" shifter --image docker:ubuntu:latest /bin/bash -c "/bin/bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?

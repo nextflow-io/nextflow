@@ -75,11 +75,11 @@ class CrgExecutor extends SgeExecutor {
         // The Univa scheduler must allocate the required cores for the job execution
         // The variable '$SGE_BINDING' must contain the cores to be used
         if( task.container && task.isDockerEnabled() ) {
-            def opt = task.dockerConfig.legacy?.toString() == 'true' ? '--cpuset' : '--cpuset-cpus'
+            def opt = task.containerConfig.legacy ? '--cpuset' : '--cpuset-cpus'
             def str = "\n"
             str += "cpuset=\${cpuset:=''}\n"
             str += "[[ \$SGE_BINDING ]] && cpuset=\"$opt \$(echo \$SGE_BINDING | sed 's/ /,/g')\"\n"
-            builder.setDockerCpuset('$cpuset')
+            builder.setContainerCpuset('$cpuset')
             builder.headerScript += str
         }
 

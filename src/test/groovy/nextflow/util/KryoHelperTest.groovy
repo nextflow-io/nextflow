@@ -20,9 +20,8 @@
 
 package nextflow.util
 
-import spock.lang.Ignore
+import nextflow.container.ContainerConfig
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -117,20 +116,18 @@ class KryoHelperTest extends  Specification {
         !copy.is(bag)
     }
 
-    @Ignore
-    def testClosureSerialization() {
+    def testSerializeContainerConfig() {
 
-        setup:
-        def x = 1
-        def y = 2
-        def f = { return x+y }
-
+        given:
+        def cfg = new ContainerConfig([enabled: true, engine: 'docker', xxx: 'hello'])
         when:
-        def buffer = KryoHelper.serialize(f)
-        def copy = (Closure)KryoHelper.deserialize(buffer)
-
+        def copy = KryoHelper.deserialize(KryoHelper.serialize(cfg))
         then:
-        copy.call() == 3
+        copy == cfg
+        copy instanceof ContainerConfig
+        copy.engine == 'docker'
+        copy.enabled == true
+        copy.xxx == 'hello'
 
     }
 

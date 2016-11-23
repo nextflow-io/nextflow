@@ -24,6 +24,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import nextflow.container.ContainerConfig
 import nextflow.executor.BashWrapperBuilder
 import nextflow.util.MemoryUnit
 
@@ -60,15 +61,13 @@ class TaskBean implements Serializable, Cloneable {
 
     List<String> shell
 
-    Map dockerConfig
+    ContainerConfig containerConfig
 
-    Map shifterConfig
+    String containerCpuset
 
-    String dockerCpuset
+    MemoryUnit containerMemory
 
-    MemoryUnit dockerMemory
-
-    Path dockerMount
+    Path containerMount
 
     boolean statsEnabled
 
@@ -124,10 +123,9 @@ class TaskBean implements Serializable, Cloneable {
 
         // container config
         this.containerImage = task.getContainer()
-        this.dockerConfig = task.getDockerConfig()
-        this.dockerMemory = task.config.getMemory()
+        this.containerConfig = task.getContainerConfig()
+        this.containerMemory = task.config.getMemory()
         this.executable = task.isContainerExecutable()
-        this.shifterConfig = task.getShifterConfig()
 
         // stats
         this.statsEnabled = task.getProcessor().getSession().statsEnabled
