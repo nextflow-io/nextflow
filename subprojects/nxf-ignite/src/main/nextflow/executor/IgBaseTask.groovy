@@ -140,7 +140,7 @@ abstract class IgBaseTask<T> implements IgniteCallable<T>, ComputeJob {
             throw e
         }
         catch( Throwable e ) {
-            log.error("Cannot execute task > $bean.name", e)
+            log.error("Cannot execute task > ${bean?.name}", e)
             throw new ProcessException(e)
         }
 
