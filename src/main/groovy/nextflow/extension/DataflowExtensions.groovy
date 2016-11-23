@@ -820,12 +820,10 @@ class DataflowExtensions {
      * @return
      */
     static public final DataflowReadChannel<Number> count(final DataflowReadChannel<?> source ) {
-        final target = new DataflowVariable()
-        reduceImpl(source, target, 0) { current, item -> current+1 }
+        final target = count0(source, null)
         session.dag.addOperatorNode('count', source, target)
         return target
     }
-
 
     /**
      * Counts the number of occurrences which satisfy the given closure from inside this collection
@@ -835,17 +833,30 @@ class DataflowExtensions {
      * @return
      */
     static public final DataflowReadChannel<Number> count(final DataflowReadChannel<?> source, final Object criteria ) {
-
-        final target = new DataflowVariable()
-        final discriminator = new BooleanReturningMethodInvoker("isCase");
-
-        reduceImpl(source, target, 0) { current, item ->
-            discriminator.invoke(criteria, item) ? current+1 : current
-        }
-
+        final target = count0(source, criteria)
         session.dag.addOperatorNode('count', source, target)
         return target
     }
+
+    private static DataflowVariable count0(DataflowReadChannel<?> source, Object criteria) {
+
+        final target = new DataflowVariable()
+        final discriminator = criteria != null ? new BooleanReturningMethodInvoker("isCase") : null
+
+        if( source instanceof DataflowExpression) {
+            source.whenBound { item ->
+                discriminator == null || discriminator.invoke(criteria, item) ? target.bind(1) : target.bind(0)
+            }
+        }
+        else {
+            reduceImpl(source, target, 0) { current, item ->
+                discriminator == null || discriminator.invoke(criteria, item) ? current+1 : current
+            }
+        }
+
+        return target
+    }
+
 
     /**
      * Groups the items emitted by the source channel into groups determined by the supplied mapping closure and counts the frequency of the created groups
