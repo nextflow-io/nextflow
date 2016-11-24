@@ -297,8 +297,19 @@ class TaskProcessor {
      */
     def run() {
 
+        // -- check that the task has a body
         if ( !taskBody )
             throw new IllegalStateException("Missing task body for process `$name`")
+
+        // -- check that input set defines at least two elements
+        def invalidInputSet = config.getInputs().find { it instanceof SetInParam && it.inner.size()<2 }
+        if( invalidInputSet )
+            log.warn "Input `set` must define at least two component -- Check process `$name`"
+
+        // -- check that output set defines at least two elements
+        def invalidOutputSet = config.getOutputs().find { it instanceof SetOutParam && it.inner.size()<2 }
+        if( invalidOutputSet )
+            log.warn "Output `set` must define at least two component -- Check process `$name`"
 
         /**
          * Verify if this process run only one time
