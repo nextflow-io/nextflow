@@ -1101,6 +1101,30 @@ The directives are:
 * `time`_
 * `validExitStatus`_
 
+afterScript
+-----------
+
+The ``afterScript`` directive allows you to execute a custom (BASH) snippet immediately *after* the main process has run.
+This may be useful to clean up your staging area.
+
+beforeScript
+------------
+
+The ``beforeScript`` directive allows you to execute a custom (BASH) snippet *before* the main process script is run.
+This may be useful to initialise the underlying cluster environment or for other custom initialisation.
+
+For example::
+
+    process foo {
+
+      beforeScript 'source /cluster/bin/setup'
+
+      """
+      echo bar
+      """
+
+    }
+
 
 cache
 -----
@@ -1165,6 +1189,78 @@ Simply replace in the above script ``dockerbox:tag`` with the Docker image name 
 .. note:: This directive is ignore for processes :ref:`executed natively <process-native>`.
 
 
+.. _process-cpus:
+
+cpus
+----
+
+The ``cpus`` directive allows you to define the number of (logical) CPU required by the process' task.
+For example::
+
+    process big_job {
+
+      cpus 8
+      executor 'sge'
+
+      """
+      blastp -query input_sequence -num_threads ${task.cpus}
+      """
+    }
+
+
+This directive is required for tasks that execute multi-process or multi-threaded commands/tools and it is meant
+to reserve enough CPUs when a pipeline task is executed through a cluster resource manager.
+
+See also: `penv`_, `memory`_, `time`_, `queue`_, `maxForks`_
+
+.. _process-clusterOptions:
+
+clusterOptions
+--------------
+
+The ``clusterOptions`` directive allows to use any `native` configuration option accepted by your cluster submit command.
+You can use it to request non-standard resources or use settings that are specific to your cluster and not supported
+out of the box by Nextflow.
+
+.. note:: This directive is taken in account only when using a grid based executor:
+  :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor`,
+  :ref:`condor-executor` and :ref:`drmaa-executor` executors.
+
+.. _process-disk:
+
+disk
+----
+
+The ``disk`` directive allows you to define how much local disk storage the process is allowed to use. For example::
+
+    process big_job {
+
+        disk '2 GB'
+        executor 'cirrus'
+
+        """
+        your task script here
+        """
+    }
+
+The following memory unit suffix can be used when specifying the disk value:
+
+======= =============
+Unit    Description
+======= =============
+B       Bytes
+KB      Kilobytes
+MB      Megabytes
+GB      Gigabytes
+TB      Terabytes
+======= =============
+
+.. note:: This directive currently is taken in account only by the :ref:`ignite-executor`
+  and the :ref:`condor-executor` executors.
+
+See also: `cpus`_, `memory`_ `time`_, `queue`_ and `Dynamic computing resources`_.
+
+.. _process-echo:
 
 echo
 ----
@@ -1238,7 +1334,7 @@ returning an error condition. For example::
 
 The number of times a failing process is re-executed is defined by the `maxRetries`_ and `maxErrors`_ directives.
 
-
+.. _process-executor:
 
 executor
 --------
@@ -1277,6 +1373,16 @@ The following example shows how to set the process's executor::
 .. note:: Each executor provides its own set of configuration options that can set be in the `directive` declarations block.
    See :ref:`executor-page` section to read about specific executor directives.
 
+.. _process-ext:
+
+ext
+---
+
+The ``ext`` is a special directive used as *namespace* for user custom configuration properties that can be defined at
+process level. This can be useful for advanced configuration options.
+
+
+.. _process-maxErrors:
 
 maxErrors
 ---------
@@ -1295,6 +1401,7 @@ By default this value is set to ``3``, you can change to a different value as sh
 
 See also: `errorStrategy`_ and `maxRetries`_.
 
+.. _process-maxForks:
 
 maxForks
 --------
@@ -1314,6 +1421,7 @@ If you want to execute a process in a sequential manner, set this directive to o
 
     }
 
+.. _process-maxRetries:
 
 maxRetries
 ----------
@@ -1339,6 +1447,43 @@ only one retry is allowed, you can increase this value as shown below::
 
 See also: `errorStrategy`_ and `maxErrors`_.
 
+
+.. _process-memory:
+
+memory
+------
+
+The ``memory`` directive allows you to define how much memory the process is allowed to use. For example::
+
+    process big_job {
+
+        memory '2 GB'
+        executor 'sge'
+
+        """
+        your task script here
+        """
+    }
+
+
+The following memory unit suffix can be used when specifying the memory value:
+
+======= =============
+Unit    Description
+======= =============
+B       Bytes
+KB      Kilobytes
+MB      Megabytes
+GB      Gigabytes
+TB      Terabytes
+======= =============
+
+.. This setting is equivalent to set the ``qsub -l virtual_free=<mem>`` command line option.
+
+See also: `cpus`_, `time`_, `queue`_ and `Dynamic computing resources`_.
+
+
+.. _process-module:
 
 module
 ------
@@ -1374,6 +1519,146 @@ can be specified in a single ``module`` directive by separating all the module n
      """
   }
 
+
+.. _process-penv:
+
+penv
+----
+
+The ``penv`` directive  allows you to define the `parallel environment` to be used when submitting a parallel task to the
+:ref:`SGE <sge-executor>` resource manager. For example::
+
+    process big_job {
+
+      cpus 4
+      penv 'smp'
+      executor 'sge'
+
+      """
+      blastp -query input_sequence -num_threads ${task.cpus}
+      """
+    }
+
+This configuration depends on the parallel environment provided by your grid engine installation. Refer to your
+cluster documentation or contact your admin to lean more about this.
+
+.. note:: This setting is available when using the :ref:`sge-executor` executor.
+
+See also: `cpus`_, `memory`_, `time`_
+
+
+.. _process-publishDir:
+
+publishDir
+----------
+
+The ``publishDir`` directive allows you to publish the process output files to a specified folder. For example::
+
+
+    process foo {
+
+        publishDir '/data/chunks'
+
+        output:
+        file 'chunk_*' into letters
+
+        '''
+        printf 'Hola' | split -b 1 - chunk_
+        '''
+    }
+
+
+The above example splits the string ``Hola`` into file chunks of a single byte. When complete the ``chunk_*`` output files
+are published into the ``/data/chunks`` folder.
+
+By default files are published to the target folder creating a *symbolic link* for each process output that links
+the file produced into the process working directory. This behavior can be modified using the ``mode`` parameter.
+
+Table of optional parameters that can be used with the ``publishDir`` directive:
+
+=============== =================
+Name            Description
+=============== =================
+mode            The file publishing method. See the following table for possible values.
+overwrite       When ``true`` any existing file in the specified folder will be overridden (default: ``true`` during normal
+                pipeline execution and ``false`` when pipeline execution is `resumed`).
+pattern         Specifies a `glob`_ file pattern that selects which files to publish from the overall set of output files.
+path            Specifies the directory where files need to be published. **Note**: the syntax ``publishDir '/some/dir'`` is a shortcut for ``publishDir path: '/some/dir'``.
+saveAs          A closure which, given the name of the file being published, returns the actual file name or a full path where the file is required to be stored.
+                This can be used to rename or change the destination directory of the published files dynamically by using
+                a custom strategy.
+=============== =================
+
+Table of publish modes:
+
+=============== =================
+ Mode           Description
+=============== =================
+symlink         Creates a `symbolic link` in the published directory for each process output file (default).
+link            Creates a `hard link` in the published directory for each process output file.
+copy            Copies the output files into the published directory.
+move            Moves the output files into the published directory. **Note**: this is only supposed to be used for a `terminating` process i.e. a process whose output is not consumed by any other downstream process.
+=============== =================
+
+.. note:: The `mode` value needs to be specified as a string literal i.e. enclosed by quote characters. Multiple parameters
+  need to be separated by a colon character. For example:
+
+::
+
+    process foo {
+
+        publishDir '/data/chunks', mode: 'copy', overwrite: false
+
+        output:
+        file 'chunk_*' into letters
+
+        '''
+        printf 'Hola' | split -b 1 - chunk_
+        '''
+    }
+
+
+.. warning:: Files are copied into the specified directory in an *asynchronous* manner, thus they may not be immediately
+  available in the published directory at the end of the process execution. For this reason files published by a process
+  must not be accessed by other downstream processes.
+
+
+.. _process-queue:
+
+queue
+-----
+
+The ``queue`` directory allows you to set the `queue` where jobs are scheduled when using a grid based executor
+in your pipeline. For example::
+
+    process grid_job {
+
+        queue 'long'
+        executor 'sge'
+
+        """
+        your task script here
+        """
+    }
+
+
+Multiple queues can be specified by separating their names with a comma for example::
+
+    process grid_job {
+
+        queue 'short,long,cn-el6'
+        executor 'sge'
+
+        """
+        your task script here
+        """
+    }
+
+
+.. note:: This directive is taken in account only by the following executors: :ref:`sge-executor`, :ref:`lsf-executor`,
+  :ref:`slurm-executor`, :ref:`pbs-executor` and :ref:`drmaa-executor` executors.
+
+.. _process-scratch:
 
 scratch
 -------
@@ -1431,6 +1716,8 @@ $YOUR_VAR   Creates a scratch folder in the directory defined by the ``$YOUR_VAR
 ram-disk    Creates a scratch folder in the RAM disk ``/dev/shm/`` (experimental).
 =========== ==================
 
+.. _process-storeDir:
+
 storeDir
 --------
 
@@ -1474,232 +1761,70 @@ for each species specified by an input parameter::
     In these cases you may use the `publishDir`_ directive instead.
 
 
-publishDir
-----------
+.. _process-stageInMode:
 
-The ``publishDir`` directive allows you to publish the process output files to a specified folder. For example::
+stageInMode
+-----------
 
+The ``stageInMode`` directive defines how input files are staged-in to the process work directory. The following values
+are allowed:
 
-    process foo {
-
-        publishDir '/data/chunks'
-
-        output:
-        file 'chunk_*' into letters
-
-        '''
-        printf 'Hola' | split -b 1 - chunk_
-        '''
-    }
+======= ==================
+Value   Description
+======= ==================
+copy    Input files are staged in the process work directory by creating a copy.
+link    Input files are staged in the process work directory by creating an (hard) link for each of them.
+symlink Input files are staged in the process work directory by creating an symlink for each of them (default).
+======= ==================
 
 
-The above example splits the string ``Hola`` into file chunks of a single byte. When complete the ``chunk_*`` output files
-are published into the ``/data/chunks`` folder.
+.. _process-stageOutMode:
 
-By default files are published to the target folder creating a *symbolic link* for each process output that links
-the file produced into the process working directory. This behavior can be modified using the ``mode`` parameter.
+stageOutMode
+------------
 
-Table of optional parameters that can be used with the ``publishDir`` directive:
+The ``stageOutMode`` directive defines how output files are staged-out from the scratch directory to the process work
+directory. The following values are allowed:
 
-=============== =================
-Name            Description
-=============== =================
-mode            The file publishing method. See the following table for possible values.
-overwrite       When ``true`` any existing file in the specified folder will be overridden (default: ``true`` during normal
-                pipeline execution and ``false`` when pipeline execution is `resumed`).
-pattern         Specifies a `glob`_ file pattern that selects which files to publish from the overall set of output files.
-path            Specifies the directory where files need to be published. **Note**: the syntax ``publishDir '/some/dir'`` is a shortcut for ``publishDir path: '/some/dir'``.
-saveAs          A closure which, given the name of the file being published, returns the actual file name or a full path where the file is required to be stored.
-                This can be used to rename or change the destination directory of the published files dynamically by using
-                a custom strategy.
-=============== =================
+======= ==================
+Value   Description
+======= ==================
+copy    Output files are copied from the scratch directory to the work directory.
+move    Output files are moved from the scratch directory to the work directory.
+rsync   Output files are copied from the scratch directory to the work directory by using the ``rsync`` utility.
+======= ==================
 
-Table of publish modes:
+See also: `scratch`_.
 
-=============== =================
- Mode           Description
-=============== =================
-symlink         Creates a `symbolic link` in the published directory for each process output file (default).
-link            Creates a `hard link` in the published directory for each process output file.
-copy            Copies the output files into the published directory.
-move            Moves the output files into the published directory. **Note**: this is only supposed to be used for a `terminating` process i.e. a process whose output is not consumed by any other downstream process.
-=============== =================
 
-.. note:: The `mode` value needs to be specified as a string literal i.e. enclosed by quote characters. Multiple parameters
-    need to be separated by a colon character. For example:
+.. _process-tag:
 
-::
+tag
+---
+
+The ``tag`` directive allows you to associate each process executions with a custom label, so that it will be easier
+to identify them in the log file or in the trace execution report. For example::
 
     process foo {
+      tag { code }
 
-        publishDir '/data/chunks', mode: 'copy', overwrite: false
-
-        output:
-        file 'chunk_*' into letters
-
-        '''
-        printf 'Hola' | split -b 1 - chunk_
-        '''
-    }
-
-
-.. warning:: Files are copied into the specified directory in an *asynchronous* manner, thus they may not be immediately
-  available in the published directory at the end of the process execution. For this reason files published by a process
-  must not be accessed by other downstream processes.
-
-validExitStatus
----------------
-
-A process is terminated when the executed command returns an error exit status. By default any error status
-other than ``0`` is interpreted as an error condition.
-
-The ``validExitStatus`` directive allows you to fine control which error status will represent a successful command execution.
-You can specify a single value or multiple values as shown in the following example::
-
-
-    process returnOk {
-        validExitStatus 0,1,2
-
-         script:
-         """
-         echo Hello
-         exit 1
-         """
-    }
-
-
-In the above example, although the command script ends with a ``1`` exit status, the process
-will not return an error condition because the value ``1`` is declared as a `valid` status in 
-the ``validExitStatus`` directive.
-
-
-.. _process-cpus:
-
-cpus
-----
-
-The ``cpus`` directive allows you to define the number of (logical) CPU required by the process' task.
-For example::
-
-    process big_job {
-
-      cpus 8
-      executor 'sge'
+      input:
+      val code from 'alpha', 'gamma', 'omega'
 
       """
-      blastp -query input_sequence -num_threads ${task.cpus}
+      echo $code
       """
     }
 
+The above snippet will print a log similar to the following one, where process names contain the tag value::
 
-This directive is required for tasks that execute multi-process or multi-threaded commands/tools and it is meant
-to reserve enough CPUs when a pipeline task is executed through a cluster resource manager.
-
-See also: `penv`_, `memory`_, `time`_, `queue`_, `maxForks`_
-
-.. _process-queue:
-
-queue
------
-
-The ``queue`` directory allows you to set the `queue` where jobs are scheduled when using a grid based executor
-in your pipeline. For example::
-
-    process grid_job {
-
-        queue 'long'
-        executor 'sge'
-
-        """
-        your task script here
-        """
-    }
+    [6e/28919b] Submitted process > foo (alpha)
+    [d2/1c6175] Submitted process > foo (gamma)
+    [1c/3ef220] Submitted process > foo (omega)
 
 
-Multiple queues can be specified by separating their names with a comma for example::
+See also :ref:`Trace execution report <trace-report>`
 
-    process grid_job {
-
-        queue 'short,long,cn-el6'
-        executor 'sge'
-
-        """
-        your task script here
-        """
-    }
-
-
-.. note:: This directive is taken in account only by the following executors: :ref:`sge-executor`, :ref:`lsf-executor`,
-  :ref:`slurm-executor`, :ref:`pbs-executor` and :ref:`drmaa-executor` executors.
-
-.. _process-disk:
-
-disk
-----
-
-The ``disk`` directive allows you to define how much local disk storage the process is allowed to use. For example::
-
-    process big_job {
-
-        disk '2 GB'
-        executor 'cirrus'
-
-        """
-        your task script here
-        """
-    }
-
-The following memory unit suffix can be used when specifying the disk value:
-
-======= =============
-Unit    Description
-======= =============
-B       Bytes
-KB      Kilobytes
-MB      Megabytes
-GB      Gigabytes
-TB      Terabytes
-======= =============
-
-.. note:: This directive currently is taken in account only by the :ref:`ignite-executor`
-  and the :ref:`condor-executor` executors.
-
-
-See also: `cpus`_, `memory`_ `time`_, `queue`_ and `Dynamic computing resources`_.
-
-.. _process-memory:
-
-memory
-------
-
-The ``memory`` directive allows you to define how much memory the process is allowed to use. For example::
-
-    process big_job {
-
-        memory '2 GB'
-        executor 'sge'
-
-        """
-        your task script here
-        """
-    }
-
-
-The following memory unit suffix can be used when specifying the memory value:
-
-======= =============
-Unit    Description
-======= =============
-B       Bytes
-KB      Kilobytes
-MB      Megabytes
-GB      Gigabytes
-TB      Terabytes
-======= =============
-
-.. This setting is equivalent to set the ``qsub -l virtual_free=<mem>`` command line option.
-
-See also: `cpus`_, `time`_, `queue`_ and `Dynamic computing resources`_.
 
 .. _process-time:
 
@@ -1731,138 +1856,39 @@ d       Days
 ======= =============
 
 .. note:: This directive is taken in account only when using one of the following grid based executors:
-    :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor`,
-    :ref:`condor-executor` and :ref:`drmaa-executor` executors.
-
-See also: `cpus`_, `memory`_, `queue`_ and `Dynamic computing resources`_.
-
-.. _process-penv:
-
-penv
-----
-
-The ``penv`` directive  allows you to define the `parallel environment` to be used when submitting a parallel task to the
-:ref:`SGE <sge-executor>` resource manager. For example::
-
-    process big_job {
-
-      cpus 4
-      penv 'smp'
-      executor 'sge'
-
-      """
-      blastp -query input_sequence -num_threads ${task.cpus}
-      """
-    }
-
-This configuration depends on the parallel environment provided by your grid engine installation. Refer to your
-cluster documentation or contact your admin to lean more about this.
-
-.. note:: This setting is available when using the :ref:`sge-executor` executor.
-
-See also: `cpus`_, `memory`_, `time`_
-
-
-.. _process-clusterOptions:
-
-clusterOptions
---------------
-
-The ``clusterOptions`` directive allows to use any `native` configuration option accepted by your cluster submit command.
-You can use it to request non-standard resources or use settings that are specific to your cluster and not supported
-out of the box by Nextflow.
-
-.. note:: This directive is taken in account only when using a grid based executor:
   :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor`,
   :ref:`condor-executor` and :ref:`drmaa-executor` executors.
 
-
-tag
----
-
-The ``tag`` directive allows you to associate each process executions with a custom label, so that it will be easier
-to identify them in the log file or in the trace execution report. For example::
-
-    process foo {
-      tag { code }
-
-      input:
-      val code from 'alpha', 'gamma', 'omega'
-
-      """
-      echo $code
-      """
-    }
-
-The above snippet will print a log similar to the following one, where process names contain the tag value::
-
-    [6e/28919b] Submitted process > foo (alpha)
-    [d2/1c6175] Submitted process > foo (gamma)
-    [1c/3ef220] Submitted process > foo (omega)
+See also: `cpus`_, `memory`_, `queue`_ and `Dynamic computing resources`_.
 
 
-See also :ref:`Trace execution report <trace-report>`
+.. _process-validExitStatus:
 
-beforeScript
-------------
+validExitStatus
+---------------
 
-The ``beforeScript`` directive allows you to execute a custom (BASH) snippet *before* the main process script is run.
-This may be useful to initialise the underlying cluster environment or for other custom initialisation.
+A process is terminated when the executed command returns an error exit status. By default any error status
+other than ``0`` is interpreted as an error condition.
 
-For example::
+The ``validExitStatus`` directive allows you to fine control which error status will represent a successful command execution.
+You can specify a single value or multiple values as shown in the following example::
 
-    process foo {
 
-      beforeScript 'source /cluster/bin/setup'
+    process returnOk {
+        validExitStatus 0,1,2
 
-      """
-      echo bar
-      """
-
+         script:
+         """
+         echo Hello
+         exit 1
+         """
     }
 
 
-afterScript
------------
+In the above example, although the command script ends with a ``1`` exit status, the process
+will not return an error condition because the value ``1`` is declared as a `valid` status in
+the ``validExitStatus`` directive.
 
-The ``afterScript`` directive allows you to execute a custom (BASH) snippet immediately *after* the main process has run.
-This may be useful to clean up your staging area.
-
-ext
----
-
-The ``ext`` is a special directive used as *namespace* for user custom configuration properties that can be defined at
-process level. This can be useful for advanced configuration options.
-
-stageInMode
------------
-
-The ``stageInMode`` directive defines how input files are staged-in to the process work directory. The following values
-are allowed:
-
-======= ==================
-Value   Description
-======= ==================
-copy    Input files are staged in the process work directory by creating a copy.
-link    Input files are staged in the process work directory by creating an (hard) link for each of them.
-symlink Input files are staged in the process work directory by creating an symlink for each of them (default).
-======= ==================
-
-stageOutMode
-------------
-
-The ``stageOutMode`` directive defines how output files are staged-out from the scratch directory to the process work
-directory. The following values are allowed:
-
-======= ==================
-Value   Description
-======= ==================
-copy    Output files are copied from the scratch directory to the work directory.
-move    Output files are moved from the scratch directory to the work directory.
-rsync   Output files are copied from the scratch directory to the work directory by using the ``rsync`` utility.
-======= ==================
-
-See also: `scratch`_.
 
 
 Dynamic directives
