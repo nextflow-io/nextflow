@@ -258,8 +258,12 @@ class FileHelper {
             checkFileURI(uri)
             return FileSystems.getDefault().getPath(uri.path)
         }
-
-        getOrCreateFileSystemFor(uri).provider().getPath(uri)
+        else if( uri.scheme == 'http' || uri.scheme == 'https' || uri.scheme == 'ftp' ) {
+            Paths.get(uri)
+        }
+        else {
+            getOrCreateFileSystemFor(uri).provider().getPath(uri)
+        }
     }
 
 

@@ -109,6 +109,7 @@ configurations {
 
 dependencies {
     compile(project(':nxf-commons'))
+    compile(project(':nxf-httpfs'))
     compile "org.codehaus.groovy:groovy:2.4.7"
     compile "org.codehaus.groovy:groovy-nio:2.4.7"
     compile "org.codehaus.groovy:groovy-json:2.4.7"
@@ -279,6 +280,7 @@ ext.deployable << project(':nxf-commons')
 ext.deployable << project(':nxf-ignite')
 ext.deployable << project(':nxf-console')
 ext.deployable << project(':nxf-drmaa')
+ext.deployable << project(':nxf-httpfs')
 
 protected error(String message) {
     logger.error message
