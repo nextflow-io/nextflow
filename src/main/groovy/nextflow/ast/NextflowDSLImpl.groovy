@@ -267,7 +267,7 @@ public class NextflowDSLImpl implements ASTTransformation {
             /*
              * when the last statement is a string script, the 'script:' label can be omitted
              */
-            else if( len && !whenStatements ) {
+            else if( len ) {
                 def stm = block.getStatements().get(len-1)
                 readSource(stm,source,unit)
 
@@ -316,7 +316,7 @@ public class NextflowDSLImpl implements ASTTransformation {
 
         // creates a method call expression for the method `when`
         def method = new MethodCallExpression(VariableExpression.THIS_EXPRESSION, 'when', whenObj)
-        parent.addStatement( new ExpressionStatement(method) )
+        parent.getStatements().add(0, new ExpressionStatement(method))
 
     }
     /**
