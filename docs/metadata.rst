@@ -124,7 +124,7 @@ The workflow event handlers can be defined also in the ``nextflow.config`` file.
 decouple the handling of pipeline events from the main script logic.
 
 When the event handlers are included in a configuration file the only difference is that the ``onComplete`` and
-the ``onError` closures have to be defined by using the assignment operator as shown below::
+the ``onError`` closures have to be defined by using the assignment operator as shown below::
 
     workflow.onComplete = {
         // any workflow property can be used here
