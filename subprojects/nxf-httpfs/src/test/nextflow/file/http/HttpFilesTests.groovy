@@ -19,10 +19,8 @@
  */
 
 package nextflow.file.http
-
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
-import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -73,17 +71,6 @@ class HttpFilesTests extends Specification {
         def path2 = Paths.get(new URI('http://localhost:18080/missing.html'))
         then:
         !Files.exists(path2)
-    }
-
-    def 'should create a new file system ' () {
-
-        given:
-        def uri = new URI('http://www.nextflow.io/index.html')
-        when:
-        def fs = FileSystems.newFileSystem( uri, [:] )
-        then:
-        fs instanceof XFileSystem
-        fs.provider() instanceof HttpFileSystemProvider
     }
 
 
