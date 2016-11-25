@@ -1134,8 +1134,10 @@ Value                 Description
 ``'deep'``            Cache process outputs. Input files are indexed by their content.
 ===================== =================
 
+.. _process-page-container:
+
 container
-_________
+---------
 
 The ``container`` directive allows you to execute the process script in a `Docker <http://docker.io>`_ container.
 
