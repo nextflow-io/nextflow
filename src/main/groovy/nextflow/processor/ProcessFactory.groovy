@@ -21,16 +21,14 @@
 package nextflow.processor
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.executor.CirrusExecutor
+import nextflow.executor.CondorExecutor
 import nextflow.executor.CrgExecutor
 import nextflow.executor.Executor
-import nextflow.executor.CondorExecutor
 import nextflow.executor.KubernetesExecutor
 import nextflow.executor.LocalExecutor
 import nextflow.executor.LsfExecutor
 import nextflow.executor.NopeExecutor
 import nextflow.executor.PbsExecutor
-import nextflow.util.ServiceName
 import nextflow.executor.SgeExecutor
 import nextflow.executor.SlurmExecutor
 import nextflow.executor.SupportedScriptTypes
@@ -38,6 +36,7 @@ import nextflow.script.BaseScript
 import nextflow.script.ScriptType
 import nextflow.script.TaskBody
 import nextflow.util.ServiceDiscover
+import nextflow.util.ServiceName
 /**
  *  Factory class for {@TaskProcessor} instances
  *
@@ -63,7 +62,6 @@ class ProcessFactory {
             'crg': CrgExecutor,
             'bsc': LsfExecutor,
             'condor': CondorExecutor,
-            'cirrus': CirrusExecutor,
             'k8s': KubernetesExecutor
     ]
 
