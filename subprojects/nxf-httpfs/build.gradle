@@ -18,14 +18,27 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-include 'my-capsule'
-include 'nxf-commons'
-include 'nxf-dnanexus'
-include 'nxf-console'
-include 'nxf-drmaa'
-include 'nxf-ignite'
-include 'nxf-httpfs'
 
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/subprojects/$prj.name")
+apply plugin: 'groovy'
+
+sourceSets {
+    main.java.srcDirs = []
+    main.groovy.srcDirs = ['src/main']
+    main.resources.srcDirs = ['src/resources']
+    test.groovy.srcDirs = ['src/test']
+    test.java.srcDirs = []
+    test.resources.srcDirs = []
 }
+
+dependencies {
+    compile "org.codehaus.groovy:groovy:2.4.7"
+    compile "org.codehaus.groovy:groovy-nio:2.4.7"
+    compile "ch.qos.logback:logback-classic:1.1.6"
+    compile "commons-lang:commons-lang:2.6"
+    compile 'com.google.guava:guava:16.0.1'
+
+    /* testCompile inherited from top gradle build file */
+    testCompile 'com.github.tomakehurst:wiremock:1.57'
+    testCompile 'com.github.tomjankes:wiremock-groovy:0.2.0'
+}
+
