@@ -40,6 +40,7 @@ import org.codehaus.groovy.ast.expr.BinaryExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.ConstructorCallExpression
+import org.codehaus.groovy.ast.expr.DeclarationExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
 import org.codehaus.groovy.ast.expr.MapExpression
@@ -789,7 +790,11 @@ public class NextflowDSLImpl implements ASTTransformation {
 
         final Map<String,TokenValRef> fAllVariables = [:]
 
+        final Set<String> localDef = []
+
         final SourceUnit sourceUnit
+
+        private boolean declaration
 
         VariableVisitor( SourceUnit unit ) {
             this.sourceUnit = unit
@@ -805,6 +810,17 @@ public class NextflowDSLImpl implements ASTTransformation {
             }
 
             return target instanceof VariableExpression
+        }
+
+        @Override
+        void visitDeclarationExpression(DeclarationExpression expr) {
+            declaration = true
+            try {
+                super.visitDeclarationExpression(expr)
+            }
+            finally {
+                declaration = false
+            }
         }
 
         @Override
@@ -830,7 +846,19 @@ public class NextflowDSLImpl implements ASTTransformation {
             final line = var.lineNumber
             final coln = var.columnNumber
 
-            if( name != 'this' && !fAllVariables.containsKey(name) ) {
+            if( name == 'this' )
+                return
+
+            if( declaration ) {
+                if( fAllVariables.containsKey(name) )
+                    sourceUnit.addError( new SyntaxException("Variable `$name` already defined in the process scope", line, coln))
+                else
+                    localDef.add(name)
+            }
+
+            // Note: variable declared in the process scope are not added
+            // to the set of referenced variables. Only global ones are tracked
+            else if( !localDef.contains(name) && !fAllVariables.containsKey(name) ) {
                 fAllVariables[name] = new TokenValRef(name,line,coln)
             }
         }
