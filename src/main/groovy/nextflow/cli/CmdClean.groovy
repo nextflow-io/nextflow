@@ -167,7 +167,7 @@ class CmdClean extends CmdBase implements CacheBase {
     private void removeRecord(HashCode hash, TraceRecord record, int refCount) {
         if( dryRun ) {
             if( wouldRemove(hash,refCount) )
-                println "World remove ${record.workDir}"
+                println "Would remove ${record.workDir}"
             return
         }
 
