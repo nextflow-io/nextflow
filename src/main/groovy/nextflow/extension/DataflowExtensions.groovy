@@ -261,7 +261,13 @@ class DataflowExtensions {
             @Override
             public void afterStop(final DataflowProcessor processor) {
                 if( !events.onComplete || error ) return
-                events.onComplete.call(processor)
+                try {
+                    events.onComplete.call(processor)
+                }
+                catch( Exception e ) {
+                    DataflowExtensions.log.error("@unknown", e)
+                    session.abort(e)
+                }
             }
 
             @Override
