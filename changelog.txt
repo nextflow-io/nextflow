@@ -1,6 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.22.6 - 4 Dec 2016 
+- Fixed Script execution terminates before all operators complete #259
+- Fixed A script variable with the same name of a global variable invalidate process resume #254
+- Fixed `when` is not recognised when used before an `input` and `script` is not declared
+- Fixed count operator hung when applied to a dataflow variable
+- Added warning message when an input/output `set` defines only one component #216 #251
+- Reduced log verbosity of Ignite Scheduler classes
+
 0.22.5 - 17 Nov 2016
 - Fixed QueueSize=1 doesn't handle multi-cpu processes #246
 - Fixed Accessing to a not defined script params should raise an error #243
