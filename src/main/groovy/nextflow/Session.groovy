@@ -459,7 +459,7 @@ class Session implements ISession {
     void destroy() {
         try {
             log.trace "Session > destroying"
-            if( !aborted && processesBarrier.size() ) {
+            if( !aborted ) {
                 allProcessors *. join()
                 log.trace "Session > after processors join"
             }
