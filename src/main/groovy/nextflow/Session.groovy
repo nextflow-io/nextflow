@@ -362,17 +362,40 @@ class Session implements ISession {
             config.navigate('trace.sep') { observer.separator = it }
             config.navigate('trace.fields') { observer.setFieldsAndFormats(it) }
             result << observer
-    }
+        }
     }
 
-    def Session start() {
+    /*
+     * intercepts interruption signal i.e. CTRL+C
+     * - on the first invoke session#abort
+     * - on third force termination with System#exit
+     */
+    private void registerSignalHandlers() {
+
+        int c = 0
+        final ctrl_c = { Signal sig ->
+            switch( ++c ) {
+                case 1: abort(new AbortSignalException(sig)); println ''; break
+                case 2: println "One more CTRL+C to force exit"; break
+                default: log.info 'Adieu'; System.exit(1)
+            }
+
+        } as SignalHandler
+
+        // -- abort session handler
+        final abort_h = { Signal sig -> abort(new AbortSignalException(sig)) } as SignalHandler
+
+        // -- register handlers
+        Signal.handle( new Signal("INT"), ctrl_c)
+        Signal.handle( new Signal("TERM"), abort_h)
+        Signal.handle( new Signal("HUP"), abort_h)
+    }
+
+    Session start() {
         log.debug "Session start invoked"
 
         // register shut-down cleanup hooks
-        final handler = { Signal sig -> abort(new AbortSignalException(sig)) } as SignalHandler
-        Signal.handle( new Signal("INT"), handler )
-        Signal.handle( new Signal("TERM"), handler )
-        Signal.handle( new Signal("HUP"), handler )
+        registerSignalHandlers()
 
         // create tasks executor
         execService = Executors.newFixedThreadPool(poolSize)
