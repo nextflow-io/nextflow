@@ -861,13 +861,24 @@ class FileHelper {
         })
     }
 
+    /**
+     * List the content of a file system path
+     *
+     * @param path
+     *      The system system directory to list
+     * @return
+     *      The stdout produced the execute `ls -la` command.
+     *      NOTE: this output is not supposed to be exhaustive, only the first
+     *      50 lines will be returned.
+     */
     static String listDirectory(Path path) {
 
         String result = null
         Process process = null
         try {
-            process = Runtime.runtime.exec("ls -la ${path}")
-            def listStatus = process.waitFor()
+            process = Runtime.runtime.exec(['sh', '-c', 'ls -la | head -n 50'] as String[])
+            process.waitForOrKill(1_000)
+            def listStatus = process.exitValue()
             if( listStatus>0 ) {
                 log.debug "Can't list folder: ${path} -- Exit status: $listStatus"
             }
