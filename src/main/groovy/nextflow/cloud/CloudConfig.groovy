@@ -196,8 +196,6 @@ class CloudConfig extends LaunchConfig {
 
     private static final String DFLT_USER_NAME = 'ec2-user'
 
-    private Path keyFile
-
     static CloudConfig create( Map config ) {
         new CloudConfig( (Map)config?.cloud )
     }
@@ -231,8 +229,14 @@ class CloudConfig extends LaunchConfig {
         }
         else {
             createUser = true
-            if( !keyHash )
-                setKeyFile(getUserPublicKeyFile())
+            if( keyFile && !keyHash )
+                setKeyHash( keyFile.text.trim() )
+
+            if( !keyHash ) {
+                def file = getUserPublicKeyFile()
+                setKeyFile( file )
+                setKeyHash( file.text.trim() )
+            }
 
             if( !userName )
                 userName = System.getProperty('user.name')
@@ -305,14 +309,14 @@ class CloudConfig extends LaunchConfig {
 
     CloudConfig setKeyFile( Path file ) {
         if( file ) {
-            this.keyFile = file
-            setKeyHash( file.text.trim() )
+            setAttribute('keyFile', file.toString())
         }
         return this
     }
 
+    @ConfigField(_private=true)
     Path getKeyFile() {
-        keyFile
+        getAttribute('keyFile') as Path
     }
 
     CloudConfig setDriverName( String driver ) {
