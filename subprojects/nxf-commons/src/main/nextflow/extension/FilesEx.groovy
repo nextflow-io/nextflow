@@ -1403,4 +1403,11 @@ class FilesEx {
         matches(self.toPath(), pattern)
     }
 
+    static URI getUri( Path self ) {
+        self.toUri()
+    }
+
+    static URI getUri( File self ) {
+        self.toURI()
+    }
 }
