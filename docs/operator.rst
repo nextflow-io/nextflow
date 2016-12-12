@@ -1087,7 +1087,7 @@ For example::
 
         c1 = Channel.from( 1,2,3 )
         c2 = Channel.from( 'a','b' )
-        c3 = Channel.form( 'z' )
+        c3 = Channel.from( 'z' )
 
         c1 .mix(c2,c3)
            .subscribe onNext: { println it }, onComplete: { println 'Done' }
