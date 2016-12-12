@@ -32,6 +32,10 @@ class SingularityBuilderTest extends Specification {
 
     def 'should get the exec command line' () {
 
+        given:
+        def path1 = Paths.get('/foo/data/file1')
+        def path2 = Paths.get('/bar/data/file2')
+
         expect:
         new SingularityBuilder('busybox')
                 .build()
@@ -51,6 +55,25 @@ class SingularityBuilderTest extends Specification {
                 .params(runOptions: '--contain --writable')
                 .build()
                 .runCommand == 'env - PATH="$PATH" singularity exec --contain --writable busybox'
+
+        new SingularityBuilder('ubuntu')
+                .addMount(path1)
+                .build()
+                .runCommand == 'env - PATH="$PATH" singularity exec ubuntu'
+
+        new SingularityBuilder('ubuntu')
+                .addMount(path1)
+                .addMount(path2)
+                .params(autoMounts: true)
+                .build()
+                .runCommand == 'env - PATH="$PATH" singularity exec -B /foo/data/file1 -B /bar/data/file2 -B "$PWD":"$PWD" ubuntu'
+
+        new SingularityBuilder('ubuntu')
+                .addMount(path1)
+                .addMount(path1)
+                .params(autoMounts: true)
+                .build()
+                .runCommand == 'env - PATH="$PATH" singularity exec -B /foo/data/file1 -B "$PWD":"$PWD" ubuntu'
 
     }
 
