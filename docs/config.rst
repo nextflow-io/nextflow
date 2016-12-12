@@ -274,6 +274,28 @@ brackets, as shown below::
 Read :ref:`docker-page` page to lean more how use Docker containers with Nextflow.
 
 
+.. _config-singularity:
+
+Scope `singularity`
+-------------------
+
+The ``singularity`` configuration scope controls how `Singularity <http://singularity.lbl.gov>`_ containers are executed
+by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             Turn this flag to ``true`` to enable Singularity execution (default: ``false``).
+engineOptions       This attribute can be used to provide any option supported by the Singularity engine i.e. ``singularity [OPTIONS]``.
+runOptions          This attribute can be used to provide any extra command line options supported by the ``singularity exec``.
+autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed contained. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
+================== ================
+
+
+Read :ref:`singularity-page` page to lean more how use Singularity containers with Nextflow.
+
 .. _config-manifest:
 
 Scope `manifest`

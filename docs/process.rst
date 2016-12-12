@@ -1158,7 +1158,7 @@ Value                 Description
 ``'deep'``            Cache process outputs. Input files are indexed by their content.
 ===================== =================
 
-.. _process-page-container:
+.. _process-container:
 
 container
 ---------

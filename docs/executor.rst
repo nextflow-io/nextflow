@@ -143,8 +143,8 @@ The `HTCondor` executor allows you to run your pipeline script by using the `HTC
 
 Nextflow manages each process as a separate job that is submitted to the cluster by using the ``condor_submit`` command.
 
-Being so, the pipeline must be launched from a node where the ``condor_submit`` command is available, that is, in a common usage
-scenario, the cluster `head` node.
+Being so, the pipeline must be launched from a node where the ``condor_submit`` command is available, that is, in a
+common usage scenario, the cluster `head` node.
 
 To enable the HTCondor executor simply set to ``process.executor`` property to ``condor`` value in the ``nextflow.config`` file.
 
@@ -245,6 +245,30 @@ The amount of resources requested by each task submission is defined by the foll
 
 Read the :ref:`ignite-page` section in this documentation to learn how to configure Nextflow to deploy and run an
 Ignite cluster in your infrastructure.
+
+
+Kubernetes
+==========
+
+Nextflow provides an experimental support for `Kubernetes <http://kubernetes.io/>`_ clustering technology. It allows
+you to deploy and transparently run a Nextflow pipeline in a Kubernetes cluster.
+
+Nextflow manages each process as a separate `pod` that is submitted to the cluster by using the ``kubectl`` command.
+Being so, the pipeline must be launched from a node where the ``kubectl`` command is available.
+
+The pipeline processes must specify the Docker image to use by defining the ``container`` directive, either in the pipeline
+script or the ``nextflow.config`` file. Moreover the pipeline must be executed in a shared file system folder
+accessible by all Kubernetes cluster nodes.
+
+To enable this executor set the property ``process.executor = 'k8s'`` in the ``nextflow.config`` file.
+
+The following directives can be used to define the amount of computing resources needed and the container(s) to use:
+
+* :ref:`process-cpus`
+* :ref:`process-memory`
+* :ref:`process-container`
+
+
 
 
 
