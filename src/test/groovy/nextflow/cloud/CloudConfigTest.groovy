@@ -265,7 +265,29 @@ class CloudConfigTest extends Specification {
         cloud.keyHash == null
         !cloud.createUser
 
+    }
 
+    def 'should set keyFile and userName' () {
+        given:
+        def key = Files.createTempFile('nf', 'test')
+        key.text = 'ssh-public-key'
+
+        and:
+        def config = [
+                imageId: 'ami-123',
+                keyFile: key,
+                userName: 'foo'
+        ]
+
+        when:
+        def cloud = new CloudConfig(config) .build()
+        then:
+        cloud.userName == 'foo'
+        cloud.keyFile == key
+        cloud.keyHash == 'ssh-public-key'
+
+        cleanup:
+        key.delete()
 
     }
 
