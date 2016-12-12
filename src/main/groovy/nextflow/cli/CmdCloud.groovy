@@ -327,6 +327,14 @@ class CmdCloud extends CmdBase implements UsageAware {
         }
     }
 
+    @PackageScope
+    Set<String> getClusterNames() {
+        def tags = [:]; tags[TAG_CLUSTER_NAME] = null
+        def names = new HashSet()
+        driver.eachInstanceWithTags(tags) { CloudInstance it -> names.add(it.clusterName) }
+        return names
+    }
+
     private SubCmd findCommand(List<String> args) {
 
         def cmd = commands.find { it.name == args[0] || it.shortcut == args[0] || (it.name.endsWith('s') && it.name[0..-2]==args[0]) }
@@ -396,6 +404,7 @@ class CmdCloud extends CmdBase implements UsageAware {
         addField('instanceType', result)
         addField('spotPrice', result)
         addField('region', result)
+        addField('profile', result)
     }
 
     /**
@@ -440,10 +449,7 @@ class CmdCloud extends CmdBase implements UsageAware {
         }
 
         private printAvailableClusterNames() {
-            def tags = [:]; tags[TAG_CLUSTER_NAME] = null
-            def names = new HashSet()
-
-            driver.eachInstanceWithTags(tags) { CloudInstance it -> names.add(it.clusterName) }
+            def names = getClusterNames()
 
             if( !names ) {
                 println "No cluster available"
@@ -483,6 +489,10 @@ class CmdCloud extends CmdBase implements UsageAware {
             def cloudConfig = makeConfig(clusterName)
             printConfig(cloudConfig, count)
             prompt("Please confirm you really want to launch the cluster with above configuration")
+
+            // -- make sure the name it's not already used
+            if( clusterName in getClusterNames() )
+                throw new AbortOperationException("A cluster with name `$clusterName` already exists -- Cannot continue")
 
             if( count > 1 ) {
                 // -- launch the worker nodes
@@ -525,6 +535,9 @@ class CmdCloud extends CmdBase implements UsageAware {
             def cloudConfig = makeConfig(clusterName).setRole(ROLE_WORKER)
             printConfig(cloudConfig, count)
             prompt("Please confirm you really want to launch the cluster nodes(s) with the above configuration: `$clusterName`")
+
+            if( !getClusterNames().contains(clusterName) )
+                throw new AbortOperationException("No cluster available with name `$clusterName`")
 
             // launch the node
             def instanceIds = addNodes0(clusterName, count, cloudConfig)
