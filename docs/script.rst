@@ -746,7 +746,7 @@ If the target path does not exist, it will be created automatically.
 .. tip:: The ``copyTo`` method mimics the semantic of the Linux command ``cp -r <source> <target>``,
   with the following caveats: Unix BASH distinguish between paths having or not having and ending slash, for example:
   ``/some/path/name`` and ``/some/path/name/``. The first locates a regular file while the latter identifies a directory
-  location. With Nextflow, due to Java files API implementation, this not possibles and both strings represents the same path.
+  location. With Nextflow, due to Java files API implementation, this is not possibles and both strings represents the same path.
   If that path exists on the file systems it is handled accordingly (as a regular file or as a directory). If the path does not
   exist, it is supposed to locate a regular file (and any parent directory will be created automatically).
 
@@ -846,8 +846,7 @@ Given a file variable representing any file or a directory, the method
 `Linux symbolic notation <http://en.wikipedia.org/wiki/File_system_permissions#Symbolic_notation>`_
 e.g. ``rw-rw-r--``. For example::
 
-
-  permissions = myFile.getPermissions()
+    permissions = myFile.getPermissions()
 
 
 In the same way the method ``setPermissions`` allows you to set the file access permissions using the same string
@@ -864,5 +863,21 @@ respectively the `owner`, `group` and `other` permissions. For example::
 
 Learn more about `File permissions numeric notation <http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation>`_.
 
+HTTP/FTP files
+--------------
+
+Nextflow provides a transparent integration for HTTP/S and FTP protocols that allows you to handle remote resources
+as local file system objects. Simply specify the resource URL as the argument of the `file` object. For example::
+
+    pdb = file('http://files.rcsb.org/header/5FID.pdb')
+
+Then, you will be able to access it as a local file as described in the previous sections. For example::
+
+    println pdb.text
+
+The above one-liner prints the content of the PDB file. See in the previous sections how to stream or copy the content
+of files.
+
+.. note:: Write and list operations are not supported by HTTP/S and FTP files.
 
 .. _glob: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
