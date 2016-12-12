@@ -41,7 +41,7 @@ dependencies {
     }
 
     /* testCompile inherited from top gradle build file */
-    testCompile ('org.apache.ignite:ignite-spring:1.5.0.final') {
+    testCompile ('org.apache.ignite:ignite-spring:1.6.0') {
         exclude group: 'commons-logging', module: 'commons-logging'
     }
 }
