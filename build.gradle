@@ -62,6 +62,7 @@ allprojects {
     targetCompatibility = 1.7
 
     repositories {
+        jcenter()
         mavenCentral()
         maven { url 'http://uk.maven.org/maven2' }
         maven { url 'http://dl.bintray.com/paolo-ditommaso/maven'}
