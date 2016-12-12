@@ -23,7 +23,9 @@ package nextflow.container
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import groovy.transform.CompileStatic
 import nextflow.util.Escape
+import nextflow.util.PathTrie
 
 /**
  * Implements a builder for Singularity containerisation
@@ -32,11 +34,14 @@ import nextflow.util.Escape
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class SingularityBuilder extends ContainerBuilder {
 
     private String entryPoint
 
     private String runCommand
+
+    private boolean autoMounts
 
     SingularityBuilder(String name) {
         this.image = name
@@ -44,6 +49,9 @@ class SingularityBuilder extends ContainerBuilder {
 
     @Override
     SingularityBuilder params(Map params) {
+
+        if( params.containsKey('temp') )
+            this.temp = params.temp
 
         if( params.containsKey('entry') )
             this.entryPoint = params.entry
@@ -53,6 +61,9 @@ class SingularityBuilder extends ContainerBuilder {
 
         if( params.containsKey('runOptions') )
             addRunOptions(params.runOptions.toString())
+
+        if( params.autoMounts )
+            autoMounts = params.autoMounts.toString() == 'true'
 
         return this
     }
@@ -74,6 +85,11 @@ class SingularityBuilder extends ContainerBuilder {
 
         result << 'exec '
 
+        if( autoMounts ) {
+            makeVolumes(mounts, result)
+            result << ' '
+        }
+
         if( runOptions )
             result << runOptions.join(' ') << ' '
 
@@ -85,6 +101,21 @@ class SingularityBuilder extends ContainerBuilder {
         runCommand = result.toString()
 
         return this
+    }
+
+    protected CharSequence makeVolumes(List<Path> mountPaths, StringBuilder result = new StringBuilder() ) {
+
+        // find the longest commons paths and mount only them
+        def trie = new PathTrie()
+        mountPaths.each { trie.add(it) }
+
+        def paths = trie.longest()
+        paths.each{ if(it) result << "-B ${Escape.path(it)} " }
+
+        // -- append by default the current path -- this is needed when `scratch` is set to true
+        result << '-B "$PWD":"$PWD"'
+
+        return result
     }
 
     @Override
