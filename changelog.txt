@@ -1,6 +1,16 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.23.0 - 13 Dec 2016 
+- Added support for Singularity containers #252
+- Added support for HTTP/S and FTP files (read-only)
+- Fixed stream close leak while copy foreign file to local file system
+- Fixed Task scheduling may hang while checking for job completion #261
+- Fixed Specifying the keyFile cloud config attribute result in an error #263
+- Added support for multiple target channels in `tap` operator #255
+- Added `uri` property to Path and File objects
+- Made NXF_SCRATCH variable accessible to `beforeScript` handler
+
 0.22.6 - 4 Dec 2016 
 - Fixed Script execution terminates before all operators complete #259
 - Fixed A script variable with the same name of a global variable invalidate process resume #254
