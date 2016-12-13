@@ -1532,7 +1532,14 @@ class TaskProcessor {
         if( input instanceof Path ) {
             log.debug "Copying to process workdir foreign file: ${input.toUri().toString()}"
             def result = Nextflow.tempFile(input.getFileName().toString())
-            Files.copy(Files.newInputStream(input), result)
+            InputStream source = null
+            try {
+                source = Files.newInputStream(input)
+                Files.copy(source, result)
+            }
+            finally {
+                source.closeQuietly()
+            }
             return new FileHolder(input, result)
         }
 
