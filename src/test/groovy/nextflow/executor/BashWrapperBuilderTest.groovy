@@ -48,22 +48,22 @@ class BashWrapperBuilderTest extends Specification {
         when:
         builder.scratch = true
         then:
-        builder.getScratchDirectoryCommand() == 'NXF_SCRATCH="$(set +u; nxf_mktemp $TMPDIR)" && cd $NXF_SCRATCH'
+        builder.getScratchDirectoryCommand() == 'NXF_SCRATCH="$(set +u; nxf_mktemp $TMPDIR)"'
 
         when:
         builder.scratch = '$SOME_DIR'
         then:
-        builder.getScratchDirectoryCommand() == 'NXF_SCRATCH="$(set +u; nxf_mktemp $SOME_DIR)" && cd $NXF_SCRATCH'
+        builder.getScratchDirectoryCommand() == 'NXF_SCRATCH="$(set +u; nxf_mktemp $SOME_DIR)"'
 
         when:
         builder.scratch = '/my/temp'
         then:
-        builder.getScratchDirectoryCommand() == 'NXF_SCRATCH="$(set +u; nxf_mktemp /my/temp)" && cd $NXF_SCRATCH'
+        builder.getScratchDirectoryCommand() == 'NXF_SCRATCH="$(set +u; nxf_mktemp /my/temp)"'
 
         when:
         builder.scratch = 'ram-disk'
         then:
-        builder.getScratchDirectoryCommand() == 'NXF_SCRATCH="$(nxf_mktemp /dev/shm/)" && cd $NXF_SCRATCH'
+        builder.getScratchDirectoryCommand() == 'NXF_SCRATCH="$(nxf_mktemp /dev/shm/)"'
 
     }
 
@@ -180,9 +180,11 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
+                NXF_SCRATCH=''
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
                 [ -f ${folder}/.command.env ] && source ${folder}/.command.env
+                [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"
@@ -287,10 +289,12 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
+                NXF_SCRATCH=''
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
                 [ -f ${folder}/.command.env ] && source ${folder}/.command.env
-
+                [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
+                        
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"
                 CERR=\$PWD/.command.pe; mkfifo "\$CERR"
@@ -491,10 +495,11 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
+                NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)"
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
                 [ -f ${folder}/.command.env ] && source ${folder}/.command.env
-                NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)" && cd \$NXF_SCRATCH
+                [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"
@@ -616,11 +621,12 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
+                NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)"
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
                 [ -f ${folder}/.command.env ] && source ${folder}/.command.env
-                NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)" && cd \$NXF_SCRATCH
-
+                [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
+                
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"
                 CERR=\$PWD/.command.pe; mkfifo "\$CERR"
@@ -825,8 +831,10 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_term TERM INT USR1 USR2
 
                 export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
+                NXF_SCRATCH=''
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
+                [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"
@@ -933,8 +941,10 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_term TERM INT USR1 USR2
 
                 export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
+                NXF_SCRATCH=''
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
+                [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"
@@ -1043,8 +1053,10 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_term TERM INT USR1 USR2
 
                 export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
+                NXF_SCRATCH=''
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
+                [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"
@@ -1150,8 +1162,10 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_term TERM INT USR1 USR2
 
                 export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
+                NXF_SCRATCH=''
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
+                [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"
@@ -1262,8 +1276,10 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_term TERM INT USR1 USR2
 
                 export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
+                NXF_SCRATCH=''
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
+                [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"
@@ -1372,9 +1388,10 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_term TERM INT USR1 USR2
 
                 export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
+                NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)"
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
-                NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)" && cd \$NXF_SCRATCH
+                [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"
@@ -1515,8 +1532,10 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_term TERM INT USR1 USR2
 
                 export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
+                NXF_SCRATCH=''
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
+                [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"
@@ -1892,11 +1911,13 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
+                NXF_SCRATCH=''
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
                 # user `beforeScript`
                 init this
                 [ -f ${folder}/.command.env ] && source ${folder}/.command.env
+                [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"
@@ -2028,8 +2049,10 @@ class BashWrapperBuilderTest extends Specification {
                 trap on_term TERM INT USR1 USR2
 
                 export NXF_BOXID="nxf-\$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"
+                NXF_SCRATCH=''
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
+                [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"
