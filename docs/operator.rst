@@ -937,6 +937,7 @@ The combining operators are:
 * `spread`_
 * `tap`_
 
+.. _operator-into:
 
 into
 -------

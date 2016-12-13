@@ -1,11 +1,11 @@
 .. _example-page:
 
-*****************
+********
 Examples
-*****************
+********
 
 Basic pipeline
------------------
+--------------
 
 This example shows a pipeline that is made of two processes. The first process receives a
 `FASTA formatted <http://en.wikipedia.org/wiki/FASTA_format>`_ file and splits it into file chunks whose names start with
@@ -92,3 +92,12 @@ named ``dataset/``, you can execute it by entering this command::
 
 .. warning:: Make sure you enclose the ``dataset/*.fa`` parameter value in single-quotation characters,
   otherwise the BASH environment will expand the ``*`` symbol to the actual file names and the example won't work.
+
+More examples
+-------------
+
+You can find at `this link <https://github.com/nextflow-io/examples>`_ a collection of examples introducing Nextflow
+scripting.
+
+Check also `Awesome Nextflow <https://github.com/nextflow-io/awesome-nextflow/>`_ for a list
+of pipelines developed by the Nextflow community.
