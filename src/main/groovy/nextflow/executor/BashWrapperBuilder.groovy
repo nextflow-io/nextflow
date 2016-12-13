@@ -256,14 +256,14 @@ class BashWrapperBuilder {
          * try to use the 'TMP' variable, if does not exist fallback to a tmp folder
          */
         if( scratchStr == 'true' ) {
-            return 'NXF_SCRATCH="$(set +u; nxf_mktemp $TMPDIR)" && cd $NXF_SCRATCH'
+            return 'NXF_SCRATCH="$(set +u; nxf_mktemp $TMPDIR)"'
         }
 
         if( scratchStr.toLowerCase() in ['ramdisk','ram-disk']) {
-            return 'NXF_SCRATCH="$(nxf_mktemp /dev/shm/)" && cd $NXF_SCRATCH'
+            return 'NXF_SCRATCH="$(nxf_mktemp /dev/shm/)"'
         }
 
-        return "NXF_SCRATCH=\"\$(set +u; nxf_mktemp $scratchStr)\" && cd \$NXF_SCRATCH"
+        return "NXF_SCRATCH=\"\$(set +u; nxf_mktemp $scratchStr)\""
     }
 
     /**
@@ -392,6 +392,7 @@ class BashWrapperBuilder {
         if( this.fixOwnership() )
             scriptFile << "\n# patch root ownership problem of files created with docker\n[ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*} || true\n"
 
+        wrapper << ( changeDir ?: "NXF_SCRATCH=''" ) << ENDL
 
         // -- print the current environment when debug is enabled
         wrapper << '[[ $NXF_DEBUG > 0 ]] && nxf_env' << ENDL
@@ -416,9 +417,7 @@ class BashWrapperBuilder {
             wrapper << "[ -f "<< fileStr(environmentFile) << " ]" << " && source " << fileStr(environmentFile) << ENDL
         }
 
-        if( changeDir ) {
-            wrapper << changeDir << ENDL
-        }
+        wrapper << '[[ $NXF_SCRATCH ]] && echo "nxf-scratch-dir $HOSTNAME:$NXF_SCRATCH" && cd $NXF_SCRATCH' << ENDL
 
         // staging input files when required
         def stagingScript = copyStrategy.getStageInputFilesScript()

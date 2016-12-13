@@ -122,6 +122,7 @@ class CirrusWrapperBuilderTest extends Specification {
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
+                NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)"
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 # fetch scripts
                 es3 test s3:/${folder}/.command.env && es3 cat s3:/${folder}/.command.env > .command.env
@@ -131,7 +132,7 @@ class CirrusWrapperBuilderTest extends Specification {
 
                 es3 touch s3:/${folder}/.command.begin
                 [ -f .command.env ] && source .command.env
-                NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)" && cd \$NXF_SCRATCH
+                [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"
