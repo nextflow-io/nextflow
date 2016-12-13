@@ -43,7 +43,7 @@ class TapOp {
     /**
      * Operator `tapped` channel
      */
-    DataflowWriteChannel target
+    List<DataflowWriteChannel> outputs
 
     /**
      * Operator output channel
@@ -62,21 +62,22 @@ class TapOp {
 
         this.source = source
         this.result = DataflowExtensions.newChannelBy(source)
-        this.target = DataflowExtensions.newChannelBy(source)
+        this.outputs = [result]
 
         // -- set the target variable in the script binding context
-        final name = CaptureProperties.capture(holder)
-        if( !name )
+        final names = CaptureProperties.capture(holder)
+        if( !names )
             throw new IllegalArgumentException("Missing target channel on `tap` operator")
 
-        if( name.size()>1 )
-            throw new IllegalArgumentException("Operator `tap` does not allow more than one target channel")
-
         final binding = Global.session.binding
-        if( binding.hasVariable(name[0]) ) {
-            log.warn "A variable named '${name[0]}' already exists in script global context -- Consider renaming it "
+        names.each { item ->
+            def channel = DataflowExtensions.newChannelBy(source)
+            if( binding.hasVariable(item) )
+                log.warn "A variable named '${item}' already exists in script global context -- Consider renaming it "
+
+            binding.setVariable(item, channel)
+            outputs << channel
         }
-        binding.setVariable(name[0], target)
 
     }
 
@@ -94,21 +95,21 @@ class TapOp {
         }
 
         this.source = source
-        this.target = target
         this.result = DataflowExtensions.newChannelBy(source)
+        this.outputs = [result, target]
     }
 
     /**
      * @return A list holding the output channels of the `tap` operator
      */
-    List<DataflowWriteChannel> getOutputs() { [result, target] }
+    List<DataflowWriteChannel> getOutputs() { outputs }
 
     /**
      * Apply the operator
      * @return An instance of {@link TapOp} itself
      */
     TapOp apply() {
-        DataflowExtensions.newOperator([source], [result, target], new ChainWithClosure(new CopyChannelsClosure()));
+        DataflowExtensions.newOperator([source], outputs, new ChainWithClosure(new CopyChannelsClosure()));
         return this
     }
 

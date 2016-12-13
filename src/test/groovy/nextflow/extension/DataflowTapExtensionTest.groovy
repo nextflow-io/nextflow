@@ -60,6 +60,29 @@ class DataflowTapExtensionTest extends Specification {
 
     }
 
+    def 'should `tap` item to more than one channel' () {
+
+        when:
+        def result = Channel.from( 4,7,9 ) .tap { foo; bar }.map { it+1 }
+        then:
+        session.binding.foo.val == 4
+        session.binding.foo.val == 7
+        session.binding.foo.val == 9
+        session.binding.foo.val == Channel.STOP
+        session.binding.bar.val == 4
+        session.binding.bar.val == 7
+        session.binding.bar.val == 9
+        session.binding.bar.val == Channel.STOP
+
+        result.val == 5
+        result.val == 8
+        result.val == 10
+        result.val == Channel.STOP
+
+        !session.dag.isEmpty()
+
+    }
+
     def 'should `tap` target channel' () {
 
         when:
