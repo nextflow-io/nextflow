@@ -1436,15 +1436,12 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
 
-        folder.resolve('.command.sh').text ==
+        folder.resolve('.command.run.1').readLines()[-2..-1].join('\n') ==
                 """
-                #!/bin/bash -ue
-                echo Hello world!
-
                 # patch root ownership problem of files created with docker
                 [ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${folder}/{*,.*} || true
                 """
-                        .stripIndent().leftTrim()
+                        .stripIndent().trim()
 
     }
 

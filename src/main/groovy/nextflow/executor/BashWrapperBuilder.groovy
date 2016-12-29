@@ -228,8 +228,6 @@ class BashWrapperBuilder {
 
     private boolean runWithContainer
 
-    private boolean isContainerEnabled
-
     BashWrapperBuilder( TaskRun task ) {
         this(new TaskBean(task))
     }
@@ -387,11 +385,6 @@ class BashWrapperBuilder {
             wrapper << scriptCleanUp(exitedFile, changeDir, null) << ENDL
         }
 
-        // append to script file chown command to change `root` owner of files created by docker
-        // note: this is not required when running docker in OSX through boo2docker because it manage correctly files ownership
-        if( this.fixOwnership() )
-            scriptFile << "\n# patch root ownership problem of files created with docker\n[ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*} || true\n"
-
         wrapper << ( changeDir ?: "NXF_SCRATCH=''" ) << ENDL
 
         // -- print the current environment when debug is enabled
@@ -447,7 +440,7 @@ class BashWrapperBuilder {
         /*
          * process stats
          */
-        if( statsEnabled ) {
+        if( statsEnabled || fixOwnership() ) {
             final stub = new StringBuilder()
             stub << '#!/bin/bash' << ENDL
             stub << 'set -e' << ENDL
@@ -469,6 +462,11 @@ class BashWrapperBuilder {
             stub << 'end_millis=$($NXF_DATE)' << ENDL    // get the ending time
             stub << 'nxf_kill $mon || wait $mon' << ENDL     // kill the monitor and wait for its ending
             stub << 'echo $((end_millis-start_millis)) >> ' << TaskRun.CMD_TRACE << ENDL
+
+            // append to script file chown command to change `root` owner of files created by docker
+            if( this.fixOwnership() )
+                stub << "\n# patch root ownership problem of files created with docker\n[ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*} || true\n"
+
             // save to file
             stubFile.text = stub.toString()
 
