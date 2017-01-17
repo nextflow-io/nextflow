@@ -204,6 +204,16 @@ class ProcessFactory {
                     log.warn "Unknown directive `$key` for process `$name`"
                 if( key == 'params' ) // <-- patch issue #242
                     return
+                if (key == 'ext') {
+                    // update missing 'ext' properties found in 'process' scope
+                    def ext = processConfig.getProperty(key) as Map
+                    value .each  { String k, v ->
+                        if ( ! ext.containsKey(k) ) {
+                            ext[k] = v
+                        }
+                    }
+                    return
+                }
                 processConfig.put(key,value)
             }
         }
