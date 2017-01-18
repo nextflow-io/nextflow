@@ -47,4 +47,35 @@ class BlankSeparatedListTest extends Specification {
         x[2] == 'c'
     }
 
+    def 'should collect items' () {
+
+        given:
+        def p = new BlankSeparatedList('x'..'z')
+        expect:
+        p.collect() == ['x','y','z']
+
+    }
+
+    def 'should convert to a list' () {
+        given:
+        def p = new BlankSeparatedList('x'..'z')
+        expect:
+        p as List == ['x','y','z']
+        p as Set == ['x','y','z'] as Set
+    }
+
+    def 'should join items' () {
+        given:
+        def p = new BlankSeparatedList('x'..'z')
+        expect:
+        p.join('-') == 'x-y-z'
+    }
+
+    def 'should get first item' () {
+        given:
+        def p = new BlankSeparatedList('x'..'z')
+        expect:
+        p.first() == 'x'
+    }
+
 }

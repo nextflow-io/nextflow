@@ -25,6 +25,8 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import org.codehaus.groovy.runtime.InvokerHelper
+
 /**
  * A list of staged paths, which renders its content just separating
  * the items by a blank space
@@ -34,8 +36,7 @@ import groovy.transform.EqualsAndHashCode
 @EqualsAndHashCode
 public class BlankSeparatedList implements KryoSerializable {
 
-    // note: due to a bug with the groovy runtime, the class must NO implement
-    // the List interface, otherwise the toString() method is not invoked (Groovy 2.1.7)
+    // note: this class must NO implement the List interface, otherwise the toString() method is not invoked
     @Delegate(interfaces = false)
     List target
 
@@ -54,7 +55,6 @@ public class BlankSeparatedList implements KryoSerializable {
         target.join(' ')
     }
 
-
     void read (Kryo kryo, Input input) {
         target = kryo.readObject(input,ArrayList)
     }
@@ -65,6 +65,13 @@ public class BlankSeparatedList implements KryoSerializable {
 
     def getAt( int index ) {
         target.getAt(index)
+    }
+
+    /*
+     * this is needed to implement Groovy List extension methods
+     */
+    def methodMissing(String name, args) {
+        InvokerHelper.invokeMethod(target,name,args)
     }
 
 }
