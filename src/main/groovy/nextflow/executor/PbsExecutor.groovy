@@ -83,8 +83,10 @@ class PbsExecutor extends AbstractGridExecutor {
 
     @Override
     String getJobNameFor( TaskRun task ) {
-        // PBS does not allow more than 15 characters for the job name string
         def result = super.getJobNameFor(task)
+        // some implementations do not allow parenthesis in the job name -- see #271
+        result = result.replace('(','').replace(')','')
+        // PBS does not allow more than 15 characters for the job name string
         result && result.size()>15 ? result.substring(0,15) : result
     }
     /**

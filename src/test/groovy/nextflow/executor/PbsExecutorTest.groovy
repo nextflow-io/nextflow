@@ -212,6 +212,7 @@ class PbsExecutorTest extends Specification {
         name        | expected
         'hello'     | 'nf-hello'
         '12 45'     | 'nf-12_45'
+        'hello(123)'| 'nf-hello123'
         'very-long-task-name-taking-more-than-15-chars' | 'nf-very-long-ta'
 
     }
