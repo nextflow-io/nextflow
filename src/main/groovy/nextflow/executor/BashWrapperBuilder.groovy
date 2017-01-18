@@ -97,7 +97,7 @@ class BashWrapperBuilder {
             walk $1
         }
 
-        function nxf_mktemp() {
+        nxf_mktemp() {
             local base=${1:-/tmp}
             if [[ $(uname) = Darwin ]]; then mktemp -d $base/nxf.XXXXXXXXXX
             else TMPDIR="$base" mktemp -d -t nxf.XXXXXXXXXX
