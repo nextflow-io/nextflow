@@ -118,6 +118,7 @@ class BashWrapperBuilder {
             __KILL_CMD__
         }
 
+        export -f nxf_kill
         trap on_exit EXIT
         trap on_term TERM INT USR1 USR2
         '''.stripIndent().leftTrim()
