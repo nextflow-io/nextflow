@@ -214,6 +214,7 @@ class TimelineObserverTest extends Specification {
 
 <html>
 <head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <script type="text/javascript">
 var prot = (("https:" == document.location.protocol) ? "https://" : "http://");
 document.write(unescape("%3Cscript src='" + prot + "code.jquery.com/jquery-latest.min.js' type='text/javascript' %3E%3C/script%3E"));
