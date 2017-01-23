@@ -134,5 +134,43 @@ class FunctionalTests extends Specification {
 
     }
 
+    def 'test merge ext properties' () {
+        given:
+        def configStr = '''
+            process {
+                ext {
+                    alpha = "aaa"
+                    delta = "ddd"
+                }
+                $foo {
+                    ext {
+                        beta = "BBB"
+                        delta = "DDD"
+                    }
+                }
+            }
+        '''
+        def cfg = new ConfigSlurper().parse(configStr)
+
+        when:
+        def script = '''
+
+            process foo {
+                exec:
+                println true
+            }
+
+            '''
+
+        def runner = new ScriptRunner(cfg)
+        runner.setScript(script).execute()
+        def processor = runner.scriptObj.taskProcessor
+        println processor.config.ext
+        then:
+        processor instanceof TaskProcessor
+        processor.config.ext.alpha == 'aaa'
+        processor.config.ext.beta == 'BBB'
+        processor.config.ext.delta == 'DDD'
+    }
 
 }
