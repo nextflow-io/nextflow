@@ -60,7 +60,7 @@ abstract class AbstractGridExecutor extends Executor {
      * @return
      */
     def TaskMonitor createTaskMonitor() {
-        return TaskPollingMonitor.create(session, name, 100, Duration.of('1 sec'))
+        return TaskPollingMonitor.create(session, name, 100, Duration.of('5 sec'))
     }
 
     /*
