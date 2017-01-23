@@ -199,7 +199,8 @@ class ProcessFactory {
         // -- set 'default' properties defined in the configuration file in the 'process' section
         if( config.process instanceof Map ) {
             config.process .each { String key, value ->
-                if( key.startsWith('$')) return
+                if( key.startsWith('$'))
+                    return
                 if( !ProcessConfig.DIRECTIVES.contains(key) )
                     log.warn "Unknown directive `$key` for process `$name`"
                 if( key == 'params' ) // <-- patch issue #242
