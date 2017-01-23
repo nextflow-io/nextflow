@@ -1,6 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.23.1 - 23 Jan 2017
+- Fixed FixOwnership flag break non BASH scripts/templates #270
+- Fixed Fixed PBS Executor should not have parenthesis #271
+- Fixed Function nxf_kill is not invoked properly on process termination #275
+- Fixed Timeline.html is not working on IE11 #272
+- Fixed Merge process specific extended properties with the ones defined in the default scope #273
+- Fixed Using storeDir and publishDir in the same process yields unexpected results #266
+
 0.23.0 - 13 Dec 2016 
 - Added support for Singularity containers #252
 - Added support for HTTP/S and FTP files (read-only)
