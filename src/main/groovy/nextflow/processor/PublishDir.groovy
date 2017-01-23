@@ -187,7 +187,7 @@ class PublishDir {
         }
 
         this.processor = task.processor
-        this.sourceDir = task.workDir
+        this.sourceDir = task.targetDir
         this.sourceFileSystem = sourceDir.fileSystem
 
         createPublishDir()
