@@ -93,7 +93,7 @@ class PublishDirTest extends Specification {
 
         final workDir = folder.resolve('work-dir')
         final publishDir = folder.resolve('pub-dir')
-        final task = new TaskRun(workDir: workDir)
+        final task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
 
         when:
         def outputs =  [
@@ -102,7 +102,7 @@ class PublishDirTest extends Specification {
                 workDir.resolve('file3.fastq')
         ]
         def publisher = new PublishDir(path: publishDir)
-        publisher.apply(outputs, task )
+        publisher.apply(outputs, task)
 
         then:
         publishDir.resolve('file1.txt').exists()
@@ -154,7 +154,7 @@ class PublishDirTest extends Specification {
 
         final workDir = folder.resolve('work-dir')
         final publishDir = folder.resolve('pub-dir')
-        final task = new TaskRun(workDir: workDir)
+        final task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
 
         when:
         def outputs = [
@@ -206,7 +206,7 @@ class PublishDirTest extends Specification {
         final workDir = folder.resolve('work-dir')
         final target1 = folder.resolve('pub-dir1')
         final target2 = folder.resolve('pub-dir2')
-        final task = new TaskRun(workDir: workDir)
+        final task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
 
         when:
         def outputs = [
