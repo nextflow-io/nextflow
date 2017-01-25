@@ -659,6 +659,17 @@ and emits the resulting collection as a single item. For example::
     [1,2,3,4]
     Done
 
+You may also pass a comparator closure as an argument to the ``toSortedList`` operator to customize the sorting criteria.  For example, to sort by the second element of a tuple in descending order::
+
+    Channel
+        .from( ["homer", 5], ["bart", 2], ["lisa", 10], ["marge", 3], ["maggie", 7])
+        .toSortedList( { a, b -> b[1] <=> a[1] } )
+        .view()
+
+::
+
+   [[lisa, 10], [maggie, 7], [homer, 5], [marge, 3], [bart, 2]]
+
 
 Splitting operators
 ====================
