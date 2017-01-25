@@ -204,7 +204,22 @@ abstract class AbstractGridExecutor extends Executor {
      * @param jobId The ID of the job to kill
      */
     void killTask( def jobId )  {
-        new ProcessBuilder(killTaskCommand(jobId)).start()
+        def cmd = killTaskCommand(jobId)
+        def proc = new ProcessBuilder(cmd).redirectErrorStream(true).start()
+        proc.waitForOrKill(10_000)
+        def ret = proc.exitValue()
+        if( ret==0 )
+            return
+
+        def m = """\
+                Unable to killing pending jobs
+                - cmd executed: ${cmd.join(' ')}
+                - exit status : $ret
+                - output      :
+                """
+                .stripIndent()
+        m += proc.text.indent('  ')
+        log.debug(m)
     }
 
     /**
