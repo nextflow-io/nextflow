@@ -118,7 +118,6 @@ class BashWrapperBuilder {
             __KILL_CMD__
         }
 
-        export -f nxf_kill
         trap on_exit EXIT
         trap on_term TERM INT USR1 USR2
         '''.stripIndent().leftTrim()
@@ -130,6 +129,20 @@ class BashWrapperBuilder {
     // PID, STATE, %CPU, %MEM, VSIZE, RSS; VmPeak, VmHWM; RCHAR, WCHAR, syscr, syscw, READ_BYTES, WRITE_BYTES, CANCEL_W_BYTES
     @PackageScope
     static final String SCRIPT_TRACE = '''
+        nxf_kill() {
+            declare -a ALL_CHILD
+            while read P PP;do
+                ALL_CHILD[$PP]+=" $P"
+            done < <(ps -e -o pid= -o ppid=)
+
+            walk() {
+                [[ $1 != $$ ]] && kill $1 2>/dev/null || true
+                for i in ${ALL_CHILD[$1]:=}; do walk $i; done
+            }
+
+            walk $1
+        }
+
         nxf_tree() {
             declare -a ALL_CHILD
             while read P PP;do

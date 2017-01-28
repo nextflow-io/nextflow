@@ -119,7 +119,6 @@ class CirrusWrapperBuilderTest extends Specification {
                     [[ "\$pid" ]] && nxf_kill \$pid
                 }
 
-                export -f nxf_kill
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 

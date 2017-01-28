@@ -177,7 +177,6 @@ class BashWrapperBuilderTest extends Specification {
                     [[ "\$pid" ]] && nxf_kill \$pid
                 }
 
-                export -f nxf_kill
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
@@ -287,7 +286,6 @@ class BashWrapperBuilderTest extends Specification {
                     [[ "\$pid" ]] && nxf_kill \$pid
                 }
 
-                export -f nxf_kill
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
@@ -319,6 +317,20 @@ class BashWrapperBuilderTest extends Specification {
                 set -e
                 set -u
                 NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 3 ]] && set -x
+
+                nxf_kill() {
+                    declare -a ALL_CHILD
+                    while read P PP;do
+                        ALL_CHILD[\$PP]+=" \$P"
+                    done < <(ps -e -o pid= -o ppid=)
+
+                    walk() {
+                        [[ \$1 != \$\$ ]] && kill \$1 2>/dev/null || true
+                        for i in \${ALL_CHILD[\$1]:=}; do walk \$i; done
+                    }
+
+                    walk \$1
+                }
 
                 nxf_tree() {
                     declare -a ALL_CHILD
@@ -494,7 +506,6 @@ class BashWrapperBuilderTest extends Specification {
                     [[ "\$pid" ]] && nxf_kill \$pid
                 }
 
-                export -f nxf_kill
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
@@ -621,7 +632,6 @@ class BashWrapperBuilderTest extends Specification {
                     [[ "\$pid" ]] && nxf_kill \$pid
                 }
 
-                export -f nxf_kill
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
@@ -656,6 +666,20 @@ class BashWrapperBuilderTest extends Specification {
             set -e
             set -u
             NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 3 ]] && set -x
+
+            nxf_kill() {
+                declare -a ALL_CHILD
+                while read P PP;do
+                    ALL_CHILD[\$PP]+=" \$P"
+                done < <(ps -e -o pid= -o ppid=)
+
+                walk() {
+                    [[ \$1 != \$\$ ]] && kill \$1 2>/dev/null || true
+                    for i in \${ALL_CHILD[\$1]:=}; do walk \$i; done
+                }
+
+                walk \$1
+            }
 
             nxf_tree() {
                 declare -a ALL_CHILD
@@ -831,7 +855,6 @@ class BashWrapperBuilderTest extends Specification {
                     sudo docker kill \$NXF_BOXID
                 }
 
-                export -f nxf_kill
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
@@ -942,7 +965,6 @@ class BashWrapperBuilderTest extends Specification {
                     docker kill \$NXF_BOXID
                 }
 
-                export -f nxf_kill
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
@@ -1055,7 +1077,6 @@ class BashWrapperBuilderTest extends Specification {
                     [[ "\$pid" ]] && nxf_kill \$pid
                 }
 
-                export -f nxf_kill
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
@@ -1165,7 +1186,6 @@ class BashWrapperBuilderTest extends Specification {
                     docker kill -s SIGXXX \$NXF_BOXID
                 }
 
-                export -f nxf_kill
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
@@ -1280,7 +1300,6 @@ class BashWrapperBuilderTest extends Specification {
                     docker kill \$NXF_BOXID
                 }
 
-                export -f nxf_kill
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
@@ -1393,7 +1412,6 @@ class BashWrapperBuilderTest extends Specification {
                     sudo docker kill \$NXF_BOXID
                 }
 
-                export -f nxf_kill
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
@@ -1535,7 +1553,6 @@ class BashWrapperBuilderTest extends Specification {
                     docker kill \$NXF_BOXID
                 }
 
-                export -f nxf_kill
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
@@ -1643,7 +1660,6 @@ class BashWrapperBuilderTest extends Specification {
                         [[ "$pid" ]] && nxf_kill $pid
                     }
 
-                    export -f nxf_kill
                     trap on_exit EXIT
                     trap on_term TERM INT USR1 USR2
                     '''
@@ -1700,7 +1716,6 @@ class BashWrapperBuilderTest extends Specification {
                         docker kill x
                     }
 
-                    export -f nxf_kill
                     trap on_exit EXIT
                     trap on_term TERM INT USR1 USR2
                     '''
@@ -1758,7 +1773,6 @@ class BashWrapperBuilderTest extends Specification {
                         docker kill x
                     }
 
-                    export -f nxf_kill
                     trap on_exit EXIT
                     trap on_term TERM INT USR1 USR2
                     '''
@@ -1919,7 +1933,6 @@ class BashWrapperBuilderTest extends Specification {
                     [[ "\$pid" ]] && nxf_kill \$pid
                 }
 
-                export -f nxf_kill
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
@@ -2057,7 +2070,6 @@ class BashWrapperBuilderTest extends Specification {
                     [[ "\$pid" ]] && nxf_kill \$pid
                 }
 
-                export -f nxf_kill
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
