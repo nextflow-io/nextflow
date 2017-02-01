@@ -434,7 +434,7 @@ class HistoryFile extends File {
                     if( System.currentTimeMillis() - ts < 1_000 )
                         sleep rnd.nextInt(75)
                     else {
-                        error = new IllegalStateException("Can't lock history file: $this")
+                        error = new IllegalStateException("Can't lock file: ${this.absolutePath} -- Nextflow needs to run in a file system that supports file locks")
                         break
                     }
                 }
@@ -443,8 +443,6 @@ class HistoryFile extends File {
                 }
             }
             catch( Exception e ) {
-                if( error )
-                log.warn "Can't lock history file: $this", e
                 return action.call()
             }
             finally {
