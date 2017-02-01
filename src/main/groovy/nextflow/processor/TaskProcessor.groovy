@@ -761,7 +761,7 @@ class TaskProcessor {
             return true
         }
         if( invalid ) {
-            log.warn "[$task.name] Store dir can be used when using 'file' outputs"
+            log.warn "[$task.name] StoreDir can only be used when using 'file' outputs"
             return false
         }
 
