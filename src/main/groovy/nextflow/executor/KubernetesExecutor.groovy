@@ -142,6 +142,18 @@ class KubernetesExecutor extends AbstractGridExecutor {
 
         static private volumes = new AtomicInteger()
 
+        static private final String OWNER
+
+        static {
+            if( System.getenv('NXF_OWNER') ) {
+                OWNER = System.getenv('NXF_OWNER')
+            }
+            else {
+                def p = ['bash','-c','echo -n $(id -u):$(id -g)'].execute(); p.waitFor()
+                OWNER = p.text
+            }
+        }
+
         private String taskHash
         private cpu
         private mem
@@ -206,6 +218,10 @@ class KubernetesExecutor extends AbstractGridExecutor {
                 mounts.put( "vol-${volumes.incrementAndGet()}", it )
             }
 
+            def env = [:]
+            if( fixOwnership() )
+                env.put('NXF_OWNER', OWNER)
+
             new YamlBuilder(
                     name: "nxf-${taskHash}",
                     image: containerImage,
@@ -213,7 +229,9 @@ class KubernetesExecutor extends AbstractGridExecutor {
                     workDir: workDir.toString(),
                     mounts: mounts,
                     cpu: cpu,
-                    mem: mem )
+                    mem: mem,
+                    env: env
+            )
                     .create()
         }
 
@@ -231,6 +249,7 @@ class KubernetesExecutor extends AbstractGridExecutor {
         Map<String,String> mounts
         int cpu
         MemoryUnit mem
+        Map<String,String> env
 
         String create() {
 
@@ -248,9 +267,25 @@ spec:
     image: $image
     command: ${cmd.collect { "\"$it\"" }}
     workingDir: $workDir
-${getResources0()}${getMounts0(mounts)}${getVolumes0(mounts)}\
+${getEnvironment0()}${getResources0()}${getMounts0(mounts)}${getVolumes0(mounts)}\
 """
 
+        }
+
+        private String getEnvironment0() {
+            if( !env ) return ''
+
+            def result = new StringBuilder('    env:\n')
+            env.each { k,v ->
+                result.append(
+"""\
+    - name: $k
+      value: "$v"
+"""
+                )
+            }
+
+            return result.toString()
         }
 
         /**
