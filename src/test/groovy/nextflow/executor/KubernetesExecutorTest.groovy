@@ -201,6 +201,37 @@ class KubernetesExecutorTest extends Specification {
 
     }
 
+    def 'should add environment to yaml descriptor' () {
+
+        when:
+        def builder = [name: 'basic',image:'ubuntu', cmd:['do','this','and','that'], workDir:'/work/path', env: [ALPHA:'aaa', BETA: 'bbb']] as KubernetesExecutor.YamlBuilder
+        def yaml = builder.create()
+        then:
+        yaml == '''
+                apiVersion: v1
+                kind: Pod
+                metadata:
+                  name: basic
+                  labels:
+                    app: nextflow
+                spec:
+                  restartPolicy: Never
+                  containers:
+                  - name: basic
+                    image: ubuntu
+                    command: ["do", "this", "and", "that"]
+                    workingDir: /work/path
+                    env:
+                    - name: ALPHA
+                      value: "aaa"
+                    - name: BETA
+                      value: "bbb"
+                '''
+                .stripIndent().leftTrim()
+
+
+    }
+
 
     def 'should add resources to yaml descriptor' () {
 
