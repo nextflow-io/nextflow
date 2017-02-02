@@ -1,6 +1,15 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.23.2 - 2 Feb 2017 
+- Improved history lock error message
+- Fixed typo in warning message
+- Added `cleanup` to list of accepted directives
+- Added NXF_OWNER to kubernetes executor
+- Fixed Function nxf_kill is not invoked properly on a containerised process #275
+- Fixed Pending grid jobs are not cancelled upon pipeline interruption
+- Documented that the toSortedList operator can accept a comparator closure #277
+
 0.23.1 - 23 Jan 2017
 - Fixed FixOwnership flag break non BASH scripts/templates #270
 - Fixed Fixed PBS Executor should not have parenthesis #271
