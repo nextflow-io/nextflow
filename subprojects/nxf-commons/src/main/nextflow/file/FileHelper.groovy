@@ -832,7 +832,10 @@ class FileHelper {
 
     /**
      * Delete a path or a directory. If the directory is not empty
-     * delete all the content of the directory
+     * delete all the content of the directory.
+     *
+     * Note when the path is a symlink, it only remove the link without
+     * following affecting the target path
      *
      * @param path
      */
