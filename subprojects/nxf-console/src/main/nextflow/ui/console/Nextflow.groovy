@@ -228,7 +228,7 @@ class Nextflow extends Console {
         new LoggerHelper(opts).setup()
 
         if (args.length == 2 && args[1] == '--help') {
-            println 'usage: nextflow repl [filename]'
+            println 'usage: nextflow console [filename]'
             return
         }
 
