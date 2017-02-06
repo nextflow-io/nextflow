@@ -28,6 +28,7 @@ import java.nio.file.FileSystems
 import java.nio.file.FileVisitOption
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.nio.file.Paths
@@ -836,7 +837,7 @@ class FileHelper {
      * @param path
      */
     static void deletePath( Path path ) {
-        def attr = FilesEx.readAttributes(path)
+        def attr = readAttributes(path, LinkOption.NOFOLLOW_LINKS)
         if( !attr )
             return
 
@@ -894,6 +895,16 @@ class FileHelper {
         }
 
         return result
+    }
+
+    static BasicFileAttributes readAttributes(Path path, LinkOption... options) {
+        try {
+            Files.readAttributes(path,BasicFileAttributes,options)
+        }
+        catch( IOException e ) {
+            log.trace "Unable to read attributes for file: $path"
+            return null
+        }
     }
 
 }
