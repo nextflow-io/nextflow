@@ -21,6 +21,7 @@
 package nextflow.file
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -31,6 +32,8 @@ import com.google.common.jimfs.Jimfs
 import nextflow.Global
 import nextflow.ISession
 import spock.lang.Specification
+
+import static java.nio.file.LinkOption.NOFOLLOW_LINKS
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -732,5 +735,100 @@ class FileHelperTest extends Specification {
 
     }
 
+    def 'should delete file or a directory'() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        def file_1 = folder.resolve('file_1')
+        def file_2 = folder.resolve('file_2')
+        def dir_1 = folder.resolve('dir_1')
+        def dir_2 = folder.resolve('dir_2')
+        def link_to_dir_2 = folder.resolve('link_to_dir_2')
+        def link_to_file_2 = folder.resolve('link_to_file_2')
+        def link_to_missing = folder.resolve('link_to_missing')
+
+        Files.createFile(file_1)
+        Files.createFile(file_2)
+        Files.createDirectory(dir_1)
+        Files.createDirectory(dir_2)
+        Files.createSymbolicLink(link_to_file_2, file_2)
+        Files.createSymbolicLink(link_to_dir_2, dir_2)
+        Files.createSymbolicLink(link_to_missing, folder.resolve('missing'))
+
+        Files.createFile(dir_1.resolve('hello'))
+        Files.createDirectory(dir_1.resolve('sub_dir'))
+        Files.createFile(dir_1.resolve('sub_dir/world'))
+
+        expect:
+        FileHelper.deletePath(file_1)
+        // delete the file
+        !Files.exists(file_1)
+
+        FileHelper.deletePath(dir_1)
+        // delete directory including sub directory
+        !Files.exists(dir_1)
+
+        FileHelper.deletePath(link_to_file_2)
+        // delete the symlink but not the target file
+        !Files.exists(link_to_file_2 )
+        !Files.exists(link_to_file_2, LinkOption.NOFOLLOW_LINKS)
+        Files.exists(file_2)
+
+        FileHelper.deletePath(link_to_dir_2)
+        // delete the symlink but not the target dir
+        !Files.exists(link_to_dir_2)
+        !Files.exists(link_to_dir_2, LinkOption.NOFOLLOW_LINKS)
+        Files.exists(dir_2)     // <-- note: delete the symlink but not the target file
+
+        FileHelper.deletePath(link_to_missing)
+        // delete the symlink
+        !Files.exists(link_to_missing)
+        !Files.exists(link_to_missing, LinkOption.NOFOLLOW_LINKS)
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
+    def 'should read file attributes' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        def file_1 = folder.resolve('file_1.txt')
+        def dir_1 = folder.resolve('dir_1')
+        def link_to_file = folder.resolve('link_1')
+        def link_to_dir = folder.resolve('link_2')
+
+        when:
+        Files.createFile(file_1)
+        then:
+        FileHelper.readAttributes(file_1).isRegularFile()
+
+        when:
+        Files.createSymbolicLink(link_to_file, file_1)
+        then:
+        FileHelper.readAttributes(link_to_file).isRegularFile()
+        FileHelper.readAttributes(link_to_file,NOFOLLOW_LINKS).isSymbolicLink()
+
+        when:
+        Files.createDirectory(dir_1)
+        then:
+        FileHelper.readAttributes(dir_1).isDirectory()
+
+        when:
+        Files.createSymbolicLink(link_to_dir, dir_1)
+        then:
+        FileHelper.readAttributes(link_to_dir).isDirectory()
+        FileHelper.readAttributes(link_to_dir,NOFOLLOW_LINKS).isSymbolicLink()
+
+        when:
+        Files.delete(file_1)
+        then:
+        FileHelper.readAttributes(link_to_file) == null
+
+        cleanup:
+        folder?.deleteDir()
+    }
 
 }

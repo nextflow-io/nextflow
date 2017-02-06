@@ -234,7 +234,7 @@ class PublishDir {
 
         final destination = resolveDestination(target)
         if( inProcess ) {
-            processFile(source, destination)
+            safeProcessFile(source, destination)
         }
         else {
             executor.submit({ safeProcessFile(source, destination) } as Runnable)
@@ -262,18 +262,12 @@ class PublishDir {
     }
 
     @CompileStatic
-    protected void safeProcessFile(Path source, Path destination) {
+    protected void safeProcessFile(Path source, Path target) {
         try {
-            processFile(source, destination)
+            processFile(source, target)
         }
         catch( Throwable e ) {
-            log.error """
-                Unxpected condition while publishing file:
-                  mode  : ${mode.toString().toLowerCase()}
-                  source: $source
-                  target: ${destination.toUri()}
-                  cause : ${e.toString()}""".stripIndent().trim(), e
-            (Global.session as Session).abort(e)
+            log.warn "Failed to publish file: $source; to: $target [${mode.toString().toLowerCase()}] -- See log file for details", e
         }
     }
 

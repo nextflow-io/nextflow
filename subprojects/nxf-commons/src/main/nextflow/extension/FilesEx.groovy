@@ -112,7 +112,7 @@ class FilesEx {
      * @return
      */
     def static boolean deleteDir(Path path) {
-        def attr = readAttributes(path)
+        def attr = FileHelper.readAttributes(path)
         if( !attr )
              return true
 
@@ -1385,7 +1385,9 @@ class FilesEx {
         self.toAbsolutePath().normalize()
     }
 
+    @Deprecated
     static BasicFileAttributes readAttributes(Path path) {
+        log.warn "Method `readAttributes` is deprecated"
         try {
             Files.readAttributes(path,BasicFileAttributes)
         }

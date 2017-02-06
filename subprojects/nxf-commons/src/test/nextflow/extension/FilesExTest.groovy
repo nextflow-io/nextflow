@@ -1185,6 +1185,40 @@ class FilesExTest extends Specification {
 
     }
 
+    def 'should delete a directory' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        def file_1 = folder.resolve('file_1')
+        def dir_1 = folder.resolve('dir_1')
+        def dir_2 = folder.resolve('dir_2')
+        def link_to_dir_2 = folder.resolve('link_to_dir_2')
+        def link_to_file_1 = folder.resolve('link_to_file_1')
+
+        Files.createFile(file_1)
+        Files.createDirectory(dir_1)
+        Files.createDirectory(dir_2)
+        Files.createSymbolicLink(link_to_file_1, file_1)
+        Files.createSymbolicLink(link_to_dir_2, dir_2)
+
+        expect:
+        !FilesEx.deleteDir(file_1)
+        Files.exists(file_1)
+
+        FilesEx.deleteDir(dir_2)
+        !Files.exists(dir_2)
+
+        !FilesEx.deleteDir(link_to_file_1)
+        Files.exists(link_to_file_1)
+
+        FilesEx.deleteDir(link_to_dir_2)
+        !Files.exists(link_to_dir_2)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 }
 
 
