@@ -24,6 +24,7 @@ import static nextflow.processor.TaskStatus.RUNNING
 import static nextflow.processor.TaskStatus.SUBMITTED
 
 import java.nio.file.Path
+import java.nio.file.attribute.BasicFileAttributes
 
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessFailedException
@@ -277,17 +278,27 @@ class GridTaskHandler extends TaskHandler {
     boolean checkIfRunning() {
 
         if( isSubmitted() ) {
-
-            def startAttr
-            if( startFile && (startAttr=FileHelper.readAttributes(startFile)) && startAttr.lastModifiedTime()?.toMillis() > 0) {
+            if( isStarted() ) {
                 status = RUNNING
                 // use local timestamp because files are created on remote nodes which
                 // may not have a synchronized clock
                 startedMillis = System.currentTimeMillis()
                 return true
             }
-
         }
+
+        return false
+    }
+
+    private boolean isStarted() {
+
+        BasicFileAttributes attr
+        if( startFile && (attr=FileHelper.readAttributes(startFile)) && attr.lastModifiedTime()?.toMillis() > 0  )
+            return true
+
+        // fix issue #268
+        if( exitFile && (attr=FileHelper.readAttributes(exitFile)) && attr.lastModifiedTime()?.toMillis() > 0  )
+            return true
 
         return false
     }
