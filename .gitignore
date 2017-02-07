@@ -33,3 +33,6 @@ logo/
 cloud/my-*
 docker-test
 temp
+gradle.properties
+.dockerignore
+.launch.classpath
