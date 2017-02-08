@@ -75,7 +75,7 @@ class CirrusWrapperBuilderTest extends Specification {
                 # NEXTFLOW TASK: Hello 1
                 set -e
                 set -u
-                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 1 ]] && set -x
 
                 nxf_env() {
                     echo '============= task environment ============='

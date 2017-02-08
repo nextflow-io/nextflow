@@ -65,7 +65,7 @@ class BashWrapperBuilder {
         catch( Exception e ) {
             log.warn "Invalid value for `NXF_DEBUG` variable: $str -- See http://www.nextflow.io/docs/latest/config.html#environment-variables"
         }
-        BASH = Collections.unmodifiableList(  level > 1 ? ['/bin/bash','-uex'] : ['/bin/bash','-ue'] )
+        BASH = Collections.unmodifiableList(  level > 0 ? ['/bin/bash','-uex'] : ['/bin/bash','-ue'] )
 
     }
 
@@ -386,7 +386,7 @@ class BashWrapperBuilder {
         wrapper << '# NEXTFLOW TASK: ' << name << ENDL
         wrapper << 'set -e' << ENDL
         wrapper << 'set -u' << ENDL
-        wrapper << 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 2 ]] && set -x' << ENDL << ENDL
+        wrapper << 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 1 ]] && set -x' << ENDL << ENDL
 
         if( runWithContainer ) {
             containerBuilder.appendHelpers(wrapper)
@@ -459,7 +459,7 @@ class BashWrapperBuilder {
             stub << '#!/bin/bash' << ENDL
             stub << 'set -e' << ENDL
             stub << 'set -u' << ENDL
-            stub << 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 3 ]] && set -x' << ENDL << ENDL
+            stub << 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 2 ]] && set -x' << ENDL << ENDL
             stub << SCRIPT_TRACE << ENDL
             stub << 'trap \'exit ${ret:=$?}\' EXIT' << ENDL
             stub << 'touch ' << TaskRun.CMD_TRACE << ENDL

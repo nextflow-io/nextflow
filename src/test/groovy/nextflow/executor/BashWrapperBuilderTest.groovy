@@ -134,7 +134,7 @@ class BashWrapperBuilderTest extends Specification {
                 # NEXTFLOW TASK: Hello 1
                 set -e
                 set -u
-                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 1 ]] && set -x
 
                 nxf_env() {
                     echo '============= task environment ============='
@@ -243,7 +243,7 @@ class BashWrapperBuilderTest extends Specification {
                 # NEXTFLOW TASK: Hello 1
                 set -e
                 set -u
-                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 1 ]] && set -x
 
                 nxf_env() {
                     echo '============= task environment ============='
@@ -316,7 +316,7 @@ class BashWrapperBuilderTest extends Specification {
                 #!/bin/bash
                 set -e
                 set -u
-                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 3 ]] && set -x
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
 
                 nxf_kill() {
                     declare -a ALL_CHILD
@@ -462,7 +462,7 @@ class BashWrapperBuilderTest extends Specification {
                 # NEXTFLOW TASK: Hello 1
                 set -e
                 set -u
-                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 1 ]] && set -x
 
                 nxf_env() {
                     echo '============= task environment ============='
@@ -588,7 +588,7 @@ class BashWrapperBuilderTest extends Specification {
                 # NEXTFLOW TASK: Hello 2
                 set -e
                 set -u
-                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 1 ]] && set -x
 
                 nxf_env() {
                     echo '============= task environment ============='
@@ -665,7 +665,7 @@ class BashWrapperBuilderTest extends Specification {
             #!/bin/bash
             set -e
             set -u
-            NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 3 ]] && set -x
+            NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
 
             nxf_kill() {
                 declare -a ALL_CHILD
@@ -811,7 +811,7 @@ class BashWrapperBuilderTest extends Specification {
                 # NEXTFLOW TASK: Hello 3
                 set -e
                 set -u
-                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 1 ]] && set -x
 
                 nxf_env() {
                     echo '============= task environment ============='
@@ -921,7 +921,7 @@ class BashWrapperBuilderTest extends Specification {
                 # NEXTFLOW TASK: Hello 4
                 set -e
                 set -u
-                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 1 ]] && set -x
 
                 nxf_env() {
                     echo '============= task environment ============='
@@ -1034,7 +1034,7 @@ class BashWrapperBuilderTest extends Specification {
                 # NEXTFLOW TASK: Hello 5
                 set -e
                 set -u
-                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 1 ]] && set -x
 
                 nxf_env() {
                     echo '============= task environment ============='
@@ -1143,7 +1143,7 @@ class BashWrapperBuilderTest extends Specification {
                 # NEXTFLOW TASK: Hello 6
                 set -e
                 set -u
-                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 1 ]] && set -x
 
                 nxf_env() {
                     echo '============= task environment ============='
@@ -1256,7 +1256,7 @@ class BashWrapperBuilderTest extends Specification {
                 # NEXTFLOW TASK: Hello 7
                 set -e
                 set -u
-                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 1 ]] && set -x
 
                 nxf_env() {
                     echo '============= task environment ============='
@@ -1367,7 +1367,7 @@ class BashWrapperBuilderTest extends Specification {
                 # NEXTFLOW TASK: Hello 3
                 set -e
                 set -u
-                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 1 ]] && set -x
 
                 nxf_env() {
                     echo '============= task environment ============='
@@ -1509,7 +1509,7 @@ class BashWrapperBuilderTest extends Specification {
                 # NEXTFLOW TASK: Hello
                 set -e
                 set -u
-                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 1 ]] && set -x
 
                 nxf_env() {
                     echo '============= task environment ============='
@@ -1890,7 +1890,7 @@ class BashWrapperBuilderTest extends Specification {
                 # NEXTFLOW TASK: Hello 9
                 set -e
                 set -u
-                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 1 ]] && set -x
 
                 nxf_env() {
                     echo '============= task environment ============='
@@ -2006,7 +2006,7 @@ class BashWrapperBuilderTest extends Specification {
                 # NEXTFLOW TASK: Hello 1
                 set -e
                 set -u
-                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 1 ]] && set -x
 
 
                 function shifter_img() {
