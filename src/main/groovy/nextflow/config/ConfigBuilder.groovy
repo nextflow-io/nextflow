@@ -315,8 +315,9 @@ class ConfigBuilder {
         if( !uniqueId )
             return null
 
-        if( uniqueId == 'last' ) {
+        if( uniqueId == 'last' || uniqueId == 'true' ) {
             uniqueId = HistoryFile.DEFAULT.getLast()?.sessionId
+
             if( !uniqueId ) {
                 log.warn "It seems you never run this project before -- Option `-resume` is ignored"
             }
@@ -326,7 +327,7 @@ class ConfigBuilder {
     }
 
     @PackageScope
-    void configRunOptions(ConfigObject config, CmdRun cmdRun) {
+    void configRunOptions(ConfigObject config, Map env, CmdRun cmdRun) {
 
         // -- set config options
         config.cacheable = cmdRun.cacheable
@@ -340,14 +341,14 @@ class ConfigBuilder {
             config.workDir = cmdRun.workDir
 
         else if( !config.workDir )
-            config.workDir = System.getenv('NXF_WORK') ?: 'work'
+            config.workDir = env.get('NXF_WORK') ?: 'work'
 
         // -- sets the library path
         if( cmdRun.libPath )
             config.libDir = cmdRun.libPath
 
         else if ( !config.libDir )
-            config.libDir = System.getenv('NXF_LIB')
+            config.libDir = env.get('NXF_LIB')
 
         // -- override 'process' parameters defined on the cmd line
         cmdRun.process.each { name, value ->
@@ -489,7 +490,7 @@ class ConfigBuilder {
         def config = buildConfig(configFiles)
 
         if( cmdRun )
-            configRunOptions(config, cmdRun)
+            configRunOptions(config, System.getenv(), cmdRun)
 
         return config.toMap()
     }
