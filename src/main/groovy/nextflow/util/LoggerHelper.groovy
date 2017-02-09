@@ -42,6 +42,7 @@ import ch.qos.logback.core.rolling.FixedWindowRollingPolicy
 import ch.qos.logback.core.rolling.RollingFileAppender
 import ch.qos.logback.core.rolling.TriggeringPolicyBase
 import ch.qos.logback.core.spi.FilterReply
+import ch.qos.logback.core.util.FileSize
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.Global
@@ -225,6 +226,7 @@ class LoggerHelper {
             result.file = logFileName
             result.encoder = createEncoder()
             result.setContext(loggerContext)
+            result.bufferSize = FileSize.valueOf('64KB')
             result.start()
         }
 
