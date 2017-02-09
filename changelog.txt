@@ -1,6 +1,15 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.23.3 - 9 Feb 2017 
+- Fixed Job termination is not recognised if the starter file is not created #268
+- Fixed Allow NF console to resume process executions (second take) #280
+- Fixed PublishDir may throw a FileAlredyExistsException #283
+- Increased logger file appender buffer size to 64kb
+- Updated Logback to version 1.1.10
+- Updated copyright info
+- Fixed NXF_DEBUG level
+
 0.23.2 - 2 Feb 2017 
 - Improved history lock error message
 - Fixed typo in warning message
