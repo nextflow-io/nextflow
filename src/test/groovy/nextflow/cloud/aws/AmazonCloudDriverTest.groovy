@@ -389,7 +389,7 @@ class AmazonCloudDriverTest extends Specification {
         def snippet = driver.scriptCreateUser('pditommaso', 'ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA...')
         then:
         snippet ==  '''
-                    useradd pditommaso
+                    useradd -m -s /bin/bash pditommaso
                     mkdir ~pditommaso/.ssh
                     echo "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA..." > ~pditommaso/.ssh/authorized_keys
                     chmod 700 ~pditommaso/.ssh
