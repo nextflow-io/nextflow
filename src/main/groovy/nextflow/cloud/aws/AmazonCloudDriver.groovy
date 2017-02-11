@@ -137,7 +137,7 @@ class AmazonCloudDriver implements CloudDriver {
     @PackageScope
     String scriptCreateUser(String userName, String key) {
         """\
-        useradd $userName
+        useradd -m -s /bin/bash $userName
         mkdir ~$userName/.ssh
         echo "${key.trim()}" > ~$userName/.ssh/authorized_keys
         chmod 700 ~$userName/.ssh
@@ -273,6 +273,10 @@ class AmazonCloudDriver implements CloudDriver {
 
         if( cfg.instanceType?.startsWith('r3.') && cfg.instanceStorageDevice && cfg.instanceStorageMount ) {
             builder << scriptMountInstanceStorage(cfg.instanceStorageDevice, cfg.instanceStorageMount, cfg.userName)
+        }
+
+        if( builder ) {
+            builder.add(0, '#!/bin/bash')
         }
 
         builder.join('\n')
