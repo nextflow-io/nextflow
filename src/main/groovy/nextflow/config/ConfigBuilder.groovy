@@ -414,7 +414,7 @@ class ConfigBuilder {
 
 
         // -- add the command line parameters to the 'taskConfig' object
-        if( cmdRun?.params )
+        if( cmdRun.params || cmdRun.paramsFile )
             config.params.putAll( cmdRun.parsedParams )
 
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {

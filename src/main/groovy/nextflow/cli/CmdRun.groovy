@@ -19,16 +19,21 @@
  */
 
 package nextflow.cli
+import java.nio.file.Files
+import java.nio.file.Path
+
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.IStringConverter
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
+import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import nextflow.Const
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
@@ -36,6 +41,8 @@ import nextflow.util.ConfigHelper
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
+import org.yaml.snakeyaml.Yaml
+
 /**
  * CLI sub-command RUN
  *
@@ -45,6 +52,9 @@ import nextflow.util.HistoryFile
 @CompileStatic
 @Parameters(commandDescription = "Execute a pipeline project")
 class CmdRun extends CmdBase implements HubOptions {
+
+
+    static List<String> VALID_PARAMS_FILE = ['json', 'yml', 'yaml']
 
     static {
         // install the custom pool factory for GPars threads
@@ -94,6 +104,9 @@ class CmdRun extends CmdBase implements HubOptions {
      */
     @DynamicParameter(names = '--', description = 'Set a parameter used by the pipeline', hidden = true)
     Map<String,String> params = new LinkedHashMap<>()
+
+    @Parameter(names='-params-file', description = 'Load script parameters from a JSON/YAML file')
+    String paramsFile
 
     @DynamicParameter(names = ['-process.'], description = 'Set process default options' )
     Map<String,String> process = [:]
@@ -302,13 +315,58 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     Map getParsedParams() {
-        if( !params )
-            Collections.emptyMap()
+
         def result = [:]
-        params.each { key, value ->
+
+        if( paramsFile ) {
+            def path = validateParamsFile(paramsFile)
+            def ext = path.extension.toLowerCase() ?: null
+            if( ext == 'json' )
+                readJsonFile(path, result)
+            else if( ext == 'yml' || ext == 'yaml' )
+                readYamlFile(path, result)
+        }
+
+        // read the params file if any
+
+        // set the CLI params
+        params?.each { key, value ->
             result.put( key, ConfigHelper.parseValue(value) )
         }
         return result
     }
 
+    private Path validateParamsFile(String file) {
+
+        def result = FileHelper.asPath(file)
+        if( !result.exists() )
+            throw new AbortOperationException("Specified params file does not exists: $file")
+
+        def ext = result.getExtension()
+        if( !VALID_PARAMS_FILE.contains(ext) )
+            throw new AbortOperationException("Not a valid params file extension: $file -- It must be one of the following: ${VALID_PARAMS_FILE.join(',')}")
+
+        return result
+    }
+
+
+    private void readJsonFile(Path file, Map result) {
+        try {
+            def json = (Map)new JsonSlurper().parse(Files.newInputStream(file))
+            result.putAll(json)
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Cannot parse params file: $file", e)
+        }
+    }
+
+    private void readYamlFile(Path file, Map result) {
+        try {
+            def yaml = (Map)new Yaml().load(Files.newInputStream(file))
+            result.putAll(yaml)
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Cannot parse params file: $file", e)
+        }
+    }
 }
