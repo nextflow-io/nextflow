@@ -138,6 +138,17 @@ class TaskProcessorTest extends Specification {
         builder.environment().Y == '2'
         builder.environment().PATH == "${binFolder.toString()}:/some"
 
+        when:
+        home = Files.createTempDirectory('with blank')
+        binFolder = home.resolve('bin')
+        binFolder.mkdirs()
+        session = new Session([:])
+        session.setBaseDir(home)
+        processor = new DummyProcessor('task1', session, Mock(BaseScript), Mock(ProcessConfig))
+        builder = new ProcessBuilder()
+        builder.environment().putAll( processor.getProcessEnvironment() )
+        then:
+        builder.environment().PATH == "${home.toString().replace(' ', '\\ ')}/bin:\$PATH"
 
         cleanup:
         home.deleteDir()
