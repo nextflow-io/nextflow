@@ -780,4 +780,94 @@ class ConfigBuilderTest extends Specification {
 
     }
 
+    def 'should set params into config object' () {
+
+        given:
+        def emptyFile = Files.createTempFile('empty','config').toFile()
+        def EMPTY = [emptyFile.toString()]
+
+        def configFile = Files.createTempFile('test','config').toFile()
+        configFile.deleteOnExit()
+        configFile.text = '''
+          params.foo = 1
+          params.bar = 2
+          params.data = '/some/path'
+        '''
+        configFile = configFile.toString()
+
+        def jsonFile = Files.createTempFile('test','.json').toFile()
+        jsonFile.text = '''
+          {
+            "foo": 10,
+            "bar": 20
+          }
+        '''
+        jsonFile = jsonFile.toString()
+
+        def yamlFile = Files.createTempFile('test','.yaml').toFile()
+        yamlFile.text = '''
+          {
+            "foo": 100,
+            "bar": 200
+          }
+        '''
+        yamlFile = yamlFile.toString()
+
+        def config
+
+        when:
+        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun()).build()
+        then:
+        config.params == [:]
+
+        // get params for the CLI
+        when:
+        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun(params: [foo:'one', bar:'two'])).build()
+        then:
+        config.params == [foo:'one', bar:'two']
+
+        // get params from config file
+        when:
+        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun()).build()
+        then:
+        config.params == [foo:1, bar:2, data: '/some/path']
+
+        // get params form JSON file
+        when:
+        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun(paramsFile: jsonFile)).build()
+        then:
+        config.params == [foo:10, bar:20]
+
+        // get params from YAML file
+        when:
+        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun(paramsFile: yamlFile)).build()
+        then:
+        config.params == [foo:100, bar:200]
+
+        // cli override config
+        when:
+        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun(params:[foo:'hello', baz:'world'])).build()
+        then:
+        config.params == [foo:'hello', bar:2, baz: 'world', data: '/some/path']
+
+        // CLI override JSON
+        when:
+        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun(params:[foo:'hello', baz:'world'], paramsFile: jsonFile)).build()
+        then:
+        config.params == [foo:'hello', bar:20, baz: 'world']
+
+        // JSON override config
+        when:
+        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun(paramsFile: jsonFile)).build()
+        then:
+        config.params == [foo:10, bar:20, data: '/some/path']
+
+
+        // CLI override JSON that override config
+        when:
+        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun(paramsFile: jsonFile, params: [foo:'Ciao'])).build()
+        then:
+        config.params == [foo:'Ciao', bar:20, data: '/some/path']
+    }
 }
+
