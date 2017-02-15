@@ -81,6 +81,9 @@ import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
 
 import static nextflow.processor.ErrorStrategy.*
+
+import nextflow.util.Escape
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -1496,10 +1499,10 @@ class TaskProcessor {
         // pre-pend the 'bin' folder to the task environment
         if( session.binDir ) {
             if( result.containsKey('PATH') ) {
-                result['PATH'] =  "${session.binDir}:${result['PATH']}".toString()
+                result['PATH'] =  "${Escape.path(session.binDir)}:${result['PATH']}".toString()
             }
             else {
-                result['PATH'] = "${session.binDir}:\$PATH".toString()
+                result['PATH'] = "${Escape.path(session.binDir)}:\$PATH".toString()
             }
         }
 
