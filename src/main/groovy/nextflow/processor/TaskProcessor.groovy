@@ -1541,7 +1541,7 @@ class TaskProcessor {
                 Files.copy(source, result)
             }
             finally {
-                source.closeQuietly()
+                source?.closeQuietly()
             }
             return new FileHolder(input, result)
         }
