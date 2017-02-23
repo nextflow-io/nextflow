@@ -144,14 +144,9 @@ class ScriptBindingTest extends Specification {
 
         then:
         map['field1'] == 1
+        map['field-1'] == null
         map['field2']  == 2
         map['Field2']  == 3
-
-        when:
-        map['field-1'] == null
-        then:
-        def e = thrown(MissingPropertyException)
-        e.message == 'params.field-1'
 
     }
 

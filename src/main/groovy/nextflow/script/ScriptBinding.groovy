@@ -151,7 +151,10 @@ class ScriptBinding extends Binding {
 
         @Override
         Object get(Object key) {
-            if( !target.containsKey(key) ) throw new MissingPropertyException("params.$key")
+            if( !target.containsKey(key) ) {
+                log.warn "Access to undefined parameter `$key` -- Initialise it to a default value eg. `params.$key = n`"
+                return null
+            }
             return target.get(key)
         }
 
