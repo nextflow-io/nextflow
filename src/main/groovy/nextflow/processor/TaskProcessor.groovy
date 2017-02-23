@@ -1613,7 +1613,7 @@ class TaskProcessor {
         if( name.endsWith('/*') ) {
             final p = name.lastIndexOf('/')
             final dir = name.substring(0,p)
-            return files.collect { it.withName("${dir}/${it.storePath.name}") }
+            return files.collect { it.withName("${dir}/${it.stageName}") }
         }
 
         // no wildcards in the file name
