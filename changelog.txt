@@ -1,6 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.23.4 - 24 Feb 2017 
+- Fixed Show a warning message when accessing undefined parameters #293
+- Fixed Staging input files in a subfolder changes their names when they are symlinks #292
+- Fixed NPE accessing foreign files 
+- Added column char to list of path escaped chars
+- Fixed Boothook script fails on Ubuntu 16.04
+
 0.23.3 - 9 Feb 2017 
 - Fixed Job termination is not recognised if the starter file is not created #268
 - Fixed Allow NF console to resume process executions (second take) #280
