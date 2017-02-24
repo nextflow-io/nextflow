@@ -667,10 +667,11 @@ class Bolts {
         final String str = msg.toString()
         final Throwable error = params?.causedBy as Throwable
         final Duration throttle = params?.throttle as Duration ?: LOG_DFLT_THROTTLE
+        final firstOnly = params?.firstOnly == true
 
         long now = System.currentTimeMillis()
         Long ts = LOGGER_CACHE.get(str)
-        if( ts && now - ts <= throttle.toMillis() ) {
+        if( ts && (now - ts <= throttle.toMillis() || firstOnly) ) {
             return
         }
         LOGGER_CACHE.put(str, now)
@@ -678,7 +679,7 @@ class Bolts {
         action.call(str, error)
     }
 
-    private static Map<String,?> LOGGER_PARAMS = [ causedBy: Throwable, throttle: [String, Number, Duration]  ]
+    private static Map<String,?> LOGGER_PARAMS = [ causedBy: Throwable, throttle: [String, Number, Duration], firstOnly: Boolean ]
 
 
     /**

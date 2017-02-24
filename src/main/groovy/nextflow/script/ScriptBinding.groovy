@@ -152,7 +152,7 @@ class ScriptBinding extends Binding {
         @Override
         Object get(Object key) {
             if( !target.containsKey(key) ) {
-                log.warn "Access to undefined parameter `$key` -- Initialise it to a default value eg. `params.$key = n`"
+                log.warn1("Access to undefined parameter `$key` -- Initialise it to a default value eg. `params.$key = some_value`", firstOnly: true)
                 return null
             }
             return target.get(key)
