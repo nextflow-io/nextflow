@@ -262,6 +262,7 @@ class CloudConfigTest extends Specification {
         then:
         cloud.keyName == 'cloud-provided-key'
         cloud.keyFile == null
+        cloud.privateKeyFile == null
         cloud.keyHash == null
         !cloud.createUser
 
@@ -299,6 +300,7 @@ class CloudConfigTest extends Specification {
         System.setProperty('user.home', HOME.toString())
         HOME.resolve('.ssh').mkdir()
         HOME.resolve('.ssh/id_rsa.pub').text = 'ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA0fPOx7mcUAl3YIhqlllMOZsZMpXKjzfCNYK'
+        HOME.resolve('.ssh/id_rsa').text = '--- private key here ---'
 
         def config = [
                 imageId: 'ami-123',
@@ -320,6 +322,7 @@ class CloudConfigTest extends Specification {
         then:
         cloud.keyName == null
         cloud.keyFile == HOME.resolve('.ssh/id_rsa.pub')
+        cloud.privateKeyFile == HOME.resolve('.ssh/id_rsa')
         cloud.keyHash == 'ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA0fPOx7mcUAl3YIhqlllMOZsZMpXKjzfCNYK'
         cloud.createUser
         cloud.role == 'master'
