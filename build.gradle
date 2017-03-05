@@ -135,7 +135,7 @@ dependencies {
     compile ('com.amazonaws:aws-java-sdk-s3:1.11.25') { exclude group: 'commons-logging', module: 'commons-logging' }
     compile ('com.amazonaws:aws-java-sdk-ec2:1.11.25') { exclude group: 'commons-logging', module: 'commons-logging' }
     compile ('javax.mail:mail:1.4.7')
-    compile ('org.yaml:snakeyaml:1.17')
+    compile ('org.yaml:snakeyaml:1.18')
 
     // include Ivy at runtime in order to have Grape @Grab work correctly
     runtime "org.apache.ivy:ivy:2.3.0"
