@@ -279,6 +279,10 @@ Or, in alternative, using the Git clone URL::
 
     $ nextflow run http://gitlab.acme.org/foo/bar.git
 
+.. warning:: When accessing a private SCM installation over ``https`` and that server uses a custom SSL certificate
+  you may need to import such certificate into your local Java keystore. Read more
+  `here <https://docs.oracle.com/javase/tutorial/security/toolsign/rstep2.html>`_.
+
 
 Publishing your pipeline
 ========================

@@ -134,6 +134,11 @@ Pipeline execution
 Once the cluster initialization is complete, connect to the *master* node by using the SSH command that will be showed by
 Nextflow.
 
+.. note:: On MacOS, use the following command to avoid being asked for a pass-phrase even
+  you haven't defined one::
+
+    ssh-add -K [private key file]
+
 You can run your Nextflow pipeline as usual, the environment is automatically configured to use the :ref:`Ignite<ignite-page>`
 executor. If the Amazon EFS storage is specified in the cloud configuration the Nextflow work directory will
 automatically be set in a shared folder in that file system.
