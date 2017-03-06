@@ -60,7 +60,7 @@ class CmdCloud extends CmdBase implements UsageAware {
         void usage(List<String> result)
     }
 
-    static private final String NAME = 'cloud'
+    static public final String NAME = 'cloud'
 
     private List<SubCmd> commands = []
 
