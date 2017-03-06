@@ -246,6 +246,7 @@ These operators are:
 
 * `buffer`_
 * `collate`_
+* `collect`_
 * `flatten`_
 * `flatMap`_
 * `groupBy`_
@@ -599,6 +600,41 @@ As before, if you don't want to emit the last items which do not complete a tupl
 
 See also: `buffer`_ operator.
 
+collect
+-------
+
+The ``collect`` operator collects all the items emitted by a channel to a ``List`` and return
+the resulting object as a sole emission. For example::
+
+    Channel
+        .from( 1, 2, 3, 4 )
+        .collect()
+        .println()
+
+    # outputs
+    [1,2,3,4]
+
+An optional :ref:`closure <script-closure>` can be specified to transform each item before adding it to the resulting list.
+For example::
+
+    Channel
+        .from( 'hello', 'ciao', 'bonjour' )
+        .collect { it.length() }
+        .println()
+
+    # outputs
+    [5,4,7]
+
+.. Available parameters:
+..
+.. =========== ============================
+.. Field       Description
+.. =========== ============================
+.. flat        When ``true`` nested list structures are normalised and their items are added to the resulting list object (default: ``true``).
+.. sort        When ``true`` the items in the resulting list are sorted by their natural ordering. It is possible to provide a custom ordering criteria by using either a :ref:`closure <script-closure>` or a `Comparator <https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html>`_ object (default: ``false``).
+.. =========== ============================
+
+See also: `toList`_ and `toSortedList`_ operator.
 
 flatten
 ----------
@@ -641,6 +677,7 @@ and emits the resulting collection as a single item. For example::
     [1,2,3,4]
     Done
 
+See also: `collect`_ operator.
 
 toSortedList
 ---------------
@@ -670,6 +707,7 @@ You may also pass a comparator closure as an argument to the ``toSortedList`` op
 
    [[lisa, 10], [maggie, 7], [homer, 5], [marge, 3], [bart, 2]]
 
+See also: `collect`_ operator.
 
 Splitting operators
 ====================
