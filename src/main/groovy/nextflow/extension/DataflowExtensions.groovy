@@ -1232,6 +1232,20 @@ class DataflowExtensions {
         return target
     }
 
+    static public final DataflowReadChannel combine( DataflowReadChannel left, Object right ) {
+        combine(left, null, right)
+    }
+
+    static public final DataflowReadChannel combine( DataflowReadChannel left, Map params, Object right ) {
+        checkParams('combine', params, [flat:Boolean, by: [List,Integer]])
+
+        final op = new CombineOp(left,right)
+        final sources = op.inputs
+        if( params?.by != null ) op.pivot = params.by
+        final target = op.apply()
+        session.dag.addOperatorNode('combine', sources, target)
+        return target
+    }
 
     static public final DataflowReadChannel flatten( final DataflowReadChannel source )  {
 
