@@ -216,5 +216,11 @@ class BoltsTest extends Specification {
         !'1A11A1A'.isAllUpperCase()
     }
 
+    def 'should convert a map to a list of pairs' () {
+        expect:
+        [a:1, b:2, c:3].pairs() == [['a',1], ['b',2], ['c',3]]
+        [a:1, b:[2,4], c:[3,9]].pairs() == [['a',1], ['b',[2,4]], ['c',[3,9]]]
+        [a:1, b:[2,4], c:[3,9]].pairs(flat:true) == [['a',1], ['b',2], ['b',4], ['c',3], ['c',9]]
+    }
 
 }

@@ -55,6 +55,19 @@ class Bolts {
 
     static private Pattern PATTERN_LEFT_TRIM = ~/^\s+/
 
+    static List pairs(Map self, Map opts=null) {
+        def flat = opts?.flat == true
+        def result = []
+        for( Map.Entry entry : self.entrySet() ) {
+            if( flat && entry.value instanceof Collection )
+                entry.value.iterator().each { result << [entry.key, it] }
+            else
+                result << [entry.key, entry.value]
+        }
+
+        return result
+    }
+
     /**
      * Remove the left side after a dot (including it) e.g.
      * <pre>
