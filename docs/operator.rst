@@ -978,6 +978,7 @@ The combining operators are:
 
 * `cross`_
 * `collectFile`_
+* `combine`_
 * `concat`_
 * `into`_
 * `merge`_
@@ -1374,6 +1375,48 @@ The following example shows how use a `closure` to collect and sort all sequence
  and it will require as much free space as are the data you are collecting. Optionally, an alternative temporary data
  folder can be specified by using the ``tempDir`` parameter.
 
+combine
+-------
+
+The ``combine`` operator combines (cartesian product) the items emitted by two channels or by a channel and a ``Collection``
+object (as right operand). For example::
+
+    numbers = Channel.from(1,2,3)
+    words = Channel.from('hello', 'ciao')
+    numbers
+        .combine(words)
+        .println()
+
+    # outputs
+    [1, hello]
+    [2, hello]
+    [3, hello]
+    [1, ciao]
+    [2, ciao]
+    [3, ciao]
+
+A second version of the ``combine`` operator allows you to combine between them those items that share a common
+matching key. The index of the key element is specified by using the ``by`` parameter (the index is zero-based,
+multiple indexes can be specified with list a integers).
+For example::
+
+    left = Channel.from(['A',1], ['B',2], ['A',3])
+    right = Channel.from(['B','x'], ['B','y'], ['A','z'], ['A', 'w'])
+
+    left
+        .combine(right, by: 0)
+        .println()
+
+    # outputs
+    [A, 1, z]
+    [A, 3, z]
+    [A, 1, w]
+    [A, 3, w]
+    [B, 2, x]
+    [B, 2, y]
+
+
+
 concat
 --------
 
@@ -1405,6 +1448,8 @@ It will output::
 
 spread
 ---------
+
+.. warning:: This operator is deprecated. See `combine`_ instead.
 
 The ``spread`` operator combines the items emitted by the source channel with all the values in an array
 or a ``Collection`` object specified as the operator argument. For example::
