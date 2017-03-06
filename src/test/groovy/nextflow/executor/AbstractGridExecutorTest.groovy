@@ -32,11 +32,11 @@ class AbstractGridExecutorTest extends Specification {
     def 'should remove invalid chars from name' () {
 
         given:
-        def task = new TaskRun(name: 'task 90 (foo:bar)')
+        def task = new TaskRun(name: 'task 90 (foo:bar/baz)')
         def exec = [:] as AbstractGridExecutor
 
         expect:
-        exec.getJobNameFor(task) == 'nf-task_90_(foo_bar)'
+        exec.getJobNameFor(task) == 'nf-task_90_(foo_bar_baz)'
 
     }
 
