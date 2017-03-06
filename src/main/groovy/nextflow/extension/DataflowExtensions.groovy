@@ -789,6 +789,16 @@ class DataflowExtensions {
         return target
     }
 
+    static public final <V> DataflowReadChannel<V> collect(final DataflowReadChannel<V> source, Closure action=null) {
+        collect(source,Collections.emptyMap(),action)
+    }
+
+    static public final <V> DataflowReadChannel<V> collect(final DataflowReadChannel<V> source, Map opts, Closure action=null) {
+        final target = new CollectOp(source,action,opts).apply()
+        session.dag.addOperatorNode('collect', source, target)
+        return target
+    }
+
 
     /**
      * Convert a {@code DataflowQueue} alias *channel* to a Java {@code List}
