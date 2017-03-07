@@ -46,7 +46,7 @@ abstract class RepositoryProvider {
     protected ProviderConfig config
 
     RepositoryProvider setCredentials(String userName, String password) {
-        config.user = user
+        config.user = userName
         config.password = password
         return this
     }

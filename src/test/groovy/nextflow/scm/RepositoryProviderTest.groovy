@@ -55,4 +55,19 @@ class RepositoryProviderTest extends Specification {
         then:
         provider.endpointUrl == 'file:/user/data/w'
     }
+
+    def 'should set credentials' () {
+
+        given:
+        def config = Mock(ProviderConfig)
+        def provider = Spy(RepositoryProvider)
+        provider.config = config
+
+        when:
+        provider.setCredentials('pditommaso', 'secret1')
+        then:
+        1 * config.setUser('pditommaso')
+        1 * config.setPassword('secret1')
+
+    }
 }
