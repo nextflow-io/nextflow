@@ -24,18 +24,15 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import com.beust.jcommander.Parameter
-import groovy.transform.CompileStatic
 import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
-
 /**
  * Implements `fs` command
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
 class CmdFs extends CmdBase implements UsageAware {
 
     static final public NAME = 'fs'
