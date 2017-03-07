@@ -292,8 +292,11 @@ class CacheDB implements Closeable {
      */
     @Override
     void close() {
+        log.trace "Closing CacheDB.."
         writer.await()
+        log.trace "Closing CacheDB index"
         indexHandle.closeQuietly()
         db.closeQuietly()
+        log.debug "Closing CacheDB done"
     }
 }
