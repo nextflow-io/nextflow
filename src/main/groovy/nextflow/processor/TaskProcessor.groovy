@@ -202,6 +202,11 @@ class TaskProcessor {
     protected Grengine grengine
 
     /**
+     * Whenever the process is executed only once
+     */
+    protected boolean singleton
+
+    /**
      * Process ID number. The first is 1, the second 2 and so on ..
      */
     private final int id
@@ -453,8 +458,9 @@ class TaskProcessor {
          */
         // note: do not specify the output channels in the operator declaration
         // this allows us to manage them independently from the operator life-cycle
-        def stopAfterFirstRun = allScalarValues && !hasEachParams
-        def interceptor = new TaskProcessorInterceptor(opInputs, stopAfterFirstRun)
+        this.singleton = allScalarValues && !hasEachParams
+        config.getOutputs().setSingleton(singleton)
+        def interceptor = new TaskProcessorInterceptor(opInputs, singleton)
         def params = [inputs: opInputs, maxForks: maxForks, listeners: [interceptor] ]
         session.allProcessors << (processor = new DataflowOperator(group, params, wrapper))
 

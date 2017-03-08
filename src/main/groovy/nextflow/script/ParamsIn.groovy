@@ -27,7 +27,6 @@ import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
-import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Nextflow
 import nextflow.extension.ToListOp
@@ -144,68 +143,6 @@ abstract class BaseParam {
         // wrap a single value with a DataflowVariable
         return Nextflow.variable(value)
 
-    }
-
-    /**
-     * Creates a channel variable in the script context
-     *
-     * @param channel it can be a string representing a channel variable name in the script context. If
-     *      the variable does not exist it creates a {@code DataflowVariable} in the script with that name.
-     *      If the specified {@code value} is a {@code DataflowWriteChannel} object, use this object
-     *      as the output channel
-     *
-     * @param factory The type of the channel to create, either {@code DataflowVariable} or {@code DataflowQueue}
-     * @return The created (or specified) channel instance
-     */
-    final protected DataflowWriteChannel outputValToChannel( Object channel, Class<DataflowWriteChannel> factory ) {
-
-        if( channel instanceof String ) {
-            // the channel is specified by name
-            def local = channel
-
-            // look for that name in the 'script' context
-            channel = binding.hasVariable(local) ? binding.getVariable(local) : null
-            if( channel instanceof DataflowWriteChannel ) {
-                // that's OK -- nothing to do
-            }
-            else {
-                if( channel == null ) {
-                    log.trace "Creating new output channel > $local"
-                }
-                else {
-                    log.warn "Output channel `$local` overrides another variable with the same name declared in the script context -- Rename it to avoid possible conflicts"
-                }
-
-                // instantiate the new channel
-                channel = factory.newInstance()
-
-                // bind it to the script on-fly
-                if( local != '-' && binding) {
-                    // bind the outputs to the script scope
-                    binding.setVariable(local, channel)
-                }
-            }
-        }
-
-        if( channel instanceof DataflowWriteChannel ) {
-            return channel
-        }
-
-        throw new IllegalArgumentException("Invalid output channel reference")
-    }
-
-    @Deprecated
-    final protected resolveName( Map context, String name, boolean strict = true ) {
-        if( context && context.containsKey(name) )
-            return context.get(name)
-
-//        if( binding.hasVariable(name) )
-//            return binding.getVariable(name)
-
-        if( strict )
-            throw new MissingPropertyException(name)
-
-        return name
     }
 
 }
