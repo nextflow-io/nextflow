@@ -39,6 +39,7 @@ import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
@@ -1163,6 +1164,9 @@ class TaskProcessor {
                 channel.bind( PoisonPill.instance )
             }
             else if( channel instanceof DataflowStreamWriteAdapter ) {
+                channel.bind( PoisonPill.instance )
+            }
+            else if( channel instanceof DataflowExpression & !channel.isBound()) {
                 channel.bind( PoisonPill.instance )
             }
         }
