@@ -355,7 +355,7 @@ class TaskRun implements Cloneable {
 
         // fallback on the current task index, however do not set the 'name' attribute
         // so it has a chance to recover the 'sampleId' at next invocation
-        return "$baseName ($index)"
+        return processor.singleton ? baseName : "$baseName ($index)"
     }
 
     String getScript() {

@@ -25,6 +25,7 @@ import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.exception.IllegalFileException
 import nextflow.file.FilePatternSplitter
@@ -66,6 +67,7 @@ interface OutParam {
     short getIndex()
 
     Mode getMode()
+
 }
 
 enum BasicMode implements OutParam.Mode {
@@ -100,8 +102,8 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     protected OutParam.Mode mode = BasicMode.standard
 
-    /** Whenever the channel has to closed on task termination */
-    protected Boolean autoClose = Boolean.TRUE
+    @PackageScope
+    boolean singleton
 
     BaseOutParam( Binding binding, List list, short ownerIndex = -1) {
         super(binding,list,ownerIndex)
@@ -126,20 +128,71 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     }
 
     @PackageScope
-    void lazyInitImpl( def target ) {
+    void setSingleton( boolean value ) {
+        this.singleton = value
+    }
 
+    @PackageScope
+    void lazyInitImpl( def target ) {
         def channel = null
         if( target instanceof TokenVar ) {
-            channel = outputValToChannel(target.name, DataflowQueue)
+            channel = outputValToChannel(target.name)
         }
         else if( target != null ) {
-            channel = outputValToChannel(target, DataflowQueue)
+            channel = outputValToChannel(target)
         }
 
         if( channel ) {
             outChannels.add(channel)
         }
+    }
 
+    /**
+     * Creates a channel variable in the script context
+     *
+     * @param channel it can be a string representing a channel variable name in the script context. If
+     *      the variable does not exist it creates a {@code DataflowVariable} in the script with that name.
+     *      If the specified {@code value} is a {@code DataflowWriteChannel} object, use this object
+     *      as the output channel
+     *
+     * @param factory The type of the channel to create, either {@code DataflowVariable} or {@code DataflowQueue}
+     * @return The created (or specified) channel instance
+     */
+    final protected DataflowWriteChannel outputValToChannel( Object channel ) {
+
+        if( channel instanceof String ) {
+            // the channel is specified by name
+            def local = channel
+
+            // look for that name in the 'script' context
+            channel = binding.hasVariable(local) ? binding.getVariable(local) : null
+            if( channel instanceof DataflowWriteChannel ) {
+                // that's OK -- nothing to do
+            }
+            else {
+                if( channel == null ) {
+                    log.trace "Creating new output channel > $local"
+                }
+                else {
+                    log.warn "Output channel `$local` overrides another variable with the same name declared in the script context -- Rename it to avoid possible conflicts"
+                }
+
+                // instantiate the new channel
+                channel = singleton ? new DataflowVariable() : new DataflowQueue()
+
+                // bind it to the script on-fly
+                if( local != '-' && binding) {
+                    // bind the outputs to the script scope
+                    binding.setVariable(local, channel)
+                }
+            }
+        }
+
+        if( channel instanceof DataflowWriteChannel ) {
+            return channel
+        }
+
+        throw new IllegalArgumentException("Invalid output channel reference")
     }
 
 
@@ -578,4 +631,7 @@ class OutputsList implements List<OutParam> {
         (List<T>) target.findAll { it.class in classes }
     }
 
+    void setSingleton( boolean value ) {
+        target.each { BaseOutParam param -> param.singleton = value }
+    }
 }
