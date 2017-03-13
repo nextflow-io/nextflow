@@ -100,7 +100,7 @@ class CacheDB implements Closeable {
             db = Iq80DBFactory.factory.open(file, new Options().createIfMissing(true))
         }
         catch( Exception e ) {
-            throw new IOException("Can't create cache DB: $file")
+            throw new IOException("Can't create cache DB: $file", e)
         }
     }
 
