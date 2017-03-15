@@ -441,7 +441,7 @@ class Launcher {
         }
 
         catch( IOException e ) {
-            log.error e.message
+            log.error(e.message, e)
             return(1)
         }
 
