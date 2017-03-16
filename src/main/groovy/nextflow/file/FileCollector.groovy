@@ -31,6 +31,7 @@ import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.extension.FilesEx
+import nextflow.io.SkipLinesInputStream
 import nextflow.util.CacheHelper
 import nextflow.util.KryoHelper
 /**
@@ -49,6 +50,8 @@ abstract class FileCollector implements Closeable {
     Boolean newLine
 
     def seed
+
+    Integer skipLines
 
     boolean deleteTempFilesOnClose = true;
 
@@ -138,7 +141,7 @@ abstract class FileCollector implements Closeable {
      * @param value The user provided value
      * @return An {@link InputStream} referring the value
      */
-    protected InputStream normalizeToStream( value ) {
+    protected InputStream normalizeToStream0( value ) {
         if( value instanceof Path )
             return value.newInputStream()
 
@@ -152,6 +155,11 @@ abstract class FileCollector implements Closeable {
             return new FastByteArrayInputStream(value as byte[])
 
         throw new IllegalArgumentException("Not a valid file collector argument [${value.class.name}]: $value")
+    }
+
+    protected InputStream normalizeToStream( value ) {
+        def result = normalizeToStream0(value)
+        result && skipLines ? new SkipLinesInputStream(result,skipLines) : result
     }
 
     /**

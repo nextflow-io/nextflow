@@ -70,12 +70,15 @@ class CollectFileOperatorTest extends Specification {
 
         given:
         def file1 = Files.createTempDirectory('temp').resolve('A')
+        file1.deleteOnExit()
         file1.text = 'alpha\nbeta'
 
         def file2 = Files.createTempDirectory('temp').resolve('B')
+        file2.deleteOnExit()
         file2.text = 'Hello\nworld'
 
         def file3 = Files.createTempDirectory('temp').resolve('A')
+        file3.deleteOnExit()
         file3.text = 'xyz'
 
         when:
@@ -106,6 +109,7 @@ class CollectFileOperatorTest extends Specification {
 
         list[1].name == 'B'
         list[1].text == 'Hello\nworld\n'
+
 
     }
 
@@ -190,4 +194,87 @@ class CollectFileOperatorTest extends Specification {
         file.name.startsWith('collect')
         file.text == 'gamma\ndelta\nbeta\nalpha\n'
     }
+
+
+    def 'should collect file and skip header line' () {
+
+        given:
+        def file1 = Files.createTempDirectory('temp').resolve('A')
+        file1.deleteOnExit()
+        file1.text = 'HEADER\nalpha\nbeta\n'
+
+        def file2 = Files.createTempDirectory('temp').resolve('B')
+        file2.deleteOnExit()
+        file2.text = 'HEADER\nHello\nworld\n'
+
+        def file3 = Files.createTempDirectory('temp').resolve('A')
+        file3.deleteOnExit()
+        file3.text = 'HEADER\nxxx\nyyy\nzzz\n'
+
+
+        when:
+        def files = Channel
+                .from(file1,file2,file3)
+                .collectFile(skip:1, sort: 'index')
+                .toList()
+                .getVal()
+
+        def result = [:]; files.each{ result[it.name]=it }
+        then:
+        result.A.name == 'A'
+        result.A.text == 'alpha\nbeta\nxxx\nyyy\nzzz\n'
+
+        result.B.name == 'B'
+        result.B.text == 'Hello\nworld\n'
+
+
+        when:
+        files = Channel
+                .from(file1,file2,file3)
+                .collectFile(skip:2, sort: 'index')
+                .toList()
+                .getVal()
+
+        result = [:]; files.each{ result[it.name]=it }
+        then:
+        result.A.name == 'A'
+        result.A.text == 'beta\nyyy\nzzz\n'
+
+        result.B.name == 'B'
+        result.B.text == 'world\n'
+
+
+        when:
+        files = Channel
+                .from(file1,file2,file3)
+                .collectFile(skip:3, sort: 'index')
+                .toList()
+                .getVal()
+
+        result = [:]; files.each{ result[it.name]=it }
+        then:
+        result.A.name == 'A'
+        result.A.text == 'zzz\n'
+
+        result.B.name == 'B'
+        result.B.text == ''
+
+
+        when:
+        files = Channel
+                .from(file1,file2,file3)
+                .collectFile(skip:10, sort: 'index')
+                .toList()
+                .getVal()
+
+        result = [:]; files.each{ result[it.name]=it }
+        then:
+        result.A.name == 'A'
+        result.A.text == ''
+
+        result.B.name == 'B'
+        result.B.text == ''
+
+    }
+
 }

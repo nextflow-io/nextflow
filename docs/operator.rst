@@ -1315,12 +1315,13 @@ The following parameters can be used with the ``collectFile`` operator:
 =============== ========================
 Name            Description
 =============== ========================
-name            Name of the file where all received values are stored
-seed            A value or a map of values used to initialise the files content
-newLine         Appends a ``newline`` character automatically after each entry (default: ``false``)
-storeDir        Folder where the resulting file(s) are be stored
-tempDir         Folder where temporary files, used by the collecting process, are stored.
+name            Name of the file where all received values are stored.
+newLine         Appends a ``newline`` character automatically after each entry (default: ``false``).
+seed            A value or a map of values used to initialise the files content.
+skip            Skip the first `n` lines eg. ``skip: 1``.
 sort            Defines sorting criteria of content in resulting file(s). See below for sorting options.
+storeDir        Folder where the resulting file(s) are be stored.
+tempDir         Folder where temporary files, used by the collecting process, are stored.
 =============== ========================
 
 .. note:: The file content is sorted in such a way that it does not depend on the order on which
