@@ -195,28 +195,6 @@ class SortFileCollector extends FileCollector implements Closeable {
 
 
     /**
-     * Normalize values to a {@link InputStream}
-     *
-     * @param value The user provided value
-     * @return An {@link InputStream} referring the value
-     */
-    protected InputStream normalizeToStream( value ) {
-        if( value instanceof Path )
-            return value.newInputStream()
-
-        if( value instanceof File )
-            return value.newInputStream()
-
-        if( value instanceof CharSequence )
-            return new FastByteArrayInputStream(value.toString().getBytes())
-
-        if( value instanceof byte[] )
-            return new FastByteArrayInputStream(value as byte[])
-
-        throw new IllegalArgumentException("Not a valid file collector argument [${value.class.name}]: $value")
-    }
-
-    /**
      * Append a user value to the file collection
      *
      * @param key The grouping key
