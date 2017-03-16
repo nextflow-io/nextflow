@@ -55,6 +55,7 @@ import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessNotRecoverableException
+import nextflow.exception.ProcessStageException
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
 import nextflow.file.FileHelper
@@ -1178,10 +1179,17 @@ class TaskProcessor {
         def result = new StringBuilder()
         result << '\nCaused by:\n'
 
-        def message = error.cause?.getMessage() ?: ( error.getMessage() ?: error.toString() )
-        result.append('  ').append(message).append('\n')
+        def message = error instanceof ProcessStageException ? error.getMessage().toString() : error.cause?.getMessage()
+        if( !message )
+            message = error.getMessage()
+        if( !message )
+            message = error.toString()
 
-        result.toString()
+        result
+            .append('  ')
+            .append(message)
+            .append('\n')
+            .toString()
     }
 
     /**
@@ -1543,17 +1551,27 @@ class TaskProcessor {
          */
 
         if( input instanceof Path ) {
-            log.debug "Copying to process workdir foreign file: ${input.toUri().toString()}"
-            def result = Nextflow.tempFile(input.getFileName().toString())
-            InputStream source = null
             try {
-                source = Files.newInputStream(input)
-                Files.copy(source, result)
+                log.debug "Copying to process workdir foreign file: ${input.toUri().toString()}"
+                def result = Nextflow.tempFile(input.getFileName().toString())
+                InputStream source = null
+                try {
+                    source = Files.newInputStream(input)
+                    Files.copy(source, result)
+                }
+                finally {
+                    source?.closeQuietly()
+                }
+                return new FileHolder(input, result)
             }
-            finally {
-                source?.closeQuietly()
+            catch( IOException e ) {
+                def message = "Can't stage file ${input.toUri().toString()}"
+                if( e instanceof NoSuchFileException )
+                    message += " -- file does not exist"
+                else if( e.message )
+                    message += " -- reason: ${e.message}"
+                throw new ProcessStageException(message, e)
             }
-            return new FileHolder(input, result)
         }
 
         /*
