@@ -9,8 +9,8 @@ Get started
 Requirements
 ============
 
-`Nextflow` can be used on any POSIX compatible system (Linux, Solaris, OS X, etc) and
-requires Bash and `Java 7 <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_ or higher to be installed.  (But see `notes on Java compilation issues https://github.com/nextflow-io/nextflow#known-compilation-problems-`_.)
+`Nextflow` can be used on any POSIX compatible system (Linux, Solaris, OS X, etc).
+It requires BASH and `Java 7 <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_ or higher to be installed.
 
 Windows systems may be supported using a POSIX compatibility layer like `Cygwin <http://www.cygwin.com>`_ (unverified) or
 in alternative installing it into a Linux VM using a virtualization software like `VirtualBox <http://www.virtualbox.org>`_
