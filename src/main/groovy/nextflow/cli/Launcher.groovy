@@ -560,9 +560,10 @@ class Launcher {
      */
     public static void main(String... args)  {
 
-        def launcher = DripMain.LAUNCHER ?: new Launcher()
-        def status = launcher .command(args) .run()
-        System.exit(status)
+        final launcher = DripMain.LAUNCHER ?: new Launcher()
+        final status = launcher .command(args) .run()
+        if( status )
+            System.exit(status)
     }
 
 
