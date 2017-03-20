@@ -81,7 +81,8 @@ function make_temp() {
 
 function install() {
     local tmpfile=$(make_temp)
-    get "http://www.nextflow.io/releases/latest/nextflow" "$tmpfile" "$1" || exit $?
+    local version=$(set +u; [[ $NXF_VER ]] && printf "v$NXF_VER" || printf 'latest')
+    get "http://www.nextflow.io/releases/$version/nextflow" "$tmpfile" "$1" || exit $?
     mv "$tmpfile" "$1" || exit $?
     chmod +x "$1" || exit $?
     bash "$1" -download || exit $?
