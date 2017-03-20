@@ -1,6 +1,19 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.24.0 - 20 Mar 2017
+- Added new `combine` operator #298
+- Added new `collect` operator #297
+- Added new CLI option `-params-file` to load parameters from a json/yaml file #208
+- Fixed SCM user name is not set accessing private repository #300
+- Fixed Infer singleton process outputs from inputs declaration #301
+- Fixed Use exist status 1 for all NF errors #304
+- Fixed Invalid SGE job name as defined in `sge_types` #299
+- Added `skip` parameter to collectFile operator #306
+- Added experimental `fs` command
+- Improved file staging error reports #295
+- Upgraded Groovy to version 2.4.10
+ 
 0.23.4 - 24 Feb 2017 
 - Fixed Show a warning message when accessing undefined parameters #293
 - Fixed Staging input files in a subfolder changes their names when they are symlinks #292
