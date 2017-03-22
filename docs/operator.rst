@@ -246,6 +246,7 @@ These operators are:
 
 * `buffer`_
 * `collate`_
+* `collect`_
 * `flatten`_
 * `flatMap`_
 * `groupBy`_
@@ -599,6 +600,41 @@ As before, if you don't want to emit the last items which do not complete a tupl
 
 See also: `buffer`_ operator.
 
+collect
+-------
+
+The ``collect`` operator collects all the items emitted by a channel to a ``List`` and return
+the resulting object as a sole emission. For example::
+
+    Channel
+        .from( 1, 2, 3, 4 )
+        .collect()
+        .println()
+
+    # outputs
+    [1,2,3,4]
+
+An optional :ref:`closure <script-closure>` can be specified to transform each item before adding it to the resulting list.
+For example::
+
+    Channel
+        .from( 'hello', 'ciao', 'bonjour' )
+        .collect { it.length() }
+        .println()
+
+    # outputs
+    [5,4,7]
+
+.. Available parameters:
+..
+.. =========== ============================
+.. Field       Description
+.. =========== ============================
+.. flat        When ``true`` nested list structures are normalised and their items are added to the resulting list object (default: ``true``).
+.. sort        When ``true`` the items in the resulting list are sorted by their natural ordering. It is possible to provide a custom ordering criteria by using either a :ref:`closure <script-closure>` or a `Comparator <https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html>`_ object (default: ``false``).
+.. =========== ============================
+
+See also: `toList`_ and `toSortedList`_ operator.
 
 flatten
 ----------
@@ -641,6 +677,7 @@ and emits the resulting collection as a single item. For example::
     [1,2,3,4]
     Done
 
+See also: `collect`_ operator.
 
 toSortedList
 ---------------
@@ -670,6 +707,7 @@ You may also pass a comparator closure as an argument to the ``toSortedList`` op
 
    [[lisa, 10], [maggie, 7], [homer, 5], [marge, 3], [bart, 2]]
 
+See also: `collect`_ operator.
 
 Splitting operators
 ====================
@@ -940,6 +978,7 @@ The combining operators are:
 
 * `cross`_
 * `collectFile`_
+* `combine`_
 * `concat`_
 * `into`_
 * `merge`_
@@ -1276,12 +1315,13 @@ The following parameters can be used with the ``collectFile`` operator:
 =============== ========================
 Name            Description
 =============== ========================
-name            Name of the file where all received values are stored
-seed            A value or a map of values used to initialise the files content
-newLine         Appends a ``newline`` character automatically after each entry (default: ``false``)
-storeDir        Folder where the resulting file(s) are be stored
-tempDir         Folder where temporary files, used by the collecting process, are stored.
+name            Name of the file where all received values are stored.
+newLine         Appends a ``newline`` character automatically after each entry (default: ``false``).
+seed            A value or a map of values used to initialise the files content.
+skip            Skip the first `n` lines eg. ``skip: 1``.
 sort            Defines sorting criteria of content in resulting file(s). See below for sorting options.
+storeDir        Folder where the resulting file(s) are be stored.
+tempDir         Folder where temporary files, used by the collecting process, are stored.
 =============== ========================
 
 .. note:: The file content is sorted in such a way that it does not depend on the order on which
@@ -1336,6 +1376,48 @@ The following example shows how use a `closure` to collect and sort all sequence
  and it will require as much free space as are the data you are collecting. Optionally, an alternative temporary data
  folder can be specified by using the ``tempDir`` parameter.
 
+combine
+-------
+
+The ``combine`` operator combines (cartesian product) the items emitted by two channels or by a channel and a ``Collection``
+object (as right operand). For example::
+
+    numbers = Channel.from(1,2,3)
+    words = Channel.from('hello', 'ciao')
+    numbers
+        .combine(words)
+        .println()
+
+    # outputs
+    [1, hello]
+    [2, hello]
+    [3, hello]
+    [1, ciao]
+    [2, ciao]
+    [3, ciao]
+
+A second version of the ``combine`` operator allows you to combine between them those items that share a common
+matching key. The index of the key element is specified by using the ``by`` parameter (the index is zero-based,
+multiple indexes can be specified with list a integers).
+For example::
+
+    left = Channel.from(['A',1], ['B',2], ['A',3])
+    right = Channel.from(['B','x'], ['B','y'], ['A','z'], ['A', 'w'])
+
+    left
+        .combine(right, by: 0)
+        .println()
+
+    # outputs
+    [A, 1, z]
+    [A, 3, z]
+    [A, 1, w]
+    [A, 3, w]
+    [B, 2, x]
+    [B, 2, y]
+
+
+
 concat
 --------
 
@@ -1367,6 +1449,8 @@ It will output::
 
 spread
 ---------
+
+.. warning:: This operator is deprecated. See `combine`_ instead.
 
 The ``spread`` operator combines the items emitted by the source channel with all the values in an array
 or a ``Collection`` object specified as the operator argument. For example::

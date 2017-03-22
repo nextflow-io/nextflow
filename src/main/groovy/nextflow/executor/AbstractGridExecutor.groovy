@@ -42,9 +42,7 @@ abstract class AbstractGridExecutor extends Executor {
 
     protected Duration queueInterval
 
-    private final static char BLANK_CHAR = ' ' as char
-    private final static char COLON_CHAR = ':' as char
-    private final static char DOT_CHAR = '.' as char
+    private final static List<String> INVALID_NAME_CHARS = [ " ", "/", ":", "@", "*", "?", "\\n", "\\t", "\\r" ]
 
     /**
      * Initialize the executor class
@@ -149,8 +147,8 @@ abstract class AbstractGridExecutor extends Executor {
         final result = new StringBuilder("nf-")
         final name = task.getName()
         for( int i=0; i<name.size(); i++ ) {
-            final ch = name.charAt(i)
-            result.append( ch == BLANK_CHAR || ch == COLON_CHAR ? "_" : ch )
+            final ch = name[i]
+            result.append( INVALID_NAME_CHARS.contains(ch) ? "_" : ch )
         }
         result.toString()
     }

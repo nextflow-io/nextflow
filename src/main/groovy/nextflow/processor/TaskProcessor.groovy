@@ -39,6 +39,7 @@ import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
@@ -54,6 +55,7 @@ import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessNotRecoverableException
+import nextflow.exception.ProcessStageException
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
 import nextflow.file.FileHelper
@@ -200,6 +202,11 @@ class TaskProcessor {
      * Groovy engine used to evaluate dynamic code
      */
     protected Grengine grengine
+
+    /**
+     * Whenever the process is executed only once
+     */
+    protected boolean singleton
 
     /**
      * Process ID number. The first is 1, the second 2 and so on ..
@@ -453,8 +460,9 @@ class TaskProcessor {
          */
         // note: do not specify the output channels in the operator declaration
         // this allows us to manage them independently from the operator life-cycle
-        def stopAfterFirstRun = allScalarValues && !hasEachParams
-        def interceptor = new TaskProcessorInterceptor(opInputs, stopAfterFirstRun)
+        this.singleton = allScalarValues && !hasEachParams
+        config.getOutputs().setSingleton(singleton)
+        def interceptor = new TaskProcessorInterceptor(opInputs, singleton)
         def params = [inputs: opInputs, maxForks: maxForks, listeners: [interceptor] ]
         session.allProcessors << (processor = new DataflowOperator(group, params, wrapper))
 
@@ -1127,10 +1135,10 @@ class TaskProcessor {
     }
 
     static List tips = [
-            'when you have fixed the problem you can continue the execution appending to the nextflow command line the option \'-resume\'',
-            "you can try to figure out what's wrong by changing to the process work dir and showing the script file named: '${TaskRun.CMD_SCRIPT}'",
-            "view the complete command output by changing to the process work dir and entering the command: 'cat ${TaskRun.CMD_OUTFILE}'",
-            "you can replicate the issue by changing to the process work dir and entering the command: 'bash ${TaskRun.CMD_RUN}'"
+            'when you have fixed the problem you can continue the execution appending to the nextflow command line the option `-resume`',
+            "you can try to figure out what's wrong by changing to the process work dir and showing the script file named `${TaskRun.CMD_SCRIPT}`",
+            "view the complete command output by changing to the process work dir and entering the command `cat ${TaskRun.CMD_OUTFILE}`",
+            "you can replicate the issue by changing to the process work dir and entering the command `bash ${TaskRun.CMD_RUN}`"
     ]
 
     static Random RND = Random.newInstance()
@@ -1159,6 +1167,9 @@ class TaskProcessor {
             else if( channel instanceof DataflowStreamWriteAdapter ) {
                 channel.bind( PoisonPill.instance )
             }
+            else if( channel instanceof DataflowExpression & !channel.isBound()) {
+                channel.bind( PoisonPill.instance )
+            }
         }
     }
 
@@ -1168,10 +1179,17 @@ class TaskProcessor {
         def result = new StringBuilder()
         result << '\nCaused by:\n'
 
-        def message = error.cause?.getMessage() ?: ( error.getMessage() ?: error.toString() )
-        result.append('  ').append(message).append('\n')
+        def message = error instanceof ProcessStageException ? error.getMessage().toString() : error.cause?.getMessage()
+        if( !message )
+            message = error.getMessage()
+        if( !message )
+            message = error.toString()
 
-        result.toString()
+        result
+            .append('  ')
+            .append(message)
+            .append('\n')
+            .toString()
     }
 
     /**
@@ -1533,17 +1551,27 @@ class TaskProcessor {
          */
 
         if( input instanceof Path ) {
-            log.debug "Copying to process workdir foreign file: ${input.toUri().toString()}"
-            def result = Nextflow.tempFile(input.getFileName().toString())
-            InputStream source = null
             try {
-                source = Files.newInputStream(input)
-                Files.copy(source, result)
+                log.debug "Copying to process workdir foreign file: ${input.toUri().toString()}"
+                def result = Nextflow.tempFile(input.getFileName().toString())
+                InputStream source = null
+                try {
+                    source = Files.newInputStream(input)
+                    Files.copy(source, result)
+                }
+                finally {
+                    source?.closeQuietly()
+                }
+                return new FileHolder(input, result)
             }
-            finally {
-                source?.closeQuietly()
+            catch( IOException e ) {
+                def message = "Can't stage file ${input.toUri().toString()}"
+                if( e instanceof NoSuchFileException )
+                    message += " -- file does not exist"
+                else if( e.message )
+                    message += " -- reason: ${e.message}"
+                throw new ProcessStageException(message, e)
             }
-            return new FileHolder(input, result)
         }
 
         /*
@@ -1613,7 +1641,7 @@ class TaskProcessor {
         if( name.endsWith('/*') ) {
             final p = name.lastIndexOf('/')
             final dir = name.substring(0,p)
-            return files.collect { it.withName("${dir}/${it.storePath.name}") }
+            return files.collect { it.withName("${dir}/${it.stageName}") }
         }
 
         // no wildcards in the file name

@@ -55,6 +55,19 @@ class Bolts {
 
     static private Pattern PATTERN_LEFT_TRIM = ~/^\s+/
 
+    static List pairs(Map self, Map opts=null) {
+        def flat = opts?.flat == true
+        def result = []
+        for( Map.Entry entry : self.entrySet() ) {
+            if( flat && entry.value instanceof Collection )
+                entry.value.iterator().each { result << [entry.key, it] }
+            else
+                result << [entry.key, entry.value]
+        }
+
+        return result
+    }
+
     /**
      * Remove the left side after a dot (including it) e.g.
      * <pre>
@@ -667,10 +680,11 @@ class Bolts {
         final String str = msg.toString()
         final Throwable error = params?.causedBy as Throwable
         final Duration throttle = params?.throttle as Duration ?: LOG_DFLT_THROTTLE
+        final firstOnly = params?.firstOnly == true
 
         long now = System.currentTimeMillis()
         Long ts = LOGGER_CACHE.get(str)
-        if( ts && now - ts <= throttle.toMillis() ) {
+        if( ts && (now - ts <= throttle.toMillis() || firstOnly) ) {
             return
         }
         LOGGER_CACHE.put(str, now)
@@ -678,7 +692,7 @@ class Bolts {
         action.call(str, error)
     }
 
-    private static Map<String,?> LOGGER_PARAMS = [ causedBy: Throwable, throttle: [String, Number, Duration]  ]
+    private static Map<String,?> LOGGER_PARAMS = [ causedBy: Throwable, throttle: [String, Number, Duration], firstOnly: Boolean ]
 
 
     /**

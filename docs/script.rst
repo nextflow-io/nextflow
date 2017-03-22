@@ -275,8 +275,6 @@ Prints::
     Sudha=Kumari
 
 
-
-
 A closure has another two important features. First it can access variables in the scope where it is defined and
 so it can `interact` with them.
 
@@ -293,6 +291,7 @@ As an example showing both these features see the following code fragment::
     println result
 
 
+Learn more about closures in the `Groovy documentation <http://groovy-lang.org/closures.html>`_
 
 .. _script-regexp:
 

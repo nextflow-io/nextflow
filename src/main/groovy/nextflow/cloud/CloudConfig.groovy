@@ -19,20 +19,19 @@
  */
 
 package nextflow.cloud
-
 import static nextflow.Const.ROLE_WORKER
 
 import java.nio.file.Path
+import java.nio.file.Paths
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
-import nextflow.exception.AbortOperationException
 import nextflow.config.CascadingConfig
 import nextflow.config.ConfigField
+import nextflow.exception.AbortOperationException
 import nextflow.util.Duration
-
 /**
  * Holds the cloud configuration settings provided in the `nextflow.config` file
  * in the `cloud` scope
@@ -317,6 +316,18 @@ class CloudConfig extends LaunchConfig {
     @ConfigField(_private=true)
     Path getKeyFile() {
         getAttribute('keyFile') as Path
+    }
+
+    Path getPrivateKeyFile() {
+        def file = getKeyFile()
+        if( !file )
+            return null
+        def baseName = file.getBaseName()
+        if( !baseName )
+            return null
+
+        def parent = file.getParent()
+        parent ? parent.resolve(baseName) : Paths.get(baseName)
     }
 
     CloudConfig setDriverName( String driver ) {

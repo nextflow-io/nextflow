@@ -261,6 +261,13 @@ class TaskProcessorTest extends Specification {
         list1 *. stageName == ['dir/file.fa']
         list2 *. stageName == ['dir/file_1.fa', 'dir/file_2.fa', 'dir/file_3.fa']
 
+        when:
+        list1 = processor.expandWildcards('dir/*', [FileHolder.get('file.fa')])
+        list2 = processor.expandWildcards('dir/*', [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
+        then:
+        list1 *. stageName == ['dir/file.fa']
+        list2 *. stageName == ['dir/titi.fa', 'dir/toto.fa']
+
     }
 
 

@@ -46,7 +46,7 @@ import nextflow.util.HistoryFile.Record
 @Parameters(commandDescription = "Clean up project cache and work directories")
 class CmdClean extends CmdBase implements CacheBase {
 
-    static final NAME = 'clean'
+    static final public NAME = 'clean'
 
     @Parameter(names=['-q', '-quiet'], description = 'Do not print names of files removed', arity = 0)
     boolean quiet

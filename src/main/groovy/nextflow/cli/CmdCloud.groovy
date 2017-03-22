@@ -60,7 +60,7 @@ class CmdCloud extends CmdBase implements UsageAware {
         void usage(List<String> result)
     }
 
-    static private final String NAME = 'cloud'
+    static public final String NAME = 'cloud'
 
     private List<SubCmd> commands = []
 
@@ -251,13 +251,13 @@ class CmdCloud extends CmdBase implements UsageAware {
 
         String key
         if( cfg.keyName ) {
-            key = "<path to ${cfg.keyName} key file>"
+            key = "<path to `${cfg.keyName}` key file>"
         }
-        else if( cfg.keyFile ) {
-            key = cfg.keyFile
+        else if( cfg.privateKeyFile?.exists() ) {
+            key = cfg.privateKeyFile
         }
         else {
-            key = "<path to your key file>"
+            key = "<path to your private key file>"
         }
        "ssh -i ${key} ${cfg.userName}@${address}"
     }

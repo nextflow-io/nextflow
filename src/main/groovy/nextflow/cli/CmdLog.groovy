@@ -63,7 +63,7 @@ class CmdLog extends CmdBase implements CacheBase {
         ALL_FIELDS.sort(true)
     }
 
-    static final NAME = 'log'
+    static final public NAME = 'log'
 
     @Parameter(names = ['-s'], description='Character used to separate column values')
     String sep = '\t'

@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#
+# Make test results available through
+#    https://www.nextflow.io/tests/travis/index.html
+#
 export AWS_ACCESS_KEY_ID=$NXF_AWS_ACCESS
 export AWS_SECRET_ACCESS_KEY=$NXF_AWS_SECRET
 export AWS_DEFAULT_REGION=eu-west-1

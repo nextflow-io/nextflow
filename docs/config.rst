@@ -199,7 +199,10 @@ exitReadTimeout       Determines how long the executor waits before return an er
 killBatchSize         Determines the number of jobs that can be `killed` in a single command execution (default: ``100``).
 perJobMemLimit        Specifies Platform LSF *per-job* memory limit mode. See :ref:`lsf-executor`.
 jobName               Determines the name of jobs submitted to the underlying cluster executor e.g. ``executor.jobName = { "$task.name - $task.hash" }`` .
+cpus                  The maximum number of CPUs made available by the underlying system (only used by the ``local`` executor).
+memory                The maximum amount of memory made available by the underlying system (only used by the ``local`` executor).
 ===================== =====================
+
 
 
 The executor settings can be defined as shown below::
@@ -221,19 +224,17 @@ the executor name with the symbol ``$`` and using it as special scope identifier
     }
 
     $local {
-        queueSize = 20
-        pollInterval = '1sec'
+        cpus = 8
+        memory = '32 GB'
     }
   }
 
 The above configuration example can be rewritten using the dot notation as shown below::
 
-  executor.$sge.queueSize = 100
-  executor.$sge.pollInterval = '30sec'
-  executor.$local.queueSize = 10
-  executor.$local.pollInterval = '1sec'
-
-
+    executor.$sge.queueSize = 100
+    executor.$sge.pollInterval = '30sec'
+    executor.$local.cpus = 8
+    executor.$local.memory = '32 GB'
 
 .. _config-docker:
 

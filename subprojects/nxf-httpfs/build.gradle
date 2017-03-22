@@ -31,8 +31,8 @@ sourceSets {
 }
 
 dependencies {
-    compile "org.codehaus.groovy:groovy:2.4.7"
-    compile "org.codehaus.groovy:groovy-nio:2.4.7"
+    compile "org.codehaus.groovy:groovy:2.4.10"
+    compile "org.codehaus.groovy:groovy-nio:2.4.10"
     compile "ch.qos.logback:logback-classic:1.1.10"
 
     /* testCompile inherited from top gradle build file */

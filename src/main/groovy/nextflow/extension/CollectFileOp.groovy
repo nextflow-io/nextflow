@@ -51,7 +51,8 @@ class CollectFileOp {
             sliceMaxSize: Integer,
             sliceMaxItems: Integer,
             deleteTempFilesOnClose: Boolean,
-            cache: [Boolean, String]
+            cache: [Boolean, String],
+            skip: Integer
     ]
 
     private final Map params
@@ -245,7 +246,8 @@ class CollectFileOp {
         collector.seed = params?.seed
         if( params?.deleteTempFilesOnClose != null )
             collector.deleteTempFilesOnClose = params.deleteTempFilesOnClose as boolean
-
+        if( params?.skip )
+            collector.skipLines = params?.skip
 
         return collector
     }
