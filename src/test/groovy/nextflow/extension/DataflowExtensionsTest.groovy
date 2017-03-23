@@ -1305,6 +1305,18 @@ class DataflowExtensionsTest extends Specification {
         result.val == 3
         result.val == Channel.STOP
 
+        when:
+        result = Channel.value(1).ifEmpty(100)
+        then:
+        result instanceof DataflowVariable
+        result.val == 1
+
+        when:
+        result = Channel.value().close().ifEmpty(100)
+        then:
+        result instanceof DataflowVariable
+        result.val == 100
+
     }
 
     def 'should create a channel given a list'() {
