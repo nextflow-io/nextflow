@@ -33,6 +33,7 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.script.ScriptType
 import nextflow.trace.TraceRecord
+import nextflow.util.Escape
 import nextflow.util.PosixProcess
 /**
  * Executes the specified task on the locally exploiting the underlying Java thread pool
@@ -133,7 +134,7 @@ class LocalTaskHandler extends TaskHandler {
         // NOTE: the actual command is wrapper by another bash whose stream
         // are redirected to null. This is important in order to consume the stdout/stderr
         // of the wrapped job otherwise that output will cause the inner `tee`s hang
-        List cmd = ['/bin/bash','-c', job.join(' ') + " &> $task.workDir/$TaskRun.CMD_LOG" ]
+        List cmd = ['/bin/bash','-c', job.join(' ') + " &> ${Escape.path(task.workDir)}/${TaskRun.CMD_LOG}" ]
         log.trace "Launch cmd line: ${cmd.join(' ')}"
 
         session.getExecService().submit( {
