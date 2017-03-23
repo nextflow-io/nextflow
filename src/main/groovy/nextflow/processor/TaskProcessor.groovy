@@ -1919,7 +1919,7 @@ class TaskProcessor {
      * @return {@code TaskDef}
      */
     final protected void submitTask( TaskRun task, HashCode hash, Path folder ) {
-        log.trace "[${task.name}] actual run folder: ${task.workDir}"
+        log.trace "[${task.name}] actual run folder: ${folder}"
 
         makeTaskContextStage3(task, hash, folder)
 
