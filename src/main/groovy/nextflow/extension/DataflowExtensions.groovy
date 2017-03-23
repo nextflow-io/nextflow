@@ -1869,8 +1869,12 @@ class DataflowExtensions {
         if( source instanceof DataflowQueue ) {
             source.bind(Channel.STOP)
         }
+        else if( source instanceof DataflowExpression ) {
+            if( !source.isBound() )
+                source.bind(Channel.STOP)
+        }
         else {
-            log.warn "Operation `close` can only be applied to a queue channel"
+            log.warn "Operator `close` cannot be applied to channels of type: ${source?.class?.simpleName}"
         }
         return source
     }
