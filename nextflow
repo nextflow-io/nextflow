@@ -168,13 +168,13 @@ while [[ $# != 0 ]]; do
     -download)
       if [[ ! "$cmd" ]]; then
       rm -rf $NXF_HOME/framework/$NXF_VER || exit $?
-      $0 -version || exit $?
+      bash "$0" -version || exit $?
       exit 0
       fi
       ;;
     -self-update|self-update)
       if [[ ! "$cmd" ]]; then
-      install $0;
+      install "$0";
       exit 0
       fi
       ;;
