@@ -1331,21 +1331,32 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    @Timeout(1)
     def 'should close the dataflow channel' () {
 
-        given:
+        when:
         def source = Channel.create()
         source << 10
         source << 20
         source << 30
         def result = source.close()
-
-        expect:
+        then:
         result.is source
         result.val == 10
         result.val == 20
         result.val == 30
         result.val == Channel.STOP
+
+        when:
+        source = Channel.value().close()
+        then:
+        source.val == Channel.STOP
+
+        when:
+        source = Channel.value(1).close()
+        then:
+        source.val == 1
+
     }
 
     def 'should assign a channel to new variable' () {
