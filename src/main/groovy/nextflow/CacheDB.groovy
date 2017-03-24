@@ -100,7 +100,22 @@ class CacheDB implements Closeable {
             db = Iq80DBFactory.factory.open(file, new Options().createIfMissing(true))
         }
         catch( Exception e ) {
-            throw new IOException("Can't create cache DB: $file", e)
+            String msg
+            if( e.message?.startsWith('Unable to acquire lock') ) {
+                msg = "Unable to acquire lock on session with ID $uniqueId"
+                msg += "\n\n"
+                msg += "Common reason of this error are:"
+                msg += "\n - You are trying to resume the execution of an already running pipeline"
+                msg += "\n - A previous execution was abruptly interrupted leaving the session open"
+                msg += '\n'
+                msg += '\nYou can check what process is holding the lock file by using the following command:'
+                msg += "\n - lsof $file/LOCK"
+                throw new IOException(msg)
+            }
+            else {
+                msg = "Can't open cache DB: $file"
+                throw new IOException(msg, e)
+            }
         }
     }
 
