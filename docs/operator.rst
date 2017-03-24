@@ -44,7 +44,7 @@ begins with ``a``::
 
     Channel
         .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
-        .filter( ~/a+/ )
+        .filter( ~/^a.*/ )
         .subscribe { println it }
 
 ::
