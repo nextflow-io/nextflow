@@ -1,6 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.24.1 - 24 Mar 2017
+- Fixed Improve explanation of cache DB IOException #303
+- Fixed Operator ifEmpty results in a error when applied to a dataflow variable #308
+- Fixed Process execution fails when the work path contains a parenthesis character #310
+- Fixed Installer script fails when current path contains a blank character #311
+- Fixed Include SLURM partition when checking job status #312
+- Allow the usage of `close` operator on unbounded dataflow variable
+
 0.24.0 - 20 Mar 2017
 - Added new `combine` operator #298
 - Added new `collect` operator #297
