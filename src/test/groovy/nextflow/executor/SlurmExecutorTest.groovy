@@ -246,7 +246,7 @@ class SlurmExecutorTest extends Specification {
         then:
         usr
         exec.queueStatusCommand(null) == ['squeue','-h','-o','%i %t','-t','all','-u', usr]
-        exec.queueStatusCommand('xxx') == ['squeue','-h','-o','%i %t','-t','all','-u', usr]
+        exec.queueStatusCommand('xxx') == ['squeue','-h','-o','%i %t','-t','all','-p','xxx','-u', usr]
 
     }
 }
