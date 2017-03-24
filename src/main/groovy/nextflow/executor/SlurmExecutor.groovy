@@ -121,6 +121,9 @@ class SlurmExecutor extends AbstractGridExecutor {
 
         final result = ['squeue','-h','-o','%i %t', '-t', 'all']
 
+        if( queue )
+            result << '-p' << queue.toString()
+
         final user = System.getProperty('user.name')
         if( user )
             result << '-u' << user
