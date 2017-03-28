@@ -26,6 +26,7 @@ import java.util.concurrent.Future
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.exception.ProcessException
 import nextflow.processor.LocalPollingMonitor
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -90,8 +91,6 @@ class LocalExecutor extends Executor {
  */
 @Slf4j
 class LocalTaskHandler extends TaskHandler {
-
-    private final startTimeMillis = System.currentTimeMillis()
 
     private final Path exitFile
 
@@ -164,7 +163,7 @@ class LocalTaskHandler extends TaskHandler {
 
 
     long elapsedTimeMillis() {
-        System.currentTimeMillis() - startTimeMillis
+        startTimeMillis ? System.currentTimeMillis() - startTimeMillis : 0
     }
 
     /**
@@ -209,8 +208,8 @@ class LocalTaskHandler extends TaskHandler {
                 task.stderr = errorFile
                 status = TaskStatus.COMPLETED
 
-                // signal has completed
-                return true
+                // stop the execution by raising an exception
+                throw new ProcessException("Process exceeded running time limit (${task.config.getTime()})")
             }
         }
 
