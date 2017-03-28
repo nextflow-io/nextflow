@@ -91,7 +91,7 @@ class LocalExecutor extends Executor {
 @Slf4j
 class LocalTaskHandler extends TaskHandler {
 
-    private final startTimeMillis = System.currentTimeMillis()
+    private long startTimeMillis = -1
 
     private final Path exitFile
 
@@ -160,11 +160,19 @@ class LocalTaskHandler extends TaskHandler {
 
         // mark as submitted -- transition to STARTED has to be managed by the scheduler
         status = TaskStatus.SUBMITTED
+        
+        // set the start time after submission in case of any failure to execute.
+        startTimeMillis = System.currentTimeMillis()
     }
 
 
+    /**
+      * Returns the amount of time elapsed from submission.  If the job has not been
+      * submitted, returns -1.
+      */
     long elapsedTimeMillis() {
-        System.currentTimeMillis() - startTimeMillis
+        if( startTimeMillis < 0 ) { return -1 }
+        else { System.currentTimeMillis() - startTimeMillis }
     }
 
     /**
