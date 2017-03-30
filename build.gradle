@@ -238,7 +238,7 @@ String bytesToHex(byte[] bytes) {
     return result.toString();
 }
 
-task makeSha1 { doLast {
+task makeDigest { doLast {
     byte[] digest
     String  str = file('nextflow').text
     // create sha1
@@ -247,6 +247,9 @@ task makeSha1 { doLast {
     // create sha-256
     digest = java.security.MessageDigest.getInstance("SHA-256").digest(str.getBytes())
     file('nextflow.sha256').text = bytesToHex(digest) + '\n'
+    // create md5
+    digest = java.security.MessageDigest.getInstance("MD5").digest(str.getBytes())
+    file('nextflow.md5').text = bytesToHex(digest) + '\n'
 }}
 
 /*
@@ -443,7 +446,7 @@ task pack( dependsOn: [packOne, packDx, packAll]) {
 }
 
 
-task deploy( type: Exec, dependsOn: [clean, pack, deployable.uploadArchives, makeSha1]) {
+task deploy( type: Exec, dependsOn: [clean, pack, deployable.uploadArchives, makeDigest]) {
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
