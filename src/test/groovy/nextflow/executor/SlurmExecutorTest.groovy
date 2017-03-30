@@ -245,8 +245,8 @@ class SlurmExecutorTest extends Specification {
         def exec = [:] as SlurmExecutor
         then:
         usr
-        exec.queueStatusCommand(null) == ['squeue','-h','-o','%i %t','-t','all','-u', usr]
-        exec.queueStatusCommand('xxx') == ['squeue','-h','-o','%i %t','-t','all','-p','xxx','-u', usr]
+        exec.queueStatusCommand(null) == ['squeue','--noheader','-o','%i %t','-t','all','-u', usr]
+        exec.queueStatusCommand('xxx') == ['squeue','--noheader','-o','%i %t','-t','all','-p','xxx','-u', usr]
 
     }
 }
