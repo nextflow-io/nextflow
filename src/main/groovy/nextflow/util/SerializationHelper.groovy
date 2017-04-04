@@ -57,6 +57,7 @@ class KryoHelper {
         serializers.put( File, FileSerializer )
         serializers.put( S3Path, PathSerializer )
         serializers.put( Pattern, PatternSerializer )
+        serializers.put( ArrayTuple, ArrayTupleSerializer )
 
         threadLocal = new ThreadLocal<Kryo>() {
             @Override
@@ -382,5 +383,29 @@ class PatternSerializer extends Serializer<Pattern> {
         ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(buffer))
         return (Pattern) ois.readObject()
 
+    }
+}
+
+@CompileStatic
+class ArrayTupleSerializer extends Serializer<ArrayTuple> {
+
+    @Override
+    void write(Kryo kryo, Output output, ArrayTuple tuple) {
+        final len = tuple.size()
+        output.writeInt(len)
+        for( int i=0; i<len; i++ ) {
+            kryo.writeClassAndObject(output, tuple.get(i))
+        }
+    }
+
+    @Override
+    ArrayTuple read(Kryo kryo, Input input, Class<ArrayTuple> type) {
+        final len = input.readInt()
+        def list = new ArrayList(len)
+        for( int i=0; i<len; i++ ) {
+            def item = kryo.readClassAndObject(input)
+            list.add(item)
+        }
+        return new ArrayTuple(list)
     }
 }
