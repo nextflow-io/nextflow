@@ -1,5 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
+0.24.2 - 5 Apr 2017 
+- Fixed Tuple array object deserialisation fails #317
+- Use SLURM squeue —-noheader instead -h command line option to support not standard implementation #316
+- Fixed Execution time is incorrect for the local executor #313
 
 0.24.1 - 24 Mar 2017
 - Fixed Improve explanation of cache DB IOException #303
