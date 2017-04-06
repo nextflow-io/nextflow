@@ -4,10 +4,10 @@
 Frequently Asked Questions
 **************************
 
-How process multiple input files in parallel?
+How do I process multiple input files in parallel?
 ---------------------------------------------
 
-Q: *I have a collection of input files (e.g. carrots.fa, onions.fa, broccoli.fa). How can I specify a process to be performed on each file in a parallel manner?*
+Q: *I have a collection of input files (e.g. carrots.fa, onions.fa, broccoli.fa). How can I specify that a process is performed on each input file in a parallel manner?*
 
 A: The idea here is to create a ``channel`` that will trigger a process
 execution for each of your files. First define a parameter that specifies where
@@ -50,7 +50,7 @@ into ``carrots.aln``, ``onions.aln`` and ``broccoli.aln``.
 These aligned files are now in the channel ``vegetable_alns`` and can be
 used as input for a further process.
 
-How get a unique ID based on the file name?
+How do I get a unique ID based on the file name?
 -------------------------------------------
 
 *Q: How do I get a unique identifier based on a dataset file names (e.g. broccoli from broccoli.fa) and have the results going to a specific folder (e.g. results/broccoli/)?*
@@ -91,20 +91,20 @@ and ``datasetFile``):
         """
     }
 
-In our example above would now have the folder ``broccoli`` which would
+In our example above would now have the folder ``broccoli`` in the results directory which would
 contain the file ``broccoli.aln``.
 
 Channels can contain and emit any type of data structure simplifying the
 flow of data.
 
-How use multiple times the same channel?
+How do I use the same channel multiple times?
 ----------------------------------------
 
 *Q: Can a channel be used in two input statements? For example, I want carrots.fa to be aligned by both ClustalW and T-Coffee.*
 
 
-A: No, a channel can be consumed only by one process or operator. You must
-split a channel before calling it as an input in different processes.
+A: A channel can be consumed only by one process or operator (except if channel only ever contains one item). You must
+duplicate a channel before calling it as an input in different processes.
 First we create the channel emitting the input files:
 
 ::
@@ -157,7 +157,7 @@ alignment processes (three x ClustalW) + (three x T-Coffee) will be
 executed as parallel processes.
 
 
-How invoke custom scripts and tools?
+How do I invoke custom scripts and tools?
 ------------------------------------
 
 *Q: I have executables in my code, how should I call them in Nextflow?*
@@ -203,7 +203,7 @@ alignments are in the channel ``clustalw_alns``:
         """
     }
 
-How do I iterate over a process nth times?
+How do I iterate over a process n times?
 -------------------------------------------
 
 To perform a process *n* times, we can specify the input to be
@@ -233,15 +233,16 @@ To perform a process *n* times, we can specify the input to be
     }
 
 
-How do I iterate over nth files them within a process?
+How do I iterate over nth files from within a process?
 --------------------------------------------------------
 
 *Q: For example, I have 100 files emitted by a channel. I wish to perform one process where I iterate over each file inside the process.*
 
-A: The idea here to transform the channel emitting 100 files to a channel
-that will collect all files into a list object and produce that list as
-a sole emission. Then the process' script will be able to iterate over
+A: The idea here to transform a channel emitting multiple items into a channel
+that will collect all files into a list object and produce that list as a single emission. We do this using the ``collect()`` operator. The process script would then be able to iterate over
 the files by using a simple for-loop.
+
+This is also useful if all the items of a channel are required to be in the work directory.
 
 ::
 
