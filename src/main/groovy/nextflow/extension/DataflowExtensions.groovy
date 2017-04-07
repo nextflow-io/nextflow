@@ -1758,19 +1758,17 @@ class DataflowExtensions {
     static public DataflowReadChannel ifEmpty( DataflowReadChannel source, value ) {
 
         boolean empty = true
-        def result = newChannelBy(source)
-        subscribeImpl(source, [
-                onNext: { result.bind(it); empty=false },
-                onComplete: {
-                    if(empty) {
-                        if( value instanceof Closure )
-                            result.bind(value.call())
-                        else
-                            result.bind(value)
-                    }
-                    result.bind(Channel.STOP)
-                }]
-        )
+        final result = newChannelBy(source)
+        final singleton = result instanceof DataflowExpression
+        final next = { result.bind(it); empty=false }
+        final complete = {
+            if(empty)
+                result.bind( value instanceof Closure ? value() : value )
+            if( !singleton )
+                result.bind(Channel.STOP)
+        }
+
+        subscribeImpl(source, [onNext: next, onComplete: complete])
 
         session.dag.addOperatorNode('ifEmpty', source, result)
         return result
@@ -1871,8 +1869,12 @@ class DataflowExtensions {
         if( source instanceof DataflowQueue ) {
             source.bind(Channel.STOP)
         }
+        else if( source instanceof DataflowExpression ) {
+            if( !source.isBound() )
+                source.bind(Channel.STOP)
+        }
         else {
-            log.warn "Operation `close` can only be applied to a queue channel"
+            log.warn "Operator `close` cannot be applied to channels of type: ${source?.class?.simpleName}"
         }
         return source
     }

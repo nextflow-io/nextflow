@@ -131,5 +131,17 @@ class KryoHelperTest extends  Specification {
 
     }
 
+    def 'should serialised a tuple array' () {
+
+        given:
+        def tuple = new ArrayTuple(['alpha','beta',null,'gamma'])
+        when:
+        def buffer = KryoHelper.serialize(tuple)
+        then:
+        KryoHelper.deserialize(buffer) == tuple
+        KryoHelper.deserialize(buffer) instanceof ArrayTuple
+
+    }
+
 
 }

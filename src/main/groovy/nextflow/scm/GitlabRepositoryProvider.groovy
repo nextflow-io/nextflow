@@ -20,6 +20,7 @@
 
 package nextflow.scm
 
+import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 
 /**
@@ -30,6 +31,7 @@ import nextflow.exception.AbortOperationException
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 class GitlabRepositoryProvider extends RepositoryProvider {
 
     GitlabRepositoryProvider(String project, ProviderConfig config=null) {
@@ -58,7 +60,12 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     }
 
     String getDefaultBranch() {
-        invokeAndParseResponse(getEndpointUrl()) ?. default_branch
+        def result = invokeAndParseResponse(getEndpointUrl()) ?. default_branch
+        if( !result ) {
+            log.debug "Unable to fetch repo default branch. Using `master` branch -- See https://gitlab.com/gitlab-com/support-forum/issues/1655#note_26132691"
+            return 'master'
+        }
+        return result
     }
 
     /** {@inheritDoc} */

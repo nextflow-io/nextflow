@@ -181,7 +181,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
                 channel = singleton && mode==BasicMode.standard ? new DataflowVariable() : new DataflowQueue()
 
                 // bind it to the script on-fly
-                if( local != '-' && binding) {
+                if( local != '-' && binding ) {
                     // bind the outputs to the script scope
                     binding.setVariable(local, channel)
                 }

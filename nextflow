@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-#  Copyright (c) 2013-2016, Centre for Genomic Regulation (CRG).
-#  Copyright (c) 2013-2016, Paolo Di Tommaso and the respective authors.
+#  Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
+#  Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
 #
 #  This file is part of Nextflow.
 #
@@ -140,7 +140,7 @@ if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
 fi
 
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
-NXF_VER=${NXF_VER:-'0.24.0'}
+NXF_VER=${NXF_VER:-'0.24.2'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_ASSETS=${NXF_ASSETS:-$NXF_HOME/assets}
 NXF_CLI="$0 $@"
@@ -168,13 +168,14 @@ while [[ $# != 0 ]]; do
     -download)
       if [[ ! "$cmd" ]]; then
       rm -rf $NXF_HOME/framework/$NXF_VER || exit $?
-      $0 -version || exit $?
+      bash "$0" -version || exit $?
       exit 0
       fi
       ;;
     -self-update|self-update)
       if [[ ! "$cmd" ]]; then
-      install $0;
+      unset NXF_VER
+      install "$0";
       exit 0
       fi
       ;;

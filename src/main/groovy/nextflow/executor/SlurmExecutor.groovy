@@ -119,7 +119,10 @@ class SlurmExecutor extends AbstractGridExecutor {
     @Override
     protected List<String> queueStatusCommand(Object queue) {
 
-        final result = ['squeue','-h','-o','%i %t', '-t', 'all']
+        final result = ['squeue','--noheader','-o','%i %t', '-t', 'all']
+
+        if( queue )
+            result << '-p' << queue.toString()
 
         final user = System.getProperty('user.name')
         if( user )

@@ -26,6 +26,7 @@ import java.util.concurrent.Future
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.exception.ProcessException
 import nextflow.processor.LocalPollingMonitor
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -33,6 +34,7 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.script.ScriptType
 import nextflow.trace.TraceRecord
+import nextflow.util.Escape
 import nextflow.util.PosixProcess
 /**
  * Executes the specified task on the locally exploiting the underlying Java thread pool
@@ -90,8 +92,6 @@ class LocalExecutor extends Executor {
 @Slf4j
 class LocalTaskHandler extends TaskHandler {
 
-    private final startTimeMillis = System.currentTimeMillis()
-
     private final Path exitFile
 
     private final Long wallTimeMillis
@@ -133,7 +133,7 @@ class LocalTaskHandler extends TaskHandler {
         // NOTE: the actual command is wrapper by another bash whose stream
         // are redirected to null. This is important in order to consume the stdout/stderr
         // of the wrapped job otherwise that output will cause the inner `tee`s hang
-        List cmd = ['/bin/bash','-c', job.join(' ') + " &> $task.workDir/$TaskRun.CMD_LOG" ]
+        List cmd = ['/bin/bash','-c', job.join(' ') + " &> ${Escape.path(task.workDir)}/${TaskRun.CMD_LOG}" ]
         log.trace "Launch cmd line: ${cmd.join(' ')}"
 
         session.getExecService().submit( {
@@ -163,7 +163,7 @@ class LocalTaskHandler extends TaskHandler {
 
 
     long elapsedTimeMillis() {
-        System.currentTimeMillis() - startTimeMillis
+        startTimeMillis ? System.currentTimeMillis() - startTimeMillis : 0
     }
 
     /**
@@ -208,8 +208,8 @@ class LocalTaskHandler extends TaskHandler {
                 task.stderr = errorFile
                 status = TaskStatus.COMPLETED
 
-                // signal has completed
-                return true
+                // stop the execution by raising an exception
+                throw new ProcessException("Process exceeded running time limit (${task.config.getTime()})")
             }
         }
 

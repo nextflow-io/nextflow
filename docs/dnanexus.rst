@@ -7,6 +7,7 @@ DNAnexus cloud
 DNAnexus is a cloud platform specifically designed for genomics applications. Nextflow provides experimental support
 for the DNAnexus platform allowing you to execute your pipeline in the cloud.
 
+.. warning:: This feature has been deprecated and will be removed in a future release.
 
 Prerequisites
 ==============
