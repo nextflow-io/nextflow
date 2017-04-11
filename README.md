@@ -337,9 +337,7 @@ Citations
 
 If you use Nextflow for research purpose, please cite: 
 
-http://dx.doi.org/10.6084/m9.figshare.1254958
-
-(manuscript under preparation)
+P. Di Tommaso, et al. Nextflow enables reproducible computational workflows. Nature Biotechnology 35, 316–319 (2017) doi:[10.1038/nbt.3820](http://www.nature.com/nbt/journal/v35/n4/full/nbt.3820.html) 
 
 Credits
 -------
