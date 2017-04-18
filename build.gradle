@@ -464,7 +464,8 @@ task deploy( type: Exec, dependsOn: [clean, pack, deployable.uploadArchives, mak
         files << file('nextflow').absoluteFile
         files << file('nextflow.sha1').absoluteFile
         files << file('nextflow.sha256').absoluteFile
-
+        files << file('nextflow.md5').absoluteFile
+        
         println "Uploading artifacts: "
         files.each { println "- $it"}
 
