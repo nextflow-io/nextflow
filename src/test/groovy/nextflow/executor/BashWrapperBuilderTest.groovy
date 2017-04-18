@@ -369,19 +369,14 @@ class BashWrapperBuilderTest extends Specification {
 
                 nxf_sleep() {
                   if [[ \$1 < 0 ]]; then sleep 5;
-                  elif [[ \$1 < 10 ]]; then sleep 0.1;
+                  elif [[ \$1 < 10 ]]; then sleep 0.1 2>/dev/null || sleep 1;
                   elif [[ \$1 < 130 ]]; then sleep 1;
                   else sleep 5; fi
                 }
 
                 nxf_date() {
-                    case `uname` in
-                        Darwin) if hash gdate 2>/dev/null; then echo 'gdate +%s%3N'; else echo 'date +%s000'; fi;;
-                        *) echo 'date +%s%3N';;
-                    esac
+                    local ts=\$(date +%s%3N); [[ \$ts == *3N ]] && date +%s000 || echo \$ts
                 }
-
-                NXF_DATE=\$(nxf_date)
 
                 nxf_trace() {
                   local pid=\$1; local trg=\$2;
@@ -405,7 +400,7 @@ class BashWrapperBuilderTest extends Specification {
 
                 trap 'exit \${ret:=\$?}' EXIT
                 touch .command.trace
-                start_millis=\$(\$NXF_DATE)
+                start_millis=\$(nxf_date)
                 (
                 /bin/bash -ue ${folder}/.command.sh
                 ) &
@@ -413,7 +408,7 @@ class BashWrapperBuilderTest extends Specification {
                 nxf_trace "\$pid" .command.trace &
                 mon=\$!
                 wait \$pid || ret=\$?
-                end_millis=\$(\$NXF_DATE)
+                end_millis=\$(nxf_date)
                 nxf_kill \$mon || wait \$mon
                 echo \$((end_millis-start_millis)) >> .command.trace
                 """
@@ -718,19 +713,14 @@ class BashWrapperBuilderTest extends Specification {
 
             nxf_sleep() {
               if [[ \$1 < 0 ]]; then sleep 5;
-              elif [[ \$1 < 10 ]]; then sleep 0.1;
+              elif [[ \$1 < 10 ]]; then sleep 0.1 2>/dev/null || sleep 1;
               elif [[ \$1 < 130 ]]; then sleep 1;
               else sleep 5; fi
             }
 
             nxf_date() {
-                case `uname` in
-                    Darwin) if hash gdate 2>/dev/null; then echo 'gdate +%s%3N'; else echo 'date +%s000'; fi;;
-                    *) echo 'date +%s%3N';;
-                esac
+                local ts=\$(date +%s%3N); [[ \$ts == *3N ]] && date +%s000 || echo \$ts
             }
-
-            NXF_DATE=\$(nxf_date)
 
             nxf_trace() {
               local pid=\$1; local trg=\$2;
@@ -754,7 +744,7 @@ class BashWrapperBuilderTest extends Specification {
 
             trap 'exit \${ret:=\$?}' EXIT
             touch .command.trace
-            start_millis=\$(\$NXF_DATE)
+            start_millis=\$(nxf_date)
             (
             /bin/bash -ue ${folder}/.command.sh < ${folder}/.command.in
             ) &
@@ -762,7 +752,7 @@ class BashWrapperBuilderTest extends Specification {
             nxf_trace "\$pid" .command.trace &
             mon=\$!
             wait \$pid || ret=\$?
-            end_millis=\$(\$NXF_DATE)
+            end_millis=\$(nxf_date)
             nxf_kill \$mon || wait \$mon
             echo \$((end_millis-start_millis)) >> .command.trace
             """
