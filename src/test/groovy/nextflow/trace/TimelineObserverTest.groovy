@@ -76,6 +76,7 @@ class TimelineObserverTest extends Specification {
         r3.process = 'beta'
 
         def observer = [:] as TimelineObserver
+        observer.beginMillis = 1000
         observer.startMillis = 1000
         observer.endMillis = 3500
         observer.records['1'] = r1
@@ -180,6 +181,7 @@ class TimelineObserverTest extends Specification {
 
         def file = TestHelper.createInMemTempFile('report.html')
         def observer = new TimelineObserver(file)
+        observer.beginMillis = 1000
         observer.startMillis = 1000
         observer.endMillis = 3500
         observer.records['1'] = r1
@@ -271,6 +273,7 @@ var handler=null;
 // see https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20c
 var colors = d3.scale.category20c().domain(d3.range(0,20)).range()
 
+function c0(index) { return "#9c9c9c"; }
 function c1(index) { return "#bdbdbd"; }
 function c2(index) { return colors[index % 16]; } // <-- note: uses only the first 16 colors
 
@@ -317,10 +320,19 @@ function getTickFormat() {
     }
   }
 
+  if( delta <= 7 * DAY ) {
+    return {
+      format: d3.time.format("%b %e %H:%M"),
+      tickTime: d3.time.hours,
+      tickInterval: 6,
+      tickSize: 6
+    }
+  }
+
   return {
-    format: d3.time.format("%b %e %H:%M"),
-    tickTime: d3.time.hours,
-    tickInterval: 6,
+    format: d3.time.format("%b %e"),
+    tickTime: d3.time.days,
+    tickInterval: 1,
     tickSize: 6
   }
 }
