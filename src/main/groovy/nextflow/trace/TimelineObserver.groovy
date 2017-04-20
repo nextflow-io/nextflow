@@ -55,6 +55,8 @@ class TimelineObserver implements TraceObserver {
 
     private Path reportFile
 
+    private long beginMillis
+
     private long startMillis
 
     private long endMillis
@@ -69,7 +71,7 @@ class TimelineObserver implements TraceObserver {
      */
     @Override
     void onFlowStart(Session session) {
-        startMillis = System.currentTimeMillis()
+        beginMillis = startMillis = System.currentTimeMillis()
     }
 
     /**
@@ -132,7 +134,15 @@ class TimelineObserver implements TraceObserver {
 
     @Override
     void onProcessCached(TaskHandler handler) {
-        //onProcessComplete(handler)
+
+        final record = handler.getTraceRecord()
+
+        // remove the record from the current records
+        synchronized (records) {
+            records[ record.taskId ] = record
+        }
+
+        beginMillis = Math.min( beginMillis, record.get('submit') as long )
     }
 
 
@@ -155,7 +165,7 @@ class TimelineObserver implements TraceObserver {
     protected StringBuilder renderData() {
         final result = new StringBuilder()
         result << 'var elapsed="' << new Duration(endMillis-startMillis).toString() << '"\n'
-        result << 'var beginningMillis=' << startMillis << ';\n'
+        result << 'var beginningMillis=' << beginMillis << ';\n'
         result << 'var endingMillis=' << endMillis << ';\n'
         result << 'var data=[\n'
         records.values().eachWithIndex { TraceRecord it, index ->
@@ -186,7 +196,8 @@ class TimelineObserver implements TraceObserver {
             if( start && realtime ) {
                 def label = StringEscapeUtils.escapeJavaScript(labelString(record))
                 def ending = start+realtime
-                template << ", {\"starting_time\": $start, \"ending_time\": $ending, \"color\":c2($index), \"label\": \"$label\"}"
+                def clr = record.cached ? 'c0' : 'c2'
+                template << ", {\"starting_time\": $start, \"ending_time\": $ending, \"color\":$clr($index), \"label\": \"$label\"}"
 
                 if( complete && ending < complete ) {
                     template << ", {\"starting_time\": $ending, \"ending_time\": $complete, \"color\":c1($index)}"
@@ -208,6 +219,9 @@ class TimelineObserver implements TraceObserver {
 
         if( memory )
             result <<  memory.toString()
+
+        if( record.cached )
+            result << 'CACHED'
 
         result.join(' / ')
     }

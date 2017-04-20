@@ -455,4 +455,8 @@ class TraceRecord implements Serializable {
         return this
     }
 
+    boolean isCached() {
+        store.status == 'CACHED'
+    }
+
 }
