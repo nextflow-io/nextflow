@@ -1,5 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
+
+0.24.3 - 24 Apr 2017 
+- Fixed Process execution fails with not GNU version of sleep and date tools #321
+- Fixed Pending processes are not cleaned up properly #322
+- Fixed NPE is thrown when Singularity is enabled and a process uses no container #324
+- Fixed Cached processes are not included in the timeline report #325
+- Added MD5 digest file upload
+- Updated docs
+
 0.24.2 - 5 Apr 2017 
 - Fixed Tuple array object deserialisation fails #317
 - Use SLURM squeue —-noheader instead -h command line option to support not standard implementation #316
