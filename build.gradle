@@ -55,7 +55,7 @@ ext {
 allprojects {
     apply plugin: 'java'
 
-    version = '0.24.2'
+    version = '0.24.3'
     group = 'io.nextflow'
 
     sourceCompatibility = 1.7
@@ -512,6 +512,7 @@ task release(type: Exec, dependsOn: pack) {
     aws s3 cp $launcherFile s3://www.nextflow.io/releases/latest/nextflow $s3CmdOpts
     aws s3 cp $launcherSha1 s3://www.nextflow.io/releases/latest/nextflow.sha1 $s3CmdOpts
     aws s3 cp $launcherSha256 s3://www.nextflow.io/releases/latest/nextflow.sha256 $s3CmdOpts
+    aws s3 cp $launcherSha256 s3://www.nextflow.io/releases/latest/nextflow.md5 $s3CmdOpts
     """.stripIndent()
 
     commandLine 'bash', '-e', temp.absolutePath
