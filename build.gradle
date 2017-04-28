@@ -175,6 +175,7 @@ dependencies {
 // http://forums.gradle.org/gradle/topics/gradle_task_groovydoc_failing_with_noclassdeffounderror
 groovydoc {
     groovyClasspath = project.configurations.gdocLibs
+    includes  = ["nextflow/**"]
 }
 
 //sourceSets.main.compileClasspath += configurations.provided
@@ -605,7 +606,7 @@ configure(deployable) {
 
     task javadocJar(type: Jar) {
         classifier = 'javadoc'
-        from javadoc
+        from groovydoc
     }
 
     task sourcesJar(type: Jar) {
