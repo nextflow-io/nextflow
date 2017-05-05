@@ -963,7 +963,7 @@ class TaskProcessor {
                 errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount)
                 if( errorStrategy.soft ) {
                     def msg = error.getMessage()
-                    if( errorStrategy == IGNORE) msg += " -- Error is ignored"
+                    if( errorStrategy == IGNORE ) msg += " -- Error is ignored"
                     else if( errorStrategy == RETRY ) msg += " -- Execution is retried ($taskErrCount)"
                     log.warn msg
                     task.failed = true
