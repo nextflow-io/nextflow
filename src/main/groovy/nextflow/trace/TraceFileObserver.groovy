@@ -195,6 +195,12 @@ class TraceFileObserver implements TraceObserver {
     @Override
     void onFlowStart(Session session) {
         log.debug "Flow starting -- trace file: $tracePath"
+
+        // make sure parent path exists
+        def parent = tracePath.getParent()
+        if( parent )
+            Files.createDirectories(parent)
+
         // roll the any trace files that may exist
         tracePath.rollFile()
 
