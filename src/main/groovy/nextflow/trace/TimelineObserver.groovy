@@ -152,6 +152,11 @@ class TimelineObserver implements TraceObserver {
         final tpl = readTemplate()
         final p = tpl.indexOf(REPLACE_STR)
 
+        // make sure the parent path exists
+        def parent = reportFile.getParent()
+        if( parent )
+            Files.createDirectories(parent)
+
         // roll the any trace files that may exist
         reportFile.rollFile()
 
