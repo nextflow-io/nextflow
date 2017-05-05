@@ -164,7 +164,7 @@ public class NextflowDSLImpl implements ASTTransformation {
         if( isClosure ) {
             // the block holding all the statements defined in the process (closure) definition
             def block = (lastArg as ClosureExpression).code as BlockStatement
-            def len = block.statements.size()
+            int len = block.statements.size()
 
             makeGStringLazyVisitor = new GStringToLazyVisitor(unit)
 
