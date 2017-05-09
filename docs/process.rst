@@ -1387,8 +1387,7 @@ process level. This can be useful for advanced configuration options.
 maxErrors
 ---------
 
-The ``maxErrors`` directive allows you to specify the maximum number of times a process can fail when using the ``Retry`` `error strategy`.
-By default this value is set to ``3``, you can change to a different value as show in the example below::
+The ``maxErrors`` directive allows you to specify the maximum number of times a process can fail when using the ``Retry`` `error strategy`.  By default this value is set to ``3``, you can change to a different value as show in the example below::
 
     process retryIfFail {
       errorStrategy 'retry'
@@ -1398,6 +1397,11 @@ By default this value is set to ``3``, you can change to a different value as sh
       echo 'do this as that .. '
       """
     }
+    
+Setting ``maxErrors`` to ``-1`` will effectively disable it.
+
+.. note:: This setting considers the **total** errors accumulated for a given process, across all instances. If you want
+  to control the number of times a process **instance** (aka task) can fail, use ``maxRetries``.
 
 See also: `errorStrategy`_ and `maxRetries`_.
 
