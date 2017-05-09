@@ -393,7 +393,7 @@ class Channel  {
      */
     static DataflowChannel<Path> watchPath( String filePattern, String events = 'create' ) {
 
-        final splitter = FilePatternSplitter.regex().parse(filePattern.toString())
+        final splitter = FilePatternSplitter.glob().parse(filePattern)
         final fs = FileHelper.fileSystemForScheme(splitter.scheme)
         final folder = splitter.parent
         final pattern = splitter.fileName
@@ -405,7 +405,7 @@ class Channel  {
 
     static DataflowChannel<Path> watchPath( Path path, String events = 'create' ) {
         final fs = path.getFileSystem()
-        final splitter = FilePatternSplitter.regex().parse(path.toString())
+        final splitter = FilePatternSplitter.glob().parse(path.toString())
         final folder = splitter.parent
         final pattern = splitter.fileName
         final result = watchImpl('glob', folder, pattern, pattern.startsWith('*'), events, fs)
