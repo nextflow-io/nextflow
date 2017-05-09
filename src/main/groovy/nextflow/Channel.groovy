@@ -529,6 +529,16 @@ class Channel  {
         if( indexOfWildcards==-1 && indexOfBrackets==-1 )
             filePattern = '*' + filePattern
 
+        // count the `*` and `?` wildcard before any {} and [] glob pattern
+        int groupCount = 0
+        for( int i=0; i<filePattern.size(); i++ ) {
+            def ch = filePattern[i]
+            if( ch=='?' || ch=='*' )
+                groupCount++
+            else if( ch=='{' || ch=='[' )
+                break
+        }
+
         def regex = filePattern
                 .replace('.','\\.')
                 .replace('*','(.*)')
@@ -539,7 +549,7 @@ class Channel  {
 
         def matcher = (fileName =~ /$regex/)
         if( matcher.matches() ) {
-            def c=matcher.groupCount()
+            def c=Math.min(groupCount, matcher.groupCount())
             def end = c ? matcher.end(c) : ( indexOfBrackets != -1 ? indexOfBrackets : fileName.size() )
             def prefix = fileName.substring(0,end)
             while(prefix.endsWith('-') || prefix.endsWith('_') || prefix.endsWith('.') )

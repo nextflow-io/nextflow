@@ -393,6 +393,9 @@ class ChannelTest extends Specification {
         Channel.readPrefix(Paths.get('/some/path/abc_1.fa'), '*_1.fa') == 'abc'
         Channel.readPrefix(Paths.get('/some/path/abc_1.fa'), '*_{1,2}.fa') == 'abc'
         Channel.readPrefix(Paths.get('/some/path/abc_1.fa'), '*_[1-2].fa') == 'abc'
+        Channel.readPrefix(Paths.get('/some/path/abc_1.fa'), '**_{1,2}.*') == 'abc'
+        Channel.readPrefix(Paths.get('/some/path/abc_1_trimmed.fa'), '*_[1-2]_*.fa') == 'abc'
+        Channel.readPrefix(Paths.get('/some/path/abc_1_trimmed.fa'), '*??_[1-2]_*.fa') == 'abc'
         Channel.readPrefix(Paths.get('/some/path/abc_1.fa'), 'abc_{1,2}.fa') == 'abc'
         Channel.readPrefix(Paths.get('/some/path/abc_1.fa'), 'abc_[1-9].fa') == 'abc'
         Channel.readPrefix(Paths.get('/some/path/foo_abc_1.fa'), 'foo_*_{1,2}.fa') == 'foo_abc'
@@ -410,7 +413,7 @@ class ChannelTest extends Specification {
         def d2 = Files.createFile(folder.resolve('delta_2.fa'))
 
         when:
-        def pairs = Channel.fromFilePairs(folder.resolve("*_{1,2}.fa"))
+        def pairs = Channel.fromFilePairs(folder.resolve("*_{1,2}.*"))
         then:
         pairs.val == ['alpha', [a1, a2]]
         pairs.val == ['beta', [b1, b2]]
