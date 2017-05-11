@@ -19,9 +19,6 @@
  */
 
 package nextflow
-import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
-import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -32,7 +29,6 @@ import org.junit.Rule
 import spock.lang.Specification
 import test.TemporaryPath
 import test.TestHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -228,21 +224,6 @@ class ChannelTest extends Specification {
 
     }
 
-
-
-    def testStringEvents() {
-
-        when:
-        Channel.stringToWatchEvents('xxx')
-        then:
-        thrown(IllegalArgumentException)
-
-        expect:
-        Channel.stringToWatchEvents() == [ ENTRY_CREATE ]
-        Channel.stringToWatchEvents('create,delete') == [ENTRY_CREATE, ENTRY_DELETE]
-        Channel.stringToWatchEvents('Create , MODIFY ') == [ENTRY_CREATE, ENTRY_MODIFY]
-
-    }
 
     def testFromPath() {
 
@@ -473,6 +454,27 @@ class ChannelTest extends Specification {
 
     }
 
+    def 'should watch and emit a file' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        when:
+        def result = Channel.watchPath("$folder/")
+        sleep 500
+        Files.createFile(folder.resolve('hello.txt'))
+        then:
+        result.val == folder.resolve('hello.txt')
+
+        when:
+        result = Channel.watchPath(folder.toString())
+        sleep 500
+        Files.createFile(folder.resolve('ciao.txt'))
+        then:
+        result.val == folder.resolve('ciao.txt')
+
+        cleanup:
+        folder?.deleteDir()
+    }
 
 
 }

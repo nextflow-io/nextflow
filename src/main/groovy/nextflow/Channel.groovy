@@ -19,19 +19,14 @@
  */
 
 package nextflow
-import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
-import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
-import static java.nio.file.StandardWatchEventKinds.OVERFLOW
+
 import static nextflow.util.CheckHelper.checkParams
 
 import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
-import java.nio.file.WatchEvent
-import java.nio.file.WatchKey
-import java.nio.file.WatchService
+import java.nio.file.Paths
 import java.util.regex.Pattern
 
 import groovy.transform.PackageScope
@@ -44,6 +39,7 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.exception.AbortOperationException
 import nextflow.extension.GroupTupleOp
 import nextflow.extension.MapOp
+import nextflow.file.DirWatcher
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.util.Duration
@@ -285,66 +281,11 @@ class Channel  {
 
 
     static private DataflowChannel<Path> watchImpl( String syntax, String folder, String pattern, boolean skipHidden, String events, FileSystem fs ) {
-        assert syntax in ['regex','glob']
-        log.debug "Watch service for path: $folder; syntax: $syntax; pattern: $pattern; skipHidden: $skipHidden; events: $events"
-
-        // now apply glob file search
         final result = create()
-        final path = fs.getPath(folder)
-        if( !path.isDirectory() ) {
-            log.warn "Cannot watch a not existing path: $path -- Make sure that path exists and it is a directory"
-            result.bind(STOP)
-            return result
-        }
 
-        final rule = "$syntax:${folder}${pattern}"
-        final matcher = FileHelper.getPathMatcherFor(rule, path.fileSystem)
-        final eventsToWatch = stringToWatchEvents(events)
-
-        Thread.start {
-            WatchService watcher = path.getFileSystem().newWatchService()
-            path.register(watcher, eventsToWatch)
-
-            while( true ) {
-                // wait for key to be signaled
-                try {
-                    WatchKey key = watcher.take();
-
-                    for (WatchEvent<?> event: key.pollEvents()) {
-                        WatchEvent.Kind<?> kind = event.kind();
-
-                        if( kind == OVERFLOW ) {
-                            log.debug "Watcher on path > $path -- get a OVERFLOW event"
-                            continue
-                        }
-
-                        // The filename is the context of the event.
-                        Path fileName = (event as WatchEvent<Path>).context();
-                        log.trace "Watcher path > $path -- event: $kind; fileName: $fileName"
-                        Path target = path.resolve(fileName)
-
-                        if (matcher.matches(target) && ( !skipHidden || !Files.isHidden(target) )) {
-                            log.trace "File watcher: $target matching: $rule -- event: $kind"
-                            result.bind(target.toAbsolutePath())
-                        }
-
-                    }
-
-                    // Reset the key -- this step is critical if you want to
-                    // receive further watch events.  If the key is no longer valid,
-                    // the directory is inaccessible so exit the loop.
-                    boolean valid = key.reset();
-                    if (!valid) {
-                        break;
-                    }
-                }
-                catch (Exception e) {
-                    log.debug "Exception while watching path: $path", e
-                    return;
-                }
-
-            }
-        }
+        new DirWatcher(syntax,folder,pattern,skipHidden,events, fs)
+                .setOnComplete { result.bind(STOP) }
+                .apply { Path file -> result.bind(file.toAbsolutePath()) }
 
         return result
     }
@@ -394,6 +335,11 @@ class Channel  {
      */
     static DataflowChannel<Path> watchPath( String filePattern, String events = 'create' ) {
 
+        if( filePattern.endsWith('/') )
+            filePattern += '*'
+        else if(Files.isDirectory(Paths.get(filePattern)))
+            filePattern += '/*'
+
         final splitter = FilePatternSplitter.glob().parse(filePattern)
         final fs = FileHelper.fileSystemForScheme(splitter.scheme)
         final folder = splitter.parent
@@ -413,39 +359,6 @@ class Channel  {
 
         session.dag.addSourceNode('Channel.watchPath', result)
         return result
-    }
-
-
-    static private EVENT_MAP = [
-            'create':ENTRY_CREATE,
-            'delete':ENTRY_DELETE,
-            'modify':ENTRY_MODIFY
-    ]
-
-    /**
-     * Converts a comma separated events string to the corresponding {@code WatchEvent.Kind} instances
-     *
-     * @param events the list of events to watch
-     * @return
-     */
-    @PackageScope
-    static WatchEvent.Kind<Path>[]  stringToWatchEvents(String events = null){
-        def result = []
-        if( !events )
-            result << ENTRY_CREATE
-
-        else {
-            events.split(',').each {
-                def ev = it.trim().toLowerCase()
-                def val = EVENT_MAP[ev]
-                if( !val )
-                    throw new IllegalArgumentException("Invalid watch event: $it -- Valid values are: ${EVENT_MAP.keySet().join(', ')}")
-                result << val
-            }
-        }
-
-        result as WatchEvent.Kind<Path>[]
-
     }
 
 
