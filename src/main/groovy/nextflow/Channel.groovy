@@ -233,11 +233,12 @@ class Channel  {
      */
     static private Map VALID_PATH_PARAMS = [
             type:['file','dir','any'],
-            followLinks: [false, true],
-            hidden: [false, true],
+            followLinks: Boolean,
+            hidden: Boolean,
             maxDepth: Integer,
-            exists: [false, true],
-            glob: [false,true]
+            exists: Boolean,
+            glob: Boolean,
+            relative: Boolean
             ]
 
     /**
