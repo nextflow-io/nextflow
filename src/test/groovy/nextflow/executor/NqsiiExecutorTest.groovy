@@ -31,6 +31,7 @@ import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Till Bayer <till.bayer@gmail.com>
  */
 class NqsiiExecutorTest extends Specification {
 
