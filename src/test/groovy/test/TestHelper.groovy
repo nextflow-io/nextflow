@@ -73,4 +73,11 @@ class TestHelper {
         ["bash","-c","command -v dot &>/dev/null"].execute().waitFor() == 0
     }
 
+
+    static void stopUntil( Closure<Boolean> condition ) {
+        def start = System.currentTimeMillis()
+        while( !condition.call() && (System.currentTimeMillis()-start) < 90_000 ) {
+            sleep 100
+        }
+    }
 }
