@@ -32,6 +32,7 @@ import nextflow.executor.PbsExecutor
 import nextflow.executor.SgeExecutor
 import nextflow.executor.SlurmExecutor
 import nextflow.executor.SupportedScriptTypes
+import nextflow.executor.NqsiiExecutor
 import nextflow.script.BaseScript
 import nextflow.script.ScriptType
 import nextflow.script.TaskBody
@@ -62,7 +63,8 @@ class ProcessFactory {
             'crg': CrgExecutor,
             'bsc': LsfExecutor,
             'condor': CondorExecutor,
-            'k8s': KubernetesExecutor
+            'k8s': KubernetesExecutor,
+            'nqsii': NqsiiExecutor
     ]
 
     private final Session session
