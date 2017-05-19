@@ -109,7 +109,7 @@ class DirWatcher {
         this.onNext = onNext
 
         if( !base.isDirectory() ) {
-            log.warn "Cannot watch a not existing path=$base -- Make sure that path exists and it is a directory"
+            log.warn "Cannot watch a not existing directory: $base -- Make sure that path exists and it is a directory"
             onComplete?.call()
             return
         }

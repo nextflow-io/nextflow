@@ -476,5 +476,12 @@ class ChannelTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should return an empty channel when watching a missing path' () {
+
+        when:
+        def result = Channel.watchPath("foo/*")
+        then:
+        result.val == Channel.STOP
+    }
 
 }
