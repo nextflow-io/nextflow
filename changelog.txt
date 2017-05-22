@@ -1,6 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.24.4 - 19 May 2017 
+- Fixed PublishDir creates nested directory structures when a folder already exists #342
+- Fixed NoSuchFileException is thrown when trace file path does not exist #334
+- Fixed watchPath glob directory not working #335
+- Fixed Channel.fromFilePairs does not handle properly multiple star wildcards #337
+- Added executor for NQSII, queuing system used on NEC clusters.
+- Added `relative` option to `fromPath` channel factory
+
 0.24.3 - 24 Apr 2017 
 - Fixed Process execution fails with not GNU version of sleep and date tools #321
 - Fixed Pending processes are not cleaned up properly #322
