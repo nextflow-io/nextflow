@@ -254,7 +254,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
         if( bindObject instanceof Closure )
             return '__$' + this.toString()
 
-        throw new IllegalArgumentException()
+        throw new IllegalArgumentException("Invalid process input definition")
     }
 
     BaseInParam bind( def obj ) {
