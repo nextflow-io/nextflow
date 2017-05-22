@@ -24,11 +24,12 @@ class DirWatcherTest extends Specification {
 
         when:
         List results = []
-        Thread.start { watcher.apply { Path file -> results.add(file.name) } }
+        watcher.apply { Path file -> results.add(file.name) }
         sleep 500
         Files.createFile(folder.resolve('hello.txt'))
         Files.createFile(folder.resolve('hola.txt'))
         TestHelper.stopUntil { results.size() == 1  }
+        watcher.terminate()
 
         then:
         results.size() == 1
@@ -48,12 +49,13 @@ class DirWatcherTest extends Specification {
 
         when:
         List results = []
-        Thread.start { watcher.apply { Path file -> results.add(file.name) } }
+        watcher.apply { Path file -> results.add(file.name) }
         sleep 500
         Files.createFile(folder.resolve('hello.txt'))
         Files.createFile(folder.resolve('hola.txt'))
         Files.createFile(folder.resolve('ciao.fasta'))
         TestHelper.stopUntil { results.size() == 2  }
+        watcher.terminate()
 
         then:
         results.size() == 2
@@ -76,13 +78,14 @@ class DirWatcherTest extends Specification {
         def watcher = new DirWatcher('glob', "$folder/", '*', false, 'modify,delete', folder.getFileSystem())
 
         when:
-        List results = []
-        Thread.start { watcher.apply { Path file -> results.add(file.name) } }
+        Set results = []
+        watcher.apply { Path file -> results.add(file.name) }
         sleep 1000
         folder.resolve('hello.txt').text = '1'
         folder.resolve('ciao.txt').delete()
         TestHelper.stopUntil { results.size() == 2 }
-
+        watcher.terminate()
+        
         then:
         results.size() == 2
         results.contains('hello.txt')
@@ -103,7 +106,7 @@ class DirWatcherTest extends Specification {
 
         when:
         List results = []
-        Thread.start { watcher.apply { Path file -> results.add(folder.relativize(file).toString()) } }
+        watcher.apply { Path file -> results.add(folder.relativize(file).toString()) }
         sleep 500
         folder.resolve('hello.txt').text = '1'
         folder.resolve('foo/hola.txt').text = '2'
@@ -111,6 +114,7 @@ class DirWatcherTest extends Specification {
         folder.resolve('foo/bar/bonjour.txt').text = '4'
         folder.resolve('foo/bar/hallo.fa').text = '5'
         TestHelper.stopUntil { results.size() == 3 }
+        watcher.terminate()
 
         then:
         results.size() == 3
@@ -133,7 +137,7 @@ class DirWatcherTest extends Specification {
 
         when:
         List results = []
-        Thread.start { watcher.apply { Path file -> results.add(folder.relativize(file).toString()) } }
+        watcher.apply { Path file -> results.add(folder.relativize(file).toString()) }
         sleep 500
         folder.resolve('hello.txt').text = '1'
         folder.resolve('foo/hola.txt').text = '2'
@@ -141,6 +145,7 @@ class DirWatcherTest extends Specification {
         folder.resolve('foo/bar/bonjour.txt').text = '4'
         folder.resolve('foo/bar/hallo.fa').text = '5'
         TestHelper.stopUntil { results.size() == 2 }
+        watcher.terminate()
 
         then:
         results.size() == 2
@@ -161,7 +166,7 @@ class DirWatcherTest extends Specification {
 
         when:
         List results = []
-        Thread.start { watcher.apply { Path file -> results.add(folder.relativize(file).toString()) } }
+        watcher.apply { Path file -> results.add(folder.relativize(file).toString()) }
         sleep 500
         Files.createDirectories(folder.resolve('foo/bar'))
         sleep 10000
@@ -171,6 +176,7 @@ class DirWatcherTest extends Specification {
         folder.resolve('foo/bar/bonjour.txt').text = '4'
         folder.resolve('foo/bar/hallo.doc').text = '5'
         TestHelper.stopUntil { results.size() == 3 }
+        watcher.terminate()
 
         then:
         results.size() == 3
