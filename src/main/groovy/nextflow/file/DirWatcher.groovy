@@ -59,8 +59,6 @@ class DirWatcher {
 
     private String dirRule
 
-    private volatile boolean terminated
-
     private Closure onNext
 
     private Closure onComplete
@@ -68,6 +66,10 @@ class DirWatcher {
     private WatchService watcher
 
     private HashMap<WatchKey,Path> watchedPaths
+
+    private Thread thread
+
+    private volatile boolean terminated
 
     DirWatcher(String syntax, String folder, String pattern, boolean skipHidden, String events, FileSystem fs) {
         assert syntax in ['regex','glob']
@@ -105,6 +107,7 @@ class DirWatcher {
     void terminate() {
         terminated = true
         watcher?.close()
+        thread?.join()
     }
 
     void apply( Closure onNext ) {
@@ -119,7 +122,7 @@ class DirWatcher {
         this.watcher = base.getFileSystem().newWatchService()
         this.watchedPaths = new HashMap<WatchKey,Path>()
 
-        Thread.start {
+        thread = Thread.start {
             try {
                 apply0()
             }
@@ -207,6 +210,10 @@ class DirWatcher {
             }
             catch (ClosedWatchServiceException e ) {
                 log.debug "Closed watch service for path: $base"
+                break
+            }
+            catch (InterruptedException e) {
+                log.debug "Interrupted watch service for path: $base"
                 break
             }
             catch (Exception e) {
