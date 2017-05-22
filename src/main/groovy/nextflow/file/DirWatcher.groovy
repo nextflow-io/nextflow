@@ -17,19 +17,21 @@ import java.nio.file.WatchEvent
 import java.nio.file.WatchKey
 import java.nio.file.WatchService
 import java.nio.file.attribute.BasicFileAttributes
-import java.util.concurrent.TimeUnit
 
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+
 /**
+ * Watch the content of a directory for file system events
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class DirWatcher {
 
-
-    static private EVENT_MAP = [
+    static private Map<String,WatchEvent.Kind<Path>> EVENT_MAP = [
             'create':ENTRY_CREATE,
             'delete':ENTRY_DELETE,
             'modify':ENTRY_MODIFY
@@ -163,7 +165,7 @@ class DirWatcher {
         while( !terminated ) {
             // wait for key to be signaled
             try {
-                WatchKey key = watcher.poll(100, TimeUnit.MILLISECONDS)
+                WatchKey key = watcher.take()
                 if( !key )
                     continue
                 def path = watchedPaths.get(key)
@@ -229,7 +231,7 @@ class DirWatcher {
             result << ENTRY_CREATE
 
         else {
-            events.split(',').each {
+            events.split(',').each { String it ->
                 def ev = it.trim().toLowerCase()
                 def val = EVENT_MAP[ev]
                 if( !val )
@@ -239,7 +241,6 @@ class DirWatcher {
         }
 
         result as WatchEvent.Kind<Path>[]
-
     }
 
 }
