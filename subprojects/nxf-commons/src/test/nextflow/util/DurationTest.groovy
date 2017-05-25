@@ -142,6 +142,15 @@ class DurationTest extends Specification {
 
     }
 
+    def 'should not convert UUID number' () {
+
+        when:
+        new Duration('10833d95-1546-4BDF-AEA6-9F9676571854')
+        then:
+        thrown(IllegalArgumentException)
+
+    }
+
     def 'should add time' () {
 
         expect:
