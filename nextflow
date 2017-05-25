@@ -105,25 +105,25 @@ function launch_nextflow() {
     if [[ $NXF_MPIRUN ]]; then
         if [[ -n "$OMPI_COMM_WORLD_RANK" ]]; then 
             if [[ $OMPI_COMM_WORLD_RANK == 0 ]]; then
-		        # sleep a few seconds in order to wait worker daemons to bootstrap
-			  sleep ${NXF_SLEEP:-10}
-			  export NXF_EXECUTOR='ignite'
-			  export NXF_CLUSTER_SHUTDOWNONCOMPLETE='true'
-			else
-			    cmdline="${launcher[@]} -log .nextflow_node_${HOSTNAME}_${OMPI_COMM_WORLD_RANK}.log node ignite"
-			fi
-		elif [[ -n "$SLURM_PROCID"]]; then
+                # sleep a few seconds in order to wait worker daemons to bootstrap
+              sleep ${NXF_SLEEP:-10}
+              export NXF_EXECUTOR='ignite'
+              export NXF_CLUSTER_SHUTDOWNONCOMPLETE='true'
+            else
+                cmdline="${launcher[@]} -log .nextflow_node_${HOSTNAME}_${OMPI_COMM_WORLD_RANK}.log node ignite"
+            fi
+        elif [[ -n "$SLURM_PROCID"]]; then
             if [[ $SLURM_PROCID == 0 ]]; then
-			    # sleep a few seconds in order to wait worker daemons to bootstrap
-			    sleep ${NXF_SLEEP:-10}
-				export NXF_EXECUTOR='ignite'
-				export NXF_CLUSTER_SHUTDOWNONCOMPLETE='true'
-			else
-			    cmdline="${launcher[@]} -log .nextflow_node_${HOSTNAME}_${SLURM_PROCID}.log node ignite"
-			fi
-		else
+                # sleep a few seconds in order to wait worker daemons to bootstrap
+                sleep ${NXF_SLEEP:-10}
+                export NXF_EXECUTOR='ignite'
+                export NXF_CLUSTER_SHUTDOWNONCOMPLETE='true'
+            else
+                cmdline="${launcher[@]} -log .nextflow_node_${HOSTNAME}_${SLURM_PROCID}.log node ignite"
+            fi
+        else
             echo_red 'Missing `$OMPI_COMM_WORLD_RANK` or `$SLURM_PROCID` variable -- it looks you are not running in a MPI environment'; exit 1; 
-		fi
+        fi
     # start in daemon mode
     elif [[ "$bg" ]]; then
       local pid_file="${NXF_PID_FILE:-.nextflow.pid}"
