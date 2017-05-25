@@ -1902,4 +1902,11 @@ class DataflowExtensions {
         return result;
     }
 
+    static <V> DataflowReadChannel<V> randomSample(final DataflowReadChannel source, int n) {
+        assert !(source instanceof DataflowExpression)
+
+        final result = new RandomSampleOp(source,n).apply()
+        session.dag.addOperatorNode('randomSample', source, result)
+        return result;
+    }
 }
