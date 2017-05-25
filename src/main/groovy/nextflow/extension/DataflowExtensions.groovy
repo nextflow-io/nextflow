@@ -1909,4 +1909,33 @@ class DataflowExtensions {
         session.dag.addOperatorNode('randomSample', source, result)
         return result;
     }
+
+    static <V> DataflowReadChannel<V> toInteger(final DataflowReadChannel source) {
+        final DataflowReadChannel<V> target = newChannelBy(source)
+        newOperator(source, target, new ChainWithClosure<V>({ it -> it as Integer }))
+        session.dag.addOperatorNode('toInteger', source, target)
+        return target;
+    }
+
+    static <V> DataflowReadChannel<V> toLong(final DataflowReadChannel source) {
+        final DataflowReadChannel<V> target = newChannelBy(source)
+        newOperator(source, target, new ChainWithClosure<V>({ it -> it as Long }))
+        session.dag.addOperatorNode('toLong', source, target)
+        return target;
+    }
+
+    static <V> DataflowReadChannel<V> toFloat(final DataflowReadChannel source) {
+        final DataflowReadChannel<V> target = newChannelBy(source)
+        newOperator(source, target, new ChainWithClosure<V>({ it -> it as Float }))
+        session.dag.addOperatorNode('toFloat', source, target)
+        return target;
+    }
+
+    static <V> DataflowReadChannel<V> toDouble(final DataflowReadChannel source) {
+        final DataflowReadChannel<V> target = newChannelBy(source)
+        newOperator(source, target, new ChainWithClosure<V>({ it -> it as Double }))
+        session.dag.addOperatorNode('toDouble', source, target)
+        return target;
+    }
+
 }

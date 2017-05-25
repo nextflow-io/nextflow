@@ -401,41 +401,7 @@ class DataflowExtensionsTest extends Specification {
     }
 
 
-    def testMin() {
 
-        expect:
-        Channel.from(4,1,7,5).min().val == 1
-        Channel.from("hello","hi","hey").min { it.size() } .val == "hi"
-        Channel.from("hello","hi","hey").min { a,b -> a.size()<=>b.size() } .val == "hi"
-        Channel.from("hello","hi","hey").min { a,b -> a.size()<=>b.size() } .val == "hi"
-        Channel.from("hello","hi","hey").min ({ a,b -> a.size()<=>b.size() } as Comparator) .val == "hi"
-
-    }
-
-    def testMax() {
-        expect:
-        Channel.from(4,1,7,5).max().val == 7
-        Channel.from("hello","hi","hey").max { it.size() } .val == "hello"
-        Channel.from("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .val == "hello"
-        Channel.from("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .val == "hello"
-        Channel.from("hello","hi","hey").max ({ a,b -> a.size()<=>b.size() } as Comparator) .val == "hello"
-
-    }
-
-    def testSum() {
-        expect:
-        Channel.from(4,1,7,5).sum().val == 17
-        Channel.from(4,1,7,5).sum { it * 2 } .val == 34
-        Channel.from( [1,1,1], [0,1,2], [10,20,30] ). sum() .val == [ 11, 22, 33 ]
-    }
-
-
-    def testMean() {
-        expect:
-        Channel.from(10,20,30).mean().val == 20
-        Channel.from(10,20,30).mean { it * 2 }.val == 40
-        Channel.from( [10,20,30], [10, 10, 10 ], [10, 30, 50]).mean().val == [10, 20, 30]
-    }
 
     def testCount() {
         expect:
@@ -1402,9 +1368,7 @@ class DataflowExtensionsTest extends Specification {
         x.val == 'Hello'
         x.val == 'Hello'
         x.val == 'Hello'
-
     }
-
 
     def 'should emit channel items until the condition is verified' () {
 
@@ -1424,5 +1388,6 @@ class DataflowExtensionsTest extends Specification {
         result.val == Channel.STOP
 
     }
+
 
 }
