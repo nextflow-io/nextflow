@@ -124,7 +124,7 @@ function launch_nextflow() {
 		else
             echo_red 'Missing `$OMPI_COMM_WORLD_RANK` or `$SLURM_PROCID` variable -- it looks you are not running in a MPI environment'; exit 1; 
 		fi
-	# start in daemon mode
+    # start in daemon mode
     elif [[ "$bg" ]]; then
       local pid_file="${NXF_PID_FILE:-.nextflow.pid}"
       bash -c "exec $cmdline" &
