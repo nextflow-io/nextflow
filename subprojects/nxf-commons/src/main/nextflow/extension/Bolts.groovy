@@ -666,33 +666,34 @@ class Bolts {
         return result
     }
 
-    private static HashMap<String,Long> LOGGER_CACHE = new LinkedHashMap<String,Long>() {
-        protected boolean removeEldestEntry(Map.Entry<String, Long> eldest) {
+    private static HashMap<Object,Long> LOGGER_CACHE = new LinkedHashMap<Object,Long>() {
+        protected boolean removeEldestEntry(Map.Entry<Object, Long> eldest) {
             return size() > 10_000
         }
     }
 
     private static final Duration LOG_DFLT_THROTTLE = Duration.of('1min')
 
-    static private checkLogCache( Object msg, Map params, Closure action ) {
+    static synchronized private checkLogCache( Object msg, Map params, Closure action ) {
 
         // -- check if this message has already been printed
         final String str = msg.toString()
         final Throwable error = params?.causedBy as Throwable
         final Duration throttle = params?.throttle as Duration ?: LOG_DFLT_THROTTLE
         final firstOnly = params?.firstOnly == true
+        final key = params.cacheKey ?: str
 
         long now = System.currentTimeMillis()
-        Long ts = LOGGER_CACHE.get(str)
+        Long ts = LOGGER_CACHE.get(key)
         if( ts && (now - ts <= throttle.toMillis() || firstOnly) ) {
             return
         }
-        LOGGER_CACHE.put(str, now)
+        LOGGER_CACHE.put(key, now)
 
         action.call(str, error)
     }
 
-    private static Map<String,?> LOGGER_PARAMS = [ causedBy: Throwable, throttle: [String, Number, Duration], firstOnly: Boolean ]
+    private static Map<String,?> LOGGER_PARAMS = [ cacheKey: Object, causedBy: Throwable, throttle: [String, Number, Duration], firstOnly: Boolean ]
 
 
     /**

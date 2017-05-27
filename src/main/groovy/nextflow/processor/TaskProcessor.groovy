@@ -2044,20 +2044,7 @@ class TaskProcessor {
         sendPoisonPill()
         session.processDeregister(this)
     }
-
-    /**
-     * Prints a warning message. This method uses a {@link Memoized} annotation
-     * to avoid to show multiple times the same message when multiple process instances
-     * invoke it.
-     *
-     * @param message The warning message to print
-     */
-    @Memoized
-    def warn( String message ) {
-        log.warn "Process `$name` $message"
-        return null
-    }
-
+    
 
     /*
      * logger class for the *iterator* processor
