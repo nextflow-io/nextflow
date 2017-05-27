@@ -1058,6 +1058,7 @@ class TaskProcessor {
                         taskCopy.config.attempt = taskErrCount+1
                         taskCopy.runType = RunType.RETRY
                         taskCopy.error = null
+                        taskCopy.resolve(taskBody)
                         checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
                     }
                     catch( Throwable e ) {
@@ -2044,7 +2045,6 @@ class TaskProcessor {
         sendPoisonPill()
         session.processDeregister(this)
     }
-    
 
     /*
      * logger class for the *iterator* processor
