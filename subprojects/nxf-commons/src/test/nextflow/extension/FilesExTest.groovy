@@ -26,6 +26,8 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -63,6 +65,32 @@ class FilesExTest extends Specification {
 
     }
 
+    @Unroll
+    def 'validate simpleName: #path'() {
+
+        expect:
+        Paths.get(path).getSimpleName() == expected
+        new File(path).getSimpleName() == expected
+
+        where:
+        path                | expected
+        'filename.txt'      | 'filename'
+        'foo.bar.baz.gas'   | 'foo'
+        '/path/file.txt'    | 'file'
+        '/path/file_name'   | 'file_name'
+        '/path/'            | 'path'
+        '/path/file.txt.gz' | 'file'
+        'a'                 | 'a'
+        '.a'                | '.a'
+        '.log'              | '.log'
+        '.log.1.2'          | '.log'
+        '.'                 | '.'
+        '..'                | '.'
+        '/some/.'           | '.'
+        '/'                 | null
+
+
+    }
 
     def testGetName() {
 
