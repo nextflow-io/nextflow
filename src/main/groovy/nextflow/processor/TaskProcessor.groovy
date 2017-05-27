@@ -104,6 +104,7 @@ class TaskProcessor {
 
     static final public String TASK_CONTEXT_PROPERTY_NAME = 'task'
 
+
     /**
      * Keeps track of the task instance executed by the current thread
      */
@@ -544,12 +545,15 @@ class TaskProcessor {
 
         // create and initialize the task instance to be executed
         final List values = args instanceof List ? args : [args]
-        log.trace "Setup new process > $name"
+        log.trace "Invoking new task > $name"
 
         // -- create the task run instance
         final task = createTaskRun()
         // -- set the task instance as the current in this thread
         currentTask.set(task)
+
+        // -- validate input lengths
+        validateInputSets(values)
 
         // -- map the inputs to a map and use to delegate closure values interpolation
         final secondPass = [:]
@@ -567,6 +571,26 @@ class TaskProcessor {
 
         def hash = createTaskHashKey(task)
         checkCachedOrLaunchTask(task, hash, resumable)
+    }
+
+    @Memoized
+    private List<SetInParam> getDeclaredInputSet() {
+        getConfig().getInputs().ofType(SetInParam)
+    }
+
+    protected void validateInputSets( List values ) {
+
+        def declaredSets = getDeclaredInputSet()
+        for( int i=0; i<declaredSets.size(); i++ ) {
+            final param = declaredSets[i]
+            final entry = values[param.index]
+            final expected = param.inner.size()
+            final actual = entry instanceof List ? entry.size() : 1
+
+            if( actual != expected ) {
+                log.warn("Process `$name` input tuple does not match declared input set cardinality -- offending value: $entry")
+            }
+        }
     }
 
 
