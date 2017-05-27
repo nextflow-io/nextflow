@@ -1222,7 +1222,9 @@ class DataflowExtensions {
 
         newOperator(params) { a, b ->
             def proc = ((DataflowProcessor) getDelegate())
-            [ [a], (b as List) ]
+            def left = [a]
+            def right = (b instanceof List ? b : [b])
+            [left, right]
                     .combinations()
                     .each{ Collection it -> proc.bindOutput(it.flatten())  }
         }

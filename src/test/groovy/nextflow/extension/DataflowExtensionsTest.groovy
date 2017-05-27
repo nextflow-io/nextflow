@@ -553,26 +553,29 @@ class DataflowExtensionsTest extends Specification {
     def testSpread() {
 
         when:
-        def r1 = Channel.from(1,2,3).spread(['a','b'])
+        def left = Channel.from(1,2,3)
+        def right = ['aa','bb']
+        def r1 = left.spread(right)
         then:
-        r1.val == [1, 'a']
-        r1.val == [1, 'b']
-        r1.val == [2, 'a']
-        r1.val == [2, 'b']
-        r1.val == [3, 'a']
-        r1.val == [3, 'b']
+        r1.val == [1, 'aa']
+        r1.val == [1, 'bb']
+        r1.val == [2, 'aa']
+        r1.val == [2, 'bb']
+        r1.val == [3, 'aa']
+        r1.val == [3, 'bb']
         r1.val == Channel.STOP
 
         when:
-        def str = Channel.from('a','b','c')
-        def r2 = Channel.from(1,2).spread(str)
+        left = Channel.from(1,2)
+        right = Channel.from('a','bb','ccc')
+        def r2 = left.spread(right)
         then:
         r2.val == [1, 'a']
-        r2.val == [1, 'b']
-        r2.val == [1, 'c']
+        r2.val == [1, 'bb']
+        r2.val == [1, 'ccc']
         r2.val == [2, 'a']
-        r2.val == [2, 'b']
-        r2.val == [2, 'c']
+        r2.val == [2, 'bb']
+        r2.val == [2, 'ccc']
         r2.val == Channel.STOP
 
     }
@@ -652,6 +655,46 @@ class DataflowExtensionsTest extends Specification {
         result.val == [7, 'b']
         result.val == [7, 'c']
         result.val == Channel.STOP
+    }
+
+    def testSpreadWithPath() {
+        given:
+        def path1 = Paths.get('/some/data/file1')
+        def path2 = Paths.get('/some/data/file2')
+
+        when:
+        def result = Channel.from(1,2,3).spread( Channel.value(path1) )
+        then:
+        result.val == [1, path1]
+        result.val == [2, path1]
+        result.val == [3, path1]
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.from(1,2,3).spread( ['abc'] )
+        then:
+        result.val == [1, 'abc']
+        result.val == [2, 'abc']
+        result.val == [3, 'abc']
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.from(1,2,3).spread( Channel.value('abc') )
+        then:
+        result.val == [1, 'abc']
+        result.val == [2, 'abc']
+        result.val == [3, 'abc']
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.from(1,2).spread( Channel.from(path1,path2) )
+        then:
+        result.val == [1, path1]
+        result.val == [1, path2]
+        result.val == [2, path1]
+        result.val == [2, path2]
+        result.val == Channel.STOP
+
     }
 
     def testFlatten() {
