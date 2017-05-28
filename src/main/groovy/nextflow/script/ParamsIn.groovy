@@ -419,46 +419,41 @@ class EachInParam extends BaseInParam {
 
     @Override String getTypeName() { 'each' }
 
+    private List<InParam> inner = []
+
+    String getName() { '__$'+this.toString() }
+
+    EachInParam bind( def obj ) {
+        def nested = ( obj instanceof TokenFileCall
+                    ? new FileInParam(binding, inner, index).bind(obj.target)
+                    : new ValueInParam(binding, inner, index).bind(obj) )
+        this.bindObject = nested.bindObject
+        return this
+    }
+
+    InParam getInner() { inner[0] }
+
     @Override
     protected DataflowReadChannel inputValToChannel( value ) {
-
-        def variable = normalizeToVariable( value, name )
+        def variable = normalizeToVariable( value )
         super.inputValToChannel(variable)
     }
 
     @PackageScope
-    static DataflowVariable normalizeToVariable( value, String name = null) {
-        if( value instanceof DataflowReadChannel ) {
-            log.warn "Using queue channel on each parameter declaration should be avoided -- take in consideration to change declaration for each: '$name' parameter"
-            // everything is mapped to a collection
-            value = readValue(value)
+    DataflowExpression normalizeToVariable( value ) {
+        if( value instanceof DataflowExpression ) {
+            return value
         }
 
-        if( !(value instanceof Collection) ) {
-            value = [value]
+        else if( value instanceof DataflowReadChannel ) {
+            return ToListOp.apply(value)
         }
 
-        // the collection is wrapped to a "scalar" dataflow variable
-        Nextflow.variable(value)
-    }
-
-
-    /**
-     * Converts the specified arguments to a {@code List} data type
-     *
-     * @param item
-     * @return
-     */
-    @PackageScope
-    static readValue( DataflowReadChannel channel ) {
-
-        if( channel instanceof DataflowExpression ) {
-            return channel.getVal()
-        }
         else {
-            return ToListOp.apply(channel).getVal()
+            def result = new DataflowVariable()
+            result.bind(value)
+            return result
         }
-
     }
 
 }
