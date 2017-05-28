@@ -21,6 +21,7 @@
 package nextflow.script
 
 import nextflow.Channel
+import nextflow.Session
 import spock.lang.Specification
 
 /**
@@ -29,23 +30,24 @@ import spock.lang.Specification
  */
 class EachInParamTest extends Specification {
 
+    def setupSpec() {
+        new Session()
+    }
+
     def testNormalize() {
 
         given:
         def channel = Channel.from(1,2,3,5)
         def value = Channel.value('a')
         def list = Channel.value([4,5,6])
+        def each = new EachInParam(Mock(Binding), [])
 
         expect:
-        EachInParam.normalizeToVariable(1).getVal() == [1]
-        EachInParam.normalizeToVariable([3,4,5]).getVal() == [3,4,5]
-        EachInParam.normalizeToVariable(channel).get() == [1,2,3,5]
-        EachInParam.normalizeToVariable(value).get() == ['a']
-        EachInParam.normalizeToVariable(list).get() == [4,5,6]
-
-
-
-
+        each.normalizeToVariable(1).val == 1
+        each.normalizeToVariable([3,4,5]).val == [3,4,5]
+        each.normalizeToVariable(channel).val == [1,2,3,5]
+        each.normalizeToVariable(value).val == 'a'
+        each.normalizeToVariable(list).val == [4,5,6]
 
     }
 

@@ -515,7 +515,10 @@ class TaskProcessor {
                 """
             { ${args.join(',')} ->
                 def out = [ ${outs.join(',')} ]
-                def itr = [ ${indexes.collect { 'x'+it }.join(',')} ]
+                def itr = [ ${indexes.collect { 'x'+it }.join(',')} ].collect {
+                        if( it instanceof Collection ) return it
+                        else { def x=new ArrayList(1); x.add(it); return x }
+                    }
                 def cmb = itr.combinations()
                 for( entries in cmb ) {
                     def count = 0
@@ -704,6 +707,8 @@ class TaskProcessor {
         config.getInputs().each { InParam param ->
             if( param instanceof SetInParam )
                 param.inner.each { task.setInput(it)  }
+            else if( param instanceof EachInParam )
+                task.setInput(param.inner)
             else
                 task.setInput(param)
         }
@@ -1785,7 +1790,6 @@ class TaskProcessor {
             def val = decodeInputValue(param,values)
 
             switch(param) {
-                case EachInParam:
                 case ValueInParam:
                     contextMap.put( param.name, val )
                     break
@@ -1800,7 +1804,7 @@ class TaskProcessor {
                     break
 
                 default:
-                    log.debug "Unsupported input param type: ${param?.class?.simpleName}"
+                    throw new IllegalStateException("Unsupported input param type: ${param?.class?.simpleName}")
             }
 
             // add the value to the task instance context
