@@ -208,12 +208,21 @@ abstract class ContainerBuilder {
         mountPaths.each { trie.add(it) }
 
         def paths = trie.longest()
-        paths.each{ if(it) result << "-v ${Escape.path(it)}:${Escape.path(it)} " }
+        paths.each {
+            if(it) {
+                result << composeVolumePath(it)
+                result << ' '
+            }
+        }
 
         // -- append by default the current path -- this is needed when `scratch` is set to true
         result << '-v "$PWD":"$PWD"'
 
         return result
+    }
+
+    protected String composeVolumePath( String path ) {
+        "-v ${Escape.path(path)}:${Escape.path(path)}"
     }
 
 }
