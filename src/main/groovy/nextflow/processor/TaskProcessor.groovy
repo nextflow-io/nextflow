@@ -588,10 +588,10 @@ class TaskProcessor {
             final param = declaredSets[i]
             final entry = values[param.index]
             final expected = param.inner.size()
-            final actual = entry instanceof List ? entry.size() : 1
+            final actual = entry instanceof Collection ? entry.size() : (entry instanceof Map ? entry.size() : 1)
 
             if( actual != expected ) {
-                log.warn("Process `$name` input tuple does not match declared input set cardinality -- offending value: $entry")
+                log.warn1("Input tuple does not match input set cardinality declared by process `$name` -- offending value: $entry", firstOnly: true, cacheKey: this)
             }
         }
     }
