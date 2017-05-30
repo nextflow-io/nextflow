@@ -548,7 +548,7 @@ class TaskProcessor {
 
         // create and initialize the task instance to be executed
         final List values = args instanceof List ? args : [args]
-        log.trace "Invoking new task > $name"
+        log.trace "Invoking task > $name"
 
         // -- create the task run instance
         final task = createTaskRun()
@@ -684,7 +684,7 @@ class TaskProcessor {
      */
 
     final protected TaskRun createTaskRun() {
-        log.trace "Creating a new process > $name"
+        log.trace "Creating a new task > $name"
 
         def index = indexCount.incrementAndGet()
         def task = new TaskRun(
@@ -1759,13 +1759,15 @@ class TaskProcessor {
         def val = values[ param.index ]
         if( param.mapIndex != -1 ) {
             def list
-            if( val instanceof Map )
+            if( val instanceof Map ) {
                 list = val.values()
-
-            else if( val instanceof Collection )
+            }
+            else if( val instanceof Collection ) {
                 list = val
-            else
+            }
+            else {
                 list = [val]
+            }
 
             try {
                 return list[param.mapIndex]
