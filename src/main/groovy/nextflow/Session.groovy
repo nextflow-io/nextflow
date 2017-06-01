@@ -578,11 +578,23 @@ class Session implements ISession {
         if( aborted ) return
         log.debug "Session aborted -- Cause: ${cause?.message ?: cause ?: '-'}"
         aborted = true
-        notifyError(null)
-        dispatcher.signal()
-        processesBarrier.forceTermination()
-        monitorsBarrier.forceTermination()
-        allProcessors *. terminate()
+        try {
+            notifyError(null)
+            dispatcher.signal()
+            processesBarrier.forceTermination()
+            monitorsBarrier.forceTermination()
+            processorsTermination()
+        }
+        catch( Throwable e ) {
+            log.debug "Unexpected error while aborting execution", e
+        }
+    }
+
+    private void processorsTermination() {
+        def processors = (DataflowProcessor[])allProcessors.toArray()
+        for( int i=0; i<processors.size(); i++ ) {
+            processors[i].terminate()
+        }
     }
 
     @PackageScope
