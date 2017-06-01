@@ -44,7 +44,6 @@ class PbsExecutor extends AbstractGridExecutor {
         result << '-N' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
         result << '-j' << 'oe'
-        result << '-V' << ''
 
         // the requested queue name
         if( task.config.queue ) {

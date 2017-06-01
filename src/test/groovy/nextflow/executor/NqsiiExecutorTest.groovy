@@ -67,7 +67,6 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j o
-                #PBS -V
                 #PBS -b 1
                 #PBS -l cpunum_job=1
                 cd /work/dir
@@ -84,7 +83,6 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j o
-                #PBS -V
                 #PBS -b 1
                 #PBS -q alpha
                 #PBS -l cpunum_job=1
@@ -104,7 +102,6 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j o
-                #PBS -V
                 #PBS -b 1
                 #PBS -q alpha
                 #PBS -l cpunum_job=1
@@ -127,7 +124,6 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j o
-                #PBS -V
                 #PBS -b 1
                 #PBS -q delta
                 #PBS -l cpunum_job=2
@@ -148,7 +144,6 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j o
-                #PBS -V
                 #PBS -b 1
                 #PBS -q delta
                 #PBS -l cpunum_job=8
@@ -168,7 +163,6 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j o
-                #PBS -V
                 #PBS -b 1
                 #PBS -q delta
                 #PBS -l cpunum_job=1
@@ -201,7 +195,6 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o "/work/dir\\ 1/.command.log"
                 #PBS -j o
-                #PBS -V
                 #PBS -b 1
                 #PBS -l cpunum_job=1
                 cd "/work/dir\\ 1"

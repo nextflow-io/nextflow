@@ -46,8 +46,7 @@ class NqsiiExecutor extends AbstractGridExecutor {
         result << '-N' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
         result << '-j' << 'o'  // stderr to stdin
-        result << '-V' << ''   // note: directive need to be returned as pairs for this reason an empty string value is added for flag options
-        result << '-b' << 1    // set number of nodes to 1
+        result << '-b' << '1'    // set number of nodes to 1
 
         // the requested queue name
         if( task.config.queue ) {
