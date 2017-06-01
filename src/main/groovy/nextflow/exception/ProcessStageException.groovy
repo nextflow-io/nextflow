@@ -8,5 +8,5 @@ import groovy.transform.InheritConstructors
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class ProcessStageException {
+class ProcessStageException extends ProcessException {
 }
