@@ -249,8 +249,11 @@ class ScriptRunner {
         // TODO add test for this property
         session.binding.setVariable( 'baseDir', session.baseDir )
         session.binding.setVariable( 'workDir', session.workDir )
-        if( scriptFile )
-        session.binding.setVariable( 'workflow', new WorkflowMetadata(this) )
+        if( scriptFile ) {
+            def meta = new WorkflowMetadata(this)
+            session.binding.setVariable( 'workflow', meta )
+            session.binding.setVariable( 'nextflow', meta.nextflow )
+        }
 
         // generate an unique class name
         session.scriptClassName = generateClassName(scriptText)

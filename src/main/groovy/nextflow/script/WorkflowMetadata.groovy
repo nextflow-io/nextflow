@@ -29,6 +29,8 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.config.ConfigBuilder
 import nextflow.util.Duration
+import nextflow.util.VersionNumber
+
 /**
  * Models workflow metadata properties and notification handler
  *
@@ -182,7 +184,7 @@ class WorkflowMetadata {
         this.start = new Date()
         this.container = owner.fetchContainers()
         this.commandLine = owner.commandLine
-        this.nextflow = [version: Const.APP_VER, build: Const.APP_BUILDNUM, timestamp: Const.APP_TIMESTAMP_UTC]
+        this.nextflow = [version: new VersionNumber(Const.APP_VER), build: Const.APP_BUILDNUM, timestamp: Const.APP_TIMESTAMP_UTC]
         this.workDir = owner.session.workDir
         this.launchDir = Paths.get('.').complete()
         this.profile = owner.profile ?: ConfigBuilder.DEFAULT_PROFILE

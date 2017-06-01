@@ -26,6 +26,7 @@ import nextflow.Const
 import nextflow.Session
 import nextflow.scm.AssetManager
 import nextflow.util.Duration
+import nextflow.util.VersionNumber
 import org.eclipse.jgit.api.Git
 import spock.lang.Specification
 
@@ -100,7 +101,7 @@ class WorkflowMetadataTest extends Specification {
         metadata.start <= new Date()
         metadata.complete == null
         metadata.commandLine == 'nextflow run -this -that'
-        metadata.nextflow.version == Const.APP_VER
+        metadata.nextflow.version == new VersionNumber(Const.APP_VER)
         metadata.nextflow.build == Const.APP_BUILDNUM
         metadata.nextflow.timestamp == Const.APP_TIMESTAMP_UTC
         metadata.profile == 'standard'
