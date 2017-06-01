@@ -6,7 +6,7 @@ Workflow introspection
 
 
 Runtime metadata
---------------------
+----------------
 
 The implicit ``workflow`` object allows you to access some workflow and runtime metadata in your Nextflow scripts.
 For example::
@@ -48,15 +48,33 @@ start                       Timestamp of workflow at execution start.
 :sup:`*` exitStatus         Exit status of the task that caused the workflow execution to fail.
 :sup:`*` errorMessage       Error message of the task that caused the workflow execution to fail.
 :sup:`*` errorReport        Detailed error of the task that caused the workflow execution to fail.
+=========================== ===========================
+
+| Properties marked with a `✝` are accessible only in the workflow completion handler.
+| Properties marked with a `*` are accessible only in the workflow completion and error handlers. See the `Completion handler`_ section for details.
+|
+Nextflow metadata
+-----------------
+
+The implicit ``nextflow`` object allows you to access the metadata information of the Nextflow runtime.
+
+=========================== ===========================
+Name                        Description
+=========================== ===========================
 nextflow.version            Nextflow runtime version number.
 nextflow.build              Nextflow runtime build number.
 nextflow.timestamp          Nextflow runtime compile timestamp.
 =========================== ===========================
 
+The method ``nextflow.version.matches`` allows you to check if the Nextflow runtime satisfies the version
+requirement eventually needed by your workflow script. The required version string can be prefixed with the usual
+comparison operators eg ``>``, ``>=``, ``=``, etc. or postfixed with the ``+`` operator to specify a minimal version
+requirement. For example::
 
-Properties marked with a `✝` are accessible only in the workflow completion handler.
-Properties marked with a `*` are accessible only in the workflow completion and error handlers.
-See the following section for details.
+    if( !nextflow.version.matches('0.22+') ) {
+        println "This workflow requires Nextflow version 0.22 or greater -- You are running version $nextflow.version"
+        exit 1
+    }
 
 
 Completion handler
