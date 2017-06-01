@@ -80,7 +80,7 @@ class VersionNumberTest extends Specification {
     def 'should validate version check for version #version' () {
 
         expect:
-        new VersionNumber(version) .check(condition) == expected
+        new VersionNumber(version) .matches(condition) == expected
 
         where:
         version     | condition     | expected
@@ -101,7 +101,7 @@ class VersionNumberTest extends Specification {
     def 'should validate plus syntax for version: #version' () {
 
         expect:
-        new VersionNumber(version) .check(condition) == expected
+        new VersionNumber(version) .matches(condition) == expected
 
         where:
         version     | condition     | expected
