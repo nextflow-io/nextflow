@@ -761,7 +761,7 @@ class TaskProcessor {
             }
 
             log.trace "[${task.name}] Cacheable folder: $folder -- exists: $exists; try: $tries"
-            def cached = shouldTryCache && exists && checkCachedOutput(task, folder, hash)
+            def cached = shouldTryCache && exists && checkCachedOutput(task.clone(), folder, hash)
             if( cached )
                 return false
 
@@ -891,12 +891,17 @@ class TaskProcessor {
         /*
          * verify stdout file
          */
-        final ctx = entry.context
         final stdoutFile = folder.resolve( TaskRun.CMD_OUTFILE )
+
+        if( entry.context != null ) {
+            task.context = entry.context
+            task.config.context = entry.context
+            task.code?.delegate = entry.context
+        }
 
         try {
             // -- check if all output resources are available
-            collectOutputs(task, folder, stdoutFile, ctx)
+            collectOutputs(task, folder, stdoutFile, task.context)
 
             // set the exit code in to the task object
             task.cached = true
@@ -905,11 +910,6 @@ class TaskProcessor {
             task.stdout = stdoutFile
             if( exitCode != null ) {
                 task.exitStatus = exitCode
-            }
-            if( ctx != null ) {
-                task.context = ctx
-                task.config.context = ctx
-                task.code?.delegate = ctx
             }
 
             log.info "[${task.hashLog}] Cached process > ${task.name}"
