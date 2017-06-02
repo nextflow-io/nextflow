@@ -1662,6 +1662,7 @@ The maths operators are:
 * `min`_
 * `max`_
 * `sum`_
+* `toInteger`_
 
 
 count
@@ -1840,6 +1841,21 @@ a function that, given an item, returns the value to be summed. For example::
 ::
 
 	Square: 91
+
+
+
+toInteger
+---------
+
+The ``toInteger`` operator allows you to convert the string values emitted by a channel to ``Integer`` values. For
+example::
+
+    Channel
+        .from( '1', '7', '12' )
+        .toInteger()
+        .sum()
+        .println()
+
 
 
 Other operators
