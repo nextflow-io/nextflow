@@ -29,6 +29,7 @@ The available filter operators are:
 * `filter`_
 * `first`_
 * `last`_
+* `randomSample`_
 * `take`_
 * `unique`_
 
@@ -201,6 +202,20 @@ a Java `class` type or any boolean `predicate`. For example::
         .from( 1,2,3,4,5 )
         .first { it > 3 }
         .subscribe { println it }
+
+
+randomSample
+------------
+
+The ``randomSample`` operator allows you to create a channel emitting the specified number of items randomly taken
+from the channel to which is applied. For example::
+
+  Channel
+        .from( 1..100 )
+        .randomSample( 10 )
+        .println()
+
+The above snippet will print 10 numbers in the range from 1 to 100.
 
 
 take
