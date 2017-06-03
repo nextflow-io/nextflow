@@ -92,13 +92,9 @@ and ``datasetFile``):
     }
 
 In our example above would now have the folder ``broccoli`` in the results directory which would
-contain the file ``broccoli.aln``.
+contain the file ``broccoli.aln``. If the input file has multiple extensions (e.g. ``brocolli.tar.gz``), you will want to use ``file.simpleName``
+instead, to strip all of them (available since Nextflow 0.25).
 
-Channels can contain and emit any type of data structure simplifying the
-flow of data.
-
-In some instances your filename may include multiple extensions (e.g. ``broccoli.tar.gz``). In such cases you can get
-the base name with ``file.getBaseName(2)``, where the number corresponds to the number of extensions to strip.
 
 How do I use the same channel multiple times?
 ---------------------------------------------
