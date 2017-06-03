@@ -92,10 +92,9 @@ and ``datasetFile``):
     }
 
 In our example above would now have the folder ``broccoli`` in the results directory which would
-contain the file ``broccoli.aln``.
+contain the file ``broccoli.aln``. If the input file has multiple extensions (e.g. ``brocolli.tar.gz``), you will want to use ``file.simpleName``
+instead, to strip all of them (available since Nextflow 0.25).
 
-Channels can contain and emit any type of data structure simplifying the
-flow of data.
 
 How do I use the same channel multiple times?
 ---------------------------------------------
@@ -124,7 +123,7 @@ Then we can define a process for aligning the datasets with *ClustalW*:
     process clustalw2_align {
         input:
         file vegetable_fasta from datasets_clustalw
-        
+
         output:
         file "${vegetable_fasta.baseName}.aln" into clustalw_alns
 
@@ -141,7 +140,7 @@ And a process for aligning the datasets with *T-Coffee*:
     process tcoffee_align {
         input:
         file vegetable_fasta from datasets_tcoffee
-        
+
         output:
         file "${vegetable_fasta.baseName}.aln" into tcoffee_alns
 
@@ -180,7 +179,7 @@ alignments are in the channel ``clustalw_alns``:
     process phylip_reformat {
         input:
         file clustalw_alignment from clustalw_alns
-        
+
         output:
         file "${clustalw_alignment.baseName}.phy" to clustalw_phylips
 
