@@ -543,7 +543,7 @@ The following fragment shows how a wildcard can be used in the input file declar
 
     }
 
-Note that rewriting input filenames according to named pattern is an extra feature and not at all obligatory. The
+Note that rewriting input filenames according to a named pattern is an extra feature and not at all obligatory. The
 normal constructs are valid for collections of multiple files as well. The following is functionally equivalent to the
 above, but preserves original staging names::
 
