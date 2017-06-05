@@ -521,6 +521,7 @@ replaced depending on the cardinality of the received input collection.
 ============ ============== ==================================================
 Cardinality   Name pattern     Staged file names
 ============ ============== ==================================================
+ any         ``*``           (named as source)
  1           ``file*.ext``   ``file.ext``
  1           ``file?.ext``   ``file1.ext``
  1           ``file??.ext``  ``file01.ext``
@@ -542,6 +543,11 @@ The following fragment shows how a wildcard can be used in the input file declar
 
     }
 
+
+.. note:: Rewriting input file names according to a named pattern is an extra feature and not at all obligatory.
+  The normal file input constructs introduced in the `Input of files`_ section are valid for collections of
+  multiple files as well. To handle multiple input files preserving the original file names, use the ``*`` wildcard as
+  name pattern or a variable identifier.
 
 Dynamic input file names
 ----------------------------
