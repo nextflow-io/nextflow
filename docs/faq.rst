@@ -1,8 +1,8 @@
 .. _faq-page:
 
-**************************
-Frequently Asked Questions
-**************************
+***
+FAQ
+***
 
 How do I process multiple input files in parallel?
 --------------------------------------------------
@@ -94,8 +94,9 @@ and ``datasetFile``):
 In our example above would now have the folder ``broccoli`` in the results directory which would
 contain the file ``broccoli.aln``.
 
-Channels can contain and emit any type of data structure simplifying the
-flow of data.
+If the input file has multiple extensions (e.g. ``brocolli.tar.gz``), you will want to use
+``file.simpleName`` instead, to strip all of them (available since Nextflow 0.25+).
+
 
 How do I use the same channel multiple times?
 ---------------------------------------------
