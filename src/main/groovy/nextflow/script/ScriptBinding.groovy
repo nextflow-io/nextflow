@@ -130,6 +130,13 @@ class ScriptBinding extends Binding {
         super.hasVariable(name) || configEnv.containsKey(name) || sysEnv.containsKey(name)
     }
 
+    @Override
+    void setVariable( String name, Object value ) {
+        if( name == 'channel' )
+            log.warn 'The use of the identifier `channel` as variable name is discouraged and will be deprecated in a future version'
+        super.setVariable(name, value)
+    }
+
     /**
      * Holds parameter immutable values
      */
