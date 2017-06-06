@@ -22,10 +22,13 @@ package nextflow.cloud.aws
 import java.nio.file.Files
 
 import com.amazonaws.services.ec2.AmazonEC2Client
+import com.amazonaws.services.ec2.model.RequestSpotInstancesRequest
+import com.amazonaws.services.ec2.model.RunInstancesRequest
 import com.amazonaws.services.ec2.waiters.AmazonEC2Waiters
 import com.amazonaws.waiters.Waiter
 import nextflow.Global
 import nextflow.cloud.CloudConfig
+import nextflow.cloud.LaunchConfig
 import nextflow.cloud.types.CloudInstanceStatus
 import nextflow.config.ConfigBuilder
 import org.apache.commons.lang.SerializationUtils
@@ -529,6 +532,80 @@ class AmazonCloudDriverTest extends Specification {
         driver.waitInstanceStatus(instanceIds, CloudInstanceStatus.TERMINATED)
         then:
         1 * waiters.instanceTerminated() >> { Mock(Waiter) }
+
+    }
+
+
+    def 'should make a plain instance request' () {
+
+        given:
+        final COUNT = 9
+        final AMI = 'ami-123'
+        final TYPE = 'mx2.123'
+        final KEY = 'my-key'
+        final SECURITY =  ['sg-123']
+        final SUBNET = 'subnet-666'
+        def cfg = Mock(LaunchConfig)
+        cfg.getNextflow() >> { new CloudConfig.Nextflow([version:'1.0', trace:'INFO']) }
+        def driver = Spy(AmazonCloudDriver)
+
+        when:
+        def req = driver.makeRunRequest(COUNT, cfg)
+
+        then:
+        (1.._) * cfg.getImageId() >> AMI
+        (1.._) * cfg.getInstanceType() >> TYPE
+        1 * driver.getUserDataAsBase64(cfg)
+        1 * driver.getBlockDeviceMappings(cfg)
+        (1.._) * cfg.getKeyName() >> KEY
+        (1.._) * cfg.getSecurityGroups() >> SECURITY
+        (1.._) * cfg.getSubnetId() >> SUBNET
+
+        req instanceof RunInstancesRequest
+        req.getMinCount() == COUNT
+        req.getMaxCount() == COUNT
+        req.getImageId() == AMI
+        req.getInstanceType() == TYPE
+        req.getKeyName() == KEY
+        req.getSecurityGroupIds() == SECURITY
+        req.getSubnetId() == SUBNET
+    }
+
+    def 'should create a spot instance request' () {
+
+        given:
+        final COUNT = 33
+        final AMI = 'ami-996'
+        final TYPE = 'lx2.663'
+        final KEY = 'your-key'
+        final SECURITY =  ['sg-775']
+        final SUBNET = 'subnet-784'
+        final PRICE = '1.52'
+        def cfg = Mock(LaunchConfig)
+        cfg.getNextflow() >> { new CloudConfig.Nextflow([version:'1.0', trace:'INFO']) }
+        def driver = Spy(AmazonCloudDriver)
+
+        when:
+        def req = driver.makeSpotRequest(COUNT, cfg)
+
+        then:
+        (1.._) * cfg.getImageId() >> AMI
+        (1.._) * cfg.getInstanceType() >> TYPE
+        1 * driver.getUserDataAsBase64(cfg)
+        1 * driver.getBlockDeviceMappings(cfg)
+        (1.._) * cfg.getKeyName() >> KEY
+        (1.._) * cfg.getSecurityGroups() >> SECURITY
+        (1.._) * cfg.getSubnetId() >> SUBNET
+        1 * cfg.getSpotPrice() >> PRICE
+
+        req instanceof RequestSpotInstancesRequest
+        req.getInstanceCount() == COUNT
+        req.getSpotPrice() == PRICE
+        req.getLaunchSpecification().getImageId() == AMI
+        req.getLaunchSpecification().getInstanceType() == TYPE
+        req.getLaunchSpecification().getKeyName() == KEY
+        req.getLaunchSpecification().getSecurityGroups() == SECURITY
+        req.getLaunchSpecification().getSubnetId() == SUBNET
 
     }
 
