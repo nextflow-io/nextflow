@@ -22,6 +22,8 @@ package nextflow.cloud.aws
 import java.nio.file.Files
 
 import com.amazonaws.services.ec2.AmazonEC2Client
+import com.amazonaws.services.ec2.model.BlockDeviceMapping
+import com.amazonaws.services.ec2.model.EbsBlockDevice
 import com.amazonaws.services.ec2.model.RequestSpotInstancesRequest
 import com.amazonaws.services.ec2.model.RunInstancesRequest
 import com.amazonaws.services.ec2.waiters.AmazonEC2Waiters
@@ -31,6 +33,7 @@ import nextflow.cloud.CloudConfig
 import nextflow.cloud.LaunchConfig
 import nextflow.cloud.types.CloudInstanceStatus
 import nextflow.config.ConfigBuilder
+import nextflow.util.MemoryUnit
 import org.apache.commons.lang.SerializationUtils
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -545,6 +548,7 @@ class AmazonCloudDriverTest extends Specification {
         final KEY = 'my-key'
         final SECURITY =  ['sg-123']
         final SUBNET = 'subnet-666'
+        final BLOCK = new BlockDeviceMapping().withDeviceName('/dev/xvdc')
         def cfg = Mock(LaunchConfig)
         cfg.getNextflow() >> { new CloudConfig.Nextflow([version:'1.0', trace:'INFO']) }
         def driver = Spy(AmazonCloudDriver)
@@ -556,7 +560,7 @@ class AmazonCloudDriverTest extends Specification {
         (1.._) * cfg.getImageId() >> AMI
         (1.._) * cfg.getInstanceType() >> TYPE
         1 * driver.getUserDataAsBase64(cfg)
-        1 * driver.getBlockDeviceMappings(cfg)
+        1 * driver.getBlockDeviceMappings(cfg) >> [ BLOCK ]
         (1.._) * cfg.getKeyName() >> KEY
         (1.._) * cfg.getSecurityGroups() >> SECURITY
         (1.._) * cfg.getSubnetId() >> SUBNET
@@ -569,6 +573,8 @@ class AmazonCloudDriverTest extends Specification {
         req.getKeyName() == KEY
         req.getSecurityGroupIds() == SECURITY
         req.getSubnetId() == SUBNET
+        req.getBlockDeviceMappings().size() == 1
+        req.getBlockDeviceMappings()[0] == BLOCK
     }
 
     def 'should create a spot instance request' () {
@@ -581,6 +587,7 @@ class AmazonCloudDriverTest extends Specification {
         final SECURITY =  ['sg-775']
         final SUBNET = 'subnet-784'
         final PRICE = '1.52'
+        final BLOCK = new BlockDeviceMapping().withDeviceName('/dev/xvdc')
         def cfg = Mock(LaunchConfig)
         cfg.getNextflow() >> { new CloudConfig.Nextflow([version:'1.0', trace:'INFO']) }
         def driver = Spy(AmazonCloudDriver)
@@ -592,7 +599,7 @@ class AmazonCloudDriverTest extends Specification {
         (1.._) * cfg.getImageId() >> AMI
         (1.._) * cfg.getInstanceType() >> TYPE
         1 * driver.getUserDataAsBase64(cfg)
-        1 * driver.getBlockDeviceMappings(cfg)
+        1 * driver.getBlockDeviceMappings(cfg) >> [ BLOCK ]
         (1.._) * cfg.getKeyName() >> KEY
         (1.._) * cfg.getSecurityGroups() >> SECURITY
         (1.._) * cfg.getSubnetId() >> SUBNET
@@ -606,6 +613,40 @@ class AmazonCloudDriverTest extends Specification {
         req.getLaunchSpecification().getKeyName() == KEY
         req.getLaunchSpecification().getSecurityGroups() == SECURITY
         req.getLaunchSpecification().getSubnetId() == SUBNET
+        req.getLaunchSpecification().getBlockDeviceMappings().size() == 1
+        req.getLaunchSpecification().getBlockDeviceMappings()[0] == BLOCK
+
+    }
+
+    def 'should create block device mapping list' () {
+        given:
+        final SIZE = MemoryUnit.of('20 GB')
+        final DEVICE = '/dev/xyz'
+        final AMI = 'ami-3232'
+        final SNAPSHOT = 'snap-2121'
+        final BLOCK = new BlockDeviceMapping()
+                    .withDeviceName('/root')
+                    .withEbs( new EbsBlockDevice().withSnapshotId(SNAPSHOT) )
+
+        def cfg = Mock(LaunchConfig)
+        cfg.getImageId() >> AMI
+        def driver = Spy(AmazonCloudDriver)
+
+        when:
+        def maps = driver.getBlockDeviceMappings(cfg)
+
+        then:
+        (1.._) * cfg.getInstanceStorageDevice() >> DEVICE
+        (1.._) * cfg.getBootStorageSize() >> SIZE
+        1 * driver.getRooDeviceMapping(AMI) >> BLOCK
+
+        maps.size() == 2
+        maps[0].deviceName == DEVICE
+        maps[0].virtualName== 'ephemeral0'
+        maps[1].deviceName == '/root'
+        maps[1].ebs.snapshotId == SNAPSHOT
+        maps[1].ebs.volumeSize == (int)SIZE.toGiga()
+
 
     }
 
