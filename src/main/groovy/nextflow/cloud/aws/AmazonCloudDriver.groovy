@@ -378,6 +378,7 @@ class AmazonCloudDriver implements CloudDriver {
             spec.setImageId(imageId)
             spec.setInstanceType(instanceType)
             spec.setUserData( getUserDataAsBase64(cfg) )
+            spec.setBlockDeviceMappings( getBlockDeviceMappings(cfg) )
 
             if( keyName )
                 spec.keyName = keyName
