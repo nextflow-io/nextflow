@@ -1181,6 +1181,7 @@ For example::
           3
 
 
+.. _operator-phase:
 
 phase
 --------
@@ -1237,6 +1238,7 @@ It prints::
     [null, 4]
 
 
+.. _operator-cross:
 
 cross
 -------
@@ -1391,6 +1393,8 @@ The following example shows how use a `closure` to collect and sort all sequence
  and it will require as much free space as are the data you are collecting. Optionally, an alternative temporary data
  folder can be specified by using the ``tempDir`` parameter.
 
+.. _operator-combine:
+
 combine
 -------
 
@@ -1432,6 +1436,9 @@ For example::
     [B, 2, y]
 
 
+See also `cross`_, `spread`_ and `phase`_.
+
+.. _operator-concat:
 
 concat
 --------
@@ -1461,6 +1468,7 @@ It will output::
     b
     c
 
+.. _operator-spread:
 
 spread
 ---------
