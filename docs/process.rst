@@ -696,7 +696,7 @@ Input repeaters
 ----------------
 
 The ``each`` qualifier allows you to repeat the execution of a process for each item in a collection,
-every time new data is received. For example::
+every time a new data is received. For example::
 
   sequences = Channel.fromPath('*.fa')
   methods = ['regular', 'expresso', 'psicoffee']
@@ -709,55 +709,41 @@ every time new data is received. For example::
     """
     t_coffee -in $seq -mode $mode > result
     """
-
   }
 
 
 In the above example every time a file of sequences is received as input by the process,
-it executes three T-coffee tasks, using a different value for the ``mode`` parameter.
-
+it executes *three* tasks running a T-coffee alignment with a different value for the ``mode`` parameter.
 This is useful when you need to `repeat` the same task for a given set of parameters.
 
-.. note:: When multiple repeaters are declared, the process is executed for each *combination* them.
+Since version 0.25+ input repeaters can be applied to files as well. For example::
 
-Take in consideration the following example. The process declares, in input, a channel receiving a
-generic ``shape`` of values. Each time a new shape value is received, it `draws` it
-in two different colors and three different sizes::
+    sequences = Channel.fromPath('*.fa')
+    methods = ['regular', 'expresso']
+    libraries = [ file('PQ001.lib'), file('PQ002.lib'), file('PQ003.lib') ]
 
-    shapes = Channel.from('circle','square', 'triangle' .. )
-
-    process combine {
+    process alignSequences {
       input:
-      val shape from shapes
-      each color from 'red','blue'
-      each size from 1,2,3
+      file seq from sequences
+      each mode from methods
+      each file(lib) from libraries
 
-      "echo draw $shape $color with size: $size"
-
+      """
+      t_coffee -in $seq -mode $mode -lib $lib > result
+      """
     }
 
-Will output::
 
-    draw circle red with size: 1
-    draw circle red with size: 2
-    draw circle red with size: 3
-    draw circle blue with size: 1
-    draw circle blue with size: 2
-    draw circle blue with size: 3
-    draw square red with size: 1
-    draw square red with size: 2
-    draw square red with size: 3
-    draw square blue with size: 1
-    draw square blue with size: 2
-    draw square blue with size: 3
-    draw triangle red with size: 1
-    draw triangle red with size: 2
-    draw triangle red with size: 3
-    draw triangle blue with size: 1
-    draw triangle blue with size: 2
-    draw triangle blue with size: 3
-    ..
+.. note:: When multiple repeaters are declared, the process is executed for each *combination* of them.
 
+In the latter example for any sequence input file emitted by the ``sequences`` channel are executed 6 alignments,
+3 using the ``regular`` method against each library files, and other 3 by using the ``expresso`` method always
+against the same library files.
+
+
+.. hint:: If you need to repeat the execution of a process over n-tuple of elements instead a simple values or files,
+  create a channel combining the input values as needed to trigger the process execution multiple times.
+  In this regard, see the :ref:`operator-combine`, :ref:`operator-cross` and :ref:`operator-phase` operators.
 
 Outputs
 ========
