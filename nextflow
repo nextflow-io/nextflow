@@ -266,7 +266,7 @@ if [ ! -f "$NXF_BIN" ]; then
     [ -f "$NXF_PATH" ] && rm "$NXF_PATH"
     mkdir -p "$NXF_PATH" || exit $?
     tmpfile=$(make_temp)
-    get "$NXF_URL" "$tmpfile"
+    get "$NXF_URL" "$tmpfile" "$NXF_BIN"
     mv "$tmpfile" "$NXF_BIN"
 fi
 
