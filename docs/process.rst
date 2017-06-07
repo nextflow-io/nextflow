@@ -282,7 +282,7 @@ the latter and making process scripts more readable and easy to maintain. For ex
 
 
 
-In the above trivial example the ``$USER`` variable is managed by the BASH interpreter, while ``!{str}`` is handled 
+In the above trivial example the ``$USER`` variable is managed by the BASH interpreter, while ``!{str}`` is handled
 as a process input variable managed by Nextflow.
 
 .. note::
@@ -290,7 +290,7 @@ as a process input variable managed by Nextflow.
     - Shell script definition requires the use of single-quote ``'`` delimited strings. When using double-quote ``"``
       delimited strings, dollar variables are interpreted as Nextflow variables as usual. See :ref:`string-interpolation`.
 
-    - Exclamation mark prefixed variables always need to be enclosed in curly brackets i.e. ``!{str}`` is a valid 
+    - Exclamation mark prefixed variables always need to be enclosed in curly brackets i.e. ``!{str}`` is a valid
       variable while ``!str`` is ignored.
 
     - Shell script supports the use of the file :ref:`process-template` mechanism. The same rules are applied to the variables
@@ -543,6 +543,19 @@ The following fragment shows how a wildcard can be used in the input file declar
 
     }
 
+Note that rewriting input filenames according to a named pattern is an extra feature and not at all obligatory. The
+normal constructs are valid for collections of multiple files as well. The following is functionally equivalent to the
+above, but preserves original staging names::
+
+    fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(count:3)
+
+    process blastThemAll {
+        input:
+        file '*' from fasta //or a variable instead of '*'
+
+        "cat *.fa"
+    }
+
 
 .. note:: Rewriting input file names according to a named pattern is an extra feature and not at all obligatory.
   The normal file input constructs introduced in the `Input of files`_ section are valid for collections of
@@ -572,8 +585,8 @@ In the above example, the input file name is set by using the current value of t
 This allows the input files to be staged in the script working directory with a name that is coherent
 with the current execution context.
 
-.. tip:: In most cases, you won't need to use dynamic file names, because each process is executed in its 
-  own private temporary directory, and input files are automatically staged to this directory by Nextflow. 
+.. tip:: In most cases, you won't need to use dynamic file names, because each process is executed in its
+  own private temporary directory, and input files are automatically staged to this directory by Nextflow.
   This guarantees that input files with the same name won't overwrite each other.
 
 
@@ -944,17 +957,17 @@ For example::
 In the above example, each time the process is executed an alignment file is produced whose name depends
 on the actual value of the ``x`` input.
 
-.. tip:: The management of output files is a very common misunderstanding when using Nextflow. 
-  With other tools, it is generally necessary to organize the outputs files into some kind of directory 
-  structure or to guarantee a unique file name scheme, so that result files won't overwrite each other 
+.. tip:: The management of output files is a very common misunderstanding when using Nextflow.
+  With other tools, it is generally necessary to organize the outputs files into some kind of directory
+  structure or to guarantee a unique file name scheme, so that result files won't overwrite each other
   and that they can be referenced univocally by downstream tasks.
 
-  With Nextflow, in most cases, you don't need to take care of naming output files, because each task is executed 
+  With Nextflow, in most cases, you don't need to take care of naming output files, because each task is executed
   in its own unique temporary directory, so files produced by different tasks can never override each other.
   Also meta-data can be associated with outputs by using the :ref:`set output <process-set>` qualifier, instead of
   including them in the output file name.
 
-  To sum up, the use of output files with static names over dynamic ones is preferable whenever possible, 
+  To sum up, the use of output files with static names over dynamic ones is preferable whenever possible,
   because it will result in a simpler and more portable code.
 
 
@@ -1057,7 +1070,7 @@ Directives
 Using the `directive` declarations block you can provide optional settings that will affect the execution of the current
 process.
 
-They must be entered at the top of the process `body`, before any other declaration blocks (i.e. ``input``, ``output``, etc) 
+They must be entered at the top of the process `body`, before any other declaration blocks (i.e. ``input``, ``output``, etc)
 and have the following syntax::
 
     name value [, value2 [,..]]
@@ -1131,7 +1144,7 @@ identify univocally the outputs produced by the process execution.
 
 
 The cache is enabled by default, you can disable it for a specific process by setting the ``cache``
-directive to ``false``. For example:: 
+directive to ``false``. For example::
 
   process noCacheThis {
     cache false
@@ -1390,7 +1403,7 @@ By default this directive is disabled, you can set it as shown in the example be
       echo 'do this as that .. '
       """
     }
-    
+
 .. note:: This setting considers the **total** errors accumulated for a given process, across all instances. If you want
   to control the number of times a process **instance** (aka task) can fail, use ``maxRetries``.
 
