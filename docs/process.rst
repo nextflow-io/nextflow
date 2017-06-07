@@ -1370,8 +1370,26 @@ The following example shows how to set the process's executor::
 ext
 ---
 
-The ``ext`` is a special directive used as *namespace* for user custom configuration properties that can be defined at
-process level. This can be useful for advanced configuration options.
+The ``ext`` is a special directive used as *namespace* for user custom process directives. This can be useful for
+advanced configuration options. For example::
+
+    process mapping {
+      container "biocontainers/star:${task.ext.version}"
+
+      input:
+      file genome from genome_file
+      set sampleId, file(reads) from reads_ch
+
+      """
+      STAR --genomeDir $genome --readFilesIn $reads
+      """
+    }
+
+In the above example, the process uses a container whose version is controlled by the ``ext.version`` property.
+This can be defined in the ``nextflow.config`` file as shown below::
+
+    process.ext.version = '2.5.3'
+
 
 
 .. _process-maxErrors:
