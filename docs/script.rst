@@ -109,7 +109,7 @@ To modify or add data to a map, the syntax is similar to adding values to list.
 
 Learn more about maps at the following links:
 
-* `Groovy Maps tutorial <http://http://groovy-lang.org/groovy-dev-kit.html#Collections-Maps>`_
+* `Groovy Maps tutorial <http://groovy-lang.org/groovy-dev-kit.html#Collections-Maps>`_
 * `Groovy Map SDK <http://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Map.html>`_
 * `Java Map SDK <http://docs.oracle.com/javase/7/docs/api/java/util/Map.html>`_
 
