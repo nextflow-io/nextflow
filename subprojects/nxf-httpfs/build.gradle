@@ -36,7 +36,8 @@ dependencies {
     compile "ch.qos.logback:logback-classic:1.1.10"
 
     /* testCompile inherited from top gradle build file */
-    testCompile 'com.github.tomakehurst:wiremock:1.57'
-    testCompile 'com.github.tomjankes:wiremock-groovy:0.2.0'
+    testCompile "org.codehaus.groovy:groovy-json:2.4.11" // needed by wiremock
+    testCompile ('com.github.tomakehurst:wiremock:1.57') { exclude module: 'groovy-all' }
+    testCompile ('com.github.tomjankes:wiremock-groovy:0.2.0') { exclude module: 'groovy-all' }
 }
 
