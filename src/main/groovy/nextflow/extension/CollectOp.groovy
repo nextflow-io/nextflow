@@ -20,14 +20,13 @@
 
 package nextflow.extension
 
+import static nextflow.util.CheckHelper.checkParams
+
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.util.ArrayBag
-import static nextflow.util.CheckHelper.*
-
-
 /**
  * Implements {@link DataflowExtensions#collect(groovyx.gpars.dataflow.DataflowReadChannel)}  operator
  *
@@ -61,7 +60,7 @@ class CollectOp {
         def next = { append(result, it) }
         def done = { target << ( result ? new ArrayBag(normalise(result)) : Channel.STOP )  }
 
-        DataflowExtensions.subscribeImpl(source, [onNext:next, onComplete:done])
+        DataflowHelper.subscribeImpl(source, [onNext:next, onComplete:done])
         return target
     }
 

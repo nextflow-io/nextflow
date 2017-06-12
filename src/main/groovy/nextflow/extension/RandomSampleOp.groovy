@@ -60,7 +60,7 @@ class RandomSampleOp {
 
     DataflowQueue apply() {
         result = new DataflowQueue()
-        DataflowExtensions.subscribeImpl(source, [onNext: this.&sampling, onComplete: this.&emit])
+        DataflowHelper.subscribeImpl(source, [onNext: this.&sampling, onComplete: this.&emit])
         return result
     }
 }

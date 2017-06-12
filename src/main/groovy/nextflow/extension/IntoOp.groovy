@@ -100,7 +100,7 @@ class IntoOp {
         params.outputs = outputs
         params.listeners = createListener()
 
-        DataflowExtensions.newOperator(params, new ChainWithClosure(new CopyChannelsClosure()))
+        DataflowHelper.newOperator(params, new ChainWithClosure(new CopyChannelsClosure()))
 
         return this
     }

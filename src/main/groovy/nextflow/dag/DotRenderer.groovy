@@ -61,7 +61,7 @@ class DotRenderer implements DagRenderer {
         return result.join('\n')
     }
 
-    private static String renderVertex(vertex) {
+    private static String renderVertex(DAG.Vertex vertex) {
 
         List attrs = []
 
@@ -109,7 +109,7 @@ class DotRenderer implements DagRenderer {
         return attrs ? "${vertex.getName()} [${attrs.join(',')}];" : null
     }
 
-    private static String renderEdge(edge) {
+    private static String renderEdge(DAG.Edge edge) {
         assert edge.from != null && edge.to != null
 
         String A = renderVertex( edge.from )

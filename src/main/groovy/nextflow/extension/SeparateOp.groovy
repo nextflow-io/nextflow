@@ -94,7 +94,7 @@ class SeparateOp {
         if( !mapper )
             mapper = createDefaultMapper(outputs.size())
 
-        DataflowExtensions.newOperator( [source], outputs, new SeparationClosure(mapper))
+        DataflowHelper.newOperator( [source], outputs, new SeparationClosure(mapper))
         return outputs
     }
 

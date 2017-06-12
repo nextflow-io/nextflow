@@ -22,6 +22,7 @@ package nextflow.extension
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
@@ -34,6 +35,7 @@ import nextflow.Channel
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class CrossOp {
 
     private DataflowReadChannel source
@@ -58,18 +60,18 @@ class CrossOp {
     DataflowQueue apply() {
 
         def result = new DataflowQueue()
-        def state = [:]
+        Map<Object,Map<Integer,List>> state = [:]
 
         final count = 2
         final stopCount = new AtomicInteger(count)
 
-        DataflowExtensions.subscribeImpl( source, crossHandlers(state, count, 0, result, mapper, stopCount ) )
-        DataflowExtensions.subscribeImpl( target, crossHandlers(state, count, 1, result, mapper, stopCount ) )
+        DataflowHelper.subscribeImpl( source, crossHandlers(state, count, 0, result, mapper, stopCount ) )
+        DataflowHelper.subscribeImpl( target, crossHandlers(state, count, 1, result, mapper, stopCount ) )
 
         return result
     }
 
-    static private final Map crossHandlers( Map<Object,Map<DataflowReadChannel,List>> buffer, int size, int index, DataflowWriteChannel target, Closure mapper, AtomicInteger stopCount ) {
+    static private final Map crossHandlers( Map<Object,Map<Integer,List>> buffer, int size, int index, DataflowWriteChannel target, Closure mapper, AtomicInteger stopCount ) {
 
         [
                 onNext: {

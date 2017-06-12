@@ -351,7 +351,14 @@ class TaskPollingMonitor implements TaskMonitor {
 
             // dump this line every two minutes
             dumpInterval.throttle(true) {
-                log.debug "!! executor $name > tasks to be completed: ${pollingQueue.size()} -- first: ${pollingQueue.peek()}"
+                def pending = pollingQueue.size()
+                if( !pending ) {
+                    log.warn "No more task to compute -- Execution may be stalled (see the log file for details)"
+                    log.debug session.dumpNetworkStatus()
+                }
+                else {
+                    log.debug "!! executor $name > tasks to be completed: ${pollingQueue.size()} -- first: ${pollingQueue.peek()}"
+                }
             }
         }
 

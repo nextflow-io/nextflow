@@ -24,7 +24,10 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Session
+import nextflow.extension.DataflowHelper
+import nextflow.processor.TaskProcessor
 import nextflow.script.DefaultInParam
 import nextflow.script.DefaultOutParam
 import nextflow.script.InParam
@@ -79,11 +82,11 @@ class DAG {
      * @param inputs The list of inputs entering in the process
      * @param outputs the list of outputs leaving the process
      */
-    void addProcessNode( String label, InputsList inputs, OutputsList outputs ) {
+    void addProcessNode( String label, InputsList inputs, OutputsList outputs, TaskProcessor process=null ) {
         assert label
         assert inputs
         assert outputs
-        addVertex( Type.PROCESS, label, normalizeInputs(inputs), normalizeOutputs(outputs))
+        addVertex( Type.PROCESS, label, normalizeInputs(inputs), normalizeOutputs(outputs), process )
     }
 
     /**
@@ -93,10 +96,10 @@ class DAG {
      * @param inputs The operator input(s). It can be either a single channel or a list of channels.
      * @param outputs The operator output(s). It can be either a single channel, a list of channels or {@code null} if the operator has no output.
      */
-    public void addOperatorNode( String label, inputs, outputs )  {
+    public void addOperatorNode( String label, inputs, outputs, List<DataflowProcessor> operators=null )  {
         assert label
         assert inputs
-        addVertex(Type.OPERATOR, label, normalizeChannels(inputs), normalizeChannels(outputs) )
+        addVertex(Type.OPERATOR, label, normalizeChannels(inputs), normalizeChannels(outputs), operators )
     }
 
     /**
@@ -120,9 +123,9 @@ class DAG {
      * @param outbounds The outbounds channels leaving the vertex
      */
     @PackageScope
-    void addVertex( Type type, String label, List<ChannelHandler> inbounds, List<ChannelHandler> outbounds ) {
+    void addVertex( Type type, String label, List<ChannelHandler> inbounds, List<ChannelHandler> outbounds, Object extra=null) {
 
-        def vertex = createVertex( type, label )
+        final vertex = createVertex( type, label, extra )
 
         inbounds?.each { ChannelHandler channel ->
             inbound( vertex, channel )
@@ -141,8 +144,18 @@ class DAG {
      * @return A {@link Vertex} object
      */
     @PackageScope
-    Vertex createVertex( Type type, String label ) {
+    Vertex createVertex( Type type, String label, extra=null ) {
         def result = new Vertex(type, label)
+        if( extra instanceof TaskProcessor ) {
+            result.process = extra
+            result.operators = [ extra.operator ]
+        }
+        else if( extra instanceof List ) {
+            result.operators = (List)extra.clone()
+        }
+        else if( extra != null )
+            throw new IllegalArgumentException("Not a valid DAG vertex parameter: [${extra.class.name}] $extra")
+
         vertices << result
         return result
     }
@@ -294,6 +307,37 @@ class DAG {
             log.debug "Missing session object -- Cannot normalize edge names"
     }
 
+    /**
+     * @return
+     *      A string listing the current active processes/operators in the
+     *      dataflow network represented by this DAG
+     */
+    String dumpActiveNodes() {
+        normalize()
+
+        // first dump active processes
+        def processes = vertices.findAll { it.process && it.isActive() }.collect { it.process }
+        if( processes ) {
+            def result = new StringBuilder()
+            processes.eachWithIndex { it, index ->
+                if( index>0 ) result << '\n'
+                result << it.dumpTerminationStatus()
+            }
+            return result.toString()
+        }
+
+        // otherwise fallback on other nodes
+        def nodes = vertices.findAll { it.active }
+        if( !nodes )
+            return null
+
+        def result = new StringBuilder()
+        nodes.each {
+            result << '  [' << it.type.toString().toLowerCase() << "] " << (it.label ?: it.name) << '\n'
+        }
+
+        return result
+    }
 
     /**
      * Model a vertex in the DAG.
@@ -313,6 +357,13 @@ class DAG {
          * The vertex type
          */
         Type type
+
+        /**
+         * One or more {@link DataflowProcessor} associated to this graph node
+         */
+        List<DataflowProcessor> operators
+
+        TaskProcessor process
 
         /**
          * Create an DGA vertex instance
@@ -337,6 +388,10 @@ class DAG {
          * @return The unique name for this node
          */
         String getName() { "p${getOrder()}" }
+
+        boolean isActive() {
+            operators?.any { DataflowHelper.isProcessorActive(it) }
+        }
 
     }
 

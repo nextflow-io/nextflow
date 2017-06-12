@@ -254,7 +254,7 @@ class CollectFileOp {
 
 
     DataflowQueue apply() {
-        channel.subscribeImpl ( onNext: this.&processItem, onComplete: this.&emitItems )
+        DataflowHelper.subscribeImpl( channel, [onNext: this.&processItem, onComplete: this.&emitItems] )
         return result
     }
 }
