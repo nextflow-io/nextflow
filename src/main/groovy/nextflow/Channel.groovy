@@ -36,6 +36,7 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.ControlMessage
 import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.dag.NodeMarker
 import nextflow.exception.AbortOperationException
 import nextflow.extension.GroupTupleOp
 import nextflow.extension.MapOp
@@ -76,7 +77,7 @@ class Channel  {
     static <T> DataflowChannel<T> empty() {
         def result = new DataflowQueue()
         result.bind(STOP)
-        session.dag.addSourceNode('Channel.empty', result)
+        NodeMarker.addSourceNode('Channel.empty', result)
         return result
     }
 
@@ -88,7 +89,7 @@ class Channel  {
      */
     static DataflowChannel from( Collection items ) {
         final result = Nextflow.channel(items)
-        session.dag.addSourceNode('Channel.from', result)
+        NodeMarker.addSourceNode('Channel.from', result)
         return result
     }
 
@@ -98,10 +99,9 @@ class Channel  {
      * @param items
      * @return
      */
-
     static DataflowChannel from( Object... items ) {
         final result = Nextflow.channel(items)
-        session.dag.addSourceNode('Channel.from', result)
+        NodeMarker.addSourceNode('Channel.from', result)
         return result
     }
 
@@ -135,7 +135,7 @@ class Channel  {
 
         final result = interval( duration, { index -> index })
 
-        session.dag.addSourceNode('Channel.interval', result)
+        NodeMarker.addSourceNode('Channel.interval', result)
         return result
     }
 
@@ -165,7 +165,7 @@ class Channel  {
 
         timer.schedule( task as TimerTask, millis )
 
-        session.dag.addSourceNode('Channel.interval', result)
+        NodeMarker.addSourceNode('Channel.interval', result)
         return result
     }
 
@@ -176,7 +176,7 @@ class Channel  {
         checkParams( 'path', opts, VALID_PATH_PARAMS )
 
         final result = fromPath0(opts, filePattern)
-        session.dag.addSourceNode('Channel.fromPath', result)
+        NodeMarker.addSourceNode('Channel.fromPath', result)
         return result
     }
 
@@ -313,7 +313,7 @@ class Channel  {
         def fs = FileHelper.fileSystemForScheme(splitter.scheme)
         def result = watchImpl( 'regex', splitter.parent, splitter.fileName, false, events, fs )
 
-        session.dag.addSourceNode('Channel.watchPath', result)
+        NodeMarker.addSourceNode('Channel.watchPath', result)
         return result
     }
 
@@ -346,7 +346,7 @@ class Channel  {
         final pattern = splitter.fileName
         def result = watchImpl('glob', folder, pattern, pattern.startsWith('*'), events, fs)
 
-        session.dag.addSourceNode('Channel.watchPath', result)
+        NodeMarker.addSourceNode('Channel.watchPath', result)
         return result
     }
 
@@ -357,7 +357,7 @@ class Channel  {
         final pattern = splitter.fileName
         final result = watchImpl('glob', folder, pattern, pattern.startsWith('*'), events, fs)
 
-        session.dag.addSourceNode('Channel.watchPath', result)
+        NodeMarker.addSourceNode('Channel.watchPath', result)
         return result
     }
 
@@ -402,7 +402,7 @@ class Channel  {
             result = groupChannel
         }
 
-        session.dag.addSourceNode('Channel.fromFilePairs', result)
+        NodeMarker.addSourceNode('Channel.fromFilePairs', result)
         return result
     }
 

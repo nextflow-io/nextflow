@@ -126,7 +126,7 @@ class ChoiceOp {
                 listeners: createListener()
         ]
 
-        DataflowExtensions. newOperator(params, new ChoiceClosure(code))
+        DataflowHelper.newOperator(params, new ChoiceClosure(code))
     }
 
 

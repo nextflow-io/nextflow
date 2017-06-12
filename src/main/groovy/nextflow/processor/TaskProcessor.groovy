@@ -25,6 +25,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
@@ -49,6 +50,7 @@ import groovyx.gpars.group.PGroup
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.cloud.CloudSpotTerminationException
+import nextflow.dag.NodeMarker
 import nextflow.exception.FailedGuardException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
@@ -58,6 +60,7 @@ import nextflow.exception.ProcessNotRecoverableException
 import nextflow.exception.ProcessStageException
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
+import nextflow.extension.DataflowHelper
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePatternSplitter
@@ -104,7 +107,6 @@ class TaskProcessor {
 
     static final public String TASK_CONTEXT_PROPERTY_NAME = 'task'
 
-
     /**
      * Keeps track of the task instance executed by the current thread
      */
@@ -146,7 +148,7 @@ class TaskProcessor {
      *
      * note: it must be declared volatile -- issue #41
      */
-    protected volatile DataflowProcessor processor
+    protected volatile DataflowProcessor operator
 
     /**
      * The underlying executor which will run the task
@@ -182,7 +184,7 @@ class TaskProcessor {
      *
      * See {@code #checkProcessTermination}
      */
-    protected volatile boolean terminated
+    protected volatile boolean completed
 
     protected boolean allScalarValues
 
@@ -208,6 +210,12 @@ class TaskProcessor {
      * Whenever the process is executed only once
      */
     protected boolean singleton
+
+    /**
+     * Track the status of input ports. When 1 the port is open (waiting for data),
+     * when 0 the port is closed (ie. received the STOP signal)
+     */
+    protected AtomicIntegerArray openPorts
 
     /**
      * Process ID number. The first is 1, the second 2 and so on ..
@@ -274,6 +282,11 @@ class TaskProcessor {
      * @return The processor name
      */
     String getName() { name }
+
+    /**
+     * @return The {@code DataflowOperator} underlying this process
+     */
+    DataflowProcessor getOperator() { operator }
 
     /**
      * @return The {@code BaseScript} object which represents pipeline script
@@ -346,9 +359,9 @@ class TaskProcessor {
         state.addListener { StateObj old, StateObj obj ->
             try {
                 log.trace "<$name> Process state changed to: $obj -- finished: ${obj.isFinished()}"
-                if( !terminated && obj.isFinished() ) {
+                if( !completed && obj.isFinished() ) {
                     terminateProcess()
-                    terminated = true
+                    completed = true
                 }
             }
             catch( Throwable e ) {
@@ -382,7 +395,6 @@ class TaskProcessor {
      */
 
     protected void createOperator() {
-
         def opInputs = new ArrayList(config.getInputs().getChannels())
 
         /*
@@ -427,9 +439,9 @@ class TaskProcessor {
             def stopAfterFirstRun = allScalarValues
             def interceptor = new BaseProcessInterceptor(opInputs, stopAfterFirstRun)
             def params = [inputs: opInputs, outputs: linkingChannels, maxForks: 1, listeners: [interceptor]]
-            session.allProcessors << (processor = new DataflowOperator(group, params, forwarder))
+            session.allOperators << (operator = new DataflowOperator(group, params, forwarder))
             // fix issue #41
-            processor.start()
+            operator.start()
 
             // set as next inputs the result channels of the iteration process
             // adding the 'control' channel removed previously
@@ -462,17 +474,25 @@ class TaskProcessor {
         // note: do not specify the output channels in the operator declaration
         // this allows us to manage them independently from the operator life-cycle
         this.singleton = allScalarValues && !hasEachParams
+        this.openPorts = createPortsArray(opInputs.size())
         config.getOutputs().setSingleton(singleton)
         def interceptor = new TaskProcessorInterceptor(opInputs, singleton)
         def params = [inputs: opInputs, maxForks: maxForks, listeners: [interceptor] ]
-        session.allProcessors << (processor = new DataflowOperator(group, params, wrapper))
+        session.allOperators << (operator = new DataflowOperator(group, params, wrapper))
 
         // notify the creation of a new vertex the execution DAG
-        session.dag.addProcessNode(name, config.getInputs(), config.getOutputs())
+        NodeMarker.addProcessNode(this, config.getInputs(), config.getOutputs())
 
         // fix issue #41
-        processor.start()
+        operator.start()
 
+    }
+
+    private AtomicIntegerArray createPortsArray(int size) {
+        def result = new AtomicIntegerArray(size)
+        for( int i=0; i<size; i++ )
+            result.set(i, 1)
+        return result
     }
 
     /**
@@ -2052,6 +2072,36 @@ class TaskProcessor {
         session.processDeregister(this)
     }
 
+    /**
+     * Dump the current process status listing
+     * all input *port* statuses for debugging purpose
+     *
+     * @return The text description representing the process status
+     */
+    String dumpTerminationStatus() {
+
+        def result = new StringBuilder()
+        def terminated = !DataflowHelper.isProcessorActive(operator)
+        result << "[process] $name\n"
+        if( terminated )
+            return result.toString()
+
+        def statusStr = !completed && !terminated ? 'status=ACTIVE' : ( completed && terminated ? 'status=TERMINATED' : "completed=$completed; terminated=$terminated" )
+        result << "  $statusStr\n"
+        // add extra info about port statuses
+        for( int i=0; i<openPorts.length(); i++ ) {
+            def last = i == openPorts.length()-1
+            def param = config.getInputs()[i]
+            def isValue = param?.inChannel instanceof DataflowExpression
+            def type = last ? '(cntrl)' : (isValue ? '(value)' : '(queue)')
+            def channel = param && !(param instanceof SetInParam) ? param.getName() : '-'
+            def status = type != '(value)' ? (openPorts.get(i) ? 'OPEN' : 'CLOSED') : '-   '
+            result << "  port $i: $type ${status}; channel: $channel\n"
+        }
+
+        return result.toString()
+    }
+
     /*
      * logger class for the *iterator* processor
      */
@@ -2137,7 +2187,8 @@ class TaskProcessor {
             super.controlMessageArrived(processor, channel, index, message)
 
             if( message == PoisonPill.instance ) {
-                log.debug "<${name}> Poison pill arrived"
+                log.debug "<${name}> Poison pill arrived; port: $index"
+                openPorts.set(index, 0) // mark the port as closed
                 state.update { StateObj it -> it.poison() }
             }
 

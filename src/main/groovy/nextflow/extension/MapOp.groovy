@@ -26,6 +26,7 @@ import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 /**
+ * Implements {@link DataflowExtensions#map(groovyx.gpars.dataflow.DataflowReadChannel, groovy.lang.Closure)} operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -44,10 +45,10 @@ class MapOp {
 
         final stopOnFirst = source instanceof DataflowExpression
         final target = DataflowExtensions.newChannelBy(source)
-        DataflowExtensions.newOperator(source, target) { it ->
+        DataflowHelper.newOperator(source, target) { it ->
 
             def result = closure.call(it)
-            def proc = ((DataflowProcessor) getDelegate())
+            def proc = (DataflowProcessor) getDelegate()
 
             // bind the result value
             if (result != Channel.VOID)

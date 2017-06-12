@@ -109,7 +109,7 @@ class TapOp {
      * @return An instance of {@link TapOp} itself
      */
     TapOp apply() {
-        DataflowExtensions.newOperator([source], outputs, new ChainWithClosure(new CopyChannelsClosure()));
+        DataflowHelper.newOperator([source], outputs, new ChainWithClosure(new CopyChannelsClosure()));
         return this
     }
 

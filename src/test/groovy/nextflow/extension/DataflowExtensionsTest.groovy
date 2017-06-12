@@ -37,28 +37,6 @@ class DataflowExtensionsTest extends Specification {
         new Session()
     }
 
-    def testHandlerNames() {
-
-        when:
-        DataflowExtensions.checkSubscribeHandlers( [:] )
-        then:
-        thrown(IllegalArgumentException)
-
-        when:
-        DataflowExtensions.checkSubscribeHandlers( [ onNext:{}] )
-        then:
-        true
-
-        when:
-        DataflowExtensions.checkSubscribeHandlers( [ onNext:{}, xxx:{}] )
-        then:
-        thrown(IllegalArgumentException)
-
-        when:
-        DataflowExtensions.checkSubscribeHandlers( [ xxx:{}] )
-        then:
-        thrown(IllegalArgumentException)
-    }
 
     def testFilter() {
 
