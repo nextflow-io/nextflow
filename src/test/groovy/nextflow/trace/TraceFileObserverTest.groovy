@@ -31,6 +31,8 @@ import nextflow.processor.TaskStatus
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import spock.lang.Specification
+import test.TestHelper
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -234,8 +236,8 @@ class TraceFileObserverTest extends Specification {
 
         given:
         final KB = 1024L
-
-        final traceText =  '''
+        final file = TestHelper.createInMemTempFile('trace')
+        file.text =  '''
                 pid state %cpu %mem vmem rss peak_vmem peak_rss rchar wchar syscr syscw read_bytes write_bytes
                 18 0 7999 46 7868980 6694900 7876620 6702144 2147483647 2147483647 44001533 148401890 2147483647 2147483647
                 9005022
@@ -244,7 +246,7 @@ class TraceFileObserverTest extends Specification {
 
         when:
         def handler = [:] as TraceRecord
-        def record = handler.parseTraceFile(traceText)
+        def record = handler.parseTraceFile(file)
         record.task_id = 3
         record.hash = '9a/a894b2'
         record.native_id = '2000'

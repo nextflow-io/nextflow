@@ -19,6 +19,8 @@
  */
 
 package nextflow.trace
+
+import java.nio.file.Path
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 
@@ -375,8 +377,9 @@ class TraceRecord implements Serializable {
      *
      */
 
-    TraceRecord parseTraceFile( String text ) {
+    TraceRecord parseTraceFile( Path file ) {
 
+        final text = file.text
         String[] header = null
         final lines = text.readLines()
         for( int count=0; count<lines.size(); count++ ) {
@@ -399,10 +402,10 @@ class TraceRecord implements Serializable {
                     final name = header[i]
                     if( i==2 || i==3 ) {
                         // fields '%cpu' and '%mem' are expressed as percent value
-                        this.put(name, values[i].toInteger() / 10F)
+                        this.put(name, parseInt(values[i], file, i) / 10F)
                     }
                     else if( i>3 ) {
-                        def val = values[i].toLong()
+                        def val = parseLong(values[i], file, i)
                         // fields from index 4 to 7 (vmem,rss,peak_vmem, peak_rss) are provided in KB, so they are normalized to bytes
                         if( i<8 ) val *= 1024
                         this.put(name, val)
@@ -425,6 +428,26 @@ class TraceRecord implements Serializable {
         }
 
         return this
+    }
+
+    private long parseInt( String str, Path file, int index )  {
+        try {
+            str.toInteger()
+        }
+        catch( NumberFormatException e ) {
+            log.debug "[WARN] Not a valid integer number `$str` -- offending column: $index in file `$file`"
+            return 0
+        }
+    }
+
+    private long parseLong( String str, Path file, int index )  {
+        try {
+            str.toLong()
+        }
+        catch( NumberFormatException e ) {
+            log.debug "[WARN] Not a valid long number `$str` -- offending column: $index in file `$file`"
+            return 0
+        }
     }
 
     @Override
