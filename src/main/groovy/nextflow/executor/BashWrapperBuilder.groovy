@@ -150,7 +150,7 @@ class BashWrapperBuilder {
             done < <(ps -e -o pid= -o ppid=)
 
             stat() {
-                local x_ps=$(ps -o pid=,state=,pcpu=,pmem=,vsz=,rss= $1)
+                local x_ps=$(ps -o pid= -o state= -o pcpu= -o pmem= -o vsz= -o rss= $1)
                 local x_io=$(cat /proc/$1/io 2> /dev/null | sed 's/^.*:\\s*//' | tr '\\n' ' ')
                 local x_vm=$(cat /proc/$1/status 2> /dev/null | egrep 'VmPeak|VmHWM' | sed 's/^.*:\\s*//' | sed 's/[\\sa-zA-Z]*$//' | tr '\\n' ' ')
                 [[ ! $x_ps ]] && return 0
