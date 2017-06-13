@@ -112,6 +112,8 @@ class KryoHelper {
         //   has to be registered the base class as default serializer
         //   See Nextflow issues #12
         kryo.addDefaultSerializer(GString, GStringSerializer)
+        // map entry serializer
+        kryo.addDefaultSerializer(Map.Entry, MapEntrySerializer)
 
         return kryo
     }
@@ -407,5 +409,22 @@ class ArrayTupleSerializer extends Serializer<ArrayTuple> {
             list.add(item)
         }
         return new ArrayTuple(list)
+    }
+}
+
+@CompileStatic
+class MapEntrySerializer extends Serializer<Map.Entry> {
+
+    @Override
+    void write(Kryo kryo, Output output, Map.Entry entry) {
+        kryo.writeClassAndObject(output, entry.getKey())
+        kryo.writeClassAndObject(output, entry.getValue())
+    }
+
+    @Override
+    Map.Entry read(Kryo kryo, Input input, Class<Map.Entry> type) {
+        def key = kryo.readClassAndObject(input)
+        def val = kryo.readClassAndObject(input)
+        new MapEntry(key,val)
     }
 }
