@@ -245,7 +245,7 @@ class ScriptRunner {
     protected BaseScript parseScript( String scriptText, List<String> args = null) {
         log.debug "> Script parsing"
         session.binding.setArgs( new ArgsList(args) )
-        session.binding.setParams( session.config.params as Map )
+        session.binding.setParams( (Map)session.config.params )
         // TODO add test for this property
         session.binding.setVariable( 'baseDir', session.baseDir )
         session.binding.setVariable( 'workDir', session.workDir )

@@ -82,11 +82,10 @@ class ScriptBinding extends Binding {
      * @param values
      */
     def void setParams( Map<String,Object> values ) {
-
-        def params = super.getVariable('params') as ParamsMap
-        values ?. each { String name, Object value ->
-            params.put(name, value)
-        }
+        if( !values )
+            return
+        def params = (ParamsMap)super.getVariable('params')
+        params.putAll(values)
     }
 
     /**
@@ -147,13 +146,15 @@ class ScriptBinding extends Binding {
 
         private List<String> realNames = []
 
+        private List<String> scriptAssignment = []
+
         @Delegate
         private Map<String,Object> target = new LinkedHashMap<>()
 
         ParamsMap() {}
 
         ParamsMap(Map<String,Object> copy) {
-            copy.each { entry -> this.put(entry.key, entry.value) }
+            putAll(copy)
         }
 
         @Override
@@ -166,7 +167,8 @@ class ScriptBinding extends Binding {
         }
 
         /**
-         * A name-value pair to the map object
+         * A name-value pair to the map object. Note this API it supposed only to be invoked indirectly
+         * when a parameter is defined/assigned. It should not be invoked directly.
          *
          * @param name The pair name
          * @param value The pair value
@@ -175,7 +177,13 @@ class ScriptBinding extends Binding {
         @Override
         String put(String name, Object value) {
             assert name
+            (name in scriptAssignment
+                    ? log.warn("`params.$name` is defined multiple times -- Assignments following the first are ignored")
+                    : scriptAssignment << name )
+            put0(name,value)
+        }
 
+        private String put0(String name, Object value) {
             // keep track of the real name
             realNames << name
 
@@ -193,6 +201,13 @@ class ScriptBinding extends Binding {
             }
 
             return result
+        }
+
+        @Override
+        void putAll(Map other) {
+            for( Map.Entry<String,Object> entry : other.entrySet() ) {
+                put0(entry.getKey(), entry.getValue())
+            }
         }
 
         /**
