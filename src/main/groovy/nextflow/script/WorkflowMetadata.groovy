@@ -292,6 +292,11 @@ class WorkflowMetadata {
                 if( err ) errorMessage = err.join('\n')
             }
         }
+        else if( owner.session.error ) {
+            def msg = owner.session.error.message ?: owner.session.error.toString()
+            errorMessage = msg
+            errorReport = msg
+        }
         else {
             exitStatus = 0
         }
