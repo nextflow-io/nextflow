@@ -147,6 +147,8 @@ class Session implements ISession {
 
     private volatile TaskFault fault
 
+    private volatile Throwable error
+
     private ScriptBinding binding
 
     private ClassLoader classLoader
@@ -168,6 +170,8 @@ class Session implements ISession {
     boolean getDumpHashes() { dumpHashes }
 
     TaskFault getFault() { fault }
+
+    Throwable getError() { error }
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -588,6 +592,7 @@ class Session implements ISession {
         if( aborted ) return
         log.debug "Session aborted -- Cause: ${cause?.message ?: cause ?: '-'}"
         aborted = true
+        error = cause
         try {
             // log the dataflow network status
             def status = dumpNetworkStatus()
