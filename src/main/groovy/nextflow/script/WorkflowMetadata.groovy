@@ -212,7 +212,7 @@ class WorkflowMetadata {
 
         final clone = (Closure)action.clone()
         clone.delegate = owner.session.binding.variables
-        clone.resolveStrategy = Closure.DELEGATE_ONLY
+        clone.resolveStrategy = Closure.DELEGATE_FIRST
 
         onCompleteActions.add(clone)
     }
@@ -244,7 +244,7 @@ class WorkflowMetadata {
 
         final clone = (Closure)action.clone()
         clone.delegate = owner.session.binding.variables
-        clone.resolveStrategy = Closure.DELEGATE_ONLY
+        clone.resolveStrategy = Closure.DELEGATE_FIRST
 
         onErrorActions.add(clone)
     }
