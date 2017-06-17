@@ -40,6 +40,7 @@ class LocalPollingMonitorTest extends Specification {
         def session = new Session()
         def monitor = new LocalPollingMonitor(
                 cpus: 10,
+                capacity: 20,
                 memory: _20_GB,
                 session: session,
                 name: 'local',
@@ -53,6 +54,7 @@ class LocalPollingMonitorTest extends Specification {
 
         expect:
         monitor.availCpus == 10
+        monitor.capacity == 20
         monitor.availMemory == _20_GB
         monitor.maxCpus == 10
         monitor.maxMemory == _20_GB
@@ -60,7 +62,7 @@ class LocalPollingMonitorTest extends Specification {
         when:
         monitor.submit(handler)
         then:
-        monitor.getPollingQueue().size()==1
+        monitor.getRunningQueue().size()==1
         monitor.availCpus == 7
         monitor.availMemory == MemoryUnit.of('18GB').toBytes()
         monitor.maxCpus == 10
@@ -69,7 +71,7 @@ class LocalPollingMonitorTest extends Specification {
         when:
         monitor.remove(handler)
         then:
-        monitor.getPollingQueue().size()==0
+        monitor.getRunningQueue().size()==0
         monitor.availCpus == 10
         monitor.availMemory == _20_GB
         monitor.maxCpus == 10
@@ -159,6 +161,7 @@ class LocalPollingMonitorTest extends Specification {
         def session = new Session()
         def monitor = new LocalPollingMonitor(
                 cpus: 10,
+                capacity: 20,
                 memory: _20_GB,
                 session: session,
                 name: 'local',
@@ -186,6 +189,7 @@ class LocalPollingMonitorTest extends Specification {
         def session = new Session()
         def monitor = new LocalPollingMonitor(
                 cpus: 10,
+                capacity: 20,
                 memory: _20_GB,
                 session: session,
                 name: 'local',
