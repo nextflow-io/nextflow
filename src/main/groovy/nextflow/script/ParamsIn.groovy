@@ -29,6 +29,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Nextflow
+import nextflow.exception.ProcessException
 import nextflow.extension.ToListOp
 import nextflow.processor.ProcessConfig
 /**
@@ -164,6 +165,8 @@ interface InParam {
 
     short mapIndex
 
+    def decodeInputs( List values )
+
 }
 
 /**
@@ -178,6 +181,8 @@ abstract class BaseInParam extends BaseParam implements InParam {
     protected fromObject
 
     protected bindObject
+
+    protected owner
 
     /**
      * The channel to which the input value is bound
@@ -293,7 +298,37 @@ abstract class BaseInParam extends BaseParam implements InParam {
         return this
     }
 
+    def decodeInputs( List inputs ) {
 
+        def value = inputs[ getIndex() ]
+
+        if( owner instanceof EachInParam ) {
+            // make sure it's always a list
+            return value instanceof Collection || value==null ? value : [value]
+        }
+
+        if( mapIndex != -1 ) {
+            def result
+            if( value instanceof Map ) {
+                result = value.values()
+            }
+            else if( value instanceof Collection ) {
+                result = value
+            }
+            else {
+                result = [value]
+            }
+
+            try {
+                return result[mapIndex]
+            }
+            catch( IndexOutOfBoundsException e ) {
+                throw new ProcessException(e)
+            }
+        }
+
+        return value
+    }
 
 }
 
@@ -427,6 +462,7 @@ class EachInParam extends BaseInParam {
         def nested = ( obj instanceof TokenFileCall
                     ? new FileInParam(binding, inner, index).bind(obj.target)
                     : new ValueInParam(binding, inner, index).bind(obj) )
+        nested.owner = this
         this.bindObject = nested.bindObject
         return this
     }
@@ -440,7 +476,7 @@ class EachInParam extends BaseInParam {
     }
 
     @PackageScope
-    DataflowExpression normalizeToVariable( value ) {
+    DataflowReadChannel normalizeToVariable( value ) {
         if( value instanceof DataflowExpression ) {
             return value
         }
