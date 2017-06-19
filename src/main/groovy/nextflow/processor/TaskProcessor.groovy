@@ -535,10 +535,7 @@ class TaskProcessor {
                 """
             { ${args.join(',')} ->
                 def out = [ ${outs.join(',')} ]
-                def itr = [ ${indexes.collect { 'x'+it }.join(',')} ].collect {
-                        if( it instanceof Collection ) return it
-                        else { def x=new ArrayList(1); x.add(it); return x }
-                    }
+                def itr = [ ${indexes.collect { 'x'+it }.join(',')} ]
                 def cmb = itr.combinations()
                 for( entries in cmb ) {
                     def count = 0
@@ -1773,34 +1770,6 @@ class TaskProcessor {
         return script.join('\n')
     }
 
-
-    protected decodeInputValue( InParam param, List values ) {
-
-        def val = values[ param.index ]
-        if( param.mapIndex != -1 ) {
-            def list
-            if( val instanceof Map ) {
-                list = val.values()
-            }
-            else if( val instanceof Collection ) {
-                list = val
-            }
-            else {
-                list = [val]
-            }
-
-            try {
-                return list[param.mapIndex]
-            }
-            catch( IndexOutOfBoundsException e ) {
-                throw new ProcessException(e)
-            }
-        }
-
-        return val
-    }
-
-
     final protected int makeTaskContextStage1( TaskRun task, Map secondPass, List values ) {
 
         final contextMap = task.context
@@ -1809,7 +1778,7 @@ class TaskProcessor {
         task.inputs.keySet().each { InParam param ->
 
             // add the value to the task instance
-            def val = decodeInputValue(param,values)
+            def val = param.decodeInputs(values)
 
             switch(param) {
                 case ValueInParam:

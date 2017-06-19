@@ -606,6 +606,7 @@ class ParamsInTest extends Specification {
         in0.inChannel instanceof DataflowVariable
         in0.inChannel.val == 'aaa'
         in0.inner.name == 'x'
+        in0.inner.owner == in0
 
         in1.class == EachInParam
         in1.name == '__$eachinparam<1>'
@@ -613,12 +614,14 @@ class ParamsInTest extends Specification {
         in1.inChannel.val == [1,2]
         in1.inner.name == 'p'
         in1.inner instanceof ValueInParam
+        in1.inner.owner == in1
 
         in2.class == EachInParam
         in2.name == '__$eachinparam<2>'
         in2.inChannel.val == [1,2,3]
         in2.inner instanceof ValueInParam
         in2.inner.name == 'z'
+        in2.inner.owner == in2
 
         in3.class == EachInParam
         in3.name == '__$eachinparam<3>'
@@ -626,6 +629,7 @@ class ParamsInTest extends Specification {
         in3.inChannel.val == 'file-a.txt'
         in3.inner instanceof FileInParam
         in3.inner.name == 'foo'
+        in3.inner.owner == in3
 
         in4.class == EachInParam
         in4.name == '__$eachinparam<4>'
@@ -634,6 +638,7 @@ class ParamsInTest extends Specification {
         in4.inner instanceof FileInParam
         in4.inner.name == 'bar'
         in4.inner.filePattern == 'bar'
+        in4.inner.owner == in4
 
     }
 
@@ -656,6 +661,35 @@ class ParamsInTest extends Specification {
         then:
         thrown(MissingPropertyException)
 
+    }
+
+
+    def 'should decode param inputs ' () {
+
+        def param
+        def holder = []
+
+        when:
+        param = new ValueInParam(Mock(Binding), holder)
+        then:
+        param.decodeInputs( ['a','b','c'] ) == 'a'
+
+        when:
+        param = new ValueInParam(Mock(Binding), holder)
+        then:
+        param.decodeInputs( ['a','b','c'] ) == 'b'
+
+        when:
+        param = new ValueInParam(Mock(Binding), [])
+        param.owner = new EachInParam(Mock(Binding), [])
+        then:
+        param.decodeInputs( ['a','b','c'] ) == ['a']
+
+        when:
+        param = new ValueInParam(Mock(Binding), [])
+        param.owner = new EachInParam(Mock(Binding), [])
+        then:
+        param.decodeInputs( [[1,2,3],'b','c'] ) == [1,2,3]
     }
 
 }
