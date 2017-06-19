@@ -299,15 +299,13 @@ abstract class BaseInParam extends BaseParam implements InParam {
     }
 
     def decodeInputs( List inputs ) {
+        final UNDEF = -1 as short
+        def value = inputs[index]
 
-        def value = inputs[ getIndex() ]
+        if( mapIndex == UNDEF || owner instanceof EachInParam )
+            return value
 
-        if( owner instanceof EachInParam ) {
-            // make sure it's always a list
-            return value instanceof Collection || value==null ? value : [value]
-        }
-
-        if( mapIndex != -1 ) {
+        if( mapIndex != UNDEF ) {
             def result
             if( value instanceof Map ) {
                 result = value.values()
@@ -477,19 +475,21 @@ class EachInParam extends BaseInParam {
 
     @PackageScope
     DataflowReadChannel normalizeToVariable( value ) {
+        def result
         if( value instanceof DataflowExpression ) {
-            return value
+            result = value
         }
 
         else if( value instanceof DataflowReadChannel ) {
-            return ToListOp.apply(value)
+            result = ToListOp.apply(value)
         }
 
         else {
-            def result = new DataflowVariable()
+            result = new DataflowVariable()
             result.bind(value)
-            return result
         }
+
+        return result.chainWith { it instanceof Collection || it == null ? it : [it] }
     }
 
 }

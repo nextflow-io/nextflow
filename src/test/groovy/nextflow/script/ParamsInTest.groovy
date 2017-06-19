@@ -604,7 +604,7 @@ class ParamsInTest extends Specification {
 
         in0.class == EachInParam
         in0.inChannel instanceof DataflowVariable
-        in0.inChannel.val == 'aaa'
+        in0.inChannel.val == ['aaa']
         in0.inner.name == 'x'
         in0.inner.owner == in0
 
@@ -626,7 +626,7 @@ class ParamsInTest extends Specification {
         in3.class == EachInParam
         in3.name == '__$eachinparam<3>'
         in3.inChannel instanceof DataflowVariable
-        in3.inChannel.val == 'file-a.txt'
+        in3.inChannel.val == ['file-a.txt']
         in3.inner instanceof FileInParam
         in3.inner.name == 'foo'
         in3.inner.owner == in3
@@ -634,7 +634,7 @@ class ParamsInTest extends Specification {
         in4.class == EachInParam
         in4.name == '__$eachinparam<4>'
         in4.inChannel instanceof DataflowVariable
-        in4.inChannel.val == 'file-x.fa'
+        in4.inChannel.val == ['file-x.fa']
         in4.inner instanceof FileInParam
         in4.inner.name == 'bar'
         in4.inner.filePattern == 'bar'
@@ -683,7 +683,7 @@ class ParamsInTest extends Specification {
         param = new ValueInParam(Mock(Binding), [])
         param.owner = new EachInParam(Mock(Binding), [])
         then:
-        param.decodeInputs( ['a','b','c'] ) == ['a']
+        param.decodeInputs( ['a','b','c'] ) == 'a'
 
         when:
         param = new ValueInParam(Mock(Binding), [])
