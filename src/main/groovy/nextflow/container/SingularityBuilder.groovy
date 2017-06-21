@@ -158,6 +158,7 @@ class SingularityBuilder extends ContainerBuilder {
     }
 
     static String normalizeImageName(String img) {
+        if( !img ) return null
         img.startsWith("/") ? img : Paths.get(img).toAbsolutePath().toString()
     }
 }

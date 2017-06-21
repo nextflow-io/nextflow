@@ -74,8 +74,8 @@ function get() {
 
 function make_temp() {
     local base=${NXF_TEMP:=$PWD}
-    if [ "$(uname)" = 'Darwin' ]; then mktemp ${base}/nxf-tmp.XXXXX || exit $?
-    else mktemp -t nxf-tmp.XXXXX -p ${base} || exit $?
+    if [ "$(uname)" = 'Darwin' ]; then mktemp "${base}/nxf-tmp.XXXXX" || exit $?
+    else mktemp -t nxf-tmp.XXXXX -p "${base}" || exit $?
     fi
 }
 
@@ -140,7 +140,7 @@ if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
 fi
 
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
-NXF_VER=${NXF_VER:-'0.24.2'}
+NXF_VER=${NXF_VER:-'0.25.0-RC2'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_ASSETS=${NXF_ASSETS:-$NXF_HOME/assets}
 NXF_CLI="$0 $@"
@@ -167,7 +167,7 @@ while [[ $# != 0 ]]; do
       ;;
     -download)
       if [[ ! "$cmd" ]]; then
-      rm -rf $NXF_HOME/framework/$NXF_VER || exit $?
+      rm -rf "$NXF_HOME/framework/$NXF_VER" || exit $?
       bash "$0" -version || exit $?
       exit 0
       fi
@@ -266,7 +266,7 @@ if [ ! -f "$NXF_BIN" ]; then
     [ -f "$NXF_PATH" ] && rm "$NXF_PATH"
     mkdir -p "$NXF_PATH" || exit $?
     tmpfile=$(make_temp)
-    get "$NXF_URL" "$tmpfile"
+    get "$NXF_URL" "$tmpfile" "$NXF_BIN"
     mv "$tmpfile" "$NXF_BIN"
 fi
 
@@ -347,7 +347,7 @@ else
     [[ $? -ne 0 ]] && echo 'Unable to initialize nextflow environment' && exit $?
 
     # Don't spit errors if can't create the LAUNCH_FILE
-    if mkdir -p ${NXF_LAUNCHER} 2>/dev/null; then
+    if mkdir -p "${NXF_LAUNCHER}" 2>/dev/null; then
         STR=''
         for x in "${launcher[@]}"; do
         [[ "$x" != "\"-Duser.dir=$PWD\"" ]] && STR+="$x "

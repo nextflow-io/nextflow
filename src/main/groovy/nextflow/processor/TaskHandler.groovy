@@ -176,7 +176,7 @@ public abstract class TaskHandler {
 
             def file = task.workDir?.resolve(TaskRun.CMD_TRACE)
             try {
-                if(file) record.parseTraceFile(file.text)
+                if(file) record.parseTraceFile(file)
             }
             catch( NoSuchFileException e ) {
                 // ignore it

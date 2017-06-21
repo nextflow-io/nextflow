@@ -29,6 +29,8 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.config.ConfigBuilder
 import nextflow.util.Duration
+import nextflow.util.VersionNumber
+
 /**
  * Models workflow metadata properties and notification handler
  *
@@ -182,7 +184,7 @@ class WorkflowMetadata {
         this.start = new Date()
         this.container = owner.fetchContainers()
         this.commandLine = owner.commandLine
-        this.nextflow = [version: Const.APP_VER, build: Const.APP_BUILDNUM, timestamp: Const.APP_TIMESTAMP_UTC]
+        this.nextflow = [version: new VersionNumber(Const.APP_VER), build: Const.APP_BUILDNUM, timestamp: Const.APP_TIMESTAMP_UTC]
         this.workDir = owner.session.workDir
         this.launchDir = Paths.get('.').complete()
         this.profile = owner.profile ?: ConfigBuilder.DEFAULT_PROFILE
@@ -210,7 +212,7 @@ class WorkflowMetadata {
 
         final clone = (Closure)action.clone()
         clone.delegate = owner.session.binding.variables
-        clone.resolveStrategy = Closure.DELEGATE_ONLY
+        clone.resolveStrategy = Closure.DELEGATE_FIRST
 
         onCompleteActions.add(clone)
     }
@@ -242,7 +244,7 @@ class WorkflowMetadata {
 
         final clone = (Closure)action.clone()
         clone.delegate = owner.session.binding.variables
-        clone.resolveStrategy = Closure.DELEGATE_ONLY
+        clone.resolveStrategy = Closure.DELEGATE_FIRST
 
         onErrorActions.add(clone)
     }
@@ -289,6 +291,11 @@ class WorkflowMetadata {
                 if( !err ) err = task.dumpStdout()
                 if( err ) errorMessage = err.join('\n')
             }
+        }
+        else if( owner.session.error ) {
+            def msg = owner.session.error.message ?: owner.session.error.toString()
+            errorMessage = msg
+            errorReport = msg
         }
         else {
             exitStatus = 0

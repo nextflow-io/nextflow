@@ -20,6 +20,8 @@
 
 package nextflow.trace
 import spock.lang.Specification
+import test.TestHelper
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -148,7 +150,8 @@ class TraceRecordTest extends Specification {
     def 'should parse a trace file and return a TraceRecord object'() {
 
         given:
-        def traceText =  '''
+        def file = TestHelper.createInMemTempFile('trace')
+        file.text =  '''
         pid state %cpu %mem vmem rss peak_vmem peak_rss rchar wchar syscr syscw read_bytes write_bytes
         1 0 10 20 11084 1220 21084 2220 4790 12 11 1 20 30
         153
@@ -157,7 +160,7 @@ class TraceRecordTest extends Specification {
 
         when:
         def handler = [:] as TraceRecord
-        def trace = handler.parseTraceFile(traceText)
+        def trace = handler.parseTraceFile(file)
         then:
         trace.'%cpu' == 1.0
         trace.'%mem' == 2.0

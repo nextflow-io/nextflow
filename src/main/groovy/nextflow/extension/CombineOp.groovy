@@ -11,9 +11,9 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Channel
 import nextflow.Nextflow
-
 /**
- *  Implements the {@link DataflowExtensions#spread(groovyx.gpars.dataflow.DataflowReadChannel, java.lang.Object)} operator
+ * Implements the {@link DataflowExtensions#spread(groovyx.gpars.dataflow.DataflowReadChannel, java.lang.Object)} operator
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -172,13 +172,13 @@ class CombineOp {
 
         if( rightChannel ) {
             final stopCount = new AtomicInteger(2)
-            DataflowExtensions.subscribeImpl( leftChannel, handler(LEFT, target, stopCount) )
-            DataflowExtensions.subscribeImpl( rightChannel, handler(RIGHT, target, stopCount) )
+            DataflowHelper.subscribeImpl( leftChannel, handler(LEFT, target, stopCount) )
+            DataflowHelper.subscribeImpl( rightChannel, handler(RIGHT, target, stopCount) )
         }
 
         else if( rightValues != null ) {
             final stopCount = new AtomicInteger(1)
-            DataflowExtensions.subscribeImpl( leftChannel, handler(LEFT, target, stopCount) )
+            DataflowHelper.subscribeImpl( leftChannel, handler(LEFT, target, stopCount) )
         }
 
         else

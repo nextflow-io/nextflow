@@ -43,7 +43,6 @@ class SgeExecutor extends AbstractGridExecutor {
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
         result << '-j' << 'y'
         result << '-terse' << ''    // note: directive need to be returned as pairs
-        result << '-V' << ''        // for this reason an empty string value is added for flag options
 
         /*
          * By using command line option -notify SIGUSR1 will be sent to your script prior to SIGSTOP

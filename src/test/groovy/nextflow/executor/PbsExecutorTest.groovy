@@ -66,7 +66,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
-                #PBS -V
                 cd /work/dir
                 '''
                 .stripIndent().leftTrim()
@@ -81,7 +80,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
-                #PBS -V
                 #PBS -q alpha
                 #PBS -l walltime=00:01:00
                 cd /work/dir
@@ -99,7 +97,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
-                #PBS -V
                 #PBS -q alpha
                 #PBS -l walltime=00:01:00
                 #PBS -l mem=1mb
@@ -120,7 +117,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
-                #PBS -V
                 #PBS -q delta
                 #PBS -l nodes=1:ppn=2
                 #PBS -l walltime=00:10:00
@@ -140,7 +136,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
-                #PBS -V
                 #PBS -q delta
                 #PBS -l nodes=1:ppn=8
                 #PBS -l walltime=24:00:00
@@ -159,7 +154,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
-                #PBS -V
                 #PBS -q delta
                 #PBS -l walltime=54:10:00
                 #PBS -l mem=2gb
@@ -190,7 +184,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o "/work/dir\\ 1/.command.log"
                 #PBS -j oe
-                #PBS -V
                 cd "/work/dir\\ 1"
                 '''
                 .stripIndent().leftTrim()

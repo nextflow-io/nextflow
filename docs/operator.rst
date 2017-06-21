@@ -29,6 +29,7 @@ The available filter operators are:
 * `filter`_
 * `first`_
 * `last`_
+* `randomSample`_
 * `take`_
 * `unique`_
 
@@ -201,6 +202,20 @@ a Java `class` type or any boolean `predicate`. For example::
         .from( 1,2,3,4,5 )
         .first { it > 3 }
         .subscribe { println it }
+
+
+randomSample
+------------
+
+The ``randomSample`` operator allows you to create a channel emitting the specified number of items randomly taken
+from the channel to which is applied. For example::
+
+  Channel
+        .from( 1..100 )
+        .randomSample( 10 )
+        .println()
+
+The above snippet will print 10 numbers in the range from 1 to 100.
 
 
 take
@@ -1166,6 +1181,7 @@ For example::
           3
 
 
+.. _operator-phase:
 
 phase
 --------
@@ -1222,6 +1238,7 @@ It prints::
     [null, 4]
 
 
+.. _operator-cross:
 
 cross
 -------
@@ -1376,6 +1393,8 @@ The following example shows how use a `closure` to collect and sort all sequence
  and it will require as much free space as are the data you are collecting. Optionally, an alternative temporary data
  folder can be specified by using the ``tempDir`` parameter.
 
+.. _operator-combine:
+
 combine
 -------
 
@@ -1417,6 +1436,9 @@ For example::
     [B, 2, y]
 
 
+See also `cross`_, `spread`_ and `phase`_.
+
+.. _operator-concat:
 
 concat
 --------
@@ -1446,6 +1468,7 @@ It will output::
     b
     c
 
+.. _operator-spread:
 
 spread
 ---------
@@ -1647,6 +1670,7 @@ The maths operators are:
 * `min`_
 * `max`_
 * `sum`_
+* `toInteger`_
 
 
 count
@@ -1825,6 +1849,21 @@ a function that, given an item, returns the value to be summed. For example::
 ::
 
 	Square: 91
+
+
+
+toInteger
+---------
+
+The ``toInteger`` operator allows you to convert the string values emitted by a channel to ``Integer`` values. For
+example::
+
+    Channel
+        .from( '1', '7', '12' )
+        .toInteger()
+        .sum()
+        .println()
+
 
 
 Other operators

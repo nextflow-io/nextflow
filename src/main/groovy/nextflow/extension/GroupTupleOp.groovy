@@ -26,9 +26,8 @@ import nextflow.Channel
 import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
 import nextflow.util.CheckHelper
-
 /**
- *  Implements {@link DataflowExtensions#groupTuple} operator logic
+ * Implements {@link DataflowExtensions#groupTuple} operator logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -210,7 +209,7 @@ class GroupTupleOp {
         /*
          * apply the logic the the source channel
          */
-        channel.subscribeImpl(onNext: this.&collect, onComplete: this.&finalise)
+        DataflowHelper.subscribeImpl(channel, [onNext: this.&collect, onComplete: this.&finalise])
 
         /*
          * return the target channel

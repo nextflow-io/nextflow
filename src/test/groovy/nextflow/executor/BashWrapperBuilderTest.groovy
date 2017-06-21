@@ -339,7 +339,7 @@ class BashWrapperBuilderTest extends Specification {
                     done < <(ps -e -o pid= -o ppid=)
 
                     stat() {
-                        local x_ps=\$(ps -o pid=,state=,pcpu=,pmem=,vsz=,rss= \$1)
+                        local x_ps=\$(ps -o pid= -o state= -o pcpu= -o pmem= -o vsz= -o rss= \$1)
                         local x_io=\$(cat /proc/\$1/io 2> /dev/null | sed 's/^.*:\\s*//' | tr '\\n' ' ')
                         local x_vm=\$(cat /proc/\$1/status 2> /dev/null | egrep 'VmPeak|VmHWM' | sed 's/^.*:\\s*//' | sed 's/[\\sa-zA-Z]*\$//' | tr '\\n' ' ')
                         [[ ! \$x_ps ]] && return 0
@@ -369,19 +369,14 @@ class BashWrapperBuilderTest extends Specification {
 
                 nxf_sleep() {
                   if [[ \$1 < 0 ]]; then sleep 5;
-                  elif [[ \$1 < 10 ]]; then sleep 0.1;
+                  elif [[ \$1 < 10 ]]; then sleep 0.1 2>/dev/null || sleep 1;
                   elif [[ \$1 < 130 ]]; then sleep 1;
                   else sleep 5; fi
                 }
 
                 nxf_date() {
-                    case `uname` in
-                        Darwin) if hash gdate 2>/dev/null; then echo 'gdate +%s%3N'; else echo 'date +%s000'; fi;;
-                        *) echo 'date +%s%3N';;
-                    esac
+                    local ts=\$(date +%s%3N); [[ \$ts == *3N ]] && date +%s000 || echo \$ts
                 }
-
-                NXF_DATE=\$(nxf_date)
 
                 nxf_trace() {
                   local pid=\$1; local trg=\$2;
@@ -405,7 +400,7 @@ class BashWrapperBuilderTest extends Specification {
 
                 trap 'exit \${ret:=\$?}' EXIT
                 touch .command.trace
-                start_millis=\$(\$NXF_DATE)
+                start_millis=\$(nxf_date)
                 (
                 /bin/bash -ue ${folder}/.command.sh
                 ) &
@@ -413,7 +408,7 @@ class BashWrapperBuilderTest extends Specification {
                 nxf_trace "\$pid" .command.trace &
                 mon=\$!
                 wait \$pid || ret=\$?
-                end_millis=\$(\$NXF_DATE)
+                end_millis=\$(nxf_date)
                 nxf_kill \$mon || wait \$mon
                 echo \$((end_millis-start_millis)) >> .command.trace
                 """
@@ -688,7 +683,7 @@ class BashWrapperBuilderTest extends Specification {
                 done < <(ps -e -o pid= -o ppid=)
 
                 stat() {
-                    local x_ps=\$(ps -o pid=,state=,pcpu=,pmem=,vsz=,rss= \$1)
+                    local x_ps=\$(ps -o pid= -o state= -o pcpu= -o pmem= -o vsz= -o rss= \$1)
                     local x_io=\$(cat /proc/\$1/io 2> /dev/null | sed 's/^.*:\\s*//' | tr '\\n' ' ')
                     local x_vm=\$(cat /proc/\$1/status 2> /dev/null | egrep 'VmPeak|VmHWM' | sed 's/^.*:\\s*//' | sed 's/[\\sa-zA-Z]*\$//' | tr '\\n' ' ')
                     [[ ! \$x_ps ]] && return 0
@@ -718,19 +713,14 @@ class BashWrapperBuilderTest extends Specification {
 
             nxf_sleep() {
               if [[ \$1 < 0 ]]; then sleep 5;
-              elif [[ \$1 < 10 ]]; then sleep 0.1;
+              elif [[ \$1 < 10 ]]; then sleep 0.1 2>/dev/null || sleep 1;
               elif [[ \$1 < 130 ]]; then sleep 1;
               else sleep 5; fi
             }
 
             nxf_date() {
-                case `uname` in
-                    Darwin) if hash gdate 2>/dev/null; then echo 'gdate +%s%3N'; else echo 'date +%s000'; fi;;
-                    *) echo 'date +%s%3N';;
-                esac
+                local ts=\$(date +%s%3N); [[ \$ts == *3N ]] && date +%s000 || echo \$ts
             }
-
-            NXF_DATE=\$(nxf_date)
 
             nxf_trace() {
               local pid=\$1; local trg=\$2;
@@ -754,7 +744,7 @@ class BashWrapperBuilderTest extends Specification {
 
             trap 'exit \${ret:=\$?}' EXIT
             touch .command.trace
-            start_millis=\$(\$NXF_DATE)
+            start_millis=\$(nxf_date)
             (
             /bin/bash -ue ${folder}/.command.sh < ${folder}/.command.in
             ) &
@@ -762,7 +752,7 @@ class BashWrapperBuilderTest extends Specification {
             nxf_trace "\$pid" .command.trace &
             mon=\$!
             wait \$pid || ret=\$?
-            end_millis=\$(\$NXF_DATE)
+            end_millis=\$(nxf_date)
             nxf_kill \$mon || wait \$mon
             echo \$((end_millis-start_millis)) >> .command.trace
             """
@@ -872,7 +862,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                sudo docker run -i -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/bin/bash -ue ${folder}/.command.sh"
+                sudo docker run -i -v ${folder}:${folder}:ro -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/bin/bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -982,7 +972,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/bin/bash -ue ${folder}/.command.sh"
+                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder}:ro -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/bin/bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1094,7 +1084,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c "/bin/bash -ue ${folder}/.command.sh"
+                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder}:ro -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c "/bin/bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1203,7 +1193,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c "/bin/bash -ue ${folder}/.command.sh"
+                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder}:ro -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c "/bin/bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1317,7 +1307,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                docker run -i -v ${folder}:${folder} -v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/bin/bash -ue ${folder}/.command.sh"
+                docker run -i -v ${folder}:${folder}:ro -v /folder\\ with\\ blanks:/folder\\ with\\ blanks:ro -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/bin/bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1429,7 +1419,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                sudo docker run -i -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/bin/bash -ue ${folder}/.command.sh"
+                sudo docker run -i -v ${folder}:${folder}:ro -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/bin/bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1499,7 +1489,7 @@ class BashWrapperBuilderTest extends Specification {
                 """
                 #!/bin/bash -ue
                 FOO=bar
-                docker run -i -e "NXF_DEBUG=\${NXF_DEBUG:=0}" -e "FOO=bar" -v $folder:$folder -v "\$PWD":"\$PWD" -w "\$PWD" --name \$NXF_BOXID docker-io/busybox --fox --baz
+                docker run -i -e "NXF_DEBUG=\${NXF_DEBUG:=0}" -e "FOO=bar" -v $folder:$folder:ro -v "\$PWD":"\$PWD" -w "\$PWD" --name \$NXF_BOXID docker-io/busybox --fox --baz
                 """
                 .stripIndent().leftTrim()
 
@@ -1604,7 +1594,7 @@ class BashWrapperBuilderTest extends Specification {
         folder.resolve('.command.sh').text ==
                 """
                 #!/bin/bash -ue
-                docker run -i -v $folder:$folder -v "\$PWD":"\$PWD" -w "\$PWD" --name \$NXF_BOXID my.registry.com/docker-io/busybox --fox --baz
+                docker run -i -v $folder:$folder:ro -v "\$PWD":"\$PWD" -w "\$PWD" --name \$NXF_BOXID my.registry.com/docker-io/busybox --fox --baz
                 """
                         .stripIndent().leftTrim()
     }

@@ -20,20 +20,33 @@
 
 package nextflow.extension
 
+import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
+
 /**
  * Implements {@link DataflowExtensions#toList(groovyx.gpars.dataflow.DataflowReadChannel)}  operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class ToListOp {
 
-    static DataflowVariable apply( DataflowReadChannel source ) {
+    private DataflowReadChannel source
+
+    ToListOp( DataflowReadChannel source ) {
+        this.source = source
+    }
+
+    DataflowVariable apply() {
         assert source != null
         final target = new DataflowVariable()
-        DataflowExtensions.reduceImpl(source, target, []) { list, item -> list << item }
+        DataflowHelper.reduceImpl(source, target, []) { List list, item -> list << item }
         return target
+    }
+
+    static DataflowVariable apply( DataflowReadChannel source ) {
+        new ToListOp(source).apply()
     }
 
 }

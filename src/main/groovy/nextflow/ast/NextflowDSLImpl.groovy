@@ -164,7 +164,7 @@ public class NextflowDSLImpl implements ASTTransformation {
         if( isClosure ) {
             // the block holding all the statements defined in the process (closure) definition
             def block = (lastArg as ClosureExpression).code as BlockStatement
-            def len = block.statements.size()
+            int len = block.statements.size()
 
             makeGStringLazyVisitor = new GStringToLazyVisitor(unit)
 
@@ -458,7 +458,7 @@ public class NextflowDSLImpl implements ASTTransformation {
             def nested = methodCall.objectExpression instanceof MethodCallExpression
             log.trace "convert > input method: $methodName"
 
-            if( methodName in ['val','env','file','each', 'set','stdin'] ) {
+            if( methodName in ['val','env','file','each','set','stdin'] ) {
                 //this methods require a special prefix
                 if( !nested )
                     methodCall.setMethod( new ConstantExpression('_in_' + methodName) )
@@ -536,6 +536,8 @@ public class NextflowDSLImpl implements ASTTransformation {
 
     private boolean withinFileMethod
 
+    private boolean withinEachMethod
+
     /**
      * This method converts the a method call argument from a Variable to a Constant value
      * so that it is possible to reference variable that not yet exist
@@ -550,6 +552,7 @@ public class NextflowDSLImpl implements ASTTransformation {
 
         withinSetMethod = name == '_in_set' || name == '_out_set'
         withinFileMethod = name == '_in_file' || name == '_out_file'
+        withinEachMethod = name == '_in_each'
 
         try {
             varToConst(methodCall.getArguments())
@@ -557,6 +560,7 @@ public class NextflowDSLImpl implements ASTTransformation {
         } finally {
             withinSetMethod = false
             withinFileMethod = false
+            withinEachMethod = false
         }
 
     }
@@ -617,7 +621,7 @@ public class NextflowDSLImpl implements ASTTransformation {
              * input:
              *   set( file(fasta:'*.fa'), .. ) from q
              */
-            if( methodCall.methodAsString == 'file' && withinSetMethod ) {
+            if( methodCall.methodAsString == 'file' && (withinSetMethod || withinEachMethod) ) {
                 def args = (TupleExpression) varToConst(methodCall.arguments)
                 return newObj( TokenFileCall, args )
             }

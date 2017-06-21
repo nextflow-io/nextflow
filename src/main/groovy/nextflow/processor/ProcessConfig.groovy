@@ -129,7 +129,7 @@ class ProcessConfig implements Map<String,Object> {
         configProperties.shell = BashWrapperBuilder.BASH
         configProperties.validExitStatus = [0]
         configProperties.maxRetries = 1
-        configProperties.maxErrors = 3
+        configProperties.maxErrors = -1
         configProperties.errorStrategy = ErrorStrategy.TERMINATE
     }
 

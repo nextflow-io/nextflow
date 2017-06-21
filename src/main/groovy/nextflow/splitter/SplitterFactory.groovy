@@ -27,7 +27,8 @@ import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
-import nextflow.extension.DataflowExtensions
+import nextflow.dag.NodeMarker
+import nextflow.extension.DataflowHelper
 /**
  * Factory class for splitter objects
  *
@@ -118,7 +119,7 @@ class SplitterFactory {
             // when the  target obj is a channel use call
             if( obj instanceof DataflowReadChannel ) {
                 def outbound = splitOverChannel( obj, splitter, opt )
-                session.dag.addOperatorNode(methodName, obj, outbound)
+                NodeMarker.addOperatorNode(methodName, obj, outbound)
                 return outbound
             }
             // invokes the splitter
@@ -134,7 +135,7 @@ class SplitterFactory {
             // when the  target obj is a channel use call
             if( obj instanceof DataflowReadChannel ) {
                 def outbound = countOverChannel( obj, splitter, opt )
-                session.dag.addOperatorNode(methodName, obj, outbound)
+                NodeMarker.addOperatorNode(methodName, obj, outbound)
                 return outbound
             }
             // invokes the splitter
@@ -176,7 +177,7 @@ class SplitterFactory {
         // set the splitter strategy options
         strategy.options(opts)
 
-        DataflowExtensions.subscribeImpl ( source, [
+        DataflowHelper.subscribeImpl ( source, [
                 onNext: { entry -> strategy.target(entry).apply() },
                 onComplete: { resultChannel << Channel.STOP }
         ] )
@@ -211,7 +212,7 @@ class SplitterFactory {
             strategy.target(entry).apply()
         }
 
-        DataflowExtensions.subscribeImpl ( source, [onNext: splitEntry, onComplete: { result.bind(count) }] )
+        DataflowHelper.subscribeImpl ( source, [onNext: splitEntry, onComplete: { result.bind(count) }] )
 
         // return the resulting channel
         return result

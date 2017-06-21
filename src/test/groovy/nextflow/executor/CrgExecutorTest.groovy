@@ -74,8 +74,6 @@ class CrgExecutorTest extends Specification {
                 'y',
                 '-terse',
                 '',
-                '-V',
-                '',
                 '-notify',
                 ''
         ]
@@ -95,8 +93,6 @@ class CrgExecutorTest extends Specification {
                 '-j',
                 'y',
                 '-terse',
-                '',
-                '-V',
                 '',
                 '-notify',
                 '',
@@ -120,8 +116,6 @@ class CrgExecutorTest extends Specification {
                 '-j',
                 'y',
                 '-terse',
-                '',
-                '-V',
                 '',
                 '-notify',
                 '',
@@ -147,8 +141,6 @@ class CrgExecutorTest extends Specification {
                 '-j',
                 'y',
                 '-terse',
-                '',
-                '-V',
                 '',
                 '-notify',
                 '',
@@ -190,7 +182,6 @@ class CrgExecutorTest extends Specification {
                     #$ -o /abc/.command.log
                     #$ -j y
                     #$ -terse
-                    #$ -V
                     #$ -notify
                     #$ -q short
                     #$ -l h_rt=24:00:00
@@ -215,7 +206,6 @@ class CrgExecutorTest extends Specification {
                     #$ -o /abc/.command.log
                     #$ -j y
                     #$ -terse
-                    #$ -V
                     #$ -notify
                     #$ -q short
                     #$ -l h_rt=24:00:00
@@ -241,7 +231,6 @@ class CrgExecutorTest extends Specification {
                     #$ -o /abc/.command.log
                     #$ -j y
                     #$ -terse
-                    #$ -V
                     #$ -notify
                     #$ -q short
                     #$ -l h_rt=24:00:00
@@ -270,7 +259,6 @@ class CrgExecutorTest extends Specification {
                     #$ -o /abc/.command.log
                     #$ -j y
                     #$ -terse
-                    #$ -V
                     #$ -notify
                     #$ -q long
                     #$ -pe mpi 2
@@ -304,7 +292,6 @@ class CrgExecutorTest extends Specification {
                     #$ -o /abc/.command.log
                     #$ -j y
                     #$ -terse
-                    #$ -V
                     #$ -notify
                     #$ -q long
                     #$ -pe mpi 4
@@ -459,7 +446,6 @@ class CrgExecutorTest extends Specification {
             #$ -o /some/dir/.command.log
             #$ -j y
             #$ -terse
-            #$ -V
             #$ -notify
             '''
             .stripIndent().leftTrim()
@@ -480,7 +466,6 @@ class CrgExecutorTest extends Specification {
             #$ -o /some/dir/.command.log
             #$ -j y
             #$ -terse
-            #$ -V
             #$ -notify
             #$ -binding env linear:1
             #$ -soft -l docker_images=*;foo;*
@@ -506,7 +491,6 @@ class CrgExecutorTest extends Specification {
             #$ -o /some/dir/.command.log
             #$ -j y
             #$ -terse
-            #$ -V
             #$ -notify
             #$ -binding env linear:1
             #$ -soft -l docker_images=*;foo;*

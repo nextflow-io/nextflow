@@ -61,7 +61,7 @@ class ConcatOp {
         def current = channels[index++]
         def next = index < channels.size() ? channels[index] : null
 
-        DataflowExtensions.subscribeImpl (current, [
+        DataflowHelper.subscribeImpl(current, [
                 onNext: { result.bind(it) },
                 onComplete: {
                     if(next) append(result, channels, index)

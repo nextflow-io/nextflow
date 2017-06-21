@@ -20,6 +20,7 @@
 
 package nextflow.util
 
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 
 /**
@@ -54,6 +55,7 @@ class BarrierTest extends Specification {
 
     }
 
+    @IgnoreIf({ javaVersion == 1.7 })
     def 'test await termination' () {
 
         given:

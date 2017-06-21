@@ -25,6 +25,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
@@ -49,6 +50,7 @@ import groovyx.gpars.group.PGroup
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.cloud.CloudSpotTerminationException
+import nextflow.dag.NodeMarker
 import nextflow.exception.FailedGuardException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
@@ -58,6 +60,7 @@ import nextflow.exception.ProcessNotRecoverableException
 import nextflow.exception.ProcessStageException
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
+import nextflow.extension.DataflowHelper
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePatternSplitter
@@ -145,7 +148,7 @@ class TaskProcessor {
      *
      * note: it must be declared volatile -- issue #41
      */
-    protected volatile DataflowProcessor processor
+    protected volatile DataflowProcessor operator
 
     /**
      * The underlying executor which will run the task
@@ -181,7 +184,7 @@ class TaskProcessor {
      *
      * See {@code #checkProcessTermination}
      */
-    protected volatile boolean terminated
+    protected volatile boolean completed
 
     protected boolean allScalarValues
 
@@ -207,6 +210,12 @@ class TaskProcessor {
      * Whenever the process is executed only once
      */
     protected boolean singleton
+
+    /**
+     * Track the status of input ports. When 1 the port is open (waiting for data),
+     * when 0 the port is closed (ie. received the STOP signal)
+     */
+    protected AtomicIntegerArray openPorts
 
     /**
      * Process ID number. The first is 1, the second 2 and so on ..
@@ -273,6 +282,11 @@ class TaskProcessor {
      * @return The processor name
      */
     String getName() { name }
+
+    /**
+     * @return The {@code DataflowOperator} underlying this process
+     */
+    DataflowProcessor getOperator() { operator }
 
     /**
      * @return The {@code BaseScript} object which represents pipeline script
@@ -345,9 +359,9 @@ class TaskProcessor {
         state.addListener { StateObj old, StateObj obj ->
             try {
                 log.trace "<$name> Process state changed to: $obj -- finished: ${obj.isFinished()}"
-                if( !terminated && obj.isFinished() ) {
+                if( !completed && obj.isFinished() ) {
                     terminateProcess()
-                    terminated = true
+                    completed = true
                 }
             }
             catch( Throwable e ) {
@@ -381,7 +395,6 @@ class TaskProcessor {
      */
 
     protected void createOperator() {
-
         def opInputs = new ArrayList(config.getInputs().getChannels())
 
         /*
@@ -426,9 +439,9 @@ class TaskProcessor {
             def stopAfterFirstRun = allScalarValues
             def interceptor = new BaseProcessInterceptor(opInputs, stopAfterFirstRun)
             def params = [inputs: opInputs, outputs: linkingChannels, maxForks: 1, listeners: [interceptor]]
-            session.allProcessors << (processor = new DataflowOperator(group, params, forwarder))
+            session.allOperators << (operator = new DataflowOperator(group, params, forwarder))
             // fix issue #41
-            processor.start()
+            operator.start()
 
             // set as next inputs the result channels of the iteration process
             // adding the 'control' channel removed previously
@@ -461,17 +474,25 @@ class TaskProcessor {
         // note: do not specify the output channels in the operator declaration
         // this allows us to manage them independently from the operator life-cycle
         this.singleton = allScalarValues && !hasEachParams
+        this.openPorts = createPortsArray(opInputs.size())
         config.getOutputs().setSingleton(singleton)
         def interceptor = new TaskProcessorInterceptor(opInputs, singleton)
         def params = [inputs: opInputs, maxForks: maxForks, listeners: [interceptor] ]
-        session.allProcessors << (processor = new DataflowOperator(group, params, wrapper))
+        session.allOperators << (operator = new DataflowOperator(group, params, wrapper))
 
         // notify the creation of a new vertex the execution DAG
-        session.dag.addProcessNode(name, config.getInputs(), config.getOutputs())
+        NodeMarker.addProcessNode(this, config.getInputs(), config.getOutputs())
 
         // fix issue #41
-        processor.start()
+        operator.start()
 
+    }
+
+    private AtomicIntegerArray createPortsArray(int size) {
+        def result = new AtomicIntegerArray(size)
+        for( int i=0; i<size; i++ )
+            result.set(i, 1)
+        return result
     }
 
     /**
@@ -544,12 +565,15 @@ class TaskProcessor {
 
         // create and initialize the task instance to be executed
         final List values = args instanceof List ? args : [args]
-        log.trace "Setup new process > $name"
+        log.trace "Invoking task > $name"
 
         // -- create the task run instance
         final task = createTaskRun()
         // -- set the task instance as the current in this thread
         currentTask.set(task)
+
+        // -- validate input lengths
+        validateInputSets(values)
 
         // -- map the inputs to a map and use to delegate closure values interpolation
         final secondPass = [:]
@@ -567,6 +591,26 @@ class TaskProcessor {
 
         def hash = createTaskHashKey(task)
         checkCachedOrLaunchTask(task, hash, resumable)
+    }
+
+    @Memoized
+    private List<SetInParam> getDeclaredInputSet() {
+        getConfig().getInputs().ofType(SetInParam)
+    }
+
+    protected void validateInputSets( List values ) {
+
+        def declaredSets = getDeclaredInputSet()
+        for( int i=0; i<declaredSets.size(); i++ ) {
+            final param = declaredSets[i]
+            final entry = values[param.index]
+            final expected = param.inner.size()
+            final actual = entry instanceof Collection ? entry.size() : (entry instanceof Map ? entry.size() : 1)
+
+            if( actual != expected ) {
+                log.warn1("Input tuple does not match input set cardinality declared by process `$name` -- offending value: $entry", firstOnly: true, cacheKey: this)
+            }
+        }
     }
 
 
@@ -657,7 +701,7 @@ class TaskProcessor {
      */
 
     final protected TaskRun createTaskRun() {
-        log.trace "Creating a new process > $name"
+        log.trace "Creating a new task > $name"
 
         def index = indexCount.incrementAndGet()
         def task = new TaskRun(
@@ -680,6 +724,8 @@ class TaskProcessor {
         config.getInputs().each { InParam param ->
             if( param instanceof SetInParam )
                 param.inner.each { task.setInput(it)  }
+            else if( param instanceof EachInParam )
+                task.setInput(param.inner)
             else
                 task.setInput(param)
         }
@@ -732,7 +778,7 @@ class TaskProcessor {
             }
 
             log.trace "[${task.name}] Cacheable folder: $folder -- exists: $exists; try: $tries"
-            def cached = shouldTryCache && exists && checkCachedOutput(task, folder, hash)
+            def cached = shouldTryCache && exists && checkCachedOutput(task.clone(), folder, hash)
             if( cached )
                 return false
 
@@ -862,12 +908,17 @@ class TaskProcessor {
         /*
          * verify stdout file
          */
-        final ctx = entry.context
         final stdoutFile = folder.resolve( TaskRun.CMD_OUTFILE )
+
+        if( entry.context != null ) {
+            task.context = entry.context
+            task.config.context = entry.context
+            task.code?.delegate = entry.context
+        }
 
         try {
             // -- check if all output resources are available
-            collectOutputs(task, folder, stdoutFile, ctx)
+            collectOutputs(task, folder, stdoutFile, task.context)
 
             // set the exit code in to the task object
             task.cached = true
@@ -876,11 +927,6 @@ class TaskProcessor {
             task.stdout = stdoutFile
             if( exitCode != null ) {
                 task.exitStatus = exitCode
-            }
-            if( ctx != null ) {
-                task.context = ctx
-                task.config.context = ctx
-                task.code?.delegate = ctx
             }
 
             log.info "[${task.hashLog}] Cached process > ${task.name}"
@@ -963,7 +1009,7 @@ class TaskProcessor {
                 errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount)
                 if( errorStrategy.soft ) {
                     def msg = error.getMessage()
-                    if( errorStrategy == IGNORE) msg += " -- Error is ignored"
+                    if( errorStrategy == IGNORE ) msg += " -- Error is ignored"
                     else if( errorStrategy == RETRY ) msg += " -- Execution is retried ($taskErrCount)"
                     log.warn msg
                     task.failed = true
@@ -1034,6 +1080,7 @@ class TaskProcessor {
                         taskCopy.config.attempt = taskErrCount+1
                         taskCopy.runType = RunType.RETRY
                         taskCopy.error = null
+                        taskCopy.resolve(taskBody)
                         checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
                     }
                     catch( Throwable e ) {
@@ -1723,32 +1770,6 @@ class TaskProcessor {
         return script.join('\n')
     }
 
-
-    protected decodeInputValue( InParam param, List values ) {
-
-        def val = values[ param.index ]
-        if( param.mapIndex != -1 ) {
-            def list
-            if( val instanceof Map )
-                list = val.values()
-
-            else if( val instanceof Collection )
-                list = val
-            else
-                list = [val]
-
-            try {
-                return list[param.mapIndex]
-            }
-            catch( IndexOutOfBoundsException e ) {
-                throw new ProcessException(e)
-            }
-        }
-
-        return val
-    }
-
-
     final protected int makeTaskContextStage1( TaskRun task, Map secondPass, List values ) {
 
         final contextMap = task.context
@@ -1757,10 +1778,9 @@ class TaskProcessor {
         task.inputs.keySet().each { InParam param ->
 
             // add the value to the task instance
-            def val = decodeInputValue(param,values)
+            def val = param.decodeInputs(values)
 
             switch(param) {
-                case EachInParam:
                 case ValueInParam:
                     contextMap.put( param.name, val )
                     break
@@ -1775,7 +1795,7 @@ class TaskProcessor {
                     break
 
                 default:
-                    log.debug "Unsupported input param type: ${param?.class?.simpleName}"
+                    throw new IllegalStateException("Unsupported input param type: ${param?.class?.simpleName}")
             }
 
             // add the value to the task instance context
@@ -2022,18 +2042,34 @@ class TaskProcessor {
     }
 
     /**
-     * Prints a warning message. This method uses a {@link Memoized} annotation
-     * to avoid to show multiple times the same message when multiple process instances
-     * invoke it.
+     * Dump the current process status listing
+     * all input *port* statuses for debugging purpose
      *
-     * @param message The warning message to print
+     * @return The text description representing the process status
      */
-    @Memoized
-    def warn( String message ) {
-        log.warn "Process `$name` $message"
-        return null
-    }
+    String dumpTerminationStatus() {
 
+        def result = new StringBuilder()
+        def terminated = !DataflowHelper.isProcessorActive(operator)
+        result << "[process] $name\n"
+        if( terminated )
+            return result.toString()
+
+        def statusStr = !completed && !terminated ? 'status=ACTIVE' : ( completed && terminated ? 'status=TERMINATED' : "completed=$completed; terminated=$terminated" )
+        result << "  $statusStr\n"
+        // add extra info about port statuses
+        for( int i=0; i<openPorts.length(); i++ ) {
+            def last = i == openPorts.length()-1
+            def param = config.getInputs()[i]
+            def isValue = param?.inChannel instanceof DataflowExpression
+            def type = last ? '(cntrl)' : (isValue ? '(value)' : '(queue)')
+            def channel = param && !(param instanceof SetInParam) ? param.getName() : '-'
+            def status = type != '(value)' ? (openPorts.get(i) ? 'OPEN' : 'CLOSED') : '-   '
+            result << "  port $i: $type ${status}; channel: $channel\n"
+        }
+
+        return result.toString()
+    }
 
     /*
      * logger class for the *iterator* processor
@@ -2120,7 +2156,8 @@ class TaskProcessor {
             super.controlMessageArrived(processor, channel, index, message)
 
             if( message == PoisonPill.instance ) {
-                log.debug "<${name}> Poison pill arrived"
+                log.debug "<${name}> Poison pill arrived; port: $index"
+                openPorts.set(index, 0) // mark the port as closed
                 state.update { StateObj it -> it.poison() }
             }
 

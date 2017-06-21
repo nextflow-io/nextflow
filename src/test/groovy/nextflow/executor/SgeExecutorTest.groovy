@@ -69,7 +69,6 @@ class SgeExecutorTest extends Specification {
                 #$ -o /abc/.command.log
                 #$ -j y
                 #$ -terse
-                #$ -V
                 #$ -notify
                 #$ -q my-queue
                 '''
@@ -86,7 +85,6 @@ class SgeExecutorTest extends Specification {
                 #$ -o /abc/.command.log
                 #$ -j y
                 #$ -terse
-                #$ -V
                 #$ -notify
                 #$ -q my-queue
                 '''
@@ -106,7 +104,6 @@ class SgeExecutorTest extends Specification {
                 #$ -o /abc/.command.log
                 #$ -j y
                 #$ -terse
-                #$ -V
                 #$ -notify
                 #$ -q my-queue
                 #$ -l h_rt=00:00:10
@@ -130,7 +127,6 @@ class SgeExecutorTest extends Specification {
                 #$ -o /abc/.command.log
                 #$ -j y
                 #$ -terse
-                #$ -V
                 #$ -notify
                 #$ -q my-queue
                 #$ -l h_rt=00:10:00
@@ -155,7 +151,6 @@ class SgeExecutorTest extends Specification {
                 #$ -o /abc/.command.log
                 #$ -j y
                 #$ -terse
-                #$ -V
                 #$ -notify
                 #$ -q my-queue
                 #$ -pe smp 1
@@ -179,7 +174,6 @@ class SgeExecutorTest extends Specification {
                 #$ -o /abc/.command.log
                 #$ -j y
                 #$ -terse
-                #$ -V
                 #$ -notify
                 #$ -q my-queue
                 #$ -pe mpi 2
@@ -203,7 +197,6 @@ class SgeExecutorTest extends Specification {
                 #$ -o /abc/.command.log
                 #$ -j y
                 #$ -terse
-                #$ -V
                 #$ -notify
                 #$ -q my-queue
                 #$ -pe orte 4
@@ -241,7 +234,6 @@ class SgeExecutorTest extends Specification {
                 #$ -o "/work/dir with/blanks/.command.log"
                 #$ -j y
                 #$ -terse
-                #$ -V
                 #$ -notify
                 #$ -q my-queue
                 '''

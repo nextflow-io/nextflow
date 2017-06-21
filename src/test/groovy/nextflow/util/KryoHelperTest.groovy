@@ -143,5 +143,19 @@ class KryoHelperTest extends  Specification {
 
     }
 
+    def 'should serialise a map entry' () {
+
+        given:
+        def map = [foo:1]
+
+        when:
+        def entry = map.entrySet().iterator().next()
+        def buffer = KryoHelper.serialize(entry)
+        then:
+        KryoHelper.deserialize(buffer) instanceof Map.Entry
+        KryoHelper.deserialize(buffer) == entry
+
+    }
+
 
 }

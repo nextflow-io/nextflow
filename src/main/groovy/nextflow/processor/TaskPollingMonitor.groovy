@@ -19,7 +19,7 @@
  */
 
 package nextflow.processor
-import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.Lock
@@ -67,10 +67,6 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     final String name
 
-    /**
-     * A lock object used to access in a synchronous manner the polling queue
-     */
-    private Lock tasksQueueLock
 
     /**
      * A lock object used to signal the completion of a task execution
@@ -78,14 +74,39 @@ class TaskPollingMonitor implements TaskMonitor {
     private Lock taskCompleteLock
 
     /**
+     * Locks the queue of pending tasks buffer
+     */
+    private Lock pendingQueueLock
+
+    /**
+     * Condition to signal a new task has been added in the {@link #pendingQueue}
+     */
+    private Condition taskAvail
+
+    /**
+     * Condition to signal a new processing slot may be available in the {@link #runningQueue}
+     */
+    private Condition slotAvail
+
+    /**
      * A condition that signal when at least a complete task is available
      */
     private Condition taskComplete
 
-    private Condition notFull
+    /**
+     * Unbounded buffer that holds all tasks scheduled but not yet submitted for execution
+     */
+    private Queue<TaskHandler> pendingQueue
 
-    private Queue<TaskHandler> pollingQueue
+    /**
+     * Bounded buffer that holds all {@code TaskHandler}s that have been submitted for execution
+     */
+    private Queue<TaskHandler> runningQueue
 
+    /**
+     * The capacity of the {@code pollingQueue} ie. the max number of tasks can be executed at
+     * the same time.
+     */
     private int capacity
 
     /**
@@ -113,10 +134,9 @@ class TaskPollingMonitor implements TaskMonitor {
         this.dumpInterval = (params.dumpInterval as Duration) ?: Duration.of('5min')
         this.capacity = (params.capacity ?: 0) as int
 
-        this.pollingQueue = new ConcurrentLinkedQueue<>()
+        this.pendingQueue = new ArrayDeque<>()
+        this.runningQueue = new ArrayBlockingQueue<>(capacity)
     }
-
-
 
     static TaskPollingMonitor create( Session session, String name, int defQueueSize, Duration defPollInterval ) {
         assert session
@@ -140,62 +160,21 @@ class TaskPollingMonitor implements TaskMonitor {
         new TaskPollingMonitor(name: name, session: session, pollInterval: pollInterval, dumpInterval: dumpInterval)
     }
 
-    protected Queue<TaskHandler> getPollingQueue() { pollingQueue }
-
-    public TaskDispatcher getDispatcher() { dispatcher }
+    /**
+     * @return The current {@link #runningQueue} instance
+     */
+    protected Queue<TaskHandler> getRunningQueue() { runningQueue }
 
     /**
-     * Set the number of tasks the monitor will handle in parallel.
-     * This value must be changed by using a mutex lock
-     *
-     * @param value
+     * @return The current {@link TaskDispatcher} instance
      */
-    final void capacitySet( int newValue ) {
-        if( newValue > capacity ) {
-            capacityInc(newValue-capacity)
-        }
-        else if( newValue < capacity ) {
-            capacityDec( capacity-newValue )
-        }
-    }
+    public TaskDispatcher getDispatcher() { dispatcher }
 
     /**
      * @return the current capacity value by the number of slots specified
      */
     public int getCapacity() { capacity }
 
-    /**
-     * Increment the monitor capacity b
-     *
-     * @param slots The number of slots to add
-     * @return The new capacity value
-     */
-    protected int capacityInc( int slots = 1 ) {
-        def result = 0
-        tasksQueueLock.withLock {
-            result = capacity += slots
-            notFull.signal()
-        }
-        log.debug "Monitor current capacity: $result (after inc: $slots)"
-        return result
-    }
-
-    /**
-     * Decrement the monitor capacity by the number of slots specified
-     *
-     * @param slots
-     * @return The new capacity value
-     */
-    protected int capacityDec( int slots = 1 ) {
-
-        def result = 0
-        tasksQueueLock.withLock {
-            result = capacity -= slots
-        }
-
-        log.debug "Monitor current capacity: $result (after dec: $slots)"
-        return result
-    }
 
     /**
      * Defines the strategy determining if a task can be submitted for execution.
@@ -207,7 +186,7 @@ class TaskPollingMonitor implements TaskMonitor {
      *      by the polling monitor
      */
     protected boolean canSubmit(TaskHandler handler) {
-        pollingQueue.size() < capacity
+        runningQueue.size() < capacity
     }
 
     /**
@@ -221,7 +200,7 @@ class TaskPollingMonitor implements TaskMonitor {
         handler.submit()
         // note: add the 'handler' into the polling queue *after* the submit operation,
         // this guarantees that in the queue are only jobs successfully submitted
-        pollingQueue.add(handler)
+        runningQueue.add(handler)
     }
 
     /**
@@ -234,7 +213,7 @@ class TaskPollingMonitor implements TaskMonitor {
      *      {@code false} otherwise
      */
     protected boolean remove(TaskHandler handler) {
-        pollingQueue.remove(handler)
+        runningQueue.remove(handler)
     }
 
     /**
@@ -245,25 +224,11 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     @Override
     void schedule(TaskHandler handler) {
-        //
-        // This guarantee that the 'pollingQueue' does not contain
-        // more entries than the specified 'capacity'
-        //
-        boolean done = tasksQueueLock.withLock() {
-
-            while ( !canSubmit(handler) )
-                notFull.await();
-
-            if( !session.isTerminated() && !session.isCancelled() ) {
-                submit(handler)
-                return true
-            }
-
-            return false
+        pendingQueueLock.withLock {
+            pendingQueue << handler
+            taskAvail.signal()  // signal that a new task is available for execution
+            slotAvail.signal()  // signal that a slot in the processing queue
         }
-
-        if( done )
-            session.notifyTaskSubmit(handler)
     }
 
     /**
@@ -281,16 +246,15 @@ class TaskPollingMonitor implements TaskMonitor {
             return false
         }
 
-        tasksQueueLock.withLock {
+        pendingQueueLock.withLock {
             if( remove(handler) ) {
-                notFull.signal()
+                slotAvail.signal()
                 return true
             }
 
             return false
         }
     }
-
 
     /**
      * Launch the monitoring thread
@@ -303,18 +267,18 @@ class TaskPollingMonitor implements TaskMonitor {
         log.debug ">>> barrier register (monitor: ${this.name})"
         session.barrier.register(this)
 
-        // creates the lock and condition
-        this.tasksQueueLock = new ReentrantLock()
-        this.notFull = tasksQueueLock.newCondition()
-
         this.taskCompleteLock = new ReentrantLock()
         this.taskComplete = taskCompleteLock.newCondition()
+
+        this.pendingQueueLock = new ReentrantLock()
+        this.taskAvail = pendingQueueLock.newCondition()
+        this.slotAvail = pendingQueueLock.newCondition()
 
         // remove pending tasks on termination
         session.onShutdown { this.cleanup() }
 
         // launch the thread polling the queue
-        Thread.start {
+        Thread.start('Running tasks thread') {
             try {
                 pollLoop()
             }
@@ -324,7 +288,34 @@ class TaskPollingMonitor implements TaskMonitor {
             }
         }
 
+        // launch daemon that submits tasks for execution
+        Thread.startDaemon('Pending tasks thread', this.&submitLoop)
+
         return this
+    }
+
+    /**
+     * Wait for new tasks and submit for execution when a slot is available
+     */
+    protected void submitLoop() {
+        while( true ) {
+            pendingQueueLock.lock()
+            try {
+                // wait for at least at to be available
+                if( pendingQueue.size()==0 )
+                    taskAvail.await()
+
+                // try to submit all pending tasks
+                int processed = submitPendingTasks()
+
+                // if no task has been submitted wait for a new slot to be available
+                if( !processed )
+                    slotAvail.await()
+            }
+            finally {
+                pendingQueueLock.unlock()
+            }
+        }
     }
 
     /**
@@ -334,12 +325,12 @@ class TaskPollingMonitor implements TaskMonitor {
 
         while( true ) {
             long time = System.currentTimeMillis()
-            log.trace "Scheduler queue size: ${pollingQueue.size()}"
+            log.trace "Scheduler queue size: ${runningQueue.size()}"
 
             // check all running tasks for termination
             checkAllTasks()
 
-            if( (session.isTerminated() && pollingQueue.size() == 0) || session.isAborted() ) {
+            if( (session.isTerminated() && runningQueue.size()==0 && pendingQueue.size()==0) || session.isAborted() ) {
                 break
             }
 
@@ -351,7 +342,14 @@ class TaskPollingMonitor implements TaskMonitor {
 
             // dump this line every two minutes
             dumpInterval.throttle(true) {
-                log.debug "!! executor $name > tasks to be completed: ${pollingQueue.size()} -- first: ${pollingQueue.peek()}"
+                def pending = runningQueue.size()
+                if( !pending ) {
+                    log.warn "No more task to compute -- Execution may be stalled (see the log file for details)"
+                    log.debug session.dumpNetworkStatus()
+                }
+                else {
+                    log.debug "!! executor $name > tasks to be completed: ${runningQueue.size()} -- first: ${runningQueue.peek()}"
+                }
             }
         }
 
@@ -389,7 +387,7 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     protected void checkAllTasks() {
 
-        for( TaskHandler handler : pollingQueue ) {
+        for( TaskHandler handler : runningQueue ) {
             try {
                 checkTaskStatus(handler)
             }
@@ -398,6 +396,34 @@ class TaskPollingMonitor implements TaskMonitor {
             }
         }
 
+    }
+
+    /**
+     * Loop over the queue of pending tasks and submit all
+     * of which satisfy the {@link #canSubmit(nextflow.processor.TaskHandler)}  condition
+     *
+     * @return The number of tasks submitted for execution
+     */
+    protected int submitPendingTasks() {
+
+        int count = 0
+        def itr = pendingQueue.iterator()
+        while( itr.hasNext() ) {
+            def handler = itr.next()
+            if( !canSubmit(handler))
+                continue
+
+            if( !session.aborted && !session.cancelled ) {
+                submit(handler)
+                session.notifyTaskSubmit(handler)
+                itr.remove()
+                count++
+            }
+            else
+                break
+        }
+
+        return count
     }
 
 
@@ -454,13 +480,13 @@ class TaskPollingMonitor implements TaskMonitor {
      * Kill all pending jobs when current execution session is aborted
      */
     protected void cleanup() {
-        if( !pollingQueue.size() ) return
-        log.warn "Killing pending tasks (${pollingQueue.size()})"
+        if( !runningQueue.size() ) return
+        log.warn "Killing pending tasks (${runningQueue.size()})"
 
         def batch = new BatchCleanup()
-        while( pollingQueue.size() ) {
+        while( runningQueue.size() ) {
 
-            TaskHandler handler = pollingQueue.poll()
+            TaskHandler handler = runningQueue.poll()
             try {
                 if( handler instanceof GridTaskHandler ) {
                     ((GridTaskHandler)handler).batch = batch

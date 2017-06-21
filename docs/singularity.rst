@@ -1,8 +1,8 @@
 .. _singularity-page:
 
-***********
-Singularity
-***********
+**********************
+Singularity containers
+**********************
 
 `Singularity <http://singularity.lbl.gov/>`_ is a container engine alternative to Docker. The main advantages
 of Singularity is that it can be used with unprivileged permissions and doesn't require a separate daemon process.
@@ -16,11 +16,9 @@ Moreover the support provided by Nextflow for different container technologies, 
 transparently executed both with Docker or Singularity containers, depending the available engine in the target
 execution platforms.
 
-.. warning:: This is an incubating feature. It may change in future Nextflow releases.
-
 
 Prerequisites
-==============
+=============
 
 You will need Singularity installed on your execution environment e.g. your computer or a distributed cluster, depending
 on where you want to run your pipeline.
@@ -49,7 +47,7 @@ configuration file.
 
 
 How it works
-=============
+============
 
 The integration for Singularity follows the same execution model implemented for Docker. You won't need to modify your
 Nextflow script in order to run it with Singularity. Simply specify the Singularity image

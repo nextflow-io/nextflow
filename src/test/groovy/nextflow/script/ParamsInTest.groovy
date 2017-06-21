@@ -19,7 +19,6 @@
  */
 
 package nextflow.script
-
 import static test.TestParser.parseAndReturnProcess
 
 import java.nio.file.Paths
@@ -29,7 +28,6 @@ import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.processor.TaskProcessor
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -580,6 +578,8 @@ class ParamsInTest extends Specification {
               each x
               each p from y
               each z from q
+              each file(foo) from foo_ch
+              each file('bar') from bar_ch
 
               return ''
             }
@@ -589,27 +589,56 @@ class ParamsInTest extends Specification {
         def binding =  [:]
         binding.q = new DataflowQueue<>()
         binding.q << 1 << 2 << 3  << Channel.STOP
+        binding.foo_ch = 'file-a.txt'
+        binding.bar_ch = 'file-x.fa'
+
         def process = parseAndReturnProcess(text, binding)
-        def in1 = process.config.getInputs().get(0)
-        def in2 = process.config.getInputs().get(1)
-        def in3 = process.config.getInputs().get(2)
+        def in0 = (EachInParam)process.config.getInputs().get(0)
+        def in1 = (EachInParam)process.config.getInputs().get(1)
+        def in2 = (EachInParam)process.config.getInputs().get(2)
+        def in3 = (EachInParam)process.config.getInputs().get(3)
+        def in4 = (EachInParam)process.config.getInputs().get(4)
 
         then:
-        process.config.getInputs().size() == 3
+        process.config.getInputs().size() == 5
+
+        in0.class == EachInParam
+        in0.inChannel instanceof DataflowVariable
+        in0.inChannel.val == ['aaa']
+        in0.inner.name == 'x'
+        in0.inner.owner == in0
 
         in1.class == EachInParam
-        in1.name == 'x'
+        in1.name == '__$eachinparam<1>'
         in1.inChannel instanceof DataflowVariable
-        in1.inChannel.val == ['aaa']
+        in1.inChannel.val == [1,2]
+        in1.inner.name == 'p'
+        in1.inner instanceof ValueInParam
+        in1.inner.owner == in1
 
         in2.class == EachInParam
-        in2.name == 'p'
-        in2.inChannel instanceof DataflowVariable
-        in2.inChannel.val == [1,2]
+        in2.name == '__$eachinparam<2>'
+        in2.inChannel.val == [1,2,3]
+        in2.inner instanceof ValueInParam
+        in2.inner.name == 'z'
+        in2.inner.owner == in2
 
         in3.class == EachInParam
-        in3.name == 'z'
-        in3.inChannel.val == [1,2,3]
+        in3.name == '__$eachinparam<3>'
+        in3.inChannel instanceof DataflowVariable
+        in3.inChannel.val == ['file-a.txt']
+        in3.inner instanceof FileInParam
+        in3.inner.name == 'foo'
+        in3.inner.owner == in3
+
+        in4.class == EachInParam
+        in4.name == '__$eachinparam<4>'
+        in4.inChannel instanceof DataflowVariable
+        in4.inChannel.val == ['file-x.fa']
+        in4.inner instanceof FileInParam
+        in4.inner.name == 'bar'
+        in4.inner.filePattern == 'bar'
+        in4.inner.owner == in4
 
     }
 
@@ -632,6 +661,35 @@ class ParamsInTest extends Specification {
         then:
         thrown(MissingPropertyException)
 
+    }
+
+
+    def 'should decode param inputs ' () {
+
+        def param
+        def holder = []
+
+        when:
+        param = new ValueInParam(Mock(Binding), holder)
+        then:
+        param.decodeInputs( ['a','b','c'] ) == 'a'
+
+        when:
+        param = new ValueInParam(Mock(Binding), holder)
+        then:
+        param.decodeInputs( ['a','b','c'] ) == 'b'
+
+        when:
+        param = new ValueInParam(Mock(Binding), [])
+        param.owner = new EachInParam(Mock(Binding), [])
+        then:
+        param.decodeInputs( ['a','b','c'] ) == 'a'
+
+        when:
+        param = new ValueInParam(Mock(Binding), [])
+        param.owner = new EachInParam(Mock(Binding), [])
+        then:
+        param.decodeInputs( [[1,2,3],'b','c'] ) == [1,2,3]
     }
 
 }

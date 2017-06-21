@@ -150,7 +150,7 @@ class BashWrapperBuilder {
             done < <(ps -e -o pid= -o ppid=)
 
             stat() {
-                local x_ps=$(ps -o pid=,state=,pcpu=,pmem=,vsz=,rss= $1)
+                local x_ps=$(ps -o pid= -o state= -o pcpu= -o pmem= -o vsz= -o rss= $1)
                 local x_io=$(cat /proc/$1/io 2> /dev/null | sed 's/^.*:\\s*//' | tr '\\n' ' ')
                 local x_vm=$(cat /proc/$1/status 2> /dev/null | egrep 'VmPeak|VmHWM' | sed 's/^.*:\\s*//' | sed 's/[\\sa-zA-Z]*$//' | tr '\\n' ' ')
                 [[ ! $x_ps ]] && return 0
@@ -180,19 +180,14 @@ class BashWrapperBuilder {
 
         nxf_sleep() {
           if [[ $1 < 0 ]]; then sleep 5;
-          elif [[ $1 < 10 ]]; then sleep 0.1;
+          elif [[ $1 < 10 ]]; then sleep 0.1 2>/dev/null || sleep 1;
           elif [[ $1 < 130 ]]; then sleep 1;
           else sleep 5; fi
         }
 
         nxf_date() {
-            case `uname` in
-                Darwin) if hash gdate 2>/dev/null; then echo 'gdate +%s%3N'; else echo 'date +%s000'; fi;;
-                *) echo 'date +%s%3N';;
-            esac
+            local ts=$(date +%s%3N); [[ $ts == *3N ]] && date +%s000 || echo $ts
         }
-
-        NXF_DATE=$(nxf_date)
 
         nxf_trace() {
           local pid=$1; local trg=$2;
@@ -463,7 +458,7 @@ class BashWrapperBuilder {
             stub << SCRIPT_TRACE << ENDL
             stub << 'trap \'exit ${ret:=$?}\' EXIT' << ENDL
             stub << 'touch ' << TaskRun.CMD_TRACE << ENDL
-            stub << 'start_millis=$($NXF_DATE)'  << ENDL
+            stub << 'start_millis=$(nxf_date)'  << ENDL
             stub << '(' << ENDL
             stub << interpreter << " " << fileStr(scriptFile)
             if( input != null ) stub << " < " << fileStr(inputFile)
@@ -473,7 +468,7 @@ class BashWrapperBuilder {
             stub << 'nxf_trace "$pid" ' << TaskRun.CMD_TRACE << ' &' << ENDL
             stub << 'mon=$!' << ENDL                     // get the pid of the monitor process
             stub << 'wait $pid || ret=$?' << ENDL        // wait for main job completion and get its exit status
-            stub << 'end_millis=$($NXF_DATE)' << ENDL    // get the ending time
+            stub << 'end_millis=$(nxf_date)' << ENDL    // get the ending time
             stub << 'nxf_kill $mon || wait $mon' << ENDL     // kill the monitor and wait for its ending
             stub << 'echo $((end_millis-start_millis)) >> ' << TaskRun.CMD_TRACE << ENDL
 

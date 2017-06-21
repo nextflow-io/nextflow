@@ -29,6 +29,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Nextflow
+import nextflow.exception.ProcessException
 import nextflow.extension.ToListOp
 import nextflow.processor.ProcessConfig
 /**
@@ -164,6 +165,8 @@ interface InParam {
 
     short mapIndex
 
+    def decodeInputs( List values )
+
 }
 
 /**
@@ -178,6 +181,8 @@ abstract class BaseInParam extends BaseParam implements InParam {
     protected fromObject
 
     protected bindObject
+
+    protected owner
 
     /**
      * The channel to which the input value is bound
@@ -254,7 +259,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
         if( bindObject instanceof Closure )
             return '__$' + this.toString()
 
-        throw new IllegalArgumentException()
+        throw new IllegalArgumentException("Invalid process input definition")
     }
 
     BaseInParam bind( def obj ) {
@@ -293,7 +298,35 @@ abstract class BaseInParam extends BaseParam implements InParam {
         return this
     }
 
+    def decodeInputs( List inputs ) {
+        final UNDEF = -1 as short
+        def value = inputs[index]
 
+        if( mapIndex == UNDEF || owner instanceof EachInParam )
+            return value
+
+        if( mapIndex != UNDEF ) {
+            def result
+            if( value instanceof Map ) {
+                result = value.values()
+            }
+            else if( value instanceof Collection ) {
+                result = value
+            }
+            else {
+                result = [value]
+            }
+
+            try {
+                return result[mapIndex]
+            }
+            catch( IndexOutOfBoundsException e ) {
+                throw new ProcessException(e)
+            }
+        }
+
+        return value
+    }
 
 }
 
@@ -419,46 +452,44 @@ class EachInParam extends BaseInParam {
 
     @Override String getTypeName() { 'each' }
 
+    private List<InParam> inner = []
+
+    String getName() { '__$'+this.toString() }
+
+    EachInParam bind( def obj ) {
+        def nested = ( obj instanceof TokenFileCall
+                    ? new FileInParam(binding, inner, index).bind(obj.target)
+                    : new ValueInParam(binding, inner, index).bind(obj) )
+        nested.owner = this
+        this.bindObject = nested.bindObject
+        return this
+    }
+
+    InParam getInner() { inner[0] }
+
     @Override
     protected DataflowReadChannel inputValToChannel( value ) {
-
-        def variable = normalizeToVariable( value, name )
+        def variable = normalizeToVariable( value )
         super.inputValToChannel(variable)
     }
 
     @PackageScope
-    static DataflowVariable normalizeToVariable( value, String name = null) {
-        if( value instanceof DataflowReadChannel ) {
-            log.warn "Using queue channel on each parameter declaration should be avoided -- take in consideration to change declaration for each: '$name' parameter"
-            // everything is mapped to a collection
-            value = readValue(value)
+    DataflowReadChannel normalizeToVariable( value ) {
+        def result
+        if( value instanceof DataflowExpression ) {
+            result = value
         }
 
-        if( !(value instanceof Collection) ) {
-            value = [value]
+        else if( value instanceof DataflowReadChannel ) {
+            result = ToListOp.apply(value)
         }
 
-        // the collection is wrapped to a "scalar" dataflow variable
-        Nextflow.variable(value)
-    }
-
-
-    /**
-     * Converts the specified arguments to a {@code List} data type
-     *
-     * @param item
-     * @return
-     */
-    @PackageScope
-    static readValue( DataflowReadChannel channel ) {
-
-        if( channel instanceof DataflowExpression ) {
-            return channel.getVal()
-        }
         else {
-            return ToListOp.apply(channel).getVal()
+            result = new DataflowVariable()
+            result.bind(value)
         }
 
+        return result.chainWith { it instanceof Collection || it == null ? it : [it] }
     }
 
 }

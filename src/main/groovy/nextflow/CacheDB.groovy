@@ -104,7 +104,7 @@ class CacheDB implements Closeable {
             if( e.message?.startsWith('Unable to acquire lock') ) {
                 msg = "Unable to acquire lock on session with ID $uniqueId"
                 msg += "\n\n"
-                msg += "Common reason of this error are:"
+                msg += "Common reasons of this error are:"
                 msg += "\n - You are trying to resume the execution of an already running pipeline"
                 msg += "\n - A previous execution was abruptly interrupted leaving the session open"
                 msg += '\n'
@@ -114,6 +114,10 @@ class CacheDB implements Closeable {
             }
             else {
                 msg = "Can't open cache DB: $file"
+                msg += '\n\n'
+                msg += "Nextflow needs to run in a file system that supports file locks.\n"
+                msg += "As workaround you can launch it from local directory and specify\n"
+                msg += "the work directory in the shared file system by using by `-w` command line option."
                 throw new IOException(msg, e)
             }
         }

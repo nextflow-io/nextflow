@@ -19,9 +19,6 @@
  */
 
 package nextflow
-import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
-import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -32,7 +29,6 @@ import org.junit.Rule
 import spock.lang.Specification
 import test.TemporaryPath
 import test.TestHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -229,21 +225,6 @@ class ChannelTest extends Specification {
     }
 
 
-
-    def testStringEvents() {
-
-        when:
-        Channel.stringToWatchEvents('xxx')
-        then:
-        thrown(IllegalArgumentException)
-
-        expect:
-        Channel.stringToWatchEvents() == [ ENTRY_CREATE ]
-        Channel.stringToWatchEvents('create,delete') == [ENTRY_CREATE, ENTRY_DELETE]
-        Channel.stringToWatchEvents('Create , MODIFY ') == [ENTRY_CREATE, ENTRY_MODIFY]
-
-    }
-
     def testFromPath() {
 
         setup:
@@ -393,6 +374,9 @@ class ChannelTest extends Specification {
         Channel.readPrefix(Paths.get('/some/path/abc_1.fa'), '*_1.fa') == 'abc'
         Channel.readPrefix(Paths.get('/some/path/abc_1.fa'), '*_{1,2}.fa') == 'abc'
         Channel.readPrefix(Paths.get('/some/path/abc_1.fa'), '*_[1-2].fa') == 'abc'
+        Channel.readPrefix(Paths.get('/some/path/abc_1.fa'), '**_{1,2}.*') == 'abc'
+        Channel.readPrefix(Paths.get('/some/path/abc_1_trimmed.fa'), '*_[1-2]_*.fa') == 'abc'
+        Channel.readPrefix(Paths.get('/some/path/abc_1_trimmed.fa'), '*??_[1-2]_*.fa') == 'abc'
         Channel.readPrefix(Paths.get('/some/path/abc_1.fa'), 'abc_{1,2}.fa') == 'abc'
         Channel.readPrefix(Paths.get('/some/path/abc_1.fa'), 'abc_[1-9].fa') == 'abc'
         Channel.readPrefix(Paths.get('/some/path/foo_abc_1.fa'), 'foo_*_{1,2}.fa') == 'foo_abc'
@@ -410,7 +394,7 @@ class ChannelTest extends Specification {
         def d2 = Files.createFile(folder.resolve('delta_2.fa'))
 
         when:
-        def pairs = Channel.fromFilePairs(folder.resolve("*_{1,2}.fa"))
+        def pairs = Channel.fromFilePairs(folder.resolve("*_{1,2}.*"))
         then:
         pairs.val == ['alpha', [a1, a2]]
         pairs.val == ['beta', [b1, b2]]
@@ -470,6 +454,34 @@ class ChannelTest extends Specification {
 
     }
 
+    def 'should watch and emit a file' () {
+        given:
+        def folder = Files.createTempDirectory('test')
 
+        when:
+        def result = Channel.watchPath("$folder/")
+        sleep 500
+        Files.createFile(folder.resolve('hello.txt'))
+        then:
+        result.val == folder.resolve('hello.txt')
+
+        when:
+        result = Channel.watchPath(folder.toString())
+        sleep 500
+        Files.createFile(folder.resolve('ciao.txt'))
+        then:
+        result.val == folder.resolve('ciao.txt')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should return an empty channel when watching a missing path' () {
+
+        when:
+        def result = Channel.watchPath("foo/*")
+        then:
+        result.val == Channel.STOP
+    }
 
 }

@@ -24,6 +24,7 @@ import java.nio.file.Paths
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.Session
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.Timeout
 /**
@@ -36,28 +37,6 @@ class DataflowExtensionsTest extends Specification {
         new Session()
     }
 
-    def testHandlerNames() {
-
-        when:
-        DataflowExtensions.checkSubscribeHandlers( [:] )
-        then:
-        thrown(IllegalArgumentException)
-
-        when:
-        DataflowExtensions.checkSubscribeHandlers( [ onNext:{}] )
-        then:
-        true
-
-        when:
-        DataflowExtensions.checkSubscribeHandlers( [ onNext:{}, xxx:{}] )
-        then:
-        thrown(IllegalArgumentException)
-
-        when:
-        DataflowExtensions.checkSubscribeHandlers( [ xxx:{}] )
-        then:
-        thrown(IllegalArgumentException)
-    }
 
     def testFilter() {
 
@@ -400,41 +379,7 @@ class DataflowExtensionsTest extends Specification {
     }
 
 
-    def testMin() {
 
-        expect:
-        Channel.from(4,1,7,5).min().val == 1
-        Channel.from("hello","hi","hey").min { it.size() } .val == "hi"
-        Channel.from("hello","hi","hey").min { a,b -> a.size()<=>b.size() } .val == "hi"
-        Channel.from("hello","hi","hey").min { a,b -> a.size()<=>b.size() } .val == "hi"
-        Channel.from("hello","hi","hey").min ({ a,b -> a.size()<=>b.size() } as Comparator) .val == "hi"
-
-    }
-
-    def testMax() {
-        expect:
-        Channel.from(4,1,7,5).max().val == 7
-        Channel.from("hello","hi","hey").max { it.size() } .val == "hello"
-        Channel.from("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .val == "hello"
-        Channel.from("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .val == "hello"
-        Channel.from("hello","hi","hey").max ({ a,b -> a.size()<=>b.size() } as Comparator) .val == "hello"
-
-    }
-
-    def testSum() {
-        expect:
-        Channel.from(4,1,7,5).sum().val == 17
-        Channel.from(4,1,7,5).sum { it * 2 } .val == 34
-        Channel.from( [1,1,1], [0,1,2], [10,20,30] ). sum() .val == [ 11, 22, 33 ]
-    }
-
-
-    def testMean() {
-        expect:
-        Channel.from(10,20,30).mean().val == 20
-        Channel.from(10,20,30).mean { it * 2 }.val == 40
-        Channel.from( [10,20,30], [10, 10, 10 ], [10, 30, 50]).mean().val == [10, 20, 30]
-    }
 
     def testCount() {
         expect:
@@ -492,6 +437,7 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    @IgnoreIf({ javaVersion == 1.7 })
     def testRouteBy() {
 
         when:
@@ -507,6 +453,7 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    @IgnoreIf({ javaVersion == 1.7 })
     def testRouteByMap() {
 
         setup:
@@ -584,26 +531,29 @@ class DataflowExtensionsTest extends Specification {
     def testSpread() {
 
         when:
-        def r1 = Channel.from(1,2,3).spread(['a','b'])
+        def left = Channel.from(1,2,3)
+        def right = ['aa','bb']
+        def r1 = left.spread(right)
         then:
-        r1.val == [1, 'a']
-        r1.val == [1, 'b']
-        r1.val == [2, 'a']
-        r1.val == [2, 'b']
-        r1.val == [3, 'a']
-        r1.val == [3, 'b']
+        r1.val == [1, 'aa']
+        r1.val == [1, 'bb']
+        r1.val == [2, 'aa']
+        r1.val == [2, 'bb']
+        r1.val == [3, 'aa']
+        r1.val == [3, 'bb']
         r1.val == Channel.STOP
 
         when:
-        def str = Channel.from('a','b','c')
-        def r2 = Channel.from(1,2).spread(str)
+        left = Channel.from(1,2)
+        right = Channel.from('a','bb','ccc')
+        def r2 = left.spread(right)
         then:
         r2.val == [1, 'a']
-        r2.val == [1, 'b']
-        r2.val == [1, 'c']
+        r2.val == [1, 'bb']
+        r2.val == [1, 'ccc']
         r2.val == [2, 'a']
-        r2.val == [2, 'b']
-        r2.val == [2, 'c']
+        r2.val == [2, 'bb']
+        r2.val == [2, 'ccc']
         r2.val == Channel.STOP
 
     }
@@ -683,6 +633,46 @@ class DataflowExtensionsTest extends Specification {
         result.val == [7, 'b']
         result.val == [7, 'c']
         result.val == Channel.STOP
+    }
+
+    def testSpreadWithPath() {
+        given:
+        def path1 = Paths.get('/some/data/file1')
+        def path2 = Paths.get('/some/data/file2')
+
+        when:
+        def result = Channel.from(1,2,3).spread( Channel.value(path1) )
+        then:
+        result.val == [1, path1]
+        result.val == [2, path1]
+        result.val == [3, path1]
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.from(1,2,3).spread( ['abc'] )
+        then:
+        result.val == [1, 'abc']
+        result.val == [2, 'abc']
+        result.val == [3, 'abc']
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.from(1,2,3).spread( Channel.value('abc') )
+        then:
+        result.val == [1, 'abc']
+        result.val == [2, 'abc']
+        result.val == [3, 'abc']
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.from(1,2).spread( Channel.from(path1,path2) )
+        then:
+        result.val == [1, path1]
+        result.val == [1, path2]
+        result.val == [2, path1]
+        result.val == [2, path2]
+        result.val == Channel.STOP
+
     }
 
     def testFlatten() {
@@ -1399,9 +1389,7 @@ class DataflowExtensionsTest extends Specification {
         x.val == 'Hello'
         x.val == 'Hello'
         x.val == 'Hello'
-
     }
-
 
     def 'should emit channel items until the condition is verified' () {
 
@@ -1421,5 +1409,6 @@ class DataflowExtensionsTest extends Specification {
         result.val == Channel.STOP
 
     }
+
 
 }

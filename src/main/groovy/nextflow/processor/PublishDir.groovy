@@ -300,10 +300,10 @@ class PublishDir {
             FilesEx.mklink(source, [hard:true], destination)
         }
         else if( mode == Mode.MOVE ) {
-            FilesEx.moveTo(source, destination)
+            FileHelper.movePath(source, destination)
         }
         else if( mode == Mode.COPY ) {
-            FilesEx.copyTo(source, destination)
+            FileHelper.copyPath(source, destination)
         }
         else {
             throw new IllegalArgumentException("Unknown file publish mode: ${mode}")
@@ -344,9 +344,8 @@ class PublishDir {
                 mode = Mode.COPY
             }
             else if( mode == Mode.SYMLINK || mode == Mode.LINK ) {
+                log.warn1("Cannot use mode `${mode.toString().toLowerCase()}` to publish files to path: $path -- Using mode `copy` instead", firstOnly:true)
                 mode = Mode.COPY
-                if( processor )
-                    processor.warn("Cannot use mode `${mode.toString().toLowerCase()}` to publish files to path: $path -- Using mode `copy` instead")
             }
         }
 

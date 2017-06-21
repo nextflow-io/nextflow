@@ -1,11 +1,11 @@
 .. _faq-page:
 
-**************************
-Frequently Asked Questions
-**************************
+***
+FAQ
+***
 
 How do I process multiple input files in parallel?
----------------------------------------------
+--------------------------------------------------
 
 Q: *I have a collection of input files (e.g. carrots.fa, onions.fa, broccoli.fa). How can I specify that a process is performed on each input file in a parallel manner?*
 
@@ -51,7 +51,7 @@ These aligned files are now in the channel ``vegetable_alns`` and can be
 used as input for a further process.
 
 How do I get a unique ID based on the file name?
--------------------------------------------
+------------------------------------------------
 
 *Q: How do I get a unique identifier based on a dataset file names (e.g. broccoli from broccoli.fa) and have the results going to a specific folder (e.g. results/broccoli/)?*
 
@@ -94,11 +94,12 @@ and ``datasetFile``):
 In our example above would now have the folder ``broccoli`` in the results directory which would
 contain the file ``broccoli.aln``.
 
-Channels can contain and emit any type of data structure simplifying the
-flow of data.
+If the input file has multiple extensions (e.g. ``brocolli.tar.gz``), you will want to use
+``file.simpleName`` instead, to strip all of them (available since Nextflow 0.25+).
+
 
 How do I use the same channel multiple times?
-----------------------------------------
+---------------------------------------------
 
 *Q: Can a channel be used in two input statements? For example, I want carrots.fa to be aligned by both ClustalW and T-Coffee.*
 
@@ -158,7 +159,7 @@ executed as parallel processes.
 
 
 How do I invoke custom scripts and tools?
-------------------------------------
+-----------------------------------------
 
 *Q: I have executables in my code, how should I call them in Nextflow?*
 
@@ -204,7 +205,7 @@ alignments are in the channel ``clustalw_alns``:
     }
 
 How do I iterate over a process n times?
--------------------------------------------
+-----------------------------------------
 
 To perform a process *n* times, we can specify the input to be
 ``each x from y..z``. For example:
@@ -234,7 +235,7 @@ To perform a process *n* times, we can specify the input to be
 
 
 How do I iterate over nth files from within a process?
---------------------------------------------------------
+------------------------------------------------------
 
 *Q: For example, I have 100 files emitted by a channel. I wish to perform one process where I iterate over each file inside the process.*
 

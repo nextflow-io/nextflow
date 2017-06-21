@@ -25,7 +25,9 @@ import java.nio.file.Files
 import nextflow.Const
 import nextflow.Session
 import nextflow.scm.AssetManager
+import nextflow.trace.TraceRecord
 import nextflow.util.Duration
+import nextflow.util.VersionNumber
 import org.eclipse.jgit.api.Git
 import spock.lang.Specification
 
@@ -100,7 +102,7 @@ class WorkflowMetadataTest extends Specification {
         metadata.start <= new Date()
         metadata.complete == null
         metadata.commandLine == 'nextflow run -this -that'
-        metadata.nextflow.version == Const.APP_VER
+        metadata.nextflow.version == new VersionNumber(Const.APP_VER)
         metadata.nextflow.build == Const.APP_BUILDNUM
         metadata.nextflow.timestamp == Const.APP_TIMESTAMP_UTC
         metadata.profile == 'standard'
@@ -127,57 +129,11 @@ class WorkflowMetadataTest extends Specification {
         dir?.deleteDir()
     }
 
-
-    def 'should access workflow script variables onComplete' () {
-
-        given:
-        def dir = Files.createTempDirectory('test')
-        dir.resolve('main.nf').text = "println 'Hello world'"
-        def script = new ScriptFile(dir.resolve('main.nf').toFile())
-
-        def session = new Session()
-
-        def runner = Mock(ScriptRunner)
-        runner.getScriptFile() >> script
-        runner.fetchContainers() >> 'busybox/latest'
-        runner.commandLine >> 'nextflow run -this -that'
-        runner.session >> session
-
-        when:
-        def metadata = new WorkflowMetadata(runner)
-        session.binding.setVariable('value_a', 1)
-        session.binding.setVariable('value_b', 2)
-        session.binding.setVariable('workflow', metadata)
-
-        def result1
-        def result2
-        def result3
-        def result4
-        def result5
-
-        def handler = {
-            result1 = workflow.commandLine   // workflow property
-            result2 = workflow      // workflow object itself
-            result3 = value_a       // variable in the session binding
-            result4 = events        // workflow private field, should not be accessed
-            result5 = xyz           // unknown field, should return null
-        }
-        metadata.onComplete(handler)
-        metadata.invokeOnComplete()
-
-        then:
-        result1 == metadata.commandLine
-        result2 == metadata
-        result3 == 1
-        result4 == null
-        result5 == null
-
-        cleanup:
-        dir?.deleteDir()
-
+    def foo_test_method() {
+        return 'foo_value'
     }
 
-    def 'should access workflow script variables onError' () {
+    def 'should access workflow script variables onComplete' () {
 
         given:
         def dir = Files.createTempDirectory('test')
@@ -211,10 +167,10 @@ class WorkflowMetadataTest extends Specification {
             result3 = value_a       // variable in the session binding
             result4 = events        // workflow private field, should not be accessed
             result5 = xyz           // unknown field, should return null
-            result6 = workflow.success
+            result6 = foo_test_method()
         }
-        metadata.onError(handler)
-        metadata.invokeOnError()
+        metadata.onComplete(handler)
+        metadata.invokeOnComplete()
 
         then:
         result1 == metadata.commandLine
@@ -222,7 +178,62 @@ class WorkflowMetadataTest extends Specification {
         result3 == 1
         result4 == null
         result5 == null
-        result6 == false
+        result6 == 'foo_value'
+
+        cleanup:
+        dir?.deleteDir()
+
+    }
+
+    def 'should access workflow script variables onError' () {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+        dir.resolve('main.nf').text = "println 'Hello world'"
+        def script = new ScriptFile(dir.resolve('main.nf').toFile())
+
+        def session = new Session()
+
+        def runner = Mock(ScriptRunner)
+        runner.getScriptFile() >> script
+        runner.fetchContainers() >> 'busybox/latest'
+        runner.commandLine >> 'nextflow run -this -that'
+        runner.session >> session
+
+        when:
+        def metadata = new WorkflowMetadata(runner)
+        session.binding.setVariable('value_a', 1)
+        session.binding.setVariable('value_b', 2)
+        session.binding.setVariable('workflow', metadata)
+
+        def result1
+        def result2
+        def result3
+        def result4
+        def result5
+        def result6
+        def result7
+
+        def handler = {
+            result1 = workflow.commandLine   // workflow property
+            result2 = workflow      // workflow object itself
+            result3 = value_a       // variable in the session binding
+            result4 = events        // workflow private field, should not be accessed
+            result5 = xyz           // unknown field, should return null
+            result6 = foo_test_method()
+            result7 = workflow.success
+        }
+        metadata.onError(handler)
+        metadata.invokeOnError(Mock(TraceRecord))
+
+        then:
+        result1 == metadata.commandLine
+        result2 == metadata
+        result3 == 1
+        result4 == null
+        result5 == null
+        result6 == 'foo_value'
+        result7 == false
 
         cleanup:
         dir?.deleteDir()

@@ -48,17 +48,17 @@ class Const {
     /**
      * The application version
      */
-    static public final String APP_VER = "0.24.2"
+    static public final String APP_VER = "0.25.0-RC2"
 
     /**
      * The app build time as linux/unix timestamp
      */
-    static public final long APP_TIMESTAMP = 1491411049280
+    static public final long APP_TIMESTAMP = 1497282041928
 
     /**
      * The app build number
      */
-    static public final int APP_BUILDNUM = 4271
+    static public final int APP_BUILDNUM = 4421
 
     /**
      * The date time formatter string
@@ -123,6 +123,7 @@ class Const {
       N E X T F L O W
       Version ${APP_VER} build ${APP_BUILDNUM}
       last modified ${APP_TIMESTAMP_UTC} ${deltaLocal()}
+      cite doi:10.1038/nbt.3820
       http://nextflow.io
 """
 

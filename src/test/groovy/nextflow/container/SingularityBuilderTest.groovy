@@ -92,6 +92,8 @@ class SingularityBuilderTest extends Specification {
 
     def 'should normalise container path' () {
         expect:
+        SingularityBuilder.normalizeImageName(null) == null
+        SingularityBuilder.normalizeImageName('') == null
         SingularityBuilder.normalizeImageName('/abs/path/bar.img') == '/abs/path/bar.img'
         SingularityBuilder.normalizeImageName('foo.img') == Paths.get('foo.img').toAbsolutePath().toString()
     }

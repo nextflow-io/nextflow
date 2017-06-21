@@ -154,8 +154,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
                 continue
             }
 
-
-            if( i == 0 )
+            if( i == 0 || str )
                 throw new IllegalArgumentException("Not a valid duration value: ${str}")
             break
         }
@@ -325,7 +324,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
     }
 
     def multiply( Number value ) {
-        return new Duration( durationInMillis * value )
+        return new Duration( (long)(durationInMillis * value) )
     }
 
     def div( Number value ) {

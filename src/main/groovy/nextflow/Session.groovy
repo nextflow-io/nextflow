@@ -37,8 +37,8 @@ import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.dag.DAG
 import nextflow.exception.AbortOperationException
-import nextflow.exception.MissingLibraryException
 import nextflow.exception.AbortSignalException
+import nextflow.exception.MissingLibraryException
 import nextflow.file.FileHelper
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskDispatcher
@@ -58,7 +58,6 @@ import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
 import sun.misc.Signal
 import sun.misc.SignalHandler
-
 /**
  * Holds the information on the current execution
  *
@@ -71,7 +70,7 @@ class Session implements ISession {
     /**
      * Keep a list of all processor created
      */
-    final List<DataflowProcessor> allProcessors = []
+    final List<DataflowProcessor> allOperators = []
 
     /**
      * Dispatch tasks for executions
@@ -148,6 +147,8 @@ class Session implements ISession {
 
     private volatile TaskFault fault
 
+    private volatile Throwable error
+
     private ScriptBinding binding
 
     private ClassLoader classLoader
@@ -169,6 +170,8 @@ class Session implements ISession {
     boolean getDumpHashes() { dumpHashes }
 
     TaskFault getFault() { fault }
+
+    Throwable getError() { error }
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -391,6 +394,17 @@ class Session implements ISession {
         Signal.handle( new Signal("HUP"), abort_h)
     }
 
+    /**
+     * Dump the current dataflow network listing
+     * the status of active processes and operators
+     * for debugging purpose
+     */
+    String dumpNetworkStatus() {
+        def msg = dag.dumpActiveNodes()
+        msg ? "The following nodes are still active:\n" + msg : null
+    }
+
+
     Session start() {
         log.debug "Session start invoked"
 
@@ -483,7 +497,7 @@ class Session implements ISession {
         try {
             log.trace "Session > destroying"
             if( !aborted ) {
-                allProcessors *. join()
+                allOperators *. join()
                 log.trace "Session > after processors join"
             }
 
@@ -566,7 +580,7 @@ class Session implements ISession {
         notifyError(handler)
         dispatcher.signal()
         processesBarrier.forceTermination()
-        allProcessors *. terminate()
+        allOperators *. terminate()
     }
 
     /**
@@ -578,11 +592,29 @@ class Session implements ISession {
         if( aborted ) return
         log.debug "Session aborted -- Cause: ${cause?.message ?: cause ?: '-'}"
         aborted = true
-        notifyError(null)
-        dispatcher.signal()
-        processesBarrier.forceTermination()
-        monitorsBarrier.forceTermination()
-        allProcessors *. terminate()
+        error = cause
+        try {
+            // log the dataflow network status
+            def status = dumpNetworkStatus()
+            if( status )
+                log.debug(status)
+            // force termination
+            notifyError(null)
+            dispatcher.signal()
+            processesBarrier.forceTermination()
+            monitorsBarrier.forceTermination()
+            operatorsForceTermination()
+        }
+        catch( Throwable e ) {
+            log.debug "Unexpected error while aborting execution", e
+        }
+    }
+
+    private void operatorsForceTermination() {
+        def operators = (DataflowProcessor[])allOperators.toArray()
+        for( int i=0; i<operators.size(); i++ ) {
+            operators[i].terminate()
+        }
     }
 
     @PackageScope
@@ -590,7 +622,7 @@ class Session implements ISession {
         terminated = true
         processesBarrier.forceTermination()
         monitorsBarrier.forceTermination()
-        allProcessors *. terminate()
+        allOperators *. terminate()
 
         execService?.shutdownNow()
         GParsConfig.shutdown()

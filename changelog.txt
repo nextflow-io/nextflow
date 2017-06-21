@@ -1,5 +1,22 @@
 NEXTFLOW CHANGE-LOG
 ===================
+
+0.24.4 - 19 May 2017 
+- Fixed PublishDir creates nested directory structures when a folder already exists #342
+- Fixed NoSuchFileException is thrown when trace file path does not exist #334
+- Fixed watchPath glob directory not working #335
+- Fixed Channel.fromFilePairs does not handle properly multiple star wildcards #337
+- Added executor for NQSII, queuing system used on NEC clusters.
+- Added `relative` option to `fromPath` channel factory
+
+0.24.3 - 24 Apr 2017 
+- Fixed Process execution fails with not GNU version of sleep and date tools #321
+- Fixed Pending processes are not cleaned up properly #322
+- Fixed NPE is thrown when Singularity is enabled and a process uses no container #324
+- Fixed Cached processes are not included in the timeline report #325
+- Added MD5 digest file upload
+- Updated docs
+
 0.24.2 - 5 Apr 2017 
 - Fixed Tuple array object deserialisation fails #317
 - Use SLURM squeue —-noheader instead -h command line option to support not standard implementation #316
