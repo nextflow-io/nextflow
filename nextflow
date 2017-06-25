@@ -18,6 +18,17 @@
 #  You should have received a copy of the GNU General Public License
 #  along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
 
+NXF_VER=${NXF_VER:-'0.25.0-RC4'}
+NXF_ORG=${NXF_ORG:-'nextflow-io'}
+NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
+NXF_PROT=${NXF_PROT:-'https'}
+NXF_BASE=${NXF_BASE:-$NXF_PROT://www.nextflow.io/releases}
+NXF_CLI="$0 $@"
+
+export NXF_CLI
+export NXF_ORG
+export NXF_HOME
+
 if [[ $TERM && $TERM != 'dumb' ]]; then
 GREEN=$(tput setaf 2; tput bold)
 YELLOW=$(tput setaf 3)
@@ -82,7 +93,7 @@ function make_temp() {
 function install() {
     local tmpfile=$(make_temp)
     local version=$(set +u; [[ $NXF_VER ]] && printf "v$NXF_VER" || printf 'latest')
-    get "http://www.nextflow.io/releases/$version/nextflow" "$tmpfile" "$1" || exit $?
+    get "$NXF_BASE/$version/nextflow" "$tmpfile" "$1" || exit $?
     mv "$tmpfile" "$1" || exit $?
     chmod +x "$1" || exit $?
     bash "$1" -download || exit $?
@@ -139,17 +150,8 @@ if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
     exit 0
 fi
 
-NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
-NXF_VER=${NXF_VER:-'0.25.0-RC2'}
-NXF_ORG=${NXF_ORG:-'nextflow-io'}
-NXF_ASSETS=${NXF_ASSETS:-$NXF_HOME/assets}
-NXF_CLI="$0 $@"
 
-export NXF_CLI
-export NXF_ORG
-export NXF_HOME
-
-# Check if it is required to run in background
+# parse the command line
 bg=''
 declare -a jvmopts=()
 declare -a args=("$@")
@@ -213,7 +215,6 @@ NXF_PACK=one
 NXF_MODE=${NXF_MODE:-''}
 NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACK.jar}
 NXF_BIN=${NXF_BIN:-$NXF_HOME/framework/$NXF_VER/$NXF_JAR}
-NXF_BASE=${NXF_BASE:-http://www.nextflow.io/releases}
 NXF_PATH=$(dirname "$NXF_BIN")
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
 NXF_GRAB=${NXF_GRAB:-''}
@@ -346,7 +347,7 @@ else
     launcher=($("$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"))
     [[ $? -ne 0 ]] && echo 'Unable to initialize nextflow environment' && exit $?
 
-    # Don't spit errors if can't create the LAUNCH_FILE
+    # Don't show errors if the LAUNCH_FILE can't be created
     if mkdir -p "${NXF_LAUNCHER}" 2>/dev/null; then
         STR=''
         for x in "${launcher[@]}"; do
