@@ -278,7 +278,7 @@ class TaskPollingMonitor implements TaskMonitor {
         session.onShutdown { this.cleanup() }
 
         // launch the thread polling the queue
-        Thread.start('Running tasks thread') {
+        Thread.start('Task monitor') {
             try {
                 pollLoop()
             }
@@ -289,7 +289,7 @@ class TaskPollingMonitor implements TaskMonitor {
         }
 
         // launch daemon that submits tasks for execution
-        Thread.startDaemon('Pending tasks thread', this.&submitLoop)
+        Thread.startDaemon('Task submitter', this.&submitLoop)
 
         return this
     }
