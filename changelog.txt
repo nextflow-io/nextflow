@@ -1,6 +1,37 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.25.0 - 26 Jun 2017 
+- Fixed Dataflow threads pool get exhausted with a large number of tasks #92
+- Fixed Custom function cannot be invoked in the workflow completion handler #374
+- Fixed Runtime errors are not reported in the `workflow.errorMessage` property #369
+- Fixed Warn if params.something is defined twice in a NF script #372
+- Fixed Map.Entry values deserialization process fail #373
+- Fixed List active operators that may hang the script execution #315
+- Fixed launcher error message #366
+- Fixed AWS spot instance bootStorageSize property is ignored #368
+- Fixed Implicit variable `task` is not accessible in cached processes #363
+- Fixed Do not export user environment when submitting job to SGE-like batch scheduler #362
+- Fixed Process termination can throw a ConcurrentModificationException hiding the error cause message #359
+- Fixed GroovyRuntimeException during foreign file copy process #360
+- Fixed Helper function to compare version numbers #319
+- Fixed Docker input file mounts should be read-only for enforce container security #346
+- Fixed Extend `each` repeater syntax to support file collections #355
+- Fixed Modified task properties are not accessible in the command script during task retry #345
+- Fixed PublishDir warning message
+- Fixed Spread operator mishandles Iterable values provided as a dataflow variable #353
+- Fixed UUID cli options are wrongly interpreted as Duration objects #349
+- New toInteger and toLong converter operators
+- New randomSample operator #344
+- New `simpleName` extension method to Path/File objects #354
+- New warning message when input tuple cardinality does not match declared length #348
+- Improved use example into ext directive documentation #327
+- Improved error handing when parsing trace file #371
+- Improved error reporting for process missing input definition
+- Improved launcher script to support https protocol by default #379
+- Change `maxErrors` default to -1
+- Deprecated identifier `channel` as variable name
+
 0.24.4 - 19 May 2017 
 - Fixed PublishDir creates nested directory structures when a folder already exists #342
 - Fixed NoSuchFileException is thrown when trace file path does not exist #334
