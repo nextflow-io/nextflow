@@ -584,12 +584,15 @@ class BashWrapperBuilder {
          * initialise the builder
          */
         builder.addMountForInputs(inputFiles)
-        builder.addMount(workDir)
+
         if( !executable )
             builder.addMount(binDir)
 
         if(this.containerMount)
             builder.addMount(containerMount)
+
+        // task work dir
+        builder.setWorkDir(workDir)
 
         // set the name
         builder.setName('$NXF_BOXID')
@@ -631,6 +634,9 @@ class BashWrapperBuilder {
 
         if( containerConfig.containsKey('kill') )
             builder.params(kill: containerConfig.kill)
+
+        if( containerConfig.writableInputMounts==false )
+            builder.params(readOnlyInputs: true)
 
         // override the docker entry point the image is NOT defined as executable
         if( !executable )

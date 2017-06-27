@@ -66,15 +66,22 @@ class SingularityBuilderTest extends Specification {
                 .addMount(path2)
                 .params(autoMounts: true)
                 .build()
-                .runCommand == 'env - PATH="$PATH" singularity exec -B /foo/data/file1 -B /bar/data/file2 -B "$PWD":"$PWD" ubuntu'
+                .runCommand == 'env - PATH="$PATH" singularity exec -B /foo/data/file1 -B /bar/data/file2 -B "$PWD" ubuntu'
 
         new SingularityBuilder('ubuntu')
                 .addMount(path1)
                 .addMount(path1)
                 .params(autoMounts: true)
                 .build()
-                .runCommand == 'env - PATH="$PATH" singularity exec -B /foo/data/file1 -B "$PWD":"$PWD" ubuntu'
+                .runCommand == 'env - PATH="$PATH" singularity exec -B /foo/data/file1 -B "$PWD" ubuntu'
 
+        new SingularityBuilder('ubuntu')
+                .addMount(path1)
+                .addMount(path1)
+                .params(autoMounts: true)
+                .params(readOnlyInputs: true)
+                .build()
+                .runCommand == 'env - PATH="$PATH" singularity exec -B /foo/data/file1:/foo/data/file1:ro -B "$PWD" ubuntu'
     }
 
     def 'should return export variables' () {
