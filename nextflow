@@ -58,10 +58,10 @@ get_abs_filename() {
 }
 
 function get() {
-    if command -v wget &>/dev/null; then
-        GET="wget -q $1 -O $2"
-    elif command -v curl &>/dev/null; then
+    if command -v curl &>/dev/null; then
         GET="curl -fsSL $1 -o $2"
+    elif command -v wget &>/dev/null; then
+        GET="wget -q $1 -O $2"
     else
         echo_red "Error: cannot find 'curl' nor 'wget' utility --  please install one of them"
         exit 1
@@ -71,12 +71,12 @@ function get() {
     $GET; status=$?
     printf "\r\033[K"
     if [ $status -ne 0 ]; then
-        echo_red "Error: cannot download nextflow required file -- make sure you can connect the internet"
+        echo_red "Error: cannot download nextflow required file -- make sure you can connect to the internet"
         echo ""
-        echo "Alternatively you can download the file:"
+        echo "Alternatively you can try to download this file:"
         echo "    $1"
         echo ""
-        echo "And save it as:"
+        echo "and save it as:"
         echo "    ${3:-$2}"
         echo ""
         exit 1
