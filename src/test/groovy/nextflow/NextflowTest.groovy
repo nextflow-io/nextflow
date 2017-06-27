@@ -23,6 +23,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.util.ArrayTuple
+import spock.lang.Requires
 import spock.lang.Specification
 /**
  *
@@ -30,6 +31,11 @@ import spock.lang.Specification
  */
 class NextflowTest extends Specification {
 
+    @Requires({ System.getenv('CI_GROOVY_VERSION') })
+    def 'should match CI groovy version'() {
+        expect:
+        System.getenv('CI_GROOVY_VERSION') == GroovySystem.getVersion()
+    }
 
     def testFile() {
 
