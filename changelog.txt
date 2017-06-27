@@ -1,6 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.25.1 - 27 Jun 2017
+- Duplicate mount point docker error #384
+- Disable Docker read-only mounts by default
+
 0.25.0 - 26 Jun 2017 
 - Fixed Dataflow threads pool get exhausted with a large number of tasks #92
 - Fixed Custom function cannot be invoked in the workflow completion handler #374
