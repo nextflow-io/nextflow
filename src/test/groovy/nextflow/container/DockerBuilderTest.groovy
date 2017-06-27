@@ -40,9 +40,9 @@ class DockerBuilderTest extends Specification {
 
         expect:
         builder.makeVolumes([]).toString() == '-v "$PWD":"$PWD"'
-        builder.makeVolumes(files).toString() == '-v /folder:/folder:ro -v "$PWD":"$PWD"'
-        builder.makeVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow:ro -v /db/pdb/local/data:/db/pdb/local/data:ro -v "$PWD":"$PWD"'
-        builder.makeVolumes(quotes).toString() == '-v /folder\\ with\\ blanks:/folder\\ with\\ blanks:ro -v "$PWD":"$PWD"'
+        builder.makeVolumes(files).toString() == '-v /folder:/folder -v "$PWD":"$PWD"'
+        builder.makeVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v "$PWD":"$PWD"'
+        builder.makeVolumes(quotes).toString() == '-v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v "$PWD":"$PWD"'
 
     }
 
@@ -115,13 +115,13 @@ class DockerBuilderTest extends Specification {
                 .addMount(db_file)
                 .addMount(db_file)  // <-- add twice the same to prove that the final string won't contain duplicates
                 .build()
-                .runCommand == 'docker run -i -e "BASH_ENV=/data/env\\ file" -v /home/db:/home/db:ro -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i -e "BASH_ENV=/data/env\\ file" -v /home/db:/home/db -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
-                .params(writableInputMounts: true)
+                .params(readOnlyInputs: true)
                 .addMount(db_file)
                 .build()
-                .runCommand == 'docker run -i -v /home/db:/home/db -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i -v /home/db:/home/db:ro -v "$PWD":"$PWD" -w "$PWD" fedora'
 
 
     }
