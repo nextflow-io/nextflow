@@ -44,25 +44,36 @@ class NameGenerator {
             "berserk",
             "big",
             "boring",
+            "chaotic",
+            "cheeky",
+            "cheesy",
             "clever",
             "cocky",
             "compassionate",
             "condescending",
+            "curious",
             "cranky",
+            "crazy",
             "desperate",
             "determined",
+            "disturbed",
             "distracted",
+            "distraught",
             "dreamy",
             "drunk",
             "ecstatic",
             "elated",
             "elegant",
             "evil",
+            "exotic",
+            "extravagant",
             "fervent",
+            "festering",
             "focused",
             "furious",
             "gigantic",
             "gloomy",
+            "golden",
             "goofy",
             "grave",
             "happy",
@@ -70,12 +81,16 @@ class NameGenerator {
             "hopeful",
             "hungry",
             "infallible",
+            "intergalactic",
+            "insane",
             "jolly",
             "jovial",
             "kickass",
+            "lethal",
             "lonely",
             "loving",
             "mad",
+            "magical",
             "modest",
             "naughty",
             "nauseous",
@@ -85,14 +100,20 @@ class NameGenerator {
             "pensive",
             "prickly",
             "reverent",
+            "ridiculous",
             "romantic",
             "sad",
+            "scruffy",
+            "shrivelled",
             "serene",
             "sharp",
             "sick",
             "silly",
             "sleepy",
             "small",
+            "special",
+            "spontaneous",
+            "soggy",
             "stoic",
             "stupefied",
             "suspicious",
@@ -100,6 +121,7 @@ class NameGenerator {
             "thirsty",
             "tiny",
             "trusting",
+            "voluptuous",
             "zen"
 
     ]
@@ -179,6 +201,9 @@ class NameGenerator {
             // Walter Houser Brattain co-invented the transistor - https://en.wikipedia.org/wiki/Walter_Houser_Brattain
             "brattain",
 
+            // Sydney Brenner - South African biologist who worked on the genetic code, and other areas of molecular biology. https://en.wikipedia.org/wiki/Sydney_Brenner
+            "brenner",
+
             // Emmett Brown invented time travel. https://en.wikipedia.org/wiki/Emmett_Brown (thanks Brian Goff)
             "brown",
 
@@ -187,6 +212,9 @@ class NameGenerator {
 
             // Subrahmanyan Chandrasekhar - Astrophysicist known for his mathematical theory on different stages and evolution in structures of the stars. He has won nobel prize for physics - https://en.wikipedia.org/wiki/Subrahmanyan_Chandrasekhar
             "chandrasekhar",
+
+            // George M. Church - American geneticist, molecular engineer, and chemist. https://en.wikipedia.org/wiki/George_M._Church
+            "church",
 
             //Claude Shannon - The father of information theory and founder of digital circuit design theory. (https://en.wikipedia.org/wiki/Claude_Shannon)
             "shannon",
@@ -199,6 +227,9 @@ class NameGenerator {
 
             // Seymour Roger Cray was an American electrical engineer and supercomputer architect who designed a series of computers that were the fastest in the world for decades. https://en.wikipedia.org/wiki/Seymour_Cray
             "cray",
+
+            // Francis Crick - British molecular biologist, biophysicist, and neuroscientist, most noted for being a co-discoverer of the structure of the DNA molecule. https://en.wikipedia.org/wiki/Francis_Crick
+            "crick",
 
             // This entry reflects a husband and wife team who worked together:
             // Joan Curran was a Welsh scientist who developed radar and invented chaff, a radar countermeasure. https://en.wikipedia.org/wiki/Joan_Curran
@@ -251,6 +282,7 @@ class NameGenerator {
             "feynman",
 
             // Benjamin Franklin is famous for his experiments in electricity and the invention of the lightning rod.
+            // Rosalind Franklin - English chemist and X-ray crystallographer who made contributions to the understanding of the molecular structures of DNA. https://en.wikipedia.org/wiki/Rosalind_Franklin
             "franklin",
 
             // Galileo was a founding father of modern astronomy, and faced politics and obscurantism to establish scientific truth.  https://en.wikipedia.org/wiki/Galileo_Galilei
@@ -346,6 +378,9 @@ class NameGenerator {
             // Hedy Lamarr - Actress and inventor. The principles of her work are now incorporated into modern Wi-Fi, CDMA and Bluetooth technology. https://en.wikipedia.org/wiki/Hedy_Lamarr
             "lamarr",
 
+            // Jean-Baptiste Lamarck - French naturalist. He was a soldier, biologist, academic, and an early proponent of the idea that biological evolution occurred and proceeded in accordance with natural laws. https://en.wikipedia.org/wiki/Jean-Baptiste_Lamarck
+            "lamarck",
+
             // Leslie B. Lamport - American computer scientist. Lamport is best known for his seminal work in distributed systems and was the winner of the 2013 Turing Award. https://en.wikipedia.org/wiki/Leslie_Lamport
             "lamport",
 
@@ -373,6 +408,9 @@ class NameGenerator {
             // Maria Mayer - American theoretical physicist and Nobel laureate in Physics for proposing the nuclear shell model of the atomic nucleus - https://en.wikipedia.org/wiki/Maria_Mayer
             "mayer",
 
+            // Friedrich Miescher - Swiss physician and biologist. He was the first researcher to isolate nucleic acid. https://en.wikipedia.org/wiki/Friedrich_Miescher
+            "miescher",
+
             // John McCarthy invented LISP: https://en.wikipedia.org/wiki/John_McCarthy_(computer_scientist)
             "mccarthy",
 
@@ -387,6 +425,9 @@ class NameGenerator {
 
             // Lise Meitner - Austrian/Swedish physicist who was involved in the discovery of nuclear fission. The element meitnerium is named after her - https://en.wikipedia.org/wiki/Lise_Meitner
             "meitner",
+
+            // Gregor Mendel - Scientist and Augustinian friar. Gained posthumous recognition as the founder of the modern science of genetics. https://en.wikipedia.org/wiki/Gregor_Mendel
+            "mendel",
 
             // Carla Meninsky, was the game designer and programmer for Atari 2600 games Dodge 'Em and Warlords. https://en.wikipedia.org/wiki/Carla_Meninsky
             "meninsky",
@@ -478,6 +519,9 @@ class NameGenerator {
             // Jean E. Sammet developed FORMAC, the first widely used computer language for symbolic manipulation of mathematical formulas. https://en.wikipedia.org/wiki/Jean_E._Sammet
             "sammet",
 
+            // Frederick Sanger - British biochemist who worked on protein structure and DNA sequencing. https://en.wikipedia.org/wiki/Frederick_Sanger
+            "sanger",
+
             // Carol Shaw - Originally an Atari employee, Carol Shaw is said to be the first female video game designer. https://en.wikipedia.org/wiki/Carol_Shaw_(video_game_designer)
             "shaw",
 
@@ -529,8 +573,17 @@ class NameGenerator {
             // Sir Mokshagundam Visvesvaraya - is a notable Indian engineer.  He is a recipient of the Indian Republic's highest honour, the Bharat Ratna, in 1955. On his birthday, 15 September is celebrated as Engineer's Day in India in his memory - https://en.wikipedia.org/wiki/Visvesvaraya
             "visvesvaraya",
 
+            // Craig Venter - American biotechnologist, biochemist, geneticist, and businessman. Known for being involved with sequencing the second human genome. https://en.wikipedia.org/wiki/Craig_Venter
+            "venter",
+
             // Christiane Nüsslein-Volhard - German biologist, won Nobel Prize in Physiology or Medicine in 1995 for research on the genetic control of embryonic development. https://en.wikipedia.org/wiki/Christiane_N%C3%BCsslein-Volhard
             "volhard",
+
+            // C. H. Waddington -  British developmental biologist, paleontologist, geneticist, embryologist and philosopher who laid the foundations for systems biology, epigenetics, and evolutionary developmental biology. https://en.wikipedia.org/wiki/C._H._Waddington
+            "waddington",
+
+            // James Watson - American molecular biologist, geneticist and zoologist, best known as one of the co-discoverers of the structure of DNA. https://en.wikipedia.org/wiki/James_Watson
+            "watson",
 
             // Marlyn Wescoff - one of the original programmers of the ENIAC. https://en.wikipedia.org/wiki/ENIAC - https://en.wikipedia.org/wiki/Marlyn_Meltzer
             "wescoff",
