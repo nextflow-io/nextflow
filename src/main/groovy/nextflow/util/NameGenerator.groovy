@@ -226,6 +226,9 @@ class NameGenerator {
             // Emmett Brown invented time travel. https://en.wikipedia.org/wiki/Emmett_Brown (thanks Brian Goff)
             "brown",
 
+            // Santiago Ramón y Cajal - Spanish,  pathologist, histologist, neuroscientist, is considered the father of neuroscience  https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal
+            "cajal",
+
             // Rachel Carson - American marine biologist and conservationist, her book Silent Spring and other writings are credited with advancing the global environmental movement. https://en.wikipedia.org/wiki/Rachel_Carson
             "carson",
 
@@ -328,6 +331,9 @@ class NameGenerator {
             // William Henry "Bill" Gates III is an American business magnate, philanthropist, investor, computer programmer, and inventor. https://en.wikipedia.org/wiki/Bill_Gates
             "gates",
 
+            // Walter Gilbert is an American biochemist, developed a DNA sequencing method and first proposed the existence of introns and exons. https://en.wikipedia.org/wiki/Walter_Gilbert
+            "gilbert",
+
             // Adele Goldberg, was one of the designers and developers of the Smalltalk language. https://en.wikipedia.org/wiki/Adele_Goldberg_(computer_scientist)
             "goldberg",
 
@@ -403,11 +409,17 @@ class NameGenerator {
             // Jack Kilby invented silicone integrated circuits and gave Silicon Valley its name. - https://en.wikipedia.org/wiki/Jack_Kilby
             "kilby",
 
+            //Motoo Kimura - Japanese biologist introduced the neutral theory of molecular evolution. - https://en.wikipedia.org/wiki/Motoo_Kimura
+            "kimura",
+
             // Maria Kirch - German astronomer and first woman to discover a comet - https://en.wikipedia.org/wiki/Maria_Margarethe_Kirch
             "kirch",
 
             // Donald Knuth - American computer scientist, author of "The Art of Computer Programming" and creator of the TeX typesetting system. https://en.wikipedia.org/wiki/Donald_Knuth
             "knuth",
+
+            // Robert Kock - German physician, considered the founder of modern bacteriology. - https://en.wikipedia.org/wiki/Robert_Koch
+            "koch",
 
             // Sophie Kowalevski - Russian mathematician responsible for important original contributions to analysis, differential equations and mechanics - https://en.wikipedia.org/wiki/Sofia_Kovalevskaya
             "kowalevski",
@@ -531,6 +543,9 @@ class NameGenerator {
 
             // Louis Pasteur discovered vaccination, fermentation and pasteurization. https://en.wikipedia.org/wiki/Louis_Pasteur.
             "pasteur",
+
+            //Linus Carl Pauling - American biochemist considered one of the founders of the fields of quantum chemistry and molecular biology. He was also a peace activist and was awarded the Nobel Peace Prize - https://en.wikipedia.org/wiki/Linus_Pauling
+            "pauling"
 
             // Cecilia Payne-Gaposchkin was an astronomer and astrophysicist who, in 1925, proposed in her Ph.D. thesis an explanation for the composition of stars in terms of the relative abundances of hydrogen and helium. https://en.wikipedia.org/wiki/Cecilia_Payne-Gaposchkin
             "payne",
