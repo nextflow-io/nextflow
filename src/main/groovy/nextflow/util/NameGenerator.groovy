@@ -95,6 +95,7 @@ class NameGenerator {
             "loving",
             "mad",
             "magical",
+            "marvelous",
             "mighty",
             "modest",
             "naughty",
@@ -147,6 +148,9 @@ class NameGenerator {
             // Maria Gaetana Agnesi - Italian mathematician, philosopher, theologian and humanitarian. She was the first woman to write a mathematics handbook and the first woman appointed as a Mathematics Professor at a University. https://en.wikipedia.org/wiki/Maria_Gaetana_Agnesi
             "agnesi",
 
+            // André-Marie Ampère - French physicist and mathematician, one of the founders of the science of classical electromagnetism. https://en.wikipedia.org/wiki/Andr%C3%A9-Marie_Amp%C3%A8re
+            "ampere",
+
             // Archimedes was a physicist, engineer and mathematician who invented too many things to list them here. https://en.wikipedia.org/wiki/Archimedes
             "archimedes",
 
@@ -174,8 +178,14 @@ class NameGenerator {
             // Laura Bassi, the world's first female professor https://en.wikipedia.org/wiki/Laura_Bassi
             "bassi",
 
+            // Antoine César Becquerel, Alexandre-Edmond Becquerel, Antoine Henri Becquerel and Jean Becquerel... Lineage of French scientists, working on electric and luminescent phenomena, solar spectrum, magnetism, electricity, optics, radioactivity... https://en.wikipedia.org/wiki/Becquerel_(disambiguation)
+            "becquerel",
+
             // Alexander Graham Bell - an eminent Scottish-born scientist, inventor, engineer and innovator who is credited with inventing the first practical telephone - https://en.wikipedia.org/wiki/Alexander_Graham_Bell
             "bell",
+
+            // Claude Bernard - French physiologist, was one of the first to suggest the use of blind experiments to ensure the objectivity of scientific observations. https://en.wikipedia.org/wiki/Claude_Bernard
+            "bernard",
 
             // Homi J Bhabha - was an Indian nuclear physicist, founding director, and professor of physics at the Tata Institute of Fundamental Research. Colloquially known as "father of Indian nuclear programme"- https://en.wikipedia.org/wiki/Homi_J._Bhabha
             "bhabha",
@@ -231,6 +241,9 @@ class NameGenerator {
             // Gerty Theresa Cori - American biochemist who became the third woman—and first American woman—to win a Nobel Prize in science, and the first woman to be awarded the Nobel Prize in Physiology or Medicine. Cori was born in Prague. https://en.wikipedia.org/wiki/Gerty_Cori
             "cori",
 
+            // Charles-Augustin de Coulomb - French physicist, developed Coulomb's law, the definition of the electrostatic force of attraction and repulsion, but also did important work on friction. https://en.wikipedia.org/wiki/Charles-Augustin_de_Coulomb
+            "coulomb",
+
             // Seymour Roger Cray was an American electrical engineer and supercomputer architect who designed a series of computers that were the fastest in the world for decades. https://en.wikipedia.org/wiki/Seymour_Cray
             "cray",
 
@@ -245,11 +258,20 @@ class NameGenerator {
             // Marie Curie discovered radioactivity. https://en.wikipedia.org/wiki/Marie_Curie.
             "curie",
 
+            // Georges Cuvier - French naturalist and zoologist, was instrumental in establishing the fields of comparative anatomy and paleontology through his work in comparing living animals with fossils. https://en.wikipedia.org/wiki/Georges_Cuvier
+            "cuvier",
+
+            // Jean-Baptiste le Rond d'Alembert - French mathematician, mechanician, physicist, philosopher, and music theorist. https://en.wikipedia.org/wiki/Jean_le_Rond_d%27Alembert
+            "dalembert",
+
             // Charles Darwin established the principles of natural evolution. https://en.wikipedia.org/wiki/Charles_Darwin.
             "darwin",
 
             // Leonardo Da Vinci invented too many things to list here. https://en.wikipedia.org/wiki/Leonardo_da_Vinci.
             "davinci",
+
+            // René Descartes - French philosopher, mathematician, and scientist. His best known philosophical statement is "Cogito ergo sum". https://en.wikipedia.org/wiki/Ren%C3%A9_Descartes
+            "descartes",
 
             // Edsger Wybe Dijkstra was a Dutch computer scientist and mathematical scientist. https://en.wikipedia.org/wiki/Edsger_W._Dijkstra.
             "dijkstra",
@@ -287,6 +309,9 @@ class NameGenerator {
             // Richard Feynman was a key contributor to quantum mechanics and particle physics. https://en.wikipedia.org/wiki/Richard_Feynman
             "feynman",
 
+            // Jean-Baptiste Joseph Fourier - a French mathematician and physicist, best known for initiating the investigation of Fourier series and their applications to problems of heat transfer and vibrations, is also generally credited with the discovery of the greenhouse effect. https://en.wikipedia.org/wiki/Joseph_Fourier
+            "fourrier",
+
             // Benjamin Franklin is famous for his experiments in electricity and the invention of the lightning rod.
             // Rosalind Franklin - English chemist and X-ray crystallographer who made contributions to the understanding of the molecular structures of DNA. https://en.wikipedia.org/wiki/Rosalind_Franklin
             "franklin",
@@ -311,6 +336,9 @@ class NameGenerator {
 
             // Jane Goodall - British primatologist, ethologist, and anthropologist who is considered to be the world's foremost expert on chimpanzees - https://en.wikipedia.org/wiki/Jane_Goodall
             "goodall",
+
+            // Johannes Gensfleisch zur Laden zum Gutenberg - Inventor of movable-type printing press. https://en.wikipedia.org/wiki/Johannes_Gutenberg
+            "gutenberg",
 
             // Margaret Hamilton - Director of the Software Engineering Division of the MIT Instrumentation Laboratory, which developed on-board flight software for the Apollo space program. https://en.wikipedia.org/wiki/Margaret_Hamilton_(scientist)
             "hamilton",
@@ -390,6 +418,9 @@ class NameGenerator {
             // Leslie B. Lamport - American computer scientist. Lamport is best known for his seminal work in distributed systems and was the winner of the 2013 Turing Award. https://en.wikipedia.org/wiki/Leslie_Lamport
             "lamport",
 
+            // Pierre-Simon, marquis de Laplace, French scholar whose work was important to the development of mathematics, statistics, physics and astronomy. https://en.wikipedia.org/wiki/Pierre-Simon_Laplace
+            "laplace",
+
             // Antoine Lavoisier - French chemist central to the 18th-century chemical revolution and had a large influence on both the history of chemistry and the history of biology. https://en.wikipedia.org/wiki/Antoine_Lavoisier
             "lavoisier",
 
@@ -398,6 +429,9 @@ class NameGenerator {
 
             // Henrietta Swan Leavitt - she was an American astronomer who discovered the relation between the luminosity and the period of Cepheid variable stars. https://en.wikipedia.org/wiki/Henrietta_Swan_Leavitt
             "leavitt",
+
+            // Guillaume Joseph Hyacinthe Jean-Baptiste Le Gentil de la Galaisière - French astronomer, part of the international collaborative project to measure the distance to the Sun, by observing the transit of Venus at different points on the earth. Mainly known for being one of the most unfortunate and unlucky scientist ever. https://en.wikipedia.org/wiki/Guillaume_Le_Gentil
+            "legentil",
 
             // Ruth Lichterman - one of the original programmers of the ENIAC. https://en.wikipedia.org/wiki/ENIAC - https://en.wikipedia.org/wiki/Ruth_Teitelbaum
             "lichterman",
@@ -413,6 +447,9 @@ class NameGenerator {
 
             // Mahavira - Ancient Indian mathematician during 9th century AD who discovered basic algebraic identities - https://en.wikipedia.org/wiki/Mah%C4%81v%C4%ABra_(mathematician)
             "mahavira",
+
+            // Benoit B. Mandelbrot - Polish-born, French and American mathematician, recognized for his contribution to the field of fractal geometry, which included coining the word "fractal". https://en.wikipedia.org/wiki/Benoit_Mandelbrot
+            "mandelbrot",
 
             // Maria Mayer - American theoretical physicist and Nobel laureate in Physics for proposing the nuclear shell model of the atomic nucleus - https://en.wikipedia.org/wiki/Maria_Mayer
             "mayer",
@@ -489,11 +526,17 @@ class NameGenerator {
             // Radia Perlman is a software designer and network engineer and most famous for her invention of the spanning-tree protocol (STP). https://en.wikipedia.org/wiki/Radia_Perlman
             "perlman",
 
+            // Thomas Gautier Pesquet - French astronaut. https://en.wikipedia.org/wiki/Thomas_Pesquet
+            "pesquet",
+
             // Rob Pike was a key contributor to Unix, Plan 9, the X graphic system, utf-8, and the Go programming language. https://en.wikipedia.org/wiki/Rob_Pike
             "pike",
 
             // Henri Poincaré made fundamental contributions in several fields of mathematics. https://en.wikipedia.org/wiki/Henri_Poincar%C3%A9
             "poincare",
+
+            // Siméon Denis Poisson - French mathematician, geometer, and physicist, obtained many important results, was the final leading opponent of the wave theory of light and was proven wrong. https://en.wikipedia.org/wiki/Sim%C3%A9on_Denis_Poisson
+            "poisson",
 
             // Laura Poitras is a director and producer whose work, made possible by open source crypto tools, advances the causes of truth and freedom of information by reporting disclosures by whistleblowers such as Edward Snowden. https://en.wikipedia.org/wiki/Laura_Poitras
             "poitras",
