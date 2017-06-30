@@ -545,7 +545,7 @@ class NameGenerator {
             "pasteur",
 
             //Linus Carl Pauling - American biochemist considered one of the founders of the fields of quantum chemistry and molecular biology. He was also a peace activist and was awarded the Nobel Peace Prize - https://en.wikipedia.org/wiki/Linus_Pauling
-            "pauling"
+            "pauling",
 
             // Cecilia Payne-Gaposchkin was an astronomer and astrophysicist who, in 1925, proposed in her Ph.D. thesis an explanation for the composition of stars in terms of the relative abundances of hydrogen and helium. https://en.wikipedia.org/wiki/Cecilia_Payne-Gaposchkin
             "payne",
