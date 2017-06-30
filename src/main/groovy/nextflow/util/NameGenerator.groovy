@@ -746,3 +746,5 @@ class NameGenerator {
                 return result
         }
     }
+
+}
