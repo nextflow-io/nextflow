@@ -316,7 +316,7 @@ class NameGenerator {
             "feynman",
 
             // Jean-Baptiste Joseph Fourier - a French mathematician and physicist, best known for initiating the investigation of Fourier series and their applications to problems of heat transfer and vibrations, is also generally credited with the discovery of the greenhouse effect. https://en.wikipedia.org/wiki/Joseph_Fourier
-            "fourrier",
+            "fourier",
 
             // Benjamin Franklin is famous for his experiments in electricity and the invention of the lightning rod.
             // Rosalind Franklin - English chemist and X-ray crystallographer who made contributions to the understanding of the molecular structures of DNA. https://en.wikipedia.org/wiki/Rosalind_Franklin
