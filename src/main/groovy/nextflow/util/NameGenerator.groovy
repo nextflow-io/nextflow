@@ -160,6 +160,9 @@ class NameGenerator {
             // Aryabhata - Ancient Indian mathematician-astronomer during 476-550 CE https://en.wikipedia.org/wiki/Aryabhata
             "aryabhata",
 
+            // Lorenzo Romano Amedeo Carlo Avogadro was an Italian scientist, most noted for his contribution to molecular theory now known as Avogadro's law - https://en.wikipedia.org/wiki/Amedeo_Avogadro
+            "avogadro",
+
             // Wanda Austin - Wanda Austin is the President and CEO of The Aerospace Corporation, a leading architect for the US security space programs. https://en.wikipedia.org/wiki/Wanda_Austin
             "austin",
 
@@ -299,6 +302,9 @@ class NameGenerator {
 
             // Leonhard Euler invented large parts of modern mathematics. https://de.wikipedia.org/wiki/Leonhard_Euler
             "euler",
+
+            // Federico Faggin is an Italian physicist, inventor and entrepreneur, widely known for designing the first commercial microprocessor - https://en.wikipedia.org/wiki/Federico_Faggin
+            "faggin",
 
             // Pierre de Fermat pioneered several aspects of modern mathematics. https://en.wikipedia.org/wiki/Pierre_de_Fermat
             "fermat",
@@ -454,6 +460,9 @@ class NameGenerator {
             // Maria Mayer - American theoretical physicist and Nobel laureate in Physics for proposing the nuclear shell model of the atomic nucleus - https://en.wikipedia.org/wiki/Maria_Mayer
             "mayer",
 
+            // Guglielmo Marconi, 1st Marquis of Marconi was an Italian inventor and electrical engineer known for his pioneering work on long-distance radio transmission - https://en.wikipedia.org/wiki/Guglielmo_Marconi
+            "marconi",
+
             // Friedrich Miescher - Swiss physician and biologist. He was the first researcher to isolate nucleic acid. https://en.wikipedia.org/wiki/Friedrich_Miescher
             "miescher",
 
@@ -480,6 +489,9 @@ class NameGenerator {
 
             // Johanna Mestorf - German prehistoric archaeologist and first female museum director in Germany - https://en.wikipedia.org/wiki/Johanna_Mestorf
             "mestorf",
+
+            // Antonio Santi Giuseppe Meucci was an Italian inventor best known for developing a voice-communication apparatus that several sources credit as the first telephone - https://en.wikipedia.org/wiki/Antonio_Meucci
+            "meucci",
 
             // Marvin Minsky - Pioneer in Artificial Intelligence, co-founder of the MIT's AI Lab, won the Turing Award in 1969. https://en.wikipedia.org/wiki/Marvin_Minsky
             "minsky",
@@ -553,6 +565,9 @@ class NameGenerator {
             // Sally Kristen Ride was an American physicist and astronaut. She was the first American woman in space, and the youngest American astronaut. https://en.wikipedia.org/wiki/Sally_Ride
             "ride",
 
+            // Ettore Majorana was an Italian theoretical physicist who worked on neutrino masses - https://en.wikipedia.org/wiki/Ettore_Majorana
+            "majorana",
+
             // Rita Levi-Montalcini - Won Nobel Prize in Physiology or Medicine jointly with colleague Stanley Cohen for the discovery of nerve growth factor (https://en.wikipedia.org/wiki/Rita_Levi-Montalcini)
             "montalcini",
 
@@ -613,6 +628,9 @@ class NameGenerator {
             // Ken Thompson - co-creator of UNIX and the C programming language - https://en.wikipedia.org/wiki/Ken_Thompson
             "thompson",
 
+            // Evangelista Torricelli was an Italian physicist and mathematician, best known for his invention of the barometer - https://en.wikipedia.org/wiki/Evangelista_Torricelli
+            "torricelli",
+
             // Linus Torvalds invented Linux and Git. https://en.wikipedia.org/wiki/Linus_Torvalds
             "torvalds",
 
@@ -630,6 +648,9 @@ class NameGenerator {
 
             // Christiane Nüsslein-Volhard - German biologist, won Nobel Prize in Physiology or Medicine in 1995 for research on the genetic control of embryonic development. https://en.wikipedia.org/wiki/Christiane_N%C3%BCsslein-Volhard
             "volhard",
+
+            // Alessandro Giuseppe Antonio Anastasio Volta was an Italian physicist, chemist, and a pioneer of electricity and power - https://en.wikipedia.org/wiki/Alessandro_Volta
+            "volta",
 
             // C. H. Waddington -  British developmental biologist, paleontologist, geneticist, embryologist and philosopher who laid the foundations for systems biology, epigenetics, and evolutionary developmental biology. https://en.wikipedia.org/wiki/C._H._Waddington
             "waddington",
