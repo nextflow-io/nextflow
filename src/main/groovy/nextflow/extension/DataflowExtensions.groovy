@@ -464,8 +464,13 @@ class DataflowExtensions {
      * @return
      */
     static final <V> DataflowReadChannel<V> first( DataflowReadChannel<V> source ) {
-        if( source instanceof DataflowExpression )
-            log.warn "The use of `first` operator is unnecessary when applied to a value channel"
+        if( source instanceof DataflowExpression ) {
+            def msg = "The use of `first` operator is unnecessary when applied to a value channel"
+            def name = session?.binding?.getVariableName(source)
+            if( name )
+                msg += " -- check channel `$name`"
+            log.warn msg
+        }
 
         def target = new DataflowVariable<V>()
         source.whenBound { target.bind(it) }

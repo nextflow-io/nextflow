@@ -183,5 +183,20 @@ class ScriptBindingTest extends Specification {
 
     }
 
+    def 'should get the variable name giving the value'() {
+
+        given:
+        def X=1
+        def Y='hello'
+        def binding = new ScriptBinding([:])
+        binding.setVariable('foo', X)
+        binding.setVariable('bar', Y)
+
+        expect:
+        binding.getVariableName(X) == 'foo'
+        binding.getVariableName(Y) == 'bar'
+        binding.getVariableName(new String(Y)) == null
+        binding.getVariableName(null) == null
+    }
 
 }
