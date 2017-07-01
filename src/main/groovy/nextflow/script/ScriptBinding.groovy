@@ -137,6 +137,16 @@ class ScriptBinding extends Binding {
     }
 
     /**
+     * Lookup the name of a variable giving the value reference
+     *
+     * @param value The value for which the variable name is needed
+     * @return The associated variable name
+     */
+    String getVariableName(value) {
+        super.getVariables().find { entry -> entry.value?.is(value) }?.getKey()
+    }
+
+    /**
      * Holds parameter immutable values
      */
     @CompileStatic
