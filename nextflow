@@ -30,10 +30,12 @@ export NXF_ORG
 export NXF_HOME
 
 if [[ $TERM && $TERM != 'dumb' ]]; then
+if command -v tput &>/dev/null; then
 GREEN=$(tput setaf 2; tput bold)
 YELLOW=$(tput setaf 3)
 RED=$(tput setaf 1)
 NORMAL=$(tput sgr0)
+fi
 fi
 
 function echo_red() {
