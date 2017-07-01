@@ -169,6 +169,9 @@ class NameGenerator {
             // Charles Babbage invented the concept of a programmable computer. https://en.wikipedia.org/wiki/Charles_Babbage.
             "babbage",
 
+            // Leo Baekeland - Belgian-American scientist known for inventing Bakelite. Considered the "Father of the Plastics Industry". https://en.wikipedia.org/wiki/Leo_Baekeland
+            "baekeland",
+
             // Stefan Banach - Polish mathematician, was one of the founders of modern functional analysis. https://en.wikipedia.org/wiki/Stefan_Banach
             "banach",
 
@@ -463,6 +466,9 @@ class NameGenerator {
             // Auguste and Louis Lumière - the first filmmakers in history - https://en.wikipedia.org/wiki/Auguste_and_Louis_Lumi%C3%A8re
             "lumiere",
 
+            // René François Ghislain Magritte - Belgian surrealist artist. https://en.wikipedia.org/wiki/René_Magritte
+            "magritte",
+
             // Mahavira - Ancient Indian mathematician during 9th century AD who discovered basic algebraic identities - https://en.wikipedia.org/wiki/Mah%C4%81v%C4%ABra_(mathematician)
             "mahavira",
 
@@ -498,6 +504,9 @@ class NameGenerator {
 
             // Carla Meninsky, was the game designer and programmer for Atari 2600 games Dodge 'Em and Warlords. https://en.wikipedia.org/wiki/Carla_Meninsky
             "meninsky",
+
+            // Gerardus Mercator - German-Flemish cartographer, geographer and cosmographer. Known for creating a 1569 world map based on rhumb lines. https://en.wikipedia.org/wiki/Gerardus_Mercator
+            "mercator",
 
             // Johanna Mestorf - German prehistoric archaeologist and first female museum director in Germany - https://en.wikipedia.org/wiki/Johanna_Mestorf
             "mestorf",
@@ -559,6 +568,9 @@ class NameGenerator {
             // Rob Pike was a key contributor to Unix, Plan 9, the X graphic system, utf-8, and the Go programming language. https://en.wikipedia.org/wiki/Rob_Pike
             "pike",
 
+            // Joseph Plateau - Belgian physisist known for being one of the first persons to demonstrate the illusion of moving image.
+            "plateau",
+
             // Henri Poincaré made fundamental contributions in several fields of mathematics. https://en.wikipedia.org/wiki/Henri_Poincar%C3%A9
             "poincare",
 
@@ -595,6 +607,9 @@ class NameGenerator {
             // Rosalind Franklin - British biophysicist and X-ray crystallographer whose research was critical to the understanding of DNA - https://en.wikipedia.org/wiki/Rosalind_Franklin
             "rosalind",
 
+            // Peter Paul Rubens - Flemish baroque painter. https://en.wikipedia.org/wiki/Peter_Paul_Rubens
+            "rubens",
+
             // Meghnad Saha - Indian astrophysicist best known for his development of the Saha equation, used to describe chemical and physical conditions in stars - https://en.wikipedia.org/wiki/Meghnad_Saha
             "saha",
 
@@ -603,6 +618,9 @@ class NameGenerator {
 
             // Frederick Sanger - British biochemist who worked on protein structure and DNA sequencing. https://en.wikipedia.org/wiki/Frederick_Sanger
             "sanger",
+
+            // Adolphe Sax - inventor of the saxophone. https://en.wikipedia.org/wiki/Adolphe_Sax
+            "sax",
 
             // Carol Shaw - Originally an Atari employee, Carol Shaw is said to be the first female video game designer. https://en.wikipedia.org/wiki/Carol_Shaw_(video_game_designer)
             "shaw",
@@ -618,6 +636,9 @@ class NameGenerator {
 
             // Betty Snyder - one of the original programmers of the ENIAC. https://en.wikipedia.org/wiki/ENIAC - https://en.wikipedia.org/wiki/Betty_Holberton
             "snyder",
+
+            // Ernest Solvay - Belgian chemist. Founded Solvay & Cie and began a series of conferences in physics in 1911. https://en.wikipedia.org/wiki/Ernest_Solvay
+            "solvay",
 
             // Frances Spence - one of the original programmers of the ENIAC. https://en.wikipedia.org/wiki/ENIAC - https://en.wikipedia.org/wiki/Frances_Spence
             "spence",
