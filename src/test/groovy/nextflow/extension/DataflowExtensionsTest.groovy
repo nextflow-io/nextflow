@@ -24,7 +24,7 @@ import java.nio.file.Paths
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.Session
-import spock.lang.IgnoreIf
+import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Timeout
 /**
@@ -437,7 +437,7 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
-    @IgnoreIf({ javaVersion == 1.7 })
+    @Ignore()
     def testRouteBy() {
 
         when:
@@ -453,7 +453,7 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
-    @IgnoreIf({ javaVersion == 1.7 })
+    @Ignore
     def testRouteByMap() {
 
         setup:

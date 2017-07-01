@@ -1620,7 +1620,9 @@ See also: `into`_, `choice`_ and `map`_ operators.
 
 
 route
-----------
+-----
+
+.. warning:: This operator is deprecated. It will be removed in a future release.
 
 The ``route`` operator allows you to forward the items emitted by the source channel 
 to a channel which is associated with the item's key. 

@@ -903,6 +903,7 @@ class DataflowExtensions {
      * @param mapper A optional mapping function that given an entry return its key
      */
     static final void route( final DataflowReadChannel source, Map<?,DataflowWriteChannel> targets, Closure mapper = DEFAULT_MAPPING_CLOSURE ) {
+        log.warn "Operator `route` is deprecated -- It will be removed in a future release"
 
         DataflowHelper.subscribeImpl(source,
                 [
