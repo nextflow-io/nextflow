@@ -236,6 +236,9 @@ class NameGenerator {
             // Santiago Ramón y Cajal - Spanish,  pathologist, histologist, neuroscientist, is considered the father of neuroscience  https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal
             "cajal",
 
+            // Michelangelo Merisi da Caravaggio was an Italian painter active - https://en.wikipedia.org/wiki/Caravaggio
+            "caravaggio",
+
             // Rachel Carson - American marine biologist and conservationist, her book Silent Spring and other writings are credited with advancing the global environmental movement. https://en.wikipedia.org/wiki/Rachel_Carson
             "carson",
 
@@ -581,6 +584,9 @@ class NameGenerator {
             // Joseph Plateau - Belgian physisist known for being one of the first persons to demonstrate the illusion of moving image.
             "plateau",
 
+            // Pablo Picasso was a Spanish painter, sculptor, printmaker, ceramicist, stage designer, poet and playwright - https://en.wikipedia.org/wiki/Pablo_Picasso
+            "picasso",
+
             // Henri Poincaré made fundamental contributions in several fields of mathematics. https://en.wikipedia.org/wiki/Henri_Poincar%C3%A9
             "poincare",
 
@@ -631,6 +637,9 @@ class NameGenerator {
 
             // Adolphe Sax - inventor of the saxophone. https://en.wikipedia.org/wiki/Adolphe_Sax
             "sax",
+
+            //Claude Shannon - The father of information theory and founder of digital circuit design theory. (https://en.wikipedia.org/wiki/Claude_Shannon)
+            "shannon",
 
             // Carol Shaw - Originally an Atari employee, Carol Shaw is said to be the first female video game designer. https://en.wikipedia.org/wiki/Carol_Shaw_(video_game_designer)
             "shaw",
