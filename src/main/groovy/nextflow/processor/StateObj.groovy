@@ -66,7 +66,7 @@ class StateObj implements Serializable, Cloneable {
     }
 
     void poison() {
-        log.debug "<$name> State before poison: $this"
+        log.trace "<$name> State before poison: $this"
         poisoned = true
     }
 

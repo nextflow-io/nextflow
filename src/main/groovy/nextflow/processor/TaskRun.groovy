@@ -498,7 +498,7 @@ class TaskRun implements Cloneable {
 
 
     String toString( ) {
-        "id: $id; name: $name; type: $type; status: $exitStatus; error: $error; workDirectory: $workDir"
+        "id: $id; name: $name; type: $type; exit: ${exitStatus==Integer.MAX_VALUE ? '-' : exitStatus}; error: $error; workDir: $workDir"
     }
 
 

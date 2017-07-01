@@ -30,7 +30,9 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.Escape
+import nextflow.util.Throttle
 import org.apache.commons.lang.StringUtils
+
 /**
  * Generic task processor executing a task through a grid facility
  *
@@ -315,7 +317,7 @@ abstract class AbstractGridExecutor extends Executor {
     public boolean checkActiveStatus( jobId, queue ) {
 
         // -- fetch the queue status
-        fQueueStatus = (Map<Object,QueueStatus>)queueInterval.throttle(null) { getQueueStatus(queue) }
+        fQueueStatus = (Map<Object,QueueStatus>)Throttle.after(queueInterval) { getQueueStatus(queue) }
         if( fQueueStatus == null ) { // no data is returned, so return true
             log.trace "Queue status map is null -- return true"
             return true

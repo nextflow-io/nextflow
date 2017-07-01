@@ -27,6 +27,7 @@ import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 
 import groovy.util.logging.Slf4j
+import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessSubmitException
 import nextflow.file.FileHelper
@@ -35,6 +36,8 @@ import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
 import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
+import nextflow.util.Throttle
+
 /**
  * Handles a job execution in the underlying grid platform
  */
@@ -66,6 +69,8 @@ class GridTaskHandler extends TaskHandler {
 
     private long exitStatusReadTimeoutMillis
 
+    private Duration sanityCheckInterval
+
     final static private READ_TIMEOUT = Duration.of('270sec') // 4.5 minutes
 
     BatchCleanup batch
@@ -79,9 +84,10 @@ class GridTaskHandler extends TaskHandler {
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
-        final timeout = executor.session?.getExitReadTimeout(executor.name, READ_TIMEOUT) ?: READ_TIMEOUT
-        this.exitStatusReadTimeoutMillis = timeout.toMillis()
+        final duration = executor.session?.getExitReadTimeout(executor.name, READ_TIMEOUT) ?: READ_TIMEOUT
+        this.exitStatusReadTimeoutMillis = duration.toMillis()
         this.queue = task.config?.queue
+        this.sanityCheckInterval = duration
     }
 
     protected ProcessBuilder createProcessBuilder() {
@@ -106,7 +112,6 @@ class GridTaskHandler extends TaskHandler {
      */
     @Override
     void submit() {
-        log.debug "Launching process > ${task.name} -- work folder: ${task.workDir}"
         String result = null
         def exitStatus = Integer.MAX_VALUE
         ProcessBuilder builder = null
@@ -128,15 +133,16 @@ class GridTaskHandler extends TaskHandler {
                 // -- wait the the process completes
                 result = process.text
                 exitStatus = process.waitFor()
-                log.trace "submit ${task.name} > exit: $exitStatus\n$result\n"
 
                 if( exitStatus ) {
-                    throw new ProcessSubmitException("Failed to submit job to grid scheduler for execution")
+                    log.debug "Failed to submit process ${task.name} > exit: $exitStatus; workDir: $task.workDir\n$result\n"
+                    throw new ProcessSubmitException("Failed to submit process to grid scheduler for execution")
                 }
 
                 // save the JobId in the
                 this.jobId = executor.parseJobId(result)
                 this.status = SUBMITTED
+                log.debug "Submitted process ${task.name} > ${executor.name} jobId: $jobId; workDir: ${task.workDir}"
             }
             finally {
                 // make sure to release all resources
@@ -159,6 +165,8 @@ class GridTaskHandler extends TaskHandler {
 
 
     private long startedMillis
+
+    private long exitTimestampMillis0 = System.currentTimeMillis()
 
     private long exitTimestampMillis1
 
@@ -295,9 +303,15 @@ class GridTaskHandler extends TaskHandler {
         if( startFile && (attr=FileHelper.readAttributes(startFile)) && attr.lastModifiedTime()?.toMillis() > 0  )
             return true
 
-        // fix issue #268
-        if( exitFile && (attr=FileHelper.readAttributes(exitFile)) && attr.lastModifiedTime()?.toMillis() > 0  )
-            return true
+        // to avoid unnecessary pressure on the file system check the existence of
+        // the exit file on only on a time-periodic basis
+        def now = System.currentTimeMillis()
+        if( now - exitTimestampMillis0 > exitStatusReadTimeoutMillis ) {
+            exitTimestampMillis0 = now
+            // fix issue #268
+            if( exitFile && (attr=FileHelper.readAttributes(exitFile)) && attr.lastModifiedTime()?.toMillis() > 0  )
+                return true
+        }
 
         return false
     }
@@ -308,17 +322,39 @@ class GridTaskHandler extends TaskHandler {
         // verify the exit file exists
         def exit
         if( isRunning() && (exit = readExitStatus()) != null ) {
-
             // finalize the task
             task.exitStatus = exit
             task.stdout = outputFile
             task.stderr = errorFile
             status = COMPLETED
             return true
-
+        }
+        // sanity check
+        else if( !passSanityCheck() ) {
+            log.debug "Task sanity check failed > $task"
+            task.stdout = outputFile
+            task.stderr = errorFile
+            status = COMPLETED
+            return true
         }
 
         return false
+    }
+
+    private boolean passSanityCheck() {
+        Throttle.after(sanityCheckInterval, true) {
+            if( isCompleted() ) {
+                return true
+            }
+            if( task.workDir.exists() ) {
+                return true
+            }
+            // if the task is not complete (ie submitted or running)
+            // AND the work-dir does not exists ==> something is wrong
+            task.error = new ProcessException("Task work directory is missing (!)")
+            // sanity check does not pass
+            return false
+        }
     }
 
     @Override

@@ -90,6 +90,7 @@ import static nextflow.processor.ErrorStrategy.*
 import nextflow.util.Escape
 
 /**
+ * Implement nextflow process execution logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -2036,7 +2037,7 @@ class TaskProcessor {
     }
 
     protected void terminateProcess() {
-        log.debug "<${name}> Sending poison pills and terminating process"
+        log.trace "<${name}> Sending poison pills and terminating process"
         sendPoisonPill()
         session.processDeregister(this)
     }
@@ -2156,7 +2157,7 @@ class TaskProcessor {
             super.controlMessageArrived(processor, channel, index, message)
 
             if( message == PoisonPill.instance ) {
-                log.debug "<${name}> Poison pill arrived; port: $index"
+                log.trace "<${name}> Poison pill arrived; port: $index"
                 openPorts.set(index, 0) // mark the port as closed
                 state.update { StateObj it -> it.poison() }
             }
@@ -2166,7 +2167,7 @@ class TaskProcessor {
 
         @Override
         public void afterStop(final DataflowProcessor processor) {
-            log.debug "<${name}> After stop"
+            log.trace "<${name}> After stop"
         }
 
         /**
