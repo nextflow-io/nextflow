@@ -48,6 +48,7 @@ class NameGenerator {
             "chaotic",
             "cheeky",
             "cheesy",
+            "childish",
             "clever",
             "cocky",
             "compassionate",
@@ -70,6 +71,7 @@ class NameGenerator {
             "exotic",
             "extravagant",
             "fabulous",
+            "fake",
             "fervent",
             "festering",
             "focused",
@@ -83,25 +85,34 @@ class NameGenerator {
             "happy",
             "high",
             "hopeful",
+            "horny",
+            "hot",
             "hungry",
             "infallible",
             "insane",
             "intergalactic",
+            "instinctive",
+            "irreverent",
             "jolly",
             "jovial",
+            "juvenile",
             "kickass",
             "lethal",
             "lonely",
             "loving",
             "mad",
             "magical",
+            "maniac",
             "marvelous",
             "mighty",
             "modest",
+            "nasty",
             "naughty",
             "nauseous",
             "nice",
+            "non-coding",
             "nostalgic",
+            "parallel",
             "peaceful",
             "pedantic",
             "pensive",
@@ -121,6 +132,7 @@ class NameGenerator {
             "soggy",
             "special",
             "spontaneous",
+            "spurious",
             "stoic",
             "stupefied",
             "suspicious",
@@ -129,6 +141,7 @@ class NameGenerator {
             "tiny",
             "trusting",
             "voluptuous",
+            "wise",
             "zen"
 
     ]
@@ -412,7 +425,7 @@ class NameGenerator {
             // Jack Kilby invented silicone integrated circuits and gave Silicon Valley its name. - https://en.wikipedia.org/wiki/Jack_Kilby
             "kilby",
 
-            //Motoo Kimura - Japanese biologist introduced the neutral theory of molecular evolution. - https://en.wikipedia.org/wiki/Motoo_Kimura
+            // Motoo Kimura - Japanese biologist introduced the neutral theory of molecular evolution. - https://en.wikipedia.org/wiki/Motoo_Kimura
             "kimura",
 
             // Maria Kirch - German astronomer and first woman to discover a comet - https://en.wikipedia.org/wiki/Maria_Margarethe_Kirch
@@ -459,6 +472,9 @@ class NameGenerator {
 
             // Barbara Liskov - co-developed the Liskov substitution principle. Liskov was also the winner of the Turing Prize in 2008. - https://en.wikipedia.org/wiki/Barbara_Liskov
             "liskov",
+
+            // Konrad Zacharias Lorenz - was an Austrian zoologist, ethologist, and ornithologist founder of the modern ethology, study of animal behavior. - https://en.wikipedia.org/wiki/Konrad_Lorenz
+            "lorenz",
 
             // Ada Lovelace invented the first algorithm. https://en.wikipedia.org/wiki/Ada_Lovelace (thanks James Turnbull)
             "lovelace",
@@ -519,6 +535,9 @@ class NameGenerator {
 
             // Maryam Mirzakhani - an Iranian mathematician and the first woman to win the Fields Medal. https://en.wikipedia.org/wiki/Maryam_Mirzakhani
             "mirzakhani",
+
+            // Jacques Lucien Monod - A french molecular biologist who studied genetic control of enzyme and virus synthesis using as model the lac operon of E. coli - https://en.wikipedia.org/wiki/Jacques_Monod
+            "monod",
 
             // Samuel Morse - contributed to the invention of a single-wire telegraph system based on European telegraphs and was a co-developer of the Morse code - https://en.wikipedia.org/wiki/Samuel_Morse
             "morse",
@@ -708,6 +727,9 @@ class NameGenerator {
 
             // Jeannette Wing - co-developed the Liskov substitution principle. - https://en.wikipedia.org/wiki/Jeannette_Wing
             "wing",
+
+            // Carl Richard Woese - American microbiologist defined the Archaea kingdom of life by his pioneering phylogenetic taxonomy classification using 16S ribosomal RNA - https://en.wikipedia.org/wiki/Carl_Woese
+            "woese",
 
             // Steve Wozniak invented the Apple I and Apple II. https://en.wikipedia.org/wiki/Steve_Wozniak
             "wozniak",
