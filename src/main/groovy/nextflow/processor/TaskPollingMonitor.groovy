@@ -31,8 +31,9 @@ import nextflow.Session
 import nextflow.executor.BatchCleanup
 import nextflow.executor.GridTaskHandler
 import nextflow.util.Duration
+import nextflow.util.Throttle
+
 /**
- *
  * Monitors the queued tasks waiting for their termination
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -228,6 +229,7 @@ class TaskPollingMonitor implements TaskMonitor {
             pendingQueue << handler
             taskAvail.signal()  // signal that a new task is available for execution
             slotAvail.signal()  // signal that a slot in the processing queue
+            log.trace "Scheduled task > $handler"
         }
     }
 
@@ -309,8 +311,10 @@ class TaskPollingMonitor implements TaskMonitor {
                 int processed = submitPendingTasks()
 
                 // if no task has been submitted wait for a new slot to be available
-                if( !processed )
+                if( !processed ) {
+                    Throttle.after(dumpInterval) { dumpSubmitQueue() }
                     slotAvail.await()
+                }
             }
             finally {
                 pendingQueueLock.unlock()
@@ -341,19 +345,57 @@ class TaskPollingMonitor implements TaskMonitor {
             }
 
             // dump this line every two minutes
-            dumpInterval.throttle(true) {
-                def pending = runningQueue.size()
-                if( !pending ) {
-                    log.warn "No more task to compute -- Execution may be stalled (see the log file for details)"
-                    log.debug session.dumpNetworkStatus()
-                }
-                else {
-                    log.debug "!! executor $name > tasks to be completed: ${runningQueue.size()} -- first: ${runningQueue.peek()}"
-                }
+            Throttle.after(dumpInterval) {
+                dumpPendingTasks()
             }
         }
-
     }
+
+    protected void dumpPendingTasks() {
+
+        try {
+            def pending = runningQueue.size()
+            if( !pending ) {
+                log.debug "No more task to compute -- ${session.dumpNetworkStatus() ?: 'Execution may be stalled'}"
+                return
+            }
+
+            def msg = []
+            msg << "!! executor $name > tasks to be completed: ${runningQueue.size()} -- pending tasks are shown below"
+            // dump the first 10 tasks
+            def i=0; def itr = runningQueue.iterator()
+            while( i++<10 && itr.hasNext() )
+                msg << "~> ${itr.next()}"
+            if( pending>i )
+                msg << ".. remaining tasks omitted."
+            log.debug msg.join('\n')
+        }
+        catch (Throwable e) {
+            log.debug "Oops.. expected exception", e
+        }
+    }
+
+    protected void dumpSubmitQueue() {
+        try {
+            def pending = pendingQueue.size()
+            if( !pending )
+                return
+
+            def msg = []
+            msg << "%% executor $name > tasks in the submission queue: ${pending} -- tasks to be submitted are shown below"
+            // dump the first 10 tasks
+            def i=0; def itr = pendingQueue.iterator()
+            while( i++<10 && itr.hasNext() )
+                msg << "~> ${itr.next()}"
+            if( pending>i )
+                msg << ".. remaining tasks omitted."
+            log.debug msg.join('\n')
+        }
+        catch (Throwable e) {
+            log.debug "Oops.. expected exception", e
+        }
+    }
+
 
     /**
      * Await for one or more tasks to be processed
@@ -460,7 +502,9 @@ class TaskPollingMonitor implements TaskMonitor {
         }
 
         // check if it is terminated
-        if( handler.checkIfCompleted()  ) {
+        if( handler.checkIfCompleted() ) {
+            log.debug "Task completed > $handler"
+
             // since completed *remove* the task from the processing queue
             evict(handler)
 
