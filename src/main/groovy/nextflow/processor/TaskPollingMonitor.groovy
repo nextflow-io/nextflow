@@ -414,10 +414,14 @@ class TaskPollingMonitor implements TaskMonitor {
                 continue
 
             if( !session.aborted && !session.cancelled ) {
-                submit(handler)
-                session.notifyTaskSubmit(handler)
-                itr.remove()
-                count++
+                itr.remove(); count++   // <-- remove the task in all cases
+                try {
+                    submit(handler)
+                    session.notifyTaskSubmit(handler)
+                }
+                catch ( Exception e ) {
+                    handleException(handler, e)
+                }
             }
             else
                 break

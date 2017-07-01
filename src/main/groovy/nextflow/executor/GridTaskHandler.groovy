@@ -107,16 +107,15 @@ class GridTaskHandler extends TaskHandler {
     @Override
     void submit() {
         log.debug "Launching process > ${task.name} -- work folder: ${task.workDir}"
-        // -- create the wrapper script
-        executor.createBashWrapperBuilder(task).build()
-
-        // -- start the execution and notify the event to the monitor
-        final builder = createProcessBuilder()
-
-        def exitStatus = 0
         String result = null
-
+        def exitStatus = Integer.MAX_VALUE
+        ProcessBuilder builder = null
         try {
+            // -- create the wrapper script
+            executor.createBashWrapperBuilder(task).build()
+
+            // -- start the execution and notify the event to the monitor
+            builder = createProcessBuilder()
             final process = builder.start()
 
             try {
@@ -150,7 +149,7 @@ class GridTaskHandler extends TaskHandler {
         }
         catch( Exception e ) {
             task.exitStatus = exitStatus
-            task.script = CmdLineHelper.toLine(builder.command())
+            task.script = builder ? CmdLineHelper.toLine(builder.command()) : null
             task.stdout = result
             status = COMPLETED
             throw new ProcessFailedException("Error submitting process '${task.name}' for execution", e )
