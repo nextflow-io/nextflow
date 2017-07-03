@@ -1,6 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.25.2 - 3 July 2017
+- - Fixed Execution hangs if a job submission fail #396
+- Fixed stdout can not be sent into multiple channels #388
+- Fixed Pipeline execution hangs when a process exceed the time limit and retry error strategy is used #387
+- Added scientists and adjectives to run name generator
+- Deprecated `route` operator
+
 0.25.1 - 27 Jun 2017
 - Duplicate mount point docker error #384
 - Disable Docker read-only mounts by default
