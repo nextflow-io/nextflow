@@ -6,7 +6,7 @@ main() {
     # log file name
     LOG=${name}.log
     export NXF_HOME='/opt/nextflow'
-    export NXF_PACKAGE='dx'
+    export NXF_MODE='dx'
 
     # Launch it !
     set +e
