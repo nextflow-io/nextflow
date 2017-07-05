@@ -71,6 +71,8 @@ import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
 import nextflow.script.FileOutParam
 import nextflow.script.InParam
+import nextflow.script.MissingParam
+import nextflow.script.OptionalParam
 import nextflow.script.OutParam
 import nextflow.script.ScriptType
 import nextflow.script.SetInParam
@@ -1296,9 +1298,12 @@ class TaskProcessor {
                 log.trace "Process $name > normalize stdout param: $param"
                 value = value instanceof Path ? value.text : value?.toString()
 
-            case FileOutParam:
-                if( !value && param instanceof FileOutParam && param.optional  )
+            case OptionalParam:
+                if( !value && param instanceof OptionalParam && param.optional ) {
+                    final holder = [] as MissingParam; holder.missing = param
+                    tuples[param.index] = holder
                     break
+                }
 
             case ValueOutParam:
                 log.trace "Process $name > collecting out param: ${param} = $value"
@@ -1313,7 +1318,13 @@ class TaskProcessor {
         // -- bind out the collected values
         for( OutParam param : config.getOutputs() ) {
             def list = tuples[param.index]
-            if( list == null ) throw new IllegalStateException()
+            if( list == null )
+                throw new IllegalStateException()
+
+            if( list instanceof MissingParam ) {
+                log.debug "Process $name > Skipping output binding because one or more optional files are missing: $list.missing"
+                continue
+            }
 
             if( param.mode == BasicMode.standard ) {
                 log.trace "Process $name > Binding out param: ${param} = ${list}"
@@ -1345,10 +1356,6 @@ class TaskProcessor {
 
     protected void bindOutParam( OutParam param, List values ) {
         log.trace "<$name> Binding param $param with $values"
-
-        if( !values && param instanceof FileOutParam && param.optional )
-            return
-
         def x = values.size() == 1 ? values[0] : values
         param.getOutChannels().each { it.bind(x) }
     }
