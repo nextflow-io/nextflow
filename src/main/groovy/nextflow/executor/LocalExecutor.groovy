@@ -206,10 +206,11 @@ class LocalTaskHandler extends TaskHandler {
                 destroy()
                 task.stdout = outputFile
                 task.stderr = errorFile
+                task.error = new ProcessException("Process exceeded running time limit (${task.config.getTime()})")
                 status = TaskStatus.COMPLETED
 
-                // stop the execution by raising an exception
-                throw new ProcessException("Process exceeded running time limit (${task.config.getTime()})")
+                // signal it has completed
+                return true
             }
         }
 

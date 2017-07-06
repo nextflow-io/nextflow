@@ -55,7 +55,7 @@ ext {
 allprojects {
     apply plugin: 'java'
 
-    version = '0.25.0-RC2'
+    version = '0.25.2'
     group = 'io.nextflow'
 
     sourceCompatibility = 1.7
@@ -486,10 +486,25 @@ task installLauncher(type: Copy, dependsOn: ['pack']) {
     into "$homeDir/.nextflow/framework/$version/"
 }
 
+task dockerImage(type: Exec, dependsOn: deploy) {
+
+    def temp = File.createTempFile('upload',null)
+    temp.deleteOnExit()
+    temp.text =  """\
+    cd docker
+    docker build -t nextflow/nextflow:$version .
+    docker tag nextflow/nextflow:$version nextflow/nextflow:latest
+    docker push nextflow/nextflow:$version
+    docker push nextflow/nextflow:latest
+    """.stripIndent()
+
+    commandLine 'bash', '-e', temp.absolutePath
+}
+
 /*
  * Tag and upload the release
  */
-task release(type: Exec, dependsOn: pack) {
+task release(type: Exec, dependsOn: [pack, dockerImage]) {
 
     def launcherFile = file('nextflow').absoluteFile
     def launcherSha1 = file('nextflow.sha1').absoluteFile

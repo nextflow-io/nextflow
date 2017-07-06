@@ -19,6 +19,7 @@
  */
 
 package nextflow.container
+
 import java.nio.file.Path
 
 import groovy.transform.PackageScope
@@ -48,6 +49,10 @@ abstract class ContainerBuilder {
 
     protected String image
 
+    protected Path workDir
+
+    protected boolean readOnlyInputs
+
 
     ContainerBuilder addRunOptions(String str) {
         runOptions.add(str)
@@ -74,6 +79,11 @@ abstract class ContainerBuilder {
         else
             throw new IllegalArgumentException("Not a supported memory value")
 
+        return this
+    }
+
+    ContainerBuilder setWorkDir( Path path ) {
+        this.workDir = path
         return this
     }
 
@@ -203,26 +213,49 @@ abstract class ContainerBuilder {
      */
     protected CharSequence makeVolumes(List<Path> mountPaths, StringBuilder result = new StringBuilder() ) {
 
-        // find the longest commons paths and mount only them
-        def trie = new PathTrie()
-        mountPaths.each { trie.add(it) }
+        // add the work-dir to the list of container mounts
+        final workDirStr = workDir?.toString()
+        final allMounts = new ArrayList<Path>(mountPaths)
+        if( workDir )
+            allMounts << workDir
 
-        def paths = trie.longest()
+        // find the longest commons paths and mount only them
+        final trie = new PathTrie()
+        allMounts.each { trie.add(it) }
+
+        // when mounts are read-only make sure to remove the work-dir path
+        final paths = trie.longest()
+        if( readOnlyInputs && workDirStr && paths.contains(workDirStr) )
+            paths.remove(workDirStr)
+
         paths.each {
             if(it) {
-                result << composeVolumePath(it)
+                result << composeVolumePath(it,readOnlyInputs)
                 result << ' '
             }
         }
 
+        // when mounts are read-only, make sure to include the work-dir as writable
+        if( readOnlyInputs && workDir ) {
+            result << composeVolumePath(workDirStr)
+            result << ' '
+        }
+
         // -- append by default the current path -- this is needed when `scratch` is set to true
-        result << '-v "$PWD":"$PWD"'
+        result << composeVolumePath('$PWD')
 
         return result
     }
 
-    protected String composeVolumePath( String path ) {
-        "-v ${Escape.path(path)}:${Escape.path(path)}"
+    protected String composeVolumePath( String path, boolean readOnly = false ) {
+        def result = "-v ${escape(path)}:${escape(path)}"
+        if( readOnly )
+            result += ':ro'
+        return result
+    }
+
+    protected String escape(String path) {
+        path.startsWith('$') ? "\"$path\"" : Escape.path(path)
     }
 
 }

@@ -19,7 +19,7 @@
  */
 
 package nextflow.util
-import java.util.concurrent.ConcurrentHashMap
+
 import java.util.concurrent.TimeUnit
 
 import groovy.transform.CompileStatic
@@ -339,52 +339,6 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
     @Override
     int compareTo(Duration that) {
         return this.durationInMillis <=> that.durationInMillis
-    }
-
-    @EqualsAndHashCode
-    static class ThrottleObj {
-        Object result
-        long timestamp
-
-        ThrottleObj() {}
-
-        ThrottleObj( value, long timestamp ) {
-            this.result = value
-            this.timestamp = timestamp
-        }
-    }
-
-    def throttle( Closure closure ) {
-        throttle0( durationInMillis, null, closure)
-    }
-
-    def throttle( seed, Closure closure ) {
-        def initialValue = new ThrottleObj( seed, System.currentTimeMillis() )
-        throttle0( durationInMillis, initialValue, closure)
-    }
-
-    static final Map<Integer,ThrottleObj> throttleMap = new ConcurrentHashMap<>()
-
-    private static throttle0( long delayMillis, ThrottleObj initialValue, Closure closure ) {
-        assert closure != null
-
-        def key = 17
-        key  = 31 * key + closure.class.hashCode()
-        key  = 31 * key + closure.owner.hashCode()
-        key  = 31 * key + closure.delegate?.hashCode() ?: 0
-
-        ThrottleObj obj = throttleMap.get(key)
-        if( obj == null ) {
-            obj = initialValue ?: new ThrottleObj()
-            throttleMap.put(key,obj)
-        }
-
-        if( System.currentTimeMillis() - obj.timestamp > delayMillis ) {
-            obj.timestamp = System.currentTimeMillis()
-            obj.result = closure.call()
-        }
-
-        obj.result
     }
 
 }

@@ -39,30 +39,45 @@ class NameGenerator {
             "agitated",
             "amazing",
             "angry",
+            "astonishing",
             "awesome",
             "backstabbing",
             "berserk",
             "big",
             "boring",
+            "chaotic",
+            "cheeky",
+            "cheesy",
             "clever",
             "cocky",
             "compassionate",
             "condescending",
             "cranky",
+            "crazy",
+            "curious",
+            "deadly",
             "desperate",
             "determined",
             "distracted",
+            "distraught",
+            "disturbed",
             "dreamy",
             "drunk",
             "ecstatic",
             "elated",
             "elegant",
             "evil",
+            "exotic",
+            "extravagant",
+            "fabulous",
             "fervent",
+            "festering",
             "focused",
+            "friendly",
             "furious",
             "gigantic",
             "gloomy",
+            "golden",
             "goofy",
             "grave",
             "happy",
@@ -70,29 +85,45 @@ class NameGenerator {
             "hopeful",
             "hungry",
             "infallible",
+            "insane",
+            "intergalactic",
+            "irreverent",
             "jolly",
             "jovial",
             "kickass",
+            "lethal",
             "lonely",
             "loving",
             "mad",
+            "magical",
+            "maniac",
+            "marvelous",
+            "mighty",
             "modest",
             "naughty",
             "nauseous",
+            "nasty",
+            "nice",
             "nostalgic",
             "peaceful",
             "pedantic",
             "pensive",
             "prickly",
             "reverent",
+            "ridiculous",
             "romantic",
             "sad",
+            "scruffy",
             "serene",
             "sharp",
+            "shrivelled",
             "sick",
             "silly",
             "sleepy",
             "small",
+            "soggy",
+            "special",
+            "spontaneous",
             "stoic",
             "stupefied",
             "suspicious",
@@ -100,6 +131,8 @@ class NameGenerator {
             "thirsty",
             "tiny",
             "trusting",
+            "voluptuous",
+            "wise",
             "zen"
 
     ]
@@ -119,6 +152,9 @@ class NameGenerator {
             // Maria Gaetana Agnesi - Italian mathematician, philosopher, theologian and humanitarian. She was the first woman to write a mathematics handbook and the first woman appointed as a Mathematics Professor at a University. https://en.wikipedia.org/wiki/Maria_Gaetana_Agnesi
             "agnesi",
 
+            // André-Marie Ampère - French physicist and mathematician, one of the founders of the science of classical electromagnetism. https://en.wikipedia.org/wiki/Andr%C3%A9-Marie_Amp%C3%A8re
+            "ampere",
+
             // Archimedes was a physicist, engineer and mathematician who invented too many things to list them here. https://en.wikipedia.org/wiki/Archimedes
             "archimedes",
 
@@ -128,11 +164,17 @@ class NameGenerator {
             // Aryabhata - Ancient Indian mathematician-astronomer during 476-550 CE https://en.wikipedia.org/wiki/Aryabhata
             "aryabhata",
 
+            // Lorenzo Romano Amedeo Carlo Avogadro was an Italian scientist, most noted for his contribution to molecular theory now known as Avogadro's law - https://en.wikipedia.org/wiki/Amedeo_Avogadro
+            "avogadro",
+
             // Wanda Austin - Wanda Austin is the President and CEO of The Aerospace Corporation, a leading architect for the US security space programs. https://en.wikipedia.org/wiki/Wanda_Austin
             "austin",
 
             // Charles Babbage invented the concept of a programmable computer. https://en.wikipedia.org/wiki/Charles_Babbage.
             "babbage",
+
+            // Leo Baekeland - Belgian-American scientist known for inventing Bakelite. Considered the "Father of the Plastics Industry". https://en.wikipedia.org/wiki/Leo_Baekeland
+            "baekeland",
 
             // Stefan Banach - Polish mathematician, was one of the founders of modern functional analysis. https://en.wikipedia.org/wiki/Stefan_Banach
             "banach",
@@ -146,8 +188,14 @@ class NameGenerator {
             // Laura Bassi, the world's first female professor https://en.wikipedia.org/wiki/Laura_Bassi
             "bassi",
 
+            // Antoine César Becquerel, Alexandre-Edmond Becquerel, Antoine Henri Becquerel and Jean Becquerel... Lineage of French scientists, working on electric and luminescent phenomena, solar spectrum, magnetism, electricity, optics, radioactivity... https://en.wikipedia.org/wiki/Becquerel_(disambiguation)
+            "becquerel",
+
             // Alexander Graham Bell - an eminent Scottish-born scientist, inventor, engineer and innovator who is credited with inventing the first practical telephone - https://en.wikipedia.org/wiki/Alexander_Graham_Bell
             "bell",
+
+            // Claude Bernard - French physiologist, was one of the first to suggest the use of blind experiments to ensure the objectivity of scientific observations. https://en.wikipedia.org/wiki/Claude_Bernard
+            "bernard",
 
             // Homi J Bhabha - was an Indian nuclear physicist, founding director, and professor of physics at the Tata Institute of Fundamental Research. Colloquially known as "father of Indian nuclear programme"- https://en.wikipedia.org/wiki/Homi_J._Bhabha
             "bhabha",
@@ -179,14 +227,26 @@ class NameGenerator {
             // Walter Houser Brattain co-invented the transistor - https://en.wikipedia.org/wiki/Walter_Houser_Brattain
             "brattain",
 
+            // Sydney Brenner - South African biologist who worked on the genetic code, and other areas of molecular biology. https://en.wikipedia.org/wiki/Sydney_Brenner
+            "brenner",
+
             // Emmett Brown invented time travel. https://en.wikipedia.org/wiki/Emmett_Brown (thanks Brian Goff)
             "brown",
+
+            // Santiago Ramón y Cajal - Spanish,  pathologist, histologist, neuroscientist, is considered the father of neuroscience  https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal
+            "cajal",
+
+            // Michelangelo Merisi da Caravaggio was an Italian painter active - https://en.wikipedia.org/wiki/Caravaggio
+            "caravaggio",
 
             // Rachel Carson - American marine biologist and conservationist, her book Silent Spring and other writings are credited with advancing the global environmental movement. https://en.wikipedia.org/wiki/Rachel_Carson
             "carson",
 
             // Subrahmanyan Chandrasekhar - Astrophysicist known for his mathematical theory on different stages and evolution in structures of the stars. He has won nobel prize for physics - https://en.wikipedia.org/wiki/Subrahmanyan_Chandrasekhar
             "chandrasekhar",
+
+            // George M. Church - American geneticist, molecular engineer, and chemist. https://en.wikipedia.org/wiki/George_M._Church
+            "church",
 
             //Claude Shannon - The father of information theory and founder of digital circuit design theory. (https://en.wikipedia.org/wiki/Claude_Shannon)
             "shannon",
@@ -197,8 +257,14 @@ class NameGenerator {
             // Gerty Theresa Cori - American biochemist who became the third woman—and first American woman—to win a Nobel Prize in science, and the first woman to be awarded the Nobel Prize in Physiology or Medicine. Cori was born in Prague. https://en.wikipedia.org/wiki/Gerty_Cori
             "cori",
 
+            // Charles-Augustin de Coulomb - French physicist, developed Coulomb's law, the definition of the electrostatic force of attraction and repulsion, but also did important work on friction. https://en.wikipedia.org/wiki/Charles-Augustin_de_Coulomb
+            "coulomb",
+
             // Seymour Roger Cray was an American electrical engineer and supercomputer architect who designed a series of computers that were the fastest in the world for decades. https://en.wikipedia.org/wiki/Seymour_Cray
             "cray",
+
+            // Francis Crick - British molecular biologist, biophysicist, and neuroscientist, most noted for being a co-discoverer of the structure of the DNA molecule. https://en.wikipedia.org/wiki/Francis_Crick
+            "crick",
 
             // This entry reflects a husband and wife team who worked together:
             // Joan Curran was a Welsh scientist who developed radar and invented chaff, a radar countermeasure. https://en.wikipedia.org/wiki/Joan_Curran
@@ -208,11 +274,20 @@ class NameGenerator {
             // Marie Curie discovered radioactivity. https://en.wikipedia.org/wiki/Marie_Curie.
             "curie",
 
+            // Georges Cuvier - French naturalist and zoologist, was instrumental in establishing the fields of comparative anatomy and paleontology through his work in comparing living animals with fossils. https://en.wikipedia.org/wiki/Georges_Cuvier
+            "cuvier",
+
+            // Jean-Baptiste le Rond d'Alembert - French mathematician, mechanician, physicist, philosopher, and music theorist. https://en.wikipedia.org/wiki/Jean_le_Rond_d%27Alembert
+            "dalembert",
+
             // Charles Darwin established the principles of natural evolution. https://en.wikipedia.org/wiki/Charles_Darwin.
             "darwin",
 
             // Leonardo Da Vinci invented too many things to list here. https://en.wikipedia.org/wiki/Leonardo_da_Vinci.
             "davinci",
+
+            // René Descartes - French philosopher, mathematician, and scientist. His best known philosophical statement is "Cogito ergo sum". https://en.wikipedia.org/wiki/Ren%C3%A9_Descartes
+            "descartes",
 
             // Edsger Wybe Dijkstra was a Dutch computer scientist and mathematical scientist. https://en.wikipedia.org/wiki/Edsger_W._Dijkstra.
             "dijkstra",
@@ -241,6 +316,9 @@ class NameGenerator {
             // Leonhard Euler invented large parts of modern mathematics. https://de.wikipedia.org/wiki/Leonhard_Euler
             "euler",
 
+            // Federico Faggin is an Italian physicist, inventor and entrepreneur, widely known for designing the first commercial microprocessor - https://en.wikipedia.org/wiki/Federico_Faggin
+            "faggin",
+
             // Pierre de Fermat pioneered several aspects of modern mathematics. https://en.wikipedia.org/wiki/Pierre_de_Fermat
             "fermat",
 
@@ -250,7 +328,11 @@ class NameGenerator {
             // Richard Feynman was a key contributor to quantum mechanics and particle physics. https://en.wikipedia.org/wiki/Richard_Feynman
             "feynman",
 
+            // Jean-Baptiste Joseph Fourier - a French mathematician and physicist, best known for initiating the investigation of Fourier series and their applications to problems of heat transfer and vibrations, is also generally credited with the discovery of the greenhouse effect. https://en.wikipedia.org/wiki/Joseph_Fourier
+            "fourier",
+
             // Benjamin Franklin is famous for his experiments in electricity and the invention of the lightning rod.
+            // Rosalind Franklin - English chemist and X-ray crystallographer who made contributions to the understanding of the molecular structures of DNA. https://en.wikipedia.org/wiki/Rosalind_Franklin
             "franklin",
 
             // Galileo was a founding father of modern astronomy, and faced politics and obscurantism to establish scientific truth.  https://en.wikipedia.org/wiki/Galileo_Galilei
@@ -258,6 +340,9 @@ class NameGenerator {
 
             // William Henry "Bill" Gates III is an American business magnate, philanthropist, investor, computer programmer, and inventor. https://en.wikipedia.org/wiki/Bill_Gates
             "gates",
+
+            // Walter Gilbert is an American biochemist, developed a DNA sequencing method and first proposed the existence of introns and exons. https://en.wikipedia.org/wiki/Walter_Gilbert
+            "gilbert",
 
             // Adele Goldberg, was one of the designers and developers of the Smalltalk language. https://en.wikipedia.org/wiki/Adele_Goldberg_(computer_scientist)
             "goldberg",
@@ -273,6 +358,9 @@ class NameGenerator {
 
             // Jane Goodall - British primatologist, ethologist, and anthropologist who is considered to be the world's foremost expert on chimpanzees - https://en.wikipedia.org/wiki/Jane_Goodall
             "goodall",
+
+            // Johannes Gensfleisch zur Laden zum Gutenberg - Inventor of movable-type printing press. https://en.wikipedia.org/wiki/Johannes_Gutenberg
+            "gutenberg",
 
             // Margaret Hamilton - Director of the Software Engineering Division of the MIT Instrumentation Laboratory, which developed on-board flight software for the Apollo space program. https://en.wikipedia.org/wiki/Margaret_Hamilton_(scientist)
             "hamilton",
@@ -331,11 +419,17 @@ class NameGenerator {
             // Jack Kilby invented silicone integrated circuits and gave Silicon Valley its name. - https://en.wikipedia.org/wiki/Jack_Kilby
             "kilby",
 
+            // Motoo Kimura - Japanese biologist introduced the neutral theory of molecular evolution. - https://en.wikipedia.org/wiki/Motoo_Kimura
+            "kimura",
+
             // Maria Kirch - German astronomer and first woman to discover a comet - https://en.wikipedia.org/wiki/Maria_Margarethe_Kirch
             "kirch",
 
             // Donald Knuth - American computer scientist, author of "The Art of Computer Programming" and creator of the TeX typesetting system. https://en.wikipedia.org/wiki/Donald_Knuth
             "knuth",
+
+            // Robert Kock - German physician, considered the founder of modern bacteriology. - https://en.wikipedia.org/wiki/Robert_Koch
+            "koch",
 
             // Sophie Kowalevski - Russian mathematician responsible for important original contributions to analysis, differential equations and mechanics - https://en.wikipedia.org/wiki/Sofia_Kovalevskaya
             "kowalevski",
@@ -346,8 +440,17 @@ class NameGenerator {
             // Hedy Lamarr - Actress and inventor. The principles of her work are now incorporated into modern Wi-Fi, CDMA and Bluetooth technology. https://en.wikipedia.org/wiki/Hedy_Lamarr
             "lamarr",
 
+            // Jean-Baptiste Lamarck - French naturalist. He was a soldier, biologist, academic, and an early proponent of the idea that biological evolution occurred and proceeded in accordance with natural laws. https://en.wikipedia.org/wiki/Jean-Baptiste_Lamarck
+            "lamarck",
+
             // Leslie B. Lamport - American computer scientist. Lamport is best known for his seminal work in distributed systems and was the winner of the 2013 Turing Award. https://en.wikipedia.org/wiki/Leslie_Lamport
             "lamport",
+
+            // Pierre-Simon, marquis de Laplace, French scholar whose work was important to the development of mathematics, statistics, physics and astronomy. https://en.wikipedia.org/wiki/Pierre-Simon_Laplace
+            "laplace",
+
+            // Antoine Lavoisier - French chemist central to the 18th-century chemical revolution and had a large influence on both the history of chemistry and the history of biology. https://en.wikipedia.org/wiki/Antoine_Lavoisier
+            "lavoisier",
 
             // Mary Leakey - British paleoanthropologist who discovered the first fossilized Proconsul skull - https://en.wikipedia.org/wiki/Mary_Leakey
             "leakey",
@@ -355,11 +458,17 @@ class NameGenerator {
             // Henrietta Swan Leavitt - she was an American astronomer who discovered the relation between the luminosity and the period of Cepheid variable stars. https://en.wikipedia.org/wiki/Henrietta_Swan_Leavitt
             "leavitt",
 
+            // Guillaume Joseph Hyacinthe Jean-Baptiste Le Gentil de la Galaisière - French astronomer, part of the international collaborative project to measure the distance to the Sun, by observing the transit of Venus at different points on the earth. Mainly known for being one of the most unfortunate and unlucky scientist ever. https://en.wikipedia.org/wiki/Guillaume_Le_Gentil
+            "legentil",
+
             // Ruth Lichterman - one of the original programmers of the ENIAC. https://en.wikipedia.org/wiki/ENIAC - https://en.wikipedia.org/wiki/Ruth_Teitelbaum
             "lichterman",
 
             // Barbara Liskov - co-developed the Liskov substitution principle. Liskov was also the winner of the Turing Prize in 2008. - https://en.wikipedia.org/wiki/Barbara_Liskov
             "liskov",
+
+            // Konrad Zacharias Lorenz - was an Austrian zoologist, ethologist, and ornithologist founder of the modern ethology, study of animal behavior. - https://en.wikipedia.org/wiki/Konrad_Lorenz
+            "lorenz",
 
             // Ada Lovelace invented the first algorithm. https://en.wikipedia.org/wiki/Ada_Lovelace (thanks James Turnbull)
             "lovelace",
@@ -367,11 +476,23 @@ class NameGenerator {
             // Auguste and Louis Lumière - the first filmmakers in history - https://en.wikipedia.org/wiki/Auguste_and_Louis_Lumi%C3%A8re
             "lumiere",
 
+            // René François Ghislain Magritte - Belgian surrealist artist. https://en.wikipedia.org/wiki/René_Magritte
+            "magritte",
+
             // Mahavira - Ancient Indian mathematician during 9th century AD who discovered basic algebraic identities - https://en.wikipedia.org/wiki/Mah%C4%81v%C4%ABra_(mathematician)
             "mahavira",
 
+            // Benoit B. Mandelbrot - Polish-born, French and American mathematician, recognized for his contribution to the field of fractal geometry, which included coining the word "fractal". https://en.wikipedia.org/wiki/Benoit_Mandelbrot
+            "mandelbrot",
+
             // Maria Mayer - American theoretical physicist and Nobel laureate in Physics for proposing the nuclear shell model of the atomic nucleus - https://en.wikipedia.org/wiki/Maria_Mayer
             "mayer",
+
+            // Guglielmo Marconi, 1st Marquis of Marconi was an Italian inventor and electrical engineer known for his pioneering work on long-distance radio transmission - https://en.wikipedia.org/wiki/Guglielmo_Marconi
+            "marconi",
+
+            // Friedrich Miescher - Swiss physician and biologist. He was the first researcher to isolate nucleic acid. https://en.wikipedia.org/wiki/Friedrich_Miescher
+            "miescher",
 
             // John McCarthy invented LISP: https://en.wikipedia.org/wiki/John_McCarthy_(computer_scientist)
             "mccarthy",
@@ -388,17 +509,29 @@ class NameGenerator {
             // Lise Meitner - Austrian/Swedish physicist who was involved in the discovery of nuclear fission. The element meitnerium is named after her - https://en.wikipedia.org/wiki/Lise_Meitner
             "meitner",
 
+            // Gregor Mendel - Scientist and Augustinian friar. Gained posthumous recognition as the founder of the modern science of genetics. https://en.wikipedia.org/wiki/Gregor_Mendel
+            "mendel",
+
             // Carla Meninsky, was the game designer and programmer for Atari 2600 games Dodge 'Em and Warlords. https://en.wikipedia.org/wiki/Carla_Meninsky
             "meninsky",
 
+            // Gerardus Mercator - German-Flemish cartographer, geographer and cosmographer. Known for creating a 1569 world map based on rhumb lines. https://en.wikipedia.org/wiki/Gerardus_Mercator
+            "mercator",
+
             // Johanna Mestorf - German prehistoric archaeologist and first female museum director in Germany - https://en.wikipedia.org/wiki/Johanna_Mestorf
             "mestorf",
+
+            // Antonio Santi Giuseppe Meucci was an Italian inventor best known for developing a voice-communication apparatus that several sources credit as the first telephone - https://en.wikipedia.org/wiki/Antonio_Meucci
+            "meucci",
 
             // Marvin Minsky - Pioneer in Artificial Intelligence, co-founder of the MIT's AI Lab, won the Turing Award in 1969. https://en.wikipedia.org/wiki/Marvin_Minsky
             "minsky",
 
             // Maryam Mirzakhani - an Iranian mathematician and the first woman to win the Fields Medal. https://en.wikipedia.org/wiki/Maryam_Mirzakhani
             "mirzakhani",
+
+            // Jacques Lucien Monod - A french molecular biologist who studied genetic control of enzyme and virus synthesis using as model the lac operon of E. coli - https://en.wikipedia.org/wiki/Jacques_Monod
+            "monod",
 
             // Samuel Morse - contributed to the invention of a single-wire telegraph system based on European telegraphs and was a co-developer of the Morse code - https://en.wikipedia.org/wiki/Samuel_Morse
             "morse",
@@ -433,17 +566,32 @@ class NameGenerator {
             // Louis Pasteur discovered vaccination, fermentation and pasteurization. https://en.wikipedia.org/wiki/Louis_Pasteur.
             "pasteur",
 
+            //Linus Carl Pauling - American biochemist considered one of the founders of the fields of quantum chemistry and molecular biology. He was also a peace activist and was awarded the Nobel Peace Prize - https://en.wikipedia.org/wiki/Linus_Pauling
+            "pauling",
+
             // Cecilia Payne-Gaposchkin was an astronomer and astrophysicist who, in 1925, proposed in her Ph.D. thesis an explanation for the composition of stars in terms of the relative abundances of hydrogen and helium. https://en.wikipedia.org/wiki/Cecilia_Payne-Gaposchkin
             "payne",
 
             // Radia Perlman is a software designer and network engineer and most famous for her invention of the spanning-tree protocol (STP). https://en.wikipedia.org/wiki/Radia_Perlman
             "perlman",
 
+            // Thomas Gautier Pesquet - French astronaut. https://en.wikipedia.org/wiki/Thomas_Pesquet
+            "pesquet",
+
             // Rob Pike was a key contributor to Unix, Plan 9, the X graphic system, utf-8, and the Go programming language. https://en.wikipedia.org/wiki/Rob_Pike
             "pike",
 
+            // Joseph Plateau - Belgian physisist known for being one of the first persons to demonstrate the illusion of moving image.
+            "plateau",
+
+            // Pablo Picasso was a Spanish painter, sculptor, printmaker, ceramicist, stage designer, poet and playwright - https://en.wikipedia.org/wiki/Pablo_Picasso
+            "picasso",
+
             // Henri Poincaré made fundamental contributions in several fields of mathematics. https://en.wikipedia.org/wiki/Henri_Poincar%C3%A9
             "poincare",
+
+            // Siméon Denis Poisson - French mathematician, geometer, and physicist, obtained many important results, was the final leading opponent of the wave theory of light and was proven wrong. https://en.wikipedia.org/wiki/Sim%C3%A9on_Denis_Poisson
+            "poisson",
 
             // Laura Poitras is a director and producer whose work, made possible by open source crypto tools, advances the causes of truth and freedom of information by reporting disclosures by whistleblowers such as Edward Snowden. https://en.wikipedia.org/wiki/Laura_Poitras
             "poitras",
@@ -460,6 +608,9 @@ class NameGenerator {
             // Sally Kristen Ride was an American physicist and astronaut. She was the first American woman in space, and the youngest American astronaut. https://en.wikipedia.org/wiki/Sally_Ride
             "ride",
 
+            // Ettore Majorana was an Italian theoretical physicist who worked on neutrino masses - https://en.wikipedia.org/wiki/Ettore_Majorana
+            "majorana",
+
             // Rita Levi-Montalcini - Won Nobel Prize in Physiology or Medicine jointly with colleague Stanley Cohen for the discovery of nerve growth factor (https://en.wikipedia.org/wiki/Rita_Levi-Montalcini)
             "montalcini",
 
@@ -472,11 +623,23 @@ class NameGenerator {
             // Rosalind Franklin - British biophysicist and X-ray crystallographer whose research was critical to the understanding of DNA - https://en.wikipedia.org/wiki/Rosalind_Franklin
             "rosalind",
 
+            // Peter Paul Rubens - Flemish baroque painter. https://en.wikipedia.org/wiki/Peter_Paul_Rubens
+            "rubens",
+
             // Meghnad Saha - Indian astrophysicist best known for his development of the Saha equation, used to describe chemical and physical conditions in stars - https://en.wikipedia.org/wiki/Meghnad_Saha
             "saha",
 
             // Jean E. Sammet developed FORMAC, the first widely used computer language for symbolic manipulation of mathematical formulas. https://en.wikipedia.org/wiki/Jean_E._Sammet
             "sammet",
+
+            // Frederick Sanger - British biochemist who worked on protein structure and DNA sequencing. https://en.wikipedia.org/wiki/Frederick_Sanger
+            "sanger",
+
+            // Adolphe Sax - inventor of the saxophone. https://en.wikipedia.org/wiki/Adolphe_Sax
+            "sax",
+
+            //Claude Shannon - The father of information theory and founder of digital circuit design theory. (https://en.wikipedia.org/wiki/Claude_Shannon)
+            "shannon",
 
             // Carol Shaw - Originally an Atari employee, Carol Shaw is said to be the first female video game designer. https://en.wikipedia.org/wiki/Carol_Shaw_(video_game_designer)
             "shaw",
@@ -492,6 +655,9 @@ class NameGenerator {
 
             // Betty Snyder - one of the original programmers of the ENIAC. https://en.wikipedia.org/wiki/ENIAC - https://en.wikipedia.org/wiki/Betty_Holberton
             "snyder",
+
+            // Ernest Solvay - Belgian chemist. Founded Solvay & Cie and began a series of conferences in physics in 1911. https://en.wikipedia.org/wiki/Ernest_Solvay
+            "solvay",
 
             // Frances Spence - one of the original programmers of the ENIAC. https://en.wikipedia.org/wiki/ENIAC - https://en.wikipedia.org/wiki/Frances_Spence
             "spence",
@@ -517,6 +683,9 @@ class NameGenerator {
             // Ken Thompson - co-creator of UNIX and the C programming language - https://en.wikipedia.org/wiki/Ken_Thompson
             "thompson",
 
+            // Evangelista Torricelli was an Italian physicist and mathematician, best known for his invention of the barometer - https://en.wikipedia.org/wiki/Evangelista_Torricelli
+            "torricelli",
+
             // Linus Torvalds invented Linux and Git. https://en.wikipedia.org/wiki/Linus_Torvalds
             "torvalds",
 
@@ -529,8 +698,20 @@ class NameGenerator {
             // Sir Mokshagundam Visvesvaraya - is a notable Indian engineer.  He is a recipient of the Indian Republic's highest honour, the Bharat Ratna, in 1955. On his birthday, 15 September is celebrated as Engineer's Day in India in his memory - https://en.wikipedia.org/wiki/Visvesvaraya
             "visvesvaraya",
 
+            // Craig Venter - American biotechnologist, biochemist, geneticist, and businessman. Known for being involved with sequencing the second human genome. https://en.wikipedia.org/wiki/Craig_Venter
+            "venter",
+
             // Christiane Nüsslein-Volhard - German biologist, won Nobel Prize in Physiology or Medicine in 1995 for research on the genetic control of embryonic development. https://en.wikipedia.org/wiki/Christiane_N%C3%BCsslein-Volhard
             "volhard",
+
+            // Alessandro Giuseppe Antonio Anastasio Volta was an Italian physicist, chemist, and a pioneer of electricity and power - https://en.wikipedia.org/wiki/Alessandro_Volta
+            "volta",
+
+            // C. H. Waddington -  British developmental biologist, paleontologist, geneticist, embryologist and philosopher who laid the foundations for systems biology, epigenetics, and evolutionary developmental biology. https://en.wikipedia.org/wiki/C._H._Waddington
+            "waddington",
+
+            // James Watson - American molecular biologist, geneticist and zoologist, best known as one of the co-discoverers of the structure of DNA. https://en.wikipedia.org/wiki/James_Watson
+            "watson",
 
             // Marlyn Wescoff - one of the original programmers of the ENIAC. https://en.wikipedia.org/wiki/ENIAC - https://en.wikipedia.org/wiki/Marlyn_Meltzer
             "wescoff",
@@ -546,6 +727,9 @@ class NameGenerator {
 
             // Jeannette Wing - co-developed the Liskov substitution principle. - https://en.wikipedia.org/wiki/Jeannette_Wing
             "wing",
+
+            // Carl Richard Woese - American microbiologist defined the Archaea kingdom of life by his pioneering phylogenetic taxonomy classification using 16S ribosomal RNA - https://en.wikipedia.org/wiki/Carl_Woese
+            "woese",
 
             // Steve Wozniak invented the Apple I and Apple II. https://en.wikipedia.org/wiki/Steve_Wozniak
             "wozniak",

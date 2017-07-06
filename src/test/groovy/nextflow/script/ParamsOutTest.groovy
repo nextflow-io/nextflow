@@ -756,6 +756,8 @@ class ParamsOutTest extends Specification {
             process hola {
               output:
               stdout into p
+              stdout into (q)
+              stdout into (x,y,z)
 
               return ''
             }
@@ -765,12 +767,18 @@ class ParamsOutTest extends Specification {
         def process = parseAndReturnProcess(text, binding)
 
         when:
-        def out1 = process.config.getOutputs().get(0)
+        def out0 = (StdOutParam)process.config.getOutputs().get(0)
+        def out1 = (StdOutParam)process.config.getOutputs().get(1)
+        def out2 = (StdOutParam)process.config.getOutputs().get(2)
 
         then:
-        process.config.getOutputs().size() == 1
+        process.config.getOutputs().size() == 3
 
-        out1.class == StdOutParam
+        out0.getOutChannels()[0].is binding.p
+        out1.getOutChannels()[0].is binding.q
+        out2.getOutChannels()[0].is binding.x
+        out2.getOutChannels()[1].is binding.y
+        out2.getOutChannels()[2].is binding.z
 
     }
 

@@ -20,8 +20,6 @@
 
 package nextflow.container
 import groovy.transform.CompileStatic
-import nextflow.util.Escape
-
 /**
  * Helper methods to handle Docker containers
  *
@@ -55,8 +53,6 @@ class DockerBuilder extends ContainerBuilder {
     private kill = true
 
     private boolean legacy
-
-    private boolean writableInputMounts
 
     DockerBuilder( String name ) {
         this.image = name
@@ -96,8 +92,8 @@ class DockerBuilder extends ContainerBuilder {
         if( params.containsKey('legacy') )
             this.legacy = params.legacy?.toString() == 'true'
 
-        if( params.containsKey('writableInputMounts') )
-            this.writableInputMounts = params.writableInputMounts?.toString() == 'true'
+        if( params.containsKey('readOnlyInputs') )
+            this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
 
         return this
     }
@@ -205,14 +201,6 @@ class DockerBuilder extends ContainerBuilder {
      */
     @Override
     String getKillCommand() { killCommand }
-
-    @Override
-    protected String composeVolumePath( String path ) {
-        def result = "-v ${Escape.path(path)}:${Escape.path(path)}"
-        if( !writableInputMounts )
-            result += ':ro'
-        return result
-    }
 
     static boolean isAbsoluteDockerName(String image) {
         def p = image.indexOf('/')

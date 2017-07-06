@@ -19,14 +19,11 @@
  */
 
 package nextflow.container
-
 import java.nio.file.Path
 import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import nextflow.util.Escape
-import nextflow.util.PathTrie
-
 /**
  * Implements a builder for Singularity containerisation
  *
@@ -64,6 +61,9 @@ class SingularityBuilder extends ContainerBuilder {
 
         if( params.autoMounts )
             autoMounts = params.autoMounts.toString() == 'true'
+
+        if( params.containsKey('readOnlyInputs') )
+            this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
 
         return this
     }
@@ -103,18 +103,10 @@ class SingularityBuilder extends ContainerBuilder {
         return this
     }
 
-    protected CharSequence makeVolumes(List<Path> mountPaths, StringBuilder result = new StringBuilder() ) {
-
-        // find the longest commons paths and mount only them
-        def trie = new PathTrie()
-        mountPaths.each { trie.add(it) }
-
-        def paths = trie.longest()
-        paths.each{ if(it) result << "-B ${Escape.path(it)} " }
-
-        // -- append by default the current path -- this is needed when `scratch` is set to true
-        result << '-B "$PWD":"$PWD"'
-
+    protected String composeVolumePath( String path, boolean readOnly = false ) {
+        def result = "-B ${escape(path)}"
+        if( readOnly )
+            result += ":${escape(path)}:ro"
         return result
     }
 

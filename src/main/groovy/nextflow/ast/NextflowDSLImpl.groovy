@@ -420,6 +420,9 @@ public class NextflowDSLImpl implements ASTTransformation {
 
     protected void fixStdinStdout( ExpressionStatement stm ) {
 
+        // transform the following syntax:
+        //      `stdin from x`  --> stdin() from (x)
+        //      `stdout into x` --> `stdout() into (x)`
         if( stm.expression instanceof PropertyExpression ) {
             def expr = (PropertyExpression)stm.expression
             def obj = expr.objectExpression
@@ -441,7 +444,25 @@ public class NextflowDSLImpl implements ASTTransformation {
                     stm.setExpression( from )
                 }
             }
-
+        }
+        // transform the following syntax:
+        //      `stdout into (x,y,..)` --> `stdout() into (x,y,..)`
+        else if( stm.expression instanceof MethodCallExpression ) {
+            def methodCall = (MethodCallExpression)stm.expression
+            if( 'stdout' == methodCall.getMethodAsString() ) {
+                def args = methodCall.getArguments()
+                if( args instanceof ArgumentListExpression && args.getExpressions() && args.getExpression(0) instanceof MethodCallExpression ) {
+                    def methodCall2 = (MethodCallExpression)args.getExpression(0)
+                    def args2 = methodCall2.getArguments()
+                    if( args2 instanceof ArgumentListExpression && methodCall2.methodAsString == 'into') {
+                        def vars = args2.getExpressions()
+                        def stdout = new MethodCallExpression( new VariableExpression('this'), 'stdout', new ArgumentListExpression()  )
+                        def into = new MethodCallExpression(stdout, 'into', new ArgumentListExpression(vars))
+                        // remove replace the old one with the new one
+                        stm.setExpression( into )
+                    }
+                }
+            }
         }
     }
 

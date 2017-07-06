@@ -246,13 +246,37 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
 }
 
+/**
+ * Implements an optional file output option
+ */
+trait OptionalParam {
+
+    private boolean optional
+
+    boolean getOptional() { optional }
+
+    def optional( boolean value ) {
+        this.optional = value
+        return this
+    }
+
+}
+
+/**
+ * Placeholder trait to mark a missing optional output parameter
+ */
+trait MissingParam {
+
+    OutParam missing
+
+}
 
 /**
  * Model a process *file* output parameter
  */
 @Slf4j
 @InheritConstructors
-class FileOutParam extends BaseOutParam implements OutParam {
+class FileOutParam extends BaseOutParam implements OutParam, OptionalParam {
 
     /**
      * ONLY FOR TESTING DO NOT USE
@@ -296,8 +320,6 @@ class FileOutParam extends BaseOutParam implements OutParam {
 
     protected boolean glob = true
 
-    protected boolean optional
-
     private GString gstring
 
     private Closure<String> dynamicObj
@@ -317,8 +339,6 @@ class FileOutParam extends BaseOutParam implements OutParam {
     boolean getFollowLinks() { followLinks }
 
     boolean getGlob() { glob }
-
-    boolean getOptional() { optional }
 
 
     /**
@@ -364,11 +384,6 @@ class FileOutParam extends BaseOutParam implements OutParam {
 
     FileOutParam glob( boolean value ) {
         glob = value
-        return this
-    }
-
-    FileOutParam optional( boolean value ) {
-        this.optional = value
         return this
     }
 
@@ -545,7 +560,7 @@ class StdOutParam extends BaseOutParam { }
 
 
 @InheritConstructors
-class SetOutParam extends BaseOutParam {
+class SetOutParam extends BaseOutParam implements OptionalParam {
 
     enum CombineMode implements OutParam.Mode { combine }
 
@@ -586,7 +601,15 @@ class SetOutParam extends BaseOutParam {
         type.newInstance(binding,inner,index)
     }
 
-    def SetOutParam mode( def value ) {
+    @Override
+    void lazyInit() {
+        super.lazyInit()
+        inner.each { opt ->
+            if( opt instanceof FileOutParam ) opt.optional(this.optional)
+        }
+    }
+
+    SetOutParam mode( def value ) {
 
         def str = value instanceof String ? value : ( value instanceof TokenVar ? value.name : null )
         if( str ) {
