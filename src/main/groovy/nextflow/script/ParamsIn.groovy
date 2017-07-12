@@ -331,6 +331,15 @@ abstract class BaseInParam extends BaseParam implements InParam {
 }
 
 /**
+ *  Represents a process map that contains input file parameters
+ */
+@Slf4j
+@InheritConstructors
+class FilemapInParam extends BaseInParam {
+    @Override String getTypeName() { 'filemap' }
+}
+
+/**
  *  Represents a process *file* input parameter
  */
 @Slf4j

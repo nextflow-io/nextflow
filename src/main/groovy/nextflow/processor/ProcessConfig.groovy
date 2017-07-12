@@ -31,6 +31,7 @@ import nextflow.script.DefaultOutParam
 import nextflow.script.EachInParam
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
+import nextflow.script.FilemapInParam
 import nextflow.script.FileOutParam
 import nextflow.script.InParam
 import nextflow.script.InputsList
@@ -253,6 +254,10 @@ class ProcessConfig implements Map<String,Object> {
     }
 
     /// input parameters
+
+    InParam _in_filemap( obj ) {
+        new FilemapInParam(this).bind(obj)
+    }
 
     InParam _in_val( obj ) {
         new ValueInParam(this).bind(obj)
