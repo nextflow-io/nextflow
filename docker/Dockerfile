@@ -1,17 +1,20 @@
 FROM openjdk:8-jre-alpine
-MAINTAINER Paolo Di Tommmaso <paolo.ditommaso@gmail.com> 
+MAINTAINER Paolo Di Tommaso <paolo.ditommaso@gmail.com>
 
-# Add requiders dependencies 
+# Add required dependencies
 # - bash 
 # - gnu coreutils 
 # - curl 
 RUN apk update && apk add bash && apk add coreutils && apk add curl
 
-# pull deps 
+# download runtime
 RUN curl https://www.nextflow.io/releases/v0.25.2/nextflow > /usr/local/bin/nextflow \
   && chmod 755 /usr/local/bin/nextflow \
   && sync \
   && nextflow -download
 
-# define the entry point 
+# see https://blogs.oracle.com/java-platform-group/java-se-support-for-docker-cpu-and-memory-limits
+ENV NXF_OPTS='-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap'
+
+# define the entry point
 ENTRYPOINT nextflow 

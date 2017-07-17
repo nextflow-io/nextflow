@@ -115,9 +115,9 @@ class CacheDB implements Closeable {
             else {
                 msg = "Can't open cache DB: $file"
                 msg += '\n\n'
-                msg += "Nextflow needs to run in a file system that supports file locks.\n"
-                msg += "As workaround you can launch it from local directory and specify\n"
-                msg += "the work directory in the shared file system by using by `-w` command line option."
+                msg += "Nextflow needs to be executed in a shared file system that supports file locks.\n"
+                msg += "Alternatively you can run it in a local directory and specify the shared work\n"
+                msg += "directory by using by `-w` command line option."
                 throw new IOException(msg, e)
             }
         }
