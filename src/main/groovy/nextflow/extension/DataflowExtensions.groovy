@@ -301,13 +301,6 @@ class DataflowExtensions {
         return result
     }
 
-
-    static final DataflowReadChannel cachePath( final DataflowReadChannel source, Map params) {
-        def result = new CachePathOp(source, params).apply()
-        NodeMarker.addOperatorNode('cachePath', source, result)
-        return result
-    }
-
     static final DataflowReadChannel groupTuple( final DataflowReadChannel source, final Map params ) {
         def result = new GroupTupleOp(params, source).apply()
         NodeMarker.addOperatorNode('groupTuple', source, result)
