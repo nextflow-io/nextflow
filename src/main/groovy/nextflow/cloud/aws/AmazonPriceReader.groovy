@@ -67,6 +67,7 @@ class AmazonPriceReader {
     static {
         REGIONS.'ap-south-1' = 'Asia Pacific (Mumbai)'
         REGIONS.'eu-west-1' = "EU (Ireland)"
+        REGIONS.'eu-west-2' = "EU (London)"
         REGIONS.'eu-central-1' = "EU (Frankfurt)"
         REGIONS.'ap-southeast-1' = "Asia Pacific (Singapore)"
         REGIONS.'ap-southeast-2' = "Asia Pacific (Sydney)"
@@ -76,6 +77,8 @@ class AmazonPriceReader {
         REGIONS.'us-west-1' = "US West (N. California)"
         REGIONS.'us-west-2' = "US West (Oregon)"
         REGIONS.'sa-east-1' = "South America (Sao Paulo)"
+        REGIONS.'ca-central-1' = "Canada (Central)"
+
     }
 
     private Map<String,CloudInstanceType> TABLE
