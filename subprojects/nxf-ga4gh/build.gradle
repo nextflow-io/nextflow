@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -17,14 +17,22 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
+apply plugin: 'groovy'
 
-include 'my-capsule'
-include 'nxf-commons'
-include 'nxf-console'
-include 'nxf-ignite'
-include 'nxf-httpfs'
-include 'nxf-ga4gh'
+sourceSets {
+    main.java.srcDirs = []
+    main.groovy.srcDirs = ['src/main']
+    main.resources.srcDirs = ['src/resources']
+    test.groovy.srcDirs = ['src/test']
+    test.java.srcDirs = []
+    test.resources.srcDirs = []
+}
 
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/subprojects/$prj.name")
+dependencies {
+    compile project(':')
+    compile 'io.swagger:swagger-annotations:1.5.15'
+    compile 'com.squareup.okhttp:okhttp:2.7.5'
+    compile 'com.squareup.okhttp:logging-interceptor:2.7.5'
+    compile 'com.google.code.gson:gson:2.8.1'
+    compile 'joda-time:joda-time:2.9.9'
 }
