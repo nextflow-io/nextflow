@@ -180,16 +180,26 @@ class AmazonPriceReader {
                 if( tkns[colServiceCode] != "AmazonEC2" ) continue
                 if( tkns[colLocation] != location) continue
                 if( tkns[colOS] != 'Linux' ) continue
-                //if( tkns[colCurrentGen] != 'Yes' ) continue
 
                 List storage = parseStorage(tkns[colStorage])
 
-                if( map.get(tkns[colInstanceType]) )
+                final instanceType = tkns[colInstanceType]
+                if( map.get(instanceType) )
                     continue
 
+                if( !tkns[colCpu] ) {
+                    log.debug "Missing cpu number for instance type: $instanceType -- offending entry: $line"
+                    continue
+                }
+
+                if( !tkns[colMem] ) {
+                    log.debug "Missing memory value for instance type: $instanceType -- offending entry: $line"
+                    continue
+                }
+
                 def entry = new CloudInstanceType(
-                        id: tkns[colInstanceType],
-                        cpus: tkns[colCpu] as int ,
+                        id: instanceType,
+                        cpus: tkns[colCpu] as int,
                         memory: parseMem(tkns[colMem]),
                         disk: storage[0],
                         numOfDisks: storage[1]
