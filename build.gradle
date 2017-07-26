@@ -125,6 +125,7 @@ configurations {
     ignite.extendsFrom runtime
     console.extendsFrom runtime
     gdocLibs.extendsFrom runtime
+    ga4gh.extendsFrom runtime
 }
 
 
@@ -171,6 +172,10 @@ dependencies {
     }
 
     console(project(':nxf-console')) {
+        exclude module: 'nextflow'
+    }
+
+    ga4gh(project(':nxf-ga4gh')) {
         exclude module: 'nextflow'
     }
 
@@ -559,10 +564,10 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
  * Save the runtime classpath
  */
 task exportClasspath {
-    dependsOn configurations.ignite, configurations.console
+    dependsOn configurations.ignite, configurations.console, configurations.ga4gh
 
     def home = System.getProperty('user.home')
-    def all = configurations.ignite + configurations.console
+    def all = configurations.ignite + configurations.console + configurations.ga4gh
     def libs = all.collect { File file -> /* println file.canonicalPath.replace(home, '$HOME'); */ file.canonicalPath;  }
     new File('.launch.classpath').text = libs.join(':')
 }

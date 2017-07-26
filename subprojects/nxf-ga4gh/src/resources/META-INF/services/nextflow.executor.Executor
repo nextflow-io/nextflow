@@ -18,4 +18,4 @@
 #   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-nextflow.executor.DrmaaExecutor
+nextflow.executor.TesExecutor
