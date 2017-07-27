@@ -82,7 +82,7 @@ fi
 # Handle special program cli options
 #
 while [ "$*" != "" ]; do
-  if [[ "$1" == '--debug' || "$1" == '--trace' ]]; then
+  if [[ "$1" == '-debug' || "$1" == '-trace' ]]; then
     args+=("$1")
 
   elif [ "$1" == --with-yourkit ]; then 
