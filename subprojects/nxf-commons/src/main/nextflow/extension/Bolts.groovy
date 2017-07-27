@@ -681,7 +681,7 @@ class Bolts {
         final Throwable error = params?.causedBy as Throwable
         final Duration throttle = params?.throttle as Duration ?: LOG_DFLT_THROTTLE
         final firstOnly = params?.firstOnly == true
-        final key = params.cacheKey ?: str
+        final key = params?.cacheKey ?: str
 
         long now = System.currentTimeMillis()
         Long ts = LOGGER_CACHE.get(key)
