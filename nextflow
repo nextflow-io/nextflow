@@ -256,7 +256,7 @@ fi
 
 # Verify installed Java version
 if [ ! -d "$NXF_LAUNCHER" ]; then # <-- only the first time
-    $JAVA_CMD -version 2>&1 | awk '/version/ {print $3}' | grep '"1\.[7|8]\..*"' > /dev/null
+    $JAVA_CMD $NXF_OPTS -version 2>&1 | awk '/version/ {print $3}' | grep '"1\.[7|8]\..*"' > /dev/null
     if [ $? -ne 0 ]; then
          echo_red "Error: cannot find Java or it's a wrong version -- please make sure that Java 7 or higher it's installed"
          echo_red "Note: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n JAVA_HOME: $JAVA_HOME\n"
