@@ -67,7 +67,7 @@ class KubernetesExecutor extends AbstractGridExecutor {
     }
 
     /**
-     * Define the Kubernates job execution command line
+     * Define the Kubernetes job execution command line
      *
      * @param task A {@link TaskRun} instance that need to be submitted for execution
      * @param scriptFile (not used)
