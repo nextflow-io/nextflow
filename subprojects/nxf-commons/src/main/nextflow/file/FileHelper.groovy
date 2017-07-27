@@ -48,6 +48,8 @@ import nextflow.Global
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
 import nextflow.util.CacheHelper
+import nextflow.util.Escape
+
 /**
  * Provides some helper method handling files
  *
@@ -879,19 +881,20 @@ class FileHelper {
 
         String result = null
         Process process = null
+        final target = Escape.path(path)
         try {
-            process = Runtime.runtime.exec(['sh', '-c', 'ls -la | head -n 50'] as String[])
+            process = Runtime.runtime.exec(['sh', '-c', "ls -la ${target} | head -n 50"] as String[])
             process.waitForOrKill(1_000)
             def listStatus = process.exitValue()
             if( listStatus>0 ) {
-                log.debug "Can't list folder: ${path} -- Exit status: $listStatus"
+                log.debug "Can't list folder: ${target} -- Exit status: $listStatus"
             }
             else {
                 result = process.text
             }
         }
         catch( IOException e ) {
-            log.debug "Can't list folder: $path -- Cause: ${e.message ?: e.toString()}"
+            log.debug "Can't list folder: $target -- Cause: ${e.message ?: e.toString()}"
         }
         finally {
             process?.destroy()
