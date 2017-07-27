@@ -1229,9 +1229,12 @@ class TaskProcessor {
         def result = new StringBuilder()
         result << '\nCaused by:\n'
 
-        def message = error instanceof ProcessStageException ? error.getMessage().toString() : error.cause?.getMessage()
-        if( !message )
+        def message
+        if( error instanceof ProcessStageException || error instanceof MissingFileException || !error.cause )
             message = error.getMessage()
+        else
+            message = error.cause.getMessage()
+
         if( !message )
             message = error.toString()
 
