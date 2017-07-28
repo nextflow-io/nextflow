@@ -75,6 +75,9 @@ class GridTaskHandler extends TaskHandler {
 
     BatchCleanup batch
 
+    /** only for testing purpose */
+    protected GridTaskHandler() {}
+
     GridTaskHandler( TaskRun task, AbstractGridExecutor executor ) {
         super(task)
 
@@ -142,7 +145,7 @@ class GridTaskHandler extends TaskHandler {
                 // save the JobId in the
                 this.jobId = executor.parseJobId(result)
                 this.status = SUBMITTED
-                log.debug "Submitted process ${task.name} > ${executor.name} jobId: $jobId; workDir: ${task.workDir}"
+                log.debug "[${executor.name.toUpperCase()}] submitted process ${task.name} > jobId: $jobId; workDir: ${task.workDir}"
             }
             finally {
                 // make sure to release all resources
@@ -341,7 +344,7 @@ class GridTaskHandler extends TaskHandler {
         return false
     }
 
-    private boolean passSanityCheck() {
+    protected boolean passSanityCheck() {
         Throttle.after(sanityCheckInterval, true) {
             if( isCompleted() ) {
                 return true

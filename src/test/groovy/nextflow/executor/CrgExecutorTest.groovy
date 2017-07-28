@@ -399,9 +399,9 @@ class CrgExecutorTest extends Specification {
 
 
         when:
-        executor.fQueueStatus = executor.parseQueueStatus(text)
+        def status = executor.parseQueueStatus(text)
         then:
-        executor.dumpQueueStatus().readLines().sort() == [
+        executor.dumpQueueStatus(status).readLines().sort() == [
                 '  job: 7548318: RUNNING',
                 '  job: 7548348: RUNNING',
                 '  job: 7548349: HOLD',

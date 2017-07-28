@@ -32,7 +32,6 @@ import nextflow.util.Duration
 import nextflow.util.Escape
 import nextflow.util.Throttle
 import org.apache.commons.lang.StringUtils
-
 /**
  * Generic task processor executing a task through a grid facility
  *
@@ -255,35 +254,40 @@ abstract class AbstractGridExecutor extends Executor {
     /**
      * @return The status for all the scheduled and running jobs
      */
-    Map<?,QueueStatus> getQueueStatus(queue) {
+    Map<String,QueueStatus> getQueueStatus(queue) {
 
         List cmd = queueStatusCommand(queue)
         if( !cmd ) return null
 
         try {
-            log.trace "Getting grid queue status: ${cmd.join(' ')}"
+            log.trace "[${name.toUpperCase()}] getting queue ${queue?"($queue) ":''}status > cmd: ${cmd.join(' ')}"
 
             def process = new ProcessBuilder(cmd).start()
             def result = process.text
             process.waitForOrKill( 10 * 1000 )
             def exit = process.exitValue()
 
-            log.trace "${name.toUpperCase()} status result > exit: $exit\n$result\n"
+            log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status > cmd exit: $exit\n$result"
 
             return ( exit == 0 ) ? parseQueueStatus( result ) : null
 
         }
         catch( Exception e ) {
-            log.warn "Unable to fetch queue status -- See the log file for details", e
+            log.warn "[${name.toUpperCase()}] failed to retrieve queue ${queue?"($queue) ":''}status -- See the log file for details", e
             return null
         }
 
     }
 
     @PackageScope
-    String dumpQueueStatus() {
+    String dumpQueueStatus(Map<String,QueueStatus> statusMap) {
+        if( statusMap == null )
+            return '  (null)'
+        if( statusMap.isEmpty() )
+            return '  (empty)'
+
         def result = new StringBuilder()
-        fQueueStatus?.each { k, v ->
+        statusMap?.each { k, v ->
             result << '  job: ' << StringUtils.leftPad(k?.toString(),6) << ': ' << v?.toString() << '\n'
         }
         return result.toString()
@@ -300,12 +304,7 @@ abstract class AbstractGridExecutor extends Executor {
      * @param text
      * @return
      */
-    protected abstract Map<?,QueueStatus> parseQueueStatus( String text )
-
-    /**
-     * Store jobs status
-     */
-    protected Map<Object,QueueStatus> fQueueStatus = null
+    protected abstract Map<String,QueueStatus> parseQueueStatus( String text )
 
     /**
      * Verify that a job in a 'active' state i.e. RUNNING or HOLD
@@ -315,23 +314,26 @@ abstract class AbstractGridExecutor extends Executor {
      *  to retrieve the job status for some
      */
     public boolean checkActiveStatus( jobId, queue ) {
+        assert jobId
 
         // -- fetch the queue status
-        fQueueStatus = (Map<Object,QueueStatus>)Throttle.after(queueInterval) { getQueueStatus(queue) }
-        if( fQueueStatus == null ) { // no data is returned, so return true
-            log.trace "Queue status map is null -- return true"
+        Map<String,QueueStatus>status = Throttle.cache(queue, queueInterval) {
+            final result = getQueueStatus(queue)
+            log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status >\n" + dumpQueueStatus(result)
+            return result
+        }
+
+        if( status == null ) { // no data is returned, so return true
             return true
         }
 
-        log.trace "Queue status:\n" + dumpQueueStatus()
-
-        if( !fQueueStatus.containsKey(jobId) ) {
-            log.trace "Queue status map does not contain jobId: `$jobId`"
+        if( !status.containsKey(jobId) ) {
+            log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status > map does not contain jobId: `$jobId`"
             return false
         }
 
-        final result = fQueueStatus[jobId] == QueueStatus.RUNNING || fQueueStatus[jobId] == QueueStatus.HOLD
-        log.trace "JobId `$jobId` active status: $result"
+        final result = status[jobId.toString()] == QueueStatus.RUNNING || status[jobId.toString()] == QueueStatus.HOLD
+        log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status > jobId `$jobId` active status: $result"
         return result
     }
 

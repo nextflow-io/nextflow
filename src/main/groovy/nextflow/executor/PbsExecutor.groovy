@@ -139,7 +139,7 @@ class PbsExecutor extends AbstractGridExecutor {
     ]
 
     @Override
-    protected Map<?, QueueStatus> parseQueueStatus(String text) {
+    protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
         final JOB_ID = 'Job Id:'
         final JOB_STATUS = 'job_state ='

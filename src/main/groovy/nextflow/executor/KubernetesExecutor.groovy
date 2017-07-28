@@ -116,7 +116,7 @@ class KubernetesExecutor extends AbstractGridExecutor {
     static private final K8S_JOB_ID = ~/^(nxf-[0-9a-f]{32})/
 
     @Override
-    protected Map<?, QueueStatus> parseQueueStatus(String text) {
+    protected Map<String, QueueStatus> parseQueueStatus(String text) {
         def result = [:]
         if( !text ) return result
 
