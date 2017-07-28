@@ -21,6 +21,7 @@
 package nextflow.executor
 import java.nio.file.Path
 
+import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 import nextflow.util.MemoryUnit
 /**
@@ -33,6 +34,7 @@ import nextflow.util.MemoryUnit
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 class LsfExecutor extends AbstractGridExecutor {
 
     /**
@@ -127,7 +129,7 @@ class LsfExecutor extends AbstractGridExecutor {
             }
         }
 
-        new IllegalStateException("Invalid LSF submit response:\n$text\n\n");
+        new IllegalStateException("[LSF] Invalid submit response:\n$text\n\n");
     }
 
     @Override
@@ -158,7 +160,7 @@ class LsfExecutor extends AbstractGridExecutor {
     ]
 
     @Override
-    protected Map<?, QueueStatus> parseQueueStatus(String text) {
+    protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
         def result = [:]
 
@@ -166,6 +168,9 @@ class LsfExecutor extends AbstractGridExecutor {
             def cols = line.split(',')
             if( cols.size() == 3 ) {
                 result.put( cols[0], DECODE_STATUS.get(cols[1]) )
+            }
+            else {
+                log.debug "[LSF] invalid status line: `$line`"
             }
         }
 

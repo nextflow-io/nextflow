@@ -124,7 +124,7 @@ class CondorExecutor extends AbstractGridExecutor {
 
 
     @Override
-    protected Map<?, QueueStatus> parseQueueStatus(String text) {
+    protected Map<String, QueueStatus> parseQueueStatus(String text) {
         def result = [:]
         if( !text ) return result
 

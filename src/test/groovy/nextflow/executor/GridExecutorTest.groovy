@@ -20,12 +20,10 @@
 
 package nextflow.executor
 import java.nio.file.Files
-import java.nio.file.Path
 
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
-import nextflow.util.Duration
 import spock.lang.Specification
 /**
  *
@@ -79,19 +77,17 @@ class GridExecutorTest extends Specification {
     def testCheckIfTerminated(){
 
         setup:
-        def work = Files.createTempDirectory('test')
-        def task = Mock(TaskRun)
-        task.getWorkDir() >> work
-        def executor = [:] as AbstractGridExecutor
-        executor.queueInterval = Duration.of('1min')
+        def handler = Spy(GridTaskHandler)
+        handler.status = TaskStatus.RUNNING
 
         when:
-        def handler = new GridTaskHandler(task, executor)
-        handler.status = TaskStatus.RUNNING
+        def complete = handler.checkIfCompleted()
         then:
-        !handler.checkIfCompleted()
+        1 * handler.isRunning() >> true
+        1 * handler.readExitStatus() >> null
+        1 * handler.passSanityCheck() >> true
         handler.status == TaskStatus.RUNNING
-
+        !complete
     }
 
 
