@@ -116,14 +116,24 @@ function launch_nextflow() {
     done
 
     if [[ $NXF_MPIRUN ]]; then
-        if [[ -z $OMPI_COMM_WORLD_RANK ]]; then echo_red 'Missing `$OMPI_COMM_WORLD_RANK` variable -- it looks you are not running in a MPI environment'; exit 1; fi
-        if [[ $OMPI_COMM_WORLD_RANK == 0 ]]; then
+        local rank=''
+        [[ $SLURM_PROCID ]] && rank=$SLURM_PROCID
+        [[ $OMPI_COMM_WORLD_RANK ]] && rank=$OMPI_COMM_WORLD_RANK
+        if [[ ! $rank ]]; then
+          echo_red 'It looks you are not running in a MPI enabled environment -- cannot find `$OMPI_COMM_WORLD_RANK` nor `$SLURM_PROCID` variable';
+          exit 1;
+        fi
+        if [[ $SLURM_CPUS_PER_TASK && $SLURM_MEM_PER_CPU ]]; then
+            export NXF_CLUSTER_MAXCPUS=$SLURM_CPUS_PER_TASK
+            export NXF_CLUSTER_MAXMEMORY="$(($SLURM_MEM_PER_CPU*$SLURM_CPUS_PER_TASK))MB"
+        fi
+        if [[ $rank == 0 ]]; then
             # sleep a few seconds in order to wait worker daemons to bootstrap
             sleep ${NXF_SLEEP:-10}
             export NXF_EXECUTOR='ignite'
             export NXF_CLUSTER_SHUTDOWNONCOMPLETE='true'
         else
-            cmdline="${launcher[@]} -log .nextflow_node_${HOSTNAME}_${OMPI_COMM_WORLD_RANK}.log node ignite"
+            cmdline="${launcher[@]} -log .nextflow_node_${rank}.log node ignite"
         fi
     # start in daemon mode
     elif [[ "$bg" ]]; then
