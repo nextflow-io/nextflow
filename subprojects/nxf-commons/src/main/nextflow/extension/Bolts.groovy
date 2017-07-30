@@ -418,14 +418,12 @@ class Bolts {
     }
 
 
-    private static Lock MAP_LOCK = new ReentrantLock()
-
     static def <T> T getOrCreate( Map self, key, factory ) {
 
         if( self.containsKey(key) )
             return (T)self.get(key)
 
-        withLock(MAP_LOCK) {
+        synchronized (self) {
             if( self.containsKey(key) )
                 return (T)self.get(key)
 
