@@ -133,7 +133,6 @@ class SingularityCache {
      */
     @PackageScope
     Path downloadSingularityImage(String imageUrl) {
-        println ">>> download"
         def localPath = localImagePath(imageUrl)
         if( localPath.exists() ) {
             log.debug "Singularity found local store for image=$imageUrl; path=$localPath"
@@ -217,7 +216,6 @@ class SingularityCache {
      */
     Path getCachePathFor(String url) {
         def promise = getLazyImagePath(url)
-        println promise
         def result = promise.getVal()
         if( !result )
             throw new ProcessNotRecoverableException("Missing singularity file for image `$url`")
