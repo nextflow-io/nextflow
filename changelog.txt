@@ -1,8 +1,19 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.25.3 - 31 July 2017 
+- Fixed NPE when parsing AWS price file #408
+- Fixed Grid queue status return wrong data when a process change the submission queue dynamically #412
+- Fixed MPI-like execution for SLURM batch scheduler
+- Fixed NPE when log params key is not defined
+- Fixed Optional parameter for set #399
+- Added automatic pull for Singularity remote images #356
+- Added London and Canada AWS regions
+- Merged Pass NXF_OPTS to JVM during the java version check to allow memory definition on memory-restricted environments #411
+- Improved error message in launcher file
+
 0.25.2 - 3 July 2017
-- - Fixed Execution hangs if a job submission fail #396
+- Fixed Execution hangs if a job submission fail #396
 - Fixed stdout can not be sent into multiple channels #388
 - Fixed Pipeline execution hangs when a process exceed the time limit and retry error strategy is used #387
 - Added scientists and adjectives to run name generator
