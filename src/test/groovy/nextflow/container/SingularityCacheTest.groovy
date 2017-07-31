@@ -73,7 +73,7 @@ class SingularityCacheTest extends Specification {
         cache.downloadSingularityImage(IMAGE)
         then:
         1 * cache.localImagePath(IMAGE) >> dir.resolve(LOCAL)
-        1 * cache.runCommand("singularity pull --name $dir/$LOCAL $IMAGE > /dev/null") >> 0
+        1 * cache.runCommand("singularity pull --name $LOCAL $IMAGE > /dev/null", dir) >> 0
 
     }
 
