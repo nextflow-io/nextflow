@@ -1,6 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.25.4 - 31 July 2017 
+- Removed invalid debug information 
+
 0.25.3 - 31 July 2017 
 - Fixed NPE when parsing AWS price file #408
 - Fixed Grid queue status return wrong data when a process change the submission queue dynamically #412
