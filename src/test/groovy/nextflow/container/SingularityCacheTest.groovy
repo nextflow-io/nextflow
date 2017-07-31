@@ -72,7 +72,7 @@ class SingularityCacheTest extends Specification {
         when:
         cache.downloadSingularityImage(IMAGE)
         then:
-        1 * cache.localImageName(IMAGE) >> dir.resolve(LOCAL)
+        1 * cache.localImagePath(IMAGE) >> dir.resolve(LOCAL)
         1 * cache.runCommand("singularity pull --name $dir/$LOCAL $IMAGE > /dev/null") >> 0
 
     }
@@ -92,13 +92,12 @@ class SingularityCacheTest extends Specification {
         when:
         cache.downloadSingularityImage(IMAGE)
         then:
-        1 * cache.localImageName(IMAGE) >> container
+        1 * cache.localImagePath(IMAGE) >> container
         0 * cache.runCommand(_) >> 0
 
         cleanup:
         dir.deleteDir()
     }
-
 
     @Ignore
     @Timeout(1)
