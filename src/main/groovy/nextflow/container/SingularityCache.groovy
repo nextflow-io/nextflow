@@ -13,6 +13,7 @@ import nextflow.Global
 import nextflow.exception.ProcessNotRecoverableException
 import nextflow.util.Escape
 /**
+ * Handle caching of remote Singularity images
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -32,11 +33,27 @@ class SingularityCache {
     @PackageScope
     SingularityCache() {}
 
+    /**
+     * Create a Singularity cache object
+     *
+     * @param config A {@link ContainerConfig} object
+     * @param env The environment configuration object. Specifying {@code null} the current system environment is used
+     */
     SingularityCache(ContainerConfig config, Map<String,String> env=null) {
         this.config = config
         this.env = env ?: System.getenv()
     }
 
+    /**
+     * Given a remote image URL string returns a normalised name used to store
+     * the image in the local file system
+     *
+     * @param imageUrl
+     *          A Singularity remote image url. It must be prefixed with a pseudo-protocol supported by
+     *          by the underlying singularity tool eg. {@code docker://pditommaso/foo:latest}
+     * @return
+     *          A file name corresponding to the image URL eg. {@code pditommaso-foo.img}
+     */
     @PackageScope
     String simpleName(String imageUrl) {
         def p = imageUrl.indexOf('://')
@@ -46,8 +63,16 @@ class SingularityCache {
         return name
     }
 
+    /**
+     * Create the specified directory if not exists
+     *
+     * @param
+     *      str A path string representing a folder where store the singularity images once downloaded
+     * @return
+     *      the directory as a {@link Path} object
+     */
     @PackageScope
-    Path checkPath(String str) {
+    Path checkDir(String str) {
         def result = Paths.get(str)
         if( !result.exists() && !result.mkdirs() ) {
             throw new IOException("Failed to create Singularity cache directory: $str -- Make sure a file with the same does not exist and you have write permission")
@@ -55,16 +80,26 @@ class SingularityCache {
         return result
     }
 
+    /**
+     * Retried the directory where store the singularity images once downloaded.
+     * If tries these setting in the following order:
+     * 1) {@code singularity.cacheDir} setting in the nextflow config file;
+     * 2) the {@code NXF_SINGULARITY_CACHEDIR} environment variable
+     * 3) the {@code $workDir/singularity} path
+     *
+     * @return
+     *      the {@code Path} where store the singularity images
+     */
     @PackageScope
     Path getCacheDir() {
 
         def str = config.cacheDir as String
         if( str )
-            return checkPath(str)
+            return checkDir(str)
 
         str = env.get('NXF_SINGULARITY_CACHEDIR')
         if( str )
-            return checkPath(str)
+            return checkDir(str)
 
         def workDir = Global.session.workDir
         if( workDir.fileSystem != FileSystems.default ) {
@@ -78,14 +113,28 @@ class SingularityCache {
         return result
     }
 
+    /**
+     * Get the path on the file system where store a remote singularity image
+     *
+     * @param imageUrl The singularity remote URL
+     * @return the container image local {@link Path}
+     */
     @PackageScope
-    Path localImageName(String imageUrl) {
+    Path localImagePath(String imageUrl) {
         getCacheDir().resolve( simpleName(imageUrl) )
     }
 
+    /**
+     * Run the singularity tool to pull a remote image and store in the file system.
+     * Requires singularity 2.3.x or later.
+     *
+     * @param imageUrl The singularity image remote URL
+     * @return  the container image local {@link Path}
+     */
     @PackageScope
     Path downloadSingularityImage(String imageUrl) {
-        def localPath = localImageName(imageUrl)
+        println ">>> download"
+        def localPath = localImagePath(imageUrl)
         if( localPath.exists() ) {
             log.debug "Singularity found local store for image=$imageUrl; path=$localPath"
             return localPath
@@ -127,8 +176,18 @@ class SingularityCache {
         return status
     }
 
+    /**
+     * Given a remote image URL returns a {@link DataflowVariable} which holds
+     * the local image path.
+     *
+     * This method synchronise multiple concurrent requests so that only one
+     * image download is actually executed.
+     *
+     * @param imageUrl The singularity image remote URL
+     * @return The {@link DataflowVariable} which hold (and pull) the local image file
+     */
     @PackageScope
-    DataflowVariable<Path> getLocalImageFileName(String imageUrl) {
+    DataflowVariable<Path> getLazyImagePath(String imageUrl) {
         if( imageUrl in localImageNames ) {
             log.trace "Singularity found local cache for image `$imageUrl`"
             return localImageNames[imageUrl]
@@ -147,9 +206,18 @@ class SingularityCache {
         }
     }
 
-
+    /**
+     * Pull a Singularity remote image, caching the resulting image in the file system.
+     *
+     * This method synchronise multiple concurrent requests so that only one
+     * image download is actually executed.
+     *
+     * @param url The singularity image remote URL
+     * @return the container image local {@link Path}
+     */
     Path getCachePathFor(String url) {
-        def promise = getLocalImageFileName(url)
+        def promise = getLazyImagePath(url)
+        println promise
         def result = promise.getVal()
         if( !result )
             throw new ProcessNotRecoverableException("Missing singularity file for image `$url`")
