@@ -101,6 +101,30 @@ specifing them in the ``nextflow.config`` file as shown below::
 Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
 
 
+Singularity & Docker Hub
+========================
+
+Nextflow is able to transparently pull remote container images stored in the `Singularity-Hub <https://singularity-hub.org/>`_
+or any Docker compatible registry.
+
+.. note:: This feature requires you have installed Singularity 2.3.x or higher
+
+Remote container images can specified in your Nextflow script or configuration file by simply prefixing the image name
+with the ``shub://`` or ``docker://`` pseudo-protocol as required by the Singularity tool. For example::
+
+    process.container = 'docker://debian:wheezy'
+    singularity.enabled = true
+
+
+Nextflow caches those images in the ``singularity`` directory in the pipeline work directory by default. However it is
+suggest to provide a centralised caching directory by using either the ``NXF_SINGULARITY_CACHEDIR`` environment variable
+or the ``singularity.cacheDir`` setting in the Nextflow config file.
+
+.. warning:: When using a computing cluster the Singularity cache directory must be a shared folder accessible
+  to all computing nodes.
+
+.. error::  When pulling Docker images Singularity may be unable to determine the container size if the image was
+  stored by using an old Docker format, resulting in a pipeline execution error. See the Singularity documentation for details.
 
 Advanced settings
 =================
