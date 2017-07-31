@@ -10,7 +10,6 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
-import nextflow.exception.ProcessNotRecoverableException
 import nextflow.util.Escape
 /**
  * Handle caching of remote Singularity images
@@ -77,7 +76,7 @@ class SingularityCache {
         if( !result.exists() && !result.mkdirs() ) {
             throw new IOException("Failed to create Singularity cache directory: $str -- Make sure a file with the same does not exist and you have write permission")
         }
-        return result
+        return result.toAbsolutePath()
     }
 
     /**
@@ -98,6 +97,10 @@ class SingularityCache {
             return checkDir(str)
 
         str = env.get('NXF_SINGULARITY_CACHEDIR')
+        if( str )
+            return checkDir(str)
+
+        str = env.get('SINGULARITY_PULLFOLDER')
         if( str )
             return checkDir(str)
 
@@ -147,9 +150,9 @@ class SingularityCache {
 
         log.info "Pulling Singularity image $imageUrl [cache $localPath]"
 
-        String cmd = "singularity pull --name ${Escape.path(localPath)} $imageUrl > /dev/null"
+        String cmd = "singularity pull --name ${Escape.path(localPath.getFileName())} $imageUrl > /dev/null"
         try {
-            runCommand( cmd )
+            runCommand( cmd, localPath.parent )
             log.debug "Singularity pull complete image=$imageUrl path=$localPath"
         }
         catch( Exception e ){
@@ -161,15 +164,18 @@ class SingularityCache {
     }
 
     @PackageScope
-    int runCommand( String cmd ) {
+    int runCommand( String cmd, Path storePath ) {
         log.trace "Singularity pull command: $cmd"
 
-        def proc = new ProcessBuilder(['bash','-c',cmd]).start()
+        def builder = new ProcessBuilder(['bash','-c',cmd])
+        // workaround due to Singularity issue --> https://github.com/singularityware/singularity/issues/847#issuecomment-319097420
+        builder.environment().put('SINGULARITY_PULLFOLDER', storePath.toString())
+        def proc = builder.start()
         proc.waitForOrKill(10 * 60 * 1_000)
         def status = proc.exitValue()
         if( status != 0 ) {
             def msg = "Failed to pull singularity image\n  command: $cmd\n  message:\n"
-            msg += proc.err?.text?.indent('  ')
+            msg += proc.err?.text?.trim()?.indent('  ')
             throw new IllegalStateException(msg)
         }
         return status
@@ -217,10 +223,10 @@ class SingularityCache {
     Path getCachePathFor(String url) {
         def promise = getLazyImagePath(url)
         def result = promise.getVal()
-        if( !result )
-            throw new ProcessNotRecoverableException("Missing singularity file for image `$url`")
         if( promise.isError() )
-            throw new ProcessNotRecoverableException(promise.getError())
+            throw new IllegalStateException(promise.getError())
+        if( !result )
+            throw new IllegalStateException("Cannot pull Singularity image `$url`")
         log.trace "Singularity cache for `$url` path=$result"
         return result
     }
