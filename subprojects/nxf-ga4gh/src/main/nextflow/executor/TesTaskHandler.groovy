@@ -8,12 +8,11 @@ import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import io.swagger.client.api.TaskServiceApi
-import io.swagger.client.model.Body
-import io.swagger.client.model.OUTPUTONLYExecutors
-import io.swagger.client.model.OUTPUTONLYInputs
-import io.swagger.client.model.OUTPUTONLYTasks
-import nextflow.processor.TaskBean
+import nextflow.ga4gh.tes.client.api.TaskServiceApi
+import nextflow.ga4gh.tes.client.model.Body
+import nextflow.ga4gh.tes.client.model.OUTPUTONLYExecutors
+import nextflow.ga4gh.tes.client.model.OUTPUTONLYInputs
+import nextflow.ga4gh.tes.client.model.OUTPUTONLYTasks
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus

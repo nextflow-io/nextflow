@@ -12,11 +12,11 @@ import nextflow.processor.TaskRun
 class TesBashBuilder extends BashWrapperBuilder {
 
     TesBashBuilder(TaskRun task) {
-        super(new TaskBean(task), new NoopFileCopyStrategy())
+        super(new TaskBean(task), new TesFileCopyStrategy())
     }
 
     TesBashBuilder(TaskBean task) {
-        super(task, new NoopFileCopyStrategy())
+        super(task, new TesFileCopyStrategy())
     }
 
     protected boolean containerInit() { false }
