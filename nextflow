@@ -141,7 +141,7 @@ function launch_nextflow() {
       local pid_file="${NXF_PID_FILE:-.nextflow.pid}"
       bash -c "exec $cmdline" &
       disown
-      printf $! > "$pid_file"
+      echo $! > "$pid_file"
       exit 0
     fi
 
