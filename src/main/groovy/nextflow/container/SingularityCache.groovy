@@ -10,6 +10,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
+import nextflow.util.Duration
 import nextflow.util.Escape
 /**
  * Handle caching of remote Singularity images
@@ -27,6 +28,8 @@ class SingularityCache {
     private Map<String,String> env
 
     private boolean missingCacheDir
+
+    private Duration pullTimeout = Duration.of('10min')
 
     /** Only for debugging purpose - do not use */
     @PackageScope
@@ -91,6 +94,9 @@ class SingularityCache {
      */
     @PackageScope
     Path getCacheDir() {
+
+        if( config.pullTimeout )
+            pullTimeout = config.pullTimeout as Duration
 
         def str = config.cacheDir as String
         if( str )
@@ -165,13 +171,18 @@ class SingularityCache {
 
     @PackageScope
     int runCommand( String cmd, Path storePath ) {
-        log.trace "Singularity pull command: $cmd"
+        log.trace """Singularity pull
+                     command: $cmd
+                     timeout: $pullTimeout
+                     folder : $storePath""".stripIndent()
 
-        def builder = new ProcessBuilder(['bash','-c',cmd])
+        final max = pullTimeout.toMillis()
+        final builder = new ProcessBuilder(['bash','-c',cmd])
         // workaround due to Singularity issue --> https://github.com/singularityware/singularity/issues/847#issuecomment-319097420
-        builder.environment().put('SINGULARITY_PULLFOLDER', storePath.toString())
-        def proc = builder.start()
-        proc.waitForOrKill(10 * 60 * 1_000)
+        builder.directory(storePath.toFile())
+        builder.environment().remove('SINGULARITY_PULLFOLDER')
+        final proc = builder.start()
+        proc.waitForOrKill(max)
         def status = proc.exitValue()
         if( status != 0 ) {
             def msg = "Failed to pull singularity image\n  command: $cmd\n  message:\n"
