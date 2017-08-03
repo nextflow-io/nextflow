@@ -131,7 +131,7 @@ is created.
 Pipeline execution
 ==================
 
-Once the cluster initialization is complete, connect to the *master* node using the SSH command displayed by
+Once the cluster initialization is complete, connect to the *master* node using the SSH command which will be displayed by
 Nextflow.
 
 .. note:: On MacOS, use the following command to avoid being asked for a pass-phrase even
