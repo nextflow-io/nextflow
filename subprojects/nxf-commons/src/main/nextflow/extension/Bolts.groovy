@@ -22,16 +22,14 @@ package nextflow.extension
 
 import java.nio.file.Path
 import java.util.concurrent.locks.Lock
-import java.util.concurrent.locks.ReentrantLock
 import java.util.regex.Pattern
 
-import com.google.common.cache.Cache
-import com.google.common.cache.CacheBuilder
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import nextflow.file.FileHelper
 import nextflow.util.CheckHelper
 import nextflow.util.Duration
+import nextflow.file.FileLocker
 import nextflow.util.MemoryUnit
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
@@ -340,6 +338,59 @@ class Bolts {
             self.unlock()
             return true
         }
+    }
+
+    /**
+     * Creates a file system wide lock that prevent two or more JVM instances/process
+     * to work on the same file
+     *
+     * Note: this does not protected against multiple-thread accessing the file in a
+     * concurrent manner.
+     *
+     * @param
+     *      self The file over which define the lock
+     * @param
+     *      timeout An option timeout elapsed which the a {@link InterruptedException} is thrown
+     * @param
+     *      closure The action to apply during the lock file spawn
+     * @return
+     *      The user provided {@code closure} result
+     *
+     * @throws
+     *      InterruptedException if the lock cannot be acquired within the specified {@code timeout}
+     */
+    static withLock(File self, Duration timeout = null, Closure closure) {
+        def locker = new FileLocker(self)
+        if( timeout )
+            locker.setTimeout(timeout)
+        locker.lock(closure)
+    }
+
+
+    /**
+     * Creates a file system wide lock that prevent two or more JVM instances/process
+     * to work on the same file
+     *
+     * Note: this does not protected against multiple-thread accessing the file in a
+     * concurrent manner.
+     *
+     * @param
+     *      self The file over which define the lock
+     * @param
+     *      timeout An option timeout elapsed which the a {@link InterruptedException} is thrown
+     * @param
+     *      closure The action to apply during the lock file spawn
+     * @return
+     *      The user provided {@code closure} result
+     *
+     * @throws
+     *      InterruptedException if the lock cannot be acquired within the specified {@code timeout}
+     */
+    static withLock( Path self, Duration timeout, Closure closure ) {
+        def locker = new FileLocker(self.toFile())
+        if( timeout )
+            locker.setTimeout(timeout)
+        locker.lock(closure)
     }
 
 

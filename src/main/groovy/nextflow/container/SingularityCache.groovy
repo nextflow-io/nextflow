@@ -1,4 +1,5 @@
 package nextflow.container
+
 import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -12,6 +13,7 @@ import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
 import nextflow.util.Duration
 import nextflow.util.Escape
+import nextflow.file.FileLocker
 /**
  * Handle caching of remote Singularity images
  *
@@ -142,14 +144,26 @@ class SingularityCache {
      */
     @PackageScope
     Path downloadSingularityImage(String imageUrl) {
-        def localPath = localImagePath(imageUrl)
+        final localPath = localImagePath(imageUrl)
+        final file = new File("${localPath.parent}/.${localPath.name}.lock")
+        new FileLocker(file)
+            .setMessage("Another Nextflow instance is pulling the Singularity image $imageUrl -- this can take some minutes")
+            .setTimeout(pullTimeout)
+            .lock { downloadSingularityImage0(imageUrl, localPath) }
+
+        file.delete()
+        return localPath
+    }
+
+
+    @PackageScope
+    Path downloadSingularityImage0(String imageUrl, Path localPath) {
+
         if( localPath.exists() ) {
             log.debug "Singularity found local store for image=$imageUrl; path=$localPath"
             return localPath
         }
-        else {
-            log.trace "Singularity pulling remote image `$imageUrl`"
-        }
+        log.trace "Singularity pulling remote image `$imageUrl`"
 
         if( missingCacheDir )
             log.warn1 "Singularity cache directory has not been defined -- Remote image will be stored in the path: $localPath.parent"

@@ -63,9 +63,9 @@ class SingularityCacheTest extends Specification {
     def 'should run singularity pull command'() {
 
         given:
+        def dir = Files.createTempDirectory('test')
         def IMAGE = 'docker://pditommaso/foo:latest'
         def LOCAL = 'foo-latest.img'
-        def dir = Paths.get('/test/path')
         and:
         def cache = Spy(SingularityCache)
 
