@@ -98,7 +98,7 @@ the AMI and machine virtualization type. See the `Amazon documentation for detai
 Shared file system
 ------------------
 
-A shared file system can easily made available in your cloud cluster by using the `Amazon EFS <https://aws.amazon.com/efs/>`_
+A shared file system can easily be made available in your cloud cluster by using the `Amazon EFS <https://aws.amazon.com/efs/>`_
 storage. You will only need to specify in the cloud configuration the EFS file system ID and optionally the
 mount path. For example::
 
