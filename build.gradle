@@ -44,6 +44,15 @@ if (System.getenv('CI_GROOVY_VERSION')) {
                 }
             }
         }
+
+        configurations.all {
+            resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+                if (details.requested.group == 'org.codehaus.groovy') {
+                    details.useVersion(groovyVer)
+                    println ">> Overriding $details.requested with version: $groovyVer"
+                }
+            }
+        }
     }
     logger.lifecycle "Overriden Groovy dependency to use $groovyVer"
 }
