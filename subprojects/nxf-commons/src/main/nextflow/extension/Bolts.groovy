@@ -29,7 +29,7 @@ import groovy.transform.CompileStatic
 import nextflow.file.FileHelper
 import nextflow.util.CheckHelper
 import nextflow.util.Duration
-import nextflow.file.FileLocker
+import nextflow.file.FileMutex
 import nextflow.util.MemoryUnit
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
@@ -360,7 +360,7 @@ class Bolts {
      *      InterruptedException if the lock cannot be acquired within the specified {@code timeout}
      */
     static withLock(File self, Duration timeout = null, Closure closure) {
-        def locker = new FileLocker(self)
+        def locker = new FileMutex(self)
         if( timeout )
             locker.setTimeout(timeout)
         locker.lock(closure)
@@ -387,7 +387,7 @@ class Bolts {
      *      InterruptedException if the lock cannot be acquired within the specified {@code timeout}
      */
     static withLock( Path self, Duration timeout, Closure closure ) {
-        def locker = new FileLocker(self.toFile())
+        def locker = new FileMutex(self.toFile())
         if( timeout )
             locker.setTimeout(timeout)
         locker.lock(closure)
