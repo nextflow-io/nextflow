@@ -13,7 +13,7 @@ import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
 import nextflow.util.Duration
 import nextflow.util.Escape
-import nextflow.file.FileLocker
+import nextflow.file.FileMutex
 /**
  * Handle caching of remote Singularity images
  *
@@ -146,12 +146,17 @@ class SingularityCache {
     Path downloadSingularityImage(String imageUrl) {
         final localPath = localImagePath(imageUrl)
         final file = new File("${localPath.parent}/.${localPath.name}.lock")
-        new FileLocker(file)
-            .setMessage("Another Nextflow instance is pulling the Singularity image $imageUrl -- this can take some minutes")
-            .setTimeout(pullTimeout)
-            .lock { downloadSingularityImage0(imageUrl, localPath) }
+        final wait = "Another Nextflow instance is pulling the Singularity image $imageUrl -- please wait the download completes"
+        final err =  "Unable to acquire exclusive lock after $pullTimeout on file: $file"
 
-        file.delete()
+        final mutex = new FileMutex(target: file, timeout: pullTimeout, waitMessage: wait, errorMessage: err)
+        try {
+            mutex .lock { downloadSingularityImage0(imageUrl, localPath) }
+        }
+        finally {
+            file.delete()
+        }
+
         return localPath
     }
 

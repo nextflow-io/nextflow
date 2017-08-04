@@ -14,9 +14,11 @@ import nextflow.util.Duration
  */
 @Slf4j
 @CompileStatic
-class FileLocker {
+class FileMutex {
 
-    String message
+    String waitMessage
+
+    String errorMessage
 
     Duration timeout
 
@@ -26,27 +28,33 @@ class FileLocker {
 
     private long timeoutMillis
 
-    FileLocker(File target) {
+    FileMutex() { }
+
+    FileMutex(File target) {
         this.target = target
     }
 
-    FileLocker setTimeout( String str ) {
-        this.timeoutMillis = Duration.of(str).millis
+    FileMutex setTimeout( value ) {
+        if( value instanceof Duration )
+            timeoutMillis = value.millis
+        else if( value instanceof CharSequence )
+            timeoutMillis = Duration.of(value.toString()).millis
+        else if( value instanceof Number )
+            timeoutMillis = value.longValue()
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid Duration value: $value [${value.class.name}]")
+
         return this
     }
 
-    FileLocker setTimeout( Duration duration ) {
-        this.timeoutMillis = duration.millis
+
+    FileMutex setWaitMessage( String str ) {
+        this.waitMessage = str
         return this
     }
 
-    FileLocker setDuration( long millis ) {
-        this.timeoutMillis = millis
-        return this
-    }
-
-    FileLocker setMessage( String str ) {
-        this.message = str
+    FileMutex setErrorMessage( String str ) {
+        this.errorMessage = str
         return this
     }
 
@@ -63,8 +71,8 @@ class FileLocker {
             long begin = System.currentTimeMillis()
             FileLock lock
             while( !(lock=file.getChannel().tryLock()) )  {
-                if( message && !showed ) {
-                    log.info message
+                if( waitMessage && !showed ) {
+                    log.info waitMessage
                     showed = true
                 }
 
