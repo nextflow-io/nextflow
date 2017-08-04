@@ -97,6 +97,9 @@ class CmdCloud extends CmdBase implements UsageAware {
     @Parameter(names=['-r','-region'], description = 'The region to use. Overrides config/env settings.')
     String region
 
+    @Parameter(names='-y', description = 'Skip launch confirmation')
+    boolean yes
+
     @Parameter
     List<String> args
 
@@ -488,7 +491,8 @@ class CmdCloud extends CmdBase implements UsageAware {
             // -- show the config and ask for confirmation
             def cloudConfig = makeConfig(clusterName)
             printConfig(cloudConfig, count)
-            prompt("Please confirm you really want to launch the cluster with above configuration")
+            if( !yes )
+                prompt("Please confirm you really want to launch the cluster with above configuration")
 
             // -- make sure the name it's not already used
             if( clusterName in getClusterNames() )
@@ -511,6 +515,7 @@ class CmdCloud extends CmdBase implements UsageAware {
             result << "Usage: nextflow cloud $name <cluster name> [options]".toString()
             result << ''
             launchCommonOpts(result)
+            addField('yes', result)
             result << ''
         }
     }
