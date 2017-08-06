@@ -201,11 +201,13 @@ class SingularityCache {
         builder.directory(storePath.toFile())
         builder.environment().remove('SINGULARITY_PULLFOLDER')
         final proc = builder.start()
+        final err = new StringBuilder()
+        proc.consumeProcessErrorStream(err)
         proc.waitForOrKill(max)
         def status = proc.exitValue()
         if( status != 0 ) {
             def msg = "Failed to pull singularity image\n  command: $cmd\n  message:\n"
-            msg += proc.err?.text?.trim()?.indent('  ')
+            msg += err.toString().trim().indent('  ')
             throw new IllegalStateException(msg)
         }
         return status
