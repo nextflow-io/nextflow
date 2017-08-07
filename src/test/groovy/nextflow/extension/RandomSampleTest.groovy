@@ -57,4 +57,21 @@ class RandomSampleTest extends Specification {
         result != 'A'..'J'
     }
 
+    def 'should always produce the same sequence' () {
+        given:
+        def testSeq = 'A'..'J'
+        def ch1 = Channel.from(testSeq)
+        def ch2 = Channel.from(testSeq)
+        def seed  = 23
+        def firstSampler = new RandomSampleOp(ch1, 10, seed)
+        def secondSampler = new RandomSampleOp(ch2, 10, seed)
+
+        when:
+        def resultFirstRun = (List)firstSampler.apply().toList().val
+        def resultSecondRun = (List)secondSampler.apply().toList().val
+
+        then:
+        resultFirstRun == resultSecondRun
+    }
+
 }
