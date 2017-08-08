@@ -11,6 +11,7 @@ import com.amazonaws.services.batch.model.KeyValuePair
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.upplication.s3fs.S3Path
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.exception.AbortOperationException
@@ -32,7 +33,8 @@ import nextflow.util.Escape
 @CompileStatic
 class AwsBatchExecutor extends Executor {
 
-    AWSBatchClient client
+    @PackageScope
+    static AWSBatchClient client
 
     @Override
     void register() {
@@ -183,7 +185,7 @@ class AwsBatchTaskHandler extends TaskHandler {
     void kill() {
         assert jobId
         log.debug "[AWS BATCH] killing job=$jobId"
-        final req = new CancelJobRequest().withJobId(jobId)
+        final req = new CancelJobRequest().withJobId(jobId).withReason('Job killed by NF')
         final resp = client.cancelJob(req)
         log.debug "[AWS BATCH] killing job=$jobId; response=$resp"
     }
@@ -350,7 +352,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         if( normalized ) {
             result << ""
             normalized.each {
-                result << "nxf_s3_upload $it s3:/${targetDir}/ || true" // <-- add true to avoid it stops on errors
+                result << "nxf_s3_upload $it s3:/${targetDir.resolve(it)} || true" // <-- add true to avoid it stops on errors
             }
         }
 

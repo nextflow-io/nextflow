@@ -64,7 +64,7 @@ ext {
 allprojects {
     apply plugin: 'java'
 
-    version = '0.25.5'
+    version = '0.26.AWSBATCH-SNAPSHOT'
     group = 'io.nextflow'
 
     sourceCompatibility = 1.7
@@ -141,8 +141,9 @@ dependencies {
         exclude group: 'org.apache.tika', module: 'tika-core'
         exclude group: 'com.amazonaws', module: 'aws-java-sdk-s3'
     }
-    compile ('com.amazonaws:aws-java-sdk-s3:1.11.25') { exclude group: 'commons-logging', module: 'commons-logging' }
-    compile ('com.amazonaws:aws-java-sdk-ec2:1.11.25') { exclude group: 'commons-logging', module: 'commons-logging' }
+    compile ('com.amazonaws:aws-java-sdk-s3:1.11.172') { exclude group: 'commons-logging', module: 'commons-logging' }
+    compile ('com.amazonaws:aws-java-sdk-ec2:1.11.172') { exclude group: 'commons-logging', module: 'commons-logging' }
+    compile ('com.amazonaws:aws-java-sdk-batch:1.11.172') { exclude group: 'commons-logging', module: 'commons-logging' }
     compile ('javax.mail:mail:1.4.7')
     compile ('org.yaml:snakeyaml:1.18')
 
