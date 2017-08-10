@@ -300,12 +300,20 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         }
     }
 
+
     /**
      * @return A script snippet that download from S3 the task scripts:
      * {@code .command.env}, {@code .command.sh}, {@code .command.in},
      * etc.
      */
     String getBeforeStartScript() {
+	
+		def S3StorageClass = Global.AwsGetStorageClass()
+		def S3Encryption = Global.AwsGetStorageEncryption()
+		def S3EncryptionCommand = ""
+		if(S3Encryption == "AES256") {
+			S3EncryptionCommand += "--sse "+S3Encryption
+		}
 
         """
         # aws helper
@@ -314,9 +322,9 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
           local s3path=\$2
 
           if [[ -d \$name ]]; then
-            aws s3 cp --quiet --storage-class REDUCED_REDUNDANCY --recursive \$name \$s3path
+            aws s3 cp \$name \$s3path --quiet --storage-class """+S3StorageClass+""" --recursive """+S3EncryptionCommand+"""
           else
-            aws s3 cp --quiet --storage-class REDUCED_REDUNDANCY \$name \$s3path
+            aws s3 cp \$name \$s3path --quiet --storage-class """+S3StorageClass+""" """+S3EncryptionCommand+"""
           fi
         }
 
