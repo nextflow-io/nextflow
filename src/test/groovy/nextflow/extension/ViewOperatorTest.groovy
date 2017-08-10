@@ -64,7 +64,7 @@ class ViewOperatorTest extends Specification{
 
     }
 
-    def 'should print channel items without appending the newline charater'() {
+    def 'should print channel items without appending the newline character'() {
 
         when:
         def result = Channel.from(1,2,3).view(newLine:false) { " ~ $it" }
@@ -75,6 +75,22 @@ class ViewOperatorTest extends Specification{
         result.val == Channel.STOP
 
         capture.toString() == ' ~ 1 ~ 2 ~ 3'
+    }
+
+    def 'should print dataflow value' () {
+        when:
+        def result = Channel.value(1).view { ">> $it" }
+        then:
+        result.val == 1
+        capture.toString() == ">> 1\n"
+    }
+
+    def 'should return stop signal'() {
+        when:
+        def result = Channel.value(Channel.STOP).view { ">> $it" }
+        then:
+        result.val == Channel.STOP
+        capture.toString() == ''
     }
 
 }
