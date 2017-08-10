@@ -1967,7 +1967,7 @@ class TaskProcessor {
                 return true
             }
 
-            log.trace "Task ${task.name} is not executed becase `when` condition is not verified"
+            log.trace "Task ${task.name} is not executed because `when` condition is not verified"
             finalizeTask0(task)
             return false
         }
