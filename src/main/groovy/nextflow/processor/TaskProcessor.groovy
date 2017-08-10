@@ -587,6 +587,9 @@ class TaskProcessor {
         if( !checkWhenGuard(task) )
             return
 
+        // -- resolve the task command script
+        task.resolve(taskBody)
+
         // -- verify if exists a stored result for this case,
         //    if true skip the execution and return the stored data
         if( checkStoredOutput(task) )
@@ -1838,8 +1841,6 @@ class TaskProcessor {
         //    so that lazy directives will be resolved against it
         task.config.context = ctx
 
-        // -- resolve the task command script
-        task.resolve(taskBody)
     }
 
     final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
