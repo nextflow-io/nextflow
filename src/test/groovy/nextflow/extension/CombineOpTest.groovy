@@ -151,6 +151,18 @@ class CombineOpTest extends Specification {
     }
 
     @Timeout(1)
+    def 'should combine with empty value' () {
+        given:
+        def left = Channel.value().close()
+        def right = Channel.value('z')
+        def op = new CombineOp(left, right)
+        when:
+        def result = op.apply()
+        then:
+        result.val == Channel.STOP
+    }
+
+    @Timeout(1)
     def 'should chain combine ops flat default' () {
 
         given:
