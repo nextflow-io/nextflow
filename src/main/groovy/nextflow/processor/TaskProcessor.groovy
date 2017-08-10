@@ -1220,7 +1220,7 @@ class TaskProcessor {
             else if( channel instanceof DataflowStreamWriteAdapter ) {
                 channel.bind( PoisonPill.instance )
             }
-            else if( channel instanceof DataflowExpression & !channel.isBound()) {
+            else if( channel instanceof DataflowExpression && !channel.isBound()) {
                 channel.bind( PoisonPill.instance )
             }
         }
