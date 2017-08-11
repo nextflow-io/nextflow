@@ -74,6 +74,7 @@ start                   Timestamp when the task execution has started.
 complete                Timestamp when task execution has completed.
 duration                Time elapsed to complete since the submission.
 realtime                Task execution time i.e. delta between completion and start timestamp.
+queue                   The queue that the executor attempted to run the process on.
 %cpu                    Percentage of CPU used by the process.
 %mem                    Percentage of memory used by the process.
 rss                     Real memory (resident set) size of the process. Equivalent to ``ps -o rss`` .
