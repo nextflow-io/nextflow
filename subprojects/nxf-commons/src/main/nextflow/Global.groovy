@@ -157,7 +157,7 @@ class Global {
         if( config==null ) config = this.config
 		if(config && config.aws instanceof Map) {
 			def client = getAwsClientConfig()
-			def storageClass = ((Map)client).storage_class
+			def storageClass = ((Map)client).upload_storage_class
 			if (storageClass == "REDUCED_REDUNDANCY") {
 				return storageClass
 			}
@@ -171,7 +171,6 @@ class Global {
 	static String AwsGetStorageEncryption(Map env=null, Map config=null) {
         if( env==null ) env = System.getenv()
         if( config==null ) config = this.config
-
 		if(config && config.aws instanceof Map) {
 			def client = getAwsClientConfig()
 			def storageEncryption = ((Map)client).storage_encryption
