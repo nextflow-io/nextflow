@@ -292,6 +292,7 @@ enabled             Turn this flag to ``true`` to enable Singularity execution (
 engineOptions       This attribute can be used to provide any option supported by the Singularity engine i.e. ``singularity [OPTIONS]``.
 runOptions          This attribute can be used to provide any extra command line options supported by the ``singularity exec``.
 autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed contained. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
+cacheDir            The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
 ================== ================
 
 
@@ -515,24 +516,25 @@ Environment variables
 The following environment variables control the configuration of the Nextflow runtime and
 the Java virtual machine used by it.
 
-================== ================
-Name                Description
-================== ================
-NXF_HOME            Nextflow home directory (default: ``$HOME/.nextflow``).
-NXF_VER             Defines what version of Nextflow to use.
-NXF_ORG             Default `organization` prefix when looking for a hosted repository (default: ``nextflow-io``).
-NXF_GRAB            Provides extra runtime dependencies downloaded from a Maven repository service.
-NXF_OPTS            Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of ``-Dkey[=value]`` properties.
-NXF_CLASSPATH       Allows to extend the Java runtime classpath with extra jar files or class folders.
-NXF_DRMAA           Defines the Java DRMAA binding library to be used. It can be specified as a jar file location or a Maven coordinate.
-NXF_ASSETS          Defined the directory where downloaded pipeline repositories are stored (default: ``$NXF_HOME/assets``)
-NXF_PID_FILE        Name of the file where the process PID is saved when Nextflow is launched in background.
-NXF_WORK            Directory where working files are stored (usually your *scratch* directory)
-NXF_TEMP            Directory where temporary files are stored
-NXF_DEBUG           Defines scripts debugging level: ``1`` dump task environment variables in the task log file; ``2`` enables command script execution tracing; ``3`` enables command wrapper execution tracing.
-NXF_EXECUTOR        Defines the default process executor e.g. `sge`
-JAVA_HOME           Path location of the Java VM installation used to run Nextflow.
-JAVA_CMD            Path location of the Java binary command used to launch  Nextflow.
-HTTP_PROXY          Defines the HTTP proxy server
-HTTPS_PROXY         Defines the HTTPS proxy server
-================== ================
+=========================== ================
+Name                        Description
+=========================== ================
+NXF_HOME                    Nextflow home directory (default: ``$HOME/.nextflow``).
+NXF_VER                     Defines what version of Nextflow to use.
+NXF_ORG                     Default `organization` prefix when looking for a hosted repository (default: ``nextflow-io``).
+NXF_GRAB                    Provides extra runtime dependencies downloaded from a Maven repository service.
+NXF_OPTS                    Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of ``-Dkey[=value]`` properties.
+NXF_CLASSPATH               Allows to extend the Java runtime classpath with extra jar files or class folders.
+NXF_DRMAA                   Defines the Java DRMAA binding library to be used. It can be specified as a jar file location or a Maven coordinate.
+NXF_ASSETS                  Defined the directory where downloaded pipeline repositories are stored (default: ``$NXF_HOME/assets``)
+NXF_PID_FILE                Name of the file where the process PID is saved when Nextflow is launched in background.
+NXF_WORK                    Directory where working files are stored (usually your *scratch* directory)
+NXF_TEMP                    Directory where temporary files are stored
+NXF_DEBUG                   Defines scripts debugging level: ``1`` dump task environment variables in the task log file; ``2`` enables command script execution tracing; ``3`` enables command wrapper execution tracing.
+NXF_EXECUTOR                Defines the default process executor e.g. `sge`
+NXF_SINGULARITY_CACHEDIR    Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
+JAVA_HOME                   Path location of the Java VM installation used to run Nextflow.
+JAVA_CMD                    Path location of the Java binary command used to launch  Nextflow.
+HTTP_PROXY                  Defines the HTTP proxy server
+HTTPS_PROXY                 Defines the HTTPS proxy server
+=========================== ================

@@ -98,7 +98,7 @@ the AMI and machine virtualization type. See the `Amazon documentation for detai
 Shared file system
 ------------------
 
-A shared file system can easily made available in your cloud cluster by using the `Amazon EFS <https://aws.amazon.com/efs/>`_
+A shared file system can easily be made available in your cloud cluster by using the `Amazon EFS <https://aws.amazon.com/efs/>`_
 storage. You will only need to specify in the cloud configuration the EFS file system ID and optionally the
 mount path. For example::
 
@@ -131,7 +131,7 @@ is created.
 Pipeline execution
 ==================
 
-Once the cluster initialization is complete, connect to the *master* node by using the SSH command that will be showed by
+Once the cluster initialization is complete, connect to the *master* node using the SSH command which will be displayed by
 Nextflow.
 
 .. note:: On MacOS, use the following command to avoid being asked for a pass-phrase even

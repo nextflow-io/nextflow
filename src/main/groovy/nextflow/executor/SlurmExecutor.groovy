@@ -154,7 +154,7 @@ class SlurmExecutor extends AbstractGridExecutor {
     ]
 
     @Override
-    protected Map<?, QueueStatus> parseQueueStatus(String text) {
+    protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
         def result = [:]
 
@@ -162,6 +162,9 @@ class SlurmExecutor extends AbstractGridExecutor {
             def cols = line.split(/\s+/)
             if( cols.size() == 2 ) {
                 result.put( cols[0], STATUS_MAP.get(cols[1]) )
+            }
+            else {
+                log.debug "[SLURM] invalid status line: `$line`"
             }
         }
 

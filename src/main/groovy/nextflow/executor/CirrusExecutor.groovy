@@ -180,7 +180,7 @@ class CirrusExecutor extends AbstractGridExecutor {
      *  3        3      3       -1      DONE    102400  102400  204800  0       default ["/bin/ls"]       0
      */
     @Override
-    protected Map<?, QueueStatus> parseQueueStatus(String text) {
+    protected Map<String, QueueStatus> parseQueueStatus(String text) {
         def result = [:]
         text.eachLine { String row, index ->
             if( index< 1 ) return

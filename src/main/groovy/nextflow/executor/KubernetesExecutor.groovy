@@ -67,7 +67,7 @@ class KubernetesExecutor extends AbstractGridExecutor {
     }
 
     /**
-     * Define the Kubernates job execution command line
+     * Define the Kubernetes job execution command line
      *
      * @param task A {@link TaskRun} instance that need to be submitted for execution
      * @param scriptFile (not used)
@@ -116,7 +116,7 @@ class KubernetesExecutor extends AbstractGridExecutor {
     static private final K8S_JOB_ID = ~/^(nxf-[0-9a-f]{32})/
 
     @Override
-    protected Map<?, QueueStatus> parseQueueStatus(String text) {
+    protected Map<String, QueueStatus> parseQueueStatus(String text) {
         def result = [:]
         if( !text ) return result
 

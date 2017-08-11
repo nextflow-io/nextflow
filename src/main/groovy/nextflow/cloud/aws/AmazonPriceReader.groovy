@@ -67,6 +67,7 @@ class AmazonPriceReader {
     static {
         REGIONS.'ap-south-1' = 'Asia Pacific (Mumbai)'
         REGIONS.'eu-west-1' = "EU (Ireland)"
+        REGIONS.'eu-west-2' = "EU (London)"
         REGIONS.'eu-central-1' = "EU (Frankfurt)"
         REGIONS.'ap-southeast-1' = "Asia Pacific (Singapore)"
         REGIONS.'ap-southeast-2' = "Asia Pacific (Sydney)"
@@ -76,6 +77,8 @@ class AmazonPriceReader {
         REGIONS.'us-west-1' = "US West (N. California)"
         REGIONS.'us-west-2' = "US West (Oregon)"
         REGIONS.'sa-east-1' = "South America (Sao Paulo)"
+        REGIONS.'ca-central-1' = "Canada (Central)"
+
     }
 
     private Map<String,CloudInstanceType> TABLE
@@ -180,16 +183,26 @@ class AmazonPriceReader {
                 if( tkns[colServiceCode] != "AmazonEC2" ) continue
                 if( tkns[colLocation] != location) continue
                 if( tkns[colOS] != 'Linux' ) continue
-                //if( tkns[colCurrentGen] != 'Yes' ) continue
 
                 List storage = parseStorage(tkns[colStorage])
 
-                if( map.get(tkns[colInstanceType]) )
+                final instanceType = tkns[colInstanceType]
+                if( map.get(instanceType) )
                     continue
 
+                if( !tkns[colCpu] ) {
+                    log.debug "Missing cpu number for instance type: $instanceType -- offending entry: $line"
+                    continue
+                }
+
+                if( !tkns[colMem] ) {
+                    log.debug "Missing memory value for instance type: $instanceType -- offending entry: $line"
+                    continue
+                }
+
                 def entry = new CloudInstanceType(
-                        id: tkns[colInstanceType],
-                        cpus: tkns[colCpu] as int ,
+                        id: instanceType,
+                        cpus: tkns[colCpu] as int,
                         memory: parseMem(tkns[colMem]),
                         disk: storage[0],
                         numOfDisks: storage[1]

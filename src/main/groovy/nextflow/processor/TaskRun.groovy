@@ -19,7 +19,6 @@
  */
 
 package nextflow.processor
-
 import java.nio.file.FileSystems
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -29,7 +28,11 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.container.ContainerConfig
+import nextflow.container.ContainerScriptTokens
+import nextflow.container.DockerBuilder
+import nextflow.container.ShifterBuilder
 import nextflow.container.SingularityBuilder
+import nextflow.container.SingularityCache
 import nextflow.container.UdockerBuilder
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.ProcessException
@@ -45,10 +48,6 @@ import nextflow.script.ScriptType
 import nextflow.script.StdInParam
 import nextflow.script.TaskBody
 import nextflow.script.ValueOutParam
-import nextflow.container.ContainerScriptTokens
-import nextflow.container.DockerBuilder
-import nextflow.container.ShifterBuilder
-
 /**
  * Models a task instance
  *
@@ -547,10 +546,15 @@ class TaskRun implements Cloneable {
             UdockerBuilder.normalizeImageName(imageName)
         }
         else if( engine == 'singularity' ) {
-            SingularityBuilder.normalizeImageName(imageName)
+            if( !imageName )
+                return null
+            if( imageName.startsWith('docker://') || imageName.startsWith('shub://'))
+                return new SingularityCache(cfg) .getCachePathFor(imageName) .toString()
+            else
+                return SingularityBuilder.normalizeImageName(imageName)
         }
         else {
-            DockerBuilder.normalizeImageName(imageName, getContainerConfig())
+            DockerBuilder.normalizeImageName(imageName, cfg)
         }
     }
 

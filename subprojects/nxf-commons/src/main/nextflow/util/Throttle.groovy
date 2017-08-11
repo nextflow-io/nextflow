@@ -188,4 +188,27 @@ class Throttle {
         obj.result
     }
 
+    static <V> V cache( Object key, Duration eviction, Closure<V> action ) {
+        cache(key, eviction.toMillis(), action)
+    }
+
+    static <V> V cache( Object key, long eviction, Closure<V> closure ) {
+        final int hash = key?.hashCode() ?: 0
+
+        ThrottleObj obj = throttleMap.get(hash)
+        if( obj == null ) {
+            obj = new ThrottleObj()
+            obj.result = closure.call()
+            obj.timestamp = System.currentTimeMillis()
+            throttleMap.put(hash,obj)
+        }
+
+        else if( System.currentTimeMillis() - obj.timestamp > eviction ) {
+            obj.timestamp = System.currentTimeMillis()
+            obj.result = closure.call()
+        }
+
+        (V)obj.result
+    }
+
 }

@@ -18,7 +18,8 @@
 #  You should have received a copy of the GNU General Public License
 #  along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
 
-NXF_VER=${NXF_VER:-'0.25.2'}
+[[ "$NXF_DEBUG" == 'x' ]] && set -x
+NXF_VER=${NXF_VER:-'0.25.5'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -116,21 +117,31 @@ function launch_nextflow() {
     done
 
     if [[ $NXF_MPIRUN ]]; then
-        if [[ -z $OMPI_COMM_WORLD_RANK ]]; then echo_red 'Missing `$OMPI_COMM_WORLD_RANK` variable -- it looks you are not running in a MPI environment'; exit 1; fi
-        if [[ $OMPI_COMM_WORLD_RANK == 0 ]]; then
+        local rank=''
+        [[ $SLURM_PROCID ]] && rank=$SLURM_PROCID
+        [[ $OMPI_COMM_WORLD_RANK ]] && rank=$OMPI_COMM_WORLD_RANK
+        if [[ ! $rank ]]; then
+          echo_red 'It looks you are not running in a MPI enabled environment -- cannot find `$OMPI_COMM_WORLD_RANK` nor `$SLURM_PROCID` variable';
+          exit 1;
+        fi
+        if [[ $SLURM_CPUS_PER_TASK && $SLURM_MEM_PER_CPU ]]; then
+            export NXF_CLUSTER_MAXCPUS=$SLURM_CPUS_PER_TASK
+            export NXF_CLUSTER_MAXMEMORY="$(($SLURM_MEM_PER_CPU*$SLURM_CPUS_PER_TASK))MB"
+        fi
+        if [[ $rank == 0 ]]; then
             # sleep a few seconds in order to wait worker daemons to bootstrap
             sleep ${NXF_SLEEP:-10}
             export NXF_EXECUTOR='ignite'
             export NXF_CLUSTER_SHUTDOWNONCOMPLETE='true'
         else
-            cmdline="${launcher[@]} -log .nextflow_node_${HOSTNAME}_${OMPI_COMM_WORLD_RANK}.log node ignite"
+            cmdline="${launcher[@]} -log .nextflow_node_${rank}.log node ignite"
         fi
     # start in daemon mode
     elif [[ "$bg" ]]; then
       local pid_file="${NXF_PID_FILE:-.nextflow.pid}"
       bash -c "exec $cmdline" &
       disown
-      printf $! > "$pid_file"
+      echo $! > "$pid_file"
       exit 0
     fi
 
@@ -256,10 +267,16 @@ fi
 
 # Verify installed Java version
 if [ ! -d "$NXF_LAUNCHER" ]; then # <-- only the first time
-    $JAVA_CMD -version 2>&1 | awk '/version/ {print $3}' | grep '"1\.[7|8]\..*"' > /dev/null
+    JAVA_OUT="$($JAVA_CMD $NXF_OPTS -version 2>&1)"
+    if [ $? -ne 0 ]; then
+        echo_red "${JAVA_OUT:-Failed to launch the Java virtual machine}"
+        echo_yellow "Note: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_OPTS: $NXF_OPTS\n"
+        exit 1
+    fi
+    echo "$JAVA_OUT" | awk '/version/ {print $3}' | grep '"1\.[7|8]\..*"' > /dev/null
     if [ $? -ne 0 ]; then
          echo_red "Error: cannot find Java or it's a wrong version -- please make sure that Java 7 or higher it's installed"
-         echo_red "Note: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n JAVA_HOME: $JAVA_HOME\n"
+         echo_yellow "Note: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n JAVA_HOME: $JAVA_HOME\n"
          exit 1
     fi
 fi
@@ -347,7 +364,7 @@ if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ]; then
 else
     # otherwise run the capsule and get the result classpath in the 'launcher' and save it to a file
     launcher=($("$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"))
-    [[ $? -ne 0 ]] && echo 'Unable to initialize nextflow environment' && exit $?
+    [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit $?
 
     # Don't show errors if the LAUNCH_FILE can't be created
     if mkdir -p "${NXF_LAUNCHER}" 2>/dev/null; then
