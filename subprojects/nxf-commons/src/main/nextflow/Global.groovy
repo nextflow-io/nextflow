@@ -157,9 +157,11 @@ class Global {
         if( config==null ) config = this.config
 		if(config && config.aws instanceof Map) {
 			def client = getAwsClientConfig()
-			def storageClass = ((Map)client).upload_storage_class
-			if (storageClass == "REDUCED_REDUNDANCY") {
-				return storageClass
+			if(client) {
+				def storageClass = ((Map)client).upload_storage_class
+				if (storageClass == "REDUCED_REDUNDANCY") {
+					return storageClass
+				}
 			}
 		}
 		return "STANDARD"
@@ -173,9 +175,11 @@ class Global {
         if( config==null ) config = this.config
 		if(config && config.aws instanceof Map) {
 			def client = getAwsClientConfig()
-			def storageEncryption = ((Map)client).storage_encryption
-			if (storageEncryption == "AES256") {
-				return storageEncryption
+			if(client) {
+				def storageEncryption = ((Map)client).storage_encryption
+				if (storageEncryption == "AES256") {
+					return storageEncryption
+				}
 			}
 		}
 		return null

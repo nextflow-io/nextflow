@@ -146,4 +146,14 @@ class GlobalTest extends Specification {
 	}
 
 
+   	def testAwsStorageOptionsWithNoAwsClientConfig() {
+			
+        Global.config = [process: [
+			queue:"test"
+		]]
+
+		expect:
+		Global.AwsGetStorageEncryption() == null
+		Global.AwsGetStorageClass() == "STANDARD"
+	}
 }
