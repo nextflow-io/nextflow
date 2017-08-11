@@ -320,11 +320,10 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         nxf_s3_upload() {
           local name=\$1
           local s3path=\$2
-
           if [[ -d \$name ]]; then
-            aws s3 cp \$name \$s3path --quiet --storage-class """+S3StorageClass+""" --recursive """+S3EncryptionCommand+"""
+            aws s3 cp \$name \$s3path --quiet --storage-class $S3StorageClass --recursive $S3EncryptionCommand
           else
-            aws s3 cp \$name \$s3path --quiet --storage-class """+S3StorageClass+""" """+S3EncryptionCommand+"""
+            aws s3 cp \$name \$s3path --quiet --storage-class $S3StorageClass $S3EncryptionCommand
           fi
         }
 
