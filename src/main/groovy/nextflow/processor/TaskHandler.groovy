@@ -158,6 +158,7 @@ public abstract class TaskHandler {
         record.script = task.getScript()
         record.scratch = task.getScratch()
         record.workdir = task.getWorkDirStr()
+        record.queue = task.config.queue
 
         if( isCompleted() ) {
             if( completeTimeMillis ) {

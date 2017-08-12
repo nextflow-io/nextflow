@@ -44,6 +44,7 @@ class TraceRecordTest extends Specification {
         record.duration = '2000'
         record.'%cpu' = '5.00'
         record.rss = '1024'
+        record.queue = 'big'
 
         expect:
         record.getFmtStr(name, converter) == expected
@@ -57,6 +58,7 @@ class TraceRecordTest extends Specification {
         'duration'  | null      | '2s'
         '%cpu'      | null      | '5.0%'
         'rss'       | null      | '1 KB'
+        'queue'     | null      | 'big'
 
     }
 
