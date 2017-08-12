@@ -26,7 +26,7 @@
 config ?= compile
 
 compile:
-	./gradlew -q compile exportClasspath
+	./gradlew compile exportClasspath
 
 clean:
 	./gradlew clean
