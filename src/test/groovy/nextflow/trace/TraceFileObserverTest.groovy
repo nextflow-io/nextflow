@@ -258,9 +258,10 @@ class TraceFileObserverTest extends Specification {
         record.complete = 1429031455000
         record.duration = 9087193
         record.realtime = 9005022
+        record.queue = 'bigjobs'
 
         def trace = [:] as TraceFileObserver
-        trace.setFieldsAndFormats('task_id,hash,native_id,name,status,exit,submit,duration,realtime,%cpu,rss,vmem,peak_rss,peak_vmem,rchar,wchar,syscr,syscw,duration:num,realtime:num,rss:num,vmem:num,peak_rss:num,peak_vmem:num,rchar:num,wchar:num')
+        trace.setFieldsAndFormats('task_id,hash,native_id,name,status,exit,submit,duration,realtime,%cpu,rss,vmem,peak_rss,peak_vmem,rchar,wchar,syscr,syscw,duration:num,realtime:num,rss:num,vmem:num,peak_rss:num,peak_vmem:num,rchar:num,wchar:num,queue')
         def result = trace.render(record).split('\t')
 
         then:
@@ -290,6 +291,7 @@ class TraceFileObserverTest extends Specification {
         result[23] == 7876620*KB as String      // peak_vmem:num
         result[24] == '2147483647'    // rchar:num
         result[25] == '2147483647'    // wchar:num
+        result[26] == 'bigjobs'       // queue
     }
 
 }
