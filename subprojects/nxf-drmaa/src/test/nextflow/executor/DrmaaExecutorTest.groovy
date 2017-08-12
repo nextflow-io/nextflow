@@ -152,6 +152,7 @@ class DrmaaExecutorTest extends Specification {
         expected.workdir = workDir.toString()
         expected.script = null
         expected.scratch = null
+        expected.queue = null
 
         def task = [:] as TaskRun
         task.id = TaskId.of(30)
@@ -172,7 +173,6 @@ class DrmaaExecutorTest extends Specification {
         handler.startTimeMillis = 1406265009000
         then:
         handler.getTraceRecord() == expected
-
 
         cleanup:
         workDir?.deleteDir()
