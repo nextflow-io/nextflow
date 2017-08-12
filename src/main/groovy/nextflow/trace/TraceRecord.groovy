@@ -42,8 +42,6 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class TraceRecord implements Serializable {
 
-    public static String WORKDIR = 'folder'
-
     public TraceRecord() {
         this.store = [:]
     }
