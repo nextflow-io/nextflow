@@ -30,7 +30,7 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class GlobalTest extends Specification {
-
+ 
 
     def testAwsCredentials() {
 
@@ -102,4 +102,58 @@ class GlobalTest extends Specification {
     }
 
 
+   	def testAwsStorageClassRR() {
+			
+        Global.config = [aws: [
+            region: 'eu-west-1',
+			client: [
+				storageEncryption: 'AES256',
+				uploadStorageClass: 'REDUCED_REDUNDANCY'
+			]
+        ]]
+
+		expect:
+		Global.AwsGetStorageClass() == "REDUCED_REDUNDANCY"
+	}
+
+
+
+   	def testAwsStorageClassStandard() {
+			
+        Global.config = [aws: [
+            region: 'eu-west-1',
+			client: [
+				storageEncryption: 'AES256',
+			]
+        ]]
+
+		expect:
+		Global.AwsGetStorageClass() == "STANDARD"
+	}
+
+
+   	def testAwsStorageClassStandard() {
+			
+        Global.config = [aws: [
+            region: 'eu-west-1',
+			client: [
+				storageEncryption: 'AES256',
+			]
+        ]]
+
+		expect:
+		Global.AwsGetStorageEncryption() == "AES256"
+	}
+
+
+   	def testAwsStorageOptionsWithNoAwsClientConfig() {
+			
+        Global.config = [process: [
+			queue:"test"
+		]]
+
+		expect:
+		Global.AwsGetStorageEncryption() == null
+		Global.AwsGetStorageClass() == "STANDARD"
+	}
 }

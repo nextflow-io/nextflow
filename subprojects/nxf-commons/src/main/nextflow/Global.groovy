@@ -114,6 +114,9 @@ class Global {
         return null
     }
 
+
+
+
     static List<String> getAwsCredentials(Map env, Map config) {
 
         def home = Paths.get(System.properties.get('user.home') as String)
@@ -146,6 +149,44 @@ class Global {
         def ini = new IniFile(file)
         return ini.section('default').region
     }
+
+
+
+	static String AwsGetStorageClass(Map env=null, Map config=null) {
+        if( env==null ) env = System.getenv()
+        if( config==null ) config = this.config
+		if(config && config.aws instanceof Map) {
+			def client = getAwsClientConfig()
+			if(client) {
+				def storageClass = ((Map)client).upload_storage_class
+				if (storageClass == "REDUCED_REDUNDANCY") {
+					return storageClass
+				}
+			}
+		}
+		return "STANDARD"
+
+
+	}
+
+
+	static String AwsGetStorageEncryption(Map env=null, Map config=null) {
+        if( env==null ) env = System.getenv()
+        if( config==null ) config = this.config
+		if(config && config.aws instanceof Map) {
+			def client = getAwsClientConfig()
+			if(client) {
+				def storageEncryption = ((Map)client).storage_encryption
+				if (storageEncryption == "AES256") {
+					return storageEncryption
+				}
+			}
+		}
+		return null
+
+
+	}
+
 
     static List<String> getAwsCredentials(Map env) {
         getAwsCredentials(env, config)
