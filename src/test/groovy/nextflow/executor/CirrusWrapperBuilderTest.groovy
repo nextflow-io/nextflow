@@ -147,8 +147,8 @@ class CirrusWrapperBuilderTest extends Specification {
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
-                es3 -q -v 0 --no-stats sync .command.out s3:/${folder} || true
-                es3 -q -v 0 --no-stats sync .command.err s3:/${folder} || true
+                es3 -q -v 0 --no-stats sync .command.out s3:/${folder}/.command.out || true
+                es3 -q -v 0 --no-stats sync .command.err s3:/${folder}/.command.err || true
                 """
                         .stripIndent().leftTrim()
 

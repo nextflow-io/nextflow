@@ -132,7 +132,7 @@ class GlobalTest extends Specification {
 	}
 
 
-   	def testAwsStorageClassStandard() {
+   	def testAwsStorageEncryption() {
 			
         Global.config = [aws: [
             region: 'eu-west-1',
