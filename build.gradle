@@ -240,6 +240,12 @@ task buildInfo { doLast {
     src = src.replaceAll(/version *= *'[0-9a-zA-Z_\-\.]+'/, "version = '$major'" as String)
     src = src.replaceAll(/release *= *'[0-9a-zA-Z_\-\.]+'/, "release = '$version'" as String)
     file.text = src
+
+    // -- update dockerfile
+    file = new File('docker/Dockerfile')
+    src = file.text
+    src = src.replaceAll(/releases\/v[0-9a-zA-Z_\-\.]+\//, "releases/v$version/" as String)
+    file.text = src
 }}
 
 String bytesToHex(byte[] bytes) {
