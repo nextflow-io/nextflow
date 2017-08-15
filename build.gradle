@@ -32,30 +32,29 @@ apply plugin: "jacoco"
 apply plugin: 'idea'
 apply plugin: 'io.codearte.nexus-staging'   // See https://github.com/Codearte/gradle-nexus-staging-plugin/
 
-if (System.getenv('CI_GROOVY_VERSION')) {
-    // Add ability to test with upcoming versions of Groovy
-    def groovyVer = System.getenv('CI_GROOVY_VERSION')
-    if (groovyVer.endsWith('-SNAPSHOT')) {
-        allprojects {
-            repositories {
-                maven {
-                    name 'JFrog OSS snapshot repo'
-                    url 'https://oss.jfrog.org/oss-snapshot-local/'
-                }
-            }
-        }
-
-        configurations.all {
-            resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-                if (details.requested.group == 'org.codehaus.groovy') {
-                    details.useVersion(groovyVer)
-                    println ">> Overriding $details.requested with version: $groovyVer"
-                }
+// Add ability to test with upcoming versions of Groovy
+def groovyVer = System.getenv('CI_GROOVY_VERSION')
+if (groovyVer?.endsWith('-SNAPSHOT')) {
+    logger.lifecycle "Overriden Groovy dependency to use $groovyVer"
+    allprojects {
+        repositories {
+            maven {
+                name 'JFrog OSS snapshot repo'
+                url 'https://oss.jfrog.org/oss-snapshot-local/'
             }
         }
     }
-    logger.lifecycle "Overriden Groovy dependency to use $groovyVer"
+
+    configurations.all {
+        resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+            if (details.requested.group == 'org.codehaus.groovy') {
+                details.useVersion(groovyVer)
+                println ">> Overriding $details.requested with version: $groovyVer"
+            }
+        }
+    }
 }
+
 
 ext {
     mainClassName = 'nextflow.cli.Launcher'
@@ -79,14 +78,21 @@ allprojects {
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
     }
 
+    configurations {
+        // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
+        all*.exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+    }
+
     dependencies {
         // test configuration
         testCompile ("cglib:cglib-nodep:2.2")
         testCompile ("org.objenesis:objenesis:1.4")
-        testCompile ("org.spockframework:spock-core:1.0-groovy-2.4") {
-            exclude module: 'groovy-all'
-        }
+        testCompile ("org.spockframework:spock-core:1.0-groovy-2.4")
         testCompile 'com.google.jimfs:jimfs:1.0'
+        // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sec:module_replacement
+        modules {
+            module("commons-logging:commons-logging") { replacedBy("org.slf4j:jcl-over-slf4j") }
+        }
     }
 
     // this is required due to this IDEA bug
@@ -117,6 +123,7 @@ configurations {
     gdocLibs.extendsFrom runtime
 }
 
+
 dependencies {
     compile(project(':nxf-commons'))
     compile(project(':nxf-httpfs'))
@@ -130,19 +137,18 @@ dependencies {
     compile "ch.qos.logback:logback-classic:1.1.10"
     compile "ch.qos.logback:logback-core:1.1.10"
     compile "org.codehaus.gpars:gpars:1.2.1"
-    compile("ch.grengine:grengine:1.0.3") { exclude group: 'org.codehaus.groovy', module: 'groovy-all' }
+    compile("ch.grengine:grengine:1.0.3")
     compile "commons-lang:commons-lang:2.6"
     compile "com.beust:jcommander:1.35"
     compile("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
     compile('org.iq80.leveldb:leveldb:0.7')
-    compile('org.eclipse.jgit:org.eclipse.jgit:4.3.1.201605051710-r') { exclude group: 'commons-logging', module: 'commons-logging' }
+    compile('org.eclipse.jgit:org.eclipse.jgit:4.3.1.201605051710-r')
     compile('io.nextflow:nxf-s3fs:1.0.0') {
-        exclude group: 'commons-logging', module: 'commons-logging'
         exclude group: 'org.apache.tika', module: 'tika-core'
         exclude group: 'com.amazonaws', module: 'aws-java-sdk-s3'
     }
-    compile ('com.amazonaws:aws-java-sdk-s3:1.11.25') { exclude group: 'commons-logging', module: 'commons-logging' }
-    compile ('com.amazonaws:aws-java-sdk-ec2:1.11.25') { exclude group: 'commons-logging', module: 'commons-logging' }
+    compile ('com.amazonaws:aws-java-sdk-s3:1.11.25')
+    compile ('com.amazonaws:aws-java-sdk-ec2:1.11.25')
     compile ('javax.mail:mail:1.4.7')
     compile ('org.yaml:snakeyaml:1.18')
 
@@ -705,5 +711,14 @@ configure(deployable) {
 //test {
 //    testLogging {
 //        events "passed", "skipped", "failed", "standardOut", "standardError"
+//    }
+//}
+
+
+//task allFiles {
+//    doLast {
+//        configurations.compile.files.sort{ it.name }.each { file ->
+//            println file.name
+//        }
 //    }
 //}
