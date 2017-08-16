@@ -27,10 +27,10 @@ class RandomSampleOp {
 
     private int counter
 
-    RandomSampleOp( DataflowReadChannel source, int N, Integer seed = null) {
+    RandomSampleOp( DataflowReadChannel source, int N, Long seed = null) {
         this.source = source
         this.N = N
-        this.rng = seed ? new Random(seed) : new Random()
+        this.rng = seed != null ? new Random(seed) : new Random()
     }
 
 

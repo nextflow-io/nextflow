@@ -1680,7 +1680,7 @@ class DataflowExtensions {
         return result;
     }
 
-    static <V> DataflowReadChannel<V> randomSample(final DataflowReadChannel source, int n, Integer seed = null) {
+    static <V> DataflowReadChannel<V> randomSample(final DataflowReadChannel source, int n, Long seed = null) {
         assert !(source instanceof DataflowExpression)
 
         final result = new RandomSampleOp(source,n, seed).apply()
