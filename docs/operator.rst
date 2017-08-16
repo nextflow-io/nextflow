@@ -216,7 +216,17 @@ from the channel to which is applied. For example::
         .println()
 
 The above snippet will print 10 numbers in the range from 1 to 100.
+The operator supports a second parameter ```seed``` that allows to set the initial seed for the random number generator
+used for the resevoir sample. By setting it, the ```randomsSample``` operator will always return the same *pseudorandom* sequence.
+For example::
 
+  Channel
+        .from( 1..100 )
+        .randomSample( 10, 234)
+        .println()
+
+The above example will print 10 random numbers in the range between 1 and 100. At each run of the script, the same 
+sequence will be returned.
 
 take
 -------
