@@ -21,15 +21,16 @@ class RandomSampleOp {
 
     private int N
 
-    private Random rng = new Random()
+    private Random rng
 
     private List reservoir = []
 
     private int counter
 
-    RandomSampleOp( DataflowReadChannel source, int N ) {
+    RandomSampleOp( DataflowReadChannel source, int N, Long seed = null) {
         this.source = source
         this.N = N
+        this.rng = seed != null ? new Random(seed) : new Random()
     }
 
 
@@ -52,7 +53,7 @@ class RandomSampleOp {
     private void emit(nop) {
 
         if( counter <= N )
-            Collections.shuffle(reservoir)
+            Collections.shuffle(reservoir, rng)
 
         reservoir.each { it!=null ? result.bind(it) : null }
         result.bind(Channel.STOP)
