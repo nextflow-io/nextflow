@@ -587,6 +587,9 @@ class TaskProcessor {
         if( !checkWhenGuard(task) )
             return
 
+        // -- resolve the task command script
+        task.resolve(taskBody)
+
         // -- verify if exists a stored result for this case,
         //    if true skip the execution and return the stored data
         if( checkStoredOutput(task) )
@@ -1217,7 +1220,7 @@ class TaskProcessor {
             else if( channel instanceof DataflowStreamWriteAdapter ) {
                 channel.bind( PoisonPill.instance )
             }
-            else if( channel instanceof DataflowExpression & !channel.isBound()) {
+            else if( channel instanceof DataflowExpression && !channel.isBound()) {
                 channel.bind( PoisonPill.instance )
             }
         }
@@ -1838,8 +1841,6 @@ class TaskProcessor {
         //    so that lazy directives will be resolved against it
         task.config.context = ctx
 
-        // -- resolve the task command script
-        task.resolve(taskBody)
     }
 
     final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
@@ -1967,7 +1968,7 @@ class TaskProcessor {
                 return true
             }
 
-            log.trace "Task ${task.name} is not executed becase `when` condition is not verified"
+            log.trace "Task ${task.name} is not executed because `when` condition is not verified"
             finalizeTask0(task)
             return false
         }

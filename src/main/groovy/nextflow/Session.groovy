@@ -400,8 +400,14 @@ class Session implements ISession {
      * for debugging purpose
      */
     String dumpNetworkStatus() {
-        def msg = dag.dumpActiveNodes()
-        msg ? "The following nodes are still active:\n" + msg : null
+        try {
+            def msg = dag.dumpActiveNodes()
+            msg ? "The following nodes are still active:\n" + msg : null
+        }
+        catch( Exception e ) {
+            log.debug "Unexpected error dumping DGA status", e
+            return null
+        }
     }
 
 

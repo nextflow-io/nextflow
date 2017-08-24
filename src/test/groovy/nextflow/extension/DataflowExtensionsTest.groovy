@@ -222,6 +222,11 @@ class DataflowExtensionsTest extends Specification {
         result.val == 3
         result.val == Channel.STOP
 
+        when:
+        result = Channel.value().close().flatMap()
+        then:
+        result.val == Channel.STOP
+
     }
 
     def testMapManyWithTuples () {
@@ -713,15 +718,6 @@ class DataflowExtensionsTest extends Specification {
         r4.val == 5
         r4.val == 6
         r4.val == Channel.STOP
-
-        when:
-        def r5 = Channel.value( [1,2,3] ).flatten()
-        then:
-        r5.val == 1
-        r5.val == 2
-        r5.val == 3
-        r5.val == Channel.STOP
-
     }
 
     @Timeout(1)
@@ -733,6 +729,11 @@ class DataflowExtensionsTest extends Specification {
         result.val == 2
         result.val == 1
         result.val == Channel.STOP
+
+        when:
+        result = Channel.value().close().flatten()
+        then:
+        result.val ==  Channel.STOP
     }
 
     def testCollate() {

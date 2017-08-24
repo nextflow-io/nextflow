@@ -1,6 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.25.6 - 13 Aug 2017 
+- Fixed Empty channel waiting forever when viewed and mixed #428
+- Fixed Error Channels cannot be used as input in more than one process or operator #429
+- Fixed Script body is resolved even if the `when` guard evaluate to false
+- Added queue process directive as option for trace file
+
 0.25.5 - 4 Aug 2017
 - Fixed NF fails to pull images hosted in the Singularity Hub #414
 - Added `-y` to cloud create command to skip confirmation request

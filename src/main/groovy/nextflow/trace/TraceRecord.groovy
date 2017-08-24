@@ -42,8 +42,6 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class TraceRecord implements Serializable {
 
-    public static String WORKDIR = 'folder'
-
     public TraceRecord() {
         this.store = [:]
     }
@@ -89,7 +87,8 @@ class TraceRecord implements Serializable {
             attempt:    'num',
             workdir:    'str',
             script:     'str',
-            scratch:    'str'
+            scratch:    'str',
+            queue:      'str'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [

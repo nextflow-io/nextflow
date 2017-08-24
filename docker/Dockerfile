@@ -17,4 +17,4 @@ RUN curl https://www.nextflow.io/releases/v0.25.2/nextflow > /usr/local/bin/next
 ENV NXF_OPTS='-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap'
 
 # define the entry point
-ENTRYPOINT nextflow 
+ENTRYPOINT ["nextflow"] 

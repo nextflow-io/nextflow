@@ -34,7 +34,6 @@ dependencies {
     compile "ch.qos.logback:logback-classic:1.1.10"
     compile "commons-lang:commons-lang:2.6"
     compile 'com.google.guava:guava:16.0.1'
-    testCompile 'com.google.jimfs:jimfs:1.0'
 
     /* testCompile inherited from top gradle build file */
 }

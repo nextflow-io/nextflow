@@ -31,7 +31,6 @@ class TaskHandlerTest extends Specification {
 
     def static final long KB = 1024
 
-
     def 'test get trace record'() {
 
         given:
@@ -44,7 +43,7 @@ class TaskHandlerTest extends Specification {
         def folder = TestHelper.createInMemTempDir()
         folder.resolve( TaskRun.CMD_TRACE ).text = traceText
 
-        def task = new TaskRun(id: new TaskId(100), workDir: folder, name:'task1', exitStatus: 127, config: [tag: 'seq_x', container: 'ubuntu']  )
+        def task = new TaskRun(id: new TaskId(100), workDir: folder, name:'task1', exitStatus: 127, config: [tag: 'seq_x', container: 'ubuntu', queue: 'longjobs']  )
         task.metaClass.getHashLog = { "5d5d7ds" }
         task.processor = Mock(TaskProcessor)
         task.processor.getSession() >> new Session()
@@ -82,6 +81,7 @@ class TaskHandlerTest extends Specification {
         trace.syscw ==  1
         trace.read_bytes == 20
         trace.write_bytes == 30
+        trace.queue == 'longjobs'
 
         // check get method
         trace.getFmtStr('%cpu') == '1.0%'
