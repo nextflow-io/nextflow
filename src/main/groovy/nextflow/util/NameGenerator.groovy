@@ -404,6 +404,9 @@ class NameGenerator {
             // Karen Spärck Jones came up with the concept of inverse document frequency, which is used in most search engines today. https://en.wikipedia.org/wiki/Karen_Sp%C3%A4rck_Jones
             "jones",
 
+            // Rudolf E. Kálmán, American engineer and mathematican of Hungarian origin. One of the inventors of the smoother/predictor commonly known as "Kalman Filter" https://en.wikipedia.org/wiki/Rudolf_E._K%C3%A1lm%C3%A1n
+            "kalman",
+            
             // A. P. J. Abdul Kalam - is an Indian scientist aka Missile Man of India for his work on the development of ballistic missile and launch vehicle technology - https://en.wikipedia.org/wiki/A._P._J._Abdul_Kalam
             "kalam",
 
