@@ -1,6 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.25.7 - 6 Sep 2017
+- Fixed Unable to parse the AWS price list API #444
+- Added seed parameter to `randomSample` operator #410
+
 0.25.6 - 13 Aug 2017 
 - Fixed Empty channel waiting forever when viewed and mixed #428
 - Fixed Error Channels cannot be used as input in more than one process or operator #429
