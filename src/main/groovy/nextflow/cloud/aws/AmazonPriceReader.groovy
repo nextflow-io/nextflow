@@ -47,17 +47,15 @@ class AmazonPriceReader {
 
     final static private int CACHE_MAX_DAYS = 7
 
-    final static private int colPricePerUnit = 9
-    final static private int colCurrency = 10
-    final static private int colProdFamily = 14 // it must be `Compute Instance`
-    final static private int colServiceCode = 15 // it must be `AmazonEC2`
-    final static private int colLocation = 16 //
-    final static private int colInstanceType = 18
-    final static private int colCurrentGen = 19
-    final static private int colCpu = 21
-    final static private int colMem = 24
-    final static private int colStorage = 25
-    final static private int colOS = 37
+    final static private int COL_CURRENCY = 10
+    final static private int COL_PRODFAMILY = 14 // it must be `Compute Instance`
+    final static private int COL_SERVICECODE = 15 // it must be `AmazonEC2`
+    final static private int COL_LOCATION = 16 //
+    final static private int COL_INSTANCETYPE = 18
+    final static private int COL_CPU = 21
+    final static private int COL_MEM = 24
+    final static private int COL_STORAGE = 25
+    final static private int COL_OS = 36
 
     final static private char DOUBLE_QUOTE = '"' as char
     final static private char COMMA = ',' as char
@@ -84,6 +82,15 @@ class AmazonPriceReader {
     private Map<String,CloudInstanceType> TABLE
 
     private String region
+
+    private int colProdFamily = COL_PRODFAMILY
+    private int colServiceCode = COL_SERVICECODE
+    private int colLocation = COL_LOCATION
+    private int colInstanceType = COL_INSTANCETYPE
+    private int colCpu = COL_CPU
+    private int colMem = COL_MEM
+    private int colStorage = COL_STORAGE
+    private int colOS = COL_OS
 
     AmazonPriceReader( String region ) {
         this.region = region
@@ -176,14 +183,17 @@ class AmazonPriceReader {
             int c=0
             String line
             while( (line=reader.readLine()) != null ) {
-                if( c++ < 7 ) continue
+                c++
+                if( c < 7 ) {
+                    if( c==6 ) parseCsvHeader(line)
+                    continue
+                }
                 def tkns = parseCsvLine(line)
                 if( tkns.size() < 64 ) continue
                 if( tkns[colProdFamily] != 'Compute Instance') continue
                 if( tkns[colServiceCode] != "AmazonEC2" ) continue
                 if( tkns[colLocation] != location) continue
                 if( tkns[colOS] != 'Linux' ) continue
-
                 List storage = parseStorage(tkns[colStorage])
 
                 final instanceType = tkns[colInstanceType]
@@ -218,37 +228,76 @@ class AmazonPriceReader {
         return map
     }
 
+    private void parseCsvHeader( String line ) {
+        final header = parseCsvLine(line)
+
+        colProdFamily   = ndx(header, "Product Family", COL_PRODFAMILY)
+        colServiceCode  = ndx(header, "serviceCode", COL_SERVICECODE)
+        colLocation     = ndx(header, "Location", COL_LOCATION)
+        colInstanceType = ndx(header,"Instance Type", COL_INSTANCETYPE)
+        colCpu          = ndx(header,"vCPU", COL_CPU)
+        colMem          = ndx(header,"Memory", COL_MEM)
+        colStorage      = ndx(header,"Storage", COL_STORAGE)
+        colOS           = ndx(header,"Operating System",COL_OS)
+
+        log.debug "AWS csv field: ProductFamily=$colProdFamily; ServiceCode=$colServiceCode; Location=$colLocation; InstanceType=$colInstanceType; Cpu=$colCpu; Mem=$colMem; Storage=$colStorage; OS=$colOS"
+    }
+
+    private int ndx(List<String> header, String field, int defValue) {
+        def p = header.indexOf(field)
+        if( p==-1 ) {
+            log.warn "Missing field `$field` in AWS csv price file"
+            return defValue
+        }
+        return p
+    }
+
     @PackageScope
     List<String> parseCsvLine( String line ) {
         def result = []
-        boolean open = false
-        int start = -1
-        int i=0
-        while( i<line.size() ) {
-
-            def ch = line.charAt(i)
-            if( ch == DOUBLE_QUOTE ) {
-                if( !open ) {
-                    // open a new field
-                    open = true
-                    start = i
-                }
-                else if( i+1 == line.size() || line.charAt(i+1) == COMMA ) {
-                    // close the field
-                    open = false
-                    result << line.substring(start+1, i)
-                }
+        while( line != null ) {
+            if( !line ) {
+                result.add(null)
+                break
             }
-            else if( ch == COMMA ) {
-                if( i+1 == line.size() || line.charAt(i+1) == COMMA ) {
-                    // empty field
-                    result << null
-                }
+            else if( line.startsWith('"') ) {
+                line = readQuotedValue(line, result)
             }
-
-            i++
+            else {
+                line = readSimpleValue(line, result)
+            }
         }
         return result
+    }
+
+    private String readSimpleValue(String line, List<String> result) {
+        def p = line.indexOf( (int)COMMA )
+        if( p == -1 ) {
+            result.add(line)
+            return null
+        }
+        else {
+            result.add(line.substring(0,p) ?: null)
+            return line.substring(p+1)
+        }
+    }
+
+    private String readQuotedValue(String line, List<String> result) {
+        def strip = line.substring(1)
+        def p = strip.indexOf( (int)DOUBLE_QUOTE )
+        if( p == -1 )
+            throw new IllegalStateException("Missing double-quote termination in CSV value -- offending line: $line")
+        result.add( strip.substring(0,p) )
+
+        def next = p+1
+        if( next<strip.size() ) {
+            if( strip.charAt(next) != COMMA )
+                throw new IllegalStateException("Invalid CSV value -- offending line: $line")
+            return strip.substring(next+1)
+        }
+        else {
+            return null
+        }
     }
 
     private MemoryUnit parseMem( String str ) {
@@ -273,6 +322,5 @@ class AmazonPriceReader {
             return EMPTY
         }
     }
-
 
 }
