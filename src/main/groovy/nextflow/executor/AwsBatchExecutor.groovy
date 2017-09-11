@@ -321,7 +321,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             local pattern=\$1
             local s3path=\$2
             for name in \$pattern;do
-              if [[ -d \$f ]]; then
+              if [[ -d "\$name" ]]; then
                 echo "aws s3 cp \$name \$s3path/\$name --quiet --storage-class $S3StorageClass --recursive $S3EncryptionCommand"
                 aws s3 cp \$name \$s3path/\$name --quiet --storage-class $S3StorageClass --recursive $S3EncryptionCommand
               else
