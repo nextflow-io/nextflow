@@ -318,16 +318,15 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         """
         # aws helper
         nxf_s3_upload() {
-            local s3path="\${!#}"
-            local length=\$((\$#-1))
-            local files=\${@:1:\$length}
-            for f in \$files;do
+            local pattern=\$1
+            local s3path=\$2
+            for name in \$pattern;do
               if [[ -d \$f ]]; then
-                echo "aws s3 cp \$f \$s3path/\$f --quiet --storage-class $S3StorageClass --recursive $S3EncryptionCommand"
-                aws s3 cp \$f \$s3path/\$f --quiet --storage-class $S3StorageClass --recursive $S3EncryptionCommand
+                echo "aws s3 cp \$name \$s3path/\$name --quiet --storage-class $S3StorageClass --recursive $S3EncryptionCommand"
+                aws s3 cp \$name \$s3path/\$name --quiet --storage-class $S3StorageClass --recursive $S3EncryptionCommand
               else
-                echo "aws s3 cp \$f \$s3path/\$f --quiet --storage-class $S3StorageClass $S3EncryptionCommand"
-                aws s3 cp \$f \$s3path/\$f --quiet --storage-class $S3StorageClass $S3EncryptionCommand
+                echo "aws s3 cp \$name \$s3path/\$name --quiet --storage-class $S3StorageClass $S3EncryptionCommand"
+                aws s3 cp \$name \$s3path/\$name --quiet --storage-class $S3StorageClass $S3EncryptionCommand
               fi
           done
         }
@@ -364,7 +363,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         if( normalized ) {
             result << ""
             normalized.each {
-                result << "nxf_s3_upload $it s3:/${targetDir} || true" // <-- add true to avoid it stops on errors
+                result << "nxf_s3_upload '$it' s3:/${targetDir} || true" // <-- add true to avoid it stops on errors
             }
         }
 

@@ -19,7 +19,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         fileCopy.touchFile(Paths.get("/data/work/41/41393a4cf1fd2b040ae9b36ff46c34/.command.run")) == "touch .command.run && nxf_s3_upload .command.run s3://data/work/41/41393a4cf1fd2b040ae9b36ff46c34 && rm .command.run"
         fileCopy.copyFile("nobel_prize_results.gz",Paths.get("/data/work/41/41393a4cf1fd2b040ae9b36ff46c34/nobel_prize_results.gz")) == "nxf_s3_upload nobel_prize_results.gz s3://data/work/41/41393a4cf1fd2b040ae9b36ff46c34"
         fileCopy.exitFile(Paths.get("/data/work/41/41393a4cf1fd2b040ae9b36ff46c34/.exitcode")) == ".exitcode && nxf_s3_upload .exitcode s3://data/work/41/41393a4cf1fd2b040ae9b36ff46c34 || true"
-        fileCopy.getUnstageOutputFilesScript() == "\nnxf_s3_upload outputs_* s3://data/results || true\nnxf_s3_upload final_folder s3://data/results || true"
+        fileCopy.getUnstageOutputFilesScript() == "\nnxf_s3_upload 'outputs_*' s3://data/results || true\nnxf_s3_upload 'final_folder' s3://data/results || true"
     }
     
 }
