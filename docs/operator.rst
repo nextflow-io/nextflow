@@ -71,7 +71,7 @@ are returned::
 
 
 Finally, a filtering condition can be defined by using any a boolean `predicate`. A predicate is expressed by
-a :ref:`closure <script-closure>` retuning a boolean value. For example the following fragment shows how filter
+a :ref:`closure <script-closure>` returning a boolean value. For example the following fragment shows how filter
 a channel emitting numbers so that the `odd` values are returned::
 
     Channel
@@ -218,7 +218,7 @@ from the channel to which is applied. For example::
 The above snippet will print 10 numbers in the range from 1 to 100.
 
 The operator supports a second parameter that allows to set the initial `seed` for the random number generator.
-By setting it, the ``randomsSample`` operator will always return the same pseudo-random sequence. For example::
+By setting it, the ``randomSample`` operator will always return the same pseudo-random sequence. For example::
 
   Channel
         .from( 1..100 )
@@ -441,7 +441,7 @@ It prints::
     [3, [B, D]]
 
 By default the first entry in the tuple is used a the grouping key. A different key can be chosen by using the
-``by`` parameter and specifing the index of entry to be used as key (the index is zero-based). For example::
+``by`` parameter and specifying the index of entry to be used as key (the index is zero-based). For example::
 
    Channel
         .from( [1,'A'], [1,'B'], [2,'C'], [3, 'B'], [1,'C'], [2, 'A'], [3, 'D'] )
@@ -861,7 +861,7 @@ limit       Limits the number of retrieved sequences to the specified value.
 record      Parse each entry in the FASTA file as record objects (see following table for accepted values)
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
 decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
-file        When ``true`` saves each split to a file. Use a string instead of ``true`` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in oder to save the split files into the specified folder.
+file        When ``true`` saves each split to a file. Use a string instead of ``true`` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified folder.
 elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
 =========== ============================
 
@@ -926,7 +926,7 @@ limit       Limits the number of retrieved *reads* to the specified value.
 record      Parse each entry in the FASTQ file as record objects (see following table for accepted values)
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
 decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
-file        When ``true`` saves each split to a file. Use a string instead of ``true`` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in oder to save the split files into the specified folder.
+file        When ``true`` saves each split to a file. Use a string instead of ``true`` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified folder.
 elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
 =========== ============================
 
@@ -1904,7 +1904,7 @@ ifEmpty
 --------
 
 The ``ifEmpty`` operator creates a channel which emits a default value, specified as the operator parameter, when the channel to which
-is applied is *empty* i.e. doesn't emit any value. Otherwise the it will empty the same sequence of entries as the original channel.
+is applied is *empty* i.e. doesn't emit any value. Otherwise it will emit the same sequence of entries as the original channel.
 
 Thus, the following example prints::
 
