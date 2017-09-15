@@ -292,9 +292,70 @@ The following directives can be used to define the amount of computing resources
 * :ref:`process-container`
 
 
+AWS Batch (Beta)
+================
+
+Nextflow supports `AWS Batch <https://aws.amazon.com/batch/>` service which allows submitting jobs in the cloud without having to
+spin out and manage a cluster of virtual machines. AWS Batch uses Docker containers to run tasks, which makes deploying pipelines much simpler.
 
 
+Installation 
+------------
+
+In order to use AWS Batch, it is necessary to clone the Nextflow repository, move to the ``aws-batch`` branch and compile Nextflow::
+
+    git clone https://github.com/nextflow-io/nextflow.git
+    git checkout aws-batch
+    make compile
 
 
+Configuration
+-------------
+
+To submit jobs on AWS Batch it is necessary to specify ``aws-batch`` as executor in the ``nextflow.config`` file.
+
+Once done that a ``queue`` paramter needs to specified, either in ``nextflow.config`` or within each process of the pipeline::
+
+    process {
+        queue = 'my-queue/my-job-definition'
+    }
+
+Finally to run Nextflow with AWS Batch, an S3 bucket needs to be used as a working directory::
+
+    nextflow run pipeline.nf -w s3://my-bucket/my-prefix
+
+The official AWS Batch documentation provides all the instructions to create `computing environments <http://docs.aws.amazon.com/batch/latest/userguide/compute_environments.html>`, `queues <http://docs.aws.amazon.com/batch/latest/userguide/job_queues.html>` and `job definitions <http://docs.aws.amazon.com/batch/latest/userguide/job_definitions.html>`.
+
+AWS Batch uses Amazon ECS service to spin up clusters of Docker containers, so each job definiton needs to be linked to an existing container that will be used to run
+the tasks. Docker container images need to be available in a repository that can be reached by the ECS instances (so either on Docker Hub or on AWS ECR for example).
+
+Nextflow needs also to use the ``aws cli`` tool in order to copy the runnable scripts inside the container and perform the staging and unstaging of files with S3.
+The aws cli can either be already present or added to existing containers or can be installed directly on a custom AMI that will be used by Batch (see next section).
+
+
+Custom AMI
+----------
+
+AWS Batch uses the default ECS instance AMI, which has only a 22 GB volume for Docker container, so a custom AMI needs to be prepared or used in order to fully utilize the service to run bioinformatics pipelines with Nextflow.
+
+In order to do that, follow the instruction from AWS documentation to create a ``custom AMI <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html>``. During the process it is highly reccommended to create also an EBS volume to be used as temporary space for Nextflow.
+
+So let's assume that the custom AMI has a large EBS volume attached and mounted as a partition called ``/scratch``, then in the ``job definition`` for AWS Batch this volume on the host instance needs to be mounted as ``/tmp`` on the container. In this way the Nextflow task that will run inside the container will directly use the scratch space on the host for all the intermediate files. 
+
+If the ``aws cli`` tool needs to be installed outside the Docker containers, so during the custom AMI creation it is possible to put a self-contained python environment (like virtualenv or MiniConda) with the CLI inside. For example to do that with Miniconda::
+
+    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    bash Miniconda3-latest-Linux-x86_64.sh -b -f -p /scratch/miniconda
+    /scratch/miniconda/bin/conda install -c conda-forge awscli
+
+Once done that, in order to work from the container, the ``aws cli`` executable needs to be modified to reflect the path used inside the container. For instance in this case the shebang of the executable ``/scratch/miniconda/bin/aws`` needs to be changed like this::
+
+   #!/tmp/miniconda/bin/python3.6
+
+By default Nextflow will assume the ``aws cli`` is directly available in the container. To use an installation from the host image it is possible to specify a ``aws_cli`` parameter in the Nextflow process configuration::
+
+    process {
+        aws_cli = '/tmp/miniconda/bin/aws'
+    }
 
 
