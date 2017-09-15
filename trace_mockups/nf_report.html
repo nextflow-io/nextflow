@@ -10,6 +10,7 @@
 
   <!-- Bootstrap core CSS -->
   <link href="bootstrap.min.css" rel="stylesheet">
+  <link href="datatables.min.css" rel="stylesheet">
   <style type="text/css">
   body {
     padding-top: 80px;
@@ -87,6 +88,7 @@
 <script src="popper.min.js"></script>
 <script src="bootstrap.min.js"></script>
 <script src="plotly.min.js"></script>
+<script src="datatables.min.js"></script>
 
 <!-- Plotting code -->
 <script type="text/javascript">
@@ -104,6 +106,9 @@ $(function() {
         window.data_byprocess[rematch[1]] = [];
       }
       window.data_byprocess[rematch[1]].push(window.data['trace'][i]);
+    } else {
+      window.data['trace'][i]['process_name'] = window.data['trace'][i]['name'];
+      window.data['trace'][i]['tag'] = '-';
     }
   }
 
@@ -137,10 +142,14 @@ $(function() {
 
   // Build the trace table
   for(i=0; i<window.data['trace'].length; i++){
+    var status = window.data['trace'][i]['status'];
+    if(status == 'COMPLETED'){ status = '<span class="badge badge-success">COMPLETED</span>'; }
+    if(status == 'CACHED'){ status = '<span class="badge badge-secondary">CACHED</span>'; }
+    if(status == 'FAILED'){ status = '<span class="badge badge-danger">FAILED</span>'; }
     $('#tasks_table tbody').append('<tr>'+
       '<td>' + window.data['trace'][i]['process_name'] + '</td>'+
       '<td>' + window.data['trace'][i]['tag'] + '</td>'+
-      '<td>' + window.data['trace'][i]['status'] + '</td>'+
+      '<td>' + status + '</td>'+
       // '<td>' + window.data['trace'][i]['hash'] + '</td>'+
       // '<td>' + window.data['trace'][i]['name'] + '</td>'+
       // '<td>' + window.data['trace'][i]['task_id'] + '</td>'+
@@ -156,6 +165,10 @@ $(function() {
       '<td>' + window.data['trace'][i]['rss'] + '</td>'+
     +'</tr>');
   }
+  $('#tasks_table').DataTable({
+    "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]]
+  });
+
 });
 </script>
 
