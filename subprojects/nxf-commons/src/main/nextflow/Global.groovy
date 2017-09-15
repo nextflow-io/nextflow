@@ -187,6 +187,17 @@ class Global {
 
 	}
 
+    static String GetAwsCliPath(Map env=null, Map config=null) {
+        if( env==null ) env = System.getenv()
+        if( config==null ) config = this.config
+        
+        // check if custom aws cli path is specified in the config file 
+        def awsCli = config.process.aws_cli?.toString()
+        if( !awsCli )
+            awsCli = "aws"
+        return awsCli
+    }
+
 
     static List<String> getAwsCredentials(Map env) {
         getAwsCredentials(env, config)
