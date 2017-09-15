@@ -12,7 +12,7 @@
   <link href="bootstrap.min.css" rel="stylesheet">
   <style type="text/css">
   body {
-    padding-top: 120px;
+    padding-top: 80px;
   }
   </style>
 
@@ -35,20 +35,27 @@
   </nav>
 
   <div class="container-fluid" data-spy="scroll" data-target="#nf-report-navbar" data-offset="0">
-    <h4 id="summary">Report Summary</h4>
+    <h2 id="summary">Report Summary</h2>
     <p><em>Coming soon..</em></p>
 
-    <h4 id="timeline">Timeline</h4>
+    <h2 id="timeline">Timeline</h2>
     <p><em>Coming soon..</em></p>
 
-    <h4 id="resources">Resource Usage</h4>
-    <h5>Times Used</h5>
+    <h2 id="resources">Resource Usage</h2>
+
+    <h4>CPU Usage</h4>
+    <div id="cpuplot"></div>
+
+    <h4>Memory Usage</h4>
+    <div id="memplot"></div>
+
+    <h4>Job Duration</h4>
     <div id="timeplot"></div>
 
-    <h4 id="versions">Software Versions</h4>
+    <h2 id="versions">Software Versions</h2>
     <p><em>Coming soon..</em></p>
 
-    <h4 id="tasks">Tasks</h4>
+    <h2 id="tasks">Tasks</h2>
     <table class="table small" id="tasks_table">
       <thead>
         <tr>
@@ -100,19 +107,33 @@ $(function() {
     }
   }
 
-  // Plot histograms of time used
-  var boxplotdata = [];
+  // Plot histograms of resource usage
+  var cpu_data = [];
+  var mem_data = [];
+  var time_data = [];
   for(var pname in window.data_byprocess){
     if (window.data_byprocess.hasOwnProperty(pname)) {
-      var y = [];
-      // TODO: Hardcoded to only handle seconds
+      var c = [];
+      var m = [];
+      var t = [];
+      // TODO: Hardcoded to only handle Gb
       for (var i = 0; i < window.data_byprocess[pname].length; i ++) {
-        y[i] = parseInt(window.data_byprocess[pname][i]['duration'].replace('s',''));
+        c[i] = parseInt(window.data_byprocess[pname][i]['%cpu'].replace('%',''));
+        if(window.data_byprocess[pname][i]['vmem'].indexOf('GB') > 0){
+          m[i] = parseInt(window.data_byprocess[pname][i]['vmem'].replace('GB','')) * 1000000000;
+        } else {
+          m[i] = parseInt(window.data_byprocess[pname][i]['vmem'].replace('MB','')) * 1000000;
+        }
+        t[i] = parseInt(window.data_byprocess[pname][i]['duration'].replace('s',''));
       }
-      boxplotdata.push({y: y, name: pname, type:'box'});
+      cpu_data.push({y: c, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
+      mem_data.push({y: m, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
+      time_data.push({y: t, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
     }
   }
-  Plotly.newPlot('timeplot', boxplotdata);
+  Plotly.newPlot('cpuplot', cpu_data);
+  Plotly.newPlot('memplot', mem_data);
+  Plotly.newPlot('timeplot', time_data);
 
   // Build the trace table
   for(i=0; i<window.data['trace'].length; i++){
