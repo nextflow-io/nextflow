@@ -126,6 +126,15 @@ class GlobalTest extends Specification {
         Global.GetAwsCliPath() == "/tmp/pythonenv/bin/aws"
     }
 
+    def TestGetAwsCliPathDefault() {
+        Global.config = [process:[
+                'executor': 'aws-batch'
+            ]
+        ]
+        expect:
+        Global.GetAwsCliPath() == "aws"
+    }
+
 
    	def testAwsStorageClassStandard() {
 			
