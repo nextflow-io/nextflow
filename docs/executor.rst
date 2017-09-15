@@ -89,7 +89,7 @@ SLURM
 =====
 
 
-The `SLURM` executor allows you to run your pipeline script by using the `SLURM <https://computing.llnl.gov/linux/slurm/>`_ resource manager.
+The `SLURM` executor allows you to run your pipeline script by using the `SLURM <https://slurm.schedmd.com/documentation.html>`_ resource manager.
 
 Nextflow manages each process as a separate job that is submitted to the cluster by using the ``sbatch`` command.
 
