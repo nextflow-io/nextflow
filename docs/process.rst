@@ -1600,6 +1600,8 @@ path            Specifies the directory where files need to be published. **Note
 saveAs          A closure which, given the name of the file being published, returns the actual file name or a full path where the file is required to be stored.
                 This can be used to rename or change the destination directory of the published files dynamically by using
                 a custom strategy.
+                Return the value ``null`` from the closure to *not* publish a file.
+                This is useful when the process has multiple output files, but you want to publish only some of them.
 =============== =================
 
 Table of publish modes:
