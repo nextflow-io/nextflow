@@ -295,7 +295,7 @@ The following directives can be used to define the amount of computing resources
 AWS Batch (Beta)
 ================
 
-Nextflow supports `AWS Batch <https://aws.amazon.com/batch/>` service which allows submitting jobs in the cloud without having to
+Nextflow supports `AWS Batch <https://aws.amazon.com/batch/>`_ service which allows submitting jobs in the cloud without having to
 spin out and manage a cluster of virtual machines. AWS Batch uses Docker containers to run tasks, which makes deploying pipelines much simpler.
 
 
@@ -314,7 +314,7 @@ Configuration
 
 To submit jobs on AWS Batch it is necessary to specify ``aws-batch`` as executor in the ``nextflow.config`` file.
 
-Once done that a ``queue`` paramter needs to specified, either in ``nextflow.config`` or within each process of the pipeline::
+Once done that a ``queue`` parameter needs to specified, either in ``nextflow.config`` or within each process of the pipeline::
 
     process {
         queue = 'my-queue/my-job-definition'
@@ -324,7 +324,7 @@ Finally to run Nextflow with AWS Batch, an S3 bucket needs to be used as a worki
 
     nextflow run pipeline.nf -w s3://my-bucket/my-prefix
 
-The official AWS Batch documentation provides all the instructions to create `computing environments <http://docs.aws.amazon.com/batch/latest/userguide/compute_environments.html>`, `queues <http://docs.aws.amazon.com/batch/latest/userguide/job_queues.html>` and `job definitions <http://docs.aws.amazon.com/batch/latest/userguide/job_definitions.html>`.
+The official AWS Batch documentation provides all the instructions to create `computing environments <http://docs.aws.amazon.com/batch/latest/userguide/compute_environments.html>`_, `queues <http://docs.aws.amazon.com/batch/latest/userguide/job_queues.html>`_ and `job definitions <http://docs.aws.amazon.com/batch/latest/userguide/job_definitions.html>`_.
 
 AWS Batch uses Amazon ECS service to spin up clusters of Docker containers, so each job definiton needs to be linked to an existing container that will be used to run
 the tasks. Docker container images need to be available in a repository that can be reached by the ECS instances (so either on Docker Hub or on AWS ECR for example).
@@ -338,17 +338,17 @@ Custom AMI
 
 AWS Batch uses the default ECS instance AMI, which has only a 22 GB volume for Docker container, so a custom AMI needs to be prepared or used in order to fully utilize the service to run bioinformatics pipelines with Nextflow.
 
-In order to do that, follow the instruction from AWS documentation to create a ``custom AMI <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html>``. During the process it is highly reccommended to create also an EBS volume to be used as temporary space for Nextflow.
+In order to do that, follow the instruction from AWS documentation to create a `custom AMI <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html>`_. It is highly reccommended to create also an EBS volume to be used as temporary scratch space for Nextflow tasks.
 
-So let's assume that the custom AMI has a large EBS volume attached and mounted as a partition called ``/scratch``, then in the ``job definition`` for AWS Batch this volume on the host instance needs to be mounted as ``/tmp`` on the container. In this way the Nextflow task that will run inside the container will directly use the scratch space on the host for all the intermediate files. 
+So let's assume that the custom AMI has a EBS volume attached and mounted as a partition called ``/scratch``, then in the ``job definition`` for AWS Batch this volume on the host instance needs to be mounted as ``/tmp`` on the container. In this way the Nextflow task that will run inside the container will directly use the scratch space on the host for all the intermediate files. 
 
-If the ``aws cli`` tool needs to be installed outside the Docker containers, so during the custom AMI creation it is possible to put a self-contained python environment (like virtualenv or MiniConda) with the CLI inside. For example to do that with Miniconda::
+If the ``aws cli`` tool needs to be installed outside the Docker containers, during the custom AMI creation it is possible to put a self-contained python environment (like virtualenv or MiniConda) containing the ``aws cli``. For example to do that with Miniconda::
 
     wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
     bash Miniconda3-latest-Linux-x86_64.sh -b -f -p /scratch/miniconda
     /scratch/miniconda/bin/conda install -c conda-forge awscli
 
-Once done that, in order to work from the container, the ``aws cli`` executable needs to be modified to reflect the path used inside the container. For instance in this case the shebang of the executable ``/scratch/miniconda/bin/aws`` needs to be changed like this::
+Once done that, in order to work from the container, the ``aws cli`` executable needs to be modified to reflect the path of the mount point in the container. So, as suggested, if the host ``/scratch`` volume will be mounted as ``/tmp`` in the container, then the shebang of the executable ``/scratch/miniconda/bin/aws`` needs to be changed like this::
 
    #!/tmp/miniconda/bin/python3.6
 
