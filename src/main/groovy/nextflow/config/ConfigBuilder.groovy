@@ -43,6 +43,7 @@ import nextflow.util.HistoryFile
 class ConfigBuilder {
 
     static final public DEFAULT_PROFILE = 'standard'
+    static final public DEFAULT_BROADCAST_PORT = 9092
 
     CliOptions options
 
@@ -394,6 +395,19 @@ class ConfigBuilder {
             config.timeline.enabled = true
             if( !config.timeline.file )
                 config.timeline.file = cmdRun.withTimeline
+        }
+
+        // -- sets broadcast server options
+        if( cmdRun.withBroadcast ) {
+            if( !(config.broadcast instanceof Map) )
+                config.broadcast = [:]
+            config.broadcast.enabled = true
+            try {
+                int port = Integer.parseInt(cmdRun.withBroadcast)
+                config.broadcast.port = port
+            } catch (NumberFormatException ex) {
+                config.broadcast.port = DEFAULT_BROADCAST_PORT
+            }
         }
 
         // -- sets DAG report options
