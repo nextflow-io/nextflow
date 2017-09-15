@@ -39,6 +39,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
 import nextflow.trace.GraphObserver
+import nextflow.trace.ReportObserver
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.util.LoggerHelper
@@ -209,6 +210,10 @@ class Launcher {
 
             else if( current == '-with-trace' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << TraceFileObserver.DEF_FILE_NAME
+            }
+
+            else if( current == '-with-report' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << ReportObserver.DEF_FILE_NAME
             }
 
             else if( current == '-with-timeline' && (i==args.size() || args[i].startsWith('-'))) {
