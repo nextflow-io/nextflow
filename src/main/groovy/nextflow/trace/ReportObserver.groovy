@@ -150,9 +150,15 @@ class ReportObserver implements TraceObserver {
 
     protected void renderHtml() {
 
+        // make records safe for JS
+        def records_safe = [:]
+        records.values().eachWithIndex { TraceRecord it, index ->
+            records_safe[index] = makesafe(it)
+        }
+
         // render HTML report template
         final tpl_fields = [
-            records : records,
+            records : records_safe,
             assets_css : [
                 readTemplate('assets/bootstrap.min.css'),
                 readTemplate('assets/datatables.min.css')
@@ -196,6 +202,25 @@ class ReportObserver implements TraceObserver {
     //     result << '};\n'
     //     result
     // }
+
+    protected makesafe(TraceRecord record){
+        def safefields = [:]
+        final stringfields = [
+            "status", "hash", "name", "process", "tag", "container", "script", "scratch", "workdir"
+        ]
+        final longfields = [
+            "task_id", "exit", "submit", "start", "attempt", "complete", "duration", "realtime",
+            "%cpu", "%mem", "vmem", "rss", "peak_vmem", "peak_rss", "rchar", "wchar",
+            "syscr", "syscw", "read_bytes", "write_bytes", "native_id"
+        ]
+        stringfields.collect{ k ->
+            safefields[k] = StringEscapeUtils.escapeJavaScript( record.get(k) as String )
+        }
+        longfields.collect{ k ->
+            safefields[k] = record.get(k) as Long
+        }
+        safefields
+    }
 
     // protected void append(StringBuilder template, TraceRecord record) {
     //     final name = record.get('name') as String ?: '(unknown)'

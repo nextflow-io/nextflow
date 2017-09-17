@@ -117,25 +117,39 @@ window.data = {
   "trace": [
     <% out << records.collect{ k,v -> """
     {
-      "name": "${v.name}",
-      "submit": "${v.submit}",
-      "start": "${v.start}",
-      "realtime": "${v.realtime}",
-      "process": "${v.process}",
-      "complete": "${v.complete}",
+      "task_id": "${v.task_id}",
       "status": "${v.status}",
       "hash": "${v.hash}",
-      "task_id": "${v.task_id}",
-      "pct_cpu": "${v."%cpu"}",
-      "vmem": "${v.vmem}",
-      "native_id": "${v.native_id}",
+      "name": "${v.name}",
       "exit": "${v.exit}",
+      "submit": "${v.submit}",
+      "start": "${v.start}",
+      "process": "${v.process}",
+      "tag": "${v.tag}",
+      "module": "${v.module}",
+      "container": "${v.container}",
+      "attempt": "${v.attempt}",
+      "script": "${v.script}",
+      "scratch": "${v.scratch}",
+      "workdir": "${v.workdir}",
+      "complete": "${v.complete}",
       "duration": "${v.duration}",
-      "wchar": "${v.wchar}",
+      "realtime": "${v.realtime}",
+      "pct_cpu": "${v."%cpu"}",
+      "pct_mem": "${v."%mem"}",
+      "vmem": "${v.vmem}",
+      "rss": "${v.rss}",
+      "peak_vmem": "${v.peak_vmem}",
+      "peak_rss": "${v.peak_rss}",
       "rchar": "${v.rchar}",
-      "rss": "${v.rss}"
+      "wchar": "${v.wchar}",
+      "syscr": "${v.syscr}",
+      "syscw": "${v.syscw}",
+      "read_bytes": "${v.read_bytes}",
+      "write_bytes": "${v.write_bytes}",
+      "native_id": "${v.native_id}"
     },
-    """ }.join("\n") %>
+    """ }.join() %>
   ]
 };
 
