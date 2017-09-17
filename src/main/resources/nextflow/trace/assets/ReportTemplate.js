@@ -1,22 +1,14 @@
 // JavaScript used to power the Nextflow Report Template output.
 window.data_byprocess = {};
 $(function() {
-  // Add in some extra fields and collect stats by process
+
+  // Collect stats by process
   for(i=0; i<window.data['trace'].length; i++){
-    var myString = "something format_abc";
-    var name_regex = /([^\(]+) \((.*)\)$/g;
-    var rematch = name_regex.exec(window.data['trace'][i]['name']);
-    if(rematch){
-      window.data['trace'][i]['process_name'] = rematch[1];
-      window.data['trace'][i]['tag'] = rematch[2];
-      if(!window.data_byprocess.hasOwnProperty(rematch[1])){
-        window.data_byprocess[rematch[1]] = [];
-      }
-      window.data_byprocess[rematch[1]].push(window.data['trace'][i]);
-    } else {
-      window.data['trace'][i]['process_name'] = window.data['trace'][i]['name'];
-      window.data['trace'][i]['tag'] = '-';
+    var proc = window.data['trace'][i]['process']
+    if(!window.data_byprocess.hasOwnProperty(proc)){
+      window.data_byprocess[proc] = [];
     }
+    window.data_byprocess[proc].push(window.data['trace'][i]);
   }
 
   // Plot histograms of resource usage
@@ -28,7 +20,6 @@ $(function() {
       var c = [];
       var m = [];
       var t = [];
-      // TODO: Hardcoded to only handle Gb
       for (var i = 0; i < window.data_byprocess[pname].length; i ++) {
         c[i] = parseInt(window.data_byprocess[pname][i]['pct_cpu']);
         m[i] = parseInt(window.data_byprocess[pname][i]['vmem']);
@@ -50,7 +41,7 @@ $(function() {
     if(status == 'CACHED'){ status = '<span class="badge badge-secondary">CACHED</span>'; }
     if(status == 'FAILED'){ status = '<span class="badge badge-danger">FAILED</span>'; }
     $('#tasks_table tbody').append('<tr>'+
-      '<td>' + window.data['trace'][i]['process_name'] + '</td>'+
+      '<td>' + window.data['trace'][i]['process'] + '</td>'+
       '<td>' + window.data['trace'][i]['tag'] + '</td>'+
       '<td>' + status + '</td>'+
       '<td>' + window.data['trace'][i]['hash'] + '</td>'+
