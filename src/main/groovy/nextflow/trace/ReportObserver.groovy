@@ -50,6 +50,16 @@ class ReportObserver implements TraceObserver {
      */
     final private Map<TaskId,TraceRecord> records = new LinkedHashMap<>()
 
+    /**
+     * Holds workflow session
+     */
+    private Class nfsession
+
+    // BREAKS: unable to resolve class WorkflowMetadata
+    private WorkflowMetadata getWorkflowMetadata() {
+        nfsession.binding.getVariable('workflow')
+    }
+
     private Path reportFile
 
     private long beginMillis
@@ -69,6 +79,7 @@ class ReportObserver implements TraceObserver {
     @Override
     void onFlowStart(Session session) {
         beginMillis = startMillis = System.currentTimeMillis()
+        nfsession = session
     }
 
     /**
@@ -78,6 +89,13 @@ class ReportObserver implements TraceObserver {
     void onFlowComplete() {
         log.debug "Flow completing -- rendering html report"
         endMillis = System.currentTimeMillis()
+        // println session_binding
+        // session_binding.each{
+        //   println it.key
+        //   println it.value
+        //   println "-----"
+        // }
+        // workflow = session_binding.binding.getVariable('workflow')
         renderHtml()
     }
 
@@ -144,6 +162,9 @@ class ReportObserver implements TraceObserver {
 
     protected void renderHtml() {
 
+        // workflow metadata fields
+        def metadata = getWorkflowMetadata()
+
         // make records safe for JS
         def records_safe = [:]
         records.values().eachWithIndex { TraceRecord it, index ->
@@ -152,6 +173,7 @@ class ReportObserver implements TraceObserver {
 
         // render HTML report template
         final tpl_fields = [
+            workflow : metadata,
             records : records_safe,
             assets_css : [
                 readTemplate('assets/bootstrap.min.css'),
