@@ -34,6 +34,9 @@
   body {
     padding-top: 80px;
   }
+  pre {
+    margin-bottom: 0;
+  }
   </style>
 
 </head>
@@ -56,11 +59,6 @@
 
   <div class="container-fluid" data-spy="scroll" data-target="#nf-report-navbar" data-offset="0">
 
-    <h2>Raw dump of records:</h2>
-    <pre>
-    <% out << records.collect{ k,v -> "$k: $v" }.join("\n") %>
-    </pre>
-
     <h2 id="summary">Report Summary</h2>
     <p><em>Coming soon..</em></p>
 
@@ -82,25 +80,40 @@
     <p><em>Coming soon..</em></p>
 
     <h2 id="tasks">Tasks</h2>
-    <table class="table small" id="tasks_table">
+    <table class="table small table-striped" id="tasks_table">
       <thead>
         <tr>
-          <th>process name</th>
+          <th>task_id</th>
+          <th>process</th>
           <th>tag</th>
+          <th>name</th>
           <th>status</th>
           <th>hash</th>
-          <th>name</th>
-          <th>task_id</th>
+          <th>exit</th>
+          <th>submit</th>
+          <th>start</th>
+          <th>module</th>
+          <th>container</th>
+          <th>attempt</th>
+          <th>script</th>
+          <th>scratch</th>
+          <th>workdir</th>
+          <th>complete</th>
+          <th>duration</th>
           <th>realtime</th>
           <th>pct_cpu</th>
-          <th>submit</th>
+          <th>pct_mem</th>
           <th>vmem</th>
-          <th>native_id</th>
-          <th>exit</th>
-          <th>duration</th>
-          <th>wchar</th>
-          <th>rchar</th>
           <th>rss</th>
+          <th>peak_vmem</th>
+          <th>peak_rss</th>
+          <th>rchar</th>
+          <th>wchar</th>
+          <th>syscr</th>
+          <th>syscw</th>
+          <th>read_bytes</th>
+          <th>write_bytes</th>
+          <th>native_id</th>
         </tr>
       </thead>
       <tbody></tbody>
