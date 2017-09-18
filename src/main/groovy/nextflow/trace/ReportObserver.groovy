@@ -30,6 +30,7 @@ import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
+import nextflow.script.WorkflowMetadata
 import nextflow.util.Duration
 import org.apache.commons.lang.StringEscapeUtils
 /**
@@ -53,10 +54,10 @@ class ReportObserver implements TraceObserver {
     /**
      * Holds workflow session
      */
-    private Class nfsession
+    private Session nfsession
 
-    // BREAKS: unable to resolve class WorkflowMetadata
     private WorkflowMetadata getWorkflowMetadata() {
+        // BREAKS: Cannot return value of type java.lang.Object on method returning type nextflow.script.WorkflowMetadata
         nfsession.binding.getVariable('workflow')
     }
 
@@ -89,13 +90,6 @@ class ReportObserver implements TraceObserver {
     void onFlowComplete() {
         log.debug "Flow completing -- rendering html report"
         endMillis = System.currentTimeMillis()
-        // println session_binding
-        // session_binding.each{
-        //   println it.key
-        //   println it.value
-        //   println "-----"
-        // }
-        // workflow = session_binding.binding.getVariable('workflow')
         renderHtml()
     }
 
@@ -164,6 +158,7 @@ class ReportObserver implements TraceObserver {
 
         // workflow metadata fields
         def metadata = getWorkflowMetadata()
+        // def metadata = nfsession.binding.getVariable('workflow')
 
         // make records safe for JS
         def records_safe = [:]
