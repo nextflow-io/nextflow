@@ -33,8 +33,10 @@ import nextflow.processor.TaskProcessor
 import nextflow.util.Duration
 import org.apache.commons.lang.StringEscapeUtils
 /**
- * Render pipeline report processes execution
+ * Render pipeline report processes execution.
+ * Based on original TimelineObserver code by Paolo Di Tommaso
  *
+ * @author Phil Ewels <phil.ewels@scilifelab.se>
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -47,11 +49,6 @@ class ReportObserver implements TraceObserver {
      * Holds the the start time for tasks started/submitted but not yet completed
      */
     final private Map<TaskId,TraceRecord> records = new LinkedHashMap<>()
-
-    /*
-     * Holds an unique index color for each process group
-     */
-    // final private Map<String,Integer> colorIndexes = new ConcurrentHashMap<>()
 
     private Path reportFile
 
@@ -145,9 +142,6 @@ class ReportObserver implements TraceObserver {
         beginMillis = Math.min( beginMillis, record.get('submit') as long )
     }
 
-
-    // final private String REPLACE_STR = '/*REPLACE_WITH_REPORT_DATA*/'
-
     protected void renderHtml() {
 
         // make records safe for JS
@@ -190,19 +184,6 @@ class ReportObserver implements TraceObserver {
         writer.close()
     }
 
-    // protected StringBuilder renderData() {
-    //     final result = new StringBuilder()
-    //     result << 'window.data = {\n'
-    //     result << '  "trace": [\n'
-    //     records.values().eachWithIndex { TraceRecord it, index ->
-    //         if( index ) result << ',\n'
-    //         append(result, it)
-    //     }
-    //     result << '\n  ]\n'
-    //     result << '};\n'
-    //     result
-    // }
-
     protected makesafe(TraceRecord record){
         def safefields = [:]
         final stringfields = [
@@ -221,64 +202,6 @@ class ReportObserver implements TraceObserver {
         }
         safefields
     }
-
-    // protected void append(StringBuilder template, TraceRecord record) {
-    //     final name = record.get('name') as String ?: '(unknown)'
-    //     final submit = record.get('submit') as Long
-    //     final start = record.get('start') as Long
-    //     final realtime = record.get('realtime') as Long
-    //     final process = record.get('process') as String
-    //     final complete = record.get('complete') as Long
-    // 
-    //     final status = record.get('status') as String
-    //     final hash = record.get('hash') as String
-    //     final task_id = record.get('task_id') as String
-    //     final pct_cpu = record.get('%cpu') as String
-    //     final vmem = record.get('vmem') as String
-    //     final native_id = record.get('native_id') as String
-    //     final exit = record.get('exit') as String
-    //     final duration = record.get('duration') as String
-    //     final wchar = record.get('wchar') as String
-    //     final rchar = record.get('rchar') as String
-    //     final rss = record.get('rss') as String
-    // 
-    //     template << '\n    {\n'
-    //     template << "      \"name\": \"${StringEscapeUtils.escapeJavaScript(name)}\", \n"
-    //     template << "      \"submit\": \"$submit\", \n"
-    //     template << "      \"start\": \"$start\", \n"
-    //     template << "      \"realtime\": \"$realtime\", \n"
-    //     template << "      \"process\": \"${StringEscapeUtils.escapeJavaScript(process)}\", \n"
-    //     template << "      \"complete\": \"$complete\", \n"
-    //     template << "      \"status\": \"${StringEscapeUtils.escapeJavaScript(status)}\", \n"
-    //     template << "      \"hash\": \"${StringEscapeUtils.escapeJavaScript(hash)}\", \n"
-    //     template << "      \"task_id\": \"${StringEscapeUtils.escapeJavaScript(task_id)}\", \n"
-    //     template << "      \"pct_cpu\": \"${StringEscapeUtils.escapeJavaScript(pct_cpu)}\", \n"
-    //     template << "      \"vmem\": \"${StringEscapeUtils.escapeJavaScript(vmem)}\", \n"
-    //     template << "      \"native_id\": \"${StringEscapeUtils.escapeJavaScript(native_id)}\", \n"
-    //     template << "      \"exit\": \"${StringEscapeUtils.escapeJavaScript(exit)}\", \n"
-    //     template << "      \"duration\": \"${StringEscapeUtils.escapeJavaScript(duration)}\", \n"
-    //     template << "      \"wchar\": \"${StringEscapeUtils.escapeJavaScript(wchar)}\", \n"
-    //     template << "      \"rchar\": \"${StringEscapeUtils.escapeJavaScript(rchar)}\", \n"
-    //     template << "      \"rss\": \"${StringEscapeUtils.escapeJavaScript(rss)}\" \n"
-    //     template << '    }'
-    // }
-
-    // protected String labelString( TraceRecord record ) {
-    //     def result = []
-    //     def duration = record.getFmtStr('duration')
-    //     def memory = record.getFmtStr('vmem')
-    // 
-    //     if( duration )
-    //         result << duration.toString()
-    // 
-    //     if( memory )
-    //         result <<  memory.toString()
-    // 
-    //     if( record.cached )
-    //         result << 'CACHED'
-    // 
-    //     result.join(' / ')
-    // }
 
     protected String readTemplate( String path ) {
         StringWriter writer = new StringWriter();
