@@ -36,31 +36,61 @@ $(function() {
 
   // Build the trace table
   for(i=0; i<window.data['trace'].length; i++){
+    // Use a nice label for the status
     var status = window.data['trace'][i]['status'];
     if(status == 'COMPLETED'){ status = '<span class="badge badge-success">COMPLETED</span>'; }
     if(status == 'CACHED'){ status = '<span class="badge badge-secondary">CACHED</span>'; }
+    if(status == 'ABORTED'){ status = '<span class="badge badge-danger">ABORTED</span>'; }
     if(status == 'FAILED'){ status = '<span class="badge badge-danger">FAILED</span>'; }
+    // Trim whitespace properly from the script
+    var script = '';
+    var lines = window.data['trace'][i]['script'].split("\n");
+    var ws_re = /^(\s+)/g;
+    var flws_match = ws_re.exec(lines[1]);
+    if(flws_match == null){
+      script = window.data['trace'][i]['script'];
+    } else {
+      for(var j=0; j<lines.length; j++){
+        script += lines[j].replace(new RegExp('^'+flws_match[1]), '').replace(/\s+$/,'') + "\n";
+      }
+    }
     $('#tasks_table tbody').append('<tr>'+
+      '<td>' + window.data['trace'][i]['task_id'] + '</td>'+
       '<td>' + window.data['trace'][i]['process'] + '</td>'+
       '<td>' + window.data['trace'][i]['tag'] + '</td>'+
-      '<td>' + status + '</td>'+
-      '<td>' + window.data['trace'][i]['hash'] + '</td>'+
       '<td>' + window.data['trace'][i]['name'] + '</td>'+
-      '<td>' + window.data['trace'][i]['task_id'] + '</td>'+
+      '<td>' + status + '</td>'+
+      '<td><code>' + window.data['trace'][i]['hash'] + '</code></td>'+
+      '<td>' + window.data['trace'][i]['exit'] + '</td>'+
+      '<td>' + window.data['trace'][i]['submit'] + '</td>'+
+      '<td>' + window.data['trace'][i]['start'] + '</td>'+
+      '<td>' + window.data['trace'][i]['module'] + '</td>'+
+      '<td>' + window.data['trace'][i]['container'] + '</td>'+
+      '<td>' + window.data['trace'][i]['attempt'] + '</td>'+
+      '<td><pre><code>' + script.trim() + '</code></pre></td>'+
+      '<td><samp>' + window.data['trace'][i]['scratch'] + '</samp></td>'+
+      '<td><samp>' + window.data['trace'][i]['workdir'] + '</samp></td>'+
+      '<td>' + window.data['trace'][i]['complete'] + '</td>'+
+      '<td>' + window.data['trace'][i]['duration'] + '</td>'+
       '<td>' + window.data['trace'][i]['realtime'] + '</td>'+
       '<td>' + window.data['trace'][i]['pct_cpu'] + '</td>'+
-      '<td>' + window.data['trace'][i]['submit'] + '</td>'+
+      '<td>' + window.data['trace'][i]['pct_mem'] + '</td>'+
       '<td>' + window.data['trace'][i]['vmem'] + '</td>'+
-      '<td>' + window.data['trace'][i]['native_id'] + '</td>'+
-      '<td>' + window.data['trace'][i]['exit'] + '</td>'+
-      '<td>' + window.data['trace'][i]['duration'] + '</td>'+
-      '<td>' + window.data['trace'][i]['wchar'] + '</td>'+
-      '<td>' + window.data['trace'][i]['rchar'] + '</td>'+
       '<td>' + window.data['trace'][i]['rss'] + '</td>'+
+      '<td>' + window.data['trace'][i]['peak_vmem'] + '</td>'+
+      '<td>' + window.data['trace'][i]['peak_rss'] + '</td>'+
+      '<td>' + window.data['trace'][i]['rchar'] + '</td>'+
+      '<td>' + window.data['trace'][i]['wchar'] + '</td>'+
+      '<td>' + window.data['trace'][i]['syscr'] + '</td>'+
+      '<td>' + window.data['trace'][i]['syscw'] + '</td>'+
+      '<td>' + window.data['trace'][i]['read_bytes'] + '</td>'+
+      '<td>' + window.data['trace'][i]['write_bytes'] + '</td>'+
+      '<td>' + window.data['trace'][i]['native_id'] + '</td>'+
     +'</tr>');
   }
   $('#tasks_table').DataTable({
-    "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]]
+    "lengthMenu": [[25, 50, 100, -1], [25, 50, 100, "All"]],
+    "scrollX": true
   });
 
 });
