@@ -993,7 +993,7 @@ class TaskProcessor {
 
             // -- retry without increasing the error counts
             if( error.cause instanceof CloudSpotTerminationException ) {
-                log.warn "${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
+                log.warn "[$task.hashLog] ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
                 final taskCopy = task.makeCopy()
                 taskCopy.runType = RunType.RETRY
                 session.getExecService().submit { checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false ) }
@@ -1014,7 +1014,7 @@ class TaskProcessor {
 
                 errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount)
                 if( errorStrategy.soft ) {
-                    def msg = error.getMessage()
+                    def msg = "[$task.hashLog] $error.message"
                     if( errorStrategy == IGNORE ) msg += " -- Error is ignored"
                     else if( errorStrategy == RETRY ) msg += " -- Execution is retried ($taskErrCount)"
                     log.warn msg

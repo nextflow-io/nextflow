@@ -25,6 +25,7 @@ import static nextflow.Const.S3_UPLOADER_CLASS
 import java.lang.reflect.Field
 import java.nio.file.NoSuchFileException
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.regex.Pattern
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.LoggerContext
@@ -62,6 +63,8 @@ import org.slf4j.LoggerFactory
  */
 @CompileStatic
 class LoggerHelper {
+
+    static private Pattern HASH_PREFIX = ~/(^\[[a-z0-9]{2}\/[a-z0-9]+\] )(.+)/
 
     static private String STARTUP_ERROR = 'startup failed:\n'
 
@@ -309,6 +312,9 @@ class LoggerHelper {
      */
     static class PrettyConsoleLayout extends LayoutBase<ILoggingEvent> {
 
+        PrettyConsoleLayout() {
+        }
+
         public String doLayout(ILoggingEvent event) {
             StringBuilder buffer = new StringBuilder(128);
             if( event.level == Level.INFO ) {
@@ -323,10 +329,24 @@ class LoggerHelper {
                 appendFormattedMessage(buffer, event, error, (Session)Global.session)
             }
             else {
-                buffer
-                        .append( event.getLevel().toString() ) .append(": ")
-                        .append(event.getFormattedMessage())
-                        .append(CoreConstants.LINE_SEPARATOR)
+                def m = HASH_PREFIX.matcher(event.formattedMessage)
+                if( m.matches() ) {
+                    def hash = m.group(1)
+                    def message = m.group(2)
+
+                    buffer
+                            .append( hash )
+                            .append( event.level.toString() ) .append(": ")
+                            .append( message )
+                            .append( CoreConstants.LINE_SEPARATOR )
+                }
+                else {
+                    buffer
+                            .append( event.level.toString() ) .append(": ")
+                            .append( event.formattedMessage )
+                            .append( CoreConstants.LINE_SEPARATOR )
+                }
+
             }
 
             return buffer.toString()
