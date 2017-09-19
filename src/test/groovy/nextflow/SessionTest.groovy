@@ -21,12 +21,12 @@
 package nextflow
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.nio.file.attribute.PosixFilePermission
 
 import nextflow.trace.TraceFileObserver
 import nextflow.util.Duration
 import spock.lang.Specification
 import test.TestHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -286,6 +286,30 @@ class SessionTest extends Specification {
         session.baseDir == folder
         session.workDir.isAbsolute()
         !session.workDir.toString().contains('..')
+
+    }
+
+    def 'should collect bin executable files' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        Files.createFile(folder.resolve('foo.sh'))
+        Files.createFile(folder.resolve('bar.sh'))
+        Files.createFile(folder.resolve('baz.sh'))
+
+        Files.setPosixFilePermissions(folder.resolve('foo.sh'), [PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_EXECUTE] as Set)
+        Files.setPosixFilePermissions(folder.resolve('bar.sh'), [PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_EXECUTE] as Set)
+        def session = [:] as Session
+
+        when:
+        def result = session.findBinEntries(folder)
+        then:
+        result.size() == 2
+        result['foo.sh'] == folder.resolve('foo.sh')
+        result['bar.sh'] == folder.resolve('bar.sh')
+
+        cleanup:
+        folder?.deleteDir()
 
     }
 

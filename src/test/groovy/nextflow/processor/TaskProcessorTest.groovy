@@ -647,6 +647,27 @@ class TaskProcessorTest extends Specification {
         processor.visitOptions(param,'dir-name') == [type:'any', followLinks: true, maxDepth: 5, hidden: false, relative: false]
     }
 
+    def 'should get bin files in the script command' () {
 
+        given:
+        def session = Mock(Session)
+        session.getBinEntries() >> ['foo.sh': Paths.get('/some/path/foo.sh'), 'bar.sh': Paths.get('/some/path/bar.sh')]
+        def processor = [:] as TaskProcessor
+        processor.session = session
+
+        when:
+        def result = processor.getTaskBinEntries('var=x foo.sh')
+        then:
+        result.size()==1
+        result.contains(Paths.get('/some/path/foo.sh'))
+
+        when:
+        result = processor.getTaskBinEntries('echo $(foo.sh); bar.sh')
+        then:
+        result.size()==2
+        result.contains(Paths.get('/some/path/foo.sh'))
+        result.contains(Paths.get('/some/path/bar.sh'))
+
+    }
 
 }

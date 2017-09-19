@@ -1870,12 +1870,38 @@ class TaskProcessor {
             vars.each { k, v -> keys.add( k ); keys.add( v ) }
         }
 
+        final binEntries = getTaskBinEntries(task.source)
+        if( binEntries ) {
+            log.trace "Task: $name > Adding scripts on project bin path: ${-> binEntries.join('; ')}"
+            keys.addAll(binEntries)
+        }
+
         final mode = config.getHashMode()
         final hash = CacheHelper.hasher(keys, mode).hash()
         if( session.dumpHashes ) {
             traceInputsHashes(task, keys, mode, hash)
         }
         return hash
+    }
+
+    /**
+     * This method scans the task command string looking for invocations of scripts
+     * defined in the project bin folder.
+     *
+     * @param script The task command string
+     * @return The list of paths of scripts in the project bin folder referenced in the task command
+     */
+    @Memoized
+    protected List<Path> getTaskBinEntries(String script) {
+        def result = []
+        def tokenizer = new StringTokenizer(script," \t\n\r\f()[]{};&|<>`")
+        while( tokenizer.hasMoreTokens() ) {
+            def token = tokenizer.nextToken()
+            def path = session.binEntries.get(token)
+            if( path )
+                result.add(path)
+        }
+        return result;
     }
 
     private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
