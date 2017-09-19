@@ -19,14 +19,10 @@
  */
 
 package nextflow.util
-
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import org.apache.commons.lang.StringUtils
-
 /**
  * Helper method to handle configuration object
  *
