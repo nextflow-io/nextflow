@@ -1341,12 +1341,15 @@ configuration. The following values can be used:
 Name            Executor
 ============== ==================
 ``local``      The process is executed in the computer where `Nextflow` is launched.
-``sge``        The process is executed using a Sun Grid Engine / `Open Grid Engine <http://gridscheduler.sourceforge.net/>`_.
-``lsf``        The process is executed via the `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ job scheduler.
-``slurm``      The process is executed via the SLURM job scheduler.
-``pbs``        The process is executed via the `PBS/Torque <http://en.wikipedia.org/wiki/Portable_Batch_System>`_ job scheduler.
-``condor``     The process is executed via the `HTCondor <https://research.cs.wisc.edu/htcondor/>`_ job scheduler.
-``dnanexus``   The process is executed into the `DNAnexus <http://www.dnanexus.com/>`_ cloud.
+``sge``        The process is executed using the Sun Grid Engine / `Open Grid Engine <http://gridscheduler.sourceforge.net/>`_.
+``uge``        The process is executed using the `Univa Grid Engine <https://en.wikipedia.org/wiki/Univa_Grid_Engine/>`_ job scheduler.
+``lsf``        The process is executed using the `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ job scheduler.
+``slurm``      The process is executed using the SLURM job scheduler.
+``pbs``        The process is executed using the `PBS/Torque <http://en.wikipedia.org/wiki/Portable_Batch_System>`_ job scheduler.
+``condor``     The process is executed using the `HTCondor <https://research.cs.wisc.edu/htcondor/>`_ job scheduler.
+``nqsii``      The process is executed using the `NQSII <https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster>`_ job scheduler.
+``ignite``     The process is executed using the `Apache Ignite <https://ignite.apache.org/>`_ cluster.
+``k8s``        The process is executed using the `Kubernetes <https://kubernetes.io/>`_ cluster.
 ============== ==================
 
 The following example shows how to set the process's executor::
