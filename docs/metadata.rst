@@ -53,6 +53,7 @@ start                       Timestamp of workflow at execution start.
 | Properties marked with a `✝` are accessible only in the workflow completion handler.
 | Properties marked with a `*` are accessible only in the workflow completion and error handlers. See the `Completion handler`_ section for details.
 |
+
 Nextflow metadata
 -----------------
 
