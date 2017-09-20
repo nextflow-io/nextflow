@@ -24,6 +24,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
+import groovy.text.GStringTemplateEngine
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -57,8 +58,7 @@ class ReportObserver implements TraceObserver {
     private Session nfsession
 
     private WorkflowMetadata getWorkflowMetadata() {
-        // BREAKS: Cannot return value of type java.lang.Object on method returning type nextflow.script.WorkflowMetadata
-        nfsession.binding.getVariable('workflow')
+        nfsession.binding.getVariable('workflow') as WorkflowMetadata
     }
 
     private Path reportFile
@@ -157,8 +157,32 @@ class ReportObserver implements TraceObserver {
     protected void renderHtml() {
 
         // workflow metadata fields
-        def metadata = getWorkflowMetadata()
-        // def metadata = nfsession.binding.getVariable('workflow')
+        def wfmd = getWorkflowMetadata()
+        def workflow = [
+                "scriptId" : wfmd.scriptId,
+                "scriptFile" : wfmd.scriptFile,
+                "scriptName" : wfmd.scriptName,
+                "repository" : wfmd.repository,
+                "commitId" : wfmd.commitId,
+                "revision" : wfmd.revision,
+                "projectDir" : wfmd.projectDir,
+                "start" : wfmd.start,
+                "container" : wfmd.container,
+                "commandLine" : wfmd.commandLine,
+                "nextflow" : wfmd.nextflow,
+                "workDir" : wfmd.workDir,
+                "launchDir" : wfmd.launchDir,
+                "profile" : wfmd.profile,
+                "sessionId" : wfmd.sessionId,
+                "resume" : wfmd.resume,
+                "runName" : wfmd.runName
+//                "success" : wfmd.success,
+//                'complete' : wfmd.complete,
+//                'duration':  wfmd.duration,
+//                'exitStatus' : wfmd.exitStatus,
+//                'errorMessage' : wfmd.errorMessage,
+//                'errorReport' : wfmd.errorReport
+        ]
 
         // make records safe for JS
         def records_safe = [:]
@@ -168,7 +192,7 @@ class ReportObserver implements TraceObserver {
 
         // render HTML report template
         final tpl_fields = [
-            workflow : metadata,
+            workflow : workflow,
             records : records_safe,
             assets_css : [
                 readTemplate('assets/bootstrap.min.css'),
@@ -184,7 +208,7 @@ class ReportObserver implements TraceObserver {
             ]
         ]
         final tpl = readTemplate('ReportTemplate.html')
-        def engine = new groovy.text.GStringTemplateEngine()
+        def engine = new GStringTemplateEngine()
         def html_template = engine.createTemplate(tpl)
         def html_output = html_template.make(tpl_fields).toString()
 
