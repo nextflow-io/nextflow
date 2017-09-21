@@ -153,6 +153,10 @@ class DrmaaExecutorTest extends Specification {
         expected.script = null
         expected.scratch = null
         expected.queue = null
+        expected.cpus = 1
+        expected.time = null
+        expected.memory = null
+        expected.disk = null
 
         def task = [:] as TaskRun
         task.id = TaskId.of(30)
