@@ -1006,6 +1006,7 @@ The combining operators are:
 * `combine`_
 * `concat`_
 * `into`_
+* `join`_
 * `merge`_
 * `mix`_
 * `phase`_
@@ -1129,6 +1130,56 @@ Using the closure syntax the above example can be rewritten as shown below::
 
 See also `into`_ and `separate`_ operators.
 
+.. _operator-join:
+
+join
+-----
+
+The ``join`` operator creates a channel that joins together the items emitted by two channels for which exits
+a matching key. The key is defined, by default, as the first element in each item emitted.
+
+For example::
+
+  left = Channel.from(['X', 1], ['Y', 2], ['Z', 3], ['P', 7])
+  right= Channel.from(['Z', 6], ['Y', 5], ['X', 4])
+  left.join(right).println()
+
+The resulting channel emits::
+
+  [Z, 3, 6]
+  [Y, 2, 5]
+  [X, 1, 4]
+
+The `index` of a different matching element can be specified by using the ``by`` parameter.
+
+The ``join`` operator can emit all the pairs that are incomplete, i.e. the items for which a matching element
+is missing, by specifying the optional parameter ``remainder`` as shown below::
+
+    left = Channel.from(['X', 1], ['Y', 2], ['Z', 3], ['P', 7])
+    right= Channel.from(['Z', 6], ['Y', 5], ['X', 4])
+    left.join(right, remainder: true).println()
+
+The above example prints::
+
+    [Y, 2, 5]
+    [Z, 3, 6]
+    [X, 1, 4]
+    [P, 7, null]
+
+
+The following parameters can be used with the ``join`` operator:
+
+=============== ========================
+Name            Description
+=============== ========================
+by              The index (zero based) of the element to be used as grouping key.
+                A key composed by multiple elements can be defined specifying a list of indices e.g. ``by: [0,2]``
+remainder       When ``false`` incomplete tuples (i.e. with less than `size` grouped items)
+                are discarded (default). When ``true`` incomplete tuples are emitted as the ending emission.
+=============== ========================
+
+
+.. _operator-merge:
 
 merge
 --------
@@ -1142,8 +1193,8 @@ and the other which emits a series of even integers::
     evens = Channel.from([2, 4, 6]);
 
     odds
-        .merge( evens ) { o, e -> [o, e] }
-        .subscribe { println it }
+        .merge( evens )
+        .println()
 
 ::
 
@@ -1151,6 +1202,14 @@ and the other which emits a series of even integers::
     [3, 4]
     [5, 6]
 
+An option closure can be provide to customise the items emitted by the resulting merged channel. For example::
+
+    odds  = Channel.from([1, 3, 5, 7, 9]);
+    evens = Channel.from([2, 4, 6]);
+
+    odds
+        .merge( evens ) { a, b -> tuple(b*b, a) }
+        .println()
 
 
 mix
@@ -1195,6 +1254,8 @@ For example::
 
 phase
 --------
+
+.. warning:: This operator is deprecated. Use the `join`_ operator instead.
 
 The ``phase`` operator creates a channel that synchronizes the values emitted by two other channels,
 in such a way that it emits pairs of items that have a matching key.
@@ -1247,6 +1308,7 @@ It prints::
     [5, null]
     [null, 4]
 
+See also `join`_ operator.
 
 .. _operator-cross:
 

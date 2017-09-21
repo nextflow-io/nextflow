@@ -14,22 +14,6 @@ class CombineOpTest extends Specification {
         new Session()
     }
 
-    def 'should split entry' () {
-        given:
-        def op = new CombineOp(Mock(DataflowQueue), Mock(DataflowQueue))
-        when:
-        def pair = op.split(pivot, entry)
-        then:
-        pair.keys == keys
-        pair.values == values
-
-        where:
-        pivot           | entry                         | keys          | values
-        [0]             | ['A','B','C','D','E','F']     | ['A']         | ['B','C','D','E','F']
-        [0,1]           | ['A','B','C','D','E','F']     | ['A','B']     | ['C','D','E','F']
-        [0,2]           | ['A','B','C','D','E','F']     | ['A','C']     | ['B','D','E','F']
-        [0,1,4]         | ['A','B','C','D','E','F']     | ['A','B','E'] | ['C','D','F']
-    }
 
     def 'should make a tuple' () {
         given:

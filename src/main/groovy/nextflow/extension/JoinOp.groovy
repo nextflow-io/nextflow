@@ -23,63 +23,72 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.util.CheckHelper
 
+import static nextflow.extension.DataflowHelper.addToList
+
 /**
- * Implements {@link DataflowExtensions#phase} operator logic
+ * Implements {@link DataflowExtensions#join} operator logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
-class PhaseOp {
+class JoinOp {
 
-    static final private Map PHASE_PARAMS = [remainder: Boolean]
+    static final private Map JOIN_PARAMS = [remainder: Boolean, by: [List,Integer]]
 
     private DataflowReadChannel source
 
-    private Map opts
-
     private DataflowReadChannel target
 
-    private Closure mapper = DataflowExtensions.DEFAULT_MAPPING_CLOSURE
+    private List<Integer> pivot
 
-    PhaseOp( DataflowReadChannel source, DataflowReadChannel target ) {
+    private boolean remainder
+
+    private boolean singleton = true
+
+    JoinOp( DataflowReadChannel source, DataflowReadChannel target, Map params = null ) {
+        CheckHelper.checkParams('join', params, JOIN_PARAMS)
         this.source = source
         this.target = target
-        this.opts = [:]
+        this.pivot = parsePivot(params?.by)
+        this.remainder = params?.remainder ? params.remainder as boolean : false
     }
 
-    PhaseOp setOpts( Map opts ) {
-        CheckHelper.checkParams('phase', opts, PHASE_PARAMS)
-        this.opts = opts
-        return this
-    }
-
-    PhaseOp setMapper( Closure mapper ) {
-        this.mapper = mapper ?: DataflowExtensions.DEFAULT_MAPPING_CLOSURE
-        return this
+    private List<Integer> parsePivot(value) {
+        if( value == null )
+            return [0]
+        if( value instanceof List )
+            return value as List<Integer>
+        else
+            return [value as int]
     }
 
     DataflowQueue apply() {
 
-        def result = new DataflowQueue()
-        def state = [:]
+        // the resulting channel
+        final result = new DataflowQueue()
+        // the following buffer maintains the state of collected items as a map of maps.
+        // The first map associates the joining key with the collected values
+        // The inner map associates the channel index with the actual values received on that channel
+        final Map<Object,Map<Integer,List>> state = [:]
 
         final count = 2
         final stopCount = new AtomicInteger(count)
-        final remainder = opts.remainder ? opts.remainder as boolean : false
 
-        DataflowHelper.subscribeImpl( source, phaseHandler(state, count, 0, result, mapper, stopCount, remainder) )
-        DataflowHelper.subscribeImpl( target, phaseHandler(state, count, 1, result, mapper, stopCount, remainder) )
+        DataflowHelper.subscribeImpl( source, handler(state, count, 0, result, stopCount, remainder) )
+        DataflowHelper.subscribeImpl( target, handler(state, count, 1, result, stopCount, remainder) )
         return result
     }
 
     /**
-     * Returns the methods {@code OnNext} and {@code onComplete} which will implement the phase logic
+     * Returns the methods {@code OnNext} and {@code onComplete} which will implement the join logic
      *
      * @param buffer The shared state buffering the channel received values
      * @param count The overall number of channel
@@ -88,21 +97,22 @@ class PhaseOp {
      * @param mapper A closure mapping a value to its key
      * @return A map with {@code OnNext} and {@code onComplete} methods entries
      */
-    static private final Map phaseHandler( Map<Object,Map<Integer,List>> buffer, int size, int index, DataflowWriteChannel target, Closure mapper, AtomicInteger stopCount, boolean remainder ) {
+    private final Map handler( Map<Object,Map<Integer,List>> buffer, int size, int index, DataflowWriteChannel target, AtomicInteger stopCount, boolean remainder ) {
 
         [
                 onNext: {
                     synchronized (buffer) {
-                        def entries = phaseImpl(buffer, size, index, it, mapper, false)
+                        def entries = join0(buffer, size, index, it)
                         if( entries ) {
-                            target.bind(entries)
+                            this.singleton &= entries.size()==1
+                            target.bind( entries.size()==1 ? entries[0] : entries )
                         }
                     }},
 
                 onComplete: {
                     if( stopCount.decrementAndGet()==0) {
                         if( remainder )
-                            phaseRemainder(buffer,size, target)
+                            remainder0(buffer,size,target)
                         target << Channel.STOP
                     }}
 
@@ -112,7 +122,7 @@ class PhaseOp {
 
 
     /**
-     * Implements the phase operator logic. Basically buffers the values received on each channel by their key .
+     * Implements the join operator logic. Basically buffers the values received on each channel by their key .
      *
      * When a value with the same key has arrived on each channel, they are removed from the buffer and returned as list
      *
@@ -120,13 +130,13 @@ class PhaseOp {
      * @param buffer The shared state buffer
      * @param size The overall number of channels
      * @param current The current channel
-     * @param item The value just arrived
+     * @param data The value just arrived
      * @param mapper The mapping closure retrieving a key by the item just arrived over the current channel
      * @return The list a values having a common key for each channel or {@code null} when some values are missing
      *
      */
     @PackageScope
-    static final List phaseImpl( Map<Object,Map<Integer,List>> buffer, int size, int index, def item, Closure mapper, boolean isCross = false) {
+    final List join0( Map<Object,Map<Integer,List>> buffer, int size, int index, def data) {
 
         // The 'buffer' structure track the values emitted by the channel, it is arranged in the following manner:
         //
@@ -139,13 +149,13 @@ class PhaseOp {
         //  before a match for it is found on another channel)
 
         // get the index key for this object
-        final key = mapper.call(item)
+        final item0 = DataflowHelper.split(pivot, data)
 
         // given a key we expect to receive on object with the same key on each channel
-        def channels = buffer.get(key)
+        def channels = buffer.get(item0.keys)
         if( channels==null ) {
             channels = new TreeMap<Integer, List>()
-            buffer[key] = channels
+            buffer[item0.keys] = channels
         }
 
         if( !channels.containsKey(index) ) {
@@ -155,30 +165,23 @@ class PhaseOp {
 
         // add the received item to the list
         // when it is used in the gather op add always as the first item
-        if( isCross && index == 0 ) {
-            entries[0] = item
-        }
-        else  {
-            entries << item
-        }
+        entries << item0.values
 
-        // now check if it has received a element matching for each channel
+        // now check if it has received an element matching for each channel
         if( channels.size() != size )  {
             return null
         }
 
         def result = []
+        // add the key
+        addToList(result, item0.keys)
 
         Iterator<Map.Entry<Integer,List>> itr = channels.iterator()
         while( itr.hasNext() ) {
             def entry = itr.next()
 
             def list = entry.getValue()
-            result << list[0]
-
-            // do not remove the first element when it is 'cross' op
-            if( isCross && entry.getKey() == 0 )
-                continue
+            addToList(result, list[0])
 
             list.remove(0)
             if( list.size() == 0 ) {
@@ -189,30 +192,31 @@ class PhaseOp {
         return result
     }
 
+    private final void remainder0( Map<Object,Map<Integer,List>> buffers, int count, DataflowWriteChannel target ) {
+       log.trace "Operator `join` remainder buffer: ${-> buffers}"
 
-    static private final void phaseRemainder( Map<Object,Map<Integer,List>> buffers, int count, DataflowWriteChannel target ) {
-        Collection<Map<Integer,List>> slots = buffers.values()
-
-        slots.each { Map<Integer,List> entry ->
+        buffers.each { Object key, Map<Integer,List> entry ->
 
             while( true ) {
 
                 boolean fill=false
-                def result = new ArrayList(count)
+                def result = new ArrayList(count+1)
+                addToList(result, key)
+
                 for( int i=0; i<count; i++ ) {
                     List values = entry[i]
                     if( values ) {
+                        addToList(result, values[0])
                         fill |= true
-                        result[i] = values[0]
                         values.remove(0)
                     }
-                    else {
-                        result[i] = null
+                    else if( !singleton ) {
+                        addToList(result, null)
                     }
                 }
 
                 if( fill )
-                    target.bind( result )
+                    target.bind( singleton ? result[0] : result )
                 else
                     break
             }
