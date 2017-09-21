@@ -9,6 +9,10 @@ import spock.lang.Specification
  */
 class ReportObserverTest extends Specification {
 
+    def setupSpec() {
+        TraceRecord.TIMEZONE = TimeZone.getTimeZone('UTC') // note: set the timezone to be sure the time string does not change on CI test servers
+    }
+
     def 'should render json data' () {
 
         given:
@@ -52,18 +56,18 @@ class ReportObserverTest extends Specification {
 
         json.trace[1].task_id == '2'
         json.trace[1].name == 'bar'
-        json.trace[1].submit == '2015-04-23 22:37:05.141'
-        json.trace[1].start == '2015-04-23 22:37:05.241'
-        json.trace[1].complete == '2015-04-23 22:37:05.641'
+        json.trace[1].submit == '2015-04-23 20:37:05.141'
+        json.trace[1].start == '2015-04-23 20:37:05.241'
+        json.trace[1].complete == '2015-04-23 20:37:05.641'
         json.trace[1].realtime == '400ms'
         json.trace[1].duration == '500ms'
         json.trace[1].process == 'alpha'
 
         json.trace[2].task_id == '3'
         json.trace[2].name == 'baz'
-        json.trace[2].submit == '2015-04-23 22:37:05.141'
-        json.trace[2].start == '2015-04-23 22:37:05.341'
-        json.trace[2].complete == '2015-04-23 22:37:05.841'
+        json.trace[2].submit == '2015-04-23 20:37:05.141'
+        json.trace[2].start == '2015-04-23 20:37:05.341'
+        json.trace[2].complete == '2015-04-23 20:37:05.841'
         json.trace[2].realtime == '500ms'
         json.trace[2].duration == '700ms'
         json.trace[2].process == 'beta'

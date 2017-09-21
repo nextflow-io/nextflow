@@ -61,12 +61,6 @@ class ReportObserver implements TraceObserver {
 
     private Path reportFile
 
-    private long beginMillis
-
-    private long startMillis
-
-    private long endMillis
-
     ReportObserver( Path file ) {
         this.reportFile = file
     }
@@ -77,7 +71,6 @@ class ReportObserver implements TraceObserver {
      */
     @Override
     void onFlowStart(Session session) {
-        beginMillis = startMillis = System.currentTimeMillis()
         nfsession = session
     }
 
@@ -87,7 +80,6 @@ class ReportObserver implements TraceObserver {
     @Override
     void onFlowComplete() {
         log.debug "Flow completing -- rendering html report"
-        endMillis = System.currentTimeMillis()
         renderHtml()
     }
 
@@ -152,44 +144,13 @@ class ReportObserver implements TraceObserver {
             records[ record.taskId ] = record
         }
 
-        beginMillis = Math.min( beginMillis, record.get('submit') as long )
     }
 
     protected void renderHtml() {
 
-        // workflow metadata fields
-        def wfmd = getWorkflowMetadata()
-        def workflow = [
-                "scriptId" : wfmd.scriptId,
-                "scriptFile" : wfmd.scriptFile,
-                "scriptName" : wfmd.scriptName,
-                "repository" : wfmd.repository,
-                "commitId" : wfmd.commitId,
-                "revision" : wfmd.revision,
-                "projectDir" : wfmd.projectDir,
-                "start" : wfmd.start,
-                "container" : wfmd.container,
-                "commandLine" : wfmd.commandLine,
-                "nextflow" : wfmd.nextflow,
-                "workDir" : wfmd.workDir,
-                "launchDir" : wfmd.launchDir,
-                "profile" : wfmd.profile,
-                "sessionId" : wfmd.sessionId,
-                "resume" : wfmd.resume,
-                "runName" : wfmd.runName
-//                "success" : wfmd.success,
-//                'complete' : wfmd.complete,
-//                'duration':  wfmd.duration,
-//                'exitStatus' : wfmd.exitStatus,
-//                'errorMessage' : wfmd.errorMessage,
-//                'errorReport' : wfmd.errorReport
-        ]
-
-
-
         // render HTML report template
         final tpl_fields = [
-            workflow : workflow,
+            workflow : getWorkflowMetadata(),
             payload : renderJsonData(records.values()),
             assets_css : [
                 readTemplate('assets/bootstrap.min.css'),
