@@ -210,20 +210,13 @@ class TraceRecord implements Serializable {
     static String fmtMemory( def value, String fmt) {
         if( value == null ) return NA
 
-        String str
-        if( value instanceof MemoryUnit ) {
-            str = value.toString()
+        String str = value.toString()
+        if( str.isLong() ) {
+            str = new MemoryUnit(str.toLong()).toString()
+            str = str.replaceAll(/,/,'')
         }
-        else if( value instanceof Number ) {
-            str = new MemoryUnit(value.toLong()).toString()
-        }
-        else if( value instanceof CharSequence && value.isLong() ) {
-            str = new MemoryUnit(value.toLong()).toString()
-        }
-        else {
-            throw new IllegalArgumentException("Not a valid memory value: `$value` [${value.getClass().getName()}]")
-        }
-        return str.replaceAll(/,/,'')
+
+        return str
     }
 
     /**
