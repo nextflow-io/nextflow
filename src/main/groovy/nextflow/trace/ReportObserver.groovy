@@ -22,7 +22,6 @@ package nextflow.trace
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.ConcurrentHashMap
 
 import groovy.text.GStringTemplateEngine
 import groovy.transform.CompileStatic
@@ -32,8 +31,6 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
 import nextflow.script.WorkflowMetadata
-import nextflow.util.Duration
-import org.apache.commons.lang.StringEscapeUtils
 /**
  * Render pipeline report processes execution.
  * Based on original TimelineObserver code by Paolo Di Tommaso
@@ -45,7 +42,8 @@ import org.apache.commons.lang.StringEscapeUtils
 @CompileStatic
 class ReportObserver implements TraceObserver {
 
-    static final String DEF_FILE_NAME = 'nf-report.html'
+    static final String DEF_FILE_NAME = 'report.html'
+
 
     /**
      * Holds the the start time for tasks started/submitted but not yet completed
@@ -104,6 +102,7 @@ class ReportObserver implements TraceObserver {
      */
     @Override
     void onProcessSubmit(TaskHandler handler) {
+        log.trace "Trace report - submit process > handler"
         final trace = handler.getTraceRecord()
         synchronized (records) {
             records[ trace.taskId ] = trace
@@ -116,6 +115,7 @@ class ReportObserver implements TraceObserver {
      */
     @Override
     void onProcessStart(TaskHandler handler) {
+        log.trace "Trace report - start process > handler"
         def trace = handler.getTraceRecord()
         synchronized (records) {
             records[ trace.taskId ] = trace
@@ -128,6 +128,7 @@ class ReportObserver implements TraceObserver {
      */
     @Override
     void onProcessComplete(TaskHandler handler) {
+        log.trace "Trace report - complete process > handler"
         final taskId = handler.task.id
         final record = handler.getTraceRecord()
         if( !record ) {
@@ -143,7 +144,7 @@ class ReportObserver implements TraceObserver {
 
     @Override
     void onProcessCached(TaskHandler handler) {
-
+        log.trace "Trace report - cached process > handler"
         final record = handler.getTraceRecord()
 
         // remove the record from the current records
@@ -184,16 +185,12 @@ class ReportObserver implements TraceObserver {
 //                'errorReport' : wfmd.errorReport
         ]
 
-        // make records safe for JS
-        def records_safe = [:]
-        records.values().eachWithIndex { TraceRecord it, index ->
-            records_safe[index] = makesafe(it)
-        }
+
 
         // render HTML report template
         final tpl_fields = [
             workflow : workflow,
-            records : records_safe,
+            payload : renderJsonData(records.values()),
             assets_css : [
                 readTemplate('assets/bootstrap.min.css'),
                 readTemplate('assets/datatables.min.css')
@@ -225,23 +222,16 @@ class ReportObserver implements TraceObserver {
         writer.close()
     }
 
-    protected makesafe(TraceRecord record){
-        def safefields = [:]
-        final stringfields = [
-            "status", "hash", "name", "process", "tag", "container", "script", "scratch", "workdir"
-        ]
-        final longfields = [
-            "task_id", "exit", "submit", "start", "attempt", "complete", "duration", "realtime",
-            "%cpu", "%mem", "vmem", "rss", "peak_vmem", "peak_rss", "rchar", "wchar",
-            "syscr", "syscw", "read_bytes", "write_bytes", "native_id"
-        ]
-        stringfields.collect{ k ->
-            safefields[k] = StringEscapeUtils.escapeJavaScript( record.get(k) as String )
+    protected String renderJsonData(Collection<TraceRecord> data) {
+        def result = new StringBuilder()
+        result << '{ "trace": [\n'
+        int i=0
+        for( TraceRecord record : data ) {
+            if( i++ ) result << ','
+            record.renderJson(result)
         }
-        longfields.collect{ k ->
-            safefields[k] = record.get(k) as Long
-        }
-        safefields
+        result << ']}'
+        return result.toString()
     }
 
     protected String readTemplate( String path ) {
