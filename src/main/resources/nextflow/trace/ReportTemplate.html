@@ -135,6 +135,31 @@
       <dt class="col-sm-3">Session ID</dt>
       <dd class="col-sm-9"><code>${workflow.sessionId}</code></dd>
 
+      <dt class="col-sm-3">Success</dt>
+      <dd class="col-sm-9"><code>${workflow.success}</code></dd>
+
+      <dt class="col-sm-3">Complete</dt>
+      <dd class="col-sm-9"><code>${workflow.complete}</code></dd>
+
+      <dt class="col-sm-3">Duration</dt>
+      <dd class="col-sm-9"><code>${workflow.duration}</code></dd>
+
+      <dt class="col-sm-3">Exit status</dt>
+      <dd class="col-sm-9"><code>${workflow.exitStatus}</code></dd>
+
+      <% if (workflow.errorMessage) {
+      out << """
+      <dt class="col-sm-3">Error message</dt>
+      <dd class="col-sm-9"><samp>${workflow.errorMessage}</samp></dd>
+      """
+      } %>
+
+      <% if (workflow.errorReport) {
+      out << """
+      <dt class="col-sm-3">Error report</dt>
+      <dd class="col-sm-9"><samp>${workflow.errorReport}</samp></dd>
+      """
+      } %>
     </dl>
 
     <h2 id="timeline">Timeline</h2>

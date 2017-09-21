@@ -30,6 +30,7 @@ import nextflow.Const
 import nextflow.config.ConfigBuilder
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
+import org.codehaus.groovy.runtime.InvokerHelper
 
 /**
  * Models workflow metadata properties and notification handler
@@ -249,6 +250,9 @@ class WorkflowMetadata {
         onErrorActions.add(clone)
     }
 
+    def get(String field) {
+        InvokerHelper.getProperty(this,field)
+    }
 
     /**
      * Implements the following idiom in the pipeline script:
