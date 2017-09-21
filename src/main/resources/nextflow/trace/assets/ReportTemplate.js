@@ -21,7 +21,7 @@ $(function() {
       var m = [];
       var t = [];
       for (var i = 0; i < window.data_byprocess[pname].length; i ++) {
-        c[i] = parseInt(window.data_byprocess[pname][i]['pct_cpu']);
+        c[i] = parseInt(window.data_byprocess[pname][i]['%cpu']);
         m[i] = parseInt(window.data_byprocess[pname][i]['vmem']);
         t[i] = parseInt(window.data_byprocess[pname][i]['duration']);
       }
@@ -66,6 +66,10 @@ $(function() {
       '<td>' + window.data['trace'][i]['start'] + '</td>'+
       '<td>' + window.data['trace'][i]['module'] + '</td>'+
       '<td>' + window.data['trace'][i]['container'] + '</td>'+
+      '<td>' + window.data['trace'][i]['cpus'] + '</td>'+
+      '<td>' + window.data['trace'][i]['memory'] + '</td>'+
+      '<td>' + window.data['trace'][i]['time'] + '</td>'+
+      '<td>' + window.data['trace'][i]['disk'] + '</td>'+
       '<td>' + window.data['trace'][i]['attempt'] + '</td>'+
       '<td><pre><code>' + script.trim() + '</code></pre></td>'+
       '<td><samp>' + window.data['trace'][i]['scratch'] + '</samp></td>'+
@@ -73,8 +77,8 @@ $(function() {
       '<td>' + window.data['trace'][i]['complete'] + '</td>'+
       '<td>' + window.data['trace'][i]['duration'] + '</td>'+
       '<td>' + window.data['trace'][i]['realtime'] + '</td>'+
-      '<td>' + window.data['trace'][i]['pct_cpu'] + '</td>'+
-      '<td>' + window.data['trace'][i]['pct_mem'] + '</td>'+
+      '<td>' + window.data['trace'][i]['%cpu'] + '</td>'+
+      '<td>' + window.data['trace'][i]['%mem'] + '</td>'+
       '<td>' + window.data['trace'][i]['vmem'] + '</td>'+
       '<td>' + window.data['trace'][i]['rss'] + '</td>'+
       '<td>' + window.data['trace'][i]['peak_vmem'] + '</td>'+

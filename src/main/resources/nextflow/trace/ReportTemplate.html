@@ -166,6 +166,10 @@
           <th>start</th>
           <th>module</th>
           <th>container</th>
+          <th>cpus</th>
+          <th>memory</th>
+          <th>time</th>
+          <th>disk</th>
           <th>attempt</th>
           <th>script</th>
           <th>scratch</th>
@@ -173,8 +177,8 @@
           <th>complete</th>
           <th>duration</th>
           <th>realtime</th>
-          <th>pct_cpu</th>
-          <th>pct_mem</th>
+          <th>%cpu</th>
+          <th>%mem</th>
           <th>vmem</th>
           <th>rss</th>
           <th>peak_vmem</th>
@@ -203,45 +207,7 @@
   ${ assets_js.join("\n\n\n\n") }
 
   // Nextflow report data
-  window.data = {
-    "trace": [
-      <% out << records.collect{ k,v -> """
-      {
-        "task_id": "${v.task_id}",
-        "status": "${v.status}",
-        "hash": "${v.hash}",
-        "name": "${v.name}",
-        "exit": "${v.exit}",
-        "submit": "${v.submit}",
-        "start": "${v.start}",
-        "process": "${v.process}",
-        "tag": "${v.tag}",
-        "module": "${v.module}",
-        "container": "${v.container}",
-        "attempt": "${v.attempt}",
-        "script": "${v.script}",
-        "scratch": "${v.scratch}",
-        "workdir": "${v.workdir}",
-        "complete": "${v.complete}",
-        "duration": "${v.duration}",
-        "realtime": "${v.realtime}",
-        "pct_cpu": "${v."%cpu"}",
-        "pct_mem": "${v."%mem"}",
-        "vmem": "${v.vmem}",
-        "rss": "${v.rss}",
-        "peak_vmem": "${v.peak_vmem}",
-        "peak_rss": "${v.peak_rss}",
-        "rchar": "${v.rchar}",
-        "wchar": "${v.wchar}",
-        "syscr": "${v.syscr}",
-        "syscw": "${v.syscw}",
-        "read_bytes": "${v.read_bytes}",
-        "write_bytes": "${v.write_bytes}",
-        "native_id": "${v.native_id}"
-      },
-      """ }.join() %>
-    ]
-  };
+  window.data = $payload;
 
   </script>
 

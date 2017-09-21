@@ -19,6 +19,8 @@
  */
 
 package nextflow.trace
+
+import groovy.json.JsonSlurper
 import spock.lang.Specification
 import test.TestHelper
 
@@ -180,5 +182,38 @@ class TraceRecordTest extends Specification {
 
     }
 
+
+    def 'should render record json' () {
+
+        given:
+        def record = new TraceRecord()
+        record.task_id = 'hola'
+        record.native_id = null
+        record.submit = timestamp
+        record.duration = '2000'
+        record.'%cpu' = '5.00'
+        record.rss = '1024'
+        record.queue = 'big'
+        record.cpus = 4
+        record.time = 3_600_000L
+        record.memory = 1024L * 1024L * 1024L * 8L
+
+        when:
+        def json = new JsonSlurper().parseText(record.renderJson().toString())
+
+        then:
+        json.task_id == 'hola'
+        json.native_id == '-'
+        json.submit == '2014-10-06 12:03:02.622'
+        json.duration == '2s'
+        json.'%cpu' == '5.0%'
+        json.rss == '1 KB'
+        json.queue == 'big'
+        json.cpus == '4'
+        json.time == '1h'
+        json.memory == '8 GB'
+
+
+    }
 
 }

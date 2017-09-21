@@ -21,6 +21,8 @@
 package nextflow.processor
 
 import nextflow.Session
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import test.TestHelper
 /**
@@ -43,7 +45,16 @@ class TaskHandlerTest extends Specification {
         def folder = TestHelper.createInMemTempDir()
         folder.resolve( TaskRun.CMD_TRACE ).text = traceText
 
-        def task = new TaskRun(id: new TaskId(100), workDir: folder, name:'task1', exitStatus: 127, config: [tag: 'seq_x', container: 'ubuntu', queue: 'longjobs']  )
+        def config = [
+                tag: 'seq_x',
+                container: 'ubuntu',
+                queue: 'longjobs',
+                cpus: 2,
+                time: '1 hour',
+                disk: '100 GB',
+                memory: '4 GB'
+        ]
+        def task = new TaskRun(id: new TaskId(100), workDir: folder, name:'task1', exitStatus: 127, config: config  )
         task.metaClass.getHashLog = { "5d5d7ds" }
         task.processor = Mock(TaskProcessor)
         task.processor.getSession() >> new Session()
@@ -82,6 +93,10 @@ class TaskHandlerTest extends Specification {
         trace.read_bytes == 20
         trace.write_bytes == 30
         trace.queue == 'longjobs'
+        trace.cpus == 2
+        trace.time == Duration.of('1 hour').toMillis()
+        trace.memory == MemoryUnit.of('4 GB').toBytes()
+        trace.disk == MemoryUnit.of('100 GB').toBytes()
 
         // check get method
         trace.getFmtStr('%cpu') == '1.0%'
@@ -90,6 +105,9 @@ class TaskHandlerTest extends Specification {
         trace.getFmtStr('vmem') == '10.8 MB'
         trace.getFmtStr('peak_rss') == '2.2 MB'
         trace.getFmtStr('peak_vmem') == '20.6 MB'
+        trace.getFmtStr('time') == '1h'
+        trace.getFmtStr('memory') == '4 GB'
+        trace.getFmtStr('disk') == '100 GB'
 
         when:
         handler = [:] as TaskHandler
