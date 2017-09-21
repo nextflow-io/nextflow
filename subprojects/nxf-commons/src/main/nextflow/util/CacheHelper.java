@@ -198,7 +198,7 @@ public class CacheHelper {
         try {
             BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
             hasher = hasher.putLong(attrs.size());
-            if( attrs.lastAccessTime() != null) {
+            if( attrs.lastModifiedTime() != null) {
                 hasher = hasher.putLong( attrs.lastModifiedTime().toMillis() );
             }
             return hasher;
