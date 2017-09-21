@@ -9,7 +9,7 @@ git:
   submodules: false
 env:
   global:
-  - _JAVA_OPTIONS='-Xverify:none -XX:MaxPermSize=256m'
+  - _JAVA_OPTIONS='-Xverify:none'
   - GRADLE_OPTS='-Dorg.gradle.daemon=false'
 after_script:
 - bash pub-tests.sh build/reports/tests/ travis
