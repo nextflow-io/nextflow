@@ -204,8 +204,7 @@ public class CacheHelper {
             return hasher;
         }
         catch (IOException e) {
-            log.debug("Unable to hash file: {} -- Cause: {}", file, e.toString());
-            return hasher;
+            throw new RuntimeException(e);
         }
     }
 
