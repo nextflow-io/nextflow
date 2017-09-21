@@ -211,7 +211,7 @@ class DataflowHelper {
         parameters.put("outputs", [])
         parameters.put('listeners', [listener])
 
-        newOperator(parameters) {
+        newOperator (parameters) {
             if( events.onNext ) {
                 events.onNext.call(it)
             }
@@ -281,5 +281,41 @@ class DataflowHelper {
         chainImpl(channel, new DataflowQueue(), [listeners: [listener]], {true})
     }
 
+
+    @PackageScope
+    static KeyPair split(List<Integer> pivot, entry) {
+        final result = new KeyPair()
+
+        if( !(entry instanceof List) ) {
+            if( pivot != [0] )
+                throw new IllegalArgumentException("Not a valid `by` index: $pivot")
+            result.keys = [entry]
+            result.values = []
+            return result
+        }
+
+        def list = (List)entry
+        result.keys = new ArrayList(pivot.size())
+        result.values = new ArrayList(list.size())
+
+        for( int i=0; i<list.size(); i++ ) {
+            if( i in pivot )
+                result.keys << list[i]
+            else
+                result.values << list[i]
+        }
+
+        return result
+    }
+
+    @PackageScope
+    static void addToList(List result, entry)  {
+        if( entry instanceof List ) {
+            result.addAll(entry)
+        }
+        else {
+            result.add(entry)
+        }
+    }
 
 }

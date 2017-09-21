@@ -1297,6 +1297,18 @@ class DataflowExtensions {
         return target
     }
 
+    static final DataflowReadChannel join( DataflowReadChannel left, DataflowReadChannel right ) {
+        def target = new JoinOp(left,right) .apply()
+        NodeMarker.addOperatorNode('join', [left, right], target)
+        return target
+    }
+
+    static final DataflowReadChannel join( DataflowReadChannel left, Map opts, DataflowReadChannel right ) {
+        def target = new JoinOp(left,right,opts) .apply()
+        NodeMarker.addOperatorNode('join', [left, right], target)
+        return target
+    }
+
 
     /**
      * Phase channels
@@ -1661,20 +1673,32 @@ class DataflowExtensions {
         NodeMarker.addOperatorNode('choice', source, outputs)
     }
 
-    static <V> DataflowReadChannel<V> merge(final DataflowReadChannel<V> source, final DataflowReadChannel<V> other, final Closure<V> closure) {
+    static DataflowReadChannel merge(final DataflowReadChannel source, final DataflowReadChannel other, final Closure closure=null) {
         final result = newChannelBy(source)
         final inputs = [source, other]
-        newOperator(inputs, [result], new ChainWithClosure(closure))
+        final action = closure ? new ChainWithClosure<>(closure) : new DefaultMergeClosure(inputs.size())
+        newOperator(inputs, [result], action)
         NodeMarker.addOperatorNode('merge', inputs, result)
         return result;
     }
 
-    static <V> DataflowReadChannel<V> merge(final DataflowReadChannel source, final List<DataflowReadChannel<Object>> others, final Closure<V> closure) {
+    static DataflowReadChannel merge(final DataflowReadChannel source, final DataflowReadChannel... others) {
         final result = newChannelBy(source)
-        final List<DataflowReadChannel<?>> inputs = new ArrayList<DataflowReadChannel<?>>(1 + others.size())
+        final List<DataflowReadChannel> inputs = new ArrayList<DataflowReadChannel>(1 + others.size())
         inputs.add(source);
         inputs.addAll(others);
-        newOperator(inputs, [result], new ChainWithClosure(closure));
+        newOperator(inputs, [result], new DefaultMergeClosure(1 + others.size()));
+        NodeMarker.addOperatorNode('merge', inputs, result)
+        return result;
+    }
+
+    static DataflowReadChannel merge(final DataflowReadChannel source, final List<DataflowReadChannel> others, final Closure closure=null) {
+        final result = newChannelBy(source)
+        final List<DataflowReadChannel> inputs = new ArrayList<DataflowReadChannel>(1 + others.size())
+        final action = closure ? new ChainWithClosure<>(closure) : new DefaultMergeClosure(1 + others.size())
+        inputs.add(source);
+        inputs.addAll(others);
+        newOperator(inputs, [result], action);
         NodeMarker.addOperatorNode('merge', inputs, result)
         return result;
     }
