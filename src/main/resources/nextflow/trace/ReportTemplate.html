@@ -22,20 +22,29 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="">
-  <meta name="author" content="">
+  <meta name="description" content="Nextflow workflow report for run id [${workflow.runName}]">
+  <meta name="author" content="Paolo Di Tommaso, Phil Ewels">
+  <link rel="icon" type="image/png" href="https://www.nextflow.io/img/favicon.png" />
 
-  <title>Nextflow: Workflow Report</title>
+  <title>[${workflow.runName}] Nextflow Workflow Report</title>
 
   <style type="text/css">
   ${ assets_css.join("\n\n\n\n") }
 
   /* Nextflow Report Custom CSS */
   body {
-    padding-top: 80px;
+    padding-top: 56px;
   }
   pre {
     margin-bottom: 0;
+  }
+  pre.nfcommand {
+    white-space: pre-wrap;
+    border: 1px solid #ccc;
+    padding: 10px 15px;
+    border-radius: 5px;
+    background-color: #F0F2F4;
+    font-size: 0.8rem;
   }
   footer {
     background-color: #ededed;
@@ -60,112 +69,106 @@
     </button>
     <div class="collapse navbar-collapse" id="navbarCollapse">
       <ul class="navbar-nav mr-auto">
-        <li class="nav-item"><a class="nav-link" href="#summary">Summary</a></li>
-        <li class="nav-item"><a class="nav-link" href="#timeline">Timeline</a></li>
+        <li class="nav-item"><a class="nav-link" href="#">Summary</a></li>
         <li class="nav-item"><a class="nav-link" href="#resources">Resources</a></li>
         <li class="nav-item"><a class="nav-link" href="#tasks">Tasks</a></li>
       </ul>
     </div>
   </nav>
 
-  <div class="container-fluid" data-spy="scroll" data-target="#nf-report-navbar" data-offset="0">
+  <div class="jumbotron mb-0">
+    <div class="container" data-spy="scroll" data-target="#nf-report-navbar" data-offset="0">
 
-    <h2 id="summary">Report Summary</h2>
+      <h1 class="display-3">Nextflow workflow report</h1>
+      <h2 class="text-muted mb-4"><samp>[${workflow.runName}]</samp> ${workflow.resume ? '<em>(resumed run)</em>' : ''}</h2>
 
-    <dl class="row small">
-      <dt class="col-sm-3">Run started</dt>
-      <dd class="col-sm-9">${workflow.start}</dd>
+      <% if (workflow.success){
+          out << """
+          <div class="alert alert-success mb-4">
+              Workflow execution completed successfully!
+          </div>
+          """
+      } else {
+          out << """
+          <div class="alert alert-danger mb-4">
+              <h4>Workflow execution completed unsuccessfully!</h4>
+              <p>The exit status of the task that caused the workflow execution to fail was: <code>${workflow.exitStatus}</code>.</p>
+              <p>The full error message was:</p>
+              <pre>${workflow.errorReport}</pre>
+          </div>
+          """
+      }
+      %>
 
-      <dt class="col-sm-3">Nextflow command</dt>
-      <dd class="col-sm-9"><code>${workflow.commandLine}</code></dd>
+      <dl>
+        <dt>Run times</dt>
+        <dd>${workflow.start} - ${workflow.complete} (duration: <strong>${workflow.duration}</strong>)</dd>
 
-      <dt class="col-sm-3">runName</dt>
-      <dd class="col-sm-9"><samp>[${workflow.runName}]</samp> <em>(${workflow.resume ? '' : 'not '}resumed run)</em></dd>
+        <dt>Nextflow command</dt>
+        <dd><pre class="nfcommand"><code>${workflow.commandLine}</code></pre></dd>
+      </dl>
 
-      <dt class="col-sm-3">Launch directory</dt>
-      <dd class="col-sm-9"><samp>${workflow.launchDir}</samp></dd>
+      <dl class="row small">
+        <dt class="col-sm-3">Launch directory</dt>
+        <dd class="col-sm-9"><samp>${workflow.launchDir}</samp></dd>
 
-      <dt class="col-sm-3">Work directory</dt>
-      <dd class="col-sm-9"><samp>${workflow.workDir}</samp></dd>
+        <dt class="col-sm-3">Work directory</dt>
+        <dd class="col-sm-9"><samp>${workflow.workDir}</samp></dd>
 
-      <dt class="col-sm-3">Project directory</dt>
-      <dd class="col-sm-9"><samp>${workflow.projectDir}</samp></dd>
+        <dt class="col-sm-3">Project directory</dt>
+        <dd class="col-sm-9"><samp>${workflow.projectDir}</samp></dd>
 
-      <% if (workflow.scriptFile) {
-        out << """
-        <dt class="col-sm-3">Script path</dt>
-        <dd class="col-sm-9"><samp>${workflow.scriptFile}</samp></dd>
-        """
-      } %>
+        <% if (workflow.scriptFile) {
+          out << """
+          <dt class="col-sm-3">Script path</dt>
+          <dd class="col-sm-9"><samp>${workflow.scriptFile}</samp></dd>
+          """
+        } %>
 
-      <% if (workflow.scriptName) {
-        out << """
-        <dt class="col-sm-3">Script name</dt>
-        <dd class="col-sm-9"><samp>${workflow.scriptName}</samp></dd>
-        """
-      } %>
+        <% if (workflow.scriptName) {
+          out << """
+          <dt class="col-sm-3">Script name</dt>
+          <dd class="col-sm-9"><samp>${workflow.scriptName}</samp></dd>
+          """
+        } %>
 
-      <% if (workflow.scriptId) {
-        out << """
-        <dt class="col-sm-3">Script hash</dt>
-        <dd class="col-sm-9"><code>${workflow.scriptId}</code></dd>
-        """
-      } %>
+        <% if (workflow.scriptId) {
+          out << """
+          <dt class="col-sm-3">Script hash</dt>
+          <dd class="col-sm-9"><code>${workflow.scriptId}</code></dd>
+          """
+        } %>
 
-      <% if (workflow.repository) {
-        out << """
-        <dt class="col-sm-3">Workflow repository</dt>
-        <dd class="col-sm-9"><code>${workflow.repository}</code>, revision <code>${workflow.revision}</code> (commit hash <code>${workflow.commitId}</code>)</dd>
-        """
-      } %>
+        <% if (workflow.repository) {
+          out << """
+          <dt class="col-sm-3">Workflow repository</dt>
+          <dd class="col-sm-9"><code>${workflow.repository}</code>, revision <code>${workflow.revision}</code> (commit hash <code>${workflow.commitId}</code>)</dd>
+          """
+        } %>
 
-      <% if (workflow.container) {
-        out << """
-        <dt class="col-sm-3">Workflow container</dt>
-        <dd class="col-sm-9"><samp>${workflow.container}</samp></dd>
-        """
-      } %>
+        <% if (workflow.container) {
+          out << """
+          <dt class="col-sm-3">Workflow container</dt>
+          <dd class="col-sm-9"><samp>${workflow.container}</samp></dd>
+          """
+        } %>
 
-      <dt class="col-sm-3">Workflow profile</dt>
-      <dd class="col-sm-9">${workflow.profile}</dd>
+        <dt class="col-sm-3">Workflow profile</dt>
+        <dd class="col-sm-9">${workflow.profile}</dd>
 
-      <dt class="col-sm-3">Nextflow version</dt>
-      <dd class="col-sm-9">version ${workflow.nextflow.version}, build ${workflow.nextflow.build} (${workflow.nextflow.timestamp})</dd>
+        <dt class="col-sm-3">Nextflow version</dt>
+        <dd class="col-sm-9">version ${workflow.nextflow.version}, build ${workflow.nextflow.build} (${workflow.nextflow.timestamp})</dd>
 
-      <dt class="col-sm-3">Session ID</dt>
-      <dd class="col-sm-9"><code>${workflow.sessionId}</code></dd>
+        <dt class="col-sm-3">Session ID</dt>
+        <dd class="col-sm-9"><code>${workflow.sessionId}</code></dd>
 
-      <dt class="col-sm-3">Success</dt>
-      <dd class="col-sm-9"><code>${workflow.success}</code></dd>
+      </dl>
+    </div>
+  </div>
 
-      <dt class="col-sm-3">Complete</dt>
-      <dd class="col-sm-9"><code>${workflow.complete}</code></dd>
-
-      <dt class="col-sm-3">Duration</dt>
-      <dd class="col-sm-9"><code>${workflow.duration}</code></dd>
-
-      <dt class="col-sm-3">Exit status</dt>
-      <dd class="col-sm-9"><code>${workflow.exitStatus}</code></dd>
-
-      <% if (workflow.errorMessage) {
-      out << """
-      <dt class="col-sm-3">Error message</dt>
-      <dd class="col-sm-9"><samp>${workflow.errorMessage}</samp></dd>
-      """
-      } %>
-
-      <% if (workflow.errorReport) {
-      out << """
-      <dt class="col-sm-3">Error report</dt>
-      <dd class="col-sm-9"><samp>${workflow.errorReport}</samp></dd>
-      """
-      } %>
-    </dl>
-
-    <h2 id="timeline">Timeline</h2>
-    <p><em>Coming soon..</em></p>
-
-    <h2 id="resources">Resource Usage</h2>
+  <div class="container">
+    <h2 id="resources" style="padding-top: 80px;">Resource Usage</h2>
+    <p>These plots give an overview of the distrubtion of resource usages for each process.</p>
 
     <h4>CPU Usage</h4>
     <div id="cpuplot"></div>
@@ -176,7 +179,12 @@
     <h4>Job Duration</h4>
     <div id="timeplot"></div>
 
-    <h2 id="tasks">Tasks</h2>
+    <h2 id="tasks" style="padding-top: 80px;">Tasks</h2>
+    <p>This table shows information about each task in the workflow. Use the search box on the right
+      to filter rows for specific values. Clicking headers will sort the table by that value and
+      scrolling side to side will reveal more columns.</p>
+  </div>
+  <div class="container-fluid">
     <table class="table small table-striped" id="tasks_table">
       <thead>
         <tr>
