@@ -24,6 +24,7 @@ import java.nio.file.Files
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.BlockDeviceMapping
 import com.amazonaws.services.ec2.model.EbsBlockDevice
+import com.amazonaws.services.ec2.model.GroupIdentifier
 import com.amazonaws.services.ec2.model.RequestSpotInstancesRequest
 import com.amazonaws.services.ec2.model.RunInstancesRequest
 import com.amazonaws.services.ec2.waiters.AmazonEC2Waiters
@@ -611,7 +612,7 @@ class AmazonCloudDriverTest extends Specification {
         req.getLaunchSpecification().getImageId() == AMI
         req.getLaunchSpecification().getInstanceType() == TYPE
         req.getLaunchSpecification().getKeyName() == KEY
-        req.getLaunchSpecification().getSecurityGroups() == SECURITY
+        req.getLaunchSpecification().getAllSecurityGroups() == [ new GroupIdentifier().withGroupId(SECURITY[0]) ]
         req.getLaunchSpecification().getSubnetId() == SUBNET
         req.getLaunchSpecification().getBlockDeviceMappings().size() == 1
         req.getLaunchSpecification().getBlockDeviceMappings()[0] == BLOCK
