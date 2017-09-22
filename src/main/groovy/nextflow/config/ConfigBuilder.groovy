@@ -387,6 +387,15 @@ class ConfigBuilder {
 
         }
 
+        // -- sets report report options
+        if( cmdRun.withReport ) {
+            if( !(config.report instanceof Map) )
+                config.report = [:]
+            config.report.enabled = true
+            if( !config.report.file )
+                config.report.file = cmdRun.withReport
+        }
+
         // -- sets timeline report options
         if( cmdRun.withTimeline ) {
             if( !(config.timeline instanceof Map) )

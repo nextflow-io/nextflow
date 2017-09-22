@@ -68,6 +68,10 @@ status                  Task status.
 exit                    POSIX process exit status.
 module                  Environment module used to run the task.
 container               Docker image name used to execute the task.
+cpus                    The cpus number request for the task execution.
+time                    The time request for the task execution
+disk                    The disk space request for the task execution.
+memory                  The memory request for the task execution.
 attempt                 Attempt at which the task completed.
 submit                  Timestamp when the task has been submitted.
 start                   Timestamp when the task execution has started.

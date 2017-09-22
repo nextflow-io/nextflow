@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<!--
+  ~ Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
+  ~ Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+  ~
+  ~   This file is part of 'Nextflow'.
+  ~
+  ~   Nextflow is free software: you can redistribute it and/or modify
+  ~   it under the terms of the GNU General Public License as published by
+  ~   the Free Software Foundation, either version 3 of the License, or
+  ~   (at your option) any later version.
+  ~
+  ~   Nextflow is distributed in the hope that it will be useful,
+  ~   but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~   GNU General Public License for more details.
+  ~
+  ~   You should have received a copy of the GNU General Public License
+  ~   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <title>Nextflow: Workflow Report</title>
+
+  <style type="text/css">
+  ${ assets_css.join("\n\n\n\n") }
+
+  /* Nextflow Report Custom CSS */
+  body {
+    padding-top: 80px;
+  }
+  pre {
+    margin-bottom: 0;
+  }
+  footer {
+    background-color: #ededed;
+    margin: 50px 0 0;
+    padding: 20px 0;
+    border-top: 1px solid #cccccc;
+    color: #999999;
+    font-size: 0.8rem;
+  }
+  footer a {
+    color: #999999;
+    text-decoration: underline;
+  }
+  </style>
+
+</head>
+<body>
+  <nav id="nf-report-navbar" class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+    <a class="navbar-brand" href="#">Nextflow Report</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarCollapse">
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item"><a class="nav-link" href="#summary">Summary</a></li>
+        <li class="nav-item"><a class="nav-link" href="#timeline">Timeline</a></li>
+        <li class="nav-item"><a class="nav-link" href="#resources">Resources</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tasks">Tasks</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container-fluid" data-spy="scroll" data-target="#nf-report-navbar" data-offset="0">
+
+    <h2 id="summary">Report Summary</h2>
+
+    <dl class="row small">
+      <dt class="col-sm-3">Run started</dt>
+      <dd class="col-sm-9">${workflow.start}</dd>
+
+      <dt class="col-sm-3">Nextflow command</dt>
+      <dd class="col-sm-9"><code>${workflow.commandLine}</code></dd>
+
+      <dt class="col-sm-3">runName</dt>
+      <dd class="col-sm-9"><samp>[${workflow.runName}]</samp> <em>(${workflow.resume ? '' : 'not '}resumed run)</em></dd>
+
+      <dt class="col-sm-3">Launch directory</dt>
+      <dd class="col-sm-9"><samp>${workflow.launchDir}</samp></dd>
+
+      <dt class="col-sm-3">Work directory</dt>
+      <dd class="col-sm-9"><samp>${workflow.workDir}</samp></dd>
+
+      <dt class="col-sm-3">Project directory</dt>
+      <dd class="col-sm-9"><samp>${workflow.projectDir}</samp></dd>
+
+      <% if (workflow.scriptFile) {
+        out << """
+        <dt class="col-sm-3">Script path</dt>
+        <dd class="col-sm-9"><samp>${workflow.scriptFile}</samp></dd>
+        """
+      } %>
+
+      <% if (workflow.scriptName) {
+        out << """
+        <dt class="col-sm-3">Script name</dt>
+        <dd class="col-sm-9"><samp>${workflow.scriptName}</samp></dd>
+        """
+      } %>
+
+      <% if (workflow.scriptId) {
+        out << """
+        <dt class="col-sm-3">Script hash</dt>
+        <dd class="col-sm-9"><code>${workflow.scriptId}</code></dd>
+        """
+      } %>
+
+      <% if (workflow.repository) {
+        out << """
+        <dt class="col-sm-3">Workflow repository</dt>
+        <dd class="col-sm-9"><code>${workflow.repository}</code>, revision <code>${workflow.revision}</code> (commit hash <code>${workflow.commitId}</code>)</dd>
+        """
+      } %>
+
+      <% if (workflow.container) {
+        out << """
+        <dt class="col-sm-3">Workflow container</dt>
+        <dd class="col-sm-9"><samp>${workflow.container}</samp></dd>
+        """
+      } %>
+
+      <dt class="col-sm-3">Workflow profile</dt>
+      <dd class="col-sm-9">${workflow.profile}</dd>
+
+      <dt class="col-sm-3">Nextflow version</dt>
+      <dd class="col-sm-9">version ${workflow.nextflow.version}, build ${workflow.nextflow.build} (${workflow.nextflow.timestamp})</dd>
+
+      <dt class="col-sm-3">Session ID</dt>
+      <dd class="col-sm-9"><code>${workflow.sessionId}</code></dd>
+
+      <dt class="col-sm-3">Success</dt>
+      <dd class="col-sm-9"><code>${workflow.success}</code></dd>
+
+      <dt class="col-sm-3">Complete</dt>
+      <dd class="col-sm-9"><code>${workflow.complete}</code></dd>
+
+      <dt class="col-sm-3">Duration</dt>
+      <dd class="col-sm-9"><code>${workflow.duration}</code></dd>
+
+      <dt class="col-sm-3">Exit status</dt>
+      <dd class="col-sm-9"><code>${workflow.exitStatus}</code></dd>
+
+      <% if (workflow.errorMessage) {
+      out << """
+      <dt class="col-sm-3">Error message</dt>
+      <dd class="col-sm-9"><samp>${workflow.errorMessage}</samp></dd>
+      """
+      } %>
+
+      <% if (workflow.errorReport) {
+      out << """
+      <dt class="col-sm-3">Error report</dt>
+      <dd class="col-sm-9"><samp>${workflow.errorReport}</samp></dd>
+      """
+      } %>
+    </dl>
+
+    <h2 id="timeline">Timeline</h2>
+    <p><em>Coming soon..</em></p>
+
+    <h2 id="resources">Resource Usage</h2>
+
+    <h4>CPU Usage</h4>
+    <div id="cpuplot"></div>
+
+    <h4>Memory Usage</h4>
+    <div id="memplot"></div>
+
+    <h4>Job Duration</h4>
+    <div id="timeplot"></div>
+
+    <h2 id="tasks">Tasks</h2>
+    <table class="table small table-striped" id="tasks_table">
+      <thead>
+        <tr>
+          <th>task_id</th>
+          <th>process</th>
+          <th>tag</th>
+          <th>name</th>
+          <th>status</th>
+          <th>hash</th>
+          <th>exit</th>
+          <th>submit</th>
+          <th>start</th>
+          <th>module</th>
+          <th>container</th>
+          <th>cpus</th>
+          <th>memory</th>
+          <th>time</th>
+          <th>disk</th>
+          <th>attempt</th>
+          <th>script</th>
+          <th>scratch</th>
+          <th>workdir</th>
+          <th>complete</th>
+          <th>duration</th>
+          <th>realtime</th>
+          <th>%cpu</th>
+          <th>%mem</th>
+          <th>vmem</th>
+          <th>rss</th>
+          <th>peak_vmem</th>
+          <th>peak_rss</th>
+          <th>rchar</th>
+          <th>wchar</th>
+          <th>syscr</th>
+          <th>syscw</th>
+          <th>read_bytes</th>
+          <th>write_bytes</th>
+          <th>native_id</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+  </div>
+
+  <footer>
+    <div class="container-fluid">
+      Generated by <a href="https://www.nextflow.io" target="_blank">Nextflow</a>, version ${workflow.nextflow.version}
+    </div>
+  </footer>
+
+  <script type="text/javascript">
+  ${ assets_js.join("\n\n\n\n") }
+
+  // Nextflow report data
+  window.data = $payload;
+
+  </script>
+
+</body>
+</html>
