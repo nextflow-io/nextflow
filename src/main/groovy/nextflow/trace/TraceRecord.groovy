@@ -24,6 +24,7 @@ import java.nio.file.Path
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 
+import groovy.json.StringEscapeUtils
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -52,7 +53,7 @@ class TraceRecord implements Serializable {
 
     final private static String DEFAULT_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS"
 
-    final public static NA = '-'
+    final public static String NA = '-'
 
     final public static List<String> NON_PRIMITIVE_TYPES = ['date','time','perc','mem']
 
@@ -88,7 +89,11 @@ class TraceRecord implements Serializable {
             workdir:    'str',
             script:     'str',
             scratch:    'str',
-            queue:      'str'
+            queue:      'str',
+            cpus:       'num',
+            memory:     'mem',
+            disk:       'mem',
+            time:       'time'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [
@@ -348,7 +353,7 @@ class TraceRecord implements Serializable {
      * @param separator A delimiter that separates fields entries in the final string
      * @return The final string containing all field values
      */
-    String render( List<String> fields, List<String> formats, String separator ) {
+    String renderText( List<String> fields, List<String> formats, String separator ) {
         def result = new ArrayList(fields.size())
         for( int i=0; i<fields.size(); i++ ) {
             String name = fields[i]
@@ -359,6 +364,27 @@ class TraceRecord implements Serializable {
         return result.join(separator)
     }
 
+    CharSequence renderJson(StringBuilder result, List<String> fields, List<String> formats) {
+        final QUOTE = '"'
+        if( result == null ) result = new StringBuilder()
+        result << "{"
+        for( int i=0; i<fields.size(); i++ ) {
+            if( i ) result << ','
+            String name = fields[i]
+            String format = i<formats?.size() ? formats[i] : null
+            String value = StringEscapeUtils.escapeJavaScript(getFmtStr(name, format) ?: NA)
+            result << QUOTE << name << QUOTE << ":" << QUOTE << value << QUOTE
+        }
+        result << "}"
+        return result
+    }
+
+    CharSequence renderJson(StringBuilder result = new StringBuilder()) {
+        def fields = []
+        def formats = []
+        FIELDS.each { name, type -> fields << name; formats << type }
+        renderJson(result, fields, formats)
+    }
 
     String toString() {
         "${this.class.simpleName} ${store}"
