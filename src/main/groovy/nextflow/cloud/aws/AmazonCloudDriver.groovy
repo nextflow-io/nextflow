@@ -38,6 +38,7 @@ import com.amazonaws.services.ec2.model.DescribeInstancesRequest
 import com.amazonaws.services.ec2.model.DescribeSpotInstanceRequestsRequest
 import com.amazonaws.services.ec2.model.DescribeSpotPriceHistoryRequest
 import com.amazonaws.services.ec2.model.Filter
+import com.amazonaws.services.ec2.model.GroupIdentifier
 import com.amazonaws.services.ec2.model.Image
 import com.amazonaws.services.ec2.model.Instance
 import com.amazonaws.services.ec2.model.LaunchSpecification
@@ -65,7 +66,6 @@ import nextflow.cloud.types.CloudSpotPrice
 import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskTemplateEngine
 import nextflow.util.ServiceName
-
 /**
  * Implements the cloud driver of Amazon AWS
  *
@@ -386,8 +386,11 @@ class AmazonCloudDriver implements CloudDriver {
             if( subnetId )
                 spec.subnetId = subnetId
 
-            if( securityGroups )
-                spec.securityGroups = securityGroups
+            if( securityGroups ) {
+                def allGroups = securityGroups.collect { new GroupIdentifier().withGroupId(it) }
+                spec.withAllSecurityGroups(allGroups)
+            }
+
         }
 
 
