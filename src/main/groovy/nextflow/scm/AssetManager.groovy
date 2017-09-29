@@ -33,6 +33,7 @@ import nextflow.script.ScriptFile
 import nextflow.util.IniFile
 import org.eclipse.jgit.api.CreateBranchCommand
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.api.MergeResult
 import org.eclipse.jgit.api.ListBranchCommand
 import org.eclipse.jgit.api.errors.RefNotFoundException
 import org.eclipse.jgit.errors.RepositoryNotFoundException
@@ -566,17 +567,44 @@ class AssetManager {
             }
         }
 
-        // now pull to update it
-        def pull = git.pull()
-        if( provider.hasCredentials() )
-            pull.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password))
+        // JGit does not apparently support pulling tagged repos.
+        // Pulling a tag always results in a DetachedHeadException.
+        // The jgit equivalent of `git pull origin tag` does not work.
+        // Therefore we don't pull if we've cloned a tagged repo and
+        // simply assume that it's up to date.
+        if ( taggedRepo() ) {
+            log.debug("Repo appears to be checked out to a TAG, so we are NOT pulling the repo and assuming it is already up to date!")
+            return MergeResult.MergeStatus.ALREADY_UP_TO_DATE.toString()
 
-        def result = pull.call()
-        if(!result.isSuccessful())
-            throw new AbortOperationException("Cannot pull project `$project` -- ${result.toString()}")
+        // For normal branches pull get any updated code.
+        } else {
+            log.debug("Not apparently a tagged repo - pulling!")
 
-        return result?.mergeResult?.mergeStatus?.toString()
+            def pull = git.pull()
+            if( provider.hasCredentials() )
+                pull.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password))
 
+            def result = pull.call()
+            if(!result.isSuccessful())
+                throw new AbortOperationException("Cannot pull project `$project` -- ${result.toString()}")
+
+            return result?.mergeResult?.mergeStatus?.toString()
+        }
+    }
+
+    /**
+     * Check if the repo is checked out to a TAG or commit hash.
+     *
+     * @return true if the repo is checked out to a TAG or commit hash, false otherwise.
+     */
+    private boolean taggedRepo() {
+        // getFullBranch returns a string like "refs/heads/branchname" if
+        // the repo is checked out a branch.  If it's checked out to a tag or
+        // commit hash, then it returns the ObjectId in hex format.
+        // So we just check if the branch path starts with "refs/heads" or not.
+        def full = git.getRepository().getFullBranch()
+        log.debug("Repo branch/tag: " + full)
+        return !full.startsWith("refs/heads")
     }
 
     /**

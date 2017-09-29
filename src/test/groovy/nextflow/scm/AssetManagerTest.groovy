@@ -153,6 +153,96 @@ class AssetManagerTest extends Specification {
     }
 
 
+    // Downloading the first time with a tag (not branch) should work fine.
+    // But the second time with the same tag (which would just be a pull)
+    // will cause a detached HEAD exception with jgit.
+    // So we don't pull the repo is tagged and instead return Already Up To Date.
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def testPullTagTwice() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [github: [auth: token]])
+
+        when:
+        manager.download("v1.2")
+        then:
+        folder.resolve('nextflow-io/hello/.git').isDirectory()
+
+        when:
+        def result = manager.download("v1.2")
+        then:
+        noExceptionThrown()
+        result == "Already-up-to-date"
+    }
+
+    // Hashes should behave the same as tags.
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def testPullHashTwice() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [github: [auth: token]])
+
+        when:
+        manager.download("0ec2ecd0ac13bc7e32594c0258ebce55e383d241")
+        then:
+        folder.resolve('nextflow-io/hello/.git').isDirectory()
+
+        when:
+        def result = manager.download("0ec2ecd0ac13bc7e32594c0258ebce55e383d241")
+        then:
+        noExceptionThrown()
+        result == "Already-up-to-date"
+    }
+
+
+    // Downloading a branch first and then pulling the branch
+    // should work fine, unlike with tags.
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def testPullBranchTwice() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [github: [auth: token]])
+
+        when:
+        manager.download("mybranch")
+        then:
+        folder.resolve('nextflow-io/hello/.git').isDirectory()
+
+        when:
+        manager.download("mybranch")
+        then:
+        noExceptionThrown()
+    }
+
+    // First clone a repo with a tag, then forget to include the -r argument
+    // when you execute nextflow.
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def testPullTagThenBranch() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [github: [auth: token]])
+
+        when:
+        manager.download("v1.2")
+        then:
+        folder.resolve('nextflow-io/hello/.git').isDirectory()
+
+        when:
+        def result = manager.download()
+        then:
+        noExceptionThrown()
+        result == "Already-up-to-date"
+    }
+
+
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testClone() {
 
