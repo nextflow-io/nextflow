@@ -39,6 +39,7 @@ import com.amazonaws.services.ec2.model.DescribeSpotInstanceRequestsRequest
 import com.amazonaws.services.ec2.model.DescribeSpotPriceHistoryRequest
 import com.amazonaws.services.ec2.model.Filter
 import com.amazonaws.services.ec2.model.GroupIdentifier
+import com.amazonaws.services.ec2.model.IamInstanceProfileSpecification
 import com.amazonaws.services.ec2.model.Image
 import com.amazonaws.services.ec2.model.Instance
 import com.amazonaws.services.ec2.model.LaunchSpecification
@@ -84,6 +85,8 @@ class AmazonCloudDriver implements CloudDriver {
 
     private String region
 
+    private String role
+
     AmazonCloudDriver() {
         this(Collections.emptyMap())
     }
@@ -97,38 +100,68 @@ class AmazonCloudDriver implements CloudDriver {
         }
         else {
             def credentials = Global.getAwsCredentials()
-            if( !credentials )
-                throw new AbortOperationException('Missing AWS access and secret keys -- Make sure to define in your system environment the following variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`')
-            this.accessKey = credentials[0]
-            this.secretKey = credentials[1]
+            if( credentials ) {
+                this.accessKey = credentials[0]
+                this.secretKey = credentials[1]
+            }
+            else {
+                role = fetchRole()
+                if( role )
+                    log.debug "Using AWS IAM role: $role"
+                else
+                    throw new AbortOperationException('Missing AWS access and secret keys -- Make sure to define in your system environment the following variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`')
+            }
         }
 
         // -- get the aws default region
-        this.region = config.region ?: Global.getAwsRegion()
-        if( !this.region )
+        region = config.region ?: Global.getAwsRegion()
+        if( !region )
+            region = fetchRegion()
+        if( !region )
             throw new AbortOperationException('Missing AWS region -- Make sure to define in your system environment the variable `AWS_DEFAULT_REGION`')
     }
 
     /** only for testing purpose */
     @CompileDynamic
-    protected AmazonCloudDriver( Map config, AmazonEC2Client client ) {
-        (accessKey, secretKey) = Global.getAwsCredentials(null, config)
-        this.region = Global.getAwsRegion(null, config)
+    protected AmazonCloudDriver( AmazonEC2Client client ) {
         this.ec2client = client
     }
 
+    protected String fetchRole() {
+        try {
+            def role = getUrl('http://169.254.169.254/latest/meta-data/iam/security-credentials/').readLines()
+            if( role.size() != 1 )
+                throw new IllegalArgumentException("Not a valid EC2 IAM role")
+            return role.get(0)
+        }
+        catch( IOException e ) {
+            log.trace "Unable to fetch IAM credentials -- Cause: ${e.message}"
+            return null
+        }
+    }
+
+    protected String fetchRegion() {
+        try {
+            def zone = getUrl('http://169.254.169.254/latest/meta-data/placement/availability-zone')
+            zone ? zone.substring(0,zone.length()-1) : null
+        }
+        catch (IOException e) {
+            log.debug "Cannot fetch AWS region", e
+            return null
+        }
+    }
+
     static private AmazonEC2Client createEc2Client( String accessKey, String secretKey, String region ) {
-        def result = new AmazonEC2Client(new BasicAWSCredentials(accessKey, secretKey))
-        result.setRegion( RegionUtils.getRegion(region) )
+        def result = (accessKey && secretKey
+                        ? new AmazonEC2Client(new BasicAWSCredentials(accessKey, secretKey))
+                        : new AmazonEC2Client())
+        if( region )
+            result.setRegion( RegionUtils.getRegion(region) )
         return result
     }
 
     synchronized private AmazonEC2Client getClient() {
         if( ec2client == null ) {
-            if( !accessKey ) throw new IllegalArgumentException("Missing AWS access key config property")
-            if( !secretKey ) throw new IllegalArgumentException("Missing AWS secret key config property")
-            if( !region ) throw new IllegalArgumentException("Missing AWS region config property")
-
             ec2client = createEc2Client(accessKey, secretKey, region)
         }
         return ec2client
@@ -183,9 +216,6 @@ class AmazonCloudDriver implements CloudDriver {
     @PackageScope
     String scriptBashEnv( LaunchConfig cfg ) {
         def profile = """\
-        export AWS_ACCESS_KEY_ID='$accessKey'
-        export AWS_SECRET_ACCESS_KEY='$secretKey'
-        export AWS_DEFAULT_REGION='$region'
         export NXF_VER='${cfg.nextflow.version}'
         export NXF_MODE='${cfg.nextflow.mode}'
         export NXF_EXECUTOR='ignite'
@@ -207,25 +237,27 @@ class AmazonCloudDriver implements CloudDriver {
         if( cfg.instanceStorageDevice && cfg.instanceStorageMount )
             profile += "export NXF_TEMP='${cfg.instanceStorageMount}'\n"
 
+        if( accessKey )
+            profile += "export AWS_ACCESS_KEY_ID='$accessKey'\n"
+
+        if( secretKey )
+            profile += "export AWS_SECRET_ACCESS_KEY='$secretKey'\n"
+
+        if( region )
+            profile += "export AWS_DEFAULT_REGION='$region'\n"
+
         return profile
     }
 
 
     @PackageScope
     String cloudInitScript(LaunchConfig cfg) {
-        if( !accessKey ) throw new AbortOperationException('Missing AWS access id')
-        if( !secretKey ) throw new AbortOperationException('Missing AWS secret key')
-        if( !region ) throw new AbortOperationException('Missing AWS region')
-
         // load init script template
         def template =  this.class.getResourceAsStream('cloud-boot.txt')
         if( !template )
             throw new IllegalStateException("Missing `cloud-boot.txt` template resource")
 
         def binding = new CloudBootTemplateBinding(cfg)
-        binding.awsAccessKey = accessKey
-        binding.awsSecretKey = secretKey
-        binding.awsRegion = region
         binding.nextflowConfig = cfg.renderCloudConfigObject()
         binding.bashProfile = scriptBashEnv(cfg)
 
@@ -354,6 +386,9 @@ class AmazonCloudDriver implements CloudDriver {
         req.instanceType = cfg.instanceType
         req.userData = getUserDataAsBase64(cfg)
         req.setBlockDeviceMappings( getBlockDeviceMappings(cfg) )
+        if( role ) {
+            req.setIamInstanceProfile( new IamInstanceProfileSpecification().withName(role) )
+        }
 
         if( cfg.keyName )
             req.keyName = cfg.keyName
@@ -390,6 +425,9 @@ class AmazonCloudDriver implements CloudDriver {
                 def allGroups = securityGroups.collect { new GroupIdentifier().withGroupId(it) }
                 spec.withAllSecurityGroups(allGroups)
             }
+
+            if( role )
+                spec.setIamInstanceProfile(new IamInstanceProfileSpecification().withName(role) )
 
         }
 
@@ -646,7 +684,7 @@ class AmazonCloudDriver implements CloudDriver {
         }
     }
 
-    private String getUrl(String path, int timeout=150) {
+    protected String getUrl(String path, int timeout=150) {
         final url = new URL(path)
         final con = url.openConnection()
         con.setConnectTimeout(timeout)

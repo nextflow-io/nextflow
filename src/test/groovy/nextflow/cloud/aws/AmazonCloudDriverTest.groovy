@@ -86,7 +86,7 @@ class AmazonCloudDriverTest extends Specification {
             '''
 
         def config = new ConfigBuilder().buildConfig([file])
-        def driver = new AmazonCloudDriver(config, Mock(AmazonEC2Client))
+        def driver = new AmazonCloudDriver(Mock(AmazonEC2Client))
 
         when:
         def payload = driver.getUserDataAsString( CloudConfig.create(config).build() )
@@ -104,21 +104,17 @@ class AmazonCloudDriverTest extends Specification {
 
         given:
         def CONFIG = [
-                aws: [accessKey: 'alpha', secretKey: 'beta', region: 'region-1'],
                 cloud: [
                         nextflow: [version: '0.21.0'],
                 ]
             ]
-        def cloud = new AmazonCloudDriver(CONFIG, Mock(AmazonEC2Client))
+        def cloud = new AmazonCloudDriver(Mock(AmazonEC2Client))
 
         when:
         def cfg = (Map)SerializationUtils.clone(CONFIG)
         def bash1 = cloud.scriptBashEnv(CloudConfig.create(cfg).setClusterName('cluster-x'))
         then:
         bash1 == '''
-            export AWS_ACCESS_KEY_ID='alpha'
-            export AWS_SECRET_ACCESS_KEY='beta'
-            export AWS_DEFAULT_REGION='region-1'
             export NXF_VER='0.21.0'
             export NXF_MODE='ignite'
             export NXF_EXECUTOR='ignite'
@@ -132,9 +128,6 @@ class AmazonCloudDriverTest extends Specification {
         def bash2 = cloud.scriptBashEnv(CloudConfig.create(cfg).setClusterName('cluster-x'))
         then:
         bash2 == '''
-            export AWS_ACCESS_KEY_ID='alpha'
-            export AWS_SECRET_ACCESS_KEY='beta'
-            export AWS_DEFAULT_REGION='region-1'
             export NXF_VER='0.21.0'
             export NXF_MODE='ignite'
             export NXF_EXECUTOR='ignite'
@@ -149,9 +142,6 @@ class AmazonCloudDriverTest extends Specification {
         def bash3 = cloud.scriptBashEnv(CloudConfig.create(cfg).setClusterName('cluster-x'))
         then:
         bash3 == '''
-            export AWS_ACCESS_KEY_ID='alpha'
-            export AWS_SECRET_ACCESS_KEY='beta'
-            export AWS_DEFAULT_REGION='region-1'
             export NXF_VER='0.21.0'
             export NXF_MODE='ignite'
             export NXF_EXECUTOR='ignite'
@@ -169,9 +159,6 @@ class AmazonCloudDriverTest extends Specification {
         def bash4 = cloud.scriptBashEnv(CloudConfig.create(cfg).setClusterName('cluster-x'))
         then:
         bash4 == '''
-            export AWS_ACCESS_KEY_ID='alpha'
-            export AWS_SECRET_ACCESS_KEY='beta'
-            export AWS_DEFAULT_REGION='region-1'
             export NXF_VER='0.21.0'
             export NXF_MODE='ignite'
             export NXF_EXECUTOR='ignite'
@@ -188,9 +175,6 @@ class AmazonCloudDriverTest extends Specification {
         def bash5 = cloud.scriptBashEnv(CloudConfig.create(cfg).setClusterName('cluster-x'))
         then:
         bash5 == '''
-            export AWS_ACCESS_KEY_ID='alpha'
-            export AWS_SECRET_ACCESS_KEY='beta'
-            export AWS_DEFAULT_REGION='region-1'
             export NXF_VER='0.21.0'
             export NXF_MODE='ignite'
             export NXF_EXECUTOR='ignite'
@@ -199,7 +183,28 @@ class AmazonCloudDriverTest extends Specification {
             '''
                 .stripIndent() .leftTrim()
 
+
+        when:
+        cloud.accessKey = 'alpha'
+        cloud.secretKey = 'beta'
+        cloud.region = 'region-1'
+        then:
+        def bash6 = cloud.scriptBashEnv(CloudConfig.create(cfg).setClusterName('cluster-x'))
+        then:
+        bash6 == '''
+            export NXF_VER='0.21.0'
+            export NXF_MODE='ignite'
+            export NXF_EXECUTOR='ignite'
+            export NXF_CLUSTER_JOIN='cloud:aws:cluster-x'
+            export NXF_TEMP='/scratch'
+            export AWS_ACCESS_KEY_ID='alpha'
+            export AWS_SECRET_ACCESS_KEY='beta'
+            export AWS_DEFAULT_REGION='region-1'
+            '''
+                .stripIndent() .leftTrim()
     }
+
+
 
     def 'should fill up the cloud-boot template' () {
 
@@ -223,7 +228,10 @@ class AmazonCloudDriverTest extends Specification {
 
         ]]
 
-        def driver = new AmazonCloudDriver(config, Mock(AmazonEC2Client))
+        def driver = new AmazonCloudDriver(Mock(AmazonEC2Client))
+        driver.accessKey = 'xxx'
+        driver.secretKey = 'yyy'
+        driver.region = 'eu-west-1'
 
         when:
         def cloud = CloudConfig.create(config)
@@ -268,9 +276,6 @@ class AmazonCloudDriverTest extends Specification {
                     mkdir -p $HOME/bin
                     profile=$(mktemp)
                     cat <<EOF > $profile
-                    export AWS_ACCESS_KEY_ID='xxx'
-                    export AWS_SECRET_ACCESS_KEY='yyy'
-                    export AWS_DEFAULT_REGION='eu-west-1'
                     export NXF_VER='0.23.0'
                     export NXF_MODE='ignite'
                     export NXF_EXECUTOR='ignite'
@@ -278,6 +283,9 @@ class AmazonCloudDriverTest extends Specification {
                     export NXF_WORK='/mnt/efs/ec2-user/work'
                     export NXF_ASSETS='/mnt/efs/ec2-user/projects'
                     export NXF_TEMP='/scratch'
+                    export AWS_ACCESS_KEY_ID='xxx'
+                    export AWS_SECRET_ACCESS_KEY='yyy'
+                    export AWS_DEFAULT_REGION='eu-west-1'
 
                     EOF
 
@@ -342,7 +350,7 @@ class AmazonCloudDriverTest extends Specification {
                 ]]
 
 
-        def driver = new AmazonCloudDriver(config, Mock(AmazonEC2Client))
+        def driver = new AmazonCloudDriver(Mock(AmazonEC2Client))
 
         when:
         def script = driver.cloudInitScript(CloudConfig.create(config).setClusterName('my-cluster'))
@@ -516,7 +524,7 @@ class AmazonCloudDriverTest extends Specification {
         def instanceIds = ['i-111','i-222','i-333']
         def client = Mock(AmazonEC2Client)
         def waiters = Mock(AmazonEC2Waiters)
-        def driver = new AmazonCloudDriver(config, client)
+        def driver = new AmazonCloudDriver(client)
         client.waiters() >> waiters
 
         when:
@@ -648,7 +656,27 @@ class AmazonCloudDriverTest extends Specification {
         maps[1].ebs.snapshotId == SNAPSHOT
         maps[1].ebs.volumeSize == (int)SIZE.toGiga()
 
-
     }
 
+    def 'should fetch aws region' () {
+        given:
+        def driver = Spy(AmazonCloudDriver, constructorArgs: [Mock(AmazonEC2Client)])
+
+        when:
+        def result = driver.fetchRegion()
+        then:
+        driver.getUrl('http://169.254.169.254/latest/meta-data/placement/availability-zone') >> 'eu-west-1a'
+        result == 'eu-west-1'
+    }
+
+    def 'should fetch aws role' () {
+        given:
+        def driver = Spy(AmazonCloudDriver, constructorArgs: [Mock(AmazonEC2Client)])
+
+        when:
+        def result = driver.fetchRole()
+        then:
+        driver.getUrl('http://169.254.169.254/latest/meta-data/iam/security-credentials/') >> 'iam-role-here'
+        result == 'iam-role-here'
+    }
 }
